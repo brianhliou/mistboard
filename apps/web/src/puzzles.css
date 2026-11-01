@@ -1430,8 +1430,7 @@ a.puzzle-streak-chip:focus-visible {
   gap: 8px;
 }
 
-.puzzle-vote-button,
-.puzzle-play-position {
+.puzzle-vote-button {
   display: grid;
   place-items: center;
   width: 34px;
@@ -1446,12 +1445,30 @@ a.puzzle-streak-chip:focus-visible {
 }
 
 .puzzle-play-position {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: center;
+  width: fit-content;
+  min-height: 32px;
+  margin: 2px 0;
   color: var(--site-muted);
+  font-size: 13px;
   text-decoration: none;
 }
 
-.puzzle-vote-button svg,
 .puzzle-play-position svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.puzzle-play-position:hover {
+  color: var(--site-text);
+  text-decoration: underline;
+}
+
+.puzzle-vote-button svg {
   display: block;
   width: 22px;
   height: 22px;
@@ -1465,8 +1482,7 @@ a.puzzle-streak-chip:focus-visible {
   color: hsl(359, 58%, 57%);
 }
 
-.puzzle-vote-button:hover,
-.puzzle-play-position:hover {
+.puzzle-vote-button:hover {
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
@@ -1886,8 +1902,8 @@ a.puzzle-tag--link:hover {
      then Next puzzle taking the rest, in the spot Hint and Solution held. */
   .puzzles-shell .puzzle-solved-panel {
     grid-template-rows: none;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas: "title vote cta";
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "title vote cta play";
     align-content: center;
     align-items: center;
     padding: 6px 12px 6px 0;
@@ -1915,10 +1931,28 @@ a.puzzle-tag--link:hover {
     display: none;
   }
 
-  .puzzles-shell .puzzle-vote-button,
-  .puzzles-shell .puzzle-play-position {
+  .puzzles-shell .puzzle-vote-button {
     width: 40px;
     height: 40px;
+  }
+
+  /* No room for the words in the one-row strip: the icon alone, after Next
+     puzzle, so it stays apart from the thumbs. */
+  .puzzles-shell .puzzle-play-position {
+    grid-area: play;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: 4px;
+  }
+
+  .puzzles-shell .puzzle-play-position span {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-play-position svg {
+    width: 20px;
+    height: 20px;
   }
 
   .puzzles-shell .puzzle-continue-button {

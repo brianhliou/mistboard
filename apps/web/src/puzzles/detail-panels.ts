@@ -136,7 +136,9 @@ function revealedPanel(
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
-  panel.append(title, cont, solvedFeedback(session, renderSession, assist, displayState));
+  panel.append(title, cont);
+  appendPlayPosition(panel, session, displayState);
+  panel.append(solvedFeedback(session, renderSession, assist));
   panel.append(puzzleReportControl(session));
   return panel;
 }
@@ -167,7 +169,9 @@ function solvedPanel(
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
-  panel.append(title, cont, solvedFeedback(session, renderSession, assist, displayState));
+  panel.append(title, cont);
+  appendPlayPosition(panel, session, displayState);
+  panel.append(solvedFeedback(session, renderSession, assist));
   panel.append(puzzleReportControl(session));
   return panel;
 }
@@ -176,7 +180,6 @@ function solvedFeedback(
   session: PuzzleSession,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
-  displayState: PuzzleState,
 ): HTMLElement {
   const feedbackRow = document.createElement('div');
   feedbackRow.className = 'puzzle-solved-feedback';
@@ -191,7 +194,6 @@ function solvedFeedback(
     puzzleVoteButton('up', session, renderSession, assist),
     puzzleVoteButton('down', session, renderSession, assist),
   );
-  appendPlayPosition(votes, session, displayState);
   feedbackRow.append(prompt, votes);
   return feedbackRow;
 }
@@ -210,9 +212,14 @@ function appendPlayPosition(
   const link = document.createElement('a');
   link.className = 'puzzle-play-position';
   link.dataset.puzzlePlayPosition = 'true';
+  // A quiet text link under Next puzzle, kept out of the vote row so it does
+  // not read as a third rating button.
   link.title = t('lobby.panelTabComputer');
+  // The words hide in the phone strip; the label keeps the icon named.
   link.setAttribute('aria-label', link.title);
-  link.append(buildUiIcon('play-engine'));
+  const label = document.createElement('span');
+  label.textContent = link.title;
+  link.append(buildUiIcon('play-engine'), label);
   link.target = '_blank';
   link.rel = 'noopener';
   link.href = practicePositionHref(

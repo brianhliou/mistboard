@@ -107,11 +107,12 @@ describe('play the displayed puzzle position', () => {
       });
       expect(parsePracticePositionParams(url.searchParams).ok).toBe(true);
       expect(link!.closest('.puzzle-solved-panel')).toBe(el);
-      const votes = link!.closest('.puzzle-vote-actions');
-      expect(votes).not.toBeNull();
-      expect(votes!.querySelectorAll('button')).toHaveLength(2);
+      // A quiet link under Next puzzle, never in the vote row.
+      expect(link!.closest('.puzzle-vote-actions')).toBeNull();
+      expect(link!.previousElementSibling?.matches('.puzzle-continue-button')).toBe(true);
+      expect(el.querySelectorAll('.puzzle-vote-actions button')).toHaveLength(2);
       expect(link!.querySelector('.ui-icon-play-engine')).not.toBeNull();
-      expect(link!.textContent).toBe('');
+      expect(link!.textContent).toBe('Play the computer');
       expect(link!.getAttribute('style')).toBeNull();
       expect(link!.target).toBe('_blank');
       expect(link!.rel).toBe('noopener');
@@ -129,7 +130,7 @@ describe('play the displayed puzzle position', () => {
     expect(new URL(link!.href).searchParams.get('fen')).toBe(
       standardXiangqiEngineFen(session.puzzle.initial as XiangqiGameState),
     );
-    expect(link!.closest('.puzzle-vote-actions')?.querySelectorAll('button')).toHaveLength(2);
+    expect(link!.closest('.puzzle-vote-actions')).toBeNull();
     expect(link!.target).toBe('_blank');
     link!.addEventListener('click', (event) => event.preventDefault());
     link!.click();
@@ -209,7 +210,7 @@ describe('play the displayed puzzle position', () => {
     const link = playLink(panel(materialSession()));
     expect(link?.title).toBe(label);
     expect(link?.getAttribute('aria-label')).toBe(label);
-    expect(link?.textContent).toBe('');
+    expect(link?.textContent).toBe(label);
     expect(new URL(link!.href).pathname).toBe('/practice/position');
   });
 });

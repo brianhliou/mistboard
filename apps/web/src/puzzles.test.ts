@@ -922,7 +922,9 @@ describe('puzzles route', () => {
     expect(new URL(playPosition!.href).searchParams.get('fen')).toBe(
       standardXiangqiEngineFen(shownState),
     );
-    expect(playPosition!.closest('.puzzle-vote-actions')).not.toBeNull();
+    expect(playPosition!.closest('.puzzle-vote-actions')).toBeNull();
+    expect(playPosition!.previousElementSibling?.matches('.puzzle-continue-button')).toBe(true);
+    expect(playPosition!.textContent).toBe('Play the computer');
     expect(playPosition!.target).toBe('_blank');
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.click();
     expect(root.querySelector('.finish-badge--mated')).not.toBeNull();
