@@ -29,6 +29,7 @@ import {
   landingVariantSupportsPve,
   roomCreationGameSpecId,
   roomCreationRequestBody,
+  variantLabelForGameSpec,
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
@@ -120,6 +121,19 @@ function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup 
     preferredColor: 'random',
   };
 }
+
+describe('Chinese variant names', () => {
+  it.each([
+    { language: 'zh-CN', locale: 'zh-Hans', flipName: '兽棋', jungleName: '斗兽棋' },
+    { language: 'zh-TW', locale: 'zh-Hant', flipName: '獸棋', jungleName: '鬥獸棋' },
+  ] as const)(
+    'names jungle-flip in $language while preserving Jungle',
+    ({ locale, flipName, jungleName }) => {
+      expect(variantLabelForGameSpec('jungle-flip', locale)).toBe(flipName);
+      expect(variantLabelForGameSpec('jungle', locale)).toBe(jungleName);
+    },
+  );
+});
 
 describe('variant create-request conformance', () => {
   it('preserves the five browser Rapfi choices and both human colours in hidden setup', () => {

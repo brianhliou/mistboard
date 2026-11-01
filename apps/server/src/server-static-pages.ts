@@ -216,14 +216,14 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/zh-hans/champions': {
     title: '引擎冠军与挑战赛 | Mistboard',
     description:
-      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
+      '揭棋、暗棋、斗兽棋和兽棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
     htmlLang: 'zh-Hans',
     localeGroup: '/champions',
   },
   '/zh-hant/champions': {
     title: '引擎冠軍與挑戰賽 | Mistboard',
     description:
-      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
+      '揭棋、暗棋、鬥獸棋和獸棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
     htmlLang: 'zh-Hant',
     localeGroup: '/champions',
   },

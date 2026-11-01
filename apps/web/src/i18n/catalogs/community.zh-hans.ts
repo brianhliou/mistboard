@@ -628,7 +628,7 @@ export const ZH_HANS_COMMUNITY = {
   'bots.katagoCreditNet': '神经网络：Kouza 的 Dandelion 4',
   'bots.jqeCredit': "jqe，作者 Devin O'Keefe",
   'bots.abJchessCredit': 'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）',
-  'bots.mistyBio': 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
+  'bots.mistyBio': 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和兽棋。',
   'bots.firstParty': '官方机器人',
   'bots.gameCountOne': '{count} 局',
   'bots.gameCountMany': '{count} 局',
