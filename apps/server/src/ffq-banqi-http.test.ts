@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Writable } from 'node:stream';
 import test from 'node:test';
 import { ffqBanqiHttpTarget, guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import { handleApiRequest, routes } from './http-api.js';
@@ -65,6 +69,9 @@ function reads(id: string): Array<[string, string]> {
     `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/game/${id}`)}`,
     `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/banqi/game/${id}`)}`,
     `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/embed/game/${id}`)}`,
+    `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/room/${id}`)}`,
+    `/room/${id}/`,
+    `/room/${id}/unsupported`,
   ])
     paths.push(['GET', path]);
   paths.push(['POST', `/api/rooms/${id}/abandon`]);
@@ -92,19 +99,28 @@ async function invoke(
     url,
     headers: signedIn ? { cookie: 'mistboard_session=fixture.token' } : {},
   } as IncomingMessage;
-  const response = {
-    setHeader: (key: string, value: unknown) => {
-      headers[key.toLowerCase()] = value;
+  // A real writable lets the authorized shell exercise the static handler
+  // without opening a listening socket. Refusals and APIs use the same sink.
+  const response = Object.assign(
+    new Writable({
+      write(chunk, _encoding, callback) {
+        body += chunk.toString();
+        callback();
+      },
+    }),
+    {
+      setHeader(key: string, value: unknown) {
+        headers[key.toLowerCase()] = value;
+        return this;
+      },
+      writeHead(code: number, values: Record<string, unknown> = {}) {
+        status = code;
+        for (const [key, value] of Object.entries(values)) headers[key.toLowerCase()] = value;
+        return this;
+      },
     },
-    writeHead: (code: number, values: Record<string, unknown> = {}) => {
-      status = code;
-      for (const [key, value] of Object.entries(values)) headers[key.toLowerCase()] = value;
-    },
-    end: (chunk = '') => {
-      body += chunk;
-      finish();
-    },
-  } as unknown as ServerResponse;
+  ) as unknown as ServerResponse;
+  response.on('finish', finish);
   await run(request, response);
   await done;
   return { status, body, headers };
@@ -116,6 +132,11 @@ for (const flag of [undefined, 'false', 'true']) {
       timeout: 15_000,
     }, async (t) => {
       const previous = process.env[FLAG];
+      const staticDir = await mkdtemp(join(tmpdir(), 'ffq-shell-'));
+      await writeFile(
+        join(staticDir, 'index.html'),
+        '<!doctype html><html><head><title>Private shell fixture</title></head><body><div id="app"></div></body></html>',
+      );
       if (flag === undefined) delete process.env[FLAG];
       else process.env[FLAG] = flag;
       t.after(async () => {
@@ -123,6 +144,7 @@ for (const flag of [undefined, 'false', 'true']) {
         else process.env[FLAG] = previous;
         clearPresence();
         await close();
+        await rm(staticDir, { recursive: true, force: true });
       });
       init('postgres://mistboard@127.0.0.1:9/never-connect');
       t.mock.method(getPool(), 'connect', () => assert.fail('unexpected database connection'));
@@ -187,7 +209,7 @@ for (const flag of [undefined, 'false', 'true']) {
       const handler = createHttpRequestHandler({
         ...context,
         publicHost: 'https://mistboard.com',
-        staticDir: '/not-used',
+        staticDir,
         drainController: { isDraining: () => false },
       } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
       const admitted = flag === 'true' && role === 'admin';
@@ -200,13 +222,18 @@ for (const flag of [undefined, 'false', 'true']) {
         'live_alias',
       ]) {
         for (const [method, path] of reads(id)) {
-          // Only the two explicitly supported summary endpoints are open.
+          // Only minimal summaries and the canonical live room shell open.
           const safeSummary =
             !['ffq_inflight', 'ffq_wrong_variant'].includes(id) &&
             method === 'GET' &&
             (path === `/api/games/${id}` || path === `/api/ffq-banqi/games/${id}`);
+          const safeShell = method === 'GET' && [`/room/${id}`, `/room/${id}/`].includes(path);
           const result = await invoke(handler, method, path, role !== null);
-          assert.equal(result.status, admitted && safeSummary ? 200 : 404, `${method} ${path}`);
+          assert.equal(
+            result.status,
+            admitted && (safeSummary || safeShell) ? 200 : 404,
+            `${method} ${path}`,
+          );
           assert.ok(!result.body.includes(SECRET), `${method} ${path}: leaked setup`);
           assert.equal(result.headers['cache-control'], 'no-store');
           if (admitted && safeSummary) {
@@ -223,6 +250,10 @@ for (const flag of [undefined, 'false', 'true']) {
                 rated: false,
               },
             });
+          } else if (admitted && safeShell) {
+            assert.ok(result.body.includes('Private shell fixture'));
+            assert.ok(result.body.includes('<div id="app"></div>'));
+            assert.equal(result.headers['x-robots-tag'], 'noindex');
           } else assert.equal(result.body, '{"error":"not_found"}');
         }
       }

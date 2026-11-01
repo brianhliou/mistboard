@@ -7,7 +7,7 @@ import * as persistence from './persistence.js';
 import { type HttpApiContext, writeJson } from './routes/lib.js';
 
 type ReadContext = Pick<HttpApiContext, 'rooms' | 'inMemoryGameSummary'>;
-type Target = { roomId: string; summary: boolean; ffqPath: boolean };
+type Target = { roomId: string; summary: boolean; shell: boolean; ffqPath: boolean };
 
 // Collection endpoints aren't room ids. Keep every descendant of an addressed
 // room inside the boundary, including unsupported/future reads and mutations.
@@ -28,7 +28,7 @@ export function ffqBanqiHttpTarget(url: URL): Target | null {
     if (!embedded) return null;
     try {
       const target = ffqBanqiHttpTarget(new URL(embedded, 'http://localhost'));
-      return target ? { ...target, summary: false } : null;
+      return target ? { ...target, summary: false, shell: false } : null;
     } catch {
       return null;
     }
@@ -57,13 +57,15 @@ export function ffqBanqiHttpTarget(url: URL): Target | null {
   return {
     roomId,
     summary: !!game && !game[3] && (!game[1] || game[1] === FFQ_BANQI_SPEC_ID),
+    shell: /^\/room\/[^/]+\/?$/.test(path),
     ffqPath: game?.[1] === FFQ_BANQI_SPEC_ID || page?.[1] === FFQ_BANQI_SPEC_ID,
   };
 }
 
 // Invoked BEFORE API route dispatch or HTML/OG/static handling. FFQ never
 // falls through to another variant's serializer, even for an enabled admin.
-// Until masked replay has its own contract, only minimal summaries are open.
+// Only the canonical live room shell and minimal summaries are open; masked
+// state/history arrives over the independently gated room socket.
 export async function guardFFQBanqiHttpRead(
   ctx: ReadContext,
   request: IncomingMessage,
@@ -90,8 +92,11 @@ export async function guardFFQBanqiHttpRead(
     writeJson(response, 404, { error: 'not_found' });
     return true;
   };
-  if (!target.summary || request.method !== 'GET') return refuse();
+  if ((!target.summary && !target.shell) || request.method !== 'GET') return refuse();
   if (!ffqBanqiEnabled() || !ffqBanqiAdmits(await currentAccountUser(request))) return refuse();
+  // Continue through the normal static shell only AFTER authorization, keeping
+  // the private cache/robots headers. No replay, share or alias page opens.
+  if (target.shell) return false;
 
   const game =
     ctx.inMemoryGameSummary?.(roomId) ??

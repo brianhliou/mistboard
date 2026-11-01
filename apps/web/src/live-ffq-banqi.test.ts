@@ -102,7 +102,7 @@ describe('FFQ banqi live room', () => {
   it('draws all 32 hit targets, four open tiles, fixed seats, HP and quiet counters', async () => {
     await mount();
     expect(document.querySelector('#app.live-route--banqi')).not.toBeNull();
-    expect(document.querySelectorAll('[data-square]')).toHaveLength(32);
+    expect(document.querySelectorAll('.banqi-live-board [data-square]')).toHaveLength(32);
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(4);
     const bars = [...document.querySelectorAll<HTMLProgressElement>('.ffq-banqi-hp progress')];
     expect(bars.map((bar) => [bar.value, bar.max])).toEqual([

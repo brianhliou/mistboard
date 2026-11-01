@@ -167,10 +167,12 @@ describe('variant correspondence conformance', () => {
 describe('variant marker conformance', () => {
   // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
   // Nor is Three Kingdoms banqi, a hidden playtest (#628, #684) only an admin
-  // reaches on prod.
+  // reaches on prod. FFQ also stays without a public marker in its admin test.
   const markedTenants = webVariantTenants().filter(
     (tenant) =>
-      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID,
+      tenant.gameSpecId !== MAHJONG_SPEC_ID &&
+      tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID &&
+      tenant.gameSpecId !== FFQ_BANQI_SPEC_ID,
   );
 
   it('marks Xiangqi Mahjong with its own tile marker', () => {

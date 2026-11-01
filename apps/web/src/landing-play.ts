@@ -11,7 +11,9 @@ import {
   DEFAULT_DAYS_PER_MOVE,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  type GameSpecId,
   gameSpecForId,
   isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
@@ -132,6 +134,7 @@ export type LandingGameSpecId =
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
   | typeof XIANGQI_MAHJONG_SPEC_ID
+  | typeof FFQ_BANQI_SPEC_ID
   | typeof THREE_KINGDOMS_BANQI_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
@@ -261,7 +264,7 @@ export function allowedTimePresetIds(
 // Dark chess is always offered. Integrated tenant variants join the normal play
 // entry points through their registry landing config.
 export function enabledLandingVariantGameSpecs(
-  _mode: LandingPlayMode,
+  mode: LandingPlayMode,
   locale: Locale,
 ): { gameSpecId: LandingGameSpecId; label: string }[] {
   const specs: { gameSpecId: LandingGameSpecId; label: string }[] = [
@@ -271,6 +274,7 @@ export function enabledLandingVariantGameSpecs(
   // entry points (Dark Xiangqi never does: it has no live room/lobby runtime).
   for (const tenant of webVariantTenants()) {
     if (!tenant.landing?.offerInMenu()) continue;
+    if (!landingModeAllowed(tenant.gameSpecId, mode)) continue;
     specs.push({
       gameSpecId: tenant.gameSpecId as LandingGameSpecId,
       label: variantLabelForGameSpec(tenant.gameSpecId as LandingGameSpecId, locale),
@@ -318,12 +322,17 @@ export function landingPlayDeepLinkAccepts(variant: string): boolean {
 
 function deepLinkInitialVariant(
   variant: string | null,
-  _mode: LandingPlayMode,
+  mode: LandingPlayMode,
 ): LandingGameSpecId | undefined {
   if (variant === DARK_CHESS_SPEC_ID) return DARK_CHESS_SPEC_ID;
   const tenant = variant ? webVariantTenantForSpecId(variant) : null;
-  if (tenant?.landing?.acceptsDeepLink()) return tenant.gameSpecId as LandingGameSpecId;
+  if (tenant?.landing?.acceptsDeepLink() && landingModeAllowed(tenant.gameSpecId, mode))
+    return tenant.gameSpecId as LandingGameSpecId;
   return undefined;
+}
+
+function landingModeAllowed(gameSpecId: GameSpecId, mode: LandingPlayMode): boolean {
+  return webVariantTenantForSpecId(gameSpecId)?.landing?.modes?.includes(mode) ?? true;
 }
 const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   firstColor: 'white',
@@ -1785,10 +1794,14 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ? choice.initialRated === true
         : (choice.initialRated ?? storedPreference.rated ?? true);
   const publicVariantOptions = enabledLandingVariantGameSpecs(choice.mode, locale);
-  const softLinkedHiddenVariant =
-    choice.initialGameSpecId &&
-    !publicVariantOptions.some((option) => option.gameSpecId === choice.initialGameSpecId)
+  const initialGameSpecId =
+    choice.initialGameSpecId && landingModeAllowed(choice.initialGameSpecId, choice.mode)
       ? choice.initialGameSpecId
+      : undefined;
+  const softLinkedHiddenVariant =
+    initialGameSpecId &&
+    !publicVariantOptions.some((option) => option.gameSpecId === initialGameSpecId)
+      ? initialGameSpecId
       : undefined;
   const variantOptions = softLinkedHiddenVariant
     ? [
@@ -1800,7 +1813,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     : publicVariantOptions;
   const fallbackGameSpecId = defaultLandingGameSpecId(variantOptions, choice.mode);
   let selectedGameSpecId: LandingGameSpecId =
-    choice.initialGameSpecId ?? storedPreference.gameSpecId ?? fallbackGameSpecId;
+    initialGameSpecId ?? storedPreference.gameSpecId ?? fallbackGameSpecId;
   if (!variantOptions.some((option) => option.gameSpecId === selectedGameSpecId)) {
     selectedGameSpecId = fallbackGameSpecId;
   }
@@ -3805,6 +3818,7 @@ export function roomCreationGameSpecId(
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
   | typeof XIANGQI_MAHJONG_SPEC_ID
+  | typeof FFQ_BANQI_SPEC_ID
   | typeof THREE_KINGDOMS_BANQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
@@ -3821,6 +3835,7 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   // Admin playtest on prod (#684), everyone in a local flag build (#628).
   if (setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) return THREE_KINGDOMS_BANQI_SPEC_ID;
+  if (setup.gameSpecId === FFQ_BANQI_SPEC_ID) return FFQ_BANQI_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;

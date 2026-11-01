@@ -46,9 +46,14 @@ import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
-describe('FFQ banqi server-only admin playtest', () => {
-  it('registers the masked server tenant while the web client waits for its own card', () => {
-    expect(webVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain('ffq-banqi');
+describe('FFQ banqi hidden admin playtest', () => {
+  it('registers its live client without enabling public replay or discovery', () => {
+    const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
+    expect(web?.roomIdPrefix).toBe('ffq_');
+    expect(web?.loadLiveRoomClient).toBeTypeOf('function');
+    expect(web?.watch).toBeUndefined();
+    expect(web?.gameRouteBase).toBeUndefined();
+    expect(web?.mountPostgame).toBeUndefined();
     const server = registeredVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
     expect(server).toMatchObject({
       roomIdPrefix: 'ffq_',
@@ -124,15 +129,13 @@ describe('web tenant registry <-> server tenant registry parity', () => {
   it('web and server registries cover the same game spec ids', () => {
     // Chess itself is deliberately in NEITHER registry (a registry miss IS the
     // chess fallback; see the header comments of both registry files), and the
-    // dark-chess correspondence tenant (dchx_) is registered on BOTH sides, so
-    // FFQ is a staged server-only hidden playtest until its web card lands.
-    // Its missing public capabilities and routes are asserted above.
+    // dark-chess correspondence tenant (dchx_) is registered on BOTH sides.
+    // Hidden playtests still register both dispatchers; their missing public
+    // capabilities and routes are asserted above.
     const webSpecs = new Set<string>(webTenants.map((tenant) => tenant.gameSpecId));
     const serverSpecs = new Set(serverTenants.map((registration) => registration.gameSpecId));
     const missingOnServer = [...webSpecs].filter((id) => !serverSpecs.has(id)).sort();
-    const missingOnWeb = [...serverSpecs]
-      .filter((id) => id !== 'ffq-banqi' && !webSpecs.has(id))
-      .sort();
+    const missingOnWeb = [...serverSpecs].filter((id) => !webSpecs.has(id)).sort();
     expect(
       { missingOnServer, missingOnWeb },
       `tenant registries drifted: [${missingOnServer.join(', ')}] need a side-effect import in apps/server/src/variant-tenant/register-tenants.ts; [${missingOnWeb.join(', ')}] need a WEB_VARIANT_TENANTS entry in apps/web/src/variant-tenant/registry.ts`,

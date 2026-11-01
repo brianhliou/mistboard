@@ -20,6 +20,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   isPublicGameSpec,
@@ -40,6 +41,7 @@ import {
   crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
+  ffqBanqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jqeEnabled,
@@ -52,7 +54,7 @@ import {
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
-import { hasLikelyVariantGrant } from '../signed-in-state.js';
+import { hasLikelyVariantGrant, isLikelyAdmin } from '../signed-in-state.js';
 import {
   threeKingdomsBanqiEngineOffered,
   threeKingdomsBanqiOffered,
@@ -93,6 +95,9 @@ export type WebTenantLandingConfig = {
   timePresetIds: readonly TimeControlId[];
   // Whether the variant appears in normal play-menu entry points.
   offerInMenu(): boolean;
+  // Restricted playtests can offer only supported entry modes. Omitted keeps
+  // the usual picker behavior (including disabled cards for missing bots).
+  modes?: readonly ('pvp' | 'pve' | 'lobby')[];
   // Whether a ?play deep link may select the variant (soft-launch links can be
   // live while the menu entry is still hidden).
   acceptsDeepLink(): boolean;
@@ -207,6 +212,9 @@ const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): 
 const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 // Xiangqi mahjong is gated the same way, on its own flag and its own grant.
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
+// Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
+// The server repeats this check for create, HTTP shells and every connection.
+const ffqBanqiOffered = () => ffqBanqiEnabled() && isLikelyAdmin();
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -301,6 +309,31 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
 // Deleting a retired variant's block is its own later commit
 // (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
+  {
+    gameSpecId: FFQ_BANQI_SPEC_ID,
+    roomIdPrefix: 'ffq_',
+    // A cold authorized room load does not have its admin hint yet. The HTTP
+    // shell and socket enforce the account check before any state is sent.
+    enabled: ffqBanqiEnabled,
+    pageTitleKey: 'variant.ffqBanqi.name',
+    loadLiveRoomClient: () =>
+      import('../live-ffq-banqi.js').then(
+        ({ bootstrapFFQBanqiLiveRoom }) => bootstrapFFQBanqiLiveRoom,
+      ),
+    // No postgame route, watch channel or public listing. Finished rooms keep
+    // the same masked live client; shared discovery never links them.
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      offerInMenu: ffqBanqiOffered,
+      acceptsDeepLink: ffqBanqiOffered,
+      modes: ['pvp'],
+    },
+  },
   {
     // Dark-chess correspondence rooms (server registration: correspondence
     // create flow). Deliberately capability-free: no loadLiveRoomClient (rooms

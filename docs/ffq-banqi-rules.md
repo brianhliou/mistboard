@@ -8,14 +8,25 @@ has not been checked against this kernel.
 The game package supplies the kernel, public projections, tests and canonical
 `FFQ_BANQI_SPEC_ID` (`ffq-banqi`). Its metadata names the 4x8 board
 (`banqi-4x8`), FFQ movement (`ffq-banqi`), HP objective (`hp-depletion`) and
-fixed-seat, four-reveal setup (`ffq-banqi-deal`). It remains `publicSurface:
-'hidden'` and `runtimeStatus: 'future'` until a serving tenant exists.
+fixed-seat, four-reveal setup (`ffq-banqi-deal`). Its metadata remains
+`publicSurface: 'hidden'` and `runtimeStatus: 'future'`; the registered hidden
+tenant explicitly handles its admin playtest, never a fallback Fog Chess room.
 
-Canonical `gameSpecId` and legacy `variant` room requests both return 501
-`ffq_banqi_not_integrated`, never a fallback Fog Chess room. There is no tenant,
-route or launch flag. Ratings, correspondence and studies exclude FFQ; the
-export capability is explicitly empty (no PGN or JSON). Existing web metadata
-placeholders offer no public play, marker, rules page, analysis or embed.
+`MISTBOARD_FFQ_BANQI_ENABLED=true` opens server room creation, the canonical
+`/room/ffq_…` HTML shell and seat/observer sockets **only to admin accounts**.
+The flag defaults off, including in development; off means 404 for every HTTP
+caller, and on still means 404 for guests and ordinary accounts. Successful
+private reads and refusals carry `Cache-Control: no-store` and `noindex`.
+Canonical `gameSpecId` and legacy `variant` creation selectors share the gate.
+
+`VITE_FFQ_BANQI_ENABLED=true` opts the web build into the live renderer. It also
+offers an admin-only **friend** setup, via the standard play picker or
+`/?play=friend&gameSpecId=ffq-banqi&side=red`. The admin hint only controls that
+entry's appearance; server authorization owns access. A cold room load needs
+no stored hint. Bot and lobby setups exclude FFQ, and its fixed seats say
+Red/Black. Ratings, correspondence and studies exclude FFQ; there is no public
+listing, rules page, watch channel, analysis, embed, export or review route.
+Live and finished games use the same masked room client.
 
 ## Rules
 
@@ -72,8 +83,8 @@ placeholders offer no public play, marker, rules page, analysis or embed.
 Canonical state contains true covered identities and is **server-secret**, even
 after game end. Only `getFFQBanqiPlayerView` and `ffqBanqiStateToFen` may cross a
 player/engine boundary. No seed or exact-deal field is retained in either.
-The seeded helper is for tests/replay; a future live adapter must supply a
-secret crypto-backed RNG and persist the initial deal with the action history.
+The seeded helper is for tests/replay; the live adapter supplies a secret
+crypto-backed RNG and persists the initial deal with the action history.
 
 A board back serializes to exactly `{ faceDown: true }`, without ink or role.
 Legality and chase detection depend only on public occupancy and face-up pieces.
@@ -135,3 +146,63 @@ to a covered board entry caused **hidden permutations preserve complete
 player/observer payloads and legality, even after game end** to fail. Restoring
 the exact `{ faceDown: true }` projection made it pass. This sentinel checks
 the whole serialized view after a covered capture, across all result reasons.
+
+## Local hidden playtest verification (s-16f5)
+
+Review the HTTP allowlist in `apps/server/src/ffq-banqi-http.ts` first: only the
+canonical room shell proceeds to static serving after authorization. Review,
+alias pages, embeds/oEmbed, exports and event APIs stay closed. The browser
+tenant uses the existing room route and dynamically imports its own styles;
+this change adds no prerendered page or public discovery entry.
+
+With the local Postgres already running, the desktop spec creates two fresh,
+stats-excluded admin accounts and independent sessions, opens the standard
+friend setup, flips as Red, replies as Black, checks both HP displays and
+reconnects Red. It removes the sessions and admin roles afterward, retaining
+excluded game attribution. It never uses an operator login or remote database.
+
+```sh
+MISTBOARD_DEV_PORT_BASE=3170 MISTBOARD_FFQ_BANQI_ENABLED=true VITE_FFQ_BANQI_ENABLED=true npm run test:e2e -- ffq-banqi.spec.ts --project=desktop --workers=1
+```
+
+The spec is discovered and its TypeScript check passes. The browser journey
+has **not run** in the burn sandbox. The load guard reported saturated memory
+(49% free against a 50% reserve), so the heavy checks below are also pending:
+
+```sh
+npm run build -w @mistboard/game && npm run build -w @mistboard/board-render && npm run build -w @mistboard/mahjong && npm run build --workspace @mistboard/web
+```
+
+The web build must print `css check: N baked pages link every stylesheet that
+styles them`; that line is **not yet confirmed** for this branch. Run the
+prescribed burn suite before committing, including the full server and web
+registrar packages. No full suite or browser pass is implied by the targeted
+checks below.
+
+```sh
+nice -n 10 sh -c 'W="--changed main"; git diff --quiet main...HEAD -- packages || W=; npm run build --workspace @mistboard/game && npm run build --workspace @mistboard/board-render && npm run build --workspace @mistboard/mahjong && npm run build --workspace @mistboard/server && npm run test:tooling && npm run test:unit -w @mistboard/server -w @mistboard/game -w @mistboard/board-render -w @mistboard/mahjong && VITEST_MAX_WORKERS=7 npm run test:unit -w @mistboard/web -- $W'
+```
+
+Targeted evidence: the new enabled-admin HTTP case failed before the change
+(`GET /room/ffq_reserved`: 404 instead of 200), then passed with the entire
+flag/account matrix. Server tenant tests also pass for both seats, alternating
+moves, illegal actions, HP endings and the 30-ply draw. Web checks cover the
+admin/flag matrix, mode switches, fixed seats, canonical casual room requests,
+registry parity, conformance, the board and the live HP/result/history UI.
+Final targeted runs exited 0: all six FFQ server test files (51 tests), five
+web files (73 tests), the e2e TypeScript project and Biome on the nine changed
+TypeScript files. The web conformance checks emitted sandbox `connect EPERM`
+noise for localhost lookups but reported no failed tests or Vitest errors.
+
+Planted-failure proof: temporarily returning the canonical board from
+`getFFQBanqiClientView` made **serialized FFQ seat and observer payloads mask
+identities at every ply, live AND HP-finished** exit 1 with `red payload
+carries a covered identity`. Restoring the masked view made it pass again.
+Public off-board captures remain the existing explicit FFQ disclosure choice
+recorded in `FFQ_BANQI_RULES`; covered pieces still on the board stay secret.
+
+This base predates `flip-jungle-name.test.ts`. After the standing Mistboard
+session rebases onto the Flip Jungle naming ship, run that test and reconcile
+the inherited FFQ catalog strings with its exact counted allowlist. This card
+adds no new Chinese FFQ name in web source. The branch stays parked for that
+session's review; no release, push or merge is part of this card.

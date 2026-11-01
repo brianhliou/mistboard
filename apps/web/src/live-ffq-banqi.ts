@@ -1,5 +1,5 @@
-// Standalone FFQ live client. Route activation belongs to the final playtest
-// integration card. Seats are fixed red/black, and finished views stay masked.
+// Hidden FFQ live client. Both build and server flags are explicit opt-ins;
+// the server admits admins only. Fixed red/black seats; finished views stay masked.
 import {
   type BanqiColor,
   type BanqiSquare,
@@ -251,6 +251,7 @@ function canInteract(): boolean {
 }
 
 function renderBoard(refs: LiveRefs, view: FFQBanqiWireView | null): void {
+  refs.board.className = 'board banqi-live-board';
   refs.board.setAttribute('aria-label', 'FFQ Banqi board');
   if (!view) {
     refs.board.replaceChildren();
