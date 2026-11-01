@@ -45,6 +45,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   let reviewing = false;
   let reviewToken = 0;
   let resumeId = rememberedRun();
+  let pendingReviewId = new URLSearchParams(window.location.search).get('review');
 
   const active = (): boolean => !stopped && shell.isConnected;
   const remaining = (): number => Math.max(0, deadline - performance.now());
@@ -74,7 +75,8 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     resumeId = null;
     error = null;
     shell.classList.remove('puzzle-storm-error');
-    rememberRun(next.finished ? null : next.runId);
+    // Results belong to this run too; reload must not start another clock.
+    rememberRun(next.runId);
     rememberSeen(next.results.map((result) => result.id));
   };
   const finish = (): void => {
@@ -207,6 +209,11 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     card.append(title, tally(), bests, chips, next, recovery());
     shell.replaceChildren(card);
     next.focus({ preventScroll: true });
+    if (pendingReviewId) {
+      const id = pendingReviewId;
+      pendingReviewId = null;
+      void review(id);
+    }
   };
   const showBoard = (): void => {
     if (!active() || !run) return;
@@ -278,12 +285,12 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       adopt(await request({ action: 'resume', runId }));
       showBoard();
     } catch (cause) {
-      if (!run && cause instanceof Error && cause.message === '404') {
+      if (cause instanceof Error && cause.message === '404') {
+        run = null;
         resumeId = null;
         rememberRun(null);
-        busy = false;
-        await start();
-      } else showError(cause);
+      }
+      showError(cause);
     } finally {
       busy = false;
     }
@@ -292,6 +299,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     if (busy || !active()) return;
     busy = true;
     ++reviewToken;
+    pendingReviewId = null;
     try {
       const next = await request({ action: 'start', recent: seenIds() });
       window.history.replaceState(null, '', '/puzzles?mode=storm');
@@ -392,15 +400,17 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     begun = true;
     document.removeEventListener('visibilitychange', beginWhenVisible);
     document.removeEventListener('prerenderingchange', beginWhenVisible);
-    const reviewId = new URLSearchParams(window.location.search).get('review');
-    if (reviewId) {
-      void review(reviewId);
-      return;
-    }
-    // A failed resume keeps its id. Only a 404 (gone or another account's)
-    // starts fresh; a network failure must not silently discard a timed run.
+    // Reconcile a saved run before opening a review so a live clock never
+    // runs unseen. showSummary opens the pending review once the run ends.
+    // Network failures retain the id; a missing run requires New Storm.
     if (resumeId) void resume();
-    else void start();
+    else if (pendingReviewId) {
+      const id = pendingReviewId;
+      pendingReviewId = null;
+      void review(id);
+    } else {
+      void start();
+    }
   };
   const timer = window.setInterval(tick, 100);
   window.addEventListener('pagehide', onPageHide);

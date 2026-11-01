@@ -43,7 +43,7 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
   let deadline = Date.now() + (options.remaining ?? 180_000);
   let loseMoveResponse = false;
   let failStart = false;
-  let failResume = false;
+  let failResume: number | null = null;
   let delayMove = 0;
   const results: { id: string; outcome: 'solved' | 'failed' }[] = [];
   const snapshot = () => ({
@@ -80,7 +80,7 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
     }
     const body = JSON.parse(String(init?.body));
     if (body.action === 'start' && failStart) return json({}, 503);
-    if (body.action === 'resume' && failResume) return json({}, 503);
+    if (body.action === 'resume' && failResume) return json({}, failResume);
     let attempt: ReturnType<typeof attemptStandardXiangqiPuzzleLine> | undefined;
     if (body.action === 'move') {
       expect(body).toMatchObject({ runId: 'run', version, puzzleId: puzzles[index]!.id });
@@ -126,8 +126,8 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
     failStart: (value: boolean) => {
       failStart = value;
     },
-    failResume: (value: boolean) => {
-      failResume = value;
+    failResume: (value: boolean, status = 503) => {
+      failResume = value ? status : null;
     },
     delayNextMove: (ms: number) => {
       delayMove = ms;
@@ -275,7 +275,7 @@ it('expires without another move, keeps results, and opens an unrated review', a
   await vi.advanceTimersByTimeAsync(11_000);
   await vi.waitFor(() => expect(root.querySelector('[data-storm-results]')).not.toBeNull());
   expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('0:00');
-  expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+  expect(JSON.parse(window.sessionStorage.getItem(storageKey)!)).toEqual({ runId: 'run' });
   const chip = root.querySelector<HTMLAnchorElement>('.puzzle-streak-chip--solved')!;
   expect(chip.href).toContain('mode=storm&review=');
   chip.click();
@@ -285,6 +285,88 @@ it('expires without another move, keeps results, and opens an unrated review', a
   expect(fetchSpy.mock.calls.some(([url]) => String(url).endsWith('/attempt'))).toBe(true);
   click(root, 'Back to results');
   expect(root.querySelector('[data-storm-results]')).not.toBeNull();
+});
+
+it('restores the same results and review chips on reload until New Storm is pressed', async () => {
+  const { fetchSpy } = server({ remaining: 10_000 });
+  const root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  await move(root, puzzles[0]!.solution[0]!);
+  await move(root, puzzles[0]!.solution[2]!);
+  await vi.advanceTimersByTimeAsync(11_000);
+  await vi.waitFor(() => expect(root.querySelector('[data-storm-results]')).not.toBeNull());
+  const results = root.querySelector('[data-storm-results]')!.textContent;
+  const chipHref = root.querySelector<HTMLAnchorElement>('.puzzle-streak-chip--solved')!.href;
+
+  window.dispatchEvent(new Event('pagehide'));
+  root.remove();
+  const reloaded = await open();
+  await vi.waitFor(() => expect(reloaded.querySelector('[data-storm-results]')).not.toBeNull());
+  expect(reloaded.querySelector('[data-storm-results]')!.textContent).toBe(results);
+  expect(reloaded.querySelector<HTMLAnchorElement>('.puzzle-streak-chip--solved')!.href).toBe(
+    chipHref,
+  );
+  const actions = () =>
+    fetchSpy.mock.calls
+      .filter(([url]) => url === '/api/puzzles/storm')
+      .map(([, init]) => JSON.parse(String(init?.body)).action);
+  expect(actions()).toEqual(['start', 'move', 'move', 'resume', 'resume']);
+  click(reloaded, 'New Storm');
+  await vi.waitFor(() => expect(actions().at(-1)).toBe('start'));
+});
+
+it('resumes a live run before opening a review link and opens it after the run ends', async () => {
+  window.sessionStorage.setItem(storageKey, JSON.stringify({ runId: 'run' }));
+  window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
+  const { fetchSpy } = server({ partial: true, combo: 1, remaining: 1000 });
+  const root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('0:01');
+  expect(root.textContent).not.toContain('Unrated review');
+  expect(fetchSpy.mock.calls.some(([url]) => url === `/api/puzzles/${puzzles[2]!.id}`)).toBe(false);
+  await move(root, puzzles[0]!.solution[2]!);
+  await vi.advanceTimersByTimeAsync(1100);
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[2]!.id));
+  expect(root.textContent).toContain('Unrated review');
+  expect(
+    fetchSpy.mock.calls
+      .filter(([url]) => url === '/api/puzzles/storm')
+      .map(([, init]) => JSON.parse(String(init?.body)).action),
+  ).toEqual(['resume', 'move', 'resume']);
+  click(root, 'Back to results');
+  expect(root.querySelector('[data-storm-score]')?.textContent).toBe('1');
+});
+
+it.each(['saved', 'loaded'])('offers New Storm when a %s run returns 404', async (state) => {
+  window.sessionStorage.setItem(storageKey, JSON.stringify({ runId: 'run' }));
+  const api = server();
+  if (state === 'saved') api.failResume(true, 404);
+  const root = await open();
+  if (state === 'loaded') {
+    await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+    api.loseNextMove();
+    await move(root, puzzles[0]!.solution[0]!);
+    api.failResume(true, 404);
+    click(root, 'Resume Storm');
+  }
+  await vi.waitFor(() =>
+    expect([...root.querySelectorAll('button')].some((b) => b.textContent === 'New Storm')).toBe(
+      true,
+    ),
+  );
+  expect(root.querySelector('[role="alert"]')).not.toBeNull();
+  expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+  expect(root.textContent).not.toContain('Resume Storm');
+  const actions = () =>
+    api.fetchSpy.mock.calls
+      .filter(([url]) => url === '/api/puzzles/storm')
+      .map(([, init]) => JSON.parse(String(init?.body)).action);
+  expect(actions()).not.toContain('start');
+  api.failResume(false);
+  click(root, 'New Storm');
+  await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).toBeNull());
+  expect(actions().at(-1)).toBe('start');
+  expect(boardId(root)).toBe(puzzles[0]!.id);
 });
 
 it('offers a retry when starting fails', async () => {
