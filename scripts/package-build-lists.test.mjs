@@ -18,6 +18,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (file) => readFileSync(resolve(repoRoot, file), 'utf8');
@@ -135,3 +136,81 @@ test('every CI step that builds @mistboard/game builds every dist package', () =
   assert.ok(steps >= 5, `expected the CI dependency-build steps, found ${steps}`);
   assert.deepEqual(missing, [], missing.join('\n'));
 });
+
+function workflowSteps(file, job) {
+  const block = read(file)
+    .split(/(?=^ {2}[\w-]+:\n)/m)
+    .find((block) => block.startsWith(`  ${job}:\n`));
+  assert.ok(block, `${file}: missing job ${job}`);
+  return block.split(/^ {6}- /m).slice(1);
+}
+
+for (const [job, consumer] of [
+  ['build', /run: npm run build\s*$/m],
+  // rapfi.test.ts invokes fetch-rapfi-net.mjs in beforeAll on either shard.
+  ['unit-web', /run: npm run test:unit --workspace @mistboard\/web/],
+]) {
+  test(`${job} restores both pinned engine nets before fetching them`, () => {
+    const steps = workflowSteps('.github/workflows/ci.yml', job);
+    const consumerIndex = steps.findIndex((step) => consumer.test(step));
+    assert.ok(consumerIndex >= 0, `${job}: missing net consumer`);
+    const cacheIndex = steps.findIndex((step) => step.includes('key: engine-nets-'));
+    assert.ok(cacheIndex >= 0, `${job}: missing engine net cache`);
+    assert.ok(cacheIndex < consumerIndex, `${job}: restore nets before their consumer`);
+    const cache = steps[cacheIndex];
+    assert.ok(
+      cache.includes(`key: engine-nets-\${{ hashFiles('apps/web/public/engine/*/net.json') }}`),
+    );
+    assert.ok(cache.includes('apps/web/public/engine/pikafish/pikafish.nnue'));
+    assert.ok(cache.includes('apps/web/public/engine/rapfi/*.data'));
+    // Only Build fetches both files. A shard saving first would leave an
+    // immutable, Rapfi-only cache under the shared key on every later run.
+    assert.match(
+      cache,
+      job === 'build' ? /uses: actions\/cache@/ : /uses: actions\/cache\/restore@/,
+    );
+    assert.doesNotMatch(cache, /\bif:/, 'restore and SHA verification must run on every build');
+    assert.doesNotMatch(cache, /restore-keys:/, 'a pin change must miss the cache');
+  });
+}
+
+for (const [file, job, install] of [
+  ['.github/workflows/ci.yml', 'browser-smoke', 'npx playwright install chromium'],
+  [
+    '.github/workflows/seo-render-audit.yml',
+    'audit',
+    'npx playwright install --with-deps chromium',
+  ],
+]) {
+  test(`${file} caches Chromium by the locked Playwright version and keeps installation`, () => {
+    const steps = workflowSteps(file, job);
+    const versionIndex = steps.findIndex((step) => step.includes('id: playwright-version'));
+    assert.ok(versionIndex >= 0, `${job}: missing Playwright version step`);
+    const versionCommand = steps[versionIndex].match(/run: node -e "([^"]+)" >> "\$GITHUB_OUTPUT"/);
+    assert.ok(versionCommand, `${job}: write the locked version to the step output`);
+    for (const version of ['1.62.1', '1.63.0']) {
+      const output = [];
+      runInNewContext(versionCommand[1], {
+        require(path) {
+          assert.equal(path, './package-lock.json');
+          return { packages: { 'node_modules/@playwright/test': { version } } };
+        },
+        console: { log: (line) => output.push(line) },
+      });
+      assert.deepEqual(output, [`version=${version}`]);
+    }
+    const cacheIndex = steps.findIndex((step) => step.includes('path: ~/.cache/ms-playwright'));
+    assert.ok(cacheIndex > versionIndex, `${job}: restore browsers after reading their version`);
+    const cache = steps[cacheIndex];
+    assert.match(cache, /uses: actions\/cache@/);
+    assert.ok(
+      cache.includes(
+        `key: playwright-\${{ runner.os }}-\${{ steps.playwright-version.outputs.version }}`,
+      ),
+    );
+    assert.doesNotMatch(cache, /restore-keys:/, 'do not restore browsers from other versions');
+    const installIndex = steps.findIndex((step) => step.includes(`run: ${install}\n`));
+    assert.ok(installIndex > cacheIndex, `${job}: keep playwright install after the cache restore`);
+    assert.doesNotMatch(steps[installIndex], /\bif:/, 'install must also run on cache hits');
+  });
+}
