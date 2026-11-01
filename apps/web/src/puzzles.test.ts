@@ -1426,6 +1426,29 @@ describe('standard xiangqi puzzles', () => {
     });
     afterEach(() => setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset: vi.fn() }));
 
+    it('opens a copied Storm result link as an unrated solver without starting a run', async () => {
+      const puzzle = minedByPlyCount(3);
+      stubWindowLocalStorage(memoryStorage());
+      const fetchSpy = xiangqiFetchMock([puzzle]);
+      vi.stubGlobal('fetch', fetchSpy);
+      window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzle.id}`);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountPuzzles(root);
+      try {
+        await vi.waitFor(() => expect(root.textContent).toContain('Unrated review'));
+        await vi.waitFor(() => expect(root.querySelector('.puzzle-board')).not.toBeNull());
+        await clickMove(root, puzzle.solution[0]!, { held: true });
+        await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+        const attempt = fetchSpy.mock.calls.find(([url]) => String(url).endsWith('/attempt'));
+        expect(JSON.parse(String(attempt?.[1]?.body)).rated).toBe(false);
+        expect(fetchSpy.mock.calls.some(([url]) => url === '/api/puzzles/storm')).toBe(false);
+        expect(root.textContent).toContain('Unrated review');
+      } finally {
+        window.dispatchEvent(new Event('pagehide'));
+      }
+    });
+
     it('skips the setup and reply pauses for fast timed play', async () => {
       const puzzle = minedByPlyCount(3);
       // A reconstructable setup move from the public position, including captures.

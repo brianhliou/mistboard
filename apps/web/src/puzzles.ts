@@ -143,6 +143,14 @@ export async function mountPuzzles(
   const { shell, detail, controls } = buildPuzzlesFrame();
   root.replaceChildren(buildNav(), shell);
 
+  if (new URLSearchParams(window.location.search).get('mode') === 'storm') {
+    const { mountPuzzleStorm } = await import('./puzzles/storm.js');
+    await mountPuzzleStorm({ shell, detail, controls }, (puzzle, opts) =>
+      mountPuzzleSolver(detail, puzzle, opts),
+    );
+    return;
+  }
+
   if (new URLSearchParams(window.location.search).get('mode') === 'streak') {
     const { mountPuzzleStreak } = await import('./puzzles/streak.js');
     await mountPuzzleStreak({ shell, detail, controls }, (puzzle, opts) =>
