@@ -3,7 +3,7 @@
 [![CI](https://github.com/brianhliou/mistboard/actions/workflows/ci.yml/badge.svg)](https://github.com/brianhliou/mistboard/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
-<img src="assets/readme-hero.png" alt="The Mistboard homepage: a live xiangqi game, the lobby and the Play a game button" />
+<img src="assets/readme-hero.png" alt="The Mistboard homepage: a live jieqi game against the jqe bot, the lobby, the puzzle of the day, xiangqi deep dives, the blog and news" />
 
 > **Bring people together across cultures through Chinese chess and the world's classic strategy games.**
 
