@@ -535,7 +535,10 @@ test('every tenant with a review URL binds a card on a position-card variant', a
   let cards = 0;
   for (const entry of registeredVariantTenants()) {
     if (entry.card?.layout === 'gomoku') {
-      assert.equal(entry.finishedGameOpensRoom, true, `${entry.kind}: a card needs a page`);
+      assert.ok(
+        entry.finishedGameOpensRoom || entry.reviewRouteBase,
+        `${entry.kind}: a card needs a page`,
+      );
       assert.equal(entry.card.variant, entry.gameSpecId, entry.kind);
       assert.equal(entry.card.finalPosition([], `${entry.roomIdPrefix}x`), null);
       continue;

@@ -102,7 +102,9 @@ export async function tenantGameCard(
 ): Promise<TenantGameCard | null> {
   const registration = variantTenantForRoomId(roomId);
   const card = registration?.card;
-  const gameRouteBase = registration?.export?.gameRouteBase;
+  // The card's page: the export's game route, else a review page with no export
+  // (gomoku while hidden), else the finished room.
+  const gameRouteBase = registration?.export?.gameRouteBase ?? registration?.reviewRouteBase;
   if (!registration || !card || !cardEnabled(registration)) return null;
   if (!gameRouteBase && !registration.finishedGameOpensRoom) return null;
   const label =
@@ -272,7 +274,11 @@ export async function tenantGamePageMeta(
   }
   const entry = await tenantGameCard(roomId, store);
   if (!entry) return null;
-  if (gameMatch && `${gameMatch[1] ?? ''}/game` !== entry.registration.export?.gameRouteBase) {
+  if (
+    gameMatch &&
+    `${gameMatch[1] ?? ''}/game` !==
+      (entry.registration.export?.gameRouteBase ?? entry.registration.reviewRouteBase)
+  ) {
     return null;
   }
   const { scores } = entry;

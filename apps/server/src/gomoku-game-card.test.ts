@@ -125,7 +125,11 @@ test('Gomoku finished-game card draws the final stones, winning line, names and 
   assert.doesNotMatch(svg, /<path d="[^"]+" fill="#(?:b91c1c|1f2937)"/);
   const meta = await tenantGamePageMeta(`/room/${roomId}`, store);
   assert.equal(meta?.title, 'alice vs bob · Gomoku · 五子棋 | Mistboard');
-  assert.equal(meta?.urlPath, `/room/${roomId}`);
+  // The review page is the card's canonical page, from the room and from itself.
+  assert.equal(meta?.urlPath, `/gomoku/game/${roomId}`);
+  const reviewMeta = await tenantGamePageMeta(`/gomoku/game/${roomId}`, store);
+  assert.equal(reviewMeta?.urlPath, `/gomoku/game/${roomId}`);
+  assert.equal(reviewMeta?.title, meta?.title);
   assert.equal(meta?.imagePath, `/og/game/${roomId}.png?v=${TENANT_GAME_OG_IMAGE_VERSION}`);
   assert.match(meta?.description ?? '', /alice won/);
   assert.equal(await tenantGamePageMeta(`/xiangqi/game/${roomId}`, store), null);

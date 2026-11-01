@@ -378,7 +378,7 @@ describe('Gomoku hidden registration', () => {
   });
 
   it.each(['false', 'true'])(
-    'registers matching casual tenants and five browser bots without public routes with flag %s',
+    'registers matching casual tenants, five browser bots and a gated review with flag %s',
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
@@ -420,9 +420,20 @@ describe('Gomoku hidden registration', () => {
         expect(server?.engineDisplayName?.(option.id)).toBe('Rapfi');
       expect(server?.engineDisplayName?.('human')).toBeNull();
       expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
-      for (const path of ['/gomoku', '/gomoku/game/test', '/gomoku/review/test']) {
+      for (const path of ['/gomoku', '/gomoku/review/test']) {
         expect(isClientRoute(path), path).toBe(false);
       }
+      expect(web?.gameRouteBase).toBe('/gomoku/game');
+      expect(web?.reviewRouteBase).toBe('/gomoku/game');
+      expect(web?.mountPostgame).toBeTypeOf('function');
+      expect(server?.reviewRouteBase).toBe('/gomoku/game');
+      expect(web?.finishedGameOpensRoom).toBeUndefined();
+      expect(server?.finishedGameOpensRoom).toBeUndefined();
+      expect(isClientRoute('/gomoku/game/gmk_test')).toBe(true);
+      expect(isReviewShellRoute('/gomoku/game/gmk_test')).toBe(true);
+      expect(
+        reviewUrlForGame({ roomId: 'gmk_test', variant: GOMOKU_SPEC_ID } as FeaturedGame),
+      ).toBe('/gomoku/game/gmk_test');
     },
   );
 });

@@ -308,7 +308,12 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     roomIdPrefix: 'gmk_',
     enabled: gomokuEnabled,
     pageTitleKey: 'variant.gomoku.name',
-    finishedGameOpensRoom: true,
+    gameRouteBase: '/gomoku/game',
+    reviewRouteBase: '/gomoku/game',
+    mountPostgame: (root, roomId) =>
+      import('../gomoku-postgame.js').then(({ mountGomokuPostgame }) =>
+        mountGomokuPostgame(root, roomId),
+      ),
     loadLiveRoomClient: () =>
       import('../live-gomoku.js').then(({ bootstrapGomokuLiveRoom }) => bootstrapGomokuLiveRoom),
     watch: {

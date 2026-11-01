@@ -163,6 +163,22 @@ afterEach(() => {
 });
 
 describe('Rapfi browser PvE', () => {
+  it('links the finished room to review and reports the postgame action', async () => {
+    await mount(position(9), 'white');
+    const capture = vi.fn();
+    const { setPostHogInstance } = await import('./analytics.js');
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+    const link = document.querySelector<HTMLAnchorElement>('.postgame-actions a[href*="/game/"]');
+    expect(link?.getAttribute('href')).toBe(`/gomoku/game/${ROOM}`);
+    link?.addEventListener('click', (event) => event.preventDefault());
+    link?.click();
+    expect(capture).toHaveBeenCalledWith('postgame_action', {
+      action: 'review',
+      variant: 'gomoku',
+      mode: 'pvp',
+    });
+  });
+
   it.each(['black', 'white'] as const)(
     'plays the bot turn for a %s human at every level',
     async (human) => {

@@ -20,6 +20,7 @@ import {
   type TenantLiveClientContext,
   type TenantLiveEvent,
   type TenantMovePlayed,
+  type TenantRecording,
 } from './variant-tenant/live-client.js';
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 
@@ -197,7 +198,7 @@ const tenant: WebVariantTenant<GomokuColor> = {
   isColor: isGomokuColor,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
   enabled: gomokuEnabled,
-  reviewUrl: (roomId) => `/room/${encodeURIComponent(roomId)}`,
+  reviewUrl: (roomId) => `/gomoku/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: (reason) => {
     switch (reason) {
       case 'five':
@@ -326,4 +327,10 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
 
 export function bootstrapGomokuLiveRoom(): void {
   client.bootstrap();
+}
+
+export function bootstrapGomokuRecording(
+  recording: TenantRecording<GomokuColor, GomokuPlayerView>,
+): void {
+  client.bootstrap(recording);
 }

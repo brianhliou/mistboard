@@ -153,6 +153,12 @@ test('Gomoku finished endpoint is registered in HTTP dispatch', async () => {
   }
 });
 
+test('Gomoku finished games link to their tenant review instead of the live room', () => {
+  const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;
+  assert.equal(registration.reviewRouteBase, '/gomoku/game');
+  assert.equal(registration.finishedGameOpensRoom, undefined);
+});
+
 test('Gomoku live payload builder and watch capability keep listings and rated play closed', () => {
   assert.equal(hasLiveWatchPayloadBuilder('gomoku'), true);
   const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;

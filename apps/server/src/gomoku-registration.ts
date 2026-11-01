@@ -166,7 +166,7 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
-  finishedGameOpensRoom: true,
+  reviewRouteBase: '/gomoku/game',
   watch: {
     channelId: 'gomoku',
     family: 'gomoku',
