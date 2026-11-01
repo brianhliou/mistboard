@@ -397,6 +397,7 @@ export const EN_PLAY = {
   'puzzle.viewSolution': 'View solution',
   'puzzle.skipToNext': 'Skip to the next puzzle',
   'puzzle.nextPuzzle': 'Next puzzle',
+  'puzzle.playPosition': 'Play this position',
   'puzzle.success': 'Success!',
   // Streak line under the Success heading (signed-in solvers only; days on the
   // solver's own calendar).
@@ -598,6 +599,20 @@ export const EN_PLAY = {
   'puzzle.dashboardSignIn': 'Sign in to see your puzzle dashboard',
   'puzzle.dashboardDays': '{n} days',
   'puzzle.dashboardDay': '1 day',
+  'puzzle.stormTitle': 'Puzzle Storm',
+  'puzzle.stormRules': 'Solve as many puzzles as you can in three minutes.',
+  'puzzle.stormFacts':
+    'Correct moves build a combo and earn time. A miss costs 10 seconds. Unrated.',
+  'puzzle.stormTime': 'Time remaining',
+  'puzzle.stormScore': 'Solved',
+  'puzzle.stormCombo': 'Combo',
+  'puzzle.stormFinished': 'Storm complete',
+  'puzzle.stormDailyBest': 'Daily best: {best}',
+  'puzzle.stormNewRun': 'New Storm',
+  'puzzle.stormResume': 'Resume Storm',
+  'puzzle.stormContinueFailed': 'Could not continue Storm. Resume to sync your moves and clock.',
+  'puzzle.stormReview': 'Unrated review',
+  'puzzle.stormBack': 'Back to results',
   'puzzle.streakTitle': 'Puzzle Streak',
   'puzzle.streakRules': 'Solve progressively harder puzzles. One wrong move ends the run.',
   'puzzle.streakFacts': 'No clock, one skip. Your puzzle rating does not change.',

@@ -978,8 +978,20 @@ async function streakResponse(run: StreakRun) {
 }
 
 async function stormResponse(run: StormRun) {
-  const id = run.state.ids[run.state.results.length];
-  const puzzle = !run.state.finished && id ? await puzzleById(id) : null;
+  // Keep the timed client's next two boards ready without ever sending their
+  // answers. Use the same explicit public projection as the detail endpoint.
+  const index = run.state.results.length;
+  const ids = run.state.finished ? [] : run.state.ids.slice(index, index + 3);
+  const details = await Promise.all(
+    ids.map(async (id) => {
+      const puzzle = await puzzleById(id);
+      return puzzle ? await puzzleDetail(puzzle) : null;
+    }),
+  );
+  const puzzle = ids[0] ? await puzzleById(ids[0]) : null;
+  // Stored moves are solver moves only. Regrade that accepted prefix to
+  // restore the board and its already-played replies without a new submit.
+  const progress = puzzle && run.state.moves.length ? attemptPuzzle(puzzle, run.state.moves) : null;
   return {
     runId: run.id,
     version: run.version,
@@ -993,7 +1005,9 @@ async function stormResponse(run: StormRun) {
     finished: run.state.finished,
     moves: run.state.moves,
     results: run.state.results,
-    puzzle: puzzle ? await puzzleDetail(puzzle) : null,
+    puzzle: details[0] ?? null,
+    upcoming: details.slice(1).filter((detail) => detail !== null),
+    progress: progress?.ok && !progress.complete ? progress : null,
   };
 }
 

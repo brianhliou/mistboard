@@ -51,6 +51,7 @@ import {
   xiangqiPiece3dMarkup,
   xiangqiPiece3dTurnLook,
 } from './piece-3d.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -513,6 +514,7 @@ export function animateJieqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // The gold band rides on the piece for the whole glide (the square grid's
   // marks fade in as it lands). A reverse step renders the PRIOR move's marks
   // at a different square, so neither would track the reverse glide.
@@ -762,6 +764,7 @@ export function animateJieqiReveal(
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
   if (!slot) return false;
+  if (!opts.alongGlide) animateMoveGlyphs(host, pieceAnimationDurationMs(), opts.delayMs ?? 0);
   const { file, rank } = jieqiCoordOf(square);
   const center = intersection(file, rank, perspective);
   const pieceSet = opts.pieceSet ?? readStoredXiangqiPieceSet();
@@ -858,5 +861,7 @@ export function animateJieqiStepReveal(
   const square = jieqiRevealSquare(move, before, after);
   const piece = square ? after[square] : undefined;
   if (!square || !piece) return false;
-  return animateJieqiReveal(host, square, piece.color, perspective, { alongGlide: true });
+  return animateJieqiReveal(host, square, piece.color, perspective, {
+    alongGlide: move.from !== move.to,
+  });
 }

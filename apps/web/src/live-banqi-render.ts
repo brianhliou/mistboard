@@ -39,6 +39,7 @@ import {
   piece3dRim,
   round2,
 } from './piece-3d.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -357,6 +358,7 @@ export function animateBanqiBoardMove(
   const from = cellCenter(originSquare);
   const to = cellCenter(settleSquare);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // A reverse step renders the prior move's marker at a different square, so
   // fading it in would not track the reverse glide.
   if (!opts.reverse) {
@@ -664,6 +666,7 @@ export function flipBanqiFamilyReveal<S extends string>(
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
   if (!slot) return false;
+  animateMoveGlyphs(host, pieceAnimationDurationMs(), 0);
   const point = center(square);
   return flipSvgPiece(slot, point, back(point.x, point.y), pieceFlipDurationMs(), {
     ...(style ? { style } : {}),
@@ -798,6 +801,7 @@ export function flipBanqiTile3dReveal<S extends string>(
   const style = opts.style ?? pieceFlipStyle();
   const durationMs = opts.durationMs ?? pieceFlipDurationMs();
   if (durationMs <= 0) return false;
+  animateMoveGlyphs(host, pieceAnimationDurationMs(), 0);
   const anchor = anchorOf(square);
   const disc = banqiTile3dDiscCenter(anchor);
   if (style !== 'flat') {

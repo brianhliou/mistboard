@@ -49,6 +49,7 @@ import {
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
 import { PIECE_3D_IVORY, piece3dDepthShare, piece3dEnabled, round2 } from './piece-3d.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -281,7 +282,10 @@ export function animateJungleFlipBoardMove(
   move: { from: JungleFlipSquare; to: JungleFlipSquare },
   opts: { reverse?: boolean } = {},
 ): void {
-  if (move.from === move.to) return;
+  if (move.from === move.to) {
+    if (!opts.reverse) animateMoveGlyphs(host, pieceAnimationDurationMs(), 0);
+    return;
+  }
   const duration = pieceAnimationDurationMs();
   if (duration <= 0) return;
   const settleSquare = opts.reverse ? move.from : move.to;
@@ -294,6 +298,7 @@ export function animateJungleFlipBoardMove(
   const from = geom.center(origin.file, origin.rank);
   const to = geom.center(settle.file, settle.rank);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // Fade the destination tint in as the piece lands. A reverse step renders the
   // PRIOR move's mark on a different cell, so fading it would not track the glide.
   if (!opts.reverse) {
@@ -430,6 +435,7 @@ export function animateJungleFlipReveal(
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
   if (!slot) return false;
+  animateMoveGlyphs(host, pieceAnimationDurationMs(), opts.delayMs ?? 0);
   const geom = createGridGeometry(DESCRIPTOR, false);
   const { file, rank } = jungleFlipCoordOf(square);
   const anchor = geom.center(file, rank);

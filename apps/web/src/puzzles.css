@@ -39,7 +39,7 @@
 /* Quiet links: practice and sign-in sit under the main action, never beside
    it as a second call to action. */
 .puzzle-streak-practice,
-.puzzle-streak-signin,
+a.puzzle-streak-signin,
 .puzzle-quiet-link {
   color: var(--site-muted);
   font-size: 13px;
@@ -48,9 +48,73 @@
 }
 
 .puzzle-streak-practice:hover,
-.puzzle-streak-signin:hover,
+a.puzzle-streak-signin:hover,
 .puzzle-quiet-link:hover {
   color: var(--site-accent);
+}
+
+/* A guest's invitation to keep their score: Register filled like the
+   header's button, Sign in outlined, both returning to this page. */
+.puzzle-signin-cta {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.puzzle-signin-cta-lead {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.puzzle-signin-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.puzzle-signin-cta-register,
+.puzzle-signin-cta-login,
+.puzzle-streak-tally a.puzzle-streak-signin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: 7px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.puzzle-signin-cta-register {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 18%, transparent);
+}
+
+.puzzle-signin-cta-register:hover,
+.puzzle-signin-cta-register:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 82%, white);
+  color: var(--site-on-accent);
+}
+
+.puzzle-signin-cta-login,
+.puzzle-streak-tally a.puzzle-streak-signin {
+  border: 1px solid color-mix(in srgb, var(--site-accent) 45%, transparent);
+  color: var(--site-accent);
+}
+
+.puzzle-signin-cta-login:hover,
+.puzzle-signin-cta-login:focus-visible,
+.puzzle-streak-tally a.puzzle-streak-signin:hover {
+  background: color-mix(in srgb, var(--site-accent) 8%, transparent);
+  color: var(--site-accent);
+}
+
+.puzzle-streak-tally a.puzzle-streak-signin {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 /* The left card in the regular page's card type: the title as a card heading,
@@ -1319,7 +1383,7 @@ a.puzzle-streak-chip:focus-visible {
   cursor: default;
 }
 
-/* Feedback row: analysis stub · short prompt · compact thumbs. */
+/* Feedback row: short prompt · compact thumbs · play the displayed position. */
 .puzzle-solved-feedback {
   display: flex;
   align-items: center;
@@ -1366,11 +1430,13 @@ a.puzzle-streak-chip:focus-visible {
   gap: 8px;
 }
 
-.puzzle-vote-button {
+.puzzle-vote-button,
+.puzzle-play-position {
   display: grid;
   place-items: center;
   width: 34px;
   height: 34px;
+  flex-shrink: 0;
   padding: 0;
   border: 0;
   border-radius: 4px;
@@ -1379,7 +1445,13 @@ a.puzzle-streak-chip:focus-visible {
   cursor: pointer;
 }
 
-.puzzle-vote-button svg {
+.puzzle-play-position {
+  color: var(--site-muted);
+  text-decoration: none;
+}
+
+.puzzle-vote-button svg,
+.puzzle-play-position svg {
   display: block;
   width: 22px;
   height: 22px;
@@ -1393,7 +1465,8 @@ a.puzzle-streak-chip:focus-visible {
   color: hsl(359, 58%, 57%);
 }
 
-.puzzle-vote-button:hover {
+.puzzle-vote-button:hover,
+.puzzle-play-position:hover {
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
@@ -1409,6 +1482,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-analysis-button:focus-visible,
 .puzzle-vote-button:focus-visible,
+.puzzle-play-position:focus-visible,
 .puzzle-continue-button:focus-visible {
   outline: 2px solid var(--site-accent);
   outline-offset: -2px;
@@ -1841,7 +1915,8 @@ a.puzzle-tag--link:hover {
     display: none;
   }
 
-  .puzzles-shell .puzzle-vote-button {
+  .puzzles-shell .puzzle-vote-button,
+  .puzzles-shell .puzzle-play-position {
     width: 40px;
     height: 40px;
   }
@@ -1851,7 +1926,14 @@ a.puzzle-tag--link:hover {
     width: auto;
     min-height: 44px;
     margin: 0;
+    padding: 0 8px;
     font-size: 15px;
+    letter-spacing: normal;
+  }
+
+  /* Leave room for all three actions beside Next on a narrow phone. */
+  .puzzles-shell .puzzle-solved-panel .puzzle-continue-button svg {
+    display: none;
   }
 
   /* The move strip: one line that scrolls sideways inside itself, the moves
@@ -2815,5 +2897,146 @@ a.puzzle-tag--link:hover {
   /* The variation row joins the one-line move strip as an inline aside. */
   .puzzles-shell .puzzle-move-variation {
     border-radius: 4px;
+  }
+}
+
+.puzzle-storm-feedback,
+.puzzle-storm-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  color: var(--site-text);
+  background: var(--site-panel);
+}
+
+.puzzle-storm-tally {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.puzzle-storm-tally > div {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.puzzle-storm-tally strong {
+  color: var(--site-heading);
+  font-size: clamp(24px, 5vw, 36px);
+  line-height: 1.1;
+}
+
+.puzzle-storm-tally span {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.puzzle-storm-tally .puzzle-storm-clock--low {
+  color: var(--site-danger, #b33030);
+}
+
+.puzzle-storm-feedback > p,
+.puzzle-storm-recovery > p {
+  margin: 0;
+}
+
+.puzzle-storm-feedback [data-storm-change] {
+  min-height: 1em;
+  font-weight: 700;
+}
+
+.puzzle-storm-recovery {
+  grid-column: 1 / -1;
+}
+
+.puzzle-storm-recovery:empty {
+  display: none;
+}
+
+.puzzle-storm-recovery .puzzle-continue-button,
+.puzzle-storm-review .puzzle-continue-button {
+  min-height: 44px;
+}
+
+.puzzle-storm-results {
+  width: min(100%, 580px);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.puzzle-storm-results .puzzle-streak-chips {
+  max-height: 40dvh;
+  overflow: auto;
+}
+
+.puzzle-storm-results .puzzle-streak-chip {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.puzzle-storm-review {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* A Storm run is played forward against the clock: the move arrows would sit
+   disabled the whole run, so they show only when reviewing a finished puzzle. */
+.puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-move-nav {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .puzzles-shell.puzzle-storm-shell .puzzle-trainer-panel {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-trainer-panel > .puzzle-moves {
+    display: none;
+  }
+
+  .puzzle-storm-feedback {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 8px;
+    padding: 8px 12px;
+  }
+
+  .puzzle-storm-feedback > .puzzle-storm-tally {
+    grid-column: 1 / -1;
+  }
+
+  .puzzles-page > .puzzles-shell.puzzle-storm-shell.puzzle-storm-reviewing {
+    overflow: auto;
+  }
+
+  .puzzle-storm-shell.puzzle-storm-reviewing .puzzles-layout {
+    flex: none;
+  }
+
+  .puzzle-storm-shell.puzzle-storm-reviewing .puzzle-board {
+    flex: none;
+    height: min(80dvh, calc(100vw * 636 / 564));
+  }
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+  .puzzles-page > .puzzles-shell.puzzle-storm-shell {
+    --puzzle-stack-chrome: 170px;
+    --puzzle-prompt-height: 100px;
+  }
+
+  .puzzles-page > .puzzles-shell.puzzle-storm-shell.puzzle-storm-error {
+    overflow: auto;
   }
 }

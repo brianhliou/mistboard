@@ -404,6 +404,19 @@ describe('reviewOpenedProps', () => {
 });
 
 describe('puzzleAttemptedProps', () => {
+  it('keeps Storm attempts unrated even if a shared preference changed', () => {
+    expect(
+      puzzleAttemptedProps({
+        puzzleId: 'storm-p1',
+        variant: 'xiangqi',
+        rated: true,
+        mode: 'storm',
+        outcome: 'solved',
+        clean: true,
+      }),
+    ).toMatchObject({ mode: 'storm', rated: false, outcome: 'solved', clean: true });
+  });
+
   it('carries the spec identity, themes, and the clean-solve flag', () => {
     expect(
       puzzleAttemptedProps({

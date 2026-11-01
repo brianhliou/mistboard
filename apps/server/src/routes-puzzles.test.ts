@@ -74,6 +74,86 @@ async function route(path: string, method = 'GET', body?: unknown): Promise<Resp
   return response;
 }
 
+test('storm preloads only the next two solution-hidden details and restores accepted progress', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const first = XIANGQI_PUZZLES.find((p) => p.solution.length >= 3)!;
+  const rest = XIANGQI_PUZZLES.filter((p) => p.id !== first.id).slice(0, 3);
+  const run = await startPuzzleStorm([first.id, ...rest.map((p) => p.id)], null);
+  const resume = async () => {
+    const response = await route('/api/puzzles/storm', 'POST', { action: 'resume', runId: run.id });
+    assert.equal(response.status, 200);
+    // Check the entire wire payload, including preloads and restored progress.
+    assert.doesNotMatch(response.body, /"(?:solution|expected|nextMove)":/);
+    return JSON.parse(response.body);
+  };
+  const started = await resume();
+  assert.equal(started.puzzle.id, first.id);
+  assert.deepEqual(
+    started.upcoming.map((p: { id: string }) => p.id),
+    rest.slice(0, 2).map((p) => p.id),
+  );
+  for (const detail of started.upcoming) {
+    assert.deepEqual(detail, JSON.parse((await route(`/api/puzzles/${detail.id}`)).body).puzzle);
+  }
+  assert.equal(started.progress, null);
+  const moved = JSON.parse(
+    (
+      await route('/api/puzzles/storm', 'POST', {
+        action: 'move',
+        runId: run.id,
+        version: 0,
+        puzzleId: first.id,
+        move: first.solution[0],
+      })
+    ).body,
+  );
+  const partial = await resume();
+  assert.deepEqual(partial.progress, moved.attempt);
+  assert.deepEqual(partial.progress.solverMoves, [first.solution[0]]);
+  assert.deepEqual(partial.progress.playedMoves, first.solution.slice(0, 2));
+  assert.deepEqual(partial.upcoming, started.upcoming);
+  let version = partial.version;
+  let next = partial;
+  for (const move of first.solution.filter((_, i) => i % 2 === 0).slice(1)) {
+    next = JSON.parse(
+      (
+        await route('/api/puzzles/storm', 'POST', {
+          action: 'move',
+          runId: run.id,
+          version,
+          puzzleId: first.id,
+          move,
+        })
+      ).body,
+    );
+    version = next.version;
+  }
+  assert.deepEqual(next.puzzle, started.upcoming[0]);
+  assert.deepEqual(
+    next.upcoming.map((p: { id: string }) => p.id),
+    rest.slice(1).map((p) => p.id),
+  );
+  assert.equal(next.progress, null);
+  t.mock.timers.tick(next.remainingMs);
+  const expired = await resume();
+  assert.equal(expired.finished, true);
+  assert.equal(expired.puzzle, null);
+  assert.deepEqual(expired.upcoming, []);
+  assert.equal(expired.progress, null);
+
+  const empty = await startPuzzleStorm([], null);
+  const ended = JSON.parse(
+    (
+      await route('/api/puzzles/storm', 'POST', {
+        action: 'resume',
+        runId: empty.id,
+      })
+    ).body,
+  );
+  assert.deepEqual(ended.upcoming, []);
+  assert.equal(ended.progress, null);
+});
+
 test('storm validates moves, rejects replayed submits, penalizes misses and expires on server time', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const started = await route('/api/puzzles/storm', 'POST', { action: 'start', score: 999 });
@@ -85,6 +165,7 @@ test('storm validates moves, rejects replayed submits, penalizes misses and expi
   assert.equal(run.best, null);
   assert.equal(run.dailyBest, null);
   assert.equal(run.version, 0);
+  assert.equal(run.upcoming.length, 2);
   assert.equal(JSON.stringify(run).includes('"solution":'), false);
   const puzzle = XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!;
   const firstSubmit = {

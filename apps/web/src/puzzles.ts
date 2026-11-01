@@ -155,6 +155,14 @@ export async function mountPuzzles(
     return;
   }
 
+  if (new URLSearchParams(window.location.search).get('mode') === 'storm') {
+    const { mountPuzzleStorm } = await import('./puzzles/storm.js');
+    await mountPuzzleStorm({ shell, detail, controls }, (puzzle, opts) =>
+      mountPuzzleSolver(detail, puzzle, opts),
+    );
+    return;
+  }
+
   if (new URLSearchParams(window.location.search).get('mode') === 'streak') {
     const { mountPuzzleStreak } = await import('./puzzles/streak.js');
     await mountPuzzleStreak({ shell, detail, controls }, (puzzle, opts) =>
@@ -162,7 +170,6 @@ export async function mountPuzzles(
     );
     return;
   }
-  puzzleAnalyticsMode = 'session';
 
   let summaries: PuzzleSummary[] = [];
   let selectedId = initialPuzzleId;
@@ -591,7 +598,7 @@ export async function mountPuzzles(
 // (the trainer page and Puzzle Streak). Embeds leave it out: a small frame.
 function createPuzzleSession(
   puzzle: PuzzleDetail,
-  opts: { history?: boolean } = {},
+  opts: { history?: boolean; fast?: boolean } = {},
 ): PuzzleSession {
   const adapter = puzzleBoardAdapter(puzzle.variant);
   // Only behind a setup move the server verified: the history ends one move
@@ -604,7 +611,7 @@ function createPuzzleSession(
   // style (#664), only when pieces animate at all and the adapter can rebuild
   // that position exactly; otherwise `initial` shows at once, as before.
   const setupIntro =
-    pieceAnimationDurationMs() > 0 ? (adapter.preSetupState?.(puzzle) ?? null) : null;
+    !opts.fast && pieceAnimationDurationMs() > 0 ? (adapter.preSetupState?.(puzzle) ?? null) : null;
   return {
     setupIntro,
     ...(history ? { history } : {}),
@@ -692,18 +699,24 @@ function renderPuzzleDetail(
   trainer.append(
     moveListPanel(session, (viewPly) => jumpPuzzle(session, renderSession, viewPly)),
     opts.feedback?.(session) ??
-      feedbackPanel(session, navigation, renderSession, {
-        onHint: () => void requestHint(session, renderSession),
-        onReveal: () => void revealSolution(session, renderSession),
-        onVote: (vote) => {
-          void sendPuzzleQualityEvent(
-            session.puzzle.id,
-            session.qualitySessionId,
-            'vote',
-            vote,
-          ).catch(() => {});
+      feedbackPanel(
+        session,
+        navigation,
+        renderSession,
+        {
+          onHint: () => void requestHint(session, renderSession),
+          onReveal: () => void revealSolution(session, renderSession),
+          onVote: (vote) => {
+            void sendPuzzleQualityEvent(
+              session.puzzle.id,
+              session.qualitySessionId,
+              'vote',
+              vote,
+            ).catch(() => {});
+          },
         },
-      }),
+        displayState,
+      ),
   );
   const actions = actionPanel(session, renderSession);
   const phoneBar = puzzlePhoneMoveNav(
@@ -1125,10 +1138,6 @@ function showPlayLocked(session: PuzzleSession, renderSession: () => void): void
   renderSession();
 }
 
-// Which host mounted the solver: the /puzzles page or a third-party embed
-// frame. The two never share a document, so a module flag is enough.
-let puzzleAnalyticsMode: PuzzleAttemptMode = 'session';
-
 function trackPuzzleAttempted(session: PuzzleSession, outcome: PuzzleAttemptOutcome): void {
   track(
     'puzzle_attempted',
@@ -1137,7 +1146,7 @@ function trackPuzzleAttempted(session: PuzzleSession, outcome: PuzzleAttemptOutc
       variant: session.puzzle.variant,
       themes: (session.puzzle as { themes?: readonly string[] }).themes,
       rated: getPuzzleRatedPref(),
-      mode: puzzleAnalyticsMode,
+      mode: session.mode ?? 'session',
       outcome,
       clean: outcome === 'solved' && !session.failed,
     }),
@@ -1153,7 +1162,14 @@ async function submitMove(
 ): Promise<void> {
   // Once the answer has been shown (or the puzzle is solved), the board is a
   // locked replay: no further moves are submitted.
-  if (session.submitting || session.revealed || session.solved || session.wrongPreview) return;
+  if (
+    session.locked ||
+    session.submitting ||
+    session.revealed ||
+    session.solved ||
+    session.wrongPreview
+  )
+    return;
   session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.checkingMove') };
@@ -1167,13 +1183,14 @@ async function submitMove(
     nextSolverMoves,
     session.qualitySessionId,
   ).catch((error: unknown) => {
+    if (session.locked) return null;
     if (error instanceof PuzzlePlayDisabledError) return PLAY_LOCKED;
     session.submitting = false;
     session.feedback = { kind: 'bad', text: t('puzzle.checkFailed') };
     renderSession();
     return null;
   });
-  if (!submitted) return;
+  if (!submitted || session.locked) return;
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { attempt, rating } = submitted;
   // A mode submitter can send the line on a terminal miss (streak or replay).
@@ -1181,6 +1198,14 @@ async function submitMove(
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
+  // A checker failure is retryable, not a missed Storm puzzle. The server
+  // leaves its clock and combo alone in this case too.
+  if (session.mode === 'storm' && !attempt.ok && attempt.code !== 'incorrect-move') {
+    session.feedback = { kind: 'bad', text: t('puzzle.checkFailed') };
+    renderSession();
+    opts.onAttempt?.(attempt);
+    return;
+  }
   if (attempt.ok) {
     session.solverMoves = attempt.solverMoves;
     session.playedMoves = attempt.playedMoves;
@@ -1188,7 +1213,7 @@ async function submitMove(
     session.viewPly = session.playedMoves.length;
     // With a scripted reply, hold on the solver's move (its ✓) first; the reply
     // glides in after REPLY_PAUSE_MS. Input stays blocked until then.
-    if (session.playedMoves.length - playedCountBefore >= 2) session.viewPly -= 1;
+    if (!opts.fast && session.playedMoves.length - playedCountBefore >= 2) session.viewPly -= 1;
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
@@ -1220,7 +1245,7 @@ async function submitMove(
     // the answer out from the ply that went wrong, like a reveal.
     session.failed = true;
     session.wrongMove = { ply: session.playedMoves.length, move: attempt.move };
-    session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
+    if (!opts.fast) session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
     showSolutionLine(session, solution, session.playedMoves.length);
     session.feedback = { kind: 'bad', text: t('puzzle.tryAnotherMove') };
     playSound('learn-failure');
@@ -1230,7 +1255,7 @@ async function submitMove(
     if (attempt.code === 'incorrect-move') {
       const ply = session.playedMoves.length;
       session.wrongTries = [...(session.wrongTries ?? []), { ply, move: attempt.move }];
-      session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
+      if (!opts.fast) session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
     }
     // Persist the failed state so the escape hatches (hint / view solution /
     // next) survive the piece-select feedback reset on the next render.
@@ -1242,6 +1267,10 @@ async function submitMove(
     // short "not quite" the lesson surface already uses, and no sound set files
     // it, so it stays the same brief cue everywhere.
     playSound('learn-failure');
+  }
+  if (session.mode === 'storm' && !attempt.ok && attempt.code === 'incorrect-move') {
+    session.locked = true;
+    trackPuzzleAttempted(session, 'failed');
   }
   if (rating) reportAttemptRating(rating);
   // The solver's own move lands instantly (they just chose it); the scripted
@@ -1268,7 +1297,7 @@ async function submitMove(
 // server-side, so it never double-counts a prior wrong-move fail). The user may
 // then play the highlighted piece, take the full solution, or move on.
 async function requestHint(session: PuzzleSession, renderSession: () => void): Promise<void> {
-  if (session.submitting || session.revealed || session.solved) return;
+  if (session.locked || session.submitting || session.revealed || session.solved) return;
   // A wrong try still held under its ✗ is dropped, not glided back.
   session.wrongPreview = null;
   session.setupIntro = null;
@@ -1280,6 +1309,7 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
     session.playedMoves.length,
     session.qualitySessionId,
   ).catch(playLockRefusal);
+  if (session.locked) return;
   if (hinted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { move, rating } = hinted;
   session.submitting = false;
@@ -1307,7 +1337,7 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
 // solution"). Spoiler-gated: nothing is fetched until this runs. Books a failed
 // rated attempt on the first terminal action (idempotent server-side).
 async function revealSolution(session: PuzzleSession, renderSession: () => void): Promise<void> {
-  if (session.submitting || session.revealed) return;
+  if (session.locked || session.submitting || session.revealed) return;
   // A wrong try still held under its ✗ is dropped, not glided back.
   session.wrongPreview = null;
   session.setupIntro = null;
@@ -1317,6 +1347,7 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
   const revealed = await fetchPuzzleSolution(session.puzzle.id, session.qualitySessionId).catch(
     playLockRefusal,
   );
+  if (session.locked) return;
   if (revealed === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { solution, rating } = revealed;
   session.submitting = false;
@@ -1365,7 +1396,7 @@ function showSolutionLine(
 // reply then bailed as unpainted and its board never went live).
 function playbackSolution(session: PuzzleSession, renderSession: () => void): void {
   const step = (): void => {
-    if (!isPaintedPuzzleSession(session)) return;
+    if (session.locked || !isPaintedPuzzleSession(session)) return;
     if (session.viewPly >= session.playedMoves.length) return;
     scrubPuzzle(session, renderSession, 'next');
     window.setTimeout(step, REVEAL_STEP_MS);
@@ -1466,7 +1497,7 @@ function playPuzzleReply(
   const held = session.viewPly;
   window.setTimeout(() => {
     session.pendingReplyPly = null;
-    if (!isPaintedPuzzleSession(session)) return;
+    if (session.locked || !isPaintedPuzzleSession(session)) return;
     // A step through the list in the pause leaves the cursor where it was put.
     if (session.viewPly !== held) {
       renderSession();
@@ -1488,7 +1519,7 @@ function takeBackWrongTry(
   window.setTimeout(() => {
     if (session.wrongPreview !== preview) return;
     session.wrongPreview = null;
-    if (!isPaintedPuzzleSession(session)) return;
+    if (session.locked || !isPaintedPuzzleSession(session)) return;
     renderSession();
     animatePuzzleMove(session, preview.move, { reverse: true });
     then();
@@ -1859,6 +1890,12 @@ export type PuzzleSolverOptions = {
   mode?: PuzzleAttemptMode;
   recordVisit?: boolean;
   navigation?: PuzzleNavigation;
+  // Storm defaults to immediate setup/replies/take-backs; other solvers keep
+  // their existing pauses unless explicitly opted into fast play.
+  fast?: boolean;
+  // Storm response.progress: an accepted partial line, including scripted
+  // replies. Restoring it sends no request, callbacks, or analytics.
+  initialAttempt?: Extract<PuzzleAttempt, { ok: true }> | null;
   analysis?: boolean;
   feedback?: (session: PuzzleSession) => HTMLElement;
   // A replacement attempt submitter. One that also returns `solution` on a
@@ -1888,8 +1925,12 @@ export function mountPuzzleSolver(
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   setBoardFamily('xiangqi');
   setPuzzleRatedPref(false);
-  puzzleAnalyticsMode = opts.mode ?? 'embed';
-  if (opts.mode === 'streak' || opts.recordVisit) {
+  opts = {
+    ...opts,
+    fast: opts.fast ?? opts.mode === 'storm',
+    analysis: opts.analysis ?? opts.mode !== 'storm',
+  };
+  if (opts.mode === 'streak' || opts.mode === 'storm' || opts.recordVisit) {
     resetPhoneMenu();
     phoneMenu.props = null;
   }
@@ -1897,17 +1938,29 @@ export function mountPuzzleSolver(
   installPuzzleGripFit();
   const session = createPuzzleSession(puzzle, {
     history: opts.mode === 'streak' || opts.recordVisit,
+    fast: opts.fast,
   });
+  session.mode = opts.mode ?? 'embed';
+  if (opts.initialAttempt) {
+    const progress = opts.initialAttempt;
+    session.setupIntro = null;
+    session.state = clonePuzzleState(progress.state);
+    session.solverMoves = [...progress.solverMoves];
+    session.playedMoves = [...progress.playedMoves];
+    session.viewPly = progress.playedMoves.length;
+    session.solved = progress.complete;
+  }
   if (opts.mode === 'streak' || opts.recordVisit) {
     void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
   }
   // Without a caller's queue, the feedback panel offers no previous/next.
   const navigation = opts.navigation ?? navigationFor([], null, async () => {});
+  let disposed = false;
   const renderSession = (): void => {
+    if (disposed) return;
     renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id), opts);
     opts.afterRender?.(host, session);
   };
-  let disposed = false;
   renderSession();
   playSetupIntro(session, renderSession, () => !disposed && host.isConnected);
 
@@ -1936,13 +1989,19 @@ export function mountPuzzleSolver(
   return {
     dispose: () => {
       disposed = true;
+      session.locked = true;
       if (isPaintedPuzzleSession(session)) forgetPaintedPuzzle();
       session.analysis?.dispose();
       window.removeEventListener('keydown', onKeyDown);
     },
     end: () => {
       if (disposed) return;
+      session.locked = true;
+      session.submitting = false;
       session.revealed = true;
+      session.setupIntro = null;
+      session.wrongPreview = null;
+      session.pendingReplyPly = null;
       session.selectedSquare = null;
       session.selectedDrop = null;
       renderSession();
