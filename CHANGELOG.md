@@ -1,25 +1,14 @@
 # Changelog
 
-What changed on mistboard.com, month by month, newest first. Modeled on
-[lichess.org/changelog](https://lichess.org/changelog): one line per change,
-grouped by the part of the site it touches, each line linking the commit.
-Unlike lichess, removals get their own heading; a change that takes something
-away is still a change.
+What changed on mistboard.com, month by month, newest first.
 
-Conventions:
-
-- Sections are months (`## 2026-09`), newest first. Within a month the
-  headings are **Playing**, **Learning and puzzles**, **Watching and review**,
-  **Community**, **Site**, **Removed**, **Fixed**, **Technical**. Use only the
-  ones a month needs, in that order.
-- One line per change, written for a player where the heading is
-  player-facing and for a contributor under **Technical**. Present tense, no
-  trailing period, the commit hash in parentheses at the end. A change that
-  spans several commits links the first and the last.
-- Every release that changes behaviour adds a line here in the same commit.
-  Refactors, test-only and docs-only commits do not. The homepage News box
-  (`apps/web/src/announcements.ts`) stays the curated, player-facing megaphone;
-  this file is the complete record.
+- Months are sections (`## 2026-10`). Within a month the headings are
+  **Playing**, **Learning and puzzles**, **Watching and review**, **Community**,
+  **Site**, **Removed**, **Fixed** and **Technical**, in that order, as needed.
+- One line per change: present tense, no trailing period, the commit hash in
+  parentheses at the end. A change across several commits links the first and last.
+- Every release that changes behaviour adds a line. Refactors, test-only and
+  docs-only commits do not.
 - The file starts at 2026-09-11. Earlier history is in `git log`.
 
 ## 2026-10

@@ -6,6 +6,17 @@
   font-size: 16px;
 }
 
+/* The mission line under the /about heading. */
+.about-section p.about-mission {
+  margin: 4px 0 20px;
+  padding-left: 14px;
+  border-left: 3px solid var(--site-accent);
+  color: var(--site-heading);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .about-section p:last-child,
 .source-section p:last-child {
   margin-bottom: 0;

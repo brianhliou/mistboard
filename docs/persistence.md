@@ -238,7 +238,7 @@ For public verification, the important checks are provider-neutral:
 2. `/health` reports unhealthy if persistence is required but unavailable.
 3. A completed game remains replayable after a restart.
 4. A live room rehydrates from events after a restart.
-5. Live Fog of War replay APIs still reject full event access until terminal state.
+5. Event APIs for a live game still refuse full events until the game ends.
 
 ## Write ordering: persist-then-apply
 
@@ -254,7 +254,7 @@ async function appendEvent(room, event) {
 
 Postgres write goes first. If it fails, in-memory state never changes; the move (or seat assignment, or clock tick) effectively did not happen. The caller decides how to surface the failure to clients. State drift between memory and DB is impossible by construction — they either both have the event or neither does.
 
-The cost is ~5–20ms of Postgres roundtrip per event. At chess pacing this is invisible. If write back-pressure ever shows up under bot traffic, batching is the answer (see "Future: batched writes" below).
+The cost is ~5–20ms of Postgres roundtrip per event. At chess pacing this is invisible.
 
 ## Crash semantics
 
@@ -298,34 +298,8 @@ The dangerous failure mode is silent: Postgres degrades, writes start failing, a
 
 The combination — persist-then-apply + loud logs + non-200 health on recent failures — means a degrading Postgres can't go unnoticed. Either every move starts visibly failing for clients, or operators see the 503 / log spike, or both.
 
-## Future: batched writes
-
-Synchronous per-event inserts are fine through PL2. The pressure point will likely be PL3 ladder traffic with multiple bots playing concurrently — Postgres write throughput per connection becomes the ceiling, not Postgres itself.
-
-When that arrives, the change is to a per-room write queue with a debounce (e.g., 50ms) that flushes a batch insert. Crash semantics shift slightly: a crash within the debounce window can lose up to N events. The mitigation is to flush synchronously at game-end (`king-capture`, `clock-expired`) and at any event the WS handler doesn't explicitly mark as batchable. Mid-game move events are batchable; terminal events aren't.
-
-Not building this yet, but the persist-then-apply API surface is forward-compatible: `persistence.appendEvent` becomes "enqueue and resolve when flushed" rather than "insert and resolve."
-
 ## Migration & data model evolution
 
 - New `GameEvent` variants: payload-only changes, no DDL.
 - Renaming or restructuring an existing event: keep the old shape readable. The `replayGameEvents` reducer is the single chokepoint that needs to handle both.
 - Backfill: if a payload format changes, write a one-shot script that reads + rewrites JSONB rows. Don't add migration framework ceremony for this.
-
-## Cold archival (PL2+, not now)
-
-Once the corpus pipeline matures, finished games dump to R2/S3 as NDJSON nightly:
-
-```
-SELECT payload FROM events
-WHERE room_id IN (SELECT room_id FROM games WHERE ended_at::date = $1)
-ORDER BY room_id, seq
-```
-
-Lab corpus consumers continue to read NDJSON. Live server doesn't depend on the archive.
-
-## Open questions
-
-- **Pregame-abandoned rooms.** A room created but never moved past `room-created` clutters `events`. Lean: GC rows older than 7 days where `seq` never exceeded a threshold. Cron, not v1.
-- **Spectator semantics across restart.** Spectator state is connection-only, not persisted. After restart, spectators reconnect and see live state via fresh `PlayerView` snapshots. No data persistence concern.
-- **Schema versioning.** Skipped intentionally for event payloads: JSONB rows are versioned at the application layer when reading payloads.

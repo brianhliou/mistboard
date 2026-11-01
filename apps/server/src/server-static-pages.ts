@@ -133,9 +133,9 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     localeGroup: '/bots',
   },
   '/about': {
-    title: 'About Mistboard | Chinese Chess and the Future of Strategy Games',
+    title: 'About Mistboard | Chinese Chess for Every Player',
     description:
-      'Bringing people together across cultures through Chinese chess and original strategy games. Free, open-source play, study, broadcasts and engine challenges.',
+      "Bringing people together across cultures through Chinese chess and the world's classic strategy games. Free, open-source play, study and broadcasts.",
   },
   '/faq': {
     title: 'Frequently Asked Questions | Mistboard',
@@ -190,7 +190,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/contribute': {
     title: 'How to Contribute | Mistboard',
     description:
-      'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
+      'Contribute to Mistboard as a player, teacher, translator, game creator or engine author.',
   },
   // A casual xiangqi group in Bellevue; Mistboard hosts its page, and
   // washingtonxiangqi.org and .com forward here (2026-10-23).
@@ -202,7 +202,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
-      'Bring Chinese chess to a world stage with Mistboard. Work with us on teaching, broadcasts, original games and engine challenges across languages.',
+      'Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages.',
   },
   // One reigning champion engine per game, moved from
   // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges

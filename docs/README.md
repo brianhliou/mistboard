@@ -1,31 +1,16 @@
-# Documentation Map
+# Documentation
 
-Public, contributor-safe docs for Mistboard: architecture and rules. Kept small
-and evergreen. Day-to-day status and detailed planning aren't tracked here (live
-state is the site plus
-[GitHub issues](https://github.com/brianhliou/mistboard/issues)); keep provider
-setup, tokens, and internal strategy in the git-ignored `docs-private/`.
+Public docs for contributors. Live status is the site and
+[GitHub issues](https://github.com/brianhliou/mistboard/issues); rules for every
+game are at [mistboard.com/rules](https://mistboard.com/rules), with the rule
+code and tests in `packages/game`.
 
-## Start Here
-
-| Document | Use it for |
+| Document | Covers |
 |---|---|
-| [../README.md](../README.md) | Product overview and quick start. |
-| [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor scope, local dev, tests, and PRs. |
-| [project-direction.md](project-direction.md) | Product focus, licensing, brand, and contribution fit. |
+| [project-direction.md](project-direction.md) | What we build and how we decide. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Package layout, state model and what each client receives. |
+| [persistence.md](persistence.md) | Event log, game records and Postgres. |
+| [engine-protocol.md](engine-protocol.md) | The request and response an engine sees. |
+| [translations.md](translations.md) | English source copy and the other languages. |
 
-## Architecture
-
-| Document | Use it for |
-|---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Package layout, state model, and the hidden-information boundary. |
-| [persistence.md](persistence.md) | Event log, game aggregates, and Postgres setup. |
-| [engine-protocol.md](engine-protocol.md) | Redacted engine request/response contract. |
-| [translations.md](translations.md) | Locale policy: English source contract, domain ownership, and critical-key coverage. |
-| [xiangqi-broadcast-track.md](xiangqi-broadcast-track.md) | Xiangqi tournament broadcasts: architecture, sources, and local testing. |
-
-## Rules
-
-Player-facing rules for every live variant are published at
-[mistboard.com/rules](https://mistboard.com/rules). The canonical rule logic and
-regression tests live in `packages/game`.
+Start with the [README](../README.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
