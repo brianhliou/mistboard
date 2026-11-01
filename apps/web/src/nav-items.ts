@@ -1,7 +1,6 @@
+import { ABOUT_NAV_GROUPS } from './about-nav-items.js';
 import type { I18nKey } from './i18n/catalog.js';
 import { STREAMERS } from './streamers-data.js';
-
-export const SHOW_ENGINE_LAB_LINKS = import.meta.env.VITE_SHOW_ENGINE_LAB_NAV === 'true';
 
 export interface NavItem {
   label: string;
@@ -70,7 +69,7 @@ export function puzzleNavItems(): NavItem[] {
 
 // Top-nav Community dropdown (lichess-aligned order): Leaderboard, Pro players
 // (the broadcast player pages at /players), Bots (the bot roster), Friends (your
-// following list), Forum, Blog (the articles surface). Teams is deliberately
+// following list), Forum. Blog lives at the end of Learn. Teams is deliberately
 // deferred. Kept distinct from communityRailItems(): the dropdown is the wide
 // social entry, the rail is the leaderboard/bots sub-nav.
 //
@@ -114,23 +113,22 @@ export function communityNavItems(): NavItem[] {
     { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
-    { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
   ];
 }
 
-// Community sub-navigation rail (lichess parity): Leaderboard + Online bots for
+// Community sub-navigation rail (lichess parity): Leaderboard + Bots for
 // now. Forum lives in the top-nav dropdown, not the rail.
 export function communityRailItems(): NavItem[] {
   return [
     { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
     { label: 'Rating stats', labelKey: 'nav.ratingStats', href: '/player/rating-stats' },
-    { label: 'Online bots', labelKey: 'nav.onlineBots', href: '/bots' },
+    { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
   ];
 }
 
 // Learn dropdown (lichess parity): rules are the durable starting point,
 // followed by the interactive xiangqi course, then Studies and the verified-coach
-// directory. The title itself links to /rules.
+// directory and Blog. The title itself links to /rules.
 export function learnNavItems(): NavItem[] {
   return [
     { label: 'Rules', labelKey: 'nav.rules', href: '/rules' },
@@ -140,6 +138,7 @@ export function learnNavItems(): NavItem[] {
     { label: 'Practice', labelKey: 'nav.practice', href: '/practice' },
     { label: 'Study', labelKey: 'nav.studies', href: '/study' },
     { label: 'Coaches', labelKey: 'nav.coaches', href: '/coach' },
+    { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
   ];
 }
 
@@ -195,12 +194,6 @@ export function watchNavItems(): NavItem[] {
   ];
 }
 
-export function utilityNavItems(): NavItem[] {
-  const items: NavItem[] = [];
-  if (SHOW_ENGINE_LAB_LINKS) items.push({ label: 'Lab', labelKey: 'nav.lab', href: '/lab' });
-  return items;
-}
-
 export interface NavSection {
   labelKey: I18nKey;
   items: NavItem[];
@@ -221,36 +214,25 @@ export function footerNavItems(): NavItem[] {
   ];
 }
 
-// The phone site menu's closing Mistboard section: the info pages a phone
-// reaches from any page (the footer is on the homepage only). Patron is
-// already Community's Support row, so it is not listed twice.
+// The phone site menu's closing Mistboard section uses the About rail's list.
+// Patron lives here; the desktop bar keeps its standalone Support link.
 export function mistboardMenuItems(): NavItem[] {
-  return [
-    { label: 'Statistics', labelKey: 'footer.stats', href: '/stats' },
-    { label: 'Updates', labelKey: 'footer.news', href: '/feed' },
-    { label: 'FAQ', labelKey: 'footer.faq', href: '/faq' },
-    { label: 'Contact', labelKey: 'footer.contact', href: '/contact' },
-    { label: 'Source', labelKey: 'footer.source', href: '/source' },
-    { label: 'Developers', labelKey: 'footer.developers', href: '/developers' },
-    { label: 'Game data', labelKey: 'footer.data', href: '/data' },
-  ];
+  return ABOUT_NAV_GROUPS.flat();
 }
 
 // The phone site menu (site-shell.ts openSiteMenu): every destination the bar
 // carries, grouped into sections and composed from the same lists the bar
 // renders, so a link added to a dropdown reaches the phone menu with no second
-// edit. The Puzzles menu joins Play and Support closes Community; Admin follows for
-// admins only, like the bar's admin menu. The order is the reading order of a
-// two-column flow: Play, Watch, Tools down the first column, Learn and
-// Community down the second. Mistboard always closes the menu
-// (mistboardMenuItems).
+// edit. Puzzles has its own section after Play. Admin follows Tools for admins
+// only, like the bar's admin menu. Mistboard always closes the menu.
 export function siteMenuSections({ admin = false }: { admin?: boolean } = {}): NavSection[] {
   return [
-    { labelKey: 'nav.play', items: [...playNavItems(), ...puzzleNavItems()] },
-    { labelKey: 'nav.watch', items: watchNavItems() },
-    { labelKey: 'nav.tools', items: toolsNavItems() },
+    { labelKey: 'nav.play', items: playNavItems() },
+    { labelKey: 'nav.puzzles', items: puzzleNavItems() },
     { labelKey: 'nav.learn', items: learnNavItems() },
-    { labelKey: 'nav.community', items: [...communityNavItems(), donateNavItem()] },
+    { labelKey: 'nav.watch', items: watchNavItems() },
+    { labelKey: 'nav.community', items: communityNavItems() },
+    { labelKey: 'nav.tools', items: toolsNavItems() },
     ...(admin ? [{ labelKey: 'nav.admin' as const, items: adminNavItems() }] : []),
     { labelKey: 'nav.mistboard', items: mistboardMenuItems() },
   ];
@@ -274,6 +256,5 @@ export function toolsNavItems(): NavItem[] {
     { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
     { label: 'Import game', labelKey: 'nav.import', href: '/import' },
     { label: 'Advanced search', labelKey: 'nav.gamesSearch', href: '/games/search' },
-    ...utilityNavItems(),
   ];
 }

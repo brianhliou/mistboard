@@ -71,16 +71,28 @@ describe('static pages', () => {
       'Mistboard Patron',
       'Terms of Use',
       'Privacy',
-      'Title verification',
       'Source code',
-      'Contribute',
       'Work with us',
       'Engine champions',
       'Developers',
-      'Game data',
-      'API',
-      'Thank you',
-      'Is Mistboard lagging?',
+    ]);
+    expect(
+      [...root.querySelectorAll('.static-page-rail-group')].map((group) =>
+        [...group.querySelectorAll('a')].map((link) => link.getAttribute('href')),
+      ),
+    ).toEqual([
+      [
+        '/about',
+        '/stats',
+        '/feed',
+        '/changelog',
+        '/faq',
+        '/contact',
+        '/patron',
+        '/terms',
+        '/privacy',
+      ],
+      ['/source', '/creators', '/champions', '/developers'],
     ]);
     // Game totals live only on /stats (linked from the rail above); About
     // neither fetches nor shows them.
