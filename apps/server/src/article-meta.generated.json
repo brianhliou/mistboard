@@ -276,7 +276,7 @@
   "gomoku": {
     "title": "Gomoku Rules",
     "kind": "rules",
-    "description": "Place stones, connect five, and compete from a dealt opening the engine judged even.",
+    "description": "Learn to place stones, make five in a row, use the clocks and follow the turn indicator from Mistboard’s dealt openings.",
     "status": "published"
   },
   "helpmates-in-xiangqi": {

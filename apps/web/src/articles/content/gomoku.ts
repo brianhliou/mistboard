@@ -1,9 +1,4 @@
-import {
-  GOMOKU_BOARD_SIZE,
-  GOMOKU_OPENING_SCREEN,
-  GOMOKU_OPENINGS,
-  type GomokuOpening,
-} from '@mistboard/game';
+import { GOMOKU_BOARD_SIZE } from '@mistboard/game';
 import {
   GOMOKU_OPENING,
   GOMOKU_PLACEMENT,
@@ -11,96 +6,98 @@ import {
 } from '../../gomoku-rules-diagrams.js';
 import type { Article } from '../types.js';
 
-function openingDescription(opening: GomokuOpening): string {
-  const stones = (color: 'black' | 'white') => {
-    const count = opening.stones.filter((stone) => stone.color === color).length;
-    return `${count} ${color} ${count === 1 ? 'stone' : 'stones'}`;
-  };
-  return `${stones('black')} and ${stones('white')}, ${opening.turn === 'black' ? 'Black' : 'White'} to move`;
-}
-
-const poolSize = `${GOMOKU_OPENINGS.length} ${GOMOKU_OPENINGS.length === 1 ? 'position' : 'positions'}`;
-const setups = [...new Set(GOMOKU_OPENINGS.map(openingDescription))];
-const percent = (value: number) => `${Number((value * 100).toFixed(2))}%`;
-const whiteToMove = GOMOKU_OPENINGS.some((opening) => opening.turn === 'white');
+// Set after the re-screened openings have a published study.
+export const GOMOKU_OPENINGS_STUDY_URL: string | null = null;
 
 // Direct-URL English review page. The hidden spec, sitemap exclusion and
-// VITE_GOMOKU_ENABLED playtest gate stay in place. Pool facts follow the kernel's
-// JSON exports so re-screening changes the prose and example together.
-export const gomokuArticle: Article = {
-  slug: 'gomoku',
-  gameSpecId: 'gomoku',
-  kind: 'rules',
-  title: 'Gomoku Rules',
-  summary: 'Place stones, connect five, and compete from a dealt opening the engine judged even.',
-  showSummaryOnPage: false,
-  status: 'published',
-  publishedAt: '2026-10-31',
-  updatedAt: '2026-11-01',
-  updateNote: 'Shortened the rules, explained the dealt openings and added the game’s history and draw-offer controls.',
-  audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
-  thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
-  tldr: [
-    'Take turns placing stones. Connect five or more in a straight line to win.',
-    'Mistboard deals an opening the engine judged even; follow the turn indicator.',
-  ],
-  intro: [
-    { kind: 'paragraph', text: 'As with Chess960, a fresh starting position lets you test each other’s play beyond memorised openings.' },
-  ],
-  sections: [
-    {
-      heading: 'Mistboard deals an engine-balanced opening',
-      blocks: [
-        { kind: 'paragraph', text: `The pool has ${poolSize}, screened at ${GOMOKU_OPENING_SCREEN.nodes.toLocaleString('en-US')} search nodes each: ${percent(GOMOKU_OPENING_SCREEN.minWinrate)}–${percent(GOMOKU_OPENING_SCREEN.maxWinrate)} estimated win rate for the side to move, no forced win found. Dealt stones use no clock time.` },
-        { kind: 'paragraph', text: `Starting setups: ${setups.join('; ')}. Follow the turn indicator.` },
-        { kind: 'raw-svg', svg: GOMOKU_OPENING, caption: `Opening ${GOMOKU_OPENINGS[0].id}: ${openingDescription(GOMOKU_OPENINGS[0])}.` },
-        { kind: 'paragraph', text: 'Tournament rules such as Swap2, used at world championships since 2009, balance Black’s advantage by letting players place stones and choose colours. Mistboard deals a screened position instead.' },
-      ],
-    },
-    {
-      heading: 'The board and your turn',
-      blocks: [
-        { kind: 'paragraph', text: `Place one stone per turn on an empty intersection of the ${GOMOKU_BOARD_SIZE}×${GOMOKU_BOARD_SIZE} board. Stones stay put. Coordinates run a–o and 1–${GOMOKU_BOARD_SIZE}.` },
-        { kind: 'raw-svg', svg: GOMOKU_PLACEMENT, caption: 'Black places h8, the centre intersection.' },
-      ],
-    },
-    {
-      heading: 'Five in a row wins',
-      blocks: [
-        { kind: 'paragraph', text: 'Connect five stones of your colour horizontally, vertically or diagonally to win immediately. Freestyle also counts six or more in a row (an overline) for either colour.' },
-        { kind: 'raw-svg', svg: GOMOKU_WINNING_BOARD, caption: 'Black completes e8–i8. Green rings mark the five; the red square marks i8.' },
-      ],
-    },
-    {
-      heading: 'Players can agree to a draw',
-      blocks: [
-        { kind: 'paragraph', text: 'In a human game, once both players have moved, press ½ (Offer draw) and confirm; your opponent can accept or decline. A full board without five is drawn; running out of time or resigning loses.' },
-      ],
-    },
-    {
-      heading: 'Black wins a perfect game from the empty board',
-      blocks: [
-        { kind: 'paragraph', text: 'The Japanese name gomokunarabe means “five in a row”; the game is also called Chinese wuziqi, Korean omok and English gobang. Japanese records date to the Edo period, with a verifiable book from 1856; Renju, which restricts Black’s moves, was named in 1899. [L. Victor Allis’s 1994 PhD thesis](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf) proved Black wins with perfect play on 15×15 under both freestyle and exactly-five rules. Dealing balanced positions keeps a solved game competitive and fair for both colours.' },
-      ],
-    },
-    {
-      heading: 'Common questions',
-      blocks: [
-        { kind: 'faq', items: [
-          { question: 'Can I start from an empty board?', answer: 'Choose Free opening (empty board) in setup. Black begins.' },
-          ...(whiteToMove ? [{ question: 'Why is White moving first in my game?', answer: 'The deal has one extra black stone, so White moves next.' }] : []),
-          { question: 'Does screening guarantee a draw?', answer: 'Screening uses finite search. A near-even evaluation is an estimate, not a proof.' },
-        ] },
-      ],
-    },
-    {
-      heading: 'Play on Mistboard',
-      blocks: [
-        { kind: 'cta', buttons: [
-          { label: 'Play vs computer', href: '/?play=computer&gameSpecId=gomoku', emphasis: 'primary' },
-          { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
-        ] },
-      ],
-    },
-  ],
-};
+// VITE_GOMOKU_ENABLED playtest gate stay in place.
+export function createGomokuArticle(
+  openingsStudyUrl: string | null = GOMOKU_OPENINGS_STUDY_URL,
+): Article {
+  return {
+    slug: 'gomoku',
+    gameSpecId: 'gomoku',
+    kind: 'rules',
+    title: 'Gomoku Rules',
+    summary: 'Learn to place stones, make five in a row, use the clocks and follow the turn indicator from Mistboard’s dealt openings.',
+    showSummaryOnPage: false,
+    status: 'published',
+    publishedAt: '2026-10-31',
+    updatedAt: '2026-11-01',
+    updateNote: 'Added a newcomer walkthrough of placement, winning, draws and clocks before explaining Mistboard’s dealt openings.',
+    audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
+    thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
+    tldr: [
+      'Place a stone on an empty intersection each turn. Stones stay where you put them.',
+      'Five or more stones of your colour in a straight line wins in freestyle Gomoku.',
+    ],
+    intro: [
+      { kind: 'paragraph', text: `Gomoku has two players, Black and White, who take turns placing one stone on a ${GOMOKU_BOARD_SIZE}×${GOMOKU_BOARD_SIZE} board. Stones never move. The player who completes five in a row wins.` },
+    ],
+    sections: [
+      {
+        heading: 'Stones stay on the intersections where you place them',
+        blocks: [
+          { kind: 'paragraph', text: 'Place your stone where two lines cross. The intersections along the edges and in the corners are playable too. An occupied intersection stays occupied for the rest of the game: stones cannot be captured or replaced. After you place a stone, your opponent takes a turn.' },
+          { kind: 'raw-svg', svg: GOMOKU_PLACEMENT, caption: 'Black places h8, the centre intersection.' },
+          { kind: 'paragraph', text: `Coordinates run a–o across the board and 1–${GOMOKU_BOARD_SIZE} up it. On your turn, choose any empty point, whether beside an existing stone or away from the group.` },
+        ],
+      },
+      {
+        heading: 'Five in a row wins',
+        blocks: [
+          { kind: 'paragraph', text: 'A winning line runs horizontally, vertically or diagonally. Its stones must be consecutive, with no empty point or opposing stone between them. A bent line does not count. Completing the line ends the game immediately; your opponent gets no reply.' },
+          { kind: 'raw-svg', svg: GOMOKU_WINNING_BOARD, caption: 'Black completes e8–i8. Green rings mark the five; the red square marks i8.' },
+          { kind: 'paragraph', text: 'Mistboard uses freestyle rules: six or more in a row, called an overline, also wins for either colour. Renju has restrictions on Black’s moves; those restrictions do not apply here.' },
+          { kind: 'paragraph', text: 'Before placing a stone, look for a line your opponent could complete next turn. Filling its empty point can block the win. Your stones can build toward several directions at once, so check the diagonals as well as the rows and columns.' },
+        ],
+      },
+      {
+        heading: 'Players can agree to a draw',
+        blocks: [
+          { kind: 'paragraph', text: 'A full board without a winning line is drawn. In a human game, once both players have moved, press ½ (Offer draw) and confirm; your opponent can accept or decline. Resigning concedes the game to your opponent.' },
+        ],
+      },
+      {
+        heading: 'Your clock runs during your turn',
+        blocks: [
+          { kind: 'paragraph', text: 'The time control sets how long each player has to think. Your clock runs while you choose a placement and passes to your opponent after you play. Running out of time loses. If the time control includes an increment, that amount is added after each move.' },
+        ],
+      },
+      {
+        heading: 'Mistboard deals a screened opening',
+        blocks: [
+          { kind: 'paragraph', text: 'Every game starts from a position already on the board, picked from a set an engine searched and judged close to even. Black’s starting move brings an advantage, as the [solved result](#black-wins-a-perfect-game-from-the-empty-board) explains. Follow the turn indicator to see who plays next. Dealt stones use no clock time.' },
+          { kind: 'raw-svg', svg: GOMOKU_OPENING, caption: 'A dealt starting position. The stones already on the board stay in play.' },
+          { kind: 'paragraph', text: 'Tournament rules such as Swap2 balance the start by letting players place stones and choose colours; Mistboard deals a screened position instead.' },
+          ...(openingsStudyUrl ? [{ kind: 'paragraph' as const, text: `You can study [every opening](${openingsStudyUrl}).` }] : []),
+        ],
+      },
+      {
+        heading: 'Black wins a perfect game from the empty board',
+        blocks: [
+          { kind: 'paragraph', text: 'The Japanese name gomokunarabe means “five in a row”; the game is also called Chinese wuziqi, Korean omok and English gobang. Japanese records date to the Edo period, with a verifiable book from 1856; Renju, which restricts Black’s moves, was named in 1899. [L. Victor Allis’s 1994 PhD thesis](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf) proved Black wins with perfect play on 15×15 under both freestyle and exactly-five rules.' },
+        ],
+      },
+      {
+        heading: 'Screening estimates the balance of a position',
+        blocks: [
+          { kind: 'faq', items: [
+            { question: 'Does screening guarantee a draw?', answer: 'Screening uses finite search. A near-even evaluation is an estimate; play can still reveal a winning continuation.' },
+          ] },
+        ],
+      },
+      {
+        heading: 'Play on Mistboard',
+        blocks: [
+          { kind: 'cta', buttons: [
+            { label: 'Play vs computer', href: '/?play=computer&gameSpecId=gomoku', emphasis: 'primary' },
+            { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
+          ] },
+        ],
+      },
+    ],
+  };
+}
+
+export const gomokuArticle: Article = createGomokuArticle();
