@@ -6,7 +6,7 @@
 
 /** Variants a client engine can evaluate. `xiangqi` uses Pikafish,
  *  `fortressxiangqi`/`atomicxiangqi`/`crazyhousexiangqi`/`chess` use Fairy-Stockfish, `jieqi` uses
- *  PikaJieQi, and the remaining variants use Misty. createCeval() dispatches to
+ *  PikaJieQi, `gomoku` uses Rapfi, and the remaining variants use Misty. createCeval() dispatches to
  *  the appropriate backend. */
 export type CevalVariant =
   | 'xiangqi'
@@ -17,6 +17,7 @@ export type CevalVariant =
   // net shipped): the study-only chess spec's review panel.
   | 'chess'
   | 'jieqi'
+  | 'gomoku'
   | 'banqi'
   | 'jungleflip'
   | 'jungle';
@@ -37,9 +38,9 @@ export function depthForEffort(effort: CevalEffort | undefined): number {
   return DEPTH_BY_EFFORT[effort];
 }
 
-/** Every registered client-engine backend implements cancellable continuous search. */
-export function cevalSupportsInfinite(_variant: CevalVariant): boolean {
-  return true;
+/** Rapfi's synchronous worker searches use bounded nodes/time, never infinite. */
+export function cevalSupportsInfinite(variant: CevalVariant): boolean {
+  return variant !== 'gomoku';
 }
 
 export interface CevalLine {
@@ -47,11 +48,12 @@ export interface CevalLine {
   multipv: number;
   depth: number;
   /** Integer score, side-to-move POV; centipawns for chess-family engines.
-   *  Misty transports its normalized value as value * 1000. Null when `mate` is set. */
+   *  Misty transports its normalized value as value * 1000. Rapfi maps its
+   *  winrate onto the panel's logistic cp scale. Null when `mate` is set. */
   scoreCp: number | null;
-  /** Signed moves-to-mate, side-to-move POV; null otherwise. */
+  /** Signed moves-to-mate (forced five for Gomoku), side-to-move POV; null otherwise. */
   mate: number | null;
-  /** Principal variation, engine UCI. */
+  /** Principal variation, engine UCI (canonical a1-o15 placements for Gomoku). */
   pvUci: string[];
 }
 
@@ -70,11 +72,13 @@ export interface CevalRequest {
   /** Base position as an engine FEN. Omit to analyse from the standard start
    *  position (the review board's whole-game replay); set it to analyse a
    *  mid-game position that has no start-position move list, e.g. a mined puzzle
-   *  that begins partway through a game. `movesUci` are then applied on top. */
+   *  that begins partway through a game. `movesUci` are then applied on top.
+   *  Gomoku uses JSON.stringify(RapfiPosition), with raw x/y and Black=1, White=2. */
   initialFen?: string;
   /** Number of ranked lines to return (default 1). */
   multiPv?: number;
-  /** Cap search depth; the engine streams shallower updates first (default 18). */
+  /** Cap search depth; the engine streams shallower updates first (default 18).
+   *  Node-based backends translate depth bands into bounded effort instead. */
   maxDepth?: number;
   /** User-selected effort. `maxDepth` remains available for fixed-depth
    * programmatic sweeps and takes precedence when supplied. */

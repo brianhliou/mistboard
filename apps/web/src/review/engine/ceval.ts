@@ -1,7 +1,7 @@
 // Client-side ("local") engine analysis for the review board, powered by the
 // vendored Fairy-Stockfish WASM build (apps/web/public/engine/fairy-stockfish)
 // for the xiangqi variants and chess. Standard xiangqi dispatches to Pikafish
-// (pikafish-ceval.ts), jieqi to PikaJieQi, the Misty games to misty-ceval.ts;
+// (pikafish-ceval.ts), jieqi to PikaJieQi, Gomoku to Rapfi, the Misty games to misty-ceval.ts;
 // createCeval() at the bottom is the one place that decides.
 //
 // FSF-wasm is multi-threaded-only: it allocates a *shared* WebAssembly.Memory and
@@ -33,6 +33,7 @@ import {
   pikafishEngineUrl,
 } from './pikafish-ceval.js';
 import { isPikaJieqiCevalVariant, PikaJieQiCeval, pikaJieqiEngineName } from './pikajieqi-ceval.js';
+import { RapfiCeval } from './rapfi-ceval.js';
 import { parseInfo } from './uci-info.js';
 
 export { type InfoFields, parseInfo } from './uci-info.js';
@@ -112,9 +113,10 @@ function snapshotAssets(assets: FsfEngineAssets): FsfEngineAssets {
 
 /** Whether the client engine for `variant` can run in this page. Fairy-Stockfish,
  *  Pikafish and PikaJieQi need SharedArrayBuffer (cross-origin isolation); the
- *  single-threaded Misty variants do not. Called with no argument, it reports
+ *  single-threaded Misty and Rapfi variants do not. Called with no argument, it reports
  *  the threaded-engine requirement for backward compatibility. */
 export function cevalSupported(variant?: CevalVariant): boolean {
+  if (variant === 'gomoku') return typeof Worker === 'function' && typeof WebAssembly === 'object';
   if (variant && isMistyCevalVariant(variant)) return true;
   return (
     typeof SharedArrayBuffer === 'function' &&
@@ -125,6 +127,7 @@ export function cevalSupported(variant?: CevalVariant): boolean {
 
 /** Human label for the engine backing `variant`. */
 export function cevalEngineName(variant: CevalVariant): string {
+  if (variant === 'gomoku') return 'Rapfi';
   return (
     mistyEngineName(variant) ??
     pikafishEngineName(variant) ??
@@ -406,6 +409,8 @@ export function createCeval(
   if (isPikafishCevalVariant(variant)) return new PikafishCeval(variant);
   if (isPikaJieqiCevalVariant(variant)) return new PikaJieQiCeval(variant);
   switch (variant) {
+    case 'gomoku':
+      return new RapfiCeval();
     case 'fortressxiangqi':
     case 'atomicxiangqi':
     case 'crazyhousexiangqi':
