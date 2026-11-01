@@ -818,6 +818,7 @@ export const ZH_HANT_PLAY = {
   'result.selfDraw': '自摸',
   'result.onDiscard': '點炮胡',
   'result.onPoints': '積分',
+  'result.reachedPoints': '達到100分',
   'live.stillFaceDown': '尚未翻開',
   'live.faceDownAtEnd': '終局時未翻開',
   'live.allRevealed': '已全部翻開',
