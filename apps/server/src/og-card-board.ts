@@ -1068,7 +1068,7 @@ export function isCardAspect(value: string): value is CardAspect {
  * what the wide card's caption says, and text is what a crop cuts.
  */
 export function renderBoardAspectCard(
-  board: PositionOgBoard,
+  board: CardBoard,
   art: CardArt,
   aspect: CardAspect,
   pieceSet: CardPieceSet = 'international',

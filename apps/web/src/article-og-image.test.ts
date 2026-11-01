@@ -4,6 +4,18 @@ import { articleOgImageUrl, articleStructuredDataImage } from './article-og-imag
 const HOST = 'https://mistboard.com';
 
 describe('article card URLs', () => {
+  it.each([undefined, 'en', 'zh-Hans', 'zh-Hant'])(
+    'shares the Gomoku rules board in every shape with the page caption (%s)',
+    (locale) => {
+      const lang = locale?.startsWith('zh-') ? `&lang=${locale.toLowerCase()}` : '';
+      const wide = `${HOST}/og/article/gomoku.png?v=7${lang}`;
+      expect(articleOgImageUrl(HOST, 'gomoku', locale)).toBe(wide);
+      expect(articleStructuredDataImage(HOST, 'gomoku', locale)).toEqual(
+        ['16x9', '4x3', '1x1'].map((aspect) => `${wide}&aspect=${aspect}`),
+      );
+    },
+  );
+
   it('og:image stays the wide card, with its ?v=', () => {
     expect(articleOgImageUrl(HOST, 'banqi')).toBe('https://mistboard.com/og/article/banqi.png?v=7');
   });

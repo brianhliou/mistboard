@@ -13,6 +13,7 @@ import {
   buildArticlePage,
   buildArticlesIndex,
   buildHomeArticleCards,
+  buildRulesArticleRailEntries,
   buildRulesIndex,
 } from './articles.js';
 import { articles, findArticle } from './articles-data.js';
@@ -22,7 +23,12 @@ import {
   GOMOKU_RULES_EXAMPLES,
   GOMOKU_WINNING_BOARDS,
 } from './gomoku-rules-diagrams.js';
-import { articleIsNoindex, rulesHrefForGameSpec } from './variant-public-surfaces.js';
+import {
+  articleIsNoindex,
+  rulesHrefForGameSpec,
+  variantPlaytestSurfaceEnabled,
+  variantPublicSurfaceEnabled,
+} from './variant-public-surfaces.js';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -43,12 +49,15 @@ describe('hidden Gomoku rules page', () => {
   });
 
   it('stays out of public listings, rails and the sitemap even in dev', () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
     const article = findArticle('gomoku');
     expect(article).toBeDefined();
     if (!article) return;
     expect(articleIsNoindex(article)).toBe(true);
     expect(articleIsIndexable('gomoku')).toBe(false);
     expect(rulesHrefForGameSpec('gomoku')).toBeNull();
+    expect(variantPlaytestSurfaceEnabled('gomoku')).toBe(false);
     for (const dev of [false, true]) {
       vi.stubEnv('DEV', dev);
       for (const locale of [undefined, 'zh-Hans', 'zh-Hant'] as const) {
@@ -70,6 +79,53 @@ describe('hidden Gomoku rules page', () => {
       }
     }
     expect(blogPosts(articles, Date.now()).map((a) => a.slug)).not.toContain('gomoku');
+  });
+
+  it.each([undefined, 'zh-Hans', 'zh-Hant'] as const)(
+    'lists Gomoku with its own marker in the opted-in rules rail and tiles (%s)',
+    (locale) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
+      expect(variantPlaytestSurfaceEnabled('gomoku')).toBe(true);
+      expect(variantPlaytestSurfaceEnabled('three-kingdoms-banqi')).toBe(false);
+      expect(variantPublicSurfaceEnabled('gomoku')).toBe(false);
+      expect(articleIsIndexable('gomoku')).toBe(false);
+      expect(rulesHrefForGameSpec('gomoku')).toBeNull();
+      const prefix = locale ? `/${locale.toLowerCase()}` : '';
+      const href = `${prefix}/rules/gomoku`;
+      const landing = buildRulesIndex(locale);
+      const tile = landing.querySelector(`.rules-landing-tile[href="${href}"]`);
+      expect(tile).not.toBeNull();
+      expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe(
+        locale ? '五子棋' : 'Gomoku',
+      );
+      for (const surface of [
+        landing,
+        buildArticlePage('xiangqi', locale),
+        buildArticlePage('gomoku', locale),
+      ]) {
+        const link = surface.querySelector(`.article-variant-sidebar a[href="${href}"]`);
+        expect(link).not.toBeNull();
+        expect(link?.querySelector('[data-variant-marker-id="gomoku"]')).not.toBeNull();
+        expect(link?.querySelector('.variant-marker-placeholder')).toBeNull();
+      }
+      expect(tile?.querySelector('[data-variant-marker-id="gomoku"]')).not.toBeNull();
+      expect(tile?.querySelector('svg, img, .articles-thumb-board')).toBeNull();
+      const railHrefs = [...landing.querySelectorAll('.article-variant-sidebar a')].map((a) =>
+        a.getAttribute('href'),
+      );
+      const tileHrefs = [...landing.querySelectorAll('.rules-landing-tile')].map((a) =>
+        a.getAttribute('href'),
+      );
+      expect(tileHrefs).toEqual(railHrefs);
+      expect(railHrefs[railHrefs.indexOf(`${prefix}/rules/xiangqi-mahjong-32`) + 1]).toBe(href);
+    },
+  );
+
+  it('places the hidden Gomoku rules after Xiangqi Mahjong, ahead of unlisted games', () => {
+    const rules = articles.filter((article) => article.kind === 'rules' && !article.sourceLang);
+    const slugs = buildRulesArticleRailEntries(rules).map((article) => article.slug);
+    expect(slugs[slugs.indexOf('xiangqi-mahjong-32') + 1]).toBe('gomoku');
   });
 
   it('translates every prose string and caption into both Chinese scripts', () => {
