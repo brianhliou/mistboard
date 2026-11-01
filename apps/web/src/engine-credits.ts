@@ -3,6 +3,7 @@
 // summed over every bot it runs (read live from /api/bots). Adding an engine is
 // one entry here, in order of games played. Licence lines stay on /source.
 
+import { gomokuEnabled } from './feature-flags.js';
 import type { I18nKey } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
 
@@ -21,14 +22,22 @@ export type EngineCredit = {
   body: I18nKey;
   /** The first is its main variant: its icon and the rating the row shows. */
   gameSpecIds: readonly string[];
-  /** Every bot it runs; the first is the bot page the row links to. */
+  /** Every bot it runs; the first is the default bot page the row links to. */
   botIds: readonly string[];
+  /** Public project page for browser engines without a public bot profile. */
+  href?: string;
+  /** Hidden engines follow the same build gate as their play surface. */
+  enabled?: () => boolean;
 };
 
 const levels = (prefix: string, count: number): string[] =>
   Array.from({ length: count }, (_, i) => `${prefix}${i + 1}`);
 
-export const ENGINE_CREDITS: readonly EngineCredit[] = [
+export const RAPFI_REPO_URL = 'https://github.com/dhbloo/rapfi';
+export const RAPFI_NETWORKS_LICENSE_URL = '/engine/rapfi/NETWORKS-CC0.txt';
+export const RAPFI_BUILD_URL = 'https://github.com/brianhliou/rapfi-wasm';
+
+const ENGINE_CREDITS: readonly EngineCredit[] = [
   {
     id: 'pikafish',
     engine: 'Pikafish',
@@ -73,7 +82,25 @@ export const ENGINE_CREDITS: readonly EngineCredit[] = [
     gameSpecIds: ['jungle'],
     botIds: ['katago'],
   },
+  {
+    id: 'rapfi',
+    engine: 'Rapfi',
+    authors: [
+      { name: 'thanks.rapfiAuthors', href: RAPFI_REPO_URL },
+      { name: 'thanks.rapfiBuildAuthor', href: RAPFI_BUILD_URL },
+    ],
+    body: 'thanks.rapfiBody',
+    gameSpecIds: ['gomoku'],
+    botIds: levels('rapfi-level-', 5),
+    href: RAPFI_REPO_URL,
+    enabled: gomokuEnabled,
+  },
 ];
+
+/** The list shared by rendering and bot enrichment, including hidden-game gates. */
+export function enabledEngineCredits(): readonly EngineCredit[] {
+  return ENGINE_CREDITS.filter((credit) => credit.enabled?.() ?? true);
+}
 
 // Pikafish's code, home page and NNUE weights licence (no commercial use without
 // permission), the last in the reader's language where pikafish.com has one.
