@@ -295,23 +295,6 @@ export async function loadRoom(roomId: string): Promise<GameEvent[] | null> {
   return loadRoomEvents<GameEvent>(roomId);
 }
 
-// Access checks need the persisted identity even for unfinished rooms that
-// have no games row yet. Select only a boolean; never load the secret setup
-// merely to decide whether a caller may read a room through an alternate URL.
-export async function roomHasGameSpec(roomId: string, gameSpecId: string): Promise<boolean> {
-  const { rows } = await getPool().query<{ matches: boolean }>(
-    `SELECT EXISTS (
-       SELECT 1 FROM games WHERE room_id = $1 AND variant = $2
-       UNION ALL
-       SELECT 1 FROM events WHERE room_id = $1
-         AND payload->>'type' = 'room-created'
-         AND (payload->>'gameSpecId' = $2 OR payload->>'variant' = $2)
-     ) AS matches`,
-    [roomId, gameSpecId],
-  );
-  return rows[0]?.matches === true;
-}
-
 export async function loadRoomEvents<T extends PersistedRoomEvent>(
   roomId: string,
 ): Promise<T[] | null> {

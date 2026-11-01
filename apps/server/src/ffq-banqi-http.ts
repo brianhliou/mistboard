@@ -75,10 +75,9 @@ export async function guardFFQBanqiHttpRead(
   const { roomId } = target;
   const reserved = !roomId || roomId.startsWith(FFQ_BANQI_ROOM_ID_PREFIX) || target.ffqPath;
   const live = reserved ? null : ctx.rooms?.get(roomId);
-  const isFFQ =
-    reserved ||
-    live?.gameSpecId === FFQ_BANQI_SPEC_ID ||
-    (persistence.isInitialized() && (await persistence.roomHasGameSpec(roomId, FFQ_BANQI_SPEC_ID)));
+  // Every persisted FFQ room is minted with the reserved prefix. Identity
+  // checks must not add a database read to other variants' HTTP requests.
+  const isFFQ = reserved || live?.gameSpecId === FFQ_BANQI_SPEC_ID;
   if (roomId && !isFFQ) return false;
 
   // Neither successful private summaries nor refusals may survive a flag or

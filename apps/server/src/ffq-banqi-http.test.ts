@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import { ffqBanqiHttpTarget } from './ffq-banqi-http.js';
+import { ffqBanqiHttpTarget, guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import { handleApiRequest, routes } from './http-api.js';
 import { close, getPool, init } from './persistence-db.js';
 import { clearPresence } from './presence.js';
@@ -133,13 +133,15 @@ for (const flag of [undefined, 'false', 'true']) {
           return { rows: role ? [{ id: 'fixture', handle: 'fixture', account_role: role }] : [] };
         }
         if (admitted && sql.includes('SELECT games.room_id')) {
-          assert.ok(params[0] === 'legacy_alias' || params[0] === 'inflight_alias');
-          if (params[0] === 'inflight_alias') return { rows: [] };
+          assert.ok(
+            ['ffq_persisted', 'ffq_inflight', 'ffq_wrong_variant'].includes(String(params[0])),
+          );
+          if (params[0] === 'ffq_inflight') return { rows: [] };
           return {
             rows: [
               {
-                room_id: 'legacy_alias',
-                variant: 'ffq-banqi',
+                room_id: params[0],
+                variant: params[0] === 'ffq_wrong_variant' ? 'banqi' : 'ffq-banqi',
                 mode: 'pvp',
                 result: 'draw',
                 termination: 'draw',
@@ -154,14 +156,7 @@ for (const flag of [undefined, 'false', 'true']) {
           };
         }
         if (admitted && sql.includes('FROM game_participants')) return { rows: [] };
-        // The pre-dispatch identity check must select metadata only, including
-        // rooms without a completed games row. Never fetch a canonical log.
-        assert.ok(sql.includes('SELECT EXISTS'), `read reached route data loading: ${sql}`);
-        assert.ok(sql.includes('games') && sql.includes('events'));
-        assert.ok(sql.includes("payload->>'gameSpecId'") && sql.includes("payload->>'variant'"));
-        assert.ok(!sql.includes('SELECT payload'));
-        assert.equal(params[1], 'ffq-banqi');
-        return { rows: [{ matches: true }] };
+        assert.fail(`read reached unexpected database loading: ${sql}`);
       });
       const summary = {
         roomId: '',
@@ -183,7 +178,7 @@ for (const flag of [undefined, 'false', 'true']) {
         rooms: new Map([['live_alias', { gameSpecId: 'ffq-banqi', setup: SECRET }]]),
         inMemoryGameSummary: (roomId: string) => {
           summaryReads++;
-          return ['legacy_alias', 'inflight_alias'].includes(roomId)
+          return ['ffq_persisted', 'ffq_inflight', 'ffq_wrong_variant'].includes(roomId)
             ? null
             : { ...summary, roomId };
         },
@@ -199,14 +194,15 @@ for (const flag of [undefined, 'false', 'true']) {
       for (const id of [
         'ffq_reserved',
         '%66fq_encoded',
-        'legacy_alias',
-        'inflight_alias',
+        'ffq_persisted',
+        'ffq_inflight',
+        'ffq_wrong_variant',
         'live_alias',
       ]) {
         for (const [method, path] of reads(id)) {
           // Only the two explicitly supported summary endpoints are open.
           const safeSummary =
-            id !== 'inflight_alias' &&
+            !['ffq_inflight', 'ffq_wrong_variant'].includes(id) &&
             method === 'GET' &&
             (path === `/api/games/${id}` || path === `/api/ffq-banqi/games/${id}`);
           const result = await invoke(handler, method, path, role !== null);
@@ -241,24 +237,39 @@ for (const flag of [undefined, 'false', 'true']) {
       assert.equal(direct.status, 404);
       assert.equal(direct.body, '{"error":"not_found"}');
       if (!admitted) assert.equal(summaryReads, 0, 'unauthorized request loaded a summary');
-      assert.ok(
-        queries.some((sql) => sql.includes('SELECT EXISTS')),
-        'persisted aliases were checked',
+      assert.equal(
+        queries.filter((sql) => sql.includes('SELECT games.room_id')).length,
+        admitted ? 6 : 0,
+        'only authorized summary endpoints load persisted summaries',
       );
     });
   }
 }
 
-test('FFQ identity lookup leaves unrelated rooms and collections with their existing dispatcher', async (t) => {
+test('unrelated game, room and OG reads perform no FFQ identity query', async (t) => {
   init('postgres://mistboard@127.0.0.1:9/never-connect');
   t.after(() => close());
-  const lookedUp: unknown[] = [];
-  t.mock.method(getPool(), 'query', async (sql: string, params: unknown[]) => {
-    assert.ok(sql.includes('SELECT EXISTS'));
-    lookedUp.push(params[0]);
-    return { rows: [{ matches: false }] };
+  t.mock.method(getPool(), 'connect', () => assert.fail('unexpected database connection'));
+  t.mock.method(getPool(), 'query', () => assert.fail('FFQ preflight queried persistence'));
+  const context = {
+    rooms: new Map([['live_nonffq', { gameSpecId: 'banqi' }]]),
+    inMemoryGameSummary: () => assert.fail('FFQ preflight loaded an unrelated summary'),
+  } as unknown as HttpApiContext;
+  const response = new Proxy({} as ServerResponse, {
+    get: (_target, key) => assert.fail(`FFQ preflight touched response: ${String(key)}`),
   });
-  const context = { rooms: new Map() } as unknown as HttpApiContext;
+  for (const id of ['nonffq', 'live_nonffq']) {
+    for (const [method, path] of reads(id)) {
+      if (path.includes('/ffq-banqi/')) continue;
+      const handled = await guardFFQBanqiHttpRead(
+        context,
+        { method, headers: {} } as IncomingMessage,
+        response,
+        new URL(path, 'http://localhost'),
+      );
+      assert.equal(handled, false, `${method} ${path}`);
+    }
+  }
   const sentinel = {
     tryHandle: async (_ctx: unknown, _req: IncomingMessage, res: ServerResponse) => {
       res.writeHead(200);
@@ -290,7 +301,6 @@ test('FFQ identity lookup leaves unrelated rooms and collections with their exis
     assert.equal(result.status, 200, path);
     assert.equal(result.body, 'existing route');
   }
-  assert.deepEqual(lookedUp, ['nonffq', 'recent']);
   assert.equal(ffqBanqiHttpTarget(new URL('http://localhost/api/games/current')), null);
   assert.equal(
     ffqBanqiHttpTarget(new URL('http://localhost/api/banqi/games/current'))?.roomId,
@@ -312,7 +322,7 @@ test('reserved FFQ reads close without persistence or touching runtime state', a
     for (const path of [
       '/api/games/ffq_reserved',
       '/api/games/ffq_reserved/events',
-      '/api/ffq-banqi/games/legacy_alias',
+      '/api/ffq-banqi/games/nonprefixed',
       '/api/games/%ZZ/events',
     ]) {
       const result = await invoke(
