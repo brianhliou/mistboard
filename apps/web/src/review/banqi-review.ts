@@ -33,6 +33,7 @@ import {
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
 } from './engine/engine-arrows.js';
+import { withFaceDownReview } from './face-down-faces.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { hoverArrowStyle } from './hover-arrow.js';
 import { formatFlipVariantBestMove } from './move-advice.js';
@@ -160,14 +161,17 @@ export function mountBanqiReview(
   start: BanqiReviewStart | null,
   config: BanqiReviewConfig,
 ): BanqiReviewHandle {
-  const adapter = makeBanqiTreeAdapter(gameId, start);
+  const faceDown = withFaceDownReview(makeBanqiTreeAdapter(gameId, start), config);
   // Banqi has no opening book, so the book pane holds the endgame tablebase,
   // on every banqi review surface (game review, analysis, study). It is closed
   // until the reader opens it, and invisible on any position it does not
   // cover, which is every position with a face-down tile.
   const explorer =
     config.explorer ?? (config.tablebasePanel === false ? undefined : banqiTablebaseExplorer());
-  return mountTreeReview(root, makeBanqiPresentation(adapter), { ...config, explorer });
+  return mountTreeReview(root, makeBanqiPresentation(faceDown.adapter), {
+    ...faceDown.config,
+    explorer,
+  });
 }
 
 /** The tablebase panel in the shape of the tree-review explorer slot. */

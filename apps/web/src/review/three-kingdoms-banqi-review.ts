@@ -27,6 +27,7 @@ import {
 } from '../three-kingdoms-banqi-diagrams.js';
 import { tkPoints } from '../three-kingdoms-banqi-score.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
+import { withFaceDownReview } from './face-down-faces.js';
 import type { NodeShape } from './game-tree.js';
 import { makeThreeKingdomsBanqiTreeAdapter } from './three-kingdoms-banqi-tree-adapter.js';
 import {
@@ -132,5 +133,6 @@ export function mountThreeKingdomsBanqiReview(
   config: ThreeKingdomsBanqiReviewConfig,
 ): TreeReviewHandle {
   if (!config.root) throw new Error('three kingdoms banqi review needs a dealt root position');
-  return mountTreeReview(root, presentation, config);
+  const faceDown = withFaceDownReview(presentation.adapter, config);
+  return mountTreeReview(root, { ...presentation, adapter: faceDown.adapter }, faceDown.config);
 }

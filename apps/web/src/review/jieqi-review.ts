@@ -31,6 +31,7 @@ import {
   candidateArrowsWithParser,
   engineArrowsFromLinesWithParser,
 } from './engine/engine-arrows.js';
+import { withFaceDownReview } from './face-down-faces.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { jieqiChanceOdds } from './jieqi-luck-mark.js';
 import { makeJieqiTreeAdapter } from './jieqi-tree-adapter.js';
@@ -198,13 +199,16 @@ export function mountJieqiReview(
   // not a data fetch: the flag lives beside the adapter that reads it and the menu
   // item that flips it, and nothing else in the review needs to know about it.
   let revealAll = false;
-  const adapter = makeJieqiTreeAdapter(gameId, deal, { revealAll: () => revealAll });
-  return mountTreeReview(root, makeJieqiPresentation(adapter), {
-    ...config,
-    revealHidden: {
-      setRevealed: (next) => {
-        revealAll = next;
+  const faceDown = withFaceDownReview(
+    makeJieqiTreeAdapter(gameId, deal, { revealAll: () => revealAll }),
+    {
+      ...config,
+      revealHidden: {
+        setRevealed: (next: boolean) => {
+          revealAll = next;
+        },
       },
     },
-  });
+  );
+  return mountTreeReview(root, makeJieqiPresentation(faceDown.adapter), faceDown.config);
 }
