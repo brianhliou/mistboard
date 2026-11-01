@@ -48,6 +48,38 @@ export type PuzzleAttemptHistoryEntry = {
   createdAt: string;
 };
 
+export type PuzzleHistoryCursor = { createdAt: string; puzzleId: string };
+
+// null starts a new page; undefined is malformed and must be rejected by the route.
+export function parsePuzzleHistoryCursor(
+  raw: string | null,
+): PuzzleHistoryCursor | null | undefined {
+  if (raw === null) return null;
+  if (raw.length > 2048 || !/^[A-Za-z0-9_-]+$/.test(raw)) return undefined;
+  try {
+    const bytes = Buffer.from(raw, 'base64url');
+    if (bytes.toString('base64url') !== raw) return undefined;
+    const value: unknown = JSON.parse(bytes.toString('utf8'));
+    if (!Array.isArray(value) || value.length !== 2) return undefined;
+    const [createdAt, puzzleId] = value;
+    if (
+      typeof createdAt !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(createdAt) ||
+      typeof puzzleId !== 'string' ||
+      !puzzleId ||
+      puzzleId.length > 256 ||
+      puzzleId.includes('\0')
+    )
+      return undefined;
+    const date = new Date(createdAt);
+    if (!Number.isFinite(date.getTime()) || date.toISOString() !== `${createdAt.slice(0, 23)}Z`)
+      return undefined;
+    return { createdAt, puzzleId };
+  } catch {
+    return undefined;
+  }
+}
+
 export type RecordPuzzleAttemptInput = {
   userId: string;
   puzzleId: string;
@@ -169,14 +201,23 @@ export async function listAttemptedPuzzleIds(
 // puzzle ratings. The caller supplies the authenticated account, not a handle
 // or an account id taken from the request. Equal timestamps have a stable tie
 // break, so bounded chronological pages can also feed a progress graph.
+// Newest-first pages use a cursor; offsets remain for the profile's oldest-first
+// walk. Preserve PostgreSQL microseconds in the cursor: pg's Date loses them.
 export async function listPuzzleAttemptHistory(
   userId: string,
   variant: string | null,
   limit: number,
   offset: number,
   order: 'oldest' | 'newest' = 'oldest',
-): Promise<{ attempts: PuzzleAttemptHistoryEntry[]; nextOffset: number | null }> {
-  if (!isInitialized()) return { attempts: [], nextOffset: null };
+  cursor: PuzzleHistoryCursor | null = null,
+): Promise<{
+  attempts: PuzzleAttemptHistoryEntry[];
+  nextOffset?: number | null;
+  nextCursor?: string | null;
+}> {
+  const newest = order === 'newest';
+  if (!isInitialized())
+    return { attempts: [], ...(newest ? { nextCursor: null } : { nextOffset: null }) };
   const { rows } = await getPool().query<{
     puzzle_id: string;
     variant: string;
@@ -185,17 +226,28 @@ export async function listPuzzleAttemptHistory(
     user_rating_before: number | null;
     user_rating_after: number | null;
     created_at: Date;
+    cursor_created_at: string;
   }>(
     `SELECT puzzle_id, variant, solved, rated,
-            user_rating_before, user_rating_after, created_at
+            user_rating_before, user_rating_after, created_at,
+            to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at
        FROM puzzle_attempts
        WHERE user_id = $1 AND ($2::text IS NULL OR variant = $2)
-       ORDER BY created_at ${order === 'newest' ? 'DESC' : 'ASC'}, puzzle_id ${order === 'newest' ? 'DESC' : 'ASC'}
-       LIMIT $3 OFFSET $4`,
-    [userId, variant, limit + 1, offset],
+       ${newest ? `AND ($4::timestamptz IS NULL OR (created_at, puzzle_id) < ($4::timestamptz, $5::text))` : ''}
+       ORDER BY created_at ${newest ? 'DESC' : 'ASC'}, puzzle_id ${newest ? 'DESC' : 'ASC'}
+       LIMIT $3 ${newest ? '' : 'OFFSET $4'}`,
+    newest
+      ? [userId, variant, limit + 1, cursor?.createdAt ?? null, cursor?.puzzleId ?? null]
+      : [userId, variant, limit + 1, offset],
   );
+  const page = rows.slice(0, limit);
+  const last = page.at(-1);
+  const nextCursor =
+    newest && rows.length > limit && last
+      ? Buffer.from(JSON.stringify([last.cursor_created_at, last.puzzle_id])).toString('base64url')
+      : null;
   return {
-    attempts: rows.slice(0, limit).map((row) => ({
+    attempts: page.map((row) => ({
       puzzleId: row.puzzle_id,
       variant: row.variant,
       solved: row.solved,
@@ -208,7 +260,7 @@ export async function listPuzzleAttemptHistory(
           : row.user_rating_after - row.user_rating_before,
       createdAt: row.created_at.toISOString(),
     })),
-    nextOffset: rows.length > limit ? offset + limit : null,
+    ...(newest ? { nextCursor } : { nextOffset: rows.length > limit ? offset + limit : null }),
   };
 }
 

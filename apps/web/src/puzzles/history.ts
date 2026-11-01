@@ -14,7 +14,7 @@ type HistoryEntry = PuzzleHistoryEntry & {
   fen: string | null;
   sideToMove: 'red' | 'black' | null;
 };
-type HistoryPage = { attempts: HistoryEntry[]; nextOffset: number | null };
+type HistoryPage = { attempts: HistoryEntry[]; nextCursor: string | null };
 
 /** The ledger has no mode column. Adjacent attempts within an hour form a session. */
 export function puzzleHistorySessions(attempts: HistoryEntry[]): HistoryEntry[][] {
@@ -117,7 +117,9 @@ export async function mountPuzzleHistory(root: HTMLElement): Promise<void> {
   root.replaceChildren(buildNav(), renderPuzzleMenuLayout('history', main));
 
   const attempts: HistoryEntry[] = [];
-  let offset: number | null = 0;
+  const seenPuzzleIds = new Set<string>();
+  let cursor: string | null = null;
+  let hasMore = true;
   let busy = false;
   const render = () => {
     content.replaceChildren();
@@ -146,13 +148,15 @@ export async function mountPuzzleHistory(root: HTMLElement): Promise<void> {
     }
   };
   const load = async () => {
-    if (busy || offset === null) return;
+    if (busy || !hasMore) return;
     busy = true;
     more.disabled = true;
     status.textContent = t('puzzle.loading');
     main.setAttribute('aria-busy', 'true');
     try {
-      const response = await fetch(`/api/puzzles/history?order=newest&limit=50&offset=${offset}`, {
+      const query = new URLSearchParams({ order: 'newest', limit: '50' });
+      if (cursor !== null) query.set('cursor', cursor);
+      const response = await fetch(`/api/puzzles/history?${query}`, {
         credentials: 'same-origin',
       });
       if (response.status === 401) {
@@ -161,7 +165,8 @@ export async function mountPuzzleHistory(root: HTMLElement): Promise<void> {
         signIn.href = loginHrefForCurrentPage();
         signIn.textContent = t('nav.signIn');
         content.replaceChildren(signIn);
-        offset = null;
+        seenPuzzleIds.clear();
+        hasMore = false;
         status.textContent = '';
         return;
       }
@@ -169,12 +174,17 @@ export async function mountPuzzleHistory(root: HTMLElement): Promise<void> {
       const page = (await response.json()) as HistoryPage;
       if (
         !Array.isArray(page.attempts) ||
-        (page.nextOffset !== null &&
-          (!Number.isSafeInteger(page.nextOffset) || page.nextOffset <= offset))
+        (page.nextCursor !== null &&
+          (typeof page.nextCursor !== 'string' || !page.nextCursor || page.nextCursor === cursor))
       )
         throw new Error('Invalid history page');
-      attempts.push(...page.attempts);
-      offset = page.nextOffset;
+      for (const attempt of page.attempts) {
+        if (seenPuzzleIds.has(attempt.puzzleId)) continue;
+        seenPuzzleIds.add(attempt.puzzleId);
+        attempts.push(attempt);
+      }
+      cursor = page.nextCursor;
+      hasMore = cursor !== null;
       render();
       status.textContent = '';
       more.textContent = t('site.more');
@@ -184,7 +194,7 @@ export async function mountPuzzleHistory(root: HTMLElement): Promise<void> {
     } finally {
       busy = false;
       more.disabled = false;
-      more.hidden = offset === null;
+      more.hidden = !hasMore;
       main.removeAttribute('aria-busy');
     }
   };

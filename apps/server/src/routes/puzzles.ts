@@ -42,6 +42,7 @@ import {
   listFailedPuzzleAttempts,
   listPuzzleAttemptHistory,
   listPuzzleRatingSummaries,
+  parsePuzzleHistoryCursor,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
 import { getPuzzleStreak } from '../persistence-puzzle-streak.js';
@@ -661,18 +662,22 @@ export async function tryHandle(
     const limit = Number(limitText);
     const offset = Number(offsetText);
     const order = parsedUrl.searchParams.get('order') ?? 'oldest';
+    const cursor = parsePuzzleHistoryCursor(parsedUrl.searchParams.get('cursor'));
     if (
       !/^\d+$/.test(limitText) ||
       !/^\d+$/.test(offsetText) ||
       !Number.isSafeInteger(offset + limit + 1) ||
       limit < 1 ||
       limit > 100 ||
-      (order !== 'oldest' && order !== 'newest')
+      (order !== 'oldest' && order !== 'newest') ||
+      cursor === undefined ||
+      (order === 'oldest' && cursor !== null) ||
+      (order === 'newest' && offset !== 0)
     ) {
       writeJson(response, 400, { error: 'invalid_pagination' }, headers);
       return true;
     }
-    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset, order);
+    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset, order, cursor);
     const rating = variant ? await getUserPuzzleRating(user.id, variant) : null;
     const store = history.attempts.length ? await getPuzzleStore() : null;
     writeJson(

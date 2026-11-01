@@ -10,6 +10,7 @@ import {
 import { loadSeedPuzzleRegistry, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import { hashSecret } from './account-session.js';
 import { close, getPool, init } from './persistence-db.js';
+import { listPuzzleAttemptHistory } from './persistence-puzzle-ratings.js';
 import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
@@ -82,7 +83,11 @@ const thumbnailFields = (index: number) => ({
 
 // Real session resolution and persistence serialization; only the pg boundary
 // is mocked. Fail on unknown reads so auth or owner checks cannot pass silently.
-function database(t: TestContext) {
+type HistoryRow = (typeof rows)[number] & { cursor_created_at?: string };
+const timestamp = (row: HistoryRow) =>
+  row.cursor_created_at ?? row.created_at.toISOString().replace('Z', '000Z');
+
+function database(t: TestContext, attempts: HistoryRow[] = rows) {
   resetPuzzleStoreForTests();
   init('postgres://mistboard@127.0.0.1:9/never');
   t.after(async () => {
@@ -127,12 +132,33 @@ function database(t: TestContext) {
       assert.match(sql, /WHERE user_id = \$1 AND \(\$2::text IS NULL OR variant = \$2\)/);
       const descending = sql.includes('ORDER BY created_at DESC, puzzle_id DESC');
       if (!descending) assert.match(sql, /ORDER BY created_at ASC, puzzle_id ASC/);
-      assert.match(sql, /LIMIT \$3 OFFSET \$4/);
+      assert.match(sql, descending ? /LIMIT \$3/ : /LIMIT \$3 OFFSET \$4/);
       assert.ok(values[1] === 'xiangqi' || values[1] === null);
-      const offset = Number(values[3]);
-      const ordered = descending ? [...rows].reverse() : rows;
+      const offset = descending ? 0 : Number(values[3]);
+      let ordered = [...attempts].sort(
+        (a, b) =>
+          timestamp(a).localeCompare(timestamp(b)) || a.puzzle_id.localeCompare(b.puzzle_id),
+      );
+      if (descending) {
+        ordered.reverse();
+        if (values[3]) {
+          assert.match(sql, /\(created_at, puzzle_id\) < \(\$4::timestamptz, \$5::text\)/);
+          const time = String(values[3]);
+          ordered = ordered.filter(
+            (row) =>
+              timestamp(row) < time ||
+              (timestamp(row) === time && row.puzzle_id < String(values[4])),
+          );
+        }
+      }
       return {
-        rows: values[0] === 'alice' ? ordered.slice(offset, offset + Number(values[2])) : [],
+        rows:
+          values[0] === 'alice'
+            ? ordered.slice(offset, offset + Number(values[2])).map((row) => ({
+                ...row,
+                cursor_created_at: timestamp(row),
+              }))
+            : [],
       };
     }
     assert.fail('unexpected database query');
@@ -254,7 +280,7 @@ test('puzzle history preserves missing legacy rating snapshots', async (t) => {
   assert.equal(response.body.attempts[0].ratingDelta, null);
 });
 
-test('history offers newest-first offset pages without changing profile chronological defaults', async (t) => {
+test('history offers newest-first cursor pages without changing profile chronological defaults', async (t) => {
   database(t);
   const first = await history('?order=newest&limit=2', 'alice');
   assert.equal(first.status, 200);
@@ -263,10 +289,89 @@ test('history offers newest-first offset pages without changing profile chronolo
     ['third', 'second'],
   );
   assert.equal(first.body.progress, null);
-  assert.equal(first.body.nextOffset, 2);
-  const last = await history('?order=newest&limit=2&offset=2', 'alice');
+  assert.equal('nextOffset' in first.body, false);
+  assert.equal(typeof first.body.nextCursor, 'string');
+  const last = await history(
+    `?order=newest&limit=2&cursor=${encodeURIComponent(first.body.nextCursor)}`,
+    'alice',
+  );
   assert.equal(last.body.attempts[0].puzzleId, 'first');
-  assert.equal(last.body.nextOffset, null);
+  assert.equal(last.body.nextCursor, null);
+});
+
+test('newest puzzle history rejects malformed cursors with 400', async (t) => {
+  const query = database(t);
+  const encoded = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  for (const cursor of [
+    '',
+    'bad!',
+    'a'.repeat(2049),
+    encoded(null),
+    encoded({}),
+    encoded([]),
+    encoded([1, 2]),
+    encoded(['not-a-date', 'first']),
+    encoded(['2026-02-30T00:00:00.000000Z', 'first']),
+    encoded(['2026-10-26T12:00:00.000000Z', '']),
+    encoded(['2026-10-26T12:00:00.000000Z', 'a\0b']),
+    encoded(['2026-10-26T12:00:00.000000Z', 'x'.repeat(257)]),
+    `${encoded(['2026-10-26T12:00:00.000000Z', 'first'])}=`,
+    encoded(['2026-10-26T12:00:00.000000Z', 'first', 'extra']),
+  ]) {
+    const response = await history(`?order=newest&cursor=${encodeURIComponent(cursor)}`, 'alice');
+    assert.equal(response.status, 400, cursor);
+    assert.deepEqual(response.body, { error: 'invalid_pagination' });
+  }
+  const cursor = encoded(['2026-10-26T12:00:00.000000Z', 'first']);
+  assert.equal((await history(`?cursor=${cursor}`, 'alice')).status, 400);
+  assert.equal((await history('?order=newest&offset=2', 'alice')).status, 400);
+  assert.equal(
+    query.mock.calls.some((call) => String(call.arguments[0]).includes('FROM puzzle_attempts')),
+    false,
+  );
+});
+
+test('persistence newest history never repeats or skips attempts inserted between pages', async (t) => {
+  const attempts = ['a', 'b', 'c', 'd', 'e', 'f'].map((puzzle_id) => ({
+    ...rows[0]!,
+    puzzle_id,
+    cursor_created_at: `2026-10-25T12:00:00.00000${puzzle_id < 'd' ? '1' : '2'}Z`,
+  }));
+  database(t, attempts);
+  const first = await listPuzzleAttemptHistory('alice', 'xiangqi', 2, 0, 'newest');
+  assert.deepEqual(
+    first.attempts.map((entry) => entry.puzzleId),
+    ['f', 'e'],
+  );
+  assert.equal(typeof first.nextCursor, 'string');
+  assert.deepEqual(JSON.parse(Buffer.from(first.nextCursor!, 'base64url').toString('utf8')), [
+    '2026-10-25T12:00:00.000002Z',
+    'e',
+  ]);
+  attempts.push(
+    ...['new-1', 'new-2', 'new-3'].map((puzzle_id) => ({
+      ...rows[2]!,
+      puzzle_id,
+      cursor_created_at: '2026-10-27T12:00:00.000000Z',
+    })),
+  );
+  const collected = [...first.attempts];
+  let next = first.nextCursor;
+  for (let pageNumber = 0; next && pageNumber < 3; pageNumber++) {
+    const [createdAt, puzzleId] = JSON.parse(Buffer.from(next, 'base64url').toString('utf8'));
+    const page = await listPuzzleAttemptHistory('alice', 'xiangqi', 2, 0, 'newest', {
+      createdAt,
+      puzzleId,
+    });
+    collected.push(...page.attempts);
+    next = page.nextCursor;
+  }
+  assert.deepEqual(
+    collected.map((entry) => entry.puzzleId),
+    ['f', 'e', 'd', 'c', 'b', 'a'],
+  );
+  assert.equal(next, null);
+  assert.equal(new Set(collected.map((entry) => entry.puzzleId)).size, collected.length);
 });
 
 test('history serializes only thumbnail fields for public variants and withholds unknown or mismatched views', async (t) => {

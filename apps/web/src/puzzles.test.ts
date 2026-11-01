@@ -258,7 +258,7 @@ describe('puzzles route', () => {
   it('opens Puzzle history before the puzzle-id route and highlights its shared menu', async () => {
     stubWindowLocalStorage(memoryStorage());
     window.history.replaceState(null, '', '/puzzles/history');
-    const fetchSpy = vi.fn(async () => json({ attempts: [], nextOffset: null }));
+    const fetchSpy = vi.fn(async () => json({ attempts: [], nextCursor: null }));
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
     await mountPuzzleHistory(root);
@@ -271,7 +271,7 @@ describe('puzzles route', () => {
     );
     expect(root.querySelector('main a')?.getAttribute('href')).toBe('/puzzles');
     expect(root.querySelector<HTMLButtonElement>('main button')?.hidden).toBe(true);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles/history?order=newest&limit=50&offset=0', {
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles/history?order=newest&limit=50', {
       credentials: 'same-origin',
     });
     const source = readFileSync('src/main.ts', 'utf8');
@@ -296,15 +296,15 @@ describe('puzzles route', () => {
     ).toEqual([['17:01'], ['14:01', '15:00', '16:00']]);
   });
 
-  it('joins sessions across offset pages, orders thumbnails as played, and draws each solver side', async () => {
+  it('joins sessions across cursor pages, orders thumbnails as played, and draws each solver side', async () => {
     stubWindowLocalStorage(memoryStorage());
     const recent = historyEntry(BLACK_MATE, '2026-10-31T16:00:00Z', false);
     const earlier = historyEntry(RED_MATE, '2026-10-31T15:15:00Z');
-    const old = historyEntry(RED_MATE, '2026-10-30T14:00:00Z');
+    const old = { ...historyEntry(RED_MATE, '2026-10-30T14:00:00Z'), puzzleId: 'older-puzzle' };
     const fetchSpy = vi
       .fn()
-      .mockResolvedValueOnce(json({ attempts: [recent], nextOffset: 1 }))
-      .mockResolvedValueOnce(json({ attempts: [earlier, old], nextOffset: null }));
+      .mockResolvedValueOnce(json({ attempts: [recent], nextCursor: 'page-one' }))
+      .mockResolvedValueOnce(json({ attempts: [earlier, old], nextCursor: null }));
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
     await mountPuzzleHistory(root);
@@ -313,7 +313,7 @@ describe('puzzles route', () => {
       expect(root.querySelectorAll('.puzzle-history__session')).toHaveLength(2),
     );
     expect(fetchSpy).toHaveBeenLastCalledWith(
-      '/api/puzzles/history?order=newest&limit=50&offset=1',
+      '/api/puzzles/history?order=newest&limit=50&cursor=page-one',
       { credentials: 'same-origin' },
     );
     const sessions = [...root.querySelectorAll('.puzzle-history__session')];
@@ -357,7 +357,7 @@ describe('puzzles route', () => {
         vi.fn(async () =>
           json({
             attempts: [historyEntry(RED_MATE, new Date(now).toISOString(), false)],
-            nextOffset: null,
+            nextCursor: null,
           }),
         ),
       );
@@ -370,13 +370,16 @@ describe('puzzles route', () => {
     },
   );
 
-  it('keeps loaded history on paging failures, retries the same offset, and prompts on session expiry', async () => {
+  it('keeps loaded history on paging failures, retries the same cursor, and prompts on session expiry', async () => {
     stubWindowLocalStorage(memoryStorage());
     window.history.replaceState(null, '', '/puzzles/history');
     const fetchSpy = vi
       .fn()
       .mockResolvedValueOnce(
-        json({ attempts: [historyEntry(RED_MATE, '2026-10-31T12:00:00Z')], nextOffset: 1 }),
+        json({
+          attempts: [historyEntry(RED_MATE, '2026-10-31T12:00:00Z')],
+          nextCursor: 'page-one',
+        }),
       )
       .mockResolvedValueOnce(json({}, 503))
       .mockResolvedValue(json({}, 401));
@@ -396,12 +399,39 @@ describe('puzzles route', () => {
     expect(link.textContent).toBe('Sign in');
     expect(new URL(link.href).searchParams.get('referrer')).toBe('/puzzles/history');
     expect(fetchSpy.mock.calls.slice(1).map((args) => args[0])).toEqual([
-      '/api/puzzles/history?order=newest&limit=50&offset=1',
-      '/api/puzzles/history?order=newest&limit=50&offset=1',
+      '/api/puzzles/history?order=newest&limit=50&cursor=page-one',
+      '/api/puzzles/history?order=newest&limit=50&cursor=page-one',
     ]);
     await mountPuzzleHistory(root);
     expect(root.querySelector('main a')?.textContent).toBe('Sign in');
     expect(root.querySelector('main button')?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('renders each attempt once when a later cursor page repeats already shown attempts', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    const recent = historyEntry(BLACK_MATE, '2026-10-31T16:00:00Z');
+    const earlier = historyEntry(RED_MATE, '2026-10-31T15:15:00Z');
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        // Both fields let the regression reach the old client's append logic.
+        .mockResolvedValueOnce(json({ attempts: [recent], nextCursor: 'page-one', nextOffset: 1 }))
+        .mockResolvedValueOnce(
+          json({ attempts: [recent, earlier, earlier], nextCursor: null, nextOffset: null }),
+        ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLButtonElement>('main button')!.hidden).toBe(true),
+    );
+    expect(
+      [...root.querySelectorAll<HTMLElement>('.puzzle-history__attempt')].map(
+        (link) => link.dataset.puzzleId,
+      ),
+    ).toEqual([RED_MATE.id, BLACK_MATE.id]);
   });
 
   it('never renders a future hidden-information variant as a full-information board', async () => {
@@ -411,7 +441,7 @@ describe('puzzles route', () => {
       vi.fn(async () =>
         json({
           attempts: [{ ...historyEntry(RED_MATE, '2026-10-31T12:00:00Z'), variant: 'jieqi' }],
-          nextOffset: null,
+          nextCursor: null,
         }),
       ),
     );
