@@ -135,6 +135,7 @@ registerVariantTenant({
   gameSpecId: gomokuTenant.gameSpecId,
   roomIdPrefix: gomokuTenant.roomIdPrefix,
   isEngineClientId: isGomokuEngineClientId,
+  engineDisplayName: (clientId) => (isGomokuEngineClientId(clientId) ? 'Rapfi' : null),
   ownsSpecRouting: true,
   replays: tenantReplayCheck(gomokuTenant),
   errorPrefix: 'gomoku',
@@ -166,7 +167,12 @@ registerVariantTenant({
     },
   },
   finishedGameOpensRoom: true,
-  watch: null,
+  watch: {
+    channelId: 'gomoku',
+    family: 'gomoku',
+    label: 'Gomoku',
+    legacyVariants: ['gomoku'],
+  },
   export: null,
   card: {
     layout: 'gomoku',

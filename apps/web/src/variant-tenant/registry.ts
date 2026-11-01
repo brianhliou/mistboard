@@ -311,6 +311,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     finishedGameOpensRoom: true,
     loadLiveRoomClient: () =>
       import('../live-gomoku.js').then(({ bootstrapGomokuLiveRoom }) => bootstrapGomokuLiveRoom),
+    watch: {
+      family: 'gomoku',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-gomoku-replay.js').then(({ mountGomokuWatchReplay }) =>
+          mountGomokuWatchReplay(root, roomId, options),
+        ),
+    },
     landing: {
       capabilities: {
         firstColor: 'black',

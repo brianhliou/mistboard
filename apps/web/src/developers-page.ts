@@ -22,8 +22,10 @@ import {
   embedPuzzlePath,
   embedStudyPath,
   embedTvPath,
+  isPublicGameSpec,
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
@@ -56,6 +58,7 @@ const TV_CHANNELS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'gomoku',
   'engines',
 ] as const;
 
@@ -355,6 +358,10 @@ function sizingTable(): HTMLElement {
 }
 
 function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
+  // Playtest access does not advertise an unlaunched TV channel.
+  const tvChannels = TV_CHANNELS.filter(
+    (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
+  );
   const section = proseSection('developers-section');
   const origin = siteOrigin();
   const gameExample = liveFrame(
@@ -423,7 +430,7 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
     codeBlock(tvSnippet(origin)),
     proseParagraph([
       'The snippet follows the xiangqi channel. Set channel= to any of ' +
-        `${TV_CHANNELS.join(', ')}, or drop it for the cross-variant pick the homepage shows:`,
+        `${tvChannels.join(', ')}, or drop it for the cross-variant pick the homepage shows:`,
     ]),
     codeBlock(`${origin}${embedTvPath()}`),
 

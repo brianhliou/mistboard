@@ -199,7 +199,7 @@ test('Gomoku flag gates metadata and PNGs before store reads, including a warmed
   const registration = variantTenantForRoomId(roomId);
   assert.equal(registration?.lobby?.supportsRated, false);
   assert.equal(registration?.export, null);
-  assert.equal(registration?.watch, null);
+  assert.equal(registration?.watch?.channelId, 'gomoku');
 });
 
 test('Gomoku cards reject live, aborted, absent, wrong-room and mismatched-variant games', async () => {

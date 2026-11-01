@@ -1,12 +1,138 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DARK_CHESS_SPEC_ID } from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
 // Watch channels (other than the hardcoded dark-chess default) derive from the
 // variant-tenant registry, so the registrations must be populated for the
 // derived channels to appear. This side-effect import registers every tenant.
 import './variant-tenant/register-tenants.js';
+import './routes/gomoku-games.js';
+import { collectCurrentGames } from './current-games.js';
+import { gomokuRooms } from './gomoku-registration.js';
+import { buildOpenApiDocument, WATCH_CHANNEL_IDS } from './openapi.js';
 import { channelTopPlayer } from './routes/games.js';
-import { defaultWatchChannel, listWatchChannels, watchChannelForId } from './watch-channels.js';
+import type { HttpApiContext } from './routes/lib.js';
+import { variantTenantForSpecId } from './variant-tenant/registry.js';
+import {
+  defaultWatchChannel,
+  listedOnSurface,
+  listWatchChannels,
+  watchChannelForId,
+} from './watch-channels.js';
+import { collectLiveTvCandidates } from './watch-live.js';
+
+test('Gomoku registers TV and Rapfi names without opening hidden listings', () => {
+  const registration = variantTenantForSpecId('gomoku')!;
+  assert.deepEqual(registration.watch, {
+    channelId: 'gomoku',
+    family: 'gomoku',
+    label: 'Gomoku',
+    legacyVariants: ['gomoku'],
+  });
+  for (const level of [1, 2, 3, 4, 5])
+    assert.equal(registration.engineDisplayName?.(`rapfi-level-${level}`), 'Rapfi');
+  for (const id of ['human', 'rapfi-level-0', 'rapfi-level-6'])
+    assert.equal(registration.engineDisplayName?.(id), null);
+});
+
+test('hidden Gomoku stays out of channels, Featured, Engines, current games and live TV', () => {
+  const spec = maybeGameSpecForId('gomoku')!;
+  const original = spec.publicSurface;
+  const originalFlag = process.env.MISTBOARD_GOMOKU_ENABLED;
+  const now = Date.now();
+  const roomId = 'gmk_hidden-listing-test';
+  const ctx = { rooms: new Map() } as unknown as HttpApiContext;
+  gomokuRooms.set(roomId, {
+    id: roomId,
+    events: [
+      { type: 'room-created', at: now - 60_000 },
+      { type: 'move-played', at: now - 1_000 },
+    ],
+    projection: {
+      state: { status: { type: 'playing' }, moveNumber: 8 },
+      seats: { black: 'human', white: 'rapfi-level-3' },
+      rated: false,
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    },
+    seatTokens: {},
+    clients: [],
+  } as unknown as Parameters<typeof gomokuRooms.set>[1]);
+  try {
+    assert.equal(spec.publicSurface, 'hidden');
+    for (const enabled of ['false', 'true']) {
+      process.env.MISTBOARD_GOMOKU_ENABLED = enabled;
+      assert.equal(listedOnSurface('gomoku'), false);
+      assert.equal(watchChannelForId('gomoku'), null);
+      const channels = listWatchChannels();
+      assert.equal(JSON.stringify(channels).includes('gomoku'), false);
+      assert.equal(JSON.stringify(collectCurrentGames(ctx, now)).includes(roomId), false);
+      assert.equal(JSON.stringify(collectLiveTvCandidates(ctx, now)).includes(roomId), false);
+    }
+    // Prove the fixture would be listed after a launch, with the same flag.
+    spec.publicSurface = 'casual';
+    assert.equal(watchChannelForId('gomoku')?.family, 'gomoku');
+    for (const channel of ['top', 'engines'])
+      assert.ok(watchChannelForId(channel)?.legacyVariants.includes('gomoku'));
+    for (const game of [
+      collectCurrentGames(ctx, now).find((g) => g.roomId === roomId),
+      collectLiveTvCandidates(ctx, now).find((g) => g.roomId === roomId),
+    ]) {
+      assert.ok(game, 'public, enabled fixture must be eligible');
+      assert.equal(game.players.find((p) => p.isEngine)?.name, 'Rapfi');
+    }
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+    assert.equal(watchChannelForId('gomoku'), null);
+    assert.equal(
+      collectCurrentGames(ctx, now).some((g) => g.roomId === roomId),
+      false,
+    );
+    assert.equal(
+      collectLiveTvCandidates(ctx, now).some((g) => g.roomId === roomId),
+      false,
+    );
+  } finally {
+    spec.publicSurface = original;
+    gomokuRooms.delete(roomId);
+    if (originalFlag === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = originalFlag;
+  }
+});
+
+test('Gomoku watch enums are supported but documented only when public and enabled', () => {
+  assert.ok((WATCH_CHANNEL_IDS as readonly string[]).includes('gomoku'));
+  const spec = maybeGameSpecForId('gomoku')!;
+  const original = spec.publicSurface;
+  const originalFlag = process.env.MISTBOARD_GOMOKU_ENABLED;
+  try {
+    for (const surface of ['hidden', 'casual'] as const) {
+      spec.publicSurface = surface;
+      for (const enabled of ['false', 'true']) {
+        process.env.MISTBOARD_GOMOKU_ENABLED = enabled;
+        const doc = buildOpenApiDocument('https://mistboard.com') as {
+          paths: Record<
+            string,
+            {
+              get: {
+                parameters: Array<{
+                  name: string;
+                  schema: { enum?: string[] };
+                }>;
+              };
+            }
+          >;
+        };
+        for (const path of ['/api/watch', '/api/watch/live']) {
+          const channels = doc.paths[path]!.get.parameters.find((p) => p.name === 'channel')!.schema
+            .enum!;
+          assert.equal(channels.includes('gomoku'), surface === 'casual' && enabled === 'true');
+        }
+      }
+    }
+  } finally {
+    spec.publicSurface = original;
+    if (originalFlag === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = originalFlag;
+  }
+});
 
 // The Mini Xiangqi sub-family (open, dark, drop) was retired from Mistboard TV
 // on 2026-07-05 (xiangqi pivot): their registrations carry `watch: null`, so no

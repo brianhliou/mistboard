@@ -153,10 +153,10 @@ test('Gomoku finished endpoint is registered in HTTP dispatch', async () => {
   }
 });
 
-test('Gomoku live payload builder is registered without opening watch or rated play', () => {
+test('Gomoku live payload builder and watch capability keep listings and rated play closed', () => {
   assert.equal(hasLiveWatchPayloadBuilder('gomoku'), true);
   const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;
-  assert.equal(registration.watch, null);
+  assert.equal(registration.watch?.channelId, GOMOKU_SPEC_ID);
   assert.equal(registration.export, null);
   assert.equal(registration.lobby?.supportsRated, false);
   assert.equal(gameSpecForId(GOMOKU_SPEC_ID).publicSurface, 'hidden');

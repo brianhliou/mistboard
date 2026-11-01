@@ -43,6 +43,7 @@ import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
+import { boardAspectForSpec, hasBoardAspect } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
@@ -371,6 +372,11 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 describe('Gomoku hidden registration', () => {
   afterEach(() => vi.unstubAllEnvs());
 
+  it('reserves an explicit square for the 15 by 15 watch board', () => {
+    expect(hasBoardAspect(GOMOKU_SPEC_ID)).toBe(true);
+    expect(boardAspectForSpec(GOMOKU_SPEC_ID)).toBe(1);
+  });
+
   it.each(['false', 'true'])(
     'registers matching casual tenants and five browser bots without public routes with flag %s',
     (value) => {
@@ -403,7 +409,16 @@ describe('Gomoku hidden registration', () => {
         expect(server?.isEngineClientId?.(id)).toBe(false);
       expect(web?.landing?.defaultEngineId).toBe('rapfi-level-1');
       expect(server?.lobby?.supportsRated).toBe(false);
-      expect(server?.watch).toBeNull();
+      expect(web?.watch?.family).toBe('gomoku');
+      expect(server?.watch).toEqual({
+        channelId: 'gomoku',
+        family: 'gomoku',
+        label: 'Gomoku',
+        legacyVariants: ['gomoku'],
+      });
+      for (const option of web?.landing?.engineOptions ?? [])
+        expect(server?.engineDisplayName?.(option.id)).toBe('Rapfi');
+      expect(server?.engineDisplayName?.('human')).toBeNull();
       expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
       for (const path of ['/gomoku', '/gomoku/game/test', '/gomoku/review/test']) {
         expect(isClientRoute(path), path).toBe(false);

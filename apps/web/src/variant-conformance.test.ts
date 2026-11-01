@@ -11,6 +11,7 @@ import {
   isPublicGameSpec,
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
+  maybeGameSpecForId,
   RETIRED_GAME_SPEC_IDS,
   THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
@@ -18,6 +19,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
+import { mountDevelopers } from './developers-page.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
 import { EMBED_ANALYSIS_VARIANTS } from './embed/embed-analysis.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
@@ -30,12 +32,17 @@ import {
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
-import { embedRendererKindForVariant } from './showcase-dispatch.js';
+import {
+  embedRendererKindForVariant,
+  showcaseRendererKindForSpec,
+  specIdForShowcaseVariant,
+} from './showcase-dispatch.js';
 import { buildStudyVariantSelect, STUDY_VARIANTS } from './study-catalog.js';
 import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
 import {
   finishedGameHref,
   legacyGameRouteForRoomId,
+  webVariantTenantForSpecId,
   webVariantTenants,
 } from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
@@ -46,6 +53,52 @@ import {
   variantMiniIdForGameSpec,
 } from './variants.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
+import { mountGomokuWatchReplay } from './watch-gomoku-replay.js';
+
+vi.mock('./watch-gomoku-replay.js', () => ({ mountGomokuWatchReplay: vi.fn() }));
+
+describe('Gomoku renderer integration', () => {
+  it('documents the Gomoku TV channel only when public and enabled', () => {
+    const spec = maybeGameSpecForId('gomoku')!;
+    const original = spec.publicSurface;
+    try {
+      for (const surface of ['hidden', 'casual'] as const) {
+        spec.publicSurface = surface;
+        for (const enabled of ['false', 'true']) {
+          vi.stubEnv('VITE_GOMOKU_ENABLED', enabled);
+          const root = document.createElement('div');
+          mountDevelopers(root);
+          expect(root.textContent?.includes('gomoku')).toBe(
+            surface === 'casual' && enabled === 'true',
+          );
+        }
+      }
+    } finally {
+      spec.publicSurface = original;
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('resolves showcase and game embeds to Gomoku', () => {
+    expect(showcaseRendererKindForSpec('gomoku')).toBe('gomoku');
+    expect(embedRendererKindForVariant('gomoku')).toBe('gomoku');
+    expect(specIdForShowcaseVariant('gomoku')).toBe('gomoku');
+  });
+
+  it('loads the Gomoku watch renderer with compact/embed options intact', async () => {
+    const root = document.createElement('div');
+    const options = {
+      compact: true,
+      autoplay: false,
+      pov: 'black' as const,
+      metadataByRoomId: {},
+    };
+    const watch = webVariantTenantForSpecId('gomoku')?.watch;
+    expect(watch?.family).toBe('gomoku');
+    await watch?.mountReplay(root, 'gmk_test', options);
+    expect(mountGomokuWatchReplay).toHaveBeenCalledWith(root, 'gmk_test', options);
+  });
+});
 
 // Variant-wiring conformance. Adding a variant touches ~12 scattered sites; the
 // create-request builders are the ones that fail SILENTLY when missed —
@@ -363,7 +416,7 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     }
   });
 
-  it('has a marker but no public play, rating, study, analysis, editor or embed surface', () => {
+  it('has a marker and game renderer but no public play, rating, study, analysis or editor surface', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
@@ -379,7 +432,7 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);
     expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
     expect(EMBED_ANALYSIS_VARIANTS[GOMOKU_SPEC_ID]).toBeNull();
-    expect(embedRendererKindForVariant(GOMOKU_SPEC_ID)).toBeNull();
+    expect(embedRendererKindForVariant(GOMOKU_SPEC_ID)).toBe('gomoku');
     expect(variantMiniIdForGameSpec(GOMOKU_SPEC_ID)).toBe('gomoku');
   });
 });

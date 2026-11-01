@@ -91,8 +91,8 @@ Edit task → find file → open only that file.
 | File | Owns |
 |------|------|
 | `gomoku-tenant.ts` | Hidden, unrated Black-first Gomoku referee: kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
-| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, finished-game share card; no rated, TV, export or correspondence |
-| `routes/gomoku-games.ts` | Flag-gated finished replay and registered live payload builder; replays the recorded opening into spectator views, with event-counted plies, terminal history and clocks; watch registration remains null |
+| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, finished-game share card and TV capability with Rapfi names; listings wait for publicSurface; no rated, export or correspondence |
+| `routes/gomoku-games.ts` | Flag-gated finished replay and registered live payload builder; replays the recorded opening into spectator views, with event-counted plies, terminal history and clocks; hidden games stay out of TV election and listings |
 | `routes/gomoku-games.test.ts` | Gomoku HTTP dispatch, flag denial, dealt/legacy replay, clocks, terminal evidence, invalid logs and event-derived live snapshots |
 | `gomoku-browser-bot.test.ts` | Browser bot move boundary: both colours, own-room human only, exact ply, kernel legality, PvP/rated/spectator refusal and durable bot-seat reconnect |
 | `gomoku-tenant.test.ts` | Seeded referee wins, legal 225-ply draw, replay/hydration, seat preference, wire fields and unsupported-surface regressions |
@@ -826,7 +826,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `jungle-flip-result-label.ts` | Flip Jungle seat→bound-ink result labels for postgame and watch surfaces; falls back to first/second before the opening flip binds ink |
 | `watch-banqi-replay.ts` | Mistboard TV (`/watch`) renderer for Banqi — thin adapter over `watch-tenant-replay.ts` (single public truth surface, no fog) |
 | `watch-jungle-replay.ts` | Mistboard TV (`/watch`) renderer for Jungle: thin adapter over `watch-tenant-replay.ts` with one perfect-information truth board |
-| `watch-gomoku-replay.ts` / `.test.ts` | Unregistered Gomoku full/compact watch renderer using the server's event-counted truth frames, Black/White seats, per-frame clocks, recorded autoplay and live follow; reuses `gomoku-board.ts` |
+| `watch-gomoku-replay.ts` / `.test.ts` | Registered Gomoku full/compact watch, showcase and game-embed renderer using the server's event-counted truth frames, Black/White seats, per-frame clocks, recorded autoplay and live follow; reuses `gomoku-board.ts`; listings and channel documentation remain launch-gated |
 | `watch-jungle-flip-replay.ts` | Mistboard TV (`/watch`) renderer for Flip Jungle: thin adapter over `watch-tenant-replay.ts` with masked replay plus Reveal/Hide spoiler control |
 | `watch-tenant-replay.ts` | Generic Mistboard TV (`/watch`) renderer for the tenant SVG family (Jieqi, Banqi): shared "TV" chrome — header, board panes (single truth pane or per-color triptych), control bar + auto-play, ply nav, `ReplayHandle`. Each variant supplies a small `TenantWatchAdapter`; the per-variant module is then ~30 lines. Dark chess stays on the chessground path in `replay.ts` |
 | `variant-mini-boards.ts` | Homepage variant mini-board widgets (small static SVG boards shown per variant); follow board-appearance settings via the shared appearance events. Loads `variant-mini-boards.css` |
