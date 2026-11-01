@@ -2024,7 +2024,7 @@
   "gapZ": -0.59
  },
  "engine": {
-  "_source": "mistboard-engine/lab/jieqi-match/README.md \u00a7 AB-JChess-20261031 (smoke 2026-10-31)",
+  "_source": "mistboard-engine/lab/jieqi-match/README.md § AB-JChess-20261031 (smoke 2026-10-31)",
   "releaseTag": "AB-JChess-20261031",
   "sourceCommit": "efc83867",
   "netBytes": 580156,
@@ -2060,5 +2060,21 @@
   "jqeCpAt75": 405,
   "oldK": 0.00985,
   "oldCpAt75": 112
+ },
+ "seenLate": {
+  "abWon": {
+   "games": 304,
+   "jqeLater": 119,
+   "same": 113,
+   "abjLater": 72,
+   "withinOne": 232
+  },
+  "jqeWon": {
+   "games": 227,
+   "jqeLater": 75,
+   "same": 76,
+   "abjLater": 76,
+   "withinOne": 182
+  }
  }
 }

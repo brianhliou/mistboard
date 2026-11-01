@@ -123,6 +123,12 @@ export const AB_JQE_MATCH = matchJson as unknown as {
   };
   calibration: { lo: number; hi: number; fromMove: number; toMove: number; abj: { n: number; scorePct: number }; jqe: { n: number; scorePct: number } };
   openings: Record<'abj' | 'jqe', { move: string; count: number; of: number }>;
+  /** Who saw each decisive game's result first: the move from which each engine's own scores
+   *  give the eventual winner at least 70% to the end (seenFrom), compared per game. */
+  seenLate: Record<
+    'abWon' | 'jqeWon',
+    { games: number; jqeLater: number; same: number; abjLater: number; withinOne: number }
+  >;
   darkCaptures: Record<
     'abj' | 'jqe',
     {
@@ -212,6 +218,7 @@ const D = M.disagree;
 const CAL = M.calibration;
 const OPEN = M.openings;
 const DARK = M.darkCaptures;
+const LATE = M.seenLate;
 /** Face-down captures a game, to one decimal, in the games that ended this way for the capturer. */
 export function darkPerGame(engine: 'abj' | 'jqe', result: DarkResult): string {
   const r = DARK[engine].byResult[result];
@@ -379,6 +386,10 @@ export const abJchessVsJqeArticle: Article = {
         {
           kind: 'paragraph',
           text: `jqe thinks it is doing better than it is. On moves ${CAL.fromMove} to ${CAL.toMove}, when jqe scored its own position between ${signed(CAL.lo)} and ${signed(CAL.hi)} centipawns, a small edge, it went on to score ${CAL.jqe.scorePct}% in those games. AB-JChess, at the same scores, went on to score ${CAL.abj.scorePct}%.`,
+        },
+        {
+          kind: 'paragraph',
+          text: `It is also slow to see a loss coming, though not by much. Take the move from which an engine's own scores keep the eventual winner above 70% for the rest of the game. In ${LATE.abWon.games} of AB-JChess's wins, jqe got there later than AB-JChess in ${LATE.abWon.jqeLater} games and earlier in ${LATE.abWon.abjLater}. In jqe's ${LATE.jqeWon.games} wins, AB-JChess got there later in ${LATE.jqeWon.abjLater} and earlier in ${LATE.jqeWon.jqeLater}, about even. In ${Math.round((100 * LATE.abWon.withinOne) / LATE.abWon.games)}% of AB-JChess's wins the two were within a move of each other; the ${SEEN3.jqe - SEEN3.abj} moves in the game jqe lost on move ${TURN3.move} are the far end.`,
         },
         { kind: 'sub-heading', text: 'jqe takes more face-down pieces, win or lose' },
         {

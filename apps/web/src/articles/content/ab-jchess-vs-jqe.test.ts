@@ -285,6 +285,27 @@ describe('AB-JChess vs jqe games', () => {
     expect(Math.abs(X.gapZ)).toBeLessThan(2);
   });
 
+  it('backs the late-to-see-a-loss claim', () => {
+    const L = M.seenLate;
+    const T = M.total;
+    for (const k of ['abWon', 'jqeWon'] as const) {
+      const b = L[k];
+      expect(b.jqeLater + b.same + b.abjLater).toBe(b.games);
+      expect(b.withinOne).toBeLessThanOrEqual(b.games);
+    }
+    // Nearly every decisive game is counted (a few end with no score past 70%).
+    expect(L.abWon.games).toBeLessThanOrEqual(T.wins);
+    expect(L.abWon.games).toBeGreaterThan(T.wins - 5);
+    expect(L.jqeWon.games).toBeLessThanOrEqual(T.losses);
+    expect(L.jqeWon.games).toBeGreaterThan(T.losses - 5);
+    // "jqe later ... more often": a clear lean in AB-JChess's wins; "about even" in jqe's.
+    expect(L.abWon.jqeLater).toBeGreaterThan(1.4 * L.abWon.abjLater);
+    expect(Math.abs(L.jqeWon.abjLater - L.jqeWon.jqeLater)).toBeLessThanOrEqual(5);
+    // Game 3 is the far end: a gap wider than one move.
+    const g3 = M.games.find((g) => AB_JQE_GAMES.includes(g.key as never) && seenFrom(g, g.series.jqe) - seenFrom(g, g.series.abj) > 1);
+    expect(g3).toBeDefined();
+  });
+
   it('splits the face-down captures by result, and jqe takes more in every row', () => {
     const X = M.darkCaptures;
     const T = M.total;
