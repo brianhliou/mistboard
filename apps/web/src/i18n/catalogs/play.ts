@@ -900,7 +900,6 @@ export const EN_PLAY = {
   'live.tk.points': '{count} pts',
   'live.tk.captured': 'Captured',
   'live.tk.none': 'None',
-  'live.tk.firstTo': 'First to {count} points',
   'live.tk.movesLeft': '{count} moves left before the game is decided on points',
   'live.tk.oneMoveLeft': '1 move left before the game is decided on points',
   'live.tk.adminOnly':
@@ -1260,7 +1259,6 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.tk.points',
   'live.tk.captured',
   'live.tk.none',
-  'live.tk.firstTo',
   'live.tk.movesLeft',
   'live.tk.oneMoveLeft',
   'live.tk.adminOnly',

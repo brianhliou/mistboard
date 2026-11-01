@@ -837,7 +837,6 @@ export const ZH_HANT_PLAY = {
   'live.tk.points': '{count} 分',
   'live.tk.captured': '吃子',
   'live.tk.none': '無',
-  'live.tk.firstTo': '先得 {count} 分者勝',
   'live.tk.movesLeft': '還剩 {count} 步，之後按分數判定勝負',
   'live.tk.oneMoveLeft': '還剩 1 步，之後按分數判定勝負',
   'live.tk.adminOnly': '{variant}仍在內部試玩，這個房間只對管理員帳號開放。',
