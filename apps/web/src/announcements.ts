@@ -858,7 +858,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'Learn xiangqi from scratch.',
     body: 'A free interactive course: 20 stages and 111 hands-on levels take you from how each piece moves to the named checkmate patterns.',
-    href: '/learn',
+    href: '/learn/xiangqi',
     cta: 'Start the course',
   },
   {
