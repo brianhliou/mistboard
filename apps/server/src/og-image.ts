@@ -453,9 +453,9 @@ export function renderDefaultOgAspectSvg(logoHref: string, aspect: CardAspect): 
   const logo = logoMarkImage(logoHref, (width - logoSize) / 2, top, logoSize);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    logoGlowBackground(width, height, top + logoSize / 2),
+    paperBackground(width, height),
     logo,
-    `<text x="${width / 2}" y="${top + logoSize + gap + wordmarkSize * 0.72}" text-anchor="middle" fill="#f3f4f6" font-family="${OG_FONT}" font-size="${wordmarkSize}" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
+    `<text x="${width / 2}" y="${top + logoSize + gap + wordmarkSize * 0.72}" text-anchor="middle" fill="${SITE_CARD_INK}" font-family="${OG_FONT}" font-size="${wordmarkSize}" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
     `</svg>`,
   ].join('');
 }
@@ -1276,9 +1276,8 @@ export async function loadLogoMarkHref(staticDir: string): Promise<string> {
 
 // The raster's greys (frame 53, tiles 65-69 before the 2026-10-14 re-cut) sat
 // too close to the card's blue-black (Brian, 2026-10-11: "a bit too grey and
-// not enough pop"), so a gamma curve darkens them while the whites stay white,
-// and a soft glow behind the mark keeps the darker frame from sinking into the
-// background. The 10-11 fix also eroded the alpha to drop a pale ring left by
+// not enough pop"), so a gamma curve darkens them while the whites stay white.
+// The cards moved to a light background on 2026-10-31 and kept the curve. The 10-11 fix also eroded the alpha to drop a pale ring left by
 // cutting the PNG out of white; the 10-14 re-cut of logo-mark.png cleaned that
 // edge, darkened the greys by gamma 1.25 and drew a deliberate light rim, so
 // the card no longer erodes (it would eat the rim) and applies only the rest
@@ -1297,13 +1296,19 @@ function logoMarkImage(href: string, x: number, y: number, size: number): string
   ].join('');
 }
 
-/** The card's blue-black with a slate glow centred on the mark at `cy`. */
-function logoGlowBackground(width: number, height: number, cy: number): string {
+// The site cards sit on the site's own light background, the dark mark on
+// paper as in the header, with a brand-green bar on the bottom edge. Brian,
+// 2026-10-31, on the dark card with a glow behind the mark: "it does look a
+// bit weird or cheap"; he picked this over a flat dark and a brand-green card.
+const SITE_CARD_PAPER = '#eeeae3';
+const SITE_CARD_INK = '#34322d';
+const SITE_CARD_ACCENT = '#1f6f5b';
+
+function paperBackground(width: number, height: number): string {
+  const bar = Math.round(height * 0.022);
   return [
-    `<radialGradient id="logo-glow" cx="0.5" cy="${cy / height}" r="0.38">`,
-    `<stop offset="0" stop-color="#3a4150"/><stop offset="1" stop-color="#0f1115"/>`,
-    `</radialGradient>`,
-    `<rect width="${width}" height="${height}" fill="url(#logo-glow)"/>`,
+    `<rect width="${width}" height="${height}" fill="${SITE_CARD_PAPER}"/>`,
+    `<rect x="0" y="${height - bar}" width="${width}" height="${bar}" fill="${SITE_CARD_ACCENT}"/>`,
   ].join('');
 }
 //
@@ -1321,30 +1326,29 @@ export function renderDefaultOgSvg(
   logoHref: string,
   copy: { wordmark: string; lines: string[]; note?: string } = {
     wordmark: 'MISTBOARD',
-    lines: ['Chinese chess and original strategy games.'],
-    note: 'Free and open source.',
+    lines: ["Chinese chess and the world's", 'classic strategy games.'],
   },
 ): string {
-  const logoSize = 200;
-  const logoY = 96;
+  const logoSize = 180;
+  const logoY = 92;
   const logo = logoMarkImage(logoHref, (OG_WIDTH - logoSize) / 2, logoY, logoSize);
   const wordmarkY = logoY + logoSize + 84;
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    logoGlowBackground(OG_WIDTH, OG_HEIGHT, logoY + logoSize / 2),
+    paperBackground(OG_WIDTH, OG_HEIGHT),
     logo,
-    `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="#f3f4f6" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
+    `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="${SITE_CARD_INK}" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
   ];
   let y = wordmarkY + 66;
   for (const line of copy.lines) {
     parts.push(
-      `<text x="${OG_WIDTH / 2}" y="${y}" text-anchor="middle" fill="#e5e9df" font-family="${FONT}" font-size="38" font-weight="600">${escapeXml(line)}</text>`,
+      `<text x="${OG_WIDTH / 2}" y="${y}" text-anchor="middle" fill="${SITE_CARD_INK}" font-family="${FONT}" font-size="38" font-weight="600">${escapeXml(line)}</text>`,
     );
     y += 50;
   }
   if (copy.note) {
     parts.push(
-      `<text x="${OG_WIDTH / 2}" y="${y + 8}" text-anchor="middle" fill="#8b9289" font-family="${FONT}" font-size="30" font-weight="600">${escapeXml(copy.note)}</text>`,
+      `<text x="${OG_WIDTH / 2}" y="${y + 8}" text-anchor="middle" fill="#7a766c" font-family="${FONT}" font-size="30" font-weight="600">${escapeXml(copy.note)}</text>`,
     );
   }
   parts.push(`</svg>`);
