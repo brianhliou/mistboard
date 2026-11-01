@@ -10,7 +10,11 @@ import type pg from 'pg';
 import { emitAchievementTrigger } from './achievement-triggers.js';
 import { type Glicko2, isProvisional } from './glicko.js';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
-import { newPlayerPuzzleRating, ratePuzzleAttempt } from './puzzle-rating.js';
+import {
+  newPlayerPuzzleRating,
+  type PuzzleDashboardResults,
+  ratePuzzleAttempt,
+} from './puzzle-rating.js';
 
 export type UserPuzzleRating = {
   glicko: Glicko2;
@@ -207,6 +211,51 @@ export async function listPuzzleAttemptHistory(
   };
 }
 
+// A repair is the clean later visit already verified by recordPuzzleAttempt.
+// Keep the dashboard and retry queue on this same persisted definition.
+const REPAIRED_PUZZLE_ATTEMPT = 'solved = FALSE AND repaired_at IS NOT NULL';
+
+// One row per (user, puzzle) is enforced by the first-outcome ledger's primary
+// key. A repair makes that puzzle a win without adding another attempt. The
+// window follows created_at, so repairing an older failure cannot move it into
+// a newer window. Only ids still available in the caller's puzzle store count.
+export async function getPuzzleDashboard(
+  userId: string,
+  days: number,
+  puzzleIds: readonly string[],
+  variant?: string,
+): Promise<PuzzleDashboardResults & { days: number }> {
+  const empty = { days, nb: 0, wins: 0, fixed: 0, puzzleRatingAvg: null };
+  if (!isInitialized() || puzzleIds.length === 0) return empty;
+  const { rows } = await getPool().query<{
+    nb: number;
+    wins: number;
+    fixed: number;
+    puzzle_rating_avg: number | null;
+  }>(
+    `SELECT count(*)::integer AS nb,
+            (count(*) FILTER (WHERE solved OR (${REPAIRED_PUZZLE_ATTEMPT})))::integer AS wins,
+            (count(*) FILTER (WHERE ${REPAIRED_PUZZLE_ATTEMPT}))::integer AS fixed,
+            avg(rating.rating) AS puzzle_rating_avg
+       FROM puzzle_attempts AS attempt
+       JOIN puzzle_ratings AS rating ON rating.puzzle_id = attempt.puzzle_id
+       WHERE attempt.user_id = $1
+         AND attempt.created_at >= now() - ($2::integer * INTERVAL '1 day')
+         AND attempt.created_at <= now()
+         AND attempt.puzzle_id = ANY($3::text[])
+         AND ($4::text IS NULL OR attempt.variant = $4)`,
+    [userId, days, puzzleIds, variant ?? null],
+  );
+  const row = rows[0]!;
+  return {
+    days,
+    nb: row.nb,
+    wins: row.wins,
+    fixed: row.fixed,
+    puzzleRatingAvg: row.puzzle_rating_avg === null ? null : Math.round(row.puzzle_rating_avg),
+  };
+}
+
 // Private retry queue, newest failures first. Repaired failures can be read
 // separately; neither list treats a repair as a new first outcome.
 export async function listFailedPuzzleAttempts(
@@ -221,8 +270,8 @@ export async function listFailedPuzzleAttempts(
     repaired_at: Date | null;
   }>(
     `SELECT puzzle_id, variant, created_at, repaired_at FROM puzzle_attempts
-     WHERE user_id = $1 AND solved = FALSE
-       AND repaired_at IS ${options.repaired ? 'NOT NULL' : 'NULL'}
+     WHERE user_id = $1
+       AND ${options.repaired ? REPAIRED_PUZZLE_ATTEMPT : 'solved = FALSE AND repaired_at IS NULL'}
        ${options.variant ? 'AND variant = $2' : ''}
      ORDER BY created_at DESC, puzzle_id`,
     options.variant ? [userId, options.variant] : [userId],

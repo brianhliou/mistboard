@@ -83,6 +83,36 @@ export function displayPuzzleRating(r: Glicko2): { rating: number; provisional: 
   return { rating: Math.round(r.rating), provisional: isProvisional(r.rd) };
 }
 
+export type PuzzleDashboardResults = {
+  nb: number;
+  wins: number;
+  fixed: number;
+  puzzleRatingAvg: number | null;
+};
+
+/** Pure dashboard arithmetic, shared with the dashboard page (#796). */
+export function puzzleDashboardMetrics(results: PuzzleDashboardResults): {
+  firstWins: number;
+  unfixed: number;
+  failed: number;
+  performance: number | null;
+  clear: boolean;
+} {
+  const firstWins = results.wins - results.fixed;
+  const unfixed = results.nb - results.wins;
+  const failed = results.fixed + unfixed;
+  return {
+    firstWins,
+    unfixed,
+    failed,
+    performance:
+      results.nb === 0 || results.puzzleRatingAvg === null
+        ? null
+        : Math.round(results.puzzleRatingAvg - 500 + (1000 * firstWins) / results.nb),
+    clear: results.nb >= 6 && firstWins >= 2 && failed >= 2,
+  };
+}
+
 // ── Serving rating (#712) ───────────────────────────────────────────────────
 //
 // The number the queue matches a player against. It is NOT the displayed

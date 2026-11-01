@@ -33,6 +33,7 @@ import {
   recordPuzzleQualityVote,
 } from '../persistence-puzzle-quality.js';
 import {
+  getPuzzleDashboard,
   getPuzzleRating,
   getUserPuzzleRating,
   listAttemptedPuzzleIds,
@@ -600,6 +601,41 @@ export async function tryHandle(
           }
         : null,
     });
+    return true;
+  }
+
+  // Private dashboard for the session owner, filtered like the retry queue.
+  // Claim the literal before :id; account selectors in the URL are ignored.
+  if (pathname === '/api/puzzles/dashboard') {
+    const headers = { 'cache-control': 'private, no-store' };
+    response.setHeader?.('cache-control', headers['cache-control']);
+    if (!requireMethod(request, response, 'GET')) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'not_signed_in' }, headers);
+      return true;
+    }
+    const daysText = parsedUrl.searchParams.get('days') ?? '30';
+    if (!['1', '2', '3', '7', '10', '14', '21', '30', '60', '90'].includes(daysText)) {
+      writeJson(response, 400, { error: 'invalid_days' }, headers);
+      return true;
+    }
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
+    if (variant === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_variant' }, headers);
+      return true;
+    }
+    const store = await getPuzzleStore();
+    const puzzleIds = store.puzzles
+      .filter((puzzle) => variant === null || puzzle.variant === variant)
+      .map((puzzle) => puzzle.id);
+    const dashboard = await getPuzzleDashboard(
+      user.id,
+      Number(daysText),
+      puzzleIds,
+      variant ?? undefined,
+    );
+    writeJson(response, 200, dashboard, headers);
     return true;
   }
 
