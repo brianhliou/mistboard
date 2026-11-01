@@ -13,6 +13,7 @@ import {
 import { homedir, hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { printGateSummary, runCiChecks, runGateCommand, skippedCommand } from './ci-checks.mjs';
 import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
   assertEntriesAreNew,
@@ -164,6 +165,19 @@ let shipDeployEstimate = null;
 let remoteTipCache;
 
 try {
+  if (options.gateOnly) {
+    // Local refs only: the caller updates origin/main when assembling the
+    // batch. Permit uncommitted fixes, with no release lock or mutations.
+    const base = git(['rev-parse', '--verify', `${options.remote}/${options.targetBranch}`]);
+    const head = git(['rev-parse', '--verify', options.head]);
+    const changed = unique([
+      ...readChangedFiles({ base, head }),
+      ...git(['diff', '--name-only', 'HEAD']).split('\n').filter(Boolean),
+      ...git(['ls-files', '--others', '--exclude-standard']).split('\n').filter(Boolean),
+    ]);
+    await runLocalGate(localGateFor(changed, base, true), changed);
+    process.exit(0);
+  }
   if (!options.plan) ensureCleanWorktree();
   if (options.changelog.length > 0) checkChangelogPreconditions();
   // One release at a time on this machine, taken before anything reads or
@@ -237,17 +251,7 @@ try {
 
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
-    release.gate = { kind: gate.kind, reason: gate.reason };
-    console.log(`local gate: ${gate.kind} (${gate.reason})`);
-    for (const command of gate.commands) {
-      runTimed(`local ${command.slice(2).join(' ')}`, command);
-    }
-    // ci:quick does NOT include test:persistent, and the push below goes out
-    // with --no-verify, which skips the pre-push hook that WOULD have run it.
-    // So without this a persistence change reaches hosted CI unproven: that is
-    // exactly how 2026-08-27 put three red persistent tests on main and froze
-    // the next deploy behind them.
-    await runReleasePersistenceGate(ciPlan.changedFiles);
+    await runLocalGate(gate, ciPlan.changedFiles);
   } else {
     console.log('skip: local gate (--skip-local-ci)');
   }
@@ -393,6 +397,7 @@ function parseArgs(args) {
     localCi: true,
     lockTimeoutMs: DEFAULT_LOCK_TIMEOUT_MS,
     fullCi: false,
+    gateOnly: false,
     plan: false,
     planBase: null,
     planFiles: [],
@@ -443,6 +448,8 @@ function parseArgs(args) {
       parsed.ciWait = false;
     } else if (arg === '--full-ci') {
       parsed.fullCi = true;
+    } else if (arg === '--gate-only') {
+      parsed.gateOnly = true;
     } else if (arg === '--skip-local-ci') {
       parsed.localCi = false;
     } else if (arg === '--smoke') {
@@ -462,6 +469,19 @@ function parseArgs(args) {
     }
   }
 
+  if (
+    parsed.gateOnly &&
+    !parsed.help &&
+    (parsed.push ||
+      parsed.plan ||
+      parsed.changelog.length > 0 ||
+      !parsed.localCi ||
+      parsed.extraShip !== null)
+  ) {
+    throw new Error(
+      '--gate-only cannot be combined with push, plan, changelog, extra-ship or skip-local-ci',
+    );
+  }
   if (parsed.changelog.length > 0 && !parsed.help) {
     if (parsed.head !== 'HEAD') {
       throw new Error('--changelog commits on top of HEAD; it cannot be combined with --head');
@@ -986,18 +1006,60 @@ function listGithubRuns(headRevision) {
   }
 }
 
-async function runReleasePersistenceGate(changedFiles) {
+async function runLocalGate(gate, changedFiles) {
+  release.gate = { kind: gate.kind, reason: gate.reason };
+  console.log(`local gate: ${gate.kind} (${gate.reason})`);
+  const results = [];
+  let buildSucceeded = false;
+  let loopbackSucceeded = true;
+  for (const command of gate.commands) {
+    if (command.join(' ') === 'npm run ci:quick') {
+      const ci = await runCiChecks({ summarize: false, run: runLocalCommand });
+      results.push(...ci.results);
+      buildSucceeded = ci.buildSucceeded;
+      loopbackSucceeded = ci.loopbackSucceeded;
+    } else {
+      const result = runGateCommand(command, runLocalCommand);
+      results.push(result);
+      // A targeted verify command owns its build internally. On failure we
+      // cannot prove it built, so persistence must not consume that dist.
+      if (command[2] === 'verify' || command[2] === 'build') {
+        buildSucceeded = result.status === 'passed';
+      }
+    }
+  }
+  // ci:quick excludes persistence, and the push skips the pre-push hook.
+  // Append it even after unrelated failures, using the real build verdict.
+  const persistent = await runReleasePersistenceGate(changedFiles, {
+    buildSucceeded,
+    loopbackSucceeded,
+  });
+  if (persistent) results.push(persistent);
+  printGateSummary('release gate', results);
+  if (results.some((result) => result.status === 'failed')) {
+    throw new Error('local release gate failed; nothing pushed');
+  }
+}
+
+function runLocalCommand(command) {
+  runTimed(`local ${command.slice(2).join(' ')}`, command);
+  return { status: 0 };
+}
+
+async function runReleasePersistenceGate(changedFiles, { buildSucceeded, loopbackSucceeded }) {
   if (!needsPersistenceGate(changedFiles)) return;
+  const command = ['npm', 'run', 'test:persistent'];
+  if (!buildSucceeded) return skippedCommand(command, 'build failed');
+  if (!loopbackSucceeded) return skippedCommand(command, 'loopback preflight failed');
   if (process.env.MISTBOARD_SKIP_PREPUSH_DB === '1') {
-    console.log('release: persistence gate skipped via MISTBOARD_SKIP_PREPUSH_DB=1');
-    return;
+    return skippedCommand(command, 'MISTBOARD_SKIP_PREPUSH_DB=1');
   }
   const databaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
   if (await isDatabaseReachable(databaseUrl)) {
-    runTimed('test:persistent', ['npm', 'run', 'test:persistent']);
-    return;
+    return runGateCommand(command, runLocalCommand);
   }
   console.warn(persistenceGateWarning('release'));
+  return skippedCommand(command, 'Postgres unavailable; hosted CI covers persistence');
 }
 
 function readChangedFiles({ base, head }) {
@@ -1591,7 +1653,7 @@ function recordStage(stage) {
 // an afternoon of transcript parsing. Never fails the release: a record that
 // cannot be written is a warning.
 function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
-  if (options.plan) return;
+  if (options.plan || options.gateOnly) return;
   const logPath = releaseLogPath();
   const record = {
     v: 1,
@@ -1860,7 +1922,11 @@ function run(command) {
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.error) throw result.error;
   if (result.signal) throw new Error(`${command[0]} exited with signal ${result.signal}`);
-  if (result.status !== 0) throw new Error(`${command[0]} exited with ${result.status}`);
+  if (result.status !== 0) {
+    throw Object.assign(new Error(`${command[0]} exited with ${result.status}`), {
+      exitCode: result.status ?? 1,
+    });
+  }
 }
 
 // The megaphone, after the deploy is proven: announce-tweet.mjs reads the
@@ -2147,6 +2213,7 @@ function parsePositiveInteger(value, flag) {
 function printHelp() {
   console.log(`Usage:
   npm run release:prod -- --push
+  npm run release:prod -- --gate-only
   npm run release:prod -- --push --smoke lite
   npm run release:prod -- --push --changelog "Playing: Flip board in a live game"
   node scripts/release-prod.mjs --dry-run --changelog "Fixed: ..." --plan-file CHANGELOG.md
@@ -2210,6 +2277,14 @@ Options:
   --smoke <tier>           Smoke tier: full, web, lite, none. Default ${DEFAULT_SMOKE}.
   --skip-local-ci          Do not run the local gate before push.
   --full-ci                Force ci:quick as the local gate, whatever changed.
+  --gate-only              Run the same full local gate as --push --full-ci,
+                           including persistence when the diff requires it.
+                           Uses local origin/main..HEAD (honors --remote,
+                           --target-branch and --head); update the local ref
+                           before assembling the batch. Includes uncommitted
+                           and untracked paths when selecting persistence.
+                           No lock, changelog, network planning, release record,
+                           drain, push, hosted CI wait or production smoke.
   --skip-ci-wait           Do not wait for hosted GitHub CI.
   --ci-workflow <file>     GitHub CI workflow to wait for, default ${DEFAULT_CI_WORKFLOW}.
   --base <url>             Production base URL, default ${DEFAULT_BASE_URL}.

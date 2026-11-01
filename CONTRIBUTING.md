@@ -71,6 +71,23 @@ npm run ci:quick
 npm test                 # unit and integration tests, in-memory
 ```
 
+`ci:quick` keeps running independent commands after a failure and prints all
+command results together. Tests and typecheck are skipped when the build fails,
+so they cannot use stale `dist/` output. Use `--no-keep-going` to stop early, or
+`npm run ci:local -- --keep-going` to collect failures from the local gate too.
+
+For a pre-ship batch, refresh the local `origin/main` ref before starting, then run:
+
+```bash
+npm run release:prod -- --gate-only
+```
+
+This runs the full local release gate without taking a release lock, committing
+a changelog, draining production or pushing. It includes `test:persistent` when
+changed paths require it and local Postgres is reachable, even if other checks
+failed, provided the build passed. The final summary names any skipped checks.
+The change list uses local `origin/main..HEAD` plus uncommitted and untracked paths.
+
 For interface copy, English is the source contract and noncritical locale gaps fall back safely.
 See [`docs/translations.md`](docs/translations.md) for domain ownership and the critical-key policy.
 
