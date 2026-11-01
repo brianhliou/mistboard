@@ -19,7 +19,8 @@ import {
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import { articleAnalysisLoader } from './article-replay-analysis.js';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import './board-glyph-marker.css';
 import './embed/embed-credit.css';
 import {
@@ -418,12 +419,12 @@ function glideReplayMove(
   const from = pointXY(o.file, o.rank, board);
   const to = pointXY(s.file, s.rank, board);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(frame, duration);
   // Forward only: a back step draws the PRIOR move's markers somewhere else, so
   // neither would track this glide. The gold band rides on the piece; the
-  // judgment badge fades in as the piece lands.
+  // judgment badge fades in after the piece lands.
   if (!reverse) {
     animateBoardLastMoveArrival(frame, from, to, duration);
-    drawMarkerOnArrival(frame.querySelector('.xq-marker--glyph'), duration);
   }
 }
 

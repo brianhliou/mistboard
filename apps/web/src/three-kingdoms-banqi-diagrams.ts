@@ -32,6 +32,7 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMovePiece,
 } from './board-lastmove.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import './board-lastmove.css';
 import { boardCornerRadius } from './board-metrics.js';
 import './live-banqi-board.css';
@@ -397,6 +398,7 @@ export function animateThreeKingdomsBanqiBoardMove(
   const from = point(opts.reverse ? move.to : move.from);
   const to = point(settle);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // The gold band rides the piece in, as on xiangqi and jieqi. A reverse step
   // draws the prior move's marks elsewhere: they fade in as the glide lands, so
   // a tile's coloured edge never sits waiting for the piece (Brian, 2026-10-30).
