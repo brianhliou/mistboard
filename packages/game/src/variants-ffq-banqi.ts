@@ -1,5 +1,5 @@
 // FFQ banqi (翻翻棋): rules as implemented by Huorongrong (mistboard#800).
-// Kernel only: no GameSpecId, tenant, route or player-facing registration.
+// Hidden canonical spec FFQ_BANQI_SPEC_ID; no tenant, route or launch flag.
 // Canonical state is server-secret. Only getFFQBanqiPlayerView and
 // ffqBanqiStateToFen may cross a player/engine boundary, even at game end.
 import {

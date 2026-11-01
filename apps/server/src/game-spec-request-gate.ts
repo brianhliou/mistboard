@@ -71,6 +71,10 @@ const GATED_GAME_SPECS = {
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
   },
+  // Kernel and hidden canonical metadata only. No tenant or launch flag yet.
+  'ffq-banqi': {
+    notIntegratedError: 'ffq_banqi_not_integrated',
+  },
   jungle: {
     enabled: jungleEnabled,
     disabledError: 'jungle_disabled',

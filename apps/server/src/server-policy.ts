@@ -143,8 +143,12 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // classified here, and an unclassified spec falls through to 'masked'.
 // Three Kingdoms banqi (#628, hidden playtest) serves a spectator the red seat's
 // masked board, the same for both seats (three-kingdoms-banqi-hidden-info.test.ts).
+// FFQ banqi (hidden playtest) is symmetric because every capture, covered or
+// not, is public: the 2,000-playout test in variants-ffq-banqi.test.ts pins red,
+// black and observer views as identical.
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = [
   'banqi',
+  'ffq-banqi',
   'jungle-flip',
   'three-kingdoms-banqi',
 ] as const;

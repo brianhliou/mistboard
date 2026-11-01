@@ -532,6 +532,28 @@ test('unknown variants and spec mismatches are 501, never another builder', () =
 
 // ── registry conformance ─────────────────────────────────────────────────────
 
+test('FFQ banqi explicitly exports nothing and returns no replay data', () => {
+  assert.ok(Object.hasOwn(GAME_EXPORT_FORMATS, 'ffq-banqi'), 'explicit unavailable capability');
+  assert.deepEqual(exportFormatsForVariant('ffq-banqi'), []);
+  for (const format of ['pgn', 'json'] as const) {
+    const response = resolveGameExport({
+      roomId: 'ffq_export',
+      format,
+      summary: gameRecord({ roomId: 'ffq_export', variant: 'ffq-banqi' }),
+      events: preamble('ffq_export', 'ffq-banqi'),
+      tenantForRoomId: () => null,
+    });
+    assert.equal(
+      JSON.stringify(response),
+      JSON.stringify({
+        status: 501,
+        body: { error: 'export_not_supported_for_variant', variant: 'ffq-banqi' },
+      }),
+      format,
+    );
+  }
+});
+
 test('every registered tenant binds an export exactly when the format table lists it', async () => {
   // Side-effect import: populates the registry with the real registrations.
   await import('./variant-tenant/register-tenants.js');
@@ -574,7 +596,9 @@ test('the PGN Variant tag is the registry public name for every exported tenant 
   // A variant that starts exporting must be pinned here.
   assert.deepEqual(
     Object.keys(GAME_EXPORT_FORMATS)
-      .filter((variant) => variant !== DARK_CHESS_SPEC_ID)
+      .filter(
+        (variant) => variant !== DARK_CHESS_SPEC_ID && exportFormatsForVariant(variant).length > 0,
+      )
       .sort(),
     Object.keys(expected).sort(),
   );

@@ -5,8 +5,17 @@ recorded on 2026-11-01. This is an independent implementation of that rules
 specification. No source-engine code was copied. Tencent's 天天象棋 live app
 has not been checked against this kernel.
 
-This card supplies only the game-package kernel, public projections and tests.
-It creates no tenant, GameSpecId, route, UI or player-accessible registration.
+The game package supplies the kernel, public projections, tests and canonical
+`FFQ_BANQI_SPEC_ID` (`ffq-banqi`). Its metadata names the 4x8 board
+(`banqi-4x8`), FFQ movement (`ffq-banqi`), HP objective (`hp-depletion`) and
+fixed-seat, four-reveal setup (`ffq-banqi-deal`). It remains `publicSurface:
+'hidden'` and `runtimeStatus: 'future'` until a serving tenant exists.
+
+Canonical `gameSpecId` and legacy `variant` room requests both return 501
+`ffq_banqi_not_integrated`, never a fallback Fog Chess room. There is no tenant,
+route or launch flag. Ratings, correspondence and studies exclude FFQ; the
+export capability is explicitly empty (no PGN or JSON). Existing web metadata
+placeholders offer no public play, marker, rules page, analysis or embed.
 
 ## Rules
 

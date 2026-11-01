@@ -465,7 +465,7 @@ test('hidden permutations preserve complete player/observer payloads and legalit
   assert.equal(JSON.stringify(state), before);
 });
 
-test('2,000 seeded random playouts: legal endings, nonnegative HP and whole-payload secrecy', () => {
+test('2,000 seeded random playouts: legal endings, nonnegative HP, whole-payload secrecy and seat symmetry', () => {
   let rngState = 0x800;
   const random = () => {
     rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
@@ -503,6 +503,19 @@ test('2,000 seeded random playouts: legal endings, nonnegative HP and whole-payl
         assert.equal(view.deal, undefined);
         assert.equal(view.seed, undefined);
         assert.equal(view.captures, undefined);
+      }
+      // Symmetric mask: every seat and the observer get the same payload apart
+      // from the perspective label and the legal moves (a turn fact, computed
+      // from public state), which is what lets the server serve a live board
+      // (server-policy SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS).
+      const { perspective: _r, legalMoves: _rl, ...redView } = getFFQBanqiPlayerView(next, 'red');
+      for (const perspective of ['black', 'observer'] as const) {
+        const {
+          perspective: _p,
+          legalMoves: _l,
+          ...other
+        } = getFFQBanqiPlayerView(next, perspective);
+        assert.deepEqual(other, redView);
       }
       state = next;
     }

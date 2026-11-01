@@ -94,21 +94,44 @@ test('game spec gate keeps rejecting legacy variant spellings for tenant specs',
   }
 });
 
-test('game spec gate rejects every runtimeStatus future spec, of which there are none today', () => {
-  // The five reserved ids (dark-antichess, sun-tzu, lao-tzu, dark-seirawan,
-  // dark-omega) left with the retirement sweep (#396). Should one come back,
-  // known-but-unrouted must stay distinguishable from unknown_game_spec.
-  for (const spec of GAME_SPECS.filter((s) => s.runtimeStatus === 'future')) {
-    assert.deepEqual(
-      gateGameSpecRequest({ gameSpecId: spec.id }),
-      {
-        type: 'reject',
-        error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
-        httpStatus: 501,
-        wsCloseReason: 'game spec not integrated',
-      },
-      spec.id,
+for (const input of [
+  { gameSpecId: 'ffq-banqi' },
+  { variant: 'ffq-banqi' },
+  { gameSpecId: 'dark-chess', variant: 'ffq-banqi' },
+  { gameSpecId: 'ffq-banqi', variant: 'dark-chess' },
+]) {
+  test(`FFQ banqi rejects ${JSON.stringify(input)} until a tenant exists`, () => {
+    assert.deepEqual(gateGameSpecRequest(input), {
+      type: 'reject',
+      error: 'ffq_banqi_not_integrated',
+      httpStatus: 501,
+      wsCloseReason: 'game spec not integrated',
+    });
+    assert.equal(
+      registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'ffq-banqi'),
+      false,
+      'canonical registration must not create a tenant',
     );
+  });
+}
+
+test('game spec gate rejects every runtimeStatus future spec by canonical and legacy selectors', () => {
+  // A kernel may exist before a tenant does. Known-but-unrouted must stay
+  // distinguishable from unknown_game_spec, and neither selector may fall
+  // through into a Fog Chess room.
+  for (const spec of GAME_SPECS.filter((s) => s.runtimeStatus === 'future')) {
+    for (const input of [{ gameSpecId: spec.id }, { variant: spec.id }]) {
+      assert.deepEqual(
+        gateGameSpecRequest(input),
+        {
+          type: 'reject',
+          error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
+          httpStatus: 501,
+          wsCloseReason: 'game spec not integrated',
+        },
+        JSON.stringify(input),
+      );
+    }
   }
 });
 

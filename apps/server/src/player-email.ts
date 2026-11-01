@@ -60,6 +60,8 @@ export const notificationSettingsUrl = `${emailPublicHost}/account/settings/noti
 // variant fails the build until it is named; null falls back to publicName.
 const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   banqi: { en: 'Banqi', 'zh-Hans': '暗棋', 'zh-Hant': '暗棋' },
+  // Hidden, unrouted spec; no public catalog name or correspondence support.
+  'ffq-banqi': null,
   mahjong: null,
   'three-kingdoms-banqi': {
     en: 'Three Kingdoms Banqi',
