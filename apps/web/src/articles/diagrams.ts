@@ -2846,32 +2846,6 @@ export const JIEQI_OPENING_MOVES = (labels?: { moves?: string; gamble?: string }
     ].join(''),
   );
 
-// AB-JChess vs jqe (slug: ab-jchess-vs-jqe): the first two moves both engines
-// play most, from the match record (openingLines in ab-jchess-vs-jqe-match.json):
-// the edge soldier point on each side. Black's other answers moved to the
-// openings article (#826).
-export const AB_JQE_OPENING_BOARDS = (labels?: { main?: string }) =>
-  xqSvg(
-    XQ_BOARD_W,
-    XQ_BOARD_H + 52,
-    xqBoardSvg({
-      state: XQ_START,
-      view: JIEQI_START_VIEW,
-      x: 0,
-      y: 0,
-      label: labels?.main ?? 'THE MAIN LINE: A4-A5, I7-I6',
-      perspective: 'red',
-      shroudedStyle: 'back',
-      arrows: [
-        { from: 'a4' as XiangqiSquare, to: 'a5' as XiangqiSquare },
-        { from: 'i7' as XiangqiSquare, to: 'i6' as XiangqiSquare },
-      ],
-    }),
-  );
-
-// What a face-down piece on a cannon point is worth before you spend it, and
-// what you are left holding if it turns out to be a soldier. The black cannon
-// on h8 is the screen that makes the capture on h10 legal.
 export const JIEQI_OPTION_BEFORE_BOARD: XiangqiPlayerView['board'] = {
   h3: { piece: { color: 'red', role: 'cannon' }, shrouded: true },
   h8: { piece: { color: 'black', role: 'cannon' }, shrouded: false },

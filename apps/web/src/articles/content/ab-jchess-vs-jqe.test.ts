@@ -178,7 +178,36 @@ describe('AB-JChess vs jqe games', () => {
       expect(m.lagMoves, key).toBe(caught === null ? null : (caught - m.ply) / 2);
     }
     // The lags the headings name.
-    expect(AB_JQE_GAMES.map((k) => game(k).deep.moments[0]!.lagMoves)).toEqual([6, 7, 5, null, 1]);
+    expect(AB_JQE_GAMES.map((k) => game(k).deep.moments[0]!.lagMoves)).toEqual([6, 7, 5, null, 6]);
+  });
+
+  it("backs game 1's evaluation gap against the charted numbers", () => {
+    const g = game(AB_JQE_GAMES[0]);
+    const d = g.deep;
+    const gap = d.gap!;
+    expect(gap, g.key).toBeDefined();
+    const own = d.series[d.loser];
+    const other = d.series[d.loser === 'abj' ? 'jqe' : 'abj'];
+    const win = own.slice(gap.fromPly, gap.toPly + 1);
+    const winOther = other.slice(gap.fromPly, gap.toPly + 1);
+    expect(gap.range[d.loser]).toEqual([Math.min(...win), Math.max(...win)]);
+    expect(gap.range[d.loser === 'abj' ? 'jqe' : 'abj']).toEqual([Math.min(...winOther), Math.max(...winOther)]);
+    // The gap holds through the window (at least 5 points every position) and nothing turns over.
+    for (let j = gap.fromPly; j <= gap.toPly; j++) expect(own[j]! - other[j]!, `ply ${j}`).toBeGreaterThanOrEqual(0.05);
+    expect(gap.revealsInWindow).toEqual([]);
+    expect(gap.moves).toBe(gap.toPly - gap.fromPly + 1);
+    expect(gap.agree).toBeGreaterThan(gap.moves / 2);
+    // The snap is the first position after the window where the loser's number comes within 5 points.
+    let snap = gap.toPly + 1;
+    while (own[snap]! - other[snap]! >= 0.05) snap++;
+    expect(gap.snapPly).toBe(snap);
+    expect([gap.snapFrom, gap.snapTo]).toEqual([own[snap - 1], own[snap]]);
+    expect(gap.snapMove).toBe(Math.floor((snap - 1) / 2) + 1);
+    // The board opens inside the window, on the widest differing choice.
+    const m = d.moments[0]!;
+    expect(m.ply).toBeGreaterThanOrEqual(gap.fromPly);
+    expect(m.ply).toBeLessThanOrEqual(gap.toPly);
+    expect(Math.round(100 * (m.winner.pick - m.winner.played))).toBe(Math.round(100 * gap.maxCost));
   });
 
   it('backs the pieces and points the captions name', () => {
@@ -218,12 +247,13 @@ describe('AB-JChess vs jqe games', () => {
       expect(board[sq('d10')]).toMatchObject(piece('general', 'black'));
       expect(board[sq('f5')]).toMatchObject(piece('soldier', 'black'));
     }
-    // Game 5: jqe's chariot b6 to e6; AB-JChess's soldier i8 to i7.
+    // Game 5: jqe's chariot b4 to c4; AB-JChess's advisor g8 to f9, beside the general on f8.
     {
-      const { g, m, board } = at('run2:30');
-      expect([g.red, m.played, m.pick]).toEqual(['AB-JChess-20261031', 'b6e6', 'i8i7']);
-      expect(board[sq('b6')]).toMatchObject(piece('chariot', 'black'));
-      expect(board[sq('i8')]).toMatchObject(piece('soldier', 'black'));
+      const { g, m, board } = at('run1:194');
+      expect([g.red, m.played, m.pick]).toEqual(['AB-JChess-20261031', 'b4c4', 'g8f9']);
+      expect(board[sq('b4')]).toMatchObject(piece('chariot', 'black'));
+      expect(board[sq('g8')]).toMatchObject(piece('advisor', 'black'));
+      expect(board[sq('f8')]).toMatchObject(piece('general', 'black'));
     }
   });
 

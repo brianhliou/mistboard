@@ -242,6 +242,8 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   'co-up': 'Vietnamese copy of jieqi-platform, whose zh pages exist.',
   'khai-cuoc-co-up': 'Vietnamese copy of jieqi-openings, whose zh pages exist.',
   'lai-ly-huynh-co-tuong': 'Vietnamese copy of lai-ly-huynh, whose zh pages exist.',
+  'ab-jchess-vs-jqe':
+    'English first: zh is translated once Brian signs off the English (rule of 2026-10-10), in a later ship.',
 };
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
