@@ -64,8 +64,25 @@ test('youtube link: /yt opens the xiangqi rules page, tagged youtube / video wit
     ),
     'yt-shorts-2026-12',
   );
-  for (const path of ['/yt/1', '/ytx', '/yt/2/extra'])
+  assert.equal(url.searchParams.get('utm_content'), null);
+  for (const path of ['/ytx', '/yt/2/extra', '/yt/0', '/yt/05', '/yt/abc', '/yt/12345'])
     assert.equal(xShortLinkRedirect(path, now), null, path);
+});
+
+test('youtube link: /yt/<n> opens the same rules page, tagged with the Short it came from', () => {
+  const now = new Date('2026-11-04T17:00:00Z');
+  for (const path of ['/yt/5', '/yt/5/', '/YT/5']) {
+    const url = parseTarget(xShortLinkRedirect(path, now)!);
+    assert.equal(url.pathname, '/rules/xiangqi', path);
+    assert.equal(url.searchParams.get('utm_source'), 'youtube');
+    assert.equal(url.searchParams.get('utm_medium'), 'video');
+    assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-11');
+    assert.equal(url.searchParams.get('utm_content'), 'short-5', path);
+  }
+  assert.equal(
+    parseTarget(xShortLinkRedirect('/yt/12', now)!).searchParams.get('utm_content'),
+    'short-12',
+  );
 });
 
 test('facebook short link: the puzzle post opens the bare position, never the solution', () => {

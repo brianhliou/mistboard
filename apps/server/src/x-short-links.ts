@@ -77,6 +77,10 @@ const FB_UNKNOWN_CAMPAIGN = 'fb-unknown';
 // which carries the play-the-computer button, the same page the Shorts'
 // descriptions link (Brian, 2026-11-01). The campaign carries the visit's
 // month (UTC), so a standing link never reports under a stale month.
+// Each Short shows its own number, mistboard.com/yt/5 (Brian, 2026-11-02): for
+// now every number opens the same page tagged utm_content short-<n>, so clicks
+// read per video, and a number can later be repointed (say, to its own
+// position) without touching a published video.
 function ytCampaign(now: Date): string {
   return `yt-shorts-${now.toISOString().slice(0, 7)}`;
 }
@@ -114,12 +118,14 @@ function lookup(encoded: string): XShortLink | null | undefined {
 
 /** The redirect target for a short link (/x, /fb, /yt), or null when the path is not one. */
 export function xShortLinkRedirect(pathname: string, now: Date = new Date()): string | null {
-  if (/^\/yt\/?$/i.test(pathname)) {
+  const yt = /^\/yt(?:\/([1-9]\d{0,3}))?\/?$/i.exec(pathname);
+  if (yt) {
     const utm = new URLSearchParams({
       utm_source: 'youtube',
       utm_medium: 'video',
       utm_campaign: ytCampaign(now),
     });
+    if (yt[1]) utm.set('utm_content', `short-${yt[1]}`);
     return `/rules/xiangqi?${utm.toString()}`;
   }
   const fb = /^\/fb\/([^/]+)(\/answer)?\/?$/.exec(pathname);
