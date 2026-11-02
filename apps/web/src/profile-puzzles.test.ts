@@ -72,6 +72,7 @@ function mockProfile(
           ratings: [],
           puzzleRatings: [
             { variant: 'xiangqi', rating: 1520, provisional: false, solved: 1, attempts: 2 },
+            { variant: 'mini-xiangqi', rating: 1400, provisional: true, solved: 0, attempts: 1 },
           ],
           games,
           gamesTotal,
@@ -219,6 +220,16 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
     ]);
   });
 
+  it('leaves a puzzle pool with no fetched history as a plain row', async () => {
+    mockProfile(() => json({ attempts: [attempt(0)], nextOffset: null }));
+    const root = await mount();
+    const rows = [...root.querySelectorAll<HTMLElement>('.profile-puzzle-row')];
+    expect(rows.map((row) => [row.tagName, row.dataset.puzzleVariant ?? null])).toEqual([
+      ['BUTTON', 'xiangqi'],
+      ['DIV', null],
+    ]);
+  });
+
   it('keeps an existing Games filter when selecting puzzle history', async () => {
     window.history.replaceState(null, '', '/@/solver?variant=xiangqi&result=win');
     const fetchSpy = mockProfile(() => json({ attempts: [attempt(0)], nextOffset: null }));
@@ -256,7 +267,7 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
     );
     const dots = [...root.querySelectorAll('.profile-rating-chart-dot')];
     expect(dots.map((dot) => dot.getAttribute('data-rating'))).toEqual(['1505', '1540']);
-    expect(dots[0]?.querySelector('title')?.textContent).toContain('1500 → 1505');
+    expect(dots[0]?.querySelector('title')?.textContent).toBe('Oct 1, 2026: 1500 → 1505');
     expect(root.querySelectorAll('.profile-rating-chart-line')).toHaveLength(1);
   });
 

@@ -38,6 +38,7 @@ import {
 import {
   createProfilePuzzleHistory,
   hasSavedPuzzleRating,
+  PROFILE_PUZZLE_HISTORY_VARIANT,
   type ProfilePuzzleDay,
   type ProfilePuzzleHistory,
   profilePuzzleDays,
@@ -1883,7 +1884,7 @@ function renderRatingChartFrame(
       if (dailySnapshots) {
         const sample = samples[index]!;
         const title = document.createElementNS(svgNs, 'title');
-        title.textContent = `${chartAxisDate(sample.endedAt, locale)}: ${sample.ratingBefore} → ${sample.ratingAfter}`;
+        title.textContent = `${dayLabel(sample.endedAt, locale)}: ${sample.ratingBefore} → ${sample.ratingAfter}`;
         dot.append(title);
       }
       svg.append(dot);
@@ -2668,7 +2669,10 @@ function appendProfilePuzzleRatings(
   rail.className = 'profile-puzzle-rail';
 
   for (const entry of visibleRatings) {
-    const row = document.createElement(onSelect ? 'button' : 'div');
+    // Only a pool whose history was fetched can fill the chart; the others
+    // stay plain rows rather than open an empty one.
+    const selectable = onSelect && entry.variant === PROFILE_PUZZLE_HISTORY_VARIANT;
+    const row = document.createElement(selectable ? 'button' : 'div');
     row.className = 'profile-puzzle-row';
     if (row instanceof HTMLButtonElement) {
       row.type = 'button';

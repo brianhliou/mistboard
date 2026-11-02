@@ -59,7 +59,10 @@ export function createProfilePuzzleHistory(
 
 // Called only for the viewer's own profile. The API selects the account from
 // the session; there is deliberately no handle or account id in this request.
-// Xiangqi is the public puzzle pool shown on profiles (Jungle is hidden there).
+// Xiangqi is the public puzzle pool shown on profiles (Jungle is hidden there),
+// and the only pool whose history the owner's profile fetches.
+export const PROFILE_PUZZLE_HISTORY_VARIANT = 'xiangqi';
+
 async function fetchAllPuzzleHistory(): Promise<PuzzleHistoryEntry[]> {
   // The API is oldest-first. Follow every page before showing the graph so an
   // existing player never gets a misleading, truncated early timeline.
@@ -67,7 +70,7 @@ async function fetchAllPuzzleHistory(): Promise<PuzzleHistoryEntry[]> {
   let offset: number | null = 0;
   while (offset !== null) {
     const query = new URLSearchParams({
-      variant: 'xiangqi',
+      variant: PROFILE_PUZZLE_HISTORY_VARIANT,
       limit: String(HISTORY_PAGE_SIZE),
       offset: String(offset),
     });
