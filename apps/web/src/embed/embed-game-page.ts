@@ -266,6 +266,7 @@ export async function mountEmbedGame(
         });
         // A remount (a fog game's view change) keeps the overlay it had.
         if (analysis) {
+          installLuckCards(analysis, host, root, handle);
           handle.setBoardOverlay?.(analysis.overlayAtPly);
           if (specId !== 'jieqi') {
             const { installEmbedGameLines } = await import('./embed-game-lines.js');
@@ -320,6 +321,7 @@ export async function mountEmbedGame(
       ).catch(() => {});
     }
     card.setAnnotations(loaded.annotations);
+    if (boardHost) installLuckCards(loaded, boardHost, root, card.handle);
     card.handle.setBoardOverlay?.(loaded.overlayAtPly);
   }
 }
@@ -369,4 +371,19 @@ export function seatDiscInk(game: FeaturedGame, side: 'first' | 'second'): strin
     side === 'first' ? firstSeat : secondSeat,
     game.firstColor ?? null,
   );
+}
+
+function installLuckCards(
+  analysis: EmbedAnalysis,
+  board: HTMLElement,
+  list: HTMLElement,
+  handle: EmbedBoardHandle,
+): void {
+  const detach = analysis.attachLuckCards?.(board, list);
+  if (!detach) return;
+  const destroy = handle.destroy.bind(handle);
+  handle.destroy = () => {
+    detach();
+    destroy();
+  };
 }

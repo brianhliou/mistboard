@@ -41,7 +41,8 @@ export type MoveListEntry = {
    *  right-aligned eval slot the way a study's tree view shows an assessment NAG.
    *  A chapter that plays a line out to a verdict puts it on the last move. */
   assessment?: string;
-  /** Reveal luck, independent of move judgment. */
+  /** Reveal or flip luck, independent of move judgment; the shared luck card is keyed by
+   *  this entry's ply. */
   luck?: number;
   /** The author's or the engine's note on this move, shown under its row. */
   note?: string;
@@ -324,7 +325,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
       luck.className = `review-move-list__luck review-move-list__luck--${entry.luck > 0 ? 'lucky' : entry.luck < 0 ? 'unlucky' : 'even'}`;
       luck.dataset.luckPath = String(entry.ply);
       fillLuckBadge(luck, `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`);
-      button.append(luck);
+      button.querySelector('.review-move-list__eval')!.before(luck);
     }
     button.addEventListener('click', () => onJump?.(entry.ply));
     cellsByPly.set(entry.ply, button);

@@ -9,6 +9,7 @@ import {
   type JungleFlipDeal,
   type JungleFlipGameState,
   type JungleFlipMove,
+  type JungleFlipPieceRole,
   type JungleFlipPlayerView,
   type JungleFlipSeat,
   jungleFlipMoveLabel,
@@ -31,8 +32,10 @@ import {
   engineMarkersFromLinesWithParser,
 } from './engine/engine-arrows.js';
 import { withFaceDownReview } from './face-down-faces.js';
+import { jungleFlipLuckDetail, jungleFlipLuckPieceSvg } from './flip-luck.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { makeJungleFlipTreeAdapter } from './jungle-flip-tree-adapter.js';
+import { attachLuckBadgeCard, attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatFlipVariantBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -70,6 +73,7 @@ function makeJungleFlipPresentation(
   JungleFlipBoardArrow,
   JungleFlipBoardMarker
 > {
+  let luckDetail: LuckCardDetail<JungleFlipPieceRole> | null = null;
   return {
     adapter,
     // Client engine: the in-browser MistyJungleFlip wasm (single-shot MultiPV), fed the
@@ -103,7 +107,12 @@ function makeJungleFlipPresentation(
     boardMaxPx: 560,
     perspective: (flipped) => (flipped ? 'black' : 'red'),
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
-    createBoard: (opts) => createJungleFlipInteractiveBoard(opts),
+    createBoard: (opts) => {
+      const board = createJungleFlipInteractiveBoard(opts);
+      const detach = attachLuckMarkCard(opts.board, () => luckDetail, jungleFlipLuckPieceSvg);
+      opts.signal?.addEventListener('abort', detach, { once: true });
+      return board;
+    },
     // No glide animation (a flip has no travel; board re-renders on nav).
     // The board never flips (the deal has no sides), so the glide ignores the
     // review's perspective too.
@@ -130,6 +139,21 @@ function makeJungleFlipPresentation(
       text: glyph.text,
       className: `xq-marker--${glyph.tone}`,
     }),
+    moveLuckMarker: (move, info) => {
+      luckDetail = jungleFlipLuckDetail(move, info);
+      return luckDetail ? { square: move.to, kind: 'luck', luck: { luck: info.luck } } : null;
+    },
+    moveListLuck: ({ list, luckAt, signal }) => {
+      const detach = attachLuckBadgeCard(
+        list,
+        (badge) => {
+          const at = luckAt(badge.dataset.luckPath ?? '');
+          return at ? jungleFlipLuckDetail(at.move, at) : null;
+        },
+        jungleFlipLuckPieceSvg,
+      );
+      signal.addEventListener('abort', detach, { once: true });
+    },
   };
 }
 

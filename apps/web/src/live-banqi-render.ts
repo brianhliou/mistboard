@@ -20,6 +20,7 @@ import {
   pieceFlipStyle,
 } from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
+import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
 import {
   boardCornerRadius,
   roundPieceBox,
@@ -162,7 +163,8 @@ export interface BanqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface BanqiBoardMarker extends SvgBoardMarkerStyle {
   square: BanqiSquare;
-  kind: 'circle' | 'glyph';
+  kind: 'circle' | 'glyph' | 'luck';
+  luck?: LuckMarkSpec;
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
 }
@@ -221,6 +223,16 @@ export function banqiArrowSvg(arrow: BanqiBoardArrow): string {
 
 export function banqiMarkerSvg(marker: BanqiBoardMarker): string {
   const center = cellCenter(marker.square);
+  if (marker.kind === 'luck')
+    return marker.luck
+      ? svgBoardLuckMark(
+          marker.luck,
+          center,
+          { piece: CELL * BANQI_PIECE_REACH, cell: CELL },
+          marker.square,
+          { minX: MARGIN, minY: MARGIN, maxX: WIDTH - MARGIN, maxY: HEIGHT - MARGIN },
+        )
+      : '';
   if (marker.kind === 'glyph') {
     return svgBoardGlyphMarker(
       marker,
