@@ -15,6 +15,8 @@
 import './move-list.css';
 
 export type MoveListEntry = {
+  /** Per-flip luck, with the shared card keyed by this ply. */
+  luck?: number;
   /** 1-based ply this move produced (the ply you land on by clicking it). */
   ply: number;
   /** Rendered move text (SAN / from-to / whatever the variant shows). */
@@ -304,6 +306,13 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     if (entry.assessment) evalEl.textContent = entry.assessment;
     button.append(san, evalEl);
     if (entry.suffix) appendGlyph(button, entry.suffix, entry.suffixClass);
+    if (entry.luck !== undefined) {
+      const badge = document.createElement('span');
+      badge.className = 'review-move-list__luck';
+      badge.dataset.luckPath = String(entry.ply);
+      badge.textContent = `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`;
+      button.querySelector('.review-move-list__eval')!.before(badge);
+    }
     button.addEventListener('click', () => onJump?.(entry.ply));
     cellsByPly.set(entry.ply, button);
     return button;

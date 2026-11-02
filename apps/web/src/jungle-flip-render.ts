@@ -33,6 +33,7 @@ import {
   pieceFlipDurationMs,
   pieceFlipStyle,
 } from './board-anim.js';
+import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
 import { boardCornerRadius } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
@@ -157,7 +158,8 @@ export interface JungleFlipBoardArrow extends SvgBoardArrowStyle {
 
 export interface JungleFlipBoardMarker extends SvgBoardMarkerStyle {
   square: JungleFlipSquare;
-  kind: 'circle' | 'glyph';
+  kind: 'circle' | 'glyph' | 'luck';
+  luck?: LuckMarkSpec;
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
 }
@@ -423,6 +425,16 @@ function jungleFlipMarkerSvgWithGeometry(
 ): string {
   const coord = jungleFlipCoordOf(marker.square);
   const center = geom.center(coord.file, coord.rank);
+  if (marker.kind === 'luck')
+    return marker.luck
+      ? svgBoardLuckMark(
+          marker.luck,
+          center,
+          { piece: tokenSpan(geom.cell), cell: geom.cell },
+          marker.square,
+          { minX: 0, minY: 0, maxX: FILES * geom.cell, maxY: RANKS * geom.cell },
+        )
+      : '';
   if (marker.kind === 'glyph') {
     return svgBoardGlyphMarker(
       marker,

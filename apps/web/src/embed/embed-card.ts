@@ -181,7 +181,12 @@ export type EmbedCard = {
 };
 
 /** One move's mark on the score sheet. */
-export type EmbedSheetAnnotation = { suffix?: string; suffixClass?: string; note?: string };
+export type EmbedSheetAnnotation = {
+  luck?: number;
+  suffix?: string;
+  suffixClass?: string;
+  note?: string;
+};
 
 /** The sheet's entries with any marks folded in. An entry's own note (a study's comment)
  *  comes first; the analysis note follows it. */
@@ -195,6 +200,7 @@ export function annotateEntries(
     const note = [entry.note, mark.note].filter(Boolean).join(' ');
     return {
       ...entry,
+      ...(mark.luck !== undefined ? { luck: mark.luck } : {}),
       ...(mark.suffix ? { suffix: mark.suffix, suffixClass: mark.suffixClass } : {}),
       ...(note ? { note } : {}),
     };
