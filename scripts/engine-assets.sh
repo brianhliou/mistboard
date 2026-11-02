@@ -209,10 +209,12 @@ build() {
   # The binary only: its net is fetched from the author's release by
   # railpack.json and never packaged here (ab-jchess.ref says why).
   ref=$(pin ab-jchess.ref)
-  log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, clang)"
+  # From AB-JChess-20261031 the source builds with its own per-ISA script (bash,
+  # g++, static, LTO), not a Stockfish makefile; it writes out/abjchess-<tier>.
+  log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, g++ build_tier.sh)"
   fetch_source "$work/ab-jchess" https://github.com/lxsgx23/AB-JChess.git "$ref"
-  make -C "$work/ab-jchess/abjchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
-  cp "$work/ab-jchess/abjchess/src/AB-JChess" "$bin/ab-jchess"
+  (cd "$work/ab-jchess/abjchess" && CXX=g++ JOBS="$JOBS" bash src/isa/build_tier.sh "$ABJ_ARCH" "$work/ab-jchess/out") >/dev/null
+  strip -o "$bin/ab-jchess" "$work/ab-jchess/out/abjchess-$ABJ_ARCH"
 
   # The binary only, stripped (74 MB of debug info otherwise): its net is fetched
   # from Kouza's Dandelion release by railpack.json and never packaged here
