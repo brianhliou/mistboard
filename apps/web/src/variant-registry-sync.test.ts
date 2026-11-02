@@ -183,9 +183,10 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     // exactly as before jqe existed, and AB-JChess still tops it.
     expect(pick(options)).toEqual(serverLadder.filter((tier) => tier.id !== JIEQI_JQE_ENGINE_ID));
     expect(options[0]?.id).toBe('ab-jchess-jieqi');
-    // With the flag on, jqe is the strongest entry and the rest is unchanged.
+    // With the flag on, jqe sits one rung under AB-JChess and the rest is unchanged.
     expect(pick(jieqiEngineOptions(true))).toEqual(serverLadder);
-    expect(jieqiEngineOptions(true)[0]).toMatchObject({ id: JIEQI_JQE_ENGINE_ID, name: 'jqe' });
+    expect(jieqiEngineOptions(true)[0]?.id).toBe('ab-jchess-jieqi');
+    expect(jieqiEngineOptions(true)[1]).toMatchObject({ id: JIEQI_JQE_ENGINE_ID, name: 'jqe' });
     expect(pick(jieqiEngineOptions(false))).toEqual(pick(options));
     expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-2');
   });

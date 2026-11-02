@@ -101,8 +101,9 @@ const LADDER_PREFIX = 'fairy-stockfish-level-';
 // first-timer is given (web landing-bot-policy JIEQI_FIRST_GAME_LEVEL).
 const JIEQI_LADDER_PREFIX = 'pikafish-level-';
 // The named jieqi slots above Pikafish (level 8), weakest first; first-party-bots.ts.
-// jqe sits above AB-JChess, and is listed only while its engine is enabled.
-const JIEQI_TOP_BOT_ORDER = ['pikafish', 'ab-jchess', 'jqe'];
+// AB-JChess sits above jqe (AB-JChess-20261031 took the top back from it), and jqe is
+// listed only while its engine is enabled.
+const JIEQI_TOP_BOT_ORDER = ['pikafish', 'jqe', 'ab-jchess'];
 // An unknown named slot sorts first, so it never takes "strongest" by accident.
 const jieqiTopRank = (id: string): number => JIEQI_TOP_BOT_ORDER.indexOf(id);
 const JIEQI_FIRST_GAME_LEVEL = 2;

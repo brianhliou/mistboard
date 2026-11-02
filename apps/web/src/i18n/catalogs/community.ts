@@ -651,9 +651,9 @@ export const EN_COMMUNITY = {
   'bots.pikafishBio':
     'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
   'bots.abJchessBio':
-    'An open-source jieqi engine with its own neural network, by Huorongrong and Laoxu (Kouza). Played here with their permission.',
+    "An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network. Its AB-JChess-20261031 release is built on jqe's code and took the top spot back from jqe, winning 306 games, losing 227 and drawing 67 in our 600-game match. It thinks 4 seconds a move. Played here with their permission.",
   'bots.jqeBio':
-    "An open-source jieqi engine by Devin O'Keefe, with its own neural network trained on self-play. It took the top spot from AB-JChess 0.2d, winning 171 games, losing 114 and drawing 15 in our 300-game match. It thinks 4 seconds a move. Played here with his permission.",
+    "An open-source jieqi engine by Devin O'Keefe, with its own neural network trained on self-play. It held the top spot from October 21, 2026, after beating AB-JChess 0.2d 171 games to 114 with 15 draws, and now plays one level below AB-JChess-20261031, which is built on its code. It thinks 4 seconds a move. Played here with his permission.",
   'bots.katagoBio':
     "The strongest Jungle Chess engine we know of: hzyhhzy's KataGomo, built on lightvector's KataGo, with the neural network from Kouza's Dandelion 4. Played here with permission.",
   'bots.katagoCreditKatagomo': 'KataGomo by hzyhhzy',

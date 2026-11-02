@@ -220,7 +220,8 @@ const hiddenFromMenu = () => false;
 // hiddenFromMenu (still linkable) and from a flag (still reachable in the lab).
 const retiredDeepLink = () => false;
 
-// The jqe slot above AB-JChess (2026-10-16), offered only in a VITE_JQE_ENABLED
+// The jqe slot (2026-10-16), one rung under AB-JChess since AB-JChess-20261031
+// took the top back, offered only in a VITE_JQE_ENABLED
 // build. The server holds the engine behind MISTBOARD_JQE_ENABLED until its author's
 // OK, so both flags turn on together.
 const JIEQI_JQE_ENGINE_OPTION: WebTenantEngineOption = {
@@ -230,8 +231,8 @@ const JIEQI_JQE_ENGINE_OPTION: WebTenantEngineOption = {
   kind: 'container',
 };
 
-// The jieqi ladder (2026-09-29), strongest first: jqe when enabled, the AB-JChess
-// slot (2026-10), Pikafish (level 8, full strength), then Pikafish Level 7..1,
+// The jieqi ladder (2026-09-29), strongest first: the AB-JChess slot (2026-10), jqe
+// when enabled, Pikafish (level 8, full strength), then Pikafish Level 7..1,
 // Stockfish's Skill Level applied server-side (apps/server/src/jieqi-engine.ts).
 // Hand mirror of JIEQI_PLAYABLE_ENGINES; parity is asserted by
 // variant-registry-sync.test.ts. Level 4 is the default, as on the other rated ladders.
@@ -295,9 +296,9 @@ const JIEQI_LADDER_ENGINE_OPTIONS: readonly WebTenantEngineOption[] = [
 ];
 
 export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEngineOption[] {
-  return withJqe
-    ? [JIEQI_JQE_ENGINE_OPTION, ...JIEQI_LADDER_ENGINE_OPTIONS]
-    : JIEQI_LADDER_ENGINE_OPTIONS;
+  if (!withJqe) return JIEQI_LADDER_ENGINE_OPTIONS;
+  const [abJchess, ...below] = JIEQI_LADDER_ENGINE_OPTIONS;
+  return [abJchess!, JIEQI_JQE_ENGINE_OPTION, ...below];
 }
 
 // Every tenant block, retired ones included (see WEB_VARIANT_TENANTS below).

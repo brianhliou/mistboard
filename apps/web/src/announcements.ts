@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-02',
+    kind: 'release',
+    headline: 'AB-JChess is the top jieqi bot again.',
+    body: "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.",
+    href: '/bot/ab-jchess',
+    cta: 'Play AB-JChess',
+  },
+  {
     date: '2026-11-01',
     kind: 'update',
     headline: 'Puzzle Dashboard: your results, your history, and the puzzles you missed.',

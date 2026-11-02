@@ -468,16 +468,11 @@ export const ZH_HANT_CONTENT = {
   'champions.heading': '引擎冠軍',
   'champions.intro':
     '每個遊戲都有一位現任冠軍引擎：網站上最強的機器人，並署上作者的名字。它下面還有更容易的機器人和級別。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。我們也希望託管更多引擎供你對弈，而不只是冠軍；想提供引擎，請按下面的提交步驟。',
-  'champions.aboutJieqi':
-    '作者 Huorongrong 和 Laoxu（Kouza）：帶有自己神經網路的 Pikafish 分叉。在本站每步 4 秒，4 執行緒。',
   'champions.aboutJungle':
     '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問。',
   'champions.creditCode': '程式碼',
   'champions.creditNetwork': '神經網路',
   'champions.netPikafish': '皮卡魚 NNUE',
-  'champions.aboutJqe':
-    "作者 Devin O'Keefe：開源引擎，帶有自己的神經網路，透過自我對弈訓練。在本站每步 4 秒，4 執行緒。",
-  'champions.tookJqe': '2026-10-21 從 AB-JChess 0.2d 手中奪得頭銜，共 300 局，得分率 60%。',
   'champions.historyJqe':
     "2026-10-21，揭棋：Devin O'Keefe 的 jqe 從 AB-JChess 0.2d 手中奪得頭銜，300 局 171-114-15，得分率 60%",
   'champions.lineEnd': '。',
@@ -486,7 +481,9 @@ export const ZH_HANT_CONTENT = {
   'champions.statDraws': '和',
   'champions.statLosses': '負',
   'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
-  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分率 64%。',
+  'champions.tookAbJchess2': '2026-10-31 從 jqe 手中奪回頭銜，共 600 局，得分率 57%。',
+  'champions.aboutAbJchess2':
+    "作者 Huorongrong 和 Laoxu（Kouza），基於 Devin O'Keefe 的開源引擎 jqe 的程式碼，帶有自己的神經網路。在本站每步 4 秒，4 執行緒。",
   'champions.tookJungle':
     '2026-09-22 從 MistyJungle 手中奪得頭銜，共 200 局，每步 1,000 次訪問，一局未負。',
   'champions.readMatch': '閱讀比賽報導',
@@ -506,6 +503,8 @@ export const ZH_HANT_CONTENT = {
   'champions.parenOpen': '（',
   'champions.parenClose': '）。',
   'champions.historyHeading': '頭銜歷史',
+  'champions.historyAbJchess2':
+    '2026-10-31，揭棋：Huorongrong 和 Laoxu（Kouza）基於 jqe 程式碼的 AB-JChess-20261031 從 jqe 手中奪得頭銜，600 局 306-227-67，得分率 57%',
   'champions.historyJieqi':
     '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分率 64%',
   'champions.historyJungle':
@@ -531,7 +530,8 @@ export const ZH_HANT_CONTENT = {
   'thanks.fairyStockfishAuthors': 'Fabian Fichter 和 Fairy-Stockfish 的貢獻者',
   'thanks.fairyStockfishBody': '下皮卡魚以下的各級象棋機器人和鴨子象棋機器人。',
   'thanks.abJchessAuthors': 'Huorongrong 和 Laoxu',
-  'thanks.abJchessBody': '本站最強的揭棋機器人。作者允許我們使用它的神經網路。',
+  'thanks.abJchessBody':
+    "本站最強的揭棋機器人。目前版本基於 Devin O'Keefe 的開源引擎 jqe 的程式碼。作者允許我們使用它的神經網路。",
   'thanks.katagomoAuthor': 'KataGomo，作者 hzyhhzy',
   'thanks.katagoAuthor': 'KataGo，作者 lightvector',
   'thanks.dandelionAuthor': 'Dandelion 4 神經網路，作者 Kouza',

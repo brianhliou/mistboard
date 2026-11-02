@@ -49,7 +49,7 @@ test('the stock Fairy-Stockfish rungs show the release the build downloads', () 
 });
 
 test('AB-JChess, jqe and KataGo show the build their version constant names', () => {
-  assert.equal(botEngineVersion('ab-jchess-jieqi'), '0.2d');
+  assert.equal(botEngineVersion('ab-jchess-jieqi'), 'AB-JChess-20261031 (net 20261030)');
   const jqeSha = pinnedSha('jqe.ref').slice(0, 8);
   assert.equal(botEngineVersion('jqe-jieqi'), `${jqeSha} · it014`);
   const katagoSha = pinnedSha('katago-jungle.ref').slice(0, 8);

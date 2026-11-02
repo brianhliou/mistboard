@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-02 (AB-JChess-20261031) ── 电脑 / 级 follow the 2026-10-22 jqe entry.
+  'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成为最强揭棋电脑。',
+  "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
+    'AB-JChess-20261031 是 Huorongrong 和 Laoxu（Kouza）基于 jqe 开源代码推出的新版本。它与 jqe 对弈 600 盘，306 胜、67 和、227 负。它现在排在 jqe 上面一级，jqe 继续保留。',
+  'Play AB-JChess': '与 AB-JChess 对弈',
   'Puzzle Dashboard: your results, your history, and the puzzles you missed.':
     '解题面板上线：成绩、记录，以及做错的题。',
   'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.':
@@ -560,6 +565,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-02 (AB-JChess-20261031) ── 電腦 / 級 follow the 2026-10-22 jqe entry.
+  'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成為最強揭棋電腦。',
+  "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
+    'AB-JChess-20261031 是 Huorongrong 和 Laoxu（Kouza）基於 jqe 開源程式碼推出的新版本。它與 jqe 對弈 600 盤，306 勝、67 和、227 負。它現在排在 jqe 上面一級，jqe 繼續保留。',
+  'Play AB-JChess': '與 AB-JChess 對弈',
   'Puzzle Dashboard: your results, your history, and the puzzles you missed.':
     '解題面板上線：成績、紀錄，以及做錯的題。',
   'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.':
