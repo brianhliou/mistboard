@@ -11,7 +11,7 @@
 // board uses this. Both share the review-move-list CSS vocabulary.
 
 import type { GameTree, GameTreeNode, TreePath } from './game-tree.js';
-import { createScrollRevealer } from './move-list.js';
+import { createScrollRevealer, fillLuckBadge } from './move-list.js';
 import './move-list.css';
 import './move-tree.css';
 
@@ -198,7 +198,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
     // data-luck-path lets the luck card (luck-mark-card.ts) find the move a badge labels.
     if (ann?.luck) {
-      luckEl.textContent = ann.luck;
+      fillLuckBadge(luckEl, ann.luck);
       luckEl.dataset.luckPath = key;
       if (ann.luckTone) luckEl.classList.add(`review-move-list__luck--${ann.luckTone}`);
     }

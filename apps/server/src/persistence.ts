@@ -600,6 +600,12 @@ export {
   getStudyChapterAnalysisForRead,
   saveStudyChapterAnalysis,
 } from './persistence-study-analysis.js';
+export {
+  decidedStudyChapterIds,
+  getStudyChapterDecisions,
+  getStudyChapterDecisionsForRead,
+  saveStudyChapterDecisions,
+} from './persistence-study-decisions.js';
 export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,

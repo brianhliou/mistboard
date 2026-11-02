@@ -2444,11 +2444,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // counts finally reflect the player's CHOICES rather than the dice. ACPL is hidden (it can't be
     // luck-stripped). Per-reveal luck lives on the moves + the chart band, not a separate number.
     if (gameAnalysis) {
+      gameAnalysis = {
+        ...gameAnalysis,
+        chancePlies: [...new Set([...gameAnalysis.chancePlies, ...overlay.byPly.keys()])],
+      };
       const decisionByPly = new Map(
-        [...overlay.byPly].map(([ply, info]) => [
-          ply,
-          { accuracy: info.accuracy, judgment: info.judgment },
-        ]),
+        [...overlay.byPly].map(
+          ([ply, info]) => [ply, { accuracy: info.accuracy, judgment: info.judgment }] as const,
+        ),
       );
       const merged = mergeDecisionAnalysis(gameAnalysis, decisionByPly);
       renderSummary({
@@ -2498,19 +2501,20 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // function the game embed reads, so a "??" here is a "??" in a frame. This layer adds
     // only what is review-only: the per-move eval, retro hiding, luck badges, the
     // alternatives block, and the mapping from ply to tree node.
-    analysisMarkByPly = gameAnalysis
-      ? analysisMarks({
-          analysis: gameAnalysis,
-          decisions: decisionOverlay,
-          quoteEvalBestMove: presentation.quoteEvalBestMove !== false,
-          formatBestMove: formatBestForAdvice,
-        })
-      : new Map();
+    analysisMarkByPly =
+      gameAnalysis || decisionOverlay
+        ? analysisMarks({
+            analysis: gameAnalysis ?? { moves: [], evals: [] },
+            decisions: decisionOverlay,
+            quoteEvalBestMove: presentation.quoteEvalBestMove !== false,
+            formatBestMove: formatBestForAdvice,
+          })
+        : new Map();
     luckByPathKey = new Map();
     gradePlyByPathKey = new Map();
-    if (gameAnalysis) {
+    if (gameAnalysis || decisionOverlay) {
       const nodes = mainlineNodes();
-      const evalByPly = new Map(gameAnalysis.evals.map((entry) => [entry.ply, entry]));
+      const evalByPly = new Map((gameAnalysis?.evals ?? []).map((entry) => [entry.ply, entry]));
       for (const [ply, mark] of analysisMarkByPly) {
         const node = nodes[ply];
         if (!node) continue;
@@ -2704,6 +2708,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       renderAnalysisRequest(analysisSource);
     }
   }
+
+  if (decisionSource && !analysisSource) void loadCachedDecisions();
 
   // Paint any user glyphs carried by a loaded study tree into the move list (the
   // analysis/postgame paths seed no glyphs, so this is a harmless no-op there).

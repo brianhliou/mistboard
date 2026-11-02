@@ -1457,3 +1457,52 @@ describe('mountEmbedStudy', () => {
     expect(root.textContent).toContain('could not be loaded');
   });
 });
+
+describe('jieqi study luck', () => {
+  it('fetches offline luck and shows a badge and board die without analysis', async () => {
+    const fetcher = vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () =>
+        url.endsWith('/decisions')
+          ? {
+              engineId: 'offline',
+              source: 'match',
+              decisions: [{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 62 }],
+            }
+          : {
+              study: { id: 'study' },
+              chapters: [
+                {
+                  id: 'chapter',
+                  name: 'Luck',
+                  variant: 'jieqi',
+                  hasDecisions: true,
+                  root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18.slice(0, 2)) },
+                },
+              ],
+            },
+    }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 'study', chapterId: 'chapter' }, { startPly: 1 });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      '/api/studies/study',
+      '/api/studies/study/chapters/chapter/decisions',
+    ]);
+    expect(root.querySelector('.review-move-list__luck')?.textContent).toBe('🎲 +12%');
+    expect(root.querySelector('.luck-mark[data-luck-square="i5"]')).not.toBeNull();
+    expect(root.querySelector('.review-move-list__suffix')).toBeNull();
+    root
+      .querySelector<HTMLElement>('.review-move-list__luck')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await vi.waitFor(() => expect(document.querySelector('.luck-card')).not.toBeNull());
+    // Ply 0 and the unscored second move carry no die.
+    root.querySelector<HTMLButtonElement>('.embed-card-controls button')?.click();
+    expect(root.querySelector('.luck-mark')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.review-move-list__move[data-ply="2"]')!.click();
+    expect(root.querySelector('.luck-mark')).toBeNull();
+    root.remove();
+  });
+});

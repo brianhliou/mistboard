@@ -28,7 +28,7 @@ export type DecisionMoveInfo = {
   judgment: MoveJudgment;
   /** Luck-free accuracy of the CHOICE in [0, 100] (best-vs-played pool means). Feeds the headline
    *  accuracy so a reveal ply is graded on skill, not the dice. */
-  accuracy: number;
+  accuracy?: number;
   /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky).
    *  OPTIONAL: a variant whose luck axis is not a scalar omits it rather than sending 0, which
    *  would render as "average luck" instead of "no such number". Fog is the case — its error
@@ -136,7 +136,7 @@ export type AnalysisMark = {
 };
 
 export type AnalysisMarksInput = {
-  analysis: GameAnalysis;
+  analysis: Pick<GameAnalysis, 'moves' | 'evals'>;
   decisions?: DecisionOverlay | null;
   /** The variant's policy (TreePresentation.quoteEvalBestMove): false for imperfect-
    *  information variants, whose eval best move is hindsight the mover never had. */
@@ -189,6 +189,8 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
     const luck = info.luck === undefined ? undefined : Math.round(info.luck);
     const next: AnalysisMark = {
       ...prev,
+      comment: undefined,
+      commentClass: undefined,
       suffix: glyph?.suffix,
       suffixClass: glyph?.suffixClass,
       ...(luck === undefined ? {} : { luck }),

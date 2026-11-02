@@ -525,7 +525,7 @@ body.embed-body {
 /* A score sheet, the study's: number, then the two moves in fixed halves, so
    moves line up down the column instead of drifting with label length. */
 .embed-card-moves .review-move-list__row {
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
   align-items: baseline;
   gap: 2px;
   background: transparent;
@@ -543,7 +543,7 @@ body.embed-body {
 }
 
 .embed-card-moves .review-move-list__move {
-  padding: 3px 5px;
+  padding: 3px;
   font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -555,6 +555,24 @@ body.embed-body {
   white-space: normal;
   overflow: visible;
   overflow-wrap: anywhere;
+}
+
+/* A jieqi reveal's luck badge shares the half-column with its move. At 11px a
+   tenth-rank move ("i10-h10") plus "🎲 -44%" broke the move across two lines
+   in the 226px sheet; a 10px badge with an 8.5px die, the 20px number column
+   and 3px padding fit every move on one. Where it still cannot fit, the badge
+   drops under the move rather than splitting it. */
+.embed-card-moves .review-move-list__move {
+  flex-wrap: wrap;
+}
+.embed-card-moves .review-move-list__luck {
+  margin-left: 2px;
+  font-size: 10px;
+  letter-spacing: -0.2px;
+  word-spacing: -0.2em;
+}
+.embed-card-moves .review-move-list__luck-die {
+  font-size: 8.5px;
 }
 
 /* Touch floor (#620): 26px rows for a mouse. The sheet scrolls inside the rail,
