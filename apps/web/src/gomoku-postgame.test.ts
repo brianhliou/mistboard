@@ -611,7 +611,9 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
     expect(root.querySelector('.engine-panel__eval')?.textContent).toBe(
       `${forced.mate! > 0 ? 'Black' : 'White'} wins in ${Math.abs(forced.mate!)}`,
     );
-  });
+    // Stepping to the forced ply re-renders board and graph once per move:
+    // about 4s locally and past 15s on a hosted CI runner (2026-11-01).
+  }, 60_000);
 
   it('a non-admin with the flag off sees no Analyse or board and never fetches the recording', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
