@@ -73,11 +73,17 @@ const FB_UNKNOWN_CAMPAIGN = 'fb-unknown';
 
 // The YouTube Shorts address, mistboard.com/yt: shown at the end of every
 // Short and used as the channel's profile link (a Short's description and
-// comments cannot hold a clickable link). A Short has just shown its problem
-// solved, so this opens the next problem's position with no solution loaded.
-// Repoint YT_NEXT_SLUG when a new Short goes up.
-const YT_NEXT_SLUG = '2';
-const YT_CAMPAIGN = 'yt-shorts-2026-10';
+// comments cannot hold a clickable link). It opens the xiangqi rules page,
+// which carries the play-the-computer button, the same page the Shorts'
+// descriptions link (Brian, 2026-11-01). The campaign carries the visit's
+// month (UTC), so a standing link never reports under a stale month.
+// Each Short shows its own number, mistboard.com/yt/5 (Brian, 2026-11-02): for
+// now every number opens the same page tagged utm_content short-<n>, so clicks
+// read per video, and a number can later be repointed (say, to its own
+// position) without touching a published video.
+function ytCampaign(now: Date): string {
+  return `yt-shorts-${now.toISOString().slice(0, 7)}`;
+}
 
 function targetPath(target: XShortLinkPosition): string {
   // ply=0 opens the board on the problem, with the solution there to step
@@ -111,16 +117,16 @@ function lookup(encoded: string): XShortLink | null | undefined {
 }
 
 /** The redirect target for a short link (/x, /fb, /yt), or null when the path is not one. */
-export function xShortLinkRedirect(pathname: string): string | null {
-  if (/^\/yt\/?$/.test(pathname)) {
-    const fen = X_SHORT_LINKS[YT_NEXT_SLUG]!.target.fen;
+export function xShortLinkRedirect(pathname: string, now: Date = new Date()): string | null {
+  const yt = /^\/yt(?:\/([1-9]\d{0,3}))?\/?$/i.exec(pathname);
+  if (yt) {
     const utm = new URLSearchParams({
-      fen,
       utm_source: 'youtube',
       utm_medium: 'video',
-      utm_campaign: YT_CAMPAIGN,
+      utm_campaign: ytCampaign(now),
     });
-    return `/analysis/xiangqi?${utm.toString()}`;
+    if (yt[1]) utm.set('utm_content', `short-${yt[1]}`);
+    return `/rules/xiangqi?${utm.toString()}`;
   }
   const fb = /^\/fb\/([^/]+)(\/answer)?\/?$/.exec(pathname);
   if (fb) {
