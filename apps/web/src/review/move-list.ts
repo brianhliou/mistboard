@@ -28,6 +28,8 @@ export type MoveListEntry = {
    *  right-aligned eval slot the way a study's tree view shows an assessment NAG.
    *  A chapter that plays a line out to a verdict puts it on the last move. */
   assessment?: string;
+  /** Reveal luck, independent of move judgment. */
+  luck?: number;
   /** The author's or the engine's note on this move, shown under its row. */
   note?: string;
   /** A sideline hung off the position this move was played in: what should have
@@ -304,6 +306,13 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     if (entry.assessment) evalEl.textContent = entry.assessment;
     button.append(san, evalEl);
     if (entry.suffix) appendGlyph(button, entry.suffix, entry.suffixClass);
+    if (entry.luck !== undefined) {
+      const luck = document.createElement('span');
+      luck.className = `review-move-list__luck review-move-list__luck--${entry.luck > 0 ? 'lucky' : entry.luck < 0 ? 'unlucky' : 'even'}`;
+      luck.dataset.luckPath = String(entry.ply);
+      luck.textContent = `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`;
+      button.append(luck);
+    }
     button.addEventListener('click', () => onJump?.(entry.ply));
     cellsByPly.set(entry.ply, button);
     return button;

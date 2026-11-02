@@ -36,6 +36,7 @@ export type StudyTreeNode = {
 
 export type StudyChapterPayload = {
   id: string;
+  hasDecisions?: boolean;
   name?: string;
   variant?: string;
   orientation?: 'red' | 'black' | string;

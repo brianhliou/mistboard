@@ -470,6 +470,8 @@ Edit task → find file → open only that file.
 | `routes/coaches.ts` | Coach directory API (`/api/coaches`, `/api/coaches/me` GET/PUT, `/api/coaches/:handle`): publish eligibility enforced here (`isPlayerTitle(user.title)`), untitled/unpublished detail 404s fail-closed |
 | `persistence-game-analysis.ts` | Whole-game computer-analysis cache persistence (079): `get`/`saveGameAnalysis` eval series plus typed `get`/`saveGameAnalysisBlob`, keyed immutable by (room, engine, depth); reads/writes no-op when persistence is disabled |
 | `persistence-study-analysis.ts` | `study_chapter_analysis` (163): one row per chapter with the analysed `moves`/`root_fen` and the PlyEval series, upserted by a re-run, cascading with the chapter; the read endpoint's single-row visibility lookup and the broadcast boards that already carry analysis |
+| `persistence-study-decisions.ts` | Offline Jieqi chapter decisions (184): validated upsert/read, visibility lookup and chapter presence; other variants and unsafe rows fail closed |
+| `study-chapter-decisions.ts` | Offline decision schema and mainline reveal validation; room convention is first move = ply 1, percentages from mover POV, no captured identities |
 | `persistence-puzzle-ratings.ts` | Glicko-2 puzzle rating persistence (073): only the FIRST outcome moves ratings/counters for user and puzzle; later solves set a separate, stable repair timestamp (180). `listPuzzleAttemptHistory` reads bounded chronological pages and stored rating snapshots scoped to one account and variant; `listFailedPuzzleAttempts` reads unresolved or repaired failures per account/variant |
 | `puzzle-history.test.ts` | Offline API regressions for session-private puzzle history: authentication, account isolation, chronological pages, stored rating changes, legacy nulls, current progress, and input validation; mocks only the pg query boundary |
 | `puzzle-rating.ts` | Puzzle rating math over the shared Glicko-2 engine: `seedPuzzleRating` (from mate depth), `ratePuzzleAttempt` (solve = user win/puzzle loss, symmetric update), `displayPuzzleRating`; self-calibrates like the player ladder |
@@ -892,6 +894,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `review/xiangqi-gamebook.ts` | `mountXiangqiGamebook`: standalone xiangqi gamebook (interactive-lesson) player, a board plus coach panel driving gamebook-play; moves hidden, opponent replies auto-play, wrong legal moves retry, mounted by the study page and later /learn |
 | `review/xiangqi-import.ts` | Re-export barrel forwarding `importXiangqiGame` plus `XiangqiImportResult`/`XiangqiMoveFormat` from @mistboard/game |
 | `review/study-review.ts` | `mountStudyReview`: fail-closed dispatch from a study chapter's variant to that variant's tree-review stack (each case dynamic-imports its own review module, same shape as variant-analysis.ts); resolves a composition `rootFen` inside the branch that can parse it. Exports `mountStudyReview`, `StudyReviewConfig` |
+| `review/study-decisions.ts` | Cached chapter luck read, cut to an unsaved draft's shared mainline prefix; strips decision grades for luck-only study display |
 | `review/study-analysis.ts` | Study page side of chapter analysis: fetch `GET /api/studies/:id/chapters/:cid/analysis`, cut it to the prefix of the mounted tree's mainline it covers, and hand tree-review a request-less `AnalysisSource` (chart, judgments, summary; nothing at all when uncovered) |
 | `review/chess-tree-adapter.ts` | `chessTreeAdapter`: standard-chess adapter for the GameTree spine over `standardChessVariant`, the open-information sibling of the fog one: a single board projection, check-aware legality, SAN with suffixes (`standardChessSan`), plain chess UCI in and out |
 | `review/chess-review.ts` | `mountChessReview`: the study-only chess spec's presentation (one interactive board via the Fog Chess factory with `fog: false`, Fairy-Stockfish panel on `UCI_Variant chess`). Chess is never playable here; this is where a chess study chapter renders |
@@ -1309,3 +1312,5 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/room-create-retry.ts` | _needs a one-line description_ |
 | `apps/web/src/server-render-fallback.ts` | _needs a one-line description_ |
 | `apps/web/src/watch-crazyhouse-xiangqi-replay.ts` | _needs a one-line description_ |
+
+`scripts/study-chapter-decisions.mjs`: dry-run diff / explicit apply of validated offline Jieqi luck through `prod:db`; chapter edits invalidate stored rows.

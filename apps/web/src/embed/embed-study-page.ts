@@ -43,9 +43,11 @@ import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import type { BanqiBoardArrow } from '../live-banqi-render.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
+import type { DecisionOverlay } from '../review/analysis-marks.js';
 import { createBanqiTablebasePanel } from '../review/banqi-tablebase-panel.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { hoverArrowStyle } from '../review/hover-arrow.js';
+import { fetchStudyChapterDecisions } from '../review/study-decisions.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
@@ -119,6 +121,11 @@ export async function mountEmbedStudy(
   const neutralTitle = payload.study?.name ?? 'Study';
   const chapterNumber = (payload.chapters ?? []).indexOf(chapter) + 1;
   const hidden = options.hideSolution === true;
+  const decisions =
+    chapter.variant === 'jieqi' && chapter.hasDecisions
+      ? await fetchStudyChapterDecisions(route.studyId, chapter.id, chapter.root)
+      : null;
+  options = { ...options, decisions };
   await mountChapterEmbed(
     root,
     {
@@ -143,6 +150,7 @@ export type EmbedCredit = { href: string; text: string };
 
 /** Where a chapter opens: the ply, and for fog chess which seat's view. */
 export type ChapterEmbedOptions = {
+  decisions?: DecisionOverlay | null;
   startPly?: number | null;
   pov?: EmbedPov | null;
   /** Cover the sheet and result until the reader asks (`?solution=hidden`). */
@@ -692,6 +700,7 @@ async function mountJieqiEmbed(
         line,
         {
           perspective: chapter.orientation === 'black' ? 'black' : 'red',
+          luck: options.decisions?.byPly,
           glyphs,
           notes,
           lines,
