@@ -14,6 +14,19 @@
 // same row/cell/highlight machinery, with branch children added later.
 import './move-list.css';
 
+/** Fill a luck badge ("🎲 -7%"), the die in its own span so a narrow sheet (the embed) can
+ *  shrink the die without the number; the badge's text is unchanged. */
+export function fillLuckBadge(el: HTMLElement, text: string): void {
+  if (!text.startsWith('🎲')) {
+    el.textContent = text;
+    return;
+  }
+  const die = document.createElement('span');
+  die.className = 'review-move-list__luck-die';
+  die.textContent = '🎲';
+  el.replaceChildren(die, document.createTextNode(text.slice('🎲'.length)));
+}
+
 export type MoveListEntry = {
   /** 1-based ply this move produced (the ply you land on by clicking it). */
   ply: number;
@@ -310,7 +323,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
       const luck = document.createElement('span');
       luck.className = `review-move-list__luck review-move-list__luck--${entry.luck > 0 ? 'lucky' : entry.luck < 0 ? 'unlucky' : 'even'}`;
       luck.dataset.luckPath = String(entry.ply);
-      luck.textContent = `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`;
+      fillLuckBadge(luck, `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`);
       button.append(luck);
     }
     button.addEventListener('click', () => onJump?.(entry.ply));
