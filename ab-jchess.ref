@@ -1,22 +1,29 @@
-fe35d87c7553fd23e8aab3a1dde7e712f286b416
+efc83867230a26bbcd4a6c4cf644b69e154b452e
 # ^ The AB-JChess commit the prod image runs (scripts/engine-assets.sh reads the
 # first line; this comment is ignored).
 #
-# AB-JChess (https://github.com/lxsgx23/AB-JChess, GPL-3, by lxsgx23) is a
-# Pikafish-derived jieqi engine with its own NNUE. fe35d87c is release v0.2d
-# (2026-10-10): the source moved to abjchess/src and reads a new net format
-# (ABJCHESSV11). Measured against v0.2b, the pin before it, at our live 4 s/move
-# and 4 threads over 300 games: +54 Elo [+16, +93] (mistboard-engine
-# lab/jieqi-match/abj-0.2d-vs-0.2b). v0.2b had beaten the PikaJieQi pin by +92
-# over 400 games (lab/jieqi-abjchess-2026-09-29/run6-v02b-4s.jsonl).
+# AB-JChess (https://github.com/lxsgx23/AB-JChess, GPL-3, by lxsgx23) is a jieqi
+# engine with its own NNUE. efc83867 is release AB-JChess-20261031: a new engine
+# built on jqe's code (MIT, Devin O'Keefe; THIRD_PARTY_NOTICES in its repo), with
+# net abjchess-20261030 (0.6 MB, against v0.2d's 144 MB) and about 65x v0.2d's
+# speed per node. Measured against jqe 331a6e61/it014, the jieqi champion from
+# 10-21, at our live 4 s/move and 4 threads over 600 games: 306-67-227, 0.566,
+# +46 Elo [+20, +73] (mistboard-engine lab/jieqi-match/jqe-vs-abj-20261031,
+# commit c01c608). The pin before it was v0.2d (fe35d87c), which jqe had beaten
+# by +67 over 150 pairs.
 #
 # Only the binary is built here. The net is NOT in our engines release: the
 # author allowed site use (lxsgx23/AB-JChess#1, 2026-09-30) on the terms that we
-# fetch it from his release and never re-host it, so railpack.json downloads his
-# v0.2d zip at image build time and checks the zip's and the net's sha256.
+# fetch it from his release and never re-host it, so railpack.json runs
+# scripts/fetch-abjchess-net.sh, which downloads his AB-JChess-20261031 zip,
+# checks the zip's and the net's sha256, loads the net and checks bench 43125.
 # Moving this pin means re-reading his release for the matching net.
 #
-# Built with clang for x86-64-avx2 (engine-assets.sh ABJ_ARCH), not the shared
-# sse41 target: all its strength is the net, and the NNUE runs several times
-# slower without AVX2. Prod web measured 2026-09-30: AMD EPYC 9655, avx2 bmi2
-# avx512 present.
+# Built with the source's own src/isa/build_tier.sh (g++, static, LTO) for
+# x86-64-avx2 (engine-assets.sh ABJ_ARCH), not the shared sse41 target: its
+# strength is the net, and the NNUE runs several times slower without AVX2.
+# Prod web measured 2026-09-30: AMD EPYC 9655, avx2 bmi2 avx512 present.
+#
+# UCI differences from v0.2d the server relies on: no MultiPV option (it always
+# reports one line; an unknown setoption prints an info string and is ignored),
+# EvalFile loads print "EvalFile loaded", and `go perft` and `bench` remain.
