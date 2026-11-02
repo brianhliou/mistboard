@@ -12,6 +12,7 @@
 // can.
 
 import type { BanqiGameState, BanqiMove, EmbedPov } from '@mistboard/game';
+import { jieqiMoveLabel } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
@@ -686,8 +687,12 @@ async function mountJieqiEmbed(
   let card: EmbedCard | null = null;
   const chart = series
     ? createEmbedScoreChart(series, {
-        sidePlayer: series.side === 'red' ? tags.red : tags.black,
         onJump: (ply) => card?.jumpToPly(ply),
+        moveLabel: (ply) => {
+          const move = line.played[ply - 1];
+          const after = line.states[ply];
+          return move && after ? jieqiMoveLabel(move, after) : '';
+        },
       })
     : null;
   card = await mountEmbedCard(root, {

@@ -80,14 +80,14 @@ export type EmbedScoreChart = {
 export function createEmbedScoreChart(
   data: EmbedScoreSeries,
   opts: {
-    /** Who `data.side` is: the chapter's player name for that seat, if any. */
-    sidePlayer?: string;
     onJump: (ply: number) => void;
+    /** The move that reached a ply ("e2-e5"), shown after its number in the readout. */
+    moveLabel?: (ply: number) => string;
   },
 ): EmbedScoreChart {
   const maxPly = data.series[0]!.values.length - 1;
   const sideName = data.side === 'red' ? 'Red' : 'Black';
-  const sideLabel = `Win chance for ${sideName}${opts.sidePlayer ? ` (${opts.sidePlayer})` : ''}`;
+  const sideLabel = `Win chance for ${sideName}`;
 
   const el = document.createElement('div');
   el.className = 'embed-score-chart';
@@ -144,7 +144,13 @@ export function createEmbedScoreChart(
   }
   const cursor = svg('line', { y1: '0', y2: `${VIEW_H}`, class: 'embed-score-chart__cursor' });
   chart.append(cursor);
-  plot.append(chart);
+  // Names the dashed middle line, at the right end, where a finished game's
+  // lines have left it for 0% or 100%.
+  const mid = document.createElement('span');
+  mid.className = 'embed-score-chart__mid-label';
+  mid.setAttribute('aria-hidden', 'true');
+  mid.textContent = '50%';
+  plot.append(chart, mid);
   const tip = createChartTip('embed-score-chart__tip');
   plot.append(tip);
   el.append(legend, plot);
@@ -161,12 +167,27 @@ export function createEmbedScoreChart(
     const values = data.series.map((s) => s.values[ply] ?? 0.5);
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
     showChartTip(tip, {
-      move: plyLabel(ply),
-      value: data.series.map((s, i) => `${s.name} ${percent(values[i]!)}`).join(' · '),
+      move: [plyLabel(ply), ply > 0 ? opts.moveLabel?.(ply) : ''].filter(Boolean).join(' '),
+      value: sideLabel,
       at: maxPly === 0 ? 0 : ply / maxPly,
       // Sit in the half the lines are not in, so the readout covers no data.
       low: mean > 0.5,
     });
+    // One row per engine under the heading, each name in its line's ink, so
+    // the readout says whose estimate each number is.
+    for (const [i, s] of data.series.entries()) {
+      const row = document.createElement('span');
+      row.className = 'embed-score-chart__tip-row';
+      const name = document.createElement('span');
+      name.className = 'embed-score-chart__tip-name';
+      name.setAttribute('style', `color: ${COLORS[s.color]}`);
+      name.textContent = s.name;
+      const value = document.createElement('span');
+      value.className = 'embed-score-chart__tip-value';
+      value.textContent = percent(values[i]!);
+      row.append(name, value);
+      tip.append(row);
+    }
   };
   attachChartScrub({
     surface: plot,

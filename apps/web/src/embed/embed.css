@@ -1296,7 +1296,7 @@ body.embed-body {
 /* A study chapter's win-chance graph in the board column, under the bottom seat
    row (embed-score-chart.ts; embed-card.ts underBoard), where the article
    replay draws its chart. ONE height for the tablebase's reason: the card fits
-   the board to the room the pane leaves, so 92px is what it costs the board.
+   the board to the room the pane leaves, so 140px is what it costs the board.
    It sits on the card, so no border of its own. The inks are the article's
    two-engine pair, lifted on dark. */
 .embed-score-chart {
@@ -1305,7 +1305,7 @@ body.embed-body {
   flex-direction: column;
   gap: 3px;
   box-sizing: border-box;
-  height: 92px;
+  height: 140px;
   padding: 2px 14px 6px;
   color: var(--site-text);
 }
@@ -1359,6 +1359,39 @@ body.embed-body {
   stroke-width: 1;
   stroke-dasharray: 3 3;
   vector-effect: non-scaling-stroke;
+}
+.embed-score-chart__mid-label {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  padding-left: 3px;
+  transform: translateY(-50%);
+  background: var(--site-panel);
+  color: var(--site-muted);
+  font-size: 10px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* The readout: the move and "Win chance for Red" on top, then one row per
+   engine, its name in its line's ink. Two classes: the shared
+   .review-chart-tip is a flex row of equal weight, and bundle order between
+   the two sheets is not fixed. */
+.review-chart-tip.embed-score-chart__tip {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  row-gap: 1px;
+}
+.embed-score-chart__tip-row {
+  display: contents;
+}
+.embed-score-chart__tip-name {
+  font-weight: 600;
+}
+.embed-score-chart__tip-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 .embed-score-chart__line {
   fill: none;

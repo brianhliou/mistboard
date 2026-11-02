@@ -10,34 +10,13 @@ import {
   type JieqiGameState,
   type JieqiMove,
   type JieqiSquare,
+  jieqiPerpetualCheckLoser,
   jieqiPublicDeal,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { AB_JQE_GAMES, AB_JQE_JUDGE, AB_JQE_MATCH, abJchessVsJqeArticle, chance, AB_JQE_STUDY,
-  darkPerGame, seenFrom } from './ab-jchess-vs-jqe.js';
+import { AB_JQE_GAMES, AB_JQE_MATCH, AB_JQE_STUDY, abJchessVsJqeArticle, darkPerGame } from './ab-jchess-vs-jqe.js';
 
 const M = AB_JQE_MATCH;
-// The 15 s judge's rows; its squares count ranks from 0 (f8c8 is f9c9).
-type JudgeRow = { key: string; ply: number; played: string; best: string | null; cp: number };
-const oneBased = (m: string) => m.replace(/([a-i])(\d)/g, (_, f: string, r: string) => `${f}${Number(r) + 1}`);
-const JUDGE = new Map(
-  readFileSync(
-    resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../scripts/variant-lab/ab-jchess-vs-jqe-judge.jsonl'),
-    'utf8',
-  )
-    .trim()
-    .split('\n')
-    .map((l) => JSON.parse(l) as JudgeRow)
-    .map((r) => [`${r.key}@${r.ply}`, r] as const),
-);
-const judgeAt = (key: string, ply: number) => {
-  const r = JUDGE.get(`${key}@${ply}`);
-  if (!r) throw new Error(`no judge row for ${key} ply ${ply}`);
-  return { ...r, played: oneBased(r.played), best: r.best && oneBased(r.best) };
-};
 const sum = (r: { wins: number; draws: number; losses: number }) => r.wins + r.draws + r.losses;
 const elo = (r: { wins: number; draws: number; losses: number }) => {
   const score = (r.wins + r.draws / 2) / sum(r);
@@ -55,7 +34,8 @@ function parse(moves: string): JieqiMove[] {
 function play(key: string): { states: JieqiGameState[]; moves: JieqiMove[] } {
   const g = M.games.find((x) => x.key === key)!;
   const moves = parse(g.moves);
-  let state = createInitialJieqiState('ab-jchess-vs-jqe', g.deal);
+  // The match played threefold repetition as a draw; only the drawn game reaches it.
+  let state = createInitialJieqiState('ab-jchess-vs-jqe', g.deal, { repetition: true });
   const states = [state];
   for (const [i, move] of moves.entries()) {
     expect(isJieqiLegalMove(state, move), `${key} ply ${i + 1} ${move.from}${move.to}`).toBe(true);
@@ -95,185 +75,180 @@ describe('AB-JChess vs jqe match record', () => {
 });
 
 describe('AB-JChess vs jqe games', () => {
-  it('shows each game the post names, once', () => {
+  const game = (key: string) => M.games.find((x) => x.key === key)!;
+  const sq = (s: string) => s as JieqiSquare;
+  const engineOf = (name: string) => (name === 'jqe' ? 'jqe' : 'abj');
+
+  it('shows each game the post names, once, opened on its marked move', () => {
     const shown = abJchessVsJqeArticle.sections
       .flatMap((s) => s.blocks)
       .filter((b) => b?.kind === 'embed');
     expect(shown).toHaveLength(AB_JQE_GAMES.length);
-    // Each opens its own chapter on the position before the disputed move.
     expect(shown.map((b) => (b as { path: string }).path)).toEqual(
-      AB_JQE_GAMES.map((key) => {
-        const g = M.games.find((x) => x.key === key)!;
-        return `/embed/study/${AB_JQE_STUDY.id}/${AB_JQE_STUDY.chapters[key]}?ply=${g.dispute.ply - 1}`;
-      }),
+      AB_JQE_GAMES.map(
+        (key) => `/embed/study/${AB_JQE_STUDY.id}/${AB_JQE_STUDY.chapters[key]}?ply=${game(key).deep.moments[0]!.ply}`,
+      ),
     );
     expect(M.games.map((g) => g.key)).toEqual([...AB_JQE_GAMES]);
+    // Wins for each engine and a draw.
+    expect(M.games.some((g) => g.winner !== 'draw' && g.abWon)).toBe(true);
+    expect(M.games.some((g) => g.winner !== 'draw' && !g.abWon)).toBe(true);
+    expect(M.games.filter((g) => g.winner === 'draw')).toHaveLength(1);
   });
 
   for (const key of AB_JQE_GAMES) {
-    it(`${key} replays legally to the recorded checkmate on a public deal`, () => {
-      const g = M.games.find((x) => x.key === key)!;
+    it(`${key} replays legally to its recorded result on a public deal`, () => {
+      const g = game(key);
       const { states, moves } = play(key);
       const end = states.at(-1)!;
-      expect(end.status).toMatchObject({ type: 'finished', winner: g.winner, reason: 'checkmate' });
+      if (g.winner === 'draw') {
+        expect(end.status).toMatchObject({ type: 'finished', winner: null, reason: 'repetition' });
+        // A plain repetition: nobody was checking perpetually.
+        expect(jieqiPerpetualCheckLoser(end)).toBeNull();
+        expect(g.abWon).toBe(false);
+      } else {
+        expect(end.status).toMatchObject({ type: 'finished', winner: g.winner, reason: 'checkmate' });
+        expect(g.abWon).toBe(engineOf(g.winner === 'red' ? g.red : g.black) === 'abj');
+      }
+      expect(moves).toHaveLength(g.plies);
       expect(Math.ceil(moves.length / 2)).toBe(g.moveCount);
       // The stored deal is already public: nothing in it names a piece that was
       // captured face-down or never turned over.
       expect(jieqiPublicDeal(g.deal, moves)).toEqual(g.deal);
-      expect(g.abWon).toBe((g.winner === 'red' ? g.red : g.black) !== 'jqe');
     });
   }
 
-  it('opens each game on a disputed move that both engines searched', () => {
+  it("charts the loser's chance by both engines, ending on the result", () => {
     for (const key of AB_JQE_GAMES) {
-      const g = M.games.find((x) => x.key === key)!;
-      const d = g.dispute;
-      const { states, moves } = play(key);
-      const before = states[d.ply - 1];
-      const played = moves[d.ply - 1];
-      // The stored move is the one played, by the engine the post names, and the
-      // other engine's choice was a different legal move.
-      expect(`${played.from}${played.to}`, key).toBe(d.played);
-      expect(d.move).toBe(Math.ceil(d.ply / 2));
-      const moverEngine = d.ply % 2 === 1 ? g.red : g.black;
-      expect(d.mover, key).toBe(moverEngine === 'jqe' ? 'jqe' : 'AB-JChess');
-      const alt = parse(d.alt)[0];
-      expect(d.alt).not.toBe(d.played);
-      expect(isJieqiLegalMove(before, alt), `${key} alt ${d.alt}`).toBe(true);
-      // Neither the move played nor the post's framing rests on a reveal.
-      expect(before.board[played.from]?.faceDown, key).toBe(false);
-      // At a glance the critic called it a mistake by the post's margin.
-      expect(d.glance.alt - d.glance.played, key).toBeGreaterThanOrEqual(M.disagree.costCp);
-      expect(Math.abs(d.glance.played)).toBeLessThanOrEqual(M.disagree.contestedCp);
-    }
-  });
-
-  it("charts both engines' in-game scores from the match log", () => {
-    // Each engine's own fitted curve (fit-k.txt, |cp| <= 1000), as AB-JChess's chance.
-    const K = { 'AB-JChess': 0.00269, jqe: 0.00271 } as const;
-    const abChance = (engine: 'AB-JChess' | 'jqe', cp: number) => {
-      const own = 1 / (1 + Math.exp(-K[engine] * Math.max(-1000, Math.min(1000, cp))));
-      return engine === 'AB-JChess' ? own : 1 - own;
-    };
-    for (const key of AB_JQE_GAMES) {
-      const g = M.games.find((x) => x.key === key)!;
-      const { abj, jqe } = g.series;
-      const plies = g.moves.split(' ').length;
-      for (const s of [abj, jqe]) {
-        expect(s.length, key).toBe(plies + 1);
+      const g = game(key);
+      const d = g.deep;
+      // The loser is the engine on the losing side (the drawn game: the side in trouble).
+      expect(engineOf(d.side === 'red' ? g.red : g.black), key).toBe(d.loser);
+      if (g.winner !== 'draw') expect(d.side, key).not.toBe(g.winner);
+      expect(d.nodes).toBe(22_000_000);
+      for (const e of ['abj', 'jqe'] as const) {
+        const s = d.series[e];
+        expect(s, key).toHaveLength(g.plies + 1);
         for (const v of s) expect(v >= 0 && v <= 1, key).toBe(true);
-        // The last position is the result: every game shown ends in mate.
-        expect(s[plies], key).toBe(g.abWon ? 1 : 0);
+        expect(s.at(-1), key).toBe(g.winner === 'draw' ? 0.5 : 0);
       }
-      // The critic's own next score in the game (criticOwn, from the log) is the
-      // point its line passes through just after the disputed move.
-      const d = g.dispute;
-      const critic = d.mover === 'jqe' ? 'AB-JChess' : 'jqe';
-      const line = critic === 'jqe' ? jqe : abj;
-      expect(line[d.ply], key).toBeCloseTo(abChance(critic, d.criticOwn[0]!), 3);
-      expect(line[d.ply + 1], key).toBeCloseTo(abChance(critic, d.criticOwn[0]!), 3);
     }
   });
 
-  it('backs the move-by-move captions', () => {
-    const g = (key: string) => M.games.find((x) => x.key === key)!;
-    const board = (key: string, ply: number) => play(key).states[ply].board;
-    const sq = (s: string) => s as JieqiSquare;
-    const keeps = (d: { played: number; alt: number }) => d.played >= d.alt;
+  it("marks one move per game: the loser's, where the winner's engine wanted another", () => {
+    for (const key of AB_JQE_GAMES) {
+      const g = game(key);
+      const { states, moves } = play(key);
+      const d = g.deep;
+      expect(d.moments, key).toHaveLength(1);
+      const m = d.moments[0]!;
+      const before = states[m.ply]!;
+      const played = moves[m.ply]!;
+      // The loser is to move, and the move is the one played in the game.
+      expect(m.ply % 2 === 0 ? 'red' : 'black', key).toBe(d.side);
+      expect(m.move, key).toBe(Math.floor(m.ply / 2) + 1);
+      expect(`${played.from}${played.to}`, key).toBe(m.played);
+      // The winner's pick is a different legal move, and neither turns a piece over.
+      const pick = parse(m.pick)[0]!;
+      expect(m.pick, key).not.toBe(m.played);
+      expect(isJieqiLegalMove(before, pick), `${key} pick ${m.pick}`).toBe(true);
+      for (const mv of [played, pick]) expect(before.board[mv.from]?.faceDown, key).toBe(false);
+      expect([m.pickTurnsOver, m.playedTurnsOver], key).toEqual([false, false]);
+      expect(m.revealsBeforeCaught, key).toEqual([]);
+      // Each engine prefers its own: the winner's sees at least 5 points more for the
+      // loser after its pick, the loser's at least as much after the move it played.
+      expect(m.winner.pick - m.winner.played, key).toBeGreaterThanOrEqual(0.05);
+      expect(m.loser.played, key).toBeGreaterThanOrEqual(m.loser.pick);
+    }
+  });
 
-    // Game 1: AB-JChess's chariot f9 to f6; jqe wanted f9 to h9. After h9 both lines
-    // check from i2, push the general to f1 and take the soldier on e3; after f6 the
-    // chariot goes to d1 in the game and in both lines. jqe at 4 s scores both the same.
-    {
-      const G = g('run2:30');
-      const d = G.dispute;
-      expect([G.red, d.played, d.alt]).toEqual(['AB-JChess-20261031', 'f9f6', 'f9h9']);
-      const b = board(G.key, d.ply - 1);
-      expect(b[sq('f9')]).toMatchObject({ role: 'chariot', color: 'red', faceDown: false });
-      expect(b[sq('i1')]).toMatchObject({ role: 'chariot', color: 'black' });
-      expect(b[sq('e3')]).toMatchObject({ role: 'soldier', color: 'red' });
-      for (const line of [d.pv.abj_alt, d.pv.jqe_alt]) {
-        expect(line.split(' ').slice(0, 6).join(' ')).toBe('f9h9 i1i2 e2e1 i2i3 e1f1 i3e3');
-      }
-      for (const line of [d.pv.abj_played, d.pv.jqe_played]) expect(line.split(' ')[1]).toBe('i1d1');
-      expect(G.moves.split(' ')[d.ply]).toBe('i1d1');
-      expect(chance(d.jqe.played)).toBe(chance(d.jqe.alt));
-      expect(keeps(d.abj)).toBe(true);
-      // "AB-JChess itself prefers a third move, the chariot to c9."
-      const j = judgeAt(G.key, d.ply - 1);
-      expect(j.played).toBe(d.played);
-      expect(j.best).toBe(AB_JQE_JUDGE.game1Best);
-      expect(b[sq('f9')]).toMatchObject({ role: 'chariot' });
-      expect([d.played, d.alt]).not.toContain(j.best);
-      expect(G.abWon).toBe(true);
+  it("counts the moves until the loser's own number comes down to the winner's", () => {
+    for (const key of AB_JQE_GAMES) {
+      const g = game(key);
+      const d = g.deep;
+      const m = d.moments[0]!;
+      const own = d.series[d.loser];
+      const other = d.series[d.loser === 'abj' ? 'jqe' : 'abj'];
+      const gap = (j: number) => own[j]! - other[j]!;
+      // The loser's own positions after the move, in order.
+      const loserPlies: number[] = [];
+      for (let j = m.ply + 2; j < g.plies; j += 2) loserPlies.push(j);
+      const caught = loserPlies.find((j) => gap(j) < 0.05) ?? null;
+      expect(m.caughtPly, key).toBe(caught);
+      expect(m.lagMoves, key).toBe(caught === null ? null : (caught - m.ply) / 2);
     }
-    // Game 2: elephant g3 to e5 against the advisor d1 to c2; the engines read the
-    // position far apart, and AB-JChess's side wins.
+    // The lags the headings name.
+    expect(AB_JQE_GAMES.map((k) => game(k).deep.moments[0]!.lagMoves)).toEqual([6, 7, 5, null, 1]);
+  });
+
+  it('backs the pieces and points the captions name', () => {
+    const at = (key: string) => {
+      const g = game(key);
+      const m = g.deep.moments[0]!;
+      return { g, m, board: play(key).states[m.ply]!.board };
+    };
+    const piece = (role: string, color: string) => ({ role, color, faceDown: false });
+    // Game 1: jqe's chariot c6 to c7; AB-JChess would move the advisor c9 to d8.
     {
-      const G = g('run2:198');
-      const d = G.dispute;
-      const b = board(G.key, d.ply - 1);
-      expect(b[sq('g3')]).toMatchObject({ role: 'elephant', color: 'red', faceDown: false });
-      expect(b[sq('d1')]).toMatchObject({ role: 'advisor', color: 'red', faceDown: false });
-      expect([d.played, d.alt]).toEqual(['g3e5', 'd1c2']);
-      expect(chance(d.abj.played) - chance(d.jqe.played)).toBeGreaterThanOrEqual(20);
-      expect(keeps(d.abj) && !keeps(d.jqe)).toBe(true);
-      expect(G.winner).toBe('red');
-      expect(G.abWon).toBe(true);
+      const { g, m, board } = at('run2:198');
+      expect([g.red, g.black, m.played, m.pick]).toEqual(['AB-JChess-20261031', 'jqe', 'c6c7', 'c9d8']);
+      expect(board[sq('c6')]).toMatchObject(piece('chariot', 'black'));
+      expect(board[sq('c9')]).toMatchObject(piece('advisor', 'black'));
     }
-    // Game 3: AB-JChess's soldier h5 to g5 against the chariot g6 to g7; jqe's glance
-    // wanted the chariot, at 4 s it agrees, still favours Red, and AB-JChess's chance
-    // for Black passes 70% for good before jqe's does.
+    // Game 2: jqe's soldier d5 to d6; AB-JChess's horse e6 to c5 "kept the game level".
     {
-      const G = g('run2:115');
-      const d = G.dispute;
-      const b = board(G.key, d.ply - 1);
-      expect([G.red, d.mover, d.played, d.alt]).toEqual(['jqe', 'AB-JChess', 'h5g5', 'g6g7']);
-      expect(b[sq('h5')]).toMatchObject({ role: 'soldier', color: 'black', faceDown: false });
-      expect(b[sq('g6')]).toMatchObject({ role: 'chariot', color: 'black', faceDown: false });
-      expect(keeps(d.jqe)).toBe(true);
-      expect(chance(d.glance.played)).toBeLessThan(chance(d.glance.alt));
-      expect(chance(-d.jqe.played)).toBeGreaterThan(50);
-      // The turn: jqe's soldier d5-d6 on move 82, a ?? by the judge (Red 50% to 22%).
-      const t = AB_JQE_JUDGE.game3Turn;
-      expect(G.moves.split(' ')[t.ply - 1]).toBe(t.played);
-      expect(t.move).toBe(Math.ceil(t.ply / 2));
-      expect(t.ply % 2).toBe(1); // Red's move: jqe's
-      expect(board(G.key, t.ply - 1)[sq('d5')]).toMatchObject({ role: 'soldier', color: 'red' });
-      const before = judgeAt(G.key, t.ply - 1);
-      const after = judgeAt(G.key, t.ply);
-      expect(before.played).toBe(t.played);
-      expect(before.cp).toBe(t.redBefore); // Red to move
-      expect(-after.cp).toBe(t.redAfter); // Black to move
-      expect(chance(t.redBefore) - chance(t.redAfter)).toBeGreaterThanOrEqual(15);
-      const abj = seenFrom(G, G.series.abj);
-      const jqe = seenFrom(G, G.series.jqe);
-      expect(abj).toBeGreaterThan(d.move);
-      expect(abj).toBeLessThan(jqe);
-      // Read off the move-by-move dump: AB-JChess 74% after Red's soldier d5-d6 (ply
-      // 163, its reply is move 82); jqe 72% scored before its horse i1-g2 (move 89).
-      expect([abj, jqe]).toEqual([82, 89]);
-      expect(abj).toBe(t.move);
-      expect(G.series.abj[163]).toBeGreaterThanOrEqual(0.7);
-      expect(G.series.abj[162]).toBeLessThan(0.7);
-      expect(G.abWon).toBe(true);
-      expect(G.winner).toBe('black');
+      const { g, m, board } = at('run2:115');
+      expect([g.red, m.played, m.pick]).toEqual(['jqe', 'd5d6', 'e6c5']);
+      expect(board[sq('d5')]).toMatchObject(piece('soldier', 'red'));
+      expect(board[sq('e6')]).toMatchObject(piece('horse', 'red'));
+      expect(Math.abs(m.winner.pick - 0.5)).toBeLessThanOrEqual(0.02);
     }
-    // Game 4: jqe's cannon h3 to e3 against AB-JChess's chariot d8 to g8; AB-JChess
-    // still prefers its own at 4 s, its general steps to f10 at once, and jqe wins.
+    // Game 3: AB-JChess's general e10 to f10; jqe's chariot f4 takes the soldier on e4.
     {
-      const G = g('run1:293');
-      const d = G.dispute;
-      const b = board(G.key, d.ply - 1);
-      expect([G.red, d.mover, d.played, d.alt]).toEqual(['jqe', 'jqe', 'h3e3', 'd8g8']);
-      expect(b[sq('h3')]).toMatchObject({ role: 'cannon', color: 'red', faceDown: false });
-      expect(b[sq('d8')]).toMatchObject({ role: 'chariot', color: 'red', faceDown: false });
-      expect(b[sq('e10')]).toMatchObject({ role: 'general', color: 'black' });
-      expect(G.moves.split(' ')[d.ply]).toBe('e10f10');
-      expect(keeps(d.jqe) && !keeps(d.abj)).toBe(true);
-      expect(d.criticOwn[1]).toBeLessThan(d.criticOwn[0]);
-      expect(G.abWon).toBe(false);
+      const { g, m, board } = at('run1:293');
+      expect([g.red, g.winner, m.played, m.pick]).toEqual(['jqe', 'red', 'e10f10', 'f4e4']);
+      expect(board[sq('e10')]).toMatchObject(piece('general', 'black'));
+      expect(board[sq('f4')]).toMatchObject(piece('chariot', 'black'));
+      expect(board[sq('e4')]).toMatchObject(piece('soldier', 'red'));
     }
+    // Game 4: jqe's general d10 to d9; AB-JChess's soldier f5 to g5.
+    {
+      const { g, m, board } = at('run2:96');
+      expect([g.red, m.played, m.pick]).toEqual(['AB-JChess-20261031', 'd10d9', 'f5g5']);
+      expect(board[sq('d10')]).toMatchObject(piece('general', 'black'));
+      expect(board[sq('f5')]).toMatchObject(piece('soldier', 'black'));
+    }
+    // Game 5: jqe's chariot b6 to e6; AB-JChess's soldier i8 to i7.
+    {
+      const { g, m, board } = at('run2:30');
+      expect([g.red, m.played, m.pick]).toEqual(['AB-JChess-20261031', 'b6e6', 'i8i7']);
+      expect(board[sq('b6')]).toMatchObject(piece('chariot', 'black'));
+      expect(board[sq('i8')]).toMatchObject(piece('soldier', 'black'));
+    }
+  });
+
+  it('backs the drawn game: jqe stays near even, AB-JChess scores it won, the position repeats', () => {
+    const g = game('run2:96');
+    const d = g.deep;
+    const m = d.moments[0]!;
+    const after = (e: 'abj' | 'jqe') => d.series[e].slice(m.ply, -1);
+    // "jqe's own number stays between 37% and 50%"; "AB-JChess's falls to 0%".
+    expect(Math.min(...after('jqe'))).toBeGreaterThanOrEqual(0.35);
+    expect(Math.max(...after('jqe'))).toBeLessThanOrEqual(0.5);
+    expect(Math.min(...after('abj'))).toBeLessThan(0.05);
+    // From move 74 AB-JChess's in-game score was its top score (match log, ply 146 on).
+    expect(g.abjTopScoreFromPly).toBe(146);
+    expect(Math.floor(g.abjTopScoreFromPly! / 2) + 1).toBe(74);
+    // Red's soldier goes between e8 and f8, Black's cannon between d4 and e4.
+    const tail = g.moves.split(' ').slice(g.abjTopScoreFromPly!);
+    const red = tail.filter((_, i) => (g.abjTopScoreFromPly! + i) % 2 === 0);
+    const black = tail.filter((_, i) => (g.abjTopScoreFromPly! + i) % 2 === 1);
+    for (const mv of red.slice(-3)) expect(['e8f8', 'f8e8']).toContain(mv);
+    for (const mv of black.slice(-3)) expect(['d4e4', 'e4d4']).toContain(mv);
+    const { states } = play(g.key);
+    const end = states.at(-1)!;
+    expect(end.board[sq('f8')] ?? end.board[sq('e8')]).toMatchObject({ role: 'soldier', color: 'red' });
+    expect(end.board[sq('d4')] ?? end.board[sq('e4')]).toMatchObject({ role: 'cannon', color: 'black' });
   });
 
   it('backs the face-down capture claim', () => {
@@ -301,9 +276,8 @@ describe('AB-JChess vs jqe games', () => {
     // "jqe later ... more often": a clear lean in AB-JChess's wins; "about even" in jqe's.
     expect(L.abWon.jqeLater).toBeGreaterThan(1.4 * L.abWon.abjLater);
     expect(Math.abs(L.jqeWon.abjLater - L.jqeWon.jqeLater)).toBeLessThanOrEqual(5);
-    // Game 3 is the far end: a gap wider than one move.
-    const g3 = M.games.find((g) => AB_JQE_GAMES.includes(g.key as never) && seenFrom(g, g.series.jqe) - seenFrom(g, g.series.abj) > 1);
-    expect(g3).toBeDefined();
+    // The closing paragraph: within a move in most of AB-JChess's wins.
+    expect(L.abWon.withinOne / L.abWon.games).toBeGreaterThan(0.7);
   });
 
   it('splits the face-down captures by result, and jqe takes more in every row', () => {

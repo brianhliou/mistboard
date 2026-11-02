@@ -713,7 +713,7 @@ describe('mountEmbedStudy', () => {
     expect(lines[1]?.getAttribute('stroke')).toBe('var(--eval-compare-b, #d9822b)');
     expect(lines[0]?.getAttribute('points')?.split(' ')).toHaveLength(41);
     expect(chart?.querySelector('.embed-score-chart__legend')?.textContent).toBe(
-      'AB-JChessjqeWin chance for Red (AB-JChess)',
+      'AB-JChessjqeWin chance for Red',
     );
     const ply = () => chart?.dataset.ply;
     const cursorX = () => chart?.querySelector('.embed-score-chart__cursor')?.getAttribute('x1');
@@ -740,9 +740,22 @@ describe('mountEmbedStudy', () => {
     expect(ply()).toBe('10');
     // Hovering reads both series at that ply; leaving puts the cursor back.
     plot.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, bubbles: true }));
-    expect(chart?.querySelector('.embed-score-chart__tip')?.textContent).toBe(
-      '10...AB-JChess 30% · jqe 40%',
-    );
+    // The readout names what the numbers are, then one row per engine, each
+    // name in its line's ink.
+    const tip = chart?.querySelector('.embed-score-chart__tip');
+    // The heading names the move as well as its number: the 20th, Black's 10th.
+    const twentieth = root
+      .querySelectorAll('button.review-move-list__move')[19]
+      ?.querySelector('.review-move-list__san')?.textContent;
+    expect(twentieth).toBeTruthy();
+    expect(tip?.querySelector('.review-chart-tip__move')?.textContent).toBe(`10... ${twentieth}`);
+    expect(tip?.querySelector('.review-chart-tip__value')?.textContent).toBe('Win chance for Red');
+    const rows = [...(tip?.querySelectorAll('.embed-score-chart__tip-row') ?? [])];
+    expect(rows.map((r) => r.textContent)).toEqual(['AB-JChess30%', 'jqe40%']);
+    expect(
+      rows.map((r) => r.querySelector('.embed-score-chart__tip-name')?.getAttribute('style')),
+    ).toEqual(['color: var(--eval-compare-a, #1f7a8c)', 'color: var(--eval-compare-b, #d9822b)']);
+    expect(chart?.querySelector('.embed-score-chart__mid-label')?.textContent).toBe('50%');
     expect(ply()).toBe('20');
     plot.dispatchEvent(new MouseEvent('pointerleave'));
     expect(ply()).toBe('10');
