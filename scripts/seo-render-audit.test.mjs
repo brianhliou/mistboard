@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  auditUrl,
   htmlLangFailures,
   serverHtmlFacts,
   serverHtmlFailures,
@@ -10,6 +11,190 @@ import {
 
 const SITEMAP =
   '<urlset><url><loc>https://mistboard.com/faq</loc></url><url><loc>https://mistboard.com/source</loc></url></urlset>';
+
+const AUDIT_URL = 'https://mistboard.com/rules/jungle-flip';
+const AUDIT_ARGS = { timeoutMs: 25_000, blockLazyChunks: true };
+const AUDIT_HTML =
+  '<html lang="en"><head><title>Flip Jungle Rules | Mistboard</title></head><body><div id="app"><h1>Flip Jungle Rules</h1></div></body></html>';
+
+function auditBrowser({ gotoErrors = [], rendered = {}, newPageError } = {}) {
+  const state = { contexts: 0, closed: 0, routes: 0 };
+  const browser = {
+    async newContext() {
+      state.contexts += 1;
+      return {
+        async close() {
+          state.closed += 1;
+        },
+        async newPage() {
+          if (newPageError) throw newPageError;
+          return {
+            on() {},
+            async route() {
+              state.routes += 1;
+            },
+            async goto() {
+              const error = gotoErrors.shift();
+              if (error) throw error;
+            },
+            async waitForTimeout() {},
+            async evaluate() {
+              return {
+                title: 'Flip Jungle Rules | Mistboard',
+                h1: 'Flip Jungle Rules',
+                lang: 'en',
+                appText: 100,
+                errorPanel: false,
+                imgsMissingAlt: 0,
+                ...rendered,
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+  return { browser, state };
+}
+
+test('a failed HTML fetch retries and preserves its transport cause in the report', async () => {
+  const { browser, state } = auditBrowser();
+  let calls = 0;
+  const waits = [];
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new TypeError('fetch failed', {
+          cause: Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+        });
+      }
+      return new Response(AUDIT_HTML);
+    },
+    wait: async (ms) => waits.push(ms),
+  });
+  assert.deepEqual(result.failures, []);
+  assert.equal(result.attempts, 2);
+  assert.match(result.transportErrors[0], /server HTML.*ECONNRESET/);
+  assert.match(result.warnings.join('\n'), /recovered.*2 attempts/);
+  assert.deepEqual(waits, [1000]);
+  assert.equal(calls, 2);
+  assert.equal(state.closed, 1);
+});
+
+test('a reset navigation retries with fresh browser state and chunk blocking still enabled', async () => {
+  const { browser, state } = auditBrowser({
+    gotoErrors: [new Error(`page.goto: net::ERR_CONNECTION_RESET at ${AUDIT_URL}`)],
+  });
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => new Response(AUDIT_HTML),
+    wait: async () => {},
+  });
+  assert.deepEqual(result.failures, []);
+  assert.equal(result.attempts, 2);
+  assert.match(result.transportErrors[0], /navigation.*ERR_CONNECTION_RESET/);
+  assert.deepEqual(state, { contexts: 2, closed: 2, routes: 2 });
+});
+
+test('persistent resets fail after three attempts as navigation failures, never empty content', async () => {
+  const { browser, state } = auditBrowser({
+    gotoErrors: Array.from({ length: 3 }, () => new Error('page.goto: net::ERR_CONNECTION_RESET')),
+    rendered: { title: '', h1: null, appText: 0 },
+  });
+  const waits = [];
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => new Response(AUDIT_HTML),
+    wait: async (ms) => waits.push(ms),
+  });
+  assert.equal(result.attempts, 3);
+  assert.equal(result.transportErrors.length, 3);
+  assert.match(result.failures.join('\n'), /navigation.*3 attempts.*ERR_CONNECTION_RESET/);
+  assert.doesNotMatch(result.failures.join('\n'), /#app is empty/);
+  assert.deepEqual(waits, [1000, 2000]);
+  assert.equal(state.closed, 3);
+});
+
+test('HTML deadlines cover stalled bodies and remain failures after bounded retries', async () => {
+  const { browser, state } = auditBrowser();
+  const signals = [];
+  const keepAlive = setInterval(() => {}, 1000);
+  try {
+    const result = await auditUrl(
+      browser,
+      AUDIT_URL,
+      { ...AUDIT_ARGS, timeoutMs: 10 },
+      {
+        fetchImpl: async (_url, { signal }) => {
+          signals.push(signal);
+          return {
+            status: 200,
+            text: () =>
+              new Promise((_resolve, reject) => {
+                signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+              }),
+          };
+        },
+        wait: async () => {},
+      },
+    );
+    assert.match(result.failures.join('\n'), /server HTML.*3 attempts.*TimeoutError/);
+    assert.equal(signals.length, 3);
+    assert.notEqual(signals[0], signals[1]);
+    assert.equal(state.contexts, 0);
+  } finally {
+    clearInterval(keepAlive);
+  }
+});
+
+test('HTTP and actual render failures are not retried or downgraded', async () => {
+  for (const scenario of [
+    { status: 404, expected: /HTTP 404/ },
+    { status: 503, expected: /HTTP 503/ },
+    { status: 200, rendered: { errorPanel: true }, expected: /error panel replaced/ },
+    { status: 200, rendered: { appText: 0 }, expected: /#app is empty/ },
+    { status: 200, rendered: { lang: 'vi' }, expected: /html lang changed/ },
+  ]) {
+    const { browser } = auditBrowser(scenario);
+    let calls = 0;
+    const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response(AUDIT_HTML, { status: scenario.status });
+      },
+      wait: async () => assert.fail('content and HTTP failures must not retry'),
+    });
+    assert.match(result.failures.join('\n'), scenario.expected);
+    assert.equal(calls, 1);
+  }
+});
+
+test('an idle timeout still checks the rendered DOM without retrying', async () => {
+  const { browser, state } = auditBrowser({
+    gotoErrors: [new Error('page.goto: Timeout 25000ms exceeded')],
+    rendered: { appText: 0 },
+  });
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => new Response(AUDIT_HTML),
+    wait: async () => assert.fail('a networkidle timeout must still inspect content'),
+  });
+  assert.match(result.failures.join('\n'), /#app is empty/);
+  assert.match(result.warnings.join('\n'), /load:.*Timeout/);
+  assert.equal(result.attempts, 1);
+  assert.equal(state.closed, 1);
+});
+
+test('browser setup errors release the context and are not retried as network failures', async () => {
+  const error = new Error('browser setup failed');
+  const { browser, state } = auditBrowser({ newPageError: error });
+  await assert.rejects(
+    auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+      fetchImpl: async () => new Response(AUDIT_HTML),
+      wait: async () => assert.fail('setup errors must not retry'),
+    }),
+    error,
+  );
+  assert.equal(state.closed, 1);
+});
 
 test('a transient sitemap network failure retries, rebases and respects the limit', async (t) => {
   t.mock.method(console, 'warn', () => {});
