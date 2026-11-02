@@ -36,11 +36,13 @@ import {
   profileUrlWithFilter,
 } from './profile-games-tools.js';
 import {
-  buildProfilePuzzleProgress,
   createProfilePuzzleHistory,
+  hasSavedPuzzleRating,
+  PROFILE_PUZZLE_HISTORY_VARIANT,
   type ProfilePuzzleDay,
   type ProfilePuzzleHistory,
   profilePuzzleDays,
+  profilePuzzleRatingPoints,
 } from './profile-puzzles.js';
 import {
   buildProfileDashboard,
@@ -83,6 +85,8 @@ type ProfileRatingHistoryPoint = {
   endedAt: string;
   ratingBefore: number;
   ratingAfter: number;
+  // Daily snapshots mark boundaries so missing puzzle ratings stay gaps.
+  startsSegment?: boolean;
 };
 
 type ProfileRatingHistory = {
@@ -299,10 +303,11 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   const overview = buildProfileOverview(profile, spotlight, locale);
   void hydrateProfilePresence(overview, profile.user.handle, locale);
 
-  // The owner's puzzle history feeds both the progress chart and the Activity
+  // The owner's puzzle history feeds both the spotlight and the Activity
   // tab's daily puzzle rows; visitors never request it.
   const puzzleHistory = profile.isViewer ? createProfilePuzzleHistory() : null;
   const tabs = buildProfileTabs(profile, locale, initialFilter, puzzleHistory);
+  void puzzleHistory?.load().catch(() => {});
   const ratings = buildProfileRatings(profile.ratings, locale, {
     selectedVariant,
     onSelect: (variant, timeClass) => {
@@ -327,12 +332,18 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
     profile.puzzleRatings ?? [],
     profile.puzzleStreak ?? null,
     locale,
+    puzzleHistory
+      ? (entry) => {
+          const next = buildProfilePuzzleSpotlight(entry, locale);
+          spotlight.replaceWith(next);
+          spotlight = next;
+          syncSelectedRating(ratings, null, entry.variant);
+          void hydrateProfilePuzzleSpotlight(next, entry.variant, puzzleHistory, locale);
+        }
+      : undefined,
   );
 
   const dashboard = buildProfileDashboard(ratings, overview, tabs.el);
-  if (puzzleHistory) {
-    tabs.el.before(buildProfilePuzzleProgress(locale, puzzleHistory));
-  }
   shell.append(dashboard);
 }
 
@@ -1449,14 +1460,6 @@ function buildProfileRatingSpotlight(
     ratings.find((rating) => rating.variant === variant && rating.timeClass === timeClass) ??
     preferredBucketForVariant(ratings, variant);
   const shownTimeClass = bucket?.timeClass ?? timeClass;
-  const section = document.createElement('section');
-  section.className = 'profile-rating-spotlight';
-  section.dataset.chartRange = 'ALL';
-  section.dataset.chartStart = '0';
-
-  const head = document.createElement('header');
-  head.className = 'profile-chart-head';
-
   const headline = document.createElement('div');
   headline.className = 'profile-chart-headline';
 
@@ -1503,6 +1506,42 @@ function buildProfileRatingSpotlight(
     detail.textContent = t('profile.noGamesYet', {}, locale);
   }
   headline.append(name, value, detail);
+  return buildProfileChartSpotlight(headline, locale);
+}
+
+function buildProfilePuzzleSpotlight(entry: ProfilePuzzleRating, locale: Locale): HTMLElement {
+  const headline = document.createElement('div');
+  headline.className = 'profile-chart-headline';
+  const name = document.createElement('span');
+  name.className = 'profile-chart-variant';
+  name.textContent = `${puzzleVariantLabel(entry.variant)} · ${t('nav.puzzles', {}, locale)}`;
+  const value = document.createElement('span');
+  value.className = 'profile-chart-value';
+  value.textContent = String(entry.rating);
+  if (entry.provisional) {
+    const q = document.createElement('span');
+    q.className = 'profile-rating-q';
+    q.textContent = '?';
+    value.append(q);
+  }
+  const detail = document.createElement('span');
+  detail.className = 'profile-chart-detail';
+  detail.textContent = t(
+    entry.attempts === 1 ? 'profile.puzzleAttemptOne' : 'profile.puzzleAttemptMany',
+    { count: entry.attempts },
+    locale,
+  );
+  headline.append(name, value, detail);
+  return buildProfileChartSpotlight(headline, locale);
+}
+
+function buildProfileChartSpotlight(headline: HTMLElement, locale: Locale): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'profile-rating-spotlight';
+  section.dataset.chartRange = 'ALL';
+  section.dataset.chartStart = '0';
+  const head = document.createElement('header');
+  head.className = 'profile-chart-head';
 
   const ranges = document.createElement('div');
   ranges.className = 'profile-chart-ranges';
@@ -1570,6 +1609,51 @@ async function hydrateProfileRatingSpotlight(
     spotlightHistory.set(section, []);
   }
   renderSpotlightChart(section, locale, true);
+}
+
+async function hydrateProfilePuzzleSpotlight(
+  section: HTMLElement,
+  variant: string,
+  history: ProfilePuzzleHistory,
+  locale: Locale,
+): Promise<void> {
+  const status = document.createElement('div');
+  status.className = 'profile-puzzle-history-status';
+  status.setAttribute('role', 'status');
+  section.append(status);
+  async function load(): Promise<void> {
+    section.setAttribute('aria-busy', 'true');
+    status.textContent = t('profile.loading', {}, locale);
+    try {
+      const attempts = (await history.load()).filter((entry) => entry.variant === variant);
+      const points = profilePuzzleRatingPoints(attempts).map((entry) => ({
+        roomId: entry.puzzleId,
+        endedAt: entry.createdAt,
+        ratingBefore: entry.ratingBefore,
+        ratingAfter: entry.ratingAfter,
+        startsSegment: entry.startsSegment,
+      }));
+      spotlightHistory.set(section, points);
+      renderSpotlightChart(section, locale, true);
+      status.textContent = t('profile.puzzleHistoryPrivate', {}, locale);
+      if (attempts.some((entry) => entry.rated && !hasSavedPuzzleRating(entry))) {
+        const note = document.createElement('p');
+        note.textContent = t('profile.puzzleHistoryLegacy', {}, locale);
+        status.append(note);
+      }
+    } catch {
+      status.textContent = t('profile.puzzleHistoryFailed', {}, locale);
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'profile-puzzle-history-retry';
+      retry.textContent = t('profile.puzzleHistoryRetry', {}, locale);
+      retry.addEventListener('click', () => void load());
+      status.append(retry);
+    } finally {
+      section.setAttribute('aria-busy', 'false');
+    }
+  }
+  await load();
 }
 
 // Render the chart from the section's stored history for its current window. The
@@ -1714,9 +1798,10 @@ function renderRatingChartFrame(
   }
 
   if (points.length > 0) {
+    const dailySnapshots = points[0]!.startsSegment !== undefined;
     const samples = [
-      { rating: points[0]!.ratingBefore, endedAt: points[0]!.endedAt },
-      ...points.map((point) => ({ rating: point.ratingAfter, endedAt: point.endedAt })),
+      ...(dailySnapshots ? [] : [{ ...points[0]!, rating: points[0]!.ratingBefore }]),
+      ...points.map((point) => ({ ...point, rating: point.ratingAfter })),
     ];
     const ratings = samples.map((sample) => sample.rating);
     const minRating = Math.min(...ratings);
@@ -1726,12 +1811,19 @@ function renderRatingChartFrame(
     const yMax = maxRating + padding;
     const denominator = Math.max(1, samples.length - 1);
     const yRange = Math.max(1, yMax - yMin);
+    const firstTime = Date.parse(samples[0]!.endedAt);
+    const timeSpan = Date.parse(samples.at(-1)!.endedAt) - firstTime;
     const coords = samples.map((sample, index) => ({
-      x: CHART_X0 + ((CHART_X1 - CHART_X0) * index) / denominator,
+      x:
+        CHART_X0 +
+        (CHART_X1 - CHART_X0) *
+          (dailySnapshots
+            ? timeSpan === 0
+              ? 0.5
+              : (Date.parse(sample.endedAt) - firstTime) / timeSpan
+            : index / denominator),
       y: CHART_Y1 - ((sample.rating - yMin) / yRange) * (CHART_Y1 - CHART_Y0),
     }));
-
-    const pointsAttr = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
 
     // Gradient area fill under the line (a unique id per render so multiple
     // charts never collide on the same def).
@@ -1756,16 +1848,27 @@ function renderRatingChartFrame(
     defs.append(gradient);
     svg.append(defs);
 
-    const area = document.createElementNS(svgNs, 'polygon');
-    area.setAttribute('class', 'profile-rating-chart-area');
-    area.setAttribute('fill', `url(#${gradientId})`);
-    area.setAttribute('points', `${CHART_X0},${CHART_Y1} ${pointsAttr} ${CHART_X1},${CHART_Y1}`);
-    svg.append(area);
+    const segments: (typeof coords)[] = [];
+    coords.forEach((coord, index) => {
+      if (index === 0 || samples[index]!.startsSegment) segments.push([]);
+      segments.at(-1)!.push(coord);
+    });
+    for (const segment of segments) {
+      const pointsAttr = segment.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+      const area = document.createElementNS(svgNs, 'polygon');
+      area.setAttribute('class', 'profile-rating-chart-area');
+      area.setAttribute('fill', `url(#${gradientId})`);
+      area.setAttribute(
+        'points',
+        `${segment[0]!.x},${CHART_Y1} ${pointsAttr} ${segment.at(-1)!.x},${CHART_Y1}`,
+      );
+      svg.append(area);
 
-    const ratingLine = document.createElementNS(svgNs, 'polyline');
-    ratingLine.setAttribute('class', 'profile-rating-chart-line');
-    ratingLine.setAttribute('points', pointsAttr);
-    svg.append(ratingLine);
+      const ratingLine = document.createElementNS(svgNs, 'polyline');
+      ratingLine.setAttribute('class', 'profile-rating-chart-line');
+      ratingLine.setAttribute('points', pointsAttr);
+      svg.append(ratingLine);
+    }
 
     // Dots on every sample when the series is short; only the latest when long,
     // so a busy history stays a clean line.
@@ -1777,6 +1880,13 @@ function renderRatingChartFrame(
       dot.setAttribute('cx', coord.x.toFixed(1));
       dot.setAttribute('cy', coord.y.toFixed(1));
       dot.setAttribute('r', index === coords.length - 1 ? '4' : '3');
+      dot.setAttribute('data-rating', String(samples[index]!.rating));
+      if (dailySnapshots) {
+        const sample = samples[index]!;
+        const title = document.createElementNS(svgNs, 'title');
+        title.textContent = `${dayLabel(sample.endedAt, locale)}: ${sample.ratingBefore} → ${sample.ratingAfter}`;
+        dot.append(title);
+      }
       svg.append(dot);
     });
 
@@ -2523,6 +2633,7 @@ function appendProfilePuzzleRatings(
   puzzleRatings: ProfilePuzzleRating[],
   puzzleStreak: ProfileStreak | null,
   locale: Locale,
+  onSelect?: (entry: ProfilePuzzleRating) => void,
 ): void {
   const visibleRatings = puzzleRatings.filter(
     (entry) => !HIDDEN_PROFILE_PUZZLE_VARIANTS.has(entry.variant),
@@ -2558,8 +2669,17 @@ function appendProfilePuzzleRatings(
   rail.className = 'profile-puzzle-rail';
 
   for (const entry of visibleRatings) {
-    const row = document.createElement('div');
+    // Only a pool whose history was fetched can fill the chart; the others
+    // stay plain rows rather than open an empty one.
+    const selectable = onSelect && entry.variant === PROFILE_PUZZLE_HISTORY_VARIANT;
+    const row = document.createElement(selectable ? 'button' : 'div');
     row.className = 'profile-puzzle-row';
+    if (row instanceof HTMLButtonElement) {
+      row.type = 'button';
+      row.dataset.puzzleVariant = entry.variant;
+      row.setAttribute('aria-pressed', 'false');
+      row.addEventListener('click', () => onSelect?.(entry));
+    }
 
     const name = document.createElement('span');
     name.className = 'profile-puzzle-name';
@@ -2747,11 +2867,18 @@ function buildRatingRailRow(
   return row;
 }
 
-function syncSelectedRating(section: HTMLElement, variant: ProfileRatingVariant): void {
+function syncSelectedRating(
+  section: HTMLElement,
+  variant: ProfileRatingVariant | null,
+  puzzleVariant?: string,
+): void {
   for (const row of section.querySelectorAll<HTMLElement>('.profile-rating-row')) {
     const selected = row.dataset.variant === variant;
     row.classList.toggle('profile-rating-row-selected', selected);
     row.setAttribute('aria-pressed', String(selected));
+  }
+  for (const row of section.querySelectorAll<HTMLElement>('button.profile-puzzle-row')) {
+    row.setAttribute('aria-pressed', String(row.dataset.puzzleVariant === puzzleVariant));
   }
 }
 
