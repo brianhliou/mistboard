@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
@@ -8,12 +9,32 @@ import {
   parseRapfiOutput,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import longGame from '../../../fixtures/gomoku/long-review.json';
 import { writeDisplayPreference } from './display-preferences.js';
 import type { GomokuPostgameResponse } from './gomoku-postgame.js';
 import type { XiangqiGameAnalysisResponse } from './review/game-analysis.js';
 
 const ROOM = 'gmk_review';
+
+// The recorded long game (1 MB of offline Rapfi output) lives in the private
+// repo beside the ladder records, so its suite skips where docs-private is
+// absent (hosted CI, fresh worktrees); GOMOKU_LADDER_DATA points elsewhere.
+type LongReview = {
+  opening: GomokuOpening;
+  plies: { ply: number; uci: string; mover: string }[];
+  ply_count: number;
+  termination: string;
+  result: string;
+  rated: boolean;
+  _header: { levels: unknown[]; sweep: { transcripts: { ply: number; lines: string[] }[] } };
+  analysis: XiangqiGameAnalysisResponse;
+};
+const GOMOKU_DATA = process.env.GOMOKU_LADDER_DATA
+  ? new URL(`file://${process.env.GOMOKU_LADDER_DATA.replace(/\/?$/, '/')}`)
+  : new URL('../../../docs-private/gomoku/', import.meta.url);
+const LONG_REVIEW = new URL('long-review.json', GOMOKU_DATA);
+const longGame: LongReview | null = existsSync(LONG_REVIEW)
+  ? JSON.parse(readFileSync(LONG_REVIEW, 'utf8'))
+  : null;
 
 class WorkerStub {
   static instances: WorkerStub[] = [];
@@ -75,12 +96,12 @@ function fixture(opening?: GomokuOpening): GomokuPostgameResponse {
   };
 }
 
-function longRecording(): GomokuPostgameResponse {
+function longRecording(long: LongReview): GomokuPostgameResponse {
   const payload = fixture();
-  let state = createGomokuRoomState(ROOM, longGame.opening as GomokuOpening);
+  let state = createGomokuRoomState(ROOM, long.opening as GomokuOpening);
   payload.history.truth = [{ ply: 0, at: 0, view: getGomokuPlayerView(state, 'black', true) }];
   payload.timeline = [];
-  for (const entry of longGame.plies) {
+  for (const entry of long.plies) {
     const move = parseGomokuMove(entry.uci)!;
     state = applyGomokuRoomMove(state, move);
     payload.history.truth.push({
@@ -99,9 +120,9 @@ function longRecording(): GomokuPostgameResponse {
   payload.game = {
     ...payload.game,
     mode: 'eve',
-    plyCount: longGame.ply_count,
-    termination: longGame.termination,
-    result: longGame.result === 'draw' ? 'draw' : `${longGame.result}-wins`,
+    plyCount: long.ply_count,
+    termination: long.termination,
+    result: long.result === 'draw' ? 'draw' : `${long.result}-wins`,
   };
   payload.view = getGomokuPlayerView(state, 'black', true);
   payload.state = { status: state.status, moveNumber: state.moveNumber };
@@ -488,15 +509,16 @@ describe('Gomoku finished-game review', () => {
   );
 });
 
-describe('s-da96: recorded long-game Rapfi acceptance', () => {
-  const last = longGame.ply_count;
+describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => {
+  const long = longGame as LongReview;
+  const last = longGame?.ply_count ?? 0;
   it('is a finished JSON export with no early five and a real evaluation sign change', async () => {
     const { parseGomokuExport } = await import('./gomoku-analysis-import.js');
-    const game = parseGomokuExport(JSON.stringify(longGame));
+    const game = parseGomokuExport(JSON.stringify(long));
     expect(game).not.toBeNull();
     expect(game!.moves.length).toBeGreaterThanOrEqual(80);
-    expect(longGame._header.levels).toHaveLength(2);
-    expect(longGame.rated).toBe(false);
+    expect(long._header.levels).toHaveLength(2);
+    expect(long.rated).toBe(false);
     let state = createGomokuRoomState(ROOM, game!.opening);
     for (const move of game!.moves) {
       expect(state.status.type).toBe('playing');
@@ -507,11 +529,11 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
     expect(state.status).toMatchObject({ type: 'finished', reason: 'five' });
     // Prove these are parsed engine scores, including signed mate distances,
     // rather than a synthetic curve added just to satisfy the acceptance.
-    for (const { ply, lines } of longGame._header.sweep.transcripts) {
+    for (const { ply, lines } of long._header.sweep.transcripts) {
       const candidate = parseRapfiOutput(lines)[0];
       const sign = (ply % 2 === 0) === (game!.opening.turn === 'black') ? 1 : -1;
       const forced = candidate?.forcedFive;
-      expect(longGame.analysis.plies[ply]).toMatchObject({
+      expect(long.analysis.plies[ply]).toMatchObject({
         cp: !candidate || forced ? null : sign * candidate.eval || 0,
         mate: forced
           ? sign * (forced.result === 'win' ? 1 : -1) * Math.max(1, Math.ceil(forced.plies / 2))
@@ -519,13 +541,13 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
       });
     }
     const signs = new Set(
-      longGame.analysis.plies.map((point) => Math.sign(point.mate ?? point.cp ?? 0)),
+      long.analysis.plies.map((point) => Math.sign(point.mate ?? point.cp ?? 0)),
     );
     expect(signs.has(1) && signs.has(-1)).toBe(true);
   });
 
   it('Analyse polls the sweep into one shared graph point per position', async () => {
-    const { root } = await mount(longRecording(), 200, true, longGame.analysis);
+    const { root } = await mount(longRecording(long), 200, true, long.analysis);
     root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     expect(
@@ -537,13 +559,13 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
   });
 
   it('steps board and graph to k, then jumps from the graph to another recorded ply', async () => {
-    const { root } = await mount(longRecording(), 200, true, longGame.analysis);
+    const { root } = await mount(longRecording(long), 200, true, long.analysis);
     root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     key('Home');
     for (let i = 0; i < 12; i += 1) key('ArrowRight');
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(
-      longGame.opening.stones.length + 12,
+      long.opening.stones.length + 12,
     );
     expect(root.querySelector('.advantage-chart__cursor')?.getAttribute('x1')).toBe(
       ((300 * 12) / last).toFixed(2),
@@ -552,7 +574,7 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
     vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 300 } as DOMRect);
     svg.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: (300 * 40) / last }));
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(
-      longGame.opening.stones.length + 40,
+      long.opening.stones.length + 40,
     );
     expect(root.querySelector('.advantage-chart__cursor')?.getAttribute('x1')).toBe(
       ((300 * 40) / last).toFixed(2),
@@ -565,7 +587,7 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
   });
 
   it('local analysis draws recorded best-move/PV ink while retaining the graph', async () => {
-    const { root } = await mount(longRecording(), 200, true, longGame.analysis);
+    const { root } = await mount(longRecording(long), 200, true, long.analysis);
     root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     const graph = root.querySelector('.advantage-chart');
@@ -574,12 +596,12 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
     const worker = WorkerStub.instances.at(-1)!;
     worker.emit({ type: 'ready' });
     await vi.advanceTimersByTimeAsync(0);
-    const output = longGame._header.sweep.transcripts[0]!.lines;
+    const output = long._header.sweep.transcripts[0]!.lines;
     for (const line of output) worker.emit({ type: 'line', line });
     worker.emit({ type: 'done', elapsedMs: 100 });
     await vi.advanceTimersByTimeAsync(0);
     expect(root.querySelector('.gomoku-best')?.getAttribute('data-square')).toBe(
-      longGame.analysis.plies[0]!.best,
+      long.analysis.plies[0]!.best,
     );
     expect(root.querySelector('.gomoku-pv-number')?.textContent).toBe('1');
     expect(root.querySelector('.advantage-chart')).toBe(graph);
@@ -587,10 +609,10 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
   });
 
   it('a recorded forced five clips at the shared graph edge and reads as win in N locally', async () => {
-    const { root } = await mount(longRecording(), 200, true, longGame.analysis);
+    const { root } = await mount(longRecording(long), 200, true, long.analysis);
     root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
     await vi.advanceTimersByTimeAsync(2000);
-    const forced = [...longGame.analysis.plies].reverse().find((point) => point.mate !== null)!;
+    const forced = [...long.analysis.plies].reverse().find((point) => point.mate !== null)!;
     const point = root.querySelector('.advantage-chart__line')!.getAttribute('points')!.split(' ')[
       forced.ply
     ]!;
@@ -603,7 +625,7 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
     const worker = WorkerStub.instances.at(-1)!;
     worker.emit({ type: 'ready' });
     await vi.advanceTimersByTimeAsync(0);
-    for (const line of longGame._header.sweep.transcripts.find((entry) => entry.ply === forced.ply)!
+    for (const line of long._header.sweep.transcripts.find((entry) => entry.ply === forced.ply)!
       .lines)
       worker.emit({ type: 'line', line });
     worker.emit({ type: 'done', elapsedMs: 100 });
@@ -617,7 +639,7 @@ describe('s-da96: recorded long-game Rapfi acceptance', () => {
 
   it('a non-admin with the flag off sees no Analyse or board and never fetches the recording', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
-    const { root, fetchSpy } = await mount(longRecording(), 200, false);
+    const { root, fetchSpy } = await mount(longRecording(long), 200, false);
     expect(root.querySelector('[data-gomoku-analyse], .engine-panel, .gomoku-svg')).toBeNull();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).startsWith('/api/gomoku/'))).toBe(
       false,

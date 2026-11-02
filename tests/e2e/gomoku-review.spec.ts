@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
@@ -6,7 +7,38 @@ import {
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { expect, type Page, test } from '@playwright/test';
-import fixture from '../../fixtures/gomoku/long-review.json' with { type: 'json' };
+
+// The recorded long game lives in the private repo beside the Gomoku ladder
+// records (docs-private/gomoku); without it the spec skips. GOMOKU_LADDER_DATA
+// points elsewhere.
+type LongReview = {
+  game_id: string;
+  opening: GomokuOpening;
+  plies: { ply: number; uci: string; mover: string }[];
+  ply_count: number;
+  termination: string;
+  result: string;
+  analysis: { plies: { ply: number; mate: number | null }[] };
+};
+const FIXTURE = new URL(
+  'long-review.json',
+  process.env.GOMOKU_LADDER_DATA
+    ? `file://${process.env.GOMOKU_LADDER_DATA.replace(/\/?$/, '/')}`
+    : new URL('../../docs-private/gomoku/', import.meta.url),
+);
+const loaded: LongReview | null = existsSync(FIXTURE)
+  ? JSON.parse(readFileSync(FIXTURE, 'utf8'))
+  : null;
+test.skip(!loaded, 'docs-private/gomoku/long-review.json not present');
+const fixture: LongReview = loaded ?? {
+  game_id: 'gmk_absent',
+  opening: { stones: [], turn: 'black' },
+  plies: [],
+  ply_count: 0,
+  termination: '',
+  result: 'draw',
+  analysis: { plies: [] },
+};
 
 // Run on a local pair with both Gomoku flags OFF. The recorded server result
 // replaces the expensive sweep/DB, while local analysis uses real Rapfi WASM.
