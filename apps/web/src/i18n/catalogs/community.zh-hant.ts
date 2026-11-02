@@ -268,6 +268,8 @@ export const ZH_HANT_COMMUNITY = {
   'profile.puzzleFailed': '走錯 {count} 題',
   'profile.puzzleProgress': '解題進度',
   'profile.puzzleHistoryPrivate': '象棋解題紀錄。僅你可見。',
+  'profile.puzzleAttemptOne': '嘗試 {count} 次',
+  'profile.puzzleAttemptMany': '嘗試 {count} 次',
   'profile.puzzleHistoryEmpty': '還沒有解題紀錄。',
   'profile.puzzleChartEmpty': '還沒有已儲存的評分紀錄。',
   'profile.puzzleHistoryLegacy': '較早的成績可能沒有儲存評分。進度圖會保留相應的空缺。',

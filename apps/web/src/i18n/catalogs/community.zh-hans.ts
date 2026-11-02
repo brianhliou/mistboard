@@ -268,6 +268,8 @@ export const ZH_HANS_COMMUNITY = {
   'profile.puzzleFailed': '走错 {count} 题',
   'profile.puzzleProgress': '解题进度',
   'profile.puzzleHistoryPrivate': '象棋解题记录。仅你可见。',
+  'profile.puzzleAttemptOne': '尝试 {count} 次',
+  'profile.puzzleAttemptMany': '尝试 {count} 次',
   'profile.puzzleHistoryEmpty': '还没有解题记录。',
   'profile.puzzleChartEmpty': '还没有已保存的评分记录。',
   'profile.puzzleHistoryLegacy': '较早的成绩可能没有保存评分。进度图会保留相应的空缺。',
