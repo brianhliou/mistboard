@@ -15,21 +15,26 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Puzzle Dashboard with your results, puzzle history, and a replay of the puzzles you missed ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Puzzle Storm: solve as many puzzles as you can in three minutes, then go back through the run ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 - Play a finished puzzle's final position against the computer, from a quiet link under Next puzzle ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 - Guests see Register and Sign in buttons on the puzzle page ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
 ### Watching and review
 
+- On a finished banqi, Flip Jungle or jieqi game's review, hover a face-down piece or turn on Reveal identities to see what it was ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Move glyphs in review fade once the pieces land ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
 ### Site
 
+- Flip Jungle's Chinese name is now 翻翻兽棋 / 翻翻獸棋 ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - About, FAQ, Terms and Privacy rewritten around the mission, with a binding fair-play rule and a new share card ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 - A shorter About menu, and the phone menu now matches the desktop one ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
 ### Fixed
 
+- The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Forum posts embed game links that use /room/, and game names show in the reader's language ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
 ## 2026-10
