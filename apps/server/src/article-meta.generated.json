@@ -13,7 +13,7 @@
     "title": "AB-JChess takes the jieqi title back from jqe",
     "kind": "article",
     "description": "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. How the two open, how their play differs, and five games read by both engines.",
-    "status": "published"
+    "status": "draft"
   },
   "anti-xiangqi": {
     "title": "Antichess on the Xiangqi Board Is a Draw",

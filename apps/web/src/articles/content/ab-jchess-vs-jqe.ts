@@ -302,9 +302,10 @@ export const abJchessVsJqeArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   title: 'AB-JChess takes the jieqi title back from jqe',
+  cardTitle: 'AB-JChess retakes the jieqi title',
   summary: `A new release of AB-JChess, built on jqe's open-source code, beat jqe over ${T.games} games and is the top jieqi bot on Mistboard again. How the two open, how their play differs, and five games read by both engines.`,
   showSummaryOnPage: false,
-  status: 'published',
+  status: 'draft',
   publishedAt: '2026-11-02',
   thumbnail: {
     kind: 'image',

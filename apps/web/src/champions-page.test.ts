@@ -354,12 +354,11 @@ describe('/champions', () => {
     const history = page.querySelector('.champions-list')!;
     const lines = [...history.querySelectorAll('li')].map((li) => li.textContent ?? '');
     expect(lines).toHaveLength(TITLE_HISTORY.length);
-    // AB-JChess-20261031's match has no study; its write-up link is pinned by the dated test.
-    expect(
-      lines[0].startsWith(
-        "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%.",
-      ),
-    ).toBe(true);
+    // What follows the score depends on the date (the write-up link goes live 2026-11-02 09:00);
+    // the dated test pins it.
+    const first =
+      "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%";
+    expect(lines[0].slice(0, first.length)).toBe(first);
     expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
     expect(lines[2]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
     expect(lines[3]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
