@@ -157,6 +157,8 @@ export const ZH_HANS_ACCOUNT = {
   'account.continueCopy': '一个邮箱验证码。不需要密码。',
   'account.emailAddress': '邮箱地址',
   'account.emailCodeHelp': '我们会发送一个 8 位验证码，10 分钟后失效。',
+  'account.emailSuggestion': '你是否想输入 {email}？',
+  'account.emailCannotReceive': '此地址无法接收邮件。请检查拼写。',
   'account.newAccountNotice': '初次使用 Mistboard？验证邮箱即会建立账号。',
   'account.loginCode': '登录验证码',
   'account.codePrompt': '请输入发送至 {email} 的 8 位验证码。',

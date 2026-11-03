@@ -157,6 +157,8 @@ export const ZH_HANT_ACCOUNT = {
   'account.continueCopy': '一組信箱驗證碼。不需要密碼。',
   'account.emailAddress': '信箱地址',
   'account.emailCodeHelp': '我們會寄送 8 位數驗證碼，10 分鐘後失效。',
+  'account.emailSuggestion': '你是否想輸入 {email}？',
+  'account.emailCannotReceive': '此地址無法接收郵件。請檢查拼寫。',
   'account.newAccountNotice': '初次使用 Mistboard？驗證信箱即會建立帳號。',
   'account.loginCode': '登入驗證碼',
   'account.codePrompt': '請輸入寄送至 {email} 的 8 位數驗證碼。',

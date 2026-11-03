@@ -1059,6 +1059,13 @@
   line-height: 1.45;
 }
 
+.account-auth-email-suggestion {
+  min-height: 44px;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 .account-auth-panel .account-form input {
   min-width: 100%;
   min-height: 56px;
@@ -1132,7 +1139,8 @@
   box-shadow: inset 3px 0 0 var(--site-danger, #c0392b);
 }
 
-.account-auth-reset {
+.account-auth-reset,
+.account-auth-email-suggestion {
   border: 0;
   background: transparent;
   color: var(--site-accent-strong);
@@ -1143,14 +1151,17 @@
   padding: 4px 8px;
 }
 
-.account-auth-reset:disabled {
+.account-auth-reset:disabled,
+.account-auth-email-suggestion:disabled {
   color: var(--site-muted);
   cursor: wait;
   text-decoration: none;
 }
 
 .account-auth-reset:hover,
-.account-auth-reset:focus-visible {
+.account-auth-reset:focus-visible,
+.account-auth-email-suggestion:hover,
+.account-auth-email-suggestion:focus-visible {
   text-decoration: underline;
   outline: 2px solid var(--site-focus);
   outline-offset: 2px;
