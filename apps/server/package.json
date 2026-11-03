@@ -21,6 +21,7 @@
     "migrate": "tsx src/migrate.ts",
     "seed:profiles": "node scripts/seed-profile-fixtures.mjs",
     "seed:qa-fixtures": "node scripts/seed-qa-fixtures.mjs",
+    "seed:volume": "tsx src/seed-qa-volume.ts",
     "seed:watch": "tsx src/import-corpus.ts --dir ../web/public/replay-samples --corpus local-watch-fixture --white-name \"Mistboard Engine (white)\" --black-name \"Mistboard Engine (black)\" --mode eve",
     "generate:variant-fixtures": "tsx src/generate-variant-fixtures.ts",
     "seed:variant-fixtures": "tsx src/seed-variant-fixtures.ts",

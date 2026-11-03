@@ -35,6 +35,20 @@ npm run dev:memory   # no Docker; database-backed pages stay empty
 
 Open `http://localhost:3000`. Check your work with `npm test` and `npm run typecheck`.
 
+Run `npm run db:seed:qa` to fill the local home and index surfaces. Its
+`db:seed:volume` step adds ten fictional games per public product variant,
+eight forum topics with replies, six public studies and six lobby chat messages.
+The forum and study counts match the homepage's fetch windows; News already
+uses the committed announcements. No production player data is fetched.
+
+The volume step accepts only a loopback Postgres URL and can be re-run across
+worktrees: it refreshes its own fixtures under a transaction lock and preserves
+other data. Games use deterministic legal play with a resignation at the move
+cap. Two games per variant with stored analysis support have **synthetic**
+advantage scores for layout QA, not engine evaluations. Review examples:
+`/jieqi/game/jq_qa_volume_00`, `/xiangqi/game/xq_qa_volume_00`, and
+`/banqi/game/bq_qa_volume_00`. The seed prints all chart review paths.
+
 ## Code
 
 ```text
