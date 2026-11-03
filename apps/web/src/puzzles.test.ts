@@ -1215,9 +1215,8 @@ describe('puzzles route', () => {
     expect(rule('.puzzle-side-panel')).toMatch(
       /\bheight: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
     );
-    expect(rule('.puzzle-side-panel--analysis')).toMatch(
-      /max-height: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
-    );
+    expect(css).not.toMatch(/\.puzzle-side-panel--analysis \{[^}]*overflow: auto/);
+    expect(rule('.puzzle-trainer-panel--analysis')).toContain('auto minmax(0, 1fr) auto');
   });
 
   it("puts the board's inset on the detail, where the session row under the board reads it", async () => {
@@ -1353,6 +1352,7 @@ describe('puzzles route', () => {
     expect(root.querySelector('[data-puzzle-play-position]')).toBeNull();
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')?.click();
     expect(root.querySelector('.finish-badge--mated')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
     const playPosition = root.querySelector<HTMLAnchorElement>('[data-puzzle-play-position]');
     expect(playPosition).not.toBeNull();
     const shownState = drop.solution
@@ -1362,7 +1362,7 @@ describe('puzzles route', () => {
       standardXiangqiEngineFen(shownState),
     );
     expect(playPosition!.closest('.puzzle-vote-actions')).toBeNull();
-    expect(playPosition!.previousElementSibling?.matches('.puzzle-continue-button')).toBe(true);
+    expect(playPosition!.closest('.puzzle-phone-menu')).not.toBeNull();
     expect(playPosition!.textContent).toBe('Play the computer');
     expect(playPosition!.target).toBe('_blank');
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.click();

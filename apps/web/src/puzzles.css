@@ -380,7 +380,7 @@ a.puzzle-streak-chip:focus-visible {
      this one token, so multiplying
      it by --uni-board-scale makes the whole family adjustable by the same grip
      and the same persisted setting as the room, review and analysis boards. */
-  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 10px));
+  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 70px));
   --puzzle-surface-size: calc(var(--puzzle-surface-fit) * var(--uni-board-scale, 1));
   /* Tallest a side column may grow before it scrolls: the shell's content box
      (page height minus its 8px + 12px vertical padding). Deliberately not the
@@ -419,7 +419,7 @@ a.puzzle-streak-chip:focus-visible {
 @media (min-width: 1500px) {
   .puzzles-shell {
     max-width: min(94vw, 2100px);
-    --puzzle-surface-fit: min(860px, calc(var(--puzzle-page-height) - 10px));
+    --puzzle-surface-fit: min(860px, calc(var(--puzzle-page-height) - 70px));
   }
 }
 
@@ -636,18 +636,6 @@ a.puzzle-streak-chip:focus-visible {
   overflow: hidden;
 }
 
-/* Post-completion analysis adds a third child (the engine panel). Drop the fixed
-   two-row shape so trainer + actions + engine stack naturally, capped at the
-   board height with a scroll rather than clipping the engine off-screen. */
-.puzzle-side-panel--analysis {
-  grid-template-rows: none;
-  grid-auto-rows: min-content;
-  align-content: start;
-  height: auto;
-  max-height: var(--puzzle-board-height, var(--puzzle-surface-size));
-  overflow: auto;
-}
-
 .puzzle-analysis-open-link {
   display: block;
   padding: 8px 10px;
@@ -676,7 +664,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-trainer-panel {
   display: grid;
-  grid-template-rows: minmax(180px, 1fr) minmax(190px, 240px);
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -686,7 +674,7 @@ a.puzzle-streak-chip:focus-visible {
    rows in one connected box). The bar becomes a third grid row above the moves;
    its own card chrome is stripped so only a hairline divider separates it. */
 .puzzle-trainer-panel--analysis {
-  grid-template-rows: auto minmax(140px, 1fr) minmax(190px, 240px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .puzzle-trainer-panel--analysis > .engine-panel {
@@ -1148,9 +1136,8 @@ a.puzzle-streak-chip:focus-visible {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 38px;
-  padding: 0 22px;
-  border-bottom: 1px solid var(--site-border-soft);
+  min-height: 28px;
+  padding: 0 12px;
   color: var(--site-muted);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
@@ -1372,7 +1359,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-solved-panel {
   display: grid;
-  grid-template-rows: 1fr auto auto;
+  grid-template-rows: auto auto auto auto;
   align-items: center;
   min-height: 0;
   border-top: 1px solid var(--site-border-soft);
@@ -1397,16 +1384,16 @@ a.puzzle-streak-chip:focus-visible {
   justify-content: center;
   gap: 12px;
   width: 100%;
-  min-height: 76px;
+  min-height: 96px;
   padding: 0 24px;
   border: 0;
   background: var(--site-accent);
   color: var(--site-on-accent, #fff);
   cursor: pointer;
   font: inherit;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -3113,5 +3100,143 @@ a.puzzle-tag--link:hover {
 
   .puzzles-page > .puzzles-shell.puzzle-storm-shell.puzzle-storm-error {
     overflow: auto;
+  }
+}
+
+/* The trainer ends with the board; transport controls sit beneath both. Only
+   the middle move track scrolls, including after the local engine is mounted. */
+@media (min-width: 981px) {
+  .puzzles-shell .puzzle-side-panel {
+    height: calc(var(--puzzle-board-height, var(--puzzle-surface-size)) + 52px);
+    grid-template-rows: minmax(0, 1fr) 44px;
+    overflow: visible;
+  }
+  .puzzles-shell .puzzle-side-panel > .puzzle-actions {
+    display: none;
+  }
+  .puzzles-shell .puzzle-side-panel > .puzzle-move-nav {
+    display: grid;
+    background: transparent;
+    border: 0;
+  }
+  .puzzles-shell .puzzle-move-nav > .move-nav-bar__button {
+    height: 44px;
+  }
+  .puzzles-shell .puzzle-continue-button svg {
+    width: 38px;
+    height: 38px;
+  }
+}
+.puzzle-move-variations {
+  padding: 5px 12px;
+  border-block: 1px solid var(--site-border-soft);
+  background: var(--site-panel-soft);
+  list-style: none;
+}
+.puzzle-move-variation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 27px;
+  background: transparent;
+  font-size: 13px;
+}
+.puzzle-move-variation-number {
+  color: var(--site-muted);
+}
+.puzzle-move-variation .puzzle-move-red,
+.puzzle-move-variation .puzzle-move-black {
+  font-size: inherit;
+}
+.puzzle-move-variation .puzzle-move-mark {
+  margin-left: 2px;
+}
+.puzzle-move-item .puzzle-move-cell--right .puzzle-move-mark {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 22px;
+}
+.puzzle-move-item .puzzle-move-cell--right.puzzle-move-cell--active {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+.puzzle-move-item .puzzle-move-cell--right.puzzle-move-cell--active .puzzle-move-mark {
+  color: inherit;
+}
+.puzzle-solved-feedback > .puzzle-analysis-button {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+.puzzle-phone-menu .puzzle-play-position {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+.puzzle-report-link {
+  border: 0;
+  background: transparent;
+  min-height: 40px;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 13px;
+}
+.puzzle-report-dialog {
+  width: min(420px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 24px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  text-align: left;
+}
+.puzzle-report-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.puzzle-report-dialog h2 {
+  font-size: 20px;
+  padding: 0;
+  margin: 0 0 18px;
+}
+.puzzle-report-dialog form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.puzzle-report-dialog label,
+.puzzle-report-dialog [role="status"] {
+  grid-column: 1 / -1;
+}
+.puzzle-report-dialog select {
+  min-width: 0;
+  flex: 1;
+  min-height: 40px;
+  font-size: 16px;
+}
+.puzzle-report-dialog button {
+  min-height: 40px;
+}
+@media (max-width: 980px) {
+  .puzzles-shell .puzzle-move-variations {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    border-block: 0;
+  }
+  .puzzles-shell .puzzle-move-variation {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+@media (pointer: coarse) {
+  .puzzle-move-item {
+    min-height: 40px;
   }
 }

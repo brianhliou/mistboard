@@ -179,20 +179,36 @@ function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
     list.push({ [color]: { label, active: false, mark: 'wrong' } });
     variations.set(number, list);
   }
-  const variationRow = (number: number, cells: PuzzleMoveRowCells): HTMLElement => {
-    const item = puzzleMoveRow(number, cells, firstColor, undefined);
-    item.classList.add('puzzle-move-variation');
-    return item;
+  const variationBlock = (number: number, attempts: PuzzleMoveRowCells[]): HTMLElement => {
+    const block = document.createElement('li');
+    block.className = 'puzzle-move-variations';
+    for (const cells of attempts) {
+      const color = cells.red ? 'red' : 'black';
+      const move = cells[color]!;
+      const item = document.createElement('div');
+      item.className = 'puzzle-move-variation';
+      const numberCell = puzzleMoveCell(
+        'puzzle-move-variation-number',
+        `${number}${color === 'black' ? '…' : '.'}`,
+      );
+      const cell = puzzleMoveCell(`puzzle-move-${color}`, move.label);
+      dressMoveCell(cell, move, undefined);
+      item.append(numberCell, cell);
+      block.append(item);
+    }
+    return block;
   };
 
   const out: HTMLElement[] = combined.length === 0 ? [puzzleMoveContextRow(session)] : [];
   for (const [number, row] of rows) {
     out.push(puzzleMoveRow(number, row, firstColor, session.setupIntro ? undefined : onJump));
-    for (const cells of variations.get(number) ?? []) out.push(variationRow(number, cells));
+    const attempts = variations.get(number);
+    if (attempts?.length) out.push(variationBlock(number, attempts));
     variations.delete(number);
   }
   for (const number of [...variations.keys()].sort((a, b) => a - b)) {
-    for (const cells of variations.get(number) ?? []) out.push(variationRow(number, cells));
+    const attempts = variations.get(number);
+    if (attempts?.length) out.push(variationBlock(number, attempts));
   }
   return out;
 }

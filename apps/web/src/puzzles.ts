@@ -61,7 +61,7 @@ import {
   submitPuzzleAttempt,
   type UserPuzzleRating,
 } from './puzzles/api.js';
-import { feedbackPanel } from './puzzles/detail-panels.js';
+import { feedbackPanel, puzzlePlayPosition } from './puzzles/detail-panels.js';
 import { keepActivePuzzleMoveInView, moveListPanel } from './puzzles/move-list.js';
 import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { type QueuePanelProps, renderQueuePanel } from './puzzles/queue-panel.js';
@@ -719,20 +719,36 @@ function renderPuzzleDetail(
       ),
   );
   const actions = actionPanel(session, renderSession);
+  const playPosition = isPuzzleComplete(session) ? puzzlePlayPosition(session, displayState) : null;
   const phoneBar = puzzlePhoneMoveNav(
     puzzleScrubBounds(session),
     (action) => scrubPuzzle(session, renderSession, action),
     {
-      // Phone only (the bar is hidden elsewhere). The engine row and the
-      // analysis link are lent in while the sheet is open, read at open time
-      // so they show up once the puzzle is complete; the header and the
-      // settings rows are built for the sheet from the sidebar's props.
-      blocks: () => [session.analysis?.engineEl, session.analysis?.openLinkEl],
-      head: () => (phoneMenu.props ? puzzlePhoneMenuHead(phoneMenu.props) : null),
-      rows: () => (phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : []),
+      // The desktop menu holds secondary actions. On a phone it also lends
+      // the engine controls and settings from the sidebar into the sheet.
+      blocks: () => [
+        ...(window.matchMedia('(max-width: 980px)').matches ? [session.analysis?.engineEl] : []),
+        playPosition,
+      ],
+      head: () =>
+        window.matchMedia('(max-width: 980px)').matches && phoneMenu.props
+          ? puzzlePhoneMenuHead(phoneMenu.props)
+          : null,
+      rows: () =>
+        window.matchMedia('(max-width: 980px)').matches && phoneMenu.props
+          ? puzzlePhoneMenuRows(phoneMenu.props)
+          : [],
       signal: phoneMenu.abort?.signal,
     },
   );
+  const syncMenuAvailability = (): void => {
+    if (!phoneBar.menuButton) return;
+    const empty = !window.matchMedia('(max-width: 980px)').matches && !playPosition;
+    if (empty) phoneBar.closeMenu();
+    phoneBar.menuButton.disabled = empty;
+  };
+  syncMenuAvailability();
+  window.addEventListener('resize', syncMenuAvailability, { signal: phoneMenu.abort?.signal });
   side.append(trainer, actions, phoneBar.el);
 
   // Post-completion engine analysis (adapters with a client engine): once the
@@ -743,8 +759,8 @@ function renderPuzzleDetail(
   if (opts.analysis !== false && adapter.createAnalysis && isPuzzleComplete(session)) {
     if (!session.analysis) session.analysis = adapter.createAnalysis();
     // Engine bar fuses onto the top of the move list (analyse-table shape);
-    // the jump-out link sits below the scrub controls, centered. The column
-    // grows past its fixed two-row shape, so let it scroll instead of clipping.
+    // the analysis target joins the footer vote row. Only the move track
+    // yields height and scrolls; the engine and completion controls stay put.
     // A browser that cannot run the engine hides its row (engine-panel.ts), so
     // the trainer keeps its two-row shape rather than an empty engine track.
     side.classList.add('puzzle-side-panel--analysis');
@@ -752,7 +768,13 @@ function renderPuzzleDetail(
       trainer.classList.add('puzzle-trainer-panel--analysis');
       trainer.prepend(session.analysis.engineEl);
     }
-    side.append(session.analysis.openLinkEl);
+    const open = session.analysis.openLinkEl;
+    open.classList.add('puzzle-analysis-button');
+    open.setAttribute('aria-label', t('puzzle.openInAnalysis'));
+    open.title = t('puzzle.openInAnalysis');
+    open.innerHTML =
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
+    trainer.querySelector('.puzzle-solved-feedback')?.prepend(open);
     session.analysis.refresh(session, displayState, board);
     if (!session.analysis.engineEl.hidden) {
       trainer.querySelector('.puzzle-moves')?.prepend(puzzleEvalChip(session.analysis.engineEl));
@@ -766,7 +788,7 @@ function renderPuzzleDetail(
   // A re-render while the menu is open (a step from the bar's own arrows, a
   // vote) keeps it open on the new bar.
   // Focus stays where it is: only a ☰ press moves it into the sheet.
-  if (reopenMenu) {
+  if (reopenMenu && !phoneBar.menuButton?.disabled) {
     phoneMenu.restoring = true;
     phoneBar.openMenu();
     phoneMenu.restoring = false;
