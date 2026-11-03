@@ -1,12 +1,15 @@
-// /washington-xiangqi: the page of Washington Xiangqi (华州象棋), a casual
-// xiangqi group in Bellevue. Mistboard hosts the page until the club has a site
-// of its own; washingtonxiangqi.org and .com forward here. The club is not a
-// Mistboard surface, so the page has the site nav but not the /about rail, and
-// its copy is English only until the club has a Chinese text of its own. The
-// one exception is the email sign-up form (#629), which follows the visitor's
-// locale so its confirm mail and confirm page match the language they read.
-// Rules for the copy: no venue or partner is named until they agree, and no
-// "first" or "only" claims.
+// /washington-xiangqi: the page of Washington Xiangqi (华州象棋), an effort
+// to start casual in-person xiangqi in Bellevue. Mistboard hosts the page until
+// the club has a site of its own; washingtonxiangqi.org and .com forward here.
+// The club is not a Mistboard surface, so the page has the site nav but not the
+// /about rail, and its copy is English only until the club has a Chinese text of
+// its own.
+// Rules for the copy (private issue 19, 2026-11-03): say plainly that nothing
+// is running yet; no venue or partner is named until they agree; no event,
+// group, turnout or helper is described until it exists; no "first" or "only"
+// claims. The contact is the club address, which forwards to the organizer.
+// The email sign-up form (#629) stays built but unmounted until its activation
+// (#663) ships; a page must never offer a form that answers 503.
 
 import './static-page-shell.css';
 import './club-washington-page.css';
@@ -34,12 +37,12 @@ export function mountClubWashington(root: HTMLElement): void {
   layout.className = 'club-page-layout';
   const panel = document.createElement('div');
   panel.className = 'club-page-panel';
-  panel.append(buildClubWashington(locale));
+  panel.append(buildClubWashington());
   layout.append(panel);
   root.append(buildNav(locale), layout);
 }
 
-export function buildClubWashington(locale: Locale = currentLocale()): HTMLElement {
+export function buildClubWashington(): HTMLElement {
   const section = proseSection('club-section');
   section.lang = 'en';
 
@@ -51,52 +54,86 @@ export function buildClubWashington(locale: Locale = currentLocale()): HTMLEleme
   const heading = proseHeading('Washington Xiangqi');
   heading.append(' ', name);
 
+  const status = document.createElement('p');
+  status.className = 'club-status';
+  status.textContent = 'In-person xiangqi for Greater Seattle. Meetups forming in Bellevue.';
+
   section.append(
     heading,
+    status,
     proseParagraph([
-      'Washington Xiangqi is a casual group for people who play xiangqi, Chinese chess, in Bellevue, WA. Any level is welcome, including people who have never played.',
+      'Washington Xiangqi is building a regular in-person game of xiangqi, Chinese chess, for players across Greater Seattle, starting on the Eastside in Bellevue. Every level is welcome, from lifelong players to people just learning the moves.',
+    ]),
+    buildContact(),
+
+    proseSubheading('What happens next'),
+    proseParagraph([
+      'Everyone who writes in gets the date and place of the opening meetup: a few boards in a public space in Bellevue. Once there is a core of regulars, it becomes a standing weekly game, with someone at the table to teach newcomers.',
     ]),
 
-    proseSubheading('What to expect'),
+    proseSubheading('Organizer'),
     proseParagraph([
-      'Games are free and casual, with no sign-up. Bring a set if you have one. Players speak English, Chinese or both. If you are new, say so and someone will show you how the pieces move.',
-    ]),
-
-    proseSubheading('Join the group'),
-    proseParagraph([
-      'The group talks and plans its games in WeChat. Scan the code to add Brian H. Liou, the organizer, who will invite you in.',
-    ]),
-    buildQrPlaceholder(),
-    buildClubSignup(locale),
-
-    proseSubheading('Help out'),
-    proseParagraph([
-      'Know a cafe, library room or community space in Bellevue that would host a few boards, or want to help run the group? Email ',
-      proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`),
+      'Brian H. Liou builds and runs ',
+      proseLink('Mistboard', '/'),
+      ', an online home for xiangqi and its variants with live play, lessons for beginners, tournament broadcasts and puzzles from real games. ',
+      proseLink('About Brian', '/about#who'),
       '.',
     ]),
 
-    proseSubheading('Between games'),
+    proseSubheading('Get involved'),
+    proseParagraph(['We are looking for:']),
+    clubList([
+      [
+        'Venues: ',
+        'a cafe, library or community room in Greater Seattle that can host a few boards.',
+      ],
+      ['Organizers: ', 'people who have run a club, a school chess program or a community event.'],
+      [
+        'Players: ',
+        'anyone who wants a regular game, at any level. New to xiangqi? ',
+        proseLink('Learn the rules', '/learn/xiangqi'),
+        ' before you come.',
+      ],
+    ]),
     proseParagraph([
-      'New to xiangqi? ',
-      proseLink('Learn the rules', '/learn/xiangqi'),
-      '. To keep playing between meetups, ',
-      proseLink('play online on Mistboard', '/'),
-      ', free and with no account needed. Mistboard hosts this page for the group.',
+      'Write to ',
+      proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`),
+      '. Mistboard hosts this page for Washington Xiangqi.',
     ]),
   );
   return section;
 }
 
-// The code is the organizer's own WeChat QR, not the group's: a group QR expires
-// after 7 days and stops admitting at 200 members. Until the image arrives
-// (2026-10-23) the box says so.
-function buildQrPlaceholder(): HTMLElement {
+// The one way in while nothing is running: the club address, which forwards to
+// the organizer. WeChat users are asked for an ID in the mail; a QR goes on the
+// page only once a real image exists.
+/** A plain list whose items open with a bold label. */
+function clubList(items: Array<[string, ...Array<string | Node>]>): HTMLUListElement {
+  const list = document.createElement('ul');
+  list.className = 'club-list';
+  for (const [label, ...rest] of items) {
+    const item = document.createElement('li');
+    const strong = document.createElement('strong');
+    strong.textContent = label;
+    item.append(strong, ...rest);
+    list.append(item);
+  }
+  return list;
+}
+
+function buildContact(): HTMLElement {
   const box = document.createElement('div');
-  box.className = 'club-qr club-qr-pending';
-  box.setAttribute('role', 'img');
-  box.setAttribute('aria-label', 'WeChat QR code, coming soon');
-  box.textContent = 'WeChat QR code coming soon';
+  box.className = 'club-contact';
+  const label = document.createElement('p');
+  label.className = 'club-contact-label';
+  label.textContent = 'To play, learn or help, write to';
+  const address = proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`);
+  address.classList.add('club-contact-address');
+  const note = document.createElement('p');
+  note.className = 'club-contact-note';
+  note.textContent =
+    'Tell us your level and where in the area you are. If you prefer WeChat, include your WeChat ID.';
+  box.append(label, address, note);
   return box;
 }
 
