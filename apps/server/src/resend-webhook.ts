@@ -8,6 +8,7 @@ export const EMAIL_DELIVERY_TYPES = [
   'email.bounced',
   'email.complained',
   'email.failed',
+  'email.suppressed',
 ] as const;
 export type EmailDeliveryType = (typeof EMAIL_DELIVERY_TYPES)[number];
 export type EmailDeliveryStatus = EmailDeliveryType extends `email.${infer Status}`
@@ -97,7 +98,7 @@ function string(value: unknown, field: string): string {
 
 // Only retain delivery metadata from the official event schemas; extra provider
 // fields (subject, tags, from, etc.) are intentionally discarded.
-// https://resend.com/docs/webhooks/event-types (six delivery event references)
+// https://resend.com/docs/webhooks/event-types (delivery event references)
 function parseDeliveryEvent(value: unknown, eventId: string): EmailDeliveryEvent | null {
   const payload = object(value, 'payload');
   const type = string(payload.type, 'type');

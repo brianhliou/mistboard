@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { Webhook } from 'standardwebhooks';
 import { runMigrations } from './migrate.js';
 import {
   completeLoginEmailRequest,
@@ -17,6 +18,7 @@ import {
   EMAIL_DELIVERY_TYPES,
   type EmailDeliveryEvent,
   type EmailDeliveryType,
+  verifyResendWebhook,
 } from './resend-webhook.js';
 
 const start = new Date('2026-11-03T20:00:00.000Z');
@@ -55,6 +57,12 @@ definePersistenceTests('email delivery', () => {
       await client.query(
         await readFile(new URL('../migrations/186_email_delivery.sql', import.meta.url), 'utf8'),
       );
+      await client.query(
+        await readFile(
+          new URL('../migrations/187_email_delivery_suppressed.sql', import.meta.url),
+          'utf8',
+        ),
+      );
       const tables = await client.query(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'email_delivery_migration_probe'",
       );
@@ -84,7 +92,7 @@ definePersistenceTests('email delivery', () => {
     assert.equal((await getLoginEmailRequest('challenge'))?.email, 'player@example.com');
   });
 
-  test('persistence delivery stores all six event types, counts once per normalized recipient, and retains history', async () => {
+  test('persistence delivery stores all delivery event types, counts once per normalized recipient, and retains history', async () => {
     for (const [index, type] of EMAIL_DELIVERY_TYPES.entries()) {
       const input = event(type, index);
       assert.equal(await recordEmailDeliveryEvent(input), true);
@@ -92,7 +100,7 @@ definePersistenceTests('email delivery', () => {
     }
     const address = await getEmailDeliveryAddress(' PLAYER@example.com ');
     assert.ok(address);
-    assert.equal(address.eventCount, 6);
+    assert.equal(address.eventCount, 7);
     assert.deepEqual(address.counts, {
       sent: 1,
       delivered: 1,
@@ -100,23 +108,65 @@ definePersistenceTests('email delivery', () => {
       bounced: 1,
       complained: 1,
       failed: 1,
+      suppressed: 1,
     });
-    assert.equal(address.status, 'failed');
-    assert.equal(address.failureReason, 'reached_daily_quota');
+    assert.equal(address.status, 'suppressed');
+    assert.equal(address.failureReason, null);
     assert.deepEqual(address.bounce, event('email.bounced', 3).bounce);
     assert.equal(address.firstEventAt.toISOString(), start.toISOString());
     assert.equal(
       address.lastEventAt.toISOString(),
-      event('email.failed', 5).occurredAt.toISOString(),
+      event('email.suppressed', 6).occurredAt.toISOString(),
     );
     const history = await getPool().query(
       'SELECT * FROM email_delivery_events ORDER BY occurred_at',
     );
-    assert.equal(history.rowCount, 6);
+    assert.equal(history.rowCount, 7);
     assert.deepEqual(history.rows[0].recipients, ['player@example.com']);
     assert.equal(history.rows[0].provider_email_id, 'provider_1');
     assert.ok(history.rows.every((row) => row.received_at instanceof Date));
   });
+
+  for (const type of ['email.bounced', 'email.complained', 'email.suppressed'] as const) {
+    test(`persistence ${type} remains blocked through transient events and clears only on later delivery`, async () => {
+      await recordEmailDeliveryEvent(event(type, 10));
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, true);
+      // Newer nonblocking events, including a soft bounce, must not erase a block.
+      for (const next of [
+        'email.sent',
+        'email.delivery_delayed',
+        'email.failed',
+        'email.bounced',
+      ] as const) {
+        await recordEmailDeliveryEvent({
+          ...event(next, 20),
+          bounce: next === 'email.bounced' ? { type: 'Transient', message: 'try later' } : null,
+        });
+        assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, true);
+      }
+      // Older delivery arriving late must not unblock. Neither may a tied delivery.
+      await recordEmailDeliveryEvent(event('email.delivered', 5));
+      await recordEmailDeliveryEvent(event('email.delivered', 10));
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, true);
+      await recordEmailDeliveryEvent(event('email.delivered', 30));
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, false);
+      // Replay an older blocking event after recovery, then prove a new one reblocks.
+      await recordEmailDeliveryEvent(event(type, 15));
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, false);
+      await recordEmailDeliveryEvent(event(type, 40));
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, true);
+    });
+  }
+
+  for (const bounceType of ['Transient', 'Undetermined']) {
+    test(`persistence ${bounceType} bounce alone never suppresses delivery`, async () => {
+      await recordEmailDeliveryEvent({
+        ...event('email.bounced', 10),
+        bounce: { type: bounceType, message: 'not permanent' },
+      });
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, false);
+    });
+  }
 
   test('persistence delivery handles concurrent duplicates, out-of-order progress, and older bounce details', async () => {
     const delivered = event('email.delivered', 20);
@@ -152,8 +202,8 @@ definePersistenceTests('email delivery', () => {
     }
     const first = await getEmailDeliveryAddress('first@example.com');
     const second = await getEmailDeliveryAddress('second@example.com');
-    assert.equal(first?.status, 'complained');
-    assert.equal(second?.status, 'complained');
+    assert.equal(first?.status, 'suppressed');
+    assert.equal(second?.status, 'suppressed');
     assert.deepEqual(first?.counts, second?.counts);
   });
 
@@ -258,4 +308,32 @@ definePersistenceTests('email delivery', () => {
     assert.deepEqual(correlated.rows, [{ request_id: 'newer', event_id: 'login' }]);
     await assert.rejects(correlateLoginEmailRequest('newer', '   '), /invalid_provider_email_id/);
   });
+});
+
+test('signed suppression webhook retains normalized metadata without mail content', () => {
+  const secret = `whsec_${Buffer.from('suppression-webhook-test-only').toString('base64')}`;
+  const raw = JSON.stringify({
+    type: 'email.suppressed',
+    created_at: start.toISOString(),
+    data: {
+      email_id: 'suppressed-provider',
+      to: [' Player@Example.COM '],
+      suppressed: { type: 'OnAccountSuppressionList', message: 'suppressed by provider' },
+      subject: 'private mail content',
+    },
+  });
+  const timestamp = new Date();
+  const input = verifyResendWebhook(
+    Buffer.from(raw),
+    {
+      'svix-id': 'suppressed-webhook',
+      'svix-timestamp': String(Math.floor(timestamp.getTime() / 1000)),
+      'svix-signature': new Webhook(secret).sign('suppressed-webhook', timestamp, raw),
+    },
+    secret,
+  );
+  assert.ok(input);
+  assert.equal(input.type, 'email.suppressed');
+  assert.deepEqual(input.recipients, ['player@example.com']);
+  assert.ok(!JSON.stringify(input).includes('private mail content'));
 });

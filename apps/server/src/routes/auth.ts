@@ -131,14 +131,6 @@ export async function tryHandle(
       return true;
     }
     const loginId = randomUUID();
-    const code = randomEmailLoginCode();
-    const expiresAt = new Date(now.getTime() + emailLoginCodeTtlMs);
-    await persistence.createEmailLoginChallenge({
-      id: loginId,
-      email,
-      codeHash: hashSecret(code),
-      expiresAt,
-    });
     // Challenge IDs also identify durable requests, independently of challenge
     // cleanup, failed sends, expiry, or a later request superseding this one.
     // Delivery bookkeeping is best-effort; database errors may contain email
@@ -155,6 +147,30 @@ export async function tryHandle(
         'Login email bookkeeping failed',
       );
     }
+    // This check depends only on delivery evidence, never account existence.
+    // Preserve rate-limit consumption and request accounting even when blocked.
+    let blocked = false;
+    try {
+      blocked = (await persistence.getEmailDeliveryAddress(email))?.blocked ?? false;
+    } catch {
+      logger.warn(
+        { kind: 'login_email_delivery_lookup_failed' },
+        'Login email delivery lookup failed',
+      );
+    }
+    if (blocked) {
+      authCounters.recordStart('rejected');
+      writeJson(response, 422, { error: 'login_email_unreceivable' });
+      return true;
+    }
+    const code = randomEmailLoginCode();
+    const expiresAt = new Date(now.getTime() + emailLoginCodeTtlMs);
+    await persistence.createEmailLoginChallenge({
+      id: loginId,
+      email,
+      codeHash: hashSecret(code),
+      expiresAt,
+    });
     if (authEmailDeliveryEnabled) {
       const delivery = await sendEmailLoginCode(
         email,

@@ -15,10 +15,12 @@ const STATUS_RANK: Record<EmailDeliveryStatus, number> = {
   failed: 3,
   bounced: 4,
   complained: 5,
+  suppressed: 6,
 };
 
 export type EmailDeliveryAddress = {
   email: string;
+  blocked: boolean;
   status: EmailDeliveryStatus;
   eventCount: number;
   counts: Partial<Record<EmailDeliveryStatus, number>>;
@@ -31,13 +33,23 @@ export type EmailDeliveryAddress = {
   failureReason: string | null;
 };
 
+// Progress and soft bounces never erase a hard failure. Consult retained events
+// because the latest status and bounce details may describe unrelated mail.
+// Only a strictly later delivered event clears an address block.
 export async function getEmailDeliveryAddress(email: string): Promise<EmailDeliveryAddress | null> {
   const { rows } = await getPool().query(
     `SELECT email, status, event_count AS "eventCount", counts,
        first_event_at AS "firstEventAt", last_event_at AS "lastEventAt",
        last_delivered_at AS "lastDeliveredAt", last_bounced_at AS "lastBouncedAt",
-       last_complained_at AS "lastComplainedAt", bounce, failure_reason AS "failureReason"
-     FROM email_delivery_addresses WHERE email = $1`,
+       last_complained_at AS "lastComplainedAt", bounce, failure_reason AS "failureReason",
+       EXISTS (
+         SELECT 1 FROM email_delivery_events e
+         WHERE e.recipients @> ARRAY[$1]::text[]
+           AND (e.event_type IN ('email.complained', 'email.suppressed') OR
+             (e.event_type = 'email.bounced' AND e.bounce ->> 'type' = 'Permanent'))
+           AND (a.last_delivered_at IS NULL OR e.occurred_at >= a.last_delivered_at)
+       ) AS blocked
+     FROM email_delivery_addresses a WHERE email = $1`,
     [normalizeDeliveryEmail(email)],
   );
   return rows[0] ?? null;

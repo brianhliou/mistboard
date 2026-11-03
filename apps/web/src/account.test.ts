@@ -88,6 +88,47 @@ describe('account page auth flow', () => {
     },
   );
 
+  it.each([
+    [
+      '/account',
+      'This address cannot receive our email. Check the spelling or use another email address.',
+    ],
+    ['/zh-hans/account', '此邮箱地址无法接收我们的邮件。请检查拼写或使用其他邮箱地址。'],
+    ['/zh-hant/account', '此信箱地址無法接收我們的郵件。請檢查拼寫或使用其他信箱地址。'],
+  ])(
+    'shows localized delivery recovery guidance at %s and allows correcting the address',
+    async (path, message) => {
+      window.history.replaceState(null, '', path);
+      const fetch = vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        if (String(input) === '/api/auth/email/start')
+          return jsonResponse({ error: 'login_email_unreceivable' }, 422);
+        throw new Error(`unexpected fetch: ${input}`);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app') as HTMLElement);
+      const email = document.querySelector<HTMLInputElement>('input[name="email"]')!;
+      email.value = 'blocked@example.com';
+      submitAccountForm();
+      await flushDom();
+      expect(document.querySelector('.account-status')?.textContent).toBe(message);
+      expect(document.querySelector('.account-status')?.getAttribute('data-state')).toBe('error');
+      expect(email.readOnly).toBe(false);
+      expect(email.getAttribute('aria-invalid')).toBe('true');
+      expect(document.querySelector<HTMLElement>('.account-auth-code-stage')?.hidden).toBe(true);
+      expect(document.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(
+        false,
+      );
+      email.value = 'corrected@example.com';
+      submitAccountForm();
+      await flushDom();
+      expect(
+        fetch.mock.calls.filter(([input]) => String(input) === '/api/auth/email/start'),
+      ).toHaveLength(2);
+    },
+  );
+
   it('updates the top nav after confirming a login code in-page', async () => {
     const user = testUser('misty');
     vi.stubGlobal(

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { setServerCaptureTransport } from './analytics-server.js';
 import { getPool } from './persistence-db.js';
+import type { EmailDeliveryType } from './resend-webhook.js';
 
 // Run the same real routes in isolated module graphs for dev and provider mode.
 // All email uses a placeholder key and a stubbed fetch, never the network.
@@ -29,6 +30,7 @@ const { hashSecret, ensureUserForEmail, sendEmailChangeCode } = await import(
 );
 const { authCounters, logger } = await import('./obs.js');
 const { tryHandle } = await import('./routes/auth.js');
+
 let providerSend = 0;
 if (providerMode) {
   globalThis.fetch = async () => Response.json({ id: `provider-route-${++providerSend}` });
@@ -41,6 +43,154 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('auth routes', () => {
+  for (const [index, type] of (
+    ['email.bounced', 'email.complained', 'email.suppressed'] as const
+  ).entries()) {
+    for (const existing of [false, true]) {
+      test(`${type} blocks sending with identical guidance for existing=${existing}`, async (t) => {
+        const email = `blocked-${index}-${existing}@example.com`;
+        if (existing) await ensureUserForEmail(email, new Date());
+        await deliveryEvent(email, type);
+        const sender = t.mock.method(globalThis, 'fetch', async () => {
+          throw new Error('blocked address must never reach sender');
+        });
+        const before = authCounters.totalCodesSent;
+        const requestsBefore = authCounters.totalStartRequests;
+        const response = captureResponse();
+        await tryHandle(
+          {},
+          jsonRequest(
+            { email: email.toUpperCase() },
+            `198.51.100.${80 + index * 2 + Number(existing)}`,
+          ),
+          response,
+          '/api/auth/email/start',
+        );
+        assert.equal(response.status, 422);
+        assert.deepEqual(JSON.parse(response.body), { error: 'login_email_unreceivable' });
+        assert.equal(sender.mock.callCount(), 0);
+        assert.equal(authCounters.totalCodesSent, before);
+        assert.equal(authCounters.totalStartRequests, requestsBefore + 1);
+        const ledger = await getPool().query(
+          'SELECT * FROM login_email_requests WHERE email = $1',
+          [email],
+        );
+        assert.equal(ledger.rowCount, 1);
+        assert.equal(ledger.rows[0].provider_email_id, null);
+        assert.equal(ledger.rows[0].completed_at, null);
+        assert.equal((await getPool().query('SELECT id FROM email_login_challenges')).rowCount, 0);
+        // A blocked attempt consumes the same IP bucket and 30-second address cooldown.
+        const buckets = await getPool().query(
+          'SELECT scope FROM auth_rate_limit_buckets ORDER BY scope',
+        );
+        assert.deepEqual(
+          buckets.rows.map((row) => row.scope),
+          ['email-start-email', 'email-start-ip'],
+        );
+        const again = captureResponse();
+        await tryHandle(
+          {},
+          jsonRequest({ email }, '198.51.100.90'),
+          again,
+          '/api/auth/email/start',
+        );
+        assert.equal(again.status, 429);
+        assert.deepEqual(JSON.parse(again.body), { error: 'rate_limited' });
+        assert.equal(sender.mock.callCount(), 0);
+        assert.equal(
+          (await getPool().query('SELECT request_id FROM login_email_requests')).rowCount,
+          1,
+        );
+      });
+    }
+  }
+
+  for (const [index, [type, bounceType]] of (
+    [
+      ['email.bounced', 'Transient'],
+      ['email.bounced', 'Undetermined'],
+      ['email.delivery_delayed', null],
+      ['email.failed', null],
+    ] as const
+  ).entries()) {
+    test(`${type} ${bounceType} does not block login or change response timing contract`, async () => {
+      const email = `transient-${index}@example.com`;
+      await deliveryEvent(email, type, bounceType);
+      const before = providerSend;
+      const response = captureResponse();
+      const earliest = Date.now();
+      await tryHandle(
+        {},
+        jsonRequest({ email }, `198.51.100.${100 + index}`),
+        response,
+        '/api/auth/email/start',
+      );
+      assert.equal(response.status, 202);
+      const data = JSON.parse(response.body);
+      assert.ok(Date.parse(data.resendAvailableAt) >= earliest + 30_000);
+      assert.ok(Date.parse(data.resendAvailableAt) <= Date.now() + 30_000);
+      assert.equal(Date.parse(data.expiresAt) - Date.parse(data.resendAvailableAt), 570_000);
+      assert.equal(providerSend - before, providerMode ? 1 : 0);
+    });
+  }
+
+  for (const [index, type] of (
+    ['email.bounced', 'email.complained', 'email.suppressed'] as const
+  ).entries()) {
+    test(`delivered clears ${type} suppression despite retained history and later progress`, async () => {
+      const email = `cleared-${index}@example.com`;
+      await deliveryEvent(email, type);
+      await deliveryEvent(email, 'email.delivered', null, 1);
+      await deliveryEvent(email, 'email.sent', null, 2);
+      const before = providerSend;
+      const response = captureResponse();
+      await tryHandle(
+        {},
+        jsonRequest({ email }, `198.51.100.${110 + index}`),
+        response,
+        '/api/auth/email/start',
+      );
+      assert.equal(response.status, 202);
+      assert.equal(providerSend - before, providerMode ? 1 : 0);
+    });
+  }
+
+  test('delivery lookup failure sends normally and logs no address or database error', async (t) => {
+    const email = 'lookup-failure@example.com';
+    const pool = getPool();
+    let failures = 0;
+    t.mock.method(
+      pool,
+      'query',
+      new Proxy(pool.query, {
+        apply(target, thisArg, args) {
+          if (typeof args[0] === 'string' && args[0].includes('FROM email_delivery_addresses')) {
+            failures++;
+            throw new Error(`database lookup failed for ${email}`);
+          }
+          return Reflect.apply(target, thisArg, args);
+        },
+      }),
+    );
+    const warning = t.mock.method(logger, 'warn', () => {});
+    const before = providerSend;
+    const response = captureResponse();
+    await tryHandle(
+      {},
+      jsonRequest({ email }, '198.51.100.120'),
+      response,
+      '/api/auth/email/start',
+    );
+    assert.equal(response.status, 202);
+    assert.equal(providerSend - before, providerMode ? 1 : 0);
+    assert.equal(failures, 1);
+    assert.equal(warning.mock.callCount(), 1);
+    assert.deepEqual(warning.mock.calls[0]!.arguments, [
+      { kind: 'login_email_delivery_lookup_failed' },
+      'Login email delivery lookup failed',
+    ]);
+  });
+
   for (const [index, write, statement] of [
     [0, 'recordLoginEmailRequest', 'INSERT INTO login_email_requests'],
     [1, 'correlateLoginEmailRequest', 'UPDATE login_email_requests SET provider_email_id'],
@@ -543,4 +693,21 @@ function captureResponse(): ServerResponse & ResponseCapture {
     },
   };
   return capture as unknown as ServerResponse & ResponseCapture;
+}
+
+async function deliveryEvent(
+  email: string,
+  type: EmailDeliveryType,
+  bounceType: string | null = 'Permanent',
+  seconds = 0,
+): Promise<void> {
+  await recordEmailDeliveryEvent({
+    eventId: `${email}-${type}-${seconds}`,
+    providerEmailId: 'delivery-history',
+    type,
+    recipients: [email],
+    occurredAt: new Date(Date.now() - 60_000 + seconds * 1000),
+    bounce: type === 'email.bounced' ? { type: bounceType!, message: 'delivery test' } : null,
+    failureReason: null,
+  });
 }
