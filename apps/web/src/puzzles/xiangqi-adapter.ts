@@ -263,7 +263,7 @@ function createPuzzleAnalysis(): PuzzleAnalysisController {
 
   return {
     // The engine bar and the jump-out link live in different spots on the puzzle
-    // column (engine at the top of the move list, link below the scrub controls),
+    // column (engine at the top of the move list, link beside the vote prompt),
     // so they are handed back as two elements rather than one bundled section.
     engineEl: panel.el,
     openLinkEl: openLink,

@@ -17,6 +17,7 @@ import { practicePositionHref } from '../practice-position-params.js';
 import { buildUiIcon } from '../ui-icon.js';
 import {
   colorLabel,
+  isPuzzleComplete,
   isSessionSolved,
   type PuzzleNavigation,
   type PuzzleSession,
@@ -37,14 +38,12 @@ export function feedbackPanel(
   navigation: PuzzleNavigation,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
-  displayState: PuzzleState,
+  _displayState: PuzzleState,
 ): HTMLElement {
   // Revealed first: a played-out mate line finishes the board, which would
   // otherwise read as solved and show "Success!" for a give-up.
-  if (session.revealed)
-    return revealedPanel(session, navigation, renderSession, assist, displayState);
-  if (isSessionSolved(session))
-    return solvedPanel(session, navigation, renderSession, assist, displayState);
+  if (session.revealed) return revealedPanel(session, navigation, renderSession, assist);
+  if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession, assist);
 
   const panel = document.createElement('div');
   panel.className = `puzzle-feedback puzzle-feedback--${session.feedback.kind}`;
@@ -118,7 +117,6 @@ function revealedPanel(
   navigation: PuzzleNavigation,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
-  displayState: PuzzleState,
 ): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel puzzle-revealed-panel';
@@ -137,7 +135,6 @@ function revealedPanel(
   cont.addEventListener('click', navigation.goNext);
 
   panel.append(title, cont);
-  appendPlayPosition(panel, session, displayState);
   panel.append(solvedFeedback(session, renderSession, assist));
   panel.append(puzzleReportControl(session));
   return panel;
@@ -148,7 +145,6 @@ function solvedPanel(
   navigation: PuzzleNavigation,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
-  displayState: PuzzleState,
 ): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel';
@@ -170,7 +166,6 @@ function solvedPanel(
   cont.addEventListener('click', navigation.goNext);
 
   panel.append(title, cont);
-  appendPlayPosition(panel, session, displayState);
   panel.append(solvedFeedback(session, renderSession, assist));
   panel.append(puzzleReportControl(session));
   return panel;
@@ -198,16 +193,17 @@ function solvedFeedback(
   return feedbackRow;
 }
 
-function appendPlayPosition(
-  row: HTMLElement,
+export function puzzlePlayPosition(
   session: PuzzleSession,
   displayState: PuzzleState,
-): void {
+): HTMLAnchorElement | null {
+  if (!isPuzzleComplete(session)) return null;
   // Use the board's replay-aware state, including steps before a final mate.
   // This practice route only understands standard xiangqi.
-  if (session.puzzle.variant !== XIANGQI_SPEC_ID || !session.puzzle.sideToMove) return;
+  if (session.puzzle.variant !== XIANGQI_SPEC_ID || !session.puzzle.sideToMove) return null;
   const state = displayState as XiangqiGameState;
-  if (state.status.type !== 'playing' || getStandardXiangqiLegalMoves(state).length === 0) return;
+  if (state.status.type !== 'playing' || getStandardXiangqiLegalMoves(state).length === 0)
+    return null;
 
   const link = document.createElement('a');
   link.className = 'puzzle-play-position';
@@ -235,12 +231,20 @@ function appendPlayPosition(
       ply,
     });
   });
-  row.append(link);
+  return link;
 }
 
 const reportStates = new WeakMap<
   PuzzleSession,
-  { pending: boolean; sent: boolean; reason: string }
+  {
+    pending: boolean;
+    sent: boolean;
+    reason: string;
+    dialog?: HTMLDialogElement;
+    trigger?: HTMLButtonElement;
+    home?: HTMLElement;
+    closeOnNavigation?: () => void;
+  }
 >();
 
 function puzzleReportControl(session: PuzzleSession): HTMLElement {
@@ -250,14 +254,52 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
     reportStates.set(session, state);
   }
   const reportState = state;
-  const details = document.createElement('details');
+  const details = document.createElement('div');
   details.className = 'puzzle-report';
-  const link = document.createElement('summary');
+  const link = document.createElement('button');
+  link.type = 'button';
   link.className = 'puzzle-report-link';
   link.textContent = reportState.sent ? t('puzzle.reportSent') : t('puzzle.reportProblem');
   details.append(link);
-  if (reportState.sent) return details;
+  reportState.trigger = link;
+  reportState.home = details;
+  if (reportState.sent) {
+    link.disabled = true;
+    return details;
+  }
+  const open = (): void => {
+    const dialog = reportState.dialog!;
+    // Solution playback rebuilds the trainer. Keep an open form outside that
+    // subtree so its focus, pending send and error feedback survive each ply.
+    document.body.append(dialog);
+    dialog.showModal();
+    window.addEventListener('popstate', closeOnNavigation);
+  };
+  reportState.closeOnNavigation ??= () => reportState.dialog?.close();
+  const closeOnNavigation = reportState.closeOnNavigation;
+  link.addEventListener('click', open);
+  if (reportState.dialog) {
+    if (!reportState.dialog.open) details.append(reportState.dialog);
+    return details;
+  }
 
+  const dialog = document.createElement('dialog');
+  reportState.dialog = dialog;
+  dialog.className = 'puzzle-report-dialog';
+  dialog.setAttribute('aria-label', t('puzzle.reportProblem'));
+  const heading = document.createElement('h2');
+  heading.textContent = t('puzzle.reportProblem');
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'puzzle-feedback-skip';
+  close.textContent = t('setup.cancel');
+  close.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => {
+    window.removeEventListener('popstate', closeOnNavigation);
+    if (reportState.home?.isConnected) reportState.home.append(dialog);
+    else dialog.remove();
+    reportState.trigger?.focus({ preventScroll: true });
+  });
   const form = document.createElement('form');
   const label = document.createElement('label');
   label.textContent = t('puzzle.reportReasonLabel');
@@ -287,8 +329,9 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
   send.disabled = reportState.pending;
   const status = document.createElement('p');
   status.setAttribute('role', 'status');
-  form.append(label, send, status);
-  details.append(form);
+  form.append(label, send, close, status);
+  dialog.append(heading, form);
+  details.append(dialog);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (reportState.pending || reportState.sent) return;
@@ -312,8 +355,11 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
       });
       if (!response.ok) throw new Error('report failed');
       reportState.sent = true;
-      link.textContent = t('puzzle.reportSent');
+      reportState.trigger!.textContent = t('puzzle.reportSent');
+      reportState.trigger!.setAttribute('role', 'status');
+      reportState.trigger!.disabled = true;
       form.hidden = true;
+      dialog.close();
     } catch {
       status.textContent = t('puzzle.reportFailed');
     } finally {
