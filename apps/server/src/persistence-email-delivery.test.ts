@@ -9,6 +9,7 @@ import {
   getLoginEmailRequest,
   recordEmailDeliveryEvent,
   recordLoginEmailRequest,
+  supersedeEmailLoginChallenges,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
@@ -194,7 +195,7 @@ definePersistenceTests('email delivery', () => {
       email: 'other@example.com',
       requestedAt: new Date(),
     });
-    assert.equal(await correlateLoginEmailRequest('request_1', 'provider_1'), true);
+    assert.equal(await correlateLoginEmailRequest('request_1', ' provider_1 '), true);
     assert.equal(await correlateLoginEmailRequest('request_1', 'provider_1'), true);
     assert.equal(await correlateLoginEmailRequest('request_1', 'different_provider_id'), false);
     assert.equal(
@@ -218,5 +219,43 @@ definePersistenceTests('email delivery', () => {
     assert.equal(await correlateLoginEmailRequest('missing', 'provider_missing'), false);
     assert.equal(await completeLoginEmailRequest('missing', completed), false);
     assert.equal(await getLoginEmailRequest('missing'), null);
+  });
+  test('login ledger survives supersession and deletion and keeps acceptance separate from delivery', async () => {
+    for (const requestId of ['older', 'newer']) {
+      await recordLoginEmailRequest({ requestId, email: 'player@example.com', requestedAt: start });
+      await createEmailLoginChallenge({
+        id: requestId,
+        email: 'player@example.com',
+        codeHash: 'not-a-code',
+        expiresAt: new Date(start.getTime() + 600000),
+      });
+    }
+    await correlateLoginEmailRequest('older', 'accepted-older');
+    await correlateLoginEmailRequest('newer', 'accepted-newer');
+    assert.equal(await getEmailDeliveryAddress('player@example.com'), null);
+    assert.equal((await getPool().query('SELECT event_id FROM email_delivery_events')).rowCount, 0);
+    await supersedeEmailLoginChallenges(
+      'player@example.com',
+      'newer',
+      new Date(start.getTime() + 1000),
+    );
+    await deleteEmailLoginChallenge('older');
+    await deleteEmailLoginChallenge('newer');
+    assert.equal((await getLoginEmailRequest('older'))?.providerEmailId, 'accepted-older');
+    assert.equal((await getLoginEmailRequest('older'))?.completedAt, null);
+    assert.equal((await getLoginEmailRequest('newer'))?.providerEmailId, 'accepted-newer');
+    await recordEmailDeliveryEvent({
+      ...event('email.delivered', 2, 'unrelated'),
+      providerEmailId: 'other-transactional',
+    });
+    await recordEmailDeliveryEvent({
+      ...event('email.delivered', 3, 'login'),
+      providerEmailId: 'accepted-newer',
+    });
+    const correlated = await getPool().query(
+      `SELECT r.request_id, e.event_id FROM login_email_requests r JOIN email_delivery_events e USING (provider_email_id)`,
+    );
+    assert.deepEqual(correlated.rows, [{ request_id: 'newer', event_id: 'login' }]);
+    await assert.rejects(correlateLoginEmailRequest('newer', '   '), /invalid_provider_email_id/);
   });
 });

@@ -122,6 +122,8 @@ export type LoginEmailRequest = {
   completedAt: Date | null;
 };
 
+// Login-only ledger. Other transactional mail may share recipients, so correlate
+// by the accepted provider ID, never by address or challenge lifetime.
 export async function recordLoginEmailRequest(
   input: Pick<LoginEmailRequest, 'requestId' | 'email' | 'requestedAt'>,
 ): Promise<void> {
@@ -136,11 +138,12 @@ export async function correlateLoginEmailRequest(
   requestId: string,
   providerEmailId: string,
 ): Promise<boolean> {
-  if (!providerEmailId.trim()) throw new Error('invalid_provider_email_id');
+  const acceptedId = providerEmailId.trim();
+  if (!acceptedId) throw new Error('invalid_provider_email_id');
   const { rowCount } = await getPool().query(
     `UPDATE login_email_requests SET provider_email_id = $2
      WHERE request_id = $1 AND (provider_email_id IS NULL OR provider_email_id = $2)`,
-    [requestId, providerEmailId],
+    [requestId, acceptedId],
   );
   return (rowCount ?? 0) > 0;
 }

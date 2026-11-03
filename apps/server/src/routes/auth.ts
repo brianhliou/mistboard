@@ -139,6 +139,9 @@ export async function tryHandle(
       codeHash: hashSecret(code),
       expiresAt,
     });
+    // Challenge IDs also identify durable requests, independently of challenge
+    // cleanup, failed sends, expiry, or a later request superseding this one.
+    await persistence.recordLoginEmailRequest({ requestId: loginId, email, requestedAt: now });
     if (authEmailDeliveryEnabled) {
       const delivery = await sendEmailLoginCode(
         email,
@@ -151,9 +154,12 @@ export async function tryHandle(
         writeJson(response, 502, { error: 'email_delivery_failed' });
         return true;
       }
+      if (delivery.providerEmailId) {
+        await persistence.correlateLoginEmailRequest(loginId, delivery.providerEmailId);
+      }
     }
     await persistence.supersedeEmailLoginChallenges(email, loginId, now);
-    authCounters.recordStart('sent');
+    authCounters.recordStart(authEmailDeliveryEnabled ? 'sent' : 'dev-response');
     writeJson(response, 202, {
       loginId,
       email,
@@ -219,6 +225,7 @@ export async function tryHandle(
       expiresAt,
       userAgent: sessionUserAgent(request),
     });
+    await persistence.completeLoginEmailRequest(loginId, now);
     authCounters.recordConfirm('success');
     // The server owns signup_completed (analytics-server.ts): the browser's
     // copy missed ad-blocked signups, so the web no longer fires it. Same
