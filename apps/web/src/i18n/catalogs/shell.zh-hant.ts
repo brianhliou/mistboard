@@ -7,6 +7,19 @@
 import type { ShellI18nKey } from './shell.js';
 
 export const ZH_HANT_SHELL = {
+  'metrics.loginEmail.heading': '登入郵件投遞',
+  'metrics.loginEmail.status': '狀態',
+  'metrics.loginEmail.last7d': '最近7天',
+  'metrics.loginEmail.last30d': '最近30天',
+  'metrics.loginEmail.requested': '已請求',
+  'metrics.loginEmail.sent': '已傳送',
+  'metrics.loginEmail.delivered': '已送達',
+  'metrics.loginEmail.bounced': '已退信',
+  'metrics.loginEmail.suppressed': '已抑制',
+  'metrics.loginEmail.complained': '已投訴',
+  'metrics.loginEmail.completed': '已完成驗證碼登入',
+  'metrics.loginEmail.note':
+    '滾動時間視窗截至報告產生時刻。每項活動按自身時間戳記統計，包含起始時刻，不含結束時刻。投遞狀態按已關聯的登入郵件統計，每封郵件的每種狀態只計一次，退信包括暫時和永久退信。已傳送須有傳送回呼，僅有服務商受理紀錄不計入。已請求和已完成分別統計登入請求和驗證碼登入。這些是活動次數，並非漏斗；不計其他郵件。',
   'nav.primary': '主導覽',
   'nav.menu': '選單',
   'nav.play': '對弈',

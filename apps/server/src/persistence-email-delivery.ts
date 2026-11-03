@@ -178,3 +178,58 @@ export async function getLoginEmailRequest(requestId: string): Promise<LoginEmai
   );
   return rows[0] ?? null;
 }
+
+export type LoginEmailDeliveryCounts = {
+  requested: number;
+  sent: number;
+  delivered: number;
+  bounced: number;
+  suppressed: number;
+  complained: number;
+  completed: number;
+};
+
+export type LoginEmailDeliveryMetrics = {
+  last7d: LoginEmailDeliveryCounts;
+  last30d: LoginEmailDeliveryCounts;
+};
+
+// Activity windows, not request cohorts: [now - days * 24h, now). A request
+// may predate its delivery or completion window. Provider acceptance alone
+// is not a sent webhook. Count each correlated message once per status even
+// when the provider emits multiple event IDs; never correlate by recipient.
+// Only counts leave this query, so callers cannot expose addresses or timelines.
+export async function getLoginEmailDeliveryMetrics(
+  now = new Date(),
+): Promise<LoginEmailDeliveryMetrics> {
+  const { rows } = await getPool().query<LoginEmailDeliveryCounts & { days: number }>(
+    `WITH activity AS (
+       SELECT 'requested' AS metric, request_id AS id, requested_at AS at
+       FROM login_email_requests
+       WHERE requested_at >= $1::timestamptz - interval '720 hours' AND requested_at < $1
+       UNION ALL
+       SELECT 'completed', request_id, completed_at FROM login_email_requests
+       WHERE completed_at >= $1::timestamptz - interval '720 hours' AND completed_at < $1
+       UNION ALL
+       SELECT substring(e.event_type FROM 7), e.provider_email_id, e.occurred_at
+       FROM email_delivery_events e
+       JOIN login_email_requests r USING (provider_email_id)
+       WHERE e.occurred_at >= $1::timestamptz - interval '720 hours' AND e.occurred_at < $1
+         AND e.event_type IN ('email.sent', 'email.delivered', 'email.bounced', 'email.suppressed', 'email.complained')
+     )
+     SELECT w.days,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'requested')::int AS requested,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'sent')::int AS sent,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'delivered')::int AS delivered,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'bounced')::int AS bounced,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'suppressed')::int AS suppressed,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'complained')::int AS complained,
+       count(DISTINCT a.id) FILTER (WHERE a.metric = 'completed')::int AS completed
+     FROM (VALUES (7), (30)) AS w(days)
+     LEFT JOIN activity a ON a.at >= $1::timestamptz - w.days * interval '24 hours'
+     GROUP BY w.days ORDER BY w.days`,
+    [now],
+  );
+  const [{ days: _seven, ...last7d }, { days: _thirty, ...last30d }] = rows;
+  return { last7d, last30d };
+}

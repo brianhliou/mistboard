@@ -13,6 +13,7 @@ import {
   supersedeEmailLoginChallenges,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
+import * as emailDelivery from './persistence-email-delivery.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import {
   EMAIL_DELIVERY_TYPES,
@@ -42,6 +43,119 @@ function event(
 }
 
 definePersistenceTests('email delivery', () => {
+  test('login delivery aggregates return zeroes without requests or correlated mail', async () => {
+    await recordEmailDeliveryEvent(event('email.delivered', 0));
+    const zero = {
+      requested: 0,
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+      suppressed: 0,
+      complained: 0,
+      completed: 0,
+    };
+    assert.deepEqual(await emailDelivery.getLoginEmailDeliveryMetrics(start), {
+      last7d: zero,
+      last30d: zero,
+    });
+  });
+
+  test('login delivery aggregates use rolling activity boundaries and distinct correlated messages only', async () => {
+    const now = new Date('2026-11-03T20:00:00Z');
+    const day = 86400000;
+    const types = [
+      'email.sent',
+      'email.delivered',
+      'email.bounced',
+      'email.suppressed',
+      'email.complained',
+    ] as const;
+    const instants = [
+      now.getTime() - 30 * day - 1,
+      now.getTime() - 30 * day,
+      now.getTime() - 7 * day - 1,
+      now.getTime() - 7 * day,
+      now.getTime() - 1,
+      now.getTime(),
+      now.getTime() + 1,
+    ];
+    for (const [index, instant] of instants.entries()) {
+      const requestedAt = new Date(instant);
+      const requestId = `boundary-${index}`;
+      await recordLoginEmailRequest({ requestId, email: 'player@example.com', requestedAt });
+      await recordLoginEmailRequest({ requestId, email: 'player@example.com', requestedAt });
+      await correlateLoginEmailRequest(requestId, requestId);
+      await completeLoginEmailRequest(requestId, requestedAt);
+      await completeLoginEmailRequest(requestId, new Date(instant + 1));
+      for (const type of types) {
+        const input = {
+          ...event(type, 0, `${requestId}-${type}`),
+          providerEmailId: requestId,
+          occurredAt: requestedAt,
+        };
+        await recordEmailDeliveryEvent(input);
+        assert.equal(await recordEmailDeliveryEvent(input), false); // Same webhook retry.
+        await recordEmailDeliveryEvent({ ...input, eventId: `${input.eventId}-repeat` }); // Same message, different event id.
+      }
+    }
+    // Activity uses its own time, even for requests older than either window.
+    await recordLoginEmailRequest({
+      requestId: 'old-request',
+      email: 'player@example.com',
+      requestedAt: new Date(now.getTime() - 31 * day),
+    });
+    await correlateLoginEmailRequest('old-request', 'old-provider');
+    await completeLoginEmailRequest('old-request', new Date(now.getTime() - 1));
+    for (const type of types) {
+      await recordEmailDeliveryEvent({
+        ...event(type, 0, `old-${type}`),
+        providerEmailId: 'old-provider',
+        occurredAt: new Date(now.getTime() - 1),
+      });
+      // Other transactional mail to the same address must never join by address.
+      await recordEmailDeliveryEvent({
+        ...event(type, 0, `other-${type}`),
+        providerEmailId: 'email-change',
+        occurredAt: new Date(now.getTime() - 1),
+      });
+    }
+    for (const requestId of ['uncorrelated', 'accepted-only']) {
+      await recordLoginEmailRequest({
+        requestId,
+        email: 'player@example.com',
+        requestedAt: new Date(now.getTime() - 1),
+      });
+    }
+    await correlateLoginEmailRequest('accepted-only', 'accepted-without-sent-webhook');
+    assert.deepEqual(await emailDelivery.getLoginEmailDeliveryMetrics(now), {
+      last7d: {
+        requested: 4,
+        sent: 3,
+        delivered: 3,
+        bounced: 3,
+        suppressed: 3,
+        complained: 3,
+        completed: 3,
+      },
+      last30d: {
+        requested: 6,
+        sent: 5,
+        delivered: 5,
+        bounced: 5,
+        suppressed: 5,
+        complained: 5,
+        completed: 5,
+      },
+    });
+  });
+
+  for (const type of ['email.delivery_delayed', 'email.failed'] as const) {
+    test(`persistence ${type} alone never blocks login mail`, async () => {
+      await recordEmailDeliveryEvent(event(type, 0));
+      assert.equal((await getEmailDeliveryAddress('player@example.com'))?.blocked, false);
+    });
+  }
+
   test('persistence delivery migration applies once, enforces normalized addresses, and preserves auth challenges', async () => {
     const client = await getPool().connect();
     try {

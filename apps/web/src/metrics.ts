@@ -51,6 +51,22 @@ export type AdminRetentionCohort = {
   returns: { week: number; returned: number | null; percentage: number | null }[];
 };
 
+// Mirrors LoginEmailDeliveryCounts in persistence-email-delivery.ts.
+type LoginEmailDeliveryCounts = {
+  requested: number;
+  sent: number;
+  delivered: number;
+  bounced: number;
+  suppressed: number;
+  complained: number;
+  completed: number;
+};
+
+type LoginEmailDeliveryMetrics = {
+  last7d: LoginEmailDeliveryCounts;
+  last30d: LoginEmailDeliveryCounts;
+};
+
 // Mirrors AdminMetrics in apps/server/src/persistence-admin-metrics.ts.
 export type AdminMetricsWeek = {
   weekStart: string;
@@ -97,6 +113,7 @@ export type AdminMetrics = {
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
   retentionCohorts: AdminRetentionCohort[];
+  loginEmailDelivery: LoginEmailDeliveryMetrics;
   engines: {
     eveGames: number;
     eveGamesLast7d: number;
@@ -239,6 +256,7 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
     parts.push(lede);
     parts.push(...buildWeeklySections(admin, locale));
     parts.push(buildRetentionSection(admin.retentionCohorts ?? []));
+    parts.push(buildLoginEmailDeliverySection(admin.loginEmailDelivery, locale));
   }
 
   if (publicStats && publicStats.dailyCompletedGames.length > 0) {
@@ -280,6 +298,55 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   if (deploys) parts.push(buildDeploysSection(deploys));
 
   body.replaceChildren(...parts);
+}
+
+function buildLoginEmailDeliverySection(
+  metrics: LoginEmailDeliveryMetrics,
+  locale: Locale,
+): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-section metrics-login-email';
+  const title = t('metrics.loginEmail.heading', {}, locale);
+  section.append(sectionHeading(title));
+  const note = document.createElement('p');
+  note.className = 'metrics-section-note';
+  note.textContent = t('metrics.loginEmail.note', {}, locale);
+  section.append(note);
+  const scroller = document.createElement('div');
+  scroller.className = 'metrics-retention-scroll';
+  scroller.tabIndex = 0;
+  scroller.setAttribute('role', 'region');
+  scroller.setAttribute('aria-label', title);
+  const table = document.createElement('table');
+  table.className = 'metrics-retention-table';
+  const head = table.createTHead().insertRow();
+  for (const key of ['status', 'last7d', 'last30d'] as const) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = t(`metrics.loginEmail.${key}`, {}, locale);
+    head.append(th);
+  }
+  const body = table.createTBody();
+  for (const key of [
+    'requested',
+    'sent',
+    'delivered',
+    'bounced',
+    'suppressed',
+    'complained',
+    'completed',
+  ] as const) {
+    const row = body.insertRow();
+    const label = document.createElement('th');
+    label.scope = 'row';
+    label.textContent = t(`metrics.loginEmail.${key}`, {}, locale);
+    row.append(label);
+    row.insertCell().textContent = formatStatNumber(metrics.last7d[key], locale);
+    row.insertCell().textContent = formatStatNumber(metrics.last30d[key], locale);
+  }
+  scroller.append(table);
+  section.append(scroller);
+  return section;
 }
 
 function buildRetentionSection(cohorts: AdminRetentionCohort[]): HTMLElement {
