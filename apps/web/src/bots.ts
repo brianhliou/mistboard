@@ -8,6 +8,7 @@ import { t } from './i18n/catalog.js';
 import './account-profile.css';
 import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
+import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
@@ -19,6 +20,7 @@ import {
   buildProfileTabsShell,
 } from './profile-ui.js';
 import { buildNav, buildNotice } from './site-shell.js';
+import { buildUiIcon } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
@@ -551,6 +553,17 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
     bot.ownerType === 'system' ? 'bots.firstPartyBadge' : 'bots.communityBadge',
   );
   meta.append(badge, owner);
+  if (
+    CHAMPIONS.some((title) => title.botHref === `/bot/${bot.id}` && title.gameId === gameSpecId)
+  ) {
+    const champion = document.createElement('a');
+    champion.className = 'bot-champion-title';
+    champion.href = '/champions';
+    const title = `${variantDisplayLabel(gameSpecId)} ${t('champions.championBadge')}`;
+    champion.setAttribute('aria-label', title);
+    champion.append(buildUiIcon('title-champion'), title);
+    heading.after(champion);
+  }
   identity.append(meta);
 
   const counts = document.createElement('div');
