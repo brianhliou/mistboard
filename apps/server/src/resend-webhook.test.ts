@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   EMAIL_DELIVERY_TYPES,
   normalizeDeliveryEmail,
+  ResendWebhookPayloadError,
   verifyResendWebhook,
 } from './resend-webhook.js';
 
@@ -142,7 +143,6 @@ test('Resend acknowledges authenticated unknown types but rejects malformed know
     JSON.stringify({ ...base, data: { ...base.data, email_id: '' } }),
     JSON.stringify({ ...base, data: { ...base.data, to: [] } }),
     JSON.stringify({ ...base, data: { ...base.data, to: [42] } }),
-    JSON.stringify({ ...base, data: { ...base.data, to: ['bad address'] } }),
     JSON.stringify({ ...base, data: { ...base.data, bounce: { type: 'Permanent' } } }),
     JSON.stringify({
       ...base,
@@ -156,7 +156,36 @@ test('Resend acknowledges authenticated unknown types but rejects malformed know
 
 test('delivery address normalization only trims and lowercases', () => {
   assert.equal(normalizeDeliveryEmail(' Player+Tag@Example.COM '), 'player+tag@example.com');
-  for (const address of ['', 'bad', 'a@@b', 'A <a@example.com>', 'a\nb@example.com']) {
+  for (const address of ['bad', 'a@@b', 'A <a@example.com>', 'a\nb@example.com']) {
+    assert.equal(normalizeDeliveryEmail(address), address.trim().toLowerCase());
+  }
+  for (const address of ['', '  ']) {
     assert.throws(() => normalizeDeliveryEmail(address));
+  }
+});
+
+test('verified parser failures identify only the failed field and delivery identifiers', () => {
+  const base = JSON.parse(payload('email.bounced'));
+  for (const [changes, field] of [
+    [{ to: ['private@example.com', 42] }, 'data.to[1]'],
+    [{ bounce: { type: 'Permanent', message: 42 } }, 'data.bounce.message'],
+    [{ bounce: { type: 'Permanent', message: 'No mailbox', subType: 42 } }, 'data.bounce.subType'],
+    [
+      { bounce: { type: 'Permanent', message: 'No mailbox', diagnosticCode: [42] } },
+      'data.bounce.diagnosticCode[0]',
+    ],
+  ] as const) {
+    const raw = JSON.stringify({ ...base, data: { ...base.data, ...changes } });
+    assert.throws(
+      () => verifyResendWebhook(Buffer.from(raw), signed(raw), secret),
+      (error) => {
+        assert.ok(error instanceof ResendWebhookPayloadError);
+        assert.equal(error.field, field);
+        assert.equal(error.eventType, 'email.bounced');
+        assert.equal(error.providerEmailId, 'email_1');
+        assert.ok(!JSON.stringify(error).includes('private@example.com'));
+        return true;
+      },
+    );
   }
 });

@@ -1,6 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
-import { type EmailDeliveryEvent, verifyResendWebhook } from '../resend-webhook.js';
+import {
+  type EmailDeliveryEvent,
+  ResendWebhookPayloadError,
+  verifyResendWebhook,
+} from '../resend-webhook.js';
 import { type HttpApiContext, requireMethod, writeJson } from './lib.js';
 
 const MAX_BODY_BYTES = 256 * 1024;
@@ -37,12 +42,22 @@ export async function tryHandle(
   let event: EmailDeliveryEvent | null;
   try {
     event = verifyResendWebhook(Buffer.concat(chunks), request.headers, secret);
-  } catch {
+  } catch (error) {
+    if (error instanceof ResendWebhookPayloadError) {
+      logger.warn({
+        kind: 'resend_webhook_invalid_payload',
+        eventType: error.eventType,
+        providerEmailId: error.providerEmailId,
+        field: error.field,
+      });
+      writeJson(response, 200, { received: true });
+      return true;
+    }
     writeJson(response, 400, { error: 'invalid_webhook' });
     return true;
   }
   // Acknowledge future/irrelevant event types after authentication even when DB
-  // is unavailable. Known events must be durable before we acknowledge them.
+  // is unavailable. Valid known events must be durable before acknowledgement.
   if (event) {
     if (!persistence.isInitialized()) {
       writeJson(response, 503, { error: 'persistence_disabled' });
