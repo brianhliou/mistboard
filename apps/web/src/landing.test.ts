@@ -138,6 +138,7 @@ describe('landing shell', () => {
           '轉播運維',
           'href="/database"',
           'href="/readouts"',
+          'href="/ops"',
           'href="/broadcast/xiangqi/ops"',
         ]) {
           expect(html, `${path}: ${label}`).not.toContain(label);

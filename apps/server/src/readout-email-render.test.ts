@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildMistboardReadout, type MistboardReadoutFacts } from './mistboard-readout.js';
-import { readoutDelta, renderReadoutEmail } from './readout-email-render.js';
+import { buildReadoutSummary, readoutDelta, renderReadoutEmail } from './readout-email-render.js';
 
 const product = {
   accountsCreated: 4,
@@ -141,4 +141,36 @@ test('urgent problems precede the three-item cap and cleared conditions are expl
   const cleared = renderReadoutEmail(value);
   assert.match(cleared.text, /Resolved: The flag has cleared/);
   assert.match(cleared.text, /No follow-up is needed/);
+});
+
+test('page summary and email share the same decisions and daily periods are explicit', () => {
+  const value = report({ comparison });
+  const summary = buildReadoutSummary(value);
+  const email = renderReadoutEmail(value);
+  assert.ok(email.text.includes(summary.summary));
+  assert.equal(summary.metrics[2].previous, 5);
+  value.trigger = 'daily';
+  assert.match(buildReadoutSummary(value).period, /rolling 7 complete UTC days/);
+  assert.doesNotMatch(buildReadoutSummary(value).title, /this week/);
+});
+
+test('schema-v1 history without player fields stays readable rather than inventing counts', () => {
+  const value = report();
+  value.schemaVersion = 1;
+  delete (value.product as Partial<NonNullable<typeof value.product>>).humanPlayers;
+  delete (value.product as Partial<NonNullable<typeof value.product>>).previousHumanPlayers;
+  delete (value.product as Partial<NonNullable<typeof value.product>>).returningPlayers;
+  const summary = buildReadoutSummary(value);
+  assert.equal(
+    summary.metrics.some((metric) => metric.label === 'Players'),
+    false,
+  );
+  assert.doesNotMatch(renderReadoutEmail(value).text, /NaN|undefined/);
+});
+
+test('email evidence and history links point into the consolidated Ops area', () => {
+  const value = report();
+  const rendered = renderReadoutEmail(value);
+  assert.match(rendered.html, /\/ops/);
+  assert.doesNotMatch(rendered.html, /\/readouts|\/metrics/);
 });

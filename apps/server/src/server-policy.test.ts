@@ -517,6 +517,9 @@ test('isClientRoute covers every parametric route matcher declared in main.ts', 
 // One concrete path per branch of isNoindexRoute, including the parametric
 // prefixes, so the parity check below actually exercises each one.
 const NOINDEX_ROUTE_SAMPLES = [
+  '/ops',
+  '/metrics',
+  '/readouts',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -914,5 +917,12 @@ test('a bogus locale prefix on a study path is not a route', () => {
     '/study/Ab12cd/Xy34ef/extra',
   ]) {
     assert.equal(isClientRoute(path), false, `${path} should not match`);
+  }
+});
+
+test('unified Ops and the legacy report routes are client shells kept out of search', () => {
+  for (const path of ['/ops', '/ops/', '/metrics', '/readouts']) {
+    assert.equal(isClientRoute(path), true, path);
+    assert.equal(isNoindexRoute(path), true, path);
   }
 });

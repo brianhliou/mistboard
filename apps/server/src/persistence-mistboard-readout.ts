@@ -211,9 +211,24 @@ export async function listMistboardReadoutSummaries(
 
 export async function latestMistboardReadout(
   db: Queryable = getPool(),
+  options: { trigger?: MistboardReadoutTrigger } = {},
 ): Promise<MistboardReadoutV1 | null> {
   const result = await db.query<{ payload: unknown }>(
-    `SELECT payload FROM ops_readout_snapshots ORDER BY created_at DESC, id DESC LIMIT 1`,
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE ($1::text IS NULL OR trigger = $1)
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [options.trigger ?? null],
+  );
+  return result.rows[0] ? parseStoredReadout(result.rows[0].payload) : null;
+}
+
+export async function mistboardReadoutById(
+  id: string,
+  db: Queryable = getPool(),
+): Promise<MistboardReadoutV1 | null> {
+  const result = await db.query<{ payload: unknown }>(
+    'SELECT payload FROM ops_readout_snapshots WHERE id = $1',
+    [id],
   );
   return result.rows[0] ? parseStoredReadout(result.rows[0].payload) : null;
 }

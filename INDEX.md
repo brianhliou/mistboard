@@ -168,7 +168,7 @@ Edit task → find file → open only that file.
 | `routes/fortress-xiangqi-games.ts` | Fortress Xiangqi postgame/review API branch; finished open-information 7x8 board, reserve history, and move timeline |
 | `routes/xiangqi-broadcasts.ts` | Xiangqi broadcast APIs: public index/tour/round/board reads, canonical board export, SSE snapshot streams, and admin source-ops/manual-poll endpoints |
 | `routes/puzzles.ts` | Puzzle API: list/detail/daily/rating endpoints, session-private chronological history and progress (`/api/puzzles/history`), private failed-puzzle queues (`/api/puzzles/failed`, `?repaired=true` for repairs), and attempt validation; fail-closed variant dispatch over Jungle and standard xiangqi; async puzzle store (#183: the `puzzles` table, seed-direct when persistence is off), retired ids 404 |
-| `routes/readouts.ts` | OIDC-authenticated aggregate operations API: idempotent readout generation and latest-snapshot reads, no-store responses, allowlisted cadence inputs, and no provider/product mutation capability |
+| `routes/readouts.ts` | OIDC generation and admin-session snapshot reads: latest/history cadence filters, selected snapshot lookup, shared email/page summary, no-store responses |
 | `routes/bots.ts` | Public bot directory/profile API (`/api/bots`, `/api/bots/:id`) filtered to playable enabled variants |
 | `bot-profile-policy.ts` | Shared bot profile policy: public bot id parsing and playable-variant filtering for bot directory/profile surfaces |
 | `account-session.ts` | Account auth: `currentAccountUser`, `ensureUserForEmail`, `hashSecret`, session cookies, email login |
@@ -1026,7 +1026,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `editor/editor-page.test.ts` | Editor DOM tests: mounts every variant, place/delete/clear, `?fen=` seeding and fallback, banqi face-down tile + pool status, jieqi home-square rejection, analysis link |
 | `editor/editor.css` | Editor layout, palette, hit layer, and pool-panel styles |
 | `review/xiangqi-phases.ts` | Opening / middlegame / endgame segmentation for standard xiangqi, behind the advantage chart's dividers and the summary's per-phase accuracy. A HEURISTIC, not rules: middlegame starts at first real contact (two pieces captured, or any non-soldier captured) |
-| `metrics.ts` | `/stats` (public) and `/metrics` (admin) from one module, the way `coach.ts` serves directory + detail. Public shows aggregate games, activity, mode + variant splits; admin adds the weekly growth charts from `/api/stats/admin` (players, active 28d, games, accounts, puzzles, study, community), first-game retention tables with counts and mature percentages, the result split, live in-play/online figures, and an "Engines and corpus" block at the bottom that is the only place bot-vs-bot appears |
+| `metrics.ts` | `/stats` (public) and `/ops` metrics tabs (admin) from one module, the way `coach.ts` serves directory + detail. Public shows aggregate games, activity, mode + variant splits; admin has explicit Games / Returning players / Activity / Operations destinations, complete UTC weeks and exact adjacent comparisons, plus weekly growth charts from `/api/stats/admin` (players, active 28d, games, accounts, puzzles, study, community), fixed next-/fourth-week return table with counts and explicit pending periods, the result split, live in-play/online figures, and an "Engines and corpus" block at the bottom that is the only place bot-vs-bot appears |
 | `weekly-chart.ts` | Weekly multi-series SVG line chart for `/metrics`: fixed four-slot colour order (validated light + dark), crosshair tooltip listing every series, legend for 2+ series, dashed partial current week, collapsed table of the same numbers |
 | `stats-charts.ts` | Shared statistics rendering: the cumulative-activity SVG chart, the public stats shape, and number/date formatting. Used by the `/about` platform-activity section and by `/stats` + `/metrics`, so every stats surface draws one identical chart |
 | `bot-play.ts` | One-click PvE room creation against a public bot identity. Callers name only the bot, variant, and optional pace; the server resolves the per-variant engine from the bot profile and the tenant time-control gates stay authoritative |
@@ -1160,7 +1160,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/persistence-practice.ts` | _needs a one-line description_ |
 | `apps/server/src/persistence-variant-access.ts` | Per-account access to a gated variant (139). Fail-closed: an allowlisted spec is refused without a grant row. |
 | `apps/server/src/readout-email.ts` | Scheduled operator email policy: one weekly summary, changed daily alerts only, and confirmed provider acceptance for GitHub fallback routing |
-| `apps/server/src/readout-email-render.ts` | Compact HTML/text operator email: exact weekly comparisons, labelled ongoing/new reviews, direct evidence links, and changed operational context |
+| `apps/server/src/readout-email-render.ts` | Shared email/page summary model plus HTML/text email: exact weekly comparisons, labelled ongoing/new reviews, direct evidence links, and changed operational context |
 | `apps/server/src/readout-email-render.test.ts` | Email comparison, missing-data, zero-baseline, escaping, and compact daily-alert regressions |
 | `apps/server/src/readout-comparison.test.ts` | Exact preceding-week snapshot selection and unavailable-baseline cases |
 | `scripts/readout-delivery.test.mjs` | Executes the real readout workflow offline to verify accepted-email suppression, reliable GitHub fallback, and idempotent retries |
@@ -1193,7 +1193,11 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/practice-chapter-redirect.ts` | `/practice/<set slug>/<position>`: resolves one endgame shelf exercise to this database's study chapter and replaces the URL (#521) |
 | `apps/web/src/profile-link.ts` | _needs a one-line description_ |
 | `apps/web/src/pve-memory.ts` | _needs a one-line description_ |
-| `apps/web/src/readouts-admin.ts` | _needs a one-line description_ |
+| `apps/web/src/admin-reporting-nav.ts` + `.css` | Tabs within `/ops`, rendered after successful admin reads; Readouts, Games, Returning players, Activity, System |
+| `apps/web/src/ops-admin.ts` + `ops-route.ts` | Unified `/ops` entry and canonical URLs: weekly readout by default, other tabs through admin metrics, legacy `/readouts` + `/metrics` links preserve weeks and anchors |
+| `apps/web/src/ops-admin.test.ts` | Single-section mounts, canonical entry, legacy links, selected weeks, and deployment anchors |
+| `apps/web/src/readouts-admin.test.ts` | Compact weekly rows without cards/folds, safe actions, one history picker, old snapshot fallback, and admin-only navigation |
+| `apps/web/src/readouts-admin.ts` | Compact weekly memo: four number rows, plain actions, one week picker, full report download; shared server summary and admin reporting navigation |
 | `apps/web/src/relative-time.ts` | _needs a one-line description_ |
 | `apps/web/src/review/alternatives-pref.ts` | _needs a one-line description_ |
 | `apps/web/src/review/dark-chess-decisions.ts` | _needs a one-line description_ |

@@ -449,6 +449,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/forum/etiquette' ||
     normalized === '/database' ||
     normalized === '/stats' ||
+    normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/verify-title' ||
     normalized === '/titles' ||
@@ -589,6 +590,10 @@ export function isClientRoute(pathname: string): boolean {
 export function isNoindexRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
+    // Admin reporting shells have no public search content.
+    normalized === '/ops' ||
+    normalized === '/metrics' ||
+    normalized === '/readouts' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||

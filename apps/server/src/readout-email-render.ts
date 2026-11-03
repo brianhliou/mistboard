@@ -109,7 +109,7 @@ function actionsForEmail(report: MistboardReadoutV1): Action[] {
             : 'Next: inspect the evidence and record the decision in the owning task.',
         url: action.ownerIssue
           ? `https://github.com/brianhliou/mistboard/issues/${action.ownerIssue}`
-          : `${emailPublicHost}/readouts`,
+          : `${emailPublicHost}/ops`,
         urgent: urgent(action),
       };
     });
@@ -121,18 +121,15 @@ function actionsForEmail(report: MistboardReadoutV1): Action[] {
       detail: missing
         ? `Unavailable: ${missing}. Inspect the full report before treating this check as healthy.`
         : 'Persistence is unavailable or reported recent errors. Inspect production health before trusting the activity totals.',
-      url: `${emailPublicHost}/readouts`,
+      url: `${emailPublicHost}/ops`,
       urgent: true,
     });
   }
   return actions.slice(0, 3);
 }
 
-/** Operator summary, separate from the complete Markdown kept in /readouts.
- * Every value and state is also present in text; color never carries meaning alone.
- */
-export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
-  if (report.trigger !== 'weekly') return renderDailyEmail(report);
+/** Shared data model for the email and the admin page; neither renderer owns the decisions. */
+export function buildReadoutSummary(report: MistboardReadoutV1) {
   const product = report.product;
   const before = previousProduct(report);
   const comparison =
@@ -164,7 +161,7 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
           current: product.accountsCreated,
           previous: product.previousAccountsCreated,
         },
-      ]
+      ].filter((metric) => typeof metric.current === 'number')
     : [];
   const variants = product?.completedGamesByVariant ?? [];
   const oldVariants = before
@@ -228,7 +225,7 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
   let summary =
     'Product activity is unavailable. Inspect the full report before drawing a conclusion.';
   if (product) {
-    summary = `Completed games ${readoutDelta(product.completedGames, product.previousCompletedGames)}; players ${readoutDelta(product.humanPlayers, product.previousHumanPlayers)}.`;
+    summary = `Completed games ${readoutDelta(product.completedGames, product.previousCompletedGames)}${typeof product.humanPlayers === 'number' ? `; players ${readoutDelta(product.humanPlayers, product.previousHumanPlayers)}` : ''}.`;
     if (before) {
       const additional = product.completedGames - product.previousCompletedGames;
       const gains = variants
@@ -245,10 +242,22 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
     report.verdict === 'unknown'
       ? 'Some data is unavailable'
       : product
-        ? `${number(product.completedGames)} completed games this week`
+        ? `${number(product.completedGames)} completed games ${report.trigger === 'weekly' ? 'this week' : 'in the last 7 complete days'}`
         : 'Mistboard operating review';
   const end = new Date(Date.parse(report.periodEnd) - 1).toISOString().slice(0, 10);
-  const period = `${report.periodStart.slice(0, 10)} to ${end} · complete UTC days`;
+  const period = `${report.periodStart.slice(0, 10)} to ${end} · ${report.trigger === 'weekly' ? 'complete UTC week' : 'rolling 7 complete UTC days'}`;
+  const disruptive = report.deploys?.disruptive ?? [];
+  const deploy = disruptive.length
+    ? `${disruptive.length} release${disruptive.length === 1 ? '' : 's'} held new-game creation over 5 minutes or refused a request. Longest hold: ${(Math.max(...disruptive.map((entry) => entry.heldMs)) / 60_000).toFixed(1)} min; ${disruptive.reduce((sum, entry) => sum + entry.refusedCreates, 0)} refused requests recorded. Agent next: inspect release timings before the next ship.`
+    : null;
+  return { title, period, summary, metrics, actions, extraActions, breakdown, context, deploy };
+}
+
+/** Every value and state is also present in text; color never carries meaning alone. */
+export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
+  if (report.trigger !== 'weekly') return renderDailyEmail(report);
+  const { title, period, summary, metrics, actions, extraActions, breakdown, context, deploy } =
+    buildReadoutSummary(report);
   const text: string[] = ['Mistboard weekly review', period, '', summary, ''];
   for (const metric of metrics)
     text.push(
@@ -258,11 +267,13 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
   if (!actions.length) text.push('No action needed.');
   for (const action of actions)
     text.push(`${action.state}: ${action.title}`, action.detail, action.url, '');
-  const disruptive = report.deploys?.disruptive ?? [];
-  const deploy = disruptive.length
-    ? `${disruptive.length} release${disruptive.length === 1 ? '' : 's'} held new-game creation over 5 minutes or refused a request. Longest hold: ${(Math.max(...disruptive.map((entry) => entry.heldMs)) / 60_000).toFixed(1)} min; ${disruptive.reduce((sum, entry) => sum + entry.refusedCreates, 0)} refused requests recorded. Agent next: inspect release timings before the next ship.`
-    : null;
-  if (deploy) text.push('Release follow-up', deploy, `${emailPublicHost}/metrics`, '');
+  if (deploy)
+    text.push(
+      'Release follow-up',
+      deploy,
+      `${emailPublicHost}/ops?tab=operations#deploy-history`,
+      '',
+    );
   if (extraActions)
     text.push(
       `${extraActions} more ${extraActions === 1 ? 'action' : 'actions'} in the full report.`,
@@ -281,7 +292,7 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
     ...context,
     '',
     'Database counts include guest browsers and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.',
-    `${emailPublicHost}/readouts`,
+    `${emailPublicHost}/ops`,
   );
 
   const cards = metrics.map(
@@ -297,7 +308,7 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
   const table = breakdown.length
     ? `<h2 style="font-size:17px;margin:24px 0 10px">Where the change came from</h2><table width="100%" cellspacing="0" cellpadding="7" style="font-size:12px;border-collapse:collapse"><thead><tr><th scope="col" align="left">Variant games</th><th scope="col" align="right">This week</th><th scope="col" align="right">Last week</th><th scope="col" align="right">Change</th></tr></thead><tbody>${breakdown.map((entry) => `<tr><th scope="row" align="left" style="font-weight:400;border-top:1px solid #eeece6">${E(entry.label)}</th><td align="right" style="border-top:1px solid #eeece6">${number(entry.current)}</td><td align="right" style="border-top:1px solid #eeece6">${entry.previous === undefined ? '—' : number(entry.previous)}</td><td align="right" style="border-top:1px solid #eeece6">${E(readoutDelta(entry.current, entry.previous))}</td></tr>`).join('')}</tbody></table>`
     : '';
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(title)}</title></head><body style="margin:0;background:#eeeae3;color:#34322d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${E(summary)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 8px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;border:1px solid #d8d7d4;border-radius:9px;background:#fff"><tr><td style="padding:24px 16px"><div style="font-size:12px;color:#1f6f5b;font-weight:700">MISTBOARD / ${report.trigger === 'weekly' ? 'WEEKLY REVIEW' : 'OPERATING CHECK'}</div><p style="font-size:12px;color:${muted};line-height:1.6">${E(period)}</p><h1 style="font-size:25px;line-height:1.25;margin:12px 0">${E(title)}</h1><p style="font-size:14px;line-height:1.6">${E(summary)}</p><table role="presentation" width="100%" cellspacing="6" cellpadding="0">${cards.length ? `<tr>${cards.slice(0, 2).join('')}</tr><tr>${cards.slice(2, 4).join('')}</tr>` : ''}</table><h2 style="font-size:17px;margin:24px 0 10px">What needs attention</h2>${attention || '<p style="font-size:14px">No action needed.</p>'}${deploy ? `<div style="margin-top:12px;padding:14px;border:1px solid #dedbd4;border-radius:4px"><strong style="font-size:12px">Release follow-up</strong><p style="font-size:13px;line-height:1.6">${E(deploy)}</p><a href="${E(emailPublicHost)}/metrics" style="font-size:13px;color:#1f6f5b">Open deploy history →</a></div>` : ''}${extraActions ? `<p>${extraActions} more ${extraActions === 1 ? 'action' : 'actions'} in the full report.</p>` : ''}${table}${context.length ? `<h2 style="font-size:17px;margin:24px 0 9px">Other changes</h2><p style="font-size:13px;line-height:1.7">${context.map(E).join('<br>')}</p>` : ''}<p style="font-size:11px;color:${muted};line-height:1.6">UTC days. Database counts include guests and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.</p><a href="${E(emailPublicHost)}/readouts" style="display:inline-block;margin-top:8px;padding:12px 16px;background:#1f6f5b;color:#fff;border-radius:5px;text-decoration:none;font-size:13px;font-weight:700">Full report and history →</a></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(title)}</title></head><body style="margin:0;background:#eeeae3;color:#34322d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${E(summary)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 8px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;border:1px solid #d8d7d4;border-radius:9px;background:#fff"><tr><td style="padding:24px 16px"><div style="font-size:12px;color:#1f6f5b;font-weight:700">MISTBOARD / ${report.trigger === 'weekly' ? 'WEEKLY REVIEW' : 'OPERATING CHECK'}</div><p style="font-size:12px;color:${muted};line-height:1.6">${E(period)}</p><h1 style="font-size:25px;line-height:1.25;margin:12px 0">${E(title)}</h1><p style="font-size:14px;line-height:1.6">${E(summary)}</p><table role="presentation" width="100%" cellspacing="6" cellpadding="0">${cards.length ? `<tr>${cards.slice(0, 2).join('')}</tr><tr>${cards.slice(2, 4).join('')}</tr>` : ''}</table><h2 style="font-size:17px;margin:24px 0 10px">What needs attention</h2>${attention || '<p style="font-size:14px">No action needed.</p>'}${deploy ? `<div style="margin-top:12px;padding:14px;border:1px solid #dedbd4;border-radius:4px"><strong style="font-size:12px">Release follow-up</strong><p style="font-size:13px;line-height:1.6">${E(deploy)}</p><a href="${E(emailPublicHost)}/ops?tab=operations#deploy-history" style="font-size:13px;color:#1f6f5b">Open deploy history →</a></div>` : ''}${extraActions ? `<p>${extraActions} more ${extraActions === 1 ? 'action' : 'actions'} in the full report.</p>` : ''}${table}${context.length ? `<h2 style="font-size:17px;margin:24px 0 9px">Other changes</h2><p style="font-size:13px;line-height:1.7">${context.map(E).join('<br>')}</p>` : ''}<p style="font-size:11px;color:${muted};line-height:1.6">UTC days. Database counts include guests and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.</p><a href="${E(emailPublicHost)}/ops" style="display:inline-block;margin-top:8px;padding:12px 16px;background:#1f6f5b;color:#fff;border-radius:5px;text-decoration:none;font-size:13px;font-weight:700">Full report and history →</a></td></tr></table></td></tr></table></body></html>`;
   return { text: text.join('\n'), html };
 }
 
@@ -316,10 +327,10 @@ function renderDailyEmail(report: MistboardReadoutV1): RenderedEmail {
     title,
     ...actions.flatMap((action) => [action.title, action.detail, action.url]),
     unavailable,
-    `${emailPublicHost}/readouts`,
+    `${emailPublicHost}/ops`,
   ]
     .filter(Boolean)
     .join('\n\n');
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:Arial,sans-serif;color:#34322d;margin:0;padding:24px;background:#eeeae3"><table role="presentation" width="600" style="width:100%;max-width:600px;background:#fff;border:1px solid #d8d7d4;border-radius:8px" cellpadding="20"><tr><td><h1 style="font-size:21px">${E(title)}</h1>${actions.map((action) => `<h2 style="font-size:16px">${E(action.title)}</h2><p style="font-size:14px;line-height:1.6">${E(action.detail)}</p><a href="${E(action.url)}" style="color:#1f6f5b">Review evidence →</a>`).join('')}${unavailable ? `<p style="color:#8c2723">${E(unavailable)}</p>` : ''}<p><a href="${E(emailPublicHost)}/readouts" style="color:#1f6f5b">Full report and history →</a></p></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:Arial,sans-serif;color:#34322d;margin:0;padding:24px;background:#eeeae3"><table role="presentation" width="600" style="width:100%;max-width:600px;background:#fff;border:1px solid #d8d7d4;border-radius:8px" cellpadding="20"><tr><td><h1 style="font-size:21px">${E(title)}</h1>${actions.map((action) => `<h2 style="font-size:16px">${E(action.title)}</h2><p style="font-size:14px;line-height:1.6">${E(action.detail)}</p><a href="${E(action.url)}" style="color:#1f6f5b">Review evidence →</a>`).join('')}${unavailable ? `<p style="color:#8c2723">${E(unavailable)}</p>` : ''}<p><a href="${E(emailPublicHost)}/ops" style="color:#1f6f5b">Full report and history →</a></p></td></tr></table></body></html>`;
   return { text, html };
 }

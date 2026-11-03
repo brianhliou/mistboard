@@ -73,6 +73,8 @@ function isCanonicalDestination(href: string): boolean {
     /^\/(?:zh-hans\/|zh-hant\/)?(?:play|leaderboard|news|challenges)$/.test(path) ||
     /^\/historical-xiangqi(?:\/games)?$/.test(path) ||
     path === '/players/teams/chinese-taipei' ||
+    path === '/metrics' ||
+    path === '/readouts' ||
     url.searchParams.has('page')
   )
     return false;

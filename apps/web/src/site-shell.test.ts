@@ -290,15 +290,7 @@ describe('site shell nav', () => {
         [...(adminMenu()?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
           (link) => link.textContent,
         ),
-      ).toEqual([
-        'Database',
-        'Engines',
-        'Accounts',
-        'Titles',
-        'Readouts',
-        'Metrics',
-        'Broadcast ops',
-      ]);
+      ).toEqual(['Database', 'Engines', 'Accounts', 'Titles', 'Ops', 'Broadcast ops']);
       // Last on the bar, right after Donate.
       expect(adminMenu()?.previousElementSibling?.classList.contains('site-nav-link-donate')).toBe(
         true,
@@ -322,7 +314,15 @@ describe('site shell nav', () => {
     const nav = buildNav('zh-Hans');
     document.body.append(nav);
     const html = nav.outerHTML;
-    for (const label of ['管理', '数据库', '运营简报', '转播运维', '/database', '/readouts']) {
+    for (const label of [
+      '管理',
+      '数据库',
+      '运营简报',
+      '转播运维',
+      '/database',
+      '/readouts',
+      '/ops',
+    ]) {
       expect(html, label).not.toContain(label);
     }
   });

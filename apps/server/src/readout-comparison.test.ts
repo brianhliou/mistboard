@@ -53,3 +53,24 @@ test('missing or inconsistent stored comparison is unavailable', async () => {
     );
   }
 });
+
+test('snapshot reads bind ids and latest cadence without affecting the generator default', async () => {
+  const { latestMistboardReadout, mistboardReadoutById } = await import(
+    './persistence-mistboard-readout.js'
+  );
+  const calls: { sql: string; values: unknown[] }[] = [];
+  const db = {
+    query: async (sql: string, values: unknown[]) => {
+      calls.push({ sql, values });
+      return { rows: [{ payload: previous }] };
+    },
+  } as unknown as Pick<pg.Pool, 'query'>;
+  assert.equal((await latestMistboardReadout(db))?.snapshotId, previous.snapshotId);
+  assert.deepEqual(calls[0].values, [null]);
+  await latestMistboardReadout(db, { trigger: 'weekly' });
+  assert.deepEqual(calls[1].values, ['weekly']);
+  assert.match(calls[1].sql, /trigger = \$1/);
+  await mistboardReadoutById("id' OR 1=1", db);
+  assert.deepEqual(calls[2].values, ["id' OR 1=1"]);
+  assert.doesNotMatch(calls[2].sql, /OR 1=1/);
+});

@@ -199,3 +199,32 @@ test('readout generation carries the serving box missing engines into the runtim
   );
   assert.deepEqual(seen, [{ variant: 'jieqi', binary: 'ab-jchess' }]);
 });
+
+test('all snapshot reads remain admin-gated in production, including lookup by id', async () => {
+  const before = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    for (const suffix of [
+      'latest?trigger=weekly',
+      'history?trigger=weekly',
+      'snapshot?id=readout_hidden',
+    ]) {
+      const url = new URL(`http://localhost/api/admin/readouts/${suffix}`);
+      const response = captureResponse();
+      const handled = await tryHandle(
+        ctx,
+        { method: 'GET', headers: {} } as IncomingMessage,
+        response,
+        url.pathname,
+        url,
+      );
+      assert.equal(handled, true);
+      assert.equal(response.status, 401);
+      assert.equal(response.headers['cache-control'], 'no-store');
+      assert.deepEqual(JSON.parse(response.body), { error: 'unauthorized' });
+    }
+  } finally {
+    if (before === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = before;
+  }
+});

@@ -44,6 +44,7 @@ export const ZH_HANS_SHELL = {
   'nav.engines': '引擎',
   'nav.accounts': '账户',
   'nav.titles': '头衔',
+  'nav.ops': '运营',
   'nav.readouts': '运营简报',
   'nav.metrics': '指标',
   'nav.broadcastOps': '转播运维',
