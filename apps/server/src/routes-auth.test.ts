@@ -27,7 +27,7 @@ const { definePersistenceTests, test } = await import('./persistence-test-suppor
 const { hashSecret, ensureUserForEmail, sendEmailChangeCode } = await import(
   './account-session.js'
 );
-const { authCounters } = await import('./obs.js');
+const { authCounters, logger } = await import('./obs.js');
 const { tryHandle } = await import('./routes/auth.js');
 let providerSend = 0;
 if (providerMode) {
@@ -41,6 +41,62 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('auth routes', () => {
+  for (const [index, write, statement] of [
+    [0, 'recordLoginEmailRequest', 'INSERT INTO login_email_requests'],
+    [1, 'correlateLoginEmailRequest', 'UPDATE login_email_requests SET provider_email_id'],
+    [2, 'completeLoginEmailRequest', 'UPDATE login_email_requests SET completed_at'],
+  ] as const) {
+    if (write === 'correlateLoginEmailRequest' && !providerMode) continue;
+    test(`${write} failure does not prevent email sign-in`, async (t) => {
+      const email = `bookkeeping-${index}@example.com`;
+      const pool = getPool();
+      let failures = 0;
+      t.mock.method(
+        pool,
+        'query',
+        new Proxy(pool.query, {
+          apply(target, thisArg, args) {
+            if (typeof args[0] === 'string' && args[0].trimStart().startsWith(statement)) {
+              failures++;
+              // Database error details can contain the recipient. Never log them.
+              throw new Error(`bookkeeping failed for ${email}`);
+            }
+            return Reflect.apply(target, thisArg, args);
+          },
+        }),
+      );
+      const warning = t.mock.method(logger, 'warn', () => {});
+      const sentBefore = authCounters.totalCodesSent;
+      const start = captureResponse();
+      const ip = `198.51.100.${50 + index}`;
+      await tryHandle({}, jsonRequest({ email }, ip), start, '/api/auth/email/start');
+      assert.equal(start.status, 202);
+      const { loginId, devCode, delivery } = JSON.parse(start.body);
+      assert.equal(delivery, providerMode ? 'email' : 'dev-response');
+      assert.equal(authCounters.totalCodesSent - sentBefore, providerMode ? 1 : 0);
+
+      const confirm = captureResponse();
+      await tryHandle(
+        {},
+        jsonRequest({ loginId, code: devCode }, ip),
+        confirm,
+        '/api/auth/email/confirm',
+      );
+      assert.equal(confirm.status, 200);
+      assert.equal(JSON.parse(confirm.body).isNewUser, true);
+      assert.ok(confirm.headers['set-cookie']);
+      assert.equal((await pool.query('SELECT id FROM account_sessions')).rowCount, 1);
+      assert.equal(failures, 1);
+      assert.equal(warning.mock.callCount(), 1);
+      assert.deepEqual(warning.mock.calls[0]!.arguments[0], {
+        kind: 'login_email_bookkeeping_failed',
+        write,
+        requestId: loginId,
+      });
+      assert.ok(!JSON.stringify(warning.mock.calls[0]!.arguments).includes(email));
+    });
+  }
+
   test('email auth returns delivery timing and creates a session after confirmation', async () => {
     const sentBefore = authCounters.totalCodesSent;
     const startResponse = captureResponse();
