@@ -552,7 +552,12 @@ export function animateJieqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
-  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
+  if (from.x !== to.x || from.y !== to.y) {
+    // Reveal and move badges settle with the piece, without a second fade
+    // after it lands. Refreshes keep this same animation timeline.
+    const fade = Math.min(100, duration);
+    animateMoveGlyphs(host, fade, duration - fade);
+  }
   // The gold band rides on the piece for the whole glide (the square grid's
   // marks fade in as it lands). A reverse step renders the PRIOR move's marks
   // at a different square, so neither would track the reverse glide.

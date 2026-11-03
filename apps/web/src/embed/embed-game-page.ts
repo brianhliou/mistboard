@@ -46,6 +46,7 @@ import {
   mountEmbedCard,
 } from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
+import { createEmbedScoreChart, type EmbedScoreChart } from './embed-score-chart.js';
 import './embed.css';
 
 export { fitBoardWidth } from './embed-card.js';
@@ -204,6 +205,8 @@ export async function mountEmbedGame(
   // end; truth is revealed), so a new view is a fresh mount at the same ply.
   let pov: EmbedPov | null = options.pov ?? null;
   let card: EmbedCard | null = null;
+  let chart: EmbedScoreChart | null = null;
+  let chartPly = 0;
   const picker =
     maybeGameSpecForId(specId)?.visibility === 'dark'
       ? embedPovPicker(pov ?? 'truth', fogSideLabels(specId), (next) => {
@@ -261,7 +264,11 @@ export async function mountEmbedGame(
         const handle = await mountBoard(host, specId, roomId, {
           metadataByRoomId,
           namesByRoomId: { [roomId]: names },
-          onPlyChange: hooks.onPlyChange,
+          onPlyChange: (ply, maxPly) => {
+            chartPly = ply;
+            chart?.setPly(ply);
+            hooks.onPlyChange(ply, maxPly);
+          },
           pov,
         });
         // A remount (a fog game's view change) keeps the overlay it had.
@@ -294,6 +301,15 @@ export async function mountEmbedGame(
   const loaded = await analysisLoad;
   if (loaded && card) {
     analysis = loaded;
+    if (
+      loaded.scoreSeries?.series.every(
+        (line) => line.values.length === (card!.handle.plyCount?.() ?? -1) + 1,
+      )
+    ) {
+      chart = createEmbedScoreChart(loaded.scoreSeries, { onJump: (ply) => card?.jumpToPly(ply) });
+      chart.setPly(chartPly);
+      card.setUnderBoard(chart.el);
+    }
     if (specId === 'jieqi' && boardHost) {
       const { installJieqiEmbedLines } = await import('./embed-jieqi-lines.js');
       const unknownReveals = await installJieqiEmbedLines(
@@ -302,6 +318,7 @@ export async function mountEmbedGame(
         roomId,
         loaded.bestMoves,
         pov === 'black' ? 'black' : 'red',
+        loaded.jieqiLine,
       ).catch(() => new Set<number>());
       for (const ply of unknownReveals) {
         const mark = loaded.annotations.get(ply);

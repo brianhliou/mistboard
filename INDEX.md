@@ -1294,6 +1294,9 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/embed-code.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-analysis.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-jieqi-lines.ts` | Play cached best-move alternatives in Jieqi game embeds using the public deal and shared replay board |
+| `apps/web/src/embed/embed-jieqi-luck.ts` | Reveal-only luck marks and public pool odds for finished game embeds; skips unknown identities and reuses the public line for alternatives |
+| `apps/web/src/embed/embed-jieqi-luck.test.ts` | Whole-result hidden-identity checks, unknown captured-role invariance, actual reveal grading, and record immutability |
+| `apps/web/src/embed/embed-game-analysis.test.ts` | Finished Jieqi embed graph/cursor and reveal-luck integration; GET-only, one public-game read, missing/incomplete cache fallback |
 | `apps/web/src/embed/embed-broadcast-page.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-line-page.ts` | _needs a one-line description_ |
 | `apps/web/src/fortress-xiangqi-replay-board.ts` | _needs a one-line description_ |

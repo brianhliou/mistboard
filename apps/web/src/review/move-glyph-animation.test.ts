@@ -96,21 +96,45 @@ const movers: [string, (host: HTMLElement, reverse?: boolean) => void][] = [
   ],
 ];
 describe('board glyph arrival', () => {
-  it.each(movers)(
-    '%s hides both badges until the glide ends, then fades them in',
-    (_name, move) => {
+  it.each(movers)('%s applies its badge arrival timing', (_name, move) => {
+    const host = board();
+    move(host);
+    const glide = effects.get(host.querySelector('[data-piece-square]')!)![0]!;
+    const duration = Number(glide.timing.duration);
+    expect(duration).toBeGreaterThan(0);
+    const fadeDuration = _name === 'jieqi' ? Math.min(100, duration) : duration;
+    const delay = _name === 'jieqi' ? duration - fadeDuration : duration;
+    expectLandingFade(fadeFor(host), fadeDuration, delay);
+    expectLandingFade(fadeFor(host, '.luck-mark'), fadeDuration, delay);
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    drawMarkerOnArrival(marker, pieceAnimationDurationMs());
+    const highlight = effects.get(marker)![0]!;
+    if (_name !== 'jieqi') expect(fadeFor(host).timing.duration).toBe(highlight.timing.duration);
+    expect(fadeFor(host).timing.easing).toBe(highlight.timing.easing);
+  });
+  it.each(['fast', 'normal', 'slow'] as const)(
+    'jieqi badges finish within the %s glide instead of adding a second animation',
+    (speed) => {
+      const storage = new Map<string, string>();
+      vi.spyOn(window, 'localStorage', 'get').mockReturnValue({
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          storage.set(key, value);
+        },
+      } as unknown as Storage);
+      writeDisplayPreference('pieceAnimation', speed);
+      window.dispatchEvent(new Event('mistboard:display-preferences-change'));
       const host = board();
-      move(host);
-      const glide = effects.get(host.querySelector('[data-piece-square]')!)![0]!;
-      const duration = Number(glide.timing.duration);
-      expect(duration).toBeGreaterThan(0);
-      expectLandingFade(fadeFor(host), duration);
-      expectLandingFade(fadeFor(host, '.luck-mark'), duration);
-      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      drawMarkerOnArrival(marker, pieceAnimationDurationMs());
-      const highlight = effects.get(marker)![0]!;
-      expect(fadeFor(host).timing.duration).toBe(highlight.timing.duration);
-      expect(fadeFor(host).timing.easing).toBe(highlight.timing.easing);
+      animateJieqiBoardMove(host, { from: 'a1', to: 'a2' }, 'red');
+      const duration = pieceAnimationDurationMs();
+      expect(duration).toBe({ fast: 120, normal: 250, slow: 500 }[speed]);
+      for (const selector of ['.xq-marker--glyph', '.luck-mark']) {
+        const fade = fadeFor(host, selector);
+        expect(Number(fade.timing.delay) + Number(fade.timing.duration)).toBeLessThanOrEqual(
+          duration,
+        );
+        expect(Number(fade.timing.duration)).toBeLessThanOrEqual(100);
+      }
     },
   );
   it('also holds the prior move’s glyph during a reverse step', () => {
@@ -195,7 +219,11 @@ describe('board glyph arrival', () => {
     host.innerHTML = board().innerHTML;
     animateJieqiBoardMove(host, { from: 'a1', to: 'a2' }, 'red');
     animateJieqiReveal(host, 'a2', 'red', 'red', { tile3d: false, alongGlide: true });
-    expectLandingFade(fadeFor(host, '.luck-mark'), pieceAnimationDurationMs());
+    expectLandingFade(
+      fadeFor(host, '.luck-mark'),
+      Math.min(100, pieceAnimationDurationMs()),
+      Math.max(0, pieceAnimationDurationMs() - 100),
+    );
   });
   it('keeps badges immediate without WAAPI and cancels a pending fade when disabled', () => {
     const host = board();

@@ -36,12 +36,16 @@ export async function installJieqiEmbedLines(
   roomId: string,
   bestMoves: ReadonlyMap<number, string>,
   perspective: 'red' | 'black',
+  publicLine?: JieqiReplayLine,
 ): Promise<Set<number>> {
   const unknownReveals = new Set<number>();
   if (!bestMoves.size || !handle.jumpToPly) return unknownReveals;
-  const response = await fetch(`/api/jieqi/games/${encodeURIComponent(roomId)}`);
-  if (!response.ok) return unknownReveals;
-  const line = publicJieqiReplay(await response.json());
+  let line = publicLine ?? null;
+  if (!line) {
+    const response = await fetch(`/api/jieqi/games/${encodeURIComponent(roomId)}`);
+    if (!response.ok) return unknownReveals;
+    line = publicJieqiReplay(await response.json());
+  }
   if (!line) return unknownReveals;
   const main = document.createElement('div');
   main.append(...host.childNodes);

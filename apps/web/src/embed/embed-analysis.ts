@@ -20,9 +20,14 @@ import {
   type GameEvent,
   type GameSpecId,
   hasOwnKey,
+  type JieqiPieceRole,
   type Move,
   pikafishUciToJieqiMove,
+  winPercent,
+  winPercentK,
 } from '@mistboard/game';
+import type { JieqiReplayLine } from '../jieqi-replay-board.js';
+import { jieqiPieceGhostSvg } from '../live-jieqi-render.js';
 import type { ReplayBoardOverlay } from '../replay.js';
 import {
   type AnalysisMark,
@@ -65,6 +70,8 @@ import {
 import { moveGlyphTone } from '../review/move-glyph.js';
 import type { MoveAnnotation } from '../review/move-list.js';
 import type { SvgBoardSquareGlyph } from '../svg-board-arrow.js';
+import { loadJieqiEmbedLuck } from './embed-jieqi-luck.js';
+import type { EmbedScoreSeries } from './embed-score-chart.js';
 
 type ParseEngineMove = (uci: string) => { from?: string; to: string } | null;
 
@@ -211,6 +218,9 @@ export function embedAnalysisVariant(specId: string): EmbedAnalysisVariant | nul
 }
 
 export type EmbedAnalysis = {
+  scoreSeries?: EmbedScoreSeries;
+  /** Reused by alternative lines so the public game is fetched only once. */
+  jieqiLine?: JieqiReplayLine;
   /** The same board and badge cards as the room review; detached with the board. */
   attachLuckCards?: (board: HTMLElement, list: HTMLElement) => () => void;
   /** One stored best move per judged ply. Chance moves have no invented continuation. */
@@ -258,10 +268,37 @@ export async function loadEmbedAnalysis(
     formatBestMove: variant.formatBestMove,
   });
   const result = embedAnalysisFromMarks(marks, variant, played);
-  if (specId === 'banqi' || specId === 'jungle-flip') {
-    const luck = await loadFlipLuck(specId, roomId, marks).catch(
-      () => new Map<number, FlipLuckDetail>(),
+  if (
+    specId === 'jieqi' &&
+    analysis.evals.length === played.length + 1 &&
+    played.length > 0 &&
+    analysis.evals.every(
+      (point, index) => point.ply === index && (point.cp !== null || point.mate !== null),
+    )
+  ) {
+    const values = analysis.evals.map(
+      (point) => winPercent(point.cp, point.mate, winPercentK(analysis.engineId)) / 100,
     );
+    if (values.every((value) => Number.isFinite(value) && value >= 0 && value <= 1)) {
+      const name = analysis.engineId.startsWith('ab-jchess')
+        ? 'AB-JChess'
+        : analysis.engineId.startsWith('jqe')
+          ? 'jqe'
+          : analysis.engineId.startsWith('pikafish-jieqi') ||
+              analysis.engineId.startsWith('pikajieqi')
+            ? 'PikaJieQi'
+            : 'Stored analysis';
+      result.scoreSeries = { side: 'red', series: [{ name, color: 'a', values }] };
+    }
+  }
+  if (specId === 'jieqi' || specId === 'banqi' || specId === 'jungle-flip') {
+    const publicJieqi =
+      specId === 'jieqi' ? await loadJieqiEmbedLuck(roomId, marks).catch(() => null) : null;
+    if (publicJieqi) result.jieqiLine = publicJieqi.line;
+    const luck: ReadonlyMap<number, FlipLuckDetail> =
+      specId === 'jieqi'
+        ? (publicJieqi?.luck ?? new Map())
+        : await loadFlipLuck(specId, roomId, marks).catch(() => new Map<number, FlipLuckDetail>());
     const baseOverlay = result.overlayAtPly;
     let current: FlipLuckDetail | null = null;
     result.overlayAtPly = (ply) => {
@@ -281,7 +318,10 @@ export async function loadEmbedAnalysis(
       result.annotations.set(ply, { ...result.annotations.get(ply), luck: detail.luck });
     }
     result.attachLuckCards = (board, list) => {
-      const art = (role: FlipRole, color: 'red' | 'black') => flipLuckPieceSvg(specId, role, color);
+      const art = (role: FlipRole, color: 'red' | 'black') =>
+        specId === 'jieqi'
+          ? jieqiPieceGhostSvg({ role: role as JieqiPieceRole, color, faceDown: false })
+          : flipLuckPieceSvg(specId, role, color);
       const detachBoard = attachLuckMarkCard(board, () => current, art);
       const detachList = attachLuckBadgeCard(
         list,
