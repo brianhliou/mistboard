@@ -9,6 +9,7 @@ import {
   isDisruptiveDrain,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
+  type MistboardReadoutComparison,
   type MistboardReadoutDeploys,
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
@@ -254,7 +255,7 @@ export async function collectMistboardReadoutFacts(
   now: Date,
   extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
-  const [collectors, trend] = await Promise.all([
+  const [collectors, trend, comparison] = await Promise.all([
     Promise.allSettled([
       collectProduct(db, now),
       collectPuzzles(db, now),
@@ -267,6 +268,7 @@ export async function collectMistboardReadoutFacts(
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
     recentWeeklyTrend(db).catch(() => []),
+    collectReadoutComparison(db, now).catch(() => null),
   ]);
   const sections: MistboardReadoutCollectorError['section'][] = [
     'product',
@@ -292,6 +294,36 @@ export async function collectMistboardReadoutFacts(
     deploys: settledValue(collectors[6]),
     collectorErrors,
     trend,
+    comparison,
+  };
+}
+
+export async function collectReadoutComparison(
+  db: Queryable,
+  now: Date,
+): Promise<MistboardReadoutComparison | null> {
+  const { previousPeriodStart, periodStart } = readoutPeriods(now);
+  const result = await db.query<{ payload: unknown }>(
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE trigger = 'weekly' AND period_start = $1 AND period_end = $2
+     ORDER BY created_at DESC LIMIT 1`,
+    [previousPeriodStart, periodStart],
+  );
+  if (!result.rows[0]) return null;
+  const previous = parseStoredReadout(result.rows[0].payload);
+  if (
+    previous.trigger !== 'weekly' ||
+    previous.periodStart !== previousPeriodStart.toISOString() ||
+    previous.periodEnd !== periodStart.toISOString()
+  )
+    return null;
+  return {
+    periodStart: previous.periodStart,
+    periodEnd: previous.periodEnd,
+    product: previous.product,
+    broadcastBoards: previous.broadcasts?.boards ?? null,
+    engineFailedTasks: previous.engines?.failedTasks ?? null,
+    actionKeys: previous.actions.map((action) => action.dedupeKey),
   };
 }
 

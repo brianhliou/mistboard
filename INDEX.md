@@ -1159,7 +1159,11 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/mahjong-tenant.ts` | Mahjong VariantTenant: four wind seats, server-secret wall, claim windows, and the per-account allowlist gate. |
 | `apps/server/src/persistence-practice.ts` | _needs a one-line description_ |
 | `apps/server/src/persistence-variant-access.ts` | Per-account access to a gated variant (139). Fail-closed: an allowlisted spec is refused without a grant row. |
-| `apps/server/src/readout-email.ts` | _needs a one-line description_ |
+| `apps/server/src/readout-email.ts` | Scheduled operator email policy: one weekly summary, changed daily alerts only, and confirmed provider acceptance for GitHub fallback routing |
+| `apps/server/src/readout-email-render.ts` | Compact HTML/text operator email: exact weekly comparisons, labelled ongoing/new reviews, direct evidence links, and changed operational context |
+| `apps/server/src/readout-email-render.test.ts` | Email comparison, missing-data, zero-baseline, escaping, and compact daily-alert regressions |
+| `apps/server/src/readout-comparison.test.ts` | Exact preceding-week snapshot selection and unavailable-baseline cases |
+| `scripts/readout-delivery.test.mjs` | Executes the real readout workflow offline to verify accepted-email suppression, reliable GitHub fallback, and idempotent retries |
 | `apps/server/src/routes/admin-game-artifacts.ts` | _needs a one-line description_ |
 | `apps/server/src/routes/duck-xiangqi-games.ts` | _needs a one-line description_ |
 | `apps/server/src/routes/duck-xiangqi-rooms.ts` | _needs a one-line description_ |

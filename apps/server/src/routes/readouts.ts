@@ -91,7 +91,7 @@ export async function readoutGenerateForApi(
       previousAlertKey: result.previousAlertKey,
       dryRun: body.dryRun === true,
     })
-    .catch(() => ({ send: false, reason: 'disabled' as const }));
+    .catch(() => ({ send: false, reason: 'delivery-failed' as const }));
   return {
     status: 200,
     payload: {
@@ -99,6 +99,10 @@ export async function readoutGenerateForApi(
       markdown: renderMistboardReadoutMarkdown(result.report),
       reused: result.reused,
       emailed: emailed.send,
+      // Unlike the legacy emailed flag, this explicit contract is only set
+      // after the provider accepts the message. Older servers omit it, so the
+      // workflow keeps its GitHub fallback during a rolling deployment.
+      emailDelivery: { accepted: emailed.send, reason: emailed.reason },
     },
   };
 }

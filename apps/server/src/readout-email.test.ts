@@ -6,7 +6,7 @@ import {
   type MistboardReadoutRuntime,
   type MistboardReadoutTrigger,
 } from './mistboard-readout.js';
-import { decideReadoutEmail, readoutEmailSubject } from './readout-email.js';
+import { decideReadoutEmail, readoutEmailSubject, sendReadoutEmail } from './readout-email.js';
 
 const runtime: MistboardReadoutRuntime = {
   revision: 'abc123',
@@ -127,10 +127,40 @@ test('an unconfigured mailer is a decision, not a throw', () => {
 test('the subject line carries the date and the verdict', () => {
   assert.equal(
     readoutEmailSubject(report('weekly')),
-    'Mistboard weekly readout 2026-09-07: HEALTHY',
+    'Mistboard weekly 2026-09-07: games +1 (+14%); no action needed',
   );
   assert.equal(
     readoutEmailSubject(report('daily', brokenFacts)),
     'Mistboard daily check 2026-09-07: ACTION',
   );
+});
+
+test('provider rejection is not reported as accepted email delivery', async () => {
+  const result = await sendReadoutEmail(
+    { report: report('weekly'), reused: false, previousAlertKey: null },
+    {
+      enabled: true,
+      send: async () => ({ ok: false, statusCode: 503 }),
+    },
+  );
+  assert.deepEqual(result, { send: false, reason: 'delivery-failed' });
+});
+
+test('accepted delivery contains equivalent HTML and plain text', async () => {
+  let calls = 0;
+  const result = await sendReadoutEmail(
+    { report: report('weekly'), reused: false, previousAlertKey: null },
+    {
+      enabled: true,
+      send: async (message) => {
+        calls += 1;
+        assert.match(message.html ?? '', /Completed human games/);
+        assert.match(message.text, /Completed human games/);
+        assert.doesNotMatch(message.text, /Mining:|Production revision:/);
+        return { ok: true };
+      },
+    },
+  );
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { send: true, reason: 'weekly' });
 });

@@ -78,6 +78,17 @@ export type MistboardReadoutTrendPoint = {
   activeAccounts28d?: number | null;
 };
 
+// Exact preceding weekly snapshot, never the most recent daily report. The
+// latter is an alert baseline and usually overlaps six days of this week.
+export type MistboardReadoutComparison = {
+  periodStart: string;
+  periodEnd: string;
+  product: MistboardReadoutProduct | null;
+  broadcastBoards: number | null;
+  engineFailedTasks: number | null;
+  actionKeys: string[];
+};
+
 export type MistboardReadoutMining = {
   runId: string;
   status: string;
@@ -244,6 +255,7 @@ export type MistboardReadoutV1 = {
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
+  comparison?: MistboardReadoutComparison | null;
   decisionFingerprint: string;
   // Stable while the same problem persists, so a daily alert can be posted once
   // per distinct problem instead of once per day. decisionFingerprint cannot do
@@ -261,6 +273,7 @@ export type MistboardReadoutFacts = {
   deploys?: MistboardReadoutDeploys | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
+  comparison?: MistboardReadoutComparison | null;
 };
 
 export type MistboardReadoutRuntime = MistboardReadoutV1['production'];
@@ -327,6 +340,7 @@ export function buildMistboardReadout(input: {
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
+    comparison: input.facts.comparison ?? null,
   };
   return {
     ...reportWithoutFingerprint,
@@ -781,7 +795,11 @@ function readoutVerdict(
 // different messages, and collapsing the second into "same problem" would skip
 // the email and issue comment that are the whole point of the line.
 // A disruptive deploy is the same: each one is its own incident.
-const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new', 'deploy-held-creates']);
+const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
+  'feedback-new',
+  'deploy-held-creates',
+  'puzzle-outlier-set-changed',
+]);
 
 function alertKey(
   verdict: MistboardReadoutVerdict,

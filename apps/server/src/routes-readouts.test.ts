@@ -107,6 +107,7 @@ test('readout generation parses auto cadence and returns rendered aggregate data
   assert.equal(result.status, 200);
   assert.equal((result.payload.report as { snapshotId: string }).snapshotId, 'readout_route');
   assert.match(result.payload.markdown as string, /Mistboard Readout/);
+  assert.deepEqual(result.payload.emailDelivery, { accepted: false, reason: 'dry-run' });
 });
 
 test('readout generation rejects network-supplied targets and malformed dry-run values', async () => {

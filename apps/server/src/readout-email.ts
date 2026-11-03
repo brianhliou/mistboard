@@ -9,7 +9,8 @@
  * Policy lives here rather than in send-email.ts, per that module's contract:
  * recipients, enablement, and the send rule are the caller's business.
  */
-import { type MistboardReadoutV1, renderMistboardReadoutMarkdown } from './mistboard-readout.js';
+import type { MistboardReadoutV1 } from './mistboard-readout.js';
+import { readoutDelta, renderReadoutEmail } from './readout-email-render.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress =
@@ -24,7 +25,16 @@ const readoutTo = process.env.MISTBOARD_READOUT_TO ?? process.env.MISTBOARD_FEED
 export const readoutEmailEnabled = transactionalEmailConfigured && !!fromAddress && !!readoutTo;
 
 export type ReadoutEmailDecision =
-  | { send: false; reason: 'disabled' | 'reused' | 'dry-run' | 'healthy-daily' | 'same-problem' }
+  | {
+      send: false;
+      reason:
+        | 'disabled'
+        | 'reused'
+        | 'dry-run'
+        | 'healthy-daily'
+        | 'same-problem'
+        | 'delivery-failed';
+    }
   | { send: true; reason: 'weekly' | 'daily-alert' };
 
 /**
@@ -58,24 +68,34 @@ export function decideReadoutEmail(input: {
 export function readoutEmailSubject(report: MistboardReadoutV1): string {
   const date = report.generatedAt.slice(0, 10);
   const verdict = report.verdict.toUpperCase();
-  return report.trigger === 'weekly'
-    ? `Mistboard weekly readout ${date}: ${verdict}`
-    : `Mistboard daily check ${date}: ${verdict}`;
+  if (report.trigger !== 'weekly') return `Mistboard daily check ${date}: ${verdict}`;
+  if (!report.product || report.verdict === 'unknown' || report.verdict === 'blocked') {
+    return `Mistboard weekly readout ${date}: ${verdict}`;
+  }
+  return `Mistboard weekly ${date}: games ${readoutDelta(report.product.completedGames, report.product.previousCompletedGames)}; ${report.actions.length ? `${report.actions.length} to review` : 'no action needed'}`;
 }
 
-export async function sendReadoutEmail(input: {
-  report: MistboardReadoutV1;
-  reused: boolean;
-  previousAlertKey: string | null;
-  dryRun?: boolean;
-}): Promise<ReadoutEmailDecision> {
-  const decision = decideReadoutEmail(input);
+export async function sendReadoutEmail(
+  input: {
+    report: MistboardReadoutV1;
+    reused: boolean;
+    previousAlertKey: string | null;
+    dryRun?: boolean;
+  },
+  dependencies: {
+    enabled?: boolean;
+    send?: typeof sendTransactionalEmail;
+  } = {},
+): Promise<ReadoutEmailDecision> {
+  const decision = decideReadoutEmail({ ...input, enabled: dependencies.enabled });
   if (!decision.send) return decision;
-  await sendTransactionalEmail({
+  const rendered = renderReadoutEmail(input.report);
+  const result = await (dependencies.send ?? sendTransactionalEmail)({
     from: fromAddress as string,
     to: [readoutTo as string],
     subject: readoutEmailSubject(input.report),
-    text: renderMistboardReadoutMarkdown(input.report),
+    ...rendered,
   });
+  if (!result.ok) return { send: false, reason: 'delivery-failed' };
   return decision;
 }

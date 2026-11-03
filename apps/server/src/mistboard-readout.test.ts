@@ -126,6 +126,21 @@ test('puzzle gates and qualified outliers become owned, deduplicated actions', (
   assert.match(renderMistboardReadoutMarkdown(report), /1 sample-qualified outliers/);
 });
 
+test('a changed puzzle set alerts again while an unchanged set stays quiet', () => {
+  const facts = (puzzleId: string) => ({
+    ...emptyFacts,
+    puzzles: buildElephantChessPuzzleQualityReport({
+      aggregates: [qualityAggregate({ puzzleId, starts: 20, wrongAttempts: 60 })],
+      pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    }),
+  });
+  const first = reportWith(facts('puzzle-one'));
+  const same = reportWith(facts('puzzle-one'), first);
+  const changed = reportWith(facts('puzzle-two'), first);
+  assert.equal(first.alertKey, same.alertKey);
+  assert.notEqual(first.alertKey, changed.alertKey);
+});
+
 test('collector failure produces unknown rather than healthy', () => {
   const report = buildMistboardReadout({
     snapshotId: 'readout_partial',
