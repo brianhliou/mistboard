@@ -201,8 +201,9 @@ export type LoginEmailDeliveryMetrics = {
 // Only counts leave this query, so callers cannot expose addresses or timelines.
 export async function getLoginEmailDeliveryMetrics(
   now = new Date(),
+  db: Pick<ReturnType<typeof getPool>, 'query'> = getPool(),
 ): Promise<LoginEmailDeliveryMetrics> {
-  const { rows } = await getPool().query<LoginEmailDeliveryCounts & { days: number }>(
+  const { rows } = await db.query<LoginEmailDeliveryCounts & { days: number }>(
     `WITH activity AS (
        SELECT 'requested' AS metric, request_id AS id, requested_at AS at
        FROM login_email_requests
