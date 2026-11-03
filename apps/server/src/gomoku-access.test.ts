@@ -187,7 +187,11 @@ test('an admitted Gomoku admin stays unlisted and outside public figures', async
   assert.equal(reg.enabled(), false);
   assert.equal(gameSpecForId('gomoku').publicSurface, 'hidden');
   assert.ok(countedPublicGame().includes("'gomoku'"));
-  assert.equal(reg.createCorrespondenceGameForSeek, null);
+  // Correspondence exists (s-133b) but its factory refuses while the flag is off.
+  assert.deepEqual(await reg.createCorrespondenceGameForSeek!({} as never), {
+    ok: false,
+    error: 'disabled',
+  });
   const live = room();
   const status = live.projection.state.status;
   assert.equal(status.type, 'playing');

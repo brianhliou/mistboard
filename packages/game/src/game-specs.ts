@@ -264,6 +264,7 @@ const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  GOMOKU_SPEC_ID,
   // Xiangqi Mahjong is held out at launch (Brian, 2026-10-25: "let's not support
   // correspondence for this variant yet"). Its tenant keeps the correspondence
   // binding and its tests, so opening it again is adding XIANGQI_MAHJONG_SPEC_ID here.

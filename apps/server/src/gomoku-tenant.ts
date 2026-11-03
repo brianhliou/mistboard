@@ -57,6 +57,7 @@ export const gomokuTenant: VariantTenant<
   gameSpecId: GOMOKU_SPEC_ID,
   roomIdPrefix: 'gmk_',
   colors: ['black', 'white'],
+  firstMover: (state) => state.opening?.turn ?? 'black',
   // The runtime ships in every build, like Three Kingdoms banqi. The create
   // and socket doors enforce gomokuAdmits; the registration's enabled() stays
   // the flag so lobby, TV, challenges and bot profiles remain unlisted.
