@@ -13,6 +13,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ## 2026-11
 
+### Playing
+
+- AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
+
 ### Learning and puzzles
 
 - On your own profile, the Xiangqi puzzle rating opens in the main rating chart instead of a separate card below it ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
@@ -23,6 +27,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Banqi and Flip Jungle game reviews show how lucky each flip was ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
 - Short 4, Released to the Six Directions, on the videos page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
 - On a finished banqi, Flip Jungle or jieqi game's review, hover a face-down piece or turn on Reveal identities to see what it was ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Move glyphs in review fade once the pieces land ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
