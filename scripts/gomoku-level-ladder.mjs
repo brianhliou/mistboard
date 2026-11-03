@@ -32,6 +32,31 @@ const BASELINE = Object.freeze({
 
 /** Baseline at every level, plus two-level gaps. Explicit adjacent pairs and
  * the old baseline alias remain available for historical comparisons. */
+/** Trial tiers for calibration: each override names an existing level and replaces
+ * only the fields it gives (null drops candidate choice, making the level play its best
+ * move). Unknown levels, unknown keys and half-set choice fields are refused so a typo
+ * never measures the shipped tier under a trial label. */
+export function applyTierOverrides(levels, overrides) {
+  if (!Array.isArray(overrides)) throw new Error('--tiers must be a JSON array');
+  const keys = new Set(['level', 'nodes', 'timeMs', 'candidateCount', 'evalMargin', 'bestRate']);
+  const out = levels.map((tier) => ({ ...tier }));
+  for (const override of overrides) {
+    const unknown = Object.keys(override).filter((key) => !keys.has(key));
+    if (unknown.length) throw new Error(`Unknown tier field: ${unknown.join(', ')}`);
+    const index = out.findIndex(({ level }) => level === override.level);
+    if (index < 0) throw new Error(`Unknown level in --tiers: ${override.level}`);
+    const next = { ...out[index], ...override };
+    for (const key of ['candidateCount', 'evalMargin', 'bestRate'])
+      if (next[key] === null) delete next[key];
+    if ('candidateCount' in next !== 'evalMargin' in next)
+      throw new Error(
+        `Level ${override.level} needs both candidateCount and evalMargin, or neither`,
+      );
+    out[index] = next;
+  }
+  return out;
+}
+
 export function pairingPlan(levels = RAPFI_LEVELS, pairs) {
   const ids =
     pairs === undefined
@@ -257,6 +282,7 @@ export function createRapfiPlayer(tier, request) {
               candidateCount,
               evalMargin,
               seed: plySeed,
+              ...(tier.bestRate === undefined ? {} : { bestRate: tier.bestRate }),
             });
       telemetry.searches += 1;
       telemetry.wallTimeMs += elapsed;
@@ -385,7 +411,15 @@ async function main() {
     );
     return;
   }
-  const allowed = new Set(['--games', '--seed', '--pairs', '--budgets', '--output', '--label']);
+  const allowed = new Set([
+    '--games',
+    '--seed',
+    '--pairs',
+    '--budgets',
+    '--tiers',
+    '--output',
+    '--label',
+  ]);
   for (let index = 0; index < args.length; index += 2) {
     if (!allowed.has(args[index]) || !args[index + 1])
       throw new Error(`Unknown or missing argument: ${args[index]}`);
@@ -406,7 +440,11 @@ async function main() {
     nodes.some((n, i) => !Number.isSafeInteger(n) || n < 1 || (i > 0 && n <= nodes[i - 1]))
   )
     throw new Error(`--budgets needs ${RAPFI_LEVELS.length} increasing positive integers`);
-  const levels = RAPFI_LEVELS.map((tier, index) => ({ ...tier, nodes: nodes[index] }));
+  const tierFile = option('--tiers');
+  const levels = applyTierOverrides(
+    RAPFI_LEVELS.map((tier, index) => ({ ...tier, nodes: nodes[index] })),
+    tierFile ? JSON.parse(readFileSync(tierFile, 'utf8')) : [],
+  );
   const plan = pairingPlan(levels, option('--pairs'));
   const output = option('--output');
   if (!output) throw new Error('--output <record.json> is required (existing runs are appended)');

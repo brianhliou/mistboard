@@ -36,6 +36,9 @@ export interface RapfiChoiceOptions {
   evalMargin: number;
   /** Unsigned 32-bit seed; the caller varies it per game/ply for varied play. */
   seed: number;
+  /** Chance (0-1) of playing the best candidate outright before sampling. A
+   * level's strength in Gomoku is mostly its blunder rate, which this sets. */
+  bestRate?: number;
 }
 
 const fields = {
@@ -228,7 +231,9 @@ export function validateRapfiChoiceOptions(options: RapfiChoiceOptions): void {
     options.evalMargin < 0 ||
     !Number.isInteger(options.seed) ||
     options.seed < 0 ||
-    options.seed > 0xffffffff
+    options.seed > 0xffffffff ||
+    (options.bestRate !== undefined &&
+      (!Number.isFinite(options.bestRate) || options.bestRate < 0 || options.bestRate > 1))
   )
     throw new Error('Invalid Rapfi choice options');
 }
@@ -276,6 +281,8 @@ export function selectRapfiMove(
   });
   if (!distinct.length) throw new Error('Rapfi returned no legal candidates');
   const best = distinct[0].eval;
+  if (options.bestRate !== undefined && unitSample(options.seed ^ 0x9e3779b9) < options.bestRate)
+    return { ...distinct[0].move };
   const pool = distinct
     .slice(0, options.candidateCount)
     .filter((candidate) => best - candidate.eval <= options.evalMargin);
@@ -284,15 +291,18 @@ export function selectRapfiMove(
   const weights = pool.map((candidate) =>
     Math.exp((candidate.eval - best) / Math.max(1, options.evalMargin)),
   );
-  // One Mulberry32 sample: no global random state, identical on browser/Node.
-  let n = (options.seed + 0x6d2b79f5) >>> 0;
-  n = Math.imul(n ^ (n >>> 15), n | 1);
-  n ^= n + Math.imul(n ^ (n >>> 7), n | 61);
-  let ticket =
-    (((n ^ (n >>> 14)) >>> 0) / 4294967296) * weights.reduce((sum, weight) => sum + weight, 0);
+  let ticket = unitSample(options.seed) * weights.reduce((sum, weight) => sum + weight, 0);
   for (let i = 0; i < pool.length; i++) {
     ticket -= weights[i];
     if (ticket < 0) return { ...pool[i].move };
   }
   return { ...pool[pool.length - 1].move };
+}
+
+/** One Mulberry32 sample in [0, 1): no global random state, identical on browser/Node. */
+function unitSample(seed: number): number {
+  let n = ((seed >>> 0) + 0x6d2b79f5) >>> 0;
+  n = Math.imul(n ^ (n >>> 15), n | 1);
+  n ^= n + Math.imul(n ^ (n >>> 7), n | 61);
+  return ((n ^ (n >>> 14)) >>> 0) / 4294967296;
 }
