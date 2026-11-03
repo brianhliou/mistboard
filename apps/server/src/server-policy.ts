@@ -430,6 +430,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/thanks' ||
     normalized === '/lag' ||
     normalized === '/washington-xiangqi' ||
+    normalized === '/zh-hans/washington-xiangqi' ||
+    normalized === '/zh-hant/washington-xiangqi' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||

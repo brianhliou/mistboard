@@ -248,7 +248,10 @@ const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
-const wantsClubWashington = path === '/washington-xiangqi';
+const wantsClubWashington =
+  path === '/washington-xiangqi' ||
+  path === '/zh-hans/washington-xiangqi' ||
+  path === '/zh-hant/washington-xiangqi';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -1099,7 +1102,6 @@ if (replaySample) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
 } else if (wantsClubWashington) {
-  document.title = 'Washington Xiangqi (华州象棋)';
   void mountOrReport(() =>
     import('./club-washington-page.js').then(({ mountClubWashington }) =>
       mountClubWashington(appRoot),

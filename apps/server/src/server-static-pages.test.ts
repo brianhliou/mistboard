@@ -16,6 +16,7 @@ import {
   routePreloadLinksForPath,
   SITEMAP_SECTIONS,
   SITEMAP_STATIC_ROUTES,
+  SPA_ROUTE_META,
   serveArticlePage,
   serveArticlesIndexPage,
   serveGamePage,
@@ -1031,6 +1032,60 @@ test('the videos library serves all three locales, each distinct and cross-linke
 
 // Moved from brianhliou.com/challenges/ with its zh copies (2026-10-07), so
 // each language needs a URL of its own for the old pages to redirect to.
+test('Washington Xiangqi serves three distinct locale metas with canonical and all alternates', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const seenDescriptions = new Set<string>();
+  for (const [prefix, lang, expectedTitle] of [
+    ['', 'en', 'Washington Xiangqi: Chinese chess in Greater Seattle'],
+    ['/zh-hans', 'zh-Hans', '华州象棋 Washington Xiangqi：大西雅图地区的象棋'],
+    ['/zh-hant', 'zh-Hant', '華州象棋 Washington Xiangqi：大西雅圖地區的象棋'],
+  ]) {
+    const route = `${prefix}/washington-xiangqi`;
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is missing from the sitemap`);
+    const response = captureResponse();
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: route,
+        publicHost: 'https://mistboard.com',
+      }),
+      true,
+    );
+    assert.ok(response.body.includes(`<title>${expectedTitle}</title>`), route);
+    assert.ok(response.body.includes(`<html lang="${lang}">`), route);
+    assert.ok(
+      response.body.includes(`<link rel="canonical" href="https://mistboard.com${route}">`),
+      route,
+    );
+    for (const [alternatePrefix, alternateLang] of [
+      ['', 'en'],
+      ['/zh-hans', 'zh-Hans'],
+      ['/zh-hant', 'zh-Hant'],
+      ['', 'x-default'],
+    ]) {
+      assert.ok(
+        response.body.includes(
+          `<link rel="alternate" hreflang="${alternateLang}" href="https://mistboard.com${alternatePrefix}/washington-xiangqi">`,
+        ),
+        `${route}: ${alternateLang}`,
+      );
+    }
+    const description = SPA_ROUTE_META[route]!.description;
+    assert.ok(response.body.includes(`<meta name="description" content="${description}">`));
+    assert.doesNotMatch(
+      `${expectedTitle} ${description}`,
+      /\u2014|\bfirst\b|\bonly\b|首个|首個|唯一/i,
+    );
+    if (lang === 'en') assert.doesNotMatch(`${expectedTitle} ${description}`, /[\u4e00-\u9fff]/);
+    else assert.match(description, /象棋/);
+    seenDescriptions.add(description);
+  }
+  assert.equal(seenDescriptions.size, 3, 'descriptions must not fall back to English');
+  assert.ok(!isClientRoute('/zh-hans/washington-xiangqi/anything'));
+});
+
 test('the engine champions page serves all three locales, each distinct and cross-linked', async () => {
   const staticDir = await staticDirWithPreloadManifest();
   const titles = new Set<string>();
@@ -1162,6 +1217,7 @@ test('every locale-group SPA route names itself as canonical', async () => {
     '/bots',
     '/learn/xiangqi',
     '/champions',
+    '/washington-xiangqi',
     '/practice',
     '/analysis/xiangqi',
     '/editor/xiangqi',

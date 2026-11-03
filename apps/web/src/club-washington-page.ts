@@ -2,8 +2,7 @@
 // to start casual in-person xiangqi in Bellevue. Mistboard hosts the page until
 // the club has a site of its own; washingtonxiangqi.org and .com forward here.
 // The club is not a Mistboard surface, so the page has the site nav but not the
-// /about rail, and its copy is English only until the club has a Chinese text of
-// its own.
+// /about rail. Its approved English copy is translated in the page-local table.
 // Rules for the copy (private issue 19, 2026-11-03): say plainly that nothing
 // is running yet; no venue or partner is named until they agree; no event,
 // group, turnout or helper is described until it exists; no "first" or "only"
@@ -13,7 +12,7 @@
 
 import './static-page-shell.css';
 import './club-washington-page.css';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
   proseHeading,
@@ -29,76 +28,193 @@ export const CLUB_WASHINGTON_EMAIL = 'hello@washingtonxiangqi.org';
 // Served by apps/server/src/routes/club-signup.ts.
 export const CLUB_SIGNUP_ENDPOINT = '/api/club/washington/subscribe';
 
+// Page-local like SIGNUP_COPY: club text does not ride every visitor's locale chunk.
+const EN_COPY = {
+  title: 'Washington Xiangqi: Chinese chess in Greater Seattle',
+  description:
+    'In-person xiangqi, Chinese chess, for Greater Seattle, with meetups forming in Bellevue. Every level is welcome. Write in to play, learn, host or help organize.',
+  name: '华州象棋',
+  status: 'In-person xiangqi for Greater Seattle. Meetups forming in Bellevue.',
+  intro:
+    'Washington Xiangqi is building a regular in-person game of xiangqi, Chinese chess, for players across Greater Seattle, starting on the Eastside in Bellevue. Every level is welcome, from lifelong players to people just learning the moves.',
+  contact: 'To play, learn or help, write to',
+  contactNote:
+    'Tell us your level and where in the area you are. If you prefer WeChat, include your WeChat ID.',
+  nextHeading: 'What happens next',
+  next: 'Everyone who writes in gets the date and place of the opening meetup: a few boards in a public space in Bellevue. Once there is a core of regulars, it becomes a standing weekly game, with someone at the table to teach newcomers.',
+  organizerHeading: 'Organizer',
+  organizerPrefix: 'Brian H. Liou builds and runs ',
+  organizerSuffix:
+    ', an online home for xiangqi and its variants with live play, lessons for beginners, tournament broadcasts and puzzles from real games. ',
+  about: 'About Brian',
+  stop: '.',
+  involvedHeading: 'Get involved',
+  looking: 'We are looking for:',
+  venuesLabel: 'Venues: ',
+  venues: 'a cafe, library or community room in Greater Seattle that can host a few boards.',
+  organizersLabel: 'Organizers: ',
+  organizers: 'people who have run a club, a school chess program or a community event.',
+  playersLabel: 'Players: ',
+  players: 'anyone who wants a regular game, at any level. New to xiangqi? ',
+  rules: 'Learn the rules',
+  playersSuffix: ' before you come.',
+  closingPrefix: 'Write to ',
+  closingSuffix: '. Mistboard hosts this page for Washington Xiangqi.',
+};
+
+const COPY: Record<Locale, typeof EN_COPY> = {
+  en: EN_COPY,
+  'zh-Hans': {
+    title: '华州象棋 Washington Xiangqi：大西雅图地区的象棋',
+    description:
+      '面向大西雅图地区的线下象棋，正在贝尔维尤筹备聚会。欢迎各种水平的棋友，无论是多年老手还是刚学走法的新手。想下棋、学棋、提供场地或协助组织，欢迎来信联系华州象棋。',
+    name: '华州象棋',
+    status: '面向大西雅图地区的线下象棋。正在贝尔维尤筹备聚会。',
+    intro:
+      '华州象棋正在为大西雅图地区的棋友筹备定期线下象棋活动，从东区的贝尔维尤开始。欢迎各种水平的棋友，无论是下了一辈子棋的老手，还是刚刚开始学习走法的新手。',
+    contact: '想下棋、学棋或帮忙，欢迎写信到',
+    contactNote: '请告诉我们你的棋艺水平和所在地区。如果你更习惯用微信，请在邮件中留下微信号。',
+    nextHeading: '接下来会怎样',
+    next: '每位来信者都会收到开场聚会的日期和地点：在贝尔维尤的一处公共空间摆上几副棋盘。有了一批常来的棋友后，就会成为固定的每周对局，并有人在棋桌旁教新手。',
+    organizerHeading: '组织者',
+    organizerPrefix: 'Brian H. Liou 开发并运营 ',
+    organizerSuffix:
+      '，这是一个提供象棋及其变体在线对弈的平台，还有入门课程、赛事转播和取材于实战的棋题。',
+    about: '关于 Brian',
+    stop: '。',
+    involvedHeading: '参与其中',
+    looking: '我们正在寻找：',
+    venuesLabel: '场地：',
+    venues: '大西雅图地区能摆下几副棋盘的咖啡馆、图书馆或社区活动室。',
+    organizersLabel: '组织者：',
+    organizers: '有运营俱乐部、学校棋类项目或社区活动经验的人。',
+    playersLabel: '棋友：',
+    players: '任何想定期下棋的人，水平不限。刚接触象棋？来之前可以先',
+    rules: '学习规则',
+    playersSuffix: '。',
+    closingPrefix: '欢迎写信到 ',
+    closingSuffix: '。本页面由 Mistboard 为华州象棋提供。',
+  },
+  'zh-Hant': {
+    title: '華州象棋 Washington Xiangqi：大西雅圖地區的象棋',
+    description:
+      '面向大西雅圖地區的實體象棋，正在貝爾維尤籌備聚會。歡迎各種程度的棋友，無論是多年老手還是剛學走法的新手。想下棋、學棋、提供場地或協助組織，歡迎來信聯繫華州象棋。',
+    name: '華州象棋',
+    status: '面向大西雅圖地區的實體象棋。正在貝爾維尤籌備聚會。',
+    intro:
+      '華州象棋正在為大西雅圖地區的棋友籌備定期實體象棋活動，從東區的貝爾維尤開始。歡迎各種程度的棋友，無論是下了一輩子棋的老手，還是剛剛開始學習走法的新手。',
+    contact: '想下棋、學棋或幫忙，歡迎寫信到',
+    contactNote: '請告訴我們你的棋藝程度和所在地區。如果你更習慣用微信，請在郵件中留下微信號。',
+    nextHeading: '接下來會怎樣',
+    next: '每位來信者都會收到開場聚會的日期和地點：在貝爾維尤的一處公共空間擺上幾副棋盤。有了一批常來的棋友後，就會成為固定的每週對局，並有人在棋桌旁教新手。',
+    organizerHeading: '組織者',
+    organizerPrefix: 'Brian H. Liou 開發並營運 ',
+    organizerSuffix:
+      '，這是一個提供象棋及其變體線上對弈的平台，還有入門課程、賽事轉播和取材於實戰的棋題。',
+    about: '關於 Brian',
+    stop: '。',
+    involvedHeading: '參與其中',
+    looking: '我們正在尋找：',
+    venuesLabel: '場地：',
+    venues: '大西雅圖地區能擺下幾副棋盤的咖啡館、圖書館或社區活動室。',
+    organizersLabel: '組織者：',
+    organizers: '有經營俱樂部、學校棋類課程或社區活動經驗的人。',
+    playersLabel: '棋友：',
+    players: '任何想定期下棋的人，程度不限。剛接觸象棋？來之前可以先',
+    rules: '學習規則',
+    playersSuffix: '。',
+    closingPrefix: '歡迎寫信到 ',
+    closingSuffix: '。本頁面由 Mistboard 為華州象棋提供。',
+  },
+};
+
 export function mountClubWashington(root: HTMLElement): void {
   const locale = currentLocale();
+  document.title = COPY[locale].title;
   root.replaceChildren();
   root.classList.add('landing-page', 'club-route');
+  root.append(buildNav(locale), buildClubWashingtonLayout(locale));
+}
+
+function buildClubWashingtonLayout(locale: Locale): HTMLElement {
   const layout = document.createElement('div');
   layout.className = 'club-page-layout';
   const panel = document.createElement('div');
   panel.className = 'club-page-panel';
-  panel.append(buildClubWashington());
+  panel.append(buildClubWashington(locale));
   layout.append(panel);
-  root.append(buildNav(locale), layout);
+  return layout;
 }
 
-export function buildClubWashington(): HTMLElement {
+// Same client DOM for build-time rendering, as the static index pages use.
+export function renderClubWashingtonShellForPrerender(locale: Locale = 'en'): string {
+  return `${buildNav(locale).outerHTML}${buildClubWashingtonLayout(locale).outerHTML}`;
+}
+
+// Same canonical/alternate group as the blog and rules index prerenders.
+export function clubWashingtonPrerenderHead(host: string, locale: Locale = 'en') {
+  const urlFor = (l: Locale) => `${host}${localizedHref(CLUB_WASHINGTON_PATH, l)}`;
+  const url = urlFor(locale);
+  const alternates = SUPPORTED_LOCALES.map(
+    (l) => `<link rel="alternate" hreflang="${l}" href="${urlFor(l)}" />`,
+  ).join('');
+  return {
+    title: COPY[locale].title,
+    description: COPY[locale].description,
+    url,
+    htmlLang: locale,
+    headLinks: `<link rel="canonical" href="${url}" />${alternates}<link rel="alternate" hreflang="x-default" href="${urlFor('en')}" />`,
+  };
+}
+
+export function buildClubWashington(locale: Locale = currentLocale()): HTMLElement {
+  const copy = COPY[locale];
   const section = proseSection('club-section');
-  section.lang = 'en';
+  section.lang = locale;
 
   const name = document.createElement('span');
   name.className = 'club-name-zh';
-  name.lang = 'zh-Hans';
-  name.textContent = '华州象棋';
+  name.lang = locale === 'en' ? 'zh-Hans' : locale;
+  name.textContent = copy.name;
 
   const heading = proseHeading('Washington Xiangqi');
   heading.append(' ', name);
 
   const status = document.createElement('p');
   status.className = 'club-status';
-  status.textContent = 'In-person xiangqi for Greater Seattle. Meetups forming in Bellevue.';
+  status.textContent = copy.status;
 
   section.append(
     heading,
     status,
+    proseParagraph([copy.intro]),
+    buildContact(copy),
+    proseSubheading(copy.nextHeading),
+    proseParagraph([copy.next]),
+    proseSubheading(copy.organizerHeading),
     proseParagraph([
-      'Washington Xiangqi is building a regular in-person game of xiangqi, Chinese chess, for players across Greater Seattle, starting on the Eastside in Bellevue. Every level is welcome, from lifelong players to people just learning the moves.',
+      copy.organizerPrefix,
+      proseLink('Mistboard', localizedHref('/', locale)),
+      copy.organizerSuffix,
+      proseLink(copy.about, '/about#who'),
+      copy.stop,
     ]),
-    buildContact(),
-
-    proseSubheading('What happens next'),
-    proseParagraph([
-      'Everyone who writes in gets the date and place of the opening meetup: a few boards in a public space in Bellevue. Once there is a core of regulars, it becomes a standing weekly game, with someone at the table to teach newcomers.',
-    ]),
-
-    proseSubheading('Organizer'),
-    proseParagraph([
-      'Brian H. Liou builds and runs ',
-      proseLink('Mistboard', '/'),
-      ', an online home for xiangqi and its variants with live play, lessons for beginners, tournament broadcasts and puzzles from real games. ',
-      proseLink('About Brian', '/about#who'),
-      '.',
-    ]),
-
-    proseSubheading('Get involved'),
-    proseParagraph(['We are looking for:']),
+    proseSubheading(copy.involvedHeading),
+    proseParagraph([copy.looking]),
     clubList([
+      [copy.venuesLabel, copy.venues],
+      [copy.organizersLabel, copy.organizers],
       [
-        'Venues: ',
-        'a cafe, library or community room in Greater Seattle that can host a few boards.',
-      ],
-      ['Organizers: ', 'people who have run a club, a school chess program or a community event.'],
-      [
-        'Players: ',
-        'anyone who wants a regular game, at any level. New to xiangqi? ',
-        proseLink('Learn the rules', '/learn/xiangqi'),
-        ' before you come.',
+        copy.playersLabel,
+        copy.players,
+        proseLink(copy.rules, localizedHref('/learn/xiangqi', locale)),
+        copy.playersSuffix,
       ],
     ]),
     proseParagraph([
-      'Write to ',
+      copy.closingPrefix,
       proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`),
-      '. Mistboard hosts this page for Washington Xiangqi.',
+      copy.closingSuffix,
     ]),
   );
   return section;
@@ -121,24 +237,22 @@ function clubList(items: Array<[string, ...Array<string | Node>]>): HTMLUListEle
   return list;
 }
 
-function buildContact(): HTMLElement {
+function buildContact(copy: typeof EN_COPY): HTMLElement {
   const box = document.createElement('div');
   box.className = 'club-contact';
   const label = document.createElement('p');
   label.className = 'club-contact-label';
-  label.textContent = 'To play, learn or help, write to';
+  label.textContent = copy.contact;
   const address = proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`);
   address.classList.add('club-contact-address');
   const note = document.createElement('p');
   note.className = 'club-contact-note';
-  note.textContent =
-    'Tell us your level and where in the area you are. If you prefer WeChat, include your WeChat ID.';
+  note.textContent = copy.contactNote;
   box.append(label, address, note);
   return box;
 }
 
-// The announcement list form, in the visitor's locale (the rest of the page is
-// English). Kept beside the page rather than in the shared i18n catalogs: the
+// The announcement list form, in the visitor's locale. Kept beside the page rather than in the shared i18n catalogs: the
 // club is not a Mistboard surface, and its words should not ride every
 // visitor's locale chunk. No em dashes in any of it.
 const SIGNUP_COPY: Record<

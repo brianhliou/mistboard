@@ -196,9 +196,24 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   // its page, and washingtonxiangqi.org and .com forward here (2026-10-23).
   // Nothing is running yet, so the copy says so (private issue 19, 2026-11-03).
   '/washington-xiangqi': {
-    title: 'Washington Xiangqi (华州象棋): Chinese chess in Greater Seattle',
+    title: 'Washington Xiangqi: Chinese chess in Greater Seattle',
     description:
       'In-person xiangqi, Chinese chess, for Greater Seattle, with meetups forming in Bellevue. Every level is welcome. Write in to play, learn, host or help organize.',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hans/washington-xiangqi': {
+    title: '华州象棋 Washington Xiangqi：大西雅图地区的象棋',
+    description:
+      '面向大西雅图地区的线下象棋，正在贝尔维尤筹备聚会。欢迎各种水平的棋友，无论是多年老手还是刚学走法的新手。想下棋、学棋、提供场地或协助组织，欢迎来信联系华州象棋。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hant/washington-xiangqi': {
+    title: '華州象棋 Washington Xiangqi：大西雅圖地區的象棋',
+    description:
+      '面向大西雅圖地區的實體象棋，正在貝爾維尤籌備聚會。歡迎各種程度的棋友，無論是多年老手還是剛學走法的新手。想下棋、學棋、提供場地或協助組織，歡迎來信聯繫華州象棋。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/washington-xiangqi',
   },
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
@@ -657,10 +672,6 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
 // is worth baking) but whose page still needs a heading and its links for a
 // crawler that does not run the bundle. The client clears the root on mount.
 const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
-  // The club page is read from a printed address, so its text is in the HTML
-  // for link previews and crawlers too.
-  '/washington-xiangqi':
-    '<main lang="en"><h1>Washington Xiangqi <span lang="zh-Hans">华州象棋</span></h1><p>In-person xiangqi for Greater Seattle. Meetups forming in Bellevue.</p><p>Washington Xiangqi is building a regular in-person game of xiangqi, Chinese chess, for players across Greater Seattle, starting on the Eastside in Bellevue. Every level is welcome, from lifelong players to people just learning the moves.</p><ul><li><a href="mailto:hello@washingtonxiangqi.org">hello@washingtonxiangqi.org</a></li><li><a href="/learn/xiangqi">Learn the rules</a></li><li><a href="/">Play online on Mistboard</a></li></ul></main>',
   '/games':
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
@@ -1136,7 +1147,9 @@ export async function servePrerenderedPage(params: {
     | 'changelog.html'
     | `changelog-${string}.html`
     | 'puzzles.html'
-    | 'patron.html';
+    | 'patron.html'
+    | 'washington-xiangqi.html'
+    | `zh-han${'s' | 't'}/washington-xiangqi.html`;
 }): Promise<void> {
   if (
     (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&
@@ -1206,6 +1219,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/contribute',
   '/creators',
   '/washington-xiangqi',
+  '/zh-hans/washington-xiangqi',
+  '/zh-hant/washington-xiangqi',
   '/champions',
   '/zh-hans/champions',
   '/zh-hant/champions',
