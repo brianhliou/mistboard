@@ -328,7 +328,7 @@ export const abJchessVsJqeArticle: Article = {
   summary: `A new release of AB-JChess, built on jqe's open-source code, beat jqe over ${T.games} games and is the top jieqi bot on Mistboard again. Five games read by both engines, and how their play differs.`,
   showSummaryOnPage: false,
   status: 'published',
-  publishedAt: '2026-11-02',
+  publishedAt: '2026-11-04',
   thumbnail: {
     kind: 'image',
     src: '/article-thumbs/ab-jchess-vs-jqe/thumbnail.png',
