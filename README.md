@@ -35,21 +35,6 @@ npm run dev:memory   # no Docker; database-backed pages stay empty
 
 Open `http://localhost:3000`. Check your work with `npm test` and `npm run typecheck`.
 
-Gomoku is in development and remains hidden from the public site. Its local
-postgame fixture records the dealt opening and every placement, and its profile
-thumbnail uses the final black and white stones. The current-games wall already
-has a compact Gomoku board renderer; public listings remain launch-gated.
-
-To seed the local database with the committed per-variant finished games:
-
-```bash
-npm run db:seed:variant-fixtures
-```
-
-This includes Gomoku for local review without changing its launch flags. The
-fixture is `apps/server/fixtures/variant-postgame/gomoku.jsonl`; its replay page
-is `/gomoku/game/gmk_sample_0007` in a local playtest with Gomoku enabled.
-
 ## Code
 
 ```text

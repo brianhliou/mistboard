@@ -18,14 +18,6 @@ board.
 - **Watch:** live games, tournament broadcasts and replays.
 - **Engines:** public title matches and the [engine protocol](engine-protocol.md).
 
-## In development
-
-Gomoku is built but hidden pending a separate launch. Preparation includes a
-deterministic finished-game fixture with its recorded opening, local database
-seeding, final-position profile thumbnails and compact current-games boards.
-These are development and review capabilities, not a public availability
-announcement. This preparation does not enable public listings or rated play.
-
 ## How we decide
 
 Each change answers one question: does it make Mistboard a more trustworthy

@@ -13,13 +13,6 @@ What changed on mistboard.com, month by month, newest first.
 
 ## 2026-11
 
-<!-- Pre-launch draft for the eventual hash-linked release entry:
-Technical: Gomoku remains hidden while deterministic postgame/dev fixtures,
-local seeding and final-position profile thumbnails prepare it for launch;
-the current-games wall already has its compact board renderer.
-This preparation does not change public availability or launch flags.
--->
-
 ### Playing
 
 - AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
