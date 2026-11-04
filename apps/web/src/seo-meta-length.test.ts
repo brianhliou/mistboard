@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { articles } from './articles-data.js';
+import { clubWashingtonPrerenderHead } from './club-washington-page.js';
 import { articlesIndexPrerenderHead, rulesIndexPrerenderHead } from './pages-static.js';
 import {
   SEO_DESCRIPTION_MIN,
@@ -77,6 +78,7 @@ describe('prerendered page meta is long enough to describe the page', () => {
     for (const head of [
       articlesIndexPrerenderHead('https://mistboard.com', lang),
       rulesIndexPrerenderHead('https://mistboard.com', lang),
+      clubWashingtonPrerenderHead('https://mistboard.com', lang ?? 'en'),
     ]) {
       pages.push({ page: head.url.replace('https://mistboard.com', ''), ...head });
     }
@@ -104,7 +106,7 @@ describe('prerendered page meta is long enough to describe the page', () => {
   // indexes when the baked file is missing; a copy edit has to land in both.
   it('the index meta matches the server shell fallback', () => {
     const server = readFileSync(resolve(appsDir, 'server/src/server-static-pages.ts'), 'utf-8');
-    for (const p of pages.filter((p) => /\/(blog|rules)$/.test(p.page))) {
+    for (const p of pages.filter((p) => /\/(blog|rules|washington-xiangqi)$/.test(p.page))) {
       expect(server, `${p.page} title`).toContain(`title: '${p.title}'`);
       expect(server, `${p.page} description`).toContain(`'${p.description}'`);
     }
