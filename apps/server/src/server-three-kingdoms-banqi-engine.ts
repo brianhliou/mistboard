@@ -99,7 +99,7 @@ function engineToMove(room: ThreeKingdomsBanqiEngineRoom, seat: BanqiSeat): bool
 export function threeKingdomsBanqiEngineRequestFor(
   events: readonly ThreeKingdomsBanqiEvent[],
   state: ThreeKingdomsBanqiState,
-  budget: { nodes: number; movetimeCapMs: number; evalFile?: string },
+  budget: Pick<ThreeKingdomsBanqiEngineRequest, 'nodes' | 'movetimeCapMs' | 'evalFile' | 'chance'>,
 ): ThreeKingdomsBanqiEngineRequest {
   const moveEvents = events.filter(
     (e): e is Extract<ThreeKingdomsBanqiEvent, { type: 'move-played' }> => e.type === 'move-played',
@@ -141,6 +141,7 @@ export function threeKingdomsBanqiTierRequestFor(
     nodes: tier.nodes,
     movetimeCapMs: Math.min(movetimeCapMs, tier.movetimeCapMs),
     ...(evalFile === null ? {} : { evalFile }),
+    ...(tier.chance === undefined ? {} : { chance: tier.chance }),
   });
 }
 

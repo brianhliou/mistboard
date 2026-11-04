@@ -35,6 +35,8 @@ export type ThreeKingdomsBanqiEngineTier = {
   nodes: number;
   movetimeCapMs: number;
   evaluation: 'random' | 'classical' | 'nnue';
+  /** Absent for L1 and the historical Star1 tier. */
+  chance?: 'mix';
 };
 
 // Provisional budgets, for measurement through EvE, not published Elo claims.
@@ -54,6 +56,7 @@ export const THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES: readonly ThreeKingdomsBanqiE
       nodes: 2_000 * 4 ** (Math.min(level, 7) - 2),
       movetimeCapMs: THREE_KINGDOMS_BANQI_ENGINE_MOVETIME_CAP_MS,
       evaluation: level === 8 ? 'nnue' : 'classical',
+      chance: 'mix',
     }),
   ),
 ];
@@ -168,6 +171,8 @@ export type ThreeKingdomsBanqiEngineRequest = {
   movetimeCapMs: number;
   /** Present only for L8; classical searches never send an EvalFile option. */
   evalFile?: string;
+  /** L2–L8 require advertised ChanceMix support; historical requests omit it. */
+  chance?: 'mix';
 };
 
 /** The whole stdin block the engine receives; tests serialize it to prove it is redacted. */
@@ -184,6 +189,7 @@ export function buildThreeKingdomsBanqiEngineCommands(
     ...(request.evalFile === undefined
       ? []
       : [`setoption name EvalFile value ${request.evalFile}`]),
+    ...(request.chance === 'mix' ? ['setoption name ChanceMix value true'] : []),
     'ucinewgame',
     'isready',
     position,

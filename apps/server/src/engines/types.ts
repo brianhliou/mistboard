@@ -226,12 +226,13 @@ export type JungleFlipUciEngineConfig = {
   movetime_ms: number;
 };
 
-/** TK node-budget ladder. NNUE requires the explicitly configured EvalFile. */
+/** TK node-budget ladder. NNUE requires EvalFile; Mix requires advertised ChanceMix. */
 export type ThreeKingdomsBanqiUciEngineConfig = {
   kind: 'three-kingdoms-banqi-uci';
   nodes: number;
   movetime_ms: number;
   evaluation: 'classical' | 'nnue';
+  chance?: 'mix';
 };
 
 /** MistyJungle standalone Rust UCI engine tiers (jungle-engine.ts JUNGLE_RUST_TIER_LIST). */

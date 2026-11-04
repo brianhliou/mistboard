@@ -1221,7 +1221,7 @@ const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntri
 const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map((tier) => {
     const random = tier.evaluation === 'random';
-    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}`;
+    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}`;
     return [
       tier.id,
       {
@@ -1241,9 +1241,10 @@ const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fr
                 nodes: tier.nodes,
                 movetime_ms: tier.movetimeCapMs,
                 evaluation: tier.evaluation,
+                ...(tier.chance === undefined ? {} : { chance: tier.chance }),
               },
         notes:
-          'Admin-only TK playtest; provisional uncalibrated budgets. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET; ChanceMix is never configured.',
+          'Admin-only TK playtest; provisional uncalibrated budgets. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2–L8 require advertised ChanceMix support; L1 and the historical ID do not configure it.',
       } satisfies EngineDefinition,
     ];
   }),

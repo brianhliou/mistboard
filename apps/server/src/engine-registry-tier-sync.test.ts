@@ -56,6 +56,7 @@ const TIER_SYNC_CASES: readonly TierSyncCase[] = [
               nodes: tier.nodes,
               movetime_ms: tier.movetimeCapMs,
               evaluation: tier.evaluation,
+              ...(tier.level === undefined ? {} : { chance: 'mix' as const }),
             },
     }),
   ),

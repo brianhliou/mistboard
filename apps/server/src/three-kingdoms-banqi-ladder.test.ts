@@ -67,8 +67,12 @@ async function withPaths(run: (dir: string, net: string) => Promise<void>) {
   }
 }
 
-function stubEngine(dir: string, advertiseNet = true): { bin: string; log: string } {
-  const bin = join(dir, advertiseNet ? 'stub-engine' : 'old-engine');
+function stubEngine(
+  dir: string,
+  advertiseNet = true,
+  advertiseMix = true,
+): { bin: string; log: string } {
+  const bin = join(dir, `stub-engine-net-${advertiseNet}-mix-${advertiseMix}`);
   const log = `${bin}.json`;
   writeFileSync(
     bin,
@@ -80,6 +84,7 @@ rl.on('line', line => {
   commands.push(line);
   if (line === 'uci') {
     ${advertiseNet ? "console.log('option name EvalFile type string default <empty>');" : ''}
+    ${advertiseMix ? "console.log('option name ChanceMix type check default false');" : ''}
     console.log('uciok');
   }
   if (line === 'isready') console.log('readyok');
@@ -210,11 +215,14 @@ test('TK L8 fails closed for absent, empty and non-file nets; L2 remains availab
   });
 });
 
-test('TK stub receives EvalFile before readiness/position/go and never ChanceMix', async () => {
+test('TK search levels receive ChanceMix after EvalFile and before readiness/position/go; historical stays unchanged', async () => {
   await withPaths(async (dir, net) => {
     const { bin, log } = stubEngine(dir);
     process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = bin;
-    for (const id of [L2, L8, engine.THREE_KINGDOMS_BANQI_ENGINE_ID]) {
+    for (const id of [
+      ...engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.slice(1).map((tier) => tier.id),
+      engine.THREE_KINGDOMS_BANQI_ENGINE_ID,
+    ]) {
       const events = eventsFor(id);
       const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
       const request = live.threeKingdomsBanqiTierRequestFor(events, state, id, 500);
@@ -224,12 +232,14 @@ test('TK stub receives EvalFile before readiness/position/go and never ChanceMix
       assert.deepEqual(commands, [
         'uci',
         ...(id === L8 ? [`setoption name EvalFile value ${net}`] : []),
+        ...(id === engine.THREE_KINGDOMS_BANQI_ENGINE_ID
+          ? []
+          : ['setoption name ChanceMix value true']),
         'ucinewgame',
         'isready',
         `position fen ${request.fen}`,
         `go nodes ${request.nodes} movetime 500`,
       ]);
-      assert.ok(!commands.join('\n').includes('ChanceMix'));
     }
     const old = stubEngine(dir, false);
     process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = old.bin;
@@ -246,6 +256,55 @@ test('TK stub receives EvalFile before readiness/position/go and never ChanceMix
       /does not advertise.*EvalFile/,
     );
   });
+});
+
+test('TK L2 and L8 refuse a binary that silently ignores unadvertised ChanceMix; historical still plays', async () => {
+  await withPaths(async (dir) => {
+    const { bin, log } = stubEngine(dir, true, false);
+    process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = bin;
+    for (const id of [L2, L8]) {
+      const events = eventsFor(id);
+      const request = live.threeKingdomsBanqiTierRequestFor(
+        events,
+        replayTenantEvents(threeKingdomsBanqiTenant, events).state,
+        id,
+        500,
+      );
+      await assert.rejects(
+        engine.threeKingdomsBanqiLiveEngineMove(request),
+        /does not advertise.*ChanceMix/,
+      );
+    }
+    const events = eventsFor(engine.THREE_KINGDOMS_BANQI_ENGINE_ID);
+    assert.equal(
+      (
+        await engine.threeKingdomsBanqiLiveEngineMove(
+          live.threeKingdomsBanqiTierRequestFor(
+            events,
+            replayTenantEvents(threeKingdomsBanqiTenant, events).state,
+            engine.THREE_KINGDOMS_BANQI_ENGINE_ID,
+            500,
+          ),
+        )
+      ).best,
+      'a1a1',
+    );
+    assert.ok(!readFileSync(log, 'utf8').includes('ChanceMix'));
+  });
+});
+
+test('TK Mix config and signatures separate L2–L8 from Star1; L1 and historical signatures stay unchanged', () => {
+  for (const tier of engine.THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
+    const entry = loadEngine(tier.id);
+    const oldSignature = `${tier.id}-0.1.0-${tier.evaluation}-nodes-${tier.nodes}`;
+    const mix = tier.level !== undefined && tier.level >= 2;
+    assert.equal(entry.configHash, `${oldSignature}${mix ? '-chance-mix' : ''}`);
+    assert.equal(entry.playSignature, entry.configHash);
+    assert.equal(
+      'chance' in entry.config ? entry.config.chance : undefined,
+      mix ? 'mix' : undefined,
+    );
+  }
 });
 
 test('TK L2/L8 live and EvE requests are byte-identical after swapping covered identities', async () => {
@@ -295,6 +354,11 @@ test('TK L2/L8 live and EvE requests are byte-identical after swapping covered i
         for (const events of [eventsA.slice(0, n), eventsB.slice(0, n)]) {
           const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
           const request = live.threeKingdomsBanqiTierRequestFor(events, state, id, 500);
+          assert.ok(
+            engine
+              .buildThreeKingdomsBanqiEngineCommands(request)
+              .includes('setoption name ChanceMix value true'),
+          );
           sawQuiet ||= request.moves.length > 0;
           commands.push(engine.buildThreeKingdomsBanqiEngineCommands(request).join('\n'));
         }
