@@ -15,10 +15,12 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- New xiangqi games are drawn after 120 plies (60 moves each) without a capture, as the rules page now says; games started before keep the old limit ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
 
 ### Learning and puzzles
 
+- New article, [AB-JChess takes the jieqi title back from jqe](/blog/ab-jchess-vs-jqe): a 600-game jieqi engine match read move by move by both engines, with the games in a study ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - On your own profile, the Xiangqi puzzle rating opens in the main rating chart instead of a separate card below it ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
 - Puzzle Dashboard with your results, puzzle history, and a replay of the puzzles you missed ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
@@ -28,6 +30,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- The broadcasts page lists other events in a strip, gives places in English and hides zero counts ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Clearer annotations in jieqi replays, and fixed embeds for finished games ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Banqi and Flip Jungle game reviews show how lucky each flip was ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
 - Short 4, Released to the Six Directions, on the videos page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
@@ -36,6 +39,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The browser tab icon now fills its space ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - A Washington Xiangqi club page for Greater Seattle, in English, Simplified and Traditional Chinese ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Google results show Mistboard search cards and a tab icon that reads when cropped to a circle ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Sign-in suggests a fix for a mistyped email domain, and stops sending codes to addresses that bounced, complained or cannot receive mail ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
