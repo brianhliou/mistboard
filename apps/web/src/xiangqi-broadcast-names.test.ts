@@ -49,6 +49,15 @@ describe('broadcast names follow the page locale', () => {
     expect(localPlace('Atlantis', 'zh-Hans')).toBe('Atlantis');
   });
 
+  it('names a Chinese calendar place in English, or drops it', () => {
+    expect(localPlace('上海南翔温德姆酒店', 'en')).toBe('Shanghai');
+    expect(localPlace('吉林长春', 'en')).toBe('Changchun');
+    expect(localPlace('聊城市', 'en')).toBe('Liaocheng');
+    expect(localPlace('新加坡', 'en')).toBe('Singapore');
+    expect(localPlace('某某大酒店', 'en')).toBeUndefined();
+    expect(localPlace('上海南翔温德姆酒店', 'zh-Hans')).toBe('上海南翔温德姆酒店');
+  });
+
   it('counts take the plural only in English', () => {
     expect(countText(1, 'broadcast.roundCount', 'en')).toBe('1 round');
     expect(countText(39, 'broadcast.boardCount', 'en')).toBe('39 boards');

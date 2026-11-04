@@ -663,7 +663,7 @@ export const ZH_HANT_REVIEW = {
   'broadcast.statusUpcoming': '即將開始',
   'broadcast.statusFinished': '已結束',
   'broadcast.watch': '觀看',
-  'broadcast.comingUp': '即將進行',
+  'broadcast.otherEvents': '其他賽事',
   'broadcast.fullCalendar': '完整賽程',
   'broadcast.roundLive': '{round} · 直播中',
   'broadcast.roundOn': '{round} · {date}',

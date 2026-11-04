@@ -663,7 +663,7 @@ export const ZH_HANS_REVIEW = {
   'broadcast.statusUpcoming': '即将开始',
   'broadcast.statusFinished': '已结束',
   'broadcast.watch': '观看',
-  'broadcast.comingUp': '即将进行',
+  'broadcast.otherEvents': '其他赛事',
   'broadcast.fullCalendar': '完整赛程',
   'broadcast.roundLive': '{round} · 直播中',
   'broadcast.roundOn': '{round} · {date}',
