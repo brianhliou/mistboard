@@ -5,6 +5,7 @@ import {
   banqiPlyReveal,
   banqiStateToDealtFen,
   createInitialBanqiState,
+  createStandardXiangqiStateFromSetup,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   exportFormatsForVariant,
@@ -51,8 +52,12 @@ import { xiangqiTenant } from './xiangqi-tenant.js';
 const xiangqiExport = tenantExportBinding(xiangqiTenant, {
   gameRouteBase: '/xiangqi/game',
   uci: xiangqiExportUci,
-  san: xiangqiWxfLabels,
-  writePgn: (moves) => xiangqiPgnWriter(moves, xiangqiPgnStyle(moves)),
+  san: (moves, state) =>
+    xiangqiWxfLabels(moves, createStandardXiangqiStateFromSetup(state.id, state)),
+  writePgn: (moves, state) => {
+    const initial = createStandardXiangqiStateFromSetup(state.id, state);
+    return xiangqiPgnWriter(moves, xiangqiPgnStyle(moves, initial), initial);
+  },
 });
 const darkXiangqiExport = tenantExportBinding(darkXiangqiTenant, {
   gameRouteBase: '/dark-xiangqi/game',
@@ -143,9 +148,9 @@ const xiangqiClock = {
   runningSince: 10,
 };
 
-function finishedXiangqiEvents(): unknown[] {
+function finishedXiangqiEvents(setup?: unknown): unknown[] {
   return [
-    ...preamble(XQ_ROOM, XIANGQI_SPEC_ID),
+    ...preamble(XQ_ROOM, XIANGQI_SPEC_ID, setup),
     {
       type: 'move-played',
       at: 10,
@@ -198,6 +203,18 @@ test('xiangqi JSON publication is keyed red/black with ICCS uci and WXF san', ()
   assert.equal(payload.plies[1]?.red_clock_ms_after, null);
   assert.equal(payload.plies[2]?.uci, 'b0c2');
   assert.equal(payload.plies[2]?.san, 'H8+7');
+
+  // The stored rule stamp controls replay without changing the publication schema.
+  const stampedGame = xiangqiExport.finishedGame(
+    finishedXiangqiEvents({ progressClockLimit: 120 }),
+    XQ_ROOM,
+  );
+  assert.ok(stampedGame);
+  assert.deepEqual(
+    buildTenantGamePublicationJson(summary, stampedGame, xiangqiExport.gameRouteBase),
+    payload,
+  );
+  assert.equal(JSON.stringify(payload).includes('progressClockLimit'), false);
 });
 
 test('xiangqi PGN carries Red/Black tags, the review URL, and WXF movetext', () => {

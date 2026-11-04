@@ -6232,7 +6232,6 @@ const ZH_HANS: Record<string, string> = {
   'Replaced the sample game with a game played against the engine on the site.':
     '示例对局换成了一盘在本站与引擎下的对局。',
   'Added a sample game from the site.': '新增一盘本站的示例对局。',
-  'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
@@ -6266,8 +6265,6 @@ const ZH_HANS: Record<string, string> = {
     '每种布阵各下四盘，分别为每步 150,000、200,000、300,000 和 500,000 节点，不用随机开局。',
   'Node budgets, not time, so nothing depends on the machine.':
     '用节点预算而不是时间，所以结果不依赖机器。',
-  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
-    '新增完整记录：十二种起始布阵、两张结果表、可逐步浏览的对局和检验过程，并对照示例对局更正了四个数字。',
   'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
     '我们自己用 Rust 写的引擎（α-β 搜索，带后期着法缩减，以及针对转化的静态搜索），因为现有引擎都不支持这套规则。',
   'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
@@ -6276,8 +6273,6 @@ const ZH_HANS: Record<string, string> = {
     '每盘引擎对局都经 Mistboard 的规则内核重放，每个局面的合法着法都一致。',
   'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
     '两项不依赖引擎棋力的检验：6,000 盘随机合法着法的对局，以及一次 208 亿节点的证明搜索。',
-  "Added the cannon rule's design history and the engine results behind the numbers.":
-    '新增炮规则的设计沿革，以及这些数字背后的引擎结果。',
   'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
     '点名另一个开源实现 obscuro-chess，不再称 Misty 是唯一的开源实现。',
   // jqe: machine-drafted 2026-10-24, not native-reviewed, from the English signed off that day. Terms follow ab-jchess and pikafish-reveal-bug (暗子, 翻子, 暗吃, 界限, 胜率, 皮卡鱼, 研究; 暗子布局 for a deal).
@@ -12290,7 +12285,6 @@ const ZH_HANT: Record<string, string> = {
   'Replaced the sample game with a game played against the engine on the site.':
     '範例對局換成了一盤在本站與引擎下的對局。',
   'Added a sample game from the site.': '新增一盤本站的範例對局。',
-  'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
@@ -12324,8 +12318,6 @@ const ZH_HANT: Record<string, string> = {
     '每種佈陣各下四盤，分別為每步 150,000、200,000、300,000 和 500,000 節點，不用隨機開局。',
   'Node budgets, not time, so nothing depends on the machine.':
     '用節點預算而不是時間，所以結果不依賴機器。',
-  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
-    '新增完整記錄：十二種起始佈陣、兩張結果表、可逐步瀏覽的對局和檢驗過程，並對照範例對局更正了四個數字。',
   'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
     '我們自己用 Rust 寫的引擎（α-β 搜尋，帶後期著法縮減，以及針對轉化的靜態搜尋），因為現有引擎都不支援這套規則。',
   'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
@@ -12334,8 +12326,6 @@ const ZH_HANT: Record<string, string> = {
     '每盤引擎對局都經 Mistboard 的規則內核重播，每個局面的合法著法都一致。',
   'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
     '兩項不依賴引擎棋力的檢驗：6,000 盤隨機合法著法的對局，以及一次 208 億節點的證明搜尋。',
-  "Added the cannon rule's design history and the engine results behind the numbers.":
-    '新增炮規則的設計沿革，以及這些數字背後的引擎結果。',
   'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
     '點名另一個開源實作 obscuro-chess，不再稱 Misty 是唯一的開源實作。',
   // jqe: machine-drafted 2026-10-24, not native-reviewed, from the English signed off that day. Terms follow ab-jchess and pikafish-reveal-bug (暗子, 翻子, 暗吃, 界限, 勝率, 皮卡魚, 研究, 搜尋, 著法, 神經網路; 暗子佈局 for a deal).
