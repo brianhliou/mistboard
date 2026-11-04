@@ -19,6 +19,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - On your own profile, the Xiangqi puzzle rating opens in the main rating chart instead of a separate card below it ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
 - Puzzle Dashboard with your results, puzzle history, and a replay of the puzzles you missed ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Puzzle Storm: solve as many puzzles as you can in three minutes, then go back through the run ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
@@ -27,6 +28,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Clearer annotations in jieqi replays, and fixed embeds for finished games ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Banqi and Flip Jungle game reviews show how lucky each flip was ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
 - Short 4, Released to the Six Directions, on the videos page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
 - On a finished banqi, Flip Jungle or jieqi game's review, hover a face-down piece or turn on Reveal identities to see what it was ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
@@ -34,6 +36,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- A Washington Xiangqi club page for Greater Seattle, in English, Simplified and Traditional Chinese ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Google results show Mistboard search cards and a tab icon that reads when cropped to a circle ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Sign-in suggests a fix for a mistyped email domain, and stops sending codes to addresses that bounced, complained or cannot receive mail ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - `mistboard.com/yt` and `mistboard.com/yt/<n>`, the address on our YouTube Shorts, open the xiangqi rules page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
 - Flip Jungle's Chinese name is now 翻翻兽棋 / 翻翻獸棋 ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - About, FAQ, Terms and Privacy rewritten around the mission, with a binding fair-play rule and a new share card ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
