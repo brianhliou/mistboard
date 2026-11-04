@@ -155,6 +155,22 @@ test('a rename can replace the tags, and refuses tags it would drop', () => {
   }
 });
 
+test('a rename can turn the board, and refuses a side that is not one', () => {
+  const s = study();
+  assert.deepEqual(
+    checkPlan(s, plan([{ op: 'rename', chapter: 'a', name: 'x', orientation: 'black' }])),
+    ['rename a: "Game 1" -> "x", as black'],
+  );
+  assert.throws(
+    () =>
+      checkPlan(
+        s,
+        plan([{ op: 'rename', chapter: 'a', name: 'x', orientation: 'white' as never }]),
+      ),
+    /orientation "white"/,
+  );
+});
+
 test('describes a valid plan in order, tracking chapters it adds and deletes', () => {
   const lines = checkPlan(
     study(),

@@ -89,6 +89,7 @@ import {
   type StudyVisibility,
   type StudyWithChapters,
   setChapterGamebook,
+  setChapterOrientation,
   setChapterScoreSeries,
   setChapterTags,
   updateChapterTree,
@@ -119,6 +120,8 @@ export type StudyEditOp =
       expect?: string;
       /** The chapter's whole new tag set; tags it leaves out are cleared. */
       tags?: unknown;
+      /** Turn the chapter's board to face this side (an added chapter takes it on `add`). */
+      orientation?: 'red' | 'black';
     }
   | { op: 'tree'; chapter: string; tree: unknown }
   | {
@@ -349,11 +352,19 @@ export function checkPlan(
             throw new Error(`op ${i + 1}: empty ${locale} name`);
           }
         }
+        if (
+          op.orientation !== undefined &&
+          op.orientation !== 'red' &&
+          op.orientation !== 'black'
+        ) {
+          throw new Error(`op ${i + 1}: orientation "${op.orientation}"`);
+        }
         const locales = Object.entries(op.i18n ?? {})
           .map(([locale, entry]) => ` ${locale} "${entry.name}"`)
           .join('');
+        const turned = op.orientation === undefined ? '' : `, as ${op.orientation}`;
         lines.push(
-          `rename ${op.chapter}: "${current}" -> "${op.name}"${locales}${renameTags(op, i)}`,
+          `rename ${op.chapter}: "${current}" -> "${op.name}"${locales}${renameTags(op, i)}${turned}`,
         );
         names.set(op.chapter, op.name);
         return;
@@ -573,6 +584,9 @@ export async function applyPlan(
         must(op.chapter, await renameChapter(op.chapter, owner, op.name.trim(), i18n));
         if (op.tags !== undefined) {
           must(op.chapter, await setChapterTags(op.chapter, owner, parseChapterTags(op.tags)));
+        }
+        if (op.orientation !== undefined) {
+          must(op.chapter, await setChapterOrientation(op.chapter, owner, op.orientation));
         }
         break;
       }

@@ -14,7 +14,14 @@ import {
   jieqiPublicDeal,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { AB_JQE_GAMES, AB_JQE_MATCH, AB_JQE_STUDY, abJchessVsJqeArticle, darkPerGame } from './ab-jchess-vs-jqe.js';
+import {
+  AB_JQE_GAMES,
+  AB_JQE_MATCH,
+  AB_JQE_STUDY,
+  abJchessVsJqeArticle,
+  darkPerGame,
+  openPlyOf,
+} from './ab-jchess-vs-jqe.js';
 
 const M = AB_JQE_MATCH;
 const sum = (r: { wins: number; draws: number; losses: number }) => r.wins + r.draws + r.losses;
@@ -79,17 +86,19 @@ describe('AB-JChess vs jqe games', () => {
   const sq = (s: string) => s as JieqiSquare;
   const engineOf = (name: string) => (name === 'jqe' ? 'jqe' : 'abj');
 
-  it('shows each game the post names, once, opened on its marked move', () => {
+  it('shows each game the post names, once, opened on its marked move (game 1 unmarked)', () => {
     const shown = abJchessVsJqeArticle.sections
       .flatMap((s) => s.blocks)
       .filter((b) => b?.kind === 'embed');
     expect(shown).toHaveLength(AB_JQE_GAMES.length);
     expect(shown.map((b) => (b as { path: string }).path)).toEqual(
       AB_JQE_GAMES.map(
-        (key) => `/embed/study/${AB_JQE_STUDY.id}/${AB_JQE_STUDY.chapters[key]}?ply=${game(key).deep.moments[0]!.ply}`,
+        (key) => `/embed/study/${AB_JQE_STUDY.id}/${AB_JQE_STUDY.chapters[key]}?ply=${openPlyOf(game(key))}`,
       ),
     );
     expect(M.games.map((g) => g.key)).toEqual([...AB_JQE_GAMES]);
+    // Only game 1 opens off its marked move.
+    expect(AB_JQE_GAMES.map((k) => game(k).deep.openPly ?? null)).toEqual([57, null, null, null, null]);
     // Wins for each engine and a draw.
     expect(M.games.some((g) => g.winner !== 'draw' && g.abWon)).toBe(true);
     expect(M.games.some((g) => g.winner !== 'draw' && !g.abWon)).toBe(true);
@@ -203,11 +212,18 @@ describe('AB-JChess vs jqe games', () => {
     expect(gap.snapPly).toBe(snap);
     expect([gap.snapFrom, gap.snapTo]).toEqual([own[snap - 1], own[snap]]);
     expect(gap.snapMove).toBe(Math.floor((snap - 1) / 2) + 1);
-    // The board opens inside the window, on the widest differing choice.
+    // The widest differing choice in the window costs about 5 points: no single move decides it.
     const m = d.moments[0]!;
     expect(m.ply).toBeGreaterThanOrEqual(gap.fromPly);
     expect(m.ply).toBeLessThanOrEqual(gap.toPly);
     expect(Math.round(100 * (m.winner.pick - m.winner.played))).toBe(Math.round(100 * gap.maxCost));
+    expect(gap.maxCost).toBeLessThan(0.06);
+    // The board opens unmarked on move 29, inside the window, Black to move, at 82% and 56% for Red.
+    const open = d.openPly!;
+    expect([open, Math.floor(open / 2) + 1, open % 2]).toEqual([57, 29, 1]);
+    expect(open).toBeGreaterThanOrEqual(gap.fromPly);
+    expect(open).toBeLessThanOrEqual(gap.toPly);
+    expect([Math.round(100 * (1 - d.series.abj[open]!)), Math.round(100 * (1 - d.series.jqe[open]!))]).toEqual([82, 56]);
   });
 
   it('backs the pieces and points the captions name', () => {
@@ -262,7 +278,7 @@ describe('AB-JChess vs jqe games', () => {
     const d = g.deep;
     const m = d.moments[0]!;
     const after = (e: 'abj' | 'jqe') => d.series[e].slice(m.ply, -1);
-    // "jqe's own number stays between 37% and 50%"; "AB-JChess's falls to 0%".
+    // "jqe's number for Red stays between 50% and 63%"; "AB-JChess's rises to 100%".
     expect(Math.min(...after('jqe'))).toBeGreaterThanOrEqual(0.35);
     expect(Math.max(...after('jqe'))).toBeLessThanOrEqual(0.5);
     expect(Math.min(...after('abj'))).toBeLessThan(0.05);
@@ -279,6 +295,36 @@ describe('AB-JChess vs jqe games', () => {
     const end = states.at(-1)!;
     expect(end.board[sq('f8')] ?? end.board[sq('e8')]).toMatchObject({ role: 'soldier', color: 'red' });
     expect(end.board[sq('d4')] ?? end.board[sq('e4')]).toMatchObject({ role: 'cannon', color: 'black' });
+  });
+
+  it('backs the chase-rule account of the drawn game (AB-JChess replays, rep_g4.jsonl)', () => {
+    const c = game('run2:96').abjNoChase!;
+    // Its default chase rule scores Red's repeating moves as the repetition verdict (+20000)…
+    expect(c.cpChaseRule).toEqual([20000]);
+    expect([c.fromPly, c.toPly]).toEqual([146, 152]);
+    // …and with the rule off as an ordinary edge for Red: 70% to 79% by its own K.
+    expect(c.cpNone).toEqual([311, 492]);
+    const chance = (cp: number) => Math.round(100 / (1 + Math.exp(-0.00269 * cp)));
+    expect(c.cpNone.map(chance)).toEqual([70, 79]);
+  });
+
+  it('backs the deeper searches of games 2 and 5 (horizon.jsonl, fresh hash, 1x/4x/16x)', () => {
+    const win = (x: number) => Math.round(100 * (1 - x));
+    // Game 2: jqe holds its soldier push at a draw at every budget; AB-JChess's view of it only hardens.
+    const h2 = game('run2:115').deep.horizon!;
+    expect(h2.mults).toEqual([1, 4, 16]);
+    expect(h2.played.jqe).toEqual([0.5, 0.5, 0.5]);
+    expect(h2.played.abj[2]!).toBeLessThan(h2.played.abj[0]!);
+    expect([win(h2.played.jqe[2]!), win(h2.played.abj[2]!)]).toEqual([50, 87]);
+    // Game 5: at 16x jqe scores both moves within 10 points of AB-JChess.
+    const h5 = game('run1:194').deep.horizon!;
+    expect([win(h5.played.jqe[2]!), win(h5.pick.jqe[2]!), win(h5.played.abj[2]!), win(h5.pick.abj[2]!)]).toEqual([
+      82, 45, 90, 47,
+    ]);
+    expect(Math.abs(h5.played.jqe[2]! - h5.played.abj[2]!)).toBeLessThan(0.1);
+    expect(Math.abs(h5.pick.jqe[2]! - h5.pick.abj[2]!)).toBeLessThan(0.1);
+    // At the match budget jqe's view of its move was 30 points off AB-JChess's deep view.
+    expect(game('run1:194').deep.moments[0]!.loser.played - h5.played.abj[2]!).toBeGreaterThan(0.3);
   });
 
   it('backs the face-down capture claim', () => {

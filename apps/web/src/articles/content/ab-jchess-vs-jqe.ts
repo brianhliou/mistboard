@@ -37,6 +37,14 @@ import matchJson from './ab-jchess-vs-jqe-match.json' with { type: 'json' };
 //   and its marked moment into the data file under deep. The draw's in-game score
 //   (abjTopScoreFromPly) is from the match log: AB-JChess reported +20000, its top
 //   score, on every move from that ply to the end.
+// - Follow-up, local Mac, 2026-11-03 (mistboard-engine lab/jieqi-match/
+//   jqe-vs-abj-20261031/article-analysis/followup/): horizon.py searched the marked move
+//   and the winner's pick in games 2 and 5 again with a fresh hash at 1, 4 and 16 times
+//   the 22M-node budget on 4 threads (deep.horizon). rep_g4.py and rep_g4_hist.py
+//   replayed the drawn game's repetition with AB-JChess's ChaseRule at skyrule (its
+//   default), default and none: only skyrule scores it +20000, the repetition verdict
+//   (the eval is capped at 19999); with none it scores Red's moves +311 to +492
+//   (abjNoChase). jqe scores the repeating moves 0 with its chase rule on or off.
 // - Engine facts: lab/jieqi-match/README.md § AB-JChess-20261031 (rebuilt on jqe's
 //   MIT code, net 580,156 bytes against 144 MB for v0.2d, smoke 5.79M nps against
 //   jqe's 5.27M and v0.2d's 89.6k, "about 65x faster per node"). jqe's net size
@@ -114,9 +122,22 @@ type MatchGame = {
     /** An evaluation gap (game 1 only): a stretch of moves where the two engines mostly
      *  pick the same moves but score the loser's chances far apart. */
     gap?: Gap;
+    /** Game 1: open the board here, unmarked (no single move decides it); the moment
+     *  stays as the dearest choice in the stretch. */
+    openPly?: number;
+    /** The marked move and the winner's pick searched again with a fresh hash at
+     *  `mults` times the budget: the loser's chance by each engine, per multiple. */
+    horizon?: {
+      mults: number[];
+      played: Record<'abj' | 'jqe', number[]>;
+      pick: Record<'abj' | 'jqe', number[]>;
+    };
   };
   /** The drawn game only: the ply from which AB-JChess's own in-game score was its top score. */
   abjTopScoreFromPly?: number;
+  /** The drawn game only: AB-JChess's score (cp, Red) of Red's moves over these plies,
+   *  replayed with ChaseRule none, and with its default chase rule. */
+  abjNoChase?: { fromPly: number; toPly: number; cpNone: [number, number]; cpChaseRule: number[] };
 };
 type DisagreeSide = {
   disputed: number;
@@ -254,17 +275,20 @@ export const AB_JQE_STUDY = {
 /** The game's marked moment (each game shows one). */
 export const momentOf = (g: MatchGame): Moment => g.deep.moments[0]!;
 
+/** The position a game's board opens on: game 1's unmarked one, else the marked move's. */
+export const openPlyOf = (g: MatchGame): number => g.deep.openPly ?? momentOf(g).ply;
+
 /** A game's study chapter, opened on the position before the marked move, where the
  *  study draws the move played and the winner engine's pick as arrows. */
 function replay(key: string, caption: string): ArticleBlock {
   const g = game(key);
-  const m = momentOf(g);
+  const ply = openPlyOf(g);
   const chapter = AB_JQE_STUDY.chapters[key];
   if (!chapter) throw new Error(`ab-jchess-vs-jqe: no study chapter for ${key}`);
   return {
     kind: 'embed',
-    path: `/embed/study/${AB_JQE_STUDY.id}/${chapter}?ply=${m.ply}`,
-    title: `${NAME(g.red)} vs ${NAME(g.black)}, move ${m.move}`,
+    path: `/embed/study/${AB_JQE_STUDY.id}/${chapter}?ply=${ply}`,
+    title: `${NAME(g.red)} vs ${NAME(g.black)}, move ${Math.floor(ply / 2) + 1}`,
     caption,
     // A placeholder until the card reports its height: the 702px column's card
     // plus the 140px win-chance graph under it (study_chapters.score_series).
@@ -272,28 +296,44 @@ function replay(key: string, caption: string): ArticleBlock {
   };
 }
 
-// The five games, in the order the post shows them: AB-JChess's wins, jqe's win, the
-// draw, and a game where jqe caught up at once. The test checks each caption against the
-// moves and the scores.
+// The five games, in the order the post shows them: two of AB-JChess's wins, jqe's win,
+// the draw, and a third AB-JChess win. The test checks each caption against the moves and
+// the scores.
 export type DarkResult = 'won' | 'drawn' | 'lost';
 export const AB_JQE_GAMES = ['run2:198', 'run2:115', 'run1:293', 'run2:96', 'run1:194'] as const;
 const [G1, G2, G3, G4, G5] = AB_JQE_GAMES.map(game) as [MatchGame, MatchGame, MatchGame, MatchGame, MatchGame];
 const P = (x: number): number => Math.round(100 * x);
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 const later = (n: number): string => `${WORDS[n] ?? n} move${n === 1 ? '' : 's'} later`;
-/** Both engines' chances for the loser at the marked moment, the winner's engine first. */
+/** The winner's side (the drawn game: the side that did not get into trouble). */
+const winSide = (g: MatchGame): string => (g.deep.side === 'red' ? 'Black' : 'Red');
+const winnerOf = (g: MatchGame): string => NAME(g.deep.loser === 'jqe' ? 'abj' : 'jqe');
+/** A stored loser's chance as the winner's, in points. */
+const W = (x: number): number => P(1 - x);
+/** Both engines' chances for the winner at the marked moment, the winner's engine first. */
 function numbers(g: MatchGame): string {
   const m = momentOf(g);
-  const side = cap(g.deep.side);
-  const winner = NAME(g.deep.loser === 'jqe' ? 'abj' : 'jqe');
-  return `By ${winner}, the pick leaves ${side} ${P(m.winner.pick)}% and the move played ${P(m.winner.played)}%. By ${NAME(g.deep.loser)} itself, ${P(m.loser.pick)}% and ${P(m.loser.played)}%.`;
+  return `By ${winnerOf(g)}, ${winSide(g)} has ${W(m.winner.pick)}% after the pick and ${W(m.winner.played)}% after the move played; by ${NAME(g.deep.loser)}, ${W(m.loser.pick)}% and ${W(m.loser.played)}%.`;
 }
-/** When the loser's own number came down to the winner's. */
+/** When the loser's own number came within 5 points of the winner's. */
 function caught(g: MatchGame): string {
   const m = momentOf(g);
-  const winner = NAME(g.deep.loser === 'jqe' ? 'abj' : 'jqe');
   if (m.caughtPly === null || m.lagMoves === null) throw new Error(`ab-jchess-vs-jqe: ${g.key} never caught up`);
-  return `${NAME(g.deep.loser)}'s own number comes down to ${winner}'s ${later(m.lagMoves)}, on move ${Math.floor(m.caughtPly / 2) + 1}.`;
+  return `${NAME(g.deep.loser)}'s number comes within 5 points of ${winnerOf(g)}'s ${later(m.lagMoves)}, on move ${Math.floor(m.caughtPly / 2) + 1}.`;
+}
+/** Games 2 and 5: both engines at 16 times the budget, as the winner's chance. */
+function deeper(g: MatchGame): { loserPlayed: number; loserPick: number; winnerPlayed: number; winnerPick: number } {
+  const h = g.deep.horizon;
+  if (!h) throw new Error(`ab-jchess-vs-jqe: ${g.key} has no horizon search`);
+  const i = h.mults.indexOf(16);
+  const L = g.deep.loser;
+  const Wn = L === 'jqe' ? 'abj' : 'jqe';
+  return {
+    loserPlayed: W(h.played[L][i]!),
+    loserPick: W(h.pick[L][i]!),
+    winnerPlayed: W(h.played[Wn][i]!),
+    winnerPick: W(h.pick[Wn][i]!),
+  };
 }
 /** The drawn game's range of each engine's number for the side in trouble, after the moment. */
 const after = (g: MatchGame, e: 'abj' | 'jqe') => g.deep.series[e].slice(momentOf(g).ply, -1);
@@ -307,6 +347,23 @@ const CAL = M.calibration;
 const OPEN = M.openings;
 const DARK = M.darkCaptures;
 const LATE = M.seenLate;
+/** Game 1 opens unmarked: both engines' chance for the loser there. */
+const OPEN1 = (() => {
+  const ply = openPlyOf(G1);
+  return { move: Math.floor(ply / 2) + 1, abj: G1.deep.series.abj[ply]!, jqe: G1.deep.series.jqe[ply]! };
+})();
+const D2 = deeper(G2);
+const D5 = deeper(G5);
+/** The lags of the games whose board opens on a marked move. */
+const LAGS = AB_JQE_GAMES.map(game)
+  .filter((g) => g.deep.openPly === undefined && momentOf(g).lagMoves !== null)
+  .map((g) => momentOf(g).lagMoves!);
+/** AB-JChess's win chance for a centipawn score (its own K, from 667fc31be). */
+const abjChance = (cp: number): number => 1 / (1 + Math.exp(-0.00269 * cp));
+const NOCHASE = (() => {
+  if (!G4.abjNoChase) throw new Error('ab-jchess-vs-jqe: the drawn game has no chase-rule replay');
+  return G4.abjNoChase;
+})();
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 const TWICE = M.doubleTime;
 const millions = (n: number): number => Math.round(n / 1e6);
@@ -385,16 +442,16 @@ export const abJchessVsJqeArticle: Article = {
         { kind: 'sub-heading', text: 'How to read these games' },
         {
           kind: 'paragraph',
-          text: `After the match, both engines searched every position of five games again, ${millions(G1.deep.nodes)} million positions each, about what a move got in the match. Each game is told from the side that lost it, and the draw from the side that got into trouble. The graph under the board is that side's chance by each engine, AB-JChess in teal and jqe in orange. Tap it to jump to a move.`,
+          text: `After the match, both engines searched every position of five games again, ${millions(G1.deep.nodes)} million positions each, about what a move got in the match. Each board faces the side that won, and in the draw the side that did not get into trouble. The graph under the board is that side's chance by each engine, AB-JChess in teal and jqe in orange. Tap it to jump to a move.`,
         },
         {
           kind: 'paragraph',
-          text: `Each board opens on a move where the winner's engine wanted something else. Both moves are drawn, blue for AB-JChess and orange for jqe, and the one not played is a side line. Then count the moves until the loser's own number comes down to where the winner had it. We picked moves where neither choice turned a piece over, so the gap is judgement, not the luck of a reveal. A piece taken face-down stays face-down, as it does for anyone watching on Mistboard. [The study](/study/${AB_JQE_STUDY.id}) has all five games to step through.`,
+          text: `From the second game on, each board opens on a move by the losing side where the winner's engine wanted something else. Both moves are drawn, blue for AB-JChess and orange for jqe, and the one not played is a side line. Then count the moves until the loser's own number comes within 5 points of the winner's. We picked moves where neither choice turned a piece over, so the gap is judgement, not the luck of a reveal. A piece taken face-down stays face-down, as it does for anyone watching on Mistboard. [The study](/study/${AB_JQE_STUDY.id}) has all five games to step through.`,
         },
         { kind: 'sub-heading', text: 'The engines agree on the moves and not on the score' },
         replay(
           G1.key,
-          `AB-JChess has Red. From move ${GAP.fromMove} to move ${GAP.toMove}, the two engines would have picked the same move ${GAP.agree} times out of ${GAP.moves}, and no other choice cost more than ${P(GAP.maxCost)} points by the other engine's count. Nothing is turned over. They disagree on the score: AB-JChess gives Black ${P(GAP.range.abj[0])}% to ${P(GAP.range.abj[1])}%, jqe gives itself ${P(GAP.range.jqe[0])}% to ${P(GAP.range.jqe[1])}%. The board opens on move ${M1[0].move}, the widest of those choices: jqe moves its chariot ${to(M1[0].played)}, where AB-JChess would have moved the advisor ${to(M1[0].pick)}. When AB-JChess answers ${to(GAP.snapPlayed)} on move ${GAP.snapMove}, jqe's own number falls from ${P(GAP.snapFrom)}% to ${P(GAP.snapTo)}%. AB-JChess mates on move ${G1.moveCount}.`,
+          `AB-JChess has Red. From move ${GAP.fromMove} to move ${GAP.toMove}, the two engines would have picked the same move ${GAP.agree} times out of ${GAP.moves}, and no other choice cost more than ${P(GAP.maxCost)} points by the other engine's count. Nothing is turned over. They disagree on the score: AB-JChess gives Red ${W(GAP.range.abj[1])}% to ${W(GAP.range.abj[0])}%, jqe gives Red ${W(GAP.range.jqe[1])}% to ${W(GAP.range.jqe[0])}%. The board opens on move ${OPEN1.move}, where AB-JChess gives Red ${W(OPEN1.abj)}% and jqe ${W(OPEN1.jqe)}%. No single move in the stretch decides the game. When AB-JChess answers ${to(GAP.snapPlayed)} on move ${GAP.snapMove}, jqe's number for Red rises from ${W(GAP.snapFrom)}% to ${W(GAP.snapTo)}%. AB-JChess mates on move ${G1.moveCount}.`,
         ),
         {
           kind: 'paragraph',
@@ -403,7 +460,7 @@ export const abJchessVsJqeArticle: Article = {
         { kind: 'sub-heading', text: `jqe pushes a soldier and sees the cost ${later(M1[1].lagMoves!)}` },
         replay(
           G2.key,
-          `jqe has Red. On move ${M1[1].move} jqe pushes its soldier ${to(M1[1].played)}; AB-JChess would have moved the horse ${to(M1[1].pick)} and kept the game level. ${numbers(G2)} ${caught(G2)} AB-JChess mates on move ${G2.moveCount}.`,
+          `jqe has Red. On move ${M1[1].move} jqe pushes its soldier ${to(M1[1].played)}; AB-JChess would have moved the horse ${to(M1[1].pick)} and kept the game level. ${numbers(G2)} ${caught(G2)} Given 16 times the positions, jqe still gives Black ${D2.loserPlayed}% after the push, a draw: its line for it ends with both sides repeating moves. AB-JChess, given the same, gives Black ${D2.winnerPlayed}%. More search does not change jqe's mind; it reads the position differently. AB-JChess mates on move ${G2.moveCount}.`,
         ),
         { kind: 'sub-heading', text: `AB-JChess turns down a soldier and sees the cost ${later(M1[2].lagMoves!)}` },
         replay(
@@ -413,7 +470,7 @@ export const abJchessVsJqeArticle: Article = {
         { kind: 'sub-heading', text: 'AB-JChess scores the game as won and draws it by repetition' },
         replay(
           G4.key,
-          `AB-JChess has Red. On move ${M1[3].move} jqe steps its general ${to(M1[3].played)}; AB-JChess would have pushed the soldier ${to(M1[3].pick)}. ${numbers(G4)} After that, jqe's own number stays between ${P(Math.min(...after(G4, 'jqe')))}% and ${P(Math.max(...after(G4, 'jqe')))}% to the end, while AB-JChess's falls to ${P(Math.min(...after(G4, 'abj')))}%. From move ${Math.floor(G4.abjTopScoreFromPly! / 2) + 1} AB-JChess scores the game as won for Red, yet its soldier goes back and forth between e8 and f8, jqe's cannon answers between d4 and e4, and the position comes up a third time on move ${G4.moveCount}.`,
+          `AB-JChess has Red. On move ${M1[3].move} jqe steps its general ${to(M1[3].played)}; AB-JChess would have pushed the soldier ${to(M1[3].pick)}. ${numbers(G4)} After that, jqe's number for Red stays between ${W(Math.max(...after(G4, 'jqe')))}% and ${W(Math.min(...after(G4, 'jqe')))}% to the end, while AB-JChess's rises to ${W(Math.min(...after(G4, 'abj')))}%. From move ${Math.floor(G4.abjTopScoreFromPly! / 2) + 1} AB-JChess scores the game as won for Red, yet its soldier goes back and forth between e8 and f8, jqe's cannon answers between d4 and e4, and the position comes up a third time on move ${G4.moveCount}. AB-JChess searches under the xiangqi chase rule: it reads jqe's cannon as chasing its soldier, and a side that chases alone must break off or lose, so it scores the repetition as a win and keeps repeating. Our referee, like jqe, draws any threefold repetition. With its chase rule off, AB-JChess gives Red ${P(abjChance(NOCHASE.cpNone[0]))}% to ${P(abjChance(NOCHASE.cpNone[1]))}% over the same moves.`,
         ),
         {
           kind: 'note',
@@ -423,11 +480,11 @@ export const abJchessVsJqeArticle: Article = {
         { kind: 'sub-heading', text: `jqe moves its chariot and sees the cost ${later(M1[4].lagMoves!)}` },
         replay(
           G5.key,
-          `AB-JChess has Red. On move ${M1[4].move} jqe moves its chariot ${to(M1[4].played)}; AB-JChess would have moved the advisor ${to(M1[4].pick)}, beside jqe's general. ${numbers(G5)} ${caught(G5)} AB-JChess mates on move ${G5.moveCount}.`,
+          `AB-JChess has Red. On move ${M1[4].move} jqe moves its chariot ${to(M1[4].played)}; AB-JChess would have moved the advisor ${to(M1[4].pick)}, beside jqe's general. ${numbers(G5)} ${caught(G5)} Given 16 times the positions, jqe finds the cost: it gives Red ${D5.loserPlayed}% after the chariot move and ${D5.loserPick}% after the advisor move, close to AB-JChess's ${D5.winnerPlayed}% and ${D5.winnerPick}%. The cost lay past the end of jqe's search. AB-JChess mates on move ${G5.moveCount}.`,
         ),
         {
           kind: 'paragraph',
-          text: `Lags of five to seven moves, as in four of these five games, are the long end. Across the match, counting the move from which each engine's own scores in the game gave the winner 70% for good, the two were within a move of each other in ${LATE.abWon.withinOne} of AB-JChess's ${LATE.abWon.games} wins. Where one was later, it was jqe in ${LATE.abWon.jqeLater} and AB-JChess in ${LATE.abWon.abjLater}. In jqe's ${LATE.jqeWon.games} wins each was later about as often, AB-JChess in ${LATE.jqeWon.abjLater} and jqe in ${LATE.jqeWon.jqeLater}.`,
+          text: `Lags of ${WORDS[Math.min(...LAGS)]} to ${WORDS[Math.max(...LAGS)]} moves, as in ${WORDS[LAGS.length]} of these five games, are the long end. Across the match, counting the move from which each engine's own scores in the game gave the winner 70% for good, the two were within a move of each other in ${LATE.abWon.withinOne} of AB-JChess's ${LATE.abWon.games} wins. Where one was later, it was jqe in ${LATE.abWon.jqeLater} and AB-JChess in ${LATE.abWon.abjLater}. In jqe's ${LATE.jqeWon.games} wins each was later about as often, AB-JChess in ${LATE.jqeWon.abjLater} and jqe in ${LATE.jqeWon.jqeLater}.`,
         },
       ],
     },

@@ -523,7 +523,8 @@
       "pickTurnsOver": false,
       "playedTurnsOver": false
      }
-    ]
+    ],
+    "openPly": 57
    }
   },
   {
@@ -1027,7 +1028,38 @@
       "pickTurnsOver": false,
       "playedTurnsOver": false
      }
-    ]
+    ],
+    "horizon": {
+     "mults": [
+      1,
+      4,
+      16
+     ],
+     "played": {
+      "abj": [
+       0.2731,
+       0.1946,
+       0.1348
+      ],
+      "jqe": [
+       0.5,
+       0.5,
+       0.5
+      ]
+     },
+     "pick": {
+      "abj": [
+       0.5,
+       0.4765,
+       0.4772
+      ],
+      "jqe": [
+       0.4247,
+       0.432,
+       0.4267
+      ]
+     }
+    }
    }
   },
   {
@@ -1881,7 +1913,18 @@
      }
     ]
    },
-   "abjTopScoreFromPly": 146
+   "abjTopScoreFromPly": 146,
+   "abjNoChase": {
+    "fromPly": 146,
+    "toPly": 152,
+    "cpNone": [
+     311,
+     492
+    ],
+    "cpChaseRule": [
+     20000
+    ]
+   }
   },
   {
    "key": "run1:194",
@@ -2331,7 +2374,38 @@
       "pickTurnsOver": false,
       "playedTurnsOver": false
      }
-    ]
+    ],
+    "horizon": {
+     "mults": [
+      1,
+      4,
+      16
+     ],
+     "played": {
+      "abj": [
+       0.4082,
+       0.1245,
+       0.1029
+      ],
+      "jqe": [
+       0.446,
+       0.2891,
+       0.1838
+      ]
+     },
+     "pick": {
+      "abj": [
+       0.5,
+       0.5202,
+       0.5309
+      ],
+      "jqe": [
+       0.5203,
+       0.56,
+       0.5486
+      ]
+     }
+    }
    }
   }
  ],

@@ -3,14 +3,17 @@
 // apps/web/src/articles/content/ab-jchess-vs-jqe-match.json, in the post's order.
 // Every number comes from that file's `deep` block per game.
 //
-// The reading, per game, is the losing side's (for a draw, the side that got into
-// trouble): both engines searched every position at the match's node budget, so
-// each has a view of the loser's chance at every point, drawn under the board
-// (AB-JChess teal, jqe orange). At each moment the post names, the move played is
-// an arrow in the loser's colour and the winning engine's pick an arrow in its
-// own (AB-JChess blue, jqe orange), with the pick as a one-move line beside the
-// game move when it is a face-up move. A note on the move gives both engines'
-// chance for the loser after each, and how many moves the loser took to see it.
+// Each game is read from the winner's side (for a draw, the side that did not get
+// into trouble): the board faces the winner and the graph under it is the winner's
+// chance at every position by both engines, each searching at the match's node
+// budget (AB-JChess teal, jqe orange). The match file stores the loser's chance; a
+// chance here is one minus it. At each moment the post names, the loser's move is
+// an arrow in the loser's colour and the winning engine's pick an arrow in its own
+// (AB-JChess blue, jqe orange), with the pick as a one-move line beside the game
+// move when it is a face-up move. A note on the move gives both engines' chance
+// for the winner after each, and how many moves the loser took to see it. A game
+// with `deep.openPly` (game 1) has no marked move: the moment stays in the file as
+// the dearest choice in the stretch, and the board opens unmarked at openPly.
 //
 // Hidden information: the root is the PUBLIC deal (jieqiPublicDeal): a piece
 // captured face-down or never turned over is `?` in the stored FEN, so the study
@@ -79,6 +82,8 @@ type Game = {
     side: 'red' | 'black';
     series: Record<Engine, number[]>;
     moments: DeepMoment[];
+    /** Open the board here, with no move marked: no single move is the story. */
+    openPly?: number;
   };
 };
 type Data = {
@@ -153,11 +158,15 @@ function chapter(g: Game, n: number) {
   const redE = engineOf(g.red);
   if ((redE === L ? 'red' : 'black') !== d.side)
     throw new Error(`${where}: deep.side is not the loser's`);
+  const wSide = d.side === 'red' ? ('black' as const) : ('red' as const);
+  const wName = wSide === 'red' ? 'Red' : 'Black';
+  /** The winner's chance from a stored loser's chance. */
+  const win = (x: number) => 1 - x;
 
   const shapes: Record<number, StudyArrow[]> = {};
   const comments: Record<number, string> = {};
   const sidelines = [];
-  for (const m of d.moments) {
+  for (const m of d.openPly === undefined ? d.moments : []) {
     const at = m.ply;
     if (moves[at] !== m.played) throw new Error(`${where}: moment ply ${at} is not ${m.played}`);
     if ((at % 2 === 0 ? 'red' : 'black') !== d.side) {
@@ -179,18 +188,24 @@ function chapter(g: Game, n: number) {
         redScoreEnd: null,
         brush: BRUSH[W],
         always: true,
-        comment: `${NAME[W]}'s pick. ${NAME[L]}'s chance after it: ${pct(m.winner.pick)} by ${NAME[W]}, ${pct(m.loser.pick)} by ${NAME[L]}.`,
+        comment: `${NAME[W]}'s pick. ${wName}'s chance after it: ${pct(win(m.winner.pick))} by ${NAME[W]}, ${pct(win(m.loser.pick))} by ${NAME[L]}.`,
       });
     }
     const caught =
       m.lagMoves == null
-        ? ` ${NAME[L]}'s own number never came down to ${NAME[W]}'s before the end.`
-        : ` ${NAME[L]}'s own number came down to ${NAME[W]}'s ${m.lagMoves === 1 ? 'one move' : `${m.lagMoves} moves`} later, at move ${Math.floor(m.caughtPly! / 2) + 1}.`;
+        ? ` ${NAME[L]}'s number never came within 5 points of ${NAME[W]}'s before the end.`
+        : ` ${NAME[L]}'s number came within 5 points of ${NAME[W]}'s ${m.lagMoves === 1 ? 'one move' : `${m.lagMoves} moves`} later, at move ${Math.floor(m.caughtPly! / 2) + 1}.`;
     comments[at] =
       `${NAME[L]} plays ${said(s, m.played)} (${BRUSH[L]} arrow). ${NAME[W]} wanted ${said(s, m.pick)} (${BRUSH[W]} arrow). ` +
-      `${NAME[L]}'s chance by ${NAME[W]}: ${pct(m.winner.pick)} after the pick, ${pct(m.winner.played)} after the game move. ` +
-      `By ${NAME[L]} itself: ${pct(m.loser.pick)} and ${pct(m.loser.played)}.` +
+      `${wName}'s chance by ${NAME[W]}: ${pct(win(m.winner.pick))} after the pick, ${pct(win(m.winner.played))} after the game move. ` +
+      `By ${NAME[L]}: ${pct(win(m.loser.pick))} and ${pct(win(m.loser.played))}.` +
       caught;
+  }
+  if (d.openPly !== undefined) {
+    const at = d.openPly;
+    comments[at] =
+      `${wName}'s chance here: ${pct(win(d.series[W][at]!))} by ${NAME[W]}, ${pct(win(d.series[L][at]!))} by ${NAME[L]}. ` +
+      `The engines mostly agree on the moves and not on the score; no single move decides this game.`;
   }
   const result = g.winner === 'red' ? '1-0' : g.winner === 'black' ? '0-1' : '1/2-1/2';
   comments[moves.length] =
@@ -201,10 +216,12 @@ function chapter(g: Game, n: number) {
     `Game ${n} of the post: one of ${data.total.games} games between AB-JChess-20261031 and jqe on 2026-10-31, ${data.movetimeMs / 1000} seconds a move. ` +
     `${NAME[redE]} has Red. ` +
     (g.winner === 'draw'
-      ? `The game is drawn; the graph is the chance of ${NAME[L]} (${sideName}), the side that got into trouble. `
-      : `The graph is the loser's chance: ${NAME[L]} (${sideName}). `) +
+      ? `The game is drawn; the board faces ${NAME[W]} (${wName}) and the graph is its chance, against ${NAME[L]} (${sideName}), the side that got into trouble. `
+      : `The board faces the winner, ${NAME[W]} (${wName}), and the graph is its chance. `) +
     `Both engines searched every position for ${nodesM(d.nodes)} nodes, about what a move had in the match: AB-JChess teal, jqe orange. ` +
-    `At each marked move, ${NAME[L]}'s move is the ${BRUSH[L]} arrow and ${NAME[W]}'s pick the ${BRUSH[W]} arrow. ` +
+    (d.openPly === undefined
+      ? `At the marked move, ${NAME[L]}'s move is the ${BRUSH[L]} arrow and ${NAME[W]}'s pick the ${BRUSH[W]} arrow. `
+      : '') +
     'Pieces taken face-down or never turned over stay face-down here.';
   const tree = annotateFromEngine({
     rootFen,
@@ -219,9 +236,8 @@ function chapter(g: Game, n: number) {
   return {
     key: g.key,
     name: `Game ${n}: ${NAME[redE]} vs ${NAME[other(redE)]}`,
-    // The board from AB-JChess's side in every chapter, as the study's first
-    // chapters were made (a plan cannot turn an existing chapter's board).
-    orientation: redE === 'abj' ? ('red' as const) : ('black' as const),
+    // The board faces the winner (a rename turns an existing chapter's board).
+    orientation: wSide,
     tree,
     tags: {
       red: g.red,
@@ -231,10 +247,10 @@ function chapter(g: Game, n: number) {
       date: '2026-10-31',
     },
     scoreSeries: {
-      side: d.side,
+      side: wSide,
       series: [
-        { name: 'AB-JChess', color: 'a', values: d.series.abj },
-        { name: 'jqe', color: 'b', values: d.series.jqe },
+        { name: 'AB-JChess', color: 'a', values: d.series.abj.map(win) },
+        { name: 'jqe', color: 'b', values: d.series.jqe.map(win) },
       ],
     },
   };
@@ -246,7 +262,7 @@ for (const b of built)
   console.log(
     `${b.key}: ${b.name}, ${games.find((g) => g.key === b.key)!.deep.moments.length} moments`,
   );
-const DESCRIPTION = `${built.length} games from the ${data.total.games}-game match between AB-JChess-20261031 and jqe on 2026-10-31, read from the losing side: both engines' view of the loser's chance at every position, and at each moment the move played beside the winning engine's pick. From the post at mistboard.com/blog/ab-jchess-vs-jqe.`;
+const DESCRIPTION = `${built.length} games from the ${data.total.games}-game match between AB-JChess-20261031 and jqe on 2026-10-31, read from the winner's side: both engines' view of the winner's chance at every position, and at each marked move the loser's move beside the winning engine's pick. From the post at mistboard.com/blog/ab-jchess-vs-jqe.`;
 const NAME_STUDY = `AB-JChess vs jqe: ${built.length} games read by both engines`;
 const UPDATE = arg('--update', '');
 let plan: unknown;
@@ -281,7 +297,7 @@ if (UPDATE) {
           ];
         }
         return [
-          { op: 'rename', chapter: id, name: b.name, tags: b.tags },
+          { op: 'rename', chapter: id, name: b.name, tags: b.tags, orientation: b.orientation },
           { op: 'tree', chapter: id, tree: b.tree },
           { op: 'series', chapter: id, scoreSeries: b.scoreSeries },
         ];
