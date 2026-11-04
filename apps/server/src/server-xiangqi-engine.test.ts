@@ -104,7 +104,7 @@ test('xiangqi engine catalog exposes the honest FSF human ladder', () => {
     movetimeMs: 50,
   });
   assert.equal(isCatalogXiangqiEngineClientId(fsf?.id), true);
-  assert.equal(catalogXiangqiEngineVersion(fsf?.id), '0.2.1');
+  assert.equal(catalogXiangqiEngineVersion(fsf?.id), '0.2.0');
   assert.equal(
     XIANGQI_ENGINE_CATALOG.filter((entry) => entry.id.startsWith('fairy-stockfish-xiangqi-level-'))
       .length,
@@ -179,7 +179,7 @@ test('retired xiangqi engine ids stay resolvable with their original parameters'
 test('decision payload records the tier contract and the search that actually ran', () => {
   const payload = buildXiangqiEngineDecisionPayload({
     engineId: 'fairy-stockfish-xiangqi-level-8',
-    engineVersion: '0.2.1',
+    engineVersion: '0.2.0',
     seat: 'red',
     ply: 0,
     movetimeMs: 6_000,
@@ -271,7 +271,7 @@ test('decision payload marks a fail-closed turn and a guard replacement', () => 
 
   const guarded = buildXiangqiEngineDecisionPayload({
     engineId: 'fairy-stockfish-xiangqi-level-3',
-    engineVersion: '0.2.1',
+    engineVersion: '0.2.0',
     seat: 'red',
     ply: 20,
     movetimeMs: 150,

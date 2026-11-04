@@ -1330,5 +1330,3 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 `scripts/study-chapter-decisions.mjs`: dry-run diff / explicit apply of validated offline Jieqi luck through `prod:db`; chapter edits invalidate stored rows.
 
 `apps/server/src/xiangqi-rules-replay.test.ts`: stored standard xiangqi draw-limit replay, reconnect, postgame views and export regressions.
-
-`apps/server/src/standard-xiangqi.ini`: capture-only Fairy-Stockfish draw rules for new 120-ply and legacy 60-ply standard xiangqi games.

@@ -1,14 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
-import { buildFairyStockfishCommands } from './uci-engine-harness.js';
+import {
+  buildFairyStockfishCommands,
+  UciWarmSessionCache,
+  type WarmSessionSpec,
+} from './uci-engine-harness.js';
 import {
   fsfXiangqiUciToPikafishUci,
   pikafishUciToFsfXiangqiUci,
-  standardXiangqiFsfRules,
   XIANGQI_FSF_NNUE_NET,
   XIANGQI_FSF_PLAYABLE_ENGINES,
   xiangqiFsfEngineTierFor,
+  xiangqiFsfLiveEngineMove,
 } from './xiangqi-fsf-engine.js';
 
 test('FSF Xiangqi levels 1-7 keep the Lichess/PlayStrategy weakening profiles', () => {
@@ -157,16 +163,54 @@ test('translates between Pikafish and Fairy-Stockfish Xiangqi ranks', () => {
   assert.throws(() => fsfXiangqiUciToPikafishUci('b0c2'), /invalid Fairy-Stockfish/);
 });
 
-test('FSF requests use the stored standard xiangqi capture-only limit', () => {
-  for (const limit of [60, 120] as const) {
-    const rules = standardXiangqiFsfRules({ progressClockLimit: limit });
-    const ini = readFileSync(rules.iniPath, 'utf8');
-    const section = ini.split(`[${rules.variant}:xiangqi]`)[1]!.split('[')[0]!;
-    assert.match(section, new RegExp(`nMoveRule = ${limit / 2}\\b`));
-    assert.match(section, /nMoveRuleTypes = -/);
-    const commands = buildFairyStockfishCommands({ ...rules, moves: [], movetimeMs: 50 });
-    assert.ok(commands.includes(`setoption name UCI_Variant value mistboard-xiangqi-${limit}`));
+// An ini-defined xiangqi variant silently runs classical evaluation even when it
+// inherits xiangqi and sets nnueAlias. Keep the served variant built-in so NNUE
+// tiers (including L8) use their net; the game server adjudicates the draw.
+test('standard xiangqi FSF sessions use built-in xiangqi and the NNUE EvalFile for net tiers', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'xiangqi-fsf-session-'));
+  const bin = join(dir, 'fairy-stockfish-xiangqi');
+  const net = join(dir, XIANGQI_FSF_NNUE_NET);
+  writeFileSync(bin, '');
+  writeFileSync(net, '');
+  const savedPath = process.env.MISTBOARD_FSF_XIANGQI_PATH;
+  const savedNet = process.env.MISTBOARD_FSF_XIANGQI_NET;
+  t.after(() => {
+    if (savedPath === undefined) delete process.env.MISTBOARD_FSF_XIANGQI_PATH;
+    else process.env.MISTBOARD_FSF_XIANGQI_PATH = savedPath;
+    if (savedNet === undefined) delete process.env.MISTBOARD_FSF_XIANGQI_NET;
+    else process.env.MISTBOARD_FSF_XIANGQI_NET = savedNet;
+    rmSync(dir, { recursive: true, force: true });
+  });
+  process.env.MISTBOARD_FSF_XIANGQI_PATH = bin;
+  process.env.MISTBOARD_FSF_XIANGQI_NET = net;
+  const sessions: WarmSessionSpec[] = [];
+  t.mock.method(UciWarmSessionCache.prototype, 'withSession', async (spec: WarmSessionSpec) => {
+    sessions.push(spec);
+    return { best: null };
+  });
+
+  for (const tier of XIANGQI_FSF_PLAYABLE_ENGINES) {
+    await xiangqiFsfLiveEngineMove(tier.id, []);
+    const session = sessions.at(-1)!;
+    assert.equal(session.bin, bin);
+    assert.deepEqual(
+      session.initCommands.filter((command) => command.startsWith('setoption name UCI_Variant ')),
+      ['setoption name UCI_Variant value xiangqi'],
+      tier.id,
+    );
+    assert.equal(
+      session.initCommands.some((command) => command.includes('VariantPath')),
+      false,
+    );
+    assert.ok(
+      session.initCommands.includes(`setoption name Use NNUE value ${Boolean(tier.nnue)}`),
+      tier.id,
+    );
+    assert.deepEqual(
+      session.initCommands.filter((command) => command.startsWith('setoption name EvalFile ')),
+      tier.nnue ? [`setoption name EvalFile value ${net}`] : [],
+      tier.id,
+    );
   }
-  assert.equal(standardXiangqiFsfRules().variant, 'mistboard-xiangqi-120');
-  assert.equal(standardXiangqiFsfRules({ progressClockLimit: 99 }).variant, 'mistboard-xiangqi-60');
+  assert.equal(sessions.length, XIANGQI_FSF_PLAYABLE_ENGINES.length);
 });
