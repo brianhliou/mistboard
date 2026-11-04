@@ -151,15 +151,14 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // AB-JChess-20261031 against jqe, a draft dated 2026-11-10 (DEV shows it
-      // early for review).
-      '/blog/ab-jchess-vs-jqe',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/set-up-your-board',
       // The sixth player page, the ten-time national women's champion Tang Dan,
-      // scheduled for 2026-11-06 (DEV shows it early for review).
+      // scheduled for 2026-11-05 (DEV shows it early for review).
       '/blog/tang-dan',
+      // AB-JChess-20261031 against jqe, scheduled for 2026-11-04.
+      '/blog/ab-jchess-vs-jqe',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -505,8 +504,8 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/ab-jchess-vs-jqe',
       '/blog/set-up-your-board',
+      '/blog/ab-jchess-vs-jqe',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
