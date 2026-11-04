@@ -813,6 +813,7 @@ export const ZH_HANT_PLAY = {
   'result.deadPosition': '死局',
   'result.sixtyMovesNoCapture': '60 回合無吃子',
   'result.generalBlownUp': '將帥被炸',
+  'result.noCaptureLimit': '無吃子步數到限',
   'result.sixtyPliesNoCapture': '60 步無吃子',
   'result.wallRanOut': '牌牆摸完',
   'result.selfDraw': '自摸',

@@ -2695,11 +2695,17 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
+  'Corrected the no-capture draw limit to 120 plies, or 60 moves by each player. Older games keep their original rule.':
+    '已将无吃子和棋上限更正为 120 个半回合，即双方各走 60 步。旧对局仍采用原规则。',
+  'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
+    '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
+  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
+    '澄清爆炸象棋仍采用 60 个半回合的无吃子上限，而普通象棋采用 120 个半回合。',
   Repetition: '重复局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有将军，则判和。',
-  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
-    '正式比赛规则更进一步，还禁止长捉对方无根的棋子。Mistboard 不判定长捉，因此重复的捉子按和棋计。连续 60 个半回合没有吃子，也判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. New games are also drawn after 120 consecutive plies without a capture, or 60 moves by each player. Games started before this correction keep their original 60-ply limit.':
+    '正式比赛规则更进一步，还禁止长捉对方无根的棋子。Mistboard 不判定长捉，因此重复的捉子按和棋计。新对局连续 120 个半回合没有吃子，即双方各走 60 步，也判和。此次更正前开始的对局仍采用原来的 60 个半回合上限。',
   'Mistakes chess players make': '国际象棋棋手常犯的错误',
   'Habit from chess': '国际象棋的习惯',
   'What happens in xiangqi': '在象棋里的结果',
@@ -5227,8 +5233,8 @@ const ZH_HANS: Record<string, string> = {
   'The terminal rules': '终局规则',
   'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
     '这里有三种让棋局无胜负而终止的方式，它们并不是一回事。**重复局面**：同一局面、同一方行棋出现三次；判和。**步数限制**：连续若干步无吃子，60 步或 120 步；判和，而且兵向前一步并不重置计数。**上限**：测试框架在 400、1,000 或 2,000 步处终止对局。这不是棋规，所以被截断的对局是未下完，而不是和棋。有三局一百万节点的老兵对局撞上了 1,000 步上限，随后继续下到步数限制终止；而四档预算的对局没有一局到过 2,000 步，因此表格里的每个结果都属于前两种。',
-  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
-    '**步数限制。**象棋的无吃子规则是 60 步。用标准兵时，48 局里只触发过一次。用老兵时它是常见的收束：37 和里有 30 局如此，另外七局是重复局面。设成 60 步会在行军还在进行时截断还活着的棋局，所以老兵对局和每一组四局样本都用 120 步。步数限制同时也是引擎遵循的规则，所以 60 步限制下的一局和 120 步限制下的一局，从第 2 步起就是两局不同的棋，而不是同一局在不同处被截断。',
+  '**The clock.** These experiments used a 60-ply no-capture clock. Standard xiangqi uses 120 plies, or 60 moves by each player. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步数限制。**这些实验采用 60 步的无吃子限制。普通象棋采用 120 个半回合，即双方各走 60 步。用标准兵时，48 局里只触发过一次。用老兵时它是常见的收束：37 和里有 30 局如此，另外七局是重复局面。设成 60 步会在行军还在进行时截断还活着的棋局，所以老兵对局和每一组四局样本都用 120 步。步数限制同时也是引擎遵循的规则，所以 60 步限制下的一局和 120 步限制下的一局，从第 2 步起就是两局不同的棋，而不是同一局在不同处被截断。',
   '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
     '**困毙。**按母版的规则，将无着可走又未被将判和棋。把实验室里的每局都按这条规则重新判定：老兵、实力相当条件下兵团的七胜里有五胜变成和棋，标准兵的四胜里有一胜变成和棋；对随机走子的全军，标准兵下兵团的 35 胜里有 20 胜、老兵下 38 胜里有 16 胜变成和棋；老兵预算阶梯测试的十胜里有五胜同样如此。困毙大约占了兵团胜法的一半，而母版的规则会把它拿掉。',
   'Why the soldier fails, and what a different soldier would need':
@@ -5352,8 +5358,8 @@ const ZH_HANS: Record<string, string> = {
     '没有棋子攻击黑将。黑方仍然处于被将军状态：车可以吃士，把将炸掉。黑方并不被迫应将，但在这种威胁下重复局面判将军一方负，而不是和棋。',
   'You win by blowing up the enemy general, by checkmate, by leaving the opponent with no legal move, or when the opponent gives perpetual check in the wide sense above. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '炸掉对方将帅、将死对方、让对方无子可动，或者对方按上面的宽泛定义长将，你都获胜。对局也会因超时、认输或弃局而结束，和这里的其他对局一样。',
-  'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
-    '两条和棋规则。连续六十步无吃子判和，与这里的象棋相同。同一局面第三次出现判和，除非一方在重复的循环里每一步都在将军：那一方判负，而 Mistboard 上的普通象棋会判和。如果双方都在将军，判和。',
+  'Two rules draw. Sixty consecutive plies without a capture is a draw. Standard xiangqi uses 120 plies; Atomic Xiangqi keeps its own 60-ply limit. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
+    '两条和棋规则。连续六十步无吃子判和。普通象棋采用 120 个半回合；爆炸象棋仍采用自己的 60 个半回合上限。同一局面第三次出现判和，除非一方在重复的循环里每一步都在将军：那一方判负，而 Mistboard 上的普通象棋会判和。如果双方都在将军，判和。',
   'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.':
     '本页背后的引擎对局之一：一千万节点的 Fairy-Stockfish 执红，对阵一百万节点的自己。第 6 回合红方已多出一个半兵，之后局面一直接近，直到黑方第 21 回合的 Hxf9：马吃 f9 的炮，而黑方自己的士就在旁边的 f10。爆炸带走了士，九宫白白少了一子，从此再没恢复：第 30 回合的 Cb9 让将失去了掩护，第 38 回合红车吃掉 d8 的炮，紧挨着 d9 的将。爆炸带走了将，连同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
@@ -9293,11 +9299,17 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
+  'Corrected the no-capture draw limit to 120 plies, or 60 moves by each player. Older games keep their original rule.':
+    '已將無吃子和棋上限更正為 120 個半回合，即雙方各走 60 步。舊對局仍採用原規則。',
+  'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
+    '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
+  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
+    '澄清爆炸象棋仍採用 60 個半回合的無吃子上限，而普通象棋採用 120 個半回合。',
   Repetition: '重複局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有將軍，則判和。',
-  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
-    '正式比賽規則更進一步，還禁止長捉對方無根的棋子。Mistboard 不判定長捉，因此重複的捉子按和棋計。連續 60 個半回合沒有吃子，也判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. New games are also drawn after 120 consecutive plies without a capture, or 60 moves by each player. Games started before this correction keep their original 60-ply limit.':
+    '正式比賽規則更進一步，還禁止長捉對方無根的棋子。Mistboard 不判定長捉，因此重複的捉子按和棋計。新對局連續 120 個半回合沒有吃子，即雙方各走 60 步，也判和。此次更正前開始的對局仍採用原來的 60 個半回合上限。',
   'Mistakes chess players make': '西洋棋棋手常犯的錯誤',
   'Habit from chess': '西洋棋的習慣',
   'What happens in xiangqi': '在象棋裡的結果',
@@ -11443,8 +11455,8 @@ const ZH_HANT: Record<string, string> = {
   'The terminal rules': '終局規則',
   'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
     '這裡有三種讓棋局無勝負而終止的方式，它們並不是一回事。**重複局面**：同一局面、同一方行棋出現三次；判和。**步數限制**：連續若干步無吃子，60 步或 120 步；判和，而且兵向前一步並不重置計數。**上限**：測試框架在 400、1,000 或 2,000 步處終止對局。這不是棋規，所以被截斷的對局是未下完，而不是和棋。有三局一百萬節點的老兵對局撞上了 1,000 步上限，隨後繼續下到步數限制終止；而四檔預算的對局沒有一局到過 2,000 步，因此表格裡的每個結果都屬於前兩種。',
-  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
-    '**步數限制。**象棋的無吃子規則是 60 步。用標準兵時，48 局裡只觸發過一次。用老兵時它是常見的收束：37 和裡有 30 局如此，另外七局是重複局面。設成 60 步會在行軍還在進行時截斷還活著的棋局，所以老兵對局和每一組四局樣本都用 120 步。步數限制同時也是引擎遵循的規則，所以 60 步限制下的一局和 120 步限制下的一局，從第 2 步起就是兩局不同的棋，而不是同一局在不同處被截斷。',
+  '**The clock.** These experiments used a 60-ply no-capture clock. Standard xiangqi uses 120 plies, or 60 moves by each player. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步數限制。**這些實驗採用 60 步的無吃子限制。普通象棋採用 120 個半回合，即雙方各走 60 步。用標準兵時，48 局裡只觸發過一次。用老兵時它是常見的收束：37 和裡有 30 局如此，另外七局是重複局面。設成 60 步會在行軍還在進行時截斷還活著的棋局，所以老兵對局和每一組四局樣本都用 120 步。步數限制同時也是引擎遵循的規則，所以 60 步限制下的一局和 120 步限制下的一局，從第 2 步起就是兩局不同的棋，而不是同一局在不同處被截斷。',
   '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
     '**困斃。**按母版的規則，將無著可走又未被將判和棋。把實驗室裡的每局都按這條規則重新判定：老兵、實力相當條件下兵團的七勝裡有五勝變成和棋，標準兵的四勝裡有一勝變成和棋；對隨機走子的全軍，標準兵下兵團的 35 勝裡有 20 勝、老兵下 38 勝裡有 16 勝變成和棋；老兵預算階梯測試的十勝裡有五勝同樣如此。困斃大約佔了兵團勝法的一半，而母版的規則會把它拿掉。',
   'Why the soldier fails, and what a different soldier would need':
@@ -11568,8 +11580,8 @@ const ZH_HANT: Record<string, string> = {
     '沒有棋子攻擊黑將。黑方仍然處於被將軍狀態：車可以吃士，把將炸掉。黑方並不被迫應將，但在這種威脅下重複局面判將軍一方負，而不是和棋。',
   'You win by blowing up the enemy general, by checkmate, by leaving the opponent with no legal move, or when the opponent gives perpetual check in the wide sense above. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '炸掉對方將帥、將死對方、讓對方無子可動，或者對方按上面的寬泛定義長將，你都獲勝。對局也會因超時、認輸或棄局而結束，和這裡的其他對局一樣。',
-  'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
-    '兩條和棋規則。連續六十步無吃子判和，與這裡的象棋相同。同一局面第三次出現判和，除非一方在重複的循環裡每一步都在將軍：那一方判負，而 Mistboard 上的普通象棋會判和。如果雙方都在將軍，判和。',
+  'Two rules draw. Sixty consecutive plies without a capture is a draw. Standard xiangqi uses 120 plies; Atomic Xiangqi keeps its own 60-ply limit. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
+    '兩條和棋規則。連續六十步無吃子判和。普通象棋採用 120 個半回合；爆炸象棋仍採用自己的 60 個半回合上限。同一局面第三次出現判和，除非一方在重複的循環裡每一步都在將軍：那一方判負，而 Mistboard 上的普通象棋會判和。如果雙方都在將軍，判和。',
   'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.':
     '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':

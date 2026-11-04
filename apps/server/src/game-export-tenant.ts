@@ -119,7 +119,7 @@ export type TenantExportOptions<M, State> = {
   uci: (move: M) => string;
   // Whole-line labeler, so notations that depend on the position (WXF) replay
   // the line once. Omit for tenants with no notation; every `san` is then null.
-  san?: (moves: readonly M[]) => readonly (string | null)[];
+  san?: (moves: readonly M[], state: State) => readonly (string | null)[];
   // Flip variants: read the ink the first-mover seat bound, off the final state.
   firstMoverInk?: (state: State) => string | null;
   // Gomoku retains the original opening on its state throughout replay.
@@ -128,7 +128,7 @@ export type TenantExportOptions<M, State> = {
   // identity the game never determined (see TenantExportGame.neverRevealed).
   neverRevealed?: (state: State) => Record<string, string[]> | null;
   // Tenants with an honest movetext notation bind the PGN writer here.
-  writePgn?: (moves: readonly M[]) => NonNullable<TenantExportGame['writePgn']>;
+  writePgn?: (moves: readonly M[], state: State) => NonNullable<TenantExportGame['writePgn']>;
   // Hidden-piece tenants (jieqi, banqi, jungle-flip): how a ply's reveals read
   // off the position before it, and the start as the variant's dealt FEN. The
   // binding then writes the reveals into every ply, the deal when it is real,
@@ -203,7 +203,7 @@ export function tenantExportBinding<
           event.type === 'move-played',
       );
       const moves = moveEvents.map((event) => event.move);
-      const labels = options.san ? options.san(moves) : null;
+      const labels = options.san ? options.san(moves, projection.state) : null;
       // Hidden-piece tenants read each ply's reveals off the position before it,
       // replaying the log exactly as replayTenantEvents does.
       const hidden = options.hiddenPieces;
@@ -242,7 +242,7 @@ export function tenantExportBinding<
               })),
             })
         : undefined;
-      const writePgn = options.writePgn ? options.writePgn(moves) : hiddenPgn;
+      const writePgn = options.writePgn ? options.writePgn(moves, projection.state) : hiddenPgn;
       return {
         colors: tenant.colors,
         plies,

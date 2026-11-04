@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { buildFairyStockfishCommands } from './uci-engine-harness.js';
 import {
   fsfXiangqiUciToPikafishUci,
   pikafishUciToFsfXiangqiUci,
+  standardXiangqiFsfRules,
   XIANGQI_FSF_NNUE_NET,
   XIANGQI_FSF_PLAYABLE_ENGINES,
   xiangqiFsfEngineTierFor,
@@ -153,4 +155,18 @@ test('translates between Pikafish and Fairy-Stockfish Xiangqi ranks', () => {
   assert.equal(fsfXiangqiUciToPikafishUci('h3h10'), 'h2h9');
   assert.throws(() => pikafishUciToFsfXiangqiUci('b1c10'), /invalid Pikafish/);
   assert.throws(() => fsfXiangqiUciToPikafishUci('b0c2'), /invalid Fairy-Stockfish/);
+});
+
+test('FSF requests use the stored standard xiangqi capture-only limit', () => {
+  for (const limit of [60, 120] as const) {
+    const rules = standardXiangqiFsfRules({ progressClockLimit: limit });
+    const ini = readFileSync(rules.iniPath, 'utf8');
+    const section = ini.split(`[${rules.variant}:xiangqi]`)[1]!.split('[')[0]!;
+    assert.match(section, new RegExp(`nMoveRule = ${limit / 2}\\b`));
+    assert.match(section, /nMoveRuleTypes = -/);
+    const commands = buildFairyStockfishCommands({ ...rules, moves: [], movetimeMs: 50 });
+    assert.ok(commands.includes(`setoption name UCI_Variant value mistboard-xiangqi-${limit}`));
+  }
+  assert.equal(standardXiangqiFsfRules().variant, 'mistboard-xiangqi-120');
+  assert.equal(standardXiangqiFsfRules({ progressClockLimit: 99 }).variant, 'mistboard-xiangqi-60');
 });

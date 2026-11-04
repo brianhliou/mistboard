@@ -24,8 +24,10 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { standardXiangqiProgressClockLimit } from '@mistboard/game';
 import {
   fairyStockfishPath,
+  resolveFsfVariantIniPath,
   splitFairyStockfishCommands,
   UciEnginePool,
   type UciEval,
@@ -34,7 +36,7 @@ import {
 
 // Bumped 0.1.0 -> 0.2.0 on 2026-09-02: new binary for every level, NNUE + node
 // anchor on Level 8. Recorded per PvE game as the engine build version.
-export const XIANGQI_FSF_ENGINE_VERSION = '0.2.0';
+export const XIANGQI_FSF_ENGINE_VERSION = '0.2.1';
 
 /**
  * Short form of the Fairy-Stockfish commit prod builds for this provider. MUST
@@ -233,7 +235,7 @@ export function xiangqiFsfNetPath(binPath: string): string {
 export async function xiangqiFsfLiveEngineMove(
   engineId: string,
   moves: string[],
-  opts: { movetimeMs?: number } = {},
+  opts: { movetimeMs?: number; progressClockLimit?: number } = {},
 ): Promise<UciEval> {
   const tier = xiangqiFsfEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Fairy-Stockfish Xiangqi engine: ${engineId}`);
@@ -243,7 +245,7 @@ export async function xiangqiFsfLiveEngineMove(
     const movetimeMs = opts.movetimeMs ?? tier.movetimeMs;
     const { init, position, go } = splitFairyStockfishCommands({
       moves: moves.map(pikafishUciToFsfXiangqiUci),
-      variant: 'xiangqi',
+      ...standardXiangqiFsfRules(opts),
       skill: tier.skill,
       depth: tier.depth,
       nodes: tier.nodes,
@@ -302,4 +304,18 @@ export function fsfXiangqiUciToPikafishUci(uci: string): string {
   const match = uci.match(/^([a-i])(10|[1-9])([a-i])(10|[1-9])$/);
   if (!match) throw new Error(`invalid Fairy-Stockfish Xiangqi UCI: ${uci}`);
   return `${match[1]}${Number(match[2]) - 1}${match[3]}${Number(match[4]) - 1}`;
+}
+
+// A built-in FSF xiangqi inherits chess's 50-move limit and soldier resets.
+// Choose the explicit capture-only rule stamped on the game, never that default.
+export function standardXiangqiFsfRules(options: { progressClockLimit?: number } = {}): {
+  variant: string;
+  iniPath: string;
+} {
+  const limit =
+    options.progressClockLimit === undefined ? 120 : standardXiangqiProgressClockLimit(options);
+  return {
+    variant: `mistboard-xiangqi-${limit}`,
+    iniPath: resolveFsfVariantIniPath('standard-xiangqi.ini'),
+  };
 }

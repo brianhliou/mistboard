@@ -23,6 +23,7 @@
 import {
   applyStandardXiangqiMove,
   getStandardXiangqiLegalMoves,
+  standardXiangqiProgressClockLimit,
   type XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiGameState,
@@ -131,7 +132,7 @@ export function scheduleXiangqiEngineMove(
 export type XiangqiEngineMoveProvider = (
   engineId: string,
   moves: string[],
-  opts: { movetimeMs?: number },
+  opts: { movetimeMs?: number; progressClockLimit?: number },
 ) => Promise<UciEval>;
 
 export async function playXiangqiEngineMoveIfReady(
@@ -173,7 +174,10 @@ export async function playXiangqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, history, { movetimeMs });
+      const search = await moveProvider(engineId, history, {
+        movetimeMs,
+        progressClockLimit: standardXiangqiProgressClockLimit(room.projection.state),
+      });
       lastSearch = search;
       return search.best;
     },

@@ -75,7 +75,7 @@ import {
 import {
   applyStandardXiangqiMove,
   assembleMinedXiangqiPuzzle,
-  createInitialXiangqiState,
+  createStandardXiangqiStateFromSetup,
   detectXiangqiBlunderCandidates,
   importXiangqiGame,
   isStandardXiangqiLegalMove,
@@ -141,6 +141,8 @@ export type XiangqiPuzzleMinerOptions = {
 
 export type XiangqiPuzzleMinerGame = {
   id: string;
+  // Optional stored rule stamp; old corpus inputs keep their original 60-ply rule.
+  progressClockLimit?: number;
   moves: XiangqiMove[];
   // Denormalized attribution (db mode only) — copied onto each puzzle's
   // sourceGame so the "From game" card renders without hosting the game.
@@ -505,7 +507,7 @@ export async function mineXiangqiPuzzleGame(
   // Stop at the live kernel's ending, including adjudicated draws. The puzzle
   // solver uses that same kernel and must not inherit an already drawn history.
   // An illegal recorded move truncates the walk (the legal prefix still mines).
-  let state = createInitialXiangqiState(game.id);
+  let state = createStandardXiangqiStateFromSetup(game.id, game);
   const states: XiangqiGameState[] = [state];
   const uciMoves: string[] = [];
   for (const move of game.moves) {

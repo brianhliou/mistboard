@@ -72,9 +72,9 @@ export const hordeXiangqiArticle: Article = {
     'Node budgets, not time, so nothing depends on the machine.',
   ],
   publishedAt: '2026-09-15',
-  updatedAt: '2026-10-07',
+  updatedAt: '2026-11-03',
   updateNote:
-    'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.',
+      'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.',
   audience:
     'Chess players who know Horde and wonder what it does on the xiangqi board, and xiangqi players curious why a variant was measured and then not built.',
   thumbnail: { kind: 'svg', svg: HORDE_XIANGQI_THUMBNAIL },
@@ -239,7 +239,7 @@ export const hordeXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.',
+          text: '**The clock.** These experiments used a 60-ply no-capture clock. Standard xiangqi uses 120 plies, or 60 moves by each player. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.',
         },
         {
           kind: 'paragraph',

@@ -5,7 +5,11 @@
  * side effects by variant-tenant/register-tenants.ts.
  */
 
-import { type RoomTimeControl, standardXiangqiFen } from '@mistboard/game';
+import {
+  createStandardXiangqiStateFromSetup,
+  type RoomTimeControl,
+  standardXiangqiFen,
+} from '@mistboard/game';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
@@ -153,8 +157,12 @@ registerVariantTenant({
   export: tenantExportBinding(xiangqiTenant, {
     gameRouteBase: '/xiangqi/game',
     uci: xiangqiExportUci,
-    san: xiangqiWxfLabels,
-    writePgn: (moves) => xiangqiPgnWriter(moves, xiangqiPgnStyle(moves)),
+    san: (moves, state) =>
+      xiangqiWxfLabels(moves, createStandardXiangqiStateFromSetup(state.id, state)),
+    writePgn: (moves, state) => {
+      const initial = createStandardXiangqiStateFromSetup(state.id, state);
+      return xiangqiPgnWriter(moves, xiangqiPgnStyle(moves, initial), initial);
+    },
   }),
   card: tenantCardBinding(xiangqiTenant, {
     variant: 'xiangqi',
