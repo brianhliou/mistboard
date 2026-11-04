@@ -494,6 +494,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   annotationEditing?: boolean;
   /** Whole-game analysis source; null disables the analysis affordance. */
   analysis: AnalysisSource | null;
+  /** Extra content above whole-game analysis in the Computer analysis tab.
+   *  Enables the tab without `analysis` and stays there on phones, outside the
+   *  stored-analysis strip, through analysis loads and content replacements. */
+  analysisExtra?: HTMLElement;
   /** Optional decision-vs-luck overlay for chance-move games (jieqi). When set, reveal plies get
    *  a decision-quality glyph + per-move luck readout, and the summary gains a two-number
    *  (decisions / luck) block. Absent for deterministic variants. */
@@ -1635,6 +1639,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // ── Whole-game analysis (mainline) → underboard chart + summary + glyphs ──
   const underboardBody = document.createElement('div');
   underboardBody.className = 'review-underboard-panel__body';
+  const analysisContentHost = config.analysisExtra ? document.createElement('div') : underboardBody;
+  if (config.analysisExtra) underboardBody.append(config.analysisExtra, analysisContentHost);
   // Phone game review (#619): the request control or the chart lives in a
   // strip under the board at 600px and under, in this tab body above it.
   // Without the strip, the tab body is the only home, as before.
@@ -1642,7 +1648,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   if (phoneReview && config.analysis) {
     phoneAnalysis = createPhoneAnalysisSlot({
       signal: mountAbort.signal,
-      wideHost: underboardBody,
+      wideHost: analysisContentHost,
       onScrub: (fraction) => {
         const nodes = mainlineNodes();
         const target = nodes[Math.round(fraction * Math.max(1, nodes.length - 1))];
@@ -1653,7 +1659,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   const setAnalysisContent = (content: PhoneAnalysisContent): void => {
     if (phoneAnalysis) phoneAnalysis.setContent(content);
-    else underboardBody.replaceChildren(...(content ? [content.el] : []));
+    else analysisContentHost.replaceChildren(...(content ? [content.el] : []));
   };
   // Live-FEN share input, refreshed on every navigation (see render()).
   const shareFenInput = document.createElement('input');
@@ -1887,7 +1893,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         })
       : null;
   const underboardEl = underboardPanel(underboardBody, {
-    hasAnalysis: Boolean(config.analysis),
+    hasAnalysis: Boolean(config.analysis || config.analysisExtra),
     about: config.aboutTab,
     tools: annotationEditor?.tabs,
     provenance: config.provenance,
@@ -1960,6 +1966,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       // A played game always has Share & export (and usually Move times), so the
       // panel shows for those too; the analysis board keeps its own gate.
       config.analysis ||
+        config.analysisExtra ||
         config.provenance ||
         config.showCrosstable ||
         config.aboutTab ||

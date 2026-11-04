@@ -229,7 +229,9 @@ describe('study creator workspace', () => {
 });
 
 describe('study chapter permalinks', () => {
-  const chapterSwitchFixture = (withScores = false) => {
+  const chapterSwitchFixture = (
+    opts: { scores?: 'first' | 'both' | 'stale'; owner?: boolean } = {},
+  ) => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
       const url = input.toString();
       if (url === '/api/studies/study1') {
@@ -239,7 +241,7 @@ describe('study chapter permalinks', () => {
             name: 'Two chapters',
             description: '',
             visibility: 'public',
-            isOwner: false,
+            isOwner: opts.owner ?? false,
             likeCount: 0,
             likedByViewer: false,
           },
@@ -254,12 +256,16 @@ describe('study chapter permalinks', () => {
             },
             version: 1,
             gamebook: false,
-            ...(withScores && index === 0
+            ...(opts.scores && (index === 0 || opts.scores === 'both')
               ? {
                   scoreSeries: {
                     side: 'red',
                     series: [
-                      { name: 'Engine A', color: 'a', values: [0.5, 0.6] },
+                      {
+                        name: `Engine A${index + 1}`,
+                        color: 'a',
+                        values: opts.scores === 'stale' ? [0.5, 0.6, 0.7] : [0.5, 0.6],
+                      },
                       { name: 'Engine B', color: 'b', values: [0.5, 0.4] },
                     ],
                   },
@@ -307,12 +313,22 @@ describe('study chapter permalinks', () => {
     expect(fetcher.mock.calls.filter(([url]) => url === '/api/chat/study/study1')).toHaveLength(1);
   });
 
-  it('draws scoreSeries under the board only for chapters that have scores', async () => {
-    const { root } = chapterSwitchFixture(true);
+  it('draws scoreSeries in the active Computer analysis tab without stored analysis', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'first' });
     await mountStudy(root, 'study1');
     expect(root.querySelector<HTMLButtonElement>('[data-replay="next"]')?.disabled).toBe(false);
     const chart = root.querySelector<HTMLElement>('.review-underboard .embed-score-chart');
     expect(chart).not.toBeNull();
+    const body = chart?.closest<HTMLElement>('.review-underboard-panel__body');
+    expect(body?.parentElement?.className).toBe('review-underboard-bodies');
+    expect(body?.hidden).toBe(false);
+    expect(root.querySelector('.review-underboard-tabs')?.nextElementSibling).toBe(
+      body?.parentElement,
+    );
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'analysis',
+    );
+    expect(root.querySelector('[data-tab="analysis"]')?.textContent).toBe('Computer analysis');
     expect(chart?.querySelectorAll('.embed-score-chart__line')).toHaveLength(2);
     const plot = chart!.querySelector<HTMLElement>('.embed-score-chart__plot')!;
     vi.spyOn(plot, 'getBoundingClientRect').mockReturnValue({
@@ -337,6 +353,42 @@ describe('study chapter permalinks', () => {
     await vi.waitFor(() => expect(window.location.pathname).toBe('/study/study1/chapter2'));
     await vi.waitFor(() => expect(root.querySelector('.embed-score-chart')).toBeNull());
     expect(root.querySelector('.review-shell__center')).not.toBeNull();
+    expect(root.querySelector('[data-tab="analysis"]')).toBeNull();
+    root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[0]!.click();
+    await vi.waitFor(() => expect(root.querySelectorAll('.embed-score-chart')).toHaveLength(1));
+  });
+
+  it('replaces a scored chapter chart when reusing the shell', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'both' });
+    await mountStudy(root, 'study1');
+    const shell = root.querySelector('.study-review');
+    const firstChart = root.querySelector('.embed-score-chart');
+    root.querySelectorAll<HTMLAnchorElement>('.study-chapters__link')[1]!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('.embed-score-chart__legend')?.textContent).toContain('Engine A2'),
+    );
+    expect(root.querySelector('.study-review')).toBe(shell);
+    expect(firstChart?.isConnected).toBe(false);
+    expect(root.querySelectorAll('.embed-score-chart')).toHaveLength(1);
+    expect(root.querySelector('.review-underboard-panel__body .embed-score-chart')).not.toBeNull();
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'analysis',
+    );
+  });
+
+  it('opens a scored chapter on Computer analysis for its owner', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'first', owner: true });
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'analysis',
+    );
+  });
+
+  it('omits a stale scoreSeries and its Computer analysis tab', async () => {
+    const { root } = chapterSwitchFixture({ scores: 'stale' });
+    await mountStudy(root, 'study1');
+    expect(root.querySelector('.embed-score-chart')).toBeNull();
+    expect(root.querySelector('[data-tab="analysis"]')).toBeNull();
   });
 
   it('preserves locale prefixes and rejects another study chapter path', () => {

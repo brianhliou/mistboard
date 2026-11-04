@@ -30,11 +30,7 @@ import {
   parsePracticeGoal,
   serializedTreeMainline,
 } from '@mistboard/game';
-import {
-  createEmbedScoreChart,
-  type EmbedScoreChart,
-  embedScoreSeries,
-} from './embed/embed-score-chart.js';
+import { createEmbedScoreChart, embedScoreSeries } from './embed/embed-score-chart.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { fetchStudyChapterDecisions } from './review/study-decisions.js';
@@ -1002,10 +998,15 @@ function renderStudy(
     const storedAnalysis = chapter.hasAnalysis
       ? fetchStudyChapterAnalysis(study.id, chapter.id, mountedTree)
       : null;
-    let scoreChart: EmbedScoreChart | null = null;
+    const positions = serializedTreeMainline(mountedTree).length + 1;
+    const series = embedScoreSeries(chapter.scoreSeries, positions);
+    const scoreChart = series
+      ? createEmbedScoreChart(series, { onJump: (ply) => handle?.jumpToPly(ply) })
+      : null;
     return mountStudyReview(variant, root, {
       reuseShell,
       onPlyChange: (ply) => scoreChart?.setPly(ply),
+      analysisExtra: scoreChart?.el,
       storedAnalysis,
       storedDecisions:
         variant === 'jieqi' && chapter.hasDecisions
@@ -1074,10 +1075,12 @@ function renderStudy(
       // The way to actually play it is Preview, so that is the action offered
       // here AND the tab the panel opens on. Read-only without a visible way to
       // test would just move the trap somewhere else.
-      // A reader opens on the chart when there is one, as a game review does;
-      // the owner keeps the authoring tabs in front. A chapter whose analysis
-      // covers nothing has no such tab, and the panel falls back to its first.
-      ...(chapter.hasAnalysis && !study.isOwner ? { initialUnderboardTab: 'analysis' } : {}),
+      // Two-engine chapters open on their chart for readers and owners. With
+      // stored analysis alone, owners keep the authoring tabs in front. The
+      // practice chapter's Preview action below still takes precedence.
+      ...(scoreChart || (chapter.hasAnalysis && !study.isOwner)
+        ? { initialUnderboardTab: 'analysis' }
+        : {}),
       ...(chapter.practice && study.isOwner && !previewMode
         ? {
             boardReadOnly: {
@@ -1137,12 +1140,6 @@ function renderStudy(
         );
         handle = mounted;
         activeHandle = mounted;
-        const positions = serializedTreeMainline(mounted.serialize()).length + 1;
-        const series = embedScoreSeries(chapter.scoreSeries, positions);
-        if (series) {
-          scoreChart = createEmbedScoreChart(series, { onJump: (ply) => mounted.jumpToPly(ply) });
-          root.querySelector('.study-review .review-underboard')?.prepend(scoreChart.el);
-        }
         // The review shell landed after the dock; keep the dock last, then
         // drive Back/Next from the shell's own move band.
         phone.attach(root);
