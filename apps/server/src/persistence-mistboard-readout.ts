@@ -31,6 +31,7 @@ import {
   countedPlayerSeat,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
+import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
@@ -279,6 +280,7 @@ export async function collectMistboardReadoutFacts(
       collectBroadcasts(db, extra.untrackedEvents),
       collectFeedback(db),
       collectDeploys(db, now),
+      collectLoginEmailDelivery(db, now),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
@@ -293,6 +295,7 @@ export async function collectMistboardReadoutFacts(
     'broadcasts',
     'feedback',
     'deploys',
+    'loginEmailDelivery',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -307,6 +310,7 @@ export async function collectMistboardReadoutFacts(
     broadcasts: settledValue(collectors[4]),
     feedback: settledValue(collectors[5]),
     deploys: settledValue(collectors[6]),
+    loginEmailDelivery: settledValue(collectors[7]),
     collectorErrors,
     trend,
     comparison,
@@ -340,6 +344,25 @@ export async function collectReadoutComparison(
     engineFailedTasks: previous.engines?.failedTasks ?? null,
     actionKeys: previous.actions.map((action) => action.dedupeKey),
   };
+}
+
+async function collectLoginEmailDelivery(db: Queryable, now: Date) {
+  const [metrics, complaints] = await Promise.all([
+    getLoginEmailDeliveryMetrics(now, db),
+    // Count messages rather than webhook retries, correlated by provider id.
+    // No time window: delayed arrivals and complaints aging out must not hide
+    // the next complaint. Only the count enters the stored readout.
+    Promise.resolve().then(() =>
+      db.query<{ received: number }>(
+        `SELECT count(DISTINCT e.provider_email_id)::int AS received
+       FROM email_delivery_events e
+       JOIN login_email_requests r USING (provider_email_id)
+       WHERE e.event_type = 'email.complained' AND e.occurred_at < $1`,
+        [now],
+      ),
+    ),
+  ]);
+  return { ...metrics, complaintsReceived: complaints.rows[0]!.received };
 }
 
 async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadoutProduct> {

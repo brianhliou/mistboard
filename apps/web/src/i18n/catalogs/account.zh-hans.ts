@@ -187,6 +187,7 @@ export const ZH_HANS_ACCOUNT = {
   'account.authBadResponse': '认证服务返回了无法读取的响应。',
   'account.authHttpFailed': '认证服务请求失败。请稍后再试。',
   'account.emailNotConfigured': '此运行环境未配置邮箱登录。',
+  'account.loginEmailUnreceivable': '此邮箱地址无法接收我们的邮件。请检查拼写或使用其他邮箱地址。',
   'account.emailDeliveryFailed': '邮件发送失败。请稍后再试。',
   'account.persistenceDisabled': '账号需要持久化服务器。',
   'account.invalidLoginCode': '登录验证码无效或已过期。',

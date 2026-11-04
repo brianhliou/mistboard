@@ -187,6 +187,7 @@ export const ZH_HANT_ACCOUNT = {
   'account.authBadResponse': '認證服務回傳了無法讀取的回應。',
   'account.authHttpFailed': '認證服務請求失敗。請稍後再試。',
   'account.emailNotConfigured': '此執行環境未設定信箱登入。',
+  'account.loginEmailUnreceivable': '此信箱地址無法接收我們的郵件。請檢查拼寫或使用其他信箱地址。',
   'account.emailDeliveryFailed': '郵件寄送失敗。請稍後再試。',
   'account.persistenceDisabled': '帳號需要持久化伺服器。',
   'account.invalidLoginCode': '登入驗證碼無效或已過期。',

@@ -7,6 +7,19 @@
 import type { ShellI18nKey } from './shell.js';
 
 export const ZH_HANS_SHELL = {
+  'metrics.loginEmail.heading': '登录邮件投递',
+  'metrics.loginEmail.status': '状态',
+  'metrics.loginEmail.last7d': '最近7天',
+  'metrics.loginEmail.last30d': '最近30天',
+  'metrics.loginEmail.requested': '已请求',
+  'metrics.loginEmail.sent': '已发送',
+  'metrics.loginEmail.delivered': '已送达',
+  'metrics.loginEmail.bounced': '已退信',
+  'metrics.loginEmail.suppressed': '已抑制',
+  'metrics.loginEmail.complained': '已投诉',
+  'metrics.loginEmail.completed': '已完成验证码登录',
+  'metrics.loginEmail.note':
+    '滚动时间窗口截至报告生成时刻。每项活动按自身时间戳统计，包含起始时刻，不含结束时刻。投递状态按已关联的登录邮件统计，每封邮件的每种状态只计一次，退信包括临时和永久退信。已发送须有发送回调，仅有服务商受理记录不计入。已请求和已完成分别统计登录请求和验证码登录。这些是活动次数，并非漏斗；不计其他邮件。',
   'nav.primary': '主导航',
   'nav.menu': '菜单',
   'nav.play': '对弈',

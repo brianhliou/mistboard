@@ -313,7 +313,12 @@ export class EngineCounters {
 
 export const engineCounters = new EngineCounters();
 
-export type AuthStartOutcome = 'delivery_failed' | 'rate_limited' | 'rejected' | 'sent';
+export type AuthStartOutcome =
+  | 'delivery_failed'
+  | 'dev-response'
+  | 'rate_limited'
+  | 'rejected'
+  | 'sent';
 export type AuthConfirmOutcome = 'rate_limited' | 'rejected' | 'success';
 
 // Aggregate auth outcomes only. These counters deliberately never receive an

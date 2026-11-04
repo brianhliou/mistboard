@@ -200,6 +200,8 @@ export const EN_ACCOUNT = {
   'account.authBadResponse': 'Auth server returned an unreadable response.',
   'account.authHttpFailed': 'Auth server request failed. Try again in a moment.',
   'account.emailNotConfigured': 'Email login is not configured in this runtime.',
+  'account.loginEmailUnreceivable':
+    'This address cannot receive our email. Check the spelling or use another email address.',
   'account.emailDeliveryFailed': 'Email delivery failed. Try again in a moment.',
   'account.persistenceDisabled': 'Accounts require the persistent server.',
   'account.invalidLoginCode': 'The login code was invalid or expired.',
@@ -274,6 +276,7 @@ export const CRITICAL_ACCOUNT_I18N_KEYS = [
   'account.authHttpFailed',
   'account.emailNotConfigured',
   'account.emailDeliveryFailed',
+  'account.loginEmailUnreceivable',
   'account.persistenceDisabled',
   'account.invalidLoginCode',
   'account.invalidEmail',

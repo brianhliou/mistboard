@@ -2221,6 +2221,7 @@ function authErrorMessage(value: string, locale: Locale = currentLocale()): stri
   if (value === 'auth_bad_response') return t('account.authBadResponse', {}, locale);
   if (value.startsWith('auth_http_')) return t('account.authHttpFailed', {}, locale);
   if (value === 'email_delivery_not_configured') return t('account.emailNotConfigured', {}, locale);
+  if (value === 'login_email_unreceivable') return t('account.loginEmailUnreceivable', {}, locale);
   if (value === 'email_delivery_failed') return t('account.emailDeliveryFailed', {}, locale);
   if (value === 'persistence_disabled') return t('account.persistenceDisabled', {}, locale);
   if (value === 'invalid_login_code') return t('account.invalidLoginCode', {}, locale);

@@ -163,6 +163,11 @@
   color: var(--site-muted);
 }
 
+/* Keep the long sign-in label from pushing the two windows off a phone. */
+.metrics-login-email .metrics-retention-table th[scope="row"] {
+  white-space: normal;
+}
+
 /* Restarts and drains: a plain admin table, scrolled sideways on phones. */
 .metrics-deploys-scroll {
   overflow-x: auto;

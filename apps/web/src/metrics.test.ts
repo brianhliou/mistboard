@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type DeployHistoryEntry, deployRowCells, mountMetrics } from './metrics.js';
 
 const publicStats = {
@@ -126,6 +127,26 @@ const adminMetrics = {
   // Includes a deleted id (dark-draft960) that the live-shelf filter drops.
   humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-draft960': 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
+  loginEmailDelivery: {
+    last7d: {
+      requested: 21,
+      sent: 20,
+      delivered: 19,
+      bounced: 3,
+      suppressed: 2,
+      complained: 1,
+      completed: 12,
+    },
+    last30d: {
+      requested: 90,
+      sent: 87,
+      delivered: 85,
+      bounced: 5,
+      suppressed: 4,
+      complained: 2,
+      completed: 70,
+    },
+  },
   retentionCohorts: [
     {
       weekStart: '2026-06-15',
@@ -175,7 +196,101 @@ function stubFetch(overrides: Record<string, () => Response> = {}): void {
 }
 
 describe('metrics page', () => {
+  it('renders login delivery counts for both windows only with admin data', async () => {
+    window.history.replaceState(null, '', '/metrics?tab=operations');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const section = root.querySelector('.metrics-login-email');
+    expect(section?.querySelector('h2')?.textContent).toBe('Login email delivery');
+    expect([...section!.querySelectorAll('thead th')].map((cell) => cell.textContent)).toEqual([
+      'Status',
+      'Last 7 days',
+      'Last 30 days',
+    ]);
+    expect(
+      [...section!.querySelectorAll('tbody tr')].map((row) =>
+        [...row.querySelectorAll('th, td')].map((cell) => cell.textContent),
+      ),
+    ).toEqual([
+      ['Requested', '21', '90'],
+      ['Sent', '20', '87'],
+      ['Delivered', '19', '85'],
+      ['Bounced', '3', '5'],
+      ['Suppressed', '2', '4'],
+      ['Complained', '1', '2'],
+      ['Completed code sign-ins', '12', '70'],
+    ]);
+    expect(section?.textContent).toContain('Each activity is counted at its own timestamp');
+    expect(section?.textContent).toContain('provider message');
+    await mountMetrics(root, { admin: false });
+    expect(root.querySelector('.metrics-login-email')).toBeNull();
+    stubFetch({ '/api/stats/admin': () => json({}, 401) });
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-login-email')).toBeNull();
+  });
+
+  it('renders empty login delivery windows as zeroes', async () => {
+    const zero = {
+      requested: 0,
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+      suppressed: 0,
+      complained: 0,
+      completed: 0,
+    };
+    stubFetch({
+      '/api/stats/admin': () =>
+        json({ ...adminMetrics, loginEmailDelivery: { last7d: zero, last30d: zero } }),
+    });
+    window.history.replaceState(null, '', '/metrics?tab=operations');
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const values = [...root.querySelectorAll('.metrics-login-email tbody td')].map(
+      (cell) => cell.textContent,
+    );
+    expect(values).toEqual(Array(14).fill('0'));
+  });
+
+  it.each([
+    [
+      'zh-Hans',
+      '/zh-hans/metrics?tab=operations',
+      '登录邮件投递',
+      ['状态', '最近7天', '最近30天'],
+      ['已请求', '已发送', '已送达', '已退信', '已抑制', '已投诉', '已完成验证码登录'],
+    ],
+    [
+      'zh-Hant',
+      '/zh-hant/metrics?tab=operations',
+      '登入郵件投遞',
+      ['狀態', '最近7天', '最近30天'],
+      ['已請求', '已傳送', '已送達', '已退信', '已抑制', '已投訴', '已完成驗證碼登入'],
+    ],
+  ] as const)(
+    'translates the login delivery block in %s',
+    async (locale, path, heading, columns, labels) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', path);
+      stubFetch();
+      const root = mountRoot();
+      await mountMetrics(root, { admin: true });
+      const section = root.querySelector('.metrics-login-email');
+      expect(section?.querySelector('h2')?.textContent).toBe(heading);
+      expect([...section!.querySelectorAll('thead th')].map((cell) => cell.textContent)).toEqual(
+        columns,
+      );
+      expect([...section!.querySelectorAll('tbody th')].map((cell) => cell.textContent)).toEqual(
+        labels,
+      );
+      expect(section?.textContent).not.toContain('Each activity');
+      expect(section?.textContent).not.toContain('—');
+    },
+  );
+
   afterEach(() => {
+    window.history.replaceState(null, '', '/metrics');
     vi.unstubAllGlobals();
     document.body.replaceChildren();
     document.body.className = '';
