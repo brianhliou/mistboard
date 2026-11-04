@@ -35,6 +35,11 @@ npm run dev:memory   # no Docker; database-backed pages stay empty
 
 Open `http://localhost:3000`. Check your work with `npm test` and `npm run typecheck`.
 
+Dev pairs listen on `127.0.0.1` by default. For phone testing on the same
+network, run `MISTBOARD_DEV_LAN=1 npm run dev` (or `npm run dev:memory` with
+the same prefix) and open `http://<your-Mac-LAN-address>:3000` on the phone.
+The same opt-in applies to the standalone web and agent dev commands.
+
 ## Code
 
 ```text
