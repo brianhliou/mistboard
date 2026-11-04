@@ -134,6 +134,8 @@ type SizingInput = {
 };
 
 export type ReviewScaffoldConfig = SizingInput & {
+  /** Preserve the mounted study shell and its document rail on chapter changes. */
+  reuseShell?: HTMLElement;
   /** Stops the resize work when the review is destroyed. */
   signal?: AbortSignal;
   /** Board and moves only, inside a host page's column (review-shell.ts). */
@@ -282,7 +284,7 @@ export function createReviewScaffold(
     favoriteGameId && !config.metaCard
       ? reviewActionsWithFavorite(config.actions, favoriteGameId)
       : config.actions;
-  const left = config.embedded ? [] : infoRail({ ...config, actions });
+  const left = config.embedded || config.reuseShell ? [] : infoRail({ ...config, actions });
   // Right rail, lichess order: material-top · [analyse table: engine panel ·
   // move list · advice · navigation] · summary · material-bottom. The analyse
   // table is ONE visually connected box (lichess's analyse tools) whose bottom
@@ -369,7 +371,7 @@ export function createReviewScaffold(
     summary: config.analysisSummary,
   });
 
-  const shell = createReviewShell({
+  const nextShell = createReviewShell({
     ariaLabel: config.ariaLabel,
     // `review-shell--pocket` stands in for `.review-shell:has(.review-rail-pocketbox)`:
     // a :has() whose subject is the whole shell re-matched all of its descendants
@@ -387,6 +389,15 @@ export function createReviewScaffold(
     right,
     embedded: config.embedded,
   });
+  const shell = config.reuseShell ?? nextShell;
+  if (config.reuseShell) {
+    const cluster = shell.querySelector('.review-shell__cluster')!;
+    for (const child of [...cluster.children]) {
+      if (!child.classList.contains('review-shell__left')) child.remove();
+    }
+    cluster.append(...nextShell.querySelectorAll('.review-shell__center, .review-shell__right'));
+    shell.className = nextShell.className;
+  }
   shell.querySelector('.review-shell__cluster')?.classList.add(COL1_STACK_CLASS);
   if (config.railBelow) {
     config.railBelow.classList.add('review-rail-below');
@@ -403,7 +414,7 @@ export function createReviewScaffold(
       cluster.append(gaugeCol);
     }
   }
-  root.append(shell);
+  if (!config.reuseShell) root.append(shell);
 
   // Board zoom: restore the persisted scale and glue the drag grip to the primary
   // slot's bottom-right corner (re-anchored after every refit).

@@ -406,6 +406,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Shared scaffold role. Postgame is the default; standalone analysis and
    *  studies opt into their distinct roles at their route-level mount. */
   reviewSurface?: ReviewSurface;
+  /** Keep a study's existing shell and left rail while replacing its review. */
+  reuseShell?: HTMLElement;
+  /** Synchronize an external chapter chart with the board cursor. */
+  onPlyChange?: (ply: number) => void;
   /** The standalone analysis page's phone chrome (analysis-phone-bar.ts): an
    *  engine bar over the board, an info row and a labelled bottom bar below
    *  600px. Off for embeds and every other surface. */
@@ -636,6 +640,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
  *  (to persist it — "save as study", autosave). */
 export interface TreeReviewHandle {
   serialize(): SerializedTree;
+  /** Navigate the recorded mainline from an external chart. */
+  jumpToPly(ply: number): void;
   /** Stop everything the mount started: page-wide listeners, the layout's
    *  resize work, the local engine's worker, a whole-game sweep in flight. A
    *  surface that swaps reviews without a page load (a broadcast board opened
@@ -1930,6 +1936,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const explorerBelowRail = config.explorer?.placement === 'below-rail';
   const scaffold = createReviewScaffold(root, {
     signal: mountAbort.signal,
+    reuseShell: config.reuseShell,
     embedded: config.embedded,
     reviewSurface: config.reviewSurface ?? 'game',
     ariaLabel: config.ariaLabel,
@@ -2309,6 +2316,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       phoneAnalysis.setEval(gameAnalysis ? (point ? formatEval(point.cp, point.mate) : '–') : null);
     }
     moveTimesChart?.setPly(node.ply);
+    config.onPlyChange?.(node.ply);
     config.onLineChange?.(movesTo(node));
   }
 
@@ -2797,6 +2805,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
 
   return {
     serialize: serializeCurrentTree,
+    jumpToPly(ply) {
+      go(tree.mainlinePath().slice(0, Math.max(0, Math.trunc(ply))));
+    },
     destroy() {
       mountAbort.abort();
       enginePanel?.dispose();

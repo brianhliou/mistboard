@@ -24,7 +24,17 @@ import './review/practice.css';
 import './study.css';
 import './study-index.css';
 import type { XiangqiPieceRole } from '@mistboard/game';
-import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
+import {
+  deepCloneJson,
+  normalizeStartFen,
+  parsePracticeGoal,
+  serializedTreeMainline,
+} from '@mistboard/game';
+import {
+  createEmbedScoreChart,
+  type EmbedScoreChart,
+  embedScoreSeries,
+} from './embed/embed-score-chart.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { fetchStudyChapterDecisions } from './review/study-decisions.js';
@@ -114,6 +124,8 @@ type ChapterDto = {
    *  page fetches it and the underboard gets the advantage chart. */
   hasAnalysis?: boolean;
   hasDecisions?: boolean;
+  /** Named engine win-chance lines, validated against the mounted mainline. */
+  scoreSeries?: unknown;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -227,6 +239,7 @@ function renderStudy(
   let activeAutosave: StudyAutosave | null = null;
   // Phone chrome (chapter bar, dock, chapter sheet); rebuilt per chapter.
   let activePhone: StudyPhoneHandle | null = null;
+  let activeStatusAbort: AbortController | null = null;
 
   const flushActive = async (): Promise<boolean> => {
     if (!activeAutosave) return true;
@@ -236,7 +249,10 @@ function renderStudy(
   const disposeActive = (): void => {
     activeAutosave?.dispose();
     activeAutosave = null;
+    activeHandle?.destroy();
     activeHandle = null;
+    activeStatusAbort?.abort();
+    activeStatusAbort = null;
   };
 
   const updateChapterUrl = (id: string, mode: 'push' | 'replace'): void => {
@@ -261,11 +277,7 @@ function renderStudy(
     disposeActive();
     activeId = id;
     updateChapterUrl(id, historyMode);
-    // renderActive() rebuilds the whole page and the board mounts async, so the
-    // document briefly shrinks and the browser yanks the scroll to the top. Pin
-    // it: hold the current scroll while the new chapter mounts.
-    preserveScroll();
-    renderActive();
+    await renderActive(true);
   };
 
   // Every rendered chapter has a stable permalink, including the first chapter
@@ -297,33 +309,8 @@ function renderStudy(
     window.removeEventListener('popstate', onPopState);
     window.removeEventListener('beforeunload', onBeforeUnload);
     disposeActive();
+    activePhone?.destroy();
   });
-
-  // Keep the page from jumping to the top on a chapter switch. Capture the
-  // scroll now and restore it across the re-render + async board mount, until a
-  // real user scroll releases the pin.
-  const preserveScroll = (): void => {
-    const y = window.scrollY;
-    let released = false;
-    const release = () => {
-      released = true;
-      window.removeEventListener('wheel', release);
-      window.removeEventListener('touchmove', release);
-      window.removeEventListener('keydown', release);
-    };
-    window.addEventListener('wheel', release, { passive: true, once: true });
-    window.addEventListener('touchmove', release, { passive: true, once: true });
-    window.addEventListener('keydown', release, { once: true });
-    let frames = 0;
-    const pin = () => {
-      if (released) return;
-      if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);
-      // Re-pin for a few frames — the board chunk lands async and reflows once.
-      if (frames++ < 30) requestAnimationFrame(pin);
-      else release();
-    };
-    requestAnimationFrame(pin);
-  };
 
   // A study is single-variant: chapters inherit the variant chosen at create
   // time, so no chapter request carries one (the server refuses a mismatch).
@@ -680,12 +667,8 @@ function renderStudy(
     });
   };
 
-  /** Rebuilds the page; resolves once the chapter's async board (if any) has mounted. */
-  function renderActive(): Promise<void> {
-    // Captured before the rebuild tears the old rail out of the DOM, so a
-    // chapter switch keeps the reader's place in a long chapter list.
-    const previousListScrollTop =
-      root.querySelector<HTMLElement>('.study-chapters__list')?.scrollTop ?? null;
+  /** A chapter switch reuses the document chrome; other edits rebuild the page. */
+  function renderActive(chapterSwitch = false): Promise<void> {
     const chapter = chapters.find((entry) => entry.id === activeId) ?? chapters[0];
     // Fail-closed: a chapter whose variant has no board on this client (an older
     // client, or a variant retired from the study catalog) reports unsupported
@@ -710,7 +693,26 @@ function renderStudy(
       });
     }
 
+    // Return any blocks borrowed by the phone Info sheet before finding the rail.
+    activePhone?.destroy();
     const gamebookable = studyVariantSupportsGamebook(variant);
+    const playingLesson =
+      gamebookable &&
+      (!study.isOwner || previewMode) &&
+      (chapter.gamebook || (chapter.practice && parsePracticeGoal(chapter.practiceGoal)));
+    const reuseShell =
+      chapterSwitch && !playingLesson
+        ? (root.querySelector<HTMLElement>('.study-review') ?? undefined)
+        : undefined;
+    if (reuseShell) {
+      for (const row of reuseShell.querySelectorAll<HTMLElement>('.study-chapters__row')) {
+        const active = row.dataset.chapterId === chapter.id;
+        row.classList.toggle('is-active', active);
+        const link = row.querySelector('.study-chapters__link');
+        if (active) link?.setAttribute('aria-current', 'page');
+        else link?.removeAttribute('aria-current');
+      }
+    }
     /**
      * The rail as a LEARNER sees it: no settings gear, no per-chapter gear, no
      * drag handles, no "add a chapter".
@@ -731,7 +733,6 @@ function renderStudy(
       buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
         ...(chapterLabel ? { chapterLabel } : {}),
         ...(groupHeading ? { groupHeading } : {}),
-        previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
         chapterHref: (id) => studyChapterPath(study.id, id, window.location.pathname),
@@ -771,8 +772,7 @@ function renderStudy(
           })
         : undefined;
 
-    root.replaceChildren(buildNav());
-    activePhone?.destroy();
+    if (!reuseShell) root.replaceChildren(buildNav());
     const phoneEventGroups = chapterEventGroups(chapters);
     const phone = createStudyPhone({
       studyTitle: localizedStudyName(study.name, study.i18n),
@@ -929,7 +929,12 @@ function renderStudy(
     const eventGroups = chapterEventGroups(chapters);
     let handle: TreeReviewHandle | null = null;
     activeHandle = null;
-    const status = statusSpan(study.isOwner);
+    const status = statusSpan(
+      study.isOwner,
+      reuseShell?.querySelector<HTMLElement>('.study-actions__status') ?? undefined,
+    );
+    const statusAbort = new AbortController();
+    activeStatusAbort = statusAbort;
     let autosave: StudyAutosave | null = null;
     if (study.isOwner) {
       const updateStatus = (state: StudyAutosaveState, message: string): void => {
@@ -974,12 +979,16 @@ function renderStudy(
           },
         });
       };
-      status.addEventListener('click', resolveOrRetry);
-      status.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        resolveOrRetry();
-      });
+      status.addEventListener('click', resolveOrRetry, { signal: statusAbort.signal });
+      status.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          resolveOrRetry();
+        },
+        { signal: statusAbort.signal },
+      );
     }
 
     // The board stacks are code-split per variant, so the mount is async: the
@@ -993,7 +1002,10 @@ function renderStudy(
     const storedAnalysis = chapter.hasAnalysis
       ? fetchStudyChapterAnalysis(study.id, chapter.id, mountedTree)
       : null;
+    let scoreChart: EmbedScoreChart | null = null;
     return mountStudyReview(variant, root, {
+      reuseShell,
+      onPlyChange: (ply) => scoreChart?.setPly(ply),
       storedAnalysis,
       storedDecisions:
         variant === 'jieqi' && chapter.hasDecisions
@@ -1034,21 +1046,23 @@ function renderStudy(
         : {}),
       // A chapter that is a whole game is laid out from its tags (players, date,
       // a result chip), grouped under its event when the games span several.
-      actions: rail(
-        status,
-        false,
-        (model) => {
-          const full = chapters.find((entry) => entry.id === model.id);
-          return full ? buildChapterGameRow(full, gameFocus) : null;
-        },
-        (model) => eventGroups.get(model.id) ?? null,
-      ),
+      actions: reuseShell
+        ? undefined
+        : rail(
+            status,
+            false,
+            (model) => {
+              const full = chapters.find((entry) => entry.id === model.id);
+              return full ? buildChapterGameRow(full, gameFocus) : null;
+            },
+            (model) => eventGroups.get(model.id) ?? null,
+          ),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
       // PGN download sits with FEN/Share/Moves rather than in the owner-only
       // settings menu: a study whose work cannot leave it is a trap, so every
       // viewer gets it.
       shareExtra: [...(pgnExportable() ? [pgnExportRow()] : []), cloneRow()],
-      details: buildStudyChat(study.id),
+      details: reuseShell ? undefined : buildStudyChat(study.id),
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
       annotationPracticeControls: practiceDock,
@@ -1123,6 +1137,12 @@ function renderStudy(
         );
         handle = mounted;
         activeHandle = mounted;
+        const positions = serializedTreeMainline(mounted.serialize()).length + 1;
+        const series = embedScoreSeries(chapter.scoreSeries, positions);
+        if (series) {
+          scoreChart = createEmbedScoreChart(series, { onJump: (ply) => mounted.jumpToPly(ply) });
+          root.querySelector('.study-review .review-underboard')?.prepend(scoreChart.el);
+        }
         // The review shell landed after the dock; keep the dock last, then
         // drive Back/Next from the shell's own move band.
         phone.attach(root);
@@ -1284,9 +1304,13 @@ export function chapterIdFromStudyPath(pathname: string, studyId: string): strin
  *  scratch analysis as stored on someone else's study. A viewer now gets a
  *  readout too, held back until their first move: before that there is no
  *  question to answer, and every visitor to a public study is a viewer. */
-function statusSpan(isOwner: boolean): HTMLElement {
-  const status = document.createElement('span');
-  status.className = 'study-actions__status';
+function statusSpan(isOwner: boolean, status = document.createElement('span')): HTMLElement {
+  status.classList.add('study-actions__status');
+  status.classList.remove('is-actionable');
+  status.removeAttribute('role');
+  status.removeAttribute('tabindex');
+  status.removeAttribute('title');
+  status.hidden = false;
   if (!isOwner) {
     status.dataset.state = 'viewer';
     status.textContent = t('study.viewerNotSaved');

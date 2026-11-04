@@ -12,6 +12,7 @@
 
 import { ENGINE_A_COLOR, ENGINE_B_COLOR } from '../articles/eval-compare-chart.js';
 import { attachChartScrub, createChartTip, showChartTip } from '../review/chart-scrub.js';
+import './embed-score-chart.css';
 
 export type EmbedScoreSide = 'red' | 'black';
 export type EmbedScoreSeriesLine = { name: string; color: string; values: number[] };
