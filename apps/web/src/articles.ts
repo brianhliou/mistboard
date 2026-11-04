@@ -1290,7 +1290,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 // their current shape and only /blog gets this. The one exception is the zh
 // rules pages, which end in a single line inviting a reader to review the
 // machine translation (buildRulesTranslateNote).
-function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
+export function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
   if (article.kind === 'rules') return buildRulesTranslateNote(article, lang);
   if (article.kind !== 'article') return null;
   const related = relatedArticles(article);
