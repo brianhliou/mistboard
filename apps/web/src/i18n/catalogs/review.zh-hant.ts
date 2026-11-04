@@ -34,7 +34,7 @@ export const ZH_HANT_REVIEW = {
   'review.promoteToMainline': '提升為主線',
   'review.deleteFromHere': '從此處刪除',
   'review.played': '實戰',
-  'review.advice.inaccuracy': '不精確',
+  'review.advice.inaccuracy': '失準',
   'review.advice.mistake': '錯著',
   'review.advice.blunder': '漏著',
   'review.advice.judgment': '{judgment}。',

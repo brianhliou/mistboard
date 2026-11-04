@@ -34,7 +34,7 @@ export const ZH_HANS_REVIEW = {
   'review.promoteToMainline': '提升为主线',
   'review.deleteFromHere': '从此处删除',
   'review.played': '实战',
-  'review.advice.inaccuracy': '不精确',
+  'review.advice.inaccuracy': '失准',
   'review.advice.mistake': '错着',
   'review.advice.blunder': '漏着',
   'review.advice.judgment': '{judgment}。',
