@@ -411,6 +411,8 @@ Edit task → find file → open only that file.
 | `xiangqi-engine-game.ts` | Standard-xiangqi EvE game (`playXiangqiEngineGame`): a red/black-named wrapper over `variant-eve.ts` with the xiangqi adapter |
 | `variant-eve.ts` | Tenant-variant EvE game loop (`playVariantEngineGame`) driven by a `VariantEveAdapter` (tenant, legal moves, UCI round-trip, search, live-path guard / pre-search): random opening prefix, random-mover floor, kernel validation, events/result/termination/think-time for EvE persistence |
 | `variant-eve-registry.ts` | The adapters the EvE runner can play (`eveAdapterFor`, `EVE_VARIANT_IDS`, `eveRoomId`); a tenant with a bot ladder and no adapter fails `variant-eve-registry.test.ts` |
+| `three-kingdoms-banqi-eve-adapter.ts` | Admin-playtest TK ladder adapter: seeded deals, the shared redacted live request, L1 random rating anchor and full-ladder worker capability |
+| `three-kingdoms-banqi-ladder.test.ts` | TK ladder tier selection, process-free random play, net availability, UCI ordering and hidden-identity invariance across live and EvE requests |
 | `xiangqi-eve-adapter.ts` | EvE adapter for standard xiangqi (FSF + Pikafish tiers, random floor, immediate-loss guard) |
 | `fortress-xiangqi-eve-adapter.ts` | EvE adapter for Fortress Xiangqi (FSF ladder, random floor, immediate-loss guard) |
 | `duck-xiangqi-eve-adapter.ts` | EvE adapter for Duck Xiangqi (FSF ladder, random floor, take-the-win pre-search, no guard) |
