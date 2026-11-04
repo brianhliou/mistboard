@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { downloadRow, underboardPanel } from './underboard-tabs.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { downloadRow, shareRow, underboardPanel } from './underboard-tabs.js';
 
 function shareInputs(): { fen: HTMLInputElement; moves: HTMLTextAreaElement } {
   return {
@@ -7,6 +7,166 @@ function shareInputs(): { fen: HTMLInputElement; moves: HTMLTextAreaElement } {
     moves: document.createElement('textarea'),
   };
 }
+
+describe('underboard native URL sharing', () => {
+  const writeText = vi.fn<(text: string) => Promise<void>>();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    writeText.mockReset().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { languages: ['en'], clipboard: { writeText } });
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  function urlRow(): { field: HTMLInputElement; button: HTMLButtonElement } {
+    const field = document.createElement('input');
+    const panel = underboardPanel(document.createElement('div'), {
+      shareMovesInput: document.createElement('textarea'),
+      shareUrlInput: field,
+      gameUrl: 'https://mistboard.com/review/r1',
+    });
+    document.body.append(panel);
+    const row = [...panel.querySelectorAll('.review-share__row')].find(
+      (row) => row.querySelector('.review-share__label')?.textContent === 'Share',
+    )!;
+    return { field, button: row.querySelector('button')! };
+  }
+
+  it('shares the current position URL from the click without copying it', async () => {
+    const share = vi.fn<(data?: ShareData) => Promise<void>>().mockResolvedValue(undefined);
+    Object.assign(navigator, { share });
+    const { field, button } = urlRow();
+    field.value = 'https://mistboard.com/review/r1?ply=8';
+
+    expect(button.textContent).toBe('Share');
+    button.click();
+    // Native share needs the user activation from this click, before any await.
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writeText).not.toHaveBeenCalled();
+    expect(button.textContent).toBe('Share');
+  });
+
+  it('copies the current URL when native sharing is unavailable', async () => {
+    const { field, button } = urlRow();
+    field.value = 'https://mistboard.com/review/r1?ply=12';
+    expect(button.textContent).toBe('Copy');
+    button.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+    expect(button.textContent).toBe('Copied');
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(button.textContent).toBe('Copy');
+  });
+
+  it('falls back to copying when native sharing is refused', async () => {
+    const share = vi.fn().mockRejectedValue(new DOMException('Denied', 'NotAllowedError'));
+    Object.assign(navigator, { share });
+    const { field, button } = urlRow();
+    button.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+    expect(button.textContent).toBe('Copied');
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(button.textContent).toBe('Share');
+  });
+
+  it('falls back to copying if native sharing throws synchronously', async () => {
+    const share = vi.fn(() => {
+      throw new TypeError('Sharing is unavailable');
+    });
+    Object.assign(navigator, { share });
+    const { field, button } = urlRow();
+    button.click();
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+    expect(button.textContent).toBe('Copied');
+  });
+
+  it('copies the requested URL if the position changes while native sharing is pending', async () => {
+    let rejectShare!: (error: Error) => void;
+    const share = vi.fn(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectShare = reject;
+        }),
+    );
+    Object.assign(navigator, { share });
+    const { field, button } = urlRow();
+    const requestedUrl = 'https://mistboard.com/review/r1?ply=8';
+    field.value = requestedUrl;
+    button.click();
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: requestedUrl });
+    field.value = 'https://mistboard.com/review/r1?ply=12';
+    rejectShare(new Error('Share failed'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(requestedUrl);
+    expect(button.textContent).toBe('Copied');
+  });
+
+  it('leaves the clipboard alone when the share sheet is cancelled', async () => {
+    const share = vi.fn().mockRejectedValue(new DOMException('Cancelled', 'AbortError'));
+    Object.assign(navigator, { share });
+    const { field, button } = urlRow();
+    button.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(share).toHaveBeenCalledExactlyOnceWith({ url: field.value });
+    expect(writeText).not.toHaveBeenCalled();
+    expect(button.textContent).toBe('Share');
+    expect(document.activeElement).not.toBe(field);
+  });
+
+  it.each(['missing', 'denied'] as const)(
+    'selects the URL for manual copying when the clipboard is %s',
+    async (failure) => {
+      if (failure === 'missing') Object.assign(navigator, { clipboard: undefined });
+      else writeText.mockRejectedValue(new DOMException('Denied', 'NotAllowedError'));
+      const { field, button } = urlRow();
+      button.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(button.textContent).toBe('Copy');
+      expect(document.activeElement).toBe(field);
+      expect(field.selectionStart).toBe(0);
+      expect(field.selectionEnd).toBe(field.value.length);
+    },
+  );
+
+  it('selects the URL when both native sharing and clipboard copying fail', async () => {
+    Object.assign(navigator, { share: vi.fn().mockRejectedValue(new Error('Share failed')) });
+    writeText.mockRejectedValue(new Error('Copy failed'));
+    const { field, button } = urlRow();
+    button.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(button.textContent).toBe('Share');
+    expect(document.activeElement).toBe(field);
+    expect(field.selectionEnd).toBe(field.value.length);
+  });
+
+  it.each(['FEN', 'Moves', 'Embed'])(
+    'keeps the %s row copy-only even when native sharing is available',
+    async (label) => {
+      const share = vi.fn();
+      Object.assign(navigator, { share });
+      const field = document.createElement('textarea');
+      field.value = 'Exported content';
+      const row = shareRow(label, field);
+      const button = row.querySelector('button')!;
+      expect(button.textContent).toBe('Copy');
+      button.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(field.value);
+      expect(share).not.toHaveBeenCalled();
+    },
+  );
+});
 
 describe('underboard Share & export downloads', () => {
   it('renders one download link per format, dressed like the copy buttons', () => {
