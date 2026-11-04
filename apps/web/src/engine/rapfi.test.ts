@@ -490,7 +490,7 @@ describe('eight Rapfi levels', () => {
     ).toEqual([]);
   });
 
-  it('uses four seeded choice tiers then four increasing best-move budgets within five seconds', async () => {
+  it('uses five seeded choice tiers then three increasing best-move budgets within five seconds', async () => {
     expect(RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     const candidates = parseRapfiOutput(tierOutput);
     for (const [index, tier] of RAPFI_LEVELS.entries()) {
@@ -502,7 +502,7 @@ describe('eight Rapfi levels', () => {
       const pending = transport.engine.chooseMove(pos, tier.level, seed);
       transport.receive({ type: 'ready' });
       const commands = transport.postMessage.mock.lastCall?.[0].commands;
-      const choice = tier.level <= 4;
+      const choice = tier.level <= 5;
       expect(commands.includes('INFO show_detail 2')).toBe(choice);
       if (choice) {
         expect(tier.candidateCount).toBeGreaterThan(1);
@@ -522,6 +522,7 @@ describe('eight Rapfi levels', () => {
           ? selectRapfiMove(pos, candidates, {
               candidateCount: tier.candidateCount!,
               evalMargin: tier.evalMargin!,
+              bestRate: tier.bestRate,
               seed,
             })
           : { x: 2, y: 0 },
@@ -535,13 +536,13 @@ describe('Rapfi request lifecycle', () => {
     const transport = controlled();
     const pending = transport.engine.chooseMove(
       { turn: 2, stones: [{ x: 3, y: 8, player: 1 }] },
-      5,
+      6,
     );
-    await expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 5)).rejects.toThrow(
+    await expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 6)).rejects.toThrow(
       'already searching',
     );
     transport.receive({ type: 'ready' });
-    const tier = RAPFI_LEVELS.find((entry) => entry.level === 5)!;
+    const tier = RAPFI_LEVELS.find((entry) => entry.level === 6)!;
     expect(transport.postMessage).toHaveBeenLastCalledWith({
       type: 'commands',
       commands: [

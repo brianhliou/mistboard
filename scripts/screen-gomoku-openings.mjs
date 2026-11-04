@@ -113,6 +113,24 @@ export function* candidates() {
 /** Use the last completed PV's paired EVAL/WINRATE, AND the final summary
  * score (which may come from an interrupted iteration). Never synthesize a
  * winrate from a score. Missing/truncated telemetry fails closed. */
+// Rapfi takes the side to move from the order of BOARD lines, not their
+// own/opponent field: whoever placed the last stone has just moved. List the
+// stones alternately and end on the opponent's, as apps/web/src/engine/rapfi.ts
+// rapfiBoardLines does for the live bot.
+export function boardLines(candidate) {
+  const line = (stone, field) => `${coordinates(stone).join(',')},${field}`;
+  const own = candidate.stones.filter((stone) => stone.color === candidate.turn);
+  const opponent = candidate.stones.filter((stone) => stone.color !== candidate.turn);
+  if (!opponent.length)
+    throw new Error('Rapfi needs an opponent stone to search for the side to move');
+  const lines = [];
+  for (let i = opponent.length - 1, j = own.length - 1; i >= 0 || j >= 0; i--, j--) {
+    if (i >= 0) lines.push(line(opponent[i], 2));
+    if (j >= 0) lines.push(line(own[j], 1));
+  }
+  return lines.reverse();
+}
+
 export function parseScreen(lines, requestedNodes) {
   let pv = {};
   let complete;
@@ -197,13 +215,7 @@ export async function loadEngine() {
     pin,
     search(candidate, nodes) {
       lines = [];
-      const board = [
-        'BOARD',
-        ...candidate.stones.map(
-          (stone) => `${coordinates(stone).join(',')},${stone.color === candidate.turn ? 1 : 2}`,
-        ),
-        'DONE',
-      ].join('\n');
+      const board = ['BOARD', ...boardLines(candidate), 'DONE'].join('\n');
       for (const command of [
         started ? 'RESTART' : 'START 15',
         'INFO rule 0',
@@ -268,7 +280,7 @@ export function writePool(
       `No forced win was found within this finite search; this is screening evidence, not a solved draw. ` +
       `WINRATE comes directly from INFO WINRATE, paired with the last completed INFO PV; the separate final summary can be an interrupted iteration and must pass too. Missing, nonnumeric, mate or short-budget telemetry is rejected.\n\n` +
       `Reproduce: node scripts/screen-gomoku-openings.mjs --audit /tmp/gomoku-screen.jsonl. ` +
-      `This run's full telemetry: ${audit}. New casual games and rematches draw randomly; opening: 'free' requests an empty board. Legacy logs without setup stay empty-board games.\n`,
+      `This run's full telemetry: ${audit}. New casual games and rematches draw randomly. Legacy logs without setup stay empty-board games.\n`,
   );
   return metadata;
 }

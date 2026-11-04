@@ -13,7 +13,6 @@ import {
   defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
   GOMOKU_SPEC_ID,
-  type GomokuOpeningMode,
   gameSpecForId,
   isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
@@ -167,7 +166,6 @@ export type LandingRoomSetup = {
     incrementMs: number;
   };
   preferredColor: LandingColorPreference;
-  opening?: GomokuOpeningMode;
 };
 type LandingSetupPreference = {
   // Legacy single-slot engine pick (pre per-variant). Still read/written for
@@ -1885,12 +1883,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   let colorIsExplicit = storedColor !== undefined;
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
-  const openingSection = document.createElement('label');
-  openingSection.className = 'landing-setup-section';
-  const freeOpening = document.createElement('input');
-  freeOpening.type = 'checkbox';
-  freeOpening.dataset.gomokuFreeOpening = '';
-  openingSection.append(freeOpening, document.createTextNode('Free opening (empty board)'));
   let syncGameSpecificSections = () => {};
   let syncVariantControls = () => {};
   let syncColorPreferenceControls = () => {};
@@ -2335,8 +2327,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       return;
     }
     const setup = selectedRoomSetup(selectedGameSpecId, rated, selectedPreset, preferredColor);
-    if (selectedGameSpecId === GOMOKU_SPEC_ID && choice.mode !== 'lobby')
-      setup.opening = freeOpening.checked ? 'free' : 'balanced';
     storeSetupPreference(choice.mode, setup, selectedPreset, selectedEngineId, colorIsExplicit);
     if (choice.mode === 'lobby') {
       cancelLobbyWait?.();
@@ -2472,8 +2462,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       : null;
 
   syncGameSpecificSections = () => {
-    openingSection.hidden = selectedGameSpecId !== GOMOKU_SPEC_ID || choice.mode === 'lobby';
-    openingSection.style.display = openingSection.hidden ? 'none' : '';
     const capabilities = landingGameSpecCapabilities(selectedGameSpecId);
     if (!capabilities.supportsRated) {
       rated = false;
@@ -2557,9 +2545,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     ...(colorSection
       ? [buildSetupSection('side', t('setup.side', {}, locale), colorSection, colorSummary)]
       : []),
-    buildSetupSection('opening', 'Opening', openingSection, () =>
-      freeOpening.checked ? 'Free opening' : 'Balanced opening',
-    ),
     buildSetupSection(
       'gameType',
       t('setup.gameType', {}, locale),
@@ -2631,7 +2616,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   for (const section of setupSections) {
     section.button?.addEventListener('click', () => openSetupSection(section.id));
   }
-  freeOpening.addEventListener('change', () => syncSetupAccordion());
   syncSetupAccordion();
 
   // The decision sequence closes with game type and opponent. Computer adds one
@@ -3820,7 +3804,6 @@ export function roomCreationRequestBody(
     timeControl: setup.timeControl,
     rated,
     preferredColor: setup.preferredColor,
-    ...(gameSpecId === GOMOKU_SPEC_ID ? { opening: setup.opening ?? 'balanced' } : {}),
     ...(mode === 'pve' && engineId ? { engineId } : {}),
   };
 }

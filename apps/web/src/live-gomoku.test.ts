@@ -693,7 +693,7 @@ describe('hidden Gomoku setup conformance', () => {
     }
   });
 
-  it('offers a free opening in hidden Gomoku setup and preserves the selected colour', async () => {
+  it('omits opening selection in hidden Gomoku setup and preserves the selected colour', async () => {
     const { openLandingSetupDialog, closeActiveLandingDialog, setRoomNavigator } = await import(
       './landing-play.js'
     );
@@ -708,28 +708,25 @@ describe('hidden Gomoku setup conformance', () => {
     const navigate = vi.fn();
     setRoomNavigator(navigate);
     try {
-      for (const free of [false, true]) {
+      for (const mode of ['pvp', 'pve'] as const) {
         openLandingSetupDialog({
-          mode: 'pvp',
+          mode,
           engineId: 'rapfi-level-1',
           initialGameSpecId: 'gomoku',
           initialColor: 'white',
           locale: 'en',
         });
-        const checkbox = document.querySelector<HTMLInputElement>('[data-gomoku-free-opening]');
-        expect(checkbox).not.toBeNull();
-        expect(checkbox!.checked).toBe(false);
-        checkbox!.checked = free;
-        checkbox!.dispatchEvent(new Event('change', { bubbles: true }));
+        expect(document.querySelector('[data-gomoku-free-opening]')).toBeNull();
+        expect(document.querySelector('[data-setup-section="opening"]')).toBeNull();
         document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
         await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
         const call = fetch.mock.calls.find(([input]) => input === '/api/rooms');
         expect(JSON.parse(call![1]!.body as string)).toMatchObject({
           gameSpecId: 'gomoku',
           preferredColor: 'white',
-          opening: free ? 'free' : 'balanced',
           rated: false,
         });
+        expect(JSON.parse(call![1]!.body as string)).not.toHaveProperty('opening');
         fetch.mockClear();
         navigate.mockClear();
         closeActiveLandingDialog();
@@ -742,7 +739,7 @@ describe('hidden Gomoku setup conformance', () => {
     }
   });
 
-  it('preserves balanced/free opening in both casual request modes without adding it to other variants', async () => {
+  it('omits opening fields in both casual request modes', async () => {
     const { roomCreationRequestBody } = await import('./landing-play.js');
     const setupFor = (gameSpecId: 'gomoku' | 'xiangqi') => ({
       gameSpecId,
@@ -751,18 +748,11 @@ describe('hidden Gomoku setup conformance', () => {
       preferredColor: 'white' as const,
     });
     for (const mode of ['pvp', 'pve'] as const) {
-      for (const opening of ['balanced', 'free'] as const) {
-        expect(
-          roomCreationRequestBody(mode, { ...setupFor('gomoku'), opening }, 'rapfi-level-1'),
-        ).toMatchObject({ opening });
+      for (const spec of ['gomoku', 'xiangqi'] as const) {
+        expect(roomCreationRequestBody(mode, setupFor(spec), 'rapfi-level-1')).not.toHaveProperty(
+          'opening',
+        );
       }
-      expect(roomCreationRequestBody(mode, setupFor('gomoku'))).toHaveProperty(
-        'opening',
-        'balanced',
-      );
-      expect(
-        roomCreationRequestBody(mode, { ...setupFor('xiangqi'), opening: 'free' }),
-      ).not.toHaveProperty('opening');
     }
   });
 });

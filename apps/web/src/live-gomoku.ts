@@ -281,7 +281,6 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     gameSpecId: GOMOKU_SPEC_ID,
     preferredColor: isGomokuColor(state.seat) ? state.seat : 'random',
     rated: false,
-    opening: state.view?.opening?.stones.length === 0 ? 'free' : 'balanced',
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
   renderBoard: (refs: LiveRefs, view) => {

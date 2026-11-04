@@ -49,16 +49,22 @@ export const RAPFI_LEVELS: readonly {
   readonly timeMs: number;
   readonly candidateCount?: number;
   readonly evalMargin?: number;
+  readonly bestRate?: number;
 }[] = Object.freeze([
-  { level: 1, nodes: 5_000, timeMs: 1_000, candidateCount: 128, evalMargin: 60_000 },
-  { level: 2, nodes: 10_000, timeMs: 1_000, candidateCount: 16, evalMargin: 2_000 },
-  { level: 3, nodes: 20_000, timeMs: 1_500, candidateCount: 8, evalMargin: 750 },
-  { level: 4, nodes: 40_000, timeMs: 1_500, candidateCount: 4, evalMargin: 300 },
-  { level: 5, nodes: 80_000, timeMs: 2_000 },
-  { level: 6, nodes: 150_000, timeMs: 2_500 },
-  { level: 7, nodes: 250_000, timeMs: 3_500 },
-  // Include the transport/watchdog allowance inside the five-second ceiling.
-  { level: 8, nodes: 400_000, timeMs: 4_750 },
+  // Retuned 2026-11-03 on the offline ladder (scripts/gomoku-level-ladder.mjs,
+  // 40 games per adjacent pair): each level scores 67-83% against the one below.
+  // L1-5 play the best move with probability bestRate, else a move from the
+  // candidate pool; below ~5,000 nodes Rapfi can return no candidates.
+  { level: 1, nodes: 5_000, timeMs: 1_000, candidateCount: 64, evalMargin: 20_000 },
+  { level: 2, nodes: 5_500, timeMs: 1_000, candidateCount: 64, evalMargin: 20_000, bestRate: 0.6 },
+  { level: 3, nodes: 6_000, timeMs: 1_500, candidateCount: 64, evalMargin: 20_000, bestRate: 0.85 },
+  { level: 4, nodes: 8_000, timeMs: 1_500, candidateCount: 8, evalMargin: 20_000, bestRate: 0.9 },
+  { level: 5, nodes: 10_000, timeMs: 2_000, candidateCount: 3, evalMargin: 20_000, bestRate: 0.97 },
+  { level: 6, nodes: 12_000, timeMs: 1_500 },
+  // The ladder ran L7-8 at 1.5s; the longer ceilings let a slow phone reach the
+  // node budget instead of stopping short of it.
+  { level: 7, nodes: 25_000, timeMs: 2_500 },
+  { level: 8, nodes: 80_000, timeMs: 3_500 },
 ]);
 
 export interface RapfiMove {
@@ -169,6 +175,7 @@ export class Rapfi {
               candidateCount: tier.candidateCount,
               evalMargin: tier.evalMargin ?? 0,
               seed: seedOrChoice,
+              ...(tier.bestRate === undefined ? {} : { bestRate: tier.bestRate }),
             }
           : undefined;
     const { lines, timeMs } = rapfiCommands(position, {

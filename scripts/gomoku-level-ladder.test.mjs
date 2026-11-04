@@ -328,7 +328,7 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
 
 test('best-move measurement records completed nodes and final rounded nodes without changing BOARD search', async () => {
   const summary = 'MESSAGE Speed 142K | Depth 14-21 | Eval -466 | Node 80K | Time 563ms';
-  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[4], async ({ commands }) => {
+  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[5], async ({ commands }) => {
     assert.ok(commands.includes('INFO show_detail 2'));
     assert.ok(commands.at(-1).startsWith('BOARD\n'));
     assert.ok(!commands.some((line) => line.startsWith('YXNBEST')));
@@ -404,14 +404,14 @@ test('ladder selection protects a five and an open-four block even without INFO 
 
 test('best-move tiers still use BOARD and validate the final reply', async () => {
   const state = game.createInitialGomokuState(opening);
-  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[4], async ({ commands }) => {
+  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[5], async ({ commands }) => {
     assert.ok(commands.some((line) => line.startsWith('BOARD\n')));
     assert.ok(!commands.some((line) => line.startsWith('YXNBEST')));
     return { lines: ['7,7'], elapsedMs: 2 };
   });
   assert.deepEqual(await player.choose(state, { plySeed: 42 }), { to: 'h8' });
   for (const reply of ['3,7', '15,0', 'MESSAGE no move']) {
-    const bad = ladder.createRapfiPlayer(RAPFI_LEVELS[4], async () => ({
+    const bad = ladder.createRapfiPlayer(RAPFI_LEVELS[5], async () => ({
       lines: [reply],
       elapsedMs: 1,
     }));
@@ -710,4 +710,27 @@ test('empty-board tier requests use the same plain centre reply as the browser',
       to: 'h8',
     });
   }
+});
+
+test('--tiers overrides only the named fields and refuses typos', () => {
+  const { applyTierOverrides } = ladder;
+  const levels = applyTierOverrides(RAPFI_LEVELS, [
+    { level: 2, candidateCount: 64, evalMargin: 6000 },
+    { level: 4, candidateCount: null, evalMargin: null, nodes: 60_000 },
+  ]);
+  assert.deepEqual(levels[1], { ...RAPFI_LEVELS[1], candidateCount: 64, evalMargin: 6000 });
+  assert.equal('candidateCount' in levels[3], false);
+  assert.equal(levels[3].nodes, 60_000);
+  assert.deepEqual(levels[0], RAPFI_LEVELS[0]);
+  // Planted failures: each would otherwise measure a tier other than the one named.
+  assert.throws(() => applyTierOverrides(RAPFI_LEVELS, [{ level: 9, nodes: 1 }]), /Unknown level/);
+  assert.throws(
+    () => applyTierOverrides(RAPFI_LEVELS, [{ level: 2, margin: 5 }]),
+    /Unknown tier field/,
+  );
+  assert.throws(
+    () => applyTierOverrides(RAPFI_LEVELS, [{ level: 6, candidateCount: 4 }]),
+    /both candidateCount and evalMargin/,
+  );
+  assert.throws(() => applyTierOverrides(RAPFI_LEVELS, {}), /JSON array/);
 });

@@ -4,16 +4,22 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { tsImport } from 'tsx/esm/api';
 
-const { applyGomokuRoomMove, createGomokuRoomState, getGomokuPlayerView } = await tsImport(
-  '../packages/game/src/variants-gomoku.ts',
-  import.meta.url,
-);
+const { applyGomokuRoomMove, createGomokuRoomState, getGomokuPlayerView, GOMOKU_OPENINGS } =
+  await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
 
-function fixture({ move = 'h8', network = true, worker = true, reply = true, status = 201 } = {}) {
+function fixture({
+  move = 'a1',
+  network = true,
+  worker = true,
+  reply = true,
+  status = 201,
+  openings = [GOMOKU_OPENINGS.find((o) => o.turn === 'black')],
+} = {}) {
   const page = new EventEmitter();
   const socket = new EventEmitter();
-  const initial = createGomokuRoomState('gmk_smoke', { stones: [], turn: 'black' });
-  const next = applyGomokuRoomMove(initial, { to: move });
+  let initial;
+  let next;
+  let attempts = 0;
   const view = (state) => getGomokuPlayerView(state, 'white');
   const frame = (message) => socket.emit('framereceived', { payload: JSON.stringify(message) });
   const clicks = [];
@@ -22,9 +28,12 @@ function fixture({ move = 'h8', network = true, worker = true, reply = true, sta
   page.request = {
     async post(url, options) {
       posted = { url, ...options };
+      const opening = openings[Math.min(attempts++, openings.length - 1)];
+      initial = createGomokuRoomState(`gmk_smoke_${attempts}`, opening);
+      next = applyGomokuRoomMove(initial, { to: move });
       return {
         status: () => status,
-        json: async () => ({ roomId: initial.id, url: '/room/gmk_smoke', rated: false }),
+        json: async () => ({ roomId: initial.id, url: `/room/${initial.id}`, rated: false }),
       };
     },
   };
@@ -47,7 +56,7 @@ function fixture({ move = 'h8', network = true, worker = true, reply = true, sta
         status: () => 200,
         finished: async () => null,
       });
-    if (reply) {
+    if (reply && initial.status.turn === 'black') {
       socket.emit('framesent', {
         payload: JSON.stringify({
           type: 'move',
@@ -68,7 +77,10 @@ function fixture({ move = 'h8', network = true, worker = true, reply = true, sta
       if (selector.includes('confirm-yes'))
         frame({
           type: 'event-appended',
-          state: { ...view(next), status: { type: 'aborted', reason: 'manual' } },
+          state: {
+            ...view(initial.status.turn === 'black' ? next : initial),
+            status: { type: 'aborted', reason: 'manual' },
+          },
         });
     },
   });
@@ -79,8 +91,15 @@ function fixture({ move = 'h8', network = true, worker = true, reply = true, sta
     browser: { newPage: async () => page },
     page,
     socket,
-    initial,
-    next,
+    get initial() {
+      return initial;
+    },
+    get next() {
+      return next;
+    },
+    get attempts() {
+      return attempts;
+    },
     clicks,
     get posted() {
       return posted;
@@ -109,15 +128,27 @@ test('worker/download evidence plus a kernel-legal server reply pass, then abort
   const f = fixture();
   const result = await run(f);
   assert.equal(result.ok, true);
-  assert.equal(result.move, 'h8');
+  assert.equal(result.move, 'a1');
   assert.equal(result.finalStatus.type, 'aborted');
   assert.equal(f.posted.data.gameSpecId, 'gomoku');
   assert.equal(f.posted.data.engineId, 'rapfi-level-1');
   assert.equal(f.posted.data.rated, false);
   assert.equal(f.posted.data.preferredColor, 'white');
-  assert.equal(f.posted.data.opening, 'free');
+  assert.equal(Object.hasOwn(f.posted.data, 'opening'), false);
   assert.deepEqual(f.clicks, ['[data-game-action="abort"]', '[data-game-action="confirm-yes"]']);
   assert.equal(f.closed, true);
+});
+
+test('human-first balanced deals are aborted before retrying a bot-first deal', async () => {
+  const f = fixture({
+    openings: [
+      GOMOKU_OPENINGS.find((o) => o.turn === 'white'),
+      GOMOKU_OPENINGS.find((o) => o.turn === 'black'),
+    ],
+  });
+  assert.equal((await run(f)).ok, true);
+  assert.equal(f.attempts, 2);
+  assert.equal(f.clicks.length, 4);
 });
 
 test('a legal bot reply without a confirmed abort cannot pass', async () => {
@@ -172,7 +203,7 @@ test('illegal or corrupted server replies fail kernel validation', async () => {
   const f = fixture();
   f.socket.prependListener('framereceived', (frame) => {
     const message = JSON.parse(frame.payload);
-    if (message.state?.ply === 1) {
+    if (message.state?.ply === f.initial.ply + 1) {
       message.state.board[0] = 'white';
       frame.payload = JSON.stringify(message);
     }

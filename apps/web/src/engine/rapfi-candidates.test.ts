@@ -154,7 +154,7 @@ function candidate(x: number, y: number, ev: number, pvIndex = 0) {
 
 const empty: RapfiPosition = { turn: 1, stones: [] };
 // L5 uses best-move search in both the existing and eight-level ladders.
-const bestMoveLevel = 5;
+const bestMoveLevel = 6;
 const options = { candidateCount: 3, evalMargin: 100, seed: 42 };
 const choices = () => [candidate(6, 8, 100), candidate(7, 8, 80, 1), candidate(8, 8, 40, 2)];
 
@@ -410,6 +410,31 @@ describe('Rapfi candidate commands and selection', () => {
       x: 6,
       y: 8,
     });
+  });
+
+  it('plays the best candidate at bestRate and otherwise samples as before', () => {
+    const bestCount = (bestRate?: number) =>
+      Array.from({ length: 1000 }, (_, seed) =>
+        rapfi.selectRapfiMove(empty, choices(), { ...options, seed, bestRate }),
+      ).filter((move) => move.x === 6).length;
+    for (let seed = 0; seed < 200; seed++) {
+      expect(rapfi.selectRapfiMove(empty, choices(), { ...options, seed, bestRate: 1 })).toEqual({
+        x: 6,
+        y: 8,
+      });
+      expect(rapfi.selectRapfiMove(empty, choices(), { ...options, seed, bestRate: 0 })).toEqual(
+        rapfi.selectRapfiMove(empty, choices(), { ...options, seed }),
+      );
+    }
+    const sampled = bestCount();
+    const half = bestCount(0.5);
+    // Half the moves are forced best; the rest keep the sampler's share.
+    expect(half).toBeGreaterThan(sampled + 150);
+    expect(Math.abs(half - (500 + sampled / 2))).toBeLessThan(60);
+    for (const bestRate of [-0.1, 1.1, Number.NaN])
+      expect(() => rapfi.selectRapfiMove(empty, choices(), { ...options, bestRate })).toThrow(
+        'Invalid Rapfi choice options',
+      );
   });
 
   it('uses side-to-move scores for White too, filters illegal moves and deduplicates', () => {
