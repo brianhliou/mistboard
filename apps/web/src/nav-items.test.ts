@@ -49,12 +49,13 @@ describe('watch nav', () => {
 });
 
 describe('puzzle nav', () => {
-  it('offers Puzzle Dashboard after Puzzle Streak', async () => {
+  it('offers Puzzle Storm after Puzzle Streak and before Puzzle Dashboard', async () => {
     const { puzzleNavItems } = await import('./nav-items.js');
     expect(puzzleNavItems().map(({ label, labelKey, href }) => [label, labelKey, href])).toEqual([
       ['Puzzles', 'nav.puzzles', '/puzzles'],
       ['Puzzle Themes', 'nav.puzzleThemes', '/puzzles/themes'],
       ['Puzzle Streak', 'nav.puzzleStreak', '/puzzles?mode=streak'],
+      ['Puzzle Storm', 'puzzle.stormTitle', '/puzzles?mode=storm'],
       ['Puzzle Dashboard', 'puzzle.dashboardTitle', '/puzzles/dashboard'],
     ]);
   });
