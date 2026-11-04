@@ -21,6 +21,10 @@ import {
 // Bots whose engines are not UCI ladders the EvE runner plays (the python-worker
 // dark-chess engines, the Misty variant engines). Each needs its own reason.
 const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
+  [
+    'atomic-xiangqi',
+    'retired; historical bot and engine catalogue entries remain until #811 cleanup',
+  ],
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
   ['jungle-flip', 'one node-budgeted bot, nothing to rank it against'],
@@ -121,6 +125,8 @@ test('every Fairy-Stockfish registry rung belongs to a variant with an adapter t
   for (const engineId of knownEngineIds()) {
     const engine = loadEngine(engineId);
     if (engine.config.kind !== 'fairy-stockfish') continue;
+    // Temporary catalogue entries for historical games; never executable by EvE.
+    if (engine.gameSpecId === 'atomic-xiangqi') continue;
     const adapter = eveAdapterFor(engine.gameSpecId);
     if (!adapter || adapter.tierFor(engineId) === null) orphans.push(engineId);
   }
@@ -165,4 +171,9 @@ test('EvE rows store terminations the games table accepts, and only a public ask
   assert.equal(eveGameVisibility({}), 'link');
   assert.equal(eveGameVisibility({ visibility: 'unlisted' }), 'link');
   assert.equal(eveGameVisibility({ visibility: 'PUBLIC' }), 'link');
+});
+
+test('retired atomic cannot be run by EvE even while its catalogue remains', () => {
+  assert.equal(eveAdapterFor('atomic-xiangqi'), null);
+  assert.ok(!EVE_VARIANT_IDS.includes('atomic-xiangqi'));
 });

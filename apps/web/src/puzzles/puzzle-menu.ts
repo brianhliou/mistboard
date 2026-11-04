@@ -1,17 +1,18 @@
 import './puzzle-menu.css';
 import { type I18nKey, t } from '../i18n/catalog.js';
 
-export type PuzzleMenuPage = 'puzzles' | 'themes' | 'streak' | 'dashboard' | 'history';
+export type PuzzleMenuPage = 'puzzles' | 'themes' | 'streak' | 'storm' | 'dashboard' | 'history';
 
 const ITEMS: ReadonlyArray<{ page: PuzzleMenuPage; href: string; labelKey: I18nKey }> = [
   { page: 'puzzles', href: '/puzzles', labelKey: 'nav.puzzles' },
   { page: 'themes', href: '/puzzles/themes', labelKey: 'nav.puzzleThemes' },
   { page: 'streak', href: '/puzzles?mode=streak', labelKey: 'nav.puzzleStreak' },
+  { page: 'storm', href: '/puzzles?mode=storm', labelKey: 'puzzle.stormTitle' },
   { page: 'dashboard', href: '/puzzles/dashboard', labelKey: 'puzzle.dashboardTitle' },
   { page: 'history', href: '/puzzles/history', labelKey: 'puzzle.historyTitle' },
 ];
 
-/** Shared puzzle navigation. The caller identifies the page, including streak mode. */
+/** Shared puzzle navigation. The caller identifies the page, including the run modes. */
 export function renderPuzzleMenu(active: PuzzleMenuPage): HTMLElement {
   const menu = document.createElement('nav');
   menu.className = 'puzzle-menu';

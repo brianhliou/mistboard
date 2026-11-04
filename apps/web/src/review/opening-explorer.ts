@@ -32,6 +32,8 @@ import {
   type XiangqiMove,
   type XiangqiTablebaseOutcome,
 } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
+import { currentLocale, LOCALE_META } from '../i18n/locale.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import type { XiangqiTablebasePanel } from './xiangqi-tablebase-panel.js';
 
@@ -118,13 +120,13 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
   const settleMs = options.settleMs ?? 0;
   const el = document.createElement('section');
   el.className = 'opening-explorer';
-  el.setAttribute('aria-label', 'Opening explorer');
+  el.setAttribute('aria-label', t('underboard.explorer'));
 
   const head = document.createElement('div');
   head.className = 'opening-explorer__head';
   const title = document.createElement('span');
   title.className = 'opening-explorer__title';
-  title.textContent = 'Opening explorer';
+  title.textContent = t('underboard.explorer');
   const corpus = document.createElement('span');
   corpus.className = 'opening-explorer__corpus';
   head.append(title, corpus);
@@ -132,9 +134,9 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
   const columns = document.createElement('div');
   columns.className = 'opening-explorer__columns';
   for (const [label, className] of [
-    ['Move', 'move'],
-    ['Games', 'count'],
-    ['Red / Draw / Black', 'bar'],
+    [t('review.explorer.move'), 'move'],
+    [t('review.explorer.games'), 'count'],
+    [t('review.explorer.results'), 'bar'],
   ] as const) {
     const cell = document.createElement('span');
     cell.className = `opening-explorer__col opening-explorer__col--${className}`;
@@ -144,7 +146,7 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
 
   const status = document.createElement('p');
   status.className = 'opening-explorer__status';
-  status.textContent = 'Loading opening statistics...';
+  status.textContent = t('review.explorer.loading');
 
   const table = document.createElement('div');
   table.className = 'opening-explorer__table';
@@ -292,7 +294,7 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
   function showLoading(): void {
     book.hidden = false;
     status.hidden = false;
-    status.textContent = 'Loading opening statistics...';
+    status.textContent = t('review.explorer.loading');
     table.replaceChildren();
     topGames.replaceChildren();
   }
@@ -302,7 +304,7 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
     topGames.replaceChildren();
     if (!data) {
       status.hidden = false;
-      status.textContent = 'Opening statistics are unavailable.';
+      status.textContent = t('review.explorer.unavailable');
       corpus.textContent = '';
       renderOpening(opening, null);
       return;
@@ -313,7 +315,7 @@ export function createOpeningExplorer(options: OpeningExplorerOptions = {}): Ope
       status.hidden = false;
       // Past the folded depth every position is unplayed, which is a fact about
       // the corpus rather than a failure; say which it is.
-      status.textContent = 'No corpus games reached this position.';
+      status.textContent = t('review.explorer.empty');
       return;
     }
     status.hidden = true;
@@ -376,14 +378,16 @@ function moveRow(
   // `total` is the sum of the move counts, the right denominator for a share but
   // not a distinct-game census: a game that revisits this position and varies is
   // counted under both moves.
-  count.title = `${row.games} games played this move, of ${total} recorded from this position`;
+  count.title = t('review.explorer.moveCount', { count: row.games, total });
 
   const bar = document.createElement('span');
   bar.className = 'opening-explorer__bar';
   const decided = row.redWins + row.blackWins + row.draws;
   if (decided > 0 && decided < MIN_DECIDED_FOR_BAR) {
     bar.classList.add('opening-explorer__bar--thin');
-    bar.title = `Only ${decided} decided ${decided === 1 ? 'game' : 'games'}: too few to read as a score`;
+    bar.title = t(decided === 1 ? 'review.explorer.fewOne' : 'review.explorer.fewMany', {
+      count: decided,
+    });
   }
   if (decided > 0) {
     for (const [kind, value] of [
@@ -396,13 +400,20 @@ function moveRow(
       const part = document.createElement('span');
       part.className = `opening-explorer__bar-part opening-explorer__bar-part--${kind}`;
       part.style.width = `${percent.toFixed(1)}%`;
-      part.title = `${kind === 'draw' ? 'Draws' : kind === 'red' ? 'Red wins' : 'Black wins'}: ${value}`;
+      part.title = t(
+        kind === 'draw'
+          ? 'review.explorer.draws'
+          : kind === 'red'
+            ? 'review.explorer.redWins'
+            : 'review.explorer.blackWins',
+        { count: value },
+      );
       if (percent >= MIN_BAND_PERCENT_FOR_LABEL) part.textContent = `${Math.round(percent)}%`;
       bar.append(part);
     }
   } else {
     bar.classList.add('opening-explorer__bar--unknown');
-    bar.title = 'No recorded results';
+    bar.title = t('review.explorer.noResults');
   }
 
   el.append(label, count, bar);
@@ -436,9 +447,9 @@ function nameSpan(name: string | null | undefined, won: boolean): HTMLElement {
 }
 
 function resultLabel(result: string): string {
-  if (result === '1-0') return 'Red won';
-  if (result === '0-1') return 'Black won';
-  if (result === '1/2-1/2') return 'Draw';
+  if (result === '1-0') return t('review.explorer.redWon');
+  if (result === '0-1') return t('review.explorer.blackWon');
+  if (result === '1/2-1/2') return t('review.explorer.draw');
   return '–';
 }
 
@@ -447,7 +458,7 @@ function topGamesBlock(samples: ExplorerSample[]): HTMLElement {
   wrap.className = 'opening-explorer__top-inner';
   const heading = document.createElement('p');
   heading.className = 'opening-explorer__top-heading';
-  heading.textContent = 'Top games';
+  heading.textContent = t('review.explorer.topGames');
   wrap.append(heading);
 
   for (const sample of samples.slice(0, TOP_GAMES_SHOWN)) {
@@ -481,7 +492,7 @@ function topGamesBlock(samples: ExplorerSample[]): HTMLElement {
       : ratingSpan(sample.blackRating, sample.result === '0-1');
     const vs = document.createElement('span');
     vs.className = 'opening-explorer__top-vs';
-    vs.textContent = 'vs';
+    vs.textContent = t('review.explorer.versus');
     matchup.append(redSide, vs, blackSide);
     if (sample.event) row.title = sample.event;
 
@@ -518,13 +529,22 @@ function textSpan(className: string, text: string): HTMLElement {
 }
 
 function formatGames(games: number): string {
+  const locale = currentLocale();
+  if (locale !== 'en') {
+    return games.toLocaleString(LOCALE_META[locale].dateLocale, {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    });
+  }
   if (games >= 1000) return `${(games / 1000).toFixed(1)}k`;
   return String(games);
 }
 
 function corpusLabel(data: ExplorerResponse): string {
   if (!data.build) return '';
-  return `${data.build.gameCount.toLocaleString('en-US')} games`;
+  return t('review.explorer.corpus', {
+    count: data.build.gameCount.toLocaleString(LOCALE_META[currentLocale()].dateLocale),
+  });
 }
 
 async function fetchExplorer(
