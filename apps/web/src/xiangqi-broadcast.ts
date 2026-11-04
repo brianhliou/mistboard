@@ -907,11 +907,13 @@ function renderIndex(
   if (without(ongoing).length > 0) {
     content.push(tourZone(t('broadcast.ongoing'), sortByEventDate(without(ongoing)), false));
   }
-  const comingUp = comingUpSection(calendar, data.tours);
-  if (comingUp) content.push(comingUp);
   if (without(upcoming).length > 0) {
     content.push(tourZone(t('broadcast.upcoming'), without(upcoming), false));
   }
+  // Events we do not relay, live or soon, below everything we do: each row
+  // carries its own status, so the heading does not compete with Upcoming.
+  const others = otherEventsSection(calendar, data.tours);
+  if (others) content.push(others);
   if (without(past).length > 0) {
     content.push(tourZone(t('broadcast.past'), sortByEventDate(without(past)), false));
   }
@@ -1048,7 +1050,7 @@ function featuredTourZone(entry: BroadcastIndexEntry, phase: TourIndexPhase): HT
 }
 
 /** The next few events on the calendar that we do not have a page for yet. */
-function comingUpSection(
+function otherEventsSection(
   calendar: BroadcastCalendarResponse | null,
   tours: readonly BroadcastIndexEntry[],
 ): HTMLElement | null {
@@ -1065,7 +1067,7 @@ function comingUpSection(
   const head = document.createElement('div');
   head.className = 'xqb-coming-up-head';
   const title = document.createElement('h2');
-  title.textContent = t('broadcast.comingUp');
+  title.textContent = t('broadcast.otherEvents');
   const all = document.createElement('a');
   all.className = 'xqb-link';
   all.href = '/broadcast/xiangqi/calendar';
@@ -2685,7 +2687,8 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
   }
   const players = topPlayersEl(entry, opts.featured ? 6 : 3);
   if (players) copy.append(players);
-  if (opts.featured) {
+  // A tour that has not posted a round yet has nothing to count.
+  if (opts.featured && (entry.roundCount > 0 || entry.boardCount > 0)) {
     const counts = document.createElement('span');
     counts.className = 'xqb-tour-card-meta';
     counts.textContent = [

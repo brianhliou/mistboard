@@ -68,11 +68,14 @@ export function localTitle(title: string, locale: Locale = currentLocale()): str
   return zh ? zh[locale === 'zh-Hant' ? 1 : 0] : title;
 }
 
-// Tour locations are stored in English only; these are the places events have
-// been held. An unlisted place shows as stored.
+// Tour locations are stored in English; calendar rows from dpxq carry its own
+// Chinese place line (a city, often a hotel or venue in it). These are the
+// places events have been held. An unlisted place shows as stored, except
+// that English never shows a Chinese place it cannot name.
 const PLACES: Record<string, [hans: string, hant: string]> = {
   Changchun: ['长春', '長春'],
   Hangzhou: ['杭州', '杭州'],
+  Liaocheng: ['聊城', '聊城'],
   Houston: ['休斯敦', '休士頓'],
   'Monterey Park, California': ['加州蒙特利公园', '加州蒙特利公園'],
   Philippines: ['菲律宾', '菲律賓'],
@@ -87,7 +90,24 @@ export function localPlace(
   location: string | undefined,
   locale: Locale = currentLocale(),
 ): string | undefined {
-  if (!location || locale === 'en') return location || undefined;
+  if (!location) return undefined;
+  if (/\p{Script=Han}/u.test(location)) {
+    if (locale !== 'en') return location;
+    return englishPlaceIn(location);
+  }
+  if (locale === 'en') return location;
   const zh = PLACES[location.trim()];
   return zh ? zh[locale === 'zh-Hant' ? 1 : 0] : location;
+}
+
+// The English name of the listed place a Chinese place line names: 上海南翔温德姆酒店
+// -> Shanghai, 吉林长春 -> Changchun. The longest match wins.
+function englishPlaceIn(location: string): string | undefined {
+  let best: [en: string, length: number] | undefined;
+  for (const [en, names] of Object.entries(PLACES)) {
+    for (const zh of names) {
+      if (location.includes(zh) && (!best || zh.length > best[1])) best = [en, zh.length];
+    }
+  }
+  return best?.[0];
 }

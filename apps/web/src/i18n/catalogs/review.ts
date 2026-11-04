@@ -447,7 +447,7 @@ export const EN_REVIEW = {
   'broadcast.statusUpcoming': 'Upcoming',
   'broadcast.statusFinished': 'Finished',
   'broadcast.watch': 'Watch',
-  'broadcast.comingUp': 'Coming up',
+  'broadcast.otherEvents': 'Other events',
   'broadcast.fullCalendar': 'Full calendar',
   'broadcast.roundLive': '{round} · Live',
   'broadcast.roundOn': '{round} · {date}',
