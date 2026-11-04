@@ -25,6 +25,20 @@ import {
 import { xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
 
 type Viewport = 'desktop' | 'tablet' | 'phone';
+const PUZZLE_NAV_CASES = [
+  ['/puzzles', '/puzzles'],
+  ['/puzzles?theme=matein1', '/puzzles'],
+  ['/puzzles?mode=unknown', '/puzzles'],
+  ['/puzzles?mode=streak', '/puzzles?mode=streak'],
+  ['/puzzles?mode=storm', '/puzzles?mode=storm'],
+  ['/puzzles?mode=storm&review=some-puzzle', '/puzzles?mode=storm'],
+  ['/puzzles?review=some-puzzle&mode=storm', '/puzzles?mode=storm'],
+] as const;
+const STORM_LABELS = [
+  ['en', 'Puzzle Storm'],
+  ['zh-Hans', '限时解题'],
+  ['zh-Hant', '限時解題'],
+] as const;
 const originalMatchMedia = window.matchMedia;
 function stubViewport(viewport: Viewport): void {
   window.matchMedia = ((query: string) =>
@@ -46,15 +60,22 @@ describe('site shell nav', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('marks Puzzle Streak, not the trainer, as the current page in streak mode', () => {
-    window.history.replaceState(null, '', '/puzzles?mode=streak');
+  it.each(PUZZLE_NAV_CASES)('marks only the puzzle destination current on %s', (path, href) => {
+    window.history.replaceState(null, '', path);
     const nav = buildNav();
     document.body.append(nav);
     const current = [...nav.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]')];
-    expect(current.map((a) => a.getAttribute('href'))).toEqual(['/puzzles?mode=streak']);
+    expect(current.map((a) => a.getAttribute('href'))).toEqual([href]);
     expect(
       nav.querySelector('.site-nav-menu-toggle[href="/puzzles"]')?.classList.contains('active'),
     ).toBe(true);
+  });
+
+  it.each(STORM_LABELS)('exposes Puzzle Storm in the desktop menu in %s', (locale, label) => {
+    const nav = buildNav(locale);
+    expect(
+      nav.querySelector('.site-nav-menu-panel a[href="/puzzles?mode=storm"]')?.textContent,
+    ).toBe(label);
   });
 
   it.each(['/puzzles/themes', '/puzzles/dashboard'])(
@@ -109,7 +130,7 @@ describe('site shell nav', () => {
     expect(nav.querySelector('[data-admin-only]')).toBeNull();
 
     // Puzzles is a split menu (lichess parity): the title goes to the trainer,
-    // the panel repeats it and adds Puzzle Streak.
+    // the panel repeats it and adds the puzzle destinations.
     const puzzleToggle = nav.querySelector<HTMLAnchorElement>(
       '.site-nav-menu-toggle[href="/puzzles"]',
     );
@@ -125,6 +146,7 @@ describe('site shell nav', () => {
       ['/puzzles', 'Puzzles'],
       ['/puzzles/themes', 'Puzzle Themes'],
       ['/puzzles?mode=streak', 'Puzzle Streak'],
+      ['/puzzles?mode=storm', 'Puzzle Storm'],
       ['/puzzles/dashboard', 'Puzzle Dashboard'],
     ]);
     const puzzleLink = puzzlePanel?.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
@@ -607,7 +629,13 @@ describe('site shell phone menu', () => {
     ).toEqual(['/', '/correspondence']);
     expect(
       [...(sections[1]?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href')),
-    ).toEqual(['/puzzles', '/puzzles/themes', '/puzzles?mode=streak', '/puzzles/dashboard']);
+    ).toEqual([
+      '/puzzles',
+      '/puzzles/themes',
+      '/puzzles?mode=streak',
+      '/puzzles?mode=storm',
+      '/puzzles/dashboard',
+    ]);
     expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
     expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
   });
@@ -661,6 +689,28 @@ describe('site shell phone menu', () => {
     expect([...(current ?? [])].map((a) => a.getAttribute('href'))).toEqual(['/puzzles']);
     expect(current?.[0]?.classList.contains('active')).toBe(true);
     expect(current?.[0]?.querySelector('.site-menu-dot')).not.toBeNull();
+  });
+
+  it.each(PUZZLE_NAV_CASES)(
+    'marks only the phone puzzle destination current on %s',
+    (path, href) => {
+      window.history.replaceState(null, '', path);
+      const { toggle } = phoneNav();
+      toggle.click();
+      const current = menuPanel()?.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]');
+      expect([...(current ?? [])].map((link) => link.getAttribute('href'))).toEqual([href]);
+      expect(current?.[0]?.classList.contains('active')).toBe(true);
+      expect(current?.[0]?.querySelector('.site-menu-dot')).not.toBeNull();
+    },
+  );
+
+  it.each(STORM_LABELS)('exposes Puzzle Storm in the phone menu in %s', (locale, label) => {
+    window.history.replaceState(null, '', '/puzzles?mode=storm');
+    const { toggle } = phoneNav();
+    openSiteMenu(toggle, locale);
+    const link = menuPanel()?.querySelector<HTMLAnchorElement>('a[href="/puzzles?mode=storm"]');
+    expect(link?.textContent).toBe(label);
+    expect(link?.getAttribute('aria-current')).toBe('page');
   });
 
   it('ends with the link sections: no settings chip row at the bottom of the menu', () => {

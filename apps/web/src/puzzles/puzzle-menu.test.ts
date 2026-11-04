@@ -52,11 +52,12 @@ describe('puzzle dashboard translations', () => {
   });
 });
 
-const PAGES = ['puzzles', 'themes', 'streak', 'dashboard', 'history'] as const;
+const PAGES = ['puzzles', 'themes', 'streak', 'storm', 'dashboard', 'history'] as const;
 const HREFS = [
   '/puzzles',
   '/puzzles/themes',
   '/puzzles?mode=streak',
+  '/puzzles?mode=storm',
   '/puzzles/dashboard',
   '/puzzles/history',
 ];
@@ -81,10 +82,10 @@ describe('shared puzzle menu', () => {
     expect(menu.getAttribute('aria-label')).toBe('Puzzles');
     expect([...menu.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual(HREFS);
     const gap = menu.querySelector('.puzzle-menu__gap');
-    expect(menu.children).toHaveLength(6);
-    expect(menu.children[3]).toBe(gap);
+    expect(menu.children).toHaveLength(7);
+    expect(menu.children[4]).toBe(gap);
     expect(gap?.getAttribute('aria-hidden')).toBe('true');
-    expect(gap?.previousElementSibling?.getAttribute('href')).toBe('/puzzles?mode=streak');
+    expect(gap?.previousElementSibling?.getAttribute('href')).toBe('/puzzles?mode=storm');
     expect(gap?.nextElementSibling?.getAttribute('href')).toBe('/puzzles/dashboard');
   });
 
@@ -96,9 +97,19 @@ describe('shared puzzle menu', () => {
   });
 
   it.each([
-    ['en', ['Puzzles', 'Puzzle Themes', 'Puzzle Streak', 'Puzzle Dashboard', 'Puzzle history']],
-    ['zh-Hans', ['题目', '题目主题', '连续解题', '解题面板', '解题记录']],
-    ['zh-Hant', ['題目', '題目主題', '連續解題', '解題面板', '解題紀錄']],
+    [
+      'en',
+      [
+        'Puzzles',
+        'Puzzle Themes',
+        'Puzzle Streak',
+        'Puzzle Storm',
+        'Puzzle Dashboard',
+        'Puzzle history',
+      ],
+    ],
+    ['zh-Hans', ['题目', '题目主题', '连续解题', '限时解题', '解题面板', '解题记录']],
+    ['zh-Hant', ['題目', '題目主題', '連續解題', '限時解題', '解題面板', '解題紀錄']],
   ] as const)(
     'renders localized labels in %s using the existing training keys',
     (locale, labels) => {
