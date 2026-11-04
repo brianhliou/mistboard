@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import http from 'node:http';
+import { setImmediate } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import {
@@ -8,6 +10,7 @@ import {
 } from './articles/diagrams.js';
 import { articleIsLive } from './articles/publish-time.js';
 import {
+  buildArticleFooter,
   buildArticlePage,
   buildArticlesIndex,
   buildHomeArticleCards,
@@ -21,6 +24,11 @@ import { articles } from './articles-data.js';
 import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
+
+// happy-dom's selector caches use WeakRefs. Their targets stay alive until
+// the current JS task ends; synchronous tests plus promise-only hooks can
+// otherwise retain gigabytes of detached SVG trees across this whole file.
+afterEach(() => setImmediate());
 
 // These assertions are about which slugs are curated, how they order, and what
 // each card renders. None is about recency, and several name articles from June
@@ -1121,22 +1129,33 @@ describe('rules variant sidebar', () => {
     expect([...page.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain('Names');
   });
 
-  it('localizes zh-Hans Banqi diagram captions and the engine-game embed', () => {
-    const page = buildArticlePage('banqi', 'zh-Hans');
-    document.body.append(page);
+  it('localizes zh-Hans Banqi diagram captions and the engine-game embed', async () => {
+    // Loading the child page bypasses the usual global fetch mock. Fail if
+    // markup inspection ever opens a real localhost connection again.
+    const request = vi.spyOn(http, 'request').mockImplementation(() => {
+      throw new Error('Article markup tests must not load embed pages');
+    });
+    try {
+      const page = buildArticlePage('banqi', 'zh-Hans');
+      // Keep it detached: connecting an iframe starts happy-dom navigation.
 
-    const text = page.textContent ?? '';
-    expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
-    expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
-    expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
-    expect(text).not.toContain('Before the first flip.');
-    expect(text).not.toContain('One screen, then the target.');
-    // The engine game is a study-chapter embed, the same card every other
-    // variant's rules page uses; its title is localized like any string.
-    const embed = page.querySelector('iframe[src*="/embed/study/"]');
-    expect(embed).not.toBeNull();
-    expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
-    page.remove();
+      const text = page.textContent ?? '';
+      expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
+      expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
+      expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
+      expect(text).not.toContain('Before the first flip.');
+      expect(text).not.toContain('One screen, then the target.');
+      // The engine game is a study-chapter embed, the same card every other
+      // variant's rules page uses; its title is localized like any string.
+      const embed = page.querySelector('iframe[src*="/embed/study/"]');
+      expect(embed).not.toBeNull();
+      expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
+      await setImmediate();
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      request.mockRestore();
+      document.body.replaceChildren();
+    }
   });
 
   it('keeps fogged xiangqi blockers as question-mark pieces', () => {
@@ -1171,10 +1190,14 @@ describe('blog post read-next footer', () => {
       .map((article) => article.slug);
   };
 
-  const footerLinks = (slug: string): string[] =>
-    [...buildArticlePage(slug).querySelectorAll('.article-footer .articles-index-card')].map(
+  // Exercise the real footer without building every post's unrelated boards,
+  // diagrams and embeds again for each corpus-wide navigation assertion.
+  const footerLinks = (slug: string): string[] => {
+    const article = articles.find((article) => article.slug === slug)!;
+    return [...(buildArticleFooter(article)?.querySelectorAll('.articles-index-card') ?? [])].map(
       (card) => card.getAttribute('href') ?? '',
     );
+  };
 
   // The date ring has no topic signal, so a platform page whose neighbours by
   // date are unrelated variant write-ups names its own onward posts. Missing
@@ -1402,8 +1425,6 @@ describe('blog post read-next footer', () => {
   // the row furniture rather than navigation. Walking the date ring from each
   // post is what keeps the trios distinct, so assert the property, not the
   // implementation.
-  // Renders the footer for every published post: 18.6 s on a hosted runner on
-  // 2026-11-01, past the 15 s default.
   it('gives each post a different trio', () => {
     const seen = new Map<string, string>();
     for (const slug of publishedBlogSlugs()) {
@@ -1411,7 +1432,7 @@ describe('blog post read-next footer', () => {
       expect(seen.get(key), `${slug} repeats the row on ${seen.get(key)}`).toBeUndefined();
       seen.set(key, slug);
     }
-  }, 60_000);
+  });
 
   // The row overrides the index's column ladder at two classes of specificity,
   // which outranks the index's own media queries. That is deliberate (three

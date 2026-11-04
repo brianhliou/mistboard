@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import http from 'node:http';
 import {
   applyStandardXiangqiMove,
   attemptStandardXiangqiPuzzleLine,
@@ -2896,6 +2897,12 @@ describe('standard xiangqi puzzles', () => {
     // Streak dropped the history the server sent for the same puzzle.
     it('shows the game before the puzzle in Puzzle Streak', () => {
       animationOff();
+      // Streak records a visit on mount, unlike the plain embed solver above.
+      const fetchSpy = vi.fn(async () => new Response(null, { status: 204 }));
+      vi.stubGlobal('fetch', fetchSpy);
+      const request = vi.spyOn(http, 'request').mockImplementation(() => {
+        throw new Error('Puzzle tests must not contact localhost');
+      });
       const host = document.createElement('div');
       document.body.append(host);
       const solver = mountPuzzleSolver(
@@ -2909,6 +2916,14 @@ describe('standard xiangqi puzzles', () => {
       );
       try {
         expect(host.querySelectorAll('.puzzle-move-cell--history')).toHaveLength(HISTORY.length);
+        expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
+          `/api/puzzles/${PUZZLE.id}/quality`,
+          expect.objectContaining({
+            method: 'POST',
+            body: expect.stringContaining('"event":"view"'),
+          }),
+        );
+        expect(request).not.toHaveBeenCalled();
       } finally {
         solver.dispose();
       }
