@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import dns from 'node:dns/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
+import { mock } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { setServerCaptureTransport } from './analytics-server.js';
@@ -14,6 +16,11 @@ const providerMode = process.env.MISTBOARD_TEST_LOGIN_MAIL_MODE === 'provider';
 process.env.RESEND_API_KEY = providerMode ? 're_placeholder_for_tests' : '';
 process.env.MISTBOARD_AUTH_EMAIL_FROM = 'Mistboard <play@example.com>';
 process.env.MISTBOARD_DEV_AUTH_CODES = 'true';
+// The domain check (#847) would otherwise resolve MX over real DNS, and the
+// fixtures' example.com publishes a null MX. These routes test delivery
+// evidence, so every domain accepts mail here; email-domain.test.ts and
+// auth-locale.test.ts cover the domain rejection itself.
+mock.method(dns, 'resolveMx', async () => [{ exchange: 'mx.mail.test', priority: 10 }]);
 const {
   closeUserAccount,
   consumeEmailLoginChallenge,

@@ -234,7 +234,7 @@ describe('Rapfi browser PvE', () => {
         expect(worker.url).toContain('/engine/rapfi/worker.js');
         const search = worker.messages[1] as { commands: string[] };
         expect(search.commands).toContain(`INFO max_node ${tier.nodes}`);
-        if (tier.level <= 4 && human === 'black') {
+        if (tier.candidateCount !== undefined && human === 'black') {
           expect(search.commands).toContain('INFO show_detail 2');
           expect(search.commands.at(-1)).toBe(`YXNBEST ${tier.candidateCount}`);
           expect(search.commands).toContain('YXBOARD\n0,0,2\nDONE');
