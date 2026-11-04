@@ -19,6 +19,7 @@ import {
 } from './../account-session.js';
 import { captureServerEvent, clientIpForAnalytics } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
+import { emailDomainAcceptsMail } from './../email-domain.js';
 import { authCounters } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { emailLocale } from './../player-email.js';
@@ -128,6 +129,16 @@ export async function tryHandle(
     if (!emailAllowed) {
       authCounters.recordStart('rate_limited');
       writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
+    if (authEmailDeliveryEnabled && !(await emailDomainAcceptsMail(email.split('@')[1]!))) {
+      authCounters.recordStart('rejected');
+      void captureServerEvent({
+        event: 'auth_email_domain_rejected',
+        distinctId: randomUUID(),
+        properties: { reason: 'no_mail_records' },
+      });
+      writeJson(response, 400, { error: 'email_cannot_receive' });
       return true;
     }
     const loginId = randomUUID();

@@ -143,6 +143,7 @@ Edit task → find file → open only that file.
 | `scripts/modal/elephantchess_pilot.py` + `scripts/modal/README.md` | On-demand Modal compute plane: secretless Linux provenance smoke, explicit run initialization, four-container scan/audit maps over the durable Postgres queue, progress reads, and lease-safe resume operations |
 | `routes/lib.ts` | Shared HTTP utilities: `HttpApiContext` interface, `writeJson`, `requireMethod`, `requirePersistence`, `readJsonBody`, the parse helpers, `hashIp`, `isHttpAdminAuthorized`. Imported by every route module |
 | `routes/auth.ts` | `/api/auth/{me,logout,email/start,email/confirm}` |
+| `email-domain.ts` | Bounded, TTL-cached login mail-domain DNS check: MX, implicit A/AAAA, null MX and a fail-open 1.5-second deadline. |
 | `routes/account.ts` | `/api/account/profile` (PATCH) |
 | `routes/users.ts` | `/api/users/:handle/profile` (`?tz=` buckets the profile's puzzle streak on the viewer's calendar) |
 | `routes/rooms.ts` | POST `/api/rooms`, `/api/rooms/:id/abandon`, plus `parseRoomMode` / `parsePlayablePveEngineId` |
@@ -999,6 +1000,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `account-preferences.ts` | Account preference store (localStorage `mistboard.accountPreferences.v1`): clock-tenths, low-time sound, premoves, confirm-actions, inbox/correspondence bells and deadline email. Exports read/replace/write helpers, `defaultAccountPreferences`, `shouldShowClockTenths`, and the change-event name |
 | `display-preferences.ts` | Display preference store (localStorage `mistboard.displayPreferences.v1`): piece animation, material diff, highlights, destinations, coordinates, move-list/notation, zen, resize handle, ratings, flairs. Exports `DISPLAY_PREFERENCE_DEFINITIONS`, read/write helpers, and typed ids |
 | `auth-redirect.ts` | Auth redirect helpers: `loginHrefForCurrentPage` builds `/account?tab=login` with a safe local `referrer`, `requestedAuthReferrer` reads it back |
+| `email-domain-suggestion.ts` | Optional sign-in email correction from common providers, limited to one edit or transposition and a unique match. |
 | `board-anim.ts` | Piece-move animation core: the single reader of the `pieceAnimation` display preference plus the shared WAAPI glide for the SVG board family (`glideSvgPiece`, `chessgroundAnimation`, `pieceAnimationDurationMs`, `PIECE_GLIDE_EASING`); fog-safe (driven by move payloads, never a board-state diff) |
 | `board-lastmove.ts` | The one last-move language for every token board (xiangqi, jieqi, mini, fortress): origin disc + destination halo markup scaled from each board's piece size, its CSS in `board-lastmove.css`, and the selector `drawMarkerOnArrival` targets |
 | `board-resize.ts` | Shared board resize grip (lichess-style): drags the global `--uni-board-scale` token, persists per browser (`mistboard-board-scale`), double-click resets to max. Exports `restoreBoardScale`, `currentBoardScale`, `attachBoardResizeGrip` |

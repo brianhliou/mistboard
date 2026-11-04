@@ -41,8 +41,145 @@ describe('account page auth flow', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
+  });
+
+  it.each([
+    ['gmial.com', 'gmail.com'],
+    ['gmail.con', 'gmail.com'],
+    ['yaho.de', 'yahoo.de'],
+    ['hotmial.com', 'hotmail.com'],
+    ['googlemial.com', 'googlemail.com'],
+    ['outlok.com', 'outlook.com'],
+    ['lve.com', 'live.com'],
+    ['iclod.com', 'icloud.com'],
+    ['q.com', 'qq.com'],
+    ['163.con', '163.com'],
+    ['126.con', '126.com'],
+    ['snia.com', 'sina.com'],
+    ['gmx.ed', 'gmx.de'],
+    ['web.ed', 'web.de'],
+    ['proton.em', 'proton.me'],
+    ['yaho.co.uk', 'yahoo.co.uk'],
+    ['yaho.com.tw', 'yahoo.com.tw'],
+  ])('suggests %s as %s while preserving the local part', async (domain, expected) => {
+    const { suggestEmailDomain } = await import('./email-domain-suggestion.js');
+    expect(suggestEmailDomain(` Name+tag@${domain.toUpperCase()} `)).toBe(`Name+tag@${expected}`);
+  });
+
+  it.each([
+    'player@gmail.com',
+    'player@yahoo.de',
+    'player@proton.me',
+    'player@custom.example',
+    'player@unrelated.org',
+    'player@hotmail.co.uk',
+    'player',
+    'player@',
+    '@gmail.con',
+    'player@@gmial.com',
+    'player name@gmial.com',
+  ])('does not suggest a correction for %s', async (email) => {
+    const { suggestEmailDomain } = await import('./email-domain-suggestion.js');
+    expect(suggestEmailDomain(email)).toBeNull();
+  });
+
+  it('counts shown and accepted suggestions without recording the address', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ user: null })),
+    );
+    const analytics = await import('./analytics.js');
+    const track = vi.spyOn(analytics, 'track');
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    const email = document.querySelector<HTMLInputElement>('input[name="email"]')!;
+    email.value = 'private-player@gmial.com';
+    email.dispatchEvent(new Event('input'));
+    email.dispatchEvent(new Event('change'));
+    document.querySelector<HTMLButtonElement>('.account-auth-email-suggestion')?.click();
+    expect(track.mock.calls).toEqual([
+      ['auth_email_domain_suggestion_shown', { suggested_domain: 'gmail.com' }],
+      ['auth_email_domain_suggestion_accepted', { suggested_domain: 'gmail.com' }],
+    ]);
+    email.value = 'player@custom.example';
+    email.dispatchEvent(new Event('input'));
+    expect(
+      document.querySelector<HTMLButtonElement>('.account-auth-email-suggestion')?.hidden,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['en', '/account', 'Did you mean misty@gmail.com?'],
+    ['zh-Hans', '/zh-hans/account', '你是否想输入 misty@gmail.com？'],
+    ['zh-Hant', '/zh-hant/account', '你是否想輸入 misty@gmail.com？'],
+  ])('offers an optional localized domain correction in %s', async (_locale, path, copy) => {
+    window.history.replaceState(null, '', path);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ user: null })),
+    );
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    const email = document.querySelector<HTMLInputElement>('input[name="email"]')!;
+    email.value = 'misty@gmial.com';
+    email.dispatchEvent(new Event('input'));
+    const suggestion = document.querySelector<HTMLButtonElement>('.account-auth-email-suggestion');
+    expect(suggestion?.hidden).toBe(false);
+    expect(suggestion?.textContent).toBe(copy);
+    expect(suggestion?.type).toBe('button');
+    suggestion?.click();
+    expect(email.value).toBe('misty@gmail.com');
+    expect(suggestion?.hidden).toBe(true);
+    expect(document.activeElement).toBe(email);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows submitting a suggested domain unchanged', async () => {
+    const requests: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/auth/me') return jsonResponse({ user: null });
+        requests.push(JSON.parse(String(init?.body)));
+        return jsonResponse(authStartData('login-typo'), 202);
+      }),
+    );
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    const email = document.querySelector<HTMLInputElement>('input[name="email"]')!;
+    email.value = 'misty@gmial.com';
+    email.dispatchEvent(new Event('input'));
+    submitAccountForm();
+    await flushDom();
+    expect(requests).toEqual([{ email: 'misty@gmial.com', locale: 'en' }]);
+    expect(document.querySelector<HTMLElement>('.account-auth-code-stage')?.hidden).toBe(false);
+  });
+
+  it.each([
+    ['/account', "This address can't receive email. Check the spelling."],
+    ['/zh-hans/account', '此地址无法接收邮件。请检查拼写。'],
+    ['/zh-hant/account', '此地址無法接收郵件。請檢查拼寫。'],
+  ])('localizes a domain rejection at %s', async (path, copy) => {
+    window.history.replaceState(null, '', path);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/auth/me'
+          ? jsonResponse({ user: null })
+          : jsonResponse({ error: 'email_cannot_receive' }, 400),
+      ),
+    );
+    const { mountAccount } = await import('./account.js');
+    await mountAccount(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    const email = document.querySelector<HTMLInputElement>('input[name="email"]')!;
+    email.value = 'misty@no-mail.test';
+    submitAccountForm();
+    await flushDom();
+    expect(document.querySelector('.account-status')?.textContent).toBe(copy);
+    expect(email.getAttribute('aria-invalid')).toBe('true');
   });
 
   it.each([

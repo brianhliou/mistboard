@@ -170,6 +170,8 @@ export const EN_ACCOUNT = {
   'account.continueCopy': 'One email code. No password.',
   'account.emailAddress': 'Email address',
   'account.emailCodeHelp': "We'll send an 8-digit code. It expires after 10 minutes.",
+  'account.emailSuggestion': 'Did you mean {email}?',
+  'account.emailCannotReceive': "This address can't receive email. Check the spelling.",
   'account.newAccountNotice': 'New to Mistboard? Verifying your email creates an account.',
   'account.loginCode': 'Login code',
   'account.codePrompt': 'Enter the 8-digit code sent to {email}.',
