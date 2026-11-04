@@ -517,6 +517,9 @@ test('isClientRoute covers every parametric route matcher declared in main.ts', 
 // One concrete path per branch of isNoindexRoute, including the parametric
 // prefixes, so the parity check below actually exercises each one.
 const NOINDEX_ROUTE_SAMPLES = [
+  '/ops',
+  '/metrics',
+  '/readouts',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -812,6 +815,17 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/a/b/game/c'), false); // too many segments
 });
 
+test('Gomoku analysis serves an isolated, unindexed shell without an editor or study registration', () => {
+  assert.equal(isClientRoute('/analysis/gomoku'), true);
+  assert.equal(isClientRoute('/analysis/gomoku/'), true);
+  assert.equal(isReviewShellRoute('/analysis/gomoku'), true);
+  assert.equal(isNoindexRoute('/analysis/gomoku'), true);
+  assert.equal(isNoindexRoute('/analysis/gomoku/'), true);
+  assert.equal(SITEMAP_STATIC_ROUTES.includes('/analysis/gomoku'), false);
+  assert.equal(isClientRoute('/analysis/gomoku/extra'), false);
+  assert.equal(isClientRoute('/analysis/unknown-variant'), false);
+});
+
 test('isClientRoute rejects unknown paths', () => {
   assert.equal(isClientRoute('/does-not-exist'), false);
   assert.equal(isClientRoute('/api/games/recent'), false);
@@ -903,5 +917,12 @@ test('a bogus locale prefix on a study path is not a route', () => {
     '/study/Ab12cd/Xy34ef/extra',
   ]) {
     assert.equal(isClientRoute(path), false, `${path} should not match`);
+  }
+});
+
+test('unified Ops and the legacy report routes are client shells kept out of search', () => {
+  for (const path of ['/ops', '/ops/', '/metrics', '/readouts']) {
+    assert.equal(isClientRoute(path), true, path);
+    assert.equal(isNoindexRoute(path), true, path);
   }
 });

@@ -34,6 +34,7 @@ import * as feedbackRoute from './routes/feedback.js';
 import * as fortressXiangqiGamesRoute from './routes/fortress-xiangqi-games.js';
 import * as forumRoute from './routes/forum.js';
 import * as gamesRoute from './routes/games.js';
+import * as gomokuGamesRoute from './routes/gomoku-games.js';
 import * as historicalXiangqiGamesRoute from './routes/historical-xiangqi-games.js';
 import * as inboxRoute from './routes/inbox.js';
 import * as jieqiGamesRoute from './routes/jieqi-games.js';
@@ -51,6 +52,7 @@ import * as practiceRoute from './routes/practice.js';
 import * as puzzlesRoute from './routes/puzzles.js';
 import * as readoutsRoute from './routes/readouts.js';
 import * as relationsRoute from './routes/relations.js';
+import * as resendRoute from './routes/resend.js';
 import * as roomsRoute from './routes/rooms.js';
 import * as studiesRoute from './routes/studies.js';
 import * as threeKingdomsBanqiGamesRoute from './routes/three-kingdoms-banqi-games.js';
@@ -99,6 +101,7 @@ export const routes: RouteModule[] = [
   chatRoute,
   enginesRoute,
   patronRoute,
+  resendRoute,
   feedbackRoute,
   clubSignupRoute,
   forumRoute,
@@ -134,6 +137,7 @@ export const routes: RouteModule[] = [
   banqiGamesRoute,
   threeKingdomsBanqiGamesRoute,
   xiangqiMahjongGamesRoute,
+  gomokuGamesRoute,
   gamesRoute,
   relationsRoute,
   titlesRoute,

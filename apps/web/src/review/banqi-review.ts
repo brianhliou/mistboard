@@ -9,6 +9,7 @@
 import {
   type BanqiGameState,
   type BanqiMove,
+  type BanqiPieceRole,
   type BanqiPlayerView,
   type BanqiSeat,
   banqiMoveLabel,
@@ -33,8 +34,11 @@ import {
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
 } from './engine/engine-arrows.js';
+import { withFaceDownReview } from './face-down-faces.js';
+import { banqiLuckDetail, banqiLuckPieceSvg } from './flip-luck.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { hoverArrowStyle } from './hover-arrow.js';
+import { attachLuckBadgeCard, attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatFlipVariantBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -77,6 +81,7 @@ function makeBanqiPresentation(
   BanqiBoardArrow,
   BanqiBoardMarker
 > {
+  let luckDetail: LuckCardDetail<BanqiPieceRole> | null = null;
   return {
     adapter,
     // Client engine: the in-browser MistyBanqi wasm (single-shot MultiPV). It is fed the
@@ -116,7 +121,12 @@ function makeBanqiPresentation(
     perspective: (flipped) => (flipped ? 'black' : 'red'),
     // Review plays BOTH sides: the interactive seat is the side to move.
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
-    createBoard: (opts) => createBanqiInteractiveBoard(opts),
+    createBoard: (opts) => {
+      const board = createBanqiInteractiveBoard(opts);
+      const detach = attachLuckMarkCard(opts.board, () => luckDetail, banqiLuckPieceSvg);
+      opts.signal?.addEventListener('abort', detach, { once: true });
+      return board;
+    },
     // Banqi is symmetric, so there is no perspective to pass; the presentation
     // contract takes one anyway for the fog variants, and it is dropped here.
     // A step forward onto a flip turns the tile over (#709); back over one,
@@ -147,6 +157,21 @@ function makeBanqiPresentation(
       text: glyph.text,
       className: `xq-marker--${glyph.tone}`,
     }),
+    moveLuckMarker: (move, info) => {
+      luckDetail = banqiLuckDetail(move, info);
+      return luckDetail ? { square: move.to, kind: 'luck', luck: { luck: info.luck } } : null;
+    },
+    moveListLuck: ({ list, luckAt, signal }) => {
+      const detach = attachLuckBadgeCard(
+        list,
+        (badge) => {
+          const at = luckAt(badge.dataset.luckPath ?? '');
+          return at ? banqiLuckDetail(at.move, at) : null;
+        },
+        banqiLuckPieceSvg,
+      );
+      signal.addEventListener('abort', detach, { once: true });
+    },
   };
 }
 
@@ -160,14 +185,17 @@ export function mountBanqiReview(
   start: BanqiReviewStart | null,
   config: BanqiReviewConfig,
 ): BanqiReviewHandle {
-  const adapter = makeBanqiTreeAdapter(gameId, start);
+  const faceDown = withFaceDownReview(makeBanqiTreeAdapter(gameId, start), config);
   // Banqi has no opening book, so the book pane holds the endgame tablebase,
   // on every banqi review surface (game review, analysis, study). It is closed
   // until the reader opens it, and invisible on any position it does not
   // cover, which is every position with a face-down tile.
   const explorer =
     config.explorer ?? (config.tablebasePanel === false ? undefined : banqiTablebaseExplorer());
-  return mountTreeReview(root, makeBanqiPresentation(adapter), { ...config, explorer });
+  return mountTreeReview(root, makeBanqiPresentation(faceDown.adapter), {
+    ...faceDown.config,
+    explorer,
+  });
 }
 
 /** The tablebase panel in the shape of the tree-review explorer slot. */

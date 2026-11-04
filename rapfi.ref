@@ -1,0 +1,21 @@
+1387d11312190ec66665d361ff07a7c70221b78a
+# Rapfi (dhbloo/rapfi), GPL-3.0; licence text shipped with the engine.
+# Source: https://github.com/dhbloo/rapfi/archive/1387d11312190ec66665d361ff07a7c70221b78a.tar.gz
+# Native CMake source is Rapfi/, not the repository root; no submodules needed.
+# Release, haswell (SSE + AVX2 + BMI2), static link; command modules stay enabled.
+# See scripts/engine-assets.sh RAPFI_CMAKE_FLAGS and docs/gomoku-analysis.md.
+#
+# Networks: Rapfi Networks submodule commit
+# 7eeb19b55219a48138756293f92211a1539bab4d, CC0-1.0 (redistribution allowed).
+# The web net.json pins an Emscripten .data container, NOT a native network.
+# scripts/rapfi-assets.mjs pins its SHA256, byte ranges, every extracted native
+# model/config SHA256, and licence texts. Freestyle uses
+# mix9svqfreestyle_bsmix.bin.lz4, SHA256
+# 6bc0d1b0ff8e1d857f7f412923cd458f38f1a435087c91ae71fec3676c23ef62.
+# The original config also names standard/renju weights and model210901.bin;
+# all bundled files are pinned and shipped to preserve that config unchanged.
+# Config origin: config-example/gomocalc-mix9svq at the code pin above.
+# Never replace one input with an unpinned "latest" network.
+#
+# This pin supplies native analysis assets only; it opens no Gomoku surface,
+# changes no ratings, and does not authorize an engine-worker deployment.

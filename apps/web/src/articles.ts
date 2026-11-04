@@ -389,7 +389,7 @@ function buildContentIndex(
 const COMMUNITY_WRITER_HEADING = 'Become a Mistboard contributor';
 
 const COMMUNITY_WRITER_LEDE =
-  'Players read Mistboard all over the world, from the US and China to Vietnam and Brazil. We are looking for a few players to write for it regularly, on the part of the game they know best.';
+  'Players read Mistboard all over the world, from the US and China to Vietnam and Singapore. We are looking for a few players to write for it regularly, on the part of the game they know best.';
 
 const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: string; body: string }> = [
   {
@@ -545,11 +545,19 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
   const rail = document.createElement('aside');
   rail.className = 'community-rail articles-community-rail';
-  rail.setAttribute('aria-label', 'Blog navigation');
+  rail.setAttribute('aria-label', t('articles.navigation', {}, locale));
 
   const links: Array<{ label: string; href: string; view: ArticleIndexView }> = [
-    { label: 'By Mistboard', href: localizedHref('/blog', locale), view: 'mistboard' },
-    { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
+    {
+      label: t('articles.byMistboard', {}, locale),
+      href: localizedHref('/blog', locale),
+      view: 'mistboard',
+    },
+    {
+      label: t('articles.communityPosts', {}, locale),
+      href: localizedHref('/blog/community', locale),
+      view: 'community',
+    },
   ];
 
   // A view with no posts is marked so the phone tab row can drop it (the
@@ -1493,18 +1501,19 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-// A rules page whose variant is outside the canonical order (no game spec yet,
-// or a hidden playtest spec such as three-kingdoms-banqi, #628) sorts right
-// after the spec it varies, instead of falling to the end of the rail.
+// Explicit placement for rules pages outside the canonical public shelf:
+// related playtests follow their base game; Gomoku follows the shelf's end.
 const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
   'three-kingdoms-banqi': 'banqi',
+  // A separate board-game family follows the public shelf in local playtests.
+  gomoku: 'xiangqi-mahjong',
 };
 
 function rulesArticleRailSortIndex(article: Article): number {
   const after = RULES_RAIL_AFTER_SPEC[article.slug];
   if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
+  const gameSpecId = article.gameSpecId ?? gameSpecIdFromRulesSlug(article.slug);
+  if (gameSpecId && isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -3086,6 +3095,7 @@ export function renderArticleThumbnail(
 // reads in one visual language. Chess is study-only, not a variant, and has no
 // marker: off the rail it keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
+  gomoku: 'gomoku',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',

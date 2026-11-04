@@ -1,26 +1,54 @@
 # Changelog
 
-What changed on mistboard.com, month by month, newest first. Modeled on
-[lichess.org/changelog](https://lichess.org/changelog): one line per change,
-grouped by the part of the site it touches, each line linking the commit.
-Unlike lichess, removals get their own heading; a change that takes something
-away is still a change.
+What changed on mistboard.com, month by month, newest first.
 
-Conventions:
-
-- Sections are months (`## 2026-09`), newest first. Within a month the
-  headings are **Playing**, **Learning and puzzles**, **Watching and review**,
-  **Community**, **Site**, **Removed**, **Fixed**, **Technical**. Use only the
-  ones a month needs, in that order.
-- One line per change, written for a player where the heading is
-  player-facing and for a contributor under **Technical**. Present tense, no
-  trailing period, the commit hash in parentheses at the end. A change that
-  spans several commits links the first and the last.
-- Every release that changes behaviour adds a line here in the same commit.
-  Refactors, test-only and docs-only commits do not. The homepage News box
-  (`apps/web/src/announcements.ts`) stays the curated, player-facing megaphone;
-  this file is the complete record.
+- Months are sections (`## 2026-10`). Within a month the headings are
+  **Playing**, **Learning and puzzles**, **Watching and review**, **Community**,
+  **Site**, **Removed**, **Fixed** and **Technical**, in that order, as needed.
+- One line per change: present tense, no trailing period, the commit hash in
+  parentheses at the end. A change across several commits links the first and last.
+- Every release that changes behaviour adds a line. Refactors, test-only and
+  docs-only commits do not.
 - The file starts at 2026-09-11. Earlier history is in `git log`.
+
+## 2026-11
+
+### Playing
+
+- AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
+
+### Learning and puzzles
+
+- Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- On your own profile, the Xiangqi puzzle rating opens in the main rating chart instead of a separate card below it ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
+- Puzzle Dashboard with your results, puzzle history, and a replay of the puzzles you missed ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Puzzle Storm: solve as many puzzles as you can in three minutes, then go back through the run ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- Play a finished puzzle's final position against the computer, from a quiet link under Next puzzle ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- Guests see Register and Sign in buttons on the puzzle page ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Watching and review
+
+- Clearer annotations in jieqi replays, and fixed embeds for finished games ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Banqi and Flip Jungle game reviews show how lucky each flip was ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
+- Short 4, Released to the Six Directions, on the videos page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
+- On a finished banqi, Flip Jungle or jieqi game's review, hover a face-down piece or turn on Reveal identities to see what it was ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Move glyphs in review fade once the pieces land ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Site
+
+- A Washington Xiangqi club page for Greater Seattle, in English, Simplified and Traditional Chinese ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Google results show Mistboard search cards and a tab icon that reads when cropped to a circle ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Sign-in suggests a fix for a mistyped email domain, and stops sending codes to addresses that bounced, complained or cannot receive mail ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- `mistboard.com/yt` and `mistboard.com/yt/<n>`, the address on our YouTube Shorts, open the xiangqi rules page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
+- Flip Jungle's Chinese name is now 翻翻兽棋 / 翻翻獸棋 ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- About, FAQ, Terms and Privacy rewritten around the mission, with a binding fair-play rule and a new share card ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- A shorter About menu, and the phone menu now matches the desktop one ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Fixed
+
+- The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Forum posts embed game links that use /room/, and game names show in the reader's language ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
 ## 2026-10
 

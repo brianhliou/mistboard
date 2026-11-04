@@ -39,7 +39,7 @@
 /* Quiet links: practice and sign-in sit under the main action, never beside
    it as a second call to action. */
 .puzzle-streak-practice,
-.puzzle-streak-signin,
+a.puzzle-streak-signin,
 .puzzle-quiet-link {
   color: var(--site-muted);
   font-size: 13px;
@@ -48,9 +48,73 @@
 }
 
 .puzzle-streak-practice:hover,
-.puzzle-streak-signin:hover,
+a.puzzle-streak-signin:hover,
 .puzzle-quiet-link:hover {
   color: var(--site-accent);
+}
+
+/* A guest's invitation to keep their score: Register filled like the
+   header's button, Sign in outlined, both returning to this page. */
+.puzzle-signin-cta {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.puzzle-signin-cta-lead {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.puzzle-signin-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.puzzle-signin-cta-register,
+.puzzle-signin-cta-login,
+.puzzle-streak-tally a.puzzle-streak-signin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: 7px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.puzzle-signin-cta-register {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 18%, transparent);
+}
+
+.puzzle-signin-cta-register:hover,
+.puzzle-signin-cta-register:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 82%, white);
+  color: var(--site-on-accent);
+}
+
+.puzzle-signin-cta-login,
+.puzzle-streak-tally a.puzzle-streak-signin {
+  border: 1px solid color-mix(in srgb, var(--site-accent) 45%, transparent);
+  color: var(--site-accent);
+}
+
+.puzzle-signin-cta-login:hover,
+.puzzle-signin-cta-login:focus-visible,
+.puzzle-streak-tally a.puzzle-streak-signin:hover {
+  background: color-mix(in srgb, var(--site-accent) 8%, transparent);
+  color: var(--site-accent);
+}
+
+.puzzle-streak-tally a.puzzle-streak-signin {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 /* The left card in the regular page's card type: the title as a card heading,
@@ -316,7 +380,7 @@ a.puzzle-streak-chip:focus-visible {
      this one token, so multiplying
      it by --uni-board-scale makes the whole family adjustable by the same grip
      and the same persisted setting as the room, review and analysis boards. */
-  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 10px));
+  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 70px));
   --puzzle-surface-size: calc(var(--puzzle-surface-fit) * var(--uni-board-scale, 1));
   /* Tallest a side column may grow before it scrolls: the shell's content box
      (page height minus its 8px + 12px vertical padding). Deliberately not the
@@ -355,7 +419,7 @@ a.puzzle-streak-chip:focus-visible {
 @media (min-width: 1500px) {
   .puzzles-shell {
     max-width: min(94vw, 2100px);
-    --puzzle-surface-fit: min(860px, calc(var(--puzzle-page-height) - 10px));
+    --puzzle-surface-fit: min(860px, calc(var(--puzzle-page-height) - 70px));
   }
 }
 
@@ -572,18 +636,6 @@ a.puzzle-streak-chip:focus-visible {
   overflow: hidden;
 }
 
-/* Post-completion analysis adds a third child (the engine panel). Drop the fixed
-   two-row shape so trainer + actions + engine stack naturally, capped at the
-   board height with a scroll rather than clipping the engine off-screen. */
-.puzzle-side-panel--analysis {
-  grid-template-rows: none;
-  grid-auto-rows: min-content;
-  align-content: start;
-  height: auto;
-  max-height: var(--puzzle-board-height, var(--puzzle-surface-size));
-  overflow: auto;
-}
-
 .puzzle-analysis-open-link {
   display: block;
   padding: 8px 10px;
@@ -612,7 +664,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-trainer-panel {
   display: grid;
-  grid-template-rows: minmax(180px, 1fr) minmax(190px, 240px);
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -622,7 +674,7 @@ a.puzzle-streak-chip:focus-visible {
    rows in one connected box). The bar becomes a third grid row above the moves;
    its own card chrome is stripped so only a hairline divider separates it. */
 .puzzle-trainer-panel--analysis {
-  grid-template-rows: auto minmax(140px, 1fr) minmax(190px, 240px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .puzzle-trainer-panel--analysis > .engine-panel {
@@ -640,6 +692,47 @@ a.puzzle-streak-chip:focus-visible {
   display: grid;
   gap: 12px;
   padding: 17px 20px;
+}
+
+.puzzle-replay-side {
+  gap: 10px;
+}
+
+.puzzle-replay-side__back {
+  color: var(--site-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.puzzle-replay-side__back:hover,
+.puzzle-replay-side__back:focus-visible {
+  color: var(--site-text);
+}
+
+.puzzle-replay-side__title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.puzzle-replay-side__bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--site-border-soft);
+}
+
+.puzzle-replay-side__bar > span {
+  display: block;
+  height: 100%;
+  background: #629924;
+  transition: width 0.3s ease;
+}
+
+.puzzle-replay-side__count {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The puzzle page's column sits beside the board and should end near its
@@ -1043,9 +1136,8 @@ a.puzzle-streak-chip:focus-visible {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 38px;
-  padding: 0 22px;
-  border-bottom: 1px solid var(--site-border-soft);
+  min-height: 28px;
+  padding: 0 12px;
   color: var(--site-muted);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
@@ -1267,7 +1359,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-solved-panel {
   display: grid;
-  grid-template-rows: 1fr auto auto;
+  grid-template-rows: auto auto auto auto;
   align-items: center;
   min-height: 0;
   border-top: 1px solid var(--site-border-soft);
@@ -1292,16 +1384,16 @@ a.puzzle-streak-chip:focus-visible {
   justify-content: center;
   gap: 12px;
   width: 100%;
-  min-height: 76px;
+  min-height: 96px;
   padding: 0 24px;
   border: 0;
   background: var(--site-accent);
   color: var(--site-on-accent, #fff);
   cursor: pointer;
   font: inherit;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -1319,7 +1411,7 @@ a.puzzle-streak-chip:focus-visible {
   cursor: default;
 }
 
-/* Feedback row: analysis stub · short prompt · compact thumbs. */
+/* Feedback row: short prompt · compact thumbs · play the displayed position. */
 .puzzle-solved-feedback {
   display: flex;
   align-items: center;
@@ -1371,12 +1463,37 @@ a.puzzle-streak-chip:focus-visible {
   place-items: center;
   width: 34px;
   height: 34px;
+  flex-shrink: 0;
   padding: 0;
   border: 0;
   border-radius: 4px;
   background: transparent;
   color: currentColor;
   cursor: pointer;
+}
+
+.puzzle-play-position {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: center;
+  width: fit-content;
+  min-height: 32px;
+  margin: 2px 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.puzzle-play-position svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.puzzle-play-position:hover {
+  color: var(--site-text);
+  text-decoration: underline;
 }
 
 .puzzle-vote-button svg {
@@ -1409,6 +1526,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-analysis-button:focus-visible,
 .puzzle-vote-button:focus-visible,
+.puzzle-play-position:focus-visible,
 .puzzle-continue-button:focus-visible {
   outline: 2px solid var(--site-accent);
   outline-offset: -2px;
@@ -1812,8 +1930,8 @@ a.puzzle-tag--link:hover {
      then Next puzzle taking the rest, in the spot Hint and Solution held. */
   .puzzles-shell .puzzle-solved-panel {
     grid-template-rows: none;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas: "title vote cta";
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "title vote cta play";
     align-content: center;
     align-items: center;
     padding: 6px 12px 6px 0;
@@ -1846,12 +1964,38 @@ a.puzzle-tag--link:hover {
     height: 40px;
   }
 
+  /* No room for the words in the one-row strip: the icon alone, after Next
+     puzzle, so it stays apart from the thumbs. */
+  .puzzles-shell .puzzle-play-position {
+    grid-area: play;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: 4px;
+  }
+
+  .puzzles-shell .puzzle-play-position span {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-play-position svg {
+    width: 20px;
+    height: 20px;
+  }
+
   .puzzles-shell .puzzle-continue-button {
     grid-area: cta;
     width: auto;
     min-height: 44px;
     margin: 0;
+    padding: 0 8px;
     font-size: 15px;
+    letter-spacing: normal;
+  }
+
+  /* Leave room for all three actions beside Next on a narrow phone. */
+  .puzzles-shell .puzzle-solved-panel .puzzle-continue-button svg {
+    display: none;
   }
 
   /* The move strip: one line that scrolls sideways inside itself, the moves
@@ -2815,5 +2959,284 @@ a.puzzle-tag--link:hover {
   /* The variation row joins the one-line move strip as an inline aside. */
   .puzzles-shell .puzzle-move-variation {
     border-radius: 4px;
+  }
+}
+
+.puzzle-storm-feedback,
+.puzzle-storm-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  color: var(--site-text);
+  background: var(--site-panel);
+}
+
+.puzzle-storm-tally {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.puzzle-storm-tally > div {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.puzzle-storm-tally strong {
+  color: var(--site-heading);
+  font-size: clamp(24px, 5vw, 36px);
+  line-height: 1.1;
+}
+
+.puzzle-storm-tally span {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.puzzle-storm-tally .puzzle-storm-clock--low {
+  color: var(--site-danger, #b33030);
+}
+
+.puzzle-storm-feedback > p,
+.puzzle-storm-recovery > p {
+  margin: 0;
+}
+
+.puzzle-storm-feedback [data-storm-change] {
+  min-height: 1em;
+  font-weight: 700;
+}
+
+.puzzle-storm-recovery {
+  grid-column: 1 / -1;
+}
+
+.puzzle-storm-recovery:empty {
+  display: none;
+}
+
+.puzzle-storm-recovery .puzzle-continue-button,
+.puzzle-storm-review .puzzle-continue-button {
+  min-height: 44px;
+}
+
+.puzzle-storm-results {
+  width: min(100%, 580px);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.puzzle-storm-results .puzzle-streak-chips {
+  max-height: 40dvh;
+  overflow: auto;
+}
+
+.puzzle-storm-results .puzzle-streak-chip {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.puzzle-storm-review {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* A Storm run is played forward against the clock: the move arrows would sit
+   disabled the whole run, so they show only when reviewing a finished puzzle. */
+.puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-move-nav {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .puzzles-shell.puzzle-storm-shell .puzzle-trainer-panel {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-trainer-panel > .puzzle-moves {
+    display: none;
+  }
+
+  .puzzle-storm-feedback {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 8px;
+    padding: 8px 12px;
+  }
+
+  .puzzle-storm-feedback > .puzzle-storm-tally {
+    grid-column: 1 / -1;
+  }
+
+  .puzzles-page > .puzzles-shell.puzzle-storm-shell.puzzle-storm-reviewing {
+    overflow: auto;
+  }
+
+  .puzzle-storm-shell.puzzle-storm-reviewing .puzzles-layout {
+    flex: none;
+  }
+
+  .puzzle-storm-shell.puzzle-storm-reviewing .puzzle-board {
+    flex: none;
+    height: min(80dvh, calc(100vw * 636 / 564));
+  }
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+  .puzzles-page > .puzzles-shell.puzzle-storm-shell {
+    --puzzle-stack-chrome: 170px;
+    --puzzle-prompt-height: 100px;
+  }
+
+  .puzzles-page > .puzzles-shell.puzzle-storm-shell.puzzle-storm-error {
+    overflow: auto;
+  }
+}
+
+/* The trainer ends with the board; transport controls sit beneath both. Only
+   the middle move track scrolls, including after the local engine is mounted. */
+@media (min-width: 981px) {
+  .puzzles-shell .puzzle-side-panel {
+    height: calc(var(--puzzle-board-height, var(--puzzle-surface-size)) + 52px);
+    grid-template-rows: minmax(0, 1fr) 44px;
+    overflow: visible;
+  }
+  .puzzles-shell .puzzle-side-panel > .puzzle-actions {
+    display: none;
+  }
+  .puzzles-shell .puzzle-side-panel > .puzzle-move-nav {
+    display: grid;
+    background: transparent;
+    border: 0;
+  }
+  .puzzles-shell .puzzle-move-nav > .move-nav-bar__button {
+    height: 44px;
+  }
+  .puzzles-shell .puzzle-continue-button svg {
+    width: 38px;
+    height: 38px;
+  }
+}
+.puzzle-move-variations {
+  padding: 5px 12px;
+  border-block: 1px solid var(--site-border-soft);
+  background: var(--site-panel-soft);
+  list-style: none;
+}
+.puzzle-move-variation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 27px;
+  background: transparent;
+  font-size: 13px;
+}
+.puzzle-move-variation-number {
+  color: var(--site-muted);
+}
+.puzzle-move-variation .puzzle-move-red,
+.puzzle-move-variation .puzzle-move-black {
+  font-size: inherit;
+}
+.puzzle-move-variation .puzzle-move-mark {
+  margin-left: 2px;
+}
+.puzzle-move-item .puzzle-move-cell--right .puzzle-move-mark {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 22px;
+}
+.puzzle-move-item .puzzle-move-cell--right.puzzle-move-cell--active {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+.puzzle-move-item .puzzle-move-cell--right.puzzle-move-cell--active .puzzle-move-mark {
+  color: inherit;
+}
+.puzzle-solved-feedback > .puzzle-analysis-button {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+.puzzle-phone-menu .puzzle-play-position {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+.puzzle-report-link {
+  border: 0;
+  background: transparent;
+  min-height: 40px;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 13px;
+}
+.puzzle-report-dialog {
+  width: min(420px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 24px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  text-align: left;
+}
+.puzzle-report-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.puzzle-report-dialog h2 {
+  font-size: 20px;
+  padding: 0;
+  margin: 0 0 18px;
+}
+.puzzle-report-dialog form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.puzzle-report-dialog label,
+.puzzle-report-dialog [role="status"] {
+  grid-column: 1 / -1;
+}
+.puzzle-report-dialog select {
+  min-width: 0;
+  flex: 1;
+  min-height: 40px;
+  font-size: 16px;
+}
+.puzzle-report-dialog button {
+  min-height: 40px;
+}
+@media (max-width: 980px) {
+  .puzzles-shell .puzzle-move-variations {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    border-block: 0;
+  }
+  .puzzles-shell .puzzle-move-variation {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+@media (pointer: coarse) {
+  .puzzle-move-item {
+    min-height: 40px;
   }
 }

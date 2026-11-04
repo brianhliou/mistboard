@@ -334,9 +334,18 @@ it('says New best when the run beats the best it started from, and asks a guest 
   best = null;
   click(root, 'New streak');
   await vi.waitFor(() => expect(root.querySelector('.puzzle-streak-over')).toBeNull());
-  const signIn = root.querySelector<HTMLAnchorElement>('.puzzle-streak-side .puzzle-streak-signin');
-  expect(signIn?.textContent).toBe('Sign in to save your best');
-  expect(signIn?.getAttribute('href')).toContain('/account');
+  const signIn = root.querySelector<HTMLElement>('.puzzle-streak-side .puzzle-streak-signin');
+  expect(signIn?.querySelector('.puzzle-signin-cta-lead')?.textContent).toBe(
+    'Sign in to save your best',
+  );
+  // Register and Sign in are buttons, and both bring the guest back here.
+  const register = signIn?.querySelector<HTMLAnchorElement>('.puzzle-signin-cta-register');
+  const login = signIn?.querySelector<HTMLAnchorElement>('.puzzle-signin-cta-login');
+  expect(register?.textContent).toBe('Register');
+  expect(register?.getAttribute('href')).toContain('tab=register');
+  expect(register?.getAttribute('href')).toContain('referrer=');
+  expect(login?.textContent).toBe('Sign in');
+  expect(login?.getAttribute('href')).toContain('tab=login');
   // The phone's prompt row carries a short sign-in beside the count.
   const short = root.querySelector<HTMLAnchorElement>(
     '.puzzle-streak-feedback .puzzle-streak-tally .puzzle-streak-signin',

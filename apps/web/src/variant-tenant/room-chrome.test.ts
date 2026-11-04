@@ -801,6 +801,50 @@ describe('tenant room chrome bot rematch', () => {
     }
   });
 
+  // #825: the rematch opened the new game, but Back restored this page (from
+  // the back/forward cache) with the button stuck on a disabled "Creating".
+  it('is Rematch again once the room exists, and a second click reuses that room', async () => {
+    let resolveFetch: (response: Response) => void = () => {};
+    const fetchSpy = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    try {
+      const { chrome, refs } = chromeHarness({
+        view: finished,
+        seat: 'white',
+        roomMode: 'pve',
+        playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi' },
+      });
+      chrome.renderRoomActions();
+      const button = () =>
+        refs.roomActions.querySelector<HTMLButtonElement>('button.postgame-actions__rematch');
+      button()?.click();
+      await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+      expect(button()?.textContent).toBe('Creating');
+      expect(button()?.disabled).toBe(true);
+      // A double click while the request is out makes no second room.
+      button()?.dispatchEvent(new MouseEvent('click'));
+      resolveFetch(new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }));
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
+      // The page as Back finds it.
+      expect(button()?.textContent).toBe('Rematch');
+      expect(button()?.disabled).toBe(false);
+      button()?.click();
+      expect(assign).toHaveBeenCalledTimes(2);
+      expect(assign).toHaveBeenLastCalledWith('/r/next');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      assign.mockRestore();
+      vi.unstubAllGlobals();
+      localStorage.removeItem('mistboard:last-bot-game');
+    }
+  });
+
   it('keeps a bot the tenant body already names', () => {
     const body = { mode: 'pve', gameSpecId: 'xiangqi', engineId: 'pikafish-level-4' };
     expect(withRoomBot(body, 'pikafish-level-8')).toBe(body);

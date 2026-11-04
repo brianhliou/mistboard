@@ -32,6 +32,7 @@ import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
@@ -64,6 +65,7 @@ type AnyTenant = VariantTenant<string, string, any, any, any, string>;
 // ── Coverage ────────────────────────────────────────────────────────────────
 
 const DRAWING_TENANTS: readonly AnyTenant[] = [
+  gomokuTenant,
   xiangqiTenant,
   darkXiangqiTenant,
   jieqiTenant,

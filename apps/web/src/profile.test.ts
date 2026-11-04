@@ -13,6 +13,59 @@ describe('profile ratings rail', () => {
     document.body.innerHTML = '';
   });
 
+  it.each([
+    ['/player', '/'],
+    ['/zh-hans', '/zh-hans/'],
+    ['/zh-hant', '/zh-hant/'],
+  ])('links the empty leaderboard directly to the lobby at %s', async (path, href) => {
+    window.history.replaceState(null, '', path);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response(JSON.stringify({ ladders: [], players: [] })),
+    );
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+
+    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe(href);
+  });
+
+  it.each([
+    ['en', 'Title verification'],
+    ['zh-Hans', '头衔认证'],
+    ['zh-Hant', '頭銜認證'],
+  ] as const)('offers title verification on the owner profile in %s', async (locale, label) => {
+    const { buildProfileOverview } = await import('./profile.js');
+    const profile: Parameters<typeof buildProfileOverview>[0] = {
+      isViewer: true,
+      relation: null,
+      user: {
+        handle: 'player',
+        displayName: 'Player',
+        profileVisibility: 'public',
+        accountRole: 'player',
+        createdAt: '2026-05-01T00:00:00.000Z',
+      },
+      ratings: [],
+      games: [],
+      gamesTotal: 0,
+    };
+    for (const title of [null, 'xgm']) {
+      profile.user.title = title;
+      const overview = buildProfileOverview(profile, document.createElement('div'), locale);
+      const link = overview.querySelector('.profile-owner-actions a[href="/verify-title"]');
+      expect(link?.textContent, String(title)).toBe(label);
+      expect(overview.querySelector('a[href="/account/settings"]')).not.toBeNull();
+      expect(overview.querySelector('a[href="/coach/edit"]') !== null).toBe(title === 'xgm');
+    }
+
+    profile.isViewer = false;
+    for (const relation of [null, { following: false, blocked: false }]) {
+      profile.relation = relation;
+      const overview = buildProfileOverview(profile, document.createElement('div'), locale);
+      expect(overview.querySelector('a[href="/verify-title"]')).toBeNull();
+    }
+  });
+
   it('shows soft-launch profile rows before rated games', async () => {
     // Pin prod semantics so dev-on variants (jieqi/banqi) don't add extra rows.
     vi.stubEnv('DEV', false);
@@ -903,7 +956,7 @@ describe('profile ratings rail', () => {
     expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(0);
     expect(root.textContent).not.toContain('No rated games yet.');
     expect(root.textContent).toContain('The ladders open with the first rated game.');
-    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/play');
+    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/');
     // The online-players column still renders beside it.
     expect(root.textContent).toContain('Online players');
   });

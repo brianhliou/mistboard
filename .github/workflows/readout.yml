@@ -90,6 +90,13 @@ jobs:
 
             if (process.env.DRY_RUN === 'true') return;
 
+            // Direct email is the notification owner. Posting the same report
+            // to an issue also emails subscribers, producing two copies.
+            // Keep GitHub as the fallback when mail is disabled/rejected. Do
+            // not trust the old `emailed` flag, which predates provider receipt
+            // checks. A reused snapshot is an idempotent retry, not a new event.
+            if (payload.emailDelivery?.accepted === true || payload.reused === true) return;
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const label = 'ops-readout';

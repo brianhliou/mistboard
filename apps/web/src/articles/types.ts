@@ -148,7 +148,7 @@ export type JungleReplayBlock = {
   caption?: string;
 };
 
-// Flip Jungle (兽棋 / 翻翻棋) analogue of the banqi replay: a 4x4 board stepped
+// Flip Jungle (翻翻兽棋) analogue of the banqi replay: a 4x4 board stepped
 // through a move list + hidden deal, each position replayed through the real
 // flip-jungle kernel; tiles flip to their dealt animal on first turn-over and
 // equal ranks trade off the board.

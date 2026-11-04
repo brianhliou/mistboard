@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 // The server cannot import the web bundle, so two of its dispatch surfaces
 // hand-maintain per-variant entries that must mirror the web tenant registry:
 // the SPA fallback allowlist (server-policy.ts isClientRoute) and the tenant
@@ -17,6 +17,7 @@ import {
   BOT_DEFAULT_TIME_CONTROL_ID,
   defaultEngineTimeControl,
   ENGINE_FLOORED_GAME_SPEC_IDS,
+  GOMOKU_SPEC_ID,
   isAllowedEngineTimeControl,
   isRetiredGameSpec,
   maybeGameSpecForId,
@@ -42,6 +43,7 @@ import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
+import { boardAspectForSpec, hasBoardAspect } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
@@ -366,6 +368,80 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       ).toBe(defaultEngineTimeControl(tenant.gameSpecId).id);
     }
   });
+});
+
+describe('Gomoku hidden registration', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('reserves an explicit square for the 15 by 15 watch board', () => {
+    expect(hasBoardAspect(GOMOKU_SPEC_ID)).toBe(true);
+    expect(boardAspectForSpec(GOMOKU_SPEC_ID)).toBe(1);
+  });
+
+  it.each(['false', 'true'])(
+    'registers matching casual tenants, eight browser bots and a gated review with flag %s',
+    (value) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', value);
+      vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
+      expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('hidden');
+      const web = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
+      const server = registeredVariantTenants().find(
+        (tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID,
+      );
+      expect(web?.roomIdPrefix).toBe('gmk_');
+      expect(server?.roomIdPrefix).toBe(web?.roomIdPrefix);
+      expect(web?.enabled()).toBe(value === 'true');
+      expect(server?.enabled()).toBe(value === 'true');
+      expect(web?.landing?.offerInMenu()).toBe(value === 'true');
+      expect(web?.landing?.acceptsDeepLink()).toBe(value === 'true');
+      expect(web?.landing?.capabilities).toMatchObject({
+        firstColor: 'black',
+        secondColor: 'white',
+        supportsRated: false,
+      });
+      expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual(
+        [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
+      );
+      for (const option of web?.landing?.engineOptions ?? []) {
+        expect(option.kind).toBe('browser');
+        expect(server?.isEngineClientId?.(option.id)).toBe(true);
+      }
+      // Browser choices and server recognition agree on all eight stable ids.
+      for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
+        expect(server?.isEngineClientId?.(`rapfi-level-${level}`)).toBe(true);
+        expect(server?.engineDisplayName?.(`rapfi-level-${level}`)).toBe('Rapfi');
+      }
+      for (const id of ['rapfi-level-0', 'rapfi-level-9', 'rapfi-level-1\n', 'engine:black'])
+        expect(server?.isEngineClientId?.(id)).toBe(false);
+      expect(web?.landing?.defaultEngineId).toBe('rapfi-level-1');
+      expect(server?.lobby?.supportsRated).toBe(false);
+      expect(web?.watch?.family).toBe('gomoku');
+      expect(server?.watch).toEqual({
+        channelId: 'gomoku',
+        family: 'gomoku',
+        label: 'Gomoku',
+        legacyVariants: ['gomoku'],
+      });
+      for (const option of web?.landing?.engineOptions ?? [])
+        expect(server?.engineDisplayName?.(option.id)).toBe('Rapfi');
+      expect(server?.engineDisplayName?.('human')).toBeNull();
+      expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
+      for (const path of ['/gomoku', '/gomoku/review/test']) {
+        expect(isClientRoute(path), path).toBe(false);
+      }
+      expect(web?.gameRouteBase).toBe('/gomoku/game');
+      expect(web?.reviewRouteBase).toBe('/gomoku/game');
+      expect(web?.mountPostgame).toBeTypeOf('function');
+      expect(server?.reviewRouteBase).toBe('/gomoku/game');
+      expect(web?.finishedGameOpensRoom).toBeUndefined();
+      expect(server?.finishedGameOpensRoom).toBeUndefined();
+      expect(isClientRoute('/gomoku/game/gmk_test')).toBe(true);
+      expect(isReviewShellRoute('/gomoku/game/gmk_test')).toBe(true);
+      expect(
+        reviewUrlForGame({ roomId: 'gmk_test', variant: GOMOKU_SPEC_ID } as FeaturedGame),
+      ).toBe('/gomoku/game/gmk_test');
+    },
+  );
 });
 
 // A variant's play deep link must be gated on its OWN feature flag. Two were

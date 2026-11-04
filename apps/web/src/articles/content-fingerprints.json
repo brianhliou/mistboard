@@ -4,7 +4,7 @@
     "updatedAt": null
   },
   "ab-jchess-vs-jqe": {
-    "hash": "d8ad6ea438291849",
+    "hash": "92077a33555c871c",
     "updatedAt": null
   },
   "anti-xiangqi": {
@@ -102,6 +102,10 @@
   "general-blunder-challenge": {
     "hash": "2766874a101bfb37",
     "updatedAt": "2026-10-24"
+  },
+  "gomoku": {
+    "hash": "1517c2f732f7045f",
+    "updatedAt": "2026-11-01"
   },
   "helpmates-in-xiangqi": {
     "hash": "5beedc05bced4608",

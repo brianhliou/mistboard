@@ -12,8 +12,8 @@
   "ab-jchess-vs-jqe": {
     "title": "AB-JChess takes the jieqi title back from jqe",
     "kind": "article",
-    "description": "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. Five games read by both engines, and how their play differs.",
-    "status": "published"
+    "description": "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. Five games read move by move by both engines, the two engines' chase rules, and how their play differs.",
+    "status": "draft"
   },
   "anti-xiangqi": {
     "title": "Antichess on the Xiangqi Board Is a Draw",
@@ -213,8 +213,8 @@
     "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败",
-      "zh-hant": "翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
+      "zh-hans": "翻翻兽棋：搜索量提升 512 倍，仍有 23% 的对局落败",
+      "zh-hant": "翻翻獸棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
     }
   },
   "fog-chess": {
@@ -278,6 +278,12 @@
       "zh-hans": "你能让 General Blunder 赢吗？",
       "zh-hant": "你能讓 General Blunder 贏嗎？"
     }
+  },
+  "gomoku": {
+    "title": "Gomoku Rules",
+    "kind": "rules",
+    "description": "Learn to place stones, make five in a row, use the clocks and follow the turn indicator from Mistboard’s dealt openings.",
+    "status": "published"
   },
   "helpmates-in-xiangqi": {
     "title": "Helpmates in Xiangqi",
@@ -395,8 +401,8 @@
     "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "翻翻棋規則：玩法詳解與免費線上對弈"
+      "zh-hans": "翻翻兽棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "翻翻獸棋規則：玩法詳解與免費線上對弈"
     }
   },
   "katago-jungle": {

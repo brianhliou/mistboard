@@ -1,24 +1,17 @@
-// /stats (public) and /metrics (admin) share this module, the way coach.ts
-// serves both the directory and a detail view. Public is one of the /about
-// family (static rail, translated): games per week, totals, mode + variant
-// splits. Admin adds the Postgres-true weekly series
-// from /api/stats/admin (players, games, accounts, puzzles, study, community),
-// the result split, the live in-play/online figures, and an "Engines and
-// corpus" block at the bottom that is the ONLY place bot-vs-bot appears. The
-// admin endpoint 401s for non-admins (open in local dev); the page is otherwise
-// unlinked, so it is direct-URL only like /database.
-// Plan and status: docs-private/metrics-roadmap.md.
+// Public /stats and admin reporting share the aggregate stats module.
+// Admin navigation separates games, return visits, activity and operations;
+// every admin destination waits for an authorized metrics response.
+// Public /stats keeps its translated static layout and public-only API reads.
 
 import './metrics.css';
 import { CANONICAL_VARIANT_ORDER, isRetiredGameSpec } from '@mistboard/game';
+import { buildReportingNav, type ReportingTab } from './admin-reporting-nav.js';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
 import {
-  type ActivitySeries,
-  buildInteractiveActivityChart,
   formatStatNumber,
   type PublicSiteStats,
   type PublicStatsMode,
@@ -49,6 +42,22 @@ export type AdminRetentionCohort = {
   segment: 'all' | 'jieqi' | 'other';
   players: number;
   returns: { week: number; returned: number | null; percentage: number | null }[];
+};
+
+// Mirrors LoginEmailDeliveryCounts in persistence-email-delivery.ts.
+type LoginEmailDeliveryCounts = {
+  requested: number;
+  sent: number;
+  delivered: number;
+  bounced: number;
+  suppressed: number;
+  complained: number;
+  completed: number;
+};
+
+type LoginEmailDeliveryMetrics = {
+  last7d: LoginEmailDeliveryCounts;
+  last30d: LoginEmailDeliveryCounts;
 };
 
 // Mirrors AdminMetrics in apps/server/src/persistence-admin-metrics.ts.
@@ -97,6 +106,7 @@ export type AdminMetrics = {
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
   retentionCohorts: AdminRetentionCohort[];
+  loginEmailDelivery: LoginEmailDeliveryMetrics;
   engines: {
     eveGames: number;
     eveGamesLast7d: number;
@@ -198,148 +208,336 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
   root.classList.add('landing-page', 'metrics-route');
-
   const shell = document.createElement('main');
   shell.className = 'site-section metrics-shell';
   root.append(buildNav(locale), shell);
-
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
   heading.textContent = 'Metrics';
-  shell.append(heading);
-
+  const requestedTab = new URLSearchParams(window.location.search).get('tab');
+  const tab: Exclude<ReportingTab, 'readouts'> =
+    requestedTab === 'retention' || requestedTab === 'activity' || requestedTab === 'operations'
+      ? requestedTab
+      : window.location.hash === '#deploy-history'
+        ? 'operations'
+        : 'play';
+  heading.textContent = {
+    play: 'Games and players',
+    retention: 'Returning players',
+    activity: 'Activity',
+    operations: 'System',
+  }[tab];
   const body = document.createElement('div');
   body.className = 'metrics-body';
   body.setAttribute('aria-live', 'polite');
   body.textContent = 'Loading…';
-  shell.append(body);
-
-  const [publicStats, live, admin, deploys] = await Promise.all([
-    fetchPublicStats(),
-    fetchLiveStats(),
-    fetchAdminMetrics(),
-    fetchDeployHistory(),
-  ]);
-
-  if (!publicStats && !admin) {
+  shell.append(heading, body);
+  let admin: AdminMetrics;
+  try {
+    admin = await fetchAdminMetrics();
+  } catch (error) {
     body.replaceChildren(
-      buildNotice('Statistics unavailable', 'Could not load statistics. Try again shortly.'),
+      buildNotice(
+        error instanceof AdminMetricsAccessError ? 'Admin access required' : 'Metrics unavailable',
+        error instanceof AdminMetricsAccessError
+          ? 'Sign in with an admin account to view metrics.'
+          : 'Could not load admin metrics. Try again shortly.',
+      ),
     );
     return;
   }
-
-  const parts: HTMLElement[] = [];
-  parts.push(buildHeadlineCards(publicStats, live, admin));
-
-  if (admin) {
-    const lede = document.createElement('p');
-    lede.className = 'metrics-lede';
-    lede.textContent =
-      'Every number above the last block is visitor play only: games between people or against a bot, with no seat held by an account excluded from statistics, counted from the database at game end, so Do Not Track visitors are included. Players are signed-in accounts plus guest browsers (a guest seat carries a browser id since 2026-09-11; before that date guests appear only as games with a guest seat). Weeks start on Monday; the last week is in progress.';
-    parts.push(lede);
-    parts.push(...buildWeeklySections(admin, locale));
-    parts.push(buildRetentionSection(admin.retentionCohorts ?? []));
-  }
-
-  if (publicStats && publicStats.dailyCompletedGames.length > 0) {
-    parts.push(
-      buildChartSection(
-        'Games over time',
-        buildInteractiveActivityChart(buildActivitySeries(publicStats, locale), locale),
-      ),
+  shell.prepend(buildReportingNav(tab));
+  const [publicStats, live, deploys] = await Promise.all([
+    tab === 'play' ? fetchPublicStats() : Promise.resolve(null),
+    tab === 'play' ? fetchLiveStats() : Promise.resolve(null),
+    tab === 'operations' ? fetchDeployHistory() : Promise.resolve(null),
+  ]);
+  const lede = document.createElement('p');
+  lede.className = 'metrics-lede';
+  lede.textContent =
+    'Completed human games, counted from the database including Do Not Track visitors. Players are distinct accounts and guest browser IDs, so signing in or changing browsers can count someone twice. Returning players had played before the selected week; the Returning players tab shows how many new players came back. Weeks run Monday to Sunday UTC. Charts include the current week as a dashed partial segment.';
+  const charts = buildWeeklySections(admin, locale);
+  const lifetime: HTMLElement[] = [buildHeadlineCards(publicStats, live, admin)];
+  const variants = sortedEntries(admin.humanGamesByVariant)
+    .filter((entry) => STATS_VARIANTS.includes(entry.label))
+    .map((entry) => ({ label: variantPublicName(entry.label, locale), count: entry.count }));
+  if (variants.length) lifetime.push(buildBreakdownSection('Games by variant', variants));
+  if (publicStats)
+    lifetime.push(
+      buildBreakdownSection('Games by mode', modeEntries(publicStats.modeTotals, locale)),
     );
-  }
-
-  // Variant split, narrowed to the curated live shelf (STATS_VARIANTS), from
-  // the admin endpoint's counted human games.
-  const variantEntries = admin
-    ? sortedEntries(admin.humanGamesByVariant)
-        .filter((e) => STATS_VARIANTS.includes(e.label))
-        .map((e) => ({ label: variantPublicName(e.label, locale), count: e.count }))
-    : [];
-  if (variantEntries.length > 0) {
-    parts.push(buildBreakdownSection('Games by variant', variantEntries));
-  }
-
-  if (publicStats) {
-    // Bot-vs-bot is never a mode row here: it lives in the last block.
-    parts.push(buildBreakdownSection('Games by mode', modeEntries(publicStats.modeTotals, locale)));
-  }
-
-  if (admin) {
-    const resultEntries = sortedEntries(admin.humanGamesByResult).map((entry) => ({
-      label: prettyResult(entry.label),
-      count: entry.count,
-    }));
-    if (resultEntries.length > 0) {
-      parts.push(buildBreakdownSection('Games by result', resultEntries));
-    }
+  const results = sortedEntries(admin.humanGamesByResult).map((entry) => ({
+    label: prettyResult(entry.label),
+    count: entry.count,
+  }));
+  if (results.length) lifetime.push(buildBreakdownSection('Games by result', results));
+  const parts: HTMLElement[] = [];
+  if (tab === 'play')
+    parts.push(
+      buildWeekReview(admin),
+      lede,
+      charts[2],
+      charts[0],
+      charts[1],
+      sectionHeading('Lifetime totals and live status'),
+      ...lifetime,
+    );
+  if (tab === 'activity') parts.push(...charts.slice(3));
+  if (tab === 'retention') parts.push(buildRetentionSection(admin.retentionCohorts ?? []));
+  if (tab === 'operations') {
     parts.push(buildEnginesSection(admin, locale));
+    parts.push(buildLoginEmailDeliverySection(admin.loginEmailDelivery, locale));
+    if (deploys) {
+      const history = buildDeploysSection(deploys);
+      history.id = 'deploy-history';
+      parts.push(history);
+    }
   }
-
-  if (deploys) parts.push(buildDeploysSection(deploys));
-
   body.replaceChildren(...parts);
+  if (window.location.hash === '#deploy-history')
+    document.getElementById('deploy-history')?.scrollIntoView();
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+function buildWeekReview(admin: AdminMetrics): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-week-review';
+  const weeks = [...admin.weekly].sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  const complete = (week: AdminMetricsWeek) =>
+    Date.parse(week.weekStart) + WEEK_MS <= Date.parse(admin.generatedAt);
+  const requested = new URLSearchParams(window.location.search).get('week');
+  let selected =
+    weeks.find((week) => week.weekStart === requested) ??
+    [...weeks].reverse().find(complete) ??
+    weeks.at(-1);
+  const unavailable = document.createElement('p');
+  unavailable.className = 'metrics-section-note';
+  if (requested && !weeks.some((week) => week.weekStart === requested)) {
+    unavailable.textContent = `The requested week (${requested}) is outside the available history. Showing the latest available completed week.`;
+  }
+  const label = document.createElement('label');
+  label.className = 'metrics-week-label';
+  label.append('Review week ');
+  const picker = document.createElement('select');
+  picker.setAttribute('aria-label', 'Review week');
+  for (const week of [...weeks].reverse()) {
+    const option = document.createElement('option');
+    option.value = week.weekStart;
+    const end = new Date(Date.parse(week.weekStart) + WEEK_MS - 1).toISOString().slice(0, 10);
+    option.textContent = `${week.weekStart} to ${end}${complete(week) ? '' : ' · in progress'}`;
+    picker.append(option);
+  }
+  label.append(picker);
+  const review = document.createElement('div');
+  review.className = 'metrics-week-summary';
+  const draw = () => {
+    if (!selected) {
+      review.textContent = 'No weekly activity available yet.';
+      return;
+    }
+    picker.value = selected.weekStart;
+    const priorStart = new Date(Date.parse(selected.weekStart) - WEEK_MS)
+      .toISOString()
+      .slice(0, 10);
+    const previous = complete(selected)
+      ? weeks.find((week) => week.weekStart === priorStart)
+      : undefined;
+    const heading = document.createElement('h2');
+    heading.className = 'metrics-week-heading';
+    heading.textContent = complete(selected) ? 'Completed week' : 'Week in progress';
+    const note = document.createElement('p');
+    note.className = 'metrics-section-note';
+    note.textContent = complete(selected)
+      ? `Monday–Sunday UTC${previous ? ` · compared with the week of ${previous.weekStart}` : ' · previous week unavailable'}.`
+      : 'Partial UTC week. A comparison with a complete week would be misleading, so changes are unavailable.';
+    const grid = document.createElement('div');
+    grid.className = 'metrics-cards metrics-week-cards';
+    const picks = [
+      ['Completed human games', 'humanGames'],
+      ['Players', 'players'],
+      ['Returning players', 'returningPlayers'],
+      ['New accounts', 'newAccounts'],
+    ] as const;
+    for (const [title, key] of picks) {
+      const current = selected[key];
+      const before = previous?.[key];
+      let change = 'Comparison unavailable';
+      if (before !== undefined) {
+        const difference = current - before;
+        change = `${signedDelta(difference)}${before ? ` (${Math.round((difference / before) * 100) > 0 ? '+' : ''}${Math.round((difference / before) * 100)}%)` : difference ? ' (new)' : ' (flat)'} vs ${formatStatNumber(before)}`;
+      }
+      const card = statCard(title, current, change);
+      if (before !== undefined && current > before && key === 'humanGames')
+        card.classList.add('is-up');
+      grid.append(card);
+    }
+    const split = document.createElement('p');
+    split.className = 'metrics-section-note';
+    split.textContent = `Games: ${formatStatNumber(selected.pvpGames)} vs people · ${formatStatNumber(selected.pveGames)} vs bots. New accounts count sign-ups whether or not they played.`;
+    review.replaceChildren(heading, note, grid, split);
+  };
+  picker.addEventListener('change', () => {
+    selected = weeks.find((week) => week.weekStart === picker.value);
+    const url = new URL(window.location.href);
+    unavailable.textContent = '';
+    url.searchParams.set('week', picker.value);
+    window.history.replaceState(null, '', url);
+    draw();
+  });
+  if (unavailable.textContent) section.append(unavailable);
+  section.append(label, review);
+  draw();
+  return section;
+}
+
+function buildLoginEmailDeliverySection(
+  metrics: LoginEmailDeliveryMetrics,
+  locale: Locale,
+): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-section metrics-login-email';
+  const title = t('metrics.loginEmail.heading', {}, locale);
+  section.append(sectionHeading(title));
+  const note = document.createElement('p');
+  note.className = 'metrics-section-note';
+  note.textContent = t('metrics.loginEmail.note', {}, locale);
+  section.append(note);
+  const scroller = document.createElement('div');
+  scroller.className = 'metrics-retention-scroll';
+  scroller.tabIndex = 0;
+  scroller.setAttribute('role', 'region');
+  scroller.setAttribute('aria-label', title);
+  const table = document.createElement('table');
+  table.className = 'metrics-retention-table';
+  const head = table.createTHead().insertRow();
+  for (const key of ['status', 'last7d', 'last30d'] as const) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = t(`metrics.loginEmail.${key}`, {}, locale);
+    head.append(th);
+  }
+  const body = table.createTBody();
+  for (const key of [
+    'requested',
+    'sent',
+    'delivered',
+    'bounced',
+    'suppressed',
+    'complained',
+    'completed',
+  ] as const) {
+    const row = body.insertRow();
+    const label = document.createElement('th');
+    label.scope = 'row';
+    label.textContent = t(`metrics.loginEmail.${key}`, {}, locale);
+    row.append(label);
+    row.insertCell().textContent = formatStatNumber(metrics.last7d[key], locale);
+    row.insertCell().textContent = formatStatNumber(metrics.last30d[key], locale);
+  }
+  scroller.append(table);
+  section.append(scroller);
+  return section;
 }
 
 function buildRetentionSection(cohorts: AdminRetentionCohort[]): HTMLElement {
   const section = document.createElement('section');
   section.className = 'metrics-section metrics-retention';
-  section.append(sectionHeading('First-game retention'));
+  section.append(sectionHeading('Do new players come back?'));
+  const intro = document.createElement('p');
+  intro.className = 'metrics-section-note';
+  intro.textContent =
+    'Retention means coming back to play. Start with people who finished their first game in a given week, then count how many finished another game the next week or four weeks later.';
+  const label = document.createElement('label');
+  label.className = 'metrics-return-filter';
+  label.append('First game variant ');
+  const picker = document.createElement('select');
+  picker.setAttribute('aria-label', 'First game variant');
+  for (const [value, text] of [
+    ['all', 'All variants'],
+    ['jieqi', 'Jieqi'],
+    ['other', 'Other variants'],
+  ]) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    picker.append(option);
+  }
+  label.append(picker);
+  const body = document.createElement('div');
+  const draw = () => {
+    const rows = cohorts
+      .filter((cohort) => cohort.segment === picker.value)
+      .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
+      .slice(0, 12);
+    body.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'No first-game players in this window.';
+      body.append(empty);
+      return;
+    }
+    const latest = rows.find((row) =>
+      row.returns.some(
+        (cell) => cell.week === 1 && cell.returned !== null && cell.percentage !== null,
+      ),
+    );
+    if (latest) {
+      const cell = latest.returns.find((cell) => cell.week === 1)!;
+      const example = document.createElement('p');
+      example.className = 'metrics-return-example';
+      example.textContent = `Of the ${formatStatNumber(latest.players)} players who first played in the week of ${formatReturnDate(latest.weekStart)}, ${formatStatNumber(cell.returned!)} came back the next week (${cell.percentage!.toFixed(1)}%).`;
+      body.append(example);
+    }
+    const table = document.createElement('table');
+    table.className = 'metrics-return-table';
+    const head = table.createTHead().insertRow();
+    for (const text of ['First played', 'New players', 'Next week', '4 weeks later']) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = text;
+      head.append(th);
+    }
+    const tbody = table.createTBody();
+    for (const cohort of rows) {
+      const row = tbody.insertRow();
+      const first = document.createElement('th');
+      first.scope = 'row';
+      first.textContent = formatReturnDate(cohort.weekStart);
+      row.append(first);
+      row.insertCell().textContent = formatStatNumber(cohort.players);
+      for (const week of [1, 4]) {
+        const td = row.insertCell();
+        const cell = cohort.returns.find((entry) => entry.week === week);
+        if (!cell || cell.returned === null || cell.percentage === null) {
+          td.textContent = cell ? 'Not ready' : 'Unavailable';
+          td.className = 'metrics-return-pending';
+        } else {
+          const rate = document.createElement('strong');
+          rate.textContent = `${cell.percentage.toFixed(1)}%`;
+          const count = document.createElement('span');
+          count.textContent = `${formatStatNumber(cell.returned)} of ${formatStatNumber(cohort.players)}`;
+          td.append(rate, count);
+        }
+      }
+    }
+    body.append(table);
+  };
   const note = document.createElement('p');
   note.className = 'metrics-section-note';
   note.textContent =
-    'Cohorts start with each account or guest browser’s first completed counted game. Weeks run Monday to Sunday UTC; W1 is the following calendar week. The variant split uses that first game; a return is a completed counted game in any variant during the indicated week, not a cumulative return. Cells show percentage (returned / cohort size) only after the whole return week has elapsed. Blank cells are still maturing. Guest browser ids are available since 2026-09-11; earlier guests are absent. Signing in or changing browser identity can count the same person again.';
-  section.append(note);
-  if (cohorts.length === 0) {
-    const empty = document.createElement('p');
-    empty.textContent = 'No first-game cohorts in this window.';
-    section.append(empty);
-    return section;
-  }
-  const scroller = document.createElement('div');
-  scroller.className = 'metrics-retention-scroll';
-  scroller.tabIndex = 0;
-  scroller.setAttribute('role', 'region');
-  scroller.setAttribute('aria-label', 'First-game retention by cohort and return week');
-  const table = document.createElement('table');
-  table.className = 'metrics-retention-table';
-  const head = table.createTHead().insertRow();
-  const returnWeeks = cohorts[0].returns.map((cell) => cell.week);
-  for (const label of [
-    'First-game week',
-    'First variant',
-    'Players',
-    ...returnWeeks.map((week) => `W${week}`),
-  ]) {
-    const th = document.createElement('th');
-    th.scope = 'col';
-    th.textContent = label;
-    head.append(th);
-  }
-  const labels = { all: 'All variants', jieqi: 'Jieqi', other: 'Everything else' };
-  const body = table.createTBody();
-  for (const cohort of cohorts) {
-    const row = body.insertRow();
-    for (const value of [
-      cohort.weekStart,
-      labels[cohort.segment],
-      formatStatNumber(cohort.players),
-    ]) {
-      row.insertCell().textContent = value;
-    }
-    for (const cell of cohort.returns) {
-      const td = row.insertCell();
-      if (cell.returned === null || cell.percentage === null) {
-        td.setAttribute('aria-label', `W${cell.week}: still maturing`);
-      } else {
-        td.textContent = `${cell.percentage.toFixed(1)}% (${formatStatNumber(cell.returned)} / ${formatStatNumber(cohort.players)})`;
-      }
-    }
-  }
-  scroller.append(table);
-  section.append(scroller);
+    'Last 12 first-game weeks, Monday to Sunday UTC. A return can be in any variant. “4 weeks later” checks that particular week, not any time in the first month. Not ready means that whole return week has not finished yet. Players are accounts and guest browsers; changing browser or signing in can count someone twice. Guest history starts on 2026-09-11.';
+  picker.addEventListener('change', draw);
+  section.append(intro, label, body, note);
+  draw();
   return section;
+}
+function formatReturnDate(date: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: '2-digit',
+    timeZone: 'UTC',
+  }).format(new Date(date));
 }
 
 // ── headline number cards ────────────────────────────────────────────────────
@@ -365,7 +563,7 @@ function buildHeadlineCards(
       statCard(
         'Games played',
         admin.humanGames,
-        `+${formatStatNumber(admin.humanGamesLast7d)} this week`,
+        `+${formatStatNumber(admin.humanGamesLast7d)} in the last 7 days`,
       ),
     );
   } else if (publicStats) {
@@ -382,7 +580,7 @@ function buildHeadlineCards(
       statCard(
         'Accounts',
         admin.accounts,
-        `+${formatStatNumber(admin.accountsLast30d)} this month`,
+        `+${formatStatNumber(admin.accountsLast30d)} in the last 30 days`,
       ),
       statCard('Patrons', admin.activePatrons),
     );
@@ -487,29 +685,6 @@ function buildPublicWeeklyChart(weeks: PublicStatsWeek[], locale: Locale): HTMLE
   return figure;
 }
 
-// "All games" (the true cumulative total, matching the headline) plus one
-// cumulative series per curated live variant that has games, in canonical order.
-function buildActivitySeries(publicStats: PublicSiteStats, locale: Locale): ActivitySeries[] {
-  const all: ActivitySeries = {
-    key: '__all',
-    label: 'All games',
-    days: publicStats.dailyCompletedGames,
-  };
-  const byVariant = new Map((publicStats.variantDaily ?? []).map((v) => [v.variant, v]));
-  const variantSeries: ActivitySeries[] = [];
-  for (const id of STATS_VARIANTS) {
-    const series = byVariant.get(id);
-    if (series && series.total > 0) {
-      variantSeries.push({
-        key: id,
-        label: variantPublicName(id, locale),
-        days: series.days,
-      });
-    }
-  }
-  return [all, ...variantSeries];
-}
-
 // ── weekly series (admin) ────────────────────────────────────────────────────
 type WeeklyPick = { key: keyof AdminMetricsWeek; label: string };
 
@@ -607,7 +782,7 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
 function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
   const section = document.createElement('section');
   section.className = 'metrics-section metrics-engines-section';
-  section.append(sectionHeading('Not counted above'));
+  section.append(sectionHeading('Engine and corpus activity'));
   const note = document.createElement('p');
   note.className = 'metrics-section-note';
   note.textContent = `Bot vs bot games are the engine ladder, imported and manual games are corpus, internal games have a seat held by an account excluded from statistics (the operator's own), pre-launch games finished before ${admin.engines.countedFrom ?? 'the launch date'}, when the site had no visitors yet, and short games ended before both sides had moved (fewer than ${admin.engines.minCountedPlies ?? 2} plies: opened a bot game and resigned or left). None of them count as play anywhere above.`;
@@ -922,12 +1097,10 @@ async function fetchDeployHistory(): Promise<DeployHistoryEntry[] | null> {
   }
 }
 
-async function fetchAdminMetrics(): Promise<AdminMetrics | null> {
-  try {
-    const resp = await fetch('/api/stats/admin', { credentials: 'same-origin' });
-    if (!resp.ok) return null;
-    return (await resp.json()) as AdminMetrics;
-  } catch {
-    return null;
-  }
+class AdminMetricsAccessError extends Error {}
+async function fetchAdminMetrics(): Promise<AdminMetrics> {
+  const response = await fetch('/api/stats/admin', { credentials: 'same-origin' });
+  if (response.status === 401 || response.status === 403) throw new AdminMetricsAccessError();
+  if (!response.ok) throw new Error('admin_metrics_unavailable');
+  return (await response.json()) as AdminMetrics;
 }

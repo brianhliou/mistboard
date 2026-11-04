@@ -28,9 +28,8 @@ import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import './embed.css';
 import { seatDiscEl } from '../seat-disc.js';
 
-// Below this frame width the move list drops under the board (mirrors the
-// @media rule in embed.css; the two must agree or the board is sized for the
-// wrong layout).
+// Below this measured frame width the move list drops under the board. The
+// same decision sets the CSS class: viewport media queries miss frame padding.
 export const STACK_BELOW_PX = 480;
 // Width of the move sheet beside the board. The study widget's floor for the
 // same column (articles.css): a move pair at 15px, number included, fits on one
@@ -182,13 +181,20 @@ export type EmbedCard = {
   /** Land on mainline ply `ply`, as the move list or the arrows do (leaves any
    *  sideline). How a pane under the card (a score chart) moves the board. */
   jumpToPly: (ply: number) => void;
+  /** Insert cached analysis once it loads, then refit the card and host frame. */
+  setUnderBoard: (pane: HTMLElement | null) => void;
   /** Mark moves on the score sheet: a glyph after the move and a note under it (the
    *  stored analysis's "?? … was best."), keyed by ply. Kept across sheet rebuilds. */
   setAnnotations: (byPly: ReadonlyMap<number, EmbedSheetAnnotation>) => void;
 };
 
 /** One move's mark on the score sheet. */
-export type EmbedSheetAnnotation = { suffix?: string; suffixClass?: string; note?: string };
+export type EmbedSheetAnnotation = {
+  luck?: number;
+  suffix?: string;
+  suffixClass?: string;
+  note?: string;
+};
 
 /** The sheet's entries with any marks folded in. An entry's own note (a study's comment)
  *  comes first; the analysis note follows it. */
@@ -202,6 +208,7 @@ export function annotateEntries(
     const note = [entry.note, mark.note].filter(Boolean).join(' ');
     return {
       ...entry,
+      ...(mark.luck !== undefined ? { luck: mark.luck } : {}),
       ...(mark.suffix ? { suffix: mark.suffix, suffixClass: mark.suffixClass } : {}),
       ...(note ? { note } : {}),
     };
@@ -365,7 +372,7 @@ export async function mountEmbedCard(
   controls.className = 'embed-card-controls';
   const status = document.createElement('span');
   status.className = 'embed-card-status';
-  const underBoard = options.underBoard ?? null;
+  let underBoard = options.underBoard ?? null;
   const boardFoot = underBoard ? [underBoard, controls] : [controls];
   boardCol.append(seatTop.el, boardHost, seatBottom.el, ...boardFoot);
 
@@ -547,6 +554,7 @@ export async function mountEmbedCard(
     };
     if (box.width <= 0 || box.height <= 0) return;
     const stacked = box.width < STACK_BELOW_PX;
+    card.classList.toggle('embed-card--stacked', stacked);
     const boardWidth = fitBoardWidth(box, aspect, stacked, options.railWidthPx);
     boardCol.style.width = `${boardWidth}px`;
     // Beside the board the card is the board plus the sheet at its floor, the
@@ -748,6 +756,12 @@ export async function mountEmbedCard(
     reloadLine,
     jumpToLine: jumpLine,
     jumpToPly: (ply) => jump(ply),
+    setUnderBoard: (pane) => {
+      underBoard?.remove();
+      underBoard = pane;
+      if (pane) controls.before(pane);
+      fitBoard();
+    },
     setAnnotations: (byPly) => {
       annotations = byPly;
       rebuildSheet();

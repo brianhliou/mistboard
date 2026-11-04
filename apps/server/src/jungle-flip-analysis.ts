@@ -1,4 +1,4 @@
-// Whole-game "Computer analysis" for Flip Jungle (兽棋 / 翻翻棋): a fixed-strength eval of
+// Whole-game "Computer analysis" for Flip Jungle (翻翻兽棋): a fixed-strength eval of
 // every ply, normalized to the RED SEAT's POV, cached + coalesced. Mirrors banqi-analysis.ts
 // (both are symmetric hidden-deal variants): reconstruction needs the per-game DEAL (from the
 // room-created event) to rebuild each position, and the engine is fed the REDACTED (as-played

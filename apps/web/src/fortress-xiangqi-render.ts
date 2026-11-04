@@ -20,6 +20,7 @@ import {
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -378,6 +379,7 @@ export function animateFortressXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // The gold band rides on the piece for the whole glide (forward moves only):
   // a reverse step renders the prior move's marks at a different square.
   if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);

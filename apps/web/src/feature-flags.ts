@@ -46,6 +46,12 @@ export function threeKingdomsBanqiEnabled(): boolean {
   return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
 }
 
+// Built-hidden Gomoku (#768). Explicit local opt-in, including in dev; no
+// public listing or room creation is enabled by this build flag alone.
+export function gomokuEnabled(): boolean {
+  return import.meta.env.VITE_GOMOKU_ENABLED === 'true';
+}
+
 // The playtest bot is offered only when the local build says the engine path
 // is set (the server refuses a PvE room without it, too).
 export function threeKingdomsBanqiEngineEnabled(): boolean {
@@ -98,7 +104,7 @@ export function jungleEnabled(): boolean {
   return true;
 }
 
-// Flip Jungle (兽棋 / 翻翻棋, 4×4 flip animal chess) play surface. Launched: always on
+// Flip Jungle (翻翻兽棋, 4×4 flip animal chess) play surface. Launched: always on
 // (the server MISTBOARD_JUNGLE_FLIP_ENABLED flag remains the runtime kill-switch).
 export function jungleFlipEnabled(): boolean {
   return true;

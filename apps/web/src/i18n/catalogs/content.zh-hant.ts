@@ -48,13 +48,16 @@ export const ZH_HANT_CONTENT = {
   'videos.previousVideos': '上一個影片',
   'videos.moreVideos': '更多影片',
   'articles.heading': '文章',
+  'articles.navigation': '網誌導覽',
+  'articles.byMistboard': 'Mistboard 官方文章',
+  'articles.communityPosts': '社群文章',
   'articles.latest': '網誌',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
   'articles.topicEngineering': '技術',
   'articles.topicsLabel': '主題',
   'articles.read': '閱讀',
-  'articles.intro': '原創策略遊戲的文章、規則說明與引擎工作。',
+  'articles.intro': '關於象棋及其近親的文章、規則說明與引擎工作。',
   'articles.allArticles': '全部文章',
   'articles.previousArticles': '上一篇文章',
   'articles.moreArticles': '更多文章',
@@ -136,26 +139,26 @@ export const ZH_HANT_CONTENT = {
   'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相關頁面：{path}',
   'about.heading': '關於 Mistboard',
-  'about.lede':
-    'Mistboard 是免費、開源的象棋對弈與學習網站，也提供我們設計的原創策略遊戲。看得懂中文與看不懂中文的玩家，都能在同一張棋盤上對弈。',
-  'about.whyHeading': '讓象棋走上世界舞台',
+  'about.mission': '透過象棋與世界經典策略遊戲，連結不同文化背景的人。',
+  'about.lede': 'Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。',
+  'about.whyHeading': '三種語言的象棋',
   'about.whyBody':
-    '這裡的中國棋類包括象棋及其近親揭棋和暗棋。Mistboard 支援英文、簡體中文和繁體中文，讓上海的玩家與多倫多的玩家可以坐在同一張棋盤前。棋子可以顯示為容易辨認的圖示，不認識「車」或「砲」也能下棋，入門課程則從第一步開始教。我們的使命是透過象棋與原創策略遊戲，連結不同文化背景的人。',
+    '這裡的中國棋類包括象棋及其傳統近親揭棋和暗棋。上海的玩家與多倫多的玩家可以坐在同一張棋盤前，各自用自己的語言瀏覽網站。棋子可以顯示為圖示，認識漢字之前就能下棋，入門課程則從第一步開始教。',
   'about.darkChessHeading': '從熟悉的棋盤創造新遊戲',
   'about.darkChessBody':
-    '鴨子象棋在棋盤上放入一隻不屬於任何一方的鴨子。迷霧象棋隱藏你的棋子無法到達的格點。瘋狂屋象棋讓你把吃到的棋子重新放回棋盤。這些遊戲都從熟悉的規則出發，改變玩家需要做的決策。每一種都有清楚的規則，由伺服器執行。我們也希望其他創作者將來能在這裡與玩家一起開發、測試自己的遊戲。',
+    '鴨子象棋在棋盤上放入一隻不屬於任何一方的鴨子。迷霧象棋隱藏你的棋子無法到達的格點。瘋狂屋象棋讓你把吃到的棋子重新放回棋盤。每一種都從熟悉的遊戲出發，改變玩家需要做的決策，並且都有清楚的規則，由伺服器執行。',
   'about.playStudyHeading': '對弈、研究與教學',
   'about.playStudyBody':
     '用連結邀請朋友對弈，在大廳尋找對手，或挑戰電腦。練習從真實對局中擷取的戰術題，逐步研究一盤比賽，或在結束後複盤自己的對局。課程、研習和賽事直播，讓玩家能夠互相學習，也把自己的經驗教給別人。',
-  'about.trustHeading': '與玩家共建，規則可供檢驗',
+  'about.trustHeading': '公平對弈，規則公開',
   'about.trustBody':
-    '我們的標準是棋盤回應即時、下一步操作清楚。我們在開發中使用 AI，迅速處理問題和玩家建議。規則公開，任何人都可以檢查；公平對弈由伺服器執行：在迷霧遊戲中，瀏覽器根本不會收到你看不見的棋子。電腦對手也只能取得同一位置上的人類玩家有權知道的資訊。',
+    '人類帳號只供真人對弈，機器人只能使用標示為機器人的帳號下棋。伺服器保存每一盤棋，只把每位玩家的座位有權看到的資訊傳給他。規則和程式碼都公開，任何人都可以檢查；玩家的檢舉和建議會被迅速處理。',
   'about.enginesHeading': '打造下一個挑戰者',
   'about.enginesBody':
-    '引擎作者可以在 Mistboard 的公開比賽中爭奪冠軍頭銜。我們希望把它發展為一個競技場，讓任何人都能帶來自己的引擎，在清楚的規則下比賽，對局和結果可供他人檢查。更長遠地，我們希望為新創造的策略遊戲舉辦比賽，讓人類和 AI 智能體為從未玩過的遊戲開發新的方法。',
-  'about.communityHeading': '俱樂部、比賽與文化交流',
+    '引擎作者可以在 Mistboard 的公開比賽中爭奪冠軍頭銜。想在網站上運行機器人，請先聯絡我們；獲准的機器人使用標示為機器人的帳號下棋。',
+  'about.communityHeading': '俱樂部、教師與主辦方',
   'about.communityBody':
-    '我們希望建立華盛頓州象棋俱樂部，舉辦線下比賽，讓大家能在 Mistboard 上觀看和研究這些對局。在此基礎上，我們希望與中國及其他地方的俱樂部、教師、體育和文化機構合作，開展交流與國際賽事。',
+    '我們與棋手、教師、俱樂部和賽事主辦方合作，在線上和線下進行直播、研究和教學。',
   'about.openSourceHeading': '免費且開源',
   'about.openSourcePrefix': 'Mistboard 以 AGPL-3.0-or-later 發布在 ',
   'about.openSourceMiddle':
@@ -163,7 +166,7 @@ export const ZH_HANT_CONTENT = {
   'about.openSourceSuffix': '。',
   'about.whoHeading': '誰在打造 Mistboard',
   'about.whoBody':
-    'Brian H. Liou 藉助一套 AI 智能體系統設計、開發並營運 Mistboard，從遊戲伺服器、Mistboard 自研引擎，到賽事直播和文章。此前，他在亞馬遜和 DoorDash 工作了五年，從事大規模分散式系統和成長工程。他創辦 Mistboard，是為了透過象棋與原創策略遊戲，連結不同文化背景的人。',
+    'Brian H. Liou 藉助一套 AI 智能體系統設計、開發並營運 Mistboard，從遊戲伺服器、Mistboard 自研引擎，到賽事直播和文章。此前，他在亞馬遜和 DoorDash 工作了五年，從事大規模分散式系統和成長工程。',
   'about.whoSitePrefix': '他的網站：',
   'about.articlesHeading': '文章如何寫成',
   'about.articlesBody':
@@ -204,6 +207,10 @@ export const ZH_HANT_CONTENT = {
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
+  'source.rapfi': 'Rapfi，作者 dhbloo 及貢獻者：在瀏覽器中執行的八個五子棋機器人等級，GPL-3.0。',
+  'source.rapfiNetworks': 'Rapfi 專案提供的 Rapfi 神經網路，CC0 1.0。',
+  'source.rapfiBuild':
+    'rapfi-wasm，作者 Brian H. Liou：本站使用的可重現 Rapfi 瀏覽器建置，GPL-3.0。',
   'source.dandelion':
     'Dandelion 4，作者 Kouza（lxsgx23）：本站最強鬥獸棋機器人的神經網路來源，從其發布頁取得，不在本站轉存。',
   'source.chessdb': '象棋雲庫（chessdb.cn）：象棋分析棋盤和練習中的殘局精確結果。',
@@ -249,12 +256,12 @@ export const ZH_HANT_CONTENT = {
   'faq.playFriendAnswer': '開始對局時選擇和朋友對弈，把連結傳給朋友，對方打開連結就能入座。',
   'faq.playOtherQuestion': '還有哪些玩法？',
   'faq.playOtherAnswer':
-    '揭棋、暗棋、鬥獸棋、翻翻棋，以及我們設計的遊戲：瘋狂屋象棋、鴨子象棋和迷霧象棋。',
+    '揭棋和暗棋、鬥獸棋和翻翻獸棋，以及我們設計的遊戲：瘋狂屋象棋、鴨子象棋、迷霧象棋和象棋麻將。',
   'faq.playReviewQuestion': '下完可以復盤嗎？',
   'faq.playReviewAnswer': '可以。象棋對局結束後可以進入復盤，引擎會標出決定勝負的幾步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什麼？',
   'faq.darkChessPrefix':
-    '以象棋為主：象棋及其傳統近親揭棋和暗棋。旁邊是我們設計的遊戲，例如瘋狂屋象棋、鴨子象棋和迷霧象棋，還有鬥獸棋和迷霧國際象棋。有些是公開資訊遊戲；有些用迷霧或背面朝下的棋子隱藏資訊。',
+    '以象棋為主：象棋及其傳統近親揭棋和暗棋。此外還有我們設計的遊戲，例如瘋狂屋象棋、鴨子象棋、迷霧象棋和象棋麻將，以及鬥獸棋和迷霧西洋棋。',
   'faq.rulesReference': '規則參考',
   'faq.darkChessSuffix': '列出了目前遊戲。',
   'faq.accountQuestion': '我需要帳號嗎？',
@@ -267,7 +274,7 @@ export const ZH_HANT_CONTENT = {
   'faq.contactSuffix': '送出訊息。如果是關於某局對局，請附上房間連結。',
   'faq.cheatingQuestion': 'Mistboard 如何防作弊？',
   'faq.cheatingPrefix':
-    '無論哪種棋、是否計分，借助引擎或他人協助、濫用帳號都違反公平競賽規則。在隱藏棋子的遊戲裡，伺服器還保存完整棋盤，只把每位玩家可以看到的部分傳給他，所以頁面裡沒有東西可挖。程式碼是',
+    '人類帳號只供真人對弈。無論哪種棋、是否計分，借助引擎、他人或任何外部工具都違反公平競賽規則；機器人只能使用標示為機器人的帳號下棋。伺服器保存完整對局，只把每位玩家自己能看到的部分傳給他。程式碼是',
   'faq.openSource': '開源的',
   'faq.cheatingSuffix': '，任何人都可以檢查。',
   'faq.enginesQuestion': 'Mistboard 引擎會看到完整棋盤嗎？',
@@ -283,19 +290,18 @@ export const ZH_HANT_CONTENT = {
     '開局庫另外使用了一份獲授權的匿名網路對局資料，所以它統計的局數比棋譜庫列出的要多。',
   'faq.ratedQuestion': '計分對局如何運作？',
   'faq.ratedAnswer':
-    '積分對局在兩位已登入的玩家之間進行，僅限設有排行榜的變體。積分對局仍處於 Beta 階段，評分在穩定下來之前可能波動較大。引擎對局和休閒對局不計分。',
+    '積分對局在兩位已登入的玩家之間進行，僅限設有排行榜的變體。引擎對局和休閒對局不計分。',
   'terms.heading': '使用條款',
-  'terms.intro':
-    'Mistboard 是一個免費的開源興趣專案。這些是使用 mistboard.com 託管網站的基本規則。隨著專案成長，這些規則會變化；本頁始終是目前版本。',
+  'terms.intro': '這些是使用 mistboard.com 託管網站的規則。本頁始終是目前版本。',
   'terms.offeredHeading': '網站按現狀提供',
   'terms.offeredBody':
-    '不提供擔保。開發期間，對局、帳號、評分和儲存資料可能會遺失、重置，或在不另行通知的情況下移除。不要把任何你承受不起遺失的東西放在 Mistboard 上。',
+    'Mistboard 按現狀提供，不提供任何擔保。對局、帳號、評分和儲存資料可能會被更改、重置或移除。',
   'terms.anonymousHeading': '匿名對弈',
   'terms.anonymousBody':
-    '預設情況下，對弈是匿名且基於連結的。帳號是選填的，會增加個人資料和使用者名稱。不要把本服務用於任何需要不可遺失身分的事情。',
+    '預設情況下，對弈是匿名且基於連結的。帳號是選填的，會增加個人資料和使用者名稱。',
   'terms.acceptableHeading': '可接受使用',
   'terms.acceptableBody':
-    '不要騷擾其他玩家、發送垃圾內容、濫用服務、試圖破壞迷霧過濾器，或用爬蟲大量請求本站。計分對局不要使用外部引擎幫助。濫用時，使用者名稱、房間和帳號可能會被撤銷。',
+    '不要騷擾其他玩家、發送垃圾內容、濫用服務、試圖查看遊戲隱藏的資訊，或用爬蟲大量請求本站。濫用時，使用者名稱、房間和帳號可能會被撤銷。',
   'terms.ratedAccountHeading': '計分對局需要帳號',
   'terms.ratedAccountBody':
     '休閒和基於連結的對局保持匿名且免費。計分對局需要帳號，所以評分歸屬於一個人。一個人，一個帳號。',
@@ -304,7 +310,7 @@ export const ZH_HANT_CONTENT = {
     '我們決定評分如何計算以及它們代表什麼。我們可以隨時設定、調整、重新計算、作廢或重置任何評分或排行榜本身，也可以改變系統的運作方式。評分是我們發布的一項測量結果，不是你擁有的東西。',
   'terms.fairPlayHeading': '公平競賽',
   'terms.fairPlayBody':
-    '計分對局只有在結果誠實時才有效。我們不容忍外部協助、操縱自己或他人的評分，或任何試圖鑽排行榜空子的行為。我們決定什麼越界，並且可能在越界時移除評分或帳號。',
+    '人類帳號只供真人對弈。用人類帳號下的每一盤棋，無論是否計分，都不得借助引擎、他人或任何外部工具；任何帳號都不得操縱自己或他人的評分。機器人只能使用經我們核准並標示為機器人的帳號下棋；想運行機器人，請先聯絡我們。我們決定什麼越界，並且可能在越界時移除評分，或限制、關閉帳號。',
   'terms.integrityHeading': '公平性資料',
   'terms.integrityPrefix':
     '我們會收集並分析對局和帳號資料，以保護計分對局的公平性。如何調查，以及採取什麼處理，由我們決定。我們收集什麼見',
@@ -333,8 +339,7 @@ export const ZH_HANT_CONTENT = {
   'terms.sourceLink': '原始碼',
   'terms.openSourceSuffix': '。',
   'privacy.heading': '隱私',
-  'privacy.intro':
-    'Mistboard 是一個免費的開源興趣專案。本頁說明我們在 mistboard.com 託管網站上收集什麼。隨著專案成長，本頁會變化；本頁始終是目前版本。',
+  'privacy.intro': '本頁說明我們在 mistboard.com 託管網站上收集什麼。本頁始終是目前版本。',
   'privacy.collectHeading': '我們收集什麼',
   'privacy.collectBody':
     '分析資料、你下過的對局，以及如果你建立帳號，你的使用者名稱和信箱。我們使用 PostHog 做分析：它會按瀏覽器記錄你造訪的頁面和在頁面上的操作，如果你登入，這些記錄會關聯到你的帳號。你的瀏覽器會在本機儲存中保存一個隨機識別碼，以便把你未登入時下的對局在統計中計為同一位訪客；它不是 Cookie，不會離開本站，也不會顯示給其他玩家。圍繞計分對局，為保持誠實公平，我們會收集更多資料。',
@@ -347,7 +352,7 @@ export const ZH_HANT_CONTENT = {
   'privacy.publicGamesSuffix': ' 授權。',
   'privacy.promisesHeading': '我們承諾什麼，以及不承諾什麼',
   'privacy.promisesBody':
-    '我們承諾把隱藏資訊保留在伺服器端，並告訴你我們收集什麼。我們不承諾你的資料、帳號或評分能在開發期間保留。它們可能會在不另行通知的情況下改變或消失。不要把任何你承受不起遺失的東西放在 Mistboard 上。',
+    '我們告訴你我們收集什麼，並且只把每位玩家的座位有權看到的資訊傳給他。資料、帳號和評分可能會改變或被移除。',
   'patron.heading': 'Mistboard 贊助會員',
   'patron.heroTitle': '成為 Mistboard 贊助會員。',
   'patron.heroSubtitle': '可選的按月訂閱或單次付款。沒有廣告，沒有付費變強，核心功能始終免費。',
@@ -389,7 +394,7 @@ export const ZH_HANT_CONTENT = {
   'developers.heading': '開發者',
   'apiDocs.heading': 'API 文件',
   'contribute.intro':
-    '一起為象棋和原創策略遊戲創造未來。Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始。',
+    'Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始。',
   'contribute.playHeading': '下棋並給出回饋',
   'contribute.playBody':
     '眼下你能做的最有用的事，就是下棋，然後告訴我們哪裡壞了、哪裡彆扭。真實對局暴露規則漏洞、含糊之處和缺失功能的速度，比任何其他方式都快。我們設計的新遊戲也需要試玩。',
@@ -403,7 +408,7 @@ export const ZH_HANT_CONTENT = {
     ' 上。你可以認領一個開放的 issue，或者直接提交 pull request。原始碼頁面列出了程式庫，以及 Mistboard 所依賴的函式庫。',
   'contribute.translateHeading': '幫忙翻譯',
   'contribute.translateBody':
-    'Mistboard 提供英文、簡體中文和繁體中文。中文是機器翻譯的，還沒有母語讀者校對過。如果你會下棋、能讀中文，歡迎幫我們審閱一頁，規則頁或一堂課都可以，把棋手不會這樣說的地方標出來：一個術語、一個開局名稱、一句讀起來像翻譯的話。一頁不到一小時，之後沒有任何義務。',
+    'Mistboard 提供英文、簡體中文和繁體中文，中文是機器翻譯的。如果你會下棋、能讀中文，歡迎幫我們審閱一頁，規則頁或一堂課都可以，把棋手不會這樣說的地方標出來：一個術語、一個開局名稱、一句讀起來像翻譯的話。一頁不到一小時，之後沒有任何義務。',
   'contribute.translateStartPrefix': '想開始的話，請寫信到 ',
   'contribute.translateStartMiddle':
     '，用一句話說說你怎麼下棋，以及想先看規則頁還是課程。如果你願意具名，我們會把你的名字加到',
@@ -418,7 +423,7 @@ export const ZH_HANT_CONTENT = {
   'contribute.crossLinkOr': '或',
   'creators.heading': '與我們合作',
   'creators.intro':
-    '一起把象棋帶上世界舞台。Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們希望跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。',
+    'Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。',
   'creators.playersHeading': '有等級稱號的棋手和教練',
   'creators.playersPrefix': '經過認證的稱號徽章，以及一個',
   'creators.playersCoachLink': '教練頁面',
@@ -532,6 +537,10 @@ export const ZH_HANT_CONTENT = {
   'thanks.dandelionAuthor': 'Dandelion 4 神經網路，作者 Kouza',
   'thanks.katagoBody':
     '本站最強的鬥獸棋機器人：hzyhhzy 的鬥獸棋版 KataGo，使用 Dandelion 4 神經網路，經作者許可在本站執行。',
+  'thanks.rapfiAuthors': 'dhbloo 和 Rapfi 的貢獻者',
+  'thanks.rapfiBuildAuthor': '瀏覽器建置：Brian H. Liou',
+  'thanks.rapfiBody':
+    '在瀏覽器中執行全部八個五子棋機器人等級，使用 Rapfi 專案提供的神經網路和 rapfi-wasm 建置。',
   'thanks.communityBotBy': '來自社群開發者的機器人。',
   'thanks.statGames': 'Mistboard 上的對局',
   'thanks.statRating': '{variant}等級分',
@@ -561,7 +570,7 @@ export const ZH_HANT_CONTENT = {
   'thanks.playersAskSuffix': '。',
   'thanks.lichessHeading': 'Lichess',
   'thanks.lichessLead':
-    'Mistboard 是把 lichess 的設計用在象棋及其變體上。每當我們不知道某樣東西該怎麼做，就去看 lichess 是怎麼做的，大多數時候我們做的是同樣的東西。',
+    'Mistboard 的設計很大程度上得益於 lichess。每當我們不知道某樣東西該怎麼做，就去看 lichess 是怎麼做的。',
   'thanks.lichessTook':
     '我們從 lichess 學來了大廳和使用 Glicko-2 的計分對局、對局室的版面、直播和職業棋手頁面、殺棋題的規則、更新日誌和這個頁面，以及我們國際象棋棋盤底下的棋盤程式碼。',
   'thanks.lichessCloseLink': 'Lichess',
@@ -614,15 +623,15 @@ export const ZH_HANT_CONTENT = {
   'data.fieldTimes': '對局開始和結束的時間，ISO 8601 格式，UTC。',
   'data.fieldResult': '獲勝顏色或和棋，以及對局如何結束：將死、超時、認輸等。',
   'data.fieldPlies':
-    '依序列出每一步：走子方、uci 格式的著法、該變體有記譜法時的 san（否則為 null），以及每步之後雙方的剩餘時間。在揭棋、暗棋和翻翻棋中，翻開棋子的著法還帶有 revealed，為顏色加兵種。',
-  'data.fieldInk': '僅暗棋和翻翻棋：先手翻出的顏色。',
+    '依序列出每一步：走子方、uci 格式的著法、該變體有記譜法時的 san（否則為 null），以及每步之後雙方的剩餘時間。在揭棋、暗棋和翻翻獸棋中，翻開棋子的著法還帶有 revealed，為顏色加兵種。',
+  'data.fieldInk': '僅暗棋和翻翻獸棋：先手翻出的顏色。',
   'data.fieldDeal':
-    '本站下的暗棋和翻翻棋對局：開局的暗子佈局，以寫明每枚暗子的 FEN 表示。揭棋對局和引擎對局沒有此欄位。',
+    '本站下的暗棋和翻翻獸棋對局：開局的暗子佈局，以寫明每枚暗子的 FEN 表示。揭棋對局和引擎對局沒有此欄位。',
   'data.fieldOrigin': '僅引擎對局下載：賽事、署名，以及始終未揭開的棋子所在的格子。',
   'data.formatMoves':
     'uci 著法是座標：h2e2 是走子，@c3 是翻開一枚暗子，R@d4 是從手中打入（瘋狂屋象棋），b3e3@e6 是一回合鴨子象棋，最後是鴨子的落點。',
   'data.formatPgn':
-    'PGN：用於著法能寫成可獨立重播文字的變體：迷霧國際象棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋和揭棋用 ICCS 座標，暗棋用 ICGA 記譜法，翻翻棋用座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。其他變體只提供 JSONL。',
+    'PGN：用於著法能寫成可獨立重播文字的變體：迷霧國際象棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋和揭棋用 ICCS 座標，暗棋用 ICGA 記譜法，翻翻獸棋用座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。其他變體只提供 JSONL。',
   'data.licenseHeading': '授權',
   'data.licensePrefix': '這些檔案依 ',
   'data.licenseSuffix':
@@ -637,15 +646,15 @@ export const ZH_HANT_CONTENT = {
   'data.hiddenFog':
     '已結束的迷霧對局不再隱藏任何資訊，所以檔案包含雙方的每一步，與對局結束後頁面上顯示的一致。當時每位玩家能看到什麼並未儲存；可以由著法和開源遊戲程式碼中的視野規則推出。',
   'data.hiddenFlip':
-    '揭棋、暗棋和翻翻棋開局時棋子背面朝上。它們的檔案寫明每次翻開的是什麼棋子，所以下載的對局只憑著法就能重播，兩種格式都可以。',
+    '揭棋、暗棋和翻翻獸棋開局時棋子背面朝上。它們的檔案寫明每次翻開的是什麼棋子，所以下載的對局只憑著法就能重播，兩種格式都可以。',
   'data.hiddenReveal':
-    '著法帶有翻開的棋子。在 PGN 中，著法翻開的棋子寫在 = 之後，紅方大寫，黑方小寫，所以任何 PGN 讀取器都會把它當作著法的一部分：揭棋如 e3e4=R，翻翻棋如 @c3=E。揭棋吃掉暗子時不寫出被吃的棋子，因為只有吃子的一方看到了它。字母沿用各自 FEN 的字母：揭棋 R 車、N 馬、B 相、A 仕、C 炮、P 兵；翻翻棋 R 鼠、C 貓、D 狗、W 狼、P 豹、T 虎、L 獅、E 象。',
+    '著法帶有翻開的棋子。在 PGN 中，著法翻開的棋子寫在 = 之後，紅方大寫，黑方小寫，所以任何 PGN 讀取器都會把它當作著法的一部分：揭棋如 e3e4=R，翻翻獸棋如 @c3=E。揭棋吃掉暗子時不寫出被吃的棋子，因為只有吃子的一方看到了它。字母沿用各自 FEN 的字母：揭棋 R 車、N 馬、B 相、A 仕、C 炮、P 兵；翻翻獸棋 R 鼠、C 貓、D 狗、W 狼、P 豹、T 虎、L 獅、E 象。',
   'data.hiddenBanqi':
     '暗棋 PGN 依照 Chen、Shen 和 Hsu 的記譜法（ICGA Journal，2010）：b4-b2 是走子；論文中寫作 d8(P) 的翻子，這裡寫作 d8=P，因為 PGN 會把括號讀成變著。字母沿用論文：K 帥、G 仕、M 相、R 車、N 馬、C 炮、P 兵。它的棋盤是 4 欄 8 列，所以本站座標要互換：本站的 a 到 h 欄是 ICGA 的第 1 到 8 列，本站的第 1 到 4 列是 ICGA 的 a 到 d 欄。JSON 保留本站座標。',
   'data.hiddenBanqiLetters':
     '注意 G：在暗棋著法中它是仕，在暗棋 FEN 中卻是帥。FEN 的字母為 G 帥、A 仕、E 相、R 車、H 馬、C 炮、S 兵。',
   'data.hiddenDeal':
-    '暗棋和翻翻棋對局附帶暗子佈局。這些對局在開始時就把棋子全部發好，所以 JSON 帶有 deal_fen，PGN 帶有 DealFEN 標籤：在該變體的 FEN 後加第六個欄位，依棋盤順序（從最上一列開始）寫出每枚暗子。FEN 標籤是背面朝上的初始局面。著法中的每次翻開都與佈局一致，兩個 FEN 都使用本站的座標和字母。揭棋檔案沒有佈局：被吃的暗子只有吃子的一方看到過，從未翻開的棋子沒有人看到過，所以任何檔案都不會寫出它們。',
+    '暗棋和翻翻獸棋對局附帶暗子佈局。這些對局在開始時就把棋子全部發好，所以 JSON 帶有 deal_fen，PGN 帶有 DealFEN 標籤：在該變體的 FEN 後加第六個欄位，依棋盤順序（從最上一列開始）寫出每枚暗子。FEN 標籤是背面朝上的初始局面。著法中的每次翻開都與佈局一致，兩個 FEN 都使用本站的座標和字母。揭棋檔案沒有佈局：被吃的暗子只有吃子的一方看到過，從未翻開的棋子沒有人看到過，所以任何檔案都不會寫出它們。',
   'data.hiddenNeverRevealed':
     '引擎對局下載沒有暗子佈局。對局自己的裁判程式在棋子翻開時才決定它是什麼，所以對局結束時仍是暗子的棋子從未有過身分：origin.never_revealed 列出它們所在的格子，任何檔案都不會為它們寫出棋子。它們的著法帶有每一次翻開，所以同樣可以重播。',
   'data.hiddenReplayer':

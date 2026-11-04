@@ -248,7 +248,10 @@ const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
-const wantsClubWashington = path === '/washington-xiangqi';
+const wantsClubWashington =
+  path === '/washington-xiangqi' ||
+  path === '/zh-hans/washington-xiangqi' ||
+  path === '/zh-hant/washington-xiangqi';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -331,7 +334,10 @@ const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
+const wantsPuzzleReplay = path === '/puzzles/replay';
+const wantsPuzzleHistory = path === '/puzzles/history';
 const puzzleId = puzzleIdFromPath(path);
+const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
 // dashboard share the gate; the route is invisible until the flag is on.
@@ -347,11 +353,10 @@ const wantsRatingStats = path === '/player/rating-stats';
 // Unlisted admin game browser. No nav entry; the page itself is admin-gated by
 // the /api/admin/games/query endpoint (open in local dev). Direct-URL only.
 const wantsDatabase = path === '/database';
-// Public site statistics (/stats) and the admin superset (/metrics), one module.
-// /metrics adds account count/growth + results from /api/stats (admin-gated,
-// open in local dev), so it stays unlisted and direct-URL only like /database.
+// Public statistics are separate from the unified admin Ops area.
 const wantsStats = path === '/stats';
-const wantsMetrics = path === '/metrics';
+// Preserve old bookmarks and email links through the Ops canonicalizer.
+const wantsOps = path === '/ops' || path === '/metrics' || path === '/readouts';
 // Title verification: player-facing request form. Linked from profile copy,
 // no nav entry.
 const wantsVerifyTitle = path === '/verify-title';
@@ -372,9 +377,6 @@ const wantsTitlesAdmin = path === '/titles';
 // Unlisted admin engine tracker. No nav entry; admin-gated by /api/admin/engines
 // (open in local dev). Direct-URL only.
 const wantsEngines = path === '/engines';
-// Unlisted admin readout history (/readouts): the scheduled operating readout,
-// admin-gated by /api/admin/readouts (open in local dev).
-const wantsReadoutsAdmin = path === '/readouts';
 // Unlisted admin player roster (/accounts): every registered account. Admin-
 // gated by /api/admin/accounts (open in local dev); reached from the account
 // menu's admin group.
@@ -616,11 +618,9 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./metrics.js').then(({ mountMetrics }) => mountMetrics(appRoot, { admin: false })),
   );
-} else if (wantsMetrics) {
-  setTitle('Metrics');
-  void mountOrReport(() =>
-    import('./metrics.js').then(({ mountMetrics }) => mountMetrics(appRoot, { admin: true })),
-  );
+} else if (wantsOps) {
+  setTitle('Ops');
+  void mountOrReport(() => import('./ops-admin.js').then(({ mountOps }) => mountOps(appRoot)));
 } else if (wantsVerifyTitle) {
   setTitleKey('verifyTitle.heading');
   void mountOrReport(() =>
@@ -649,11 +649,6 @@ if (replaySample) {
   setTitle('Title verification');
   void mountOrReport(() =>
     import('./titles-admin.js').then(({ mountTitlesAdmin }) => mountTitlesAdmin(appRoot)),
-  );
-} else if (wantsReadoutsAdmin) {
-  setTitle('Readouts');
-  void mountOrReport(() =>
-    import('./readouts-admin.js').then(({ mountReadoutsAdmin }) => mountReadoutsAdmin(appRoot)),
   );
 } else if (wantsAccountsAdmin) {
   setTitle('Accounts');
@@ -837,6 +832,23 @@ if (replaySample) {
         return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
       },
     ),
+  );
+} else if (wantsPuzzleDashboard) {
+  setTitleKey('puzzle.dashboardTitle');
+  void mountOrReport(() =>
+    import('./puzzles/dashboard.js').then(({ mountPuzzleDashboard }) =>
+      mountPuzzleDashboard(appRoot),
+    ),
+  );
+} else if (wantsPuzzleHistory) {
+  setTitleKey('puzzle.historyTitle');
+  void mountOrReport(() =>
+    import('./puzzles/history.js').then(({ mountPuzzleHistory }) => mountPuzzleHistory(appRoot)),
+  );
+} else if (wantsPuzzleReplay) {
+  setTitleKey('nav.puzzles');
+  void mountOrReport(() =>
+    import('./puzzles.js').then(({ mountPuzzles }) => mountPuzzles(appRoot)),
   );
 } else if (wantsPuzzles) {
   setTitleKey('nav.puzzles');
@@ -1079,7 +1091,6 @@ if (replaySample) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
 } else if (wantsClubWashington) {
-  document.title = 'Washington Xiangqi (华州象棋)';
   void mountOrReport(() =>
     import('./club-washington-page.js').then(({ mountClubWashington }) =>
       mountClubWashington(appRoot),
@@ -1203,7 +1214,9 @@ function liveRoomIdFromPath(value: string): string | null {
 
 function puzzleIdFromPath(value: string): string | null {
   const match = value.match(/^\/puzzles\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]!) : null;
+  // Fixed pages under /puzzles/ that are not puzzle ids.
+  if (!match || match[1] === 'replay' || match[1] === 'history') return null;
+  return decodeURIComponent(match[1]!);
 }
 
 function xiangqiBroadcastTourSlugFromPath(value: string): string | null {

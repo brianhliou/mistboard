@@ -170,7 +170,7 @@ export function reviewOpenedProps(input: {
 }
 
 export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned' | 'failed' | 'skipped';
-export type PuzzleAttemptMode = 'session' | 'embed' | 'streak';
+export type PuzzleAttemptMode = 'session' | 'embed' | 'streak' | 'storm';
 
 // One event per terminal outcome, mirroring the server-side quality session's
 // first terminal outcome so the two counts reconcile. `clean` is a solve with
@@ -190,7 +190,7 @@ export function puzzleAttemptedProps(input: {
     variant: input.variant,
     ...(maybeGameSpecAnalyticsProps(input.variant) ?? {}),
     themes: [...(input.themes ?? [])],
-    rated: input.rated,
+    rated: input.mode === 'storm' ? false : input.rated,
     mode: input.mode,
     outcome: input.outcome,
     clean: input.clean,

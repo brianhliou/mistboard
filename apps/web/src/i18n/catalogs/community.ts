@@ -318,6 +318,8 @@ export const EN_COMMUNITY = {
   'profile.ratedGameMany': '{count} rated games',
   'profile.unrated': 'Unrated',
   'profile.puzzleSolved': '{count} solved',
+  'profile.puzzleAttemptOne': '{count} attempt',
+  'profile.puzzleAttemptMany': '{count} attempts',
   'profile.puzzleFailed': '{count} failed',
   'profile.puzzleProgress': 'Puzzle progress',
   'profile.puzzleHistoryPrivate': 'Xiangqi puzzle history. Only you can see this.',

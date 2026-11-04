@@ -1,28 +1,40 @@
 // The games of the AB-JChess vs jqe post as one study:edit plan
 // (apps/server/src/study-edit-cli.ts): one chapter per game in
 // apps/web/src/articles/content/ab-jchess-vs-jqe-match.json, in the post's order.
-// Every number comes from that file's `deep` block per game.
+// Every number comes from that file's `aligned` block per game: both engines'
+// scores of every position at the match's own 4 seconds on 4 threads (the mover's
+// score in the game, the other engine's search of the same position afterwards).
 //
-// Each game is read from the winner's side (for a draw, the side that did not get
-// into trouble): the board faces the winner and the graph under it is the winner's
-// chance at every position by both engines, each searching at the match's node
-// budget (AB-JChess teal, jqe orange). The match file stores the loser's chance; a
-// chance here is one minus it. At each moment the post names, the loser's move is
-// an arrow in the loser's colour and the winning engine's pick an arrow in its own
-// (AB-JChess blue, jqe orange), with the pick as a one-move line beside the game
-// move when it is a face-up move. A note on the move gives both engines' chance
-// for the winner after each, and how many moves the loser took to see it. A game
-// with `deep.openPly` (game 1) has no marked move: the moment stays in the file as
-// the dearest choice in the stretch, and the board opens unmarked at openPly.
+// Each game is read from the lead's side (the winner; in a draw, the side whose
+// chances one engine read first): the board faces it and the graph under it is
+// its chance at every position by both engines (AB-JChess teal, jqe orange). The
+// annotation is lichess's set, judged by the lead engine:
+//   - the other side's moves get ?! ? ?? when the lead engine's number for its
+//     own side rises 5, 10 or 15 points over the move (moveJudgment);
+//   - wherever the two engines would play different moves, both as arrows on the
+//     position before the move, blue AB-JChess's and orange jqe's (Brian,
+//     2026-11-03: "when the two engines disagree on the best move, we always draw
+//     the two moves"); where they agree, none;
+//   - comments only where something happens (abJqeNotes, apps/web/src/articles/
+//     ab-jchess-vs-jqe-notes.ts): the split and why, the reveals and face-down
+//     captures that swung the game, the finish. The graph carries the numbers
+//     (Brian, 2026-11-03: a percentage on every move was "way too noisy");
+//   - the post's moment is the chapter's one side line: the lead engine's choice,
+//     ending in an assessment glyph; when that choice turns a piece over or takes a
+//     face-down piece, the arrow alone, because what follows depends on the draw.
+// A move that turns a piece over or takes a face-down piece is not marked: the
+// position after it knows what the piece was.
+//
+// Reveal luck is not in the tree: it is stored per chapter (study_chapter_decisions)
+// by scripts/study-chapter-decisions.mjs after the tree update, since a tree update
+// clears a chapter's rows.
 //
 // Hidden information: the root is the PUBLIC deal (jieqiPublicDeal): a piece
 // captured face-down or never turned over is `?` in the stored FEN, so the study
 // knows only what both seats saw.
 //
 //   npx tsx scripts/variant-lab/ab-jchess-vs-jqe-study.ts --out <plan.json>
-//                                       # a new study (create)
-//   … --update <studyId> --chapters run2:30:<id>,… --out <plan.json>
-//                                       # rewrite the named chapters, add the rest
+//   npx tsx scripts/variant-lab/ab-jchess-vs-jqe-study.ts --update --out <update.json>
 //   npm run study:edit -- --plan <plan.json> [--apply]
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -38,7 +50,17 @@ import {
   jieqiStateToDealtFen,
   parseJieqiFen,
 } from '@mistboard/game';
-import { annotateFromEngine, type StudyArrow, squaresOf } from '../study-annotate.js';
+import { abJqeNotes } from '../../apps/web/src/articles/ab-jchess-vs-jqe-notes.ts';
+import {
+  AB_JQE_STUDY,
+  disagreementArrows,
+} from '../../apps/web/src/articles/content/ab-jchess-vs-jqe.ts';
+import {
+  annotateFromEngine,
+  type EngineSideline,
+  judgedMoves,
+  type StudyArrow,
+} from '../study-annotate.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CONTENT = resolve(HERE, '../../apps/web/src/articles/content');
@@ -51,52 +73,49 @@ const DATA = resolve(arg('--data', resolve(CONTENT, 'ab-jchess-vs-jqe-match.json
 const OUT = resolve(arg('--out', 'ab-jchess-vs-jqe-study-plan.json'));
 
 type Engine = 'abj' | 'jqe';
-type Pair = { played: number; pick: number };
-export type DeepMoment = {
-  /** The position before the loser's move: index into the mainline, 0 = the start. */
+type Side = 'red' | 'black';
+type AlignedMoment = {
+  /** The position before the other side's move: index into the mainline, 0 = the start. */
   ply: number;
   move: number;
+  by: Engine;
   played: string;
+  /** The lead engine's choice there. */
   pick: string;
-  /** The loser's chance after each move, as the winning engine sees it. */
-  winner: Pair;
-  /** The same, as the loser's own engine sees it. */
-  loser: Pair;
+  /** Both engines' chance for the lead's side before and after the move. */
+  before: Record<Engine, number>;
+  after: Record<Engine, number>;
   caughtPly: number | null;
   lagMoves: number | null;
-  revealSwings: number[];
-  pickTurnsOver: boolean;
-  playedTurnsOver: boolean;
 };
 type Game = {
   key: string;
   red: string;
   black: string;
-  winner: 'red' | 'black' | 'draw';
+  winner: Side | 'draw';
   moves: string;
-  moveCount: number;
   deal: JieqiDeal;
-  deep: {
-    nodes: number;
-    loser: Engine;
-    side: 'red' | 'black';
+  aligned: {
+    movetimeMs: number;
+    threads: number;
+    lead: Engine;
+    side: Side;
+    catch: number;
+    /** Each engine's chance for the lead's side at positions 0..plies; the last is the result. */
     series: Record<Engine, number[]>;
-    moments: DeepMoment[];
-    /** Open the board here, with no move marked: no single move is the story. */
-    openPly?: number;
+    /** Each engine's choice at every position: the mover's is the move played. */
+    best: Record<Engine, (string | null)[]>;
+    moment: AlignedMoment;
   };
+  chase?: { fromPly: number; toPly: number };
 };
-type Data = {
-  total: { games: number };
-  movetimeMs: number;
-  games: Game[];
-};
+type Data = { total: { games: number }; games: Game[] };
 
 const NAME: Record<Engine, string> = { abj: 'AB-JChess', jqe: 'jqe' };
 const BRUSH: Record<Engine, string> = { abj: 'blue', jqe: 'orange' };
+const SIDE: Record<Side, string> = { red: 'Red', black: 'Black' };
 const engineOf = (player: string): Engine => (player.startsWith('AB-JChess') ? 'abj' : 'jqe');
 const other = (e: Engine): Engine => (e === 'abj' ? 'jqe' : 'abj');
-const pct = (x: number): string => `${Math.round(x * 100)}%`;
 
 const TOKEN = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))$/;
 function move(token: string): { from: JieqiSquare; to: JieqiSquare } {
@@ -112,26 +131,11 @@ function touchesHidden(state: JieqiGameState, token: string): boolean {
   const { from, to } = move(token);
   return state.board[from]?.faceDown === true || state.board[to]?.faceDown === true;
 }
-/** "the chariot e2-e6, taking the cannon", "a face-down piece g7-g6". */
-export function said(state: JieqiGameState, token: string): string {
-  const { from, to } = move(token);
-  const piece = state.board[from];
-  const name = !piece ? 'the piece' : piece.faceDown ? 'a face-down piece' : `the ${piece.role}`;
-  const cap = state.board[to];
-  const taking = !cap
-    ? ''
-    : cap.faceDown
-      ? ', taking a face-down piece'
-      : `, taking the ${cap.role}`;
-  return `${name} ${from}-${to}${taking}`;
-}
-
 const data = JSON.parse(readFileSync(DATA, 'utf8')) as Data;
-const nodesM = (n: number) => `${Math.round(n / 1e6)} million`;
 
 function chapter(g: Game, n: number) {
   const moves = g.moves.split(' ');
-  const where = `game ${n} (${g.key})`;
+  const where = g.key;
   const pub = jieqiPublicDeal(g.deal, moves.map(move));
   if (JSON.stringify(pub) !== JSON.stringify(g.deal)) {
     throw new Error(`${where}: the match file's deal is not the public deal`);
@@ -145,98 +149,118 @@ function chapter(g: Game, n: number) {
     if (!next) throw new Error(`${where} ply ${i + 1}: ${t} is illegal from the public root`);
     states.push(next);
   }
-  const d = g.deep;
+  const a = g.aligned;
+  const S = a.series;
   for (const e of ['abj', 'jqe'] as const) {
-    if (d.series[e].length !== moves.length + 1) {
-      throw new Error(
-        `${where}: ${e} series has ${d.series[e].length} values for ${moves.length} plies`,
-      );
+    if (S[e].length !== moves.length + 1) {
+      throw new Error(`${where}: ${e} series has ${S[e].length} values for ${moves.length} plies`);
     }
+    if (a.best[e].length !== moves.length) throw new Error(`${where}: ${e} choices are short`);
   }
-  const L = d.loser;
-  const W = other(L);
+  const W = a.lead;
+  const L = other(W);
+  const wSide = a.side;
+  const lSide: Side = wSide === 'red' ? 'black' : 'red';
   const redE = engineOf(g.red);
-  if ((redE === L ? 'red' : 'black') !== d.side)
-    throw new Error(`${where}: deep.side is not the loser's`);
-  const wSide = d.side === 'red' ? ('black' as const) : ('red' as const);
-  const wName = wSide === 'red' ? 'Red' : 'Black';
-  /** The winner's chance from a stored loser's chance. */
-  const win = (x: number) => 1 - x;
+  if ((redE === W ? 'red' : 'black') !== wSide) {
+    throw new Error(`${where}: aligned.side is not the lead's`);
+  }
+  const wName = SIDE[wSide];
+  const toRed = (x: number) => (wSide === 'red' ? x : 1 - x);
 
-  const shapes: Record<number, StudyArrow[]> = {};
+  // The lead engine judges the other side's moves; a move that touches a hidden
+  // piece is graded as no change (the next position already knows the piece).
+  const redScore = S[W].map(toRed);
+  const moveScore = moves.map((t, i) => (touchesHidden(states[i]!, t) ? redScore[i]! : null));
+  const best = a.best[W];
+
+  // Every position where the two engines would play different moves: both moves as
+  // arrows, blue AB-JChess's and orange jqe's (disagreementArrows, which the post's
+  // test checks); where they agree, none.
+  const shapes: Record<number, StudyArrow[]> = disagreementArrows(a.best);
+  for (const i of Object.keys(shapes).map(Number)) {
+    for (const e of ['abj', 'jqe'] as const) {
+      if (!tryPlay(states[i]!, a.best[e][i]!)) {
+        throw new Error(`${where}: ${NAME[e]}'s choice ${a.best[e][i]} is illegal at ${i}`);
+      }
+    }
+  }
   const comments: Record<number, string> = {};
-  const sidelines = [];
-  for (const m of d.openPly === undefined ? d.moments : []) {
-    const at = m.ply;
-    if (moves[at] !== m.played) throw new Error(`${where}: moment ply ${at} is not ${m.played}`);
-    if ((at % 2 === 0 ? 'red' : 'black') !== d.side) {
-      throw new Error(`${where}: moment ply ${at} is not a move by ${NAME[L]}`);
-    }
-    const s = states[at]!;
-    if (!tryPlay(s, m.pick))
-      throw new Error(`${where}: ${NAME[W]}'s pick ${m.pick} is illegal at ${at}`);
-    shapes[at] = [{ kind: 'arrow', brush: BRUSH[L], ...squaresOf(m.played) }];
-    // A face-up pick hangs beside the game move as a one-move line (its arrow
-    // comes with it); a pick that turns over or takes a face-down piece has no
-    // line, because what follows depends on the draw.
-    if (touchesHidden(s, m.pick)) {
-      shapes[at].push({ kind: 'arrow', brush: BRUSH[W], ...squaresOf(m.pick) });
-    } else {
-      sidelines.push({
-        ply: at,
-        moves: [m.pick],
-        redScoreEnd: null,
-        brush: BRUSH[W],
-        always: true,
-        comment: `${NAME[W]}'s pick. ${wName}'s chance after it: ${pct(win(m.winner.pick))} by ${NAME[W]}, ${pct(win(m.loser.pick))} by ${NAME[L]}.`,
-      });
-    }
-    const caught =
-      m.lagMoves == null
-        ? ` ${NAME[L]}'s number never came within 5 points of ${NAME[W]}'s before the end.`
-        : ` ${NAME[L]}'s number came within 5 points of ${NAME[W]}'s ${m.lagMoves === 1 ? 'one move' : `${m.lagMoves} moves`} later, at move ${Math.floor(m.caughtPly! / 2) + 1}.`;
-    comments[at] =
-      `${NAME[L]} plays ${said(s, m.played)} (${BRUSH[L]} arrow). ${NAME[W]} wanted ${said(s, m.pick)} (${BRUSH[W]} arrow). ` +
-      `${wName}'s chance by ${NAME[W]}: ${pct(win(m.winner.pick))} after the pick, ${pct(win(m.winner.played))} after the game move. ` +
-      `By ${NAME[L]}: ${pct(win(m.loser.pick))} and ${pct(win(m.loser.played))}.` +
-      caught;
-  }
-  if (d.openPly !== undefined) {
-    const at = d.openPly;
-    comments[at] =
-      `${wName}'s chance here: ${pct(win(d.series[W][at]!))} by ${NAME[W]}, ${pct(win(d.series[L][at]!))} by ${NAME[L]}. ` +
-      `The engines mostly agree on the moves and not on the score; no single move decides this game.`;
-  }
-  const result = g.winner === 'red' ? '1-0' : g.winner === 'black' ? '0-1' : '1/2-1/2';
-  comments[moves.length] =
-    g.winner === 'draw' ? 'Drawn: the same position came up a third time.' : 'Checkmate.';
+  const sidelines: EngineSideline[] = [];
 
-  const sideName = d.side === 'red' ? 'Red' : 'Black';
-  const intro =
-    `Game ${n} of the post: one of ${data.total.games} games between AB-JChess-20261031 and jqe on 2026-10-31, ${data.movetimeMs / 1000} seconds a move. ` +
-    `${NAME[redE]} has Red. ` +
-    (g.winner === 'draw'
-      ? `The game is drawn; the board faces ${NAME[W]} (${wName}) and the graph is its chance, against ${NAME[L]} (${sideName}), the side that got into trouble. `
-      : `The board faces the winner, ${NAME[W]} (${wName}), and the graph is its chance. `) +
-    `Both engines searched every position for ${nodesM(d.nodes)} nodes, about what a move had in the match: AB-JChess teal, jqe orange. ` +
-    (d.openPly === undefined
-      ? `At the marked move, ${NAME[L]}'s move is the ${BRUSH[L]} arrow and ${NAME[W]}'s pick the ${BRUSH[W]} arrow. `
-      : '') +
-    'Pieces taken face-down or never turned over stay face-down here.';
-  const tree = annotateFromEngine({
+  const base = {
     rootFen,
     moves,
-    // No judged marks: the moments are the post's, from both engines.
-    redScore: [],
+    redScore,
+    best,
+    moveScore,
+    judge: lSide,
     shapes,
     comments,
     sidelines,
+  };
+  const marks = judgedMoves(base);
+  const m = a.moment;
+  const at = m.ply;
+
+  // The post's moment: the only side line in the chapter, the lead engine's choice,
+  // unless it turns a piece over or takes a face-down one (what follows depends on
+  // the draw), when the arrow alone shows it.
+  if (moves[at] !== m.played) throw new Error(`${where}: moment ply ${at} is not ${m.played}`);
+  if (best[at] !== m.pick)
+    throw new Error(`${where}: the moment's pick is not ${NAME[W]}'s choice`);
+  if ((at % 2 === 0 ? 'red' : 'black') !== lSide) {
+    throw new Error(`${where}: moment ply ${at} is not a move by ${NAME[L]}`);
+  }
+  if (shapes[at]?.length !== 2) throw new Error(`${where}: the moment has no arrows`);
+  const s = states[at]!;
+  const hadLine = !touchesHidden(s, m.pick);
+  if (hadLine) {
+    sidelines.push({
+      ply: at,
+      moves: [m.pick],
+      redScoreEnd: redScore[at]!,
+      brush: BRUSH[W],
+      always: true,
+      comment: `${NAME[W]}'s choice.`,
+    });
+    // The side line draws its own arrow.
+    shapes[at] = shapes[at]!.filter((x) => x.brush !== BRUSH[W]);
+  }
+  // The comments: only where something happens, never a number the graph shows.
+  for (const [p, text] of Object.entries(abJqeNotes(g.key))) {
+    const ply = Number(p);
+    if (ply < 1 || ply > moves.length) throw new Error(`${where}: a note at ply ${ply}`);
+    comments[ply] = text;
+  }
+  if (!comments[at]) throw new Error(`${where}: no note on the position the post opens on`);
+  if (!comments[moves.length]) throw new Error(`${where}: no note on the finish`);
+
+  const result = g.winner === 'red' ? '1-0' : g.winner === 'black' ? '0-1' : '1/2-1/2';
+  const intro =
+    `${g.chase ? 'The chase rule' : `Game ${n} of the post`}: one of ${data.total.games} games between AB-JChess-20261031 and jqe on 2026-10-31, ${a.movetimeMs / 1000} seconds a move on ${a.threads} threads. ` +
+    `${NAME[redE]} has Red. ` +
+    (g.winner === 'draw'
+      ? `The game is drawn; the board faces ${wName}, whose chances ${NAME[W]} read first at the marked move. `
+      : `The board faces the winner, ${NAME[W]} (${wName}). `) +
+    `The graph is both engines' chance for ${wName}, AB-JChess teal and jqe orange. ` +
+    'Wherever the two engines would play different moves, both are drawn: blue for AB-JChess, orange for jqe. ' +
+    `Marks (?!, ?, ??) are ${NAME[L]}'s moves as ${NAME[W]} judges them. ` +
+    (g.chase
+      ? `${NAME[W]}'s marks on the repeating moves follow its own chase rule, which the match referee did not use. `
+      : '') +
+    'A die on a move that turned a piece over grades how lucky the reveal was, from what both players could see. ' +
+    'Pieces taken face-down or never turned over stay face-down here.';
+  const tree = annotateFromEngine({
+    ...base,
     intro,
   });
   return {
     key: g.key,
-    name: `Game ${n}: ${NAME[redE]} vs ${NAME[other(redE)]}`,
-    // The board faces the winner (a rename turns an existing chapter's board).
+    marks: marks.length,
+    name: g.chase
+      ? `The chase rule: ${NAME[redE]} vs ${NAME[other(redE)]}`
+      : `Game ${n}: ${NAME[redE]} vs ${NAME[other(redE)]}`,
     orientation: wSide,
     tree,
     tags: {
@@ -249,99 +273,60 @@ function chapter(g: Game, n: number) {
     scoreSeries: {
       side: wSide,
       series: [
-        { name: 'AB-JChess', color: 'a', values: d.series.abj.map(win) },
-        { name: 'jqe', color: 'b', values: d.series.jqe.map(win) },
+        { name: 'AB-JChess', color: 'a', values: S.abj },
+        { name: 'jqe', color: 'b', values: S.jqe },
       ],
     },
   };
 }
 
-const games = data.games.filter((g) => g.deep);
-const built = games.map((g, i) => chapter(g, i + 1));
-for (const b of built)
-  console.log(
-    `${b.key}: ${b.name}, ${games.find((g) => g.key === b.key)!.deep.moments.length} moments`,
-  );
-const DESCRIPTION = `${built.length} games from the ${data.total.games}-game match between AB-JChess-20261031 and jqe on 2026-10-31, read from the winner's side: both engines' view of the winner's chance at every position, and at each marked move the loser's move beside the winning engine's pick. From the post at mistboard.com/blog/ab-jchess-vs-jqe.`;
-const NAME_STUDY = `AB-JChess vs jqe: ${built.length} games read by both engines`;
-const UPDATE = arg('--update', '');
-let plan: unknown;
-if (UPDATE) {
-  const ids = new Map(
-    arg('--chapters', '')
-      .split(',')
-      .filter(Boolean)
-      .map(
-        (pair) =>
-          [pair.slice(0, pair.lastIndexOf(':')), pair.slice(pair.lastIndexOf(':') + 1)] as const,
-      ),
-  );
-  const ref = (key: string) => ids.get(key) ?? `ref:${key.replace(':', '-')}`;
-  plan = {
-    study: UPDATE,
-    ops: [
-      { op: 'study', name: NAME_STUDY, description: DESCRIPTION },
-      ...built.flatMap((b): unknown[] => {
-        const id = ids.get(b.key);
-        if (!id) {
-          return [
-            {
-              op: 'add',
-              ref: b.key.replace(':', '-'),
-              name: b.name,
-              tree: b.tree,
-              orientation: b.orientation,
-              tags: b.tags,
-              scoreSeries: b.scoreSeries,
-            },
-          ];
-        }
-        return [
-          { op: 'rename', chapter: id, name: b.name, tags: b.tags, orientation: b.orientation },
-          { op: 'tree', chapter: id, tree: b.tree },
-          { op: 'series', chapter: id, scoreSeries: b.scoreSeries },
-        ];
-      }),
-      // Chapters the post no longer reads stay at the end, in their old order.
-      {
-        op: 'order',
-        chapters: [
-          ...built.map((b) => ref(b.key)),
-          ...[...ids.entries()]
-            .filter(([k]) => !built.some((b) => b.key === k))
-            .map(([, id]) => id),
-        ],
-      },
-    ],
-  };
-} else {
-  const [first, ...rest] = built;
-  if (!first) throw new Error('no game in the match file has a deep block');
-  plan = {
-    create: {
-      owner: 'mistboard',
-      name: NAME_STUDY,
-      description: DESCRIPTION,
-      visibility: 'public',
-      chapter: {
-        name: first.name,
-        variant: 'jieqi',
-        orientation: first.orientation,
-        tree: first.tree,
-        tags: first.tags,
-        scoreSeries: first.scoreSeries,
-      },
+const games = data.games.filter((g) => g.aligned);
+let n = 0;
+const built = games.map((g) => chapter(g, g.chase ? 0 : ++n));
+for (const b of built) console.log(`${b.key}: ${b.name}, ${b.marks} marks`);
+const DESCRIPTION = `${n} games from the ${data.total.games}-game match between AB-JChess-20261031 and jqe on 2026-10-31, and one drawn game where their chase rules disagree. The graph under each game is both engines' chance at the match's 4 seconds a move, the comments mark where the game turned, and wherever the two engines would play different moves, both are drawn as arrows. From the post at mistboard.com/blog/ab-jchess-vs-jqe.`;
+const NAME_STUDY = `AB-JChess vs jqe: ${n} games read by both engines`;
+const [first, ...rest] = built;
+if (!first) throw new Error('no game in the match file has an aligned block');
+const plan = {
+  create: {
+    owner: 'mistboard',
+    name: NAME_STUDY,
+    description: DESCRIPTION,
+    visibility: 'public',
+    chapter: {
+      name: first.name,
+      variant: 'jieqi',
+      orientation: first.orientation,
+      tree: first.tree,
+      tags: first.tags,
+      scoreSeries: first.scoreSeries,
     },
-    ops: rest.map((b) => ({
-      op: 'add',
-      ref: b.key.replace(':', '-'),
-      name: b.name,
-      tree: b.tree,
-      orientation: b.orientation,
-      tags: b.tags,
-      scoreSeries: b.scoreSeries,
-    })),
-  };
-}
-writeFileSync(OUT, `${JSON.stringify(plan, null, 1)}\n`);
-console.log(`wrote ${OUT}: ${built.length} chapters`);
+  },
+  ops: rest.map((b) => ({
+    op: 'add',
+    ref: b.key.replace(':', '-'),
+    name: b.name,
+    tree: b.tree,
+    orientation: b.orientation,
+    tags: b.tags,
+    scoreSeries: b.scoreSeries,
+  })),
+};
+// --update: the same chapters as tree replacements on the study the post embeds
+// (AB_JQE_STUDY), keeping its chapter ids, so the post's links stay good.
+const update = {
+  study: AB_JQE_STUDY.id,
+  ops: [
+    { op: 'study', name: NAME_STUDY, description: DESCRIPTION },
+    ...built.map((b) => {
+      const chapter = AB_JQE_STUDY.chapters[b.key];
+      if (!chapter) throw new Error(`${b.key}: no chapter in AB_JQE_STUDY`);
+      return { op: 'tree', chapter, tree: b.tree };
+    }),
+  ],
+};
+writeFileSync(OUT, `${JSON.stringify(argv.includes('--update') ? update : plan, null, 1)}\n`);
+console.log(
+  `wrote ${OUT}: ${built.length} chapters${argv.includes('--update') ? ` as tree updates of ${AB_JQE_STUDY.id}` : ''}`,
+);

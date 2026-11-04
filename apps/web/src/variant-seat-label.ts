@@ -52,6 +52,7 @@ export function seatInkFamily(variant: string | null | undefined): string | null
  */
 export type SeatNaming = 'seat-word' | 'player';
 const SEAT_NAMING: Readonly<Record<GameSpecId, SeatNaming>> = {
+  gomoku: 'seat-word',
   banqi: 'seat-word',
   mahjong: 'seat-word',
   'xiangqi-mahjong': 'player',

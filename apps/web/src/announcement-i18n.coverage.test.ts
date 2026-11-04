@@ -3,6 +3,7 @@ import {
   ANNOUNCEMENT_LANGS,
   announcementTranslationKeys,
   hasAnnouncementTranslation,
+  localizeAnnouncementString,
 } from './announcement-i18n.js';
 import { allAnnouncements } from './announcements.js';
 
@@ -31,6 +32,13 @@ function liveStrings(): Set<string> {
 }
 
 describe('announcement translation coverage', () => {
+  it.each([
+    ['zh-Hans', '翻翻兽棋已上线。'],
+    ['zh-Hant', '翻翻獸棋已上線。'],
+  ] as const)('uses the localized Flip Jungle launch name in %s', (locale, headline) => {
+    expect(localizeAnnouncementString('Flip Jungle has launched.', locale)).toBe(headline);
+  });
+
   it('every announcement string resolves in all zh scripts', () => {
     const missing: string[] = [];
     for (const text of liveStrings()) {

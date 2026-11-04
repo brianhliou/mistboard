@@ -143,6 +143,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // AB-JChess-20261031 against jqe, a draft dated 2026-11-10 (DEV shows it
+      // early for review).
+      '/blog/ab-jchess-vs-jqe',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/set-up-your-board',
@@ -152,9 +155,6 @@ describe('article public listing gates', () => {
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
-      // AB-JChess-20261031 against jqe, scheduled for 2026-11-02 (DEV shows it
-      // early for review).
-      '/blog/ab-jchess-vs-jqe',
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
@@ -284,7 +284,7 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('keeps only working Community and By Mistboard blog navigation', () => {
+  it('keeps only working Community posts and By Mistboard blog navigation', () => {
     const official = buildArticlesIndex();
     const community = buildArticlesIndex(undefined, 'community');
     const officialLinks = [
@@ -297,11 +297,11 @@ describe('article public listing gates', () => {
 
     expect(officialLinks).toEqual([
       { label: 'By Mistboard', href: '/blog', current: 'page' },
-      { label: 'Community', href: '/blog/community', current: null },
+      { label: 'Community posts', href: '/blog/community', current: null },
     ]);
     expect(
       community.querySelector('.articles-community-rail a[aria-current="page"]')?.textContent,
-    ).toBe('Community');
+    ).toBe('Community posts');
     expect(official.querySelector('.articles-index-controls')).toBeNull();
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
@@ -375,14 +375,40 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('localizes both blog rail destinations', () => {
-    const index = buildArticlesIndex('zh-Hans', 'community');
-    const hrefs = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')].map(
-      (link) => link.getAttribute('href'),
-    );
+  it.each([
+    ['en', '', 'By Mistboard', 'Community posts', 'Blog navigation'],
+    ['zh-Hans', '/zh-hans', 'Mistboard 官方文章', '社区文章', '博客导航'],
+    ['zh-Hant', '/zh-hant', 'Mistboard 官方文章', '社群文章', '網誌導覽'],
+  ] as const)(
+    '%s: localizes blog rail labels and canonical destinations',
+    (locale, prefix, officialLabel, communityLabel, navigationLabel) => {
+      for (const view of ['mistboard', 'community'] as const) {
+        const index = buildArticlesIndex(locale === 'en' ? undefined : locale, view);
+        const rail = index.querySelector('.articles-community-rail');
+        const links = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')];
 
-    expect(hrefs).toEqual(['/zh-hans/blog', '/zh-hans/blog/community']);
-  });
+        expect(rail?.getAttribute('aria-label')).toBe(navigationLabel);
+        expect(
+          links.map((link) => ({
+            label: link.textContent,
+            href: link.getAttribute('href'),
+            current: link.getAttribute('aria-current'),
+          })),
+        ).toEqual([
+          {
+            label: officialLabel,
+            href: `${prefix}/blog`,
+            current: view === 'mistboard' ? 'page' : null,
+          },
+          {
+            label: communityLabel,
+            href: `${prefix}/blog/community`,
+            current: view === 'community' ? 'page' : null,
+          },
+        ]);
+      }
+    },
+  );
 
   it('localizes only publication-ready zh-Hans article cards', () => {
     vi.stubEnv('DEV', false);
@@ -471,9 +497,9 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
+      '/blog/ab-jchess-vs-jqe',
       '/blog/set-up-your-board',
       '/blog/shortest-stalemate-xiangqi',
-      '/blog/ab-jchess-vs-jqe',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
       '/blog/helpmates-in-xiangqi',
@@ -1376,6 +1402,8 @@ describe('blog post read-next footer', () => {
   // the row furniture rather than navigation. Walking the date ring from each
   // post is what keeps the trios distinct, so assert the property, not the
   // implementation.
+  // Renders the footer for every published post: 18.6 s on a hosted runner on
+  // 2026-11-01, past the 15 s default.
   it('gives each post a different trio', () => {
     const seen = new Map<string, string>();
     for (const slug of publishedBlogSlugs()) {
@@ -1383,7 +1411,7 @@ describe('blog post read-next footer', () => {
       expect(seen.get(key), `${slug} repeats the row on ${seen.get(key)}`).toBeUndefined();
       seen.set(key, slug);
     }
-  });
+  }, 60_000);
 
   // The row overrides the index's column ladder at two classes of specificity,
   // which outranks the index's own media queries. That is deliberate (three

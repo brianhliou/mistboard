@@ -16,8 +16,10 @@ import {
   generateMistboardReadout,
   latestMistboardReadout,
   listMistboardReadoutSummaries,
+  mistboardReadoutById,
 } from '../persistence-mistboard-readout.js';
 import { sendReadoutEmail } from '../readout-email.js';
+import { buildReadoutSummary } from '../readout-email-render.js';
 import { defaultXiangqiBroadcastFetch } from '../xiangqi-broadcast-fetch.js';
 import { type HttpApiContext, isHttpAdminSession, readJsonBody, writeJson } from './lib.js';
 
@@ -47,6 +49,7 @@ const READOUT_PATHS = [
   '/api/admin/readouts/generate',
   '/api/admin/readouts/latest',
   '/api/admin/readouts/history',
+  '/api/admin/readouts/snapshot',
 ] as const;
 
 // The field is optional on the report: a context without the census (tests,
@@ -91,7 +94,7 @@ export async function readoutGenerateForApi(
       previousAlertKey: result.previousAlertKey,
       dryRun: body.dryRun === true,
     })
-    .catch(() => ({ send: false, reason: 'disabled' as const }));
+    .catch(() => ({ send: false, reason: 'delivery-failed' as const }));
   return {
     status: 200,
     payload: {
@@ -99,6 +102,10 @@ export async function readoutGenerateForApi(
       markdown: renderMistboardReadoutMarkdown(result.report),
       reused: result.reused,
       emailed: emailed.send,
+      // Unlike the legacy emailed flag, this explicit contract is only set
+      // after the provider accepts the message. Older servers omit it, so the
+      // workflow keeps its GitHub fallback during a rolling deployment.
+      emailDelivery: { accepted: emailed.send, reason: emailed.reason },
     },
   };
 }
@@ -141,22 +148,60 @@ export async function tryHandle(
     return true;
   }
 
+  const triggerParam = parsedUrl.searchParams.get('trigger');
+  const trigger =
+    triggerParam === null
+      ? undefined
+      : triggerParam === 'weekly' || triggerParam === 'daily' || triggerParam === 'manual'
+        ? triggerParam
+        : null;
+  if (trigger === null) {
+    writeJson(response, 400, { error: 'invalid_trigger' }, { 'cache-control': 'no-store' });
+    return true;
+  }
+  if (pathname.endsWith('/snapshot')) {
+    const id = parsedUrl.searchParams.get('id') ?? '';
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
+      writeJson(response, 400, { error: 'invalid_snapshot_id' }, { 'cache-control': 'no-store' });
+      return true;
+    }
+    const report = await mistboardReadoutById(id);
+    writeJson(
+      response,
+      report ? 200 : 404,
+      report
+        ? {
+            report,
+            markdown: renderMistboardReadoutMarkdown(report),
+            summary: buildReadoutSummary(report),
+          }
+        : { error: 'not_found' },
+      { 'cache-control': 'no-store' },
+    );
+    return true;
+  }
+
   if (pathname.endsWith('/history')) {
     const limit = Number.parseInt(parsedUrl.searchParams.get('limit') ?? '', 10);
     const summaries = await defaultDependencies.list(undefined, {
       limit: Number.isFinite(limit) ? limit : undefined,
+      trigger,
     });
     writeJson(response, 200, { readouts: summaries }, { 'cache-control': 'no-store' });
     return true;
   }
 
   if (pathname.endsWith('/latest')) {
-    const report = await defaultDependencies.latest();
+    const report = await defaultDependencies.latest(undefined, { trigger });
     writeJson(
       response,
       report ? 200 : 404,
       report
-        ? { report, markdown: renderMistboardReadoutMarkdown(report) }
+        ? {
+            report,
+            markdown: renderMistboardReadoutMarkdown(report),
+            summary: buildReadoutSummary(report),
+          }
         : { error: 'not_found' },
       { 'cache-control': 'no-store' },
     );

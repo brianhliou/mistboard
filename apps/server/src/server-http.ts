@@ -757,6 +757,24 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // Club copy is baked in each interface locale, like the rules index.
+    const clubWashingtonMatch = pathname.match(/^\/(?:(zh-hans|zh-hant)\/)?washington-xiangqi\/?$/);
+    if (clubWashingtonMatch) {
+      const prefix = clubWashingtonMatch[1] as 'zh-hans' | 'zh-hant' | undefined;
+      const file = prefix
+        ? (`${prefix}/washington-xiangqi.html` as const)
+        : 'washington-xiangqi.html';
+      void servePrerenderedPage({ response, staticDir: options.staticDir, file }).catch(() => {
+        void serveSpaShellWithRoutePreloads({
+          response,
+          staticDir: options.staticDir,
+          pathname: pathname.replace(/\/+$/, ''),
+          publicHost: options.publicHost,
+        });
+      });
+      return;
+    }
+
     // The patron page, prerendered: it is the route that states what the site
     // sells and at what price, so it has to be readable without running the
     // SPA. Localized paths stay on the client-rendered shell below.

@@ -1125,7 +1125,7 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // (amateur ≪ strong ≪ strongest, each step ~90-97%). Weakening is Skill Level
 // (CPU-independent); the budget is a node count (reproducible across the slow
 // prod vCPU) capped by movetime as a wall-clock guard.
-// Flip Jungle (兽棋 / 翻翻棋, 4x4 hidden-identity flip animal chess) plays via our own
+// Flip Jungle (翻翻兽棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
 // fog engine-worker). One versioned full-strength bot; strength is a node budget capped
 // by movetime.

@@ -192,6 +192,15 @@ export {
   resolveDmReport,
   sendDmMessage,
 } from './persistence-dms.js';
+export type { EmailDeliveryAddress, LoginEmailRequest } from './persistence-email-delivery.js';
+export {
+  completeLoginEmailRequest,
+  correlateLoginEmailRequest,
+  getEmailDeliveryAddress,
+  getLoginEmailRequest,
+  recordEmailDeliveryEvent,
+  recordLoginEmailRequest,
+} from './persistence-email-delivery.js';
 export type { FeedbackSubmissionInput } from './persistence-feedback.js';
 export {
   countAnonFeedbackSubmissionsSince,
@@ -600,6 +609,12 @@ export {
   getStudyChapterAnalysisForRead,
   saveStudyChapterAnalysis,
 } from './persistence-study-analysis.js';
+export {
+  decidedStudyChapterIds,
+  getStudyChapterDecisions,
+  getStudyChapterDecisionsForRead,
+  saveStudyChapterDecisions,
+} from './persistence-study-decisions.js';
 export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,

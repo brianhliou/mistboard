@@ -13,7 +13,7 @@
 // finished. A live game has no card and no meta.
 
 import type { ServerResponse } from 'node:http';
-import { GAME_IMAGE_VERSION, winPercent } from '@mistboard/game';
+import { GAME_IMAGE_VERSION, maybeGameSpecForId, winPercent } from '@mistboard/game';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
 import { serveGameOgImage } from './og-image.js';
 import { isPositionOgVariant, positionOgVariantLabel, resolvePositionOg } from './og-position.js';
@@ -55,6 +55,13 @@ const liveStore: TenantGameCardStore = {
   analysis: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
 };
 
+// A hidden playtest's public artifacts obey its runtime flag too. Launched
+// variants keep their historical cards when room creation is switched off.
+function cardEnabled(registration: VariantTenantRegistration): boolean {
+  const spec = maybeGameSpecForId(registration.gameSpecId);
+  return !!spec && (spec.publicSurface !== 'hidden' || registration.enabled());
+}
+
 async function storedGameReplays(
   registration: VariantTenantRegistration,
   roomId: string,
@@ -95,11 +102,13 @@ export async function tenantGameCard(
 ): Promise<TenantGameCard | null> {
   const registration = variantTenantForRoomId(roomId);
   const card = registration?.card;
-  const gameRouteBase = registration?.export?.gameRouteBase;
-  if (!registration || !card) return null;
+  // The card's page: the export's game route, else a review page with no export
+  // (gomoku while hidden), else the finished room.
+  const gameRouteBase = registration?.export?.gameRouteBase ?? registration?.reviewRouteBase;
+  if (!registration || !card || !cardEnabled(registration)) return null;
   if (!gameRouteBase && !registration.finishedGameOpensRoom) return null;
   const label =
-    card.layout === 'match'
+    card.layout === 'match' || card.layout === 'gomoku'
       ? card.label
       : isPositionOgVariant(card.variant)
         ? positionOgVariantLabel(card.variant)
@@ -115,6 +124,10 @@ export async function tenantGameCard(
     const events = await store.events(roomId);
     scores = events ? card.finalScores(events, roomId) : null;
     if (!scores) return null;
+  }
+  if (card.layout === 'gomoku') {
+    const events = await store.events(roomId);
+    if (!events || !card.finalPosition(events, roomId)) return null;
   }
   const outcome = outcomeLine(game);
   if (!outcome) return null;
@@ -217,7 +230,7 @@ async function chosenPly(
   plyCount: number,
   store: TenantGameCardStore,
 ): Promise<number> {
-  if (entry.card.layout === 'match') return plyCount;
+  if (entry.card.layout === 'match' || entry.card.layout === 'gomoku') return plyCount;
   const { analysis } = entry.card;
   if (!analysis) return plyCount;
   try {
@@ -261,7 +274,11 @@ export async function tenantGamePageMeta(
   }
   const entry = await tenantGameCard(roomId, store);
   if (!entry) return null;
-  if (gameMatch && `${gameMatch[1] ?? ''}/game` !== entry.registration.export?.gameRouteBase) {
+  if (
+    gameMatch &&
+    `${gameMatch[1] ?? ''}/game` !==
+      (entry.registration.export?.gameRouteBase ?? entry.registration.reviewRouteBase)
+  ) {
     return null;
   }
   const { scores } = entry;
@@ -302,6 +319,12 @@ export async function serveTenantGameOgImage(
   store: TenantGameCardStore = liveStore,
   staticDir?: string,
 ): Promise<void> {
+  const registration = variantTenantForRoomId(roomId);
+  // Check BEFORE the PNG cache: a warmed card must disappear with the flag.
+  if (!registration || !cardEnabled(registration)) {
+    redirectToDefault(response);
+    return;
+  }
   const key = `tenant-game:v${TENANT_GAME_OG_IMAGE_VERSION}:${roomId}`;
   const cached = cache.get(key);
   if (cached) {
@@ -332,6 +355,21 @@ export async function renderTenantGameCard(
 ): Promise<string> {
   if (entry.card.layout === 'match') return matchCard(entry);
   const events = await store.events(entry.game.roomId);
+  if (entry.card.layout === 'gomoku') {
+    const position = events ? entry.card.finalPosition(events, entry.game.roomId) : null;
+    if (!position) return pairingOnlyCard(entry);
+    const player = (color: 'black' | 'white') => {
+      const index = entry.game.participants.findIndex((participant) => participant.color === color);
+      return {
+        name: entry.players[index] ?? 'Player',
+        ink: color,
+        score: seatScore(entry.game.result, color),
+      };
+    };
+    return renderBoardCard({ kind: 'gomoku', position }, art, {
+      players: { top: player('black'), bottom: player('white'), variant: entry.label },
+    });
+  }
   const plyCount = entry.game.plyCount;
   if (events) {
     // Seats sit level with their back rank: black ink at the top of the board

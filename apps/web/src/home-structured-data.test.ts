@@ -20,13 +20,15 @@ describe('homepage structured data', () => {
   ] as const) {
     it(`parses and carries the ${inLanguage} locale`, () => {
       const docs = parseScripts(homeStructuredDataScripts({ inLanguage, url, description }));
-      expect(docs.map((d) => d['@type'])).toEqual(['WebSite', 'WebApplication']);
-      for (const doc of docs) {
+      expect(docs.map((d) => d['@type'])).toEqual(['WebSite', 'WebApplication', 'Organization']);
+      for (const doc of docs.slice(0, 2)) {
         expect(doc['@context']).toBe('https://schema.org');
         expect(doc.name).toBe('Mistboard');
         expect(doc.url).toBe(url);
         expect(doc.inLanguage).toBe(inLanguage);
+        expect(doc.publisher).toEqual({ '@id': 'https://mistboard.com/#organization' });
       }
+      expect(docs[2]?.url).toBe('https://mistboard.com/');
       const app = docs[1];
       expect(app?.description).toBe(description);
       expect(app?.applicationCategory).toBe('GameApplication');
@@ -41,12 +43,12 @@ describe('homepage structured data', () => {
       url: 'https://mistboard.com/',
       description: 'a </script><script>alert(1)</script> b',
     });
-    expect(html.match(/<\/script>/g)).toHaveLength(2);
+    expect(html.match(/<\/script>/g)).toHaveLength(3);
     expect(parseScripts(html)[1]?.description).toBe('a </script><script>alert(1)</script> b');
   });
 
   it('returns plain objects for callers that build their own tags', () => {
     const docs = homeStructuredData({ inLanguage: 'en', url: 'https://x/', description: 'd' });
-    expect(docs).toHaveLength(2);
+    expect(docs).toHaveLength(3);
   });
 });

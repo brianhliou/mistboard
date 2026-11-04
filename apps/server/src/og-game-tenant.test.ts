@@ -175,7 +175,7 @@ test('a jieqi card FEN is the public spelling: no deal field, face-down pieces s
   const card = variantTenantForRoomId(JQ_ROOM)?.card;
   assert.ok(card, 'jieqi registers a card');
   assert.notEqual(card.layout, 'match');
-  if (card.layout === 'match') return;
+  if (card.layout === 'match' || card.layout === 'gomoku') return;
   const events = finishedJieqiEvents();
   for (const ply of [0, 1]) {
     const fen = card.fenAtPly(events, JQ_ROOM, ply);
@@ -297,7 +297,8 @@ test('the card draws the analysed turning point, else the final position, else t
   const entry = await tenantGameCard(XQ_ROOM, base);
   assert.ok(entry);
   assert.deepEqual(entry.players, ['alice', 'bob']);
-  if (entry.card.layout === 'match') assert.fail('xiangqi uses a board card');
+  if (entry.card.layout === 'match' || entry.card.layout === 'gomoku')
+    assert.fail('xiangqi uses a board card');
 
   // Analysed: Red POV collapses at ply 2 -> the position after ply 1 is drawn.
   const asked: string[] = [];
@@ -351,7 +352,8 @@ test('a jieqi card never carries a glyph on a face-down piece', async () => {
     }),
   );
   assert.ok(entry);
-  if (entry.card.layout === 'match') assert.fail('jieqi uses a board card');
+  if (entry.card.layout === 'match' || entry.card.layout === 'gomoku')
+    assert.fail('jieqi uses a board card');
   assert.equal(entry.card.analysis, null, 'jieqi picks no analysed ply');
   const svg = await renderTenantGameCard(
     entry,
@@ -532,6 +534,15 @@ test('every tenant with a review URL binds a card on a position-card variant', a
   const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
   let cards = 0;
   for (const entry of registeredVariantTenants()) {
+    if (entry.card?.layout === 'gomoku') {
+      assert.ok(
+        entry.finishedGameOpensRoom || entry.reviewRouteBase,
+        `${entry.kind}: a card needs a page`,
+      );
+      assert.equal(entry.card.variant, entry.gameSpecId, entry.kind);
+      assert.equal(entry.card.finalPosition([], `${entry.roomIdPrefix}x`), null);
+      continue;
+    }
     if (entry.card?.layout === 'match') {
       assert.equal(entry.finishedGameOpensRoom, true, `${entry.kind}: match cards need a page`);
       assert.equal(entry.card.variant, entry.gameSpecId, entry.kind);

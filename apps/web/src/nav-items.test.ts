@@ -48,6 +48,18 @@ describe('watch nav', () => {
   });
 });
 
+describe('puzzle nav', () => {
+  it('offers Puzzle Dashboard after Puzzle Streak', async () => {
+    const { puzzleNavItems } = await import('./nav-items.js');
+    expect(puzzleNavItems().map(({ label, labelKey, href }) => [label, labelKey, href])).toEqual([
+      ['Puzzles', 'nav.puzzles', '/puzzles'],
+      ['Puzzle Themes', 'nav.puzzleThemes', '/puzzles/themes'],
+      ['Puzzle Streak', 'nav.puzzleStreak', '/puzzles?mode=streak'],
+      ['Puzzle Dashboard', 'puzzle.dashboardTitle', '/puzzles/dashboard'],
+    ]);
+  });
+});
+
 describe('tools nav', () => {
   it('lists the analysis board first and the board editor beside it', async () => {
     const { toolsNavItems } = await import('./nav-items.js');
@@ -79,6 +91,20 @@ describe('tools nav', () => {
     expect(imported?.label).toBe('Import game');
     expect(imported?.labelKey).toBe('nav.import');
   });
+
+  it('never links to the invalid Lab route, even with the old flag enabled', async () => {
+    vi.stubEnv('VITE_SHOW_ENGINE_LAB_NAV', 'true');
+    vi.resetModules();
+    try {
+      const { toolsNavItems, siteMenuSections } = await import('./nav-items.js');
+      expect(toolsNavItems().map((item) => item.href)).not.toContain('/lab');
+      expect(
+        siteMenuSections().flatMap((section) => section.items.map((item) => item.href)),
+      ).not.toContain('/lab');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 describe('community nav', () => {
@@ -90,13 +116,82 @@ describe('community nav', () => {
       ['nav.bots', '/bots'],
       ['nav.friends', '/following'],
       ['nav.forum', '/forum'],
-      ['nav.blog', '/blog'],
     ]);
+  });
+
+  it('uses Bots for the same destination in the dropdown and community rail', async () => {
+    const { communityNavItems, communityRailItems } = await import('./nav-items.js');
+    const bot = communityNavItems().find((item) => item.href === '/bots');
+    expect(bot).toEqual({ label: 'Bots', labelKey: 'nav.bots', href: '/bots' });
+    expect(communityRailItems().find((item) => item.href === '/bots')).toEqual(bot);
   });
 
   // "Players" for the leaderboard beside "Pro players" read as one page twice.
   it('no longer labels the leaderboard "Players"', async () => {
     const { communityNavItems } = await import('./nav-items.js');
     expect(communityNavItems().some((item) => item.labelKey === 'nav.players')).toBe(false);
+  });
+});
+
+describe('learn nav', () => {
+  it('ends with Blog after the existing learning destinations', async () => {
+    const { learnNavItems } = await import('./nav-items.js');
+    expect(learnNavItems().map((item) => [item.label, item.labelKey, item.href])).toEqual([
+      ['Rules', 'nav.rules', '/rules'],
+      ['Xiangqi Basics', 'nav.learnXiangqi', '/learn/xiangqi'],
+      ['Practice', 'nav.practice', '/practice'],
+      ['Study', 'nav.studies', '/study'],
+      ['Coaches', 'nav.coaches', '/coach'],
+      ['Blog', 'nav.blog', '/blog'],
+    ]);
+  });
+});
+
+describe('phone nav', () => {
+  it.each([false, true])(
+    'orders sections with separate Puzzles and closing Mistboard (admin=%s)',
+    async (admin) => {
+      const { siteMenuSections, playNavItems, puzzleNavItems, communityNavItems } = await import(
+        './nav-items.js'
+      );
+      const sections = siteMenuSections({ admin });
+      expect(sections.map((section) => section.labelKey)).toEqual([
+        'nav.play',
+        'nav.puzzles',
+        'nav.learn',
+        'nav.watch',
+        'nav.community',
+        'nav.tools',
+        ...(admin ? ['nav.admin'] : []),
+        'nav.mistboard',
+      ]);
+      expect(sections[0]?.items).toEqual(playNavItems());
+      expect(sections[1]?.items).toEqual(puzzleNavItems());
+      expect(sections.find((section) => section.labelKey === 'nav.community')?.items).toEqual(
+        communityNavItems(),
+      );
+      expect(
+        sections.flatMap((section) => section.items).filter((item) => item.href === '/patron'),
+      ).toHaveLength(1);
+    },
+  );
+
+  it('lists the thirteen About destinations in their rail order', async () => {
+    const { mistboardMenuItems } = await import('./nav-items.js');
+    expect(mistboardMenuItems().map((item) => item.href)).toEqual([
+      '/about',
+      '/stats',
+      '/feed',
+      '/changelog',
+      '/faq',
+      '/contact',
+      '/patron',
+      '/terms',
+      '/privacy',
+      '/source',
+      '/creators',
+      '/champions',
+      '/developers',
+    ]);
   });
 });

@@ -302,6 +302,11 @@ export function createTenantRoomChrome<C extends string>(
   let sendSocket: (payload: unknown) => boolean = () => false;
   let reconnectNow: () => void = () => {};
   let playAgainStatus: 'idle' | 'creating' | 'failed' = 'idle';
+  // The rematch room this page already made (#825). Once it exists the button
+  // is "Rematch" again and goes there: Back from the new game restored this
+  // page from the back/forward cache stuck on a disabled "Creating", and a
+  // second click must not open a second room.
+  let playAgainUrl: string | null = null;
   // Previous active clock color across full clock renders, used to flash the
   // seated player's clock on the turn flip (mirrors the chess clock).
   let lastActiveClockColor: C | null = null;
@@ -356,6 +361,7 @@ export function createTenantRoomChrome<C extends string>(
 
   function resetState(): void {
     playAgainStatus = 'idle';
+    playAgainUrl = null;
     lastActiveClockColor = null;
     pendingConfirm = null;
     focusNext = null;
@@ -890,6 +896,11 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   async function createPlayAgainRoom(): Promise<void> {
+    if (playAgainStatus === 'creating') return;
+    if (playAgainUrl) {
+      window.location.assign(playAgainUrl);
+      return;
+    }
     playAgainStatus = 'creating';
     renderRoomActions();
     try {
@@ -903,6 +914,9 @@ export function createTenantRoomChrome<C extends string>(
       const data = (await response.json()) as { url?: string };
       if (!data.url) throw new Error('play-again did not return a URL');
       rememberBotRoomRequest(body);
+      playAgainUrl = data.url;
+      playAgainStatus = 'idle';
+      renderRoomActions();
       window.location.assign(data.url);
     } catch (err) {
       console.warn(err);

@@ -27,6 +27,7 @@ import type { XiangqiPieceRole } from '@mistboard/game';
 import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
+import { fetchStudyChapterDecisions } from './review/study-decisions.js';
 import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
 import type { SerializedTree } from './review/tree-serialize.js';
@@ -112,6 +113,7 @@ type ChapterDto = {
   /** The chapter has a stored engine analysis (study_chapter_analysis): the
    *  page fetches it and the underboard gets the advantage chart. */
   hasAnalysis?: boolean;
+  hasDecisions?: boolean;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -993,6 +995,10 @@ function renderStudy(
       : null;
     return mountStudyReview(variant, root, {
       storedAnalysis,
+      storedDecisions:
+        variant === 'jieqi' && chapter.hasDecisions
+          ? fetchStudyChapterDecisions(study.id, chapter.id, chapter.root, mountedTree)
+          : null,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
       ariaLabel: t('study.ariaStudy'),

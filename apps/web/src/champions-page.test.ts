@@ -316,6 +316,8 @@ describe('/champions', () => {
   it('links the AB-JChess-20261031 write-up on its card and history line once live', async () => {
     const { abJchessVsJqeArticle } = await import('./articles/content/ab-jchess-vs-jqe.js');
     expect(AB_JCHESS_2026_WRITE_UP.publishedAt).toBe(abJchessVsJqeArticle.publishedAt);
+    // A draft must never be linked: the mirror follows the article's status too.
+    expect(AB_JCHESS_2026_WRITE_UP.status).toBe(abJchessVsJqeArticle.status);
     const jieqiLinks = async (now: string) => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date(now));
@@ -340,11 +342,17 @@ describe('/champions', () => {
       }
     };
     const play = 'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi';
-    expect(await jieqiLinks('2026-11-01T12:00:00Z')).toEqual({ card: [play], history: [] });
-    expect(await jieqiLinks('2026-11-02T17:00:00Z')).toEqual({
-      card: ['Read the match /blog/ab-jchess-vs-jqe', play],
-      history: ['write-up /blog/ab-jchess-vs-jqe'],
-    });
+    const liveAt = `${abJchessVsJqeArticle.publishedAt}T17:00:00Z`;
+    const dayBefore = new Date(Date.parse(liveAt) - 86_400_000).toISOString();
+    expect(await jieqiLinks(dayBefore)).toEqual({ card: [play], history: [] });
+    expect(await jieqiLinks(liveAt)).toEqual(
+      abJchessVsJqeArticle.status === 'published'
+        ? {
+            card: ['Read the match /blog/ab-jchess-vs-jqe', play],
+            history: ['write-up /blog/ab-jchess-vs-jqe'],
+          }
+        : { card: [play], history: [] },
+    );
   });
 
   it('lists the title history newest first, then the challenge rules', () => {
@@ -354,12 +362,11 @@ describe('/champions', () => {
     const history = page.querySelector('.champions-list')!;
     const lines = [...history.querySelectorAll('li')].map((li) => li.textContent ?? '');
     expect(lines).toHaveLength(TITLE_HISTORY.length);
-    // AB-JChess-20261031's match has no study; its write-up link is pinned by the dated test.
-    expect(
-      lines[0].startsWith(
-        "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%.",
-      ),
-    ).toBe(true);
+    // What follows the score depends on the date (the write-up link goes live 2026-11-02 09:00);
+    // the dated test pins it.
+    const first =
+      "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%";
+    expect(lines[0].slice(0, first.length)).toBe(first);
     expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
     expect(lines[2]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
     expect(lines[3]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);

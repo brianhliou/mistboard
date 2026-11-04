@@ -22,6 +22,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   isPublicGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -41,6 +42,7 @@ import {
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
+  gomokuEnabled,
   jieqiEnabled,
   jqeEnabled,
   jungleEnabled,
@@ -49,6 +51,7 @@ import {
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from '../feature-flags.js';
+import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
@@ -302,6 +305,52 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
 // Deleting a retired variant's block is its own later commit
 // (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
+  {
+    gameSpecId: GOMOKU_SPEC_ID,
+    roomIdPrefix: 'gmk_',
+    enabled: gomokuOffered,
+    liveRoomServerGated: true,
+    pageTitleKey: 'variant.gomoku.name',
+    gameRouteBase: '/gomoku/game',
+    reviewRouteBase: '/gomoku/game',
+    mountPostgame: (root, roomId) =>
+      import('../gomoku-postgame.js').then(({ mountGomokuPostgame }) =>
+        mountGomokuPostgame(root, roomId),
+      ),
+    loadLiveRoomClient: () =>
+      import('../live-gomoku.js').then(({ bootstrapGomokuLiveRoom }) => bootstrapGomokuLiveRoom),
+    watch: {
+      family: 'gomoku',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-gomoku-replay.js').then(({ mountGomokuWatchReplay }) =>
+          mountGomokuWatchReplay(root, roomId, options),
+        ),
+    },
+    landing: {
+      capabilities: {
+        firstColor: 'black',
+        firstGlyph: '●',
+        firstLabel: 'Black',
+        secondColor: 'white',
+        secondGlyph: '○',
+        secondLabel: 'White',
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      engineOptions: [1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
+        id: `rapfi-level-${level}`,
+        name: `Rapfi Level ${level}`,
+        familyName: 'Rapfi',
+        kind: 'browser',
+      })),
+      defaultEngineId: 'rapfi-level-1',
+      // The picker stays unlisted. Admins have the same ?play deep-link door
+      // as Three Kingdoms banqi, for a friend room or the browser bot.
+      offerInMenu: gomokuEnabled,
+      acceptsDeepLink: gomokuOffered,
+    },
+  },
   {
     // Dark-chess correspondence rooms (server registration: correspondence
     // create flow). Deliberately capability-free: no loadLiveRoomClient (rooms
@@ -676,7 +725,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Flip Jungle (兽棋 / 翻翻棋). Symmetric hidden-identity 4×4 flip animal chess; a
+    // Flip Jungle (翻翻兽棋). Symmetric hidden-identity 4×4 flip animal chess; a
     // self-contained live client on the socket-client + chrome stack (no fog; the deal
     // is hidden from both seats equally). PvP-only at launch (no bot).
     gameSpecId: JUNGLE_FLIP_SPEC_ID,

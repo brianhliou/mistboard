@@ -12,6 +12,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
+  GOMOKU_SPEC_ID,
   gameSpecForId,
   isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
@@ -119,6 +120,7 @@ export type LandingPlayChoice = {
 };
 export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 export type LandingGameSpecId =
+  | typeof GOMOKU_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -333,6 +335,18 @@ const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   secondGlyph: '♚',
   secondLabel: 'Black',
   supportsRated: true,
+  supportsTimeControl: true,
+};
+// Taxonomy-only Gomoku has no tenant yet. Keep setup semantics explicit so
+// stale/programmatic requests retain Black first and never inherit rated chess.
+const GOMOKU_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
+  firstColor: 'black',
+  firstGlyph: '●',
+  firstLabel: 'Black',
+  secondColor: 'white',
+  secondGlyph: '○',
+  secondLabel: 'White',
+  supportsRated: false,
   supportsTimeControl: true,
 };
 
@@ -3395,6 +3409,7 @@ function chessKingGlyphNodes(value: LandingColorPreference): Node[] {
 }
 
 function landingGameSpecCapabilities(gameSpecId: LandingGameSpecId): LandingGameSpecCapabilities {
+  if (gameSpecId === GOMOKU_SPEC_ID) return GOMOKU_LANDING_CAPABILITIES;
   // Tenant capabilities live on their registry entries; chess (the fallback)
   // keeps its row here until the P2 migration.
   return (
@@ -3796,6 +3811,7 @@ export function roomCreationRequestBody(
 export function roomCreationGameSpecId(
   setup: LandingRoomSetup,
 ):
+  | typeof GOMOKU_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -3810,6 +3826,7 @@ export function roomCreationGameSpecId(
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
+  if (setup.gameSpecId === GOMOKU_SPEC_ID) return GOMOKU_SPEC_ID;
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) return XIANGQI_MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;

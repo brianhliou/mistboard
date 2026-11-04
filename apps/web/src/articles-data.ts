@@ -51,6 +51,7 @@ import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
 import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { atomicXiangqiBuildArticle } from './articles/content/atomic-xiangqi-build.js';
 import { crazyhouseXiangqiArticle } from './articles/content/crazyhouse-xiangqi.js';
+import { gomokuArticle } from './articles/content/gomoku.js';
 import { duckXiangqiStrategyArticle } from './articles/content/duck-xiangqi-strategy.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
@@ -140,6 +141,7 @@ export const articles: Article[] = [
   atomicXiangqiArticle,
   atomicXiangqiBuildArticle,
   crazyhouseXiangqiArticle,
+  gomokuArticle,
   antiXiangqiArticle,
   benedictXiangqiArticle,
   hordeXiangqiArticle,

@@ -24,6 +24,7 @@ import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
@@ -45,6 +46,7 @@ for (const flag of [
   'ATOMIC_XIANGQI',
   'DUCK_XIANGQI',
   'FORTRESS_XIANGQI',
+  'GOMOKU',
   'JIEQI',
   'JUNGLE',
   'JUNGLE_FLIP',
@@ -76,6 +78,7 @@ const TENANTS: Record<string, AnyTenant> = Object.fromEntries(
     darkXiangqiTenant,
     duckXiangqiTenant,
     fortressXiangqiTenant,
+    gomokuTenant,
     jieqiTenant,
     jungleFlipTenant,
     jungleTenant,

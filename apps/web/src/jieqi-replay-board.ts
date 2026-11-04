@@ -23,6 +23,7 @@ import {
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
+  type JieqiPieceRole,
   type JieqiSquare,
   jieqiMoveLabel,
   parseJieqiFen,
@@ -33,9 +34,16 @@ import {
   installJieqiBoardStyles,
   type JieqiBoardArrow,
   type JieqiBoardMarker,
+  jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { BEST_STYLE } from './review/engine/engine-arrows.js';
+import { jieqiRevealOdds } from './review/jieqi-luck-mark.js';
+import {
+  attachLuckBadgeCard,
+  attachLuckMarkCard,
+  type LuckCardDetail,
+} from './review/luck-mark-card.js';
 import { moveGlyphTone } from './review/move-glyph.js';
 import {
   type ChapterShape,
@@ -50,6 +58,7 @@ export type JieqiReplayLine = { states: JieqiGameState[]; played: JieqiMove[] };
 
 /** The chapter's annotations, keyed as chapterAnnotations returns them. */
 export type JieqiReplayAnnotations = {
+  luck?: ReadonlyMap<number, { luck?: number }>;
   /** Judgment glyph per 1-based mainline ply. */
   glyphs?: Record<number, string>;
   /** The chapter's comment on a mainline move, by ply. */
@@ -183,6 +192,7 @@ export function mountJieqiReplayBoard(
     suffixClass?: string;
     note?: string;
     assessment?: string;
+    luck?: number;
     line?: { moves: string[]; verdict?: string; note?: string };
   }>;
   bottomSeat: () => 'first' | 'second';
@@ -208,6 +218,29 @@ export function mountJieqiReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
+  const luckDetail = (ply: number): LuckCardDetail | null => {
+    const luck = options.luck?.get(ply)?.luck;
+    const move = played[ply - 1];
+    const before = states[ply - 1];
+    const piece = move && before?.board[move.from];
+    if (luck === undefined || !move || !before || !piece?.faceDown) return null;
+    return {
+      square: move.to,
+      color: piece.color,
+      luck,
+      kind: 'reveal',
+      odds: jieqiRevealOdds(before, move),
+      capture: null,
+    };
+  };
+  const pieceArt = (role: JieqiPieceRole, color: JieqiColor) =>
+    jieqiPieceGhostSvg({ role, color, faceDown: false });
+  const detachMark = attachLuckMarkCard(frame, () => (inLine ? null : luckDetail(index)), pieceArt);
+  const detachBadge = attachLuckBadgeCard(
+    host.closest<HTMLElement>('.embed-card') ?? host,
+    (badge) => luckDetail(Number(badge.dataset.luckPath)),
+    pieceArt,
+  );
   const paint = (): void => {
     if (inLine) {
       const side = lines.get(inLine.atPly)!;
@@ -227,12 +260,25 @@ export function mountJieqiReplayBoard(
         : undefined;
     if (next) drawn.arrows.push(nextMoveArrow(next));
     const last = index > 0 ? (played[index - 1] ?? null) : null;
+    const luck = luckDetail(index);
     frame.innerHTML = renderJieqiBoardSvg(
       getJieqiPlayerView(states[index]!, perspective),
       perspective,
       {
         arrows: drawn.arrows,
-        markers: [...drawn.markers, ...(last ? glyphMarker(last, options.glyphs?.[index]) : [])],
+        markers: [
+          ...drawn.markers,
+          ...(last ? glyphMarker(last, options.glyphs?.[index]) : []),
+          ...(last && luck
+            ? [
+                {
+                  square: last.to,
+                  kind: 'luck' as const,
+                  luck: { luck: luck.luck },
+                },
+              ]
+            : []),
+        ],
       },
     );
   };
@@ -260,6 +306,8 @@ export function mountJieqiReplayBoard(
 
   return {
     destroy: () => {
+      detachMark();
+      detachBadge();
       host.replaceChildren();
     },
     jumpToPly: (ply: number) => {
@@ -294,12 +342,14 @@ export function mountJieqiReplayBoard(
         const side = lines.get(ply);
         const meta = options.lines?.[ply];
         const assessment = options.assessments?.[ply];
+        const luck = luckDetail(ply);
         return {
           ply,
           label: label(line, i),
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(note ? { note } : {}),
           ...(assessment ? { assessment } : {}),
+          ...(luck ? { luck: Math.round(luck.luck) } : {}),
           ...(side
             ? {
                 line: {

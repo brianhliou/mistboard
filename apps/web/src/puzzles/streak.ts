@@ -7,6 +7,7 @@ import { type PuzzleAttempt, PuzzlePlayDisabledError, sendPuzzleQualityEvent } f
 import { puzzleInfoCard } from './queue-panel.js';
 import { puzzleBoardAdapter } from './registry.js';
 import { puzzleResultChips } from './result-chips.js';
+import { signInCta } from './sign-in-cta.js';
 
 type Outcome = 'solved' | 'skipped' | 'failed';
 type Run = {
@@ -485,6 +486,9 @@ function streakCount(score: number, label: string): HTMLElement {
 // Best for a signed-in player ("New best!" when this run beat it); a quiet
 // sign-in line for a guest, whose best is not kept.
 function bestLine(run: Run, newBest: boolean, short = false): HTMLElement {
+  if (run.best === null && !short) {
+    return signInCta(t('puzzle.streakSignInBest'), 'puzzle-streak-signin');
+  }
   if (run.best === null) {
     const link = document.createElement('a');
     link.className = 'puzzle-streak-meta puzzle-streak-signin';

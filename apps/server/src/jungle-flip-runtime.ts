@@ -1,5 +1,5 @@
 /**
- * Flip Jungle (兽棋 / 翻翻棋) live-room type aliases over the generic VariantTenant
+ * Flip Jungle (翻翻兽棋) live-room type aliases over the generic VariantTenant
  * runtime. Types only — the ws, factory, routes, and registration modules call the
  * generic tenant* helpers directly, bound to jungleFlipTenant.
  *

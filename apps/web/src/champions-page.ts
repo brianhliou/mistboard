@@ -150,8 +150,8 @@ const FAIRY_STOCKFISH_L8 = {
 // lab/jieqi-match/jqe-vs-abj-20261031, commit c01c608, 2026-10-31): 600 games at 4 s
 // and 4 threads, 306-67-227 (a 0.566 score). The write-up (blog/ab-jchess-vs-jqe)
 // goes live on its own date, as the jqe one did; the test pins this date to the
-// article's publishedAt. No study of the match exists, so the card links no games.
-export const AB_JCHESS_2026_WRITE_UP = { status: 'published', publishedAt: '2026-11-02' } as const;
+// article's publishedAt and status. The match's study (SwSUugEY) is linked from the post.
+export const AB_JCHESS_2026_WRITE_UP = { status: 'published', publishedAt: '2026-11-10' } as const;
 const AB_JCHESS_2026_MATCH: TitleMatch = articleIsLive(AB_JCHESS_2026_WRITE_UP)
   ? { writeUpHref: '/blog/ab-jchess-vs-jqe' }
   : {};
