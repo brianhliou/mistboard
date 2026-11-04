@@ -151,7 +151,7 @@ const FAIRY_STOCKFISH_L8 = {
 // and 4 threads, 306-67-227 (a 0.566 score). The write-up (blog/ab-jchess-vs-jqe)
 // goes live on its own date, as the jqe one did; the test pins this date to the
 // article's publishedAt. No study of the match exists, so the card links no games.
-export const AB_JCHESS_2026_WRITE_UP = { status: 'published', publishedAt: '2026-11-02' } as const;
+export const AB_JCHESS_2026_WRITE_UP = { status: 'draft', publishedAt: '2026-11-02' } as const;
 const AB_JCHESS_2026_MATCH: TitleMatch = articleIsLive(AB_JCHESS_2026_WRITE_UP)
   ? { writeUpHref: '/blog/ab-jchess-vs-jqe' }
   : {};
