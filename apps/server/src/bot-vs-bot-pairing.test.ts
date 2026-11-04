@@ -74,7 +74,6 @@ test('each variant ladder is the engines its first-party bots play, and only its
     'xiangqi',
     'jieqi',
     'duck-xiangqi',
-    'atomic-xiangqi',
     'crazyhouse-xiangqi',
     'fortress-xiangqi',
     'banqi',
@@ -122,4 +121,8 @@ test('the jieqi EvE ladder schedules jqe only while MISTBOARD_JQE_ENABLED is on,
     if (prior === undefined) delete process.env.MISTBOARD_JQE_ENABLED;
     else process.env.MISTBOARD_JQE_ENABLED = prior;
   }
+});
+
+test('retired atomic has no scheduled bot ladder', () => {
+  assert.equal(botLadderFor('atomic-xiangqi'), null);
 });
