@@ -1217,7 +1217,6 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/variant-tenant/clock-projection.ts` | _needs a one-line description_ |
 | `apps/web/src/watch-duck-xiangqi-replay.ts` | _needs a one-line description_ |
 | `apps/web/src/watch-channel-markers.ts` | Watch channel id to variant marker, shared by /watch and /games; `variant-registry-sync.test.ts` fails for a server channel without one. |
-| `apps/server/src/atomic-xiangqi-eve-adapter.ts` | Atomic Xiangqi EvE adapter: the rated-ladder runner plays the variant through the patched FSF tiers |
 | `apps/server/src/atomic-xiangqi-fsf-engine.ts` | Atomic Xiangqi Fairy-Stockfish provider: eight node-anchored tiers on the patched binary, warm sessions, the fixed-depth analysis session |
 | `apps/server/src/atomic-xiangqi-registration.ts` | Atomic Xiangqi tenant registration: rooms, lobby seek (rated), TV channel, PGN/JSON export binding, share card |
 | `apps/server/src/atomic-xiangqi-tenant.ts` | Atomic Xiangqi variant tenant: event log shape, persistence mapping, engine seat |
@@ -1229,7 +1228,8 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/profile-game-boards.ts` | Final-position thumbnails for the profile games list (`?boards=1`, #509): one batched event load, the share card's public position with roles dropped, cached per room |
 | `apps/server/src/routes/atomic-xiangqi-games.ts` | Atomic Xiangqi postgame API plus the cached whole-game analysis routes on the patched FSF |
 | `apps/server/src/routes/atomic-xiangqi-rooms.ts` | Atomic Xiangqi room creation route (PvP, PvE tiers; rated only via the lobby seek) |
-| `apps/server/src/server-atomic-xiangqi-engine.ts` | Atomic Xiangqi live bot move scheduling and the per-move decision artifact |
+| `apps/server/src/server-atomic-xiangqi-engine.ts` | Atomic Xiangqi pure move helpers kept for historical games (retired #850: no live bot scheduling) |
+| `apps/server/src/atomic-xiangqi-engine-history.ts` | Atomic Xiangqi historical engine ids, display names and analysis cache keys; pure, no native engine |
 | `apps/server/src/study-preview-board.ts` | _needs a one-line description_ |
 | `apps/web/src/anti-xiangqi-article-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/atomic-xiangqi-board.ts` | Atomic Xiangqi board marks: aftermath rings, shockwave, capture detonation animation |
