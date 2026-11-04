@@ -5,6 +5,7 @@ import type { Api } from 'chessground/api';
 import type * as cg from 'chessground/types';
 import { chessgroundAnimation } from './board-anim.js';
 import { captureRow } from './capture-render.js';
+import { t } from './i18n/catalog.js';
 
 export type ReplayPaneHandle = {
   el: HTMLDivElement;
@@ -36,11 +37,11 @@ export function createPane(
   boardEl.className = 'board replay-board';
   const topCapturesEl = document.createElement('div');
   topCapturesEl.className = 'captures-strip replay-captures replay-captures-top';
-  topCapturesEl.setAttribute('aria-label', 'Pieces captured');
+  topCapturesEl.setAttribute('aria-label', t('replay.piecesCaptured'));
   const capturesEl = document.createElement('div');
   capturesEl.className = 'captures-strip replay-captures replay-captures-bottom';
   if (kind === 'truth') capturesEl.classList.add('replay-captures-truth');
-  capturesEl.setAttribute('aria-label', 'Pieces captured');
+  capturesEl.setAttribute('aria-label', t('replay.piecesCaptured'));
   const clockSlot = document.createElement('div');
   clockSlot.className = 'replay-pane-clock-slot';
   const statusEl = document.createElement('div');
@@ -83,12 +84,12 @@ export function renderTruthCaptures(
 
   const whiteSide = document.createElement('div');
   whiteSide.className = 'captures-truth-side captures-truth-side-white';
-  whiteSide.setAttribute('aria-label', 'Black pieces captured by White');
+  whiteSide.setAttribute('aria-label', t('replay.blackPiecesCapturedByWhite'));
   if (whiteCaptureRow) whiteSide.append(whiteCaptureRow);
 
   const blackSide = document.createElement('div');
   blackSide.className = 'captures-truth-side captures-truth-side-black';
-  blackSide.setAttribute('aria-label', 'White pieces captured by Black');
+  blackSide.setAttribute('aria-label', t('replay.whitePiecesCapturedByBlack'));
   if (blackCaptureRow) blackSide.append(blackCaptureRow);
 
   split.append(whiteSide, blackSide);

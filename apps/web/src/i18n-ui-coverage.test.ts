@@ -49,9 +49,6 @@ const ALLOWED: Record<string, Reason> = {
   'videos-data.ts': 'content', // third-party video titles
   'xiangqi-mahjong-32-rules-diagrams.ts': 'content', // rules-page tile alt text; article-i18n.coverage.test.ts
   // visitor-facing debt
-  'replay-board.ts': '#464',
-  'review/move-tree.ts': '#464',
-  'review/opening-explorer.ts': '#464',
   'variant-mini-boards.ts': '#464',
 };
 
