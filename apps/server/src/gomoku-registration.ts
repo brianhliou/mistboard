@@ -17,6 +17,7 @@ import {
 } from './gomoku-tenant.js';
 import * as persistence from './persistence.js';
 import { isAllowedFullTimeControl, writeJson } from './routes/lib.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -44,6 +45,24 @@ import {
 
 export const gomokuRooms = new Map<string, GomokuRuntimeRoom>();
 export const gomokuWs = createTenantWsRuntime(gomokuTenant, { allowBrowserEngineMoves: true });
+const gomokuCorrespondence = tenantCorrespondenceBinding(
+  // Live admin playtests bypass the flag at their own admission doors. Async
+  // seeks use the registration flag and the shared per-account grant checks;
+  // the factory must also refuse while the Gomoku flag is off.
+  { ...gomokuTenant, enabled: gomokuEnabled },
+  {
+    factoryContext: () => ({
+      rooms: gomokuRooms,
+      isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, gomokuTenant.kind),
+      appendRoomEvent: persistence.appendRoomEvent,
+      isPersistenceEnabled: persistence.isInitialized,
+      recordPersistenceError: (roomId, seq, eventType, err) =>
+        recordTenantPersistenceError(gomokuTenant, roomId, seq, eventType, err),
+    }),
+    getOrLoadRoom: (roomId) => getOrLoadTenantRoom(gomokuTenant, gomokuRooms, roomId),
+    lifecycleCtx: gomokuWs.lifecycleCtx,
+  },
+);
 const gomokuExport = tenantExportBinding(gomokuTenant, {
   gameRouteBase: '/gomoku/game',
   uci: (move) => move.to,
@@ -190,6 +209,5 @@ registerVariantTenant({
       return { board, lastMove, winningLine };
     },
   },
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...gomokuCorrespondence,
 });

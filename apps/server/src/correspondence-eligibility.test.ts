@@ -15,6 +15,7 @@ import {
   CHESS_SPEC_ID,
   correspondenceTimeControl,
   GAME_SPECS,
+  GOMOKU_SPEC_ID,
   isCorrespondenceRatedSpec,
   isOfficialTimeControl,
   MAHJONG_SPEC_ID,
@@ -172,8 +173,9 @@ test('XMJ is not played by correspondence, publicly or by grant (2026-10-25)', (
 });
 
 test('an allowlisted spec is off the public eligible list, backed by a factory and a sweeper, and never rated', async () => {
-  // XMJ has launched; HK mahjong has four seats and cannot use correspondence.
-  assert.equal(CORRESPONDENCE_ALLOWLISTED_SPECS.size, 0);
+  // Gomoku has correspondence parity before launch; XMJ remains held out and
+  // HK mahjong has four seats and cannot use correspondence.
+  assert.deepEqual([...CORRESPONDENCE_ALLOWLISTED_SPECS], [GOMOKU_SPEC_ID]);
   for (const specId of CORRESPONDENCE_ALLOWLISTED_SPECS) {
     // Disjoint: the eligible list is public (copy, pickers, rated eligibility).
     assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(specId), `${specId} is on the public list`);
