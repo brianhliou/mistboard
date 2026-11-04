@@ -153,6 +153,10 @@ Multiple sessions share one Postgres: set `MISTBOARD_DEV_PORT_BASE` (default
 3000) to move a second worktree's pair to other ports (web = base, server =
 base + 1; the web proxy and dev WebSocket URL follow via `MISTBOARD_DEV_API_URL`).
 `strictPort` keeps an occupied port a loud failure, never an auto-increment.
+Both halves bind to `127.0.0.1` by default; set `MISTBOARD_DEV_LAN=1` to bind
+to `0.0.0.0` for phone testing. The web's API proxy always uses `127.0.0.1`
+to reach the paired server, and dev WebSockets follow the page's hostname.
+Production's default bind address is unchanged.
 
 The local Postgres URL is `postgres://mistboard:mistboard@localhost:5435/mistboard`.
 Migrations run via a tiny in-repo script — no ORM, no migration framework. Raw
