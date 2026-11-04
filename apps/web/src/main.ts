@@ -18,6 +18,7 @@ import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalo
 import {
   applyInternalTag,
   captureException,
+  initializeHumanInputTracking,
   setPostHogInstance,
   trackLocaleResolved,
 } from './analytics.js';
@@ -151,6 +152,7 @@ if (!isEmbedDocument)
 const phKey = import.meta.env.VITE_POSTHOG_KEY;
 const phHost = import.meta.env.VITE_POSTHOG_HOST;
 if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
+  initializeHumanInputTracking();
   void import('posthog-js').then(({ default: posthog }) => {
     posthog.init(phKey, {
       api_host: phHost,

@@ -244,6 +244,56 @@ export function applyInternalTag(ph: Pick<PostHogLike, 'register' | 'setPersonPr
   if (isInternalBrowser()) tagInternal(ph);
 }
 
+// Like the internal-browser marker, this survives sign-out and PostHog resets.
+// Keep it on the person so a project-level person filter can include the
+// pageview sent before the first input. Event properties cannot do that.
+const HUMAN_INPUT_BROWSER_KEY = 'mistboard-human-input';
+let humanInputSeen = false;
+let stopHumanInputTracking: (() => void) | null = null;
+
+function hasHumanInput(): boolean {
+  if (humanInputSeen) return true;
+  try {
+    return window.localStorage.getItem(HUMAN_INPUT_BROWSER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function applyHumanInputTag(ph: Pick<PostHogLike, 'setPersonProperties'>): void {
+  if (hasHumanInput()) ph.setPersonProperties?.({ human_input: true });
+}
+
+// Start before the async SDK import: a visitor can interact while it loads.
+// The in-memory marker also works when localStorage is blocked. A real reader
+// who never touches, scrolls or types remains unflagged by this heuristic.
+export function initializeHumanInputTracking(): () => void {
+  if (stopHumanInputTracking) return stopHumanInputTracking;
+  if (hasHumanInput()) return () => {};
+  const events = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'] as const;
+  const stop = () => {
+    for (const type of events) window.removeEventListener(type, onInput, true);
+    stopHumanInputTracking = null;
+  };
+  const onInput = (event: Event) => {
+    if (!event.isTrusted) return;
+    stop();
+    humanInputSeen = true;
+    try {
+      window.localStorage.setItem(HUMAN_INPUT_BROWSER_KEY, '1');
+    } catch {
+      // Storage blocked: remember it for this page, including identity resets.
+    }
+    if (posthogInstance) applyHumanInputTag(posthogInstance);
+  };
+  // Capture sees non-bubbling scrolls in nested panels and input whose target
+  // stops propagation. Passive listeners never delay normal input handling.
+  for (const type of events)
+    window.addEventListener(type, onInput, { capture: true, passive: true });
+  stopHumanInputTracking = stop;
+  return stop;
+}
+
 let posthogInstance: PostHogLike | null = null;
 // Actions queued before posthog-js finishes its async import (see main.ts).
 // Closures keep capture/identify/reset uniform so ordering is preserved.
@@ -259,6 +309,7 @@ function enqueue(action: (ph: PostHogLike) => void): void {
 
 export function setPostHogInstance(instance: PostHogLike): void {
   posthogInstance = instance;
+  applyHumanInputTag(instance);
   while (pending.length > 0) {
     pending.shift()!(instance);
   }
@@ -439,6 +490,7 @@ export function resetIdentity(): void {
   enqueue((ph) => {
     ph.reset();
     applyInternalTag(ph);
+    applyHumanInputTag(ph);
   });
 }
 
