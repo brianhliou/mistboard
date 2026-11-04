@@ -15,11 +15,13 @@ import {
   createBanqiDeal,
   createJieqiDeal,
   createJungleFlipDeal,
+  GOMOKU_OPENINGS,
   getAtomicXiangqiLegalMoves,
   getBanqiLegalMoves,
   getCrazyhouseXiangqiLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
+  getGomokuLegalMoves,
   getJieqiLegalMoves,
   getJungleFlipLegalMoves,
   getJungleLegalMoves,
@@ -32,6 +34,7 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
@@ -91,6 +94,16 @@ export const VARIANTS: VariantSpec[] = [
   { tenant: darkXiangqiTenant, enumerate: (s) => getXiangqiLegalMoves(s) },
   // Board moves and drops together: a drop is a move like any other.
   { tenant: crazyhouseXiangqiTenant, enumerate: (s) => getCrazyhouseXiangqiLegalMoves(s) },
+  {
+    tenant: gomokuTenant,
+    enumerate: (s) => getGomokuLegalMoves(s),
+    // Persist only the public opening, not its screening metadata. Hydration
+    // must replay this exact deal rather than call the tenant's crypto RNG.
+    makeSetup: (rng) => {
+      const { stones, turn } = GOMOKU_OPENINGS[Math.floor(rng() * GOMOKU_OPENINGS.length)]!;
+      return { stones, turn };
+    },
+  },
 ];
 
 export const DEFAULT_BASE_SEED = 7;
