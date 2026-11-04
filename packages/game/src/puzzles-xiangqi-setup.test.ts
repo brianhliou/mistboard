@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyStandardXiangqiMove,
+  createInitialStandardXiangqiState,
   createInitialXiangqiState,
   deriveXiangqiPuzzleSetupMove,
+  standardXiangqiProgressClockLimit,
   XIANGQI_PUZZLES,
   type XiangqiGameState,
   type XiangqiMove,
@@ -114,4 +116,16 @@ test('every seed puzzle with a quiet setup move rebuilds or fails closed, never 
       `${puzzle.id}: rebuilt board must replay to initial`,
     );
   }
+});
+
+test('puzzle setup reconstruction preserves the source game progress-clock stamp', () => {
+  const state = createInitialStandardXiangqiState('puzzle-rules');
+  const initial = applyStandardXiangqiMove(state, GAME[0]!);
+  const puzzle = { initial, sourceGame: { gameId: 'xq_new', ply: 1 } };
+  const setup = deriveXiangqiPuzzleSetupMove(puzzle, GAME);
+  assert.ok(setup);
+  const pre = xiangqiPuzzlePreSetupState(initial, setup);
+  assert.ok(pre);
+  assert.equal(standardXiangqiProgressClockLimit(pre), 120);
+  assert.equal(standardXiangqiProgressClockLimit(applyStandardXiangqiMove(pre, GAME[0]!)), 120);
 });

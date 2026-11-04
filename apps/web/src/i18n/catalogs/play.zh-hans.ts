@@ -813,6 +813,7 @@ export const ZH_HANS_PLAY = {
   'result.deadPosition': '死局',
   'result.sixtyMovesNoCapture': '60 回合无吃子',
   'result.generalBlownUp': '将帅被炸',
+  'result.noCaptureLimit': '无吃子步数到限',
   'result.sixtyPliesNoCapture': '60 步无吃子',
   'result.wallRanOut': '牌墙摸完',
   'result.selfDraw': '自摸',

@@ -9,7 +9,7 @@
 import {
   applyStandardXiangqiMove,
   applyXiangqiRecordMove,
-  createInitialXiangqiState,
+  createInitialStandardXiangqiState,
   fsfUciToXiangqiSquares,
   getStandardXiangqiPlayerView,
   isStandardXiangqiLegalMove,
@@ -42,7 +42,7 @@ export function buildXiangqiReplayFromMoves(
   startState?: XiangqiGameState,
   options: { record?: boolean } = {},
 ): XiangqiReplay {
-  let state = startState ?? createInitialXiangqiState('analysis');
+  let state = startState ?? createInitialStandardXiangqiState('analysis');
   const views: StandardXiangqiPlayerView[] = [getStandardXiangqiPlayerView(state, 'red')];
   const applied: XiangqiMove[] = [];
   for (let i = 0; i < moves.length; i++) {

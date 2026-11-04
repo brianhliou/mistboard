@@ -57,8 +57,8 @@ export type VariantSpec = {
   // Deterministic per-game setup from the harness's seeded RNG. Required for
   // tenants whose rules.createSetup mints a server-secret deal with a crypto RNG
   // (jieqi/banqi/jungle-flip): calling the deal builder with our
-  // seeded RNG instead keeps the committed fixtures reproducible. Omit for
-  // tenants with a fixed starting position.
+  // seeded RNG instead keeps the committed fixtures reproducible. Fixed setups
+  // can call createSetup directly; omit only for tenants without createSetup.
   makeSetup?: (rng: () => number) => unknown;
 };
 
@@ -90,7 +90,11 @@ export const VARIANTS: VariantSpec[] = [
   // picking the piece move first would bias the fixture toward tidy duck play.
   { tenant: duckXiangqiTenant, enumerate: (s) => getDuckXiangqiLegalTurns(s) },
   { tenant: atomicXiangqiTenant, enumerate: (s) => getAtomicXiangqiLegalMoves(s) },
-  { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
+  {
+    tenant: xiangqiTenant,
+    enumerate: (s) => getStandardXiangqiLegalMoves(s),
+    makeSetup: () => xiangqiTenant.rules.createSetup!(),
+  },
   { tenant: darkXiangqiTenant, enumerate: (s) => getXiangqiLegalMoves(s) },
   // Board moves and drops together: a drop is a move like any other.
   { tenant: crazyhouseXiangqiTenant, enumerate: (s) => getCrazyhouseXiangqiLegalMoves(s) },
