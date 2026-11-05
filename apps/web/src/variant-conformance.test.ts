@@ -495,7 +495,8 @@ describe('FFQ banqi canonical web metadata', () => {
 
   it('has no public play, rating, rules, watch, analysis, editor, study or embed listing', () => {
     const id = 'ffq-banqi';
-    expect(variantMiniIdForGameSpec(id)).toBeNull();
+    // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
     expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).not.toContain(id);
     expect(WATCH_CHANNEL_MINI_IDS).not.toHaveProperty(id);

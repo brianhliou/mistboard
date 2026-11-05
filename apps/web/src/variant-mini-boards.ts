@@ -20,6 +20,7 @@ export type VariantMiniId =
   | 'jieqi'
   | 'banqi'
   | 'three-kingdoms-banqi'
+  | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
   | 'xiangqi-mahjong';
@@ -124,6 +125,14 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'TKB',
     accent: '#2563a6',
     blurb: 'Flip pieces on a 9x5 grid of points and capture to score 100 points.',
+    family: 'xiangqi',
+  },
+  {
+    id: 'ffq-banqi',
+    label: 'FFQ Banqi',
+    shortLabel: 'FFQ',
+    accent: '#2563a6',
+    blurb: 'Banqi played for HP: each capture drains the opponent, and empty HP loses.',
     family: 'xiangqi',
   },
   {

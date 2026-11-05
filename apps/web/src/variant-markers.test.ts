@@ -25,17 +25,15 @@ const MARKER_PX = 1254;
 // Game specs that are deliberately not variants anywhere a marker is shown.
 // Adding to this list is a product decision, not a way to get a test green.
 // HK mahjong is an allowlisted playtest with no public surface to mark.
-// FFQ is reserved before its hidden spec is registered; it has no board art.
-const SPECS_WITHOUT_MARKER = ['chess', 'ffq-banqi', 'mahjong'];
+const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
 
 describe('variant markers', () => {
-  it('explicitly reserves FFQ without a mini-board, marker or public variant row', () => {
+  it('gives FFQ its own marker without a public variant row', () => {
     const id = 'ffq-banqi';
-    expect(VARIANT_MINI_BY_GAME_SPEC).toHaveProperty(id, null);
-    expect(variantMiniIdForGameSpec(id)).toBeNull();
-    expect(VARIANT_MINIS.map((mini) => mini.id)).not.toContain(id);
-    expect(isVariantMarkerId(id)).toBe(false);
-    expect(() => renderVariantMarker(id as VariantMiniId)).toThrow(/No variant marker/);
+    expect(VARIANT_MINI_BY_GAME_SPEC).toHaveProperty(id, id);
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(isVariantMarkerId(id)).toBe(true);
+    expect(renderVariantMarker(id)).toContain("url('/variant-markers/final/ffq-banqi.png')");
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
   });
 

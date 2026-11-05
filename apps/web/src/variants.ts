@@ -103,8 +103,8 @@ export const VARIANT_MINI_BY_GAME_SPEC: Readonly<Record<GameSpecId, VariantMiniI
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
-  // Hidden kernel only: no mini-board or public marker.
-  'ffq-banqi': null,
+  // Hidden admin playtest: its marker, without a public play or rating row.
+  'ffq-banqi': 'ffq-banqi',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
   [XIANGQI_MAHJONG_SPEC_ID]: 'xiangqi-mahjong',
