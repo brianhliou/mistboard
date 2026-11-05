@@ -274,6 +274,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       const display = formatScore(opts.variant, cp, mate);
       evalLabel.textContent = firstPlayer ? `P1 ${display}` : display;
       if (firstPlayer) evalLabel.title = t('engine.firstPlayerPerspective');
+      else if (opts.variant === 'gomoku') evalLabel.title = formatGomokuEval(cp, mate);
       else evalLabel.removeAttribute('title');
       opts.evalBar?.setEval(cp, mate);
     }
@@ -596,7 +597,9 @@ function evalTone(cp: number | null, mate: number | null, variant: CevalVariant)
 }
 
 function formatScore(variant: CevalVariant, cp: number | null, mate: number | null): string {
-  if (variant === 'gomoku') return formatGomokuEval(cp, mate);
+  // Gomoku's short form ("W in 7") keeps the headline one width as a lead
+  // turns into a forced win; the words go in the headline's tooltip.
+  if (variant === 'gomoku') return formatGomokuEval(cp, mate, { compact: true });
   return isMistyCevalVariant(variant) ? formatMistyEval(cp, mate) : formatEval(cp, mate);
 }
 
