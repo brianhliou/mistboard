@@ -3,6 +3,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const BROWSER_SMOKE_PATTERNS = [
   '.github/workflows/ci.yml',
@@ -14,16 +15,17 @@ const BROWSER_SMOKE_PATTERNS = [
 ];
 const MAX_PRINTED_FILES = 30;
 
-const options = parseArgs(process.argv.slice(2));
-if (options.help) {
-  printHelp();
-  process.exit(0);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    printHelp();
+  } else {
+    const plan = buildPlan(readChangedFiles(options));
+    printPlan(plan);
+    writeGithubOutputs(plan, options);
+    writeGithubSummary(plan, options);
+  }
 }
-
-const plan = buildPlan();
-printPlan(plan);
-writeGithubOutputs(plan);
-writeGithubSummary(plan);
 
 function parseArgs(args) {
   const parsed = {
@@ -57,8 +59,9 @@ function parseArgs(args) {
   return parsed;
 }
 
-function buildPlan() {
-  const { changedFiles, warning } = readChangedFiles();
+// Local preship and hosted CI deliberately share the same patterns and
+// conservative fallback, even though they obtain their changed paths differently.
+export function buildPlan({ changedFiles, warning = null }) {
   const matched = [];
   const unmatched = [];
 
@@ -87,7 +90,7 @@ function buildPlan() {
   };
 }
 
-function readChangedFiles() {
+function readChangedFiles(options) {
   if (options.files.length > 0) {
     return {
       changedFiles: unique(options.files.map(normalizePath)),
@@ -243,7 +246,7 @@ function printPlan({ changedFiles, matched, reason, runBrowserSmoke, unmatched, 
   printList('unmatched', unmatched);
 }
 
-function writeGithubOutputs({ changedFiles, matched, reason, runBrowserSmoke, warning }) {
+function writeGithubOutputs({ changedFiles, matched, reason, runBrowserSmoke, warning }, options) {
   const outputPath = options.githubOutput ?? process.env.GITHUB_OUTPUT;
   if (!outputPath) return;
   appendFileSync(
@@ -259,14 +262,10 @@ function writeGithubOutputs({ changedFiles, matched, reason, runBrowserSmoke, wa
   );
 }
 
-function writeGithubSummary({
-  changedFiles,
-  matched,
-  reason,
-  runBrowserSmoke,
-  unmatched,
-  warning,
-}) {
+function writeGithubSummary(
+  { changedFiles, matched, reason, runBrowserSmoke, unmatched, warning },
+  options,
+) {
   const summaryPath = options.summary ?? process.env.GITHUB_STEP_SUMMARY;
   if (!summaryPath) return;
   appendFileSync(

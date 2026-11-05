@@ -93,6 +93,7 @@
     "worktree:prepare": "node scripts/worktree-prepare.mjs",
     "verify": "node scripts/verify.mjs",
     "ci:quick": "node scripts/ci-checks.mjs quick",
+    "ci:preship": "node scripts/ci-checks.mjs preship",
     "ci:local": "node scripts/ci-checks.mjs local",
     "ci:browser-smoke:plan": "node scripts/ci-browser-smoke-plan.mjs",
     "hooks:install": "git config core.hooksPath .githooks",

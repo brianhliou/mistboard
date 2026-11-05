@@ -31,6 +31,10 @@ cp.spawnSync = (command, args, options) => {
     if (args[0] === 'log') return ok('2020-01-01T00:00:00Z');
     if (args[0] === 'rev-parse') return ok(args.includes('--abbrev-ref') ? 'agent/fixture' : args.at(-1) === 'HEAD' ? head : base);
     if (args[0] === 'merge-base') return ok(base);
+    if (args[0] === 'diff' && args.at(-1) === 'origin/main') {
+      if (failures.gitDiff) return { status: 1, stderr: 'fixture missing origin/main' };
+      return ok([...(failures.files ?? []), ...(failures.dirtyFiles ?? [])].join('\\n'));
+    }
     if (args[0] === 'diff') return ok((args.includes('HEAD')
       ? (failures.dirtyFiles ?? [])
       : (failures.files ?? ['apps/server/src/persistence.ts'])).join('\\n'));
@@ -42,12 +46,22 @@ cp.spawnSync = (command, args, options) => {
   if (args[0] === 'scripts/pre-push-check.mjs' && args.includes('--plan')) {
     return originalSpawn(command, args, options);
   }
+  if (command === 'node' && args[0] === 'scripts/audit-prod-deps.mjs') {
+    return { status: failures.audit ?? 0 };
+  }
+  if (command === 'npx' && args.includes('packages/game/src/variants-benedict-xiangqi.test.ts')) {
+    if (options.env?.MISTBOARD_DEEP_PERFT !== '1') throw new Error('deep perft was not enabled');
+    return { status: failures.perft ?? 0 };
+  }
   // The release normally uses time-command to preserve stage timings.
   if (args[0] === 'scripts/time-command.mjs') {
     const offset = args.indexOf('--');
     return cp.spawnSync(args[offset + 1], args.slice(offset + 2), options);
   }
   if (command === 'npm' && args[0] === 'run') {
+    if (failures.preshipEnv && args[1] === 'test:integration' && options.env?.MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE !== 'true') {
+      throw new Error('integration did not use the hosted environment');
+    }
     const code = failures[args.slice(1).join(' ')] ?? failures[args[1]] ?? 0;
     if (code === 'signal') return { status: null, signal: 'SIGTERM' };
     if (code === 'spawn') return { status: null, error: new Error('fixture ENOENT') };
@@ -128,6 +142,117 @@ const ran = (calls, script) =>
     const line = call.join(' ');
     return line === `npm run ${script}` || line.startsWith(`npm run ${script} `);
   });
+
+test('preship includes every quick stage and all five hosted-only checks', () => {
+  const quick = fixture('scripts/ci-checks.mjs', ['quick'], {});
+  const result = fixture('scripts/ci-checks.mjs', ['preship'], {
+    files: ['apps/web/src/study.ts'],
+    preshipEnv: true,
+  });
+  assert.equal(result.status, 0, result.output);
+  const commands = result.calls.filter((call) => call[0] !== 'git');
+  assert.deepEqual(commands.slice(0, quick.calls.length), quick.calls);
+  assert.deepEqual(commands.slice(quick.calls.length), [
+    ['npm', 'run', 'test:integration', '--workspace', '@mistboard/server'],
+    ['npm', 'run', 'test:puzzles:corpus'],
+    ['npx', 'tsx', '--test', 'packages/game/src/variants-benedict-xiangqi.test.ts'],
+    ['node', 'scripts/audit-prod-deps.mjs'],
+    ['npm', 'run', 'test:study:persistent'],
+  ]);
+  assert.ok(result.calls.some((call) => call[0] === 'git' && call.at(-1) === 'origin/main'));
+  for (const command of commands) {
+    const line = result.summary.split('\n').find((entry) => entry.includes(command.join(' ')));
+    assert.match(line ?? '', /passed.*\d+\.\d+s/, command.join(' '));
+  }
+  const pkg = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  assert.equal(pkg.scripts['ci:preship'], 'node scripts/ci-checks.mjs preship');
+});
+
+test('preship reports all failures and still runs the final browser check', () => {
+  const result = fixture('scripts/ci-checks.mjs', ['preship', '--no-keep-going'], {
+    files: ['apps/web/src/study.ts'],
+    lint: 7,
+    'test:integration': 8,
+    'test:puzzles:corpus': 9,
+    perft: 10,
+    audit: 11,
+    'test:study:persistent': 12,
+  });
+  assert.equal(result.status, 1, result.output);
+  for (const code of [7, 8, 9, 10, 11, 12]) {
+    assert.match(result.summary, new RegExp(`exit ${code}[;) ]`));
+  }
+  assert.ok(ran(result.calls, 'test:study:persistent'));
+  assert.match(result.summary, /ci:preship: 6 failed/);
+});
+
+test('preship skips browser smoke with a logged reason for unrelated paths', () => {
+  const result = fixture('scripts/ci-checks.mjs', ['preship'], {
+    files: ['apps/server/src/persistence.ts', 'packages/game/src/index.ts'],
+  });
+  assert.equal(result.status, 0, result.output);
+  assert.equal(ran(result.calls, 'test:study:persistent'), false);
+  assert.match(result.output, /skip:.*test:study:persistent.*no_browser_smoke_pattern_match/);
+  assert.ok(ran(result.calls, 'test:integration'));
+  assert.ok(ran(result.calls, 'test:puzzles:corpus'));
+});
+
+test('preship uses every browser smoke pattern shared with hosted CI', () => {
+  for (const file of [
+    '.github/workflows/ci.yml',
+    'apps/web/src/study.ts',
+    'packages/board-render/src/index.ts',
+    'package.json',
+    'package-lock.json',
+    'scripts/ci-browser-smoke-plan.mjs',
+  ]) {
+    const result = fixture('scripts/ci-checks.mjs', ['preship'], { files: [file] });
+    assert.equal(result.status, 0, result.output);
+    assert.ok(ran(result.calls, 'test:study:persistent'), file);
+  }
+});
+
+test('preship considers dirty and untracked browser fixes before a commit', () => {
+  for (const field of ['dirtyFiles', 'untrackedFiles']) {
+    const result = fixture('scripts/ci-checks.mjs', ['preship'], {
+      files: ['docs/operations.md'],
+      [field]: ['apps/web/src/study.ts'],
+    });
+    assert.equal(result.status, 0, result.output);
+    assert.ok(ran(result.calls, 'test:study:persistent'), field);
+  }
+});
+
+test('preship conservatively includes browser smoke for an empty or unknown diff', () => {
+  for (const failures of [{ files: [] }, { gitDiff: true }]) {
+    const result = fixture('scripts/ci-checks.mjs', ['preship'], failures);
+    assert.equal(result.status, 0, result.output);
+    assert.ok(ran(result.calls, 'test:study:persistent'), result.output);
+  }
+});
+
+test('the shared browser planner preserves its hosted CLI outputs', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mistboard-browser-plan-'));
+  const output = path.join(dir, 'github-output.txt');
+  const summary = path.join(dir, 'summary.md');
+  const result = spawnSync(
+    process.execPath,
+    [
+      'scripts/ci-browser-smoke-plan.mjs',
+      '--file',
+      'apps/web/src/study.ts',
+      '--github-output',
+      output,
+      '--summary',
+      summary,
+    ],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /run_browser_smoke=true/);
+  assert.match(readFileSync(output, 'utf8'), /reason=browser_smoke_pattern_match/);
+  assert.match(readFileSync(summary, 'utf8'), /Browser smoke: \*\*run\*\*/);
+});
 
 test('a web and a server unit failure are both reported in one run', () => {
   const result = fixture('scripts/ci-checks.mjs', ['quick'], {
