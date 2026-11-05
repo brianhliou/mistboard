@@ -456,6 +456,15 @@ describe('hidden Gomoku live room', () => {
     expect(panel.textContent).not.toContain('GPL-3.0');
   });
 
+  it('marks each player row with the stone that seat plays (phone, 2026-11-05)', async () => {
+    await mount(position(0), 'white', 0, pveFrame('white'));
+    const rows = [...document.querySelectorAll('.clock-player-line')];
+    const stones = rows.map((row) => row.querySelector('.clock-seat-stone')?.className ?? null);
+    expect(stones.sort()).toEqual(['clock-seat-stone black', 'clock-seat-stone white']);
+    const own = rows.find((row) => row.textContent?.includes('You'));
+    expect(own?.querySelector('.clock-seat-stone.white')).not.toBeNull();
+  });
+
   it('shows no bot panel while Rapfi is idle on the human turn', async () => {
     await mount(position(0), 'black', 0, pveFrame('black'));
     expect(document.querySelector('[data-gomoku-bot]')).toBeNull();

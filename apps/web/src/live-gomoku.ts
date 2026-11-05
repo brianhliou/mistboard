@@ -221,6 +221,12 @@ const tenant: WebVariantTenant<GomokuColor> = {
   },
   isColor: isGomokuColor,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
+  seatMarker: (color) => {
+    const stone = document.createElement('span');
+    stone.className = `clock-seat-stone ${color}`;
+    stone.setAttribute('aria-hidden', 'true');
+    return stone;
+  },
   // Like Three Kingdoms banqi, bootstrap even before the cosmetic admin hint
   // resolves. Every socket is account-gated by the server; only an admitted
   // room's hello can start Rapfi, including when the public flag is off.

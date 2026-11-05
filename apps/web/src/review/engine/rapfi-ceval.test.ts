@@ -177,7 +177,7 @@ describe('Rapfi shared ceval', () => {
     const w = latest();
     w.emit({ type: 'ready' });
     await vi.advanceTimersByTimeAsync(0);
-    expect(w.url).toContain('/engine/rapfi/worker.js?v=1387d11312');
+    expect(w.url).toContain('/engine/rapfi/worker.js?v=1387d11312.2');
     expect(w.commands).toContain('YXNBEST 3');
     expect(w.commands).toContain('INFO show_detail 2');
     expect(w.commands).toContain('YXBOARD\n7,7,1\n7,8,2\n8,8,1\n8,7,2\n6,8,1\n6,7,2\nDONE');
