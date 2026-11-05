@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
@@ -12,14 +11,17 @@ import {
   getGomokuLegalMoves,
   getGomokuPlayerView,
 } from '@mistboard/game';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeDisplayPreference } from './display-preferences.js';
 import { RAPFI_LEVELS, rapfiGameSeed, rapfiPlySeed } from './engine/rapfi.js';
+import { requireTestEngineNet } from './engine/test-net.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import type {
   TenantSocketClientOptions,
   TenantSocketFrame,
 } from './variant-tenant/socket-client.js';
+
+beforeAll(() => requireTestEngineNet('rapfi'));
 
 const socket = vi.hoisted(() => ({
   options: null as TenantSocketClientOptions | null,
@@ -676,9 +678,8 @@ describe('hidden Gomoku live room', () => {
 
 describe('hidden Gomoku setup conformance', () => {
   it('screens with the pinned evaluator despite CLI arguments and repeats with a cold hash', async () => {
-    const script = await import(
-      pathToFileURL(resolve(__dirname, '../../../scripts/screen-gomoku-openings.mjs')).href
-    );
+    // @ts-expect-error The standalone Node script has no TypeScript declaration.
+    const script = await import('../../../scripts/screen-gomoku-openings.mjs');
     const saved = process.argv;
     try {
       process.argv = [...saved, '--audit', '/tmp/unused-screen-test'];

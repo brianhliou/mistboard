@@ -15,12 +15,14 @@ import {
   rapfiPlySeed,
   selectRapfiMove,
 } from './rapfi.js';
+import { requireTestEngineNet } from './test-net.js';
 
 const engineDir = resolve(__dirname, '../../public/engine/rapfi');
 const clients: Rapfi[] = [];
 const threads: Worker[] = [];
 
 beforeAll(() => {
+  requireTestEngineNet('rapfi');
   // Fresh worktrees do not track the 40 MB data file. Exercise the same verified
   // setup as predev (staged locally, release URL when one has been configured).
   execFileSync(process.execPath, [resolve(__dirname, '../../scripts/fetch-rapfi-net.mjs')]);
