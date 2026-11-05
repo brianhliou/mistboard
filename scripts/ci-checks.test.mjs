@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -25,6 +25,9 @@ const ok = (stdout = '') => ({ status: 0, stdout, stderr: '' });
 cp.spawnSync = (command, args, options) => {
   appendFileSync(process.env.GATE_FIXTURE_CALLS, JSON.stringify([command, ...args]) + '\\n');
   if (command === 'git') {
+    if (args[0] === 'add') return ok();
+    if (args[0] === 'write-tree') return ok(failures.tree ?? 'c'.repeat(40));
+    if (args[0] === 'rev-parse' && args.includes('--git-path')) return ok(process.env.GATE_FIXTURE_INDEX);
     if (args[0] === 'status' || args[0] === 'fetch') return ok();
     if (args[0] === 'ls-files') return ok((failures.untrackedFiles ?? []).join('\\n'));
     if (args[0] === 'ls-remote') return ok(base + '\\trefs/heads/main');
@@ -107,31 +110,38 @@ globalThis.fetch = () => { throw new Error('unexpected network request'); };
 syncBuiltinESMExports();
 `;
 
-function fixture(script, args, failures) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'mistboard-gate-'));
+function fixture(script, args, failures, settings = {}) {
+  const dir = settings.dir ?? mkdtempSync(path.join(tmpdir(), 'mistboard-gate-'));
   const preload = path.join(dir, 'preload.mjs');
   const callsFile = path.join(dir, 'calls.jsonl');
   const lockFile = path.join(dir, 'release.lock');
   const logFile = path.join(dir, 'releases.jsonl');
   writeFileSync(preload, PRELOAD);
-  const result = spawnSync(process.execPath, ['--import', preload, script, ...args], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: 10_000,
-    env: {
-      ...process.env,
-      MISTBOARD_RELEASE_LOCK: lockFile,
-      MISTBOARD_RELEASE_LOG: logFile,
-      MISTBOARD_SKIP_PREPUSH_DB: '0',
-      MISTBOARD_RUN_DB_CHECKS: '1',
-      GATE_FIXTURE_CALLS: callsFile,
-      GATE_FIXTURE_FAILURES: JSON.stringify(failures),
+  writeFileSync(callsFile, '');
+  const result = spawnSync(
+    process.execPath,
+    ['--import', preload, path.join(ROOT, script), ...args],
+    {
+      cwd: settings.cwd ?? ROOT,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        MISTBOARD_RELEASE_LOCK: lockFile,
+        MISTBOARD_RELEASE_LOG: logFile,
+        MISTBOARD_SKIP_PREPUSH_DB: '0',
+        MISTBOARD_RUN_DB_CHECKS: '1',
+        MISTBOARD_GATE_STAMP_DIR: path.join(dir, 'stamps'),
+        GATE_FIXTURE_INDEX: path.join(dir, 'index'),
+        GATE_FIXTURE_CALLS: callsFile,
+        GATE_FIXTURE_FAILURES: JSON.stringify(failures),
+      },
     },
-  });
+  );
   assert.equal(result.error, undefined);
   const output = result.stdout + result.stderr;
   const calls = existsSync(callsFile)
-    ? readFileSync(callsFile, 'utf8').trim().split('\n').map(JSON.parse)
+    ? readFileSync(callsFile, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse)
     : [];
   const summary = output.slice(output.indexOf('# gate summary'));
   return { ...result, output, summary, calls, lockFile, logFile };
@@ -151,8 +161,9 @@ test('preship includes every quick stage and all five hosted-only checks', () =>
   });
   assert.equal(result.status, 0, result.output);
   const commands = result.calls.filter((call) => call[0] !== 'git');
-  assert.deepEqual(commands.slice(0, quick.calls.length), quick.calls);
-  assert.deepEqual(commands.slice(quick.calls.length), [
+  const quickCommands = quick.calls.filter((call) => call[0] !== 'git');
+  assert.deepEqual(commands.slice(0, quickCommands.length), quickCommands);
+  assert.deepEqual(commands.slice(quickCommands.length), [
     ['npm', 'run', 'test:integration', '--workspace', '@mistboard/server'],
     ['npm', 'run', 'test:puzzles:corpus'],
     ['npx', 'tsx', '--test', 'packages/game/src/variants-benedict-xiangqi.test.ts'],
@@ -380,7 +391,7 @@ test('gate-only runs the full release gate without release side effects', () => 
   assert.ok(
     result.calls
       .filter((call) => call[0] === 'git')
-      .every((call) => ['rev-parse', 'diff', 'ls-files'].includes(call[1])),
+      .every((call) => ['rev-parse', 'diff', 'ls-files', 'add', 'write-tree'].includes(call[1])),
     'gate-only must use local refs, without status, fetch, merge, commit or push',
   );
 });
@@ -415,4 +426,92 @@ test('gate-only rejects push and changelog options before running commands', () 
     assert.match(result.output, /--gate-only/);
     assert.deepEqual(result.calls, []);
   }
+});
+
+function reuseFixture() {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mistboard-reuse-'));
+  writeFileSync(path.join(dir, 'package-lock.json'), '{"lockfileVersion":3}');
+  return {
+    dir,
+    run: (script, args = [], failures = {}) => fixture(script, args, failures, { dir, cwd: dir }),
+  };
+}
+
+function assertReused(result) {
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.output, /reused gate .*stamps.*\.json/);
+  assert.equal(ran(result.calls, 'lint'), false, result.output);
+  assert.equal(ran(result.calls, 'build'), false, result.output);
+}
+
+test('quick and failed preship runs persist individual stage verdicts and durations', () => {
+  for (const [profile, failures] of [
+    ['quick', {}],
+    ['preship', { lint: 7 }],
+  ]) {
+    const f = reuseFixture();
+    const result = f.run('scripts/ci-checks.mjs', [profile], failures);
+    assert.equal(result.status, profile === 'quick' ? 0 : 1, result.output);
+    const stamps = readdirSync(path.join(f.dir, 'stamps'));
+    assert.equal(stamps.length, 1);
+    assert.match(stamps[0], /^[a-f0-9]{40}-[a-f0-9]{64}\.json$/);
+    const stamp = JSON.parse(readFileSync(path.join(f.dir, 'stamps', stamps[0]), 'utf8'));
+    assert.equal(stamp.profile, profile);
+    assert.equal(stamp.head, 'b'.repeat(40));
+    assert.ok(Number.isFinite(Date.parse(stamp.finishedAt)));
+    for (const stage of stamp.stages) {
+      assert.equal(typeof stage.name, 'string');
+      assert.equal(typeof stage.ok, 'boolean');
+      assert.ok(Number.isFinite(stage.ms) && stage.ms >= 0);
+    }
+    assert.equal(stamp.stages.find((s) => s.name === 'npm run lint').ok, !failures.lint);
+  }
+});
+
+test('release reuses tree A but a stamp for tree A does not satisfy tree B', () => {
+  const f = reuseFixture();
+  assert.equal(f.run('scripts/ci-checks.mjs', ['preship']).status, 0);
+  assertReused(
+    f.run('scripts/release-prod.mjs', ['--gate-only'], { files: ['apps/web/src/main.ts'] }),
+  );
+  const changed = f.run('scripts/release-prod.mjs', ['--gate-only'], { tree: 'd'.repeat(40) });
+  assert.equal(changed.status, 0, changed.output);
+  assert.ok(ran(changed.calls, 'lint'));
+  assert.ok(ran(changed.calls, 'build'));
+  assert.doesNotMatch(changed.output, /reused gate/);
+});
+
+test('release reruns a failed stage while reusing green stages from the failed gate', () => {
+  const f = reuseFixture();
+  assert.equal(f.run('scripts/ci-checks.mjs', ['quick'], { lint: 7 }).status, 1);
+  const result = f.run('scripts/release-prod.mjs', ['--gate-only']);
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.output, /reused gate/);
+  assert.ok(ran(result.calls, 'lint'));
+  assert.equal(ran(result.calls, 'build'), false);
+  assert.equal(ran(result.calls, 'test:tooling'), false);
+});
+
+test('a lockfile change invalidates a previously reusable gate', () => {
+  const f = reuseFixture();
+  assert.equal(f.run('scripts/ci-checks.mjs', ['quick']).status, 0);
+  assertReused(f.run('scripts/release-prod.mjs', ['--gate-only']));
+  writeFileSync(path.join(f.dir, 'package-lock.json'), '{"lockfileVersion":3,"changed":true}');
+  const result = f.run('scripts/release-prod.mjs', ['--gate-only']);
+  assert.equal(result.status, 0, result.output);
+  assert.ok(ran(result.calls, 'lint'));
+  assert.ok(ran(result.calls, 'build'));
+  assert.doesNotMatch(result.output, /reused gate/);
+});
+
+test('--no-gate-reuse runs every stage even with a green stamp', () => {
+  const f = reuseFixture();
+  const original = f.run('scripts/release-prod.mjs', ['--gate-only']);
+  assert.equal(original.status, 0, original.output);
+  assertReused(f.run('scripts/release-prod.mjs', ['--gate-only']));
+  const forced = f.run('scripts/release-prod.mjs', ['--gate-only', '--no-gate-reuse']);
+  assert.equal(forced.status, 0, forced.output);
+  const commands = (result) => result.calls.filter((call) => call[0] !== 'git');
+  assert.deepEqual(commands(forced), commands(original));
+  assert.doesNotMatch(forced.output, /reused gate/);
 });

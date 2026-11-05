@@ -25,6 +25,7 @@ import {
 } from './lib/changelog-entry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import { captureGateStamp, readGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
 import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
   acquireReleaseLock,
@@ -398,6 +399,7 @@ function parseArgs(args) {
     localCi: true,
     lockTimeoutMs: DEFAULT_LOCK_TIMEOUT_MS,
     fullCi: false,
+    gateReuse: true,
     gateOnly: false,
     plan: false,
     planBase: null,
@@ -449,6 +451,8 @@ function parseArgs(args) {
       parsed.ciWait = false;
     } else if (arg === '--full-ci') {
       parsed.fullCi = true;
+    } else if (arg === '--no-gate-reuse') {
+      parsed.gateReuse = false;
     } else if (arg === '--gate-only') {
       parsed.gateOnly = true;
     } else if (arg === '--skip-local-ci') {
@@ -697,6 +701,13 @@ function planChangedFiles() {
  * and ran no tests (2026-10-02, b40cb193 shipped a red web test to hosted CI).
  */
 function localGateFor(changedFiles, baseRevision, fullCi) {
+  const snapshot = captureGateStamp({ root: workdir });
+  const reuseStages = options.gateReuse ? readGateStamp(snapshot) : [];
+  const plan = localGatePlanFor(changedFiles, baseRevision, fullCi);
+  return { ...plan, snapshot, reuseStages };
+}
+
+function localGatePlanFor(changedFiles, baseRevision, fullCi) {
   const FULL = { kind: 'full', reason: 'ci:quick', commands: [['npm', 'run', 'ci:quick']] };
   if (fullCi) return { ...FULL, reason: '--full-ci' };
   if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
@@ -1015,12 +1026,17 @@ async function runLocalGate(gate, changedFiles) {
   let loopbackSucceeded = true;
   for (const command of gate.commands) {
     if (command.join(' ') === 'npm run ci:quick') {
-      const ci = await runCiChecks({ summarize: false, run: runLocalCommand });
+      const ci = await runCiChecks({
+        summarize: false,
+        run: runLocalCommand,
+        reuseStages: gate.reuseStages,
+        stamp: false,
+      });
       results.push(...ci.results);
       buildSucceeded = ci.buildSucceeded;
       loopbackSucceeded = ci.loopbackSucceeded;
     } else {
-      const result = runGateCommand(command, runLocalCommand);
+      const result = runGateCommand(command, runLocalCommand, undefined, gate.reuseStages);
       results.push(result);
       // A targeted verify command owns its build internally. On failure we
       // cannot prove it built, so persistence must not consume that dist.
@@ -1034,9 +1050,12 @@ async function runLocalGate(gate, changedFiles) {
   const persistent = await runReleasePersistenceGate(changedFiles, {
     buildSucceeded,
     loopbackSucceeded,
+    reuseStages: gate.reuseStages,
   });
   if (persistent) results.push(persistent);
+  if (results.some((result) => result.reused)) console.log(`reused gate ${gate.snapshot.path}`);
   printGateSummary('release gate', results);
+  writeGateStamp(gate.snapshot, 'release', results, { root: workdir });
   if (results.some((result) => result.status === 'failed')) {
     throw new Error('local release gate failed; nothing pushed');
   }
@@ -1047,11 +1066,17 @@ function runLocalCommand(command) {
   return { status: 0 };
 }
 
-async function runReleasePersistenceGate(changedFiles, { buildSucceeded, loopbackSucceeded }) {
+async function runReleasePersistenceGate(
+  changedFiles,
+  { buildSucceeded, loopbackSucceeded, reuseStages },
+) {
   if (!needsPersistenceGate(changedFiles)) return;
   const command = ['npm', 'run', 'test:persistent'];
   if (!buildSucceeded) return skippedCommand(command, 'build failed');
   if (!loopbackSucceeded) return skippedCommand(command, 'loopback preflight failed');
+  if (reuseStages.some((stage) => stage.name === command.join(' ') && stage.ok === true)) {
+    return runGateCommand(command, runLocalCommand, undefined, reuseStages);
+  }
   if (process.env.MISTBOARD_SKIP_PREPUSH_DB === '1') {
     return skippedCommand(command, 'MISTBOARD_SKIP_PREPUSH_DB=1');
   }
@@ -2290,6 +2315,7 @@ Options:
   --smoke <tier>           Smoke tier: full, web, lite, none. Default ${DEFAULT_SMOKE}.
   --skip-local-ci          Do not run the local gate before push.
   --full-ci                Force ci:quick as the local gate, whatever changed.
+  --no-gate-reuse          Run every selected gate stage, ignoring saved green results.
   --gate-only              Run the same full local gate as --push --full-ci,
                            including persistence when the diff requires it.
                            Uses local origin/main..HEAD (honors --remote,

@@ -6,6 +6,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildPlan as buildBrowserSmokePlan } from './ci-browser-smoke-plan.mjs';
+import { captureGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
 import { checkLoopback } from './lib/loopback-check.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -102,8 +103,11 @@ export async function runCiChecks({
   keepGoing = suiteName !== 'local',
   run = spawnCommand,
   summarize = true,
+  reuseStages = [],
+  stamp = true,
 } = {}) {
   if (!suites[suiteName]) throw new Error(`unknown CI gate: ${suiteName}`);
+  const snapshot = stamp ? captureGateStamp() : null;
   const commands = [...suites[suiteName]];
   if (suiteName === 'preship') {
     const plan = preshipBrowserPlan();
@@ -151,16 +155,22 @@ export async function runCiChecks({
     } else if (isTest && !loopbackSucceeded) {
       reason = 'loopback preflight failed';
     }
-    const result = reason ? skippedCommand(command, reason) : runGateCommand(command, run, env);
+    const result = reason
+      ? skippedCommand(command, reason)
+      : runGateCommand(command, run, env, reuseStages);
     results.push(result);
     if (script === 'build') buildSucceeded = result.status === 'passed';
   }
   const ok = results.every((result) => result.status === 'passed');
   if (summarize) printGateSummary(`ci:${suiteName}`, results);
+  if (stamp) writeGateStamp(snapshot, suiteName, results);
   return { ok, results, buildSucceeded, loopbackSucceeded };
 }
 
-export function runGateCommand(command, run = spawnCommand, env) {
+export function runGateCommand(command, run = spawnCommand, env, reuseStages = []) {
+  if (reuseStages.some((stage) => stage.name === command.join(' ') && stage.ok === true)) {
+    return { command, status: 'passed', exitCode: 0, durationMs: 0, reused: true };
+  }
   console.log(`\n$ ${command.join(' ')}`);
   const started = performance.now();
   const finish = (result) => {
@@ -196,7 +206,7 @@ export function printGateSummary(label, results) {
     const verdict =
       result.status === 'skipped'
         ? `skipped: ${result.reason}`
-        : `${result.status} (exit ${result.exitCode}${result.detail ? `; ${result.detail}` : ''})`;
+        : `${result.status}${result.reused ? ' (reused)' : ''} (exit ${result.exitCode}${result.detail ? `; ${result.detail}` : ''})`;
     const duration =
       result.durationMs === undefined ? '' : `; ${(result.durationMs / 1000).toFixed(2)}s`;
     console.log(`  ${result.command.join(' ')}: ${verdict}${duration}`);
@@ -246,6 +256,9 @@ All gates first check IPv4 loopback connectivity (3s timeout).
 Preship always runs every independent stage, with each stage's duration printed.
 Every run ends with command exit codes and explicit dependency skips. Tests
 and typecheck are skipped if the build fails; tests also require loopback.
+Results (including failures) are saved by working-tree hash and lockfile SHA-256
+for release:prod to reuse. MISTBOARD_GATE_STAMP_DIR overrides the default
+~/.local/share/mistboard/gate-stamps directory.
 
 ci:quick runs the drift check (INDEX/SQL-enum/redaction invariants), checks
 formatting and translation-catalog policy, runs the local build so unit tests
