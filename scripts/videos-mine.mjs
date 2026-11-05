@@ -17,6 +17,10 @@
 //   node scripts/videos-mine.mjs --json out.json  machine-readable candidates
 //   node scripts/videos-mine.mjs --all           keep off-topic results too
 //   node scripts/videos-mine.mjs --reject ID,ID   add ids to the declined ledger
+//   node scripts/videos-mine.mjs --source bilibili --json out.json
+//     Chinese jieqi first, then xiangqi teaching; proposal only. A Bilibili
+//     rejection can be recorded with --reject BV... (or bb:BV...). Stops on
+//     the first API failure; a partial sweep is never written as a proposal.
 //
 // The declined ledger (scripts/data/videos-declined.json) is why a second run is
 // useful: without it every sweep re-proposes the same rejects, including the
@@ -26,7 +30,12 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { fetchYoutubePage, mapWithConcurrency, parseEmbeddedObjects } from './lib/youtube.mjs';
+import {
+  BROWSER_HEADERS,
+  fetchYoutubePage,
+  mapWithConcurrency,
+  parseEmbeddedObjects,
+} from './lib/youtube.mjs';
 import { parseEntries } from './videos-audit.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -163,6 +172,217 @@ export function score(candidate) {
 // succeed on their own, so the fix is pacing, not retries.
 const PAUSE_MS = 1800;
 
+export const BILIBILI_QUERIES = [
+  '揭棋入门教学',
+  '揭棋开局技巧',
+  '揭棋中局战术',
+  '揭棋残局教学',
+  '揭棋实战讲解',
+  '揭象棋教学',
+  '象棋残局教学',
+  '象棋中局教学',
+  '象棋布局教学',
+];
+
+// Read the site's sanctions rather than maintain a second ban register. The
+// source is a flat literal; fail closed if that contract changes. Reprimands
+// are not bans (the same distinction as isBanned in sanctions.ts).
+function bannedPlayerNames() {
+  const source = readFileSync(resolve(HERE, '../apps/web/src/players/sanctions.ts'), 'utf8');
+  const rows = [...source.matchAll(/^\s*([\p{Script=Han}]+): \{ penalty: '([^']+)' \}/gmu)];
+  if (rows.length === 0) throw new Error('cannot read the player sanctions register');
+  const names = rows.filter((row) => row[2] !== 'Reprimand').map((row) => row[1]);
+  const aliases = readFileSync(
+    resolve(HERE, '../apps/server/src/xiangqi-broadcast-translate.ts'),
+    'utf8',
+  );
+  const english = [...aliases.matchAll(/\['([^']+)', '([^']+)'\]/g)]
+    .filter((row) => names.includes(row[1]))
+    .map((row) => row[2]);
+  return [...names, ...english];
+}
+
+// Traditional forms occurring in the sanctions register. Whitespace, case and
+// punctuation must not let "Wang Tianyi" or "王 天 一" evade the same filter.
+function normalizePlayerText(text) {
+  const traditional = '趙鄭謝躍鵬孫陽蔣張繼劉達鳴黨聶鐵強黃風楊銘瑋陸韜龍馬巋';
+  const simplified = '赵郑谢跃鹏孙阳蒋张继刘达鸣党聂铁强黄风杨铭玮陆韬龙马岿';
+  return text
+    .toLowerCase()
+    .replace(/[\p{P}\p{Z}\s]/gu, '')
+    .replace(
+      /[趙鄭謝躍鵬孫陽蔣張繼劉達鳴黨聶鐵強黃風楊銘瑋陸韜龍馬巋]/g,
+      (char) => simplified[traditional.indexOf(char)],
+    );
+}
+
+function bilibiliText(text) {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(#x[\da-f]+|#\d+|amp|quot|apos|lt|gt|nbsp);/gi, (entity, name) => {
+      if (name[0] !== '#') {
+        return { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ' }[name.toLowerCase()];
+      }
+      const point =
+        name[1].toLowerCase() === 'x' ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1));
+      return point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+    });
+}
+
+function isEngineGuide(row) {
+  const text = `${row.title} ${row.author}`;
+  return (
+    /引擎|软件|軟體|軟件|皮卡鱼|皮卡魚|佳佳|engine|pikafish|stockfish/i.test(text) &&
+    /安装|安裝|下载|下載|install|download|setup|set[ -]?up/i.test(text)
+  );
+}
+
+/** Proposal-only Bilibili sweep. All I/O and time are injectable for offline
+ *  planted-filter tests. No retries or concurrent requests after an API error. */
+export async function mineBilibili({
+  catalogueSource = readFileSync(DATA_PATH, 'utf8'),
+  declined = readBilibiliDeclined(),
+  queries = BILIBILI_QUERIES,
+  minViews = 500,
+  keepOffTopic = false,
+  fetchImpl = fetch,
+  sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
+  now = Date.now,
+} = {}) {
+  // Older checkouts predate #896's empty shelf; don't require a catalogue edit
+  // just to run discovery. A present but malformed shelf still throws.
+  const catalogued = new Set(
+    /\bconst BILIBILI_VIDEOS\b/.test(catalogueSource)
+      ? parseEntries(catalogueSource, ['BILIBILI_VIDEOS']).map((entry) => entry.bvid)
+      : [],
+  );
+  const banned = bannedPlayerNames().map(normalizePlayerText);
+  const eligible = (row) => {
+    const text = normalizePlayerText(`${row.title} ${row.author}`);
+    return (
+      !banned.some((name) => text.includes(name)) &&
+      !isEngineGuide(row) &&
+      (keepOffTopic || isXiangqi(row) || /揭棋|揭象棋/.test(`${row.title} ${row.author}`)) &&
+      row.views >= minViews
+    );
+  };
+  const cookies = new Map();
+  const request = async (url, api = true) => {
+    if (api) await sleep(PAUSE_MS + Math.floor(Math.random() * 600));
+    const response = await fetchImpl(url, {
+      method: 'GET',
+      headers: {
+        'user-agent': BROWSER_HEADERS['user-agent'],
+        accept: api ? 'application/json' : 'text/html',
+        referer: 'https://search.bilibili.com/',
+        ...(cookies.size
+          ? { cookie: [...cookies].map(([key, value]) => `${key}=${value}`).join('; ') }
+          : {}),
+      },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`Bilibili stopped: HTTP ${response.status} at ${url}`);
+    }
+    for (const cookie of response.headers.getSetCookie()) {
+      const pair = cookie.split(';')[0];
+      const equals = pair.indexOf('=');
+      if (equals > 0) cookies.set(pair.slice(0, equals), pair.slice(equals + 1));
+    }
+    if (!api) {
+      await response.body?.cancel();
+      return null;
+    }
+    let body;
+    try {
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        await response.body?.cancel();
+        throw new Error();
+      }
+      body = await response.json();
+    } catch {
+      throw new Error(`Bilibili stopped: non-JSON response at ${url}`);
+    }
+    if (body?.code !== 0) {
+      throw new Error(
+        `Bilibili stopped: API ${body?.code ?? 'missing code'} (${body?.message ?? 'no message'}) at ${url}`,
+      );
+    }
+    if (!body.data || typeof body.data !== 'object') {
+      throw new Error(`Bilibili stopped: missing API data at ${url}`);
+    }
+    return body.data;
+  };
+
+  await request('https://www.bilibili.com/', false);
+  if (cookies.size === 0) throw new Error('Bilibili stopped: homepage did not set cookies');
+  const viewed = new Set();
+  const candidates = new Map();
+  for (const query of queries) {
+    const url = new URL('https://api.bilibili.com/x/web-interface/search/type');
+    url.search = new URLSearchParams({ search_type: 'video', keyword: query, page: '1' });
+    const data = await request(url.toString());
+    if (!Array.isArray(data.result)) throw new Error('Bilibili stopped: malformed search results');
+    for (const raw of data.result) {
+      const bvid = raw?.bvid;
+      if (
+        !/^BV[\da-zA-Z]{10}$/.test(bvid ?? '') ||
+        catalogued.has(bvid) ||
+        Object.hasOwn(declined, bvid) ||
+        Object.hasOwn(declined, `bb:${bvid}`)
+      )
+        continue;
+      if (viewed.has(bvid)) {
+        const previous = candidates.get(bvid);
+        if (previous && !previous.queries.includes(query)) previous.queries.push(query);
+        continue;
+      }
+      if (typeof raw.title !== 'string' || typeof raw.author !== 'string') continue;
+      if (
+        !eligible({
+          title: bilibiliText(raw.title),
+          author: bilibiliText(raw.author),
+          views: Number(raw.play),
+        })
+      )
+        continue;
+      viewed.add(bvid);
+      const view = await request(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
+      if (
+        view.bvid !== bvid ||
+        ![1, 2].includes(view.copyright) ||
+        typeof view.title !== 'string' ||
+        !view.title ||
+        typeof view.owner?.name !== 'string' ||
+        !view.owner.name ||
+        !Number.isFinite(view.stat?.view) ||
+        !Number.isFinite(view.duration) ||
+        !Number.isFinite(view.pubdate) ||
+        view.pubdate <= 0 ||
+        typeof view.pic !== 'string'
+      ) {
+        throw new Error(`Bilibili stopped: malformed view metadata for ${bvid}`);
+      }
+      if (view.copyright === 2) continue;
+      const row = {
+        source: 'bilibili',
+        bvid,
+        title: bilibiliText(view.title),
+        author: bilibiliText(view.owner.name),
+        durationMinutes: Math.max(1, Math.round(view.duration / 60)),
+        views: view.stat.view,
+        ageDays: Math.max(1, (now() / 1000 - view.pubdate) / 86400),
+        thumbnailUrl: view.pic.replace(/^\/\//, 'https://'),
+        url: `https://www.bilibili.com/video/${bvid}`,
+        queries: [query],
+      };
+      if (eligible(row)) candidates.set(bvid, { ...row, score: score(row) });
+    }
+  }
+  return { candidates: [...candidates.values()].sort((a, b) => b.score - a.score) };
+}
+
 async function search(query, index) {
   if (index > 0) {
     await new Promise((done) => {
@@ -182,10 +402,26 @@ async function search(query, index) {
 }
 
 function readDeclined() {
-  try {
-    return JSON.parse(readFileSync(DECLINED_PATH, 'utf8'));
-  } catch {
-    return { declined: {} };
+  // A missing/corrupt ledger must stop a sweep, not put every reject back in play.
+  return JSON.parse(readFileSync(DECLINED_PATH, 'utf8'));
+}
+
+function readBilibiliDeclined() {
+  const ledger = readDeclined();
+  return { ...ledger.declined, ...ledger.bilibiliDeclined };
+}
+
+/** Keep BVIDs out of the legacy YouTube-id ledger, which catalogue tests also
+ *  enumerate. Accept bb: keys from the catalogue's source-namespaced format. */
+export function declineVideos(ledger, ids, why) {
+  for (const key of ids) {
+    const bvid = key.replace(/^bb:/, '');
+    if (/^BV[\da-zA-Z]{10}$/.test(bvid)) {
+      ledger.bilibiliDeclined ??= {};
+      ledger.bilibiliDeclined[bvid] = why;
+    } else {
+      ledger.declined[key] = why;
+    }
   }
 }
 
@@ -206,21 +442,43 @@ async function main() {
   const rejectList = flag('reject');
   if (rejectList) {
     const ledger = readDeclined();
-    for (const id of rejectList
+    const ids = rejectList
       .split(',')
       .map((part) => part.trim())
-      .filter(Boolean)) {
-      ledger.declined[id] = flag('why', 'declined during a mining sweep');
-    }
+      .filter(Boolean);
+    declineVideos(ledger, ids, flag('why', 'declined during a mining sweep'));
     writeFileSync(DECLINED_PATH, `${JSON.stringify(ledger, null, 2)}\n`);
-    console.log(`Declined ledger now holds ${Object.keys(ledger.declined).length} ids.`);
+    console.log(
+      `Declined ledger now holds ${Object.keys(ledger.declined).length} YouTube ids and ${Object.keys(ledger.bilibiliDeclined ?? {}).length} Bilibili ids.`,
+    );
     return;
   }
+
+  const source = flag('source', 'youtube');
+  if (!['youtube', 'bilibili'].includes(source))
+    throw new Error(`unknown video source "${source}"`);
 
   const language = flag('language');
   const minViews = Number(flag('min-views', '500'));
   const jsonPath = flag('json');
   const keepOffTopic = argv.includes('--all');
+  if (source === 'bilibili') {
+    if (language && language !== 'zh')
+      throw new Error('Bilibili discovery supports --language zh only');
+    const result = await mineBilibili({ minViews, keepOffTopic });
+    console.log(`BILIBILI — ${result.candidates.length} proposals (catalogue unchanged)`);
+    for (const row of result.candidates.slice(0, 30)) {
+      console.log(
+        `  ${row.score.toFixed(1)}  ${formatViews(row.views)}  ${row.durationMinutes}m  ${row.author}  ${row.title}\n    ${row.url}`,
+      );
+    }
+    if (jsonPath)
+      writeFileSync(
+        jsonPath,
+        `${JSON.stringify({ minedAt: new Date().toISOString(), source, language: 'zh', ...result }, null, 2)}\n`,
+      );
+    return;
+  }
   const languages = language ? [language] : Object.keys(QUERIES);
   for (const lang of languages) {
     if (!QUERIES[lang]) throw new Error(`no query set for language "${lang}"`);
@@ -294,5 +552,10 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
-  await main();
+  try {
+    await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }
