@@ -121,7 +121,8 @@ export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
-  // Hidden and unrated: no database rating pool is enabled or owed.
+  // Migration 188 added Gomoku to the user_ratings CHECK.
+  // Allowlisted: rated, off every public rating surface.
   | 'gomoku'
   | 'fog'
   | 'dark_xiangqi'
@@ -144,8 +145,7 @@ export type RatingPoolBaseId =
   | 'crazyhouse_xiangqi';
 
 export type GameSpecId =
-  // Built-hidden freestyle Gomoku (#768). No tenant until build 2; the
-  // default-off server flag cannot open room creation by itself.
+  // Freestyle Gomoku, with runtime admission controlled by the server flag.
   | 'gomoku'
   | 'dark-chess'
   | 'dark-xiangqi'
@@ -750,8 +750,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Hidden, unrated casual PvP (#768 build 2), under explicit local flags.
-    // The standalone Rapfi worker (#762) is not offered until build 3.
+    // Hidden, rated PvP under explicit flags; the pool stays private while allowlisted.
     id: GOMOKU_SPEC_ID,
     publicName: 'Gomoku',
     family: 'gomoku',
@@ -765,7 +764,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'gomoku',
     publicSurface: 'hidden',
     runtimeStatus: 'live',
-    rated: false,
+    rated: true,
   },
 ] as const;
 
@@ -923,6 +922,8 @@ export type RatingVariant = Extract<
   | 'crazyhouse_xiangqi'
   // Migration 168. Allowlisted: rated, but off every public rating surface.
   | 'xiangqi_mahjong'
+  // Migration 188. Private while the spec is allowlisted.
+  | 'gomoku'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

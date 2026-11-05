@@ -16,7 +16,7 @@ Edit task → find file → open only that file.
 | `xiangqi-mahjong-bot-match.ts` | Seeded six-hand XMJ harness, swapped-seat wall pairs, kernel scoring and paired promotion bounds |
 | `xiangqi-mahjong-sampled-bot.ts` | Offline XMJ action search: 64 common unseen-tile samples, redacted policy rollouts and six-hand score-race value |
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
-| `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, mahjong, gomoku), board geometries, movement/objective rules, and visibility; Gomoku is built-hidden and unrated (#768) |
+| `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, mahjong, gomoku), board geometries, movement/objective rules, and visibility; Gomoku is built-hidden and rated in a private pool (migration 188) |
 | `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |
 | `js-compat.ts` | `hasOwnKey` / `deepCloneJson`: shims for builtins newer than the browsers that actually reach us (`Object.hasOwn` needs Chrome 93, `structuredClone` Chrome 98). Vite's `build.target` lowers syntax only, never builtins, so a too-new global ships verbatim and throws on load; Chrome 92 / Android hard-failed `/puzzles` this way in Aug 2026. `apps/web/src/web-builtin-floor.test.ts` fails the build if either builtin returns to client code |
 | `engine-protocol.ts` | Public redacted engine request/response contract shared by server and external/first-party engines |
@@ -228,7 +228,7 @@ Edit task → find file → open only that file.
 | `persistence-*.test.ts` | Postgres-backed persistence regressions split by domain: events, accounts (plus the auth/sessions/profiles split files), seat tokens, lifecycle, game end/lists, ratings, puzzles, and debug artifacts |
 | `payloads.ts` | `snapshotPayload` — builds WebSocket snapshot message; applies fog redaction and seat-scoped view logic |
 | `test-builders.ts` | Shared server test builders for `GameProjection`, `PlayerView`, `SnapshotRoom`, `Room`, clients, and seat tokens |
-| `rating-buckets.ts` | Variant × time-class → bucket-id mapping for per-bucket Elo |
+| `rating-buckets.ts` | Variant × time-class → bucket-id mapping for per-bucket Elo; allowlisted specs' pools stay off leaderboards and profiles |
 | `glicko.ts` | Glicko-2 rating math (Glickman 2013) for the human PvP ladder; self-calibrating via rating deviation, so no offline calibration step |
 | `rating-store.ts` | Rating persistence/store helpers |
 | `first-party-bots.ts` | Static first-party bot profile registry mapping public bot ids to active engine ids and default variants |

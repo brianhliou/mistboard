@@ -57,7 +57,7 @@ test('canonical display order contains exactly the current public variant shelf'
   ]);
 });
 
-test('Gomoku is a built-hidden, unrated freestyle placement game', () => {
+test('Gomoku is a built-hidden, rated freestyle placement game', () => {
   const spec = gameSpecForId(GOMOKU_SPEC_ID);
   assert.equal(spec.publicName, 'Gomoku');
   assert.equal(spec.family, 'gomoku');
@@ -70,11 +70,11 @@ test('Gomoku is a built-hidden, unrated freestyle placement game', () => {
   assert.equal(spec.dropPolicy, 'none');
   assert.equal(spec.runtimeStatus, 'live');
   assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.rated, false);
+  assert.equal(spec.rated, true);
   assert.equal(spec.legacyLiveRoom, undefined);
   assert.equal(isPublicGameSpec(spec.id), false);
-  assert.equal(ratingPoolForSpec(spec.id), null);
-  assert.equal(isRatedPoolBase('gomoku'), false);
+  assert.equal(ratingPoolForSpec(spec.id), 'gomoku');
+  assert.equal(isRatedPoolBase('gomoku'), true);
   assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
   assert.equal(isCorrespondenceAllowlistedSpec(spec.id), true);
@@ -236,6 +236,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     atomic_xiangqi: true,
     crazyhouse_xiangqi: true,
     xiangqi_mahjong: true,
+    gomoku: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
 });
