@@ -121,7 +121,7 @@ test('TK tier selection accepts eight levels, keeps the historical budget and re
   );
   assert.equal(
     engine.threeKingdomsBanqiEngineVersion(engine.THREE_KINGDOMS_BANQI_ENGINE_ID),
-    '0.1.0',
+    '0.2.0',
   );
   for (const id of [
     undefined,
@@ -293,10 +293,10 @@ test('TK L2 and L8 refuse a binary that silently ignores unadvertised ChanceMix;
   });
 });
 
-test('TK Mix config and signatures separate L2–L8 from Star1; L1 and historical signatures stay unchanged', () => {
+test('TK Mix config and signatures separate L2–L8 from Star1; L1 and the historical id keep their unmixed signatures', () => {
   for (const tier of engine.THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
     const entry = loadEngine(tier.id);
-    const oldSignature = `${tier.id}-0.1.0-${tier.evaluation}-nodes-${tier.nodes}`;
+    const oldSignature = `${tier.id}-0.2.0-${tier.evaluation}-nodes-${tier.nodes}`;
     const mix = tier.level !== undefined && tier.level >= 2;
     assert.equal(entry.configHash, `${oldSignature}${mix ? '-chance-mix' : ''}`);
     assert.equal(entry.playSignature, entry.configHash);
