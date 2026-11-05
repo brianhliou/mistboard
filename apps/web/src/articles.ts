@@ -853,7 +853,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
-    thumb.append(renderArticleThumbnail(article.thumbnail, locale));
+    thumb.append(renderArticleThumbnail(article.thumbnail, locale, { imageAsBackground: true }));
   } else {
     thumb.classList.add('is-empty');
   }
@@ -3030,6 +3030,7 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
 export function renderArticleThumbnail(
   thumb: ArticleThumbnail,
   locale: Locale = currentLocale(),
+  options: { imageAsBackground?: boolean } = {},
 ): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb';
@@ -3070,6 +3071,20 @@ export function renderArticleThumbnail(
     return wrap;
   }
   if (thumb.kind === 'image') {
+    // Only the homepage opts in: keep article photos out of its indexable
+    // images, in both the prerender and the client render. Other listings keep
+    // lazy img elements. The existing wrapper still reserves the same box.
+    if (options.imageAsBackground) {
+      wrap.style.backgroundImage = `url(${JSON.stringify(thumb.src)})`;
+      wrap.style.backgroundSize = 'cover';
+      wrap.style.backgroundPosition = thumb.position ?? '50% 50%';
+      if (thumb.alt) {
+        wrap.removeAttribute('aria-hidden');
+        wrap.setAttribute('role', 'img');
+        wrap.setAttribute('aria-label', thumb.alt);
+      }
+      return wrap;
+    }
     const img = document.createElement('img');
     img.src = thumb.src;
     img.alt = thumb.alt ?? '';
