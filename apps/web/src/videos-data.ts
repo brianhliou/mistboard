@@ -161,6 +161,10 @@ export type VideoEntry = YoutubeVideo | BilibiliVideo | MistboardVideo;
 /** A mainland nav destination needs a useful catalogue before promotion. */
 export const BILIBILI_NAV_MIN_ENTRIES = 12;
 
+export function bilibiliCatalogueIsDeep(videos: readonly VideoEntry[]): boolean {
+  return videos.filter((video) => video.source === 'bilibili').length >= BILIBILI_NAV_MIN_ENTRIES;
+}
+
 /** Stable, source-namespaced key for dedupe and list rendering. */
 export function videoKey(video: VideoEntry): string {
   switch (video.source) {

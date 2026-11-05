@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as analytics from './analytics.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
+import { VIDEOS_OPEN_IN_CN } from './nav-items.js';
 import {
   buildVideoCard,
   buildVideosPage,
@@ -18,6 +19,7 @@ import {
 } from './videos.js';
 import {
   type BilibiliVideo,
+  bilibiliCatalogueIsDeep,
   FIRST_PARTY_VIDEOS,
   isShort,
   isVideoLive,
@@ -229,6 +231,33 @@ describe('country routing', () => {
 });
 
 describe('videos data', () => {
+  it.each([
+    [11, false],
+    [12, true],
+  ] as const)('checks Bilibili catalogue depth at %i entries', (count, expected) => {
+    const videos = Array.from({ length: count }, () => BILIBILI_FIXTURE);
+    expect(bilibiliCatalogueIsDeep(videos)).toBe(expected);
+  });
+
+  it('counts only Bilibili entries toward catalogue depth', () => {
+    const videos = Array.from({ length: 11 }, () => BILIBILI_FIXTURE);
+    const youtube = VIDEOS.find((video) => video.source === 'youtube')!;
+    expect(bilibiliCatalogueIsDeep([...videos, youtube, MISTBOARD_FIXTURE])).toBe(false);
+  });
+
+  it('keeps the manual CN nav gate in sync with the catalogue depth', () => {
+    expect(VIDEOS_OPEN_IN_CN).toBe(bilibiliCatalogueIsDeep(VIDEOS));
+  });
+
+  it.each(['nav-items.ts', 'viewer-geo.ts'])(
+    'keeps the eager shell free of videos-data imports in %s',
+    (file) => {
+      const here = dirname(fileURLToPath(import.meta.url));
+      const source = readFileSync(resolve(here, file), 'utf8');
+      expect(source).not.toMatch(/\bimport\b[^;]*['"][^'"]*videos-data(?:\.[cm]?[jt]s)?['"]/);
+    },
+  );
+
   it('holds verified, well-formed entries', () => {
     expect(VIDEOS.length).toBeGreaterThanOrEqual(12);
     for (const video of VIDEOS) {

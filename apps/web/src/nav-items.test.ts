@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { BilibiliVideo, VideoEntry } from './videos-data.js';
 import { isBlockedForViewer } from './viewer-geo.js';
 
 // The Streamers nav link is derived from the curated directory, so these tests
@@ -7,66 +6,29 @@ import { isBlockedForViewer } from './viewer-geo.js';
 afterEach(() => {
   vi.resetModules();
   vi.doUnmock('./streamers-data.js');
-  vi.doUnmock('./videos-data.js');
   document.cookie = 'mb_cc=; Max-Age=0; Path=/';
 });
 
 describe('watch nav', () => {
-  const bilibili = (index: number): BilibiliVideo => ({
-    source: 'bilibili',
-    bvid: `BV${String(index).padStart(10, '0')}`,
-    title: '象棋入门',
-    author: '象棋课堂',
-    thumbnailUrl: 'https://i0.hdslb.com/bfs/archive/fixture.jpg',
-    tags: ['basics'],
-    level: 'intro',
-    variant: 'xiangqi',
-    language: 'zh',
-    addedAt: '2026-11-05',
-  });
-
-  async function withCatalogue(
-    videos: readonly VideoEntry[],
-  ): Promise<typeof import('./nav-items.js')> {
-    vi.doMock('./videos-data.js', async (importOriginal) => ({
-      ...(await importOriginal<typeof import('./videos-data.js')>()),
-      VIDEOS: videos,
-    }));
-    return import('./nav-items.js');
-  }
-
-  it.each([0, 11, 12])(
-    'derives CN video nav visibility from %i live Bilibili entries',
-    async (count) => {
-      document.cookie = 'mb_cc=CN; Path=/';
-      const { watchNavItems, siteMenuSections } = await withCatalogue(
-        Array.from({ length: count }, (_, index) => bilibili(index)),
-      );
-      const visible = (items: ReturnType<typeof watchNavItems>) =>
-        items.filter((item) => !isBlockedForViewer(item.blockedIn)).map((item) => item.href);
-      expect(visible(watchNavItems()).includes('/videos')).toBe(count >= 12);
-      const watch = siteMenuSections().find((section) => section.labelKey === 'nav.watch')!;
-      expect(visible(watch.items).includes('/videos')).toBe(count >= 12);
-    },
-  );
-
-  it('does not count YouTube or unpublished Bilibili cards toward the threshold', async () => {
+  it('drives CN video visibility from the manual catalogue gate in both menus', async () => {
     document.cookie = 'mb_cc=CN; Path=/';
-    const { watchNavItems } = await withCatalogue([
-      ...Array.from({ length: 11 }, (_, index) => bilibili(index)),
-      { ...bilibili(12), publishAt: '2999-01-01T00:00:00Z' },
-      { ...bilibili(13), source: 'youtube', id: 'abcDEF12345' },
-    ]);
-    const video = watchNavItems().find((item) => item.href === '/videos')!;
-    expect(isBlockedForViewer(video.blockedIn)).toBe(true);
+    const { watchNavItems, siteMenuSections, VIDEOS_OPEN_IN_CN } = await import('./nav-items.js');
+    const visible = (items: ReturnType<typeof watchNavItems>) =>
+      items.filter((item) => !isBlockedForViewer(item.blockedIn)).map((item) => item.href);
+    expect(visible(watchNavItems()).includes('/videos')).toBe(VIDEOS_OPEN_IN_CN);
+    const watch = siteMenuSections().find((section) => section.labelKey === 'nav.watch')!;
+    expect(visible(watch.items).includes('/videos')).toBe(VIDEOS_OPEN_IN_CN);
   });
 
   it.each([null, 'US', 'HK', 'TW', 'SG', 'MY', 'MO'])(
-    'keeps the library visible without Bilibili outside CN (%s)',
+    'keeps the library visible outside CN (%s)',
     async (country) => {
       if (country) document.cookie = `mb_cc=${country}; Path=/`;
-      const { watchNavItems } = await withCatalogue([]);
+      const { watchNavItems, VIDEOS_OPEN_IN_CN, YOUTUBE_BLOCKED_IN } = await import(
+        './nav-items.js'
+      );
       const video = watchNavItems().find((item) => item.href === '/videos')!;
+      expect(video.blockedIn).toEqual(VIDEOS_OPEN_IN_CN ? undefined : YOUTUBE_BLOCKED_IN);
       expect(isBlockedForViewer(video.blockedIn)).toBe(false);
     },
   );

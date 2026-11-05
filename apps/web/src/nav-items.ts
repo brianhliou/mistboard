@@ -1,10 +1,13 @@
 import { ABOUT_NAV_GROUPS } from './about-nav-items.js';
 import type { I18nKey } from './i18n/catalog.js';
 import { STREAMERS } from './streamers-data.js';
-import { BILIBILI_NAV_MIN_ENTRIES, isVideoLive, VIDEOS } from './videos-data.js';
 import { YOUTUBE_BLOCKED_IN } from './viewer-geo.js';
 
 export { YOUTUBE_BLOCKED_IN };
+
+// Flip by hand once the Bilibili catalogue reaches BILIBILI_NAV_MIN_ENTRIES.
+// A sync test enforces this so the catalogue stays outside the eager shell.
+export const VIDEOS_OPEN_IN_CN = false;
 
 export interface NavItem {
   label: string;
@@ -182,11 +185,7 @@ export function watchNavItems(): NavItem[] {
       labelKey: 'nav.videoLibrary',
       href: '/videos',
       // Direct visits remain available; promote in CN once Bilibili has depth.
-      blockedIn:
-        VIDEOS.filter((video) => video.source === 'bilibili' && isVideoLive(video)).length >=
-        BILIBILI_NAV_MIN_ENTRIES
-          ? undefined
-          : YOUTUBE_BLOCKED_IN,
+      blockedIn: VIDEOS_OPEN_IN_CN ? undefined : YOUTUBE_BLOCKED_IN,
     },
   ];
 }
