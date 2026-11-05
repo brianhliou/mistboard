@@ -125,6 +125,7 @@ export const gomokuTenant: VariantTenant<
     snapshotExtras: (room, client) => ({
       roomMode: tenantPveEngineId(gomokuTenant, room) ? 'pve' : 'pvp',
       pveEngineId: tenantPveEngineId(gomokuTenant, room),
+      rated: room.rated,
       browserBotPaused: Boolean(room.projection.paused),
       forfeitDeadline: tenantForfeitDeadlineForClient(gomokuTenant, room, client),
     }),

@@ -334,7 +334,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'white',
         secondGlyph: '○',
         secondLabel: 'White',
-        supportsRated: false,
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],

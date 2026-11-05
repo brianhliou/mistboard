@@ -397,7 +397,7 @@ describe('Gomoku hidden registration', () => {
       expect(web?.landing?.capabilities).toMatchObject({
         firstColor: 'black',
         secondColor: 'white',
-        supportsRated: false,
+        supportsRated: true,
       });
       expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual(
         [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
@@ -414,7 +414,7 @@ describe('Gomoku hidden registration', () => {
       for (const id of ['rapfi-level-0', 'rapfi-level-9', 'rapfi-level-1\n', 'engine:black'])
         expect(server?.isEngineClientId?.(id)).toBe(false);
       expect(web?.landing?.defaultEngineId).toBe('rapfi-level-1');
-      expect(server?.lobby?.supportsRated).toBe(false);
+      expect(server?.lobby?.supportsRated).toBe(true);
       expect(web?.watch?.family).toBe('gomoku');
       expect(server?.watch).toEqual({
         channelId: 'gomoku',

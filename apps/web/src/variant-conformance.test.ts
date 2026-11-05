@@ -159,7 +159,7 @@ describe('variant create-request conformance', () => {
       }
     }
   });
-  it('preserves Gomoku setup ids and colors while refusing rated requests', () => {
+  it('preserves Gomoku setup ids, colors and rated PvP while keeping PvE casual', () => {
     for (const mode of ['pvp', 'pve'] as const) {
       for (const preferredColor of ['black', 'white', 'random'] as const) {
         const setup = { ...setupFor(GOMOKU_SPEC_ID), rated: true, preferredColor };
@@ -167,7 +167,7 @@ describe('variant create-request conformance', () => {
         expect(roomCreationRequestBody(mode, setup)).toMatchObject({
           gameSpecId: 'gomoku',
           mode,
-          rated: false,
+          rated: mode === 'pvp',
           preferredColor,
         });
       }
@@ -435,7 +435,7 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
     expect(tenant?.landing?.engineOptions).toHaveLength(8);
-    expect(tenant?.landing?.capabilities.supportsRated).toBe(false);
+    expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(
