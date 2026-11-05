@@ -596,9 +596,9 @@ type ArticleBase = {
   // article lands on the homepage with no second edit; 'deep-dives' moves it to
   // the row beneath (player pages and game deep dives).
   homeRow?: 'deep-dives';
-  // A page about a person (the player articles): one gray line under the
-  // header photo, "Corrections or rights requests: contact us.", the same small
-  // print the player pages carry, linked to /contact about this article.
+  // A page about a person (the player articles): one gray line below the
+  // article panel, "Corrections or rights requests: contact us.", the same
+  // small print the player pages carry, linked to /contact about this article.
   contactNote?: boolean;
   status: 'outline' | 'draft' | 'published';
   audience: string;

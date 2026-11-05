@@ -1241,8 +1241,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     const intro = document.createElement('div');
     intro.className = 'article-intro';
     for (const block of article.intro) intro.append(renderBlock(block, articleLang));
-    const photo = intro.querySelector('figure.article-figure-image');
-    if (article.contactNote && photo) photo.append(articleContactNote(article.slug, locale));
     sheet.append(intro);
   }
 
@@ -1276,6 +1274,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   main.append(sheet);
   const sidebar = buildTocSidebar(body, articleLang);
   if (sidebar) main.append(sidebar);
+  if (article.contactNote) main.append(articleContactNote(article.slug, locale));
 
   return main;
 }
