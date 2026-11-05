@@ -1,0 +1,179 @@
+{
+  "capturedAt": "2026-11-05T23:37:10.146Z",
+  "totalGames": 9129,
+  "gamesAgainstBots": 9031,
+  "gamesWonAgainstBots": 1825,
+  "gamesBetweenPeople": 98,
+  "longestGameBetweenPeople": {
+    "roomId": "jq_4d122891-6e54-41d9-9ad3-4e4e2863c457",
+    "variant": "jieqi",
+    "plies": 167,
+    "moves": 84,
+    "termination": "repetition",
+    "day": "2026-11-03",
+    "minutes": 27
+  },
+  "countriesAndRegions": 41,
+  "accounts": 107,
+  "players": 1004,
+  "playersWithOneGame": 440,
+  "playersWithTenGames": 140,
+  "playersWithHundredGames": 12,
+  "mostGamesByOnePlayer": 630,
+  "gamesWithThosePlayers": 3507,
+  "peakWeek": {
+    "weekStart": "2026-10-26",
+    "games": 2647,
+    "gamesByItsBusiestPlayer": 557
+  },
+  "atOneThousand": {
+    "jieqiGames": 608,
+    "gamesBetweenPeople": 7
+  },
+  "firstThousandOn": "2026-09-30",
+  "tenThousandOn": null,
+  "weeks": [
+    {
+      "weekStart": "2026-06-01",
+      "games": 2
+    },
+    {
+      "weekStart": "2026-06-08",
+      "games": 4
+    },
+    {
+      "weekStart": "2026-06-15",
+      "games": 3
+    },
+    {
+      "weekStart": "2026-06-22",
+      "games": 3
+    },
+    {
+      "weekStart": "2026-06-29",
+      "games": 0
+    },
+    {
+      "weekStart": "2026-07-06",
+      "games": 1
+    },
+    {
+      "weekStart": "2026-07-13",
+      "games": 19
+    },
+    {
+      "weekStart": "2026-07-20",
+      "games": 13
+    },
+    {
+      "weekStart": "2026-07-27",
+      "games": 30
+    },
+    {
+      "weekStart": "2026-08-03",
+      "games": 27
+    },
+    {
+      "weekStart": "2026-08-10",
+      "games": 21
+    },
+    {
+      "weekStart": "2026-08-17",
+      "games": 45
+    },
+    {
+      "weekStart": "2026-08-24",
+      "games": 21
+    },
+    {
+      "weekStart": "2026-08-31",
+      "games": 67
+    },
+    {
+      "weekStart": "2026-09-07",
+      "games": 68
+    },
+    {
+      "weekStart": "2026-09-14",
+      "games": 154
+    },
+    {
+      "weekStart": "2026-09-21",
+      "games": 381
+    },
+    {
+      "weekStart": "2026-09-28",
+      "games": 596
+    },
+    {
+      "weekStart": "2026-10-05",
+      "games": 1314
+    },
+    {
+      "weekStart": "2026-10-12",
+      "games": 1118
+    },
+    {
+      "weekStart": "2026-10-19",
+      "games": 1304
+    },
+    {
+      "weekStart": "2026-10-26",
+      "games": 2647
+    },
+    {
+      "weekStart": "2026-11-02",
+      "games": 1291
+    }
+  ],
+  "variants": [
+    {
+      "variant": "jieqi",
+      "games": 6137
+    },
+    {
+      "variant": "xiangqi",
+      "games": 1121
+    },
+    {
+      "variant": "banqi",
+      "games": 768
+    },
+    {
+      "variant": "jungle-flip",
+      "games": 336
+    },
+    {
+      "variant": "dark-chess",
+      "games": 199
+    },
+    {
+      "variant": "jungle",
+      "games": 191
+    },
+    {
+      "variant": "dark-xiangqi",
+      "games": 125
+    },
+    {
+      "variant": "crazyhouse-xiangqi",
+      "games": 117
+    },
+    {
+      "variant": "duck-xiangqi",
+      "games": 105
+    },
+    {
+      "variant": "xiangqi-mahjong",
+      "games": 26
+    },
+    {
+      "variant": "dark-crazyhouse",
+      "games": 3
+    },
+    {
+      "variant": "dark-mini-xiangqi",
+      "games": 1
+    }
+  ]
+}

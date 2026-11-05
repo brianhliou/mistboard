@@ -153,6 +153,7 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
+      '/blog/ten-thousand-games',
       '/blog/set-up-your-board',
       // The sixth player page, the ten-time national women's champion Tang Dan,
       // scheduled for 2026-11-05 (DEV shows it early for review).
@@ -504,6 +505,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
+      '/blog/ten-thousand-games',
       '/blog/set-up-your-board',
       '/blog/ab-jchess-vs-jqe',
       '/blog/shortest-stalemate-xiangqi',

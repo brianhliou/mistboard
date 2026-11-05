@@ -205,6 +205,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
   'banqi-statistics': renderBanqiStatsOgSvg,
   'one-thousand-games': renderOneThousandGamesOgSvg,
+  'ten-thousand-games': renderTenThousandGamesOgSvg,
 };
 
 // Banqi's start is 32 face-down tiles, which at thumbnail size reads as a
@@ -1184,10 +1185,18 @@ function renderBanqiStatsOgSvg(title: string): string {
 // on the default card's ground, so it reads at thumbnail size in any feed.
 // The footer says thanks instead of repeating the title the hero already says.
 function renderOneThousandGamesOgSvg(): string {
+  return renderGamesMilestoneOgSvg('1,000');
+}
+
+function renderTenThousandGamesOgSvg(): string {
+  return renderGamesMilestoneOgSvg('10,000');
+}
+
+function renderGamesMilestoneOgSvg(games: string): string {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
     `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-    `<text x="${OG_WIDTH / 2}" y="330" text-anchor="middle" font-family="${FONT}" font-size="230" font-weight="700" letter-spacing="-6" fill="#f3f4f6">1,000</text>`,
+    `<text x="${OG_WIDTH / 2}" y="330" text-anchor="middle" font-family="${FONT}" font-size="230" font-weight="700" letter-spacing="-6" fill="#f3f4f6">${games}</text>`,
     `<text x="${OG_WIDTH / 2}" y="420" text-anchor="middle" font-family="${FONT}" font-size="44" font-weight="600" letter-spacing="6" fill="#5da271">GAMES PLAYED</text>`,
     ogFooterLine('Thank you for playing', OG_HEIGHT - 44),
     `</svg>`,

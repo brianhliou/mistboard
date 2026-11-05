@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-10',
+    kind: 'status',
+    headline: '10,000 games played on Mistboard.',
+    body: 'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.',
+    href: '/blog/ten-thousand-games',
+    cta: 'Read the post',
+  },
+  {
     date: '2026-11-02',
     kind: 'release',
     headline: 'AB-JChess is the top jieqi bot again.',

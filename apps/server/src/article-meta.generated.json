@@ -623,6 +623,12 @@
       "zh-hant": "唐丹"
     }
   },
+  "ten-thousand-games": {
+    "title": "10,000 games played",
+    "kind": "article",
+    "description": "How the first 10,000 games on Mistboard came in, what people played, and who played them.",
+    "status": "draft"
+  },
   "three-kingdoms-banqi": {
     "title": "Three Kingdoms Banqi Rules",
     "kind": "rules",
