@@ -174,6 +174,8 @@ export type PositionOgBoard =
       /** Points under fog (a rules card showing one seat's opening view). The
        *  pieces there are already filtered out; this only draws the wash. */
       fog?: Array<{ file: number; rank: number }>;
+      /** Black at the bottom, without rotating the piece figures. */
+      orientation?: 'red' | 'black';
     }
   | { kind: 'grid'; files: number; ranks: number; tiles: GridTile[] }
   | {

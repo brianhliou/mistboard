@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
 import {
   coverBelowFrame,
+  inlineThumbImages,
   renderArticleThumbnail,
   resetArticleThumbs,
   serveArticleThumbnail,
@@ -97,6 +98,32 @@ test('a post with no thumbnail file falls back to its OG card', async () => {
   const missing = await serve('no-card-art');
   assert.equal(missing.status, 302);
   assert.equal(missing.headers.location, '/og/article/no-card-art.png');
+});
+
+test('embedded rasters choose their mip level at the output scale', async () => {
+  const photo = await svgToPng(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750"><rect width="1200" height="750" fill="#a33"/></svg>',
+    '#a33',
+    1,
+  );
+  mkdirSync(join(staticDir, 'img'), { recursive: true });
+  writeFileSync(join(staticDir, 'img', 'scaled-face.png'), photo);
+  const source = frame('<image href="/img/scaled-face.png" width="480" height="300"/>');
+  for (const [zoom, width] of [
+    [1, 600],
+    [5, 1200],
+  ] as const) {
+    const inlined = await inlineThumbImages(source, staticDir, zoom);
+    const uri = /href="data:image\/png;base64,([^"]+)"/.exec(inlined)?.[1];
+    assert.ok(uri);
+    assert.equal(pngSize(Buffer.from(uri, 'base64')).width, width, `zoom ${zoom}`);
+  }
+});
+
+test('the safe canvas also protects cropped board art at OG size', async () => {
+  const png = await renderArticleThumbnail(croppedCard, staticDir, 'og');
+  assert.ok(png);
+  assert.deepEqual(pngSize(png), { width: 2400, height: 1260 });
 });
 
 test('a slug outside [a-z0-9-] is a 404, so no path leaves the thumb directory', async () => {

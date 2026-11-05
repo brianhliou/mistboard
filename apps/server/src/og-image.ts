@@ -29,6 +29,7 @@ import {
   type XmjTile,
 } from '@mistboard/game';
 import type { ArticleZhTitles } from './article-meta.js';
+import { isArticleThumbSlug, renderArticleThumbnail } from './article-thumb.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
 import { gomokuEnabled } from './feature-flags.js';
 import {
@@ -316,6 +317,72 @@ function gomokuRulesCardBoard(): Extract<ArticleCardBoard, { kind: 'gomoku' }> {
   return { kind: 'gomoku', position: { board, lastMove, winningLine } };
 }
 
+// Source: en-passant-under-fog.ts WITH_EP, fogFor(WITH_EP, 'black').
+// Store only Black's visible pieces, never the full FEN behind the fog.
+const EN_PASSANT_ARTICLE_BOARD: ArticleCardBoard = {
+  kind: 'chess',
+  orientation: 'black',
+  pieces: [
+    { file: 5, rank: 3, color: 'black', role: 'pawn' },
+    { file: 6, rank: 3, color: 'white', role: 'pawn' },
+    { file: 4, rank: 5, color: 'black', role: 'pawn' },
+    { file: 7, rank: 6, color: 'black', role: 'pawn' },
+    { file: 5, rank: 7, color: 'black', role: 'king' },
+  ],
+  fogSquares: [
+    'a1',
+    'a2',
+    'a3',
+    'a4',
+    'a5',
+    'a6',
+    'a7',
+    'a8',
+    'b1',
+    'b2',
+    'b3',
+    'b4',
+    'b5',
+    'b6',
+    'b7',
+    'b8',
+    'c1',
+    'c2',
+    'c3',
+    'c4',
+    'c5',
+    'c6',
+    'c7',
+    'c8',
+    'd1',
+    'd2',
+    'd3',
+    'd4',
+    'd5',
+    'd6',
+    'd7',
+    'd8',
+    'e1',
+    'e2',
+    'e3',
+    'e4',
+    'e5',
+    'f1',
+    'f2',
+    'f5',
+    'f6',
+    'g1',
+    'g2',
+    'g5',
+    'g6',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h8',
+  ],
+};
+
 // Pages whose card is a position on the site board (og-card-board.ts), keyed by
 // the ARTICLE_META slug. Mostly rules pages; an article whose subject is a board
 // game gets one too. The fog xiangqi card shows Red's view of its game: the
@@ -326,10 +393,12 @@ function gomokuRulesCardBoard(): Extract<ArticleCardBoard, { kind: 'gomoku' }> {
 // Every entry supplies a FEN or a board: there is no start-position default.
 const BOARD_POSITION_CARDS: Record<
   string,
-  (
-    | { variant: PositionOgVariant; fen: string; redFog?: boolean }
-    | { board: Extract<ArticleCardBoard, { kind: 'gomoku' }> }
-  ) & { localized?: true }
+  ({ variant: PositionOgVariant; fen: string; redFog?: boolean } | { board: ArticleCardBoard }) & {
+    localized?: true;
+    /** Full article headline, wrapped; existing rules and Pikafish keep their layout. */
+    wrapTitle?: true;
+    orientation?: 'black';
+  }
 > = {
   xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, localized: true },
   'fog-xiangqi': {
@@ -356,6 +425,94 @@ const BOARD_POSITION_CARDS: Record<
   jungle: { variant: 'jungle', fen: JUNGLE_CARD_FEN },
   'jungle-flip': { variant: 'jungle-flip', fen: JUNGLE_FLIP_CARD_FEN },
   pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, localized: true },
+  // Source: shortest-stalemate-xiangqi.ts BLACK_STALEMATE_SVG, final ply 21.
+  'shortest-stalemate-xiangqi': {
+    variant: 'xiangqi',
+    fen: '1Cbakabn1/4r2R1/4c4/4C4/2R6/9/2P1P1P1P/8N/9/1NBAKAB2 b - - 0 11',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: helpmates-in-xiangqi.ts HELPMATE_THUMBNAIL, introMate().
+  'helpmates-in-xiangqi': {
+    variant: 'xiangqi',
+    fen: '1nbakab1r/r3n4/2c2N3/2p5p/9/9/9/9/9/3K5 b - - 4 3',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: jieqi-puzzle-search.ts JIEQI_PUZZLE_THUMBNAIL / lotteryDealt,
+  // public fields only: X/x remain backs, with no sixth-field deal to expose.
+  'jieqi-puzzle-search': {
+    variant: 'jieqi',
+    fen: 'x3k3x/9/5R3/4p4/4bnb1p/5N3/8X/2P2A1P1/4C4/4K3X b R0A0C0P0N0B2r0a0c0p1n1b0 0 28',
+    orientation: 'black',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: xiangqi-endgames.ts THUMBNAIL_STATE, chariot-vs-horse-two-elephants-fortress.
+  'xiangqi-endgames': {
+    variant: 'xiangqi',
+    fen: '4k4/9/4n3b/4R4/6b2/9/9/9/4K4/9 r - - 0 1',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: duck-xiangqi-tree-diagrams.ts duckTreeThumbnailSvg / h3-e3,
+  // before choosing a duck destination (the thumbnail has no duck on it).
+  'duck-xiangqi-game-tree': {
+    variant: 'duck-xiangqi',
+    fen: 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C2C4/9/RNBAKABNR b - - 0 1 -',
+    localized: true,
+    wrapTitle: true,
+  },
+  'en-passant-under-fog': { board: EN_PASSANT_ARTICLE_BOARD, localized: true, wrapTitle: true },
+  // Source: most-played-move.ts KINGS_GAMBIT_D6, White at the bottom.
+  'most-played-move': {
+    variant: 'dark-chess',
+    fen: 'rnbqkbnr/ppp2ppp/3p4/4p3/4PP2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: chess960-starting-positions.ts SP_783, QRKNRNBB. The sole
+  // deliberate start-position exception: the article ranks starting positions.
+  'chess960-starting-positions': {
+    variant: 'dark-chess',
+    fen: 'qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB w - - 0 1',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: lichess-analysis-accuracy.ts ZHIGALKO_QD7, Black at the bottom.
+  'lichess-analysis-accuracy': {
+    variant: 'dark-chess',
+    fen: '2rr2k1/p1q1bppp/bp2pn2/4B3/1Pp5/6P1/PQ1NPPBP/3RR1K1 b - - 0 20',
+    orientation: 'black',
+    localized: true,
+    wrapTitle: true,
+  },
+  // The jieqi rules card's middlegame: the thumbnail is a shuffled start, and a
+  // card never shows one. Backs carry no role, as on the rules card.
+  'jieqi-openings': { variant: 'jieqi', fen: JIEQI_CARD_FEN, localized: true, wrapTitle: true },
+  'khai-cuoc-co-up': { variant: 'jieqi', fen: JIEQI_CARD_FEN, wrapTitle: true },
+  // Source: riverbank-cannon-diagrams.ts RB_THUMBNAIL / ARRIVED after b3-b5.
+  'riverbank-cannon': {
+    variant: 'xiangqi',
+    fen: 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/1C7/P1P1P1P1P/7C1/9/RNBAKABNR b - - 1 1',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: dou-shou-qi-engine.ts first example, xzzhAld5/QP3lG9Cf ply 88;
+  // replayed from the public study and visually matched to thumbnail.png.
+  'dou-shou-qi-engine': {
+    variant: 'jungle',
+    fen: '7/3d3/1cep3/t2E3/2R1r2/3T3/L6/2D2l1/4W2 r 14 45',
+    localized: true,
+    wrapTitle: true,
+  },
+  // Source: jungle-den-term.ts POSITION_FEN, matching its image thumbnail.
+  'jungle-den-term': {
+    variant: 'jungle',
+    fen: '6l/1tc2d1/3ep2/3T3/7/1R2r2/1PL1W2/3DCE1/7 b 0 20',
+    localized: true,
+    wrapTitle: true,
+  },
   // English only until the rewritten rules are reviewed and localized.
   gomoku: { board: gomokuRulesCardBoard() },
 };
@@ -400,7 +557,8 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
 //  ?aspect= URLs are new with v5, so no older URL ever named them.
 //  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
 //  v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
-export const ARTICLE_OG_IMAGE_VERSION = 7;
+//  v8: articles without a dedicated card use their thumbnail art, centre-cropped.
+export const ARTICLE_OG_IMAGE_VERSION = 8;
 
 /** The page's wide card URL (og:image), as the server-rendered article shell
  *  writes it. A zh page (`langPrefix` zh-hans / zh-hant) of a slug with a zh
@@ -449,6 +607,9 @@ export function positionCardBoard(slug: string): ArticleCardBoard | null {
       extras: board.extras.filter(shown),
       fog,
     };
+  }
+  if (entry.orientation && (board.kind === 'intersection' || board.kind === 'chess')) {
+    board = { ...board, orientation: entry.orientation };
   }
   return board;
 }
@@ -554,16 +715,39 @@ export async function serveArticleOgImage(params: {
     return;
   }
   if (!custom && !position && !boardCard) {
-    redirectToDefault(response);
+    let png: Buffer | null = null;
+    try {
+      if (isArticleThumbSlug(slug)) {
+        const source = await fs.readFile(
+          resolve(staticDir, 'thumb', 'article', `${slug}.svg`),
+          'utf8',
+        );
+        png = await renderArticleThumbnail(source, staticDir, 'og');
+      }
+    } catch {
+      // Missing art and failed renders must remain a usable share link.
+      png = null;
+    }
+    if (!png) {
+      redirectToDefault(response);
+      return;
+    }
+    cacheSet(key, png);
+    writePng(response, png, 'MISS');
     return;
   }
-  const title = zhTitle ? articleCardTitleZh(zhTitle) : articleCardTitle(kind, params.title);
+  const wrapTitle = boardCard?.wrapTitle;
+  const title = zhTitle
+    ? wrapTitle
+      ? zhTitle
+      : articleCardTitleZh(zhTitle)
+    : articleCardTitle(kind, params.title);
   const art = await loadCardArt(staticDir);
   const board = positionCardBoard(slug);
   const svg = custom
     ? await custom(title, { staticDir })
     : board
-      ? renderBoardCard(board, art, { title: [title] }, pieceSet)
+      ? renderBoardCard(board, art, { title: [title], wrapTitle }, pieceSet)
       : renderArticleOgSvg(title, position!);
   const png = await svgToPng(svg);
   cacheSet(key, png);
