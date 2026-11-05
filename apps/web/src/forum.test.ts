@@ -1829,7 +1829,8 @@ describe('forum pages', () => {
     await mountForum(root);
 
     const head = root.querySelector('.forum-phone-head');
-    expect(head?.querySelector('h1.forum-phone-title')?.textContent).toBe('Forum');
+    expect(head?.querySelector('h2.forum-phone-title')?.textContent).toBe('Forum');
+    expect(root.querySelectorAll('h1')).toHaveLength(1);
     expect(head?.querySelector('.forum-phone-search-toggle')?.getAttribute('aria-label')).toBe(
       'Search the forum',
     );
