@@ -17,12 +17,17 @@
 // no lastmod are sent when new and refreshed only after more than 30 days.
 // Missing, unreadable or corrupt state seeds a baseline and sends nothing.
 // Baseline timestamps start the 30-day clock, without claiming a submission.
-// `--prerendered` remains a manual scope filter: everything except studies,
-// including players and broadcasts. It also skips fetching study sections.
+// A baseline always covers the whole sitemap, and only `--changed` writes one:
+// a partial baseline would turn the next release into a full submission. So a
+// manual sweep with no state records nothing, and an empty section refuses to
+// seed (the server answers 200 with no rows when a section's loader fails).
+// `--prerendered` remains a scope filter: everything except studies, including
+// players and broadcasts. A manual sweep also skips fetching study sections.
 //
 // Each non-dry run appends a line to ~/.config/mistboard/indexnow-log.jsonl,
-// including a zero when nothing changed. State lives beside the log because
-// the release has already pushed; a repo record would dirty each release.
+// including a zero when nothing changed. State lives beside the log, one file
+// per host, because the release has already pushed; a repo record would dirty
+// each release.
 //
 // IndexNow answers 200 (ok) or 202 (accepted, key pending validation) for a
 // good batch; only those batches advance state. Failed URLs retry next run.
@@ -119,7 +124,7 @@ export async function main(
   if (!Number.isInteger(size) || size < 1) throw new Error('--batch wants a positive integer');
   const base = a.base.replace(/\/$/, '');
   const host = new URL(base).host;
-  const statePath = resolve(directory, 'indexnow-state.json');
+  const statePath = resolve(directory, `indexnow-state-${host}.json`);
   const fetchText = async (url) => {
     const response = await fetchImpl(url);
     if (!response.ok) throw new Error(`${url} -> ${response.status}`);
@@ -132,7 +137,7 @@ export async function main(
   const sections = root.includes('<sitemapindex')
     ? await Promise.all(
         locs(root)
-          .filter((url) => !a.prerendered || !/sitemap-studies/.test(url))
+          .filter((url) => a.changed || !a.prerendered || !/sitemap-studies/.test(url))
           .map(fetchText),
       )
     : [root];
@@ -148,6 +153,10 @@ export async function main(
   const plan = a.changed
     ? selectChangedUrls(entries, loaded, now)
     : { urls: entries, state: loaded ?? {}, seeded: false };
+  if (plan.seeded && sections.some((xml) => sitemapEntries(xml).length === 0)) {
+    throw new Error('a sitemap section is empty: not seeding a partial baseline');
+  }
+  const keepState = a.changed || loaded !== null;
   let state = plan.state;
   const selected = plan.urls.filter(
     ({ url }) => (!a.only || url.includes(a.only)) && (!a.prerendered || !/\/study\//.test(url)),
@@ -206,7 +215,7 @@ export async function main(
         accepted += batch.length;
         state = recordAcceptedBatch(state, batch, response.status, now);
         // Persist each acceptance, even if a later batch or the process fails.
-        await saveState();
+        if (keepState) await saveState();
       } else {
         failed += 1;
       }

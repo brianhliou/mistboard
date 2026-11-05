@@ -104,7 +104,7 @@ async function fixture({ entries = pages, state, sections, statuses = [] } = {})
   );
   await mkdir(scratch, { recursive: true });
   const directory = await mkdtemp(resolve(scratch, 'indexnow-test-'));
-  const statePath = resolve(directory, 'indexnow-state.json');
+  const statePath = resolve(directory, 'indexnow-state-example.test.json');
   if (state !== undefined) {
     await writeFile(statePath, typeof state === 'string' ? state : JSON.stringify(state));
   }
@@ -225,7 +225,7 @@ test('manual sweep keeps only/prerendered/batch filters and updates only accepte
     broadcasts: [page('/zh-hans/broadcast/one'), page('/zh-hans/study/extra')],
     studies: [page('/zh-hans/study/one')],
   };
-  const f = await fixture({ sections });
+  const f = await fixture({ sections, state: {} });
   assert.equal(await f.run(['--only', '/zh-hans/', '--prerendered', '--batch', '2']), 0);
   const selected = [sections.pages[0], sections.players[0], sections.broadcasts[0]];
   assert.deepEqual(f.posts, [selected.slice(0, 2).map(({ url }) => url), [selected[2].url]]);
@@ -257,6 +257,49 @@ test('dry runs write no state or log, including bootstrap and filtered manual sw
       );
     await assert.rejects(f.logs(), { code: 'ENOENT' });
   }
+});
+
+test('a manual sweep with no state records none, so the next --changed seeds and sends nothing', async () => {
+  for (const state of [undefined, '{broken']) {
+    const f = await fixture({ state });
+    assert.equal(await f.run(['--only', '/rules/']), 0);
+    assert.deepEqual(f.posts, [[pages[0].url]]);
+    assert.equal(await f.run(), 0);
+    assert.equal(f.posts.length, 1);
+    assert.deepEqual(await f.state(), stateFor(pages));
+  }
+});
+
+test('--changed --prerendered seeds studies too, so a later plain --changed sends nothing', async () => {
+  const sections = { pages: [pages[0]], studies: [page('/study/one')] };
+  const f = await fixture({ sections });
+  assert.equal(await f.run(['--changed', '--prerendered']), 0);
+  assert.deepEqual(await f.state(), stateFor([...sections.pages, ...sections.studies]));
+  assert.equal(await f.run(), 0);
+  assert.deepEqual(f.posts, []);
+});
+
+test('an empty section refuses to seed, then seeds once it is back', async () => {
+  const sections = { pages: [pages[0]], studies: [] };
+  const f = await fixture({ sections });
+  await assert.rejects(f.run(), /empty/);
+  await assert.rejects(readFile(f.statePath), { code: 'ENOENT' });
+  sections.studies = [page('/study/one')];
+  assert.equal(await f.run(), 0);
+  assert.equal(await f.run(), 0);
+  assert.deepEqual(f.posts, []);
+});
+
+test('state is per host: another base neither reads nor writes this host', async () => {
+  const f = await fixture({ state: stateFor(pages) });
+  const other = 'https://staging.example.test';
+  const fetchImpl = async () =>
+    new Response(urlset([{ url: `${other}/rules/jieqi`, lastmod: '2026-11-01' }]));
+  assert.equal(
+    await main(['--base', other, '--changed'], { fetchImpl, directory: f.directory, now: NOW }),
+    0,
+  );
+  assert.deepEqual(await f.state(), stateFor(pages));
 });
 
 test('the configured tooling runner discovers indexnow-submit.test.mjs', () => {
