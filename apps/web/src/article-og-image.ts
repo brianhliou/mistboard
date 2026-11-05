@@ -51,6 +51,19 @@ export const ARTICLE_OG_ZH_SLUGS: readonly string[] = [
   'atomic-xiangqi',
   'crazyhouse-xiangqi',
   'pikafish',
+  'shortest-stalemate-xiangqi',
+  'helpmates-in-xiangqi',
+  'jieqi-puzzle-search',
+  'xiangqi-endgames',
+  'duck-xiangqi-game-tree',
+  'en-passant-under-fog',
+  'most-played-move',
+  'chess960-starting-positions',
+  'lichess-analysis-accuracy',
+  'jieqi-openings',
+  'riverbank-cannon',
+  'dou-shou-qi-engine',
+  'jungle-den-term',
 ];
 
 /** The card language a page in `lang` (an html lang or a route prefix:

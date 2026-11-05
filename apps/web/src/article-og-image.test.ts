@@ -47,7 +47,23 @@ describe('article card URLs', () => {
       ['zh-Hant', 'zh-hant'],
       ['zh-hant', 'zh-hant'],
     ] as const) {
-      for (const slug of ['banqi', 'pikafish']) {
+      for (const slug of [
+        'banqi',
+        'pikafish',
+        'shortest-stalemate-xiangqi',
+        'helpmates-in-xiangqi',
+        'jieqi-puzzle-search',
+        'xiangqi-endgames',
+        'duck-xiangqi-game-tree',
+        'en-passant-under-fog',
+        'most-played-move',
+        'chess960-starting-positions',
+        'lichess-analysis-accuracy',
+        'jieqi-openings',
+        'riverbank-cannon',
+        'dou-shou-qi-engine',
+        'jungle-den-term',
+      ]) {
         const wide = `https://mistboard.com/og/article/${slug}.png?v=8&lang=${prefix}`;
         expect(articleOgImageUrl(HOST, slug, lang)).toBe(wide);
         expect(articleStructuredDataImage(HOST, slug, lang)).toEqual([

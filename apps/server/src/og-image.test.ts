@@ -206,9 +206,157 @@ test('custom, position and board cards keep priority over thumbnail art', async 
   }
 });
 
+const FULL_BOARD_ARTICLES = [
+  'shortest-stalemate-xiangqi',
+  'helpmates-in-xiangqi',
+  'jieqi-puzzle-search',
+  'xiangqi-endgames',
+  'duck-xiangqi-game-tree',
+  'en-passant-under-fog',
+  'most-played-move',
+  'chess960-starting-positions',
+  'lichess-analysis-accuracy',
+  'jieqi-openings',
+  'khai-cuoc-co-up',
+  'riverbank-cannon',
+  'dou-shou-qi-engine',
+  'jungle-den-term',
+] as const;
+
+test('all fourteen full-board articles resolve a board and serve it in every shape', async () => {
+  const { positionCardBoard } = await import('./og-image.js');
+  const { renderBoardCard, renderBoardAspectCard } = await import('./og-card-board.js');
+  const { svgToPng } = await import('./og-raster.js');
+  // Deliberately distinctive thumbnail art: a fallback cannot pass by returning
+  // a PNG of the right size. No piece art here, so the expected glyphs match.
+  const staticDir = thumbBuild([...FULL_BOARD_ARTICLES]);
+  for (const slug of FULL_BOARD_ARTICLES) {
+    const board = positionCardBoard(slug);
+    assert.ok(board, `${slug} parses/resolves through positionCardBoard`);
+    const wide = await getRoute(`/og/article/${slug}.png?v=8`, staticDir);
+    assert.equal(wide.status, 200, slug);
+    assert.deepEqual(
+      wide.body,
+      await svgToPng(
+        renderBoardCard(board, new Map(), { title: [ARTICLE_META[slug]!.title], wrapTitle: true }),
+      ),
+      `${slug}: whole board and title, never the cropped thumbnail`,
+    );
+    for (const aspect of ['16x9', '4x3', '1x1'] as const) {
+      const res = await getRoute(`/og/article/${slug}.png?v=8&aspect=${aspect}`, staticDir);
+      assert.equal(res.status, 200, `${slug} ${aspect}`);
+      assert.deepEqual(
+        res.body,
+        await svgToPng(renderBoardAspectCard(board, new Map(), aspect)),
+        `${slug} ${aspect}: board alone, never the site logo`,
+      );
+    }
+  }
+});
+
+test('Chess960 deliberately shows SP-783, while the two openings cards use the article’s spent-option diagram', async () => {
+  const { positionCardBoard } = await import('./og-image.js');
+  const chess = positionCardBoard('chess960-starting-positions');
+  assert.ok(chess?.kind === 'chess');
+  assert.equal(chess.pieces.length, 32);
+  assert.deepEqual(
+    chess.pieces
+      .filter((p) => p.rank === 0)
+      .sort((a, b) => a.file - b.file)
+      .map((p) => p.role),
+    ['queen', 'rook', 'king', 'knight', 'rook', 'knight', 'bishop', 'bishop'],
+  );
+  const opening = positionCardBoard('jieqi-openings');
+  assert.ok(opening?.kind === 'intersection');
+  assert.deepEqual(opening, positionCardBoard('jieqi'));
+  assert.deepEqual(positionCardBoard('khai-cuoc-co-up'), opening);
+  assert.equal(opening.orientation ?? 'red', 'red');
+  const lichess = positionCardBoard('lichess-analysis-accuracy');
+  assert.ok(lichess?.kind === 'chess');
+  assert.equal(lichess.orientation, 'black');
+});
+
+test('the fog article serializes only Black’s view, with the thumbnail’s exact fog', async () => {
+  const { positionCardBoard } = await import('./og-image.js');
+  const { parseDarkChessFen, darkChessVariant } = await import('@mistboard/game');
+  const { boardToPieces, fogSquaresFromVisible } = await import('@mistboard/board-render');
+  const parsed = parseDarkChessFen('5k2/2Q4p/P2Qp3/4N3/5pP1/B7/4PP1P/RN2KB1R b KQ g3 0 29', 'test');
+  assert.ok(parsed.ok);
+  const view = darkChessVariant.getPlayerView(parsed.state, 'black');
+  const board = JSON.parse(JSON.stringify(positionCardBoard('en-passant-under-fog')));
+  assert.deepEqual(board, {
+    kind: 'chess',
+    orientation: 'black',
+    pieces: boardToPieces(view.board),
+    fogSquares: fogSquaresFromVisible(view.visibleSquares),
+  });
+  assert.equal(board.pieces.length, 5, 'four black pieces and only the visible white pawn');
+  for (const pc of board.pieces) {
+    const square = `${String.fromCharCode(97 + pc.file)}${pc.rank + 1}`;
+    assert.ok(!board.fogSquares.some((at) => at === square), `${square} is visible`);
+  }
+  assert.doesNotMatch(JSON.stringify(board), /queen|rook|bishop|knight|fen/i);
+});
+
+test('the jieqi puzzle serializes backs with no hidden identities and keeps Black at the bottom', async () => {
+  const { positionCardBoard } = await import('./og-image.js');
+  const { resolvePositionOg } = await import('./og-position.js');
+  const board = positionCardBoard('jieqi-puzzle-search');
+  assert.ok(board?.kind === 'intersection');
+  const serialized = JSON.stringify(board);
+  // The source thumbnail’s actual deal is deliberately only in this test.
+  // Changing which role lies under a back cannot change any byte of the card.
+  const source = 'x3k3x/9/5R3/4p4/4bnb1p/5N3/8X/2P2A1P1/4C4/4K3X b R0A0C0P0N0B2r0a0c0p1n1b0 0 28';
+  for (const deal of ['pnBB', 'npBB']) {
+    const resolved = resolvePositionOg('jieqi', `${source} ${deal}`);
+    assert.ok(resolved);
+    assert.deepEqual(JSON.parse(serialized), { ...resolved.board, orientation: 'black' });
+  }
+  assert.deepEqual(JSON.parse(serialized).extras, [
+    { file: 0, rank: 10, kind: 'face-down', ink: 'black' },
+    { file: 8, rank: 10, kind: 'face-down', ink: 'black' },
+    { file: 8, rank: 4, kind: 'face-down', ink: 'red' },
+    { file: 8, rank: 1, kind: 'face-down', ink: 'red' },
+  ]);
+  for (const back of board.extras) {
+    assert.ok(!board.pieces.some((p) => p.file === back.file && p.rank === back.rank));
+  }
+  assert.doesNotMatch(serialized, /faceDown|deal|hiddenRole|pool|fen/);
+});
+
+test('the thirteen translated board articles serve their complete published zh titles', async () => {
+  const { positionCardBoard, ARTICLE_OG_ZH_SLUGS } = await import('./og-image.js');
+  const { renderBoardCard } = await import('./og-card-board.js');
+  const { svgToPng } = await import('./og-raster.js');
+  const staticDir = thumbBuild([]);
+  for (const slug of FULL_BOARD_ARTICLES) {
+    const meta = ARTICLE_META[slug]!;
+    if (slug === 'khai-cuoc-co-up') {
+      assert.ok(!ARTICLE_OG_ZH_SLUGS.includes(slug));
+      continue;
+    }
+    assert.ok(ARTICLE_OG_ZH_SLUGS.includes(slug), slug);
+    for (const lang of ['zh-hans', 'zh-hant'] as const) {
+      const res = await getRoute(`/og/article/${slug}.png?v=8&lang=${lang}`, staticDir);
+      assert.equal(res.status, 200, `${slug} ${lang}`);
+      assert.deepEqual(
+        res.body,
+        await svgToPng(
+          renderBoardCard(
+            positionCardBoard(slug)!,
+            new Map(),
+            { title: [meta.zhTitles![lang]], wrapTitle: true },
+            'traditional',
+          ),
+        ),
+      );
+    }
+  }
+});
+
 test('thumbnail art does not add localized or aspect cards', async () => {
-  const staticDir = thumbBuild(['chess960-starting-positions']);
-  const path = '/og/article/chess960-starting-positions.png?v=8';
+  const staticDir = thumbBuild(['ab-jchess']);
+  const path = '/og/article/ab-jchess.png?v=8';
   const { pngSize } = await import('./og-raster.js');
   assert.equal((await getRoute(`${path}&lang=zh-hans`, staticDir)).status, 404);
   for (const [aspect, size] of Object.entries({
@@ -394,15 +542,30 @@ test('every zh card captions in its own script, at full size, from the published
     const board = positionCardBoard(slug);
     assert.ok(board, `${slug} has a board`);
     for (const lang of ARTICLE_OG_LANGS) {
-      const title = articleCardTitleZh(zhTitles[lang]);
+      const isArticle = (FULL_BOARD_ARTICLES as readonly string[]).includes(slug);
+      const title: string = isArticle ? zhTitles[lang] : articleCardTitleZh(zhTitles[lang]);
       assert.match(title, /\p{Script=Han}/u, `${slug} ${lang}: ${title}`);
-      assert.doesNotMatch(title, /[—：]/, `${slug} ${lang}: ${title}`);
-      const svg = renderBoardCard(board, new Map(), { title: [title] }, 'traditional');
-      // One line at the type scale's 52: fitted, never shrunk or broken.
-      const lines = [...svg.matchAll(/font-size="(\d+)" font-weight="700">([^<]*)<\/text>/g)]
-        .filter((m) => m[2] === title)
-        .map((m) => Number(m[1]));
-      assert.deepEqual(lines, [52], `${slug} ${lang}: ${title}`);
+      if (!isArticle) assert.doesNotMatch(title, /[—：]/, `${slug} ${lang}: ${title}`);
+      const svg = renderBoardCard(
+        board,
+        new Map(),
+        { title: [title], wrapTitle: isArticle },
+        'traditional',
+      );
+      // Rules keep their existing single line; articles may wrap, still at 52.
+      const lines = [...svg.matchAll(/font-size="(\d+)" font-weight="700">([^<]*)<\/text>/g)].map(
+        (m) => ({ size: Number(m[1]), text: m[2]! }),
+      );
+      assert.equal(
+        lines
+          .map((l) => l.text)
+          .join('')
+          .replace(/\s/g, ''),
+        title.replace(/\s/g, ''),
+        `${slug} ${lang}`,
+      );
+      assert.ok(lines.every((l) => l.size === 52));
+      if (!isArticle) assert.equal(lines.length, 1, `${slug} rules layout unchanged`);
     }
   }
   assert.equal(articleCardTitleZh(ARTICLE_META.banqi!.zhTitles!['zh-hant']), '暗棋規則');
@@ -474,6 +637,19 @@ test('no position card shows its variant at the start position', async () => {
     jungle: 'jungle',
     'jungle-flip': 'jungle-flip',
     pikafish: 'xiangqi',
+    'shortest-stalemate-xiangqi': 'xiangqi',
+    'helpmates-in-xiangqi': 'xiangqi',
+    'jieqi-puzzle-search': 'jieqi',
+    'xiangqi-endgames': 'xiangqi',
+    'duck-xiangqi-game-tree': 'duck-xiangqi',
+    'en-passant-under-fog': 'dark-chess',
+    'most-played-move': 'dark-chess',
+    'lichess-analysis-accuracy': 'dark-chess',
+    'jieqi-openings': 'jieqi',
+    'khai-cuoc-co-up': 'jieqi',
+    'riverbank-cannon': 'xiangqi',
+    'dou-shou-qi-engine': 'jungle',
+    'jungle-den-term': 'jungle',
   } as const;
   for (const [slug, variant] of Object.entries(cards)) {
     const card = positionCardBoard(slug);
@@ -695,7 +871,7 @@ test('a rules card says "Rules" once, wherever the page title has it', async () 
 });
 
 test('an aspect card is the board alone, centred, with no caption to crop', async () => {
-  const { renderBoardAspectCard, CARD_ASPECT_FRAMES } = await import('./og-card-board.js');
+  const { renderBoardAspectCard, CARD_ASPECT_FRAMES, CARD_BG } = await import('./og-card-board.js');
   const { resolvePositionOg, startPositionFen } = await import('./og-position.js');
   for (const variant of ['xiangqi', 'banqi', 'jungle'] as const) {
     const resolved = resolvePositionOg(variant, startPositionFen(variant));
@@ -713,7 +889,13 @@ test('an aspect card is the board alone, centred, with no caption to crop', asyn
         `${variant} ${aspect} centred across`,
       );
       assert.ok(Math.abs(y + h / 2 - frame.height / 2) < 0.01, `${variant} ${aspect} centred down`);
-      assert.ok(x >= 24 && y >= 24, `${variant} ${aspect} inside the pad`);
+      if (aspect === '1x1') {
+        // The square has no border: the board reaches the frame on its own colour.
+        assert.ok(w === frame.width || h === frame.height, `${variant} square fills the frame`);
+        assert.ok(!svg.includes(`fill="${CARD_BG}"`), `${variant} square has no dark frame`);
+      } else {
+        assert.ok(x >= 24 && y >= 24, `${variant} ${aspect} inside the pad`);
+      }
       // A square centre crop of the frame keeps the whole of an upright board;
       // banqi (2:1) loses its outer files to one but stays board edge to edge.
       const side = Math.min(frame.width, frame.height);
