@@ -190,6 +190,8 @@
 
 /* Gomoku starts with Black, so its positive-score share uses the dark ink. */
 [data-seat-ink-family="gomoku"] {
+  /* Ink-named Black chrome must not read the second slot, which is White. */
+  --seat-dark-ink: var(--ink-black-vs-white);
   --seat-first-ink: var(--ink-black-vs-white);
   --seat-second-ink: var(--ink-white);
   --seat-first-chip: var(--ink-black-chip);

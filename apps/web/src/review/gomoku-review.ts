@@ -3,7 +3,6 @@ import {
   type GomokuColor,
   type GomokuMove,
   type GomokuOpening,
-  type GomokuPlayerView,
   type GomokuRoomState,
   parseGomokuMove,
 } from '@mistboard/game';
@@ -12,7 +11,7 @@ import type { GomokuBoardMarker } from '../gomoku-board.js';
 import { t } from '../i18n/catalog.js';
 import type { NodeShape } from './game-tree.js';
 import { createGomokuReviewBoard } from './gomoku-review-board.js';
-import { makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
+import { type GomokuReviewView, makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
 import {
   mountTreeReview,
   type TreePresentation,
@@ -65,7 +64,7 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
   const presentation: TreePresentation<
     GomokuMove,
     GomokuRoomState,
-    GomokuPlayerView,
+    GomokuReviewView,
     GomokuColor,
     NodeShape,
     GomokuBoardMarker

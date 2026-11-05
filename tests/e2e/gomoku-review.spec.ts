@@ -18,7 +18,11 @@ type LongReview = {
   ply_count: number;
   termination: string;
   result: string;
-  analysis: { plies: { ply: number; mate: number | null }[] };
+  analysis: {
+    engineId?: string;
+    depth?: number;
+    plies: { ply: number; cp?: number | null; mate: number | null; best?: string | null }[];
+  };
 };
 const FIXTURE = new URL(
   'long-review.json',
@@ -29,7 +33,6 @@ const FIXTURE = new URL(
 const loaded: LongReview | null = existsSync(FIXTURE)
   ? JSON.parse(readFileSync(FIXTURE, 'utf8'))
   : null;
-test.skip(!loaded, 'docs-private/gomoku/long-review.json not present');
 const fixture: LongReview = loaded ?? {
   game_id: 'gmk_absent',
   opening: { stones: [], turn: 'black' },
@@ -49,8 +52,8 @@ const route = `/api/gomoku/games/${room}`;
 const opening = fixture.opening as GomokuOpening;
 const last = fixture.ply_count;
 
-function recording() {
-  let state = createGomokuRoomState(room, opening);
+function recording(game = fixture) {
+  let state = createGomokuRoomState(room, game.opening);
   const truth = [{ ply: 0, at: 0, view: getGomokuPlayerView(state, 'black', true) }];
   const timeline: Array<{
     type: 'move-played';
@@ -59,7 +62,7 @@ function recording() {
     color: 'black' | 'white';
     move: GomokuMove;
   }> = [];
-  for (const entry of fixture.plies) {
+  for (const entry of game.plies) {
     const move = { to: entry.uci } as GomokuMove;
     state = applyGomokuRoomMove(state, move);
     truth.push({
@@ -80,9 +83,9 @@ function recording() {
       roomId: room,
       variant: 'gomoku',
       mode: 'eve',
-      result: fixture.result === 'draw' ? 'draw' : `${fixture.result}-wins`,
-      termination: fixture.termination,
-      plyCount: last,
+      result: game.result === 'draw' ? 'draw' : `${game.result}-wins`,
+      termination: game.termination,
+      plyCount: game.ply_count,
       rated: false,
       initialMs: null,
       incrementMs: null,
@@ -94,7 +97,7 @@ function recording() {
   };
 }
 
-async function open(page: Page) {
+async function open(page: Page, game = fixture) {
   await page.addInitScript(() => {
     localStorage.setItem('mb_admin', '1');
     localStorage.setItem('mb_signed_in', '1');
@@ -111,7 +114,7 @@ async function open(page: Page) {
       },
     }),
   );
-  await page.route(`**${route}`, (request) => request.fulfill({ json: recording() }));
+  await page.route(`**${route}`, (request) => request.fulfill({ json: recording(game) }));
   let polls = 0;
   await page.route(`**${route}/analysis`, (request) =>
     request.request().method() === 'POST'
@@ -120,66 +123,135 @@ async function open(page: Page) {
   );
   await page.route(`**${route}/analysis/jobs/fixture-sweep`, (request) =>
     request.fulfill({
-      json: ++polls === 1 ? { status: 'pending' } : { status: 'done', result: fixture.analysis },
+      json: ++polls === 1 ? { status: 'pending' } : { status: 'done', result: game.analysis },
     }),
   );
   await page.goto(`/gomoku/game/${room}?lang=en`);
   await expect(page.locator('.gomoku-svg')).toBeVisible();
-  await page.getByRole('button', { name: 'Analyse', exact: true }).click();
+  await page.getByRole('button', { name: 'Request computer analysis', exact: true }).click();
   await expect(page.locator('.advantage-chart')).toBeVisible();
 }
 
-test('long game: Analyse yields every recorded graph point, including a null score', async ({
+const shortGame: LongReview = {
+  game_id: room,
+  opening: { stones: [], turn: 'black' },
+  plies: ['a1', 'a15', 'b1', 'b15', 'c1', 'c15', 'd1', 'd15', 'e1'].map((uci, index) => ({
+    ply: index + 1,
+    uci,
+    mover: index % 2 === 0 ? 'black' : 'white',
+  })),
+  ply_count: 9,
+  result: 'black',
+  termination: 'five',
+  analysis: {
+    engineId: 'rapfi-gomoku',
+    depth: 9,
+    plies: Array.from({ length: 10 }, (_, ply) => ({
+      ply,
+      cp: ply % 2 === 0 ? 300 : -300,
+      mate: null,
+      best: null,
+    })),
+  },
+};
+
+test('shared review gives Black a dark advantage area and White a light area in both themes', async ({
   page,
-}) => {
-  await open(page);
-  const points = await page.locator('.advantage-chart__line').getAttribute('points');
-  expect(points?.split(' ')).toHaveLength(last + 1);
-  expect(last + 1).toBeGreaterThanOrEqual(81);
-  expect(points).not.toMatch(/NaN|Infinity/);
+}, testInfo) => {
+  await open(page, shortGame);
+  await expect(page.locator('.analysis-summary__player')).toHaveCount(2);
+  await expect(page.locator('.gomoku-winning')).toHaveCount(5);
+  await expect(page.locator('.gomoku-move-number')).toHaveCount(9);
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(
+      (value) => (document.documentElement.dataset.effectiveTheme = value),
+      theme,
+    );
+    const fills = await page.locator('.advantage-chart').evaluate((chart) => {
+      const fill = (ink: string) =>
+        getComputedStyle(chart.querySelector(`.advantage-chart__area--${ink}`)!).fill;
+      return { black: fill('black'), white: fill('white') };
+    });
+    expect(fills.black).not.toBe(fills.white);
+    const brightness = (fill: string) =>
+      fill
+        .match(/[\d.]+/g)!
+        .slice(0, 3)
+        .map(Number)
+        .reduce((sum, channel) => sum + channel, 0);
+    expect(brightness(fills.black)).toBeLessThan(brightness(fills.white));
+  }
+  await page.evaluate(() => (document.documentElement.dataset.effectiveTheme = 'light'));
+  await page.screenshot({ path: testInfo.outputPath('gomoku-review.png'), fullPage: true });
 });
 
-test('long game: stepping and clicking the graph move board and cursor together', async ({
-  page,
-}) => {
-  await open(page);
-  await page.keyboard.press('Home');
-  for (let k = 0; k < 12; k += 1) await page.keyboard.press('ArrowRight');
-  await expect(page.locator('[data-piece-square]')).toHaveCount(opening.stones.length + 12);
-  await expect(page.locator('.advantage-chart__cursor')).toHaveAttribute(
-    'x1',
-    ((300 * 12) / last).toFixed(2),
-  );
-  const graph = page.locator('.advantage-chart__svg');
-  const box = await graph.boundingBox();
-  if (!box) throw new Error('graph has no layout');
-  await graph.click({ position: { x: (box.width * 40) / last, y: box.height / 2 } });
-  await expect(page.locator('[data-piece-square]')).toHaveCount(opening.stones.length + 40);
-});
+async function turnOnLocalEngine(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) <= 600) {
+    await page.locator('[data-move-nav-menu]').click();
+    await page.locator('[data-review-engine]').click();
+  } else {
+    await page.locator('.engine-panel__switch').click();
+  }
+}
 
-test('long game: local Rapfi draws its best move and line while the graph stays', async ({
-  page,
-}) => {
-  await open(page);
-  await page.keyboard.press('Home');
-  await page.locator('.engine-panel__switch').click();
-  await expect(page.locator('.gomoku-best')).toHaveCount(1, { timeout: 40_000 });
-  await expect(page.locator('.gomoku-pv-number').first()).toHaveText('1');
-  await expect(page.locator('.advantage-chart')).toBeVisible();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.locator('[data-piece-square]')).toHaveCount(opening.stones.length + 1);
-  await expect(page.locator('.gomoku-best')).toHaveCount(1, { timeout: 40_000 });
-});
+test.describe('recorded long-game Rapfi acceptance', () => {
+  test.skip(!loaded, 'docs-private/gomoku/long-review.json not present');
+  test('long game: Analyse yields every recorded graph point, including a null score', async ({
+    page,
+  }) => {
+    await open(page);
+    const points = await page.locator('.advantage-chart__line').getAttribute('points');
+    expect(points?.split(' ')).toHaveLength(last + 1);
+    expect(last + 1).toBeGreaterThanOrEqual(81);
+    expect(points).not.toMatch(/NaN|Infinity/);
+  });
 
-test('long game: a forced five is displayed as win in N', async ({ page }) => {
-  await open(page);
-  const forced = [...fixture.analysis.plies].reverse().find((point) => point.mate !== null);
-  expect(forced).toBeDefined();
-  await page.keyboard.press('Home');
-  for (let k = 0; k < forced!.ply; k += 1) await page.keyboard.press('ArrowRight');
-  await page.locator('.engine-panel__switch').click();
-  await expect(page.locator('.engine-panel__eval')).toHaveText(/^(Black|White) wins in \d+$/, {
-    timeout: 40_000,
+  test('long game: stepping and clicking the graph move board and cursor together', async ({
+    page,
+  }) => {
+    await open(page);
+    await page.keyboard.press('Home');
+    for (let k = 0; k < 12; k += 1) await page.keyboard.press('ArrowRight');
+    await expect(page.locator('[data-piece-square]')).toHaveCount(opening.stones.length + 12);
+    await expect(page.locator('.advantage-chart__cursor')).toHaveAttribute(
+      'x1',
+      ((300 * 12) / last).toFixed(2),
+    );
+    const graph = page.locator('.advantage-chart__svg');
+    const box = await graph.boundingBox();
+    if (!box) throw new Error('graph has no layout');
+    await graph.click({ position: { x: (box.width * 40) / last, y: box.height / 2 } });
+    await expect(page.locator('[data-piece-square]')).toHaveCount(opening.stones.length + 40);
+  });
+
+  test('long game: local Rapfi draws its best move and line while the graph stays', async ({
+    page,
+  }) => {
+    await open(page);
+    await page.keyboard.press('Home');
+    await turnOnLocalEngine(page);
+    await expect(page.locator('.gomoku-best')).toHaveCount(1, { timeout: 40_000 });
+    await expect(page.locator('.gomoku-pv .gomoku-pv-number').first()).toHaveText('1');
+    await expect(page.locator('.advantage-chart')).toBeVisible();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('[data-piece-square]')).toHaveCount(opening.stones.length + 1);
+    await expect(page.locator('.gomoku-best')).toHaveCount(1, { timeout: 40_000 });
+  });
+
+  test('long game: a forced five is displayed as win in N', async ({ page }) => {
+    await open(page);
+    const forced = [...fixture.analysis.plies].reverse().find((point) => point.mate !== null);
+    expect(forced).toBeDefined();
+    await page.keyboard.press('Home');
+    for (let k = 0; k < forced!.ply; k += 1) await page.keyboard.press('ArrowRight');
+    await turnOnLocalEngine(page);
+    const evaluation =
+      (page.viewportSize()?.width ?? 1280) <= 600
+        ? '.analysis-engine-bar__eval'
+        : '.engine-panel__eval';
+    await expect(page.locator(evaluation)).toHaveText(/^(Black|White) wins in \d+$/, {
+      timeout: 40_000,
+    });
   });
 });
 
@@ -188,7 +260,7 @@ test('hidden game: a non-admin with flags off sees no Analyse and gets route ref
 }) => {
   await page.route('**/api/auth/me', (request) => request.fulfill({ json: { user: null } }));
   await page.goto(`/gomoku/game/${room}?lang=en`);
-  await expect(page.locator('[data-gomoku-analyse]')).toHaveCount(0);
+  await expect(page.locator('.xiangqi-review__analyse')).toHaveCount(0);
   await expect(page.locator('.gomoku-svg')).toHaveCount(0);
   expect((await page.request.get(`${route}/analysis`)).status()).toBe(404);
   expect((await page.request.post(`${route}/analysis`)).status()).toBe(404);

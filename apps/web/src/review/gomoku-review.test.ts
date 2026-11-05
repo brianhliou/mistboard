@@ -274,6 +274,26 @@ describe('Gomoku tree review', () => {
     expect(reloaded.handle.serialize()).toEqual(saved);
   });
 
+  it('numbers the selected branch without numbering the dealt opening stones', () => {
+    const { root, handle } = mount();
+    expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(moves.length);
+    press('Home');
+    expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+    press('ArrowRight');
+    board(root)
+      .querySelector('[data-square="o15"] .gomoku-hit')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(board(root).querySelector('[data-square="o15"] .gomoku-move-number')?.textContent).toBe(
+      '2',
+    );
+    expect(board(root).querySelector('.gomoku-last')).not.toBeNull();
+    const saved = handle.serialize();
+    press('End');
+    expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(moves.length);
+    const restored = mount({ initialTree: saved });
+    expect(board(restored.root).querySelectorAll('.gomoku-move-number')).toHaveLength(moves.length);
+  });
+
   it('remembers both on and off across mounts and tolerates storage refusal', async () => {
     let mounted = mount();
     toggle(mounted.root);
