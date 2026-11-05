@@ -1047,17 +1047,7 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.study-game-line__result[data-outcome="win"] {
-  border-color: transparent;
-  background: #1a7f64;
-  color: #fff;
-}
-.study-game-line__result[data-outcome="loss"] {
-  border-color: transparent;
-  background: #b3261e;
-  color: #fff;
-}
-/* No focus player (a match, an engine gauntlet): the winning seat's ink, as
+/* The winning seat's ink, in every study (a player deep dive too), as
  * the game search's result chips paint it (historical-xiangqi-search.css),
  * from the family slots in seat-disc-ink.css, so a chess study shows White and
  * a jungle one Blue. "red" and "black" name the tag seats, first and second. */

@@ -59,7 +59,6 @@ import {
   buildChapterGameRow,
   chapterEventGroups,
   displayEventName,
-  studyFocusPlayer,
   studyGamesSummary,
 } from './study-chapter-games.js';
 import {
@@ -774,7 +773,6 @@ function renderStudy(
       studyTitle: localizedStudyName(study.name, study.i18n),
       chapters,
       activeId: chapter.id,
-      gameFocus: studyFocusPlayer(chapters),
       groupHeading: (id) => phoneEventGroups.get(id) ?? null,
       chapterHref: (id) => studyChapterPath(study.id, id, window.location.pathname),
       onSwitch: (id) => void switchTo(id),
@@ -921,7 +919,6 @@ function renderStudy(
       return Promise.resolve();
     }
 
-    const gameFocus = studyFocusPlayer(chapters);
     const eventGroups = chapterEventGroups(chapters);
     let handle: TreeReviewHandle | null = null;
     activeHandle = null;
@@ -1057,7 +1054,7 @@ function renderStudy(
             false,
             (model) => {
               const full = chapters.find((entry) => entry.id === model.id);
-              return full ? buildChapterGameRow(full, gameFocus) : null;
+              return full ? buildChapterGameRow(full) : null;
             },
             (model) => eventGroups.get(model.id) ?? null,
           ),
