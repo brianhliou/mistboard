@@ -612,7 +612,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `site-shell.css` | Shared site chrome styles for nav, mobile nav collapse, loading state, and footer; also loaded by live/learn routes that render site chrome directly |
 | `game-display.ts` | Shared game display contracts and formatters: `FeaturedGame`, `GameParticipant`, `displayParticipantName`, participant lookup, source labels, and known engine display names |
 | `game-meta.ts` | Shared `GameMeta` builder for replay surfaces, including participant rating deltas and public game review URL selection |
-| `variants.ts` | Current web-visible variant/game-spec list and leaderboard API mapping |
+| `variants.ts` | Current variant/game-spec definitions and leaderboard API mapping; Gomoku leaderboard/profile visibility follows publicSurface |
 | `feature-flags.ts` | Build-time gates for hidden/prelaunch client surfaces |
 | `rated-flag.ts` | Client mirror of `/api/server-status` rated-mode switch |
 | `public-assets.ts` | Public build asset filter used by `vite.config.ts` to keep local bakeoff and pixel-lab artifacts out of ordinary web builds |

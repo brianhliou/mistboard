@@ -17,6 +17,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   gameSpecForId,
   isPublicGameSpec,
   JIEQI_SPEC_ID,
@@ -92,7 +93,7 @@ const xiangqiMahjongPublic = isPublicGameSpec(XIANGQI_MAHJONG_SPEC_ID);
 // never shown as a variant). variant-markers.test.ts holds every live spec
 // outside that null list to a marker file on disk.
 const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
-  // Flag-gated casual play: a marker without a public rating row.
+  // Gomoku shares its marker across play and rating surfaces.
   gomoku: 'gomoku',
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
@@ -239,6 +240,17 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: xiangqiMahjongPublic,
     onProfile: xiangqiMahjongPublic,
+  },
+  // A definition exists while hidden; only publicSurface opens the grids.
+  {
+    id: currentRatingVariantForSpec(GOMOKU_SPEC_ID),
+    gameSpecId: GOMOKU_SPEC_ID,
+    apiParam: GOMOKU_SPEC_ID,
+    label: gameSpecForId(GOMOKU_SPEC_ID).publicName,
+    miniId: 'gomoku',
+    enabled: false,
+    onLeaderboard: isPublicGameSpec(GOMOKU_SPEC_ID),
+    onProfile: isPublicGameSpec(GOMOKU_SPEC_ID),
   },
   // Retired 2026-10-11, so off the canonical order and at the tail: the
   // entries stay so labels and finished games resolve, and no rating surface

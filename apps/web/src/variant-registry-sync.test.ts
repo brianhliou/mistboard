@@ -43,6 +43,7 @@ import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
+import { VARIANTS } from './variants.js';
 import { boardAspectForSpec, hasBoardAspect } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
@@ -384,6 +385,10 @@ describe('Gomoku hidden registration', () => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
       expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('hidden');
+      expect(VARIANTS.find((variant) => variant.gameSpecId === GOMOKU_SPEC_ID)).toMatchObject({
+        onLeaderboard: false,
+        onProfile: false,
+      });
       const web = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
       const server = registeredVariantTenants().find(
         (tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID,

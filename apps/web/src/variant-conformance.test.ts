@@ -436,7 +436,7 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     expect(tenant?.landing?.offerInMenu()).toBe(false);
     expect(tenant?.landing?.engineOptions).toHaveLength(8);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
-    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(
       GOMOKU_SPEC_ID,

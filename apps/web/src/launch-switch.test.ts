@@ -92,3 +92,34 @@ describe('launch switch on the web', () => {
     expect(listed).toEqual(everyValue(listed, true));
   });
 });
+
+async function mockGomokuSurface(surface: 'hidden' | 'casual') {
+  const isPublic = publicSpecPredicate(
+    GAME_SPECS.map((spec) => (spec.id === 'gomoku' ? { ...spec, publicSurface: surface } : spec)),
+  );
+  const lists = deriveLaunchLists(isPublic);
+  vi.resetModules();
+  vi.doMock('@mistboard/game', async (importOriginal) => {
+    const actual = await importOriginal<typeof Game>();
+    return {
+      ...actual,
+      isPublicGameSpec: (id: string | null | undefined) => id != null && isPublic(id),
+      CANONICAL_VARIANT_ORDER: lists.canonicalVariantOrder,
+      CORRESPONDENCE_ELIGIBLE_SPEC_IDS: lists.correspondenceEligible,
+      CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: lists.correspondenceAllowlisted,
+      ALLOWLISTED_PLAYTEST_SPEC_IDS: lists.allowlisted,
+    };
+  });
+}
+
+it.each(['hidden', 'casual'] as const)(
+  'Gomoku rating definition follows publicSurface %s without a runtime flag change',
+  async (surface) => {
+    await mockGomokuSurface(surface);
+    const registry = await import('./variants.js');
+    expect(registry.VARIANTS.find((variant) => variant.id === 'gomoku')).toBeDefined();
+    for (const grid of [registry.leaderboardVariants, registry.profileRatingVariants]) {
+      expect(grid.some((variant) => variant.id === 'gomoku')).toBe(surface === 'casual');
+    }
+  },
+);
