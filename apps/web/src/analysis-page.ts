@@ -50,6 +50,13 @@ export async function mountAnalysisPage(
   root.classList.add('analysis-route');
   const mount = await LOADERS[variant]();
   await mount(root, buildVariantPicker(variant));
+  // A gated board may already have an unavailable-page heading.
+  if (!root.querySelector('h1')) {
+    const heading = document.createElement('h1');
+    heading.className = 'visually-hidden';
+    heading.textContent = t('analysis.pageTitle', { variant: variantDisplayLabel(variant) });
+    root.prepend(heading);
+  }
 }
 
 // The top-left variant dropdown (lichess analysis anatomy): the ONLY element in
