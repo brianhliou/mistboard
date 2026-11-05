@@ -190,14 +190,22 @@
 
 /* Gomoku starts with Black, so its positive-score share uses the dark ink. */
 [data-seat-ink-family="gomoku"] {
-  /* Ink-named Black chrome must not read the second slot, which is White. */
-  --seat-dark-ink: var(--ink-black-vs-white);
-  --seat-first-ink: var(--ink-black-vs-white);
+  /* A black stone stays near-black on either theme; the ring lifts small dots. */
+  --seat-dark-ink-border: #aaa298;
+  --seat-dark-ink: #141210;
+  --seat-first-ink: #141210;
   --seat-second-ink: var(--ink-white);
   --seat-first-chip: var(--ink-black-chip);
   --seat-second-chip: var(--ink-white-chip);
   --seat-first-on-chip: var(--ink-on-black);
   --seat-second-on-chip: var(--ink-on-white);
-  --seat-first-gauge: var(--ink-black-vs-white);
+  --seat-first-gauge: #141210;
   --seat-second-gauge: var(--ink-white-chip);
+}
+
+/* A fine edge keeps the near-black area distinct on dark panels. */
+[data-seat-ink-family="gomoku"] .advantage-chart__area--black {
+  stroke: var(--seat-dark-ink-border);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
 }

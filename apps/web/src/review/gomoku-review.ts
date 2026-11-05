@@ -95,6 +95,14 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
         best && parseGomokuMove(best) ? [{ kind: 'best', square: best }] : [],
       showStoredBestWhenOff: false,
     },
+    // Terminal scores encode the known result, not a distance to a future five.
+    moveEvalVisible: (truth) => truth.status.type === 'playing',
+    moveGlyphMarker: (move, glyph) => ({
+      kind: 'glyph',
+      square: move.to,
+      text: glyph.text,
+      tone: glyph.tone,
+    }),
     formatBestMove: (uci) => uci,
     boardHostClassName: 'gomoku-live-board',
     boardWrapClassName: 'review-board-host',

@@ -264,6 +264,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  "Set position" a one-way door. Supply this and the box fills whether or not
    *  there is an engine. Falls back to `engine.fen` when omitted. */
   fen?: (truth: Truth) => string;
+  /** Whether a stored move-list score is meaningful for this resulting position. */
+  moveEvalVisible?(truth: Truth): boolean;
   /** Format a whole-game-analysis best move (server `evals[].best`, in the ANALYSIS
    *  engine's UCI dialect) for the "… was best" advice line. Omit to use the default
    *  xiangqi/FSF formatter (correct for xiangqi/fortress/jungle, whose display coords
@@ -2546,7 +2548,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
-          eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
+          eval:
+            entry && presentation.moveEvalVisible?.(node.truth) !== false
+              ? formatEval(entry.cp, entry.mate)
+              : undefined,
           comment: hidden ? undefined : mark.comment,
           commentClass: mark.commentClass,
           ...(luck === undefined

@@ -13,6 +13,7 @@ import { expect, type Page, test } from '@playwright/test';
 // points elsewhere.
 type LongReview = {
   game_id: string;
+  clocked?: boolean;
   opening: GomokuOpening;
   plies: { ply: number; uci: string; mover: string }[];
   ply_count: number;
@@ -87,12 +88,31 @@ function recording(game = fixture) {
       termination: game.termination,
       plyCount: game.ply_count,
       rated: false,
+      players: [
+        { color: 'black', name: 'Black player' },
+        { color: 'white', name: 'White player' },
+      ],
       initialMs: null,
       incrementMs: null,
     },
     state: { status: state.status, moveNumber: state.moveNumber },
     view: getGomokuPlayerView(state, 'black', true),
-    history: { truth },
+    history: {
+      truth: truth.map((frame) => ({
+        ...frame,
+        ...(game.clocked
+          ? {
+              clock: {
+                remainingMs: { black: 60000 - frame.ply * 1000, white: 60000 - frame.ply * 2000 },
+                activeColor: frame.view.status.type === 'playing' ? frame.view.status.turn : null,
+                runningSince: frame.at,
+                initialMs: 60000,
+                incrementMs: 0,
+              },
+            }
+          : {}),
+      })),
+    },
     timeline,
   };
 }
@@ -126,7 +146,12 @@ async function open(page: Page, game = fixture) {
       json: ++polls === 1 ? { status: 'pending' } : { status: 'done', result: game.analysis },
     }),
   );
+  const cached = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`${route}/analysis`) && response.request().method() === 'GET',
+  );
   await page.goto(`/gomoku/game/${room}?lang=en`);
+  await cached;
   await expect(page.locator('.gomoku-svg')).toBeVisible();
   await page.getByRole('button', { name: 'Request computer analysis', exact: true }).click();
   await expect(page.locator('.advantage-chart')).toBeVisible();
@@ -134,6 +159,7 @@ async function open(page: Page, game = fixture) {
 
 const shortGame: LongReview = {
   game_id: room,
+  clocked: true,
   opening: { stones: [], turn: 'black' },
   plies: ['a1', 'a15', 'b1', 'b15', 'c1', 'c15', 'd1', 'd15', 'e1'].map((uci, index) => ({
     ply: index + 1,
@@ -148,7 +174,7 @@ const shortGame: LongReview = {
     depth: 9,
     plies: Array.from({ length: 10 }, (_, ply) => ({
       ply,
-      cp: ply % 2 === 0 ? 300 : -300,
+      cp: ply === 9 ? -30000 : ply % 2 === 0 ? 300 : -300,
       mate: null,
       best: null,
     })),
@@ -170,8 +196,30 @@ test('shared review gives Black a dark advantage area and White a light area in 
     const fills = await page.locator('.advantage-chart').evaluate((chart) => {
       const fill = (ink: string) =>
         getComputedStyle(chart.querySelector(`.advantage-chart__area--${ink}`)!).fill;
-      return { black: fill('black'), white: fill('white') };
+      const scope = chart.closest('[data-seat-ink-family="gomoku"]')!.parentElement!;
+      const style = (selector: string) => getComputedStyle(scope.querySelector(selector)!);
+      const dot = style('.game-meta-card .seat-disc--black');
+      return {
+        black: fill('black'),
+        white: fill('white'),
+        panel: getComputedStyle(chart).backgroundColor,
+        edge: style('.advantage-chart__area--black').stroke,
+        dot: dot.backgroundColor,
+        ring: dot.borderTopColor,
+        ringWidth: dot.borderTopWidth,
+        bar: style('.review-move-times__bar--black').backgroundColor,
+        clock: style('.review-move-times__clock--black').color,
+      };
     });
+    expect(fills.black).toBe('rgb(20, 18, 16)');
+    expect(fills.dot).toBe(fills.black);
+    expect(fills.bar).toBe(fills.black);
+    expect(fills.clock).toBe(fills.black);
+    expect(fills.ringWidth).toBe('1px');
+    expect(fills.ring).not.toBe(fills.dot);
+    expect(fills.edge).not.toBe('none');
+    expect(fills.edge).not.toBe(fills.black);
+    expect(fills.black).not.toBe(fills.panel);
     expect(fills.black).not.toBe(fills.white);
     const brightness = (fill: string) =>
       fill
@@ -181,6 +229,8 @@ test('shared review gives Black a dark advantage area and White a light area in 
         .reduce((sum, channel) => sum + channel, 0);
     expect(brightness(fills.black)).toBeLessThan(brightness(fills.white));
   }
+  await expect(page.locator('.review-move-list__eval').last()).toBeEmpty();
+  await page.screenshot({ path: testInfo.outputPath('gomoku-review-dark.png'), fullPage: true });
   await page.evaluate(() => (document.documentElement.dataset.effectiveTheme = 'light'));
   await page.screenshot({ path: testInfo.outputPath('gomoku-review.png'), fullPage: true });
 });
@@ -264,4 +314,38 @@ test('hidden game: a non-admin with flags off sees no Analyse and gets route ref
   await expect(page.locator('.gomoku-svg')).toHaveCount(0);
   expect((await page.request.get(`${route}/analysis`)).status()).toBe(404);
   expect((await page.request.post(`${route}/analysis`)).status()).toBe(404);
+});
+
+test('Gomoku rules have matching play rows and larger boards without phone overflow', async ({
+  page,
+}, testInfo) => {
+  if ((page.viewportSize()?.width ?? 1280) < 600)
+    await page.setViewportSize({ width: 375, height: 844 });
+  await page.goto('/rules/gomoku?lang=en');
+  const article = page.locator('[data-article-slug="gomoku"]');
+  await expect(article.locator('h1')).toHaveText('Gomoku Rules');
+  const rows = article.locator('.article-play-cta');
+  await expect(rows).toHaveCount(2);
+  const buttons = await rows.evaluateAll((elements) =>
+    elements.map((row) =>
+      [...row.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')]),
+    ),
+  );
+  expect(buttons[0]).toEqual(buttons[1]);
+  expect(buttons[0]).toEqual([
+    ['Play Gomoku', '/?play=computer&gameSpecId=gomoku'],
+    ['Play a friend', '/?play=friend&gameSpecId=gomoku'],
+  ]);
+  const widths = await article
+    .locator('figure > svg.gomoku-svg')
+    .evaluateAll((boards) => boards.map((board) => board.getBoundingClientRect().width));
+  expect(widths).toHaveLength(3);
+  if ((page.viewportSize()?.width ?? 1280) > 600) expect(widths).toEqual([448, 448, 448]);
+  else {
+    expect(widths.every((width) => width <= 375 && width > 250)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      375,
+    );
+  }
+  await page.screenshot({ path: testInfo.outputPath('gomoku-rules.png'), fullPage: true });
 });

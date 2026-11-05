@@ -8,6 +8,8 @@ import {
   parseGomokuMove,
 } from '@mistboard/game';
 import { boardCoordinatesEnabled } from './display-preferences.js';
+import type { MoveGlyphTone } from './review/move-glyph.js';
+import { svgBoardGlyphMarker } from './svg-board-marker.js';
 
 const CELL = 32;
 const PAD = CELL;
@@ -16,7 +18,8 @@ const FILES = 'abcdefghijklmno';
 
 export type GomokuBoardMarker =
   | { kind: 'best' | 'circle'; square: string }
-  | { kind: 'pv'; moves: readonly GomokuMove[] };
+  | { kind: 'pv'; moves: readonly GomokuMove[] }
+  | { kind: 'glyph'; square: string; text: string; tone: MoveGlyphTone };
 
 export function gomokuBoardSvg(
   view: GomokuPlayerView,
@@ -69,6 +72,7 @@ export function gomokuBoardSvg(
     );
   }
   const overlays: string[] = [];
+  const glyphs: string[] = [];
   const point = (square: GomokuSquare) => ({
     x: filePoint(square.charCodeAt(0) - 97),
     y: rankPoint(Number(square.slice(1)) - 1),
@@ -83,7 +87,7 @@ export function gomokuBoardSvg(
         if (next === state) break;
         const { x, y } = point(move.to);
         overlays.push(
-          `<g class="gomoku-pv" data-square="${move.to}" opacity="0.65"><circle class="gomoku-stone gomoku-stone--${color}" cx="${x}" cy="${y}" r="14"/><text class="gomoku-pv-number gomoku-pv-number--${color}" x="${x}" y="${y}">${index + 1}</text></g>`,
+          `<g class="gomoku-pv" data-square="${move.to}" opacity="0.43"><circle class="gomoku-stone gomoku-stone--${color}" cx="${x}" cy="${y}" r="14"/><text class="gomoku-pv-number gomoku-pv-number--${color}" x="${x}" y="${y}">${index + 1}</text></g>`,
         );
         state = next;
       }
@@ -92,6 +96,24 @@ export function gomokuBoardSvg(
       if (!move || (marker.kind === 'best' && !view.legalMoves.some((m) => m.to === move.to)))
         continue;
       const { x, y } = point(move.to);
+      if (marker.kind === 'glyph') {
+        // Shared verdict badge, scaled to 32-unit spacing. Its upper-right
+        // corner clears the move number; clamp the complete disc to the wood.
+        const radius = 6;
+        const offset = 10;
+        const inset = radius + 1;
+        const cx = Math.min(EDGE - inset, x + offset);
+        const cy = Math.max(inset, y - offset);
+        glyphs.push(
+          `<g class="gomoku-glyph" data-square="${move.to}">${svgBoardGlyphMarker(
+            { text: marker.text, className: `xq-marker--${marker.tone}` },
+            { x: cx - offset, y: cy + offset },
+            radius,
+            offset,
+          )}</g>`,
+        );
+        continue;
+      }
       overlays.push(
         `<circle class="gomoku-${marker.kind}" data-square="${move.to}" cx="${x}" cy="${y}" r="15"/>`,
       );
@@ -100,6 +122,10 @@ export function gomokuBoardSvg(
   if (overlays.length)
     nodes.push(
       `<g class="gomoku-engine-overlay" pointer-events="none" aria-hidden="true">${overlays.join('')}</g>`,
+    );
+  if (glyphs.length)
+    nodes.push(
+      `<g class="gomoku-glyph-layer" pointer-events="none" aria-hidden="true">${glyphs.join('')}</g>`,
     );
   nodes.push('</svg>');
   return nodes.join('');

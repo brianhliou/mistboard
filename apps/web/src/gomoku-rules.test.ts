@@ -35,11 +35,15 @@ describe('public Gomoku rules page', () => {
     const row = [...page.querySelectorAll('.article-cta-row')].at(-1)!;
     const buttons = [...row.querySelectorAll('a.article-cta')];
     expect(buttons.map((button) => [button.textContent, button.getAttribute('href')])).toEqual([
-      ['Play vs computer', '/?play=computer&gameSpecId=gomoku'],
-      ['Challenge a friend', '/?play=friend&gameSpecId=gomoku'],
+      ['Play Gomoku', '/?play=computer&gameSpecId=gomoku'],
+      ['Play a friend', '/?play=friend&gameSpecId=gomoku'],
     ]);
     expect(buttons[0].classList.contains('article-cta-primary')).toBe(true);
     expect(buttons[1].classList.contains('article-cta-secondary')).toBe(true);
+    const firstRow = page.querySelector('.article-play-cta')!;
+    expect(buttons.map((button) => button.outerHTML)).toEqual(
+      [...firstRow.querySelectorAll('a')].map((button) => button.outerHTML),
+    );
     const article = findArticle('gomoku')!;
     expect(article.sections.at(-1)?.blocks?.at(-1)?.kind).toBe('cta');
   });
@@ -54,10 +58,10 @@ describe('public Gomoku rules page', () => {
     );
     expect(
       new Set(boards.map((board) => board.getAttribute('style')?.match(/width:([^;]+)/)?.[1])),
-    ).toEqual(new Set(['min(100%, 384px)']));
-    expect(new Set(boards.map((board) => board.getAttribute('width')))).toEqual(new Set(['384']));
+    ).toEqual(new Set(['min(100%, 448px)']));
+    expect(new Set(boards.map((board) => board.getAttribute('width')))).toEqual(new Set(['448']));
     const boardSection = findArticle('gomoku')!.sections.find(
-      (section) => section.heading === 'Stones stay on the intersections where you place them',
+      (section) => section.heading === 'Placing stones',
     );
     expect(boardSection?.blocks?.some((block) => block.kind === 'raw-svg')).toBe(true);
     for (const stone of boards.at(-1)!.querySelectorAll('.gomoku-stone')) {
@@ -173,7 +177,7 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     }
     expect(prose).toContain(`${GOMOKU_BOARD_SIZE}×${GOMOKU_BOARD_SIZE}`);
     const openingSection = article.sections.find(
-      (section) => section.heading === 'Mistboard deals a screened opening',
+      (section) => section.heading === 'Dealt openings',
     )!;
     const openingText = articleProse({ ...article, sections: [openingSection] })
       .filter(({ path }) => path.startsWith('sections'))
@@ -184,16 +188,11 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     for (const opening of openingPool.openings) expect(prose).not.toContain(opening.id);
   });
 
-  it('teaches placement, winning, draws and clocks before the dealt opening', () => {
+  it('teaches placement, winning and draws before the dealt opening', () => {
     const article = findArticle('gomoku')!;
     const headings = article.sections.map((section) => section.heading);
-    expect(headings.slice(0, 4)).toEqual([
-      'Stones stay on the intersections where you place them',
-      'Five in a row wins',
-      'Players can agree to a draw',
-      'Your clock runs during your turn',
-    ]);
-    expect(headings[4]).toBe('Mistboard deals a screened opening');
+    expect(headings.slice(0, 3)).toEqual(['Placing stones', 'Five in a row wins', 'Draws']);
+    expect(headings[3]).toBe('Dealt openings');
     const intro = article.intro
       ?.map((block) => (block.kind === 'paragraph' ? block.text : ''))
       .join(' ');
@@ -203,20 +202,36 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     expect(intro).toContain('Stones never move');
     expect(intro).toContain('completes five in a row wins');
     const page = buildArticlePage('gomoku');
-    const historyLink = page.querySelector<HTMLAnchorElement>(
-      'a[href="#black-wins-a-perfect-game-from-the-empty-board"]',
-    );
-    expect(historyLink).not.toBeNull();
-    expect(page.querySelector(historyLink!.hash)?.textContent).toBe(
-      'Black wins a perfect game from the empty board',
-    );
+    expect(headings).toEqual([
+      'Placing stones',
+      'Five in a row wins',
+      'Draws',
+      'Dealt openings',
+      'Why openings are dealt',
+      'How openings are screened',
+      'Play on Mistboard',
+    ]);
+    expect(
+      page.querySelector('a[href="#black-wins-a-perfect-game-from-the-empty-board"]'),
+    ).toBeNull();
+    expect(page.textContent).toContain('as the solved result explains');
+    expect(
+      articleProse(article)
+        .map(({ text }) => text)
+        .join(' '),
+    ).not.toMatch(/clock|—/i);
+    for (const link of page.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
+      expect(page.querySelector(link.hash)).not.toBeNull();
+    }
+    expect(article.updatedAt).toBe('2026-11-05');
+    expect(article.updateNote).toBeTruthy();
     const wordCount = articleProse(article)
       .filter(({ path }) => path !== 'summary')
       .map(({ text }) => text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))
       .join(' ')
       .match(/\S+/g)!.length;
-    expect(wordCount).toBeGreaterThanOrEqual(550);
-    expect(wordCount).toBeLessThanOrEqual(650);
+    expect(wordCount).toBeGreaterThanOrEqual(450);
+    expect(wordCount).toBeLessThanOrEqual(600);
   });
 
   it('keeps the screening FAQ and draw-offer instructions without obsolete setup questions', () => {
