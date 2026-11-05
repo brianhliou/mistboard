@@ -25,7 +25,7 @@ test('notRetiredVariant excludes every retired spec id, derived from the registr
 });
 
 test('every hidden spec is excluded from public figures independently of access grants', () => {
-  assert.ok(countedPublicGame('g').includes(`'${GOMOKU_SPEC_ID}'`));
+  assert.ok(!countedPublicGame('g').includes(`'${GOMOKU_SPEC_ID}'`));
   for (const spec of GAME_SPECS) {
     assert.equal(
       OFF_PUBLIC_GAME_SPEC_IDS.includes(spec.id),

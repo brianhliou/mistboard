@@ -37,7 +37,7 @@ describe('variant markers', () => {
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
   });
 
-  it('shares the Gomoku marker with TV with its hidden rating definition', () => {
+  it('shares the Gomoku marker with TV with its public rating definition', () => {
     const id = 'gomoku';
     expect(variantMiniIdForGameSpec(id)).toBe(id);
     expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
@@ -45,7 +45,7 @@ describe('variant markers', () => {
       "url('/variant-markers/final/gomoku.png')",
     );
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(id);
-    expect(isPublicGameSpec(id)).toBe(false);
+    expect(isPublicGameSpec(id)).toBe(true);
   });
 
   it('wires the committed Three Kingdoms art without a public variant row', () => {

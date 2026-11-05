@@ -60,6 +60,7 @@ describe('web variant launch registry', () => {
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
       XIANGQI_MAHJONG_SPEC_ID,
+      'gomoku',
     ]);
     vi.unstubAllEnvs();
     vi.resetModules();
@@ -110,6 +111,7 @@ describe('web variant launch registry', () => {
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
       XIANGQI_MAHJONG_SPEC_ID,
+      'gomoku',
     ]);
     expect(profileRatingVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
@@ -122,6 +124,7 @@ describe('web variant launch registry', () => {
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
       XIANGQI_MAHJONG_SPEC_ID,
+      'gomoku',
     ]);
   });
 
@@ -192,14 +195,14 @@ describe('web variant launch registry', () => {
   });
 });
 
-it('defines the hidden rated Gomoku registry without exposing it on public grids', () => {
+it('defines public rated Gomoku on leaderboard and profile grids', () => {
   expect(VARIANTS.find((variant) => variant.gameSpecId === 'gomoku')).toMatchObject({
     id: 'gomoku',
     apiParam: 'gomoku',
     miniId: 'gomoku',
-    onLeaderboard: false,
-    onProfile: false,
+    onLeaderboard: true,
+    onProfile: true,
   });
-  expect(leaderboardVariants.some((variant) => variant.id === 'gomoku')).toBe(false);
-  expect(profileRatingVariants.some((variant) => variant.id === 'gomoku')).toBe(false);
+  expect(leaderboardVariants.some((variant) => variant.id === 'gomoku')).toBe(true);
+  expect(profileRatingVariants.some((variant) => variant.id === 'gomoku')).toBe(true);
 });
