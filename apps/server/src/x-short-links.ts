@@ -66,6 +66,30 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
     },
     campaign: 'x-elegant-015-2026-10',
   },
+  // Problem 53, "Open the Window and Invite the Moon" (Short 5, chapter iEd47r9g).
+  '53': {
+    target: {
+      fen: '1n1k1a3/R8/b2ab4/2R6/9/6C2/9/4C4/3pArn1c/4K4 r - - 0 1',
+      moves: 'c7c10 a8c10 a9d9 d10d9 g5d5 d8e9 e3d3',
+    },
+    campaign: 'x-elegant-053-2026-11',
+  },
+  // Problem 57, "Released to the Six Directions" (Short 4, chapter Pa30hz6l).
+  '57': {
+    target: {
+      fen: '3ack3/1NR1a1P2/3n2R2/9/2C6/9/9/9/1r2p2r1/3K5 r - - 0 1',
+      moves: 'g8f8 e9f8 c9f9 d8f9 g9g10 e10g10 c6c10 d10e9 b9d10',
+    },
+    campaign: 'x-elegant-057-2026-11',
+  },
+  // Problem 75, "The Bold Commander Submits" (Short 6, chapter yn8f6ImO).
+  '75': {
+    target: {
+      fen: '4rc3/4ak3/9/9/9/9/9/2R6/3pA4/cr1AKC3 r - - 0 1',
+      moves: 'c3f3 e9f8 f3e3 f8e9 e2f3 e9f8 e3e9 e10e9 f3e2',
+    },
+    campaign: 'x-elegant-075-2026-11',
+  },
 };
 
 const UNKNOWN_CAMPAIGN = 'x-unknown';
