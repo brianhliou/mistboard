@@ -66,6 +66,14 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
     },
     campaign: 'x-elegant-015-2026-10',
   },
+  // Problem 39, "Bowang Burns the Camp" (X post, chapter 9LikA1Rm).
+  '39': {
+    target: {
+      fen: '2bak1b2/4aR2C/6N1n/9/9/9/5c3/4BC3/3p1r1n1/4K2c1 r - - 0 1',
+      moves: 'i9i10 i8h10 f9f10 e9f10 i10g10 f10e9 g8f10',
+    },
+    campaign: 'x-elegant-039-2026-11',
+  },
   // Problem 53, "Open the Window and Invite the Moon" (Short 5, chapter iEd47r9g).
   '53': {
     target: {
@@ -82,6 +90,30 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
     },
     campaign: 'x-elegant-057-2026-11',
   },
+  // Problem 59, "Appearing and Vanishing" (X post, chapter Q5TDETyb).
+  '59': {
+    target: {
+      fen: '2b1ka1r1/3Pa4/5Rc2/5Nr2/9/9/9/7C1/C2p5/4K4 r - - 0 1',
+      moves: 'a2a10 c10a8 d9d10 e10d10 f8d8 e9d8 h3d3 d8e9 f7d8 g7d7 d8c10',
+    },
+    campaign: 'x-elegant-059-2026-11',
+  },
+  // Problem 66, "Meeting Peril, Yielding Life" (X post, chapter IWmygJzY).
+  '66': {
+    target: {
+      fen: '1rbak3r/1N1Ra4/cR2b1N2/9/9/9/9/9/5p3/4K4 r - - 0 1',
+      moves: 'd9d10 e9d10 b8e8 c10e8 b9d8',
+    },
+    campaign: 'x-elegant-066-2026-11',
+  },
+  // Problem 67, "The Duck in the Fishing Net" (X post, chapter eCo9DMp8).
+  '67': {
+    target: {
+      fen: '1n1ck3C/2PPa1R2/5a3/9/8N/9/9/3n5/4p2r1/5K3 r - - 0 1',
+      moves: 'g9g10 e9f10 d9e9 e10e9 g10g9 e9e8 i6g7 e8d8 g9d9 b10d9 i10d10',
+    },
+    campaign: 'x-elegant-067-2026-11',
+  },
   // Problem 75, "The Bold Commander Submits" (Short 6, chapter yn8f6ImO).
   '75': {
     target: {
@@ -89,6 +121,14 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
       moves: 'c3f3 e9f8 f3e3 f8e9 e2f3 e9f8 e3e9 e10e9 f3e2',
     },
     campaign: 'x-elegant-075-2026-11',
+  },
+  // Problem 84, "Two Dragonflies Skim the Water" (X post, chapter sytCVSq0).
+  '84': {
+    target: {
+      fen: '1C3k3/1N2P4/1nN1b4/9/9/9/9/4p4/3p1p3/4K4 r - - 0 1',
+      moves: 'c8d10 e8c10 e9f9 f10e10 d10c8 c10e8 b9d8',
+    },
+    campaign: 'x-elegant-084-2026-11',
   },
 };
 
