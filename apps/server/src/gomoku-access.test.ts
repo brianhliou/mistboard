@@ -215,8 +215,9 @@ test('an admitted Gomoku admin stays unlisted and outside public figures', async
     collectLiveTvCandidates(ctx).some((candidate) => candidate.gameSpecId === 'gomoku'),
     false,
   );
-  // Positive control: the active human room would expose this spec if the
-  // listing gate opened, rather than being absent because the fixture is idle.
+  // Positive control: the room is genuinely in play, so its absence above is the
+  // listing gate (flag and publicSurface), not an idle fixture.
   process.env[FLAG] = 'true';
-  assert.equal(collectLiveRoomStats(ctx).playingBySpec.gomoku, 1);
+  assert.equal(collectLiveRoomStats(ctx).playing, 1);
+  assert.equal(collectLiveRoomStats(ctx).playingBySpec.gomoku, undefined);
 });
