@@ -123,18 +123,11 @@ export async function seeksVisibleTo<T extends { gameSpecId: string; creatorUser
   playableSpecs: (user: UserAccount) => Promise<readonly string[]> = (reader) =>
     persistence.playableAllowlistedSpecs(reader),
 ): Promise<T[]> {
-  // A formerly granted playtest can launch with correspondence held off.
-  // Such stored seeks must not become public when its grant gate disappears.
-  const supported = seeks.filter(
-    (seek) =>
-      CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) ||
-      CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId),
-  );
-  if (!supported.some((seek) => CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId))) {
-    return supported;
+  if (!seeks.some((seek) => CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId))) {
+    return [...seeks];
   }
   const playable = new Set(user ? await playableSpecs(user) : []);
-  return supported.filter(
+  return seeks.filter(
     (seek) =>
       !CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId) || playable.has(seek.gameSpecId),
   );

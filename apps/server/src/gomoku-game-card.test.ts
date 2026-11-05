@@ -166,7 +166,7 @@ test('Gomoku card replays dealt 3/4/5-stone openings as well as human placements
   }
 });
 
-test('public Gomoku preserves finished metadata and PNGs when its room flag is off', async () => {
+test('Gomoku flag gates metadata and PNGs before store reads, including a warmed PNG cache', async () => {
   const roomId = 'gmk_card_flag';
   const store = storeFor(roomId);
   const warm = responseProbe();
@@ -175,23 +175,33 @@ test('public Gomoku preserves finished metadata and PNGs when its room flag is o
   const hit = responseProbe();
   await serveTenantGameOgImage(roomId, hit.response, store);
   assert.equal(hit.result.headers['x-og-cache'], 'HIT');
+  const forbidden = async () => assert.fail('disabled card must not read persistence');
+  const noReads: TenantGameCardStore = {
+    summary: forbidden,
+    events: forbidden,
+    analysis: forbidden,
+  };
   try {
     for (const flag of [undefined, 'false']) {
       if (flag === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
       else process.env.MISTBOARD_GOMOKU_ENABLED = flag;
-      assert.ok(await tenantGameCard(roomId, store));
-      assert.ok(await tenantGamePageMeta(`/room/${roomId}`, store));
+      assert.equal(await tenantGameCard(roomId, noReads), null);
+      assert.equal(await tenantGamePageMeta(`/room/${roomId}`, noReads), null);
+      const cold = responseProbe();
+      await serveTenantGameOgImage('gmk_card_never_cached', cold.response, noReads);
+      assert.equal(cold.result.status, 302);
       const cached = responseProbe();
-      await serveTenantGameOgImage(roomId, cached.response, store);
-      assert.equal(cached.result.status, 200);
-      assert.equal(cached.result.headers['x-og-cache'], 'HIT');
+      await serveTenantGameOgImage(roomId, cached.response, noReads);
+      assert.equal(cached.result.status, 302);
+      assert.equal(cached.result.headers.location, '/og-image.png');
+      assert.equal(cached.result.body.length, 0);
     }
   } finally {
     process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
   }
-  assert.equal(maybeGameSpecForId('gomoku')?.publicSurface, 'casual');
+  assert.equal(maybeGameSpecForId('gomoku')?.publicSurface, 'hidden');
   const registration = variantTenantForRoomId(roomId);
-  assert.equal(registration?.lobby?.supportsRated, true);
+  assert.equal(registration?.lobby?.supportsRated, false);
   assert.equal(registration?.export?.gameRouteBase, '/gomoku/game');
   assert.equal(registration?.watch?.channelId, 'gomoku');
 });

@@ -613,7 +613,7 @@ test('rated Gomoku friend rooms require counted accounts and official clocks on 
   }
 });
 
-test('Gomoku WebSocket admits public spectators and binds placements to reserved seats', async () => {
+test('Gomoku WebSocket refuses ungranted seats and binds placements to reserved seats', async () => {
   class Socket extends EventEmitter {
     sent: Record<string, unknown>[] = [];
     closed?: { code?: number; reason?: string };
@@ -630,7 +630,8 @@ test('Gomoku WebSocket admits public spectators and binds placements to reserved
   const black = new Socket();
   const white = new Socket();
   const ctx = { wsMessageLimit: 100, wsMessageWindowMs: 1_000 };
-  // Public casual rooms admit spectators; reserved seats still require their tokens.
+  // Exercise the move protocol on reserved seats; fresh playtest seats need
+  // an account grant, while reconnecting seats retain access.
   const request = (id: string, seat: GomokuColor) => {
     const { rawToken } = mintTenantSeatToken(live, seat, {
       userId: null,
@@ -646,8 +647,6 @@ test('Gomoku WebSocket admits public spectators and binds placements to reserved
     socket.emit('message', JSON.stringify({ type: 'move', to, color: 'white' }));
     await live.pendingWrites;
   };
-  const blackRequest = request('black-player', 'black');
-  const whiteRequest = request('white-player', 'white');
   try {
     const stranger = new Socket();
     await gomokuWs.handleConnection(
@@ -656,10 +655,15 @@ test('Gomoku WebSocket admits public spectators and binds placements to reserved
       { url: '/?client=stranger', headers: { host: 'localhost' } } as IncomingMessage,
       live,
     );
-    assert.equal(stranger.closed, undefined);
-    assert.equal(stranger.sent[0]?.seat, 'spectator');
-    assert.equal(live.clients.size, 1);
-    await gomokuWs.handleConnection(ctx, black as unknown as WebSocket, blackRequest, live);
+    assert.deepEqual(stranger.closed, { code: 1008, reason: 'variant not granted' });
+    assert.deepEqual(stranger.sent, []);
+    assert.equal(live.clients.size, 0);
+    await gomokuWs.handleConnection(
+      ctx,
+      black as unknown as WebSocket,
+      request('black-player', 'black'),
+      live,
+    );
     assert.equal(black.sent[0]?.seat, 'black');
     const initial = live.projection.state;
     const first = initial.opening!.turn === 'black' ? black : white;
@@ -671,7 +675,12 @@ test('Gomoku WebSocket admits public spectators and binds placements to reserved
     assert.ok(move && next);
     await place(black, move.to);
     assert.equal(live.projection.state.ply, initial.ply);
-    await gomokuWs.handleConnection(ctx, white as unknown as WebSocket, whiteRequest, live);
+    await gomokuWs.handleConnection(
+      ctx,
+      white as unknown as WebSocket,
+      request('white-player', 'white'),
+      live,
+    );
     assert.equal(white.sent[0]?.seat, 'white');
     await place(second, move.to);
     assert.equal(live.projection.state.ply, initial.ply);

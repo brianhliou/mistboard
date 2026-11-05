@@ -141,13 +141,13 @@ export async function gomokuPostgameForApi(
     persistent ? deps.getGameSummary(roomId) : null,
     persistent ? deps.loadRoomEvents(roomId) : null,
   ]);
-  if (record && (record.roomId !== roomId || record.variant !== GOMOKU_SPEC_ID)) return null;
+  if (record && (record.roomId !== roomId || record.variant !== GOMOKU_SPEC_ID || record.rated))
+    return null;
   // Invalid persisted data must not be rescued by a different in-memory log.
   let replay = events ? gomokuReplayForApi(roomId, events) : null;
   if (events && !replay) return null;
   let game: PostgameGameSummary;
   if (record && replay) {
-    if (record.rated !== (replay.projection.rated === true)) return null;
     game = postgameGameSummary(record);
   } else {
     // Memory-only development and the interval before a finished room's game
@@ -170,7 +170,7 @@ export async function gomokuPostgameForApi(
       plyCount: summary.plyCount,
       startedAt: summary.startedAt.toISOString(),
       endedAt: summary.endedAt.toISOString(),
-      rated: replay.projection.rated === true,
+      rated: false,
       visibility: summary.visibility ?? 'public',
       initialMs: summary.initialMs ?? null,
       incrementMs: summary.incrementMs ?? null,
@@ -208,7 +208,7 @@ export async function gomokuLiveWatchPayload(
       plyCount: payload.history.truth.length - 1,
       startedAt: new Date(room.events[0]!.at).toISOString(),
       endedAt: null,
-      rated: projection.rated === true,
+      rated: false,
       visibility: 'public',
       initialMs: projection.timeControl?.initialMs ?? null,
       incrementMs: projection.timeControl?.incrementMs ?? null,
@@ -249,6 +249,7 @@ function gomokuReplayForApi(roomId: string, events: readonly unknown[]) {
     return guardTenantReplay(gomokuTenant.kind, roomId, () => {
       const created = events[0]!;
       let projection = replayTenantEvents(gomokuTenant, [created]);
+      if (projection.rated) return null;
       let ply = 0;
       const snapshot = (at: number): GomokuSnapshot => ({
         ply,
