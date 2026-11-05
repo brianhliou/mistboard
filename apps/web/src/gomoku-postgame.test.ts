@@ -378,7 +378,12 @@ describe('Gomoku finished-game review', () => {
       await vi.advanceTimersByTimeAsync(0);
       worker.output('+M5');
       await vi.advanceTimersByTimeAsync(0);
-      expect(root.querySelector('.engine-panel__eval')?.textContent).toBe(
+      // The headline box holds the short form; the long words ride on its title.
+      const headline = root.querySelector<HTMLElement>('.engine-panel__eval');
+      expect(headline?.textContent).toBe(
+        locale === 'en' ? 'B in 3' : locale === 'zh-Hans' ? '黑 3 步胜' : '黑 3 步勝',
+      );
+      expect(headline?.title).toBe(
         locale === 'en'
           ? 'Black wins in 3'
           : locale === 'zh-Hans'
