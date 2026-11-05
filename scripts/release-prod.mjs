@@ -2006,24 +2006,21 @@ function announceNews({ deployRequired }) {
   }
 }
 
-// Tell Bing what this release changed. The prerendered set (static routes plus
-// every article in three languages, ~130 URLs) goes out after the smokes, so a
-// page no longer waits for someone to remember `npm run indexnow` — the growth
-// plan asked for this on release and it was never built. Studies are excluded;
-// see the script's header. A failed submission is a warning: the pages are live
-// either way and a re-run costs nothing.
+// Tell Bing which sitemap URLs changed, across pages, studies, players and
+// broadcasts. The local state compares lastmod and refreshes undated URLs
+// after 30 days; unavailable state seeds without a backlog submission.
+// A failed batch stays pending for the next release. Failure is a warning:
+// the pages are live either way.
 function submitIndexNow({ deployRequired }) {
   if (!deployRequired) {
     console.log('skip: indexnow (no deploy)');
     return;
   }
-  const command = ['node', 'scripts/indexnow-submit.mjs', '--prerendered'];
+  const command = ['node', 'scripts/indexnow-submit.mjs', '--changed'];
   console.log(`\n$ ${quoteCommand(command)}`);
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.status !== 0) {
-    console.error(
-      'warning: indexnow submission failed; re-run `npm run indexnow -- --prerendered`',
-    );
+    console.error('warning: indexnow submission failed; re-run `npm run indexnow -- --changed`');
   }
 }
 
