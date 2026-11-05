@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { advantageSymbol, formatGomokuEval, formatGomokuEvalCompact } from './eval-format.js';
+import { advantageSymbol } from './eval-format.js';
+import { formatGomokuEval, formatGomokuEvalCompact } from './gomoku-eval-format.js';
 
 describe('advantageSymbol', () => {
   it('reads a near-equal position as equal', () => {

@@ -23,7 +23,8 @@ import '../../seat-disc-ink.css';
 import './engine-panel.css';
 import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
-import { formatEval, formatGomokuEval, formatMistyEval } from './eval-format.js';
+import { formatEval, formatMistyEval } from './eval-format.js';
+import { formatGomokuEval } from './gomoku-eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
 import { rapfiCevalPosition } from './rapfi-ceval.js';
 

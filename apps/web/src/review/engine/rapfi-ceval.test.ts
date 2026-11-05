@@ -352,7 +352,7 @@ describe('Gomoku shared engine panel', () => {
     latest().done();
     await vi.advanceTimersByTimeAsync(0);
     expect(p.el.querySelectorAll('.engine-panel__line')).toHaveLength(3);
-    expect(headline(p)).toBe('+8.7');
+    expect(headline(p)).toBe('B+8.7');
     expect(p.el.dataset.seatInkFamily).toBe('gomoku');
     expect(bar.el.dataset.seatInkFamily).toBe('gomoku');
     expect(p.el.textContent).toContain('h10 i10 f7');
@@ -373,7 +373,7 @@ describe('Gomoku shared engine panel', () => {
       latest().output();
       latest().done();
       await vi.advanceTimersByTimeAsync(0);
-      expect(headline(p)).toBe('-8.7');
+      expect(headline(p)).toBe('W+8.7');
       expect(bar.el.querySelector<HTMLElement>('.review-eval-bar__fill')?.style.height).toBe(
         '6.2%',
       );
@@ -406,8 +406,8 @@ describe('Gomoku shared engine panel', () => {
     [-29989, [], 'White wins in 6'],
     [29990, ['a1'], 'White wins in 5'],
     [-29990, ['a1'], 'Black wins in 5'],
-    [30000, [], 'Black wins in 0'],
-    [-30000, [], 'White wins in 0'],
+    [30000, [], 'Black wins'],
+    [-30000, [], 'White wins'],
   ])('keeps win distance and winning color for %s at %s', async (score, moves, expected) => {
     const { p } = panel();
     await startPanel(p, moves);
@@ -432,7 +432,7 @@ describe('Gomoku shared engine panel', () => {
     latest().emit({ type: 'ready' });
     await vi.advanceTimersByTimeAsync(0);
     latest().output();
-    expect(headline(p)).toBe('-8.7');
+    expect(headline(p)).toBe('W+8.7');
     p.setOn(false);
     expect(onLines).toHaveBeenLastCalledWith(null);
     expect(headline(p)).toBe('–');

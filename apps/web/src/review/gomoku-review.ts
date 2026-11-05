@@ -10,7 +10,7 @@ import {
 import type { RapfiPosition } from '../engine/rapfi.js';
 import type { GomokuBoardMarker } from '../gomoku-board.js';
 import { t } from '../i18n/catalog.js';
-import { formatGomokuEvalCompact } from './engine/eval-format.js';
+import { formatGomokuEvalCompact } from './engine/gomoku-eval-format.js';
 import type { NodeShape } from './game-tree.js';
 import { createGomokuReviewBoard } from './gomoku-review-board.js';
 import { type GomokuReviewView, makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
