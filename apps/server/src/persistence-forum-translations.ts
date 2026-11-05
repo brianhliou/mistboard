@@ -1,6 +1,6 @@
 import { getPool } from './persistence-db.js';
 
-// Durable machine translations of forum text (130, 188). Reads use text/plan
+// Durable machine translations of forum text (130, 189). Reads use text/plan
 // hash and locale; model and prompt version are provenance, never read gates.
 
 export type ForumTranslationLocale = 'en' | 'zh-Hans' | 'zh-Hant';
