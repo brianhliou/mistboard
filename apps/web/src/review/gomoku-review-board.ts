@@ -1,5 +1,5 @@
 import { type GomokuColor, type GomokuMove, parseGomokuMove } from '@mistboard/game';
-import { type GomokuBoardMarker, gomokuBoardSvg } from '../gomoku-board.js';
+import { type GomokuBoardMarker, gomokuBoardSvg, numberGomokuStones } from '../gomoku-board.js';
 import type { NodeShape } from './game-tree.js';
 import type { GomokuReviewView } from './gomoku-tree-adapter.js';
 import type { TreeBoardFactoryOptions, TreeBoardHandle } from './tree-review.js';
@@ -13,25 +13,7 @@ export function createGomokuReviewBoard(
   let markers: readonly GomokuBoardMarker[] = [];
   const paint = () => {
     opts.board.innerHTML = view ? gomokuBoardSvg(view, opts.enabled(), markers) : '';
-    for (const [index, move] of (view?.placements ?? []).entries()) {
-      const group = opts.board.querySelector(`[data-square="${move.to}"]`);
-      const stone = group?.querySelector('[data-piece-square]');
-      if (!stone) continue;
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute(
-        'class',
-        `gomoku-move-number gomoku-pv-number gomoku-pv-number--${stone.classList.contains('gomoku-stone--black') ? 'black' : 'white'}`,
-      );
-      label.setAttribute('x', stone.getAttribute('cx')!);
-      label.setAttribute('y', stone.getAttribute('cy')!);
-      label.setAttribute('pointer-events', 'none');
-      label.textContent = String(index + 1);
-      group!.insertBefore(label, group!.querySelector('.gomoku-hit'));
-      // Keep the last-move square visible beside the move number.
-      const last = group!.querySelector('.gomoku-last');
-      last?.setAttribute('x', String(Number(stone.getAttribute('cx')) + 6));
-      last?.setAttribute('y', String(Number(stone.getAttribute('cy')) + 6));
-    }
+    numberGomokuStones(opts.board, view?.placements ?? []);
   };
   const place = (event: Event) => {
     const current = opts.getInteractionView();

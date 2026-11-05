@@ -130,3 +130,34 @@ export function gomokuBoardSvg(
   nodes.push('</svg>');
   return nodes.join('');
 }
+
+/** Below this rendered width a two-digit stone number drops under ~7px and
+ * reads as noise (the /games cards are 178px); the homepage viewer is 340px. */
+export const GOMOKU_MOVE_NUMBER_MIN_PX = 300;
+
+/** Numbers the recorded placements on a board painted by `gomokuBoardSvg`.
+ * Dealt opening stones are not placements, so they stay unnumbered. */
+export function numberGomokuStones(
+  board: Element,
+  placements: readonly Pick<GomokuMove, 'to'>[],
+): void {
+  for (const [index, move] of placements.entries()) {
+    const group = board.querySelector(`[data-square="${move.to}"]`);
+    const stone = group?.querySelector('[data-piece-square]');
+    if (!group || !stone) continue;
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute(
+      'class',
+      `gomoku-move-number gomoku-pv-number gomoku-pv-number--${stone.classList.contains('gomoku-stone--black') ? 'black' : 'white'}`,
+    );
+    label.setAttribute('x', stone.getAttribute('cx')!);
+    label.setAttribute('y', stone.getAttribute('cy')!);
+    label.setAttribute('pointer-events', 'none');
+    label.textContent = String(index + 1);
+    group.insertBefore(label, group.querySelector('.gomoku-hit'));
+    // Keep the last-move square visible beside the move number.
+    const last = group.querySelector('.gomoku-last');
+    last?.setAttribute('x', String(Number(stone.getAttribute('cx')) + 6));
+    last?.setAttribute('y', String(Number(stone.getAttribute('cy')) + 6));
+  }
+}
