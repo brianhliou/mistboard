@@ -31,6 +31,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Engine match studies chart both engines' win chance in the Computer analysis tab, and hovering the chart names the move ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
+- Study board controls sit under the move list, and the board sits closer to the tabs below it ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
+- Study result badges are colored by the winning side, with draws drawn as an outline ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
 - The opening explorer, move tree menu, captured-piece labels and move advice in game review now read in Simplified and Traditional Chinese ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 - The broadcasts page lists other events in a strip, gives places in English and hides zero counts ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Clearer annotations in jieqi replays, and fixed embeds for finished games ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
@@ -56,6 +59,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Switching chapters in a study keeps the side panel in place ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
 - The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Forum posts embed game links that use /room/, and game names show in the reader's language ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
