@@ -8,7 +8,6 @@ import {
   GOMOKU_OPENINGS,
   type GomokuColor,
   type GomokuMove,
-  type GomokuOpening,
   type GomokuRoomState,
   type GomokuSquare,
   getGomokuLegalMoves,
@@ -77,20 +76,21 @@ test('new Gomoku games deal an opening instead of giving Black an empty board', 
     assert.ok(boards.has(JSON.stringify(state.board)));
     dealt.add(JSON.stringify(state.board));
     assert.equal(state.moveNumber, 1);
-    assert.deepEqual(state.status, { type: 'playing', turn: state.ply % 2 ? 'white' : 'black' });
+    const turn = state.opening!.turn;
+    assert.deepEqual(state.status, { type: 'playing', turn });
     assert.deepEqual(
       replayTenantEvents(gomokuTenant, JSON.parse(JSON.stringify(created.room.events))),
       created.room.projection,
     );
     const move = getGomokuLegalMoves({
       ...state,
-      status: { type: 'playing', turn: state.ply % 2 ? 'white' : 'black' },
+      status: { type: 'playing', turn },
     })[0]!;
     appendTenantRuntimeEvent(gomokuTenant, created.room, {
       type: 'move-played',
       at: Date.now(),
       roomId: state.id,
-      color: state.ply % 2 ? 'white' : 'black',
+      color: turn,
       move,
     });
     assert.equal(created.room.projection.state.ply, state.ply + 1);
@@ -134,17 +134,16 @@ test('Gomoku legacy logs replay from empty, and corrupt opening setups fail clos
 });
 
 test('dealt 3/4/5-stone rooms start their clocks and move numbers from human play', () => {
-  for (const count of [3, 4, 5]) {
-    const opening: GomokuOpening = {
-      stones: ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
-        square: square as GomokuSquare,
-        color: i % 2 ? 'white' : 'black',
-      })),
-      turn: count % 2 ? 'white' : 'black',
-    };
+  const openings = [
+    ...[3, 4, 5].map(
+      (count) => GOMOKU_OPENINGS.find((entry) => entry.stones.length === count && entry.classicId)!,
+    ),
+    GOMOKU_OPENINGS.find((entry) => entry.source === 'mined-2B3W-7x7')!,
+  ];
+  for (const [index, opening] of openings.entries()) {
     const created = createTenantRuntimeRoom(
       { ...gomokuTenant, rules: { ...gomokuTenant.rules, createSetup: () => opening } },
-      `gmk_clock_${count}`,
+      `gmk_clock_${index}`,
       { now: 1, timeControl: { initialMs: 60_000, incrementMs: 1_000 } },
     );
     assert.ok(created.ok);
