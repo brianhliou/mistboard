@@ -8,6 +8,8 @@ import { mountEditorPage } from './editor/editor-page.js';
 import { mountForum } from './forum.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 
+type HappyWindow = { happyDOM: { setViewport(size: { width: number; height: number }): void } };
+
 let root: HTMLElement;
 let styles: HTMLStyleElement;
 
@@ -93,39 +95,21 @@ describe('mounted page headings', () => {
     },
   );
 
-  it('keeps one forum h1 and a subordinate phone title', async () => {
-    window.history.replaceState(null, '', '/forum');
-    await mountForum(root);
-    expect(root.querySelectorAll('h1')).toHaveLength(1);
-    expect(root.querySelector('h1')?.textContent).toBe('Mistboard Forum');
-    expect(root.querySelector('h2.forum-phone-title')?.textContent).toBe('Forum');
-  });
-
-  it('preserves the phone title styling when demoted from h1 to h2', async () => {
+  // The two forum headers swap at 600px, so each width renders its own h1.
+  it.each([
+    [390, 'Forum'],
+    [1280, 'Mistboard Forum'],
+  ])('renders exactly one forum h1 at %ipx', async (width, text) => {
     styles.textContent += readFileSync('src/forum.css', 'utf8');
+    (window as unknown as HappyWindow).happyDOM.setViewport({ width, height: 800 });
     window.history.replaceState(null, '', '/forum');
     await mountForum(root);
-    const heading = root.querySelector('h2.forum-phone-title')!;
-    expect(heading).not.toBeNull();
-    const properties = [
-      'font-size',
-      'font-weight',
-      'line-height',
-      'letter-spacing',
-      'margin',
-      'padding',
-      'display',
-    ];
-    const appearance = (element: Element) => {
-      const computed = getComputedStyle(element);
-      return properties.map((property) => computed.getPropertyValue(property));
-    };
-    expect(getComputedStyle(heading).fontSize).toBe('24px');
-    const after = appearance(heading);
-    const previous = document.createElement('h1');
-    previous.className = heading.className;
-    previous.textContent = heading.textContent;
-    heading.replaceWith(previous);
-    expect(appearance(previous)).toEqual(after);
+    const rendered = [...root.querySelectorAll('h1')].filter((heading) =>
+      heading.closest('.forum-desktop-only, .forum-phone-only')
+        ? getComputedStyle(heading.closest('.forum-desktop-only, .forum-phone-only')!).display !==
+          'none'
+        : true,
+    );
+    expect(rendered.map((heading) => heading.textContent)).toEqual([text]);
   });
 });

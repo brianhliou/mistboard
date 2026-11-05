@@ -791,7 +791,7 @@ function forumPhoneHead(options: {
 
   const titleRow = document.createElement('div');
   titleRow.className = 'forum-phone-title-row';
-  const heading = document.createElement('h2');
+  const heading = document.createElement('h1');
   heading.className = 'forum-phone-title';
   heading.textContent = t('nav.forum');
 
