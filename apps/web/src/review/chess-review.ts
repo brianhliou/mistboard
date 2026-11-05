@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Standard chess review surface: the study-only chess spec's presentation over
 // the generic tree-review controller. The open-information sibling of
 // dark-chess-review.ts: one interactive board (no fog, no POV triptych), SAN
@@ -58,6 +59,8 @@ const chessPresentation: TreePresentation<
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Chess board',
   boardAspect: 1,
+  // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+  appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
   boardCols: 8,
   perspective: (flipped) => (flipped ? 'black' : 'white'),
   // Review plays both sides: the interactive seat is the side to move.

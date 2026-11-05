@@ -79,6 +79,10 @@ export type ReviewLayoutAdapter = {
    *  Off by default so every review's center column is board-only. */
   showBoardMaterial?: boolean;
   boards: ReviewBoardEntry[];
+  /** Window event after which the board draws differently (the coordinates
+   *  setting): the boards re-render and, with `resolveBoardAspect`, re-fit. */
+  appearanceEvent?: string;
+  resolveBoardAspect?: () => number;
   /** Board width / height, e.g. 552 / 612 for xiangqi. Drives the fill sizing. */
   boardAspect: number;
   /** Board columns (files). Sizes captured-material tiles to ≈ one board cell so
@@ -548,9 +552,25 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     flip,
   });
 
+  // One listener per page: a re-mount drops the previous page's.
+  appearanceAbort?.abort();
+  appearanceAbort = new AbortController();
+  if (adapter.appearanceEvent) {
+    window.addEventListener(
+      adapter.appearanceEvent,
+      () => {
+        if (adapter.resolveBoardAspect) scaffold.setBoardAspect(adapter.resolveBoardAspect());
+        render();
+      },
+      { signal: appearanceAbort.signal },
+    );
+  }
+
   render();
   scaffold.refit();
 }
+
+let appearanceAbort: AbortController | null = null;
 
 // Global playback keys (arrows anywhere on the page, lichess-style), ignoring
 // typing targets. The one move-nav key map lives with the bar (move-nav-bar.ts,

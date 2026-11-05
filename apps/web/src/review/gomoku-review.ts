@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 import '../gomoku-board.css';
 import {
   type GomokuColor,
@@ -110,7 +111,7 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
     boardAspect: 1,
     boardCols: 15,
     fixedOrientation: true,
-    appearanceEvent: 'mistboard:display-preferences-change',
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     perspective: (flipped) => (flipped ? 'white' : 'black'),
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
     createBoard: createGomokuReviewBoard,

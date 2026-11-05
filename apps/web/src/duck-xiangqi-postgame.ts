@@ -5,6 +5,7 @@ import type {
   DuckXiangqiTurn,
 } from '@mistboard/game';
 import { DUCK_XIANGQI_SPEC_ID } from '@mistboard/game';
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from './display-preferences.js';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 // The xiangqi surface stylesheets, IN THIS ORDER. `live-xiangqi.css` carries the
@@ -183,6 +184,14 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
     underboardOverflows: true,
     boards: [{ key: 'truth', el: boardHost, tier: 'primary' }],
     boardAspect,
+    // The coordinates setting adds or removes the label gutter, so a toggle
+    // re-renders and re-fits the board.
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
+    resolveBoardAspect: () => {
+      const next = xiangqiBoardAspect(LIVE_BOARD_GEO);
+      boardHost.style.aspectRatio = `${next} / 1`;
+      return next;
+    },
     boardCols: 9,
     maxPly: postgameReplayMaxPly(postgame),
     renderBoards({ ply, flipped }) {

@@ -199,7 +199,8 @@
   --seat-second-chip: var(--ink-white-chip);
   --seat-first-on-chip: var(--ink-on-black);
   --seat-second-on-chip: var(--ink-on-white);
-  --seat-first-gauge: #141210;
+  /* The gauge uses the lifted chess Black, so it stays visible on a dark page. */
+  --seat-first-gauge: var(--ink-black-vs-white);
   --seat-second-gauge: var(--ink-white-chip);
 }
 
