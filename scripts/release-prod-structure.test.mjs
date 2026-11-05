@@ -40,6 +40,27 @@ test('release-prod passes the target revision to the local gate plan', () => {
   assert.match(source, /'--plan',\s*'--json',\s*'--base',\s*baseRevision,\s*'--files'/);
 });
 
+test('IndexNow releases submit only changed URLs and skip releases without a deploy', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function submitIndexNow(');
+  const end = source.indexOf('\n}\n', start) + 2;
+  assert.ok(start > 0 && end > start);
+  const calls = [];
+  const submitIndexNow = vm.runInNewContext(`(${source.slice(start, end)})`, {
+    console: { log() {}, error() {} },
+    workdir: '/active-release',
+    quoteCommand: (command) => command.join(' '),
+    spawnSync: (command, args) => {
+      calls.push([command, ...args]);
+      return { status: 0 };
+    },
+  });
+  submitIndexNow({ deployRequired: false });
+  assert.deepEqual(calls, []);
+  submitIndexNow({ deployRequired: true });
+  assert.deepEqual(calls, [['node', 'scripts/indexnow-submit.mjs', '--changed']]);
+});
+
 // The drain decision read production's active-game count once, before the
 // local gate, and acted on it minutes later. A game that started in between was
 // killed by the container swap with no drain (2026-10-01, 10:38 PDT). The push
