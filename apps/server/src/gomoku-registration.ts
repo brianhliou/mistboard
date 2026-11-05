@@ -1,4 +1,4 @@
-// Built-hidden admin playtest. Rapfi runs only in the human's browser.
+// Flag-gated Gomoku rooms. Rapfi runs only in the human's browser.
 import {
   GOMOKU_SPEC_ID,
   type GomokuColor,

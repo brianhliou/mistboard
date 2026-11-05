@@ -46,8 +46,8 @@ export function threeKingdomsBanqiEnabled(): boolean {
   return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
 }
 
-// Built-hidden Gomoku (#768). Explicit local opt-in, including in dev; no
-// public listing or room creation is enabled by this build flag alone.
+// Gomoku build-time play gate, off by default, including in dev. Public
+// listings derive from publicSurface; coordinate this flag with the launch.
 export function gomokuEnabled(): boolean {
   return import.meta.env.VITE_GOMOKU_ENABLED === 'true';
 }

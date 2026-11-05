@@ -37,7 +37,7 @@ import {
   writeJson,
 } from './lib.js';
 
-// Built-hidden Gomoku replay. Both read paths require playtest admission; merely
+// Gomoku replay. Both read paths require runtime admission; merely
 // registering the live builder does not opt the tenant into watch election.
 export type GomokuPostgamePersistence = {
   getGameSummary(roomId: string): ReturnType<typeof persistence.getGameSummary>;

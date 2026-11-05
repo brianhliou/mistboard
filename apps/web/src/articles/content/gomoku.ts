@@ -9,8 +9,8 @@ import type { Article } from '../types.js';
 // Set after the re-screened openings have a published study.
 export const GOMOKU_OPENINGS_STUDY_URL: string | null = null;
 
-// Direct-URL English review page. The hidden spec, sitemap exclusion and
-// VITE_GOMOKU_ENABLED playtest gate stay in place.
+// Gomoku rules. Indexing and public listings derive from publicSurface;
+// play links also respect the VITE_GOMOKU_ENABLED build-time gate.
 export function createGomokuArticle(
   openingsStudyUrl: string | null = GOMOKU_OPENINGS_STUDY_URL,
 ): Article {

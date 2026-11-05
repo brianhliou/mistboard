@@ -1,4 +1,4 @@
-// Hidden freestyle Gomoku referee. The kernel owns legality and five/full-board
+// Freestyle Gomoku referee. The kernel owns legality and five/full-board
 // endings; the generic runtime owns seats, clocks, reconnects and event replay.
 import { randomInt } from 'node:crypto';
 import {
