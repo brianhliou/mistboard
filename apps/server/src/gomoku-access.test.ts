@@ -180,13 +180,13 @@ for (const enabled of [false, true]) {
   }
 }
 
-test('an admitted Gomoku admin stays unlisted and outside public figures', async () => {
+test('Gomoku runtime listings close with the flag while launched games remain counted', async () => {
   process.env[FLAG] = 'false';
   const reg = variantTenantForSpecId('gomoku')!;
   assert.equal(reg.admitsConnection?.(ADMIN), true);
   assert.equal(reg.enabled(), false);
-  assert.equal(gameSpecForId('gomoku').publicSurface, 'hidden');
-  assert.ok(countedPublicGame().includes("'gomoku'"));
+  assert.equal(gameSpecForId('gomoku').publicSurface, 'casual');
+  assert.ok(!countedPublicGame().includes("'gomoku'"));
   // Correspondence exists (s-133b) but its factory refuses while the flag is off.
   assert.deepEqual(await reg.createCorrespondenceGameForSeek!({} as never), {
     ok: false,

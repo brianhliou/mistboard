@@ -60,7 +60,9 @@ for (const human of ['black', 'white'] as const) {
     await expect(page.locator('.gomoku-svg')).toBeVisible();
     await expect.poll(() => ownSeat).toBe(human);
     expect(wireEngine).toBe('rapfi-level-1');
-    await expect(page.locator('[data-gomoku-bot] [role="status"]')).toBeVisible();
+    // A dealt opening may start on the human turn; the idle bot panel is hidden.
+    // Worker/network checks and the full game below verify the real bot without
+    // racing its transient thinking indicator.
     await expect(page.locator('[data-gomoku-bot] a')).toHaveCount(0);
 
     // The human plays a fixed scattered order, with no engine assistance. A

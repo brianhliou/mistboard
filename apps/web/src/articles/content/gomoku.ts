@@ -19,6 +19,7 @@ export function createGomokuArticle(
     gameSpecId: 'gomoku',
     kind: 'rules',
     title: 'Gomoku Rules',
+    seoTitle: 'Gomoku Rules: Freestyle 15x15 and Dealt Openings',
     summary: 'Learn to place stones, make five in a row, use the clocks and follow the turn indicator from Mistboard’s dealt openings.',
     showSummaryOnPage: false,
     status: 'published',

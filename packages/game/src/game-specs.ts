@@ -374,10 +374,9 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
-  // Xiangqi Mahjong takes the last place on the shelf the day it launches;
-  // until then the launch switch (its publicSurface) keeps it out.
+  // Xiangqi Mahjong precedes Gomoku, the newest family on the public shelf.
   XIANGQI_MAHJONG_SPEC_ID,
-  // Gomoku follows Xiangqi Mahjong only after its own launch switch flips.
+  // Gomoku closes the public shelf after Xiangqi Mahjong.
   GOMOKU_SPEC_ID,
   // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
   // spec sorts last, which is where the study picker should offer it.
@@ -750,7 +749,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Hidden, rated PvP under explicit flags; the pool stays private while allowlisted.
+    // Public freestyle Gomoku with rated live PvP. Server and build-time flags remain kill-switches.
     id: GOMOKU_SPEC_ID,
     publicName: 'Gomoku',
     family: 'gomoku',
@@ -762,7 +761,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'gomoku',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
     rated: true,
   },
@@ -856,7 +855,11 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
-    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
+    // Gomoku's live launch does not open public correspondence (#868).
+    // Its hidden playtest binding remains available for legacy granted games.
+    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
+      (id) => id !== GOMOKU_SPEC_ID && isPublic(id),
+    ),
     correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
       allowlisted.includes(id),
     ),

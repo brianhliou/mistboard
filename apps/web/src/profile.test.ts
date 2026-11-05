@@ -75,10 +75,11 @@ describe('profile ratings rail', () => {
 
     expect(section.textContent).toContain('Fog Chess');
     // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) +
-    // Xiangqi Mahjong (launched 2026-10-25) = 6 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
+    // Xiangqi Mahjong (launched 2026-10-25) + Gomoku = 7 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
     // kept but no profile lists them.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(6);
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(7);
     expect(section.textContent).toContain('Xiangqi Mahjong');
+    expect(section.textContent).toContain('Gomoku');
     expect(section.textContent).not.toContain('Fortress Xiangqi');
     expect(section.textContent).not.toContain('Atomic Xiangqi');
   });
