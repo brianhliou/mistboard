@@ -367,7 +367,7 @@ describe('Gomoku tree review', () => {
     expect(board(root).querySelector('.gomoku-engine-overlay')).toBeNull();
   });
 
-  it('omits the terminal result score while preserving signed mate distances', async () => {
+  it('omits the terminal result score and names the side of each forced win', async () => {
     const winningMoves = ['a1', 'a15', 'b1', 'b15', 'c1', 'c15', 'd1', 'd15', 'e1'].map(
       (to) => parseGomokuMove(to)!,
     );
@@ -395,9 +395,10 @@ describe('Gomoku tree review', () => {
       (el) => el.textContent,
     );
     expect(scores.at(-1)).toBe('');
-    expect(scores).not.toContain('-#');
-    expect(scores).toContain('#3');
-    expect(scores).toContain('-#2');
+    // Gomoku names the side rather than signing a mate (2026-11-05).
+    expect(scores.some((score) => score?.includes('#'))).toBe(false);
+    expect(scores).toContain('B in 3');
+    expect(scores).toContain('W in 2');
   });
 
   it('badges only the current blunder and clears it when navigating away', async () => {

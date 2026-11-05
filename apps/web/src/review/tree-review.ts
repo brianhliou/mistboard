@@ -266,6 +266,9 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   fen?: (truth: Truth) => string;
   /** Whether a stored move-list score is meaningful for this resulting position. */
   moveEvalVisible?(truth: Truth): boolean;
+  /** How this variant writes a whole-game eval (move list, chart readout, phone
+   *  readout). Omitted = the signed shared format, "+1.2" / "#5". */
+  formatEval?(cp: number | null, mate: number | null): string;
   /** Format a whole-game-analysis best move (server `evals[].best`, in the ANALYSIS
    *  engine's UCI dialect) for the "… was best" advice line. Omit to use the default
    *  xiangqi/FSF formatter (correct for xiangqi/fortress/jungle, whose display coords
@@ -672,6 +675,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   presentation: TreePresentation<Move, Truth, View, Color, Arrow, Marker>,
   config: TreeReviewConfig<Move, Truth, Arrow>,
 ): TreeReviewHandle {
+  const evalText = presentation.formatEval ?? formatEval;
   type Node = GameTreeNode<Move, Truth>;
   type Tree = GameTree<Move, Truth, View>;
   const { adapter } = presentation;
@@ -2330,7 +2334,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         gameAnalysis && mainlineNodes()[node.ply] === node
           ? gameAnalysis.evals.find((entry) => entry.ply === node.ply)
           : undefined;
-      phoneAnalysis.setEval(gameAnalysis ? (point ? formatEval(point.cp, point.mate) : '–') : null);
+      phoneAnalysis.setEval(gameAnalysis ? (point ? evalText(point.cp, point.mate) : '–') : null);
     }
     moveTimesChart?.setPly(node.ply);
     config.onPlyChange?.(node.ply);
@@ -2432,6 +2436,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : undefined;
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
+      formatScore: evalText,
       winK: winPercentK(analysis.engineId),
       phases: gamePhases,
       // Names the ply under the pointer in the chart's hover readout, in the same
@@ -2568,7 +2573,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           suffixClass: mark.suffixClass,
           eval:
             entry && presentation.moveEvalVisible?.(node.truth) !== false
-              ? formatEval(entry.cp, entry.mate)
+              ? evalText(entry.cp, entry.mate)
               : undefined,
           comment: hidden ? undefined : mark.comment,
           commentClass: mark.commentClass,

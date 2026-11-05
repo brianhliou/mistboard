@@ -10,6 +10,7 @@ import {
 import type { RapfiPosition } from '../engine/rapfi.js';
 import type { GomokuBoardMarker } from '../gomoku-board.js';
 import { t } from '../i18n/catalog.js';
+import { formatGomokuEvalCompact } from './engine/eval-format.js';
 import type { NodeShape } from './game-tree.js';
 import { createGomokuReviewBoard } from './gomoku-review-board.js';
 import { type GomokuReviewView, makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
@@ -98,6 +99,7 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
     },
     // Terminal scores encode the known result, not a distance to a future five.
     moveEvalVisible: (truth) => truth.status.type === 'playing',
+    formatEval: formatGomokuEvalCompact,
     moveGlyphMarker: (move, glyph) => ({
       kind: 'glyph',
       square: move.to,

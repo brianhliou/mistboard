@@ -23,7 +23,7 @@ import '../../seat-disc-ink.css';
 import './engine-panel.css';
 import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
-import { formatEval, formatMistyEval } from './eval-format.js';
+import { formatEval, formatGomokuEval, formatMistyEval } from './eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
 import { rapfiCevalPosition } from './rapfi-ceval.js';
 
@@ -595,12 +595,7 @@ function evalTone(cp: number | null, mate: number | null, variant: CevalVariant)
 }
 
 function formatScore(variant: CevalVariant, cp: number | null, mate: number | null): string {
-  if (variant === 'gomoku' && (mate != null || (cp != null && Math.abs(cp) >= 30000))) {
-    const value = mate ?? cp!;
-    return t(value > 0 ? 'engine.blackWinsIn' : 'engine.whiteWinsIn', {
-      moves: mate == null ? 0 : Math.abs(mate),
-    });
-  }
+  if (variant === 'gomoku') return formatGomokuEval(cp, mate);
   return isMistyCevalVariant(variant) ? formatMistyEval(cp, mate) : formatEval(cp, mate);
 }
 
