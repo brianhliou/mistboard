@@ -71,7 +71,9 @@ const LABELS: Record<
 // classical canon runs to hundreds of compositions), but the served document
 // must stay small. These caps keep a worst-case body in the tens of kilobytes
 // while still giving every chapter its own line and link.
-const MAX_CHAPTERS = 250;
+// 1000 covers the largest study we publish (the 600-game AB-JChess vs jqe match);
+// a chapter line is about 120 bytes, so a full list stays near 100 KB.
+const MAX_CHAPTERS = 1000;
 const MAX_COMMENTS_PER_CHAPTER = 2;
 const MAX_COMMENT_CHARS = 280;
 

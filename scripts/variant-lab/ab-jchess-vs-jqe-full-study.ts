@@ -38,7 +38,7 @@ const arg = (k: string): string => {
 const DATA = resolve(arg('--data'));
 const OUT_DIR = resolve(arg('--out-dir'));
 const VISIBILITY = argv.includes('--public') ? 'public' : 'unlisted';
-const PARTS = 3;
+const PARTS = argv.includes('--parts') ? Number(arg('--parts')) : 1;
 
 type Engine = 'abj' | 'jqe';
 type Side = 'red' | 'black';
@@ -195,8 +195,11 @@ for (let p = 0; p < PARTS; p++) {
   const plan = {
     create: {
       owner: 'mistboard',
-      name: `AB-JChess vs jqe, all ${TOTAL} games: deals ${lo} to ${hi}`,
-      description: `Every game of the ${TOTAL}-game match between AB-JChess-20261031 and jqe on 2026-10-31, in three studies of ${TOTAL / PARTS / 2} deals; this one holds deals ${lo} to ${hi}. Each deal was played twice with the colours swapped, and the two games sit side by side. The graph under each game is both engines' chance at the match's 4 seconds a move, and wherever the two engines would play different moves, both are drawn as arrows. The games the post discusses, with comments, are in its own study. From the post at mistboard.com/blog/ab-jchess-vs-jqe.`,
+      name:
+        PARTS === 1
+          ? `AB-JChess vs jqe, all ${TOTAL} games`
+          : `AB-JChess vs jqe, all ${TOTAL} games: deals ${lo} to ${hi}`,
+      description: `Every game of the ${TOTAL}-game match between AB-JChess-20261031 and jqe on 2026-10-31${PARTS === 1 ? '' : `, in ${PARTS} studies of ${TOTAL / PARTS / 2} deals; this one holds deals ${lo} to ${hi}`}. Each deal was played twice with the colours swapped, and the two games sit side by side. The graph under each game is both engines' chance at the match's 4 seconds a move, and wherever the two engines would play different moves, both are drawn as arrows. The games the post discusses, with comments, are in its own study. From the post at mistboard.com/blog/ab-jchess-vs-jqe.`,
       visibility: VISIBILITY,
       chapter: {
         name: first.name,
