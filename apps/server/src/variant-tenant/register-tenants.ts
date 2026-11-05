@@ -13,6 +13,7 @@ import '../atomic-xiangqi-registration.js';
 import '../duck-xiangqi-registration.js';
 import '../ffq-banqi-registration.js';
 import '../fortress-xiangqi-registration.js';
+import '../gomoku-registration.js';
 import '../jieqi-registration.js';
 import '../jungle-flip-registration.js';
 import '../jungle-registration.js';

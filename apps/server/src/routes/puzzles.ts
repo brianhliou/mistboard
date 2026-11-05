@@ -8,7 +8,9 @@ import {
   type JunglePuzzle,
   junglePuzzleNextMove,
   junglePuzzleSideToMove,
+  jungleStateToEngineFen,
   resolvePuzzleShortCode,
+  standardXiangqiEngineFen,
   standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
   XIANGQI_MOTIFS,
@@ -33,12 +35,14 @@ import {
   recordPuzzleQualityVote,
 } from '../persistence-puzzle-quality.js';
 import {
+  getPuzzleDashboard,
   getPuzzleRating,
   getUserPuzzleRating,
   listAttemptedPuzzleIds,
   listFailedPuzzleAttempts,
   listPuzzleAttemptHistory,
   listPuzzleRatingSummaries,
+  parsePuzzleHistoryCursor,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
 import { getPuzzleStreak } from '../persistence-puzzle-streak.js';
@@ -603,6 +607,41 @@ export async function tryHandle(
     return true;
   }
 
+  // Private dashboard for the session owner, filtered like the retry queue.
+  // Claim the literal before :id; account selectors in the URL are ignored.
+  if (pathname === '/api/puzzles/dashboard') {
+    const headers = { 'cache-control': 'private, no-store' };
+    response.setHeader?.('cache-control', headers['cache-control']);
+    if (!requireMethod(request, response, 'GET')) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'not_signed_in' }, headers);
+      return true;
+    }
+    const daysText = parsedUrl.searchParams.get('days') ?? '30';
+    if (!['1', '2', '3', '7', '10', '14', '21', '30', '60', '90'].includes(daysText)) {
+      writeJson(response, 400, { error: 'invalid_days' }, headers);
+      return true;
+    }
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
+    if (variant === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_variant' }, headers);
+      return true;
+    }
+    const store = await getPuzzleStore();
+    const puzzleIds = store.puzzles
+      .filter((puzzle) => variant === null || puzzle.variant === variant)
+      .map((puzzle) => puzzle.id);
+    const dashboard = await getPuzzleDashboard(
+      user.id,
+      Number(daysText),
+      puzzleIds,
+      variant ?? undefined,
+    );
+    writeJson(response, 200, dashboard, headers);
+    return true;
+  }
+
   // Private history and progress for the session owner. Claim the literal
   // before :id, and never accept an account selector from the client.
   if (pathname === '/api/puzzles/history') {
@@ -614,7 +653,7 @@ export async function tryHandle(
       return true;
     }
     const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
-    if (variant === 'invalid' || variant === null) {
+    if (variant === 'invalid') {
       writeJson(response, 400, { error: 'invalid_variant' }, headers);
       return true;
     }
@@ -622,23 +661,50 @@ export async function tryHandle(
     const offsetText = parsedUrl.searchParams.get('offset') ?? '0';
     const limit = Number(limitText);
     const offset = Number(offsetText);
+    const order = parsedUrl.searchParams.get('order') ?? 'oldest';
+    const cursor = parsePuzzleHistoryCursor(parsedUrl.searchParams.get('cursor'));
     if (
       !/^\d+$/.test(limitText) ||
       !/^\d+$/.test(offsetText) ||
       !Number.isSafeInteger(offset + limit + 1) ||
       limit < 1 ||
-      limit > 100
+      limit > 100 ||
+      (order !== 'oldest' && order !== 'newest') ||
+      cursor === undefined ||
+      (order === 'oldest' && cursor !== null) ||
+      (order === 'newest' && offset !== 0)
     ) {
       writeJson(response, 400, { error: 'invalid_pagination' }, headers);
       return true;
     }
-    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset);
-    const rating = await getUserPuzzleRating(user.id, variant);
+    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset, order, cursor);
+    const rating = variant ? await getUserPuzzleRating(user.id, variant) : null;
+    const store = history.attempts.length ? await getPuzzleStore() : null;
     writeJson(
       response,
       200,
       {
         ...history,
+        attempts: history.attempts.map((entry) => {
+          const puzzle = store?.byId.get(entry.puzzleId);
+          // Only these two perfect-information variants may export a full FEN.
+          // A future hidden-info puzzle needs a solver-view serializer here.
+          let fen: string | null = null;
+          let sideToMove: 'red' | 'black' | null = null;
+          if (puzzle && puzzle.variant === entry.variant) {
+            switch (puzzle.variant) {
+              case XIANGQI_SPEC_ID:
+                fen = standardXiangqiEngineFen(puzzle.initial);
+                sideToMove = standardXiangqiPuzzleSideToMove(puzzle);
+                break;
+              case JUNGLE_SPEC_ID:
+                fen = jungleStateToEngineFen(puzzle.initial);
+                sideToMove = junglePuzzleSideToMove(puzzle);
+                break;
+            }
+          }
+          return { ...entry, fen, sideToMove };
+        }),
         progress: rating
           ? {
               rating: rating.rating,
@@ -673,9 +739,15 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_repaired' });
       return true;
     }
+    const days = parsedUrl.searchParams.get('days');
+    if (days !== null && !['1', '2', '3', '7', '10', '14', '21', '30', '60', '90'].includes(days)) {
+      writeJson(response, 400, { error: 'invalid_days' });
+      return true;
+    }
     const failures = await listFailedPuzzleAttempts(user.id, {
       variant: variant ?? undefined,
       repaired: repaired === 'true',
+      days: days === null ? undefined : Number(days),
     });
     const store = await getPuzzleStore();
     writeJson(response, 200, {
@@ -906,8 +978,20 @@ async function streakResponse(run: StreakRun) {
 }
 
 async function stormResponse(run: StormRun) {
-  const id = run.state.ids[run.state.results.length];
-  const puzzle = !run.state.finished && id ? await puzzleById(id) : null;
+  // Keep the timed client's next two boards ready without ever sending their
+  // answers. Use the same explicit public projection as the detail endpoint.
+  const index = run.state.results.length;
+  const ids = run.state.finished ? [] : run.state.ids.slice(index, index + 3);
+  const details = await Promise.all(
+    ids.map(async (id) => {
+      const puzzle = await puzzleById(id);
+      return puzzle ? await puzzleDetail(puzzle) : null;
+    }),
+  );
+  const puzzle = ids[0] ? await puzzleById(ids[0]) : null;
+  // Stored moves are solver moves only. Regrade that accepted prefix to
+  // restore the board and its already-played replies without a new submit.
+  const progress = puzzle && run.state.moves.length ? attemptPuzzle(puzzle, run.state.moves) : null;
   return {
     runId: run.id,
     version: run.version,
@@ -921,7 +1005,9 @@ async function stormResponse(run: StormRun) {
     finished: run.state.finished,
     moves: run.state.moves,
     results: run.state.results,
-    puzzle: puzzle ? await puzzleDetail(puzzle) : null,
+    puzzle: details[0] ?? null,
+    upcoming: details.slice(1).filter((detail) => detail !== null),
+    progress: progress?.ok && !progress.complete ? progress : null,
   };
 }
 

@@ -507,7 +507,7 @@ test('service: a foreign quote is translated line by line for the reader, header
   assert.equal(calls.length, 0);
 });
 
-test('service: pure Chinese for an English reader translates as before, under the old cache key', async () => {
+test('service: pure Chinese for an English reader translates as before, under the current cache key', async () => {
   const body = '这是什么宝藏网站，居然很少见到有人推荐这个网站';
   const { deps, stored } = makeDeps({ sourceText: body });
   const service = createForumTranslationService(deps);
@@ -518,21 +518,42 @@ test('service: pure Chinese for an English reader translates as before, under th
     meter: () => true,
   });
   assert.deepEqual(result, { status: 'ok', text: `[en] ${body}`, cached: false });
-  assert.equal(stored[0]?.contentHash, forumContentHash(body));
+  assert.equal(stored[0]?.contentHash, forumTranslationCacheHash(body, 'en'));
+  assert.notEqual(stored[0]?.contentHash, forumContentHash(body));
 });
 
-test('forumTranslationCacheHash: whole-body texts keep the old key; segmented ones get a new one', () => {
-  assert.equal(
-    forumTranslationCacheHash('Cannon to the centre', 'zh-Hans'),
-    forumContentHash('Cannon to the centre'),
-  );
-  assert.equal(forumTranslationCacheHash('炮二平五好棋', 'en'), forumContentHash('炮二平五好棋'));
+test('forumTranslationCacheHash: no plan is served a row written under the old prompt', () => {
+  // Rows from before the game-name glossary are keyed by the bare content
+  // hash (whole body) or the segment version alone; neither may match now.
+  for (const [text, target] of [
+    ['Cannon to the centre', 'zh-Hans'],
+    ['炮二平五好棋', 'en'],
+    [QUOTE_REPLY_POST, 'zh-Hans'],
+    [MIXED_OWN_POST, 'zh-Hans'],
+  ] as const) {
+    assert.notEqual(forumTranslationCacheHash(text, target), forumContentHash(text), text);
+  }
+  // Whole-body and segmented plans still key apart from each other.
   assert.notEqual(
-    forumTranslationCacheHash(QUOTE_REPLY_POST, 'zh-Hans'),
-    forumContentHash(QUOTE_REPLY_POST),
+    forumTranslationCacheHash('炮二平五好棋', 'en'),
+    forumTranslationCacheHash(QUOTE_REPLY_POST, 'en'),
   );
-  assert.notEqual(
-    forumTranslationCacheHash(MIXED_OWN_POST, 'zh-Hans'),
-    forumContentHash(MIXED_OWN_POST),
-  );
+});
+
+test('translationSystemPrompt fixes each game name and never calls a xiangqi piece a king', () => {
+  // 2026-10-31: a reply saying 揭棋 came out in English as "Banqi (blindfold
+  // chess)", and a "Jieqi now has a repetition rule" title came out as 暗棋.
+  for (const target of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+    const prompt = translationSystemPrompt(target);
+    for (const pair of [
+      '揭棋/jieqi',
+      '暗棋 or 翻棋/banqi',
+      '斗兽棋/Jungle',
+      '迷雾象棋/Fog Xiangqi',
+    ]) {
+      assert.ok(prompt.includes(pair), `${target}: ${pair}`);
+    }
+    assert.ok(!prompt.includes('king or general'), target);
+    assert.match(prompt, /never a king, rook, knight or pawn/);
+  }
 });

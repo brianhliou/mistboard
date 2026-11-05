@@ -138,11 +138,14 @@ export function participantForColor(
 // Persisted participants are decisive when both seats are present (they
 // reflect what's actually stored and are immune to legacy variant aliases);
 // otherwise the pair derives from the canonical spec family, so a new variant
-// resolves without editing here: the xiangqi and jungle families play red vs
-// black, and everything else is orthodox white vs black.
+// resolves without editing here: xiangqi and jungle play red vs black,
+// mahjong east vs west, Gomoku black vs white, chess white vs black.
 export type MatchupSeatPair = readonly [GameParticipant['color'], GameParticipant['color']];
 
 export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
+  // Gomoku opens with Black, including when persisted participants arrive
+  // in white/black storage order.
+  if (maybeGameSpecForId(game.variant)?.family === 'gomoku') return ['black', 'white'];
   const colors = new Set((game.participants ?? []).map((participant) => participant.color));
   if (colors.size >= 2) {
     if (colors.has('east') && colors.has('west')) return ['east', 'west'];
@@ -262,6 +265,7 @@ export function liveMatchupNames(
 const WHITE_FIRST_SPECS: ReadonlySet<string> = new Set(['dark-chess', 'chess']);
 
 export function firstMoverColorName(gameSpecId: string): string {
+  if (maybeGameSpecForId(gameSpecId)?.family === 'gomoku') return t('setup.black');
   if (isFlipSeatVariant(gameSpecId)) return t('setup.first');
   if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatEast');
   if (WHITE_FIRST_SPECS.has(gameSpecId) || !maybeGameSpecForId(gameSpecId)) {
@@ -271,6 +275,7 @@ export function firstMoverColorName(gameSpecId: string): string {
 }
 
 export function secondMoverColorName(gameSpecId: string): string {
+  if (maybeGameSpecForId(gameSpecId)?.family === 'gomoku') return t('setup.white');
   if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatWest');
   return isFlipSeatVariant(gameSpecId) ? t('setup.second') : seatColorWord(gameSpecId, 'black');
 }
@@ -281,6 +286,7 @@ export function secondMoverColorName(gameSpecId: string): string {
 // 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
 export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
+  gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
   'ffq-banqi': null,
   // runtimeStatus 'future': falls back to the spec's English publicName.

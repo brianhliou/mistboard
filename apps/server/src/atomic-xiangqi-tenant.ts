@@ -8,8 +8,8 @@
  * it (the standard tenant re-scores repetitions itself; this one does not need
  * to).
  *
- * The bot is the patched Fairy-Stockfish ladder (atomic-xiangqi-fsf-engine.ts,
- * loop in server-atomic-xiangqi-engine.ts), seated by the rooms route.
+ * Historical engine seats retain their names and versions for replay and export.
+ * This tenant no longer schedules native engine execution.
  */
 
 import {
@@ -32,7 +32,7 @@ import {
   atomicXiangqiEngineDisplayName,
   atomicXiangqiEngineVersion,
   isAtomicXiangqiEngineClientId,
-} from './atomic-xiangqi-fsf-engine.js';
+} from './atomic-xiangqi-engine-history.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
@@ -148,9 +148,7 @@ export const atomicXiangqiTenant: AtomicXiangqiTenantType = {
     viewForClient: (state, client) => getAtomicXiangqiClientView(state, client),
   },
   engine: {
-    // The engine is replayed from the whole move list every ply
-    // (`position startpos moves …`), so it sees repetition and the no-capture
-    // count exactly as the kernel does.
+    // Historical seat metadata only; no native move provider is attached.
     terminalContext: 'full-history',
     isEngineClientId: isAtomicXiangqiEngineClientId,
     displayName: atomicXiangqiEngineDisplayName,

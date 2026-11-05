@@ -71,8 +71,8 @@ test('the tier ladder stays ordered weakest-first', () => {
   );
   assert.deepEqual(
     JIEQI_PLAYABLE_ENGINES.slice(-3).map((t) => t.id),
-    [JIEQI_DEFAULT_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID, JIEQI_JQE_ENGINE_ID],
-    'level 8 (the create-route default) sits under the AB-JChess top slot',
+    [JIEQI_DEFAULT_ENGINE_ID, JIEQI_JQE_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID],
+    'level 8 (the create-route default) sits under jqe, and jqe under the AB-JChess top slot',
   );
 });
 
@@ -351,10 +351,10 @@ test('the AB-JChess handshake loads its net from MISTBOARD_ABJCHESS_NET; PikaJie
   }
 });
 
-// jqe (2026-10) sits above AB-JChess on its own binary and net, held behind a flag
-// until its author's OK. The tier exists either way (so the catalog and the EvE
+// jqe (2026-10) sits one rung under AB-JChess on its own binary and net, held behind
+// a flag. The tier exists either way (so the catalog and the EvE
 // adapter know it); the flag decides whether anything may offer or seat it.
-test('the jqe top slot runs its own build at 4 s and records its own version', () => {
+test('the jqe slot runs its own build at 4 s and records its own version', () => {
   const tier = jieqiEngineTierFor(JIEQI_JQE_ENGINE_ID);
   assert.ok(tier);
   assert.equal(tier.engine, 'jqe');

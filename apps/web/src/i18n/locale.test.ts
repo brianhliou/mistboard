@@ -186,6 +186,14 @@ describe('locale helpers', () => {
     expect(localizedHref('/zh-hans/analysis/xiangqi', 'en')).toBe('/analysis/xiangqi');
   });
 
+  it('switches the club page locale with its fragment and query intact', () => {
+    expect(localizedHref('/washington-xiangqi', 'zh-Hans')).toBe('/zh-hans/washington-xiangqi');
+    expect(
+      localeSwitchNavigation('/zh-hans/washington-xiangqi?source=club#contact', 'zh-Hant'),
+    ).toEqual({ kind: 'navigate', href: '/zh-hant/washington-xiangqi?source=club#contact' });
+    expect(localizedHref('/zh-hant/washington-xiangqi', 'en')).toBe('/washington-xiangqi');
+  });
+
   it('strips existing locale prefixes before rebuilding hrefs', () => {
     expect(stripLocalePrefix('/zh-hant/rules/banqi#top')).toBe('/rules/banqi#top');
     expect(localizedHref('/zh-hans/rules/banqi', 'zh-Hant')).toBe('/zh-hant/rules/banqi');

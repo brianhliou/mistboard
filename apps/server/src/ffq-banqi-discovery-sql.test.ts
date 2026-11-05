@@ -32,14 +32,14 @@ test('FFQ is permanently excluded from public totals independently of the flag a
     if (previous === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
     else process.env.MISTBOARD_FFQ_BANQI_ENABLED = previous;
   });
-  assert.ok(offPublicGameSpecIds([]).includes(FFQ_BANQI_SPEC_ID));
+  assert.ok(offPublicGameSpecIds(() => true).includes(FFQ_BANQI_SPEC_ID));
   assert.match(publicVariant('games'), /'ffq-banqi'/);
   assert.match(countedPublicGame('games'), /'ffq-banqi'/);
   const spec = gameSpecForId(FFQ_BANQI_SPEC_ID) as { publicSurface: string };
   const surface = spec.publicSurface;
   spec.publicSurface = 'casual';
   try {
-    assert.ok(offPublicGameSpecIds([]).includes(FFQ_BANQI_SPEC_ID));
+    assert.ok(offPublicGameSpecIds(() => true).includes(FFQ_BANQI_SPEC_ID));
   } finally {
     spec.publicSurface = surface;
   }

@@ -684,7 +684,7 @@ function buildActions(): HTMLElement {
   actions.className = 'current-games-actions';
   const play = document.createElement('a');
   play.className = 'current-games-cta';
-  play.href = '/play';
+  play.href = '/';
   play.textContent = t('games.playNow');
   const post = document.createElement('a');
   post.className = 'current-games-cta is-secondary';

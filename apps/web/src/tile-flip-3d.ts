@@ -19,7 +19,7 @@
 // the reveal, `back` the identity-free back it drew before. Nothing is drawn
 // ahead of that render, and the coin is gone when the turn is.
 
-import { pieceFlipKeyframes } from './board-anim.js';
+import { pieceFlipKeyframes, trackPieceAnimation } from './board-anim.js';
 
 export interface TileFlipLayers {
   /** The flat band (and shadow) drawn under the disc, in board units. */
@@ -394,6 +394,7 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
     return animation;
   };
   const turn = run(coin, turnFrames);
+  trackPieceAnimation(turn);
   run(backBand, bandOut);
   run(frontBand, bandIn);
   if (spec.faceMark && typeof (spec.faceMark as HTMLElement).animate === 'function') {

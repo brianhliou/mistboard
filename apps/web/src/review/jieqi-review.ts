@@ -31,8 +31,9 @@ import {
   candidateArrowsWithParser,
   engineArrowsFromLinesWithParser,
 } from './engine/engine-arrows.js';
+import { withFaceDownReview } from './face-down-faces.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
-import { jieqiChanceOdds } from './jieqi-luck-mark.js';
+import { jieqiChanceOdds, jieqiRevealOdds } from './jieqi-luck-mark.js';
 import { makeJieqiTreeAdapter } from './jieqi-tree-adapter.js';
 import { attachLuckBadgeCard, attachLuckMarkCard, type LuckCardDetail } from './luck-mark-card.js';
 import { formatJieqiBestMove } from './move-advice.js';
@@ -46,7 +47,9 @@ import {
 /** Config for a jieqi review mount. Truth-typed so a caller can root the tree
  *  at a parsed dealt position (`root`) and read the current truth back from the
  *  position hand-off hooks (`analyseFromHere`, `boardEditorHref`). */
-export type JieqiReviewConfig = TreeReviewConfig<JieqiMove, JieqiGameState>;
+export type JieqiReviewConfig = TreeReviewConfig<JieqiMove, JieqiGameState> & {
+  revealLuckOnly?: boolean;
+};
 
 /** Handle returned by mountJieqiReview: snapshot the current tree to persist it. */
 export type JieqiReviewHandle = TreeReviewHandle;
@@ -58,10 +61,13 @@ export type JieqiReviewHandle = TreeReviewHandle;
 export function jieqiLuckDetail(
   move: JieqiMove,
   info: { luck: number; before: JieqiGameState },
+  revealOnly = false,
 ): LuckCardDetail | null {
   const mover = info.before.board[move.from]?.color;
   if (!mover) return null;
-  const chance = jieqiChanceOdds(info.before, move);
+  const chance = revealOnly
+    ? { kind: 'reveal' as const, reveal: jieqiRevealOdds(info.before, move), capture: null }
+    : jieqiChanceOdds(info.before, move);
   return {
     square: move.to,
     color: mover,
@@ -74,6 +80,7 @@ export function jieqiLuckDetail(
 
 function makeJieqiPresentation(
   adapter: VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView>,
+  revealLuckOnly = false,
 ): TreePresentation<
   JieqiMove,
   JieqiGameState,
@@ -166,7 +173,7 @@ function makeJieqiPresentation(
     // landed, or where the face-down piece was taken. The card states the odds from the
     // pool the server averaged over (the mover's own bag, the victim's, or both).
     moveLuckMarker: (move, info): JieqiBoardMarker | null => {
-      luckDetail = jieqiLuckDetail(move, info);
+      luckDetail = jieqiLuckDetail(move, info, revealLuckOnly);
       if (!luckDetail) return null;
       return { square: move.to, kind: 'luck', luck: { luck: info.luck } };
     },
@@ -176,7 +183,7 @@ function makeJieqiPresentation(
         list,
         (badge) => {
           const at = luckAt(badge.dataset.luckPath ?? '');
-          return at ? jieqiLuckDetail(at.move, at) : null;
+          return at ? jieqiLuckDetail(at.move, at, revealLuckOnly) : null;
         },
         pieceArt,
       );
@@ -198,13 +205,20 @@ export function mountJieqiReview(
   // not a data fetch: the flag lives beside the adapter that reads it and the menu
   // item that flips it, and nothing else in the review needs to know about it.
   let revealAll = false;
-  const adapter = makeJieqiTreeAdapter(gameId, deal, { revealAll: () => revealAll });
-  return mountTreeReview(root, makeJieqiPresentation(adapter), {
-    ...config,
-    revealHidden: {
-      setRevealed: (next) => {
-        revealAll = next;
+  const faceDown = withFaceDownReview(
+    makeJieqiTreeAdapter(gameId, deal, { revealAll: () => revealAll }),
+    {
+      ...config,
+      revealHidden: {
+        setRevealed: (next: boolean) => {
+          revealAll = next;
+        },
       },
     },
-  });
+  );
+  return mountTreeReview(
+    root,
+    makeJieqiPresentation(faceDown.adapter, config.revealLuckOnly),
+    faceDown.config,
+  );
 }

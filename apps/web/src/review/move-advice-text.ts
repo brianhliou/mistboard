@@ -5,19 +5,40 @@
 // embed, review/analysis-marks.ts) does not pull the advice widget's stylesheet
 // into a page framed by someone else. move-advice.ts re-exports all of it.
 import { fsfUciToXiangqiSquares, type MoveJudgment } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
 import type { MovePraise } from './game-analysis.js';
 
+// Resolve on access: this module can load before the visitor's locale is selected.
 export const ADVICE_LABEL: Record<Exclude<MoveJudgment, null>, string> = {
-  inaccuracy: 'Inaccuracy',
-  mistake: 'Mistake',
-  blunder: 'Blunder',
+  get inaccuracy() {
+    return t('review.advice.inaccuracy');
+  },
+  get mistake() {
+    return t('review.advice.mistake');
+  },
+  get blunder() {
+    return t('review.advice.blunder');
+  },
 };
 
 /** Inline note under a praised move (the positive counterpart of ADVICE_LABEL). */
 export const PRAISE_COMMENT: Record<MovePraise, string> = {
-  brilliant: 'Brilliant. A piece given up, and the engine agrees it does not come back.',
-  great: 'Great move. The only good move in the position.',
+  get brilliant() {
+    return t('review.advice.brilliant');
+  },
+  get great() {
+    return t('review.advice.great');
+  },
 };
+
+export function adviceJudgment(judgment: Exclude<MoveJudgment, null>): string {
+  return t('review.advice.judgment', { judgment: ADVICE_LABEL[judgment] });
+}
+
+/** Includes the locale's spacing and punctuation for the clause after a judgment. */
+export function bestMoveQuote(move: string): string {
+  return t('review.advice.best', { move });
+}
 
 // Default best-move formatter: FSF/xiangqi coordinate pair. Correct for xiangqi, fortress,
 // and atomic (their board coords match the engine dialect and they have no flips). Variants
@@ -40,7 +61,7 @@ export function formatFlipVariantBestMove(uci: string): string {
   };
   const from = toDisplay(uci.slice(0, 2));
   const to = toDisplay(uci.slice(2, 4));
-  return from === to ? `${from} flip` : `${from}-${to}`;
+  return from === to ? t('review.advice.flip', { square: from }) : `${from}-${to}`;
 }
 
 // Best-move formatter for Jieqi. PikaJieQi emits Pikafish UCI with 0-indexed

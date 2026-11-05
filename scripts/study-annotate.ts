@@ -25,6 +25,10 @@
 //   - one comment per move (the study shows the first only), notes joined.
 //   - a move whose next position carries luck (a jieqi reveal) is graded on
 //     its own search from the position before (moveScore), the mover's view.
+//   - two engines, each judging the other (scoreByMover): red's moves are graded
+//     on one series and black's on another, and a sideline or arrow can carry
+//     its engine's colour (brush). A sideline marked `always` hangs off its move
+//     with or without a glyph: the caller has picked a disputed moment to show.
 //
 // Moves are tokens in the chapter's own spelling; the caller checks legality.
 
@@ -63,12 +67,13 @@ export function moveGlyphFor(before: number, after: number): MoveGlyph | null {
   return judgment ? GLYPH_FOR[judgment] : null;
 }
 
+export type StudyArrow = { kind: 'arrow'; brush: string; orig: string; dest: string };
 export type StudyNode = {
   uci?: string;
   annotations?: {
     comments?: { text: string }[];
     glyphs?: number[];
-    shapes?: { kind: 'arrow'; brush: string; orig: string; dest: string }[];
+    shapes?: StudyArrow[];
   };
   children: StudyNode[];
 };
@@ -80,6 +85,10 @@ export type EngineSideline = {
   /** Red's expected score at the end of the sideline (its verdict). */
   redScoreEnd: number | null;
   comment?: string;
+  /** The arrow's brush on the position it leaves from; green by default. */
+  brush?: string;
+  /** Hang the line even when the move it replaces earned no glyph. */
+  always?: boolean;
 };
 
 export type JudgedMove = {
@@ -107,8 +116,14 @@ export type EngineAnnotationInput = {
    *  next position already knows which it was. When set, it grades move i in
    *  place of redScore[i + 1]. */
   moveScore?: readonly (number | null)[];
+  /** Red's expected score per position as the judge of each side's moves sees
+   *  it: red's move i is graded on red[i] -> red[i + 1], black's on black[...].
+   *  In place of redScore for grading; moveScore still overrides the after. */
+  scoreByMover?: { red: readonly number[]; black: readonly number[] };
   /** Whose moves are judged; both by default. */
   judge?: 'red' | 'black' | 'both';
+  /** Extra arrows on the position after N plies (0 = the root). */
+  shapes?: Readonly<Record<number, readonly StudyArrow[]>>;
   sidelines?: readonly EngineSideline[];
   /** Notes on mainline moves, by 1-based ply. */
   comments?: Readonly<Record<number, string>>;
@@ -147,8 +162,9 @@ export function judgedMoves(input: EngineAnnotationInput): JudgedMove[] {
     const best = input.best?.[i] ?? null;
     if (best === uci) continue;
     const forMover = (red: number): number => (mover === 'red' ? red : 1 - red);
-    const before = forMover(input.redScore[i]!);
-    const after = forMover(input.moveScore?.[i] ?? input.redScore[i + 1]!);
+    const series = input.scoreByMover?.[mover] ?? input.redScore;
+    const before = forMover(series[i]!);
+    const after = forMover(input.moveScore?.[i] ?? series[i + 1]!);
     const g = moveGlyphFor(before, after);
     if (g) out.push({ ply: i + 1, uci, mover, glyph: g, before, after, best });
   }
@@ -164,6 +180,14 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
   const sidelines = new Map((input.sidelines ?? []).map((s) => [s.ply, s]));
   const root: StudyNode = { children: [] };
   if (input.intro) comment(root, input.intro);
+  const arrows = (node: StudyNode, add: readonly StudyArrow[]): void => {
+    if (!add.length) return;
+    node.annotations = {
+      ...(node.annotations ?? {}),
+      shapes: [...(node.annotations?.shapes ?? []), ...add],
+    };
+  };
+  arrows(root, input.shapes?.[0] ?? []);
   let cursor = root;
   input.moves.forEach((uci, i) => {
     const ply = i + 1;
@@ -175,11 +199,13 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
     }
     const note = input.comments?.[ply];
     if (note) comment(node, note);
+    arrows(node, input.shapes?.[ply] ?? []);
     cursor.children.push(node);
     // A sideline hangs only off a move that earns a glyph (lichess convention):
     // the line is there because the move played was worse. A candidate line
     // off a move the engine does not fault is dropped.
-    const side = mark ? sidelines.get(i) : undefined;
+    const candidate = sidelines.get(i);
+    const side = mark || candidate?.always ? candidate : undefined;
     if (side?.moves.length) {
       if (side.moves[0] === uci) throw new Error(`sideline at ply ${i} repeats the game move`);
       let head: StudyNode | null = null;
@@ -193,17 +219,9 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
       if (side.comment) comment(head!, side.comment);
       if (side.redScoreEnd != null) glyph(tail!, assessmentForRedScore(side.redScoreEnd).nag);
       cursor.children.push(head!);
-      cursor.annotations = {
-        ...(cursor.annotations ?? {}),
-        shapes: [
-          ...(cursor.annotations?.shapes ?? []),
-          {
-            kind: 'arrow',
-            brush: 'green',
-            ...squaresOf(side.moves[0]!),
-          },
-        ],
-      };
+      arrows(cursor, [
+        { kind: 'arrow', brush: side.brush ?? 'green', ...squaresOf(side.moves[0]!) },
+      ]);
     }
     cursor = node;
   });

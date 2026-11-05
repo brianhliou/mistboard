@@ -88,24 +88,16 @@ crypto-backed RNG and persists the initial deal with the action history.
 
 A board back serializes to exactly `{ faceDown: true }`, without ink or role.
 Legality and chase detection depend only on public occupancy and face-up pieces.
-Every off-board capture's ink and exact role are **public to both seats and
-observers**, whether captured face up or covered, live or finished. This is an
-explicit FFQ exception to Mistboard's capturer-only covered-capture policy:
-public HP damage already identifies the ink and, unless clamped at zero,
-distinguishes generals (30), advisors (10) and soldiers (2); five-damage victims
-are now also identified.
-The former capturer-only tests guarded a disclosure choice, not a movement or
-settlement invariant. Making the removed victim public changes neither legal
-moves nor HP. `wasFaceDown` records how it was captured; it never keeps an
-off-board role private. Covered pieces **still on the board remain masked**,
-including after an HP-ending friendly capture or any other game end.
+A face-up capture's role is public. A covered capture's exact role is sent only
+to its capturer, including after game end; other seats and observers receive
+`role: null`. Public HP changes still disclose the victim's ink and damage
+class (some damage values uniquely identify a role). Canonical HP and movement
+rules are unchanged. Covered pieces still on the board remain masked.
 
 Pools are calculated from the initial multiset minus revealed on-board pieces
-and **all captures**, never from the truth under the remaining backs. Both seats
-and observers therefore see the same pool, whose counts equal the remaining
-covered on-board multiset without assigning identities to squares.
-`unknownCaptured` is retained in the view for snapshot compatibility and is
-always `{ red: 0, black: 0 }`.
+and captures whose roles the recipient knows. Unknown covered captures remain
+in that recipient's candidate pool, counted by ink in `unknownCaptured`.
+Observers receive their own projection, never either player's private captures.
 
 The public FEN is an **observer snapshot**, not a save/import format:
 
@@ -116,13 +108,12 @@ The public FEN is an **observer snapshot**, not a save/import format:
 Ranks run y=7 to y=0, files x=0 to x=3. `X` is a back, upper/lowercase
 `G A E R H C S` denotes revealed red/black pieces, and digits collapse empty
 runs. Turn is `r` or `b`. Pool pairs are letter+count in descending rank order,
-red then black; `-` means empty. Public covered captures are subtracted from the
-pool, so different captured roles may produce different pool fields even when
-their damage is identical. The final two fields remain `0 0`, preserving the
-11-field format with no privately captured identities. Permuting identities
-under **on-board** backs leaves the **entire FEN and serialized views** unchanged,
-live and finished. There is deliberately no dealt suffix or parser: canonical
-replay requires the secret initial deal and moves.
+red then black; `-` means empty. Covered captures stay in the observer's pool;
+the final two fields count their unknown roles by ink. Equal-damage covered
+roles cannot be distinguished through the pool. Permuting identities under
+on-board backs leaves the entire FEN and serialized views unchanged, live and
+finished. There is deliberately no dealt suffix or parser: canonical replay
+requires the secret initial deal and moves.
 This FFQ-specific dialect does not claim compatibility with an external engine.
 
 ## Unverified against Tencent's live app
@@ -198,11 +189,8 @@ Planted-failure proof: temporarily returning the canonical board from
 `getFFQBanqiClientView` made **serialized FFQ seat and observer payloads mask
 identities at every ply, live AND HP-finished** exit 1 with `red payload
 carries a covered identity`. Restoring the masked view made it pass again.
-Public off-board captures remain the existing explicit FFQ disclosure choice
-recorded in `FFQ_BANQI_RULES`; covered pieces still on the board stay secret.
+The integration regression additionally masks covered capture roles for everyone
+except the capturer, including the full live and finished replay envelope.
 
-This base predates `flip-jungle-name.test.ts`. After the standing Mistboard
-session rebases onto the Flip Jungle naming ship, run that test and reconcile
-the inherited FFQ catalog strings with its exact counted allowlist. This card
-adds no new Chinese FFQ name in web source. The branch stays parked for that
-session's review; no release, push or merge is part of this card.
+The integration onto current main also runs `flip-jungle-name.test.ts` and
+checks catalog key uniqueness. The branch remains hidden and unpushed.

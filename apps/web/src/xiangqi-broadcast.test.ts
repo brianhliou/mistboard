@@ -1035,6 +1035,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(zone('Ongoing')).toBeUndefined();
     // The earliest start leads, labelled as the next event.
     expect(names(zone('Next up'))).toEqual(['quiet-league']);
+    // Nothing posted yet: no "0 rounds / 0 games" line on the featured card.
+    expect(zone('Next up')?.textContent).not.toMatch(/\b0 rounds\b|\b0 games\b/);
     // Soonest first.
     expect(names(zone('Upcoming'))).toEqual(['asian-men', 'asian-women', 'singapore', 'changchun']);
     const status = (slug: string) =>

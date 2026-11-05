@@ -684,12 +684,27 @@ function pathMatchesNavItem(path: string, href: string): boolean {
   // A mode of a page (/puzzles?mode=streak) is its own destination: it matches
   // only with its query, and the bare page stops matching while a mode is on.
   const [hrefPath, hrefQuery] = href.split('?');
-  const mode = new URLSearchParams(window.location.search).get('mode');
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
   if (hrefQuery !== undefined)
-    return normalizedPath === hrefPath && window.location.search === `?${hrefQuery}`;
-  if (href === '/puzzles' && normalizedPath === '/puzzles' && mode === 'streak') return false;
-  // The themes index is its own menu item; puzzle detail pages stay the trainer's.
-  if (href === '/puzzles' && normalizedPath === '/puzzles/themes') return false;
+    return (
+      normalizedPath === hrefPath &&
+      [...new URLSearchParams(hrefQuery)].every(([key, value]) => params.get(key) === value)
+    );
+  if (
+    href === '/puzzles' &&
+    normalizedPath === '/puzzles' &&
+    (mode === 'streak' || mode === 'storm')
+  )
+    return false;
+  // Listed puzzle subpages own their current marker; puzzle ids stay the trainer's.
+  if (
+    href === '/puzzles' &&
+    puzzleNavItems().some(
+      (item) => item.href.startsWith('/puzzles/') && item.href === normalizedPath,
+    )
+  )
+    return false;
   return (
     normalizedPath === href ||
     (href === '/puzzles' && normalizedPath.startsWith('/puzzles/')) ||

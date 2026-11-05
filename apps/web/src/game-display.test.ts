@@ -18,15 +18,45 @@ import {
   matchupSeats,
   secondMoverColorName,
   terminationLabel,
+  variantDisplayLabel,
   variantNameKeyForSpecId,
+  watchChannelLabel,
 } from './game-display.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
+
+describe('Gomoku display name', () => {
+  it.each([
+    ['/en/watch', 'Gomoku'],
+    ['/zh-hans/watch', '五子棋'],
+    ['/zh-hant/watch', '五子棋'],
+  ])('localizes the game and TV channel at %s', (path, label) => {
+    const previousPath = window.location.pathname;
+    window.history.pushState(null, '', path);
+    try {
+      expect(variantNameKeyForSpecId('gomoku')).toBe('variant.gomoku.name');
+      expect(variantDisplayLabel('gomoku')).toBe(label);
+      expect(watchChannelLabel({ id: 'gomoku', label: 'Gomoku' })).toBe(label);
+    } finally {
+      window.history.replaceState(null, '', previousPath);
+    }
+  });
+});
 
 // Regression suite for the "white vs pikajieqi" bug: surfaces that hardcoded a
 // 'white' seat lookup dropped the red player's name on every red/black variant
 // and rendered the literal seat word instead. Every "X vs Y" surface now goes
 // through matchupSeats/matchupLabel.
 describe('matchupSeats', () => {
+  it('puts Gomoku Black first, with or without persisted participants', () => {
+    expect(matchupSeats(game('gomoku'))).toEqual(['black', 'white']);
+    const seats = [participant('white', 'alice'), participant('black', 'bob')];
+    expect(matchupSeats(game('gomoku', seats))).toEqual(['black', 'white']);
+    expect(matchupLabel(game('gomoku', seats))).toBe('bob vs alice');
+    expect(matchupLabel(game('gomoku'))).toBe('Black vs White');
+    expect(firstMoverColorName('gomoku')).toBe('Black');
+    expect(secondMoverColorName('gomoku')).toBe('White');
+  });
+
   it('resolves xiangqi to red vs black from the spec family', () => {
     expect(matchupSeats(game(XIANGQI_SPEC_ID))).toEqual(['red', 'black']);
   });

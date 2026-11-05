@@ -1,0 +1,94 @@
+.live-route--gomoku {
+  --uni-board-aspect: 1;
+  --uni-board-max: 760px;
+}
+
+.gomoku-live-board {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--board-corner-radius);
+}
+
+.gomoku-watch-layout {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 760px;
+}
+
+.gomoku-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gomoku-wood {
+  fill: var(--xq-live-board-bg, #f5dca8);
+}
+.gomoku-grid {
+  stroke: var(--xq-live-ink, #5a3a14);
+  stroke-width: 1;
+  fill: none;
+}
+.gomoku-star {
+  fill: var(--xq-live-ink, #5a3a14);
+}
+.gomoku-coordinate {
+  fill: var(--xq-live-ink, #5a3a14);
+  font: 11px system-ui;
+  text-anchor: middle;
+}
+.gomoku-stone {
+  stroke-width: 1.2;
+}
+.gomoku-ghost {
+  opacity: 0.4;
+  stroke-width: 1.2;
+  pointer-events: none;
+}
+.gomoku-stone--black {
+  fill: #222;
+  stroke: #080808;
+}
+.gomoku-stone--white {
+  fill: #faf7ee;
+  stroke: #8a806d;
+}
+.gomoku-last {
+  fill: #d65330;
+  pointer-events: none;
+}
+.gomoku-winning {
+  fill: none;
+  stroke: #168344;
+  stroke-width: 4;
+  pointer-events: none;
+}
+.gomoku-hit {
+  fill: transparent;
+}
+.gomoku-hit[aria-disabled="false"] {
+  cursor: pointer;
+}
+.gomoku-hit:focus {
+  outline: none;
+  stroke: #315e9c;
+  stroke-width: 2;
+}
+
+.gomoku-best,
+.gomoku-circle {
+  fill: none;
+  stroke: #168344;
+  stroke-width: 3;
+}
+.gomoku-pv-number {
+  font: 700 14px system-ui;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.gomoku-pv-number--black {
+  fill: #fff;
+}
+.gomoku-pv-number--white {
+  fill: #111;
+}

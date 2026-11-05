@@ -268,6 +268,8 @@ export const ZH_HANS_COMMUNITY = {
   'profile.puzzleFailed': '走错 {count} 题',
   'profile.puzzleProgress': '解题进度',
   'profile.puzzleHistoryPrivate': '象棋解题记录。仅你可见。',
+  'profile.puzzleAttemptOne': '尝试 {count} 次',
+  'profile.puzzleAttemptMany': '尝试 {count} 次',
   'profile.puzzleHistoryEmpty': '还没有解题记录。',
   'profile.puzzleChartEmpty': '还没有已保存的评分记录。',
   'profile.puzzleHistoryLegacy': '较早的成绩可能没有保存评分。进度图会保留相应的空缺。',
@@ -618,9 +620,9 @@ export const ZH_HANS_COMMUNITY = {
   'bots.otherIntro': 'Mistboard 其他棋类的机器人。',
   'bots.pikafishBio': '开源，由 Stockfish 改造而来，每步搜索三百万个局面。也可以下揭棋。',
   'bots.abJchessBio':
-    '开源揭棋引擎，自带神经网络，作者 Huorongrong 和 Laoxu（Kouza）。经作者许可在本站使用。',
+    '开源揭棋引擎，作者 Huorongrong 和 Laoxu（Kouza），自带神经网络。其 AB-JChess-20261031 版本基于 jqe 的代码，在我们 600 局的对抗赛中以 306 胜 227 负 67 和战胜 jqe，重回本站榜首。每步思考 4 秒。经作者许可在本站使用。',
   'bots.jqeBio':
-    "开源揭棋引擎，作者 Devin O'Keefe，自带神经网络，通过自我对弈训练。在我们 300 局的对抗赛中以 171 胜 114 负 15 和战胜 AB-JChess 0.2d，登上本站榜首。每步思考 4 秒。经作者许可在本站使用。",
+    "开源揭棋引擎，作者 Devin O'Keefe，自带神经网络，通过自我对弈训练。2026 年 10 月 21 日以 171 胜 114 负 15 和战胜 AB-JChess 0.2d 登上本站榜首，现位于基于其代码的 AB-JChess-20261031 之下一级。每步思考 4 秒。经作者许可在本站使用。",
   'bots.katagoBio':
     '我们所知最强的斗兽棋引擎：hzyhhzy 的 KataGomo，基于 lightvector 的 KataGo，神经网络来自 Kouza 的 Dandelion 4。经作者许可在本站使用。',
   'bots.katagoCreditKatagomo': 'KataGomo，作者 hzyhhzy',
@@ -628,7 +630,7 @@ export const ZH_HANS_COMMUNITY = {
   'bots.katagoCreditNet': '神经网络：Kouza 的 Dandelion 4',
   'bots.jqeCredit': "jqe，作者 Devin O'Keefe",
   'bots.abJchessCredit': 'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）',
-  'bots.mistyBio': 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
+  'bots.mistyBio': 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻兽棋。',
   'bots.firstParty': '官方机器人',
   'bots.gameCountOne': '{count} 局',
   'bots.gameCountMany': '{count} 局',

@@ -5,7 +5,11 @@ import { renderEmail } from './email-layout.js';
 import * as persistence from './persistence.js';
 import { type EmailLocale, emailLocale } from './player-email.js';
 import { touchPresence } from './presence.js';
-import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
+import {
+  type SendTransactionalEmailResult,
+  sendTransactionalEmail,
+  transactionalEmailConfigured,
+} from './send-email.js';
 import { isProductionLikeRuntime } from './server-policy.js';
 
 const accountSessionCookieName = 'mistboard_session';
@@ -137,7 +141,7 @@ export async function sendEmailLoginCode(
   email: string,
   code: string,
   locale?: string | null,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<SendTransactionalEmailResult> {
   return sendAccountEmailCode(email, code, 'login', locale);
 }
 
@@ -145,7 +149,7 @@ export async function sendEmailChangeCode(
   email: string,
   code: string,
   locale?: string | null,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<SendTransactionalEmailResult> {
   return sendAccountEmailCode(email, code, 'email-change', locale);
 }
 
@@ -153,7 +157,7 @@ export async function sendAccountClosureCode(
   email: string,
   code: string,
   locale?: string | null,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<SendTransactionalEmailResult> {
   return sendAccountEmailCode(email, code, 'account-closure', locale);
 }
 
@@ -261,7 +265,7 @@ async function sendAccountEmailCode(
   code: string,
   purpose: AccountCodePurpose,
   locale?: string | null,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<SendTransactionalEmailResult> {
   if (!authEmailDeliveryEnabled || !authEmailFrom) return { ok: false };
   const { subject, text, html } = accountCodeEmail(code, purpose, locale);
   const result = await sendTransactionalEmail({
@@ -271,7 +275,7 @@ async function sendAccountEmailCode(
     text,
     html,
   });
-  if (result.ok) return { ok: true };
+  if (result.ok) return result;
   console.error(
     JSON.stringify({
       level: 'error',

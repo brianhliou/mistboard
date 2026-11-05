@@ -6,7 +6,8 @@
 // on their own. Players and feedback providers are named only after they say
 // yes (Brian, 2026-10-17).
 
-import { ENGINE_CREDITS, type EngineCredit } from './engine-credits.js';
+import { type EngineCredit, enabledEngineCredits } from './engine-credits.js';
+import { gomokuEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -94,7 +95,7 @@ export function buildThanks(locale: Locale = currentLocale()): HTMLElement {
   const section = proseSection('thanks-section');
   const engines = document.createElement('ol');
   engines.className = 'thanks-engines';
-  engines.append(...ENGINE_CREDITS.map((credit) => engineRow(credit, locale)));
+  engines.append(...enabledEngineCredits().map((credit) => engineRow(credit, locale)));
   section.append(
     proseHeading(t('thanks.heading', {}, locale)),
     proseParagraph([t('thanks.intro', {}, locale)]),
@@ -141,13 +142,16 @@ export function fillEngineStats(
 ): void {
   const list = page.querySelector<HTMLOListElement>('.thanks-engines');
   if (!list || bots.length === 0) return;
-  const byId = new Map(bots.map((bot) => [bot.id, bot]));
-  for (const credit of ENGINE_CREDITS) {
+  const visibleBots = bots.filter(
+    (bot) => gomokuEnabled() || !bot.supportedGameSpecIds.includes('gomoku'),
+  );
+  const byId = new Map(visibleBots.map((bot) => [bot.id, bot]));
+  for (const credit of enabledEngineCredits()) {
     const row = list.querySelector<HTMLElement>(`[data-engine="${credit.id}"]`);
     const own = credit.botIds.flatMap((id) => byId.get(id) ?? []);
     if (row && own.length > 0) setStats(row, own, credit.gameSpecIds[0]!, locale);
   }
-  for (const bot of bots.filter((b) => b.ownerType === 'user')) {
+  for (const bot of visibleBots.filter((b) => b.ownerType === 'user')) {
     const main = bot.supportedGameSpecIds[0];
     if (!main) continue;
     const row = rowShell(main, `community-${bot.id}`);
@@ -185,7 +189,7 @@ function engineRow(credit: EngineCredit, locale: Locale): HTMLElement {
   row
     .querySelector('.thanks-engine-main')!
     .append(
-      rowTitle(credit.engine, `/bot/${encodeURIComponent(credit.botIds[0]!)}`),
+      rowTitle(credit.engine, credit.href ?? `/bot/${encodeURIComponent(credit.botIds[0]!)}`),
       by,
       rowLine('thanks-engine-body', t(credit.body, {}, locale)),
       variantList(credit.gameSpecIds),
@@ -251,7 +255,9 @@ function stat(kind: string, value: string, label: string): HTMLElement {
 function rowTitle(label: string, href: string): HTMLElement {
   const heading = document.createElement('h3');
   heading.className = 'thanks-engine-name';
-  heading.append(proseLink(label, href));
+  heading.append(
+    href.startsWith('https://') ? proseExternalLink(label, href) : proseLink(label, href),
+  );
   return heading;
 }
 

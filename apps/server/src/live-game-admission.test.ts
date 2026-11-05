@@ -32,6 +32,29 @@ test('admission finds a disconnected account across devices and a guest across r
   assert.equal(JSON.stringify(await admission.find(player)), '"xq_live"');
 });
 
+test('signed-in admission matches accounts even when another account or guest shares the browser', async () => {
+  const owners: LiveGameIdentity[] = [player, { deviceId: player.deviceId }];
+  for (const owner of owners) {
+    const candidate = room('shared-browser', owner);
+    for (const stack of ['legacy', 'tenant']) {
+      const candidates = new Map([[candidate.id, candidate]]);
+      const admission = new LiveGameAdmission({
+        rooms: stack === 'legacy' ? candidates : new Map(),
+        tenantRooms: () => (stack === 'tenant' ? [candidates] : []),
+      });
+      assert.equal(
+        await admission.find({ userId: 'other-account', deviceId: player.deviceId }),
+        null,
+      );
+      assert.equal(
+        await admission.find({ userId: player.userId }),
+        owner.userId ? candidate.id : null,
+      );
+      assert.equal(await admission.find({ deviceId: player.deviceId }), candidate.id);
+    }
+  }
+});
+
 test('admission scans both the legacy room map and tenant maps without needing a socket', async () => {
   const legacy = roomFixture({ id: 'legacy-776' });
   legacy.seatTokens.white = {
@@ -57,16 +80,23 @@ test('admission scans both the legacy room map and tenant maps without needing a
 
 test('correspondence, terminal rooms, revoked seats and spectators never count', async () => {
   for (const stack of ['legacy', 'tenant']) {
+    const admissionFor = (candidate: AdmissionRoom) => {
+      const candidates = new Map([[candidate.id, candidate]]);
+      return new LiveGameAdmission({
+        rooms: stack === 'legacy' ? candidates : new Map(),
+        tenantRooms: () => (stack === 'tenant' ? [candidates] : []),
+      });
+    };
     for (const status of ['finished', 'aborted']) {
       const candidate = room('terminal');
       candidate.projection!.state.status.type = status;
-      const admission = new LiveGameAdmission({ rooms: new Map([[candidate.id, candidate]]) });
+      const admission = admissionFor(candidate);
       assert.equal(await admission.find(player), null);
     }
     const candidate = room('correspondence');
     if (stack === 'legacy') candidate.timeControl = { daysPerMove: 3 };
     else candidate.projection!.timeControl = { daysPerMove: 3 };
-    const admission = new LiveGameAdmission({ rooms: new Map([[candidate.id, candidate]]) });
+    const admission = admissionFor(candidate);
     assert.equal(await admission.find(player), null);
   }
   const revoked = room('revoked');
@@ -107,6 +137,24 @@ test('loaded terminal and correspondence rooms override stale persisted running 
   assert.equal(await admission.find(player), 'not-loaded-running');
 });
 
+test('loaded playing rooms remain authoritative when persistence considers them stale', async () => {
+  for (const stack of ['legacy', 'tenant']) {
+    const candidate = room('loaded-playing');
+    const candidates = new Map([[candidate.id, candidate]]);
+    let persistedReads = 0;
+    const admission = new LiveGameAdmission({
+      rooms: stack === 'legacy' ? candidates : new Map(),
+      tenantRooms: () => (stack === 'tenant' ? [candidates] : []),
+      persistedRoomIds: async () => {
+        persistedReads += 1;
+        return [];
+      },
+    });
+    assert.equal(await admission.find(player), candidate.id);
+    assert.equal(persistedReads, 0);
+  }
+});
+
 test('two concurrent reservations leave exactly one winner even across account/device aliases', async () => {
   for (const competingIdentity of [{ userId: player.userId }, { deviceId: player.deviceId }]) {
     const admission = new LiveGameAdmission({
@@ -124,6 +172,40 @@ test('two concurrent reservations leave exactly one winner even across account/d
     assert.deepEqual(results[1], { ok: false, roomId: 'created-first' });
     assert.equal(await admission.find(player), 'created-first');
   }
+});
+
+test('different accounts can reserve on one browser and each pending seat stays visible to guests', async () => {
+  for (const releaseFirst of [true, false]) {
+    const other = { userId: 'other-account', deviceId: player.deviceId };
+    const admission = new LiveGameAdmission({ rooms: new Map(), tenantRooms: () => [] });
+    const [first, second] = await Promise.all([
+      admission.reserve(player, 'first-account-room'),
+      admission.reserve(other, 'second-account-room'),
+    ]);
+    assert.ok(first.ok);
+    assert.ok(second.ok);
+    assert.equal(await admission.find(player), 'first-account-room');
+    assert.equal(await admission.find(other), 'second-account-room');
+    assert.deepEqual(await admission.reserve({ deviceId: player.deviceId }, 'guest-room'), {
+      ok: false,
+      roomId: 'first-account-room',
+    });
+    const released = releaseFirst ? first : second;
+    const remaining = releaseFirst ? second : first;
+    released.reservation.release();
+    released.reservation.release();
+    assert.equal(await admission.find({ deviceId: player.deviceId }), remaining.reservation.roomId);
+    remaining.reservation.release();
+    assert.equal(await admission.find({ deviceId: player.deviceId }), null);
+  }
+});
+
+test('signed-in reservations ignore a guest reservation on the same browser', async () => {
+  const admission = new LiveGameAdmission({ rooms: new Map(), tenantRooms: () => [] });
+  assert.ok((await admission.reserve({ deviceId: player.deviceId }, 'guest-room')).ok);
+  assert.equal(await admission.find(player), null);
+  assert.ok((await admission.reserve(player, 'account-room')).ok);
+  assert.equal(await admission.find(player), 'account-room');
 });
 
 test('reservation release permits a retry after failure and cannot erase a later reservation', async () => {

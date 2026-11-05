@@ -1,4 +1,4 @@
-// MistyJungleFlip move provider for Flip Jungle (兽棋 / 翻翻棋) PvE.
+// MistyJungleFlip move provider for Flip Jungle (翻翻兽棋) PvE.
 //
 // The engine is our own `jungle-flip-engine` binary ("MistyJungleFlip", in
 // ~/projects/mistboard-engine/jungle-flip-engine) — a standalone Rust αβ+Star1+TT

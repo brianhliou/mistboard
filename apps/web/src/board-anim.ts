@@ -123,10 +123,101 @@ export function glideSvgPiece(
   if (typeof target.getAnimations === 'function') {
     for (const animation of target.getAnimations()) animation.cancel();
   }
-  target.animate([{ transform: `translate(${dxUser}px, ${dyUser}px)` }, { transform: 'none' }], {
-    duration: durationMs,
-    easing: PIECE_GLIDE_EASING,
+  trackPieceAnimation(
+    target.animate([{ transform: `translate(${dxUser}px, ${dyUser}px)` }, { transform: 'none' }], {
+      duration: durationMs,
+      easing: PIECE_GLIDE_EASING,
+    }),
+  );
+}
+
+// ── Board settle: what waits for a piece to land (#825) ────────────────────
+// The game-over sound played as the final move's glide began (Brian,
+// 2026-11-01, Three Kingdoms banqi). The glides and turn-overs register here
+// as they start and leave on their own 'finish' or 'cancel' event, so a
+// result can be chained on the animation itself instead of a guessed delay.
+// A live room also holds the board while a frame it applied has not been
+// drawn yet (the sound hook runs before the render that starts the glide),
+// including a render it is holding back for the previous move to land.
+
+type TrackedAnimation = Pick<Animation, 'addEventListener'>;
+
+const inFlightPieceAnimations = new Set<TrackedAnimation>();
+const boardSettleHolds = new Set<symbol>();
+let boardSettleWaiters: Array<() => void> = [];
+let boardSettleCheckQueued = false;
+
+/** Longest a waiter waits: past the slowest glide behind the longest held
+ *  render, so a hold or animation that never ends can delay but never drop. */
+export const BOARD_SETTLE_MAX_WAIT_MS = 3000;
+
+/** Register a piece glide or turn-over until its 'finish' or 'cancel'. */
+export function trackPieceAnimation(animation: TrackedAnimation | null | undefined): void {
+  if (!animation || typeof animation.addEventListener !== 'function') return;
+  inFlightPieceAnimations.add(animation);
+  const done = () => {
+    if (inFlightPieceAnimations.delete(animation)) queueBoardSettleCheck();
+  };
+  animation.addEventListener('finish', done);
+  animation.addEventListener('cancel', done);
+}
+
+/** Hold the board unsettled until the returned release runs (idempotent). */
+export function holdBoardSettle(): () => void {
+  const token = Symbol('board-settle-hold');
+  boardSettleHolds.add(token);
+  return () => {
+    if (boardSettleHolds.delete(token)) queueBoardSettleCheck();
+  };
+}
+
+/** No piece is moving or turning, and no applied frame waits to be drawn. */
+export function boardSettled(): boolean {
+  return inFlightPieceAnimations.size === 0 && boardSettleHolds.size === 0;
+}
+
+/**
+ * Run `run` once the board settles: at once when it already has (no animation
+ * at all, reduced motion, the 'none' pref, a page with no hold), else when the
+ * last tracked glide or turn-over ends. The check after a release is a
+ * microtask, so a render that follows the release in the same task has
+ * registered its glide by then.
+ */
+export function afterBoardSettles(run: () => void, maxWaitMs = BOARD_SETTLE_MAX_WAIT_MS): void {
+  if (boardSettled()) {
+    run();
+    return;
+  }
+  let done = false;
+  let backstop: ReturnType<typeof setTimeout> | null = null;
+  const fire = () => {
+    if (done) return;
+    done = true;
+    if (backstop) clearTimeout(backstop);
+    run();
+  };
+  backstop = setTimeout(fire, maxWaitMs);
+  boardSettleWaiters.push(fire);
+}
+
+function queueBoardSettleCheck(): void {
+  if (boardSettleCheckQueued) return;
+  boardSettleCheckQueued = true;
+  queueMicrotask(() => {
+    boardSettleCheckQueued = false;
+    if (!boardSettled()) return;
+    const waiters = boardSettleWaiters;
+    boardSettleWaiters = [];
+    for (const fire of waiters) fire();
   });
+}
+
+/** Test seam: forget every tracked animation, hold and waiter. */
+export function resetBoardSettleForTests(): void {
+  inFlightPieceAnimations.clear();
+  boardSettleHolds.clear();
+  boardSettleWaiters = [];
+  boardSettleCheckQueued = false;
 }
 
 /**
@@ -484,6 +575,7 @@ export function flipSvgPiece(
   back.animate(showUntilMidpoint, { ...timing, fill: 'both' });
   // No backwards fill: during a delay the slot's glide owns its transform.
   const turn = turner.animate?.(turnFrames, { duration: durationMs, delay });
+  trackPieceAnimation(turn);
   if (liftFrames) lifter.animate?.(liftFrames, { duration: durationMs, delay });
   edgeEl?.animate?.(pieceFlipEdgeKeyframes(style), { duration: durationMs, delay, fill: 'both' });
   const follower = opts.follower as Animatable | null | undefined;

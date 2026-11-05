@@ -11,6 +11,7 @@
 // analysis lives, how a best move is written, whether it may be quoted at all, and how an
 // engine move becomes board squares for an arrow.
 
+import type { BanqiPlayerView, JungleFlipPlayerView } from '@mistboard/game';
 import {
   engineUciToBanqiMove,
   engineUciToJungleFlipMove,
@@ -19,9 +20,14 @@ import {
   type GameEvent,
   type GameSpecId,
   hasOwnKey,
+  type JieqiPieceRole,
   type Move,
   pikafishUciToJieqiMove,
+  winPercent,
+  winPercentK,
 } from '@mistboard/game';
+import type { JieqiReplayLine } from '../jieqi-replay-board.js';
+import { jieqiPieceGhostSvg } from '../live-jieqi-render.js';
 import type { ReplayBoardOverlay } from '../replay.js';
 import {
   type AnalysisMark,
@@ -42,12 +48,19 @@ import {
   betterMoveArrowsWithParser,
   parseFortressEngineMove,
 } from '../review/engine/engine-arrows.js';
+import {
+  type FlipLuckDetail,
+  type FlipRole,
+  flipLuckPieceSvg,
+  publicFlipLuckDetail,
+} from '../review/flip-luck.js';
 import { fetchCachedGameAnalysis, regradeBestPlayed } from '../review/game-analysis.js';
 import { fetchCachedJieqiDecisions, jieqiDecisionOverlay } from '../review/jieqi-decisions.js';
 import {
   fetchCachedJungleFlipDecisions,
   jungleFlipDecisionOverlay,
 } from '../review/jungle-flip-decisions.js';
+import { attachLuckBadgeCard, attachLuckMarkCard } from '../review/luck-mark-card.js';
 import {
   defaultFormatBestMove,
   formatFlipVariantBestMove,
@@ -57,6 +70,8 @@ import {
 import { moveGlyphTone } from '../review/move-glyph.js';
 import type { MoveAnnotation } from '../review/move-list.js';
 import type { SvgBoardSquareGlyph } from '../svg-board-arrow.js';
+import { loadJieqiEmbedLuck } from './embed-jieqi-luck.js';
+import type { EmbedScoreSeries } from './embed-score-chart.js';
 
 type ParseEngineMove = (uci: string) => { from?: string; to: string } | null;
 
@@ -95,6 +110,8 @@ const isMovePlayed = (event: GameEvent): event is Extract<GameEvent, { type: 'mo
  * does not compile until someone decides which it is. Fail-closed: there is no default.
  */
 export const EMBED_ANALYSIS_VARIANTS: Readonly<Record<GameSpecId, EmbedAnalysisVariant | null>> = {
+  // No analysis surface for the hidden placement game.
+  gomoku: null,
   xiangqi: {
     route: 'xiangqi',
     quoteEvalBestMove: true,
@@ -203,6 +220,11 @@ export function embedAnalysisVariant(specId: string): EmbedAnalysisVariant | nul
 }
 
 export type EmbedAnalysis = {
+  scoreSeries?: EmbedScoreSeries;
+  /** Reused by alternative lines so the public game is fetched only once. */
+  jieqiLine?: JieqiReplayLine;
+  /** The same board and badge cards as the room review; detached with the board. */
+  attachLuckCards?: (board: HTMLElement, list: HTMLElement) => () => void;
   /** One stored best move per judged ply. Chance moves have no invented continuation. */
   bestMoves: Map<number, string>;
   /** Per-ply glyph and advice for the score sheet. */
@@ -214,7 +236,7 @@ export type EmbedAnalysis = {
 };
 
 /** A score-sheet mark: the glyph after the move and the advice under it. */
-export type EmbedMoveAnnotation = MoveAnnotation & { note?: string };
+export type EmbedMoveAnnotation = MoveAnnotation & { note?: string; luck?: number };
 
 /**
  * Load the stored analysis for a finished game and turn it into the embed's marks, or
@@ -247,7 +269,74 @@ export async function loadEmbedAnalysis(
     quoteEvalBestMove: variant.quoteEvalBestMove,
     formatBestMove: variant.formatBestMove,
   });
-  return embedAnalysisFromMarks(marks, variant, played);
+  const result = embedAnalysisFromMarks(marks, variant, played);
+  if (
+    specId === 'jieqi' &&
+    analysis.evals.length === played.length + 1 &&
+    played.length > 0 &&
+    analysis.evals.every(
+      (point, index) => point.ply === index && (point.cp !== null || point.mate !== null),
+    )
+  ) {
+    const values = analysis.evals.map(
+      (point) => winPercent(point.cp, point.mate, winPercentK(analysis.engineId)) / 100,
+    );
+    if (values.every((value) => Number.isFinite(value) && value >= 0 && value <= 1)) {
+      const name = analysis.engineId.startsWith('ab-jchess')
+        ? 'AB-JChess'
+        : analysis.engineId.startsWith('jqe')
+          ? 'jqe'
+          : analysis.engineId.startsWith('pikafish-jieqi') ||
+              analysis.engineId.startsWith('pikajieqi')
+            ? 'PikaJieQi'
+            : 'Stored analysis';
+      result.scoreSeries = { side: 'red', series: [{ name, color: 'a', values }] };
+    }
+  }
+  if (specId === 'jieqi' || specId === 'banqi' || specId === 'jungle-flip') {
+    const publicJieqi =
+      specId === 'jieqi' ? await loadJieqiEmbedLuck(roomId, marks).catch(() => null) : null;
+    if (publicJieqi) result.jieqiLine = publicJieqi.line;
+    const luck: ReadonlyMap<number, FlipLuckDetail> =
+      specId === 'jieqi'
+        ? (publicJieqi?.luck ?? new Map())
+        : await loadFlipLuck(specId, roomId, marks).catch(() => new Map<number, FlipLuckDetail>());
+    const baseOverlay = result.overlayAtPly;
+    let current: FlipLuckDetail | null = null;
+    result.overlayAtPly = (ply) => {
+      current = luck.get(ply) ?? null;
+      const overlay = baseOverlay(ply);
+      return current
+        ? {
+            ...overlay,
+            glyphs: [
+              { square: current.square, kind: 'luck', luck: { luck: current.luck } },
+              ...overlay.glyphs,
+            ],
+          }
+        : overlay;
+    };
+    for (const [ply, detail] of luck) {
+      result.annotations.set(ply, { ...result.annotations.get(ply), luck: detail.luck });
+    }
+    result.attachLuckCards = (board, list) => {
+      const art = (role: FlipRole, color: 'red' | 'black') =>
+        specId === 'jieqi'
+          ? jieqiPieceGhostSvg({ role: role as JieqiPieceRole, color, faceDown: false })
+          : flipLuckPieceSvg(specId, role, color);
+      const detachBoard = attachLuckMarkCard(board, () => current, art);
+      const detachList = attachLuckBadgeCard(
+        list,
+        (badge) => luck.get(Number(badge.dataset.luckPath)) ?? null,
+        art,
+      );
+      return () => {
+        detachBoard();
+        detachList();
+      };
+    };
+  }
+  return result;
 }
 
 /** The score-sheet annotations and board overlay for a set of marks (exported for tests). */
@@ -284,4 +373,45 @@ export function embedAnalysisFromMarks(
     return { arrows, glyphs };
   };
   return { annotations, overlayAtPly, bestMoves };
+}
+
+/** Public as-played snapshots only. Never inspect the revealed/dealt history. */
+async function loadFlipLuck(
+  variant: 'banqi' | 'jungle-flip',
+  roomId: string,
+  marks: ReadonlyMap<number, AnalysisMark>,
+): Promise<Map<number, FlipLuckDetail>> {
+  const result = new Map<number, FlipLuckDetail>();
+  if (![...marks.values()].some((mark) => mark.luck !== undefined)) return result;
+  const response = await fetch(`/api/${variant}/games/${encodeURIComponent(roomId)}`);
+  if (!response.ok) return result;
+  type View = BanqiPlayerView | JungleFlipPlayerView;
+  const postgame = (await response.json()) as {
+    history?: { truth?: { ply: number; view: View }[] };
+    timeline?: { move?: { from: string; to: string } }[];
+  };
+  const history = new Map((postgame.history?.truth ?? []).map(({ ply, view }) => [ply, view]));
+  const moves = (postgame.timeline ?? []).flatMap((event) => (event.move ? [event.move] : []));
+  for (const [ply, mark] of marks) {
+    const move = moves[ply - 1];
+    const before = history.get(ply - 1);
+    const after = history.get(ply);
+    if (mark.luck === undefined || !move || !before || !after) continue;
+    const drawn = (
+      after.board as Partial<
+        Record<string, { faceDown: boolean; color?: 'red' | 'black'; role?: FlipRole }>
+      >
+    )[move.to];
+    const detail = publicFlipLuckDetail(
+      variant,
+      move,
+      mark.luck,
+      before,
+      drawn && !drawn.faceDown && drawn.color && drawn.role
+        ? { color: drawn.color, role: drawn.role }
+        : null,
+    );
+    if (detail) result.set(ply, detail);
+  }
+  return result;
 }

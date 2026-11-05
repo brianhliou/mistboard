@@ -188,6 +188,8 @@ describe('Banqi postgame page', () => {
     expect(labels).toEqual([
       'Flip board',
       'Tablebase',
+      // #824: a finished game turns its still-face-down tiles up from here.
+      'Reveal identities',
       'Show alternatives',
       'Engine analysis',
       'Game info',

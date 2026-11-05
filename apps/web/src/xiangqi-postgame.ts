@@ -4,7 +4,9 @@
 // renderXiangqiBoardSvg with no fog mask.
 
 import {
+  createStandardXiangqiStateFromSetup,
   type StandardXiangqiPlayerView,
+  standardXiangqiFen,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
@@ -149,6 +151,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     status,
   });
 
+  const truth = createStandardXiangqiStateFromSetup(postgame.game.roomId, postgame.view);
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
     pageClassName: 'xiangqi-review',
@@ -162,6 +165,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     // The tree reconstructs positions from the move list client-side (open info,
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
+    root: { truth, fen: standardXiangqiFen(truth) },
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it

@@ -5,7 +5,8 @@ import { JUNGLE_HEIGHT, JUNGLE_WIDTH, jungleIsWater, jungleSquareOf } from '@mis
 // so nothing here fetches or replays. Like the study card thumbnails
 // (study-thumbnails.ts), it is a fingerprint, not a readable position: solid
 // discs by side on a faint board, no glyphs, because at row size a glyph only
-// greys the disc out. Boards are drawn from Red's (White's) side.
+// greys the disc out. Boards are drawn from the first mover's side: Red,
+// White in chess, Black in Gomoku.
 
 /** Mirrors ProfileBoardMark in apps/server/src/profile-game-boards.ts. */
 export type ProfileBoardMark =
@@ -152,7 +153,7 @@ function cellsMarkup(shape: 'grid' | 'jungle' | 'chess', files: number, ranks: n
 }
 
 function isSize(n: number): boolean {
-  return Number.isInteger(n) && n >= 2 && n <= 12;
+  return Number.isInteger(n) && n >= 2 && n <= 15;
 }
 
 function inRange(n: number, size: number): boolean {

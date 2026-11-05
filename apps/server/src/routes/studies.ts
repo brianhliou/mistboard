@@ -43,6 +43,7 @@ const ID = '[A-Za-z0-9]+';
 const STUDY_PATH = new RegExp(`^/api/studies/(${ID})$`);
 const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
+const CHAPTER_DECISIONS_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})/decisions$`);
 const CHAPTER_ANALYSIS_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})/analysis$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
 const CLONE_PATH = new RegExp(`^/api/studies/(${ID})/clone$`);
@@ -210,6 +211,9 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
     gamebook: chapter.gamebook,
     practice: chapter.practice,
     practiceGoal: chapter.practiceGoal,
+    // Only when set: the field is rare, and leaving it off keeps every other
+    // chapter's payload exactly as it was.
+    ...(chapter.scoreSeries ? { scoreSeries: chapter.scoreSeries } : {}),
   };
 }
 
@@ -437,6 +441,27 @@ export async function tryHandle(
     return true;
   }
 
+  const decisionsMatch = CHAPTER_DECISIONS_PATH.exec(pathname);
+  if (decisionsMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const found = await persistence.getStudyChapterDecisionsForRead(
+      decisionsMatch[1]!,
+      decisionsMatch[2]!,
+    );
+    const user = found?.visibility === 'private' ? await currentAccountUser(request) : null;
+    if (!found || (found.visibility === 'private' && user?.id !== found.ownerId)) {
+      writeJson(response, 404, { error: 'not_found' });
+    } else if (!found.decisions) {
+      response.writeHead(204);
+      response.end();
+    } else {
+      const { engineId, source, decisions } = found.decisions;
+      writeJson(response, 200, { engineId, source, decisions });
+    }
+    return true;
+  }
+
   // ── A chapter's stored engine analysis ──
   const analysisMatch = CHAPTER_ANALYSIS_PATH.exec(pathname);
   if (analysisMatch) {
@@ -610,6 +635,9 @@ async function readStudy(
   const analysed = await persistence.analysedStudyChapterIds(
     study.chapters.map((chapter) => chapter.id),
   );
+  const decided = await persistence.decidedStudyChapterIds(
+    study.chapters.map((chapter) => chapter.id),
+  );
   writeJson(response, 200, {
     study: {
       ...studyView(study, isOwner),
@@ -620,6 +648,7 @@ async function readStudy(
       ...chapterView(chapter),
       ...(solved.has(chapter.id) ? { solved: true } : {}),
       ...(analysed.has(chapter.id) ? { hasAnalysis: true } : {}),
+      ...(decided.has(chapter.id) ? { hasDecisions: true } : {}),
     })),
   });
   return true;

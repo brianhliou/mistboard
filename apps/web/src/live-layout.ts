@@ -40,6 +40,7 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
   target.classList.toggle('live-route--jungle', gameSpecId === 'jungle');
   target.classList.toggle('live-route--jungle-flip', gameSpecId === 'jungle-flip');
   target.classList.toggle('live-route--mahjong', gameSpecId === 'mahjong');
+  target.classList.toggle('live-route--gomoku', gameSpecId === 'gomoku');
   target.classList.toggle('live-route--xiangqi-mahjong', gameSpecId === 'xiangqi-mahjong');
 }
 

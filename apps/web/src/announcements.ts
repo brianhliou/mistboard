@@ -43,6 +43,30 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-02',
+    kind: 'release',
+    headline: 'AB-JChess is the top jieqi bot again.',
+    body: "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.",
+    href: '/bot/ab-jchess',
+    cta: 'Play AB-JChess',
+  },
+  {
+    date: '2026-11-01',
+    kind: 'update',
+    headline: 'Puzzle Dashboard: your results, your history, and the puzzles you missed.',
+    body: 'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.',
+    href: '/puzzles/dashboard',
+    cta: 'Open the dashboard',
+  },
+  {
+    date: '2026-11-01',
+    kind: 'update',
+    headline: 'Puzzle Storm: as many puzzles as you can in three minutes.',
+    body: 'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.',
+    href: '/puzzles?mode=storm',
+    cta: 'Play Puzzle Storm',
+  },
+  {
     date: '2026-10-31',
     kind: 'update',
     headline: 'Choose a puzzle difficulty, and see your puzzle rating over time.',
@@ -782,7 +806,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'Rated games at every time control.',
     body: 'Bullet, blitz, and rapid each keep their own rating now, instead of rated meaning 3+2 only. Correspondence stays casual on purpose.',
-    href: '/leaderboard',
+    href: '/player',
     cta: 'See the leaderboard',
     showInHomeArticleWidget: false,
   },
@@ -799,7 +823,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'Rated xiangqi is live.',
     body: 'Choose Rated in the lobby. Your rating starts at 1500 and appears after it settles.',
-    href: '/leaderboard',
+    href: '/player',
     cta: 'See the leaderboard',
     showInHomeArticleWidget: false,
   },
@@ -858,7 +882,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'Learn xiangqi from scratch.',
     body: 'A free interactive course: 20 stages and 111 hands-on levels take you from how each piece moves to the named checkmate patterns.',
-    href: '/learn',
+    href: '/learn/xiangqi',
     cta: 'Start the course',
   },
   {

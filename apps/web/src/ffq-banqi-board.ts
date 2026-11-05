@@ -31,7 +31,12 @@ export function ffqBanqiBoardView(view: FFQBanqiPlayerView): BanqiPlayerView {
     perspective: view.perspective === 'black' ? 'black' : 'red',
     board,
     legalMoves: view.legalMoves.map(move),
-    captured: view.captured,
+    captured: view.captured
+      .filter((capture) => capture.role !== null)
+      .map((capture) => ({
+        owner: capture.owner,
+        role: capture.role!,
+      })),
     // This projection is used only by banqi's renderer and click helper. The
     // room keeps FFQ's original status/reason for its result panel.
     status:

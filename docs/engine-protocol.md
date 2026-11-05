@@ -11,9 +11,8 @@ This document is the human-readable contract.
 
 ## Why this protocol exists
 
-Mistboard's trust story is that no player (including first-party engines)
-can see hidden information under Fog of War rules. The same protocol applies
-to:
+An engine sees what a player in its seat would see, and nothing more. The same
+protocol applies to:
 
 - First-party engines that ship as separate binaries
 - Third-party engines that anyone is free to write

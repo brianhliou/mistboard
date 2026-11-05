@@ -1,6 +1,19 @@
 // Shell translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_SHELL = {
+  'metrics.loginEmail.heading': 'Login email delivery',
+  'metrics.loginEmail.status': 'Status',
+  'metrics.loginEmail.last7d': 'Last 7 days',
+  'metrics.loginEmail.last30d': 'Last 30 days',
+  'metrics.loginEmail.requested': 'Requested',
+  'metrics.loginEmail.sent': 'Sent',
+  'metrics.loginEmail.delivered': 'Delivered',
+  'metrics.loginEmail.bounced': 'Bounced',
+  'metrics.loginEmail.suppressed': 'Suppressed',
+  'metrics.loginEmail.complained': 'Complained',
+  'metrics.loginEmail.completed': 'Completed code sign-ins',
+  'metrics.loginEmail.note':
+    'Rolling windows end at the report time. Each activity is counted at its own timestamp, including the start and excluding the end. Delivery statuses count each correlated login provider message once per status, including both soft and hard bounces. Sent requires a sent webhook, not just provider acceptance. Requested and completed count login requests and code sign-ins. These are activity counts, not a funnel; other mail is excluded.',
   'nav.primary': 'Primary',
   'nav.menu': 'Menu',
   'nav.play': 'Play',
@@ -38,6 +51,7 @@ export const EN_SHELL = {
   'nav.engines': 'Engines',
   'nav.accounts': 'Accounts',
   'nav.titles': 'Titles',
+  'nav.ops': 'Ops',
   'nav.readouts': 'Readouts',
   'nav.metrics': 'Metrics',
   'nav.broadcastOps': 'Broadcast ops',
@@ -56,7 +70,7 @@ export const EN_SHELL = {
   'nav.boardAndPieces': 'Pieces',
   'nav.darkMode': 'Dark mode',
   'home.tagline':
-    'Chinese chess and original strategy games. Free and open source. About Mistboard...',
+    "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
   'home.playSummary':
     'Free in the browser · No download or sign-up · Eight computer levels · Play a friend',
   'home.supportTitle': 'Mistboard Patron',
@@ -198,6 +212,7 @@ export const EN_SHELL = {
   'home.noRatedPlayers': 'No rated players yet.',
   'home.rankingsUnavailable': 'Rankings unavailable.',
   'home.latestStudies': 'Latest studies',
+  'home.topPlayers': 'Top players',
   'home.gameViewerUnavailable': 'Game viewer unavailable',
   'home.setupErrorTimeControl': 'That time control is not available. Try another one.',
   'home.setupErrorStorage': 'Room storage is not available on this server.',
@@ -349,6 +364,7 @@ export const CRITICAL_SHELL_I18N_KEYS = [
   'homeForum.timeHours',
   'homeForum.timeDays',
   'home.latestStudies',
+  'home.topPlayers',
   'home.gameViewerUnavailable',
   'home.setupErrorTimeControl',
   'home.setupErrorStorage',

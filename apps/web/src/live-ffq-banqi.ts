@@ -305,6 +305,7 @@ function renderProgress(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   const captures = document.createElement('ol');
   captures.className = 'ffq-banqi-captures';
   for (const capture of view.captured) {
+    if (capture.role === null) continue;
     const entry = document.createElement('li');
     entry.textContent = t('live.ffq.captureDamage', {
       capturer: t(capture.capturedBy === 'red' ? 'setup.red' : 'setup.black'),

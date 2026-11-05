@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import { ARTICLE_META } from './article-meta.js';
 import { fitStudyTitleLines, studyChapterOgPieces } from './og-image.js';
 
@@ -135,6 +135,101 @@ async function getRoute(path: string): Promise<RouteCapture> {
     handler({ url: path, method: 'GET', headers: {} } as never, response as never);
   });
 }
+
+function setGomokuFlag(t: TestContext, flag: string | undefined): void {
+  const original = process.env.MISTBOARD_GOMOKU_ENABLED;
+  t.after(() => {
+    if (original === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = original;
+  });
+  if (flag === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+  else process.env.MISTBOARD_GOMOKU_ENABLED = flag;
+}
+
+test('Gomoku rules card shows five connected stones through the existing board renderer', async () => {
+  const { positionCardBoard, articleCardTitle } = await import('./og-image.js');
+  const { renderBoardCard, renderBoardAspectCard, CARD_ASPECT_FRAMES } = await import(
+    './og-card-board.js'
+  );
+  const board = positionCardBoard('gomoku');
+  assert.ok(board && board.kind === 'gomoku', 'Gomoku registers its own rules board');
+  assert.equal(board.position.board.length, 225);
+  assert.equal(board.position.board.filter((stone) => stone === 'black').length, 5);
+  assert.equal(board.position.board.filter((stone) => stone === 'white').length, 4);
+  assert.deepEqual(board.position.lastMove, { to: 'i8' });
+  assert.deepEqual([...board.position.winningLine].sort(), ['e8', 'f8', 'g8', 'h8', 'i8']);
+  const meta = ARTICLE_META.gomoku!;
+  const title = articleCardTitle(meta.kind, meta.title);
+  assert.equal(title, 'Gomoku Rules');
+  // English only until the rewritten rules are localized.
+  assert.equal(meta.zhTitles, undefined);
+  {
+    const svg = renderBoardCard(board, new Map(), { title: [title] });
+    assert.match(svg, /fill="#dcb975"/);
+    assert.equal((svg.match(/class="gomoku-stone /g) ?? []).length, 9);
+    assert.equal((svg.match(/class="gomoku-winning"/g) ?? []).length, 5);
+    assert.equal((svg.match(/class="gomoku-last"/g) ?? []).length, 1);
+    assert.match(svg, /data-piece-square="i8"[^>]*gomoku-stone--black/);
+    assert.ok(svg.includes(`>${title}</text>`));
+    assert.doesNotMatch(svg, /gomoku-hit|tabindex|role="button"/);
+  }
+  for (const aspect of ['16x9', '4x3', '1x1'] as const) {
+    const svg = renderBoardAspectCard(board, new Map(), aspect);
+    const { width, height } = CARD_ASPECT_FRAMES[aspect];
+    assert.ok(svg.includes(`width="${width}" height="${height}"`));
+    assert.equal((svg.match(/class="gomoku-stone /g) ?? []).length, 9);
+  }
+});
+
+test('Gomoku rules share URLs serve every shape in English and 404 a zh caption when enabled', async (t) => {
+  setGomokuFlag(t, 'true');
+  const { articleOgImageUrl } = await import('./og-image.js');
+  const { pngSize } = await import('./og-raster.js');
+  const frames = {
+    '': { width: 2400, height: 1260 },
+    '16x9': { width: 1920, height: 1080 },
+    '4x3': { width: 1600, height: 1200 },
+    '1x1': { width: 1200, height: 1200 },
+  };
+  for (const [aspect, size] of Object.entries(frames)) {
+    const url = new URL(articleOgImageUrl('https://mistboard.test', 'gomoku'));
+    if (aspect) url.searchParams.set('aspect', aspect);
+    const res = await getRoute(`${url.pathname}${url.search}`);
+    assert.equal(res.status, 200, aspect);
+    assert.equal(res.headers['content-type'], 'image/png');
+    assert.deepEqual(pngSize(res.body), size);
+    for (const lang of ['zh-hans', 'zh-hant']) {
+      assert.equal(
+        articleOgImageUrl('https://mistboard.test', 'gomoku', lang),
+        articleOgImageUrl('https://mistboard.test', 'gomoku'),
+      );
+      url.searchParams.set('lang', lang);
+      assert.equal(
+        (await getRoute(`${url.pathname}${url.search}`)).status,
+        404,
+        `${lang} ${aspect}`,
+      );
+    }
+  }
+  // The feature gate must run before a warm card cache can return bytes.
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+  assert.equal((await getRoute('/og/article/gomoku.png?v=7')).status, 404);
+});
+
+test('Gomoku rules share images stay absent with the flag off or unset', async (t) => {
+  setGomokuFlag(t, undefined);
+  for (const flag of [undefined, 'false']) {
+    if (flag === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = flag;
+    for (const lang of ['', '&lang=zh-hans', '&lang=zh-hant']) {
+      for (const shape of ['', '&aspect=16x9', '&aspect=4x3', '&aspect=1x1']) {
+        const res = await getRoute(`/og/article/gomoku.png?v=7${lang}${shape}`);
+        assert.equal(res.status, 404, `${flag} ${lang} ${shape}`);
+        assert.notEqual(res.headers['content-type'], 'image/png');
+      }
+    }
+  }
+});
 
 test('the article card route serves each aspect at its size, board and site cards alike', async () => {
   const { pngSize } = await import('./og-raster.js');

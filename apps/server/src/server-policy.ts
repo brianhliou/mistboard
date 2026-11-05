@@ -143,16 +143,14 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // classified here, and an unclassified spec falls through to 'masked'.
 // Three Kingdoms banqi (#628, hidden playtest) serves a spectator the red seat's
 // masked board, the same for both seats (three-kingdoms-banqi-hidden-info.test.ts).
-// FFQ banqi (hidden playtest) is symmetric because every capture, covered or
-// not, is public: the 2,000-playout test in variants-ffq-banqi.test.ts pins red,
-// black and observer views as identical.
+// FFQ uses an observer projection that masks capturer-only covered roles,
+// including in finished room histories (ffq-banqi-hidden-info.test.ts).
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = [
   'banqi',
-  'ffq-banqi',
   'jungle-flip',
   'three-kingdoms-banqi',
 ] as const;
-const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi'] as const;
+const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi', 'ffq-banqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
   ...Object.fromEntries(SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'open' as const])),
@@ -434,6 +432,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/thanks' ||
     normalized === '/lag' ||
     normalized === '/washington-xiangqi' ||
+    normalized === '/zh-hans/washington-xiangqi' ||
+    normalized === '/zh-hant/washington-xiangqi' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
@@ -453,6 +453,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/forum/etiquette' ||
     normalized === '/database' ||
     normalized === '/stats' ||
+    normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/verify-title' ||
     normalized === '/titles' ||
@@ -512,6 +513,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/atomic-xiangqi/game/') ||
     normalized.startsWith('/crazyhouse-xiangqi/game/') ||
     normalized.startsWith('/xiangqi-mahjong/game/') ||
+    normalized.startsWith('/gomoku/game/') ||
     normalized.startsWith('/game/') ||
     // Study browse index (/study) + persisted study chapters. The study pages
     // serves the review SPA shell + mounts the ceval engine, so it is also a
@@ -542,8 +544,12 @@ export function isClientRoute(pathname: string): boolean {
     // Standalone analysis board: bare /analysis (opens the flagship variant) or
     // /analysis/:variant, fed by a move list rather than a room. Serves the
     // review SPA shell and mounts the ceval engine, so it must also be a
-    // review-shell route (COOP/COEP) below.
-    /^\/analysis(?:\/[a-z0-9-]+)?$/.test(normalized) ||
+    // review-shell route (COOP/COEP) below. Mirror analysis-catalog.ts, including
+    // Gomoku's gated roomless board. The client checks gomokuOffered before
+    // mounting; protected game data independently requires gomokuAdmits.
+    /^\/analysis(?:\/(?:xiangqi|jieqi|banqi|duck-xiangqi|crazyhouse-xiangqi|dark-xiangqi|dark-chess|jungle|jungle-flip|gomoku|fortress-xiangqi|atomic-xiangqi))?$/.test(
+      normalized,
+    ) ||
     // Board editor: bare /editor (the flagship) or /editor/:variant, the same
     // catalog as /analysis. Plain client page: no engine, so not a review-shell
     // route.
@@ -588,6 +594,10 @@ export function isClientRoute(pathname: string): boolean {
 export function isNoindexRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
+    // Admin reporting shells have no public search content.
+    normalized === '/ops' ||
+    normalized === '/metrics' ||
+    normalized === '/readouts' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
@@ -601,6 +611,8 @@ export function isNoindexRoute(pathname: string): boolean {
     // title until 2026-10-24, and Bing filed them as duplicates of it.
     normalized === '/lag' ||
     normalized === '/verify-title' ||
+    // Built-hidden analysis capability, never an indexed public offering.
+    normalized === '/analysis/gomoku' ||
     isSitePlayedGamePage(normalized)
   );
 }

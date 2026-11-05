@@ -1,6 +1,6 @@
 import type { VariantId } from './types.js';
 
-export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'mahjong';
+export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'mahjong' | 'gomoku';
 export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-9x10'
@@ -9,6 +9,7 @@ export type BoardGeometryId =
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
   | 'three-kingdoms-banqi-9x5'
+  | 'gomoku-15x15'
   | 'xiangqi-7x8'
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
@@ -17,6 +18,8 @@ export type BoardGeometryId =
   // Xiangqi mahjong: 32 tiles, no board at all.
   | 'xiangqi-mahjong-32';
 export type MovementRulesId =
+  // Freestyle: place a stone on an empty intersection; stones never move.
+  | 'gomoku-freestyle'
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
   | 'xiangqi-mahjong'
@@ -50,6 +53,8 @@ export type MovementRulesId =
 // general is NOT royal — capturing it does not end the game (the opponent flips
 // or plays on) — so this subsumes "all pieces captured" and stalemate alike.
 export type ObjectiveRulesId =
+  // Five or more consecutive stones in any of the four line directions.
+  | 'five-in-a-row'
   | 'king-capture'
   | 'general-capture'
   | 'checkmate'
@@ -76,6 +81,7 @@ export type ObjectiveRulesId =
 // claimed sets are public the moment they are made.
 export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed-hands';
 export type SetupRulesId =
+  | 'empty'
   | 'standard'
   | 'double-fischer-random'
   | 'jieqi-deal'
@@ -123,6 +129,8 @@ export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
+  // Hidden and unrated: no database rating pool is enabled or owed.
+  | 'gomoku'
   | 'fog'
   | 'dark_xiangqi'
   | 'jieqi'
@@ -146,6 +154,9 @@ export type RatingPoolBaseId =
   | 'crazyhouse_xiangqi';
 
 export type GameSpecId =
+  // Built-hidden freestyle Gomoku (#768). No tenant until build 2; the
+  // default-off server flag cannot open room creation by itself.
+  | 'gomoku'
   | 'dark-chess'
   | 'dark-xiangqi'
   | 'jieqi'
@@ -234,6 +245,7 @@ export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
 export const ATOMIC_XIANGQI_SPEC_ID = 'atomic-xiangqi' satisfies GameSpecId;
 export const CRAZYHOUSE_XIANGQI_SPEC_ID = 'crazyhouse-xiangqi' satisfies GameSpecId;
 export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
+export const GOMOKU_SPEC_ID = 'gomoku' satisfies GameSpecId;
 
 // Specs that may be played by correspondence (days-per-move), in display order. The
 // SINGLE source of truth shared by the server's fail-closed allowlist
@@ -265,6 +277,7 @@ const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  GOMOKU_SPEC_ID,
   // Xiangqi Mahjong is held out at launch (Brian, 2026-10-25: "let's not support
   // correspondence for this variant yet"). Its tenant keeps the correspondence
   // binding and its tests, so opening it again is adding XIANGQI_MAHJONG_SPEC_ID here.
@@ -377,6 +390,8 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // Xiangqi Mahjong takes the last place on the shelf the day it launches;
   // until then the launch switch (its publicSurface) keeps it out.
   XIANGQI_MAHJONG_SPEC_ID,
+  // Gomoku follows Xiangqi Mahjong only after its own launch switch flips.
+  GOMOKU_SPEC_ID,
   // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
   // spec sorts last, which is where the study picker should offer it.
 ];
@@ -726,7 +741,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Flip Jungle (兽棋 / 翻翻棋): the 4x4 flip derivative of Dou Shou Qi. Symmetric
+    // Flip Jungle (翻翻兽棋): the 4x4 flip derivative of Dou Shou Qi. Symmetric
     // hidden-identity (both seats see the same masked board; only the deal is hidden),
     // like banqi. Equal-rank = 同归于尽 mutual destruction. Win by leaving the opponent
     // with no legal move. Rated human PvP (own pool); PvE bot games stay unrated.
@@ -765,6 +780,24 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'three_kingdoms_banqi',
     publicSurface: 'hidden',
     runtimeStatus: 'live',
+  },
+  {
+    // Hidden, unrated casual PvP (#768 build 2), under explicit local flags.
+    // The standalone Rapfi worker (#762) is not offered until build 3.
+    id: GOMOKU_SPEC_ID,
+    publicName: 'Gomoku',
+    family: 'gomoku',
+    board: 'gomoku-15x15',
+    movement: 'gomoku-freestyle',
+    objective: 'five-in-a-row',
+    visibility: 'open',
+    setup: 'empty',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'gomoku',
+    publicSurface: 'hidden',
+    runtimeStatus: 'live',
+    rated: false,
   },
 ] as const;
 
@@ -836,6 +869,7 @@ export function publicSpecPredicate(
 export const PLAYTEST_GAME_SPEC_IDS: readonly GameSpecId[] = [
   MAHJONG_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
+  GOMOKU_SPEC_ID,
 ];
 
 export type LaunchLists = {

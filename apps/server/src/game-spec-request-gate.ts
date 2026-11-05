@@ -6,6 +6,7 @@ import {
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
+  gomokuEnabled,
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
@@ -54,6 +55,11 @@ type GateSpecEntry<Id extends GatedGameSpecId> =
 
 // Entries ordered as in the GameSpecId union (packages/game/src/game-specs.ts).
 const GATED_GAME_SPECS = {
+  gomoku: {
+    enabled: gomokuEnabled,
+    disabledError: 'gomoku_disabled',
+    notIntegratedError: 'gomoku_not_integrated',
+  },
   // Registered, not built: no tenant, no route, no client. The gate rejects
   // every request for it, which is what 'gated' means at this stage.
   mahjong: {

@@ -32,11 +32,11 @@
 // 2026-09-12. Set 2026-09-12.
 
 import {
-  ALLOWLISTED_PLAYTEST_SPEC_IDS,
   FFQ_BANQI_SPEC_ID,
+  GAME_SPECS,
+  type GameSpecId,
   isPublicGameSpec,
   RETIRED_GAME_SPEC_IDS,
-  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
@@ -148,37 +148,31 @@ export function notRetiredVariant(
 }
 
 // Variants left out of every public figure: the retired ones, and the
-// playtest variants still hidden behind the per-account allowlist
-// (ALLOWLISTED_PLAYTEST_SPEC_IDS, which the launch switch on each spec's
-// publicSurface derives). A hidden variant's games would otherwise show in
+// hidden ones, derived from each spec's publicSurface rather than its access
+// policy. A hidden variant's games would otherwise show in
 // the /stats totals and its per-variant JSON before anyone may see the game;
 // the day the switch flips, its games count, history included. Set 2026-10-16.
 //
-// Three Kingdoms banqi (#684) is an admin-only playtest with no allowlist
-// rows: an admin's games stay off the public figures while its spec is hidden.
-const ADMIN_PLAYTEST_SPEC_IDS: readonly string[] = [THREE_KINGDOMS_BANQI_SPEC_ID];
-
-export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly string[] {
-  const adminOnly = ADMIN_PLAYTEST_SPEC_IDS.filter(
-    (id) => !isPublicGameSpec(id) && !allowlisted.includes(id),
-  );
-  // FFQ never contributes public activity, even with its admin flag enabled
-  // or if its surface metadata changes. Other playtests retain their gates.
-  return [...new Set([...RETIRED_GAME_SPEC_IDS, ...allowlisted, ...adminOnly, FFQ_BANQI_SPEC_ID])];
+// This includes admin-only playtests and specs with no grant rows, so a new
+// hidden spec stays off the public figures without another exclusion list.
+export function offPublicGameSpecIds(
+  isPublic: (id: GameSpecId) => boolean = isPublicGameSpec,
+): readonly string[] {
+  return GAME_SPECS.filter(
+    (spec) =>
+      spec.id === FFQ_BANQI_SPEC_ID || spec.runtimeStatus === 'retired' || !isPublic(spec.id),
+  ).map((spec) => spec.id);
 }
 
-// Apply before pagination and counts, including a person's own profile and
-// favorites. Room-read authorization does not grant public discoverability.
+// Exclude FFQ before pagination, even if its metadata changes.
 export function notFFQBanqiGame(gamesAlias = 'games'): string {
   return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
 }
 
-export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(
-  ALLOWLISTED_PLAYTEST_SPEC_IDS,
-);
+export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds();
 
 // A game in a variant a visitor can play and see: not retired, not a hidden
-// playtest.
+// variant.
 export function publicVariant(
   gamesAlias = 'g',
   offPublicIds: readonly string[] = OFF_PUBLIC_GAME_SPEC_IDS,

@@ -25,9 +25,9 @@ export const atomicXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-15',
-  updatedAt: '2026-10-07',
+  updatedAt: '2026-11-03',
   updateNote:
-    "Added the cannon rule's design history and the engine results behind the numbers.",
+      'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.',
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: ATOMIC_XIANGQI_THUMBNAIL },
@@ -136,7 +136,7 @@ export const atomicXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.',
+          text: 'Two rules draw. Sixty consecutive plies without a capture is a draw. Standard xiangqi uses 120 plies; Atomic Xiangqi keeps its own 60-ply limit. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.',
         },
       ],
     },

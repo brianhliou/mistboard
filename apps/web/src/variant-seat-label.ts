@@ -52,6 +52,7 @@ export function seatInkFamily(variant: string | null | undefined): string | null
  */
 export type SeatNaming = 'seat-word' | 'player';
 export const SEAT_NAMING: Readonly<Record<GameSpecId, SeatNaming>> = {
+  gomoku: 'seat-word',
   banqi: 'seat-word',
   // Fixed Red/Black seats; its first flip never binds a player's ink.
   'ffq-banqi': 'seat-word',

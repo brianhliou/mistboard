@@ -242,6 +242,44 @@ definePersistenceTests('puzzle-ratings', () => {
     );
   });
 
+  test('newest history cursor survives newer inserts and preserves PostgreSQL timestamp precision', async () => {
+    await mkUser('cursor-owner', 'cursor-owner');
+    const insert = async (puzzleId: string, createdAt: string) => {
+      await getPool().query(
+        `INSERT INTO puzzle_attempts (user_id, puzzle_id, variant, solved, rated, created_at)
+         VALUES ($1, $2, 'xiangqi', TRUE, FALSE, $3::timestamptz)`,
+        ['cursor-owner', puzzleId, createdAt],
+      );
+    };
+    for (const id of ['a', 'c', 'b']) await insert(id, '2026-10-26T12:00:00.000001Z');
+    // Same millisecond, different microsecond: a JS Date cursor would skip a-c.
+    for (const id of ['d', 'f', 'e']) await insert(id, '2026-10-26T12:00:00.000002Z');
+    const first = await listPuzzleAttemptHistory('cursor-owner', 'xiangqi', 2, 0, 'newest');
+    assert.deepEqual(
+      first.attempts.map((entry) => entry.puzzleId),
+      ['f', 'e'],
+    );
+    assert.equal(typeof first.nextCursor, 'string');
+    for (const id of ['new-a', 'new-b', 'new-c']) await insert(id, '2026-10-27T12:00:00Z');
+    const collected = [...first.attempts];
+    let next = first.nextCursor;
+    for (let pageNumber = 0; next && pageNumber < 3; pageNumber++) {
+      const [createdAt, puzzleId] = JSON.parse(Buffer.from(next, 'base64url').toString('utf8'));
+      const page = await listPuzzleAttemptHistory('cursor-owner', 'xiangqi', 2, 0, 'newest', {
+        createdAt,
+        puzzleId,
+      });
+      collected.push(...page.attempts);
+      next = page.nextCursor;
+    }
+    assert.equal(next, null);
+    assert.deepEqual(
+      collected.map((entry) => entry.puzzleId),
+      ['f', 'e', 'd', 'c', 'b', 'a'],
+    );
+    assert.equal(new Set(collected.map((entry) => entry.puzzleId)).size, collected.length);
+  });
+
   test('a clean later visit repairs a rated or unrated failure without rewriting its first outcome', async () => {
     const puzzle = (await getPuzzleStore()).puzzles.find((puzzle) => puzzle.variant === 'xiangqi')!;
     for (const rated of [true, false]) {

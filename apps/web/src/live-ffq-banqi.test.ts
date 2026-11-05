@@ -178,11 +178,19 @@ describe('FFQ banqi live room', () => {
       (li) => li.textContent,
     );
     for (const [i, capture] of view.captured.entries())
-      expect(damage[i]).toContain(`−${FFQ_BANQI_DAMAGE[capture.role]} HP`);
+      expect(damage[i]).toContain(`−${FFQ_BANQI_DAMAGE[capture.role!]} HP`);
     expect(damage[0]).toBe('Red captured Red Soldier: Red −2 HP');
     expect(document.querySelector('.ffq-banqi-counters')?.textContent).toBe(
       'No progress 29/30 · Red chase 3/4 · Black chase 4/4',
     );
+  });
+
+  it('does not render a role or damage label for a masked covered capture', async () => {
+    const view = initial();
+    view.captured = [{ owner: 'black', role: null, capturedBy: 'red', wasFaceDown: true }];
+    await mount(view);
+    expect(document.querySelectorAll('.ffq-banqi-captures li')).toHaveLength(0);
+    expect(document.querySelector('.ffq-banqi-captures')?.textContent).toBe('');
   });
 
   it('drags a revealed piece to a legal target using numeric wire coordinates', async () => {

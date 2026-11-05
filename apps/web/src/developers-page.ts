@@ -22,9 +22,12 @@ import {
   embedPuzzlePath,
   embedStudyPath,
   embedTvPath,
+  isPublicGameSpec,
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { gomokuEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
   proseExternalLink,
@@ -56,6 +59,7 @@ const TV_CHANNELS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'gomoku',
   'engines',
 ] as const;
 
@@ -354,7 +358,11 @@ function sizingTable(): HTMLElement {
   return table;
 }
 
-function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
+function buildDevelopers(locale: Locale = currentLocale()): HTMLElement {
+  // Playtest access does not advertise an unlaunched TV channel.
+  const tvChannels = TV_CHANNELS.filter(
+    (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
+  );
   const section = proseSection('developers-section');
   const origin = siteOrigin();
   const gameExample = liveFrame(
@@ -378,13 +386,24 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
   void pointStudyExampleAtLocalStudy(origin, studyExample.figure, studyBlocks);
 
   section.append(
-    proseHeading('Developers'),
+    proseHeading(t('developers.heading', {}, locale)),
     proseParagraph([
       'Five things on Mistboard can run inside your page, with nothing to install and ' +
         'no API key: a study chapter, a finished game, Mistboard TV, a puzzle, and the ' +
         'analysis board. Each is an iframe. The page inside the frame carries no ' +
         'navigation, no footer, and no sign-in state; it renders the board and nothing ' +
         'else. The study widget is the same one the articles on this site use.',
+    ]),
+    proseParagraph([
+      proseLink(t('source.heading', {}, locale), localizedHref('/source', locale)),
+      ' · ',
+      proseLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+      ' · ',
+      proseLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+      ' · ',
+      proseLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+      ' · ',
+      proseLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
     ]),
 
     studyExample.figure,
@@ -423,7 +442,7 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
     codeBlock(tvSnippet(origin)),
     proseParagraph([
       'The snippet follows the xiangqi channel. Set channel= to any of ' +
-        `${TV_CHANNELS.join(', ')}, or drop it for the cross-variant pick the homepage shows:`,
+        `${tvChannels.join(', ')}, or drop it for the cross-variant pick the homepage shows:`,
     ]),
     codeBlock(`${origin}${embedTvPath()}`),
 

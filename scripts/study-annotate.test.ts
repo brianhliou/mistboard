@@ -208,4 +208,39 @@ describe('study-annotate', () => {
       { kind: 'arrow', brush: 'green', orig: 'f10', dest: 'e10' },
     ]);
   });
+  it('grades each side on its own judge, keeps a coloured always-line, and adds arrows', () => {
+    const input = {
+      rootFen: 'root',
+      moves: ['a1a2', 'b10b9', 'c1c2'],
+      // The shared series would fault nothing; each judge sees one fault.
+      redScore: [0.5, 0.5, 0.5, 0.5],
+      scoreByMover: {
+        // Red's moves judged here: c1c2 (ply 3) drops red from 60% to 30%.
+        red: [0.5, 0.5, 0.6, 0.3],
+        // Black's moves judged here: b10b9 (ply 2) costs black nothing.
+        black: [0.5, 0.5, 0.5, 0.5],
+      },
+      sidelines: [
+        { ply: 1, moves: ['f10e10'], redScoreEnd: 0.5, brush: 'orange', always: true },
+        { ply: 0, moves: ['g1g2'], redScoreEnd: 0.5, brush: 'blue' },
+      ],
+      shapes: { 1: [{ kind: 'arrow' as const, brush: 'blue', orig: 'b10', dest: 'b9' }] },
+    };
+    assert.deepEqual(
+      judgedMoves(input).map((m) => [m.ply, m.glyph]),
+      [[3, '??']],
+    );
+    const tree = annotateFromEngine(input);
+    const [first] = tree.root.children;
+    assert.equal(
+      tree.root.children.length,
+      1,
+      'a line off an unfaulted move without always is dropped',
+    );
+    assert.equal(first!.children[1]!.uci, 'f10e10', 'the always-line hangs without a glyph');
+    assert.deepEqual(first!.annotations?.shapes, [
+      { kind: 'arrow', brush: 'blue', orig: 'b10', dest: 'b9' },
+      { kind: 'arrow', brush: 'orange', orig: 'f10', dest: 'e10' },
+    ]);
+  });
 });

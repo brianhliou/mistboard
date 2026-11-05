@@ -51,6 +51,7 @@ export function renderBanqiMaterial<S extends string, V extends BanqiMaterialVie
   view: V | null,
   viewerInk: BanqiColor | null,
   moves: readonly { from: S; to: S }[] = [],
+  options: { keepFinishedOdds?: boolean } = {},
 ): void {
   slots.capturesTop.replaceChildren();
   slots.capturesBottom.replaceChildren();
@@ -71,7 +72,13 @@ export function renderBanqiMaterial<S extends string, V extends BanqiMaterialVie
   const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
   const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
   const finished = view.status.type === 'finished';
-  const poolView = finished ? banqiFaceDownAtEnd<S, V>(view, moves) : view;
+  // TK's final PlayerView already masks the remaining tiles, so it can keep
+  // its odds even without a complete log. Older truth views still need the
+  // log to recover the masked final position before computing the pool.
+  const maskedFinal =
+    options.keepFinishedOdds &&
+    Object.keys(view.board).some((square) => view.board[square as S]?.faceDown);
+  const poolView = finished && !maskedFinal ? banqiFaceDownAtEnd<S, V>(view, moves) : view;
   if (!poolView) return;
   const odds = banqiRevealOdds(poolView);
   renderHiddenPoolPanel(
@@ -81,10 +88,13 @@ export function renderBanqiMaterial<S extends string, V extends BanqiMaterialVie
       { color: bottom, label: banqiInkLabel(bottom), side: odds.pool[bottom] },
     ],
     glyph,
-    // While the game is on, each disc carries its reveal odds (#542); a finished
-    // game's tally is a record of what stayed hidden, so it carries none.
+    // TK keeps the last position's odds after play stops. poolView masks the
+    // unturned tiles before the same public pool arithmetic used during play.
     finished
-      ? { caption: t('live.faceDownAtEnd') }
+      ? {
+          caption: t('live.faceDownAtEnd'),
+          ...(options.keepFinishedOdds ? { odds } : {}),
+        }
       : view.status.type === 'playing' && odds.total > 0
         ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
         : {},

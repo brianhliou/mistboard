@@ -1,4 +1,4 @@
-// Dark Jungle / Flip Animal Chess (兽棋 翻翻棋) — the flip derivative of Dou Shou Qi,
+// Dark Jungle / Flip Animal Chess (翻翻兽棋) — the flip derivative of Dou Shou Qi,
 // on a 4×4 board with hidden piece IDENTITIES (symmetric information), modeled on
 // variants-banqi.ts and reusing the shared animal-rank kernel from variants-jungle.ts.
 //

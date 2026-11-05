@@ -39,6 +39,31 @@ function game(overrides: Partial<FeaturedGame> = {}): FeaturedGame {
 }
 
 describe('profile game board thumbnail', () => {
+  it('draws a 15x15 Gomoku intersection board with black and white edge stones', () => {
+    const host = document.createElement('div');
+    host.innerHTML =
+      profileBoardSvg({
+        shape: 'intersection',
+        files: 15,
+        ranks: 15,
+        river: null,
+        palaces: [],
+        pieces: [
+          [0, 1, 'black'],
+          [14, 15, 'white'],
+          [7, 8, 'white'],
+        ],
+      }) ?? '';
+    expect(host.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 150 150');
+    expect(
+      host.querySelector('.profile-game-board__grid')?.getAttribute('d')?.match(/M/g),
+    ).toHaveLength(30);
+    expect(host.querySelector('.profile-game-board__black')?.getAttribute('cy')).toBe('145');
+    expect(host.querySelector('.profile-game-board__white')?.getAttribute('cx')).toBe('145');
+    expect(host.querySelector('.profile-game-board__white')?.getAttribute('cy')).toBe('5');
+    expect(host.querySelectorAll('circle')).toHaveLength(3);
+  });
+
   it('draws one disc per piece, by side, red at the bottom', () => {
     const svg = profileBoardSvg(XIANGQI_END) ?? '';
     const host = document.createElement('div');

@@ -28,6 +28,7 @@ import {
   jungleFlipPieceGhostSvg,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
+import type { WithFaceDownFaces } from './review/face-down-faces.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
@@ -76,6 +77,7 @@ export function createJungleFlipInteractiveBoard(
       interactive: true,
       arrows,
       markers,
+      faceDownFaces: (view as WithFaceDownFaces<JungleFlipPlayerView>).faceDownFaces,
     });
   }
 

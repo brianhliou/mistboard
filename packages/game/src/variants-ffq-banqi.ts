@@ -62,7 +62,7 @@ export const FFQ_BANQI_RULES = {
   cannonQuietMove: false,
   cannonScreens: 1,
   cannonCoveredTargets: 'either-color',
-  coveredCaptureDisclosure: 'public',
+  coveredCaptureDisclosure: 'capturer-only',
   noProgressPlies: FFQ_BANQI_NO_PROGRESS_LIMIT,
   flipAndCaptureResetClockAndBothChases: true,
   chase: 'quiet-step-attacks-any-capturable-adjacent-face-up-enemy',
@@ -107,8 +107,8 @@ export type FFQBanqiState = {
   captures: FFQBanqiCapture[];
   lastMove?: FFQBanqiMove;
 };
-/** Every off-board capture is public, including a cannon's covered victim. */
-export type FFQBanqiCapturedView = FFQBanqiCapture;
+/** HP discloses the victim's ink; a covered victim's exact role is capturer-only. */
+export type FFQBanqiCapturedView = Omit<FFQBanqiCapture, 'role'> & { role: BanqiPieceRole | null };
 export type FFQBanqiPlayerView = {
   id: string;
   perspective: BanqiColor | 'observer';
@@ -120,10 +120,10 @@ export type FFQBanqiPlayerView = {
   noProgressClock: number;
   chaseCounts: Record<BanqiColor, number>;
   captured: FFQBanqiCapturedView[];
-  // Candidates for covered on-board tiles: subtract all public captures.
+  // Candidates include covered captures whose roles this viewer does not know.
   pool: Record<BanqiColor, Record<BanqiPieceRole, number>>;
-  // Retained for snapshot compatibility; FFQ has no private captures.
-  unknownCaptured: Record<BanqiColor, 0>;
+  // Captured roles still included in this viewer's pool.
+  unknownCaptured: Record<BanqiColor, number>;
   legalMoves: FFQBanqiMove[];
   lastMove?: FFQBanqiMove;
 };
@@ -372,20 +372,24 @@ export function getFFQBanqiPlayerView(
   );
   const captured = state.captures.map(({ owner, role, capturedBy, wasFaceDown }) => ({
     owner,
-    role,
+    role: wasFaceDown && capturedBy !== perspective ? null : role,
     capturedBy,
     wasFaceDown,
   }));
   const pool = { red: { ...BANQI_PIECE_COUNTS }, black: { ...BANQI_PIECE_COUNTS } };
   for (const piece of board) if (piece && !piece.faceDown) pool[piece.color][piece.role] -= 1;
-  for (const capture of captured) pool[capture.owner][capture.role] -= 1;
+  const unknownCaptured = { red: 0, black: 0 };
+  for (const capture of captured) {
+    if (capture.role === null) unknownCaptured[capture.owner] += 1;
+    else pool[capture.owner][capture.role] -= 1;
+  }
   return {
     id: state.id,
     perspective,
     board,
     captured,
     pool,
-    unknownCaptured: { red: 0, black: 0 },
+    unknownCaptured,
     status: { ...state.status },
     ply: state.ply,
     moveNumber: state.moveNumber,

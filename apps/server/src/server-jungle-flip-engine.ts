@@ -1,5 +1,5 @@
 /**
- * Server-side MistyJungleFlip loop for Flip Jungle (兽棋 / 翻翻棋) PvE.
+ * Server-side MistyJungleFlip loop for Flip Jungle (翻翻兽棋) PvE.
  *
  * Tier-B: Flip Jungle is driven by our `jungle-flip-engine` UCI subprocess
  * (jungle-flip-engine.ts), the same shape as banqi/jieqi/xiangqi — NOT the

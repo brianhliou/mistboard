@@ -170,7 +170,8 @@ describe('Three Kingdoms banqi live room', () => {
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(0);
     // Before the first flip no seat owns an ink and nothing can be taken:
     // one block per ink with its face-down pieces, no points and no captured
-    // line; nothing beside the names; the target once in the game card.
+    // line; nothing beside the names. The game card names the variant alone
+    // and the panel has no "N face-down could be:" heading (#823).
     expect(document.querySelectorAll('.clock-seat-tag')).toHaveLength(0);
     const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
     expect(blocks.map((block) => block.dataset.ink).sort()).toEqual(['black', 'red']);
@@ -182,8 +183,9 @@ describe('Three Kingdoms banqi live room', () => {
         block.querySelectorAll('[data-line="face-down"] .review-capture-piece').length,
       ).toBeGreaterThan(0);
     }
-    expect(document.body.textContent).toContain('First to 100 points');
-    expect(document.body.textContent?.match(/First to 100 points/g)).toHaveLength(1);
+    expect(document.body.textContent).not.toContain('First to 100 points');
+    expect(document.querySelector('.hidden-pool .hidden-pool__caption')).toBeNull();
+    expect(document.querySelector('.hidden-pool')?.textContent).not.toContain('could be');
     // No quiet-move line this early.
     expect(document.querySelector('.tk-banqi-moves-left')).toBeNull();
     expect(document.body.textContent).not.toContain('Quiet moves');
@@ -304,13 +306,56 @@ describe('Three Kingdoms banqi live room', () => {
     return slots;
   }
 
-  it('keeps both lines and their names once the game is over', async () => {
+  it("keeps the final masked position's Still face-down rows and odds after the game", async () => {
     const { line, moves } = playToFinish();
-    await mountFinished(view(line, 'red'), moves);
+    const finalView = view(line, 'red');
+    expect(Object.values(finalView.board).some((entry) => entry?.faceDown)).toBe(true);
+    // Render the same final position as a live frame, using only the player's
+    // masked board, so the expected chances cannot depend on hidden identities.
+    const options = await mount();
+    options.applyHello(
+      hello({
+        type: 'hello',
+        seat: 'red',
+        state: { ...finalView, status: { type: 'playing', turn: 'red' } },
+        events: [CREATED, ...moveEvents(moves)],
+      }),
+    );
+    options.render();
+    const faceDownRows = () =>
+      [...document.querySelectorAll('.hidden-pool [data-line="face-down"]')].map(
+        (row) => row.innerHTML,
+      );
+    const liveRows = faceDownRows();
+    const liveOdds = [...document.querySelectorAll('.hidden-pool .reveal-odds-chip__pct')].map(
+      (pct) => pct.textContent,
+    );
+    expect(liveOdds.length).toBeGreaterThan(0);
+    expect(liveOdds.every((pct) => pct?.includes('%'))).toBe(true);
+    await mountFinished(finalView, moves);
     const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
     expect(blocks).toHaveLength(2);
     for (const block of blocks) expect(lineKeys(block)).toEqual(['Captured', 'Still face-down']);
+    expect(faceDownRows()).toEqual(liveRows);
     expect(document.body.textContent).not.toContain('Face-down at the end');
+    // A final masked view is sufficient even without the full replay log.
+    await mountFinished(finalView, []);
+    expect(faceDownRows()).toEqual(liveRows);
+    // Legacy fully revealed views must be masked back to the final position,
+    // rather than using the revealed identities to calculate the odds.
+    await mountFinished(
+      {
+        ...finalView,
+        board: Object.fromEntries(
+          Object.entries(line.board).map(([square, entry]) => [
+            square,
+            entry && { color: entry.color, role: entry.role, faceDown: false as const },
+          ]),
+        ),
+      },
+      moves,
+    );
+    expect(faceDownRows()).toEqual(liveRows);
   });
 
   // A finished room is served every tile face up; the board keeps the ones

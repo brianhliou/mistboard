@@ -8,6 +8,7 @@ import { t } from './i18n/catalog.js';
 import './account-profile.css';
 import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
+import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
@@ -19,6 +20,7 @@ import {
   buildProfileTabsShell,
 } from './profile-ui.js';
 import { buildNav, buildNotice } from './site-shell.js';
+import { buildUiIcon } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
@@ -92,10 +94,11 @@ const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 // The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
 const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
 // The named jieqi slots above Pikafish (level 8), weakest first; server
-// first-party-bots.ts. jqe (2026-10-16) is listed only while the server serves it
-// (/api/bots drops it while MISTBOARD_JQE_ENABLED is off). An unknown slot sorts
-// first, so it never takes Strongest by accident.
-const JIEQI_TOP_BOT_ORDER = ['pikafish', 'ab-jchess', 'jqe'];
+// first-party-bots.ts. AB-JChess (AB-JChess-20261031) is on top again, jqe one
+// rung under it; jqe is listed only while the server serves it (/api/bots drops it
+// while MISTBOARD_JQE_ENABLED is off). An unknown slot sorts first, so it never
+// takes Strongest by accident.
+const JIEQI_TOP_BOT_ORDER = ['pikafish', 'jqe', 'ab-jchess'];
 const jieqiTopRank = (id: string): number => JIEQI_TOP_BOT_ORDER.indexOf(id);
 // The top jungle slot above Misty (2026-10, #434); server first-party-bots.ts.
 const JUNGLE_TOP_BOT_ID = 'katago';
@@ -412,7 +415,11 @@ export function botCredits(botId: string): BotCredit[] {
     return [{ label: t('bots.jqeCredit'), href: 'https://github.com/devinokeefe/jieqi' }];
   }
   if (botId === 'ab-jchess') {
-    return [{ label: t('bots.abJchessCredit'), href: 'https://github.com/lxsgx23/AB-JChess' }];
+    // AB-JChess-20261031 is built on jqe's MIT code, so jqe's author is credited too.
+    return [
+      { label: t('bots.abJchessCredit'), href: 'https://github.com/lxsgx23/AB-JChess' },
+      { label: t('bots.jqeCredit'), href: 'https://github.com/devinokeefe/jieqi' },
+    ];
   }
   if (botId !== JUNGLE_TOP_BOT_ID) return [];
   return [
@@ -546,6 +553,17 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
     bot.ownerType === 'system' ? 'bots.firstPartyBadge' : 'bots.communityBadge',
   );
   meta.append(badge, owner);
+  if (
+    CHAMPIONS.some((title) => title.botHref === `/bot/${bot.id}` && title.gameId === gameSpecId)
+  ) {
+    const champion = document.createElement('a');
+    champion.className = 'bot-champion-title';
+    champion.href = '/champions';
+    const title = `${variantDisplayLabel(gameSpecId)} ${t('champions.championBadge')}`;
+    champion.setAttribute('aria-label', title);
+    champion.append(buildUiIcon('title-champion'), title);
+    heading.after(champion);
+  }
   identity.append(meta);
 
   const counts = document.createElement('div');

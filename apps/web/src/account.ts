@@ -15,7 +15,7 @@ import {
   normalizeAccountPreferences,
   replaceAccountPreferences,
 } from './account-preferences.js';
-import { identify, resetIdentity } from './analytics.js';
+import { identify, resetIdentity, track } from './analytics.js';
 import { requestedAuthReferrer } from './auth-redirect.js';
 import {
   DISPLAY_PREFERENCE_DEFINITIONS,
@@ -25,6 +25,7 @@ import {
   readDisplayPreferences,
   writeDisplayPreference,
 } from './display-preferences.js';
+import { suggestEmailDomain } from './email-domain-suggestion.js';
 import { buildFlairIcon, FLAIR_KEYS, flairLabel, flairOfferedInPicker } from './flair.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
@@ -1847,12 +1848,50 @@ function buildLoginForm(
   emailHelp.textContent = t('account.emailCodeHelp', {}, locale);
   emailField.append(emailLabel, email, emailHelp);
 
+  const suggestionNotice = document.createElement('div');
+  suggestionNotice.setAttribute('aria-live', 'polite');
+  const suggestion = document.createElement('button');
+  suggestion.type = 'button';
+  suggestion.className = 'account-auth-email-suggestion';
+  suggestion.hidden = true;
+  suggestionNotice.hidden = true;
+  suggestionNotice.append(suggestion);
+  const shownDomains = new Set<string>();
+  const updateSuggestion = (): void => {
+    const address = suggestEmailDomain(email.value);
+    suggestion.hidden = !address;
+    suggestionNotice.hidden = !address;
+    suggestion.textContent = address
+      ? t('account.emailSuggestion', { email: address }, locale)
+      : '';
+    if (address) {
+      const domain = address.split('@')[1]!;
+      if (!shownDomains.has(domain)) {
+        shownDomains.add(domain);
+        track('auth_email_domain_suggestion_shown', { suggested_domain: domain });
+      }
+    }
+  };
+  email.addEventListener('input', updateSuggestion);
+  email.addEventListener('change', updateSuggestion);
+  suggestion.addEventListener('click', () => {
+    if (authBusy || email.readOnly) return;
+    const address = suggestEmailDomain(email.value);
+    if (!address) return;
+    track('auth_email_domain_suggestion_accepted', { suggested_domain: address.split('@')[1]! });
+    email.value = address;
+    email.removeAttribute('aria-invalid');
+    hideStatus();
+    updateSuggestion();
+    email.focus();
+  });
+
   const emailStage = document.createElement('div');
   emailStage.className = 'account-auth-stage account-auth-email-stage';
   const newAccountNotice = document.createElement('p');
   newAccountNotice.className = 'account-auth-new-account';
   newAccountNotice.textContent = t('account.newAccountNotice', {}, locale);
-  emailStage.append(emailField, newAccountNotice);
+  emailStage.append(emailField, suggestionNotice, newAccountNotice);
 
   const codeField = document.createElement('label');
   codeField.className = 'account-auth-field';
@@ -1977,6 +2016,7 @@ function buildLoginForm(
   const requestCode = async (isResend: boolean): Promise<void> => {
     if (authBusy) return;
     authBusy = true;
+    suggestion.disabled = true;
     submit.disabled = true;
     resendCode.disabled = true;
     changeEmail.disabled = true;
@@ -2034,6 +2074,7 @@ function buildLoginForm(
       if (loginId) updateCountdown();
     } finally {
       authBusy = false;
+      suggestion.disabled = false;
       if (loginId) updateCountdown();
       else submit.disabled = false;
     }
@@ -2180,11 +2221,13 @@ function authErrorMessage(value: string, locale: Locale = currentLocale()): stri
   if (value === 'auth_bad_response') return t('account.authBadResponse', {}, locale);
   if (value.startsWith('auth_http_')) return t('account.authHttpFailed', {}, locale);
   if (value === 'email_delivery_not_configured') return t('account.emailNotConfigured', {}, locale);
+  if (value === 'login_email_unreceivable') return t('account.loginEmailUnreceivable', {}, locale);
   if (value === 'email_delivery_failed') return t('account.emailDeliveryFailed', {}, locale);
   if (value === 'persistence_disabled') return t('account.persistenceDisabled', {}, locale);
   if (value === 'invalid_login_code') return t('account.invalidLoginCode', {}, locale);
   if (value === 'rate_limited') return t('account.tooManyAttempts', {}, locale);
   if (value === 'invalid_email') return t('account.invalidEmail', {}, locale);
+  if (value === 'email_cannot_receive') return t('account.emailCannotReceive', {}, locale);
   if (value === 'account_closed') return t('account.accountAlreadyClosed', {}, locale);
   return t('account.signInFailed', {}, locale);
 }

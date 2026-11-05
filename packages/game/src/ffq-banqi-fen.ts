@@ -6,9 +6,9 @@
 //
 // Eight ranks, y=7 first, four files left-to-right. X hides BOTH ink and role;
 // G/A/E/R/H/C/S are revealed pieces (UPPER red, lower black), digits are empties.
-// Pool: <letter><count> in rank order, red then black, or '-'. All captures,
-// including covered victims, are public and subtracted from this pool. The last
-// two fields remain zero for snapshot compatibility (no private captures).
+// Pool: <letter><count> in rank order, red then black, or '-'. Only revealed
+// captures are subtracted. The last two fields count covered captures by ink;
+// their roles remain candidates in the observer's pool.
 // Computed only from the masked observer view. Permuting identities underneath
 // on-board backs cannot change any field, even after game end.
 //

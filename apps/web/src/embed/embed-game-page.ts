@@ -46,6 +46,7 @@ import {
   mountEmbedCard,
 } from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
+import { createEmbedScoreChart, type EmbedScoreChart } from './embed-score-chart.js';
 import './embed.css';
 
 export { fitBoardWidth } from './embed-card.js';
@@ -204,6 +205,8 @@ export async function mountEmbedGame(
   // end; truth is revealed), so a new view is a fresh mount at the same ply.
   let pov: EmbedPov | null = options.pov ?? null;
   let card: EmbedCard | null = null;
+  let chart: EmbedScoreChart | null = null;
+  let chartPly = 0;
   const picker =
     maybeGameSpecForId(specId)?.visibility === 'dark'
       ? embedPovPicker(pov ?? 'truth', fogSideLabels(specId), (next) => {
@@ -261,11 +264,16 @@ export async function mountEmbedGame(
         const handle = await mountBoard(host, specId, roomId, {
           metadataByRoomId,
           namesByRoomId: { [roomId]: names },
-          onPlyChange: hooks.onPlyChange,
+          onPlyChange: (ply, maxPly) => {
+            chartPly = ply;
+            chart?.setPly(ply);
+            hooks.onPlyChange(ply, maxPly);
+          },
           pov,
         });
         // A remount (a fog game's view change) keeps the overlay it had.
         if (analysis) {
+          installLuckCards(analysis, host, root, handle);
           handle.setBoardOverlay?.(analysis.overlayAtPly);
           if (specId !== 'jieqi') {
             const { installEmbedGameLines } = await import('./embed-game-lines.js');
@@ -293,6 +301,15 @@ export async function mountEmbedGame(
   const loaded = await analysisLoad;
   if (loaded && card) {
     analysis = loaded;
+    if (
+      loaded.scoreSeries?.series.every(
+        (line) => line.values.length === (card!.handle.plyCount?.() ?? -1) + 1,
+      )
+    ) {
+      chart = createEmbedScoreChart(loaded.scoreSeries, { onJump: (ply) => card?.jumpToPly(ply) });
+      chart.setPly(chartPly);
+      card.setUnderBoard(chart.el);
+    }
     if (specId === 'jieqi' && boardHost) {
       const { installJieqiEmbedLines } = await import('./embed-jieqi-lines.js');
       const unknownReveals = await installJieqiEmbedLines(
@@ -301,6 +318,7 @@ export async function mountEmbedGame(
         roomId,
         loaded.bestMoves,
         pov === 'black' ? 'black' : 'red',
+        loaded.jieqiLine,
       ).catch(() => new Set<number>());
       for (const ply of unknownReveals) {
         const mark = loaded.annotations.get(ply);
@@ -320,6 +338,7 @@ export async function mountEmbedGame(
       ).catch(() => {});
     }
     card.setAnnotations(loaded.annotations);
+    if (boardHost) installLuckCards(loaded, boardHost, root, card.handle);
     card.handle.setBoardOverlay?.(loaded.overlayAtPly);
   }
 }
@@ -369,4 +388,19 @@ export function seatDiscInk(game: FeaturedGame, side: 'first' | 'second'): strin
     side === 'first' ? firstSeat : secondSeat,
     game.firstColor ?? null,
   );
+}
+
+function installLuckCards(
+  analysis: EmbedAnalysis,
+  board: HTMLElement,
+  list: HTMLElement,
+  handle: EmbedBoardHandle,
+): void {
+  const detach = analysis.attachLuckCards?.(board, list);
+  if (!detach) return;
+  const destroy = handle.destroy.bind(handle);
+  handle.destroy = () => {
+    detach();
+    destroy();
+  };
 }

@@ -133,9 +133,9 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     localeGroup: '/bots',
   },
   '/about': {
-    title: 'About Mistboard | Chinese Chess and the Future of Strategy Games',
+    title: 'About Mistboard | Chinese Chess for Every Player',
     description:
-      'Bringing people together across cultures through Chinese chess and original strategy games. Free, open-source play, study, broadcasts and engine challenges.',
+      "Bringing people together across cultures through Chinese chess and the world's classic strategy games. Free, open-source play, study and broadcasts.",
   },
   '/faq': {
     title: 'Frequently Asked Questions | Mistboard',
@@ -190,19 +190,35 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/contribute': {
     title: 'How to Contribute | Mistboard',
     description:
-      'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
+      'Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts.',
   },
-  // A casual xiangqi group in Bellevue; Mistboard hosts its page, and
-  // washingtonxiangqi.org and .com forward here (2026-10-23).
+  // In-person xiangqi for Greater Seattle, starting in Bellevue; Mistboard hosts
+  // its page, and washingtonxiangqi.org and .com forward here (2026-10-23).
+  // Nothing is running yet, so the copy says so (private issue 19, 2026-11-03).
   '/washington-xiangqi': {
-    title: 'Washington Xiangqi (华州象棋): Chinese chess in Bellevue',
+    title: 'Washington Xiangqi: Chinese chess in Greater Seattle',
     description:
-      'Washington Xiangqi is a casual group for people who play xiangqi, Chinese chess, in Bellevue, WA. Any level is welcome. Join on WeChat or by email.',
+      'In-person xiangqi, Chinese chess, for Greater Seattle, with meetups forming in Bellevue. Every level is welcome. Write in to play, learn, host or help organize.',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hans/washington-xiangqi': {
+    title: '华州象棋 Washington Xiangqi：大西雅图地区的象棋',
+    description:
+      '面向大西雅图地区的线下象棋，正在贝尔维尤筹备聚会。欢迎各种水平的棋友，无论是多年老手还是刚学走法的新手。想下棋、学棋、提供场地或协助组织，欢迎来信联系华州象棋。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hant/washington-xiangqi': {
+    title: '華州象棋 Washington Xiangqi：大西雅圖地區的象棋',
+    description:
+      '面向大西雅圖地區的實體象棋，正在貝爾維尤籌備聚會。歡迎各種程度的棋友，無論是多年老手還是剛學走法的新手。想下棋、學棋、提供場地或協助組織，歡迎來信聯繫華州象棋。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/washington-xiangqi',
   },
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
-      'Bring Chinese chess to a world stage with Mistboard. Work with us on teaching, broadcasts, original games and engine challenges across languages.',
+      'Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch.',
   },
   // One reigning champion engine per game, moved from
   // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges
@@ -216,14 +232,14 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/zh-hans/champions': {
     title: '引擎冠军与挑战赛 | Mistboard',
     description:
-      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
+      '揭棋、暗棋、斗兽棋和翻翻兽棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
     htmlLang: 'zh-Hans',
     localeGroup: '/champions',
   },
   '/zh-hant/champions': {
     title: '引擎冠軍與挑戰賽 | Mistboard',
     description:
-      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
+      '揭棋、暗棋、鬥獸棋和翻翻獸棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
     htmlLang: 'zh-Hant',
     localeGroup: '/champions',
   },
@@ -656,10 +672,6 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
 // is worth baking) but whose page still needs a heading and its links for a
 // crawler that does not run the bundle. The client clears the root on mount.
 const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
-  // The club page is read from a printed address, so its text is in the HTML
-  // for link previews and crawlers too.
-  '/washington-xiangqi':
-    '<main lang="en"><h1>Washington Xiangqi <span lang="zh-Hans">华州象棋</span></h1><p>Washington Xiangqi is a casual group for people who play xiangqi, Chinese chess, in Bellevue, WA. Any level is welcome, including people who have never played.</p><ul><li><a href="mailto:hello@washingtonxiangqi.org">hello@washingtonxiangqi.org</a></li><li><a href="/learn/xiangqi">Learn the rules</a></li><li><a href="/">Play online on Mistboard</a></li></ul></main>',
   '/games':
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
@@ -1135,7 +1147,9 @@ export async function servePrerenderedPage(params: {
     | 'changelog.html'
     | `changelog-${string}.html`
     | 'puzzles.html'
-    | 'patron.html';
+    | 'patron.html'
+    | 'washington-xiangqi.html'
+    | `zh-han${'s' | 't'}/washington-xiangqi.html`;
 }): Promise<void> {
   if (
     (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&
@@ -1205,6 +1219,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/contribute',
   '/creators',
   '/washington-xiangqi',
+  '/zh-hans/washington-xiangqi',
+  '/zh-hant/washington-xiangqi',
   '/champions',
   '/zh-hans/champions',
   '/zh-hant/champions',

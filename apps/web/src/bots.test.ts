@@ -127,6 +127,40 @@ async function flushPromises(): Promise<void> {
 }
 
 describe('bot pages', () => {
+  it('links the reigning champion badge to the title record, scoped to the selected variant', async () => {
+    const { mountBotProfile } = await import('./bots.js');
+    const profile = misty({
+      id: 'ab-jchess',
+      displayName: 'AB-JChess',
+      defaultGameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+      playOptions: [{ gameSpecId: 'jieqi', engineId: 'ab-jchess-jieqi', playable: true }],
+      rating: null,
+      ratings: [],
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    await mountBotProfile(root, 'ab-jchess');
+    expect(root.querySelector('.bot-champion-title')?.textContent).toBe('Jieqi Champion');
+    expect(root.querySelector('.bot-champion-title')?.getAttribute('href')).toBe('/champions');
+    expect(root.querySelector('.profile-header-badges .bot-champion-title')).toBeNull();
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ bot: { ...profile, id: 'jqe' } }));
+    await mountBotProfile(root, 'jqe');
+    expect(root.querySelector('.bot-champion-title')).toBeNull();
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        bot: {
+          ...profile,
+          playOptions: [{ gameSpecId: 'xiangqi', engineId: 'ab-jchess-jieqi', playable: true }],
+          defaultGameSpecId: 'xiangqi',
+          supportedGameSpecIds: ['xiangqi'],
+        },
+      }),
+    );
+    await mountBotProfile(root, 'ab-jchess');
+    expect(root.querySelector('.bot-champion-title')).toBeNull();
+  });
+
   afterEach(() => {
     document.body.replaceChildren();
     window.history.replaceState(null, '', '/');
@@ -367,10 +401,8 @@ describe('bot pages', () => {
     expect(
       [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
     ).toEqual(['Xiangqi, level by level', 'Misty, the house bot']);
-    // Community rail is shared with /player; Online bots is the active entry.
-    expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe(
-      'Online bots',
-    );
+    // Community rail is shared with /player; Bots is the active entry.
+    expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe('Bots');
 
     const sectionNames = (index: number) =>
       [

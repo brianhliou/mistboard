@@ -10,7 +10,7 @@
 import {
   applyStandardXiangqiMove,
   applyXiangqiRecordMove,
-  createInitialXiangqiState,
+  createInitialStandardXiangqiState,
   formatXiangqiMove,
   fsfUciToXiangqiSquares,
   getStandardXiangqiPlayerView,
@@ -30,7 +30,7 @@ export const xiangqiTreeAdapter: VariantTreeAdapter<
   StandardXiangqiPlayerView
 > = {
   mode: 'perfect-info',
-  initialTruth: () => createInitialXiangqiState('analysis'),
+  initialTruth: () => createInitialStandardXiangqiState('analysis'),
   isLegal: (truth, move) =>
     truth.status.type === 'playing' && isStandardXiangqiLegalMove(truth, move),
   applyMove: (truth, move) => applyStandardXiangqiMove(truth, move),

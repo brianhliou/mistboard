@@ -272,7 +272,7 @@ test('offline command exits nonzero without partial JSON on invalid input or arg
     [],
     [fileURLToPath(fixtureUrl), '--limit', '0'],
     [fileURLToPath(fixtureUrl), '--unknown'],
-    [fileURLToPath(new URL('../../../docs/offline-blunder-ranker.md', import.meta.url))],
+    [fileURLToPath(new URL('../../../LICENSE', import.meta.url))],
   ]) {
     const result = command(args);
     assert.equal(result.status, 1, result.stderr);

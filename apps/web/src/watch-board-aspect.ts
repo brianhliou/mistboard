@@ -23,6 +23,8 @@
 import { hasOwnKey } from '@mistboard/game';
 
 const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
+  // Gomoku: 15 x 15 intersections (gomoku-board.ts).
+  gomoku: 1,
   // Xiangqi family: 9 files x 10 ranks.
   xiangqi: 9 / 10,
   jieqi: 9 / 10,

@@ -98,7 +98,7 @@ const dealB = [...dealA];
 const eventsA = log(dealA, moves);
 const eventsB = log(dealB, moves);
 
-test('FFQ privacy fixture reaches HP with public covered captures and distinct secret setups', () => {
+test('FFQ privacy fixture reaches HP with covered captures and distinct secret setups', () => {
   assert.deepEqual(state.status, { type: 'finished', winner: 'red', reason: 'hp' });
   assert.ok(state.captures.some((capture) => capture.wasFaceDown));
   assert.notDeepEqual(eventsA[0], eventsB[0]);
@@ -120,8 +120,13 @@ test('serialized FFQ seat and observer payloads mask identities at every ply, li
       assert.equal(wire.liveHistory.length, ply + 1);
       assert.deepEqual(
         wire.snapshot.state.captured,
-        replayTenantEvents(ffqBanqiTenant, eventsA.slice(0, 3 + ply)).state.captures,
-        'off-board captures are public to both seats and observers',
+        replayTenantEvents(ffqBanqiTenant, eventsA.slice(0, 3 + ply)).state.captures.map(
+          (capture) => ({
+            ...capture,
+            role: capture.wasFaceDown && capture.capturedBy !== viewer ? null : capture.role,
+          }),
+        ),
+        'covered capture roles are only delivered to their capturer',
       );
       if (viewer === 'spectator') {
         assert.equal(wire.snapshot.state.perspective, 'observer');
@@ -172,4 +177,48 @@ test('registered FFQ tenant retains its fallback gate and never reveals finished
     });
   }
   assert.equal(ffqBanqiTenant.visibility.truthView, undefined, 'FFQ has no finished-board reveal');
+});
+
+test('whole FFQ room payload keeps covered capture roles capturer-only in live and finished replay', () => {
+  const deal = [...createFFQBanqiDeal(800)];
+  const place = (square: number, color: BanqiColor, role: string) => {
+    const source = deal.findIndex((piece) => piece.color === color && piece.role === role);
+    assert.ok(source >= 0);
+    [deal[square], deal[source]] = [deal[source], deal[square]];
+  };
+  // Only 6 is initially revealed. The two black victims have identical HP damage.
+  place(6, 'red', 'cannon');
+  place(4, 'black', 'horse');
+  place(0, 'black', 'elephant');
+  const swapped = [...deal];
+  [swapped[0], swapped[4]] = [swapped[4], swapped[0]];
+  for (const finished of [false, true]) {
+    const a = log(deal, [{ from: 6, to: 4 }]);
+    const b = log(swapped, [{ from: 6, to: 4 }]);
+    if (finished) {
+      const ending: FFQBanqiEvent = {
+        type: 'seat-resigned',
+        roomId: ROOM,
+        at: 100,
+        color: 'black',
+      };
+      a.push(ending);
+      b.push(ending);
+    }
+    assert.equal(replayTenantEvents(ffqBanqiTenant, a).state.captures.length, 1);
+    for (const viewer of ['black', 'spectator'] as const) {
+      assert.equal(
+        payload(a, viewer),
+        payload(b, viewer),
+        `${viewer}: capture leaks through room envelope`,
+      );
+      const wire = JSON.parse(payload(a, viewer));
+      assert.equal(wire.snapshot.state.captured[0].role, null);
+      assert.equal(wire.liveHistory.at(-1).view.captured[0].role, null);
+    }
+    const red = JSON.parse(payload(a, 'red'));
+    assert.equal(red.snapshot.state.captured[0].role, 'horse');
+    assert.equal(red.liveHistory.at(-1).view.captured[0].role, 'horse');
+    assert.notEqual(payload(a, 'red'), payload(b, 'red'));
+  }
 });

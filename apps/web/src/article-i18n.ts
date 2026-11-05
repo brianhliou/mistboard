@@ -34,6 +34,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-11-04, not native-reviewed, from the English signed
+  // off that day (jieqi readers are mostly Chinese).
+  'ab-jchess-vs-jqe',
   // Machine-drafted 2026-10-29, not native-reviewed, from the English signed
   // off that day. Menu names are the zh shell catalog's (棋盘样式, 河界文字,
   // 兵炮位标记, 平面/立体, 加厚, 速度) so the article names what the menu shows.
@@ -233,6 +236,8 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  gomoku:
+    'Hidden English review page; Brian is reviewing the rewritten rules before localized publication.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
@@ -267,6 +272,10 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
+  'Gomoku Rules': '五子棋规则',
+  'Gomoku board': '五子棋棋盘',
+  'Five in a row wins': '连五获胜',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困毙 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作杀, 萨姆·劳埃德); 迷雾国际象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我们所知最短的象棋困毙',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
@@ -841,11 +850,11 @@ const ZH_HANS: Record<string, string> = {
   ...endgamePageDictionary('zh-Hans'),
   // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
   'Flip Jungle: 512 times the search still loses 23% of games':
-    '翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败',
+    '翻翻兽棋：搜索量提升 512 倍，仍有 23% 的对局落败',
   'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
-    '翻翻棋是所有动物都盖着的 4×4 斗兽棋。一个近乎完美的引擎能测出翻棋之后还剩多少棋力：512 倍的搜索量大约只换来 242 Elo，而且仍会输掉 23% 的对局。',
+    '翻翻兽棋是所有动物都盖着的 4×4 斗兽棋。一个近乎完美的引擎能测出翻棋之后还剩多少棋力：512 倍的搜索量大约只换来 242 Elo，而且仍会输掉 23% 的对局。',
   '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
-    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盘上进行的斗兽棋，十六只动物开局时全都盖着。轮到你时，可以翻开一张棋子，随机揭示一只动物，或者把一只已翻开的动物走一格。本站的电脑 MistyJungleFlip 在能精确核对的残局中，选出最优着法的比例为 99% 到 100%。这让它成了一件测量仪器，用来回答每种翻棋游戏都会引出的问题：一盘棋里有多少是棋力，多少是翻棋？',
+    '[翻翻兽棋](/rules/jungle-flip)是在 4×4 棋盘上进行的斗兽棋，十六只动物开局时全都盖着。轮到你时，可以翻开一张棋子，随机揭示一只动物，或者把一只已翻开的动物走一格。本站的电脑 MistyJungleFlip 在能精确核对的残局中，选出最优着法的比例为 99% 到 100%。这让它成了一件测量仪器，用来回答每种翻棋游戏都会引出的问题：一盘棋里有多少是棋力，多少是翻棋？',
   'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
     '比感觉上要少。搜索量多 512 倍的引擎副本，对上较弱的那一个，仍会输掉 23% 的对局。',
   Measure: '测量项',
@@ -910,21 +919,21 @@ const ZH_HANS: Record<string, string> = {
     '最初的表里没有距离这一列。它们只存胜、和、负，这足以给着法评分，却不足以收官。在一盘自我对弈中，引擎有一虎一鼠对孤象，按表是必胜（鼠三着内困住象，因为象不能吃鼠）。连续八回合，它走出按表评为最优的着法，却毫无进展，因为每一步取胜着法得分相同，直到重复规则判为和棋。存入距离后，3 着取胜优于 9 着取胜：引擎选最短的必胜路线，并把必败局面尽量拖长，那个残局以鼠三着吃象告终。国际象棋的残局库，例如 Syzygy，附带距离也是同样的原因。',
   'Skill shows in the average, not the game': '棋力体现在平均值上，而不在单局上',
   'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
-    '翻翻棋里棋力是真实存在的：242 Elo 的阶梯是真实差距，在长期对抗中更强的引擎会赢。但发牌和翻棋决定了任一局中相当大的一部分，所以哪怕强得多的棋手也常常落败，一局结果几乎说明不了谁更强。还缺的测量是对强人类棋手的等级分，这是唯一不依赖引擎或其求解器的检验。',
+    '翻翻兽棋里棋力是真实存在的：242 Elo 的阶梯是真实差距，在长期对抗中更强的引擎会赢。但发牌和翻棋决定了任一局中相当大的一部分，所以哪怕强得多的棋手也常常落败，一局结果几乎说明不了谁更强。还缺的测量是对强人类棋手的等级分，这是唯一不依赖引擎或其求解器的检验。',
   'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
     '本站的[对局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和运气，让你看清自己的对局里哪部分是哪一种。规则页上的[二十盘引擎对局](/study/uKxJ60mN)是电脑自我对弈，引擎源码在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
   'Play MistyJungleFlip': '与 MistyJungleFlip 对弈',
-  'Flip Jungle rules': '翻翻棋规则',
-  'FLIP JUNGLE': '翻翻棋',
+  'Flip Jungle rules': '翻翻兽棋规则',
+  'FLIP JUNGLE': '翻翻兽棋',
   'SKILL CEILING': '棋力上限',
   '512× THE SEARCH, 23% LOST': '512 倍搜索，仍输 23%',
   'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
-    '翻翻棋的棋力与运气：搜索量多 512 倍，仍输 23% 的对局',
-  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+    '翻翻兽棋的棋力与运气：搜索量多 512 倍，仍输 23% 的对局',
+  "Flip Jungle's skill ceiling": '翻翻兽棋的棋力上限',
   'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
-    '翻棋游戏里有多少由翻棋决定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了测量：搜索量多 512 倍的引擎，仍会输掉 23% 的对局。',
+    '翻棋游戏里有多少由翻棋决定，[翻翻兽棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了测量：搜索量多 512 倍的引擎，仍会输掉 23% 的对局。',
   'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
-    '电脑有多强，翻棋又决定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
+    '电脑有多强，翻棋又决定了多少？[翻翻兽棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
   'Misty has no idea of a den race': 'Misty 不懂冲兽穴竞速',
   // katago-jungle den paragraph, cut 2026-10-16 to link /blog/jungle-den-term: machine-drafted, not native-reviewed.
   'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den, so it learns who wins a den race only when the search reaches the den. In August we tried three ways to teach it, and none helped once the search budget was held fixed; races decide only 4.7% of games at full strength. [Teaching our Jungle Chess engine the den race](/blog/jungle-den-term) has the matches, and a game where depth found the race on its own.':
@@ -1211,6 +1220,7 @@ const ZH_HANS: Record<string, string> = {
   'Multi-solution puzzles': '有不止一个答案的题目',
   'Skill vs. Luck in Flip Games': '把翻子棋的实力和运气分开',
   'Duck Xiangqi Strategy': '鸭子象棋攻略',
+  'AB-JChess retakes the jieqi title': 'AB-JChess 夺回揭棋榜首',
   'Xiangqi Antichess Is a Draw': '象棋棋盘上的反棋是和棋',
   'How MistyBanqi Plays': 'MistyBanqi 是怎么下棋的',
   'Horde on the Xiangqi Board': '象棋棋盘上的部落棋',
@@ -1393,7 +1403,7 @@ const ZH_HANS: Record<string, string> = {
   'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
     '6 月只有 12 盘。9 月已经有近 800 盘，光是 9 月 21 日那一周就有 387 盘。[统计页面](/stats)会持续更新计数。',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
-    '[揭棋](/rules/jieqi)，也就是棋子背面朝下开局的象棋，在前 1,000 盘里占了 608 盘。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分别是 96 盘和 82 盘，然后是迷雾国际象棋、斗兽棋、迷雾象棋、鸭子象棋、翻翻棋和堡垒象棋。这些对局里只有 7 盘是两个人对下，其余都是和电脑下的。',
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下开局的象棋，在前 1,000 盘里占了 608 盘。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分别是 96 盘和 82 盘，然后是迷雾国际象棋、斗兽棋、迷雾象棋、鸭子象棋、翻翻兽棋和堡垒象棋。这些对局里只有 7 盘是两个人对下，其余都是和电脑下的。',
   'Thank you': '感谢',
   'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
     '感谢每一位来下过棋、报告过问题，或者成为[赞助会员](/patron)支持网站的朋友。我们要把这里做成下中国象棋和原创棋类游戏最好的地方，免费并且[开源](https://github.com/brianhliou/mistboard)。',
@@ -2689,11 +2699,17 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
+  'Corrected the no-capture draw limit to 120 plies, or 60 moves by each player. Older games keep their original rule.':
+    '已将无吃子和棋上限更正为 120 个半回合，即双方各走 60 步。旧对局仍采用原规则。',
+  'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
+    '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
+  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
+    '澄清爆炸象棋仍采用 60 个半回合的无吃子上限，而普通象棋采用 120 个半回合。',
   Repetition: '重复局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有将军，则判和。',
-  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
-    '正式比赛规则更进一步，还禁止长捉对方无根的棋子。Mistboard 不判定长捉，因此重复的捉子按和棋计。连续 60 个半回合没有吃子，也判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. New games are also drawn after 120 consecutive plies without a capture, or 60 moves by each player. Games started before this correction keep their original 60-ply limit.':
+    '正式比赛规则更进一步，还禁止长捉对方无根的棋子。Mistboard 不判定长捉，因此重复的捉子按和棋计。新对局连续 120 个半回合没有吃子，即双方各走 60 步，也判和。此次更正前开始的对局仍采用原来的 60 个半回合上限。',
   'Mistakes chess players make': '国际象棋棋手常犯的错误',
   'Habit from chess': '国际象棋的习惯',
   'What happens in xiangqi': '在象棋里的结果',
@@ -3130,9 +3146,9 @@ const ZH_HANS: Record<string, string> = {
     '斗兽棋在网上已经玩了很多年，大多在手机应用和国内游戏平台上。但等级分对局、赛后复盘，以及一台能告诉你哪一步走错的引擎，一直没有跟上。真正认真的斗兽棋引擎研究留在学术论文和残局库里，没有落在任何能实际对弈的地方。Mistboard 把这三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '斗兽棋是一种围绕等级与地形展开的双人策略游戏。双方各指挥八种动物，目标是进入敌方兽穴或消灭敌方全部棋子。',
-  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋规则：玩法详解与免费在线对弈',
+  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻兽棋规则：玩法详解与免费在线对弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
-    '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
+    '斗兽棋的 4×4 翻面版本，又称翻翻兽棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
     '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
@@ -3165,7 +3181,7 @@ const ZH_HANS: Record<string, string> = {
     '虎的走法与狮完全相同：在陆地上走一格，或者纵向、横向直线跳过河流，落在河对岸的第一格。路径上任何水格里只要有一只任意颜色的鼠，就会阻止两种动物跳跃。',
   'A rat in the river blocks the leap.': '河中的鼠会挡住跳跃。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
-    '翻翻棋是[斗兽棋](/rules/jungle)的紧凑型隐藏棋子变体。十六枚动物棋子全部背面朝上放在 4×4 棋盘上。这里没有河流、兽穴或陷阱：翻开棋子、移动动物，并消灭另一种颜色。',
+    '翻翻兽棋是[斗兽棋](/rules/jungle)的紧凑型隐藏棋子变体。十六枚动物棋子全部背面朝上放在 4×4 棋盘上。这里没有河流、兽穴或陷阱：翻开棋子、移动动物，并消灭另一种颜色。',
   'A lion captures a lower-ranked wolf.': '狮吃掉等级较低的狼。',
   'Equal ranks work differently. When an animal captures an enemy of its own rank, both pieces leave the board, and neither side keeps the square.':
     '同等级的处理方式不同。当动物吃与自己同等级的敌子时，两枚棋子都离开棋盘，双方都不占据该格。',
@@ -3247,9 +3263,9 @@ const ZH_HANS: Record<string, string> = {
   'Separating Skill from Luck in Flip Games': '把翻子棋的实力和运气分开',
   // The seoTitle, which names the three variants where the on-page title does not.
   'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
-    '暗棋、揭棋和翻翻棋的对局复盘：实力与运气',
+    '暗棋、揭棋和翻翻兽棋的对局复盘：实力与运气',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
-    '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
+    '暗棋、揭棋和翻翻兽棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
     'Mistboard 的对局复盘现在会把每次翻子拆成两部分：你做的决策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的旧棋。它翻出了我两个月前赢自家引擎的一盘暗棋，然后把功劳记在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
@@ -3259,7 +3275,7 @@ const ZH_HANS: Record<string, string> = {
   'Most game review tools cannot say any of that.': '大多数复盘工具一句都说不出来。',
   'A flip is a decision plus a dice roll': '翻子是一次决策加一次掷骰',
   'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is. Jieqi’s reveals and flip jungle’s flips are the same problem wearing different pieces; banqi is the worked example throughout because its bag is the purest.':
-    '暗棋里一半的着法是翻开一枚背面朝下的棋子。一步棋，两件事：选哪枚翻，以及翻出来是什么。揭棋的揭子和翻翻棋的翻子是同一个问题换了棋子；全文用暗棋做例子，因为它的随机性最纯粹。',
+    '暗棋里一半的着法是翻开一枚背面朝下的棋子。一步棋，两件事：选哪枚翻，以及翻出来是什么。揭棋的揭子和翻翻兽棋的翻子是同一个问题换了棋子；全文用暗棋做例子，因为它的随机性最纯粹。',
   'A chess-style review grades the swing of the whole move. Flip the corner tile, find the enemy general, and the review calls it a blunder. It was a bad tile, not a bad decision.':
     '照搬国际象棋的复盘会给整步棋的胜率波动打分。翻开角落那枚棋，翻出对方的将，复盘就记你一个漏着。可那是一枚坏棋子，不是一个坏决策。',
   'This is why banqi reviews on Mistboard show no centipawn loss: it cannot be separated from the tiles, so next to numbers that can be, it reads as noise.':
@@ -3331,7 +3347,7 @@ const ZH_HANS: Record<string, string> = {
     '引擎更强，赢它通常都借了棋子的力。如果你赢过它，现在复盘会告诉你借了多少。',
   'Jieqi rolls different dice': '揭棋掷的是另一种骰子',
   'Jieqi gets the same treatment with a different pool. A jieqi reveal draws from your own remaining dark pieces, so you know the color and not the piece. A banqi tile is dark to both players, color included. Different bags, same arithmetic, and jungle’s flip variant makes a third. Every one of them gets the dashed line.':
-    '揭棋用同一套办法，只是抽取的范围不同。揭棋的揭子从你自己剩余的暗子里抽，所以你知道颜色，不知道身份。暗棋的棋子对双方都是暗的，连颜色也是。范围不同，算法相同，斗兽棋的翻棋版本（翻翻棋）是第三家。它们每一个都有那条虚线。',
+    '揭棋用同一套办法，只是抽取的范围不同。揭棋的揭子从你自己剩余的暗子里抽，所以你知道颜色，不知道身份。暗棋的棋子对双方都是暗的，连颜色也是。范围不同，算法相同，斗兽棋的翻棋版本（翻翻兽棋）是第三家。它们每一个都有那条虚线。',
   'For the builders': '写给实现者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
     '三个选择让这些数字保持诚实。第一，**反事实不能改变剩下棋子的构成**。把翻开的格子从卒改标成炮，你就悄悄往棋局里加了一枚炮、拿走了一枚卒，局面因此偏移两枚棋子的分量，平均值也被抬高。所以实现里用的是交换：让反事实身份和一个确实藏着这枚棋的背面格子对调，隐藏棋子的集合始终恰好等于这盘棋的集合。',
@@ -3346,12 +3362,12 @@ const ZH_HANS: Record<string, string> = {
     '还有一条诚实的边界：逐点扣除运气，等于把胜率当成线性的，而它并不是线性的。方向可信。小数点后第二位不可信。',
   'Try it on your own games': '拿你自己的棋试试',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
-    '在 Mistboard 打开任何一盘下完的暗棋、揭棋或翻翻棋，你自己的，或[观战页](/watch)上任何人的，然后请求电脑分析。运气数字会逐翻子出现在着法列表里，虚线则画出棋子们本该给你的那盘棋。',
+    '在 Mistboard 打开任何一盘下完的暗棋、揭棋或翻翻兽棋，你自己的，或[观战页](/watch)上任何人的，然后请求电脑分析。运气数字会逐翻子出现在着法列表里，虚线则画出棋子们本该给你的那盘棋。',
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有时它承认你是被抢了。有时它把你的胜利收走。在对我旧棋的一轮扫描里，这两件事它都做了。',
   'Play Banqi': '下暗棋',
   'Play Jieqi': '下揭棋',
-  'Play Jungle Flip': '下翻翻棋',
+  'Play Jungle Flip': '下翻翻兽棋',
   // riverbank-cannon (drafted 2026-08-23; machine battery applied, native read pending)
   'The Riverbank Cannon Problem': '巡河炮问题',
   'Fog Xiangqi Opening Theory: The Riverbank Cannon': '迷雾象棋开局理论：巡河炮',
@@ -5221,8 +5237,8 @@ const ZH_HANS: Record<string, string> = {
   'The terminal rules': '终局规则',
   'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
     '这里有三种让棋局无胜负而终止的方式，它们并不是一回事。**重复局面**：同一局面、同一方行棋出现三次；判和。**步数限制**：连续若干步无吃子，60 步或 120 步；判和，而且兵向前一步并不重置计数。**上限**：测试框架在 400、1,000 或 2,000 步处终止对局。这不是棋规，所以被截断的对局是未下完，而不是和棋。有三局一百万节点的老兵对局撞上了 1,000 步上限，随后继续下到步数限制终止；而四档预算的对局没有一局到过 2,000 步，因此表格里的每个结果都属于前两种。',
-  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
-    '**步数限制。**象棋的无吃子规则是 60 步。用标准兵时，48 局里只触发过一次。用老兵时它是常见的收束：37 和里有 30 局如此，另外七局是重复局面。设成 60 步会在行军还在进行时截断还活着的棋局，所以老兵对局和每一组四局样本都用 120 步。步数限制同时也是引擎遵循的规则，所以 60 步限制下的一局和 120 步限制下的一局，从第 2 步起就是两局不同的棋，而不是同一局在不同处被截断。',
+  '**The clock.** These experiments used a 60-ply no-capture clock. Standard xiangqi uses 120 plies, or 60 moves by each player. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步数限制。**这些实验采用 60 步的无吃子限制。普通象棋采用 120 个半回合，即双方各走 60 步。用标准兵时，48 局里只触发过一次。用老兵时它是常见的收束：37 和里有 30 局如此，另外七局是重复局面。设成 60 步会在行军还在进行时截断还活着的棋局，所以老兵对局和每一组四局样本都用 120 步。步数限制同时也是引擎遵循的规则，所以 60 步限制下的一局和 120 步限制下的一局，从第 2 步起就是两局不同的棋，而不是同一局在不同处被截断。',
   '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
     '**困毙。**按母版的规则，将无着可走又未被将判和棋。把实验室里的每局都按这条规则重新判定：老兵、实力相当条件下兵团的七胜里有五胜变成和棋，标准兵的四胜里有一胜变成和棋；对随机走子的全军，标准兵下兵团的 35 胜里有 20 胜、老兵下 38 胜里有 16 胜变成和棋；老兵预算阶梯测试的十胜里有五胜同样如此。困毙大约占了兵团胜法的一半，而母版的规则会把它拿掉。',
   'Why the soldier fails, and what a different soldier would need':
@@ -5346,8 +5362,8 @@ const ZH_HANS: Record<string, string> = {
     '没有棋子攻击黑将。黑方仍然处于被将军状态：车可以吃士，把将炸掉。黑方并不被迫应将，但在这种威胁下重复局面判将军一方负，而不是和棋。',
   'You win by blowing up the enemy general, by checkmate, by leaving the opponent with no legal move, or when the opponent gives perpetual check in the wide sense above. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '炸掉对方将帅、将死对方、让对方无子可动，或者对方按上面的宽泛定义长将，你都获胜。对局也会因超时、认输或弃局而结束，和这里的其他对局一样。',
-  'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
-    '两条和棋规则。连续六十步无吃子判和，与这里的象棋相同。同一局面第三次出现判和，除非一方在重复的循环里每一步都在将军：那一方判负，而 Mistboard 上的普通象棋会判和。如果双方都在将军，判和。',
+  'Two rules draw. Sixty consecutive plies without a capture is a draw. Standard xiangqi uses 120 plies; Atomic Xiangqi keeps its own 60-ply limit. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
+    '两条和棋规则。连续六十步无吃子判和。普通象棋采用 120 个半回合；爆炸象棋仍采用自己的 60 个半回合上限。同一局面第三次出现判和，除非一方在重复的循环里每一步都在将军：那一方判负，而 Mistboard 上的普通象棋会判和。如果双方都在将军，判和。',
   'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.':
     '本页背后的引擎对局之一：一千万节点的 Fairy-Stockfish 执红，对阵一百万节点的自己。第 6 回合红方已多出一个半兵，之后局面一直接近，直到黑方第 21 回合的 Hxf9：马吃 f9 的炮，而黑方自己的士就在旁边的 f10。爆炸带走了士，九宫白白少了一子，从此再没恢复：第 30 回合的 Cb9 让将失去了掩护，第 38 回合红车吃掉 d8 的炮，紧挨着 d9 的将。爆炸带走了将，连同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
@@ -5545,7 +5561,7 @@ const ZH_HANS: Record<string, string> = {
   'Every finished xiangqi game on the site can be sent for review. Pikafish runs over it on the server, and the move list shows where the evaluation moved, what it preferred instead, and which moves lost the game. The post-game review chess players are used to, for xiangqi.':
     '站内每一盘下完的象棋都可以提交复盘。皮卡鱼在服务器上把整盘棋跑一遍，着法列表会显示评估在哪里发生了变化、它更倾向的走法，以及哪几步输掉了棋。国际象棋玩家习惯的那种赛后复盘，现在象棋也有。',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
-    '对暗棋、揭棋和翻棋斗兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
+    '对暗棋、揭棋和翻翻兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行全强度的皮卡鱼，带官方权重，你分析的内容不会离开你的电脑。权重 51 MB，只需下载一次。',
   Questions: '常见问题',
@@ -5715,7 +5731,7 @@ const ZH_HANS: Record<string, string> = {
   // Rules-page study embeds, flip jungle (2026-09-25).
   'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
     'MistyJungleFlip 以本站电脑三倍的强度自我对弈。第一次翻出的是红子，所以先手执红。第 10 回合双方的猫相遇并同归于尽，第 24 回合红方的老鼠吃掉了蓝方的大象，第 28 回合双方的狮子也同归于尽，蓝方随即无子可走。红方获胜。',
-  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻兽棋：一盘引擎对局，红方第 28 回合获胜',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
   // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
@@ -6220,7 +6236,6 @@ const ZH_HANS: Record<string, string> = {
   'Replaced the sample game with a game played against the engine on the site.':
     '示例对局换成了一盘在本站与引擎下的对局。',
   'Added a sample game from the site.': '新增一盘本站的示例对局。',
-  'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
@@ -6254,8 +6269,6 @@ const ZH_HANS: Record<string, string> = {
     '每种布阵各下四盘，分别为每步 150,000、200,000、300,000 和 500,000 节点，不用随机开局。',
   'Node budgets, not time, so nothing depends on the machine.':
     '用节点预算而不是时间，所以结果不依赖机器。',
-  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
-    '新增完整记录：十二种起始布阵、两张结果表、可逐步浏览的对局和检验过程，并对照示例对局更正了四个数字。',
   'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
     '我们自己用 Rust 写的引擎（α-β 搜索，带后期着法缩减，以及针对转化的静态搜索），因为现有引擎都不支持这套规则。',
   'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
@@ -6264,8 +6277,6 @@ const ZH_HANS: Record<string, string> = {
     '每盘引擎对局都经 Mistboard 的规则内核重放，每个局面的合法着法都一致。',
   'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
     '两项不依赖引擎棋力的检验：6,000 盘随机合法着法的对局，以及一次 208 亿节点的证明搜索。',
-  "Added the cannon rule's design history and the engine results behind the numbers.":
-    '新增炮规则的设计沿革，以及这些数字背后的引擎结果。',
   'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
     '点名另一个开源实现 obscuro-chess，不再称 Misty 是唯一的开源实现。',
   // jqe: machine-drafted 2026-10-24, not native-reviewed, from the English signed off that day. Terms follow ab-jchess and pikafish-reveal-bug (暗子, 翻子, 暗吃, 界限, 胜率, 皮卡鱼, 研究; 暗子布局 for a deal).
@@ -6388,11 +6399,11 @@ const ZH_HANS: Record<string, string> = {
   'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
     'Mistboard 有九套棋子样式：图画、汉字、卡通动物，以及五套传统风格的美术棋子。在设置的「棋子」里选择。',
   'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
-    '棋子默认是平面的，可以在设置的「棋子」里改成「立体」。立体适用于象棋、揭棋、暗棋和翻翻棋，「加厚」边缘让棋子的侧边更厚。',
+    '棋子默认是平面的，可以在设置的「棋子」里改成「立体」。立体适用于象棋、揭棋、暗棋和翻翻兽棋，「加厚」边缘让棋子的侧边更厚。',
   'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
     '象棋棋盘可以是交叉点棋盘，棋子落在交叉点上；也可以是方格棋盘，棋子放在格子里。在「棋盘」里选择。',
   'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
-    '暗棋、揭棋和翻翻棋里的暗子翻开时会翻转，立体棋子会立在侧边上转过来。「速度」决定棋子移动和翻转的快慢，选「关闭」就不播放动画。',
+    '暗棋、揭棋和翻翻兽棋里的暗子翻开时会翻转，立体棋子会立在侧边上转过来。「速度」决定棋子移动和翻转的快慢，选「关闭」就不播放动画。',
   'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
     'Mistboard 的象棋棋子有九套样式，可以画成平面或立体；象棋棋盘可以画成交叉点棋盘或方格棋盘。棋子在屏幕上会移动和翻转，河界也可以写上传统的名字。',
   'Nine piece sets': '九套棋子样式',
@@ -6416,15 +6427,15 @@ const ZH_HANS: Record<string, string> = {
     '同一个象棋棋盘角落画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
   'Flat, 3D, and 3D with the Thick edge.': '平面、立体，以及「加厚」边缘的立体。',
   'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
-    '有暗子的棋也能用这种样式。在[揭棋](/rules/jieqi)里，背面朝上的暗子和其他棋子一样以立体显示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)里，每一枚棋子也是如此。',
+    '有暗子的棋也能用这种样式。在[揭棋](/rules/jieqi)里，背面朝上的暗子和其他棋子一样以立体显示；在[暗棋](/rules/banqi)和[翻翻兽棋](/rules/jungle-flip)里，每一枚棋子也是如此。',
   'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
     '一个既有暗子也有明子的揭棋局面画了三次：平面、立体，以及加厚边缘的立体',
   'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
     '揭棋：平面、立体，以及「加厚」边缘的立体。没有字的圆片是还没翻开的暗子。',
   'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
-    '同一个翻翻棋棋盘画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
+    '同一个翻翻兽棋棋盘画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
   'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
-    '翻翻棋：平面、立体，以及「加厚」边缘的立体。绿色的棋子还没翻开。',
+    '翻翻兽棋：平面、立体，以及「加厚」边缘的立体。绿色的棋子还没翻开。',
   'The xiangqi board can be lined, or a square grid like chess':
     '象棋棋盘可以是交叉点棋盘，也可以是像国际象棋那样的方格棋盘',
   'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
@@ -6437,7 +6448,7 @@ const ZH_HANS: Record<string, string> = {
     '如果你是从国际象棋转来下象棋的，可以先试试方格棋盘。棋子放在深浅相间的格子里，一步棋看起来就和你习惯的一样；想用交叉点棋盘时，改一项设置就行。两种棋盘都能用平面和立体棋子。「棋盘颜色」在两种棋盘上提供同样的木色和纸色，绿色的「斗兽棋」配色只用于方格棋盘。',
   'Pieces glide and turn over': '棋子会滑动和翻转',
   'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
-    '在复盘、研究或回放里逐步查看对局时，每一步的棋子都会从原来的位置滑到新的位置，不用到处找哪里变了也能跟上。在暗棋、揭棋和翻翻棋里，暗子翻开时会翻转。立体棋子像真的棋子一样立在侧边上翻过来；平面棋子先收窄成一条细线，再展开露出另一面。',
+    '在复盘、研究或回放里逐步查看对局时，每一步的棋子都会从原来的位置滑到新的位置，不用到处找哪里变了也能跟上。在暗棋、揭棋和翻翻兽棋里，暗子翻开时会翻转。立体棋子像真的棋子一样立在侧边上翻过来；平面棋子先收窄成一条细线，再展开露出另一面。',
   'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
     '点每个棋盘下方的前进箭头就能看到。暗棋这盘的第一步是在原地翻开一枚棋子。揭棋里，一枚暗子走动后在落点翻开。无论你自己怎么设置，这两个棋盘都以立体显示。',
   'Banqi: the first move turns a tile over.': '暗棋：第一步翻开一枚棋子。',
@@ -6489,10 +6500,127 @@ const ZH_HANS: Record<string, string> = {
   'The menus, sets and choices as they are on this date. When a setting moves or a set is added, this article is updated and says so at the top.':
     '本文的菜单、棋子样式和选项以这一天为准。设置项换了位置或新增了棋子样式时，本文会随之更新，并在文章开头注明。',
   'Play xiangqi': '下象棋',
+  // ab-jchess-vs-jqe: machine-drafted 2026-11-04, not native-reviewed, from the English signed off that day. Terms follow jqe and ab-jchess (暗子, 翻子, 暗吃, 胜率, 研究, 暗子布局, 搜索, 局面, 长将, 长捉, 重复局面, 和棋, 判负, 裁判程序, 神经网络, 复盘; 车马炮相仕帅兵 / 象士将卒; AB-JChess, jqe and Elo unchanged).
+  'AB-JChess takes the jieqi title back from jqe': 'AB-JChess 从 jqe 手中夺回揭棋榜首',
+  "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. Five games read move by move by both engines, the two engines' chase rules, and how their play differs.":
+    'AB-JChess 基于 jqe 开源代码开发的新版本，在 600 盘比赛中战胜 jqe，再次成为 Mistboard 上最强的揭棋电脑。本文用两个引擎逐步解读五盘棋，比较它们的长捉规则和下法。',
+  'AB-JChess is the top jieqi bot on Mistboard again. Its new release, AB-JChess-20261031, beat jqe over 600 games: it won 306, drew 67 and lost 227, about 46 Elo. Most of the edge came with Red.':
+    'AB-JChess 再次成为 Mistboard 上最强的揭棋电脑。它的新版本 AB-JChess-20261031 在 600 盘比赛中战胜 jqe：赢 306 盘，和 67 盘，输 227 盘，约合 46 Elo。大部分优势来自执红的对局。',
+  "The new release is built on jqe's open-source code, with a network of 0.6 MB where the last one's was 144 MB. It searches about 65 times as many positions a second as before.":
+    '新版本基于 jqe 的开源代码开发，神经网络为 0.6 MB，上一版则是 144 MB。它每秒搜索的局面数约为以前的 65 倍。',
+  'In a level endgame with every piece face up, AB-JChess saw a soldier push lose eight moves before jqe did, and it still saw it with its chase rule switched off and 16 times the search.':
+    '在一个所有棋子都已翻开的均衡残局中，AB-JChess 比 jqe 早八个回合看出一步进兵会输棋。即使关闭长捉规则，并把搜索量增至 16 倍，它仍能看出来。',
+  "The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and 42 of the 67 draws ended that way; scored by Mistboard's rules, AB-JChess's edge is about 41 Elo.":
+    '这场比赛把所有三次重复局面都判为和棋。Mistboard 则将重复过程中每一步都将军的一方判负，67 盘和棋中有 42 盘属于这种情况；按 Mistboard 的规则计分，AB-JChess 的优势约为 41 Elo。',
+  'AB-JChess is the top [jieqi](/rules/jieqi) bot on Mistboard again. Its new release by Huorongrong and Laoxu (Kouza), AB-JChess-20261031, beat jqe, which took the title from it in October, over 600 games. jqe stays on the ladder one level below.':
+    'AB-JChess 再次成为 Mistboard 上最强的[揭棋](/rules/jieqi)电脑。Huorongrong 和 Laoxu（Kouza）开发的新版本 AB-JChess-20261031，在 600 盘比赛中战胜了 10 月从它手中夺走榜首的 jqe。jqe 仍留在电脑阶梯上，排在它下面一级。',
+  'AB-JChess-20261031 against jqe 0.1.0. Both engines are still being developed, so a later release of either may score differently.':
+    'AB-JChess-20261031 对 jqe 0.1.0。两个引擎都还在开发中，任何一方的后续版本都可能得出不同的结果。',
+  'The result': '比赛结果',
+  "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out.":
+    '这 600 盘棋来自 300 组暗子布局，每组红黑互换各下一次，用 4 个线程，每步 4 秒。和 jqe 对上一版 AB-JChess 的比赛一样，我们的裁判程序把任何三次重复局面，以及双方各连续 60 步无吃子，都判为和棋。暗子被吃时，裁判程序会向两个引擎公开它是什么；在 Mistboard 上，只有吃子方才会知道。',
+  'AB-JChess': 'AB-JChess',
+  'Won-drawn-lost': '胜-和-负',
+  'All 600 games': '全部 600 盘',
+  'With Red': '执红',
+  'With Black': '执黑',
+  "Almost all of AB-JChess's edge came with Red. Over the match it comes to about +46 Elo, with a 95% range of +23 to +69. Scored by Mistboard's own repetition rule it would be about +41, as explained below.":
+    'AB-JChess 的优势几乎全部来自执红的对局。整场比赛约合 +46 Elo，95% 区间为 +23 to +69。按 Mistboard 自己的重复局面规则计分则约为 +41，下文会说明。',
+  'Five games, read by both engines': '用两个引擎解读五盘棋',
+  'How to read these games': '如何查看这些对局',
+  "Each board opens on a move where the engines disagreed, played by the side that went on to lose or draw. Wherever the two would have played different moves, a blue arrow shows AB-JChess's choice and an orange one jqe's. The graph under the board is the winning side's chance by each engine at match settings, AB-JChess in teal and jqe in orange, and the comments in the move list say where the game turned and what each engine expected. A die beside a reveal grades its luck from what both players could see; [the study](/study/SwSUugEY) has all six games.":
+    '每个棋盘都从两个引擎意见不同的一步开始，走这步棋的一方最终输棋或和棋。只要两个引擎选择的着法不同，蓝色箭头就表示 AB-JChess 的选择，橙色箭头表示 jqe 的选择。棋盘下方的曲线是两个引擎按比赛设置评估的胜方胜率，AB-JChess 用青绿色，jqe 用橙色；着法列表中的注释说明局势在哪里转变，以及各引擎当时的预期。翻子旁的骰子根据双方可见的信息，为这次翻子的运气评分；[研究](/study/SwSUugEY)中收录了全部六盘棋。',
+  'AB-JChess wins game 1: one soldier push loses the endgame':
+    '第 1 盘 AB-JChess 获胜：一步进兵输掉残局',
+  'Move 82. jqe (Red) pushes a soldier from d5 to d6. AB-JChess would move the horse from e6 to c5.':
+    '第 82 回合。jqe（红方）把兵从 d5 进到 d6。AB-JChess 会把马从 e6 走到 c5。',
+  'jqe vs AB-JChess, move 82': 'jqe 对 AB-JChess，第 82 回合',
+  "Every piece is face up and the game is level. jqe (Red) pushes a soldier, where AB-JChess would give its horse for Black's advisor. AB-JChess sees at once that the push lets Black's cannon swing over and attack Red's general; jqe sees it only eight moves later. Black wins on move 103, when Red has no legal move. Why did jqe push? Not for lack of time: with 16 times the search it still picks the push and still calls the game a dead draw. It misjudged the position rather than missing a move. AB-JChess, with its chase rule off and the same extra search, still sees the push lose.":
+    '所有棋子都已翻开，局面均衡。jqe（红方）选择进兵，AB-JChess 则会用马换掉黑方的士。AB-JChess 立刻看出，进兵会让黑炮转到另一侧攻击红帅；jqe 八个回合后才看出来。第 103 回合，红方无合法着法，黑方获胜。jqe 为什么进兵？时间不够并不是原因：把搜索量增至 16 倍，它仍选择进兵，仍判断为必和。它对局面的判断有误，并非漏算了某步棋。AB-JChess 关闭长捉规则，并增加同样的搜索量后，仍能看出进兵会输。',
+  'AB-JChess wins game 2: a reveal decides it': '第 2 盘 AB-JChess 获胜：翻子决定胜负',
+  "Move 25. jqe (Black) brings its chariot home from h1 to h7. AB-JChess would keep it on Red's back rank, at g1.":
+    '第 25 回合。jqe（黑方）把车从 h1 撤回 h7。AB-JChess 会把车留在红方底线的 g1。',
+  'AB-JChess vs jqe, move 25': 'AB-JChess 对 jqe，第 25 回合',
+  "Black's chariot has raided Red's back rank. jqe brings it home; AB-JChess would leave it there. Two later moves decide it: on move 35 Red turns over a soldier and both engines call the game even, and on move 36 Red takes a hidden piece and both have Red winning. Red wins on move 66. Both engines saw those two moves the same way, so this game does not tell us which was right about the chariot.":
+    '黑车已经进入红方底线。jqe 把它撤回，AB-JChess 则会让它留下。后来的两步棋决定了胜负：第 35 回合红方翻出兵，两个引擎都认为局面均衡；第 36 回合红方暗吃一子，两个引擎都认为红方已是胜势。红方在第 66 回合获胜。两个引擎对这两步的判断相同，所以这盘棋无法说明它们对车的处理谁对谁错。',
+  "AB-JChess wins game 3: jqe's cannon starts a losing run of trades":
+    '第 3 盘 AB-JChess 获胜：jqe 走炮引出一连串不利的兑子',
+  'Move 15. jqe (Black) moves its cannon from e4 to e6. AB-JChess would move the horse from d6 to f5.':
+    '第 15 回合。jqe（黑方）把炮从 e4 走到 e6。AB-JChess 会把马从 d6 走到 f5。',
+  'AB-JChess vs jqe, move 15': 'AB-JChess 对 jqe，第 15 回合',
+  "Red is ahead after its cannon took a hidden piece on move 14. jqe's cannon move starts a run of trades: Black gives a soldier and its horse for an elephant and an advisor. AB-JChess thinks the trades are bad for Black; jqe thinks they are fine and only agrees two moves later. Red wins on move 72. Three hidden pieces turned over in a row helped change jqe's mind, so this example is weaker than game 1.":
+    '红方在第 14 回合用炮暗吃一子后占优。jqe 走炮，引出一连串兑子：黑方用卒和马换掉红方的相和仕。AB-JChess 认为这些兑子对黑方不利，jqe 却认为没有问题，两个回合后才同意 AB-JChess 的判断。红方在第 72 回合获胜。连续三次翻子促使 jqe 改变判断，所以这个例子的说服力不如第 1 盘。',
+  'jqe wins game 4: two reveals go wrong for AB-JChess': '第 4 盘 jqe 获胜：AB-JChess 两次翻子不利',
+  'Move 14. AB-JChess (Red) moves its cannon from h6 to h9. jqe would turn over the piece on h1 by moving it to f2.':
+    '第 14 回合。AB-JChess（红方）把炮从 h6 走到 h9。jqe 会把 h1 的暗子走到 f2 翻开。',
+  'AB-JChess vs jqe, move 14': 'AB-JChess 对 jqe，第 14 回合',
+  "Many pieces are still hidden, and jqe already thinks Black is better. AB-JChess makes a quiet cannon move where jqe would turn over a hidden piece, and neither engine can see past a reveal, so we can't say who was right. Luck decides it: AB-JChess turns over a soldier on move 19, then a chariot that Black's cannon takes at once. Black wins on move 30.":
+    '棋盘上还有很多暗子，jqe 已经认为黑方占优。AB-JChess 走了一步没有直接威胁的炮棋，jqe 则会翻子。两个引擎都无法看清翻子后的走向，所以无法判断谁对。运气决定了胜负：AB-JChess 在第 19 回合翻出兵，随后又翻出车，立刻被黑炮吃掉。黑方在第 30 回合获胜。',
+  'Game 5 is drawn: AB-JChess has it won and repeats':
+    '第 5 盘和棋：AB-JChess 已是胜势，却走成重复局面',
+  'Move 39. jqe (Red) moves a chariot from f3 to d3. AB-JChess would move the other chariot from a10 to f10.':
+    '第 39 回合。jqe（红方）把车从 f3 走到 d3。AB-JChess 会把另一辆车从 a10 走到 f10。',
+  'jqe vs AB-JChess, move 39': 'jqe 对 AB-JChess，第 39 回合',
+  "Red is far ahead for most of the game, but Black slowly comes back. After Red turns over a soldier on move 50, AB-JChess thinks Black is winning. Then Red's chariot and Black's elephant move back and forth until the same position comes up three times, and the game is drawn. AB-JChess did not see the repetition coming, because in the match each engine was given only the current position, not the moves before it.":
+    '红方在这盘棋的大部分时间里都大幅领先，但黑方逐渐追了回来。第 50 回合红方翻出兵后，AB-JChess 认为黑方已是胜势。随后红车和黑象来回移动，同一局面出现三次，比赛判为和棋。AB-JChess 没有预见到重复局面，因为比赛只向每个引擎提供当前局面，没有提供此前的着法。',
+  "Game one's eight moves is the long end; in the other four the lag was two or three. Across the match, counting from the move where each engine's own scores gave the winner 70% for good, the two were within a move of each other in 232 of AB-JChess's 304 wins, and where one was later it was jqe in 119 and AB-JChess in 72. In jqe's 227 wins each was later about as often, AB-JChess in 76 and jqe in 75.":
+    '第 1 盘相差八个回合，是较长的情况，另外四盘只差两三个回合。纵观整场比赛，以每个引擎自己的评分开始持续给最终胜方至少 70% 胜率的回合为起点比较，AB-JChess 的 304 盘胜局中，有 232 盘两个引擎相差不超过一个回合；判断有先后时，较晚的是 jqe 的有 119 盘，是 AB-JChess 的有 72 盘。在 jqe 的 227 盘胜局中，两者判断较晚的次数接近，AB-JChess 有 76 盘，jqe 有 75 盘。',
+  'How their play differs': '它们的下法有何不同',
+  'jqe overrates a small edge': 'jqe 高估了小幅优势',
+  'When jqe scored its own position as a small edge, it won less often from there than AB-JChess did from the same score.':
+    'jqe 认为自己略占优势时，最终赢棋的比例低于 AB-JChess 给出相同评分时的比例。',
+  'Small edge (+50 to +150), moves 6 to 30': '小幅优势（+50 to +150），第 6 到第 30 回合',
+  jqe: 'jqe',
+  'Went on to score': '最终得分率',
+  'jqe takes more face-down pieces, win or lose': '无论输赢，jqe 都暗吃更多棋子',
+  'Both take more in the games they win, so the table splits by result.':
+    '两个引擎在赢棋时都暗吃得更多，因此表格按比赛结果分组。',
+  'Face-down pieces taken a game': '每盘暗吃子数',
+  'In games it won': '胜局中',
+  'In games it drew': '和局中',
+  'In games it lost': '负局中',
+  "It costs jqe nothing we can measure. In close positions, its winning chance one move after a face-down capture fell 1.7 points on average and AB-JChess's 0.7, a gap smaller than the noise in the sample.":
+    '我们没有测出这给 jqe 带来什么损失。在接近均衡的局面中，暗吃后再走一步，jqe 的胜率平均下降 1.7 个百分点，AB-JChess 下降 0.7 个百分点，这一差距小于样本中的随机波动。',
+  'What the match tells us': '这场比赛说明了什么',
+  'Half the deals decided themselves': '一半暗子布局本身就决定了胜负',
+  "Each deal was played twice with the colours swapped. In 147 of the 300 deals the same colour won both games, Red in 93 and Black in 54, so whichever engine had that side, the deal decided it. AB-JChess's edge comes from the rest: it won both games of a deal 56 times, and jqe did 34 times.":
+    '每组暗子布局都红黑互换下了两盘。在 300 组布局中，有 147 组是同一颜色两盘都赢，其中红方 93 组，黑方 54 组，也就是说，无论哪个引擎执这一方，胜负都由布局决定。AB-JChess 的优势来自其余布局：同一组布局的两盘都赢，它做到了 56 次，jqe 做到了 34 次。',
+  "AB-JChess's edge is judgement, not depth": 'AB-JChess 的优势在于判断，而非搜索深度',
+  "jqe was the later of the two to see the result in AB-JChess's wins, while in jqe's wins neither engine was. In game 1 jqe still called a lost endgame a dead draw with 16 times the search, and when it scored itself a small edge it went on to score less than AB-JChess did from the same score. Both point the same way: jqe's mistakes are in how it values quiet positions and trades, not in how far it looks. Neither engine searches past a reveal, so turning a piece over stays a guess for both, as in game 4.":
+    '在 AB-JChess 的胜局中，jqe 判断出结果较晚；而在 jqe 的胜局中，两个引擎没有谁明显更晚。第 1 盘里，把搜索量增至 16 倍后，jqe 仍把必输残局判断为必和；它认为自己略占优势时，最终得分也低于 AB-JChess 给出相同评分时的得分。两者都说明：jqe 的问题在于如何评估平静局面和兑子，而非搜索得不够远。两个引擎都不会搜索翻子之后的着法，所以对双方而言，翻子都仍需猜测，第 4 盘就是如此。',
+  "Most draws were not draws by Mistboard's rules": '按 Mistboard 的规则，大部分和棋都不该判和',
+  "Our referee drew every threefold repetition. Mistboard does not: a side that gives check on every move of the repetition loses. In 42 of the 67 draws one side did that, and in 40 of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won 323, drew 25 and lost 252, about +41 Elo with a 95% range of +17 to +66. The +46 above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.":
+    '我们的裁判程序把所有三次重复局面都判为和棋。Mistboard 则将重复过程中每一步都将军的一方判负。67 盘和棋中，有 42 盘是一方长将，其中 40 盘两个引擎都已认为另一方是胜势，持续将军成了劣势方避免输棋的办法。按 Mistboard 的规则计分，AB-JChess 赢 323 盘，和 25 盘，输 252 盘，约合 +41 Elo，95% 区间为 +17 to +66。上面的 +46 保留了裁判程序的规则，和 jqe 对上一版 AB-JChess 的比赛相同，便于比较两场比赛。',
+  "Of the 25 games that stay drawn, 9 were won for one side by both engines' scores and repeated anyway, 8 of them for AB-JChess. That is the blindness game 5 showed: in the match each engine saw only the current position, so it could not see a repetition coming. On Mistboard the bots are sent the moves since the last capture or reveal, so they do see it.":
+    '仍判和棋的 25 盘中，有 9 盘两个引擎都认为一方已是胜势，却仍走成了重复局面，其中 8 盘是 AB-JChess 占胜势。这正是第 5 盘暴露的问题：比赛中每个引擎只能看到当前局面，无法预见重复。Mistboard 会向电脑发送自上次吃子或翻子以来的着法，所以它们能够发现重复局面。',
+  "The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matches Mistboard's. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.":
+    '两个引擎还各自带有长捉规则，也就是一方持续攻击同一棋子所形成的重复局面的规则，两者都与 Mistboard 不同。jqe 将重复过程中每一步都捉同一棋子的一方判负。AB-JChess 则只要一方有任何一步捉子，而另一方从未捉子，就将前者判负。',
+  "Move 51. AB-JChess (Red) moves its chariot from c9 to c3, attacking Black's horse on a3. jqe would move it to f9.":
+    '第 51 回合。AB-JChess（红方）把车从 c9 走到 c3，攻击 a3 的黑马。jqe 会把车走到 f9。',
+  'AB-JChess vs jqe, move 51': 'AB-JChess 对 jqe，第 51 回合',
+  "Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black 72% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard draws a chase, so jqe was counting on a rule the game is not played under. Step through the board for both engines' rules searched on and off.":
+    '此后红车每走一步都攻击黑马。按 jqe 的规则红方判负，所以 jqe 直到终局都给黑方至少 72% 的胜率；按 AB-JChess 的规则，黑马也在反捉，因此它判断为和棋。Mistboard 对长捉判和，所以 jqe 依赖的是本站对局并不采用的规则。逐步查看棋盘，可以比较两个引擎开启和关闭各自规则时的搜索结果。',
+  'A smaller network, a faster search': '神经网络更小，搜索更快',
+  "The new release is rebuilt on [jqe's code](https://github.com/devinokeefe/jieqi), which Devin O'Keefe published under the MIT licence, with a network of its own. That network is 0.6 MB, where the last release's was 144 MB and jqe's is 1.5 MB. A small network is quick to run, so the new release looks at about 65 times as many positions a second as the last one, a little more than jqe.":
+    "新版本基于 Devin O'Keefe 以 MIT 许可证发布的 [jqe 代码](https://github.com/devinokeefe/jieqi)重建，使用自己的神经网络。这个网络是 0.6 MB，上一版是 144 MB，jqe 的是 1.5 MB。小网络运行得快，所以新版本每秒查看的局面数约为上一版的 65 倍，也比 jqe 略多。",
+  'In 4 seconds each engine searches about 22 million positions. To see whether either was short of time, each one searched its own moves from 20 of the games again with twice that. AB-JChess would have changed its move 20% of the time and jqe 18%, and the change was worth 0.07 points of winning chance a move to each. A change worth 5 points or more came up once in 754 moves for AB-JChess and once in 750 for jqe. More time would help both a little and neither more than the other.':
+    '每个引擎在 4 秒内搜索约 22 百万个局面。为检验它们是否时间不足，我们让各引擎用两倍搜索量，重新搜索 20 盘棋中自己走过的着法。AB-JChess 会在 20% 的时候改走别的棋，jqe 则是 18%，对两者而言，每步改动平均都只增加 0.07 个百分点的胜率。提高至少 5 个百分点的改动，AB-JChess 在 754 步中出现一次，jqe 在 750 步中出现一次。更多时间对双方都有一点帮助，帮助的程度也相近。',
+  'Game review': '复盘',
+  'Game review for jieqi runs on AB-JChess, so new reviews use the new release. On our server it searches about 47 times as many positions a second as the old one, so a review looks further in the same time.':
+    '揭棋复盘使用 AB-JChess，因此新复盘会采用新版本。在我们的服务器上，它每秒搜索的局面数约为旧版的 47 倍，同样时间里复盘能看得更远。',
+  "The score in a review is the engine's own number, and each network counts on its own scale. The old network's scale was steep: +1.1 already meant a 75% chance. The new one counts on about the same scale as jqe, where 75% is +4.1. So the same position now shows a bigger number, and we fitted the new network's winning chances on 9,776 positions from this match. Old reviews keep the old numbers, so compare an old review with a new one by winning chance, not by the score.":
+    '复盘中的评分是引擎自己的数值，每个神经网络的尺度不同。旧网络的尺度很陡：+1.1 就已表示 75% 的胜率。新网络的尺度与 jqe 接近，75% 对应 +4.1。所以同一局面现在会显示更大的数值，我们用这场比赛中的 9,776 个局面拟合了新网络的胜率。旧复盘保留旧数值，因此比较新旧复盘时，要看胜率，不要直接比较评分。',
+  "AB-JChess is open source under the GPL-3.0 licence at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). The network is downloaded from the authors' own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu (Kouza). Laoxu trains AB-JChess's networks and, for this release, tested four ways of searching a reveal and kept the best; he and Huorongrong worked out together the small, fast network it plays with. And thank you, Devin O'Keefe, for the code the new release stands on.":
+    "AB-JChess 以 GPL-3.0 许可证开源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。每次构建网站时，神经网络都从作者自己的发布版本下载，我们不另行托管。感谢 Huorongrong 和 Laoxu（Kouza）。Laoxu 负责训练 AB-JChess 的神经网络，这次测试了四种翻子搜索方法，保留了最好的一种；他与 Huorongrong 共同设计了这个小而快的网络。也感谢 Devin O'Keefe，新版本基于他提供的代码开发。",
+  'TOP BOT AGAIN': '重回最强电脑',
 };
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
+  'Gomoku Rules': '五子棋規則',
+  'Gomoku board': '五子棋棋盤',
+  'Five in a row wins': '連五獲勝',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作殺, 薩姆·勞埃德, 著法, 搜尋, 電腦); 迷霧國際象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我們所知最短的象棋困斃',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
@@ -7283,11 +7411,11 @@ const ZH_HANT: Record<string, string> = {
     '用縮寫拼成的鍵需要一項檢查，而這項檢查從任何單個縮寫上都看不出來：沒有兩個名字縮寫成同一個東西。手寫的字母表在有人為車選定 `r` 的那一刻，就做了這項檢查。`role[0]` 從來沒有做過。',
   // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
   'Flip Jungle: 512 times the search still loses 23% of games':
-    '翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',
+    '翻翻獸棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',
   'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
-    '翻翻棋是所有動物都蓋著的 4×4 鬥獸棋。一個近乎完美的引擎能測出翻棋之後還剩多少棋力：512 倍的搜尋量大約只換來 242 Elo，而且仍會輸掉 23% 的對局。',
+    '翻翻獸棋是所有動物都蓋著的 4×4 鬥獸棋。一個近乎完美的引擎能測出翻棋之後還剩多少棋力：512 倍的搜尋量大約只換來 242 Elo，而且仍會輸掉 23% 的對局。',
   '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
-    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盤上進行的鬥獸棋，十六隻動物開局時全都蓋著。輪到你時，可以翻開一張棋子，隨機揭示一隻動物，或者把一隻已翻開的動物走一格。本站的電腦 MistyJungleFlip 在能精確核對的殘局中，選出最優著法的比例為 99% 到 100%。這讓它成了一件測量儀器，用來回答每種翻棋遊戲都會引出的問題：一盤棋裡有多少是棋力，多少是翻棋？',
+    '[翻翻獸棋](/rules/jungle-flip)是在 4×4 棋盤上進行的鬥獸棋，十六隻動物開局時全都蓋著。輪到你時，可以翻開一張棋子，隨機揭示一隻動物，或者把一隻已翻開的動物走一格。本站的電腦 MistyJungleFlip 在能精確核對的殘局中，選出最優著法的比例為 99% 到 100%。這讓它成了一件測量儀器，用來回答每種翻棋遊戲都會引出的問題：一盤棋裡有多少是棋力，多少是翻棋？',
   'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
     '比感覺上要少。搜尋量多 512 倍的引擎副本，對上較弱的那一個，仍會輸掉 23% 的對局。',
   Measure: '測量項',
@@ -7352,21 +7480,21 @@ const ZH_HANT: Record<string, string> = {
     '最初的表裡沒有距離這一欄。它們只存勝、和、負，這足以給著法評分，卻不足以收官。在一盤自我對弈中，引擎有一虎一鼠對孤象，按表是必勝（鼠三著內困住象，因為象不能吃鼠）。連續八回合，它走出按表評為最優的著法，卻毫無進展，因為每一步取勝著法得分相同，直到重複規則判為和棋。存入距離後，3 著取勝優於 9 著取勝：引擎選最短的必勝路線，並把必敗局面盡量拖長，那個殘局以鼠三著吃象告終。國際象棋的殘局庫，例如 Syzygy，附帶距離也是同樣的原因。',
   'Skill shows in the average, not the game': '棋力體現在平均值上，而不在單局上',
   'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
-    '翻翻棋裡棋力是真實存在的：242 Elo 的階梯是真實差距，在長期對抗中更強的引擎會贏。但發牌和翻棋決定了任一局中相當大的一部分，所以哪怕強得多的棋手也常常落敗，一局結果幾乎說明不了誰更強。還缺的測量是對強人類棋手的等級分，這是唯一不依賴引擎或其求解器的檢驗。',
+    '翻翻獸棋裡棋力是真實存在的：242 Elo 的階梯是真實差距，在長期對抗中更強的引擎會贏。但發牌和翻棋決定了任一局中相當大的一部分，所以哪怕強得多的棋手也常常落敗，一局結果幾乎說明不了誰更強。還缺的測量是對強人類棋手的等級分，這是唯一不依賴引擎或其求解器的檢驗。',
   'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
     '本站的[對局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和運氣，讓你看清自己的對局裡哪部分是哪一種。規則頁上的[二十盤引擎對局](/study/uKxJ60mN)是電腦自我對弈，引擎原始碼在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
   'Play MistyJungleFlip': '與 MistyJungleFlip 對弈',
-  'Flip Jungle rules': '翻翻棋規則',
-  'FLIP JUNGLE': '翻翻棋',
+  'Flip Jungle rules': '翻翻獸棋規則',
+  'FLIP JUNGLE': '翻翻獸棋',
   'SKILL CEILING': '棋力上限',
   '512× THE SEARCH, 23% LOST': '512 倍搜尋，仍輸 23%',
   'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
-    '翻翻棋的棋力與運氣：搜尋量多 512 倍，仍輸 23% 的對局',
-  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+    '翻翻獸棋的棋力與運氣：搜尋量多 512 倍，仍輸 23% 的對局',
+  "Flip Jungle's skill ceiling": '翻翻獸棋的棋力上限',
   'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
-    '翻棋遊戲裡有多少由翻棋決定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了測量：搜尋量多 512 倍的引擎，仍會輸掉 23% 的對局。',
+    '翻棋遊戲裡有多少由翻棋決定，[翻翻獸棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了測量：搜尋量多 512 倍的引擎，仍會輸掉 23% 的對局。',
   'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
-    '電腦有多強，翻棋又決定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
+    '電腦有多強，翻棋又決定了多少？[翻翻獸棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
   'Misty has no idea of a den race': 'Misty 不懂衝獸穴競速',
   // katago-jungle den paragraph, cut 2026-10-16 to link /blog/jungle-den-term: machine-drafted, not native-reviewed.
   'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den, so it learns who wins a den race only when the search reaches the den. In August we tried three ways to teach it, and none helped once the search budget was held fixed; races decide only 4.7% of games at full strength. [Teaching our Jungle Chess engine the den race](/blog/jungle-den-term) has the matches, and a game where depth found the race on its own.':
@@ -7656,6 +7784,7 @@ const ZH_HANT: Record<string, string> = {
   'Multi-solution puzzles': '有不止一個答案的題目',
   'Skill vs. Luck in Flip Games': '把翻子棋的實力和運氣分開',
   'Duck Xiangqi Strategy': '鴨子象棋攻略',
+  'AB-JChess retakes the jieqi title': 'AB-JChess 奪回揭棋榜首',
   'Xiangqi Antichess Is a Draw': '象棋棋盤上的反棋是和棋',
   'How MistyBanqi Plays': 'MistyBanqi 是怎麼下棋的',
   'Horde on the Xiangqi Board': '象棋棋盤上的部落棋',
@@ -7828,7 +7957,7 @@ const ZH_HANT: Record<string, string> = {
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
-  // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻棋, 堡壘象棋).
+  // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻獸棋, 堡壘象棋).
   '1,000 games played': '已下完 1,000 盤棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盤對局',
   'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
@@ -7841,7 +7970,7 @@ const ZH_HANT: Record<string, string> = {
   'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
     '6 月只有 12 盤。9 月已經有近 800 盤，光是 9 月 21 日那一週就有 387 盤。[統計頁面](/stats)會持續更新計數。',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
-    '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻獸棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
   'Thank you': '感謝',
   'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
     '感謝每一位來下過棋、回報過問題，或者成為[贊助會員](/patron)支持網站的朋友。我們要把這裡做成下象棋和原創棋類遊戲最好的地方，免費並且[開源](https://github.com/brianhliou/mistboard)。',
@@ -9283,11 +9412,17 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
+  'Corrected the no-capture draw limit to 120 plies, or 60 moves by each player. Older games keep their original rule.':
+    '已將無吃子和棋上限更正為 120 個半回合，即雙方各走 60 步。舊對局仍採用原規則。',
+  'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
+    '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
+  'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
+    '澄清爆炸象棋仍採用 60 個半回合的無吃子上限，而普通象棋採用 120 個半回合。',
   Repetition: '重複局面',
   'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
     '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有將軍，則判和。',
-  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
-    '正式比賽規則更進一步，還禁止長捉對方無根的棋子。Mistboard 不判定長捉，因此重複的捉子按和棋計。連續 60 個半回合沒有吃子，也判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. New games are also drawn after 120 consecutive plies without a capture, or 60 moves by each player. Games started before this correction keep their original 60-ply limit.':
+    '正式比賽規則更進一步，還禁止長捉對方無根的棋子。Mistboard 不判定長捉，因此重複的捉子按和棋計。新對局連續 120 個半回合沒有吃子，即雙方各走 60 步，也判和。此次更正前開始的對局仍採用原來的 60 個半回合上限。',
   'Mistakes chess players make': '西洋棋棋手常犯的錯誤',
   'Habit from chess': '西洋棋的習慣',
   'What happens in xiangqi': '在象棋裡的結果',
@@ -9700,9 +9835,9 @@ const ZH_HANT: Record<string, string> = {
     '鬥獸棋在網上已經玩了很多年，大多在手機應用和中文遊戲平台上。但等級分對局、賽後覆盤，以及一台能告訴你哪一步走錯的引擎，一直沒有跟上。真正認真的鬥獸棋引擎研究留在學術論文和殘局庫裡，沒有落在任何能實際對弈的地方。Mistboard 把這三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '鬥獸棋是一種圍繞等級與地形展開的雙人策略遊戲。雙方各指揮八種動物，目標是進入敵方獸穴或消滅敵方全部棋子。',
-  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋規則：玩法詳解與免費線上對弈',
+  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻獸棋規則：玩法詳解與免費線上對弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
-    '鬥獸棋的 4×4 翻面版本，又稱翻翻棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
+    '鬥獸棋的 4×4 翻面版本，又稱翻翻獸棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋規則：玩法詳解與免費線上對弈',
   'Ranks and captures': '等級與吃子',
   'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank.':
@@ -9738,7 +9873,7 @@ const ZH_HANT: Record<string, string> = {
   'The tiger moves exactly like the lion: one land square, or a leap straight across a river lengthwise or sideways, landing on the first square past the water. A rat of either color on any water square in the path blocks either animal’s jump.':
     '虎的走法與獅完全相同：在陸地上走一格，或者縱向、橫向直線跳過河流，落在河對岸的第一格。路徑上任何水格裡只要有一隻任意顏色的鼠，就會阻止兩種動物跳躍。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
-    '翻翻棋是[鬥獸棋](/rules/jungle)的緊湊型隱藏棋子變體。十六枚動物棋子全部背面朝上放在 4×4 棋盤上。這裡沒有河流、獸穴或陷阱：翻開棋子、移動動物，並消滅另一種顏色。',
+    '翻翻獸棋是[鬥獸棋](/rules/jungle)的緊湊型隱藏棋子變體。十六枚動物棋子全部背面朝上放在 4×4 棋盤上。這裡沒有河流、獸穴或陷阱：翻開棋子、移動動物，並消滅另一種顏色。',
   'CAPTURED PIECE KNOWLEDGE': '被吃暗子資訊',
   General: '將',
   Advisor: '士',
@@ -9796,9 +9931,9 @@ const ZH_HANT: Record<string, string> = {
   'Separating Skill from Luck in Flip Games': '把翻子棋的實力和運氣分開',
   // The seoTitle, which names the three variants where the on-page title does not.
   'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
-    '暗棋、揭棋和翻翻棋的對局複盤：實力與運氣',
+    '暗棋、揭棋和翻翻獸棋的對局複盤：實力與運氣',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
-    '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
+    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
     'Mistboard 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
@@ -9808,7 +9943,7 @@ const ZH_HANT: Record<string, string> = {
   'Most game review tools cannot say any of that.': '大多數覆盤工具一句都說不出來。',
   'A flip is a decision plus a dice roll': '翻子是一次決策加一次擲骰',
   'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is. Jieqi’s reveals and flip jungle’s flips are the same problem wearing different pieces; banqi is the worked example throughout because its bag is the purest.':
-    '暗棋裡一半的著法是翻開一枚背面朝下的棋子。一步棋，兩件事：選哪枚翻，以及翻出來是什麼。揭棋的揭子和翻翻棋的翻子是同一個問題換了棋子；全文用暗棋做例子，因為它的隨機性最純粹。',
+    '暗棋裡一半的著法是翻開一枚背面朝下的棋子。一步棋，兩件事：選哪枚翻，以及翻出來是什麼。揭棋的揭子和翻翻獸棋的翻子是同一個問題換了棋子；全文用暗棋做例子，因為它的隨機性最純粹。',
   'A chess-style review grades the swing of the whole move. Flip the corner tile, find the enemy general, and the review calls it a blunder. It was a bad tile, not a bad decision.':
     '照搬國際象棋的覆盤會給整步棋的勝率波動打分。翻開角落那枚棋，翻出對方的將，覆盤就記你一個漏著。可那是一枚壞棋子，不是一個壞決策。',
   'This is why banqi reviews on Mistboard show no centipawn loss: it cannot be separated from the tiles, so next to numbers that can be, it reads as noise.':
@@ -9880,7 +10015,7 @@ const ZH_HANT: Record<string, string> = {
     '引擎更強，贏它通常都借了棋子的力。如果你贏過它，現在覆盤會告訴你借了多少。',
   'Jieqi rolls different dice': '揭棋擲的是另一種骰子',
   'Jieqi gets the same treatment with a different pool. A jieqi reveal draws from your own remaining dark pieces, so you know the color and not the piece. A banqi tile is dark to both players, color included. Different bags, same arithmetic, and jungle’s flip variant makes a third. Every one of them gets the dashed line.':
-    '揭棋用同一套辦法，只是抽取的範圍不同。揭棋的揭子從你自己剩餘的暗子裡抽，所以你知道顏色，不知道身份。暗棋的棋子對雙方都是暗的，連顏色也是。範圍不同，演算法相同，鬥獸棋的翻棋版本（翻翻棋）是第三家。它們每一個都有那條虛線。',
+    '揭棋用同一套辦法，只是抽取的範圍不同。揭棋的揭子從你自己剩餘的暗子裡抽，所以你知道顏色，不知道身份。暗棋的棋子對雙方都是暗的，連顏色也是。範圍不同，演算法相同，鬥獸棋的翻棋版本（翻翻獸棋）是第三家。它們每一個都有那條虛線。',
   'For the builders': '寫給實現者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
     '三個選擇讓這些數字保持誠實。第一，**反事實不能改變剩下棋子的構成**。把翻開的格子從卒改標成炮，你就悄悄往棋局裡加了一枚炮、拿走了一枚卒，局面因此偏移兩枚棋子的分量，平均值也被抬高。所以實現裡用的是交換：讓反事實身份和一個確實藏著這枚棋的背面格子對調，隱藏棋子的集合始終恰好等於這盤棋的集合。',
@@ -9895,12 +10030,12 @@ const ZH_HANT: Record<string, string> = {
     '還有一條誠實的邊界：逐點扣除運氣，等於把勝率當成線性的，而它並不是線性的。方向可信。小數點後第二位不可信。',
   'Try it on your own games': '拿你自己的棋試試',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
-    '在 Mistboard 開啟任何一盤下完的暗棋、揭棋或翻翻棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。',
+    '在 Mistboard 開啟任何一盤下完的暗棋、揭棋或翻翻獸棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。',
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有時它承認你是被搶了。有時它把你的勝利收走。在對我舊棋的一輪掃描裡，這兩件事它都做了。',
   'Play Banqi': '下暗棋',
   'Play Jieqi': '下揭棋',
-  'Play Jungle Flip': '下翻翻棋',
+  'Play Jungle Flip': '下翻翻獸棋',
   // riverbank-cannon (drafted 2026-08-23; machine battery applied, native read pending)
   'The Riverbank Cannon Problem': '巡河炮問題',
   'Fog Xiangqi Opening Theory: The Riverbank Cannon': '迷霧象棋開局理論：巡河炮',
@@ -11433,8 +11568,8 @@ const ZH_HANT: Record<string, string> = {
   'The terminal rules': '終局規則',
   'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
     '這裡有三種讓棋局無勝負而終止的方式，它們並不是一回事。**重複局面**：同一局面、同一方行棋出現三次；判和。**步數限制**：連續若干步無吃子，60 步或 120 步；判和，而且兵向前一步並不重置計數。**上限**：測試框架在 400、1,000 或 2,000 步處終止對局。這不是棋規，所以被截斷的對局是未下完，而不是和棋。有三局一百萬節點的老兵對局撞上了 1,000 步上限，隨後繼續下到步數限制終止；而四檔預算的對局沒有一局到過 2,000 步，因此表格裡的每個結果都屬於前兩種。',
-  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
-    '**步數限制。**象棋的無吃子規則是 60 步。用標準兵時，48 局裡只觸發過一次。用老兵時它是常見的收束：37 和裡有 30 局如此，另外七局是重複局面。設成 60 步會在行軍還在進行時截斷還活著的棋局，所以老兵對局和每一組四局樣本都用 120 步。步數限制同時也是引擎遵循的規則，所以 60 步限制下的一局和 120 步限制下的一局，從第 2 步起就是兩局不同的棋，而不是同一局在不同處被截斷。',
+  '**The clock.** These experiments used a 60-ply no-capture clock. Standard xiangqi uses 120 plies, or 60 moves by each player. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步數限制。**這些實驗採用 60 步的無吃子限制。普通象棋採用 120 個半回合，即雙方各走 60 步。用標準兵時，48 局裡只觸發過一次。用老兵時它是常見的收束：37 和裡有 30 局如此，另外七局是重複局面。設成 60 步會在行軍還在進行時截斷還活著的棋局，所以老兵對局和每一組四局樣本都用 120 步。步數限制同時也是引擎遵循的規則，所以 60 步限制下的一局和 120 步限制下的一局，從第 2 步起就是兩局不同的棋，而不是同一局在不同處被截斷。',
   '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
     '**困斃。**按母版的規則，將無著可走又未被將判和棋。把實驗室裡的每局都按這條規則重新判定：老兵、實力相當條件下兵團的七勝裡有五勝變成和棋，標準兵的四勝裡有一勝變成和棋；對隨機走子的全軍，標準兵下兵團的 35 勝裡有 20 勝、老兵下 38 勝裡有 16 勝變成和棋；老兵預算階梯測試的十勝裡有五勝同樣如此。困斃大約佔了兵團勝法的一半，而母版的規則會把它拿掉。',
   'Why the soldier fails, and what a different soldier would need':
@@ -11558,8 +11693,8 @@ const ZH_HANT: Record<string, string> = {
     '沒有棋子攻擊黑將。黑方仍然處於被將軍狀態：車可以吃士，把將炸掉。黑方並不被迫應將，但在這種威脅下重複局面判將軍一方負，而不是和棋。',
   'You win by blowing up the enemy general, by checkmate, by leaving the opponent with no legal move, or when the opponent gives perpetual check in the wide sense above. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '炸掉對方將帥、將死對方、讓對方無子可動，或者對方按上面的寬泛定義長將，你都獲勝。對局也會因超時、認輸或棄局而結束，和這裡的其他對局一樣。',
-  'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
-    '兩條和棋規則。連續六十步無吃子判和，與這裡的象棋相同。同一局面第三次出現判和，除非一方在重複的循環裡每一步都在將軍：那一方判負，而 Mistboard 上的普通象棋會判和。如果雙方都在將軍，判和。',
+  'Two rules draw. Sixty consecutive plies without a capture is a draw. Standard xiangqi uses 120 plies; Atomic Xiangqi keeps its own 60-ply limit. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
+    '兩條和棋規則。連續六十步無吃子判和。普通象棋採用 120 個半回合；爆炸象棋仍採用自己的 60 個半回合上限。同一局面第三次出現判和，除非一方在重複的循環裡每一步都在將軍：那一方判負，而 Mistboard 上的普通象棋會判和。如果雙方都在將軍，判和。',
   'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.':
     '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
@@ -11810,7 +11945,7 @@ const ZH_HANT: Record<string, string> = {
   'Every finished xiangqi game on the site can be sent for review. Pikafish runs over it on the server, and the move list shows where the evaluation moved, what it preferred instead, and which moves lost the game. The post-game review chess players are used to, for xiangqi.':
     '站內每一盤下完的象棋都可以提交復盤。皮卡魚在伺服器上把整盤棋跑一遍，著法列表會顯示評估在哪裡發生了變化、它更傾向的走法，以及哪幾步輸掉了棋。西洋棋玩家習慣的那種賽後復盤，現在象棋也有。',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
-    '對暗棋、揭棋和翻棋鬥獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
+    '對暗棋、揭棋和翻翻獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行全強度的皮卡魚，帶官方權重，你分析的內容不會離開你的電腦。權重 51 MB，只需下載一次。',
   Questions: '常見問題',
@@ -11980,7 +12115,7 @@ const ZH_HANT: Record<string, string> = {
   // Rules-page study embeds, flip jungle (2026-09-25).
   'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
     'MistyJungleFlip 以本站電腦三倍的強度自我對弈。第一次翻出的是紅子，所以先手執紅。第 10 回合雙方的貓相遇並同歸於盡，第 24 回合紅方的老鼠吃掉了藍方的大象，第 28 回合雙方的獅子也同歸於盡，藍方隨即無子可走。紅方獲勝。',
-  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻獸棋：一盤引擎對局，紅方第 28 回合獲勝',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
   // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
@@ -12268,7 +12403,6 @@ const ZH_HANT: Record<string, string> = {
   'Replaced the sample game with a game played against the engine on the site.':
     '範例對局換成了一盤在本站與引擎下的對局。',
   'Added a sample game from the site.': '新增一盤本站的範例對局。',
-  'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
@@ -12302,8 +12436,6 @@ const ZH_HANT: Record<string, string> = {
     '每種佈陣各下四盤，分別為每步 150,000、200,000、300,000 和 500,000 節點，不用隨機開局。',
   'Node budgets, not time, so nothing depends on the machine.':
     '用節點預算而不是時間，所以結果不依賴機器。',
-  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
-    '新增完整記錄：十二種起始佈陣、兩張結果表、可逐步瀏覽的對局和檢驗過程，並對照範例對局更正了四個數字。',
   'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
     '我們自己用 Rust 寫的引擎（α-β 搜尋，帶後期著法縮減，以及針對轉化的靜態搜尋），因為現有引擎都不支援這套規則。',
   'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
@@ -12312,8 +12444,6 @@ const ZH_HANT: Record<string, string> = {
     '每盤引擎對局都經 Mistboard 的規則內核重播，每個局面的合法著法都一致。',
   'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
     '兩項不依賴引擎棋力的檢驗：6,000 盤隨機合法著法的對局，以及一次 208 億節點的證明搜尋。',
-  "Added the cannon rule's design history and the engine results behind the numbers.":
-    '新增炮規則的設計沿革，以及這些數字背後的引擎結果。',
   'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
     '點名另一個開源實作 obscuro-chess，不再稱 Misty 是唯一的開源實作。',
   // jqe: machine-drafted 2026-10-24, not native-reviewed, from the English signed off that day. Terms follow ab-jchess and pikafish-reveal-bug (暗子, 翻子, 暗吃, 界限, 勝率, 皮卡魚, 研究, 搜尋, 著法, 神經網路; 暗子佈局 for a deal).
@@ -12436,11 +12566,11 @@ const ZH_HANT: Record<string, string> = {
   'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
     'Mistboard 有九套棋子樣式：圖畫、漢字、卡通動物，以及五套傳統風格的美術棋子。在設定的「棋子」裡選擇。',
   'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
-    '棋子預設是平面的，可以在設定的「棋子」裡改成「立體」。立體適用於象棋、揭棋、暗棋和翻翻棋，「加厚」邊緣讓棋子的側邊更厚。',
+    '棋子預設是平面的，可以在設定的「棋子」裡改成「立體」。立體適用於象棋、揭棋、暗棋和翻翻獸棋，「加厚」邊緣讓棋子的側邊更厚。',
   'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
     '象棋棋盤可以是交叉點棋盤，棋子落在交叉點上；也可以是方格棋盤，棋子放在格子裡。在「棋盤」裡選擇。',
   'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
-    '暗棋、揭棋和翻翻棋裡的暗子翻開時會翻轉，立體棋子會立在側邊上轉過來。「速度」決定棋子移動和翻轉的快慢，選「關閉」就不播放動畫。',
+    '暗棋、揭棋和翻翻獸棋裡的暗子翻開時會翻轉，立體棋子會立在側邊上轉過來。「速度」決定棋子移動和翻轉的快慢，選「關閉」就不播放動畫。',
   'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
     'Mistboard 的象棋棋子有九套樣式，可以畫成平面或立體；象棋棋盤可以畫成交叉點棋盤或方格棋盤。棋子在螢幕上會移動和翻轉，河界也可以寫上傳統的名字。',
   'Nine piece sets': '九套棋子樣式',
@@ -12464,15 +12594,15 @@ const ZH_HANT: Record<string, string> = {
     '同一個象棋棋盤角落畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
   'Flat, 3D, and 3D with the Thick edge.': '平面、立體，以及「加厚」邊緣的立體。',
   'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
-    '有暗子的棋也能用這種樣式。在[揭棋](/rules/jieqi)裡，背面朝上的暗子和其他棋子一樣以立體顯示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)裡，每一枚棋子也是如此。',
+    '有暗子的棋也能用這種樣式。在[揭棋](/rules/jieqi)裡，背面朝上的暗子和其他棋子一樣以立體顯示；在[暗棋](/rules/banqi)和[翻翻獸棋](/rules/jungle-flip)裡，每一枚棋子也是如此。',
   'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
     '一個既有暗子也有明子的揭棋局面畫了三次：平面、立體，以及加厚邊緣的立體',
   'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
     '揭棋：平面、立體，以及「加厚」邊緣的立體。沒有字的圓片是還沒翻開的暗子。',
   'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
-    '同一個翻翻棋棋盤畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
+    '同一個翻翻獸棋棋盤畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
   'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
-    '翻翻棋：平面、立體，以及「加厚」邊緣的立體。綠色的棋子還沒翻開。',
+    '翻翻獸棋：平面、立體，以及「加厚」邊緣的立體。綠色的棋子還沒翻開。',
   'The xiangqi board can be lined, or a square grid like chess':
     '象棋棋盤可以是交叉點棋盤，也可以是像西洋棋那樣的方格棋盤',
   'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
@@ -12485,7 +12615,7 @@ const ZH_HANT: Record<string, string> = {
     '如果你是從西洋棋轉來下象棋的，可以先試試方格棋盤。棋子放在深淺相間的格子裡，一步棋看起來就和你習慣的一樣；想用交叉點棋盤時，改一項設定就行。兩種棋盤都能用平面和立體棋子。「棋盤顏色」在兩種棋盤上提供同樣的木色和紙色，綠色的「鬥獸棋」配色只用於方格棋盤。',
   'Pieces glide and turn over': '棋子會滑動和翻轉',
   'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
-    '在覆盤、研究或回放裡逐步查看對局時，每一步的棋子都會從原來的位置滑到新的位置，不用到處找哪裡變了也能跟上。在暗棋、揭棋和翻翻棋裡，暗子翻開時會翻轉。立體棋子像真的棋子一樣立在側邊上翻過來；平面棋子先收窄成一條細線，再展開露出另一面。',
+    '在覆盤、研究或回放裡逐步查看對局時，每一步的棋子都會從原來的位置滑到新的位置，不用到處找哪裡變了也能跟上。在暗棋、揭棋和翻翻獸棋裡，暗子翻開時會翻轉。立體棋子像真的棋子一樣立在側邊上翻過來；平面棋子先收窄成一條細線，再展開露出另一面。',
   'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
     '點每個棋盤下方的前進箭頭就能看到。暗棋這盤的第一步是在原地翻開一枚棋子。揭棋裡，一枚暗子走動後在落點翻開。無論你自己怎麼設定，這兩個棋盤都以立體顯示。',
   'Banqi: the first move turns a tile over.': '暗棋：第一步翻開一枚棋子。',
@@ -12537,6 +12667,119 @@ const ZH_HANT: Record<string, string> = {
   'The menus, sets and choices as they are on this date. When a setting moves or a set is added, this article is updated and says so at the top.':
     '本文的選單、棋子樣式和選項以這一天為準。設定項換了位置或新增了棋子樣式時，本文會隨之更新，並在文章開頭註明。',
   'Play xiangqi': '下象棋',
+  // ab-jchess-vs-jqe: machine-drafted 2026-11-04, not native-reviewed, from the English signed off that day. Terms follow jqe and ab-jchess (暗子, 翻子, 暗吃, 勝率, 研究, 暗子佈局, 搜尋, 局面, 長將, 長捉, 重複局面, 和棋, 判負, 裁判程式, 神經網路, 覆盤; 車馬炮相仕帥兵 / 象士將卒; AB-JChess, jqe and Elo unchanged).
+  'AB-JChess takes the jieqi title back from jqe': 'AB-JChess 從 jqe 手中奪回揭棋榜首',
+  "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. Five games read move by move by both engines, the two engines' chase rules, and how their play differs.":
+    'AB-JChess 基於 jqe 開源程式碼開發的新版本，在 600 盤比賽中戰勝 jqe，再次成為 Mistboard 上最強的揭棋電腦。本文用兩個引擎逐步解讀五盤棋，比較它們的長捉規則和下法。',
+  'AB-JChess is the top jieqi bot on Mistboard again. Its new release, AB-JChess-20261031, beat jqe over 600 games: it won 306, drew 67 and lost 227, about 46 Elo. Most of the edge came with Red.':
+    'AB-JChess 再次成為 Mistboard 上最強的揭棋電腦。它的新版本 AB-JChess-20261031 在 600 盤比賽中戰勝 jqe：贏 306 盤，和 67 盤，輸 227 盤，約合 46 Elo。大部分優勢來自執紅的對局。',
+  "The new release is built on jqe's open-source code, with a network of 0.6 MB where the last one's was 144 MB. It searches about 65 times as many positions a second as before.":
+    '新版本基於 jqe 的開源程式碼開發，神經網路為 0.6 MB，上一版則是 144 MB。它每秒搜尋的局面數約為以前的 65 倍。',
+  'In a level endgame with every piece face up, AB-JChess saw a soldier push lose eight moves before jqe did, and it still saw it with its chase rule switched off and 16 times the search.':
+    '在一個所有棋子都已翻開的均衡殘局中，AB-JChess 比 jqe 早八個回合看出一步進兵會輸棋。即使關閉長捉規則，並把搜尋量增至 16 倍，它仍能看出來。',
+  "The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and 42 of the 67 draws ended that way; scored by Mistboard's rules, AB-JChess's edge is about 41 Elo.":
+    '這場比賽把所有三次重複局面都判為和棋。Mistboard 則將重複過程中每一步都將軍的一方判負，67 盤和棋中有 42 盤屬於這種情況；按 Mistboard 的規則計分，AB-JChess 的優勢約為 41 Elo。',
+  'AB-JChess is the top [jieqi](/rules/jieqi) bot on Mistboard again. Its new release by Huorongrong and Laoxu (Kouza), AB-JChess-20261031, beat jqe, which took the title from it in October, over 600 games. jqe stays on the ladder one level below.':
+    'AB-JChess 再次成為 Mistboard 上最強的[揭棋](/rules/jieqi)電腦。Huorongrong 和 Laoxu（Kouza）開發的新版本 AB-JChess-20261031，在 600 盤比賽中戰勝了 10 月從它手中奪走榜首的 jqe。jqe 仍留在電腦階梯上，排在它下面一級。',
+  'AB-JChess-20261031 against jqe 0.1.0. Both engines are still being developed, so a later release of either may score differently.':
+    'AB-JChess-20261031 對 jqe 0.1.0。兩個引擎都還在開發中，任何一方的後續版本都可能得出不同的結果。',
+  'The result': '比賽結果',
+  "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out.":
+    '這 600 盤棋來自 300 組暗子佈局，每組紅黑互換各下一次，用 4 個執行緒，每步 4 秒。和 jqe 對上一版 AB-JChess 的比賽一樣，我們的裁判程式把任何三次重複局面，以及雙方各連續 60 步無吃子，都判為和棋。暗子被吃時，裁判程式會向兩個引擎公開它是什麼；在 Mistboard 上，只有吃子方才會知道。',
+  'AB-JChess': 'AB-JChess',
+  'Won-drawn-lost': '勝-和-負',
+  'All 600 games': '全部 600 盤',
+  'With Red': '執紅',
+  'With Black': '執黑',
+  "Almost all of AB-JChess's edge came with Red. Over the match it comes to about +46 Elo, with a 95% range of +23 to +69. Scored by Mistboard's own repetition rule it would be about +41, as explained below.":
+    'AB-JChess 的優勢幾乎全部來自執紅的對局。整場比賽約合 +46 Elo，95% 區間為 +23 to +69。按 Mistboard 自己的重複局面規則計分則約為 +41，下文會說明。',
+  'Five games, read by both engines': '用兩個引擎解讀五盤棋',
+  'How to read these games': '如何查看這些對局',
+  "Each board opens on a move where the engines disagreed, played by the side that went on to lose or draw. Wherever the two would have played different moves, a blue arrow shows AB-JChess's choice and an orange one jqe's. The graph under the board is the winning side's chance by each engine at match settings, AB-JChess in teal and jqe in orange, and the comments in the move list say where the game turned and what each engine expected. A die beside a reveal grades its luck from what both players could see; [the study](/study/SwSUugEY) has all six games.":
+    '每個棋盤都從兩個引擎意見不同的一步開始，走這步棋的一方最終輸棋或和棋。只要兩個引擎選擇的著法不同，藍色箭頭就表示 AB-JChess 的選擇，橙色箭頭表示 jqe 的選擇。棋盤下方的曲線是兩個引擎按比賽設定評估的勝方勝率，AB-JChess 用青綠色，jqe 用橙色；著法列表中的註釋說明局勢在哪裡轉變，以及各引擎當時的預期。翻子旁的骰子根據雙方可見的資訊，為這次翻子的運氣評分；[研究](/study/SwSUugEY)中收錄了全部六盤棋。',
+  'AB-JChess wins game 1: one soldier push loses the endgame':
+    '第 1 盤 AB-JChess 獲勝：一步進兵輸掉殘局',
+  'Move 82. jqe (Red) pushes a soldier from d5 to d6. AB-JChess would move the horse from e6 to c5.':
+    '第 82 回合。jqe（紅方）把兵從 d5 進到 d6。AB-JChess 會把馬從 e6 走到 c5。',
+  'jqe vs AB-JChess, move 82': 'jqe 對 AB-JChess，第 82 回合',
+  "Every piece is face up and the game is level. jqe (Red) pushes a soldier, where AB-JChess would give its horse for Black's advisor. AB-JChess sees at once that the push lets Black's cannon swing over and attack Red's general; jqe sees it only eight moves later. Black wins on move 103, when Red has no legal move. Why did jqe push? Not for lack of time: with 16 times the search it still picks the push and still calls the game a dead draw. It misjudged the position rather than missing a move. AB-JChess, with its chase rule off and the same extra search, still sees the push lose.":
+    '所有棋子都已翻開，局面均衡。jqe（紅方）選擇進兵，AB-JChess 則會用馬換掉黑方的士。AB-JChess 立刻看出，進兵會讓黑炮轉到另一側攻擊紅帥；jqe 八個回合後才看出來。第 103 回合，紅方無合法著法，黑方獲勝。jqe 為什麼進兵？時間不夠並不是原因：把搜尋量增至 16 倍，它仍選擇進兵，仍判斷為必和。它對局面的判斷有誤，並非漏算了某步棋。AB-JChess 關閉長捉規則，並增加同樣的搜尋量後，仍能看出進兵會輸。',
+  'AB-JChess wins game 2: a reveal decides it': '第 2 盤 AB-JChess 獲勝：翻子決定勝負',
+  "Move 25. jqe (Black) brings its chariot home from h1 to h7. AB-JChess would keep it on Red's back rank, at g1.":
+    '第 25 回合。jqe（黑方）把車從 h1 撤回 h7。AB-JChess 會把車留在紅方底線的 g1。',
+  'AB-JChess vs jqe, move 25': 'AB-JChess 對 jqe，第 25 回合',
+  "Black's chariot has raided Red's back rank. jqe brings it home; AB-JChess would leave it there. Two later moves decide it: on move 35 Red turns over a soldier and both engines call the game even, and on move 36 Red takes a hidden piece and both have Red winning. Red wins on move 66. Both engines saw those two moves the same way, so this game does not tell us which was right about the chariot.":
+    '黑車已經進入紅方底線。jqe 把它撤回，AB-JChess 則會讓它留下。後來的兩步棋決定了勝負：第 35 回合紅方翻出兵，兩個引擎都認為局面均衡；第 36 回合紅方暗吃一子，兩個引擎都認為紅方已是勝勢。紅方在第 66 回合獲勝。兩個引擎對這兩步的判斷相同，所以這盤棋無法說明它們對車的處理誰對誰錯。',
+  "AB-JChess wins game 3: jqe's cannon starts a losing run of trades":
+    '第 3 盤 AB-JChess 獲勝：jqe 走炮引出一連串不利的兌子',
+  'Move 15. jqe (Black) moves its cannon from e4 to e6. AB-JChess would move the horse from d6 to f5.':
+    '第 15 回合。jqe（黑方）把炮從 e4 走到 e6。AB-JChess 會把馬從 d6 走到 f5。',
+  'AB-JChess vs jqe, move 15': 'AB-JChess 對 jqe，第 15 回合',
+  "Red is ahead after its cannon took a hidden piece on move 14. jqe's cannon move starts a run of trades: Black gives a soldier and its horse for an elephant and an advisor. AB-JChess thinks the trades are bad for Black; jqe thinks they are fine and only agrees two moves later. Red wins on move 72. Three hidden pieces turned over in a row helped change jqe's mind, so this example is weaker than game 1.":
+    '紅方在第 14 回合用炮暗吃一子後佔優。jqe 走炮，引出一連串兌子：黑方用卒和馬換掉紅方的相和仕。AB-JChess 認為這些兌子對黑方不利，jqe 卻認為沒有問題，兩個回合後才同意 AB-JChess 的判斷。紅方在第 72 回合獲勝。連續三次翻子促使 jqe 改變判斷，所以這個例子的說服力不如第 1 盤。',
+  'jqe wins game 4: two reveals go wrong for AB-JChess': '第 4 盤 jqe 獲勝：AB-JChess 兩次翻子不利',
+  'Move 14. AB-JChess (Red) moves its cannon from h6 to h9. jqe would turn over the piece on h1 by moving it to f2.':
+    '第 14 回合。AB-JChess（紅方）把炮從 h6 走到 h9。jqe 會把 h1 的暗子走到 f2 翻開。',
+  'AB-JChess vs jqe, move 14': 'AB-JChess 對 jqe，第 14 回合',
+  "Many pieces are still hidden, and jqe already thinks Black is better. AB-JChess makes a quiet cannon move where jqe would turn over a hidden piece, and neither engine can see past a reveal, so we can't say who was right. Luck decides it: AB-JChess turns over a soldier on move 19, then a chariot that Black's cannon takes at once. Black wins on move 30.":
+    '棋盤上還有很多暗子，jqe 已經認為黑方佔優。AB-JChess 走了一步沒有直接威脅的炮棋，jqe 則會翻子。兩個引擎都無法看清翻子後的走向，所以無法判斷誰對。運氣決定了勝負：AB-JChess 在第 19 回合翻出兵，隨後又翻出車，立刻被黑炮吃掉。黑方在第 30 回合獲勝。',
+  'Game 5 is drawn: AB-JChess has it won and repeats':
+    '第 5 盤和棋：AB-JChess 已是勝勢，卻走成重複局面',
+  'Move 39. jqe (Red) moves a chariot from f3 to d3. AB-JChess would move the other chariot from a10 to f10.':
+    '第 39 回合。jqe（紅方）把車從 f3 走到 d3。AB-JChess 會把另一輛車從 a10 走到 f10。',
+  'jqe vs AB-JChess, move 39': 'jqe 對 AB-JChess，第 39 回合',
+  "Red is far ahead for most of the game, but Black slowly comes back. After Red turns over a soldier on move 50, AB-JChess thinks Black is winning. Then Red's chariot and Black's elephant move back and forth until the same position comes up three times, and the game is drawn. AB-JChess did not see the repetition coming, because in the match each engine was given only the current position, not the moves before it.":
+    '紅方在這盤棋的大部分時間裡都大幅領先，但黑方逐漸追了回來。第 50 回合紅方翻出兵後，AB-JChess 認為黑方已是勝勢。隨後紅車和黑象來回移動，同一局面出現三次，比賽判為和棋。AB-JChess 沒有預見到重複局面，因為比賽只向每個引擎提供當前局面，沒有提供此前的著法。',
+  "Game one's eight moves is the long end; in the other four the lag was two or three. Across the match, counting from the move where each engine's own scores gave the winner 70% for good, the two were within a move of each other in 232 of AB-JChess's 304 wins, and where one was later it was jqe in 119 and AB-JChess in 72. In jqe's 227 wins each was later about as often, AB-JChess in 76 and jqe in 75.":
+    '第 1 盤相差八個回合，是較長的情況，另外四盤只差兩三個回合。縱觀整場比賽，以每個引擎自己的評分開始持續給最終勝方至少 70% 勝率的回合為起點比較，AB-JChess 的 304 盤勝局中，有 232 盤兩個引擎相差不超過一個回合；判斷有先後時，較晚的是 jqe 的有 119 盤，是 AB-JChess 的有 72 盤。在 jqe 的 227 盤勝局中，兩者判斷較晚的次數接近，AB-JChess 有 76 盤，jqe 有 75 盤。',
+  'How their play differs': '它們的下法有何不同',
+  'jqe overrates a small edge': 'jqe 高估了小幅優勢',
+  'When jqe scored its own position as a small edge, it won less often from there than AB-JChess did from the same score.':
+    'jqe 認為自己略佔優勢時，最終贏棋的比例低於 AB-JChess 給出相同評分時的比例。',
+  'Small edge (+50 to +150), moves 6 to 30': '小幅優勢（+50 to +150），第 6 到第 30 回合',
+  jqe: 'jqe',
+  'Went on to score': '最終得分率',
+  'jqe takes more face-down pieces, win or lose': '無論輸贏，jqe 都暗吃更多棋子',
+  'Both take more in the games they win, so the table splits by result.':
+    '兩個引擎在贏棋時都暗吃得更多，因此表格按比賽結果分組。',
+  'Face-down pieces taken a game': '每盤暗吃子數',
+  'In games it won': '勝局中',
+  'In games it drew': '和局中',
+  'In games it lost': '負局中',
+  "It costs jqe nothing we can measure. In close positions, its winning chance one move after a face-down capture fell 1.7 points on average and AB-JChess's 0.7, a gap smaller than the noise in the sample.":
+    '我們沒有測出這給 jqe 帶來什麼損失。在接近均衡的局面中，暗吃後再走一步，jqe 的勝率平均下降 1.7 個百分點，AB-JChess 下降 0.7 個百分點，這一差距小於樣本中的隨機波動。',
+  'What the match tells us': '這場比賽說明了什麼',
+  'Half the deals decided themselves': '一半暗子佈局本身就決定了勝負',
+  "Each deal was played twice with the colours swapped. In 147 of the 300 deals the same colour won both games, Red in 93 and Black in 54, so whichever engine had that side, the deal decided it. AB-JChess's edge comes from the rest: it won both games of a deal 56 times, and jqe did 34 times.":
+    '每組暗子佈局都紅黑互換下了兩盤。在 300 組佈局中，有 147 組是同一顏色兩盤都贏，其中紅方 93 組，黑方 54 組，也就是說，無論哪個引擎執這一方，勝負都由佈局決定。AB-JChess 的優勢來自其餘佈局：同一組佈局的兩盤都贏，它做到了 56 次，jqe 做到了 34 次。',
+  "AB-JChess's edge is judgement, not depth": 'AB-JChess 的優勢在於判斷，而非搜尋深度',
+  "jqe was the later of the two to see the result in AB-JChess's wins, while in jqe's wins neither engine was. In game 1 jqe still called a lost endgame a dead draw with 16 times the search, and when it scored itself a small edge it went on to score less than AB-JChess did from the same score. Both point the same way: jqe's mistakes are in how it values quiet positions and trades, not in how far it looks. Neither engine searches past a reveal, so turning a piece over stays a guess for both, as in game 4.":
+    '在 AB-JChess 的勝局中，jqe 判斷出結果較晚；而在 jqe 的勝局中，兩個引擎沒有誰明顯更晚。第 1 盤裡，把搜尋量增至 16 倍後，jqe 仍把必輸殘局判斷為必和；它認為自己略佔優勢時，最終得分也低於 AB-JChess 給出相同評分時的得分。兩者都說明：jqe 的問題在於如何評估平靜局面和兌子，而非搜尋得不夠遠。兩個引擎都不會搜尋翻子之後的著法，所以對雙方而言，翻子都仍需猜測，第 4 盤就是如此。',
+  "Most draws were not draws by Mistboard's rules": '按 Mistboard 的規則，大部分和棋都不該判和',
+  "Our referee drew every threefold repetition. Mistboard does not: a side that gives check on every move of the repetition loses. In 42 of the 67 draws one side did that, and in 40 of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won 323, drew 25 and lost 252, about +41 Elo with a 95% range of +17 to +66. The +46 above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.":
+    '我們的裁判程式把所有三次重複局面都判為和棋。Mistboard 則將重複過程中每一步都將軍的一方判負。67 盤和棋中，有 42 盤是一方長將，其中 40 盤兩個引擎都已認為另一方是勝勢，持續將軍成了劣勢方避免輸棋的辦法。按 Mistboard 的規則計分，AB-JChess 贏 323 盤，和 25 盤，輸 252 盤，約合 +41 Elo，95% 區間為 +17 to +66。上面的 +46 保留了裁判程式的規則，和 jqe 對上一版 AB-JChess 的比賽相同，便於比較兩場比賽。',
+  "Of the 25 games that stay drawn, 9 were won for one side by both engines' scores and repeated anyway, 8 of them for AB-JChess. That is the blindness game 5 showed: in the match each engine saw only the current position, so it could not see a repetition coming. On Mistboard the bots are sent the moves since the last capture or reveal, so they do see it.":
+    '仍判和棋的 25 盤中，有 9 盤兩個引擎都認為一方已是勝勢，卻仍走成了重複局面，其中 8 盤是 AB-JChess 佔勝勢。這正是第 5 盤暴露的問題：比賽中每個引擎只能看到當前局面，無法預見重複。Mistboard 會向電腦發送自上次吃子或翻子以來的著法，所以它們能夠發現重複局面。',
+  "The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matches Mistboard's. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.":
+    '兩個引擎還各自帶有長捉規則，也就是一方持續攻擊同一棋子所形成的重複局面的規則，兩者都與 Mistboard 不同。jqe 將重複過程中每一步都捉同一棋子的一方判負。AB-JChess 則只要一方有任何一步捉子，而另一方從未捉子，就將前者判負。',
+  "Move 51. AB-JChess (Red) moves its chariot from c9 to c3, attacking Black's horse on a3. jqe would move it to f9.":
+    '第 51 回合。AB-JChess（紅方）把車從 c9 走到 c3，攻擊 a3 的黑馬。jqe 會把車走到 f9。',
+  'AB-JChess vs jqe, move 51': 'AB-JChess 對 jqe，第 51 回合',
+  "Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black 72% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard draws a chase, so jqe was counting on a rule the game is not played under. Step through the board for both engines' rules searched on and off.":
+    '此後紅車每走一步都攻擊黑馬。按 jqe 的規則紅方判負，所以 jqe 直到終局都給黑方至少 72% 的勝率；按 AB-JChess 的規則，黑馬也在反捉，因此它判斷為和棋。Mistboard 對長捉判和，所以 jqe 依賴的是本站對局並不採用的規則。逐步查看棋盤，可以比較兩個引擎開啟和關閉各自規則時的搜尋結果。',
+  'A smaller network, a faster search': '神經網路更小，搜尋更快',
+  "The new release is rebuilt on [jqe's code](https://github.com/devinokeefe/jieqi), which Devin O'Keefe published under the MIT licence, with a network of its own. That network is 0.6 MB, where the last release's was 144 MB and jqe's is 1.5 MB. A small network is quick to run, so the new release looks at about 65 times as many positions a second as the last one, a little more than jqe.":
+    "新版本基於 Devin O'Keefe 以 MIT 授權發布的 [jqe 程式碼](https://github.com/devinokeefe/jieqi)重建，使用自己的神經網路。這個網路是 0.6 MB，上一版是 144 MB，jqe 的是 1.5 MB。小網路執行得快，所以新版本每秒查看的局面數約為上一版的 65 倍，也比 jqe 略多。",
+  'In 4 seconds each engine searches about 22 million positions. To see whether either was short of time, each one searched its own moves from 20 of the games again with twice that. AB-JChess would have changed its move 20% of the time and jqe 18%, and the change was worth 0.07 points of winning chance a move to each. A change worth 5 points or more came up once in 754 moves for AB-JChess and once in 750 for jqe. More time would help both a little and neither more than the other.':
+    '每個引擎在 4 秒內搜尋約 22 百萬個局面。為檢驗它們是否時間不足，我們讓各引擎用兩倍搜尋量，重新搜尋 20 盤棋中自己走過的著法。AB-JChess 會在 20% 的時候改走別的棋，jqe 則是 18%，對兩者而言，每步改動平均都只增加 0.07 個百分點的勝率。提高至少 5 個百分點的改動，AB-JChess 在 754 步中出現一次，jqe 在 750 步中出現一次。更多時間對雙方都有一點幫助，幫助的程度也相近。',
+  'Game review': '覆盤',
+  'Game review for jieqi runs on AB-JChess, so new reviews use the new release. On our server it searches about 47 times as many positions a second as the old one, so a review looks further in the same time.':
+    '揭棋覆盤使用 AB-JChess，因此新覆盤會採用新版本。在我們的伺服器上，它每秒搜尋的局面數約為舊版的 47 倍，同樣時間裡覆盤能看得更遠。',
+  "The score in a review is the engine's own number, and each network counts on its own scale. The old network's scale was steep: +1.1 already meant a 75% chance. The new one counts on about the same scale as jqe, where 75% is +4.1. So the same position now shows a bigger number, and we fitted the new network's winning chances on 9,776 positions from this match. Old reviews keep the old numbers, so compare an old review with a new one by winning chance, not by the score.":
+    '覆盤中的評分是引擎自己的數值，每個神經網路的尺度不同。舊網路的尺度很陡：+1.1 就已表示 75% 的勝率。新網路的尺度與 jqe 接近，75% 對應 +4.1。所以同一局面現在會顯示更大的數值，我們用這場比賽中的 9,776 個局面擬合了新網路的勝率。舊覆盤保留舊數值，因此比較新舊覆盤時，要看勝率，不要直接比較評分。',
+  "AB-JChess is open source under the GPL-3.0 licence at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). The network is downloaded from the authors' own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu (Kouza). Laoxu trains AB-JChess's networks and, for this release, tested four ways of searching a reveal and kept the best; he and Huorongrong worked out together the small, fast network it plays with. And thank you, Devin O'Keefe, for the code the new release stands on.":
+    "AB-JChess 以 GPL-3.0 授權開源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。每次建置網站時，神經網路都從作者自己的發布版本下載，我們不另行託管。感謝 Huorongrong 和 Laoxu（Kouza）。Laoxu 負責訓練 AB-JChess 的神經網路，這次測試了四種翻子搜尋方法，保留了最好的一種；他與 Huorongrong 共同設計了這個小而快的網路。也感謝 Devin O'Keefe，新版本基於他提供的程式碼開發。",
+  'TOP BOT AGAIN': '重回最強電腦',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
