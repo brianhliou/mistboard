@@ -169,9 +169,17 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
       },
       analysis?.onPosition,
     );
+    const center = root.querySelector('.review-shell__center');
+    if (!center) throw new Error('missing gomoku review center');
+    // The live center is a horizontal flex row. Use the shared review column
+    // so the underboard tools stack below the board instead of squeezing beside it.
+    const column = document.createElement('div');
+    column.className = 'review-center-column';
+    column.append(...center.childNodes);
+    center.append(column);
     if (analysis) {
       analysis.attach(recording);
-      root.querySelector('.review-shell__center')?.append(analysis.el);
+      column.append(analysis.el);
       analysis.loadCached();
       window.addEventListener(
         'pagehide',
@@ -190,7 +198,7 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
       downloads.append(
         downloadRow(gameExportLinks(roomId, exportFormatsForVariant(GOMOKU_SPEC_ID))),
       );
-      root.querySelector('.review-shell__center')?.append(downloads);
+      column.append(downloads);
     }
     track(
       'review_opened',

@@ -326,6 +326,20 @@ describe('Gomoku finished-game review', () => {
       locale === 'en' ? 'Download' : locale === 'zh-Hans' ? '下载' : '下載',
     );
   });
+  it.each([false, true])(
+    'stacks the board, analysis and downloads in the shared center column (admin: %s)',
+    async (admin) => {
+      const { root } = await mount(fixture(), 200, admin);
+      const column = root.querySelector('.review-shell__center > .review-center-column');
+      expect(column).not.toBeNull();
+      expect(column?.querySelector(':scope > .board-shell .gomoku-live-board')).not.toBeNull();
+      expect(column?.querySelector(':scope > .review-share a[download$=".json"]')).not.toBeNull();
+      expect(
+        Boolean(column?.querySelector(':scope > .review-underboard [data-gomoku-analyse]')),
+      ).toBe(admin);
+      expect(root.querySelector('.review-shell__center')?.children).toHaveLength(1);
+    },
+  );
   for (const enabled of [false, true]) {
     it.each([undefined, false, true])(
       `admits review by role with flag ${enabled}: admin %s`,
