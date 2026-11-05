@@ -493,7 +493,21 @@ describe('Gomoku finished-game review', () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  it.each(['unfinished', 'missing-root', 'wrong-room', 'wrong-variant', 'rated'])(
+  it('loads a valid finished rated recording', async () => {
+    const payload = fixture();
+    payload.game.rated = true;
+    const { root } = await mount(payload);
+    expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(3);
+    expect(root.textContent).not.toContain('Postgame unavailable');
+    key('Home');
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
+    key('End');
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(3);
+    expect(capture).toHaveBeenCalledWith('review_opened', expect.any(Object));
+  });
+
+  it.each(['unfinished', 'missing-root', 'wrong-room', 'wrong-variant'])(
     'refuses a %s recording',
     async (kind) => {
       const payload = fixture();
@@ -501,7 +515,6 @@ describe('Gomoku finished-game review', () => {
       if (kind === 'missing-root') payload.history.truth = payload.history.truth.slice(1);
       if (kind === 'wrong-room') payload.game.roomId = 'gmk_other';
       if (kind === 'wrong-variant') (payload.game as { variant: string }).variant = 'xiangqi';
-      if (kind === 'rated') payload.game.rated = true;
       const { root } = await mount(payload);
       expect(root.querySelector('.gomoku-live-board')).toBeNull();
       expect(capture).not.toHaveBeenCalled();

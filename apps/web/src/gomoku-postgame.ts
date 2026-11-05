@@ -134,7 +134,6 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
     if (
       postgame.game?.roomId !== roomId ||
       postgame.game.variant !== GOMOKU_SPEC_ID ||
-      postgame.game.rated ||
       postgame.view?.status.type !== 'finished' ||
       !Array.isArray(history) ||
       history.length === 0 ||
