@@ -9,6 +9,7 @@ import type { ContentI18nKey } from './content.js';
 export const ZH_HANS_CONTENT = {
   'videos.heading': '视频库',
   'videos.intro': '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
+  'videos.introMainland': '精选象棋与揭棋中文视频：规则、开局、战术与思路。',
   'videos.searchLabel': '搜索视频',
   'videos.searchPlaceholder': '按标题或作者搜索',
   'videos.filterLabel': '按主题筛选',

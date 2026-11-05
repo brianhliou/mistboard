@@ -7,7 +7,7 @@ export { YOUTUBE_BLOCKED_IN };
 
 // Flip by hand once the Bilibili catalogue reaches BILIBILI_NAV_MIN_ENTRIES.
 // A sync test enforces this so the catalogue stays outside the eager shell.
-export const VIDEOS_OPEN_IN_CN = false;
+export const VIDEOS_OPEN_IN_CN = true;
 
 export interface NavItem {
   label: string;

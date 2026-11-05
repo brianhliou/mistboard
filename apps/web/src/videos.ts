@@ -130,7 +130,11 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
 
   const intro = document.createElement('p');
   intro.className = 'videos-intro';
-  intro.textContent = t('videos.intro', {}, locale);
+  intro.textContent = t(
+    isBlockedForViewer(YOUTUBE_BLOCKED_IN) ? 'videos.introMainland' : 'videos.intro',
+    {},
+    locale,
+  );
 
   // Ours lead. The library's job changed the day the channel published: it is
   // the site's one surface that can turn a visitor into a subscriber, and a
@@ -179,10 +183,16 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
     ours.append(subscribe);
   }
 
-  // Which facet options actually exist in the data. Level always spans its full
-  // ordered set; language, variant, and source facets render only when they
-  // discriminate (more than one language/variant/source present), so the page
-  // never shows a dead single-option facet.
+  // Which facet options actually exist in the data, so a chip never filters to
+  // nothing (the mainland shelf has no advanced videos today); language, variant,
+  // and source facets render only when they discriminate (more than one present),
+  // so the page never shows a dead single-option facet.
+  const presentTags = VIDEO_TAGS.filter((tag) =>
+    available.some((video) => video.tags.includes(tag)),
+  );
+  const presentLevels = VIDEO_LEVELS.filter((level) =>
+    available.some((video) => video.level === level),
+  );
   const presentLanguages = VIDEO_LANGUAGES.filter((language) =>
     available.some((video) => video.language === language),
   );
@@ -266,7 +276,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   const topicGroup = buildChipGroup({
     labelText: t('videos.topicLabel', {}, locale),
     allLabel: t('videos.allTag', {}, locale),
-    values: VIDEO_TAGS,
+    values: presentTags,
     optionLabel: (tag) => t(TAG_LABEL_KEYS[tag], {}, locale),
     selected: state.tags,
     onChange: apply,
@@ -277,7 +287,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   const levelGroup = buildChipGroup({
     labelText: t('videos.levelLabel', {}, locale),
     allLabel: t('videos.allTag', {}, locale),
-    values: VIDEO_LEVELS,
+    values: presentLevels,
     optionLabel: (level) => t(LEVEL_LABEL_KEYS[level], {}, locale),
     selected: state.levels,
     onChange: apply,

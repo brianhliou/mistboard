@@ -1232,8 +1232,209 @@ const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [
   },
 ];
 
-// Intentionally empty until the Bilibili curation pass.
-const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [];
+// First curation pass, 2026-11-05: read by hand from Bilibili's public search
+// and each video's own page. Original uploads only (repost mark checked per
+// video), no sanctioned player in the title or uploader, no engine install
+// guides. Jieqi first, then xiangqi teaching.
+const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
+  {
+    source: 'bilibili',
+    bvid: 'BV1vQ4y1E7BC',
+    title: '揭棋 保姆级教学（上篇）',
+    author: '次元人柱力',
+    durationMinutes: 20,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/0477323e5469bd90e4cf5a64088873c9bb2f7c45.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1iN4y1q7Rf',
+    title: '揭棋 保姆级教学（中篇）',
+    author: '次元人柱力',
+    durationMinutes: 12,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/04dc9881e3999da9cb0d1d23a1e3a8ed049e5d4a.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1dmYmzhE6k',
+    title: '揭棋玩法讲解',
+    author: '波斯猫ABC',
+    durationMinutes: 5,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/885a85bba103aa6797690b23d18fa2e790534953.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1VE411g7Hc',
+    title: '揭棋开局全规律个人总结（新手入门必学）',
+    author: '无规矩不成方源',
+    durationMinutes: 68,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/f188ace7f508695c6f296cac3612a58b492dbf1f.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1Qs6YB1EfR',
+    title: '[揭棋开局]边兵开局的常见应对技巧',
+    author: '恬澈澄安',
+    durationMinutes: 10,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i0.hdslb.com/bfs/archive/3eb4aa6f91dd62eb2b42d25800ef30a27b828cb7.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1z8w1z7ERj',
+    title: '[揭棋开局]开局抢占河口的重要性',
+    author: '恬澈澄安',
+    durationMinutes: 4,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i0.hdslb.com/bfs/archive/9690d4679e913e97b5cdb583fa015e2557c6807d.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1f3ey6GE6h',
+    title: '【揭棋】一套理论告诉你如何正确使用暗炮打暗马。',
+    author: '金银铜绿水',
+    durationMinutes: 15,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i0.hdslb.com/bfs/archive/fa1a9a4e971baf60c126a83249662209190526d5.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1nH4y1C7vx',
+    title: '[揭棋]不走无意义之棋',
+    author: '叶子Y小叶',
+    durationMinutes: 8,
+    tags: ['strategy'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/1e88a1d68e41618de0f609a400594333d8bbb340.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV14zH8e5ERS',
+    title: '揭棋里第三恶心的招数',
+    author: '卞孝先',
+    durationMinutes: 11,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/5e800f8ebf113b1338df5223235d767ae887a1b8.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1da411S7Vf',
+    title: '【中国象棋】零基础学棋 | 入门篇（全集）',
+    author: '象棋研究者',
+    durationMinutes: 241,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/934429fb05867c2a361cdc6909018272b7311d63.png@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1PN4zzqErY',
+    title: '象棋入门 如何走子以及记录方法 零基础学象棋第一集',
+    author: '板鸭象棋',
+    durationMinutes: 41,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/918750e6a2c09bded1c3866f883bd18205beb118.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1NM4y137GJ',
+    title: '【中国象棋】入门教程：棋子的基本走法',
+    author: '祝尧讲棋',
+    durationMinutes: 6,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/81f4bdd4949b93cab8eb9ba7fc43c60a25c83d71.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1AV4y147LA',
+    title: '【中国象棋】初级篇 | 基础开局和基本杀法',
+    author: '象棋研究者',
+    durationMinutes: 596,
+    tags: ['openings', 'tactics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/87c9afbed7c87ab7a83989c91823215d1f166793.png@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1dg411c7cj',
+    title:
+      '【兰天象棋•象棋初级教程】象棋基本杀法～铁门闩，象棋入门必备课程，国家象棋大师带你象棋入门。',
+    author: '象棋大师张兰天',
+    durationMinutes: 6,
+    tags: ['tactics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/5e8cdd2d8fe66d95b6a01761dbd297594b0155a7.jpg@672w_378h_1c.jpg',
+  },
+];
 
 /** The curated catalogue: other people's videos, filtered and faceted by the
  *  page. Deliberately does NOT include our own episodes — they have their own

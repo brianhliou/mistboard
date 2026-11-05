@@ -4,6 +4,8 @@ export const EN_CONTENT = {
   'videos.heading': 'Video library',
   'videos.intro':
     'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
+  'videos.introMainland':
+    'Curated Chinese-language xiangqi and jieqi videos: rules, openings, tactics, and strategy.',
   'videos.ourHeading': 'From Mistboard',
   'videos.ourIntro': 'Our own episodes. New ones land on the channel first.',
   'videos.shortsHeading': 'Puzzle Shorts',

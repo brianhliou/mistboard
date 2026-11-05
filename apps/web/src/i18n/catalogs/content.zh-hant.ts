@@ -9,6 +9,7 @@ import type { ContentI18nKey } from './content.js';
 export const ZH_HANT_CONTENT = {
   'videos.heading': '影片庫',
   'videos.intro': '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
+  'videos.introMainland': '精選象棋與揭棋中文影片：規則、開局、戰術與思路。',
   'videos.searchLabel': '搜尋影片',
   'videos.searchPlaceholder': '依標題或作者搜尋',
   'videos.filterLabel': '依主題篩選',

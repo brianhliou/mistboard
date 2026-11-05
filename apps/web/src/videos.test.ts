@@ -6,6 +6,7 @@ import * as analytics from './analytics.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import { VIDEOS_OPEN_IN_CN } from './nav-items.js';
+import { isBanned, SANCTIONS, sanctionFor } from './players/sanctions.js';
 import {
   buildVideoCard,
   buildVideosPage,
@@ -112,6 +113,24 @@ const BILIBILI_FIXTURE: BilibiliVideo = {
   addedAt: '2026-11-05',
 };
 
+const YOUTUBE_ONLY = VIDEOS.filter((video) => video.source === 'youtube');
+
+/** What #895 keeps out of the Bilibili shelf. Repost status is not in the entry,
+ *  so that one is checked on each video's own page when it is curated. */
+function bilibiliProblems(video: BilibiliVideo | VideoEntry): string[] {
+  if (video.source !== 'bilibili') return [];
+  const text = `${video.title} ${video.author}`;
+  const problems = Object.keys(SANCTIONS)
+    .filter((name) => isBanned(sanctionFor(name)) && text.includes(name))
+    .map((name) => `banned player ${name}: ${video.bvid}`);
+  if (/引擎|安装|下载|软件/.test(video.title)) problems.push(`engine guide: ${video.bvid}`);
+  if (!/^BV[0-9A-Za-z]{10}$/.test(video.bvid)) problems.push(`bad id: ${video.bvid}`);
+  if (!/^https:\/\/i\d\.hdslb\.com\/bfs\/archive\//.test(video.thumbnailUrl)) {
+    problems.push(`thumbnail: ${video.bvid}`);
+  }
+  return problems;
+}
+
 async function pageWithCatalogue(
   videos: readonly VideoEntry[],
   locale: 'en' | 'zh-Hans' | 'zh-Hant' = 'en',
@@ -143,11 +162,13 @@ describe('country routing', () => {
       // start fetching their art would still flash broken YouTube thumbnails.
       const imageSource = vi.spyOn(HTMLImageElement.prototype, 'src', 'set');
       const page = buildVideosPage(locale);
-      expect(page.querySelectorAll('.videos-card')).toHaveLength(0);
+      const bilibili = VIDEOS.filter((video) => video.source === 'bilibili');
+      expect(page.querySelectorAll('.videos-card')).toHaveLength(bilibili.length);
       expect(page.querySelector('.videos-ours')).toBeNull();
       expect(page.querySelector('.videos-subscribe')).toBeNull();
       expect(page.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
-      expect(imageSource).not.toHaveBeenCalled();
+      const requested = imageSource.mock.calls.map(([src]) => src);
+      expect(requested.filter((src) => !src.includes('.hdslb.com/'))).toEqual([]);
     },
   );
 
@@ -167,7 +188,7 @@ describe('country routing', () => {
 
   it('derives CN facets and counts from reachable videos and keeps local first-party cards', async () => {
     document.cookie = 'mb_cc=CN; Path=/';
-    const page = await pageWithCatalogue([...VIDEOS, BILIBILI_FIXTURE]);
+    const page = await pageWithCatalogue([...YOUTUBE_ONLY, BILIBILI_FIXTURE]);
     expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
     expect(page.querySelector('.videos-count')?.textContent).toBe('1 video');
     expect(page.querySelectorAll('.videos-ours-grid .videos-card')).toHaveLength(1);
@@ -192,7 +213,7 @@ describe('country routing', () => {
   });
 
   it('allows a mixed source catalogue to filter Bilibili and Jieqi independently', async () => {
-    const page = await pageWithCatalogue([...VIDEOS, BILIBILI_FIXTURE, MISTBOARD_FIXTURE]);
+    const page = await pageWithCatalogue([...YOUTUBE_ONLY, BILIBILI_FIXTURE, MISTBOARD_FIXTURE]);
     chip(page, 'Language', 'all').click();
     chip(page, 'Source', 'bilibili').click();
     expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
@@ -205,9 +226,25 @@ describe('country routing', () => {
     document.cookie = 'mb_cc=CN; Path=/';
     const root = mount();
     expect(root.querySelector('.videos-page')).not.toBeNull();
-    expect(root.querySelectorAll('.videos-card')).toHaveLength(0);
-    expect(root.querySelector('a[href="/videos"]')).toBeNull();
+    expect(root.querySelectorAll('.videos-card').length).toBeGreaterThanOrEqual(12);
     expect(root.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+  });
+
+  it('offers a mainland viewer no filter chip that leads to an empty page', () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const root = mount();
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.videos-facet button')];
+    expect(chips.length).toBeGreaterThan(4);
+    for (const chip of chips) {
+      chip.click();
+      expect(root.querySelectorAll('.videos-card').length, chip.textContent ?? '').toBeGreaterThan(
+        0,
+      );
+      chip.click();
+    }
+    expect(root.querySelector('.videos-intro')?.textContent).toBe(
+      'Curated Chinese-language xiangqi and jieqi videos: rules, openings, tactics, and strategy.',
+    );
   });
 
   it('keeps the homepage free of video rows and blocked thumbnails', async () => {
@@ -282,10 +319,22 @@ describe('videos data', () => {
     expect(new Set(VIDEOS.map(videoKey)).size).toBe(VIDEOS.length);
   });
 
-  it('ships no Bilibili entries before curation', () => {
-    expect(
-      [...VIDEOS, ...FIRST_PARTY_VIDEOS].filter((video) => video.source === 'bilibili'),
-    ).toEqual([]);
+  it('ships Bilibili entries that pass the catalogue filters', () => {
+    const bilibili = VIDEOS.filter((video) => video.source === 'bilibili');
+    expect(bilibili.length).toBeGreaterThanOrEqual(12);
+    expect(bilibili.flatMap(bilibiliProblems)).toEqual([]);
+    expect(new Set(bilibili.map((video) => video.bvid)).size).toBe(bilibili.length);
+  });
+
+  it.each([
+    ['a banned player in the title', { title: '王天一讲棋' }],
+    ['a banned player as uploader', { author: '赵鑫鑫' }],
+    ['an engine install guide', { title: '揭棋引擎安装教程' }],
+    ['a thumbnail off Bilibili', { thumbnailUrl: 'https://example.com/a.jpg' }],
+    ['a malformed id', { bvid: 'av12345' }],
+  ])('rejects %s', (_label, planted) => {
+    expect(bilibiliProblems(BILIBILI_FIXTURE)).toEqual([]);
+    expect(bilibiliProblems({ ...BILIBILI_FIXTURE, ...planted })).not.toEqual([]);
   });
 
   // The length sorts push an unknown duration to the end of the list, so a
@@ -541,9 +590,8 @@ describe('videos page', () => {
     expect(root.querySelector('.videos-empty')?.hasAttribute('hidden')).toBe(true);
   });
 
-  it('renders a level facet but no dead variant/source facets for homogeneous data', () => {
+  it('renders a level facet and the variant and source facets the catalogue earns', () => {
     const root = mount();
-    // All current videos are xiangqi YouTube videos, so those facets stay hidden.
     expect(() => facetRow(root, 'Level')).not.toThrow();
     const labels = [...root.querySelectorAll('.videos-facet-label')].map((el) => el.textContent);
     expect(labels).toContain('Topic');
@@ -551,8 +599,9 @@ describe('videos page', () => {
     // Language discriminates now that the catalog is mixed, and leads the stack
     // because it is the one facet that starts with a selection.
     expect(labels[0]).toBe('Language');
-    expect(labels).not.toContain('Game');
-    expect(labels).not.toContain('Source');
+    // Bilibili brought jieqi and a second source, so both facets now discriminate.
+    expect(labels).toContain('Game');
+    expect(labels).toContain('Source');
     // Level facet exposes All + the three ordered levels.
     const levelChips = facetRow(root, 'Level').querySelectorAll('.videos-tag-chip');
     expect(levelChips.length).toBe(VIDEO_LEVELS.length + 1);
