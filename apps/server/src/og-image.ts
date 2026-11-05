@@ -29,6 +29,7 @@ import {
   type XmjTile,
 } from '@mistboard/game';
 import type { ArticleZhTitles } from './article-meta.js';
+import { isArticleThumbSlug, renderArticleThumbnail } from './article-thumb.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
 import { gomokuEnabled } from './feature-flags.js';
 import {
@@ -400,7 +401,8 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
 //  ?aspect= URLs are new with v5, so no older URL ever named them.
 //  v6 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
 //  v7 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
-export const ARTICLE_OG_IMAGE_VERSION = 7;
+//  v8: articles without a dedicated card use their thumbnail art, centre-cropped.
+export const ARTICLE_OG_IMAGE_VERSION = 8;
 
 /** The page's wide card URL (og:image), as the server-rendered article shell
  *  writes it. A zh page (`langPrefix` zh-hans / zh-hant) of a slug with a zh
@@ -554,7 +556,25 @@ export async function serveArticleOgImage(params: {
     return;
   }
   if (!custom && !position && !boardCard) {
-    redirectToDefault(response);
+    let png: Buffer | null = null;
+    try {
+      if (isArticleThumbSlug(slug)) {
+        const source = await fs.readFile(
+          resolve(staticDir, 'thumb', 'article', `${slug}.svg`),
+          'utf8',
+        );
+        png = await renderArticleThumbnail(source, staticDir, 'og');
+      }
+    } catch {
+      // Missing art and failed renders must remain a usable share link.
+      png = null;
+    }
+    if (!png) {
+      redirectToDefault(response);
+      return;
+    }
+    cacheSet(key, png);
+    writePng(response, png, 'MISS');
     return;
   }
   const title = zhTitle ? articleCardTitleZh(zhTitle) : articleCardTitle(kind, params.title);

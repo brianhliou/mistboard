@@ -25,6 +25,7 @@ import type { ServerResponse } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
 import { loadCardArt } from './og-card-board.js';
+import { OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import {
   createPngCache,
   halveImage,
@@ -246,9 +247,15 @@ function placedImages(svg: string): Placed[] {
 }
 
 /** `svg` with each root-relative image inlined as a data URI at the mip level
- *  its drawn size needs (an unreadable one is dropped). The render is 1:1 with
- *  the frame, so an image's drawn size is its size in SVG units. */
-export async function inlineThumbImages(svg: string, staticDir: string): Promise<string> {
+ *  its drawn size needs (an unreadable one is dropped). `zoom` converts SVG
+ *  units to output pixels, including the wide OG card's larger frame. OG
+ *  requires every image so unavailable art falls back instead of going blank. */
+export async function inlineThumbImages(
+  svg: string,
+  staticDir: string,
+  zoom = 1,
+  requireImages = false,
+): Promise<string> {
   const placed = placedImages(svg);
   const resolved = await Promise.all(
     placed.map(async (image) => {
@@ -263,8 +270,11 @@ export async function inlineThumbImages(svg: string, staticDir: string): Promise
   for (const { image, raster, unitsPerPixel } of resolved) {
     out += svg.slice(cursor, image.start);
     cursor = image.end;
-    if (!raster) continue;
-    const need = Math.max(raster.width, raster.height) * unitsPerPixel;
+    if (!raster) {
+      if (requireImages) throw new Error('thumbnail image unavailable');
+      continue;
+    }
+    const need = Math.max(raster.width, raster.height) * unitsPerPixel * zoom;
     let pick = raster.levels[0]!;
     for (const level of raster.levels) if (level.px >= need) pick = level;
     const attrs = image.attrs.replace(/\s(?:xlink:)?href="[^"]*"/g, '');
@@ -308,15 +318,28 @@ export function coverBelowFrame(svg: string): string | null {
   return root.replace(frame, tall) + svg.slice(root.length);
 }
 
-/** A thumbnail SVG from the build as its 480x300 PNG: images inlined, the
- *  canvas grown to cover its art, cropped back to the frame, palette-encoded.
- *  Null when it cannot be drawn safely. */
+/** A build thumbnail as a PNG: images inlined at their drawn size and the
+ *  canvas grown to cover its art safely. Feeds keep their 480x300 palette PNG;
+ *  OG renders the vectors at 1200x750 and keeps the centre 1200x630, with full
+ *  colour for photos. Null when it cannot be drawn safely. */
 export async function renderArticleThumbnail(
   source: string,
   staticDir: string,
+  format: 'feed' | 'og' = 'feed',
 ): Promise<Buffer | null> {
-  const covered = coverBelowFrame(await inlineThumbImages(source, staticDir));
+  const zoom = format === 'og' ? OG_WIDTH / ARTICLE_THUMB_WIDTH : 1;
+  const covered = coverBelowFrame(
+    await inlineThumbImages(source, staticDir, zoom, format === 'og'),
+  );
   if (!covered) return null;
+  if (format === 'og') {
+    const top = (ARTICLE_THUMB_HEIGHT * zoom - OG_HEIGHT) / 2;
+    return svgToPng(covered, PANEL_SOFT, zoom, {
+      top,
+      right: OG_WIDTH,
+      bottom: top + OG_HEIGHT,
+    });
+  }
   const crop = { right: ARTICLE_THUMB_WIDTH, bottom: ARTICLE_THUMB_HEIGHT };
   const { pixels, width, height } = await svgToRgba(covered, PANEL_SOFT, 1, crop);
   const png = encodePalettePng(pixels, width, height);

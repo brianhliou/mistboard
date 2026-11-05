@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test, { type TestContext } from 'node:test';
 import { ARTICLE_META } from './article-meta.js';
 import { fitStudyTitleLines, studyChapterOgPieces } from './og-image.js';
@@ -111,10 +114,10 @@ type RouteCapture = { status: number; headers: Record<string, string>; body: Buf
 
 /** Drives the real HTTP handler for one GET and resolves when it ends; the og
  *  routes return before touching any of the handler's game options. */
-async function getRoute(path: string): Promise<RouteCapture> {
+async function getRoute(path: string, staticDir = WEB_PUBLIC): Promise<RouteCapture> {
   const { createHttpRequestHandler } = await import('./server-http.js');
   const handler = createHttpRequestHandler({
-    staticDir: WEB_PUBLIC,
+    staticDir,
     publicHost: 'https://mistboard.test',
   } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
   return new Promise((resolveCapture) => {
@@ -135,6 +138,89 @@ async function getRoute(path: string): Promise<RouteCapture> {
     handler({ url: path, method: 'GET', headers: {} } as never, response as never);
   });
 }
+
+// A feed SVG with 24-unit strips at either edge: at 2.5x, the wide card
+// must remove exactly those 60 pixels above and below the centre artwork.
+const THUMB_ART =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300"><rect width="480" height="300" fill="#00aacc"/><rect width="480" height="24" fill="#ff0000"/><rect y="276" width="480" height="24" fill="#ff0000"/><circle cx="240" cy="150" r="60" fill="#ffffff"/></svg>';
+
+function thumbBuild(slugs: string[], source = THUMB_ART): string {
+  const dir = mkdtempSync(join(tmpdir(), 'article-og-thumb-'));
+  mkdirSync(join(dir, 'thumb', 'article'), { recursive: true });
+  copyFileSync(join(WEB_PUBLIC, 'logo-mark.png'), join(dir, 'logo-mark.png'));
+  for (const slug of slugs) writeFileSync(join(dir, 'thumb', 'article', `${slug}.svg`), source);
+  return dir;
+}
+
+test('a wide article card uses thumbnail vectors at 1200x630 with a centre crop and cache', async () => {
+  const { pngSize, svgToPng } = await import('./og-raster.js');
+  const staticDir = thumbBuild(['ab-jchess']);
+  const first = await getRoute('/og/article/ab-jchess.png?v=8', staticDir);
+  assert.equal(first.status, 200);
+  assert.equal(first.headers['content-type'], 'image/png');
+  assert.match(first.headers['cache-control'] ?? '', /immutable/);
+  assert.equal(first.headers['x-og-cache'], 'MISS');
+  assert.deepEqual(pngSize(first.body), { width: 1200, height: 630 });
+  const expected = await svgToPng(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#00aacc"/><circle cx="600" cy="315" r="150" fill="#ffffff"/></svg>',
+    '#33312e',
+    1,
+  );
+  assert.deepEqual(first.body, expected, 'renders vectors at output size and crops both edges');
+  const { readFile } = await import('node:fs/promises');
+  assert.notDeepEqual(first.body, await readFile(join(WEB_PUBLIC, 'og-image.png')));
+  const second = await getRoute('/og/article/ab-jchess.png?v=8', staticDir);
+  assert.equal(second.headers['x-og-cache'], 'HIT');
+  assert.deepEqual(second.body, first.body);
+});
+
+test('missing or unrenderable thumbnail art still redirects to the default card', async () => {
+  for (const [slug, source] of [
+    ['jqe', null],
+    ['horde-xiangqi', 'not an SVG'],
+    [
+      'co-up',
+      '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300"><image href="/missing.png" width="480" height="300"/></svg>',
+    ],
+    [
+      'jieqi-platform',
+      '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300"><circle cx="50" cy="5000" r="10" opacity="0.5"/></svg>',
+    ],
+  ] as const) {
+    const staticDir = thumbBuild(source ? [slug] : [], source ?? THUMB_ART);
+    const res = await getRoute(`/og/article/${slug}.png?v=8`, staticDir);
+    assert.equal(res.status, 302, slug);
+    assert.equal(res.headers.location, '/og-image.png', slug);
+    assert.equal(res.body.length, 0, slug);
+  }
+});
+
+test('custom, position and board cards keep priority over thumbnail art', async () => {
+  const { pngSize } = await import('./og-raster.js');
+  const slugs = ['server-enforced-fog', 'fog-chess', 'jungle'];
+  const staticDir = thumbBuild(slugs);
+  for (const slug of slugs) {
+    const res = await getRoute(`/og/article/${slug}.png?v=8`, staticDir);
+    assert.equal(res.status, 200, slug);
+    assert.deepEqual(pngSize(res.body), { width: 2400, height: 1260 }, slug);
+  }
+});
+
+test('thumbnail art does not add localized or aspect cards', async () => {
+  const staticDir = thumbBuild(['chess960-starting-positions']);
+  const path = '/og/article/chess960-starting-positions.png?v=8';
+  const { pngSize } = await import('./og-raster.js');
+  assert.equal((await getRoute(`${path}&lang=zh-hans`, staticDir)).status, 404);
+  for (const [aspect, size] of Object.entries({
+    '1x1': { width: 1200, height: 1200 },
+    '4x3': { width: 1600, height: 1200 },
+    '16x9': { width: 1920, height: 1080 },
+  })) {
+    const res = await getRoute(`${path}&aspect=${aspect}`, staticDir);
+    assert.equal(res.status, 200, aspect);
+    assert.deepEqual(pngSize(res.body), size, aspect);
+  }
+});
 
 function setGomokuFlag(t: TestContext, flag: string | undefined): void {
   const original = process.env.MISTBOARD_GOMOKU_ENABLED;
@@ -213,7 +299,7 @@ test('Gomoku rules share URLs serve every shape in English and 404 a zh caption 
   }
   // The feature gate must run before a warm card cache can return bytes.
   process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
-  assert.equal((await getRoute('/og/article/gomoku.png?v=7')).status, 404);
+  assert.equal((await getRoute('/og/article/gomoku.png?v=8')).status, 404);
 });
 
 test('Gomoku rules share images stay absent with the flag off or unset', async (t) => {
@@ -223,7 +309,7 @@ test('Gomoku rules share images stay absent with the flag off or unset', async (
     else process.env.MISTBOARD_GOMOKU_ENABLED = flag;
     for (const lang of ['', '&lang=zh-hans', '&lang=zh-hant']) {
       for (const shape of ['', '&aspect=16x9', '&aspect=4x3', '&aspect=1x1']) {
-        const res = await getRoute(`/og/article/gomoku.png?v=7${lang}${shape}`);
+        const res = await getRoute(`/og/article/gomoku.png?v=8${lang}${shape}`);
         assert.equal(res.status, 404, `${flag} ${lang} ${shape}`);
         assert.notEqual(res.headers['content-type'], 'image/png');
       }
@@ -239,29 +325,29 @@ test('the article card route serves each aspect at its size, board and site card
   // re-framed.
   for (const slug of ['jungle', 'banqi', 'pikafish', 'jieqi-platform']) {
     for (const [aspect, [width, height]] of Object.entries(expected)) {
-      const res = await getRoute(`/og/article/${slug}.png?v=7&aspect=${aspect}`);
+      const res = await getRoute(`/og/article/${slug}.png?v=8&aspect=${aspect}`);
       assert.equal(res.status, 200, `${slug} ${aspect}`);
       assert.equal(res.headers['content-type'], 'image/png');
       assert.deepEqual(pngSize(res.body), { width, height }, `${slug} ${aspect}`);
     }
   }
   // The wide card is untouched: still 2400x1260 with no aspect.
-  const wide = await getRoute('/og/article/jungle.png?v=7');
+  const wide = await getRoute('/og/article/jungle.png?v=8');
   assert.deepEqual(pngSize(wide.body), { width: 2400, height: 1260 });
 });
 
 test('an unknown aspect is a 400, never the wide card under a square URL', async () => {
   for (const bad of ['2x1', '1X1', '', 'square']) {
-    const res = await getRoute(`/og/article/jungle.png?v=7&aspect=${bad}`);
+    const res = await getRoute(`/og/article/jungle.png?v=8&aspect=${bad}`);
     assert.equal(res.status, 400, JSON.stringify(bad));
     assert.notEqual(res.headers['content-type'], 'image/png');
   }
 });
 
 test('a hand-drawn card has no aspect versions and says so with a 404', async () => {
-  const res = await getRoute('/og/article/yin-sheng.png?v=7&aspect=1x1');
+  const res = await getRoute('/og/article/yin-sheng.png?v=8&aspect=1x1');
   assert.equal(res.status, 404);
-  const unknown = await getRoute('/og/article/no-such-article.png?v=7&aspect=1x1');
+  const unknown = await getRoute('/og/article/no-such-article.png?v=8&aspect=1x1');
   assert.equal(unknown.status, 404);
 });
 
@@ -277,9 +363,9 @@ test('a xiangqi-family card has a zh version per script at every shape', async (
   assert.ok(!ARTICLE_OG_ZH_SLUGS.includes('jungle'), 'animal pieces have no hanzi set');
   for (const slug of ['banqi', 'pikafish']) {
     for (const shape of ['', '&aspect=16x9', '&aspect=4x3', '&aspect=1x1']) {
-      const plain = await getRoute(`/og/article/${slug}.png?v=7${shape}`);
-      const hans = await getRoute(`/og/article/${slug}.png?v=7&lang=zh-hans${shape}`);
-      const hant = await getRoute(`/og/article/${slug}.png?v=7&lang=zh-hant${shape}`);
+      const plain = await getRoute(`/og/article/${slug}.png?v=8${shape}`);
+      const hans = await getRoute(`/og/article/${slug}.png?v=8&lang=zh-hans${shape}`);
+      const hant = await getRoute(`/og/article/${slug}.png?v=8&lang=zh-hant${shape}`);
       for (const [name, res] of [
         ['zh-hans', hans],
         ['zh-hant', hant],
@@ -324,19 +410,19 @@ test('every zh card captions in its own script, at full size, from the published
 
 test('an unknown lang is a 400 and a card with no zh version is a 404', async () => {
   for (const bad of ['zh', 'zh-Hant', 'zh-tw', 'en', 'traditional', '']) {
-    const res = await getRoute(`/og/article/banqi.png?v=7&lang=${bad}`);
+    const res = await getRoute(`/og/article/banqi.png?v=8&lang=${bad}`);
     assert.equal(res.status, 400, JSON.stringify(bad));
     assert.notEqual(res.headers['content-type'], 'image/png');
   }
   // The retired pre-release parameter is not quietly honoured either.
-  const old = await getRoute('/og/article/banqi.png?v=7&pieces=traditional');
-  const plain = await getRoute('/og/article/banqi.png?v=7');
+  const old = await getRoute('/og/article/banqi.png?v=8&pieces=traditional');
+  const plain = await getRoute('/og/article/banqi.png?v=8');
   assert.ok(old.body.equals(plain.body), 'pieces= is ignored, not mapped to a zh card');
   for (const path of [
-    '/og/article/jungle.png?v=7&lang=zh-hant',
-    '/og/article/yin-sheng.png?v=7&lang=zh-hant',
-    '/og/article/jieqi-platform.png?v=7&lang=zh-hans&aspect=1x1',
-    '/og/article/no-such-article.png?v=7&lang=zh-hans',
+    '/og/article/jungle.png?v=8&lang=zh-hant',
+    '/og/article/yin-sheng.png?v=8&lang=zh-hant',
+    '/og/article/jieqi-platform.png?v=8&lang=zh-hans&aspect=1x1',
+    '/og/article/no-such-article.png?v=8&lang=zh-hans',
   ]) {
     const res = await getRoute(path);
     assert.equal(res.status, 404, path);
@@ -577,18 +663,18 @@ test('every mid-game rules card is a legal line, replayed by its kernel', async 
 test("a zh page names its script's card; the English page and other boards do not", async () => {
   const { articleOgImageUrl } = await import('./og-image.js');
   const host = 'https://mistboard.com';
-  assert.equal(articleOgImageUrl(host, 'banqi'), `${host}/og/article/banqi.png?v=7`);
+  assert.equal(articleOgImageUrl(host, 'banqi'), `${host}/og/article/banqi.png?v=8`);
   for (const prefix of ['zh-hans', 'zh-hant']) {
     for (const slug of ['banqi', 'pikafish']) {
       assert.equal(
         articleOgImageUrl(host, slug, prefix),
-        `${host}/og/article/${slug}.png?v=7&lang=${prefix}`,
+        `${host}/og/article/${slug}.png?v=8&lang=${prefix}`,
       );
     }
-    assert.equal(articleOgImageUrl(host, 'jungle', prefix), `${host}/og/article/jungle.png?v=7`);
+    assert.equal(articleOgImageUrl(host, 'jungle', prefix), `${host}/og/article/jungle.png?v=8`);
   }
   for (const other of ['vi', 'zh', 'en']) {
-    assert.equal(articleOgImageUrl(host, 'banqi', other), `${host}/og/article/banqi.png?v=7`);
+    assert.equal(articleOgImageUrl(host, 'banqi', other), `${host}/og/article/banqi.png?v=8`);
   }
 });
 
@@ -692,10 +778,10 @@ test('the Xiangqi Mahjong card shows a hand the rules kernel calls a win', async
 
 test('the Xiangqi Mahjong rules card renders wide only, at the card size', async () => {
   const { pngSize } = await import('./og-raster.js');
-  const res = await getRoute('/og/article/xiangqi-mahjong-32.png?v=7');
+  const res = await getRoute('/og/article/xiangqi-mahjong-32.png?v=8');
   assert.equal(res.status, 200);
   assert.equal(res.headers['content-type'], 'image/png');
   assert.deepEqual(pngSize(res.body), { width: 2400, height: 1260 });
-  const aspect = await getRoute('/og/article/xiangqi-mahjong-32.png?v=7&aspect=1x1');
+  const aspect = await getRoute('/og/article/xiangqi-mahjong-32.png?v=8&aspect=1x1');
   assert.equal(aspect.status, 404);
 });
