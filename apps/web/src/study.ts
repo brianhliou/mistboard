@@ -1001,7 +1001,10 @@ function renderStudy(
     const positions = serializedTreeMainline(mountedTree).length + 1;
     const series = embedScoreSeries(chapter.scoreSeries, positions);
     const scoreChart = series
-      ? createEmbedScoreChart(series, { onJump: (ply) => handle?.jumpToPly(ply) })
+      ? createEmbedScoreChart(series, {
+          onJump: (ply) => handle?.jumpToPly(ply),
+          moveLabel: (ply) => handle?.mainlineMoveLabel(ply) ?? '',
+        })
       : null;
     return mountStudyReview(variant, root, {
       reuseShell,

@@ -646,6 +646,9 @@ export interface TreeReviewHandle {
   serialize(): SerializedTree;
   /** Navigate the recorded mainline from an external chart. */
   jumpToPly(ply: number): void;
+  /** The move-list text of the mainline move that reached a ply ("a4-a5"), or
+   *  '' past the end; an external chart's readout shows it after the number. */
+  mainlineMoveLabel(ply: number): string;
   /** Stop everything the mount started: page-wide listeners, the layout's
    *  resize work, the local engine's worker, a whole-game sweep in flight. A
    *  surface that swaps reviews without a page load (a broadcast board opened
@@ -2814,6 +2817,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     serialize: serializeCurrentTree,
     jumpToPly(ply) {
       go(tree.mainlinePath().slice(0, Math.max(0, Math.trunc(ply))));
+    },
+    mainlineMoveLabel(ply) {
+      const path = tree.mainlinePath();
+      const at = Math.trunc(ply);
+      if (at < 1 || at > path.length) return '';
+      return tree.nodeAt(path.slice(0, at))?.label ?? '';
     },
     destroy() {
       mountAbort.abort();

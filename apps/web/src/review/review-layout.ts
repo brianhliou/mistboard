@@ -297,27 +297,15 @@ export function createReviewScaffold(
   // advice + any study annotations). Playback controls live BELOW it (lichess
   // analyse), so the box bottom lines up with the board and the controls sit under
   // both — see config.navigation's position in the rail group below.
-  //
-  // A study is the exception: its rail carries no analysis summary, so the box IS
-  // the bottom of the column, and unfused controls left a dead gap between the box
-  // and the board line. There the controls become the box's last strip, and the box
-  // bottom lands on the board bottom. Fusing requires no rail panel: the opening
-  // explorer opens as the box's bottom section and would split fused controls
-  // from the board line.
-  // Material rows change where the controls belong. With a pocket, the box that
-  // tracks the board is [top pocket · moves · bottom pocket] and the controls sit
-  // BELOW it (lichess crazyhouse), so fusing them into the moves strip would
-  // sandwich them above the bottom pocket instead.
+  // Studies included (Brian, 2026-11-04: the controls sit under the right column
+  // and the column ends with the move list, on the board line, as on lichess).
+  // With a pocket, the box that tracks the board is [top pocket · moves · bottom
+  // pocket] (lichess crazyhouse), and the controls sit below that box.
   const hasPocketBox = Boolean(materialTop || materialBottom);
-  const fuseNavigation = config.reviewSurface === 'study' && !config.railPanel && !hasPocketBox;
   railMain.append(
-    ...[
-      config.enginePanel,
-      config.moves,
-      config.moveComment,
-      config.annotations,
-      fuseNavigation ? config.navigation : null,
-    ].filter((el): el is HTMLElement => el != null),
+    ...[config.enginePanel, config.moves, config.moveComment, config.annotations].filter(
+      (el): el is HTMLElement => el != null,
+    ),
   );
   // The rail panel (opening explorer) is the bottom section of the moves box: a
   // wrapper holds railMain and the panel, keeps the box's board-height footprint
@@ -351,12 +339,9 @@ export function createReviewScaffold(
     boardTrackingBox = pocketBox;
   }
   const right = railGroup(
-    [
-      boardTrackingBox,
-      fuseNavigation ? null : config.navigation,
-      config.analysisSummary,
-      config.railFooter,
-    ].filter((el): el is HTMLElement => el != null),
+    [boardTrackingBox, config.navigation, config.analysisSummary, config.railFooter].filter(
+      (el): el is HTMLElement => el != null,
+    ),
   );
   const center = config.underboard ? centerColumn(stage.el, config.underboard) : stage.el;
   // Phone stack (col1): the center column and the right rail dissolve and each
@@ -364,7 +349,7 @@ export function createReviewScaffold(
   // after the underboard and the whole move list (review-shell.css "col1 stack").
   markCol1Areas({
     board: stage.el,
-    nav: fuseNavigation ? undefined : config.navigation,
+    nav: config.navigation,
     moves: boardTrackingBox,
     extra: config.railFooter,
     under: config.underboard,

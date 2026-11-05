@@ -473,14 +473,10 @@
 
 /* Right rail ends at the board line (study surface).
  *
- * A study has no analysis-summary under its table (that is where the global
- * shell lets the rail exceed the board) and its playback controls are fused
- * INTO the analyse box (review-layout.ts), so the box bottom is the column
- * bottom. The board-height pin therefore lives on the box itself (the shared
- * .review-shell__right .review-rail-main rule); the group only has to stop
- * stretching to the taller grid row, otherwise it grew past the board and the
- * fused controls sank with it. The earlier version pinned the GROUP instead and
- * left the box short of the board with the controls floating in the gap.
+ * The board-height pin lives on the analyse box itself (the shared
+ * .review-shell__right .review-rail-main rule), so the box ends on the board
+ * line and the playback controls sit under it, as on the game review. The group
+ * only has to stop stretching to the taller grid row.
  */
 @media (min-width: 800px) {
   .study-review .review-shell__right .review-rail-group {
