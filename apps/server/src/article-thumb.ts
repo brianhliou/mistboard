@@ -318,23 +318,77 @@ export function coverBelowFrame(svg: string): string | null {
   return root.replace(frame, tall) + svg.slice(root.length);
 }
 
+/** The share card is wider than the art, so its crop loses 24 units off the top
+ *  and bottom of a 300-unit thumbnail. Art with something in those strips names
+ *  a fit: `shift` moves the crop down (or up, negative) by that many units, up
+ *  to 24; `whole` draws all 300 units in the frame, wider and a little smaller,
+ *  and needs vector art that extends past its own sides or sits on the panel. */
+export type ArticleOgFit = { shift: number } | 'whole';
+
+export const ARTICLE_OG_FITS: Readonly<Record<string, ArticleOgFit>> = {
+  // Text cards: a title high up and a row of pieces low down.
+  'jieqi-platform': { shift: 15 },
+  'co-up': { shift: 15 },
+  'luat-co-up': { shift: 15 },
+  // Half boards with their pieces against the bottom or the top edge.
+  'set-up-your-board': { shift: 24 },
+  'horde-xiangqi': { shift: -24 },
+  'jieqi-bot-wins': { shift: -13 },
+  'pikafish-reveal-bug': { shift: -13 },
+  // The duck disc is taller than the crop; the atomic art is a window on a full board.
+  'duck-xiangqi-strategy': 'whole',
+  'atomic-xiangqi-build': 'whole',
+};
+
+const NESTED_ART = new RegExp(
+  `<svg x="0" y="0" width="${ARTICLE_THUMB_WIDTH}" height="${ARTICLE_THUMB_HEIGHT}"([^>]*) viewBox="(-?[\\d.]+) (-?[\\d.]+) ([\\d.]+) ([\\d.]+)"`,
+);
+
+/** Refit a thumbnail's nested art to the share card's own frame, keeping its
+ *  full height. Null when the art is not a nested vector. */
+function fitWholeArt(svg: string): string | null {
+  const match = NESTED_ART.exec(svg);
+  if (!match) return null;
+  const [found, attrs, x, y, width, height] = match as unknown as [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  const frameHeight = (ARTICLE_THUMB_WIDTH * OG_HEIGHT) / OG_WIDTH;
+  const wide = (Number(height) * OG_WIDTH) / OG_HEIGHT;
+  const left = Number(x) - (wide - Number(width)) / 2;
+  const frameTop = (ARTICLE_THUMB_HEIGHT - frameHeight) / 2;
+  return svg.replace(
+    found,
+    `<svg x="0" y="${frameTop}" width="${ARTICLE_THUMB_WIDTH}" height="${frameHeight}"${attrs} viewBox="${left} ${y} ${wide} ${height}"`,
+  );
+}
+
 /** A build thumbnail as a PNG: images inlined at their drawn size and the
  *  canvas grown to cover its art safely. Feeds keep their 480x300 palette PNG;
- *  OG renders the vectors at 2400x1500 and keeps the centre 2400x1260, the size
- *  every page declares for its card, with full colour for photos. Null when it cannot be drawn safely. */
+ *  OG renders the vectors at 2400x1500 and keeps the 2400x1260 its `fit` names
+ *  (the centre by default), the size every page declares for its card, with
+ *  full colour for photos. Null when it cannot be drawn safely. */
 export async function renderArticleThumbnail(
   source: string,
   staticDir: string,
   format: 'feed' | 'og' = 'feed',
+  fit?: ArticleOgFit,
 ): Promise<Buffer | null> {
   const zoom = format === 'og' ? (OG_WIDTH * OG_CARD_ZOOM) / ARTICLE_THUMB_WIDTH : 1;
+  const fitted = format === 'og' && fit === 'whole' ? fitWholeArt(source) : source;
+  if (!fitted) return null;
   const covered = coverBelowFrame(
-    await inlineThumbImages(source, staticDir, zoom, format === 'og'),
+    await inlineThumbImages(fitted, staticDir, zoom, format === 'og'),
   );
   if (!covered) return null;
   if (format === 'og') {
     const height = OG_HEIGHT * OG_CARD_ZOOM;
-    const top = (ARTICLE_THUMB_HEIGHT * zoom - height) / 2;
+    const shift = fit && fit !== 'whole' ? fit.shift : 0;
+    const top = (ARTICLE_THUMB_HEIGHT * zoom - height) / 2 + shift * zoom;
     return svgToPng(covered, PANEL_SOFT, zoom, {
       top,
       right: OG_WIDTH * OG_CARD_ZOOM,

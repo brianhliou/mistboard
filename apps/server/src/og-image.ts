@@ -29,7 +29,7 @@ import {
   type XmjTile,
 } from '@mistboard/game';
 import type { ArticleZhTitles } from './article-meta.js';
-import { isArticleThumbSlug, renderArticleThumbnail } from './article-thumb.js';
+import { ARTICLE_OG_FITS, isArticleThumbSlug, renderArticleThumbnail } from './article-thumb.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
 import { gomokuEnabled } from './feature-flags.js';
 import {
@@ -722,7 +722,7 @@ export async function serveArticleOgImage(params: {
           resolve(staticDir, 'thumb', 'article', `${slug}.svg`),
           'utf8',
         );
-        png = await renderArticleThumbnail(source, staticDir, 'og');
+        png = await renderArticleThumbnail(source, staticDir, 'og', ARTICLE_OG_FITS[slug]);
       }
     } catch {
       // Missing art and failed renders must remain a usable share link.
