@@ -208,6 +208,7 @@ type PostHogLike = {
 };
 
 // The stale-asset scraper rotates desktop browser versions from late 2023.
+// This is only a suspicion: real players also use these older browsers.
 // Keep the cutoff fixed; mobile browsers and unrecognised UAs stay eligible.
 export function isLikelyAutomatedBrowser(ua: string, webdriver: boolean): boolean {
   if (webdriver) return true;
@@ -217,12 +218,39 @@ export function isLikelyAutomatedBrowser(ua: string, webdriver: boolean): boolea
   return version !== null && Number(version[1]) < 125;
 }
 
+let analyticsDeferred = false;
+let analyticsInitialization: Promise<void> | null = null;
+
 export async function initializeAnalytics(isEmbedDocument: boolean): Promise<void> {
   const phKey = import.meta.env.VITE_POSTHOG_KEY;
   const phHost = import.meta.env.VITE_POSTHOG_HOST;
   if (!phKey || !phHost || !import.meta.env.PROD || isEmbedDocument) return;
-  if (isLikelyAutomatedBrowser(navigator.userAgent, navigator.webdriver)) return;
+  if (analyticsInitialization) return analyticsInitialization;
+  if (analyticsDeferred) return;
+  const deferUntilInput =
+    isLikelyAutomatedBrowser(navigator.userAgent, navigator.webdriver) && !hasHumanInput();
   initializeHumanInputTracking();
+  if (deferUntilInput) {
+    analyticsDeferred = true;
+    // Programmatic scrolling produces trusted scroll events. Keep the broader
+    // human_input person tag, but require one of these inputs to load the SDK.
+    const events = ['pointerdown', 'keydown', 'touchstart', 'wheel'] as const;
+    const onInput = (event: Event) => {
+      if (!event.isTrusted) return;
+      for (const type of events) window.removeEventListener(type, onInput, true);
+      analyticsDeferred = false;
+      analyticsInitialization = loadAnalytics(phKey, phHost);
+      void analyticsInitialization;
+    };
+    for (const type of events)
+      window.addEventListener(type, onInput, { capture: true, passive: true });
+    return;
+  }
+  analyticsInitialization = loadAnalytics(phKey, phHost);
+  return analyticsInitialization;
+}
+
+async function loadAnalytics(phKey: string, phHost: string): Promise<void> {
   const { default: posthog } = await import('posthog-js');
   posthog.init(phKey, {
     api_host: phHost,
@@ -350,19 +378,25 @@ export function initializeHumanInputTracking(): () => void {
 }
 
 let posthogInstance: PostHogLike | null = null;
-// Actions queued before posthog-js finishes its async import.
+// Actions queued while waiting for human input or the async SDK import.
 // Closures keep capture/identify/reset uniform so ordering is preserved.
 const pending: Array<(ph: PostHogLike) => void> = [];
+const MAX_DEFERRED_ACTIONS = 200;
+
+function waitingForAnalyticsInput(): boolean {
+  // Once deferred, a scroll setting the person tag must not release the gate.
+  return (
+    analyticsDeferred ||
+    (isLikelyAutomatedBrowser(navigator.userAgent, navigator.webdriver) && !hasHumanInput())
+  );
+}
 
 function enqueue(action: (ph: PostHogLike) => void): void {
-  // Excluded browsers never retain events or caught exceptions while the SDK
-  // is absent, even on long-lived pages whose analytics calls keep arriving.
-  if (import.meta.env.PROD && isLikelyAutomatedBrowser(navigator.userAgent, navigator.webdriver))
-    return;
   if (posthogInstance) {
     action(posthogInstance);
   } else if (import.meta.env.PROD) {
     pending.push(action);
+    if (waitingForAnalyticsInput() && pending.length > MAX_DEFERRED_ACTIONS) pending.shift();
   }
 }
 
@@ -385,12 +419,14 @@ export function track(name: string, props?: Record<string, unknown>): void {
 // capture_exceptions only sees UNHANDLED errors/promise rejections, so any error
 // we swallow into a friendly UI panel is invisible to monitoring unless we report
 // it here. Groups in Error Tracking the same as an unhandled throw (and rides the
-// same before_send filter). No-op in DEV; queues until posthog loads in PROD.
+// same before_send filter). No-op in DEV; queues until posthog loads in PROD,
+// except while waiting for input: stale-chunk scraper errors must stay dropped.
 export function captureException(error: unknown, props?: Record<string, unknown>): void {
   if (import.meta.env.DEV) {
     console.error('[captureException]', error, props ?? {});
     return;
   }
+  if (!posthogInstance && waitingForAnalyticsInput()) return;
   enqueue((ph) => {
     if (ph.captureException) {
       ph.captureException(error, props);
