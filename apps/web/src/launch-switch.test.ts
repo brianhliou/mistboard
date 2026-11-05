@@ -135,3 +135,19 @@ it.each(['hidden', 'casual'] as const)(
     );
   },
 );
+
+it.each(['hidden', 'casual'] as const)(
+  'Gomoku flair picker follows publicSurface %s without invalidating existing wearers',
+  async (surface) => {
+    await mockGomokuSurface(surface);
+    const flair = await import('./flair.js');
+    expect(flair.isFlairKey('variant-gomoku')).toBe(true);
+    expect(flair.flairOfferedInPicker('variant-gomoku')).toBe(surface === 'casual');
+    for (const key of ['variant-dark-chess', 'variant-atomic-xiangqi']) {
+      expect(flair.isFlairKey(key)).toBe(true);
+      expect(flair.buildFlairIcon(key).querySelector('.flair-mask')).not.toBeNull();
+    }
+    expect(flair.flairOfferedInPicker('variant-dark-chess')).toBe(true);
+    expect(flair.flairOfferedInPicker('variant-atomic-xiangqi')).toBe(false);
+  },
+);
