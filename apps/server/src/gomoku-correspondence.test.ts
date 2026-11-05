@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import {
-  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   correspondenceTimeControl,
   DAY_MS,
   type GomokuColor,
   type GomokuOpening,
   getGomokuLegalMoves,
-  isCorrespondenceAllowlistedSpec,
 } from '@mistboard/game';
 import { gomokuRooms } from './gomoku-registration.js';
 import { type GomokuRuntimeRoom, gomokuTenant } from './gomoku-tenant.js';
@@ -180,28 +178,27 @@ test('Gomoku correspondence factory and seek creation remain behind the Gomoku f
     error: 'disabled',
   });
   assert.equal(gomokuRooms.size, 0);
-  // Public correspondence stays held off even for an admin, regardless of the flag.
+  // An admin bypasses the grant lookup, but never this correspondence flag.
   const admin = { id: 'admin', accountRole: 'admin' } as UserAccount;
   const ctx = {} as HttpApiContext;
   const body = { gameSpecId: 'gomoku', daysPerMove: 0 };
   assert.deepEqual(await createSeekResult(ctx, admin, body, 'board'), {
-    status: 501,
-    body: { error: 'correspondence_unsupported_spec' },
+    status: 404,
+    body: { error: 'variant_disabled' },
   });
   process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
   assert.deepEqual(await createSeekResult(ctx, admin, body, 'board'), {
-    status: 501,
-    body: { error: 'correspondence_unsupported_spec' },
+    status: 400,
+    body: { error: 'invalid_days_per_move' },
   });
 });
 
-test('public Gomoku has no correspondence seeks or rating pool', async () => {
-  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), false);
-  assert.equal(isCorrespondenceAllowlistedSpec('gomoku'), false);
+test('hidden Gomoku seeks require access to be visible and cannot rate', async () => {
   const seeks = [{ gameSpecId: 'xiangqi' }, { gameSpecId: 'gomoku' }];
   const user = { id: 'reader' } as UserAccount;
   for (const reader of [null, user]) {
-    assert.deepEqual(await seeksVisibleTo(seeks, reader, async () => ['gomoku']), [seeks[0]]);
+    assert.deepEqual(await seeksVisibleTo(seeks, reader, async () => []), [seeks[0]]);
   }
+  assert.deepEqual(await seeksVisibleTo(seeks, user, async () => ['gomoku']), seeks);
   assert.equal(ratedSeekError('gomoku', terms.timeControl, true), 'rated_unsupported_spec');
 });

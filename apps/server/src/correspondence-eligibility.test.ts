@@ -60,7 +60,7 @@ test('every correspondence-eligible spec is a real game spec', () => {
   }
 });
 
-test('public correspondence follows the shelf with XMJ and Gomoku held off', () => {
+test('every variant on the public shelf is eligible, and nothing else (2026-10-02)', () => {
   // Brian: "all of them should support it". The shelf is CANONICAL_VARIANT_ORDER,
   // the one list every picker reads; mahjong and study-only chess are not on it.
   // A variant added to the shelf without correspondence fails here, not in a
@@ -68,9 +68,7 @@ test('public correspondence follows the shelf with XMJ and Gomoku held off', () 
   // Xiangqi Mahjong is on the shelf but held out (Brian, 2026-10-25).
   assert.deepEqual(
     [...CORRESPONDENCE_ELIGIBLE_SPECS].sort(),
-    CANONICAL_VARIANT_ORDER.filter(
-      (id) => id !== XIANGQI_MAHJONG_SPEC_ID && id !== GOMOKU_SPEC_ID,
-    ).sort(),
+    CANONICAL_VARIANT_ORDER.filter((id) => id !== XIANGQI_MAHJONG_SPEC_ID).sort(),
   );
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(MAHJONG_SPEC_ID));
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(CHESS_SPEC_ID));
@@ -175,10 +173,9 @@ test('XMJ is not played by correspondence, publicly or by grant (2026-10-25)', (
 });
 
 test('an allowlisted spec is off the public eligible list, backed by a factory and a sweeper, and never rated', async () => {
-  // Gomoku and XMJ are publicly launched with correspondence held off.
+  // Gomoku has correspondence parity before launch; XMJ remains held out and
   // HK mahjong has four seats and cannot use correspondence.
-  assert.deepEqual([...CORRESPONDENCE_ALLOWLISTED_SPECS], []);
-  assert.equal(isCorrespondenceRatedSpec(GOMOKU_SPEC_ID), false);
+  assert.deepEqual([...CORRESPONDENCE_ALLOWLISTED_SPECS], [GOMOKU_SPEC_ID]);
   for (const specId of CORRESPONDENCE_ALLOWLISTED_SPECS) {
     // Disjoint: the eligible list is public (copy, pickers, rated eligibility).
     assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(specId), `${specId} is on the public list`);
@@ -196,7 +193,7 @@ test('an allowlisted spec is off the public eligible list, backed by a factory a
   }
 });
 
-test('held-off XMJ seeks stay hidden without looking up playtest grants', async () => {
+test('launched XMJ seeks are public without looking up playtest grants', async () => {
   const { seeksVisibleTo } = await import('./routes/correspondence-seeks.js');
   const seeks = [{ gameSpecId: XIANGQI_SPEC_ID }, { gameSpecId: XIANGQI_MAHJONG_SPEC_ID }];
   const reader = { id: 'u1' } as NonNullable<Parameters<typeof seeksVisibleTo>[1]>;
@@ -205,7 +202,7 @@ test('held-off XMJ seeks stay hidden without looking up playtest grants', async 
     looked = true;
     return [];
   };
-  assert.deepEqual(await seeksVisibleTo(seeks, reader, grants), [seeks[0]]);
-  assert.deepEqual(await seeksVisibleTo(seeks, null, grants), [seeks[0]]);
+  assert.deepEqual(await seeksVisibleTo(seeks, reader, grants), seeks);
+  assert.deepEqual(await seeksVisibleTo(seeks, null, grants), seeks);
   assert.equal(looked, false);
 });

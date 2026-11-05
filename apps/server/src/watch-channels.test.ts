@@ -57,8 +57,7 @@ test('hidden Gomoku stays out of channels, Featured, Engines, current games and 
     clients: [],
   } as unknown as Parameters<typeof gomokuRooms.set>[1]);
   try {
-    assert.equal(spec.publicSurface, 'casual');
-    spec.publicSurface = 'hidden';
+    assert.equal(spec.publicSurface, 'hidden');
     for (const enabled of ['false', 'true']) {
       process.env.MISTBOARD_GOMOKU_ENABLED = enabled;
       assert.equal(listedOnSurface('gomoku'), false);

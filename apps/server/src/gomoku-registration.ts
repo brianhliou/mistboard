@@ -3,7 +3,6 @@ import {
   GOMOKU_SPEC_ID,
   type GomokuColor,
   getGomokuPlayerView,
-  isPublicGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
@@ -203,12 +202,7 @@ registerVariantTenant({
     // The Chinese name is identical in Simplified and Traditional Chinese.
     label: 'Gomoku · 五子棋',
     finalPosition(events, roomId) {
-      // Launched variants retain historical cards when creation is switched off.
-      if (
-        (!gomokuEnabled() && !isPublicGameSpec(GOMOKU_SPEC_ID)) ||
-        !isTenantEventLog(gomokuTenant, events, roomId)
-      )
-        return null;
+      if (!gomokuEnabled() || !isTenantEventLog(gomokuTenant, events, roomId)) return null;
       const { state } = replayTenantEvents(gomokuTenant, events);
       if (state.status.type !== 'finished') return null;
       const { board, lastMove, winningLine } = getGomokuPlayerView(state, 'black', true);

@@ -160,28 +160,11 @@ test('every server list agrees with the launch switch as it stands', () => {
   assert.deepEqual(xmjListedNow(), xmjListedUnder(isPublicGameSpec));
 });
 
-test('Gomoku is launched with a public rated pool and no public correspondence', async () => {
-  assert.equal(isPublicGameSpec('gomoku'), true);
-  assert.equal(articleIsIndexable('gomoku'), true);
-  assert.equal(CANONICAL_VARIANT_ORDER.at(-1), 'gomoku');
-  assert.equal(isAllowlistedGameSpec('gomoku'), false);
-  assert.equal(await mayPlayVariant(null, 'gomoku'), true);
-  assert.equal(isPublicRatingPool('gomoku'), true);
-  assert.ok(!countedPublicGame('g').includes("'gomoku'"));
-  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), false);
-  assert.equal(isCorrespondenceAllowlistedSpec('gomoku'), false);
-  const hidden = publicSpecPredicate(
-    GAME_SPECS.map((spec) =>
-      spec.id === 'gomoku' ? { ...spec, publicSurface: 'hidden' as const } : spec,
-    ),
-  );
-  const lists = deriveLaunchLists(hidden);
-  assert.ok(lists.allowlisted.includes('gomoku'));
-  assert.ok(!lists.canonicalVariantOrder.includes('gomoku'));
-  assert.ok(privateRatingPoolsFor(lists.allowlisted).includes('gomoku'));
-  assert.ok(playtestRulesSlugs(hidden).includes('gomoku'));
-  assert.ok(offPublicGameSpecIds(hidden).includes('gomoku'));
-  assert.ok(!lists.correspondenceEligible.includes('gomoku'));
+test('Gomoku rules stay unindexed while hidden and follow the launch switch', () => {
+  assert.equal(isPublicGameSpec('gomoku'), false);
+  assert.equal(articleIsIndexable('gomoku'), false);
+  assert.ok(playtestRulesSlugs(isPublicGameSpec).includes('gomoku'));
+  assert.ok(!playtestRulesSlugs(publicSpecPredicate(withSwitchOn('gomoku'))).includes('gomoku'));
 });
 
 // config/product-profile.json is the deploy catalog (dev flags, seed fixtures),
@@ -217,10 +200,8 @@ test('flipping the XMJ switch lists it on every server surface', () => {
   // It takes the shelf's last place; every other variant keeps its place.
   const launched = deriveLaunchLists(on);
   const hidden = deriveLaunchLists(off);
-  assert.deepEqual(
-    launched.canonicalVariantOrder.filter((id) => id !== XMJ),
-    hidden.canonicalVariantOrder,
-  );
+  assert.equal(launched.canonicalVariantOrder.at(-1), XMJ);
+  assert.deepEqual(launched.canonicalVariantOrder.slice(0, -1), hidden.canonicalVariantOrder);
   // Correspondence is the one list the switch does not reach: XMJ is held out of
   // it either way (Brian, 2026-10-25), so flipping it leaves that list alone.
   assert.deepEqual(launched.correspondenceEligible, hidden.correspondenceEligible);

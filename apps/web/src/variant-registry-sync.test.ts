@@ -412,10 +412,10 @@ describe('Gomoku hidden registration', () => {
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
-      expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('casual');
+      expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('hidden');
       expect(VARIANTS.find((variant) => variant.gameSpecId === GOMOKU_SPEC_ID)).toMatchObject({
-        onLeaderboard: true,
-        onProfile: true,
+        onLeaderboard: false,
+        onProfile: false,
       });
       const web = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
       const server = registeredVariantTenants().find(
