@@ -11,8 +11,10 @@ import type {
 //
 // Shape: a content-addressed cache in front of a model. The route resolves a
 // topic/post id to its visible text, hashes the text, and serves a stored
-// translation when one exists for (hash, target locale, model). Only a miss
-// costs money, so only a miss is metered; in-flight misses for the same key
+// translation when one exists for (text + plan shape, target locale). Prompt
+// version and model are provenance, not invalidation: prefer the current prompt,
+// then any stored row. On a miss, also accept the legacy v2 hash, never v1.
+// Only a miss costs money, so only a miss is metered; in-flight misses for the same key
 // are coalesced so a popular post translates once however many readers tap
 // at the same moment.
 //
@@ -127,8 +129,8 @@ export type ForumTranslationPlan = {
   parts: TranslationPart[];
   segments: string[];
   // True when every line with letters is sent and there is no quote: the
-  // model sees what the whole-body path used to send, so translations cached
-  // before segments existed are still right and keep their key.
+  // model sees what the whole-body path used to send, so compatible legacy v2
+  // translations keep their whole-body shape and can still be served.
   wholeBody: boolean;
 };
 
@@ -218,25 +220,33 @@ export function assembleForumTranslation(plan: ForumTranslationPlan, raw: string
     .join('\n');
 }
 
-// The cache key. Every plan is keyed under the prompt version, and a
-// segmented plan also under the segment version, so a row the whole-body path
-// wrote for a quote or a mixed-script post (which could have dropped the
-// author's own line) is never served again; no row has to be deleted.
+// Durable keys depend only on normalized text and the output plan's shape.
+// The namespace keeps them apart from pre-v2 rows with incorrect game names;
+// the segment marker keeps whole-body output out of quote/mixed-script plans.
 const SEGMENTED_KEY_VERSION = 'forum-translation-segments-v1';
-// Bumped when the system prompt changes what a correct translation is, so a
-// row written under the old prompt is never served again. v2: fixed game
-// names (a 揭棋 post had come out as "Banqi (blindfold chess)").
-const PROMPT_KEY_VERSION = 'forum-translation-prompt-v2';
+// Provenance on new writes, and a preference on reads, never part of the key.
+// v2 fixed game names (a 揭棋 post had come out as "Banqi (blindfold chess)").
+export const PROMPT_KEY_VERSION = 'forum-translation-prompt-v2';
 
 function cacheHashForPlan(text: string, plan: ForumTranslationPlan): string {
-  const parts = plan.wholeBody ? [PROMPT_KEY_VERSION] : [PROMPT_KEY_VERSION, SEGMENTED_KEY_VERSION];
+  const shape = plan.wholeBody ? 'whole-body' : SEGMENTED_KEY_VERSION;
   return createHash('sha256')
-    .update(`${parts.join('\n')}\n${normalizeForumText(text)}`, 'utf8')
+    .update(`forum-translation-text\n${shape}\n${normalizeForumText(text)}`, 'utf8')
     .digest('hex');
 }
 
 export function forumTranslationCacheHash(text: string, target: TranslationLocale): string {
   return cacheHashForPlan(text, planForumTranslation(text, target));
+}
+
+// Fixed v2 recipe: future prompt bumps must keep finding these rows. No v1
+// fallback, because those translations predate the corrected game names.
+export function legacyForumTranslationCacheHash(text: string, target: TranslationLocale): string {
+  const plan = planForumTranslation(text, target);
+  const marker = plan.wholeBody ? '' : `${SEGMENTED_KEY_VERSION}\n`;
+  return createHash('sha256')
+    .update(`forum-translation-prompt-v2\n${marker}${normalizeForumText(text)}`, 'utf8')
+    .digest('hex');
 }
 
 // ── Model client ────────────────────────────────────────────────────────────
@@ -335,16 +345,18 @@ export function createAnthropicTranslationClient(
 
 export type ForumTranslationDeps = {
   client: TranslationModelClient;
+  promptVersion?: string;
   loadSource(kind: ForumTranslationSourceKind, id: string): Promise<ForumTranslationSource | null>;
   getCached(key: {
     contentHash: string;
     targetLocale: TranslationLocale;
-    model: string;
+    promptVersion: string;
   }): Promise<StoredForumTranslation | null>;
   store(input: {
     contentHash: string;
     targetLocale: TranslationLocale;
     model: string;
+    promptVersion: string;
     translatedText: string;
     source: { kind: ForumTranslationSourceKind; id: string };
     inputTokens: number;
@@ -418,6 +430,7 @@ export function createForumTranslationService(deps: ForumTranslationDeps): Forum
   const dailyCap = deps.dailyMissCap ?? DEFAULT_DAILY_MISS_CAP;
   const breaker = deps.breaker ?? DEFAULT_BREAKER;
   const now = deps.now ?? Date.now;
+  const promptVersion = deps.promptVersion ?? PROMPT_KEY_VERSION;
 
   // Process-local counters. One web instance serves prod, and a reset on
   // deploy only ever under-counts toward the cap, never over-spends past it
@@ -471,7 +484,13 @@ export function createForumTranslationService(deps: ForumTranslationDeps): Forum
 
       const contentHash = cacheHashForPlan(source.text, plan);
       const model = deps.client.model;
-      const cached = await deps.getCached({ contentHash, targetLocale: target, model });
+      const cached =
+        (await deps.getCached({ contentHash, targetLocale: target, promptVersion })) ??
+        (await deps.getCached({
+          contentHash: legacyForumTranslationCacheHash(source.text, target),
+          targetLocale: target,
+          promptVersion,
+        }));
       if (cached) return { status: 'ok', text: cached.translatedText, cached: true };
 
       const key = `${contentHash}:${target}:${model}`;
@@ -542,6 +561,7 @@ export function createForumTranslationService(deps: ForumTranslationDeps): Forum
           contentHash,
           targetLocale: target,
           model,
+          promptVersion,
           translatedText,
           source: { kind, id },
           inputTokens: translation.inputTokens,
