@@ -3352,6 +3352,9 @@ function colorGlyphNodes(
   if (capabilities.glyphClass === 'xiangqi') {
     return xiangqiGeneralGlyphNodes(value);
   }
+  if (capabilities.glyphClass === 'stone') {
+    return gomokuStoneGlyphNodes(value);
+  }
   if (value === 'random') {
     const first = document.createElement('span');
     first.className = capabilities.neutralGlyphColor ? '' : capabilities.firstColor;
@@ -3394,6 +3397,20 @@ function xiangqiGeneralGlyphNodes(value: LandingColorPreference): Node[] {
   };
   if (value === 'random') return [general('red'), general('black')];
   return [general(value === 'black' ? 'black' : 'red')];
+}
+
+// Gomoku sides are stones drawn like the board's own, never text glyphs: a
+// character glyph turns white on the selected fill, so a picked Black read as
+// a white stone (Brian's phone, 2026-11-05).
+function gomokuStoneGlyphNodes(value: LandingColorPreference): Node[] {
+  const stone = (color: 'black' | 'white') => {
+    const piece = document.createElement('span');
+    piece.className = `landing-color-piece stone ${color}`;
+    piece.setAttribute('aria-hidden', 'true');
+    return piece;
+  };
+  if (value === 'random') return [stone('black'), stone('white')];
+  return [stone(value === 'white' ? 'white' : 'black')];
 }
 
 function chessKingGlyphNodes(value: LandingColorPreference): Node[] {

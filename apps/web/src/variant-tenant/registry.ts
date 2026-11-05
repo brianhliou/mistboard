@@ -364,6 +364,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         firstColor: 'black',
         firstGlyph: '●',
         firstLabel: 'Black',
+        glyphClass: 'stone',
         secondColor: 'white',
         secondGlyph: '○',
         secondLabel: 'White',
