@@ -152,7 +152,7 @@ function thumbBuild(slugs: string[], source = THUMB_ART): string {
   return dir;
 }
 
-test('a wide article card uses thumbnail vectors at 1200x630 with a centre crop and cache', async () => {
+test('a wide article card uses thumbnail vectors at the declared 2400x1260 with a centre crop and cache', async () => {
   const { pngSize, svgToPng } = await import('./og-raster.js');
   const staticDir = thumbBuild(['ab-jchess']);
   const first = await getRoute('/og/article/ab-jchess.png?v=8', staticDir);
@@ -160,11 +160,11 @@ test('a wide article card uses thumbnail vectors at 1200x630 with a centre crop 
   assert.equal(first.headers['content-type'], 'image/png');
   assert.match(first.headers['cache-control'] ?? '', /immutable/);
   assert.equal(first.headers['x-og-cache'], 'MISS');
-  assert.deepEqual(pngSize(first.body), { width: 1200, height: 630 });
+  assert.deepEqual(pngSize(first.body), { width: 2400, height: 1260 });
   const expected = await svgToPng(
     '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#00aacc"/><circle cx="600" cy="315" r="150" fill="#ffffff"/></svg>',
     '#33312e',
-    1,
+    2,
   );
   assert.deepEqual(first.body, expected, 'renders vectors at output size and crops both edges');
   const { readFile } = await import('node:fs/promises');

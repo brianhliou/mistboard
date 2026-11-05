@@ -103,7 +103,7 @@ export const setUpYourBoardArticle: Article = {
   audience: 'Anyone who plays on Mistboard and wants the board to look the way they like it.',
   thumbnail: {
     kind: 'image',
-    src: '/article-thumbs/board-looks/thumbnail.webp',
+    src: '/article-thumbs/board-looks/thumbnail.jpg',
     alt: 'Xiangqi pieces drawn in 3D on the lined board',
   },
   readNext: ['jieqi', 'banqi', 'jungle-flip'],

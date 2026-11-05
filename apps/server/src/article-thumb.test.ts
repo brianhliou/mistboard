@@ -111,7 +111,7 @@ test('embedded rasters choose their mip level at the output scale', async () => 
   const source = frame('<image href="/img/scaled-face.png" width="480" height="300"/>');
   for (const [zoom, width] of [
     [1, 600],
-    [2.5, 1200],
+    [5, 1200],
   ] as const) {
     const inlined = await inlineThumbImages(source, staticDir, zoom);
     const uri = /href="data:image\/png;base64,([^"]+)"/.exec(inlined)?.[1];
@@ -123,7 +123,7 @@ test('embedded rasters choose their mip level at the output scale', async () => 
 test('the safe canvas also protects cropped board art at OG size', async () => {
   const png = await renderArticleThumbnail(croppedCard, staticDir, 'og');
   assert.ok(png);
-  assert.deepEqual(pngSize(png), { width: 1200, height: 630 });
+  assert.deepEqual(pngSize(png), { width: 2400, height: 1260 });
 });
 
 test('a slug outside [a-z0-9-] is a 404, so no path leaves the thumb directory', async () => {

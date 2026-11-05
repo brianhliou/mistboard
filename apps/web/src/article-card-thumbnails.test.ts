@@ -129,3 +129,19 @@ describe('article card thumbnails', () => {
     expect(handCropped.sort()).toEqual(['atomic-xiangqi', 'atomic-xiangqi-build', 'horde-xiangqi']);
   });
 });
+
+// The server rasterises a thumbnail for feeds and the share card, and resvg
+// cannot decode WebP: the feed image comes out blank and the card falls back to
+// the site logo, with no error anywhere (set-up-your-board, 2026-11-04).
+describe('article thumbnail art the rasteriser can read', () => {
+  it('uses PNG or JPEG for every published or scheduled image thumbnail', () => {
+    const unreadable = articles
+      .filter((article) => article.status === 'published' && article.thumbnail?.kind === 'image')
+      .flatMap((article) => {
+        const thumb = article.thumbnail;
+        if (thumb?.kind !== 'image') return [];
+        return /\.(png|jpe?g)(?:[?#]|$)/i.test(thumb.src) ? [] : [`${article.slug}: ${thumb.src}`];
+      });
+    expect(unreadable).toEqual([]);
+  });
+});

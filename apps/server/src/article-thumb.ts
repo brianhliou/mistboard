@@ -30,6 +30,7 @@ import {
   createPngCache,
   halveImage,
   halvePng,
+  OG_CARD_ZOOM,
   OG_FONT_OPTIONS,
   pngSize,
   svgToPng,
@@ -66,7 +67,6 @@ const MIME: Readonly<Record<string, string>> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
 };
 
 let thumbCache = createPngCache(96);
@@ -320,24 +320,25 @@ export function coverBelowFrame(svg: string): string | null {
 
 /** A build thumbnail as a PNG: images inlined at their drawn size and the
  *  canvas grown to cover its art safely. Feeds keep their 480x300 palette PNG;
- *  OG renders the vectors at 1200x750 and keeps the centre 1200x630, with full
- *  colour for photos. Null when it cannot be drawn safely. */
+ *  OG renders the vectors at 2400x1500 and keeps the centre 2400x1260, the size
+ *  every page declares for its card, with full colour for photos. Null when it cannot be drawn safely. */
 export async function renderArticleThumbnail(
   source: string,
   staticDir: string,
   format: 'feed' | 'og' = 'feed',
 ): Promise<Buffer | null> {
-  const zoom = format === 'og' ? OG_WIDTH / ARTICLE_THUMB_WIDTH : 1;
+  const zoom = format === 'og' ? (OG_WIDTH * OG_CARD_ZOOM) / ARTICLE_THUMB_WIDTH : 1;
   const covered = coverBelowFrame(
     await inlineThumbImages(source, staticDir, zoom, format === 'og'),
   );
   if (!covered) return null;
   if (format === 'og') {
-    const top = (ARTICLE_THUMB_HEIGHT * zoom - OG_HEIGHT) / 2;
+    const height = OG_HEIGHT * OG_CARD_ZOOM;
+    const top = (ARTICLE_THUMB_HEIGHT * zoom - height) / 2;
     return svgToPng(covered, PANEL_SOFT, zoom, {
       top,
-      right: OG_WIDTH,
-      bottom: top + OG_HEIGHT,
+      right: OG_WIDTH * OG_CARD_ZOOM,
+      bottom: top + height,
     });
   }
   const crop = { right: ARTICLE_THUMB_WIDTH, bottom: ARTICLE_THUMB_HEIGHT };
