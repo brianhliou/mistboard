@@ -29,6 +29,10 @@ export function captureGateStamp({ root = process.cwd() } = {}) {
     const originalPath = path.resolve(root, original);
     if (existsSync(originalPath)) copyFileSync(originalPath, index);
     git(['add', '-A', '--', '.'], env);
+    // release:prod commits its --changelog line before the gate, so a key that
+    // covered CHANGELOG.md would never match the pre-ship run. That commit
+    // runs the changelog grammar test itself, which is the only gate it needs.
+    git(['rm', '--cached', '-q', '--ignore-unmatch', '--', 'CHANGELOG.md'], env);
     const tree = git(['write-tree'], env);
     if (!/^[a-f0-9]{40,64}$/.test(tree)) throw new Error('invalid tree hash');
     const lock = createHash('sha256')

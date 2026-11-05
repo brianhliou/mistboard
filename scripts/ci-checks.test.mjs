@@ -26,6 +26,7 @@ cp.spawnSync = (command, args, options) => {
   appendFileSync(process.env.GATE_FIXTURE_CALLS, JSON.stringify([command, ...args]) + '\\n');
   if (command === 'git') {
     if (args[0] === 'add') return ok();
+    if (args[0] === 'rm' && args.includes('--cached')) return ok();
     if (args[0] === 'write-tree') return ok(failures.tree ?? 'c'.repeat(40));
     if (args[0] === 'rev-parse' && args.includes('--git-path')) return ok(process.env.GATE_FIXTURE_INDEX);
     if (args[0] === 'status' || args[0] === 'fetch') return ok();
@@ -391,7 +392,11 @@ test('gate-only runs the full release gate without release side effects', () => 
   assert.ok(
     result.calls
       .filter((call) => call[0] === 'git')
-      .every((call) => ['rev-parse', 'diff', 'ls-files', 'add', 'write-tree'].includes(call[1])),
+      .every(
+        (call) =>
+          ['rev-parse', 'diff', 'ls-files', 'add', 'write-tree'].includes(call[1]) ||
+          (call[1] === 'rm' && call.includes('--cached')),
+      ),
     'gate-only must use local refs, without status, fetch, merge, commit or push',
   );
 });

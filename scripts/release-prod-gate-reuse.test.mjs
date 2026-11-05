@@ -108,3 +108,21 @@ test('release help documents the force-run escape hatch', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /--no-gate-reuse\s+Run every selected gate stage/);
 });
+
+test("the release's own changelog commit keeps the pre-ship gate key; other edits do not", (t) => {
+  const repo = repository(t);
+  repo.write('CHANGELOG.md', '## 2026-11\n');
+  repo.git('add', 'CHANGELOG.md');
+  repo.commit();
+  const preship = repo.snapshot();
+  repo.write('CHANGELOG.md', '## 2026-11\n\n### Fixed\n\n- A line the release inserts\n');
+  repo.git('add', 'CHANGELOG.md');
+  repo.commit();
+  assert.equal(
+    repo.snapshot().path,
+    preship.path,
+    '--changelog runs before the gate and must not miss',
+  );
+  repo.write('source.txt', 'a code change');
+  assert.notEqual(repo.snapshot().path, preship.path);
+});
