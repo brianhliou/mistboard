@@ -8,7 +8,7 @@
 //
 // The library catalogs on four axes: topic (`tags`), difficulty (`level`), game
 // (`variant`), and spoken `language`. Each entry declares its `source` — an
-// external YouTube video or a first-party Mistboard-hosted one — as a
+// external YouTube/Bilibili video or a first-party Mistboard-hosted one — as a
 // discriminated union, so the render layer derives the watch URL and thumbnail
 // per source rather than assuming YouTube everywhere. Add Mistboard how-tos and
 // deep dives to MISTBOARD_VIDEOS.
@@ -54,6 +54,8 @@
 // skipped by the sweep AND asserted absent from this array by videos.test.ts, so
 // a deliberate cut cannot quietly come back. Add to the ledger, not just here.
 
+import { isBlockedForViewer, YOUTUBE_BLOCKED_IN } from './viewer-geo.js';
+
 export type VideoTag =
   | 'basics'
   | 'openings'
@@ -78,10 +80,8 @@ export type VideoLevel = 'intro' | 'intermediate' | 'advanced';
 
 export const VIDEO_LEVELS: readonly VideoLevel[] = ['intro', 'intermediate', 'advanced'];
 
-// Which game the video is about. Everything is xiangqi today; `fog` is reserved
-// for the Fog of War content lane so those videos have somewhere to land without
-// a schema change. The variant facet only renders when more than one is present.
-export type VideoVariant = 'xiangqi' | 'fog';
+// The variant facet only renders when more than one game is present.
+export type VideoVariant = 'xiangqi' | 'jieqi' | 'fog';
 
 // Spoken language of the video. Deliberately NOT the site `Locale`: speech and
 // script are different axes, so one 'zh' covers Mandarin video for both the
@@ -94,7 +94,7 @@ export type VideoLanguage = 'en' | 'zh';
 // English first, then by catalog depth. The order drives the facet row.
 export const VIDEO_LANGUAGES: readonly VideoLanguage[] = ['en', 'zh'];
 
-export type VideoSource = 'youtube' | 'mistboard';
+export type VideoSource = 'youtube' | 'bilibili' | 'mistboard';
 
 interface VideoBase {
   /** Exact title (YouTube oembed value, or Mistboard's own title). */
@@ -138,6 +138,13 @@ export interface YoutubeVideo extends VideoBase {
   short?: true;
 }
 
+/** A curated Bilibili video. Art is recorded at curation time, not derived. */
+export interface BilibiliVideo extends VideoBase {
+  source: 'bilibili';
+  bvid: string;
+  thumbnailUrl: string;
+}
+
 /** A first-party Mistboard-hosted video. Watch URL + thumbnail are explicit. */
 export interface MistboardVideo extends VideoBase {
   source: 'mistboard';
@@ -149,11 +156,32 @@ export interface MistboardVideo extends VideoBase {
   thumbnailUrl: string;
 }
 
-export type VideoEntry = YoutubeVideo | MistboardVideo;
+export type VideoEntry = YoutubeVideo | BilibiliVideo | MistboardVideo;
+
+/** A mainland nav destination needs a useful catalogue before promotion. */
+export const BILIBILI_NAV_MIN_ENTRIES = 12;
 
 /** Stable, source-namespaced key for dedupe and list rendering. */
 export function videoKey(video: VideoEntry): string {
-  return video.source === 'youtube' ? `yt:${video.id}` : `mb:${video.slug}`;
+  switch (video.source) {
+    case 'youtube':
+      return `yt:${video.id}`;
+    case 'bilibili':
+      return `bb:${video.bvid}`;
+    case 'mistboard':
+      return `mb:${video.slug}`;
+  }
+}
+
+/** Applied before creating cards, so blocked thumbnails never start loading. */
+export function isVideoAvailableForViewer(video: VideoEntry): boolean {
+  switch (video.source) {
+    case 'youtube':
+      return !isBlockedForViewer(YOUTUBE_BLOCKED_IN);
+    case 'bilibili':
+    case 'mistboard':
+      return true;
+  }
 }
 
 // Kept here rather than in videos.ts so a surface that only needs a card's URL
@@ -169,21 +197,24 @@ export function videoWatchUrl(video: VideoEntry): string {
       return video.short
         ? `https://www.youtube.com/shorts/${encodeURIComponent(video.id)}`
         : `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+    case 'bilibili':
+      return `https://www.bilibili.com/video/${encodeURIComponent(video.bvid)}/`;
     case 'mistboard':
       return video.url;
   }
 }
 
 export function videoThumbUrl(video: VideoEntry): string {
-  // An explicit thumbnail always wins: it is how our own episodes avoid a
-  // third-party image request that a blocker can drop.
-  if (video.thumbnailUrl) return video.thumbnailUrl;
   switch (video.source) {
     case 'youtube':
       // no-cors image load: img.youtube.com sends CORP: cross-origin, so it
       // passes dev's site-wide COEP require-corp and a review page's (the SPA
       // keeps that COEP across pushState). hqdefault ships 4:3 letterboxed.
-      return `https://img.youtube.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
+      return (
+        video.thumbnailUrl ??
+        `https://img.youtube.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`
+      );
+    case 'bilibili':
     case 'mistboard':
       return video.thumbnailUrl;
   }
@@ -1197,11 +1228,18 @@ const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [
   },
 ];
 
+// Intentionally empty until the Bilibili curation pass.
+const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [];
+
 /** The curated catalogue: other people's videos, filtered and faceted by the
  *  page. Deliberately does NOT include our own episodes — they have their own
  *  shelf above it, and mixing them in would double-render every card and shift
  *  every count and facet the page derives from this list. */
-export const VIDEOS: readonly VideoEntry[] = [...YOUTUBE_VIDEOS, ...MISTBOARD_VIDEOS];
+export const VIDEOS: readonly VideoEntry[] = [
+  ...YOUTUBE_VIDEOS,
+  ...BILIBILI_VIDEOS,
+  ...MISTBOARD_VIDEOS,
+];
 
 /** Ours: the episodes, then the Shorts. Rendered above the catalogue, never
  *  inside it; the shelf splits them by `short`. */

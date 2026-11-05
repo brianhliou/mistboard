@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as analytics from './analytics.js';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
   buildVideoCard,
@@ -15,6 +17,7 @@ import {
   videoWatchUrl,
 } from './videos.js';
 import {
+  type BilibiliVideo,
   FIRST_PARTY_VIDEOS,
   isShort,
   isVideoLive,
@@ -93,6 +96,138 @@ const MISTBOARD_FIXTURE: VideoEntry = {
   addedAt: '2026-07-21',
 };
 
+const BILIBILI_FIXTURE: BilibiliVideo = {
+  source: 'bilibili',
+  bvid: 'BV1xx411c7mD',
+  thumbnailUrl: 'https://i0.hdslb.com/bfs/archive/fixture.jpg',
+  title: '揭棋入门',
+  author: '象棋课堂',
+  durationMinutes: 10,
+  tags: ['basics'],
+  level: 'intro',
+  variant: 'jieqi',
+  language: 'zh',
+  addedAt: '2026-11-05',
+};
+
+async function pageWithCatalogue(
+  videos: readonly VideoEntry[],
+  locale: 'en' | 'zh-Hans' | 'zh-Hant' = 'en',
+): Promise<HTMLElement> {
+  vi.resetModules();
+  vi.doMock('./videos-data.js', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('./videos-data.js')>()),
+    VIDEOS: videos,
+    FIRST_PARTY_VIDEOS: [...FIRST_PARTY_VIDEOS, MISTBOARD_FIXTURE],
+  }));
+  const { buildVideosPage: build } = await import('./videos.js');
+  await ensureLocaleCatalog(locale);
+  return build(locale);
+}
+
+afterEach(() => {
+  document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+  vi.restoreAllMocks();
+  vi.doUnmock('./videos-data.js');
+  vi.resetModules();
+});
+
+describe('country routing', () => {
+  it.each(SUPPORTED_LOCALES)(
+    'never builds YouTube destinations or thumbnails for CN (%s)',
+    (locale) => {
+      document.cookie = 'mb_cc=CN; Path=/';
+      // Inspect assignments as well as the finished DOM: hiding cards after they
+      // start fetching their art would still flash broken YouTube thumbnails.
+      const imageSource = vi.spyOn(HTMLImageElement.prototype, 'src', 'set');
+      const page = buildVideosPage(locale);
+      expect(page.querySelectorAll('.videos-card')).toHaveLength(0);
+      expect(page.querySelector('.videos-ours')).toBeNull();
+      expect(page.querySelector('.videos-subscribe')).toBeNull();
+      expect(page.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+      expect(imageSource).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([null, 'US', 'HK', 'TW', 'SG', 'MY', 'MO'])(
+    'preserves YouTube in Chinese locales outside CN (%s)',
+    (country) => {
+      if (country) document.cookie = `mb_cc=${country}; Path=/`;
+      const page = buildVideosPage('zh-Hant');
+      expect(page.querySelectorAll('.videos-catalog-grid .videos-card')).toHaveLength(
+        VIDEOS.filter((video) => video.language === 'zh').length,
+      );
+      expect(page.querySelector('.videos-ours-grid .videos-card')).not.toBeNull();
+      expect(page.querySelector('.videos-shorts-grid .videos-card')).not.toBeNull();
+      expect(page.querySelector('.videos-subscribe')).not.toBeNull();
+    },
+  );
+
+  it('derives CN facets and counts from reachable videos and keeps local first-party cards', async () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const page = await pageWithCatalogue([...VIDEOS, BILIBILI_FIXTURE]);
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+    expect(page.querySelector('.videos-count')?.textContent).toBe('1 video');
+    expect(page.querySelectorAll('.videos-ours-grid .videos-card')).toHaveLength(1);
+    expect(page.querySelector('.videos-ours-grid a')?.getAttribute('href')).toBe(
+      MISTBOARD_FIXTURE.url,
+    );
+    expect(page.querySelector('.videos-shorts-grid')).toBeNull();
+    expect(page.querySelector('.videos-subscribe')).toBeNull();
+    const labels = [...page.querySelectorAll('.videos-facet-label')].map((el) => el.textContent);
+    expect(labels).not.toContain('Language');
+    expect(labels).not.toContain('Source');
+    expect(labels).not.toContain('Game');
+    expect(page.querySelector('.videos-note')?.textContent).toContain('Bilibili');
+    expect(page.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+    const search = page.querySelector<HTMLInputElement>('.videos-search')!;
+    search.value = 'no match';
+    search.dispatchEvent(new Event('input'));
+    expect(visibleTitles(page)).toEqual([]);
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+  });
+
+  it('allows a mixed source catalogue to filter Bilibili and Jieqi independently', async () => {
+    const page = await pageWithCatalogue([...VIDEOS, BILIBILI_FIXTURE, MISTBOARD_FIXTURE]);
+    chip(page, 'Language', 'all').click();
+    chip(page, 'Source', 'bilibili').click();
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+    chip(page, 'Source', 'all').click();
+    chip(page, 'Game', 'jieqi').click();
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+  });
+
+  it('never flashes a blocked card when the CN SPA route mounts', () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const root = mount();
+    expect(root.querySelector('.videos-page')).not.toBeNull();
+    expect(root.querySelectorAll('.videos-card')).toHaveLength(0);
+    expect(root.querySelector('a[href="/videos"]')).toBeNull();
+    expect(root.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+  });
+
+  it('keeps the homepage free of video rows and blocked thumbnails', async () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const { renderLandingShellForPrerender } = await import('./landing.js');
+    const html = renderLandingShellForPrerender();
+    expect(html).not.toMatch(/videos-card|videos-grid|videos-ours|youtube\.com|youtu\.be/i);
+    expect(html).toContain('landing-play');
+  });
+
+  it('keeps /videos on an empty SPA shell with only modulepreload hints before JS mounts', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const shell = readFileSync(resolve(here, '../index.html'), 'utf8');
+    const prerender = readFileSync(resolve(here, '../scripts/prerender-articles.mjs'), 'utf8');
+    expect(shell).toContain('<div id="app"></div>');
+    expect(shell).not.toMatch(/videos-card|youtube\.com|youtu\.be/i);
+    expect(prerender).toContain("{ pattern: '^/videos$', module: 'src/videos.ts' }");
+    expect(prerender).not.toMatch(/ssrLoadModule\([^)]*videos\.ts/);
+    expect(prerender).not.toContain('videos.html');
+  });
+});
+
 describe('videos data', () => {
   it('holds verified, well-formed entries', () => {
     expect(VIDEOS.length).toBeGreaterThanOrEqual(12);
@@ -103,9 +238,12 @@ describe('videos data', () => {
       expect(video.tags.length).toBeGreaterThan(0);
       for (const tag of video.tags) expect(VIDEO_TAGS).toContain(tag);
       expect(VIDEO_LEVELS).toContain(video.level);
-      expect(['xiangqi', 'fog']).toContain(video.variant);
+      expect(['xiangqi', 'jieqi', 'fog']).toContain(video.variant);
       if (video.source === 'youtube') expect(video.id).toMatch(/^[A-Za-z0-9_-]{11}$/);
-      else {
+      else if (video.source === 'bilibili') {
+        expect(video.bvid).toMatch(/^BV[A-Za-z0-9]{10}$/);
+        expect(video.thumbnailUrl.trim()).not.toBe('');
+      } else {
         expect(video.slug.trim()).not.toBe('');
         expect(video.url.trim()).not.toBe('');
         expect(video.thumbnailUrl.trim()).not.toBe('');
@@ -113,6 +251,12 @@ describe('videos data', () => {
     }
     // Keys are unique across sources.
     expect(new Set(VIDEOS.map(videoKey)).size).toBe(VIDEOS.length);
+  });
+
+  it('ships no Bilibili entries before curation', () => {
+    expect(
+      [...VIDEOS, ...FIRST_PARTY_VIDEOS].filter((video) => video.source === 'bilibili'),
+    ).toEqual([]);
   });
 
   // The length sorts push an unknown duration to the end of the list, so a
@@ -199,6 +343,14 @@ describe('videoLanguageForLocale', () => {
 });
 
 describe('source-dispatched watch + thumbnail', () => {
+  it('namespaces every source and uses the Bilibili watch destination and curated thumbnail', () => {
+    expect(videoKey(BILIBILI_FIXTURE)).toBe('bb:BV1xx411c7mD');
+    expect(videoWatchUrl(BILIBILI_FIXTURE)).toBe('https://www.bilibili.com/video/BV1xx411c7mD/');
+    expect(videoThumbUrl(BILIBILI_FIXTURE)).toBe(BILIBILI_FIXTURE.thumbnailUrl);
+    expect(videoKey(MISTBOARD_FIXTURE)).toBe('mb:first-fog-game');
+    const yt = VIDEOS.find((video) => video.source === 'youtube')!;
+    expect(videoKey(yt)).toMatch(/^yt:/);
+  });
   it('derives YouTube URLs from the id', () => {
     const yt = VIDEOS.find((v) => v.source === 'youtube' && v.firstParty !== true);
     if (!yt || yt.source !== 'youtube') throw new Error('expected a youtube video');
@@ -249,6 +401,56 @@ describe('scheduled Shorts', () => {
 });
 
 describe('video card', () => {
+  it.each([
+    ['en', 'Bilibili'],
+    ['zh-Hans', '哔哩哔哩'],
+    ['zh-Hant', '嗶哩嗶哩'],
+  ] as const)(
+    'links out to Bilibili with localized copy and analytics (%s)',
+    async (locale, label) => {
+      await ensureLocaleCatalog(locale);
+      const track = vi.spyOn(analytics, 'track').mockImplementation(() => {});
+      const card = buildVideoCard(BILIBILI_FIXTURE, locale);
+      const link = card.querySelector<HTMLAnchorElement>('.videos-card-link')!;
+      expect(link.getAttribute('href')).toBe(videoWatchUrl(BILIBILI_FIXTURE));
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+      expect(card.querySelector('.videos-source-badge')?.textContent).toBe(label);
+      link.addEventListener('click', (event) => event.preventDefault());
+      link.dispatchEvent(new MouseEvent('click', { cancelable: true }));
+      expect(track).toHaveBeenCalledWith('video_clicked', {
+        kind: 'card',
+        source: 'bilibili',
+        video_key: videoKey(BILIBILI_FIXTURE),
+        first_party: false,
+        level: 'intro',
+        language: 'zh',
+      });
+    },
+  );
+
+  it.each([BILIBILI_FIXTURE, VIDEOS[0]!, FIRST_PARTY_VIDEOS[0]!])(
+    'falls back once to local art without a referrer ($source)',
+    (video) => {
+      const card = buildVideoCard(video);
+      const img = card.querySelector('img')!;
+      expect(img.referrerPolicy).toBe('no-referrer');
+      expect(img.getAttribute('src')).toBe(videoThumbUrl(video));
+      img.dispatchEvent(new Event('error'));
+      expect(img.getAttribute('src')).toBe('/video-thumbs/unavailable.svg');
+      const here = dirname(fileURLToPath(import.meta.url));
+      expect(readFileSync(resolve(here, `../public${img.getAttribute('src')}`), 'utf8')).toContain(
+        '<svg',
+      );
+      // A second error must not reassign src and retry forever.
+      const source = vi.spyOn(img, 'src', 'set');
+      img.dispatchEvent(new Event('error'));
+      expect(source).not.toHaveBeenCalled();
+      expect(card.querySelector('.videos-card-link')?.getAttribute('href')).toBe(
+        videoWatchUrl(video),
+      );
+    },
+  );
   it('shelves our own episodes above the catalogue, never inside it', () => {
     // The library's job is to turn a visitor into a subscriber, so ours lead and
     // the curated list stays external. A first-party entry appearing in the

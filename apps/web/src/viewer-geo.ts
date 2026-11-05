@@ -11,6 +11,9 @@
 
 export const VIEWER_COUNTRY_COOKIE = 'mb_cc';
 
+// Country, not language: YouTube remains reachable in HK/TW/SG/MY.
+export const YOUTUBE_BLOCKED_IN: readonly string[] = ['CN'];
+
 export function viewerCountry(): string | null {
   if (typeof document === 'undefined') return null;
   for (const part of document.cookie.split(';')) {
