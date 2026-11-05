@@ -1062,9 +1062,11 @@
   background: var(--seat-second-chip, var(--ink-black-chip, #34302e));
   color: var(--seat-second-on-chip, var(--ink-on-black, #f2ede3));
 }
+/* A draw is an outline, not a fill: a grey fill sat too close to the black
+ * seat's dark chip in the dark theme (Brian, 2026-11-04). */
 .study-game-line__result[data-outcome="draw"] {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--site-muted) 30%, var(--site-panel, var(--site-bg)));
+  border-color: color-mix(in srgb, var(--site-muted) 70%, transparent);
+  background: transparent;
   color: var(--site-text);
 }
 
