@@ -32,6 +32,7 @@
 // 2026-09-12. Set 2026-09-12.
 
 import {
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
   isPublicGameSpec,
@@ -157,9 +158,15 @@ export function notRetiredVariant(
 export function offPublicGameSpecIds(
   isPublic: (id: GameSpecId) => boolean = isPublicGameSpec,
 ): readonly string[] {
-  return GAME_SPECS.filter((spec) => spec.runtimeStatus === 'retired' || !isPublic(spec.id)).map(
-    (spec) => spec.id,
-  );
+  return GAME_SPECS.filter(
+    (spec) =>
+      spec.id === FFQ_BANQI_SPEC_ID || spec.runtimeStatus === 'retired' || !isPublic(spec.id),
+  ).map((spec) => spec.id);
+}
+
+// Exclude FFQ before pagination, even if its metadata changes.
+export function notFFQBanqiGame(gamesAlias = 'games'): string {
+  return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
 }
 
 export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds();

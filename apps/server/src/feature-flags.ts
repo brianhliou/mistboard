@@ -101,6 +101,12 @@ export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
 }
 
+// Hidden FFQ banqi playtest. This opt-in never grants access on its own;
+// ffq-banqi-access.ts also requires an admin account at every entry point.
+export function ffqBanqiEnabled(): boolean {
+  return process.env.MISTBOARD_FFQ_BANQI_ENABLED === 'true';
+}
+
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the in-process α-β bot + rated pool come later).

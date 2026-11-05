@@ -5,6 +5,7 @@ export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-9x10'
   | 'banqi-8x4'
+  | 'banqi-4x8'
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
   | 'three-kingdoms-banqi-9x5'
@@ -25,6 +26,8 @@ export type MovementRulesId =
   | 'orthodox-chess'
   | 'xiangqi'
   | 'banqi'
+  // FFQ: banqi's rank ladder with capture-only cannons and friendly covered captures.
+  | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
   // Banqi's piece geometry on 9x5 with no rank ladder (any piece takes any
@@ -56,6 +59,8 @@ export type ObjectiveRulesId =
   | 'general-capture'
   | 'checkmate'
   | 'last-mover'
+  // FFQ banqi: deplete the opponent's HP; no legal move also loses.
+  | 'hp-depletion'
   // 'den-or-race': win by moving a piece into the opponent's den OR capturing all
   // their pieces (Jungle / Dou Shou Qi). No royal piece; perfect information.
   | 'den-or-race'
@@ -81,6 +86,8 @@ export type SetupRulesId =
   | 'double-fischer-random'
   | 'jieqi-deal'
   | 'banqi-deal'
+  // FFQ: fixed Red/Black seats, with squares 6, 15, 16 and 25 face up.
+  | 'ffq-banqi-deal'
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'three-kingdoms-banqi-deal'
@@ -108,7 +115,8 @@ export type DropPolicyId =
 export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 /**
  * `live`: built and served (offered or hidden, per publicSurface). `future`: an
- * id reserved ahead of any code. `retired`: was launched, is closed to new
+ * id reserved ahead of a serving runtime (a rules kernel may exist).
+ * `retired`: was launched, is closed to new
  * games. Every create path refuses it (the request gate's 410
  * `retired_game_spec`, and createTenantRuntimeRoom as the backstop), every
  * listing omits it, and `npm run variants` lists it only under `--all`. Its
@@ -131,6 +139,8 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   // Never rated: no user_ratings CHECK entry exists or is owed until a launch.
   | 'three_kingdoms_banqi'
+  // Reserved metadata only; excluded from RatingVariant and RATED_POOL_BASES.
+  | 'ffq_banqi'
   | 'fortress_xiangqi'
   | 'mahjong_hk'
   // Migration 168 added it to the user_ratings CHECK.
@@ -151,6 +161,8 @@ export type GameSpecId =
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
+  // FFQ banqi (翻翻棋): kernel and hidden metadata only, no tenant or launch flag.
+  | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
   // Three Kingdoms banqi (三國暗棋, #628): banqi's pieces on a 9x5 board, scored to
@@ -221,6 +233,7 @@ export const DARK_CHESS_SPEC_ID = 'dark-chess' satisfies GameSpecId;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
+export const FFQ_BANQI_SPEC_ID = 'ffq-banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const XIANGQI_MAHJONG_SPEC_ID = 'xiangqi-mahjong' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
@@ -533,6 +546,25 @@ export const GAME_SPECS: readonly GameSpec[] = [
     rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
+  },
+  {
+    // Kernel only: 4x8, fixed inks, four initial reveals, 60 HP, capture-only
+    // cannons, 30-ply no-progress draw and four consecutive chases permitted.
+    // No serving tenant yet: every room request is rejected, and this entry
+    // opens no public play, ratings, correspondence, studies or exports.
+    id: FFQ_BANQI_SPEC_ID,
+    publicName: 'FFQ Banqi',
+    family: 'xiangqi',
+    board: 'banqi-4x8',
+    movement: 'ffq-banqi',
+    objective: 'hp-depletion',
+    visibility: 'hidden-identity',
+    setup: 'ffq-banqi-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'ffq_banqi',
+    publicSurface: 'hidden',
+    runtimeStatus: 'future',
   },
   {
     // Hong Kong Old Style (清章). Four seats, one human against three bots to

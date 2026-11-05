@@ -7,6 +7,7 @@ import {
   firstPartyBotForEngine,
   persistedSeatDisplayName,
 } from './first-party-bots.js';
+import { notFFQBanqiGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { scheduledEngineGame } from './persistence-game-data.js';
 import type {
@@ -614,6 +615,7 @@ export async function listRecentEveGames(limit = 12): Promise<RecentEveGameRecor
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE games.mode = 'eve'
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
      ORDER BY games.ended_at DESC, games.room_id DESC
     LIMIT $2`,
@@ -633,6 +635,7 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
        -- historical corpus, an off-site engine match) is dated when it was
        -- played elsewhere, and a 400-game match import would fill this list.
        AND games.mode <> 'imported'
+       AND ${notFFQBanqiGame()}
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
        AND NOT (games.mode = 'pvp' AND games.ply_count < $3)
        AND NOT (games.mode = 'pve' AND games.ply_count < 2)
@@ -788,6 +791,7 @@ async function queryShowcasePvp(
      WHERE games.status = 'completed'
        AND games.visibility = 'public'
        AND games.variant = ANY($3::text[])
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pvp'
        AND games.ply_count >= $1
        AND EXISTS (
@@ -815,6 +819,7 @@ async function queryShowcasePve(
      WHERE games.status = 'completed'
        AND games.visibility <> 'private'
        AND games.variant = ANY($3::text[])
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pve'
        AND games.ply_count >= $1
        AND EXISTS (
@@ -880,6 +885,7 @@ export async function listWatchUnlockedGames(
      ) last_events ON true
      WHERE games.status = 'completed'
        ${variantClause}
+       AND ${notFFQBanqiGame()}
        ${modeClause}
        ${curatedClause}
        -- Watch is a live TV surface; a days-per-move game replays as frozen
@@ -935,6 +941,7 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
      ) last_events ON true
      WHERE games.status = 'running'
        ${variantClause}
+       AND ${notFFQBanqiGame()}
        ${modeClause}
        AND games.visibility <> 'private'
        AND ${NOT_CORRESPONDENCE_SQL}
@@ -1056,6 +1063,7 @@ const HEAD_TO_HEAD_FROM_SQL = `FROM games
       AND b.color <> a.color
      WHERE games.variant = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND games.visibility <> 'private'
        AND a.visibility <> 'private'
        AND b.visibility <> 'private'`;
@@ -1120,6 +1128,7 @@ export async function tallyHeadToHeadGames(
 // as a participant. Keeping this predicate beside every favorite query prevents
 // a later visibility flip from leaking a stale bookmark through the saved list.
 const FAVORITE_ACCESS_SQL = `games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND (
          games.visibility <> 'private'
          OR EXISTS (
@@ -1189,6 +1198,7 @@ export async function listFavoriteGames(
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE favorite.user_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND (
          games.visibility <> 'private'
          OR EXISTS (

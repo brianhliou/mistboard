@@ -285,9 +285,10 @@ export function secondMoverColorName(gameSpecId: string): string {
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
 // 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
-export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
+export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
   gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
+  'ffq-banqi': null,
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
   'xiangqi-mahjong': 'variant.xiangqiMahjong.name',
@@ -312,8 +313,8 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
 // their own partial copy, and the bots one silently missed xiangqi, jungle,
 // jungle-flip, and dark-xiangqi.
 export function variantNameKeyForSpecId(gameSpecId: string): I18nKey | null {
-  const spec = maybeGameSpecForId(gameSpecId);
-  return spec ? (VARIANT_NAME_KEYS[spec.id] ?? null) : null;
+  const id = maybeGameSpecForId(gameSpecId)?.id;
+  return id ? VARIANT_NAME_KEYS[id] : null;
 }
 
 // Human label for a persisted games.variant value. Legacy/alias strings resolve

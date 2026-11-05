@@ -97,6 +97,12 @@ export function banqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_BANQI_ENABLED === 'true';
 }
 
+// FFQ's admin-only playtest remains off even in dev. The server checks the
+// account independently; this flag only enables its renderer when routed.
+export function ffqBanqiEnabled(): boolean {
+  return import.meta.env.VITE_FFQ_BANQI_ENABLED === 'true';
+}
+
 // Jungle / Dou Shou Qi (perfect-information 7×9 animal-rank game) play surface.
 // Launched: always on (the server MISTBOARD_JUNGLE_ENABLED flag remains the runtime
 // kill-switch for room creation).

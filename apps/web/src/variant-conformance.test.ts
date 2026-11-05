@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
   GOMOKU_SPEC_ID,
@@ -21,7 +22,19 @@ import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
 import { mountDevelopers } from './developers-page.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
-import { EMBED_ANALYSIS_VARIANTS } from './embed/embed-analysis.js';
+import {
+  EMBED_ANALYSIS_VARIANTS,
+  embedAnalysisVariant,
+  loadEmbedAnalysis,
+} from './embed/embed-analysis.js';
+import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
+import {
+  firstMoverColorName,
+  secondMoverColorName,
+  VARIANT_NAME_KEYS,
+  variantDisplayLabel,
+  variantNameKeyForSpecId,
+} from './game-display.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
   enabledLandingVariantGameSpecs,
@@ -39,7 +52,12 @@ import {
   specIdForShowcaseVariant,
 } from './showcase-dispatch.js';
 import { buildStudyVariantSelect, STUDY_VARIANTS } from './study-catalog.js';
-import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
+import {
+  gameSpecIdFromRulesSlug,
+  rulesHrefForGameSpec,
+  rulesSlugForGameSpec,
+} from './variant-public-surfaces.js';
+import { SEAT_NAMING, seatsNamePlayers } from './variant-seat-label.js';
 import {
   finishedGameHref,
   legacyGameRouteForRoomId,
@@ -50,6 +68,7 @@ import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import {
   leaderboardVariants,
   profileRatingVariants,
+  VARIANT_MINI_BY_GAME_SPEC,
   VARIANTS,
   variantMiniIdForGameSpec,
 } from './variants.js';
@@ -256,11 +275,12 @@ describe('variant correspondence conformance', () => {
 describe('variant marker conformance', () => {
   // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
   // Nor is Three Kingdoms banqi, a hidden playtest (#628, #684) only an admin
-  // reaches on prod.
+  // reaches on prod. FFQ also stays without a public marker in its admin test.
   const markedTenants = webVariantTenants().filter(
     (tenant) =>
       tenant.gameSpecId !== MAHJONG_SPEC_ID &&
       tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID &&
+      tenant.gameSpecId !== FFQ_BANQI_SPEC_ID &&
       tenant.gameSpecId !== GOMOKU_SPEC_ID,
   );
 
@@ -399,17 +419,93 @@ describe('rules link conformance', () => {
   // A meta card, a review page and a rules page's play button all link a variant
   // to rulesHrefForGameSpec. A variant whose rules page has a different slug
   // must say so (RULES_GAME_SPEC_BY_SLUG), or the link 404s the day it goes
-  // public. `chess` is study-only: /rules/chess is the primer, not its page.
+  // public. Future specs reserve metadata before they have a page; live hidden
+  // playtests still need rules. `chess` is study-only: /rules/chess is the primer.
   it('every live variant links to a rules page that exists and points back', () => {
     const rulesSlugs = new Set(articles.filter((a) => a.kind === 'rules').map((a) => a.slug));
     for (const spec of GAME_SPECS) {
-      // Taxonomy-only Gomoku has no rules page or playable tenant yet (#768).
-      if (isRetiredGameSpec(spec.id) || spec.id === 'chess' || spec.id === GOMOKU_SPEC_ID) continue;
+      if (
+        isRetiredGameSpec(spec.id) ||
+        spec.id === 'chess' ||
+        spec.id === GOMOKU_SPEC_ID ||
+        spec.id === FFQ_BANQI_SPEC_ID
+      )
+        continue;
       const slug = rulesSlugForGameSpec(spec.id);
       expect(rulesSlugs.has(slug), `${spec.id}: no /rules/${slug}`).toBe(true);
       expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
     }
     expect(rulesSlugForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong-32');
+  });
+});
+
+describe('FFQ banqi canonical web metadata', () => {
+  it.each(['variants.ts', 'variant-seat-label.ts', 'game-display.ts', 'embed/embed-analysis.ts'])(
+    'keeps %s exhaustive over canonical GameSpecId without registration bypasses',
+    (file) => {
+      // A literal union can mask a missing canonical registration. Once registered,
+      // FFQ must use the same typed maps and metadata lookup as every other spec.
+      const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+      expect(source).toMatch(/\bRecord\s*<\s*GameSpecId\s*,/);
+      expect(source).not.toMatch(/===\s*['"]ffq-banqi['"]/);
+    },
+  );
+
+  it('keys every dispatch map exactly by the registered game specs', () => {
+    const ids = GAME_SPECS.map((spec) => spec.id).sort();
+    expect(ids).toContain(FFQ_BANQI_SPEC_ID);
+    for (const map of [
+      VARIANT_MINI_BY_GAME_SPEC,
+      SEAT_NAMING,
+      VARIANT_NAME_KEYS,
+      EMBED_ANALYSIS_VARIANTS,
+    ]) {
+      expect(Object.keys(map).sort()).toEqual(ids);
+    }
+  });
+
+  it('uses FFQ banqi canonical name metadata without borrowing the Banqi name', () => {
+    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
+    expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
+    expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('FFQ Banqi');
+  });
+
+  it('keeps FFQ banqi fixed Red/Black seats after canonical registration', () => {
+    expect(SEAT_NAMING).toHaveProperty('ffq-banqi', 'seat-word');
+    expect(seatsNamePlayers('ffq-banqi')).toBe(false);
+    expect(isFlipSeatVariant('ffq-banqi')).toBe(false);
+    expect(firstMoverColorName('ffq-banqi')).toBe('Red');
+    expect(secondMoverColorName('ffq-banqi')).toBe('Black');
+    // A Banqi-style firstColor must not swap the fixed FFQ seats.
+    expect(seatInkForVariant('ffq-banqi', 'red', 'black')).toBe('red');
+    expect(seatInkForVariant('ffq-banqi', 'black', 'black')).toBe('black');
+  });
+
+  it('explicitly has no embed analysis and never loads replay inputs for it', async () => {
+    expect(EMBED_ANALYSIS_VARIANTS).toHaveProperty('ffq-banqi', null);
+    expect(embedAnalysisVariant('ffq-banqi')).toBeNull();
+    const playedMoves = vi.fn();
+    const events = vi.fn();
+    expect(
+      await loadEmbedAnalysis('ffq-banqi', 'reserved-room', { playedMoves, events }),
+    ).toBeNull();
+    expect(playedMoves).not.toHaveBeenCalled();
+    expect(events).not.toHaveBeenCalled();
+  });
+
+  it('has no public play, rating, rules, watch, analysis, editor, study or embed listing', () => {
+    const id = 'ffq-banqi';
+    // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).not.toContain(id);
+    expect(WATCH_CHANNEL_MINI_IDS).not.toHaveProperty(id);
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(id);
+    expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(id);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(id);
+    expect(rulesHrefForGameSpec(id)).toBeNull();
+    expect(articles.some((article) => article.kind === 'rules' && article.slug === id)).toBe(false);
+    expect(embedRendererKindForVariant(id)).toBeNull();
   });
 });
 

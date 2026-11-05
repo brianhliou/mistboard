@@ -10,7 +10,7 @@ import {
   renderVariantMarker,
 } from './variant-markers.js';
 import { VARIANT_MINIS, type VariantMiniId } from './variant-mini-boards.js';
-import { VARIANTS, variantMiniIdForGameSpec } from './variants.js';
+import { VARIANT_MINI_BY_GAME_SPEC, VARIANTS, variantMiniIdForGameSpec } from './variants.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 // Variant markers fail closed: no fallback picture exists, so a variant with no
@@ -28,6 +28,15 @@ const MARKER_PX = 1254;
 const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
 
 describe('variant markers', () => {
+  it('gives FFQ its own marker without a public variant row', () => {
+    const id = 'ffq-banqi';
+    expect(VARIANT_MINI_BY_GAME_SPEC).toHaveProperty(id, id);
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(isVariantMarkerId(id)).toBe(true);
+    expect(renderVariantMarker(id)).toContain("url('/variant-markers/final/ffq-banqi.png')");
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+  });
+
   it('shares the Gomoku marker with TV while keeping it hidden and unrated', () => {
     const id = 'gomoku';
     expect(variantMiniIdForGameSpec(id)).toBe(id);
@@ -75,7 +84,8 @@ describe('variant markers', () => {
       .filter((spec) => variantMiniIdForGameSpec(spec.id) === null)
       .map((spec) => spec.id)
       .sort();
-    expect(missing).toEqual(SPECS_WITHOUT_MARKER);
+    const liveIds = new Set<string>(live.map((spec) => spec.id));
+    expect(missing).toEqual(SPECS_WITHOUT_MARKER.filter((id) => liveIds.has(id)));
     for (const spec of live) {
       const id = variantMiniIdForGameSpec(spec.id);
       if (id) expect(isVariantMarkerId(id), spec.id).toBe(true);

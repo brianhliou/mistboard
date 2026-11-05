@@ -48,6 +48,33 @@ import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
+describe('FFQ banqi hidden admin playtest', () => {
+  it('registers its live client without enabling public replay or discovery', () => {
+    const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
+    expect(web?.roomIdPrefix).toBe('ffq_');
+    expect(web?.loadLiveRoomClient).toBeTypeOf('function');
+    expect(web?.watch).toBeUndefined();
+    expect(web?.gameRouteBase).toBeUndefined();
+    expect(web?.mountPostgame).toBeUndefined();
+    const server = registeredVariantTenants().find((tenant) => tenant.gameSpecId === 'ffq-banqi');
+    expect(server).toMatchObject({
+      roomIdPrefix: 'ffq_',
+      watch: null,
+      lobby: null,
+      export: null,
+      card: null,
+    });
+    expect(server?.admitsConnection).toBeTypeOf('function');
+    expect(server?.reviewRouteBase).toBeUndefined();
+  });
+
+  it('adds no FFQ game or review route to the server shell allowlist', () => {
+    for (const path of ['/ffq-banqi/game/reserved-room', '/ffq-banqi/review/reserved-room']) {
+      expect(isClientRoute(path), path).toBe(false);
+    }
+  });
+});
+
 describe('web tenant routes <-> server SPA fallback allowlist', () => {
   it('every tenant postgame route serves the SPA shell on direct hits', () => {
     for (const tenant of webVariantTenants()) {
@@ -104,8 +131,9 @@ describe('web tenant registry <-> server tenant registry parity', () => {
   it('web and server registries cover the same game spec ids', () => {
     // Chess itself is deliberately in NEITHER registry (a registry miss IS the
     // chess fallback; see the header comments of both registry files), and the
-    // dark-chess correspondence tenant (dchx_) is registered on BOTH sides, so
-    // the spec-id sets must match exactly with no exception list.
+    // dark-chess correspondence tenant (dchx_) is registered on BOTH sides.
+    // Hidden playtests still register both dispatchers; their missing public
+    // capabilities and routes are asserted above.
     const webSpecs = new Set<string>(webTenants.map((tenant) => tenant.gameSpecId));
     const serverSpecs = new Set(serverTenants.map((registration) => registration.gameSpecId));
     const missingOnServer = [...webSpecs].filter((id) => !serverSpecs.has(id)).sort();

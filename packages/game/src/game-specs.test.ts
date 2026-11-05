@@ -11,6 +11,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   deriveLaunchLists,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
   GOMOKU_SPEC_ID,
@@ -41,6 +42,7 @@ import {
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 import { hasStartFen } from './start-fen.js';
+import { FFQ_BANQI_RULES } from './variants-ffq-banqi.js';
 
 test('canonical display order contains exactly the current public variant shelf', () => {
   assert.deepEqual(CANONICAL_VARIANT_ORDER, [
@@ -190,6 +192,46 @@ test('composite specs are composed from rule modules', () => {
   const fortress = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
   assert.equal(fortress.reserves, 'crazyhouse');
   assert.notEqual(fortress.dropPolicy, 'none');
+});
+
+test('FFQ banqi has canonical metadata matching its distinct kernel rules', () => {
+  assert.equal(FFQ_BANQI_SPEC_ID, 'ffq-banqi');
+  const spec = maybeGameSpecForId('ffq-banqi');
+  assert.ok(spec, 'FFQ banqi must be a canonical spec');
+  assert.deepEqual(spec, {
+    id: 'ffq-banqi',
+    publicName: 'FFQ Banqi',
+    family: 'xiangqi',
+    board: `banqi-${FFQ_BANQI_RULES.board.width}x${FFQ_BANQI_RULES.board.height}`,
+    movement: 'ffq-banqi',
+    objective: 'hp-depletion',
+    visibility: 'hidden-identity',
+    setup: 'ffq-banqi-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'ffq_banqi',
+    publicSurface: 'hidden',
+    runtimeStatus: 'future',
+  });
+  assert.equal(isGameSpecId(spec.id), true);
+  assert.equal(gameSpecForId(FFQ_BANQI_SPEC_ID), spec);
+  assert.equal(legacyLiveRoomForGameSpec(spec.id), null);
+});
+
+test('FFQ banqi stays out of public play, ratings, correspondence and studies', () => {
+  const spec = maybeGameSpecForId('ffq-banqi');
+  assert.ok(spec);
+  assert.equal(isPublicGameSpec(spec.id), false);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(isRetiredGameSpec(spec.id), false);
+  assert.equal(ratingPoolForSpec(spec.id), null);
+  assert.equal(isRatedPoolBase(spec.ratingPoolBase), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
+  assert.equal(isCorrespondenceRatedSpec(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), false);
+  assert.equal(isAdminOnlyStudySpecId(spec.id), false);
+  assert.equal(hasStartFen(spec.id), false, 'the observer FEN is not an import format');
 });
 
 test('game spec ids are unique and discoverable', () => {

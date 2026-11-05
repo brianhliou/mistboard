@@ -91,7 +91,7 @@ const xiangqiMahjongPublic = isPublicGameSpec(XIANGQI_MAHJONG_SPEC_ID);
 // compile until it names its marker, or says null on purpose (a spec that is
 // never shown as a variant). variant-markers.test.ts holds every live spec
 // outside that null list to a marker file on disk.
-const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
+export const VARIANT_MINI_BY_GAME_SPEC: Readonly<Record<GameSpecId, VariantMiniId | null>> = {
   // Flag-gated casual play: a marker without a public rating row.
   gomoku: 'gomoku',
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
@@ -103,6 +103,8 @@ const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
+  // Hidden admin playtest: its marker, without a public play or rating row.
+  'ffq-banqi': 'ffq-banqi',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
   [XIANGQI_MAHJONG_SPEC_ID]: 'xiangqi-mahjong',
