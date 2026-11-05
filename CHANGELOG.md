@@ -20,6 +20,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Puzzle Storm is now in the Puzzles menu on desktop and phone ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 - New article, [AB-JChess takes the jieqi title back from jqe](/blog/ab-jchess-vs-jqe): a 600-game jieqi engine match read move by move by both engines, with the games in a study ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - On your own profile, the Xiangqi puzzle rating opens in the main rating chart instead of a separate card below it ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
@@ -30,6 +31,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- The opening explorer, move tree menu, captured-piece labels and move advice in game review now read in Simplified and Traditional Chinese ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 - The broadcasts page lists other events in a strip, gives places in English and hides zero counts ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Clearer annotations in jieqi replays, and fixed embeds for finished games ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Banqi and Flip Jungle game reviews show how lucky each flip was ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
@@ -48,11 +50,19 @@ What changed on mistboard.com, month by month, newest first.
 - About, FAQ, Terms and Privacy rewritten around the mission, with a binding fair-play rule and a new share card ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 - A shorter About menu, and the phone menu now matches the desktop one ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
+### Removed
+
+- Retired Atomic Xiangqi games no longer get new computer analysis; finished games and stored analysis stay readable ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
+
 ### Fixed
 
 - The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Forum posts embed game links that use /room/, and game names show in the reader's language ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Technical
+
+- Visitor analytics now flags browsers with real input, so headless crawlers can be filtered out ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ## 2026-10
 
