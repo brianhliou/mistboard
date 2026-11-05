@@ -996,6 +996,7 @@ function renderBoardInner(
   width: number,
   height: number,
   pieceSet: CardPieceSet,
+  edgeToEdge = false,
 ): string {
   switch (board.kind) {
     case 'gomoku':
@@ -1016,6 +1017,7 @@ function renderBoardInner(
         boardSize: height,
         palette: BROWN_PALETTE,
         fogStyle: 'solid',
+        ...(edgeToEdge ? { cornerRadius: 0 } : {}),
         boards: [
           {
             pieces: board.pieces,
@@ -1149,13 +1151,27 @@ export function renderBoardAspectCard(
   );
   const boardX = (frame.width - width) / 2;
   const boardY = (frame.height - height) / 2;
-  const inner = renderBoardInner(board, art, width, height, pieceSet);
+  const edgeToEdge = aspect === '1x1';
+  const inner = renderBoardInner(board, art, width, height, pieceSet, edgeToEdge);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.width}" height="${frame.height}" viewBox="0 0 ${frame.width} ${frame.height}">`,
-    `<rect width="${frame.width}" height="${frame.height}" fill="${aspect === '1x1' ? boardWood(board) : CARD_BG}"/>`,
+    `<rect width="${frame.width}" height="${frame.height}" fill="${edgeToEdge ? boardWood(board) : CARD_BG}"/>`,
     `<svg x="${boardX}" y="${boardY}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${inner}</svg>`,
+    edgeToEdge ? jungleSideLines(board, boardX, width, frame.height) : '',
     `</svg>`,
   ].join('');
+}
+
+/** A narrow Jungle board's outer edges, for a frame painted the board's own
+ *  colour: the board has no outline, so its cells would run on into the frame. */
+function jungleSideLines(board: CardBoard, x: number, width: number, height: number): string {
+  if (x <= 0 || boardWood(board) !== JUNGLE.land) return '';
+  return [x, x + width]
+    .map(
+      (lineX) =>
+        `<line x1="${lineX}" y1="0" x2="${lineX}" y2="${height}" stroke="${JUNGLE.grid}" stroke-width="1"/>`,
+    )
+    .join('');
 }
 
 /** The colour a board is painted on, for a frame that should read as more board. */

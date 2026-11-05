@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { type TestContext } from 'node:test';
 import { ARTICLE_META } from './article-meta.js';
-import { fitStudyTitleLines, studyChapterOgPieces } from './og-image.js';
+import { fitStudyTitleLines, positionCardBoard, studyChapterOgPieces } from './og-image.js';
 
 // Golden Roc composition 1 ("The horse leaps Tan Creek"), taken from the live
 // study. A 排局 IS its diagram, so the card has to key off the chapter's own
@@ -868,6 +868,39 @@ test('a rules card says "Rules" once, wherever the page title has it', async () 
     const words = articleCardTitle('rules', meta.title).match(/\bRules\b/g) ?? [];
     assert.equal(words.length, 1, `${slug}: ${meta.title}`);
   }
+});
+
+test('a board on the square card runs to the frame with no corner to show the wood', async () => {
+  const { renderBoardAspectCard } = await import('./og-card-board.js');
+  const board = positionCardBoard('most-played-move');
+  assert.ok(board);
+  const clip = (svg: string) => /<clipPath[^>]*><rect[^>]*rx="([\d.]+)"/.exec(svg)?.[1];
+  assert.equal(clip(renderBoardAspectCard(board, new Map(), '1x1')), '0');
+  assert.notEqual(clip(renderBoardAspectCard(board, new Map(), '16x9')), '0');
+});
+
+test('a Jungle board narrower than the square card draws its own sides', async () => {
+  const { renderBoardAspectCard, CARD_ASPECT_FRAMES } = await import('./og-card-board.js');
+  const { resolvePositionOg, startPositionFen } = await import('./og-position.js');
+  const lines = (variant: 'jungle' | 'xiangqi', aspect: '1x1' | '16x9') => {
+    const resolved = resolvePositionOg(variant, startPositionFen(variant));
+    assert.ok(resolved);
+    const svg = renderBoardAspectCard(resolved.board, new Map(), aspect);
+    const [, x, width] =
+      /<\/?rect[^>]*\/><svg x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/.exec(svg) ?? [];
+    return {
+      left: Number(x),
+      right: Number(x) + Number(width),
+      found: [...svg.matchAll(/<\/svg><line x1="([\d.]+)"[^>]*\/><line x1="([\d.]+)"/g)].map(
+        (m) => [Number(m[1]), Number(m[2])],
+      ),
+    };
+  };
+  const square = lines('jungle', '1x1');
+  assert.ok(square.left > 0 && square.right < CARD_ASPECT_FRAMES['1x1'].width);
+  assert.deepEqual(square.found, [[square.left, square.right]]);
+  assert.deepEqual(lines('jungle', '16x9').found, [], 'the dark frame already shows its edges');
+  assert.deepEqual(lines('xiangqi', '1x1').found, [], 'xiangqi has its own outline');
 });
 
 test('an aspect card is the board alone, centred, with no caption to crop', async () => {
