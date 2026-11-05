@@ -129,7 +129,8 @@ export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
-  // Hidden and unrated: no database rating pool is enabled or owed.
+  // Migration 188 added Gomoku to the user_ratings CHECK.
+  // Allowlisted: rated, off every public rating surface.
   | 'gomoku'
   | 'fog'
   | 'dark_xiangqi'
@@ -154,8 +155,7 @@ export type RatingPoolBaseId =
   | 'crazyhouse_xiangqi';
 
 export type GameSpecId =
-  // Built-hidden freestyle Gomoku (#768). No tenant until build 2; the
-  // default-off server flag cannot open room creation by itself.
+  // Freestyle Gomoku, with runtime admission controlled by the server flag.
   | 'gomoku'
   | 'dark-chess'
   | 'dark-xiangqi'
@@ -387,10 +387,9 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
-  // Xiangqi Mahjong takes the last place on the shelf the day it launches;
-  // until then the launch switch (its publicSurface) keeps it out.
+  // Xiangqi Mahjong precedes Gomoku, the newest family on the public shelf.
   XIANGQI_MAHJONG_SPEC_ID,
-  // Gomoku follows Xiangqi Mahjong only after its own launch switch flips.
+  // Gomoku closes the public shelf after Xiangqi Mahjong.
   GOMOKU_SPEC_ID,
   // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
   // spec sorts last, which is where the study picker should offer it.
@@ -782,8 +781,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Hidden, unrated casual PvP (#768 build 2), under explicit local flags.
-    // The standalone Rapfi worker (#762) is not offered until build 3.
+    // Public freestyle Gomoku with rated live PvP. Server and build-time flags remain kill-switches.
     id: GOMOKU_SPEC_ID,
     publicName: 'Gomoku',
     family: 'gomoku',
@@ -795,9 +793,9 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'gomoku',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
-    rated: false,
+    rated: true,
   },
 ] as const;
 
@@ -889,7 +887,11 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
-    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
+    // Gomoku's live launch does not open public correspondence (#868).
+    // Its hidden playtest binding remains available for legacy granted games.
+    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
+      (id) => id !== GOMOKU_SPEC_ID && isPublic(id),
+    ),
     correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
       allowlisted.includes(id),
     ),
@@ -955,6 +957,8 @@ export type RatingVariant = Extract<
   | 'crazyhouse_xiangqi'
   // Migration 168. Allowlisted: rated, but off every public rating surface.
   | 'xiangqi_mahjong'
+  // Migration 188. Private while the spec is allowlisted.
+  | 'gomoku'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

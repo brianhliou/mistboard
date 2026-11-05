@@ -228,6 +228,7 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   // Rated, but allowlisted: the server keeps this pool off every profile, and
   // its VARIANTS entry stays out of PROFILE_VARIANT_ORDER until the spec is public.
   xiangqi_mahjong: 'variant.xiangqiMahjong.name',
+  gomoku: 'variant.gomoku.name',
 };
 
 // Profile rating grid is subject-scoped and follows the baseline rating variant

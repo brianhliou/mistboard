@@ -128,6 +128,22 @@ describe('move times totals', () => {
     expect(caption.textContent).not.toContain('Total');
   });
 
+  it('keeps White-first dealt-game time totals and recorded clocks attached to their ink', () => {
+    const chart = createMoveTimesChart(times, {
+      firstMover: 'black',
+      seatColors: { red: 'black', black: 'white' },
+      clocks: Array.from({ length: 6 }, () => ({ first: 59_000, second: 58_000 })),
+    });
+    expect(chart.el.querySelector('.review-move-times__caption')?.textContent).toBe(
+      'White 1:21 · Black 31s',
+    );
+    expect(chart.el.querySelector('.review-move-times__bar')?.classList).toContain(
+      'review-move-times__bar--white',
+    );
+    move(withLayout(chart.el), 50);
+    expect(tip(chart.el).textContent).toContain('White 0:58 · Black 0:59');
+  });
+
   it('names chess sides White and Black', () => {
     const chart = createMoveTimesChart(times, { seatColors: { red: 'white', black: 'black' } });
     const caption = chart.el.querySelector('.review-move-times__caption') as HTMLElement;

@@ -36,6 +36,16 @@ childEnv.MISTBOARD_BIND_HOST = bindHost;
 for (const flag of PRODUCT_SERVER_FLAGS) {
   if (childEnv[flag] === undefined) childEnv[flag] = 'true';
 }
+// Unlaunched variants' page flags: local testing sees them without an admin
+// account. Prod builds never run this script; set one to 'false' to check the
+// pre-launch view.
+for (const flag of [
+  'VITE_GOMOKU_ENABLED',
+  'VITE_THREE_KINGDOMS_BANQI_ENABLED',
+  'MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED',
+]) {
+  if (childEnv[flag] === undefined) childEnv[flag] = 'true';
+}
 
 if (currentWorktreeRole(repoRoot) === 'control') {
   console.warn(

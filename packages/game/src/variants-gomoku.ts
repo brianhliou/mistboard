@@ -39,7 +39,8 @@ export type GomokuOpening = {
 export const GOMOKU_OPENING_SCREEN = openingPool.screening;
 export const GOMOKU_OPENINGS = openingPool.openings as readonly (GomokuOpening & {
   readonly id: string;
-  readonly classicId: string;
+  readonly classicId?: string;
+  readonly source?: 'classic' | 'mined-2B3W-7x7';
   readonly screening: {
     readonly score: number;
     readonly finalScore: number;
@@ -58,7 +59,7 @@ export type GomokuState = {
   // Flat row-major board: a1 = 0, o1 = 14, a2 = 15, o15 = 224.
   readonly board: readonly (GomokuColor | null)[];
   readonly status: GomokuStatus;
-  // Total stones, including any dealt opening; Black plays at even ply counts.
+  // Total stones, including any dealt opening; the turn is explicit in status.
   readonly ply: number;
   readonly lastMove?: GomokuMove;
 };
@@ -207,7 +208,7 @@ function makesFive(board: GomokuState['board'], index: number, color: GomokuColo
 
 /** Validate a dealt opening once; subsequent helpers accept states from here
  * or applyGomokuMove. There are no captures or forbidden moves in freestyle,
- * so alternating counts and the absence of an existing five suffice. */
+ * so supported dealt counts and the absence of an existing five suffice. */
 export function createInitialGomokuState(
   opening: GomokuOpening = { stones: [], turn: 'black' },
 ): GomokuState {
@@ -226,7 +227,10 @@ export function createInitialGomokuState(
     if (stone.color === 'black') black += 1;
     else white += 1;
   }
-  if (black !== white + (opening.turn === 'white' ? 1 : 0)) {
+  // Mined five-stone deals reverse the usual colour counts. Black moves
+  // first from 2B+3W; never infer the turn from the total stone count.
+  const minedDeal = black === 2 && white === 3 && opening.turn === 'black';
+  if (!minedDeal && black !== white + (opening.turn === 'white' ? 1 : 0)) {
     throw new Error('Gomoku stone counts do not match the side to move');
   }
   for (let index = 0; index < POINT_COUNT; index += 1) {

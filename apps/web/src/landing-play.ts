@@ -346,19 +346,6 @@ const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   supportsRated: true,
   supportsTimeControl: true,
 };
-// Taxonomy-only Gomoku has no tenant yet. Keep setup semantics explicit so
-// stale/programmatic requests retain Black first and never inherit rated chess.
-const GOMOKU_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
-  firstColor: 'black',
-  firstGlyph: '●',
-  firstLabel: 'Black',
-  secondColor: 'white',
-  secondGlyph: '○',
-  secondLabel: 'White',
-  supportsRated: false,
-  supportsTimeControl: true,
-};
-
 // UI-only placeholder shown in the engine picker before /api/engines/playable
 // resolves (or if every retry fails). It is NOT a real, submittable engine: the
 // id is a sentinel the server rejects with 400 invalid_engine, so it can never
@@ -3422,7 +3409,6 @@ function chessKingGlyphNodes(value: LandingColorPreference): Node[] {
 }
 
 function landingGameSpecCapabilities(gameSpecId: LandingGameSpecId): LandingGameSpecCapabilities {
-  if (gameSpecId === GOMOKU_SPEC_ID) return GOMOKU_LANDING_CAPABILITIES;
   // Tenant capabilities live on their registry entries; chess (the fallback)
   // keeps its row here until the P2 migration.
   return (

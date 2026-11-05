@@ -706,6 +706,10 @@ describe('hidden Gomoku setup conformance', () => {
         }),
     );
     vi.stubGlobal('fetch', fetch);
+    const { setResolvedSignedIn } = await import('./signed-in-state.js');
+    setResolvedSignedIn(true);
+    const { setRatedModeEnabled } = await import('./rated-flag.js');
+    setRatedModeEnabled(true);
     const navigate = vi.fn();
     setRoomNavigator(navigate);
     try {
@@ -715,6 +719,7 @@ describe('hidden Gomoku setup conformance', () => {
           engineId: 'rapfi-level-1',
           initialGameSpecId: 'gomoku',
           initialColor: 'white',
+          initialRated: mode === 'pvp',
           locale: 'en',
         });
         expect(document.querySelector('[data-gomoku-free-opening]')).toBeNull();
@@ -725,7 +730,7 @@ describe('hidden Gomoku setup conformance', () => {
         expect(JSON.parse(call![1]!.body as string)).toMatchObject({
           gameSpecId: 'gomoku',
           preferredColor: 'white',
-          rated: false,
+          rated: mode === 'pvp',
         });
         expect(JSON.parse(call![1]!.body as string)).not.toHaveProperty('opening');
         fetch.mockClear();
@@ -735,6 +740,8 @@ describe('hidden Gomoku setup conformance', () => {
     } finally {
       closeActiveLandingDialog();
       setRoomNavigator(null);
+      setResolvedSignedIn(undefined);
+      setRatedModeEnabled(false);
       window.localStorage?.clear();
       vi.unstubAllGlobals();
     }

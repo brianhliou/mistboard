@@ -11,16 +11,20 @@ import {
   gameSpecForId,
   isCorrespondenceRatedSpec,
   JIEQI_SPEC_ID,
+  RATED_POOL_BASES,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
   bucketForGame,
   CORRESPONDENCE_RATING_TIME_CLASS,
   DEFAULT_RATING_BUCKET,
+  isPublicRatingPool,
+  PRIVATE_RATING_POOLS,
   PUBLIC_RATING_TIME_CLASS,
   PUBLIC_RATING_TIME_CLASSES,
   parseRatingTimeClass,
   parseRatingVariant,
+  publicRatingPoolSql,
   type RatingVariant,
   visibleRatingTimeClasses,
 } from './rating-buckets.js';
@@ -174,5 +178,25 @@ test('surfaces show no correspondence ladder while rated correspondence is held'
     assert.equal(visibleRatingTimeClasses().includes('correspondence'), false);
   } finally {
     if (prior !== undefined) process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = prior;
+  }
+});
+
+test('launched Gomoku has a public pool and every live lobby pace has its own bucket', () => {
+  assert.deepEqual(PRIVATE_RATING_POOLS, []);
+  assert.equal(isPublicRatingPool('gomoku'), true);
+  assert.equal(parseRatingVariant('gomoku'), 'gomoku');
+  assert.equal(publicRatingPoolSql('r.variant'), 'TRUE');
+  for (const pool of RATED_POOL_BASES) {
+    if (pool !== 'gomoku') assert.equal(isPublicRatingPool(pool), true, pool);
+  }
+  for (const [initialMs, incrementMs, timeClass] of [
+    [60_000, 1_000, 'bullet'],
+    [180_000, 2_000, 'blitz'],
+    [300_000, 5_000, 'rapid'],
+  ] as const) {
+    assert.deepEqual(bucketForGame({ variant: 'gomoku', initialMs, incrementMs }), {
+      variant: 'gomoku',
+      timeClass,
+    });
   }
 });

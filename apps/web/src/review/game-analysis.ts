@@ -258,7 +258,9 @@ export function computeGameAnalysis(
     ...[...bestPlayed].map((ply): [number, number | null] => [ply, 100]),
   ]);
   const accuracies = gameAccuracy(
-    redWinPercents,
+    // gameAccuracy owns transitions by move order and expects the FIRST MOVER's
+    // POV, while stored evals and individual move grades stay seat-keyed.
+    firstMover === 'red' ? redWinPercents : redWinPercents.map((win) => 100 - win),
     accuracyOverride.size ? accuracyOverride : undefined,
   );
 
@@ -389,7 +391,11 @@ export function mergeDecisionAnalysis(
       bump(move.mover, move.judgment);
     }
   }
-  const accuracies = gameAccuracy(redWinPercents, override);
+  const firstMover = analysis.moves[0]?.mover ?? 'red';
+  const accuracies = gameAccuracy(
+    firstMover === 'red' ? redWinPercents : redWinPercents.map((win) => 100 - win),
+    override,
+  );
   const build = (side: 'red' | 'black', accuracy: number): PlayerAnalysis => ({
     accuracy,
     inaccuracies: counts[side].i,
@@ -397,7 +403,10 @@ export function mergeDecisionAnalysis(
     blunders: counts[side].b,
     acpl: 0, // not shown for chance variants (see AnalysisSummaryOptions.hideAcpl)
   });
-  return { red: build('red', accuracies.first), black: build('black', accuracies.second) };
+  return {
+    red: build('red', firstMover === 'red' ? accuracies.first : accuracies.second),
+    black: build('black', firstMover === 'black' ? accuracies.first : accuracies.second),
+  };
 }
 
 function mean(values: number[]): number {

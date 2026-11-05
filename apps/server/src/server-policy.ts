@@ -611,8 +611,6 @@ export function isNoindexRoute(pathname: string): boolean {
     // title until 2026-10-24, and Bing filed them as duplicates of it.
     normalized === '/lag' ||
     normalized === '/verify-title' ||
-    // Built-hidden analysis capability, never an indexed public offering.
-    normalized === '/analysis/gomoku' ||
     isSitePlayedGamePage(normalized)
   );
 }

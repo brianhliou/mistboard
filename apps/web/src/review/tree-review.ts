@@ -251,6 +251,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    * decision layer name the better move.
    */
   quoteEvalBestMove?: boolean;
+  /** Omit centipawn loss for variants whose scores do not represent material. */
+  hideAcpl?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -262,6 +264,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  "Set position" a one-way door. Supply this and the box fills whether or not
    *  there is an engine. Falls back to `engine.fen` when omitted. */
   fen?: (truth: Truth) => string;
+  /** Whether a stored move-list score is meaningful for this resulting position. */
+  moveEvalVisible?(truth: Truth): boolean;
   /** Format a whole-game-analysis best move (server `evals[].best`, in the ANALYSIS
    *  engine's UCI dialect) for the "… was best" advice line. Omit to use the default
    *  xiangqi/FSF formatter (correct for xiangqi/fortress/jungle, whose display coords
@@ -505,8 +509,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Per-ply elapsed milliseconds (index 0 = ply 1). When present, a "Move times"
    *  underboard tab renders a per-move bar chart. Only real games supply it. */
   moveTimes?: number[];
+  /** Analysis slot playing recorded ply 1; dealt roots can start with the second side. */
+  firstMover?: 'red' | 'black';
   /** Remaining clocks per ply for the Move times clock overlay (series[0] = the
-   *  start, series[p] = after ply p; `first` = the first mover). Absent = untimed,
+   *  start, series[p] = after ply p; `first` = the first analysis slot). Absent = untimed,
    *  and the bars draw alone. Build it with `reviewMoveClocks`. */
   moveClocks?: ShowcaseClockPair[];
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
@@ -1704,7 +1710,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (view) summaryView = view;
     if (!summaryView) return;
     const summary = createAnalysisSummary(summaryView.analysis, config.players, {
-      hideAcpl: summaryView.hideAcpl,
+      hideAcpl: presentation.hideAcpl || summaryView.hideAcpl,
       seatColors: config.seatColors,
       phases: gamePhases,
       onJudgment: { hover: markJudgment, jump: jumpToJudgment },
@@ -1883,6 +1889,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const moveTimesChart =
     config.moveTimes && config.moveTimes.length > 0
       ? createMoveTimesChart(config.moveTimes, {
+          firstMover: config.firstMover,
           seatColors: config.seatColors,
           ...(config.moveClocks ? { clocks: config.moveClocks } : {}),
           moveLabel: (ply) => {
@@ -2559,7 +2566,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
-          eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
+          eval:
+            entry && presentation.moveEvalVisible?.(node.truth) !== false
+              ? formatEval(entry.cp, entry.mate)
+              : undefined,
           comment: hidden ? undefined : mark.comment,
           commentClass: mark.commentClass,
           ...(luck === undefined
@@ -2655,23 +2665,23 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     } else if (control instanceof HTMLButtonElement) {
       control.addEventListener('click', () => {
         control.disabled = true;
-        label.textContent = 'Analysing the whole game…';
+        label.textContent = t('replay.analysingWholeGame');
         source
           .run((done, total) => {
-            label.textContent = `Analysing… ${done}/${total}`;
+            label.textContent = t('replay.analysingProgress', { done, total });
           }, mountAbort.signal)
           .then((analysis) => {
             applyAnalysis(analysis);
             // The decomposition (jieqi) is the heavier follow-on pass; kick it off once the basic
             // sweep is in (it depends on it). Failure leaves the eval graph standing on its own.
             if (decisionSource) {
-              label.textContent = 'Analysing reveals…';
+              label.textContent = t('replay.analysingReveals');
               return runDecisions();
             }
           })
           .catch(() => {
             control.disabled = false;
-            label.textContent = 'Analysis failed — retry';
+            label.textContent = t('replay.analysisFailed');
           });
       });
     }

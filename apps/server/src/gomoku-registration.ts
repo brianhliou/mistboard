@@ -1,8 +1,9 @@
-// Built-hidden admin playtest. Rapfi runs only in the human's browser.
+// Flag-gated Gomoku rooms. Rapfi runs only in the human's browser.
 import {
   GOMOKU_SPEC_ID,
   type GomokuColor,
   getGomokuPlayerView,
+  isPublicGameSpec,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
@@ -80,6 +81,7 @@ export async function createGomokuRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: GomokuColor | 'random',
   engine?: TenantRoomEngineSeat<GomokuColor>,
+  rated = false,
 ) {
   if (
     engine &&
@@ -101,7 +103,7 @@ export async function createGomokuRoom(
       timeControl,
       creatorPreference,
       engine: engine ? { engineId: engine.engineId, seat: engine.seat } : undefined,
-      rated: false,
+      rated: engine ? false : rated,
     },
   );
   if (!created.ok && created.error === 'disabled')
@@ -126,12 +128,12 @@ const route = createTenantRoomsRoute<
     isEngineClientId: isGomokuEngineClientId,
     seats: ['black', 'white'],
   },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createGomokuRoom(timeControl, preferredColor, engine),
+  createRoom: (ctx, { timeControl, preferredColor, engine, rated }) =>
+    ctx.createGomokuRoom(timeControl, preferredColor, engine, rated),
 });
 export async function handleGomokuCreate(...args: Parameters<typeof route.handleCreate>) {
   const [, response, body] = args;
-  // Opening selection is no longer a supported surface, like rated play.
+  // Opening selection is no longer a supported surface.
   if (body.opening !== undefined) {
     writeJson(response, 501, { error: 'gomoku_unsupported_surface' });
     return;
@@ -173,11 +175,10 @@ registerVariantTenant({
       ),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
     createRoom: async (timeControl, rated) => {
-      if (rated) throw new Error('gomoku_unsupported_surface');
-      const created = await createGomokuRoom(timeControl, 'random');
+      const created = await createGomokuRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`gomoku_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
@@ -202,7 +203,12 @@ registerVariantTenant({
     // The Chinese name is identical in Simplified and Traditional Chinese.
     label: 'Gomoku · 五子棋',
     finalPosition(events, roomId) {
-      if (!gomokuEnabled() || !isTenantEventLog(gomokuTenant, events, roomId)) return null;
+      // Launched variants retain historical cards when creation is switched off.
+      if (
+        (!gomokuEnabled() && !isPublicGameSpec(GOMOKU_SPEC_ID)) ||
+        !isTenantEventLog(gomokuTenant, events, roomId)
+      )
+        return null;
       const { state } = replayTenantEvents(gomokuTenant, events);
       if (state.status.type !== 'finished') return null;
       const { board, lastMove, winningLine } = getGomokuPlayerView(state, 'black', true);

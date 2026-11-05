@@ -43,6 +43,7 @@ import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
+import { VARIANTS } from './variants.js';
 import { boardAspectForSpec, hasBoardAspect } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
@@ -411,7 +412,11 @@ describe('Gomoku hidden registration', () => {
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
-      expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('hidden');
+      expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('casual');
+      expect(VARIANTS.find((variant) => variant.gameSpecId === GOMOKU_SPEC_ID)).toMatchObject({
+        onLeaderboard: true,
+        onProfile: true,
+      });
       const web = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
       const server = registeredVariantTenants().find(
         (tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID,
@@ -425,7 +430,7 @@ describe('Gomoku hidden registration', () => {
       expect(web?.landing?.capabilities).toMatchObject({
         firstColor: 'black',
         secondColor: 'white',
-        supportsRated: false,
+        supportsRated: true,
       });
       expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual(
         [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
@@ -442,7 +447,7 @@ describe('Gomoku hidden registration', () => {
       for (const id of ['rapfi-level-0', 'rapfi-level-9', 'rapfi-level-1\n', 'engine:black'])
         expect(server?.isEngineClientId?.(id)).toBe(false);
       expect(web?.landing?.defaultEngineId).toBe('rapfi-level-1');
-      expect(server?.lobby?.supportsRated).toBe(false);
+      expect(server?.lobby?.supportsRated).toBe(true);
       expect(web?.watch?.family).toBe('gomoku');
       expect(server?.watch).toEqual({
         channelId: 'gomoku',

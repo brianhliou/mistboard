@@ -815,12 +815,12 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/a/b/game/c'), false); // too many segments
 });
 
-test('Gomoku analysis serves an isolated, unindexed shell without an editor or study registration', () => {
+test('Gomoku analysis serves an isolated, indexable shell without an editor or study registration', () => {
   assert.equal(isClientRoute('/analysis/gomoku'), true);
   assert.equal(isClientRoute('/analysis/gomoku/'), true);
   assert.equal(isReviewShellRoute('/analysis/gomoku'), true);
-  assert.equal(isNoindexRoute('/analysis/gomoku'), true);
-  assert.equal(isNoindexRoute('/analysis/gomoku/'), true);
+  assert.equal(isNoindexRoute('/analysis/gomoku'), false);
+  assert.equal(isNoindexRoute('/analysis/gomoku/'), false);
   assert.equal(SITEMAP_STATIC_ROUTES.includes('/analysis/gomoku'), false);
   assert.equal(isClientRoute('/analysis/gomoku/extra'), false);
   assert.equal(isClientRoute('/analysis/unknown-variant'), false);

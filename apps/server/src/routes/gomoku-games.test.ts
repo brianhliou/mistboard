@@ -429,13 +429,13 @@ test('canonical Gomoku export HTTP surface serves JSON only while its flag is on
   }
 });
 
-test('Gomoku live payload builder and watch capability keep listings and rated play closed', () => {
+test('Gomoku live payload builder and watch capability support public listings and rated play', () => {
   assert.equal(hasLiveWatchPayloadBuilder('gomoku'), true);
   const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;
   assert.equal(registration.watch?.channelId, GOMOKU_SPEC_ID);
   assert.equal(registration.export?.gameRouteBase, '/gomoku/game');
-  assert.equal(registration.lobby?.supportsRated, false);
-  assert.equal(gameSpecForId(GOMOKU_SPEC_ID).publicSurface, 'hidden');
+  assert.equal(registration.lobby?.supportsRated, true);
+  assert.equal(gameSpecForId(GOMOKU_SPEC_ID).publicSurface, 'casual');
   const live = room();
   gomokuRooms.set(ROOM_ID, live);
   try {
@@ -632,7 +632,7 @@ test('Gomoku snapshots retain recorded move clocks and clock pause/resume events
   assert.equal(payload.history.truth.length, 4);
 });
 
-test('Gomoku zero-move endings retain a terminal ply zero and unrated logs are required', async () => {
+test('Gomoku zero-move endings retain a terminal ply zero and rated logs replay', async () => {
   const { gomokuPostgameForApi } = await api();
   const created: GomokuEvent = {
     type: 'room-created',
@@ -655,8 +655,18 @@ test('Gomoku zero-move endings retain a terminal ply zero and unrated logs are r
   assert.equal(payload.history.truth[0]!.ply, 0);
   assert.equal(payload.history.truth[0]!.at, 2_000);
   assert.deepEqual(payload.history.truth[0]!.view.status, payload.state.status);
+  const rated = await gomokuPostgameForApi(
+    ROOM_ID,
+    deps([{ ...created, rated: true }, resigned], gameRecord({ plyCount: 0, rated: true })),
+  );
+  assert.ok(rated);
+  assert.equal(rated.game.rated, true);
+  assert.equal(rated.history.truth[0]!.ply, 0);
   assert.equal(
-    await gomokuPostgameForApi(ROOM_ID, deps([{ ...created, rated: true }, resigned])),
+    await gomokuPostgameForApi(
+      ROOM_ID,
+      deps([{ ...created, rated: true }, resigned], gameRecord({ plyCount: 0, rated: false })),
+    ),
     null,
   );
 });
@@ -829,6 +839,37 @@ test('Gomoku live builder replays events into spectator snapshots and preserves 
     assert.equal(await gomokuLiveWatchPayload(ROOM_ID), null);
     live.events[0] = { ...live.events[0]!, roomId: 'gmk_other' };
     assert.equal(await gomokuLiveWatchPayload(ROOM_ID), null);
+  } finally {
+    gomokuRooms.clear();
+  }
+});
+
+test('rated Gomoku live and memory-only finished summaries retain replayed rating state', async () => {
+  const { gomokuLiveWatchPayload, gomokuPostgameForApi } = await api();
+  const created = createTenantRuntimeRoom(gomokuTenant, ROOM_ID, {
+    now: 1000,
+    rated: true,
+    timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+  });
+  assert.ok(created.ok);
+  gomokuRooms.set(ROOM_ID, created.room);
+  try {
+    const live = await gomokuLiveWatchPayload(ROOM_ID);
+    assert.ok(live);
+    assert.equal(JSON.parse(JSON.stringify(live)).game.rated, true);
+    appendTenantRuntimeEvent(gomokuTenant, created.room, {
+      type: 'seat-resigned',
+      at: 2000,
+      roomId: ROOM_ID,
+      color: 'white',
+    });
+    const finished = await gomokuPostgameForApi(ROOM_ID, {
+      ...deps([]),
+      isPersistenceEnabled: () => false,
+      getLiveRoom: () => created.room,
+    });
+    assert.ok(finished);
+    assert.equal(JSON.parse(JSON.stringify(finished)).game.rated, true);
   } finally {
     gomokuRooms.clear();
   }

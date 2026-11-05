@@ -49,6 +49,7 @@ import {
 // fails the build here instead of its games counting as Fog Chess (Xiangqi
 // Mahjong, 2026-10-15, was missing from the hand-written CASE).
 export const GAME_VARIANTS_BY_RATING_POOL = {
+  gomoku: ['gomoku'],
   fog: ['dark-chess', 'fog'],
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
