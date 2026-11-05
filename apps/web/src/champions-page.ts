@@ -17,8 +17,14 @@
 // (jieqi-engine.ts, jungle-katago-engine.ts, jungle-engine.ts). TITLES is in
 // CANONICAL_VARIANT_ORDER (champions-page.test.ts checks it against VARIANTS).
 
+import { isPublicGameSpec } from '@mistboard/game';
 import { articleIsLive } from './articles/publish-time.js';
-import { PIKAFISH_REPO_URL, pikafishWeightsLicenseUrl } from './engine-credits.js';
+import {
+  PIKAFISH_REPO_URL,
+  pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_REPO_URL,
+} from './engine-credits.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
@@ -82,11 +88,11 @@ type Title = {
   nameKey: I18nKey;
   // The bot's name as the site shows it; `holderKey` where zh uses a
   // published translation (皮卡鱼 for Pikafish).
-  holder: string;
+  holder?: string;
   holderKey?: I18nKey;
   // The holder's bot page (/bot/<id>, keyed by the /api/bots id). The card's
-  // name links there like a profile. Every holder here has one on prod.
-  botHref: string;
+  // name links there like a profile. Open titles may have no holder or bot page.
+  botHref?: string;
   // The holder's id in the variant's computer setup (variant-tenant/registry.ts
   // engineOptions). "Play the champion" opens setup with it picked, through the
   // deep link landing-play.ts maybeOpenPlayDeepLink reads; the test checks setup
@@ -185,6 +191,20 @@ const JIEQI_AB_JCHESS_20261031: Title = {
   },
 };
 
+// No title match has been played. Rapfi is credited as the available engine,
+// without asserting a holder or publishing the locally bundled network URL.
+export const GOMOKU_OPEN_TITLE: Title = {
+  gameId: 'gomoku',
+  nameKey: 'variant.gomoku.name',
+  setupEngineId: 'rapfi-level-8',
+  credits: {
+    code: [
+      { name: 'Rapfi', href: RAPFI_REPO_URL },
+      { name: 'Rapfi WASM', href: RAPFI_BUILD_URL },
+    ],
+  },
+};
+
 export const TITLES: readonly Title[] = [
   {
     gameId: 'xiangqi',
@@ -248,6 +268,7 @@ export const TITLES: readonly Title[] = [
     ...MISTY,
     credits: mistyRepo('misty-xiangqi-mahjong'),
   },
+  ...(isPublicGameSpec('gomoku') ? [GOMOKU_OPEN_TITLE] : []),
 ];
 
 export const CHAMPIONS = TITLES.filter((title) => title.reign);
@@ -287,7 +308,7 @@ function marker(gameId: VariantMiniId, size: number): HTMLElement {
 }
 
 function holderName(title: Title, locale: Locale): string {
-  return title.holderKey ? t(title.holderKey, {}, locale) : title.holder;
+  return title.holderKey ? t(title.holderKey, {}, locale) : (title.holder ?? '');
 }
 
 // "Code  A, B" and "Network  C" rows, each name linked to its source.
@@ -382,7 +403,7 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
   card.dataset.game = title.gameId;
 
   // The name links to the holder's bot page, like a profile.
-  const profileLink = proseLink(holderName(title, locale), title.botHref);
+  const profileLink = proseLink(holderName(title, locale), title.botHref ?? '#challenge');
   profileLink.className = 'champions-hero-name-link';
 
   const crown = el('span', 'champions-crown', [
@@ -422,17 +443,21 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
 function openCard(title: Title, locale: Locale): HTMLElement {
   const card = el('article', 'champions-open');
   card.dataset.game = title.gameId;
-  const holder = proseLink(holderName(title, locale), title.botHref);
+  const holder = proseLink(holderName(title, locale), title.botHref ?? '#challenge');
   holder.className = 'champions-open-holder-link';
   card.append(
     el('div', 'champions-open-head', [
       marker(title.gameId, 26),
       el('h3', 'champions-open-game', [t(title.nameKey, {}, locale)]),
     ]),
-    el('p', 'champions-open-holder', [
-      el('span', 'champions-open-label', [t('champions.heldBy', {}, locale)]),
-      holder,
-    ]),
+    ...(title.holder
+      ? [
+          el('p', 'champions-open-holder', [
+            el('span', 'champions-open-label', [t('champions.heldBy', {}, locale)]),
+            holder,
+          ]),
+        ]
+      : []),
     ...(title.credits ? [creditList(title.credits, locale)] : []),
     el('span', 'champions-open-badge', [t('champions.openBadge', {}, locale)]),
     button(t('champions.challengeCta', {}, locale), '#challenge'),
