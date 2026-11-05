@@ -1521,11 +1521,12 @@ describe('image thumbnail crop', () => {
 });
 
 describe('player article contact note', () => {
-  it('puts the corrections line under the header photo, about that article', () => {
+  it('puts the corrections line below the article panel, about that article', () => {
     const page = buildArticlePage('zuo-wenjing');
     const notes = page.querySelectorAll('.article-contact-note');
     expect(notes).toHaveLength(1);
-    expect(notes[0]?.closest('figure.article-figure-image')).not.toBeNull();
+    expect(notes[0]?.closest('.article-sheet')).toBeNull();
+    expect(notes[0]?.parentElement?.lastElementChild).toBe(notes[0]);
     expect(notes[0]?.textContent).toBe('Corrections or rights requests: contact us.');
     expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
       '/contact?about=%2Fblog%2Fzuo-wenjing',
