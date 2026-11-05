@@ -446,6 +446,7 @@ export const ZH_HANS_REVIEW = {
   'replay.endProgressClock': '自然限着',
   'replay.endTruncated': '未完成',
   'replay.endRace': '进入兽穴',
+  'replay.endFive': '五子连线',
   'replay.endChasing': '长将',
   'replay.endDenEntered': '入兽穴',
   'replay.endPiecesCaptured': '吃光全部棋子',

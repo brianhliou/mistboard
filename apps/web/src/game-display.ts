@@ -400,8 +400,25 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   'pieces-captured': 'replay.endPiecesCaptured',
 };
 
-export function terminationLabel(termination: string, locale?: Locale): string {
+// The persisted goal-win code is shared by two different rules. A scoped
+// lookup must name the variant explicitly, never borrow another game's goal.
+const RACE_TERMINATION_KEYS = new Map<GameSpecId, I18nKey>([
+  ['gomoku', 'replay.endFive'],
+  ['jungle', 'replay.endRace'],
+  ['jungle-flip', 'replay.endRace'],
+]);
+
+export function terminationLabel(
+  termination: string,
+  locale?: Locale,
+  variant?: GameSpecId,
+): string {
   if (!termination) return '';
+  if (termination === 'race' && variant !== undefined) {
+    const key = RACE_TERMINATION_KEYS.get(variant);
+    if (!key) throw new Error(`Unsupported race termination for ${variant}`);
+    return t(key, {}, locale);
+  }
   const key = TERMINATION_KEYS[termination];
   if (key) return t(key, {}, locale);
   return humanizeToken(termination);

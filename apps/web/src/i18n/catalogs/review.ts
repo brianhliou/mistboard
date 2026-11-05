@@ -217,6 +217,7 @@ export const EN_REVIEW = {
   'replay.endProgressClock': 'Progress clock',
   'replay.endTruncated': 'Truncated',
   'replay.endRace': 'Den entered',
+  'replay.endFive': 'Five in a row',
   'replay.endChasing': 'Perpetual check',
   'replay.endDenEntered': 'Den entered',
   'replay.endPiecesCaptured': 'All pieces captured',

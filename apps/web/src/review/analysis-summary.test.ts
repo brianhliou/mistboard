@@ -18,6 +18,18 @@ const ANALYSIS: GameAnalysis = {
 };
 
 describe('analysis summary judgment rows', () => {
+  it('keeps centipawn loss by default and omits it only when the variant opts out', () => {
+    const labels = (hideAcpl?: boolean) =>
+      [
+        ...createAnalysisSummary(ANALYSIS, undefined, { hideAcpl }).querySelectorAll(
+          '.analysis-summary__stat-label',
+        ),
+      ].map((el) => el.textContent);
+    expect(labels().filter((label) => label === 'Average centipawn loss')).toHaveLength(2);
+    expect(labels(false)).toEqual(labels());
+    expect(labels(true)).not.toContain('Average centipawn loss');
+  });
+
   it('renders non-zero counts as buttons carrying side + judgment, zero counts as plain rows', () => {
     const el = createAnalysisSummary(ANALYSIS, undefined, {
       onJudgment: { hover: () => {}, jump: () => {} },

@@ -70,6 +70,7 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
     GomokuBoardMarker
   > = {
     adapter: makeGomokuTreeAdapter(config.opening),
+    hideAcpl: true,
     engine: {
       panelVariant: 'gomoku',
       positionMode: 'fen',

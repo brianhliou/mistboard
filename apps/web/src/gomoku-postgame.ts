@@ -127,6 +127,7 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
     const status = reviewOutcomeLine(
       gameOutcome(postgame.game.result, GOMOKU_SPEC_ID),
       postgame.game.termination,
+      GOMOKU_SPEC_ID,
     );
     const { metaCard, details } = buildReviewMeta({
       gameSpecId: GOMOKU_SPEC_ID,

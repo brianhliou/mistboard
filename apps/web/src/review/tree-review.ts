@@ -251,6 +251,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    * decision layer name the better move.
    */
   quoteEvalBestMove?: boolean;
+  /** Omit centipawn loss for variants whose scores do not represent material. */
+  hideAcpl?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -1691,7 +1693,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (view) summaryView = view;
     if (!summaryView) return;
     const summary = createAnalysisSummary(summaryView.analysis, config.players, {
-      hideAcpl: summaryView.hideAcpl,
+      hideAcpl: presentation.hideAcpl || summaryView.hideAcpl,
       seatColors: config.seatColors,
       phases: gamePhases,
       onJudgment: { hover: markJudgment, jump: jumpToJudgment },

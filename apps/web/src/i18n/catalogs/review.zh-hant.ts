@@ -446,6 +446,7 @@ export const ZH_HANT_REVIEW = {
   'replay.endProgressClock': '自然限著',
   'replay.endTruncated': '未完成',
   'replay.endRace': '進入獸穴',
+  'replay.endFive': '五子連線',
   'replay.endChasing': '長將',
   'replay.endDenEntered': '入獸穴',
   'replay.endPiecesCaptured': '吃光全部棋子',

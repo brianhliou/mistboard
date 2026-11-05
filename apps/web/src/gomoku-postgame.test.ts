@@ -195,6 +195,53 @@ async function mount(
 const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
 
 describe('Gomoku finished-game review', () => {
+  it.each([
+    ['en', 'Five in a row • White is victorious'],
+    ['zh-Hans', '五子连线 • 白方获胜'],
+    ['zh-Hant', '五子連線 • 白方獲勝'],
+  ])('names a persisted race termination as five in a row in %s', async (locale, outcome) => {
+    window.history.replaceState(null, '', `/${locale.toLowerCase()}/gomoku/game/${ROOM}`);
+    const payload = fixture();
+    payload.game.result = 'white-wins';
+    payload.game.termination = 'race';
+    const { root } = await mount(payload);
+    expect(root.querySelector('.game-meta-card__status')?.textContent).toBe(outcome);
+  });
+
+  it('penalizes both players for blunders when the dealt opening has White to move', async () => {
+    const opening = GOMOKU_OPENINGS.find((entry) => entry.stones.length === 5)!;
+    const analysis = {
+      engineId: 'rapfi-gomoku',
+      depth: 9,
+      // Black-POV evaluations: White loses a forced win, then Black loses it back.
+      plies: [-6, 6, -6, -6].map((mate, ply) => ({ ply, cp: null, mate, best: null })),
+    };
+    const { root } = await mount(fixture(opening), 200, false, analysis, { cached: true });
+    expect(root.querySelectorAll('.review-move-list__suffix.review-move--blunder')).toHaveLength(2);
+    for (const player of root.querySelectorAll('.analysis-summary__player')) {
+      expect(player.querySelector('.analysis-summary__stat--blunder strong')?.textContent).toBe(
+        '1',
+      );
+      const accuracy = player.querySelector(
+        '.analysis-summary__phase--headline strong',
+      )?.textContent;
+      expect(Number.parseInt(accuracy!, 10)).toBeLessThan(100);
+    }
+  });
+
+  it('omits centipawn loss from the Gomoku summary', async () => {
+    const analysis = {
+      engineId: 'rapfi-gomoku',
+      depth: 9,
+      plies: [0, -600, 600, 0].map((cp, ply) => ({ ply, cp, mate: null, best: null })),
+    };
+    const { root } = await mount(fixture(), 200, false, analysis, { cached: true });
+    const summary = root.querySelector('.analysis-summary')!;
+    expect(summary).not.toBeNull();
+    expect(summary.textContent).not.toContain('Average centipawn loss');
+    expect(summary.querySelectorAll('.analysis-summary__stat')).toHaveLength(6);
+  });
+
   it('requests the existing sweep and keeps the shared graph in sync with navigation', async () => {
     const analysis = {
       engineId: 'rapfi-gomoku',
