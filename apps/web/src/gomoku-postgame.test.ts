@@ -514,6 +514,8 @@ describe('Gomoku finished-game review', () => {
     expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(3);
     expect(root.textContent).not.toContain('Postgame unavailable');
+    expect(root.textContent).toContain('Rated');
+    expect(root.textContent).not.toContain('Casual');
     key('Home');
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
     key('End');

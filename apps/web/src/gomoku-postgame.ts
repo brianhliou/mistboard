@@ -93,7 +93,7 @@ function recordingFrame(
     events: postgame.timeline.filter((entry) => entry.type === 'move-played' && entry.move),
     liveHistory: postgame.history.truth.map(({ ply, view }) => ({ ply, view })),
     roomMode: postgame.game.mode,
-    rated: false,
+    rated: postgame.game.rated,
   };
 }
 
