@@ -632,9 +632,13 @@ describe('article public listing gates', () => {
     );
 
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector('.landing-article-card[href="/blog/misty"] img')?.getAttribute('src'),
-    ).toBe('/article-thumbs/misty-engine-belief-20260708.jpg');
+    const homeThumb = home?.querySelector<HTMLElement>(
+      '.landing-article-card[href="/blog/misty"] .articles-index-card-thumb',
+    );
+    expect(homeThumb?.querySelector('img')).toBeNull();
+    expect(homeThumb?.style.backgroundImage).toContain(
+      '/article-thumbs/misty-engine-belief-20260708.jpg',
+    );
   });
 
   it('renders the server-side truth article with the generated truth-core thumbnail', () => {
