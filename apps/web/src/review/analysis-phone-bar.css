@@ -127,6 +127,9 @@
   .review-shell.review-shell--analysis .review-rail-main > .engine-panel:not(.engine-panel--on) {
     display: none;
   }
+  .has-analysis-engine-tools .review-shell--analysis .review-rail-main > .engine-panel {
+    display: none;
+  }
   /* The move strip: one row that scrolls sideways, the current move kept in
      view (analysis-phone-bar.ts revealCurrentMove). The phone game review
      (review-info-sheet.ts, #619) uses the same strip. */
