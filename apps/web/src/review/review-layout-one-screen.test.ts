@@ -71,6 +71,25 @@ describe('oneScreenBoardWidth', () => {
     vi.stubGlobal('innerHeight', 568);
     expect(oneScreenBoardWidth(phoneReview(), 333, 0.9)).toBe(Number.POSITIVE_INFINITY);
   });
+
+  it('reserves the analysis toolbar and its page padding on a short phone', () => {
+    stubPhone(true);
+    vi.stubGlobal('innerHeight', 568);
+    const stage = phoneReview();
+    const shell = stage.closest<HTMLElement>('.review-shell')!;
+    const root = document.createElement('div');
+    root.className = 'has-analysis-phone-bar';
+    root.style.paddingBottom = '68px';
+    shell.before(root);
+    root.append(shell);
+    const bar = document.createElement('nav');
+    bar.className = 'analysis-phone-bar';
+    bar.getBoundingClientRect = () => box(508, 568);
+    root.append(bar);
+    const width = oneScreenBoardWidth(stage, 333, 1);
+    expect(width).toBe(244);
+    expect(90 + width + 140 + 24 + 68).toBeLessThanOrEqual(568);
+  });
 });
 
 // #619 round 3 (Brian, 2026-10-28: "I don't really love that the board has been
