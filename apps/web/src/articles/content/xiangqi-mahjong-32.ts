@@ -47,9 +47,9 @@ export const xiangqiMahjong32Article: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-15',
-  updatedAt: '2026-10-26',
+  updatedAt: '2026-11-06',
   updateNote:
-    'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.',
+    'Matches at 10+5 can now be rated.',
   audience:
     'Xiangqi players who have never played mahjong, mahjong players who have never seen this game, and anyone at the Mistboard table who wants to know why a hand won.',
   intro: [
@@ -335,7 +335,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.',
+          text: 'A match between two signed-in players can be rated at any of the four time controls, and the rating counts the whole match as one result. Matches against Misty, the computer, are unrated.',
         },
         {
           kind: 'paragraph',

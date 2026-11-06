@@ -6033,10 +6033,9 @@ const ZH_HANS: Record<string, string> = {
     '一手牌真正开始之前就胡牌，叫做**天胡**：庄家起手的五张牌已经是胡牌牌型，或另一位玩家在还没有人吃碰之前，第一次摸牌就胡。',
   'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.':
     '可选 1+1、3+2、5+5 或 10+5。每人六手共用一个计时器，两手之间计时暂停。第一手由谁做庄，随机抽定。',
-  'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.':
-    '两位已登录玩家在 1+1、3+2 或 5+5 下的比赛可以计等级分，整场比赛算作一个结果。10+5 的比赛和对电脑 Misty 的比赛不计等级分。',
-  'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.':
-    '新增 Mistboard 上一场比赛怎么进行：可选的时限、哪些比赛计等级分，以及第一手由谁做庄。',
+  'A match between two signed-in players can be rated at any of the four time controls, and the rating counts the whole match as one result. Matches against Misty, the computer, are unrated.':
+    '两位已登录玩家的比赛在四种时限下都可以计等级分，整场比赛算作一个结果。对电脑 Misty 的比赛不计等级分。',
+  'Matches at 10+5 can now be rated.': '10+5 的比赛现在也可以计等级分。',
   'Winning hands and their score': '胡牌牌型与台数',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是胡对手弃牌时的台数。',
@@ -6819,10 +6818,9 @@ const ZH_HANT: Record<string, string> = {
     '一手牌真正開始之前就胡牌，叫做**天胡**：莊家起手的五張牌已經是胡牌牌型，或另一位玩家在還沒有人吃碰之前，第一次摸牌就胡。',
   'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.':
     '可選 1+1、3+2、5+5 或 10+5。每人六手共用一個計時器，兩手之間計時暫停。第一手由誰做莊，隨機抽定。',
-  'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.':
-    '兩位已登入玩家在 1+1、3+2 或 5+5 下的比賽可以計等級分，整場比賽算作一個結果。10+5 的比賽和對電腦 Misty 的比賽不計等級分。',
-  'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.':
-    '新增 Mistboard 上一場比賽怎麼進行：可選的時限、哪些比賽計等級分，以及第一手由誰做莊。',
+  'A match between two signed-in players can be rated at any of the four time controls, and the rating counts the whole match as one result. Matches against Misty, the computer, are unrated.':
+    '兩位已登入玩家的比賽在四種時限下都可以計等級分，整場比賽算作一個結果。對電腦 Misty 的比賽不計等級分。',
+  'Matches at 10+5 can now be rated.': '10+5 的比賽現在也可以計等級分。',
   'Winning hands and their score': '胡牌牌型與台數',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是胡對手棄牌時的台數。',

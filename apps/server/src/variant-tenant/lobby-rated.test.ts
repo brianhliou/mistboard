@@ -282,9 +282,11 @@ test('friend rooms: rated needs a signed-in creator, a rated pace and a human op
         assert.equal(guest.status, 401, registration.kind);
         assert.deepEqual(guest.json, { error: 'rated_requires_account' }, registration.kind);
 
+        // Every preset rates since 10+5 joined on 2026-11-06, so an off-menu
+        // pace stands in for an unrated one.
         const slow = await createFriendRoom(
           registration,
-          { mode: 'pvp', rated: true, timeControl: { initialMs: 600_000, incrementMs: 5_000 } },
+          { mode: 'pvp', rated: true, timeControl: { initialMs: 900_000, incrementMs: 10_000 } },
           ACCOUNT,
         );
         assert.equal(slow.status, 400, registration.kind);

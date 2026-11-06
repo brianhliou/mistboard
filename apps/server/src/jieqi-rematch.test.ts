@@ -310,7 +310,14 @@ test('jieqi rematch context: rated carries over only while the rated switch and 
     );
     assert.ok(rated.ok);
     assert.equal(rated.room.rated, true, 'rated 1+1 stays rated');
-    const offPace = await jieqiRematchContext.createRoom(TEN_PLUS_FIVE, true);
+    // 10+5 rates since 2026-11-06 (the rapid pool, with 5+5).
+    const tenPlusFive = await jieqiRematchContext.createRoom(TEN_PLUS_FIVE, true);
+    assert.ok(tenPlusFive.ok);
+    assert.equal(tenPlusFive.room.rated, true, 'rated 10+5 stays rated');
+    const offPace = await jieqiRematchContext.createRoom(
+      { initialMs: 900_000, incrementMs: 10_000 },
+      true,
+    );
     assert.ok(offPace.ok);
     assert.equal(offPace.room.rated, false, 'a pace with no rated pool rematches casual');
     process.env.MISTBOARD_RATED_ENABLED = 'false';
