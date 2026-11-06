@@ -226,6 +226,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'crazyhouse-xiangqi',
   'misty',
   'server-enforced-fog',
+  // Machine-drafted 2026-11-06, not native-reviewed, from the English updated
+  // 2026-11-06. A hidden playtest page; zh inherits its noindex by slug.
+  'gomoku',
 ] as const;
 
 // Published articles that deliberately have no zh pages, each with its reason.
@@ -236,8 +239,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
-  gomoku:
-    'Hidden English review page; Brian is reviewing the rewritten rules before localized publication.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
@@ -276,6 +277,47 @@ const ZH_HANS: Record<string, string> = {
   'Gomoku Rules': '五子棋规则',
   'Gomoku board': '五子棋棋盘',
   'Five in a row wins': '连五获胜',
+  'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
+  'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
+    '学会落子、连成五子，并在 Mistboard 发放的开局里跟着回合提示走棋。',
+  'Explained why openings are dealt and gave the game’s history its own section.':
+    '说明了开局为什么由系统发放，并把这个游戏的历史单独成节。',
+  'Place a stone on an empty point each turn. Stones stay where you put them.':
+    '每回合在一个空的交叉点上放一枚棋子。棋子落下后就不再移动。',
+  'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
+    '在无禁手五子棋中，同色棋子在一条直线上连成五个或更多即获胜。',
+  'Gomoku has two players, Black and White, who take turns placing one stone on a 15×15 board. Stones never move. The player who completes five in a row wins.':
+    '五子棋由黑白双方对弈，轮流在 15×15 的棋盘上各放一枚棋子。棋子永不移动。先连成五子的一方获胜。',
+  'Placing stones': '落子',
+  'Place your stone on a point, where two lines cross. The points along the edges and in the corners are playable too. An occupied point stays occupied for the rest of the game: stones cannot be captured or replaced. Unless your stone ends the game, your opponent plays next.':
+    '把棋子放在交叉点上，也就是两条线相交的地方。边线和角上的交叉点也可以落子。已被占据的交叉点在整盘棋里都会保持占据：棋子不能被吃掉，也不能被替换。除非你这一子结束了对局，否则接下来轮到对手。',
+  'Black places h8, the centre point.': '黑方落在 h8，即中心点。',
+  'Coordinates run a–o across the board and 1–15 up it. On your turn, choose any empty point, whether beside an existing stone or away from the group.':
+    '坐标横向为 a–o，纵向为 1–15。轮到你时，可以选择任意空点，紧挨已有棋子或远离棋群都可以。',
+  'A winning line runs horizontally, vertically or diagonally. Its stones must be consecutive, with no empty point or opposing stone between them. A bent line does not count. Completing the line ends the game immediately; your opponent gets no reply.':
+    '获胜的连线可以是横向、纵向或斜向。这些棋子必须连续，中间不能有空点或对方棋子。拐弯的线不算。连线一完成，对局立即结束，对手没有回应的机会。',
+  'Black completes e8–i8. Green rings mark the five; the red square marks i8.':
+    '黑方连成 e8–i8。绿圈标出这五子；红方块标出 i8。',
+  'Mistboard uses freestyle rules: six or more in a row, called an overline, also wins for either colour. Renju has restrictions on Black’s moves; those restrictions do not apply here.':
+    'Mistboard 采用无禁手规则：六子或更多连成一线称为长连，对任一方都算获胜。连珠规则对黑方的着法有限制；这里不适用这些限制。',
+  'Before placing a stone, look for a line your opponent could complete next turn. Filling its empty point can block the win. Your stones can build toward several directions at once, so check the diagonals as well as the rows and columns.':
+    '落子之前，先看对手下一步能否连成一条线。占住那个空点就可以挡住对方的胜利。你的棋子可以同时朝几个方向发展，所以除了横线和纵线，也要检查斜线。',
+  'A full board without a winning line is drawn. In a human game, once both players have moved, press ½ (Offer draw) and confirm; your opponent can accept or decline. Resigning concedes the game to your opponent.':
+    '棋盘下满仍无人连五，即为和棋。在真人对局中，双方都走过之后，可以按 ½（提和）并确认；对手可以接受或拒绝。认输即把这盘棋判给对手。',
+  'Dealt openings': '发放的开局',
+  'Every game starts from a position already on the board, picked from a set an engine searched and judged close to even. From an empty board, Black’s first move is a real advantage, so the game starts from a balanced position instead. Follow the turn indicator to see who plays next.':
+    '每盘棋都从一个已经摆好棋子的局面开始，这个局面选自一组经引擎搜索、判断为接近均势的开局。如果从空棋盘开始，黑方先走是实实在在的优势，所以这里改从一个均衡的局面开始。看回合提示就知道下一步轮到谁。',
+  'A dealt starting position. The stones already on the board stay in play.':
+    '一个发放的起始局面。棋盘上已有的棋子都会留在对局中。',
+  'Tournament rules such as Swap2 balance the start by letting players place stones and choose colours; Mistboard deals a screened position instead.':
+    'Swap2 等比赛规则让棋手自己摆子、选颜色来平衡开局；Mistboard 则直接发放一个经过筛选的局面。',
+  'Names and history': '名称与历史',
+  'The Japanese name gomokunarabe means “five in a row”; the game is also called Chinese wuziqi, Korean omok and English gobang. Japanese records date to the Edo period, with a verifiable book from 1856; Renju, which restricts Black’s moves, was named in 1899. [L. Victor Allis’s 1994 PhD thesis](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf) proved Black wins with perfect play from an empty 15×15 board under both freestyle and exactly-five rules.':
+    '日文名 gomokunarabe（五目並べ）意为“五子连成一排”；这个游戏在中国叫五子棋，在韩国叫 omok，英文也叫 gobang。日本的记载可追溯到江户时代，可考的书籍出自 1856 年；限制黑方着法的连珠在 1899 年定名。[L. Victor Allis 1994 年的博士论文](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf)证明了：从空的 15×15 棋盘开始，无论无禁手规则还是恰好五子规则，黑方在完美对弈下都必胜。',
+  'Does screening guarantee a draw?': '筛选能保证和棋吗？',
+  'Screening uses finite search. A near-even evaluation is an estimate; play can still reveal a winning continuation.':
+    '筛选用的是有限深度的搜索。接近均势的评估只是估计；实战中仍可能出现必胜的着法。',
+  'Play Gomoku': '下五子棋',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困毙 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作杀, 萨姆·劳埃德); 迷雾国际象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我们所知最短的象棋困毙',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
@@ -6620,6 +6662,47 @@ const ZH_HANT: Record<string, string> = {
   'Gomoku Rules': '五子棋規則',
   'Gomoku board': '五子棋棋盤',
   'Five in a row wins': '連五獲勝',
+  'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
+  'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
+    '學會落子、連成五子，並在 Mistboard 發放的開局裡跟著回合提示走棋。',
+  'Explained why openings are dealt and gave the game’s history its own section.':
+    '說明了開局為什麼由系統發放，並把這個遊戲的歷史單獨成節。',
+  'Place a stone on an empty point each turn. Stones stay where you put them.':
+    '每回合在一個空的交叉點上放一枚棋子。棋子落下後就不再移動。',
+  'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
+    '在無禁手五子棋中，同色棋子在一條直線上連成五個或更多即獲勝。',
+  'Gomoku has two players, Black and White, who take turns placing one stone on a 15×15 board. Stones never move. The player who completes five in a row wins.':
+    '五子棋由黑白雙方對弈，輪流在 15×15 的棋盤上各放一枚棋子。棋子永不移動。先連成五子的一方獲勝。',
+  'Placing stones': '落子',
+  'Place your stone on a point, where two lines cross. The points along the edges and in the corners are playable too. An occupied point stays occupied for the rest of the game: stones cannot be captured or replaced. Unless your stone ends the game, your opponent plays next.':
+    '把棋子放在交叉點上，也就是兩條線相交的地方。邊線和角上的交叉點也可以落子。已被佔據的交叉點在整盤棋裡都會保持佔據：棋子不能被吃掉，也不能被替換。除非你這一子結束了對局，否則接下來輪到對手。',
+  'Black places h8, the centre point.': '黑方落在 h8，即中心點。',
+  'Coordinates run a–o across the board and 1–15 up it. On your turn, choose any empty point, whether beside an existing stone or away from the group.':
+    '座標橫向為 a–o，縱向為 1–15。輪到你時，可以選擇任意空點，緊挨已有棋子或遠離棋群都可以。',
+  'A winning line runs horizontally, vertically or diagonally. Its stones must be consecutive, with no empty point or opposing stone between them. A bent line does not count. Completing the line ends the game immediately; your opponent gets no reply.':
+    '獲勝的連線可以是橫向、縱向或斜向。這些棋子必須連續，中間不能有空點或對方棋子。拐彎的線不算。連線一完成，對局立即結束，對手沒有回應的機會。',
+  'Black completes e8–i8. Green rings mark the five; the red square marks i8.':
+    '黑方連成 e8–i8。綠圈標出這五子；紅方塊標出 i8。',
+  'Mistboard uses freestyle rules: six or more in a row, called an overline, also wins for either colour. Renju has restrictions on Black’s moves; those restrictions do not apply here.':
+    'Mistboard 採用無禁手規則：六子或更多連成一線稱為長連，對任一方都算獲勝。連珠規則對黑方的著法有限制；這裡不適用這些限制。',
+  'Before placing a stone, look for a line your opponent could complete next turn. Filling its empty point can block the win. Your stones can build toward several directions at once, so check the diagonals as well as the rows and columns.':
+    '落子之前，先看對手下一步能否連成一條線。佔住那個空點就可以擋住對方的勝利。你的棋子可以同時朝幾個方向發展，所以除了橫線和縱線，也要檢查斜線。',
+  'A full board without a winning line is drawn. In a human game, once both players have moved, press ½ (Offer draw) and confirm; your opponent can accept or decline. Resigning concedes the game to your opponent.':
+    '棋盤下滿仍無人連五，即為和棋。在真人對局中，雙方都走過之後，可以按 ½（提和）並確認；對手可以接受或拒絕。認輸即把這盤棋判給對手。',
+  'Dealt openings': '發放的開局',
+  'Every game starts from a position already on the board, picked from a set an engine searched and judged close to even. From an empty board, Black’s first move is a real advantage, so the game starts from a balanced position instead. Follow the turn indicator to see who plays next.':
+    '每盤棋都從一個已經擺好棋子的局面開始，這個局面選自一組經引擎搜尋、判斷為接近均勢的開局。如果從空棋盤開始，黑方先走是實實在在的優勢，所以這裡改從一個均衡的局面開始。看回合提示就知道下一步輪到誰。',
+  'A dealt starting position. The stones already on the board stay in play.':
+    '一個發放的起始局面。棋盤上已有的棋子都會留在對局中。',
+  'Tournament rules such as Swap2 balance the start by letting players place stones and choose colours; Mistboard deals a screened position instead.':
+    'Swap2 等比賽規則讓棋手自己擺子、選顏色來平衡開局；Mistboard 則直接發放一個經過篩選的局面。',
+  'Names and history': '名稱與歷史',
+  'The Japanese name gomokunarabe means “five in a row”; the game is also called Chinese wuziqi, Korean omok and English gobang. Japanese records date to the Edo period, with a verifiable book from 1856; Renju, which restricts Black’s moves, was named in 1899. [L. Victor Allis’s 1994 PhD thesis](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf) proved Black wins with perfect play from an empty 15×15 board under both freestyle and exactly-five rules.':
+    '日文名 gomokunarabe（五目並べ）意為「五子連成一排」；這個遊戲在中國叫五子棋，在韓國叫 omok，英文也叫 gobang。日本的記載可追溯到江戶時代，可考的書籍出自 1856 年；限制黑方著法的連珠在 1899 年定名。[L. Victor Allis 1994 年的博士論文](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf)證明了：從空的 15×15 棋盤開始，無論無禁手規則還是恰好五子規則，黑方在完美對弈下都必勝。',
+  'Does screening guarantee a draw?': '篩選能保證和棋嗎？',
+  'Screening uses finite search. A near-even evaluation is an estimate; play can still reveal a winning continuation.':
+    '篩選用的是有限深度的搜尋。接近均勢的評估只是估計；實戰中仍可能出現必勝的著法。',
+  'Play Gomoku': '下五子棋',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作殺, 薩姆·勞埃德, 著法, 搜尋, 電腦); 迷霧國際象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我們所知最短的象棋困斃',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':

@@ -5,9 +5,10 @@ const HOST = 'https://mistboard.com';
 
 describe('article card URLs', () => {
   it.each([undefined, 'en', 'zh-Hans', 'zh-Hant'])(
-    'shares the English Gomoku rules board in every shape until it is localized (%s)',
+    'shares the Gomoku rules board in every shape with the page caption (%s)',
     (locale) => {
-      const wide = `${HOST}/og/article/gomoku.png?v=8`;
+      const lang = locale?.startsWith('zh-') ? `&lang=${locale.toLowerCase()}` : '';
+      const wide = `${HOST}/og/article/gomoku.png?v=8${lang}`;
       expect(articleOgImageUrl(HOST, 'gomoku', locale)).toBe(wide);
       expect(articleStructuredDataImage(HOST, 'gomoku', locale)).toEqual(
         ['16x9', '4x3', '1x1'].map((aspect) => `${wide}&aspect=${aspect}`),
