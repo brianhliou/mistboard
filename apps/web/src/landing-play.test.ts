@@ -999,19 +999,19 @@ describe('landing play panel', () => {
     const panel = buildLandingPlayPanel([]);
     document.body.append(panel);
 
-    // The default variant here is xiangqi, which carries the deliberate ladder:
-    // 10+5 is offered casually but is casual-ONLY (rated: false on the spec), so
-    // the rated toggle is what separates the two sets. A variant whose picker
-    // omits a pace still omits it rated: allowedTimePresetIds narrows the
-    // variant's own set.
+    // The default variant here is xiangqi, which offers all four paces, and
+    // all four rate since 2026-11-06 (10+5 shares the rapid rating with 5+5),
+    // so Casual and Rated show the same set. A variant whose picker omits a
+    // pace still omits it rated: allowedTimePresetIds narrows the variant's
+    // own set.
     openPlaySetup(panel, 'Find opponent');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalButton('Casual');
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalButton('Rated');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('keeps rated setup disabled for signed-out players', () => {
@@ -1056,7 +1056,7 @@ describe('landing play panel', () => {
     // Like Find opponent (and lichess challenges): a signed-in player starts on Rated,
     // and Rated narrows the clocks to the rated ones.
     expect(rated?.getAttribute('aria-checked')).toBe('true');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalTimeControl('3 + 2');
     [...document.querySelectorAll('button')]
@@ -1152,7 +1152,7 @@ describe('landing play panel', () => {
       ...document.querySelectorAll<HTMLButtonElement>('.landing-start-option'),
     ].find((button) => button.textContent === 'Rated');
     expect(ratedAfter?.getAttribute('aria-checked')).toBe('true');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('a signed-out player who picks Rated in a bot dialog is sent to sign in', () => {

@@ -83,14 +83,16 @@ export const TIME_CONTROLS: readonly TimeControlSpec[] = [
     // 15.0, so a guest on a full xiangqi board cannot finish one — they flagged
     // in 32% of jieqi and 36% of xiangqi games, against 0 of 159 for signed-in
     // players at the same pace. 10+5 affords 25.0s/move, the first rung clear
-    // of the measured need. Casual-only for now: it shares the rapid bucket
-    // with 5+5, so flipping `rated` later adds no rating pool.
+    // of the measured need. Rated since 2026-11-06 (Brian: "yes, ok"): it
+    // shares the rapid rating with 5+5, as Lichess classes both, so it adds
+    // no rating pool, and a variant whose default is 10+5 no longer drops to
+    // 1+1 when the player picks Rated.
     id: '10m5',
     label: '10 + 5',
     initialMs: 600_000,
     incrementMs: 5_000,
     timeClass: 'rapid',
-    rated: false,
+    rated: true,
   },
 ];
 

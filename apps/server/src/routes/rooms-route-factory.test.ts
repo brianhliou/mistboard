@@ -402,7 +402,7 @@ test('factory: a rated friend room is gated on the flag, the account and the pac
       assert.equal(guest.status, 401);
       assert.deepEqual(json(guest), { error: 'rated_requires_account' });
 
-      // 10+5 is not a rated pace → 400.
+      // 15+10 is off the menu, so not a rated pace → 400.
       const slow = captureResponse();
       await route.handleCreate(
         baseCtx,
@@ -411,7 +411,7 @@ test('factory: a rated friend room is gated on the flag, the account and the pac
           gameSpecId: BANQI_SPEC_ID,
           mode: 'pvp',
           rated: true,
-          timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+          timeControl: { initialMs: 900_000, incrementMs: 10_000 },
         },
         ACCOUNT,
       );
