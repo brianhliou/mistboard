@@ -1,10 +1,316 @@
 {
-  "capturedAt": "2026-11-05T23:37:10.146Z",
-  "totalGames": 9129,
-  "gamesAgainstBots": 9031,
+  "capturedAt": "2026-11-06T01:01:44.193Z",
+  "totalGames": 9130,
+  "gamesAgainstBots": 9032,
   "gamesWonAgainstBots": 1825,
   "gamesBetweenPeople": 98,
   "countriesAndRegions": 41,
+  "gamesSeenFromBothSides": 56,
+  "gamesAcrossBorders": 0,
+  "bots": [
+    {
+      "bot": "pikafish",
+      "variant": "jieqi",
+      "games": 1121,
+      "peopleWon": 60
+    },
+    {
+      "bot": "pikafish-level-3",
+      "variant": "jieqi",
+      "games": 913,
+      "peopleWon": 176
+    },
+    {
+      "bot": "ab-jchess",
+      "variant": "jieqi",
+      "games": 882,
+      "peopleWon": 147
+    },
+    {
+      "bot": "pikafish-level-2",
+      "variant": "jieqi",
+      "games": 762,
+      "peopleWon": 435
+    },
+    {
+      "bot": "misty",
+      "variant": "banqi",
+      "games": 762,
+      "peopleWon": 100
+    },
+    {
+      "bot": "pikafish-level-4",
+      "variant": "jieqi",
+      "games": 680,
+      "peopleWon": 108
+    },
+    {
+      "bot": "jqe",
+      "variant": "jieqi",
+      "games": 549,
+      "peopleWon": 62
+    },
+    {
+      "bot": "pikafish-level-1",
+      "variant": "jieqi",
+      "games": 405,
+      "peopleWon": 279
+    },
+    {
+      "bot": "pikafish-level-6",
+      "variant": "jieqi",
+      "games": 399,
+      "peopleWon": 23
+    },
+    {
+      "bot": "fairy-stockfish-level-2",
+      "variant": "xiangqi",
+      "games": 343,
+      "peopleWon": 167
+    },
+    {
+      "bot": "misty",
+      "variant": "jungle-flip",
+      "games": 331,
+      "peopleWon": 48
+    },
+    {
+      "bot": "pikafish-level-5",
+      "variant": "jieqi",
+      "games": 320,
+      "peopleWon": 47
+    },
+    {
+      "bot": "pikafish",
+      "variant": "xiangqi",
+      "games": 274,
+      "peopleWon": 0
+    },
+    {
+      "bot": "misty",
+      "variant": "dark-chess",
+      "games": 194,
+      "peopleWon": 22
+    },
+    {
+      "bot": "fairy-stockfish-level-4",
+      "variant": "xiangqi",
+      "games": 164,
+      "peopleWon": 23
+    },
+    {
+      "bot": "misty",
+      "variant": "jungle",
+      "games": 136,
+      "peopleWon": 3
+    },
+    {
+      "bot": "misty",
+      "variant": "dark-xiangqi",
+      "games": 121,
+      "peopleWon": 18
+    },
+    {
+      "bot": "fairy-stockfish-level-8",
+      "variant": "xiangqi",
+      "games": 101,
+      "peopleWon": 2
+    },
+    {
+      "bot": "fairy-stockfish-level-4",
+      "variant": "duck-xiangqi",
+      "games": 85,
+      "peopleWon": 9
+    },
+    {
+      "bot": "fairy-stockfish-level-4",
+      "variant": "crazyhouse-xiangqi",
+      "games": 76,
+      "peopleWon": 2
+    },
+    {
+      "bot": "fairy-stockfish-level-5",
+      "variant": "xiangqi",
+      "games": 59,
+      "peopleWon": 5
+    },
+    {
+      "bot": "katago",
+      "variant": "jungle",
+      "games": 53,
+      "peopleWon": 0
+    },
+    {
+      "bot": "pikafish-level-7",
+      "variant": "jieqi",
+      "games": 52,
+      "peopleWon": 0
+    },
+    {
+      "bot": "fairy-stockfish-level-1",
+      "variant": "xiangqi",
+      "games": 50,
+      "peopleWon": 27
+    },
+    {
+      "bot": "fairy-stockfish-level-3",
+      "variant": "xiangqi",
+      "games": 40,
+      "peopleWon": 19
+    },
+    {
+      "bot": "fairy-stockfish-level-7",
+      "variant": "xiangqi",
+      "games": 35,
+      "peopleWon": 0
+    },
+    {
+      "bot": "general-blunder",
+      "variant": "xiangqi",
+      "games": 28,
+      "peopleWon": 21
+    },
+    {
+      "bot": "misty",
+      "variant": "xiangqi-mahjong",
+      "games": 25,
+      "peopleWon": 2
+    },
+    {
+      "bot": "fairy-stockfish-level-3",
+      "variant": "crazyhouse-xiangqi",
+      "games": 21,
+      "peopleWon": 5
+    },
+    {
+      "bot": "fairy-stockfish-level-6",
+      "variant": "xiangqi",
+      "games": 15,
+      "peopleWon": 4
+    },
+    {
+      "bot": "fairy-stockfish-level-8",
+      "variant": "duck-xiangqi",
+      "games": 10,
+      "peopleWon": 0
+    },
+    {
+      "bot": "fairy-stockfish-level-1",
+      "variant": "duck-xiangqi",
+      "games": 6,
+      "peopleWon": 1
+    },
+    {
+      "bot": "fairy-stockfish-level-8",
+      "variant": "crazyhouse-xiangqi",
+      "games": 4,
+      "peopleWon": 0
+    },
+    {
+      "bot": "fairy-stockfish-level-2",
+      "variant": "crazyhouse-xiangqi",
+      "games": 3,
+      "peopleWon": 3
+    },
+    {
+      "bot": "fairy-stockfish-level-3",
+      "variant": "duck-xiangqi",
+      "games": 3,
+      "peopleWon": 2
+    },
+    {
+      "bot": "fairy-stockfish-level-1",
+      "variant": "crazyhouse-xiangqi",
+      "games": 3,
+      "peopleWon": 3
+    }
+  ],
+  "endings": [
+    {
+      "ending": "resignation",
+      "games": 3412,
+      "averagePlies": 32,
+      "draws": 0
+    },
+    {
+      "ending": "checkmate",
+      "games": 2723,
+      "averagePlies": 58,
+      "draws": 0
+    },
+    {
+      "ending": "timeout",
+      "games": 1736,
+      "averagePlies": 31,
+      "draws": 0
+    },
+    {
+      "ending": "stalemate",
+      "games": 628,
+      "averagePlies": 102,
+      "draws": 0
+    },
+    {
+      "ending": "abandonment",
+      "games": 168,
+      "averagePlies": 27,
+      "draws": 0
+    },
+    {
+      "ending": "repetition",
+      "games": 106,
+      "averagePlies": 72,
+      "draws": 106
+    },
+    {
+      "ending": "general-captured",
+      "games": 94,
+      "averagePlies": 36,
+      "draws": 0
+    },
+    {
+      "ending": "king-captured",
+      "games": 93,
+      "averagePlies": 48,
+      "draws": 0
+    },
+    {
+      "ending": "race",
+      "games": 57,
+      "averagePlies": 59,
+      "draws": 0
+    },
+    {
+      "ending": "dead-position",
+      "games": 49,
+      "averagePlies": 64,
+      "draws": 49
+    },
+    {
+      "ending": "progress-clock",
+      "games": 37,
+      "averagePlies": 186,
+      "draws": 37
+    },
+    {
+      "ending": "chasing",
+      "games": 22,
+      "averagePlies": 101,
+      "draws": 0
+    },
+    {
+      "ending": "points",
+      "games": 3,
+      "averagePlies": 142,
+      "draws": 0
+    },
+    {
+      "ending": "draw",
+      "games": 2,
+      "averagePlies": 102,
+      "draws": 2
+    }
+  ],
   "accounts": 107,
   "players": 1004,
   "playersWithOneGame": 440,
@@ -19,7 +325,7 @@
   },
   "atOneThousand": {
     "jieqiGames": 608,
-    "gamesBetweenPeople": 7
+    "gamesBetweenPeople": 4
   },
   "firstThousandOn": "2026-09-30",
   "tenThousandOn": null,
@@ -114,7 +420,7 @@
     },
     {
       "weekStart": "2026-11-02",
-      "games": 1291
+      "games": 1292
     }
   ],
   "variants": [
@@ -136,7 +442,7 @@
     },
     {
       "variant": "dark-chess",
-      "games": 199
+      "games": 200
     },
     {
       "variant": "jungle",

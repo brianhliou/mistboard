@@ -1824,9 +1824,11 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 /* The match-fixing tables lead with a name in English and Chinese. On a phone
    the four-column who's-who cannot hold that on one line, so the name may break
    between the two, never inside either: the English names carry a no-break
-   space and keep-all holds the Chinese together. */
+   space and keep-all holds the Chinese together. The 10,000 games bot table
+   breaks its names the same way, before the level range. */
 @media (max-width: 600px) {
-  [data-article-slug="xiangqi-match-fixing"] .article-table-key-column td:first-child {
+  [data-article-slug="xiangqi-match-fixing"] .article-table-key-column td:first-child,
+  [data-article-slug="ten-thousand-games"] .article-table-key-column td:first-child {
     white-space: normal;
     word-break: keep-all;
   }
