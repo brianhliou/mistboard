@@ -1,3 +1,5 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { signDmEmailUnsubscribeToken } from './inbox-email-unsubscribe.js';
 import {
   createUser,
   findUserByEmail,
@@ -6,8 +8,65 @@ import {
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import { createInboxEmailUnsubscribeRoute } from './routes/inbox-email-unsubscribe.js';
 
 definePersistenceTests('accounts', () => {
+  test('DM unsubscribe persists only inboxEmail and invalid or unknown tokens change nothing', async () => {
+    const user = await createUser({
+      id: 'user_dm_unsubscribe',
+      email: 'dm-unsubscribe@example.com',
+      emailVerifiedAt: null,
+      handle: 'dmunsubscribe',
+      displayName: 'DM unsubscribe',
+      now: new Date(),
+    });
+    const secret = 'test-only-persistence-signing-key';
+    const route = createInboxEmailUnsubscribeRoute({ env: { MISTBOARD_ENGINE_SECRET: secret } });
+    const token = signDmEmailUnsubscribeToken(user.id, secret);
+    async function call(method: string, value: string) {
+      const url = new URL('https://mistboard.example/api/inbox/email/unsubscribe');
+      url.searchParams.set('t', value);
+      let status = 0;
+      const response = {
+        writeHead(code: number) {
+          status = code;
+          return this;
+        },
+        end() {},
+      } as unknown as ServerResponse;
+      assert.equal(
+        await route.tryHandle(
+          {},
+          { method, headers: {} } as IncomingMessage,
+          response,
+          url.pathname,
+          url,
+        ),
+        true,
+      );
+      return status;
+    }
+    assert.equal(await call('GET', token), 200);
+    assert.deepEqual(
+      (await findUserByEmail(user.email))?.accountPreferences,
+      user.accountPreferences,
+    );
+    for (const invalid of [`${token}x`, signDmEmailUnsubscribeToken('unknown_account', secret)]) {
+      assert.equal(await call('POST', invalid), 400);
+      assert.deepEqual(
+        (await findUserByEmail(user.email))?.accountPreferences,
+        user.accountPreferences,
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      assert.equal(await call('POST', token), 200);
+      assert.deepEqual((await findUserByEmail(user.email))?.accountPreferences, {
+        ...user.accountPreferences,
+        inboxEmail: false,
+      });
+    }
+  });
+
   test('inbox email defaults on and persists independently of the bell', async () => {
     const now = new Date();
     const user = await createUser({
