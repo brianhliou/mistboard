@@ -156,8 +156,8 @@ describe('landing play panel', () => {
     openPlaySetup(panel, '挑戰好友');
 
     expect(document.querySelector('.landing-setup-title')?.textContent).toBe('開始對局');
-    expect(document.querySelector('[aria-label="對局類型"]')).not.toBeNull();
-    expect(document.querySelector('[aria-label="變體"]')).not.toBeNull();
+    expect(document.querySelector('[aria-label="計分方式"]')).not.toBeNull();
+    expect(document.querySelector('[aria-label="棋種"]')).not.toBeNull();
     expect(document.querySelector('[aria-label="用時"]')).not.toBeNull();
     // Xiangqi pivot: DMX is hidden from the picker; assert a still-visible
     // xiangqi variant card (Dark Xiangqi) localizes instead.
@@ -227,12 +227,12 @@ describe('landing play panel', () => {
       options.map((option) => option.querySelector('.landing-color-label')?.textContent),
     ).toEqual(['Red', 'Random', 'Blue']);
     expect(
-      [...options[0]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
+      [...options[0]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle img')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual(['/piece-sets/jungle/dobutsu/red-elephant.png?v=2']);
     expect(
-      [...options[1]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
+      [...options[1]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle img')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual([
@@ -240,7 +240,7 @@ describe('landing play panel', () => {
       '/piece-sets/jungle/dobutsu/black-elephant.png?v=2',
     ]);
     expect(
-      [...options[2]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
+      [...options[2]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle img')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual(['/piece-sets/jungle/dobutsu/black-elephant.png?v=2']);
