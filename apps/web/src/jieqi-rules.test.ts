@@ -9,23 +9,8 @@ import { translateArticle } from './article-i18n.js';
 import { articleProse } from './article-prose.js';
 import matchRecord from './articles/content/ab-jchess-vs-jqe-match.json' with { type: 'json' };
 import { jieqiArticle } from './articles/content/jieqi.js';
-import { jieqiTranslationSource } from './articles/content/jieqi-translation-source.js';
 import { buildArticlePage } from './articles.js';
-import { type Article, articles } from './articles-data.js';
 import { renderArticlePageShellForPrerender } from './pages-static.js';
-
-// Render the published source in the registry as a before comparison. This
-// compares the whole page without freezing unrelated navigation or theme HTML.
-async function publishedShell(source: Article, lang?: 'zh-Hans' | 'zh-Hant'): Promise<string> {
-  const index = articles.findIndex((article) => article.slug === source.slug);
-  const current = articles[index];
-  articles[index] = source;
-  try {
-    return await renderArticlePageShellForPrerender(source.slug, lang);
-  } finally {
-    articles[index] = current;
-  }
-}
 
 describe('English Jieqi rules review', () => {
   it('keeps the rules reference and the sample game, without a walkthrough or tips', () => {
@@ -98,27 +83,17 @@ describe('English Jieqi rules review', () => {
   });
 
   for (const lang of ['zh-Hans', 'zh-Hant'] as const) {
-    it(`${lang}: rules still translate their published source`, () => {
-      expect(translateArticle(jieqiArticle, lang)).toEqual(
-        translateArticle(jieqiTranslationSource, lang),
-      );
-    });
-
-    it(`${lang}: rules HTML matches its published version`, async () => {
-      const html = await renderArticlePageShellForPrerender('jieqi', lang);
-      expect(html).toBe(await publishedShell(jieqiTranslationSource, lang));
+    it(`${lang}: leaves no English prose string untranslated`, () => {
+      const translated = translateArticle(jieqiArticle, lang);
+      const english = new Set(articleProse(jieqiArticle).map(({ text }) => text));
+      const untranslated = articleProse(translated).filter(({ text }) => english.has(text));
+      expect(untranslated).toEqual([]);
+      expect(translated.updateNote).not.toBe(jieqiArticle.updateNote);
     });
   }
 
   it('can measure the English rules shell without starting a server', async () => {
     const html = await renderArticlePageShellForPrerender('jieqi');
     expect(html).toContain('Captured dark pieces');
-    if (process.env.JIEQI_RULES_MEASURE === '1') {
-      const before = await publishedShell(jieqiTranslationSource);
-      const jungle = await renderArticlePageShellForPrerender('jungle');
-      process.stdout.write(
-        `Prerender shells in bytes: Jieqi before=${Buffer.byteLength(before)}, after=${Buffer.byteLength(html)}, Jungle=${Buffer.byteLength(jungle)}\n`,
-      );
-    }
   });
 });
