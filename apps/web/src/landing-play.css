@@ -638,6 +638,36 @@
   height: 38px;
 }
 
+/* Gomoku stones, the board's own fills (gomoku-board.css). They keep their
+   ink on the selected fill; a light ring keeps the black stone off the green. */
+.landing-color-piece.stone {
+  display: block;
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid;
+  border-radius: 50%;
+}
+
+.landing-color-piece.stone.black {
+  border-color: #080808;
+  background: #222;
+}
+
+.landing-color-piece.stone.white {
+  border-color: #8a806d;
+  background: #faf7ee;
+}
+
+.landing-color-option.selected .landing-color-piece.stone.black {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75);
+}
+
+.landing-color-glyph.random .landing-color-piece.stone {
+  width: 28px;
+  height: 28px;
+}
+
 .landing-color-option .landing-color-glyph.white {
   color: #f8faf5;
   -webkit-text-stroke: 1px #65716a;
@@ -1321,16 +1351,30 @@ html.landing-setup-open body {
   height: 28px;
 }
 
+/* Every piece-image side shrinks to the phone row; the xiangqi general was
+   missing here and rose 16px out of its button (Brian's phone, 2026-11-05). */
 .landing-setup-row .landing-color-piece.jungle,
-.landing-setup-row .landing-color-piece.chess {
+.landing-setup-row .landing-color-piece.chess,
+.landing-setup-row .landing-color-piece.xiangqi {
   width: 28px;
   height: 28px;
 }
 
 .landing-setup-row .landing-color-glyph.random .landing-color-piece.jungle,
-.landing-setup-row .landing-color-glyph.random .landing-color-piece.chess {
+.landing-setup-row .landing-color-glyph.random .landing-color-piece.chess,
+.landing-setup-row .landing-color-glyph.random .landing-color-piece.xiangqi {
   width: 22px;
   height: 22px;
+}
+
+.landing-setup-row .landing-color-piece.stone {
+  width: 22px;
+  height: 22px;
+}
+
+.landing-setup-row .landing-color-glyph.random .landing-color-piece.stone {
+  width: 20px;
+  height: 20px;
 }
 
 .landing-setup-row .landing-engine-select {

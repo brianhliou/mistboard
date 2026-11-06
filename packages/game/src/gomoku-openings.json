@@ -13,10 +13,46 @@
     "timeoutMs": 60000,
     "screened": 2204,
     "deepScreened": 560,
-    "accepted": 50,
+    "accepted": 247,
     "scorePerspective": "side-to-move",
     "hashPolicy": "YXHASHCLEAR before every search",
-    "prefilterMaxAbsScore": 170
+    "prefilterMaxAbsScore": 170,
+    "sources": {
+      "classic": {
+        "engineCommit": "1387d11312",
+        "networksCommit": "7eeb19b",
+        "dataSha256": "f61d31b4d98fc53fb43a31a4f0b4357a8b64053bb5762a0967250b873cc9a57e",
+        "rule": "freestyle",
+        "boardSize": 15,
+        "nodes": 1000000,
+        "prefilterNodes": 10000,
+        "maxAbsScore": 40,
+        "minWinrate": 0.45,
+        "maxWinrate": 0.55,
+        "timeoutMs": 60000,
+        "screened": 2204,
+        "deepScreened": 560,
+        "accepted": 50,
+        "scorePerspective": "side-to-move",
+        "hashPolicy": "YXHASHCLEAR before every search",
+        "prefilterMaxAbsScore": 170
+      },
+      "mined-2B3W-7x7": {
+        "config": {
+          "nb": 2,
+          "nw": 3,
+          "H": 3
+        },
+        "band": [0.48, 0.52],
+        "nodes": 1000000,
+        "maxAbsScore": 40,
+        "minWinrate": 0.48,
+        "maxWinrate": 0.52,
+        "screened": 31402,
+        "deepScreened": 5557,
+        "accepted": 197
+      }
+    }
   },
   "openings": [
     {
@@ -1754,6 +1790,6901 @@
         "finalScore": 4,
         "nodes": 1000000,
         "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-051",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -8,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-052",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g5",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": 9,
+        "nodes": 1000000,
+        "depth": 30,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-053",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-054",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 1,
+        "winrate": 0.50125,
+        "finalScore": 1,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-055",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": 12,
+        "nodes": 1000000,
+        "depth": 30,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-056",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-057",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": 9,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-058",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -20,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-059",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": -5,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-060",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1001000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-061",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -16,
+        "winrate": 0.480011,
+        "finalScore": -36,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-062",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": -16,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-063",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-064",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g5",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -20,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-065",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 1,
+        "winrate": 0.50125,
+        "finalScore": 1,
+        "nodes": 1000000,
+        "depth": 31,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-066",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 11,
+        "winrate": 0.513747,
+        "finalScore": 11,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-067",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": -11,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-068",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 3,
+        "winrate": 0.50375,
+        "finalScore": 3,
+        "nodes": 1001000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-069",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -4,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-070",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e7",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "black"
+        },
+        {
+          "square": "e9",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-071",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-072",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 14,
+        "winrate": 0.517493,
+        "finalScore": -6,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-073",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -14,
+        "winrate": 0.482507,
+        "finalScore": -34,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-074",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -16,
+        "winrate": 0.480011,
+        "finalScore": -16,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-075",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-076",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": -32,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-077",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 3,
+        "winrate": 0.50375,
+        "finalScore": 3,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-078",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-079",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": 10,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-080",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 40,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-081",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-082",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": -5,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-083",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -7,
+        "winrate": 0.491251,
+        "finalScore": -27,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-084",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -8,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-085",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-086",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": 18,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-087",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "k6",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -20,
+        "nodes": 1001000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-088",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": 19,
+        "nodes": 1001000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-089",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": 12,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-090",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": -30,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-091",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -4,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-092",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-093",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i5",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-094",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": -1,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-095",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-096",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": -5,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-097",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-098",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-099",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -24,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-100",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": 11,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-101",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -3,
+        "winrate": 0.49625,
+        "finalScore": 37,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-102",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-103",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-104",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": -28,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-105",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 16,
+        "winrate": 0.519989,
+        "finalScore": 16,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-106",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": -25,
+        "nodes": 1001000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-107",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -4,
+        "nodes": 1001000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-108",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 14,
+        "winrate": 0.517493,
+        "finalScore": 14,
+        "nodes": 1001000,
+        "depth": 29,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-109",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "e9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "k9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": 9,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-110",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": 10,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-111",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "e10",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 13,
+        "winrate": 0.516244,
+        "finalScore": 13,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-112",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 14,
+        "winrate": 0.517493,
+        "finalScore": 14,
+        "nodes": 1000000,
+        "depth": 30,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-113",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -3,
+        "winrate": 0.49625,
+        "finalScore": -3,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-114",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": -30,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-115",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-116",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 8,
+        "winrate": 0.509999,
+        "finalScore": 28,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-117",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "k9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 16,
+        "winrate": 0.519989,
+        "finalScore": -4,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-118",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-119",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -14,
+        "winrate": 0.482507,
+        "finalScore": -14,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-120",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-121",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": 4,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-122",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-123",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -14,
+        "winrate": 0.482507,
+        "finalScore": -14,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-124",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-125",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-126",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": 32,
+        "nodes": 1001000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-127",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": 12,
+        "nodes": 1001000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-128",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -14,
+        "winrate": 0.482507,
+        "finalScore": -4,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-129",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -8,
+        "nodes": 1000000,
+        "depth": 29,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-130",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": -8,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-131",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-132",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g5",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i5",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": 35,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-133",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g5",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "i5",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1001000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-134",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g7",
+          "color": "black"
+        },
+        {
+          "square": "i11",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-135",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 11,
+        "winrate": 0.513747,
+        "finalScore": 11,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-136",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 13,
+        "winrate": 0.516244,
+        "finalScore": -10,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-137",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-138",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": 19,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-139",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "black"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-140",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -7,
+        "winrate": 0.491251,
+        "finalScore": -7,
+        "nodes": 1000000,
+        "depth": 29,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-141",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -24,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-142",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 11,
+        "winrate": 0.513747,
+        "finalScore": -29,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-143",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-144",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -11,
+        "winrate": 0.486253,
+        "finalScore": -11,
+        "nodes": 1001000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-145",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 13,
+        "winrate": 0.516244,
+        "finalScore": 18,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-146",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": 25,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-147",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-148",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-149",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 5,
+        "winrate": 0.50625,
+        "finalScore": -40,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-150",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-151",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "k9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -14,
+        "winrate": 0.482507,
+        "finalScore": -14,
+        "nodes": 1001000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-152",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 8,
+        "winrate": 0.509999,
+        "finalScore": 5,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-153",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -24,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-154",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "k6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 8,
+        "winrate": 0.509999,
+        "finalScore": -32,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-155",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-156",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "black"
+        },
+        {
+          "square": "e10",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "k6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": 12,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-157",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": 30,
+        "nodes": 1001000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-158",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 16,
+        "winrate": 0.519989,
+        "finalScore": -24,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-159",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -33,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-160",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": -21,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-161",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": 18,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-162",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "f5",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": -30,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-163",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": -36,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-164",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": 8,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-165",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 13,
+        "winrate": 0.516244,
+        "finalScore": 13,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-166",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "i11",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -20,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-167",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e7",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "e6",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": 5,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-168",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": -11,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-169",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 20,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-170",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -16,
+        "winrate": 0.480011,
+        "finalScore": -16,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-171",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": -5,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-172",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-173",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1001000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-174",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 8,
+        "winrate": 0.509999,
+        "finalScore": 8,
+        "nodes": 1001000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-175",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 20,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-176",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 15,
+        "winrate": 0.518741,
+        "finalScore": 15,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-177",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 5,
+        "winrate": 0.50625,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-178",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 16,
+        "winrate": 0.519989,
+        "finalScore": -24,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-179",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 14,
+        "winrate": 0.517493,
+        "finalScore": 14,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-180",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g6",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -3,
+        "winrate": 0.49625,
+        "finalScore": 37,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-181",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "e5",
+          "color": "white"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -8,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-182",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 8,
+        "winrate": 0.509999,
+        "finalScore": 8,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-183",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 15,
+        "winrate": 0.518741,
+        "finalScore": 15,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-184",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": -30,
+        "nodes": 1000000,
+        "depth": 20,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-185",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "e6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -11,
+        "winrate": 0.486253,
+        "finalScore": -11,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-186",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "black"
+        },
+        {
+          "square": "f5",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": 4,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-187",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "e7",
+          "color": "white"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-188",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": -16,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-189",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f7",
+          "color": "black"
+        },
+        {
+          "square": "i11",
+          "color": "black"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-190",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e7",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -35,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-191",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f5",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 8,
+        "winrate": 0.509999,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-192",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g5",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -29,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-193",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e7",
+          "color": "black"
+        },
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        },
+        {
+          "square": "k9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -14,
+        "winrate": 0.482507,
+        "finalScore": -14,
+        "nodes": 1000000,
+        "depth": 29,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-194",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -16,
+        "winrate": 0.480011,
+        "finalScore": -24,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-195",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -6,
+        "winrate": 0.492501,
+        "finalScore": -6,
+        "nodes": 1000000,
+        "depth": 31,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-196",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": 12,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-197",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": -30,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-198",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -5,
+        "winrate": 0.49375,
+        "finalScore": -25,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-199",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": -21,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-200",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 3,
+        "winrate": 0.50375,
+        "finalScore": 3,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-201",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -7,
+        "winrate": 0.491251,
+        "finalScore": -7,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-202",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 16,
+        "winrate": 0.519989,
+        "finalScore": 16,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-203",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": 7,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-204",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-205",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -16,
+        "winrate": 0.480011,
+        "finalScore": -16,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-206",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": 15,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-207",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 13,
+        "winrate": 0.516244,
+        "finalScore": 13,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-208",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": 12,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-209",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 14,
+        "winrate": 0.517493,
+        "finalScore": 14,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-210",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": 8,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-211",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-212",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 11,
+        "winrate": 0.513747,
+        "finalScore": -17,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-213",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": -30,
+        "nodes": 1001000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-214",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 1,
+        "winrate": 0.50125,
+        "finalScore": 1,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-215",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -7,
+        "winrate": 0.491251,
+        "finalScore": -7,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-216",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-217",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-218",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": 4,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-219",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -7,
+        "winrate": 0.491251,
+        "finalScore": -7,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-220",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 14,
+        "winrate": 0.517493,
+        "finalScore": 14,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-221",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-222",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f5",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": -11,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-223",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": -1,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-224",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": -33,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-225",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "g8",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -29,
+        "nodes": 1001000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-226",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g5",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-227",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 13,
+        "winrate": 0.516244,
+        "finalScore": 13,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-228",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "i5",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1001000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-229",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f5",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "g11",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -3,
+        "winrate": 0.49625,
+        "finalScore": 17,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-230",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "e7",
+          "color": "white"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "k9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 15,
+        "winrate": 0.518741,
+        "finalScore": 35,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-231",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e6",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "black"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        },
+        {
+          "square": "k10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 3,
+        "winrate": 0.50375,
+        "finalScore": 3,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-232",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "h5",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -1,
+        "winrate": 0.49875,
+        "finalScore": 9,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-233",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "f5",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 12,
+        "winrate": 0.514996,
+        "finalScore": 35,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-234",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -28,
+        "nodes": 1000000,
+        "depth": 20,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-235",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        },
+        {
+          "square": "k8",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -4,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-236",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "h11",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -40,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-237",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "h8",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": 30,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-238",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "k11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": 9,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-239",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-240",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 29,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-241",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h11",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 9,
+        "winrate": 0.511248,
+        "finalScore": -11,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-242",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "g7",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": -10,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-243",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "f6",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -14,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-244",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "k7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -7,
+        "winrate": 0.491251,
+        "finalScore": 33,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-245",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "f8",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-246",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "e8",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "e11",
+          "color": "white"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "k6",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": 8,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-247",
+      "source": "mined-2B3W-7x7",
+      "stones": [
+        {
+          "square": "h5",
+          "color": "black"
+        },
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "i11",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 1,
+        "winrate": 0.50125,
+        "finalScore": -19,
+        "nodes": 1001000,
+        "depth": 25,
         "forcedWin": false
       }
     }

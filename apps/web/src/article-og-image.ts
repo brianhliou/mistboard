@@ -8,7 +8,7 @@
 /** Mirrors ARTICLE_OG_IMAGE_VERSION in apps/server/src/og-image.ts. Scrapers
  *  hold a card under its URL with a year-long immutable max-age, so the LOOK of
  *  a card can only change behind a new ?v=. */
-export const ARTICLE_OG_IMAGE_VERSION = 7;
+export const ARTICLE_OG_IMAGE_VERSION = 8;
 
 /** The shapes Google asks for in an Article's `image` (it crops a single wide
  *  card to a square in some surfaces, which cut the caption), widest first. */
@@ -51,6 +51,19 @@ export const ARTICLE_OG_ZH_SLUGS: readonly string[] = [
   'atomic-xiangqi',
   'crazyhouse-xiangqi',
   'pikafish',
+  'shortest-stalemate-xiangqi',
+  'helpmates-in-xiangqi',
+  'jieqi-puzzle-search',
+  'xiangqi-endgames',
+  'duck-xiangqi-game-tree',
+  'en-passant-under-fog',
+  'most-played-move',
+  'chess960-starting-positions',
+  'lichess-analysis-accuracy',
+  'jieqi-openings',
+  'riverbank-cannon',
+  'dou-shou-qi-engine',
+  'jungle-den-term',
 ];
 
 /** The card language a page in `lang` (an html lang or a route prefix:

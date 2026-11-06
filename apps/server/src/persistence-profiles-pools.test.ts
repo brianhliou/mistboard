@@ -13,6 +13,7 @@ test('every rated spec counts its profile games in its own pool', () => {
     const variants: readonly string[] = GAME_VARIANTS_BY_RATING_POOL[pool];
     assert.ok(variants.includes(spec.id), `${spec.id}: not counted in pool ${pool}`);
   }
+  assert.deepEqual(GAME_VARIANTS_BY_RATING_POOL.gomoku, ['gomoku']);
   assert.deepEqual(GAME_VARIANTS_BY_RATING_POOL.xiangqi_mahjong, ['xiangqi-mahjong']);
 });
 

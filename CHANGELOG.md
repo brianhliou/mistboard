@@ -15,11 +15,14 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- On phones the side picker fits the xiangqi generals ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - New xiangqi games are drawn after 120 plies (60 moves each) without a capture, as the rules page now says; games started before keep the old limit ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
 
 ### Learning and puzzles
 
+- The AB-JChess vs jqe match is one study of all 600 games, and studies now list up to 1,000 chapters ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Study result chips take the winner's colour, draws show as an outline, and the move controls sit under the move list ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Puzzle Storm is now in the Puzzles menu on desktop and phone ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 - New article, [AB-JChess takes the jieqi title back from jqe](/blog/ab-jchess-vs-jqe): a 600-game jieqi engine match read move by move by both engines, with the games in a study ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
@@ -44,6 +47,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- The video page adds Shorts 5 and 6, and visitors from mainland China see 14 Bilibili picks ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Homepage article cards show their photos, and shared articles get a whole-board preview card ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - The browser tab icon now fills its space ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - A Washington Xiangqi club page for Greater Seattle, in English, Simplified and Traditional Chinese ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Google results show Mistboard search cards and a tab icon that reads when cropped to a circle ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
@@ -59,6 +64,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- The coordinates toggle redraws every board on a review page ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- The contact note sits below the article instead of inside it ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Switching chapters in a study keeps the side panel in place ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
 - The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
@@ -66,6 +73,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Search engines are told only about pages that changed in a release ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Visitor analytics now flags browsers with real input, so headless crawlers can be filtered out ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ## 2026-10

@@ -34,6 +34,7 @@
       "/scripts/fetch-abjchess-net.sh",
       "/scripts/fetch-katago-jungle-net.sh",
       "/scripts/fetch-release-asset.sh",
+      "/scripts/fetch-private-net.sh",
       "/engine.ref",
       "/scripts/build.mjs",
       "/scripts/start.mjs",

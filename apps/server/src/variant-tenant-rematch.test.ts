@@ -23,6 +23,7 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
@@ -77,6 +78,7 @@ const TENANTS: Record<string, AnyTenant> = Object.fromEntries(
     darkChessTenant,
     darkXiangqiTenant,
     duckXiangqiTenant,
+    ffqBanqiTenant,
     fortressXiangqiTenant,
     gomokuTenant,
     jieqiTenant,
@@ -245,6 +247,7 @@ test('every registered tenant is held to the rematch contract', () => {
   }
   assert.ok(TENANTS.mahjong?.rematch, 'mahjong (four seats) opts out');
   assert.ok(TENANTS['dark-chess']?.rematch, 'dark chess (correspondence only, #531) opts out');
+  assert.ok(TENANTS['ffq-banqi']?.rematch, 'FFQ requires creation through the admin gate');
 });
 
 test('a retired variant offers no rematch: it opens no new rooms', async () => {

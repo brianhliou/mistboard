@@ -19,6 +19,7 @@ import { banqiTenant } from '../banqi-tenant.js';
 import { crazyhouseXiangqiTenant } from '../crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
+import { gomokuTenant } from '../gomoku-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
@@ -191,7 +192,7 @@ async function createFriendRoom(
   accountUser: UserAccount | null,
 ): Promise<{ status: number | null; json: Record<string, unknown> }> {
   const response = captureResponse();
-  const request = {} as IncomingMessage;
+  const request = { headers: {} } as IncomingMessage;
   const fullBody = { gameSpecId: registration.gameSpecId, ...body };
   assert.ok(
     registration.http.matchesCreateRequest(fullBody),
@@ -465,6 +466,7 @@ type AnyTenant = VariantTenant<
 // The tenant objects behind every rated lobby; the first assertion below fails
 // when a new rated lobby is missing here, so the summary check cannot go stale.
 const RATED_LOBBY_TENANTS = [
+  gomokuTenant,
   xiangqiTenant,
   crazyhouseXiangqiTenant,
   duckXiangqiTenant,

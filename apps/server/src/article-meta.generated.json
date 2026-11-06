@@ -286,7 +286,7 @@
   "gomoku": {
     "title": "Gomoku Rules",
     "kind": "rules",
-    "description": "Learn to place stones, make five in a row, use the clocks and follow the turn indicator from Mistboard’s dealt openings.",
+    "description": "Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.",
     "status": "published"
   },
   "helpmates-in-xiangqi": {

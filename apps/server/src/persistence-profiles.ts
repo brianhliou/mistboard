@@ -21,7 +21,7 @@ import {
   userFromRow,
 } from './persistence-accounts.js';
 import { getUserAchievements, type UserAchievement } from './persistence-achievements.js';
-import { seatWonGame } from './persistence-counted-games.js';
+import { notFFQBanqiGame, seatWonGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -49,6 +49,7 @@ import {
 // fails the build here instead of its games counting as Fog Chess (Xiangqi
 // Mahjong, 2026-10-15, was missing from the hand-written CASE).
 export const GAME_VARIANTS_BY_RATING_POOL = {
+  gomoku: ['gomoku'],
   fog: ['dark-chess', 'fog'],
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
@@ -541,6 +542,7 @@ async function queryUserGames(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        ${filterSql.sql}
        ${profileVisibilityClause(isViewer)}
      )
@@ -668,6 +670,7 @@ export async function getUserProfileByHandle(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND ${RATED_POOL_VARIANTS_SQL}
        ${visibilityClause}
      GROUP BY 1`,
@@ -823,6 +826,7 @@ export async function getUserRatingHistory(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pvp'
        AND COALESCE(games.rated, false) = true
        AND game_participants.elo_before IS NOT NULL

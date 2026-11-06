@@ -33,8 +33,8 @@ export type AnalysisSummaryLabels = { red?: string; black?: string };
 export type SummaryJudgment = Exclude<MoveJudgment, null>;
 
 export type AnalysisSummaryOptions = {
-  /** Hide the ACPL row. Chance/hidden-info variants (jieqi) set this: centipawn loss can't be
-   *  luck-stripped, so it reads as noise next to the luck-free accuracy + counts. */
+  /** Hide the ACPL row where centipawns are meaningless (Gomoku) or loss cannot
+   *  be stripped of luck (jieqi's hidden information). */
   hideAcpl?: boolean;
   /** Visual ink for each analysis seat. Stats and labels remain seat-keyed. */
   seatColors?: ReviewSeatColors;

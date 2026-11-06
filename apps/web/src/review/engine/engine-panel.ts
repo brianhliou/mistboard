@@ -24,6 +24,7 @@ import './engine-panel.css';
 import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
 import { formatEval, formatMistyEval } from './eval-format.js';
+import { formatGomokuEval } from './gomoku-eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
 import { rapfiCevalPosition } from './rapfi-ceval.js';
 
@@ -273,6 +274,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       const display = formatScore(opts.variant, cp, mate);
       evalLabel.textContent = firstPlayer ? `P1 ${display}` : display;
       if (firstPlayer) evalLabel.title = t('engine.firstPlayerPerspective');
+      else if (opts.variant === 'gomoku') evalLabel.title = formatGomokuEval(cp, mate);
       else evalLabel.removeAttribute('title');
       opts.evalBar?.setEval(cp, mate);
     }
@@ -595,12 +597,9 @@ function evalTone(cp: number | null, mate: number | null, variant: CevalVariant)
 }
 
 function formatScore(variant: CevalVariant, cp: number | null, mate: number | null): string {
-  if (variant === 'gomoku' && (mate != null || (cp != null && Math.abs(cp) >= 30000))) {
-    const value = mate ?? cp!;
-    return t(value > 0 ? 'engine.blackWinsIn' : 'engine.whiteWinsIn', {
-      moves: mate == null ? 0 : Math.abs(mate),
-    });
-  }
+  // Gomoku's short form ("W in 7") keeps the headline one width as a lead
+  // turns into a forced win; the words go in the headline's tooltip.
+  if (variant === 'gomoku') return formatGomokuEval(cp, mate, { compact: true });
   return isMistyCevalVariant(variant) ? formatMistyEval(cp, mate) : formatEval(cp, mate);
 }
 

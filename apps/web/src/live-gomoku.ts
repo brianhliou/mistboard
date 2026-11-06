@@ -38,6 +38,8 @@ let generation = 0;
 let pendingKey: string | null = null;
 let submittedKey: string | null = null;
 let botFailed = false;
+// Why the last bot request failed; shown under the notice on dev builds only.
+let botFailure = '';
 let botPaused = false;
 let roomPaused = false;
 let recordingPosition: ((ply: number, view: GomokuPlayerView) => void) | null = null;
@@ -148,10 +150,12 @@ function syncBot(): void {
         throw new Error('Rapfi reply disconnected');
       ctx.renderAll();
     })
-    .catch(() => {
+    .catch((error: unknown) => {
       if (generation !== ticket) return;
       stopBot();
       botFailed = true;
+      botFailure = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      console.warn('[gomoku-bot] Rapfi failed', error);
       ctx.renderAll();
     });
 }
@@ -172,6 +176,12 @@ function renderBotPanel(refs: LiveRefs): void {
       ? t('live.gomokuBotPaused')
       : t('live.gomokuBotThinking');
   panel.append(label);
+  if (botFailed && botFailure && import.meta.env.DEV) {
+    const reason = document.createElement('p');
+    reason.dataset.gomokuBotFailure = '';
+    reason.textContent = botFailure;
+    panel.append(reason);
+  }
   if (
     core?.state.seat !== 'spectator' &&
     core?.state.view?.status.type === 'playing' &&

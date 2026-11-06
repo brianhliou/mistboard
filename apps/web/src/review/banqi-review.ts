@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Banqi review surface: the banqi presentation bundle over the
 // generic tree-review controller (mountTreeReview). The client engine is the in-browser
 // MistyBanqi wasm build (a Misty ceval backend, fed the per-node redacted FEN), so the
@@ -17,6 +18,7 @@ import {
   banqiStateToEngineFen,
   engineUciToBanqiMove,
 } from '@mistboard/game';
+
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { t } from '../i18n/catalog.js';
 import type { BanqiBoardArrow, BanqiBoardMarker } from '../live-banqi-render.js';
@@ -112,6 +114,8 @@ function makeBanqiPresentation(
     defaultBoardAriaLabel: 'Banqi board',
     // 8×4 board (WIDTH 568 / HEIGHT 312 from live-banqi-render).
     boardAspect: 568 / 312,
+    // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     // Discs sit inset within their cell, so capture tiles size a touch under one
     // cell (board width / 10), matching the linear postgame.
     boardCols: 10,

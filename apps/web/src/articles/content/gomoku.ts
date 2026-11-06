@@ -9,8 +9,8 @@ import type { Article } from '../types.js';
 // Set after the re-screened openings have a published study.
 export const GOMOKU_OPENINGS_STUDY_URL: string | null = null;
 
-// Direct-URL English review page. The hidden spec, sitemap exclusion and
-// VITE_GOMOKU_ENABLED playtest gate stay in place.
+// Gomoku rules. Indexing and public listings derive from publicSurface;
+// play links also respect the VITE_GOMOKU_ENABLED build-time gate.
 export function createGomokuArticle(
   openingsStudyUrl: string | null = GOMOKU_OPENINGS_STUDY_URL,
 ): Article {
@@ -19,12 +19,13 @@ export function createGomokuArticle(
     gameSpecId: 'gomoku',
     kind: 'rules',
     title: 'Gomoku Rules',
-    summary: 'Learn to place stones, make five in a row, use the clocks and follow the turn indicator from Mistboard’s dealt openings.',
+    seoTitle: 'Gomoku Rules: Freestyle 15x15 and Dealt Openings',
+    summary: 'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.',
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-10-31',
-    updatedAt: '2026-11-01',
-    updateNote: 'Added a newcomer walkthrough of placement, winning, draws and clocks before explaining Mistboard’s dealt openings.',
+    updatedAt: '2026-11-05',
+    updateNote: 'Simplified the section titles and placement walkthrough, enlarged the diagrams and aligned the play buttons.',
     audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
     thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
     tldr: [
@@ -36,7 +37,7 @@ export function createGomokuArticle(
     ],
     sections: [
       {
-        heading: 'Stones stay on the intersections where you place them',
+        heading: 'Placing stones',
         blocks: [
           { kind: 'paragraph', text: 'Place your stone where two lines cross. The intersections along the edges and in the corners are playable too. An occupied intersection stays occupied for the rest of the game: stones cannot be captured or replaced. After you place a stone, your opponent takes a turn.' },
           { kind: 'raw-svg', svg: GOMOKU_PLACEMENT, caption: 'Black places h8, the centre intersection.' },
@@ -53,34 +54,28 @@ export function createGomokuArticle(
         ],
       },
       {
-        heading: 'Players can agree to a draw',
+        heading: 'Draws',
         blocks: [
           { kind: 'paragraph', text: 'A full board without a winning line is drawn. In a human game, once both players have moved, press ½ (Offer draw) and confirm; your opponent can accept or decline. Resigning concedes the game to your opponent.' },
         ],
       },
       {
-        heading: 'Your clock runs during your turn',
+        heading: 'Dealt openings',
         blocks: [
-          { kind: 'paragraph', text: 'The time control sets how long each player has to think. Your clock runs while you choose a placement and passes to your opponent after you play. Running out of time loses. If the time control includes an increment, that amount is added after each move.' },
-        ],
-      },
-      {
-        heading: 'Mistboard deals a screened opening',
-        blocks: [
-          { kind: 'paragraph', text: 'Every game starts from a position already on the board, picked from a set an engine searched and judged close to even. Black’s starting move brings an advantage, as the [solved result](#black-wins-a-perfect-game-from-the-empty-board) explains. Follow the turn indicator to see who plays next. Dealt stones use no clock time.' },
+          { kind: 'paragraph', text: 'Every game starts from a position already on the board, picked from a set an engine searched and judged close to even. Black’s starting move brings an advantage, as the solved result explains. Follow the turn indicator to see who plays next.' },
           { kind: 'raw-svg', svg: GOMOKU_OPENING, caption: 'A dealt starting position. The stones already on the board stay in play.' },
           { kind: 'paragraph', text: 'Tournament rules such as Swap2 balance the start by letting players place stones and choose colours; Mistboard deals a screened position instead.' },
           ...(openingsStudyUrl ? [{ kind: 'paragraph' as const, text: `You can study [every opening](${openingsStudyUrl}).` }] : []),
         ],
       },
       {
-        heading: 'Black wins a perfect game from the empty board',
+        heading: 'Why openings are dealt',
         blocks: [
           { kind: 'paragraph', text: 'The Japanese name gomokunarabe means “five in a row”; the game is also called Chinese wuziqi, Korean omok and English gobang. Japanese records date to the Edo period, with a verifiable book from 1856; Renju, which restricts Black’s moves, was named in 1899. [L. Victor Allis’s 1994 PhD thesis](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf) proved Black wins with perfect play on 15×15 under both freestyle and exactly-five rules.' },
         ],
       },
       {
-        heading: 'Screening estimates the balance of a position',
+        heading: 'How openings are screened',
         blocks: [
           { kind: 'faq', items: [
             { question: 'Does screening guarantee a draw?', answer: 'Screening uses finite search. A near-even evaluation is an estimate; play can still reveal a winning continuation.' },
@@ -91,8 +86,8 @@ export function createGomokuArticle(
         heading: 'Play on Mistboard',
         blocks: [
           { kind: 'cta', buttons: [
-            { label: 'Play vs computer', href: '/?play=computer&gameSpecId=gomoku', emphasis: 'primary' },
-            { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
+            { label: 'Play Gomoku', href: '/?play=computer&gameSpecId=gomoku', emphasis: 'primary' },
+            { label: 'Play a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
           ] },
         ],
       },
