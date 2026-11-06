@@ -518,8 +518,8 @@ const ZH_HANS: Record<string, string> = {
     '电脑搜索只保留最局促的局面，由此找到了它',
   'Both sides play toward one goal, stalemating Black, as in a [helpmate](/blog/helpmates-in-xiangqi). Every line is far too many to search past a few moves, so after each move the search keeps a fixed number of positions, the ones where Black has the fewest legal moves, and drops the rest. Each black piece that can still move counts heavily against a position. The search stops at the first position where Black is to move, has no legal move and is not in check.':
     '双方朝同一个目标走棋：困毙黑方，就像[合作杀](/blog/helpmates-in-xiangqi)那样。走过几步之后，全部着法就多到无法逐一搜索，所以每走一步，搜索只保留固定数量的局面，即黑方合法着法最少的那些，其余全部丢弃。黑方每有一个还能动的子，局面的评分就要重重扣分。搜索停在第一个这样的局面：轮到黑方走，黑方没有合法着法，且没有被将军。',
-  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](/study/ls3xEcX3) with the others.':
-    '丢弃局面让搜索变快，也正因如此它可能漏掉更短的着法。反过来运行，它在22个半回合内困毙了红方，这盘棋和其他几盘一起收在[这个研究](/study/ls3xEcX3)里。',
+  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies.':
+    '丢弃局面让搜索变快，也正因如此它可能漏掉更短的着法。反过来运行，它在22个半回合内困毙了红方。',
   'No stalemate is possible in under 9 plies': '少于9个半回合不可能形成困毙',
   'A search of every line proves that no game stalemates Black within 7 plies, and none stalemates Red within 8. So a stalemate shorter than ours, if one exists, takes 9 to 20 plies. Find one, or prove there is none, and post it in the forum.':
     '对所有着法的完全搜索证明，没有任何对局能在7个半回合内困毙黑方，也没有任何对局能在8个半回合内困毙红方。所以比我们更短的困毙如果存在，需要9到20个半回合。找到一个，或者证明它不存在，然后发到论坛上。',
@@ -7019,8 +7019,8 @@ const ZH_HANT: Record<string, string> = {
     '電腦搜尋只保留最侷促的局面，由此找到了它',
   'Both sides play toward one goal, stalemating Black, as in a [helpmate](/blog/helpmates-in-xiangqi). Every line is far too many to search past a few moves, so after each move the search keeps a fixed number of positions, the ones where Black has the fewest legal moves, and drops the rest. Each black piece that can still move counts heavily against a position. The search stops at the first position where Black is to move, has no legal move and is not in check.':
     '雙方朝同一個目標走棋：困斃黑方，就像[合作殺](/blog/helpmates-in-xiangqi)那樣。走過幾步之後，全部著法就多到無法逐一搜尋，所以每走一步，搜尋只保留固定數量的局面，即黑方合法著法最少的那些，其餘全部丟棄。黑方每有一個還能動的子，局面的評分就要重重扣分。搜尋停在第一個這樣的局面：輪到黑方走，黑方沒有合法著法，且沒有被將軍。',
-  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](/study/ls3xEcX3) with the others.':
-    '丟棄局面讓搜尋變快，也正因如此它可能漏掉更短的著法。反過來執行，它在22個半回合內困斃了紅方，這盤棋和其他幾盤一起收在[這個研究](/study/ls3xEcX3)裡。',
+  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies.':
+    '丟棄局面讓搜尋變快，也正因如此它可能漏掉更短的著法。反過來執行，它在22個半回合內困斃了紅方。',
   'No stalemate is possible in under 9 plies': '少於9個半回合不可能形成困斃',
   'A search of every line proves that no game stalemates Black within 7 plies, and none stalemates Red within 8. So a stalemate shorter than ours, if one exists, takes 9 to 20 plies. Find one, or prove there is none, and post it in the forum.':
     '對所有著法的完全搜尋證明，沒有任何對局能在7個半回合內困斃黑方，也沒有任何對局能在8個半回合內困斃紅方。所以比我們更短的困斃如果存在，需要9到20個半回合。找到一個，或者證明它不存在，然後發到論壇上。',
