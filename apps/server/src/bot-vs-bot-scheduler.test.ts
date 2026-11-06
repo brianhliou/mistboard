@@ -336,8 +336,8 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
     ],
   );
   assert.deepEqual(config.skipped, [
-    // Built, but hidden (publicSurface 'hidden'): never scheduled.
-    { variant: 'mahjong', reason: 'not-public' },
+    // Retired 2026-11-06, and it never went public.
+    { variant: 'mahjong', reason: 'not-live' },
     { variant: 'jungle-flip', reason: 'no-eve-adapter' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },
