@@ -610,6 +610,7 @@ test('the PGN Variant tag is the registry public name for every exported tenant 
     jungle: 'Jungle Chess',
     'jungle-flip': 'Flip Jungle',
     gomoku: 'Gomoku',
+    'xiangqi-mahjong': 'Xiangqi Mahjong',
   };
   // A variant that starts exporting must be pinned here.
   assert.deepEqual(

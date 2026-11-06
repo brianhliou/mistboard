@@ -1,5 +1,5 @@
 /**
- * Xiangqi mahjong registry entry. Narrow on purpose: no export. Its TV channel
+ * Xiangqi mahjong registry entry. Finished matches export JSON. Its TV channel
  * follows the spectator view and lists only when the spec is public.
  * A room is PvE (the in-process bot takes the other seat), PvP (a friend room,
  * or a Find opponent pairing through the lobby), or correspondence (a seek or
@@ -49,6 +49,7 @@ import {
   type TenantLiveRoom,
 } from './variant-tenant/ws.js';
 import { registerLiveWatchPayloadBuilder } from './watch-live.js';
+import { xiangqiMahjongExport } from './xiangqi-mahjong-game-export.js';
 import { type XmjEvent, xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 import { xmjLiveWatchPayloadFor } from './xiangqi-mahjong-watch.js';
 
@@ -216,8 +217,7 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
-  // No export binding: there is no record format for this game here.
-  export: null,
+  export: xiangqiMahjongExport,
   card: {
     layout: 'match',
     variant: xiangqiMahjongTenant.gameSpecId,

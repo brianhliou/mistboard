@@ -42,6 +42,7 @@ import {
   type HiddenPieceVariant,
   maybeGameSpecForId,
   writeHiddenPiecePgn,
+  type XmjMove,
 } from '@mistboard/game';
 import { buildGamePgn, buildGamePublicationJson } from './game-export.js';
 import {
@@ -69,6 +70,7 @@ import {
   type VariantTenantExport,
   type VariantTenantRegistration,
   variantTenantForRoomId,
+  type XmjExportMatch,
 } from './variant-tenant/registry.js';
 import {
   applyTenantEvent,
@@ -235,11 +237,14 @@ export function tenantExportBinding<
               tags,
               result,
               dealFen,
-              plies: plies.map((ply) => ({
-                uci: ply.uci,
-                revealed: ply.revealed ?? null,
-                captured_hidden: ply.capturedHidden ?? null,
-              })),
+              plies: plies.map((ply) => {
+                if (ply.uci === undefined) throw new Error('hidden-piece export missing uci');
+                return {
+                  uci: ply.uci,
+                  revealed: ply.revealed ?? null,
+                  captured_hidden: ply.capturedHidden ?? null,
+                };
+              }),
             })
         : undefined;
       const writePgn = options.writePgn ? options.writePgn(moves, projection.state) : hiddenPgn;
@@ -268,13 +273,16 @@ export function tenantExportBinding<
 export type TenantPublicationPly = {
   ply: number;
   mover: string;
-  uci: string;
-  san: string | null;
   // Hidden-piece variants only, and only on a ply that did it: the piece this
   // move turned over, and the face-down piece it captured (jieqi).
   revealed?: HiddenPieceIdentity;
   captured_hidden?: HiddenPieceIdentity;
-} & Record<`${string}_clock_ms_after`, number | null>;
+} & (
+  | { uci: string; san: string | null; move?: never; notation?: never }
+  // Mahjong actions have no UCI/SAN. Automatic draws follow from the setup.
+  | { move: XmjMove; notation: string; uci?: never; san?: never }
+) &
+  Record<`${string}_clock_ms_after`, number | null>;
 
 // Same top-level shape as the chess GamePublication; `players` and the per-ply
 // clock keys are named by the tenant's colors instead of white/black.
@@ -314,6 +322,7 @@ export type TenantGamePublication = {
     never_revealed?: Record<string, string[]>;
   };
   plies: TenantPublicationPly[];
+  match?: XmjExportMatch;
 };
 
 // Display names by color, through the same private-seat redaction and corpus
@@ -346,8 +355,7 @@ function publicationPlies(game: TenantExportGame): TenantPublicationPly[] {
     return {
       ply: ply.ply,
       mover: ply.mover,
-      uci: ply.uci,
-      san: ply.san,
+      ...(ply.move ? { move: ply.move, notation: ply.notation } : { uci: ply.uci, san: ply.san }),
       ...(ply.revealed ? { revealed: { ...ply.revealed } } : {}),
       ...(ply.capturedHidden ? { captured_hidden: { ...ply.capturedHidden } } : {}),
       ...clocks,
@@ -411,6 +419,7 @@ export function buildTenantGamePublicationJson(
       : {}),
     ...(game.origin ? { origin: publicationOrigin(game) } : {}),
     plies: publicationPlies(game),
+    ...(game.match ? { match: game.match } : {}),
   };
 }
 

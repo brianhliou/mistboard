@@ -25,6 +25,10 @@ import type {
   GomokuPlayerView,
   HiddenPieceIdentity,
   RoomTimeControl,
+  XmjHandResult,
+  XmjMove,
+  XmjRoomSetup,
+  XmjSeat,
 } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
@@ -119,14 +123,11 @@ export type VariantTenantWatchChannel = {
 };
 
 // One exported ply of a FINISHED tenant game, already type-erased: the mover
-// is the tenant's color word, the move is a coordinate string in the encoding
-// documented in game-export-tenant.ts, and `san` is null unless the tenant has
-// a real human notation for the move (xiangqi WXF).
+// is the tenant's color word. Board moves carry UCI and optionally SAN; mahjong
+// carries its canonical action and a readable tile label instead.
 export type TenantExportPly = {
   ply: number;
   mover: string;
-  uci: string;
-  san: string | null;
   // Remaining clock per color after the move, when the event carried a clock.
   clockMsAfter: Readonly<Record<string, number>> | null;
   // Hidden-piece tenants only (jieqi, banqi, jungle-flip): the identity this ply
@@ -136,6 +137,17 @@ export type TenantExportPly = {
   // know a piece taken face-down (Brian, 2026-10-16).
   revealed?: HiddenPieceIdentity;
   capturedHidden?: HiddenPieceIdentity;
+} & (
+  | { uci: string; san: string | null; move?: never; notation?: never }
+  | { move: XmjMove; notation: string; uci?: never; san?: never }
+);
+
+// Xiangqi mahjong's replay data, released only after the match finishes.
+// Hand results use the rules' seat indices: 0 = east, 1 = west.
+export type XmjExportMatch = {
+  setup: XmjRoomSetup;
+  hands: readonly XmjHandResult[];
+  final_score: Record<XmjSeat, number>;
 };
 
 export type TenantExportPgnResult = '1-0' | '0-1' | '1/2-1/2' | '*';
@@ -144,6 +156,7 @@ export type TenantExportGame = {
   // Move order: [first mover, second mover], the tenant's own color words.
   colors: readonly string[];
   plies: readonly TenantExportPly[];
+  match?: XmjExportMatch;
   // Flip variants only (banqi, jungle-flip): the ink the first-mover seat bound
   // on its opening flip. The result is recorded by seat, so a consumer needs
   // this to know which pieces the winner actually played.
