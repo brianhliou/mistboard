@@ -10,7 +10,6 @@ import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
-import { type AuthUser, loadCachedCurrentUser } from './account-nav.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jieqiEnabled } from './feature-flags.js';
 import { installJieqiBoardStyles } from './live-jieqi-render.js';
@@ -31,7 +30,6 @@ import {
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { retroSideForViewer } from './review/retro-side.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -71,8 +69,6 @@ export type JieqiPostgameResponse = {
       name: string;
       rating: number | null;
       kind: 'account' | 'guest' | 'engine';
-      handle?: string | null;
-      botId?: string | null;
     }>;
     /** Imported games only: the event and the source's credit. */
     origin?: ReviewGameOrigin;
@@ -114,10 +110,10 @@ export function mountJieqiPostgame(root: HTMLElement, roomId: string): void {
     );
     return;
   }
-  void Promise.all([loadJieqiPostgame(roomId), loadCachedCurrentUser()])
-    .then(([result, viewer]) => {
+  void loadJieqiPostgame(roomId)
+    .then((result) => {
       if (result.ok) {
-        renderPostgame(root, result.postgame, viewer);
+        renderPostgame(root, result.postgame);
         return;
       }
       renderError(root, errorTitle(result.status), errorBody(result));
@@ -148,11 +144,7 @@ export function jieqiPostgameApiUrl(roomId: string): string {
   return url.pathname;
 }
 
-function renderPostgame(
-  root: HTMLElement,
-  postgame: JieqiPostgameResponse,
-  viewer: AuthUser | null,
-): void {
+function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): void {
   // Reconstruct the fixed deal from the earliest fully-revealed truth snapshot, then
   // let the tree replay the move list + branch client-side. If the truth stream is
   // missing/incomplete, recoverJieqiDeal throws and the outer .catch renders an
@@ -200,7 +192,6 @@ function renderPostgame(
 
   root.replaceChildren(buildNav());
   mountJieqiReview(root, postgame.game.roomId, deal, {
-    retroSide: postgame.game.mode === 'imported' ? null : retroSideForViewer(gamePlayers, viewer),
     // A finished game: what the still-face-down pieces were, on hover and
     // from the menu (#824). The payload already carries the whole deal.
     showFaceDown: true,

@@ -5,7 +5,6 @@ import {
   type GomokuMove,
   type GomokuPlayerView,
 } from '@mistboard/game';
-import { loadCachedCurrentUser } from './account-nav.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { gomokuEnabled } from './feature-flags.js';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
@@ -27,7 +26,6 @@ import {
 } from './review/game-review-meta.js';
 import { mountGomokuReview } from './review/gomoku-review.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { retroSideForViewer } from './review/retro-side.js';
 import { downloadRow } from './review/underboard-tabs.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -178,14 +176,9 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
         },
       );
     };
-    const viewer = await loadCachedCurrentUser();
     const signedIn = isLikelySignedIn();
     root.replaceChildren(buildNav());
     const review = mountGomokuReview(root, {
-      retroSide:
-        postgame.game.mode === 'imported'
-          ? null
-          : retroSideForViewer(postgame.game.players, viewer, 'black', 'white'),
       pageClassName: 'gomoku-review',
       ariaLabel: t('replay.postgameReview'),
       title: variant,
