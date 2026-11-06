@@ -52,7 +52,7 @@ export const ZH_HANT_CONTENT = {
   'videos.sort.newest': '最新',
   'videos.sort.longest': '最長',
   'videos.sort.shortest': '最短',
-  'videos.previousVideos': '上一個影片',
+  'videos.previousVideos': '上一組影片',
   'videos.moreVideos': '更多影片',
   'articles.heading': '文章',
   'articles.navigation': '網誌導覽',
@@ -66,7 +66,7 @@ export const ZH_HANT_CONTENT = {
   'articles.read': '閱讀',
   'articles.intro': '關於象棋及其近親的文章、規則說明與引擎工作。',
   'articles.allArticles': '全部文章',
-  'articles.previousArticles': '上一篇文章',
+  'articles.previousArticles': '上一組文章',
   'articles.moreArticles': '更多文章',
   'articles.news': '新聞',
   'articles.articleKind': '文章',
@@ -177,7 +177,7 @@ export const ZH_HANT_CONTENT = {
   'about.whoSitePrefix': '他的網站：',
   'about.articlesHeading': '文章如何寫成',
   'about.articlesBody':
-    '文章與 Claude 合寫，並由 Brian 對照文中引用的對局、引擎運行和資料逐一核實。中文頁面由英文機器翻譯。',
+    '文章與 Claude 合寫，並由 Brian 對照文中引用的對局、引擎分析結果和資料逐一核實。中文頁面由英文機器翻譯。',
   'stats.heading': '統計',
   'stats.lede':
     '這裡的對局量。計入人與人或人與引擎之間已完成的對局；引擎對引擎的比賽和測試對局不計入。',
@@ -240,7 +240,7 @@ export const ZH_HANT_CONTENT = {
     'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
   'source.pikafishJieqi': '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋機器人和揭棋分析，GPL-3.0。',
   'source.chessPieceSets':
-    '國際象棋棋子取自 lichess：Cburnett，作者 Colin M.L. Burnett；Merida，作者 Armando Hernandez Marroquin，GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
+    '國際象棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
     '音效：Futuristic、NES、Piano 和 SFX 音效取自 lichess，作者 Enigmahack，AGPL-3.0；Wood 音效作者 el_boss，終局音效作者 Kenney，鴨子象棋的鴨叫作者 D4XX，皆為 CC0。',
   'source.fonts':
@@ -274,9 +274,9 @@ export const ZH_HANT_CONTENT = {
   'faq.accountQuestion': '我需要帳號嗎？',
   'faq.accountAnswer':
     '休閒對弈不需要。你可以透過連結開始或加入對局，進入大廳，或不註冊就對戰引擎。帳號會增加使用者名稱、個人資料和計分對局。',
-  'faq.contactQuestion': '如何回報 bug 或聯絡？',
+  'faq.contactQuestion': '如何回報錯誤或聯絡我們？',
   'faq.contactPrefix': '可以在 ',
-  'faq.contactMiddle': ' 提交 issue，或透過',
+  'faq.contactMiddle': ' 回報問題，或透過',
   'faq.contactLink': '聯絡',
   'faq.contactSuffix': '送出訊息。如果是關於某局對局，請附上房間連結。',
   'faq.cheatingQuestion': 'Mistboard 如何防作弊？',
@@ -289,7 +289,7 @@ export const ZH_HANT_CONTENT = {
     '不會。在隱藏棋子的對局中，引擎看到的和坐在同一位置的人類玩家一樣。完整棋盤只留在伺服器上，用來判定著法和結果。',
   'faq.liveWatchQuestion': '我可以觀看即時對局嗎？',
   'faq.liveWatchAnswer':
-    '大多數對局都可以在觀戰頁即時觀看。揭棋和暗棋的觀眾看到的就是棋盤的實際樣子，背面朝下的棋子也一樣。迷霧對局在進行中不能觀戰，這樣沒有人能在對局中把完整棋盤告訴玩家。任何對局結束後，都可以從任一方視角，或在完整揭示狀態下復盤。',
+    '大多數對局都可以在觀戰頁即時觀看。揭棋和暗棋的觀眾看到的就是棋盤的實際樣子，背面朝上的棋子也一樣。迷霧對局在進行中不能觀戰，這樣沒有人能在對局中把完整棋盤告訴玩家。任何對局結束後，都可以從任一方視角，或在完整揭示狀態下復盤。',
   'faq.libraryQuestion': '棋譜庫裡的對局從哪裡來？',
   'faq.libraryAnswer':
     '四個來源：我們自己重新錄入的公有領域古譜、經主辦方同意轉播的比賽、從公開棋譜庫取得並在頁面上註明出處的個別賽事，以及在本站下的對局。我們不轉載其他網站的棋譜庫。別處有規模很大的象棋資料庫，複製過來並不難。那些是建庫的人的成果，所以我們先徵求同意。這樣棋譜庫會比原本可以達到的規模小，但裡面每一局的來源都說得清楚。',
@@ -305,7 +305,7 @@ export const ZH_HANT_CONTENT = {
     'Mistboard 按現狀提供，不提供任何擔保。對局、帳號、評分和儲存資料可能會被更改、重置或移除。',
   'terms.anonymousHeading': '匿名對弈',
   'terms.anonymousBody':
-    '預設情況下，對弈是匿名且基於連結的。帳號是選填的，會增加個人資料和使用者名稱。',
+    '預設情況下，對弈是匿名且基於連結的。可自行選擇是否建立帳號；建立後會有個人資料和使用者名稱。',
   'terms.acceptableHeading': '可接受使用',
   'terms.acceptableBody':
     '不要騷擾其他玩家、發送垃圾內容、濫用服務、試圖查看遊戲隱藏的資訊，或用爬蟲大量請求本站。濫用時，使用者名稱、房間和帳號可能會被撤銷。',
@@ -342,7 +342,7 @@ export const ZH_HANT_CONTENT = {
     '聯絡我們，我們會退款。我們可能調整提供的金額或停止提供贊助，但任何變化都不會影響你已付費的週期。',
   'terms.openSourceHeading': '開源與品牌',
   'terms.openSourcePrefix':
-    '原始碼是 AGPL-3.0-or-later。Mistboard 名稱、標誌、網域和託管服務身分是專案資產。歡迎 fork，但應該選擇自己的名稱。授權與鳴謝見',
+    '原始碼是 AGPL-3.0-or-later。Mistboard 名稱、標誌、網域和託管服務身分是專案資產。歡迎建立衍生專案，但應使用自己的名稱。授權與鳴謝見',
   'terms.sourceLink': '原始碼',
   'terms.openSourceSuffix': '。',
   'privacy.heading': '隱私',
@@ -381,7 +381,7 @@ export const ZH_HANT_CONTENT = {
   'patron.currencyNote': '價格以美元標示，結帳時會換算成你所在地區的貨幣。',
   'patron.checkoutError': '發起結帳時出了問題，請重試。',
   'patron.transparencyTitle': 'Mistboard 如何運轉',
-  'patron.transparency': '沒有廣告，沒有投資人，也不出售資料。訂閱用來支付伺服器和開發時間。',
+  'patron.transparency': '沒有廣告，沒有投資人，也不出售資料。',
   'patron.faqTitle': '常見問題',
   'patron.faqPerkQuestion': '有贊助者專屬的內容嗎？',
   'patron.faqPerkAnswer':
@@ -412,7 +412,7 @@ export const ZH_HANT_CONTENT = {
   'contribute.codeHeading': '改進程式碼',
   'contribute.codePrefix': 'Mistboard 以 AGPL-3.0-or-later 授權發布在 ',
   'contribute.codeSuffix':
-    ' 上。你可以認領一個開放的 issue，或者直接提交 pull request。原始碼頁面列出了程式庫，以及 Mistboard 所依賴的函式庫。',
+    ' 上。你可以認領一個開放的 issue，或者直接提交 pull request。原始碼頁面列出了程式碼儲存庫，以及 Mistboard 所依賴的函式庫。',
   'contribute.translateHeading': '幫忙翻譯',
   'contribute.translateBody':
     'Mistboard 提供英文、簡體中文和繁體中文，中文是機器翻譯的。如果你會下棋、能讀中文，歡迎幫我們審閱一頁，規則頁或一堂課都可以，把棋手不會這樣說的地方標出來：一個術語、一個開局名稱、一句讀起來像翻譯的話。一頁不到一小時，之後沒有任何義務。',
@@ -435,7 +435,7 @@ export const ZH_HANT_CONTENT = {
   'creators.playersPrefix': '經過認證的稱號徽章，以及一個',
   'creators.playersCoachLink': '教練頁面',
   'creators.playersBody':
-    '，學生直接聯絡你、直接付費給你，我們不抽取任何佣金。你的評註研究可以署名登上首頁，文章以你的名字發表，審閱我們的課程和題目也會註明你的貢獻。可以先進行',
+    '，學生直接聯絡你、直接付費給你，我們不抽取任何佣金。你附有評註的研習可以署名登上首頁，文章以你的名字發表，審閱我們的課程和題目也會註明你的貢獻。可以先進行',
   'creators.playersVerifyLink': '稱號認證',
   'creators.playersOr': '，或',
   'creators.playersLink': '了解我們為有稱號棋手提供什麼',
@@ -448,7 +448,7 @@ export const ZH_HANT_CONTENT = {
   'creators.analysisLead': '現成的分析。',
   'creators.analysisPrefix': '每盤棋都整理成一個',
   'creators.analysisLink': '研究',
-  'creators.analysisSuffix': '，附引擎分析並標註關鍵時刻，可以直接在鏡頭前講解。',
+  'creators.analysisSuffix': '，附引擎分析並標註關鍵時刻，可以直接在螢幕上展示。',
   'creators.streamLead': '直播準備。',
   'creators.streamBody':
     '可嵌入 OBS 的棋盤、按你選擇的強度對弈的機器人，開播前我們和你一起做一次技術檢查。',
@@ -462,7 +462,7 @@ export const ZH_HANT_CONTENT = {
   'creators.writersBody': '以你的名字發表文章和佈局指南，署名發表排局作品。',
   'creators.enginesHeading': '引擎作者',
   'creators.enginesBody':
-    '我們把強引擎作為網站上的機器人提供服務，註明作者，並在我們的機器人梯隊中評定等級分。',
+    '我們把強引擎作為網站上的機器人提供服務，註明作者，並透過與機器人排行榜上的對手對弈來評定等級分。',
   'creators.enginesChampionsPrefix': '在公開對抗賽中擊敗冠軍的引擎會奪得頭銜：請看',
   'creators.enginesChampionsLink': '引擎冠軍',
   'creators.enginesChampionsSuffix': '。',
@@ -529,13 +529,13 @@ export const ZH_HANT_CONTENT = {
   'champions.ruleSubmitSuffix': '發給我們。',
   'thanks.heading': '致謝',
   'thanks.intro':
-    'Mistboard 的很多部分建立在別人的工作之上：你對弈的引擎、其他網站允許我們展示的棋譜和照片，以及告訴我們哪裡出了問題的玩家。這一頁按名字感謝他們。',
+    'Mistboard 的很多部分建立在別人的工作之上：你對弈的引擎、其他網站允許我們展示的棋譜和照片，以及告訴我們哪裡出了問題的玩家。本頁逐一具名致謝。',
   'thanks.enginesHeading': '你對弈的引擎',
   'thanks.pikafishAuthors': '皮卡魚開發團隊',
   'thanks.pikafishBody':
     '本站最強的象棋機器人，也是全站象棋分析所用的引擎。它的揭棋分支驅動揭棋機器人和揭棋分析。',
   'thanks.fairyStockfishAuthors': 'Fabian Fichter 和 Fairy-Stockfish 的貢獻者',
-  'thanks.fairyStockfishBody': '下皮卡魚以下的各級象棋機器人和鴨子象棋機器人。',
+  'thanks.fairyStockfishBody': '為難度低於皮卡魚的各級象棋機器人和鴨子象棋機器人提供引擎支援。',
   'thanks.abJchessAuthors': 'Huorongrong 和 Laoxu',
   'thanks.abJchessBody':
     "本站最強的揭棋機器人。目前版本基於 Devin O'Keefe 的開源引擎 jqe 的程式碼。作者允許我們使用它的神經網路。",
@@ -564,7 +564,8 @@ export const ZH_HANT_CONTENT = {
   'thanks.pressName': '攝影師和新聞機構',
   'thanks.pressBody': '其餘的棋手照片，每張都在對應棋手的頁面上註明出處。',
   'thanks.elephantChessName': 'ElephantChess',
-  'thanks.elephantChessBody': '我們題目所挖掘的業餘對局，他們以每月公開資料集的形式發布。',
+  'thanks.elephantChessBody':
+    '我們的題目取材於他們的業餘對局；他們以每月公開資料集的形式發布這些對局。',
   'thanks.chessdbName': 'chessdb.cn',
   'thanks.chessdbBody': '象棋雲庫為象棋分析棋盤和練習提供殘局的精確結果。',
   'thanks.jimPngName': 'Jim Png',
@@ -648,7 +649,7 @@ export const ZH_HANT_CONTENT = {
   'data.included':
     '自 2026 年 6 月起在本站下完的每一盤對局：人對人或人對機器人，計分或休閒，登入或以訪客身分。對局依結束時所在的月份（UTC）歸檔。',
   'data.excluded':
-    '不包含：中止的對局和雙方都還沒走棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、機器人對局（它們有獨立的檔案），以及引擎對局等匯入的對局。當月結束後才會加入。',
+    '不包含：中止的對局和任一方尚未走過棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、機器人對局（它們有獨立的檔案），以及引擎對局等匯入的對局。當月結束後才會加入。',
   'data.hiddenHeading': '隱藏資訊',
   'data.hiddenFog':
     '已結束的迷霧對局不再隱藏任何資訊，所以檔案包含雙方的每一步，與對局結束後頁面上顯示的一致。當時每位玩家能看到什麼並未儲存；可以由著法和開源遊戲程式碼中的視野規則推出。',
@@ -676,5 +677,5 @@ export const ZH_HANT_CONTENT = {
   'data.engineNote':
     '本站自己的機器人之間的對局，每天幾盤。它們有獨立的檔案，從不出現在上面的檔案中。',
   'data.engineAbout':
-    '本站每天安排幾盤自己的機器人之間的對局，就是你可以對戰的那些機器人，涵蓋多個變體，並在本站自己的伺服器上進行。這些對局發布在獨立的月度檔案中，位於對局資料頁面的「機器人對局」下，mode 為 eve。它們從不出現在人類對局的檔案中，也不計入本站的統計或等級分。揭棋機器人對局和本站其他對局一樣在開局時發牌，因此帶有 deal_fen。',
+    '本站每天安排幾盤自己的機器人之間的對局，就是你可以對戰的那些機器人，涵蓋多個變體，並在本站自己的伺服器上進行。這些對局發布在獨立的月度檔案中，位於對局資料頁面的「機器人對局」下，mode 為 eve。它們從不出現在人類對局的檔案中，也不計入本站的統計或等級分。揭棋機器人對局和本站其他對局一樣在開局時分配棋子，因此帶有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;

@@ -37,7 +37,7 @@ describe('rendered figures carry translated labels', () => {
 
   it('zh-Hans jieqi rules page', () => {
     const labels = figureText(buildArticlePage('jieqi', 'zh-Hans'));
-    expect(labels).toContain('洗混后的开局');
+    expect(labels).toContain('打乱后的初始布局');
     expect(labels).toContain('翻子前：马位');
     expect(labels).not.toContain('SHUFFLED START');
     expect(labels).not.toContain('CAPTURE');

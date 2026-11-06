@@ -81,7 +81,7 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Pieces move much as in [xiangqi](/rules/xiangqi), but there is no palace and no river, so no piece is confined to one part of the board. Nothing blocks a horse or an elephant. The general slides like a chariot, and a soldier can step backward.',
+          text: 'Pieces move much as in [xiangqi](/rules/xiangqi), but there is no palace and no river, so no piece is confined to one part of the board. Pieces in between do not block a horse or an elephant. The general slides like a chariot, and a soldier can step backward.',
         },
         {
           kind: 'paragraph',
@@ -109,7 +109,7 @@ export const threeKingdomsBanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: '**Cannon:** slides like the chariot when it moves. To capture, it jumps exactly one piece, face-up or face-down, of either color. Below, it can take the general by jumping the face-down tile, but not the soldier next to it, with nothing to jump.',
+          text: '**Cannon:** slides like the chariot when it moves. To capture along a row or column, it jumps exactly one piece, face-up or face-down, of either color. Below, it can take the general by jumping the face-down tile, but not the soldier next to it, with nothing to jump.',
         },
         {
           kind: 'raw-svg',
@@ -184,7 +184,7 @@ export const threeKingdomsBanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'You may not play a chase that brings about the same position, with the same player to move, for the third time or later, unless chases are all you can play. A flip or capture starts that count again. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.',
+          text: 'You may not play a chase that brings about the same position, with the same player to move, for the third time or later, unless forbidding those chases would leave you with no legal move. A flip or capture starts that count again. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.',
         },
       ],
     },
@@ -202,7 +202,7 @@ export const threeKingdomsBanqiArticle: Article = {
             {
               question: 'Is the general special in Three Kingdoms banqi?',
               answer:
-                'Only in its value. It is worth 20, the most of any piece, and it slides like a chariot. It is not royal: capturing it scores 20 points, and play goes on unless that reaches 100.',
+                'Only in its value. It is worth 20, the most of any piece, and it slides like a chariot. It is not royal: capturing it scores 20 points, and the usual endings still apply.',
             },
             {
               question: 'How is this different from regular banqi?',

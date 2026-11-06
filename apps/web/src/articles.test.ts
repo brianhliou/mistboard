@@ -437,7 +437,7 @@ describe('article public listing gates', () => {
     const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
     expect(home?.getAttribute('aria-label')).toBe('網誌');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
-      '上一篇文章',
+      '上一組文章',
     );
     expect(home?.querySelector('.landing-carousel-nav-next')?.getAttribute('aria-label')).toBe(
       '更多文章',

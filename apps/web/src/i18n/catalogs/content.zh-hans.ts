@@ -52,7 +52,7 @@ export const ZH_HANS_CONTENT = {
   'videos.sort.newest': '最新',
   'videos.sort.longest': '最长',
   'videos.sort.shortest': '最短',
-  'videos.previousVideos': '上一个视频',
+  'videos.previousVideos': '上一组视频',
   'videos.moreVideos': '更多视频',
   'articles.heading': '文章',
   'articles.navigation': '博客导航',
@@ -66,7 +66,7 @@ export const ZH_HANS_CONTENT = {
   'articles.read': '阅读',
   'articles.intro': '关于中国象棋及其近亲的文章、规则说明与引擎工作。',
   'articles.allArticles': '全部文章',
-  'articles.previousArticles': '上一篇文章',
+  'articles.previousArticles': '上一组文章',
   'articles.moreArticles': '更多文章',
   'articles.news': '新闻',
   'articles.articleKind': '文章',
@@ -177,7 +177,7 @@ export const ZH_HANS_CONTENT = {
   'about.whoSitePrefix': '他的网站：',
   'about.articlesHeading': '文章如何写成',
   'about.articlesBody':
-    '文章与 Claude 合写，并由 Brian 对照文中引用的对局、引擎运行和资料逐一核实。中文页面由英文机器翻译。',
+    '文章与 Claude 合写，并由 Brian 对照文中引用的对局、引擎分析结果和资料逐一核实。中文页面由英文机器翻译。',
   'stats.heading': '统计',
   'stats.lede':
     '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
@@ -240,7 +240,7 @@ export const ZH_HANS_CONTENT = {
     'Fairy-Stockfish，作者 Fabian Fichter 及贡献者：皮卡鱼以下的各级象棋机器人和鸭子象棋机器人，GPL-3.0。',
   'source.pikafishJieqi': '皮卡鱼的揭棋分支，含 Mistboard 的补丁：揭棋机器人和揭棋分析，GPL-3.0。',
   'source.chessPieceSets':
-    '国际象棋棋子取自 lichess：Cburnett，作者 Colin M.L. Burnett；Merida，作者 Armando Hernandez Marroquin，GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
+    '国际象棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），均采用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
     '音效：Futuristic、NES、Piano 和 SFX 音效取自 lichess，作者 Enigmahack，AGPL-3.0；Wood 音效作者 el_boss，终局音效作者 Kenney，鸭子象棋的鸭叫作者 D4XX，均为 CC0。',
   'source.fonts':
@@ -274,9 +274,9 @@ export const ZH_HANS_CONTENT = {
   'faq.accountQuestion': '我需要账号吗？',
   'faq.accountAnswer':
     '休闲对弈不需要。你可以通过链接开始或加入对局，进入大厅，或不注册就对战引擎。账号会增加用户名、个人资料和计分对局。',
-  'faq.contactQuestion': '如何报告 bug 或联系？',
+  'faq.contactQuestion': '如何报告错误或联系我们？',
   'faq.contactPrefix': '可以在 ',
-  'faq.contactMiddle': ' 提交 issue，或通过',
+  'faq.contactMiddle': ' 提交问题，或通过',
   'faq.contactLink': '联系',
   'faq.contactSuffix': '发送消息。如果是关于某局对局，请附上房间链接。',
   'faq.cheatingQuestion': 'Mistboard 如何防作弊？',
@@ -289,7 +289,7 @@ export const ZH_HANS_CONTENT = {
     '不会。在隐藏棋子的对局中，引擎看到的和坐在同一位置的人类玩家一样。完整棋盘只留在服务器上，用来判定着法和结果。',
   'faq.liveWatchQuestion': '我可以观看实时对局吗？',
   'faq.liveWatchAnswer':
-    '大多数对局都可以在观战页实时观看。揭棋和暗棋的观众看到的就是棋盘的实际样子，背面朝下的棋子也一样。迷雾对局在进行中不能观战，这样没有人能在对局中把完整棋盘告诉玩家。任何对局结束后，都可以从任一方视角，或在完整揭示状态下复盘。',
+    '大多数对局都可以在观战页实时观看。揭棋和暗棋的观众看到的就是棋盘的实际样子，背面朝上的棋子也一样。迷雾对局在进行中不能观战，这样没有人能在对局中把完整棋盘告诉玩家。任何对局结束后，都可以从任一方视角，或在完整揭示状态下复盘。',
   'faq.libraryQuestion': '棋谱库里的对局从哪里来？',
   'faq.libraryAnswer':
     '四个来源：我们自己重新录入的公有领域古谱、经主办方同意转播的比赛、从公开棋谱库取得并在页面上注明出处的个别赛事，以及在本站下的对局。我们不转载其他网站的棋谱库。别处有规模很大的象棋数据库，复制过来并不难。那些是建库的人的成果，所以我们先征求同意。这样棋谱库会比原本可以达到的规模小，但里面每一局的来源都说得清楚。',
@@ -342,7 +342,7 @@ export const ZH_HANS_CONTENT = {
     '联系我们，我们会退款。我们可能调整提供的金额或停止提供赞助，但任何变化都不会影响你已付费的周期。',
   'terms.openSourceHeading': '开源与品牌',
   'terms.openSourcePrefix':
-    '源代码是 AGPL-3.0-or-later。Mistboard 名称、标志、域名和托管服务身份是项目资产。欢迎 fork，但应该选择自己的名称。许可和鸣谢见',
+    '源代码是 AGPL-3.0-or-later。Mistboard 名称、标志、域名和托管服务身份是项目资产。欢迎创建衍生项目，但应使用自己的名称。许可和鸣谢见',
   'terms.sourceLink': '源码',
   'terms.openSourceSuffix': '。',
   'privacy.heading': '隐私',
@@ -381,7 +381,7 @@ export const ZH_HANS_CONTENT = {
   'patron.currencyNote': '价格以美元标示，结账时会换算成你所在地区的货币。',
   'patron.checkoutError': '发起结账时出了问题，请重试。',
   'patron.transparencyTitle': 'Mistboard 如何运转',
-  'patron.transparency': '没有广告，没有投资人，也不出售数据。订阅用来支付服务器和开发时间。',
+  'patron.transparency': '没有广告，没有投资人，也不出售数据。',
   'patron.faqTitle': '常见问题',
   'patron.faqPerkQuestion': '有赞助者专属的内容吗？',
   'patron.faqPerkAnswer':
@@ -435,7 +435,7 @@ export const ZH_HANS_CONTENT = {
   'creators.playersPrefix': '经过认证的称号徽章，以及一个',
   'creators.playersCoachLink': '教练页面',
   'creators.playersBody':
-    '，学生直接联系你、直接付费给你，我们不抽取任何佣金。你的评注研究可以署名登上首页，文章以你的名字发表，审阅我们的课程和题目也会注明你的贡献。可以先进行',
+    '，学生直接联系你、直接付费给你，我们不抽取任何佣金。你附有评注的研习可以署名登上首页，文章以你的名字发表，审阅我们的课程和题目也会注明你的贡献。可以先进行',
   'creators.playersVerifyLink': '称号认证',
   'creators.playersOr': '，或',
   'creators.playersLink': '了解我们为有称号棋手提供什么',
@@ -448,7 +448,7 @@ export const ZH_HANS_CONTENT = {
   'creators.analysisLead': '现成的分析。',
   'creators.analysisPrefix': '每盘棋都整理成一个',
   'creators.analysisLink': '研究',
-  'creators.analysisSuffix': '，附引擎分析并标注关键时刻，可以直接在镜头前讲解。',
+  'creators.analysisSuffix': '，附引擎分析并标注关键时刻，可以直接在屏幕上展示。',
   'creators.streamLead': '直播准备。',
   'creators.streamBody':
     '可嵌入 OBS 的棋盘、按你选择的强度对弈的机器人，开播前我们和你一起做一次技术检查。',
@@ -462,7 +462,7 @@ export const ZH_HANS_CONTENT = {
   'creators.writersBody': '以你的名字发表文章和布局指南，署名发表排局作品。',
   'creators.enginesHeading': '引擎作者',
   'creators.enginesBody':
-    '我们把强引擎作为网站上的机器人提供服务，注明作者，并在我们的机器人梯队中评定等级分。',
+    '我们把强引擎作为网站上的机器人提供服务，注明作者，并通过与机器人排行榜上的对手对弈来评定等级分。',
   'creators.enginesChampionsPrefix': '在公开对抗赛中击败冠军的引擎会夺得头衔：请看',
   'creators.enginesChampionsLink': '引擎冠军',
   'creators.enginesChampionsSuffix': '。',
@@ -529,13 +529,13 @@ export const ZH_HANS_CONTENT = {
   'champions.ruleSubmitSuffix': '发给我们。',
   'thanks.heading': '致谢',
   'thanks.intro':
-    'Mistboard 的很多部分建立在别人的工作之上：你对弈的引擎、其他网站允许我们展示的棋谱和照片，以及告诉我们哪里出了问题的玩家。这一页按名字感谢他们。',
+    'Mistboard 的很多部分建立在别人的工作之上：你对弈的引擎、其他网站允许我们展示的棋谱和照片，以及告诉我们哪里出了问题的玩家。本页逐一具名致谢。',
   'thanks.enginesHeading': '你对弈的引擎',
   'thanks.pikafishAuthors': '皮卡鱼开发团队',
   'thanks.pikafishBody':
     '本站最强的象棋机器人，也是全站象棋分析所用的引擎。它的揭棋分支驱动揭棋机器人和揭棋分析。',
   'thanks.fairyStockfishAuthors': 'Fabian Fichter 和 Fairy-Stockfish 的贡献者',
-  'thanks.fairyStockfishBody': '下皮卡鱼以下的各级象棋机器人和鸭子象棋机器人。',
+  'thanks.fairyStockfishBody': '为难度低于皮卡鱼的各级象棋机器人和鸭子象棋机器人提供引擎支持。',
   'thanks.abJchessAuthors': 'Huorongrong 和 Laoxu',
   'thanks.abJchessBody':
     "本站最强的揭棋机器人。当前版本基于 Devin O'Keefe 的开源引擎 jqe 的代码。作者允许我们使用它的神经网络。",
@@ -564,7 +564,8 @@ export const ZH_HANS_CONTENT = {
   'thanks.pressName': '摄影师和新闻机构',
   'thanks.pressBody': '其余的棋手照片，每张都在对应棋手的页面上注明出处。',
   'thanks.elephantChessName': 'ElephantChess',
-  'thanks.elephantChessBody': '我们题目所挖掘的业余对局，他们以每月公开数据集的形式发布。',
+  'thanks.elephantChessBody':
+    '我们的题目取材于他们的业余对局；他们以每月公开数据集的形式发布这些对局。',
   'thanks.chessdbName': 'chessdb.cn',
   'thanks.chessdbBody': '象棋云库为象棋分析棋盘和练习提供残局的精确结果。',
   'thanks.jimPngName': 'Jim Png',
@@ -648,7 +649,7 @@ export const ZH_HANS_CONTENT = {
   'data.included':
     '自 2026 年 6 月起在本站下完的每一盘对局：人对人或人对机器人，计分或休闲，登录或以访客身份。对局按结束时所在的月份（UTC）归档。',
   'data.excluded':
-    '不包含：中止的对局和双方都还没走棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、机器人对局（它们有单独的文件），以及引擎对局等导入的对局。当月结束后才会加入。',
+    '不包含：中止的对局和任一方尚未走过棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、机器人对局（它们有单独的文件），以及引擎对局等导入的对局。当月结束后才会加入。',
   'data.hiddenHeading': '隐藏信息',
   'data.hiddenFog':
     '已结束的迷雾对局不再隐藏任何信息，所以文件包含双方的每一步，与对局结束后页面上显示的一致。当时每位玩家能看到什么并未保存；可以由着法和开源游戏代码中的视野规则推出。',
@@ -676,5 +677,5 @@ export const ZH_HANS_CONTENT = {
   'data.engineNote':
     '本站自己的机器人之间的对局，每天几盘。它们有单独的文件，从不出现在上面的文件中。',
   'data.engineAbout':
-    '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时发牌，因此带有 deal_fen。',
+    '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时分配棋子，因此带有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;
