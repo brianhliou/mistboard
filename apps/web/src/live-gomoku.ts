@@ -9,13 +9,6 @@ import {
   isGomokuColor,
   parseGomokuMove,
 } from '@mistboard/game';
-import {
-  Rapfi,
-  type RapfiLevel,
-  type RapfiPosition,
-  rapfiGameSeed,
-  rapfiPlySeed,
-} from './engine/rapfi.js';
 import { type GomokuBoardMarker, gomokuBoardSvg } from './gomoku-board.js';
 import './gomoku-board.css';
 import './live-xiangqi.css';
@@ -32,16 +25,6 @@ import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 
 let core: TenantLiveClientContext<GomokuColor, GomokuPlayerView> | null = null;
 let roomMode: 'pvp' | 'pve' = 'pvp';
-let engineId: string | null = null;
-let rapfi: Rapfi | null = null;
-let generation = 0;
-let pendingKey: string | null = null;
-let submittedKey: string | null = null;
-let botFailed = false;
-// Why the last bot request failed; shown under the notice on dev builds only.
-let botFailure = '';
-let botPaused = false;
-let roomPaused = false;
 let recordingPosition: ((ply: number, view: GomokuPlayerView) => void) | null = null;
 let recordingMarkers: readonly GomokuBoardMarker[] = [];
 
@@ -55,154 +38,6 @@ function boardSvg(view: GomokuPlayerView, enabled: boolean): string {
   return gomokuBoardSvg(marked, enabled, recordingMarkers);
 }
 
-function stopBot(): void {
-  generation += 1;
-  rapfi?.stop();
-  rapfi = null;
-  pendingKey = null;
-  submittedKey = null;
-}
-
-function botLevel(): RapfiLevel | null {
-  return engineId && /^rapfi-level-[1-8]$/.test(engineId) && engineId.length === 13
-    ? (Number(engineId.at(-1)) as RapfiLevel)
-    : null;
-}
-
-function syncBot(): void {
-  const ctx = core;
-  const view = ctx?.state.view;
-  const level = botLevel();
-  if (
-    !ctx ||
-    !view ||
-    ctx.state.rated ||
-    roomMode !== 'pve' ||
-    !level ||
-    !isGomokuColor(ctx.state.seat) ||
-    view.status.type !== 'playing' ||
-    ctx.connection() !== 'connected' ||
-    !ctx.replay.isLive() ||
-    roomPaused
-  ) {
-    stopBot();
-    return;
-  }
-  const turn = view.status.turn;
-  if (turn === ctx.state.seat || ctx.state.seats[turn] !== engineId) {
-    if (pendingKey) stopBot();
-    return;
-  }
-  const key = `${view.id}:${view.ply}:${engineId}`;
-  if (pendingKey === key || submittedKey === key || botFailed || botPaused) return;
-  if (pendingKey) stopBot();
-  else generation += 1;
-  const ticket = generation;
-  pendingKey = key;
-  const position: RapfiPosition = {
-    turn: turn === 'black' ? 1 : 2,
-    stones: view.board.flatMap((color, index) =>
-      color
-        ? [
-            {
-              x: index % 15,
-              y: Math.floor(index / 15),
-              player: color === 'black' ? (1 as const) : (2 as const),
-            },
-          ]
-        : [],
-    ),
-  };
-  rapfi ??= new Rapfi();
-  void rapfi
-    .chooseMove(position, level, rapfiPlySeed(rapfiGameSeed(view.id), view.ply))
-    .then(({ move }) => {
-      if (generation !== ticket) return;
-      pendingKey = null;
-      const current = ctx.state.view;
-      // Never submit a result against an old frame, replay, closed socket or room.
-      if (
-        !current ||
-        current.id !== view.id ||
-        current.ply !== view.ply ||
-        current.status.type !== 'playing' ||
-        current.status.turn !== turn ||
-        ctx.connection() !== 'connected' ||
-        !ctx.replay.isLive() ||
-        roomPaused
-      ) {
-        stopBot();
-        return;
-      }
-      const placement = parseGomokuMove(`${String.fromCharCode(97 + move.x)}${move.y + 1}`);
-      if (!placement || applyGomokuRoomMove(current, placement) === current)
-        throw new Error('Rapfi returned an illegal placement');
-      submittedKey = key;
-      if (
-        !ctx.send({
-          type: 'move',
-          to: placement.to,
-          browserBot: true,
-          roomId: view.id,
-          expectedPly: view.ply - (view.opening?.stones.length ?? 0),
-        })
-      )
-        throw new Error('Rapfi reply disconnected');
-      ctx.renderAll();
-    })
-    .catch((error: unknown) => {
-      if (generation !== ticket) return;
-      stopBot();
-      botFailed = true;
-      botFailure = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      console.warn('[gomoku-bot] Rapfi failed', error);
-      ctx.renderAll();
-    });
-}
-
-function renderBotPanel(refs: LiveRefs): void {
-  syncBot();
-  if (roomMode !== 'pve' || !botLevel()) return;
-  // Idle says nothing: the opponent strip already names "Rapfi Level N", as
-  // every other variant's bot seat does.
-  if (!botFailed && !botPaused && !pendingKey) return;
-  const panel = document.createElement('div');
-  panel.dataset.gomokuBot = engineId ?? '';
-  const label = document.createElement('p');
-  label.setAttribute('role', 'status');
-  label.textContent = botFailed
-    ? t('live.gomokuBotFailed')
-    : botPaused
-      ? t('live.gomokuBotPaused')
-      : t('live.gomokuBotThinking');
-  panel.append(label);
-  if (botFailed && botFailure && import.meta.env.DEV) {
-    const reason = document.createElement('p');
-    reason.dataset.gomokuBotFailure = '';
-    reason.textContent = botFailure;
-    panel.append(reason);
-  }
-  if (
-    core?.state.seat !== 'spectator' &&
-    core?.state.view?.status.type === 'playing' &&
-    (pendingKey || botFailed || botPaused)
-  ) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.gomokuBotAction = pendingKey ? 'cancel' : 'retry';
-    button.textContent = pendingKey ? t('setup.cancel') : t('live.gomokuBotRetry');
-    button.addEventListener('click', () => {
-      botPaused = pendingKey !== null;
-      botFailed = false;
-      stopBot();
-      core?.renderAll();
-    });
-    panel.append(button);
-  }
-  refs.hiddenPool.append(panel);
-}
-
-window.addEventListener('pagehide', stopBot);
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) core?.renderAll();
 });
@@ -227,9 +62,7 @@ const tenant: WebVariantTenant<GomokuColor> = {
     stone.setAttribute('aria-hidden', 'true');
     return stone;
   },
-  // Like Three Kingdoms banqi, bootstrap even before the cosmetic admin hint
-  // resolves. Every socket is account-gated by the server; only an admitted
-  // room's hello can start Rapfi, including when the public flag is off.
+  // Admission is enforced by the server, including admin playtests while hidden.
   enabled: () => true,
   reviewUrl: (roomId) => `/gomoku/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: (reason) => {
@@ -267,29 +100,14 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
   boardClass: 'gomoku-live-board',
   chrome: { roomMode: () => roomMode },
   onFrame: (frame) => {
-    if (frame.type === 'hello') {
-      stopBot();
-      botFailed = false;
-      botPaused = false;
-    }
     if (frame.roomMode === 'pvp' || frame.roomMode === 'pve') roomMode = frame.roomMode;
-    if ('pveEngineId' in frame)
-      engineId = typeof frame.pveEngineId === 'string' ? frame.pveEngineId : null;
-    if (typeof frame.browserBotPaused === 'boolean') roomPaused = frame.browserBotPaused;
   },
   resetState: () => {
-    stopBot();
     roomMode = 'pvp';
-    engineId = null;
-    botFailed = false;
-    botPaused = false;
-    roomPaused = false;
     recordingPosition = null;
     recordingMarkers = [];
   },
-  onDisabled: () => stopBot(),
-  renderExtras: (refs, view) => {
-    renderBotPanel(refs);
+  renderExtras: (_refs, view) => {
     if (view) recordingPosition?.(client.replay.activePly() ?? client.replay.latestPly(), view);
   },
   playAgainRequestBody: (state) => ({

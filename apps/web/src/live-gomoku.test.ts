@@ -10,18 +10,15 @@ import {
   type GomokuRoomState,
   getGomokuLegalMoves,
   getGomokuPlayerView,
+  RAPFI_LEVELS,
 } from '@mistboard/game';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeDisplayPreference } from './display-preferences.js';
-import { RAPFI_LEVELS, rapfiGameSeed, rapfiPlySeed } from './engine/rapfi.js';
-import { requireTestEngineNet } from './engine/test-net.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import type {
   TenantSocketClientOptions,
   TenantSocketFrame,
 } from './variant-tenant/socket-client.js';
-
-beforeAll(() => requireTestEngineNet('rapfi'));
 
 const socket = vi.hoisted(() => ({
   options: null as TenantSocketClientOptions | null,
@@ -115,50 +112,12 @@ const sentMoves = () => socket.sent.filter((value) => (value as { type?: string 
 
 const workers: TestWorker[] = [];
 class TestWorker {
-  onmessage: ((event: { data: unknown }) => void) | null = null;
-  onerror: ((event: { message: string }) => void) | null = null;
-  messages: unknown[] = [];
-  terminated = false;
   constructor(readonly url: string) {
     workers.push(this);
   }
-  postMessage(message: { type: string }) {
-    this.messages.push(message);
-    if (message.type === 'init') this.onmessage?.({ data: { type: 'ready' } });
-  }
-  terminate() {
-    this.terminated = true;
-  }
-  answer(x = 7, y = 7) {
-    if (
-      (this.messages.at(-1) as { commands?: string[] })?.commands?.some((line) =>
-        line.startsWith('YXNBEST'),
-      )
-    ) {
-      for (const line of [
-        `INFO PV 0`,
-        'INFO NUMPV 1',
-        'INFO DEPTH 2',
-        'INFO SELDEPTH 2',
-        'INFO NODES 10',
-        'INFO TOTALNODES 10',
-        'INFO TOTALTIME 1',
-        'INFO SPEED 10000',
-        'INFO EVAL 0',
-        'INFO WINRATE 0.5',
-        `INFO BESTLINE ${x},${y}`,
-        'INFO PV DONE',
-      ])
-        this.onmessage?.({ data: { type: 'line', line } });
-    }
-    this.onmessage?.({ data: { type: 'line', line: `${x},${y}` } });
-    this.onmessage?.({ data: { type: 'done', elapsedMs: 1 } });
-  }
+  postMessage() {}
+  terminate() {}
 }
-const flushBot = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
-};
 const pveFrame = (seat: GomokuColor, level = 1): Record<string, unknown> => ({
   roomMode: 'pve',
   pveEngineId: `rapfi-level-${level}`,
@@ -196,16 +155,38 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Rapfi browser PvE', () => {
-  it('an admin plays a browser bot with the public flag off', async () => {
+describe('server-owned Gomoku PvE', () => {
+  it('does not import the browser Rapfi adapter or delegate bot moves', () => {
+    const source = readFileSync(resolve(__dirname, 'live-gomoku.ts'), 'utf8');
+    expect(source).not.toContain('engine/rapfi');
+    expect(source).not.toContain('browserBot');
+  });
+
+  it.each(['black', 'white'] as const)(
+    'waits for the server bot for a %s human at every level',
+    async (human) => {
+      for (const tier of RAPFI_LEVELS) {
+        const state = position(human === 'black' ? 1 : 0);
+        const options = await mount(state, human, state.ply, pveFrame(human, tier.level));
+        options.render();
+        expect(workers).toHaveLength(0);
+        expect(sentMoves()).toEqual([]);
+        expect(document.querySelector('[data-gomoku-bot-action]')).toBeNull();
+        refresh(options, position(state.ply + 1), human);
+        expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(state.ply + 1);
+        click('h8');
+        expect(sentMoves()).toEqual([{ type: 'move', to: 'h8' }]);
+        expect(workers).toHaveLength(0);
+      }
+    },
+  );
+
+  it('keeps admitted admin playtests working with the public flag off', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
     await mount(position(0), 'white', 0, { ...pveFrame('white'), admin: true });
-    expect(workers).toHaveLength(1);
-    workers[0]!.answer();
-    await flushBot();
-    expect(sentMoves()).toEqual([
-      { type: 'move', to: 'h8', browserBot: true, roomId: ROOM, expectedPly: 0 },
-    ]);
+    expect(document.querySelectorAll('[data-square]')).toHaveLength(225);
+    expect(workers).toHaveLength(0);
+    expect(sentMoves()).toEqual([]);
   });
 
   it('links the finished room to review and reports the postgame action', async () => {
@@ -222,169 +203,6 @@ describe('Rapfi browser PvE', () => {
       variant: 'gomoku',
       mode: 'pvp',
     });
-  });
-
-  it.each(['black', 'white'] as const)(
-    'plays the bot turn for a %s human at every level',
-    async (human) => {
-      for (const tier of RAPFI_LEVELS) {
-        workers.length = 0;
-        const state = position(human === 'black' ? 1 : 0);
-        const options = await mount(state, human, state.ply, pveFrame(human, tier.level));
-        expect(workers).toHaveLength(1);
-        const worker = workers[0]!;
-        expect(worker.url).toContain('/engine/rapfi/worker.js');
-        const search = worker.messages[1] as { commands: string[] };
-        expect(search.commands).toContain(`INFO max_node ${tier.nodes}`);
-        if (tier.candidateCount !== undefined && human === 'black') {
-          expect(search.commands).toContain('INFO show_detail 2');
-          expect(search.commands.at(-1)).toBe(`YXNBEST ${tier.candidateCount}`);
-          expect(search.commands).toContain('YXBOARD\n0,0,2\nDONE');
-        } else
-          expect(search.commands.at(-1)).toBe(human === 'white' ? 'BEGIN' : 'BOARD\n0,0,2\nDONE');
-        // Snapshot retries and repeated paints cannot start parallel searches.
-        refresh(options, state, human);
-        expect(worker.messages).toHaveLength(2);
-        worker.answer();
-        await flushBot();
-        expect(sentMoves()).toEqual([
-          { type: 'move', to: 'h8', browserBot: true, roomId: ROOM, expectedPly: state.ply },
-        ]);
-        options.render();
-        expect(sentMoves()).toHaveLength(1);
-        // Only the server's echo may add the stone to the board.
-        expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(state.ply);
-        window.dispatchEvent(new Event('pagehide'));
-      }
-    },
-  );
-
-  it('starts after a Black human move and reuses the worker on subsequent bot turns', async () => {
-    const options = await mount(position(0), 'black', 0, pveFrame('black'));
-    expect(workers).toHaveLength(0);
-    refresh(options, position(1), 'black');
-    expect(workers).toHaveLength(1);
-    workers[0]?.answer(0, 1);
-    await flushBot();
-    refresh(options, position(2), 'black');
-    refresh(options, position(3), 'black');
-    expect(workers).toHaveLength(1);
-    const search = workers[0]?.messages.at(-1) as { commands: string[] };
-    expect(search.commands).toContain('YXBOARD\n0,0,2\n0,1,1\n1,0,2\nDONE');
-  });
-
-  it('derives distinct seeds per absolute ply and repeats the same seed on retry', async () => {
-    const options = await mount(position(0), 'black', 0, pveFrame('black'));
-    const { Rapfi } = await import('./engine/rapfi.js');
-    const choose = vi.spyOn(Rapfi.prototype, 'chooseMove');
-    try {
-      refresh(options, position(1), 'black');
-      workers[0]?.answer(0, 1);
-      await flushBot();
-      refresh(options, position(3), 'black');
-      document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="cancel"]')?.click();
-      document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="retry"]')?.click();
-      expect(choose.mock.calls.map((call) => call[2])).toEqual(
-        [1, 3, 3].map((ply) => rapfiPlySeed(rapfiGameSeed(ROOM), ply)),
-      );
-      expect(choose.mock.calls[0]?.[2]).not.toBe(choose.mock.calls[1]?.[2]);
-    } finally {
-      choose.mockRestore();
-    }
-  });
-
-  it('cancels on disconnect, ignores the old result and resumes from the reconnect snapshot', async () => {
-    const options = await mount(position(0), 'white', 0, pveFrame('white'));
-    const old = workers[0]!;
-    socket.connection = 'reconnecting';
-    options.render();
-    expect(old.terminated).toBe(true);
-    old.answer();
-    await flushBot();
-    expect(sentMoves()).toEqual([]);
-    socket.connection = 'connected';
-    options.applyHello({
-      type: 'hello',
-      seat: 'white',
-      ...pveFrame('white'),
-      state: getGomokuPlayerView(position(2), 'white'),
-      events: events(2),
-    } as TenantSocketFrame);
-    options.render();
-    expect(workers).toHaveLength(2);
-    workers[1]?.answer();
-    await flushBot();
-    expect(sentMoves()).toEqual([
-      { type: 'move', to: 'h8', browserBot: true, roomId: ROOM, expectedPly: 2 },
-    ]);
-  });
-
-  it.each(['load', 'illegal'] as const)(
-    'shows a recoverable %s error and retries only on request',
-    async (failure) => {
-      const options = await mount(position(1), 'black', 1, pveFrame('black'));
-      if (failure === 'load') workers[0]?.onerror?.({ message: 'network file unavailable' });
-      else workers[0]?.answer(0, 0);
-      await flushBot();
-      expect(sentMoves()).toEqual([]);
-      expect(workers[0]?.terminated).toBe(true);
-      expect(document.querySelector('[data-gomoku-bot]')?.textContent).toContain('could not load');
-      options.render();
-      expect(workers).toHaveLength(1);
-      document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="retry"]')?.click();
-      expect(workers).toHaveLength(2);
-      workers[1]?.answer();
-      await flushBot();
-      expect(sentMoves()).toHaveLength(1);
-    },
-  );
-
-  it('supports cancel/resume and releases the worker on a terminal frame or page exit', async () => {
-    const options = await mount(position(0), 'white', 0, pveFrame('white'));
-    document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="cancel"]')?.click();
-    expect(workers[0]?.terminated).toBe(true);
-    options.render();
-    expect(workers).toHaveLength(1);
-    document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="retry"]')?.click();
-    expect(workers).toHaveLength(2);
-    refresh(options, position(9), 'white');
-    expect(workers[1]?.terminated).toBe(true);
-    workers[1]?.answer();
-    await flushBot();
-    expect(sentMoves()).toEqual([]);
-    await mount(position(0), 'white', 0, pveFrame('white'));
-    window.dispatchEvent(new Event('pagehide'));
-    expect(workers.at(-1)?.terminated).toBe(true);
-  });
-
-  it('never computes a move for spectators, PvP, rated rooms or unknown engine ids', async () => {
-    for (const [seat, extras] of [
-      ['spectator', pveFrame('white')],
-      ['white', {}],
-      ['white', { ...pveFrame('white'), rated: true }],
-      ['white', { ...pveFrame('white'), pveEngineId: 'rapfi-level-9' }],
-    ] as const) {
-      await mount(position(0), seat, 0, extras);
-      expect(workers).toHaveLength(0);
-    }
-  });
-
-  it('cancels a paused room search and restarts at the same ply after resume', async () => {
-    const options = await mount(position(0), 'white', 0, pveFrame('white'));
-    for (const paused of [true, false]) {
-      options.applySnapshot({
-        type: 'snapshot',
-        seat: 'white',
-        state: getGomokuPlayerView(position(0), 'white'),
-        browserBotPaused: paused,
-      } as TenantSocketFrame);
-      options.render();
-      if (paused) expect(workers[0]?.terminated).toBe(true);
-    }
-    expect(workers).toHaveLength(2);
-    workers[1]?.answer();
-    await flushBot();
-    expect(sentMoves()).toHaveLength(1);
   });
 });
 
@@ -447,13 +265,10 @@ describe('hidden Gomoku live room', () => {
     expect(ghost()).toBeNull();
   });
 
-  it('keeps Rapfi status and controls without a live-page credit line', async () => {
+  it('has no browser bot status or retry controls on the server bot turn', async () => {
     await mount(position(0), 'white', 0, pveFrame('white'));
-    const panel = document.querySelector('[data-gomoku-bot]')!;
-    expect(panel.querySelector('[role="status"]')).not.toBeNull();
-    expect(panel.querySelector('[data-gomoku-bot-action]')).not.toBeNull();
-    expect(panel.querySelector('a')).toBeNull();
-    expect(panel.textContent).not.toContain('GPL-3.0');
+    expect(document.querySelector('[data-gomoku-bot]')).toBeNull();
+    expect(document.querySelector('[data-gomoku-bot-action]')).toBeNull();
   });
 
   it('marks each player row with the stone that seat plays (phone, 2026-11-05)', async () => {
@@ -578,7 +393,7 @@ describe('hidden Gomoku live room', () => {
   });
 
   it.each([3, 4, 5])(
-    'sends the full %i-stone opening to Rapfi on the actual side to move',
+    'renders the full %i-stone opening while waiting for the server',
     async (count) => {
       const stones = ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
         square: square as GomokuMove['to'],
@@ -588,16 +403,9 @@ describe('hidden Gomoku live room', () => {
       const human = turn === 'black' ? 'white' : 'black';
       const state = createGomokuRoomState(ROOM, { stones, turn });
       await mount(state, human, 0, { ...pveFrame(human), events: [CREATED] });
-      expect(workers).toHaveLength(1);
-      const commands = (workers[0]!.messages[1] as { commands: string[] }).commands;
-      expect(commands.find((line) => line.startsWith('YXBOARD\n'))?.split('\n')).toHaveLength(
-        count + 2,
-      );
-      workers[0]!.answer(0, 0);
-      await flushBot();
-      expect(sentMoves()).toEqual([
-        { type: 'move', to: 'a1', browserBot: true, roomId: ROOM, expectedPly: 0 },
-      ]);
+      expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(count);
+      expect(workers).toHaveLength(0);
+      expect(sentMoves()).toEqual([]);
     },
   );
   it.each(['black', 'white'] as const)(
