@@ -1,17 +1,16 @@
 /**
- * Words for the correspondence emails a player receives: the game-started
- * notice, the deadline warning and the daily "your move" digest. Each sender
+ * Words for the inbox and correspondence emails a player receives: unread
+ * message notices, game starts, deadline warnings and daily "your move" digests. Each sender
  * module (correspondence-start-email.ts, correspondence-deadline-warning.ts,
- * correspondence-turn-digest.ts) keeps its own policy (who, when, throttles,
- * opt-outs) and calls a builder here for the subject and the body; every
+ * correspondence-turn-digest.ts, inbox-email.ts) keeps its own policy (who,
+ * when, throttles, opt-outs) and calls a builder here for the subject and body; every
  * body renders through email-layout.ts.
  *
  * Two rules the builders keep:
- * - The subject names the game (variant and opponent). Gmail threads mail by
- *   subject, so identical subjects ("Your game has started") folded different
- *   games into one conversation.
- * - Every email says why it was sent and links to the notification settings
- *   where it can be turned off.
+ * - The subject identifies the game (variant and opponent) or message sender.
+ *   Gmail threads mail by subject, so identical subjects ("Your game has
+ *   started") folded different games into one conversation.
+ * - Every email says why it was sent and links to where it can be turned off.
  *
  * zh copy is machine translation (site policy since 2026-08-29) and reuses the
  * site's published terms: 通信对局, 求战, 轮到你走, 去走棋, 每步 N 天.
@@ -296,6 +295,64 @@ function manageLink(copy: Copy) {
 }
 
 // ── Builders ─────────────────────────────────────────────────────────────────
+
+// Metadata only. Message bodies and previews are never renderer inputs.
+export type InboxNoticeEmailInput = {
+  senderHandle: string;
+  senderName: string;
+  unsubscribeUrl: string;
+};
+
+const INBOX_COPY: Record<
+  EmailLocale,
+  {
+    subject: (sender: string) => string;
+    openInbox: string;
+    reason: string;
+    unsubscribe: string;
+  }
+> = {
+  en: {
+    subject: (sender) => `Unread message from ${sender}`,
+    openInbox: 'Open your inbox',
+    reason: 'You received this email because you have an unread message on Mistboard.',
+    unsubscribe: 'Unsubscribe from message emails',
+  },
+  'zh-Hans': {
+    subject: (sender) => `${sender}发来的未读私信`,
+    openInbox: '打开收件箱',
+    reason: '你收到这封邮件，是因为你在 Mistboard 有未读私信。',
+    unsubscribe: '退订私信邮件通知',
+  },
+  'zh-Hant': {
+    subject: (sender) => `${sender}發來的未讀私訊`,
+    openInbox: '打開收件匣',
+    reason: '你收到這封電子郵件，是因為你在 Mistboard 有未讀私訊。',
+    unsubscribe: '取消訂閱私訊郵件通知',
+  },
+};
+
+export function inboxNoticeEmail(input: InboxNoticeEmailInput, locale: EmailLocale): PlayerEmail {
+  const copy = INBOX_COPY[locale];
+  const sender =
+    locale === 'en'
+      ? `${input.senderName} (@${input.senderHandle})`
+      : `${input.senderName}（@${input.senderHandle}）`;
+  const subject = copy.subject(sender);
+  return {
+    subject,
+    ...renderEmail({
+      lang: locale,
+      headline: subject,
+      paragraphs: [],
+      button: { label: copy.openInbox, url: `${emailPublicHost}/inbox` },
+      footer: {
+        reason: copy.reason,
+        manage: { label: copy.unsubscribe, url: input.unsubscribeUrl },
+      },
+    }),
+  };
+}
 
 export type StartEmailInput = {
   roomId: string;

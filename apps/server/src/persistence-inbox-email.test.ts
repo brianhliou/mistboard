@@ -1,3 +1,5 @@
+import { sweepInboxEmails } from './inbox-email.js';
+import { dmEmailUnsubscribe } from './inbox-email-unsubscribe.js';
 import {
   blockUser,
   createUser,
@@ -11,6 +13,7 @@ import {
 import { getPool } from './persistence-db.js';
 import { listInboxEmailCandidates, markInboxEmailSent } from './persistence-inbox-email.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import type { TransactionalEmail } from './send-email.js';
 
 const HOUR = 60 * 60 * 1000;
 const now = new Date('2026-11-06T18:00:00Z');
@@ -52,6 +55,47 @@ async function fixture() {
 }
 
 definePersistenceTests('inbox email', () => {
+  test('sender sweeps at 12h, retries failures, caps all threads, and requires new messages next day', async () => {
+    await fixture();
+    const sent: TransactionalEmail[] = [];
+    let accepted = false;
+    const deps = {
+      enabled: true,
+      fromAddress: 'Mistboard <play@example.com>',
+      unsubscribe: (userId: string) =>
+        dmEmailUnsubscribe(userId, {
+          MISTBOARD_ENGINE_SECRET: 'test-only-inbox-sweeper-key',
+        }),
+      send: async (email: TransactionalEmail) => {
+        sent.push(email);
+        return { ok: accepted };
+      },
+    };
+    // The real candidate query and real mark run through the sender.
+    await sweepInboxEmails(new Date(stale.getTime() + 11 * HOUR), deps);
+    assert.equal(sent.length, 0);
+    await sweepInboxEmails(now, deps);
+    assert.equal(sent.length, 1);
+    assert.equal((await listInboxEmailCandidates({ now })).length, 1);
+    accepted = true;
+    await sweepInboxEmails(now, deps);
+    await sweepInboxEmails(new Date(now.getTime() + 60_000), deps);
+    assert.equal(sent.length, 2, 'repeat sweeps do not resend accepted messages');
+
+    await makeUser('z-sender');
+    await send('z-sender', 'm-recipient', 'new-message', later(1));
+    await sweepInboxEmails(new Date(later(24).getTime() - 1), deps);
+    assert.equal(sent.length, 2, 'rolling daily cap spans threads and midnight');
+    await sweepInboxEmails(later(24), deps);
+    assert.equal(sent.length, 3, 'new unread message is eligible next day');
+    await sweepInboxEmails(later(48), deps);
+    assert.equal(sent.length, 3, 'older messages across both threads stay covered');
+    for (const email of sent) {
+      assert.ok(!JSON.stringify(email).includes(body));
+      assert.ok(!JSON.stringify(email).includes('PRIVATE MESSAGE sentinel'));
+    }
+  });
+
   test('12-hour boundary is inclusive; candidates serialize metadata only, for either thread side', async () => {
     await fixture();
     await makeUser('z-sender');
