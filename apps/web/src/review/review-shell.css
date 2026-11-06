@@ -318,11 +318,12 @@
   border-bottom: 1px solid var(--site-border);
   background: transparent;
 }
-/* Tabs share the strip equally (lichess): each takes the same width, label
-   centered, so the active underline cells are evenly spaced across the bar. */
+/* Tabs share the strip by label length, each on one line: equal shares put
+   "Computer analysis" on two lines below a ~500px strip. */
 .review-underboard-tab {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
   padding: 7px 6px;
   border: none;
   background: transparent;
