@@ -177,14 +177,12 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // default for THIS page specifically. Re-review when a reader is available.
   'titled-players',
   // Machine-drafted, not native-reviewed (2026-08-29), by explicit decision.
-  // Champion names stay in simplified for the Traditional reader, because a
-  // person's name is written in the script that person uses and all twenty-two
-  // are mainland players; champion-name-script.test.ts enforces that.
+  // A person's name follows the page's script, so a Traditional page shows every
+  // champion in Traditional; champion-name-script.test.ts enforces that.
   'xiangqi-champions',
 
   // Machine-drafted, not native-reviewed (2026-08-29). Same standing as the
-  // page above, and the same name rule, except that this page's champions are
-  // not all mainland: see the zh-Hant block's note.
+  // page above, and the same name rule.
   'xiangqi-world-championship',
   'riverbank-cannon',
   'skill-vs-luck',
@@ -1770,8 +1768,7 @@ const ZH_HANS: Record<string, string> = {
     '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一枚敌子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
-  // players' names stay in one form in both scripts, as on the yin-sheng page.
+  // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed.
   'His 2026 record by event.': '他 2026 年各项赛事的战绩。',
   Event: '赛事',
   Dates: '日期',
@@ -1865,8 +1862,7 @@ const ZH_HANS: Record<string, string> = {
   'Portrait of Cao Yanlei.': '曹岩磊肖像。',
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
-  // lai-ly-huynh (zh-Hans), machine-drafted 2026-10-01, not native-reviewed. Mainland
-  // players' names stay in one form in both scripts, as on the cao-yanlei page; the
+  // lai-ly-huynh (zh-Hans), machine-drafted 2026-10-01, not native-reviewed. The
   // two 羊城晚报 quotes are his own words from the Chinese original, not back-translated.
   // Shared keys (title, Event, Dates, W, D, L, Opponent, Red, Black, the players'
   // names) already exist above and are reused.
@@ -1966,9 +1962,7 @@ const ZH_HANS: Record<string, string> = {
   'His games in the archive': '他在档案里的对局',
   'Mingjian Li': '李铭坚',
   'Chong Heung Ming': '庄宏明',
-  // tony-fung-ga-zen (zh-Hans), machine-drafted 2026-10-03. Mainland players' names
-  // stay in one form in both scripts, as on the cao-yanlei and lai-ly-huynh pages, so
-  // theirs live only here and reach zh-Hant through the spread. Titles follow the
+  // tony-fung-ga-zen (zh-Hans), machine-drafted 2026-10-03. Titles follow the
   // HKCCA's own list (香港特级大师); the opening list uses the site's terms (中炮,
   // 士角炮). Shared keys (Round, Opponent, Colour, Result, Red, Black, Win, Draw,
   // Event, Dates, W, D, L, League qualifier, Five Rams Cup, Guangzhou, How he plays,
@@ -2076,9 +2070,7 @@ const ZH_HANS: Record<string, string> = {
   'Tony Fung Ga Zen': '冯家俊',
   'Chao Yi-fan': '赵奕帆',
   'Cheng Yin Lung': '郑彦隆',
-  // zuo-wenjing (zh-Hans), machine-drafted 2026-10-11, not native-reviewed. Mainland
-  // players' names stay in one form in both scripts, so the name-only keys and the
-  // dates live here and reach zh-Hant through the spread. Her Asian Games quote is
+  // zuo-wenjing (zh-Hans), machine-drafted 2026-10-11, not native-reviewed. Her Asian Games quote is
   // the original Chinese from the Hubei Sports Bureau.
   'Zuo Wenjing 左文静': '左文静',
   'Zuo Wenjing': '左文静',
@@ -2189,8 +2181,7 @@ const ZH_HANS: Record<string, string> = {
   "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
     '左文静，2022 年女子世界象棋冠军：对局与分析',
   // tang-dan (zh-Hans), machine-drafted 2026-10-26, not native-reviewed, from the
-  // English Brian signed off that day. Terms follow zuo-wenjing; mainland names stay
-  // in one form in both scripts and, with the dates, reach zh-Hant through the spread.
+  // English Brian signed off that day. Terms follow zuo-wenjing.
   // Li Sih-yi is 李思谊 as dpxq records her; Taiwan is 中华台北 here, 台灣 in zh-Hant.
   'Tang Dan 唐丹': '唐丹',
   'Tang Dan. Card photo: Liu Cheng / Yangcheng Evening News, at the 2026 Five Rams Cup.':
@@ -2274,8 +2265,7 @@ const ZH_HANS: Record<string, string> = {
   'The Manila championship': '马尼拉锦标赛',
   "Tang Dan 唐丹, ten-time Chinese women's xiangqi champion: games and analysis":
     '唐丹，十届全国象棋女子个人冠军：对局与分析',
-  // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
-  // players' names stay in one form in both scripts.
+  // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲预选赛、上海杯、象甲第一阶段，31 局一局未输。他的棋风、盘面上的五局，以及全部 31 局的引擎分析。',
@@ -3675,9 +3665,8 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Every Xiangqi Champion (xiangqi-champions) --
   // MACHINE-DRAFTED 2026-08-28, NOT NATIVE-REVIEWED, by explicit decision.
-  // Champion names are deliberately NOT converted for the Traditional reader:
-  // a person's name is written in the script that person uses, and all
-  // twenty-two are mainland players. champion-name-script.test.ts enforces it.
+  // A person's name follows the page's script. champion-name-script.test.ts
+  // enforces it.
   // Chart labels and table cells are keys too, so the figure and the ruling
   // column localize with the prose instead of staying English under it.
   // seoTitle: drives the localized <title> and og:title. It sits OUTSIDE
@@ -4029,8 +4018,8 @@ const ZH_HANS: Record<string, string> = {
     '2025年的世锦赛9月在上海举行，越南的赖理兄夺冠，他在27日的决赛中战胜了中国的殷升。在这项赛事存在的三十五年里，他是第一个把慢棋冠军拿走的非中国棋手。',
   'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.':
     '赖理兄对冯家俊，2025年9月23日，决赛前四天。两百一十七步，引擎认为直到第九十回合双方仍然均势。',
-  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
-    '把这两件事连起来读很有诱惑力，好像是禁赛替他打开了门。这个读法太齐整了。他1990年生于永隆，2022年拿下世界快棋冠军，2023年就打进过这项决赛，在加赛中输给孟辰。他在本页还出现过两次，2015年输给郑惟桐，2023年输给孟辰，也就是说他在拿到任何东西之前已经来了十年。越南做了一代人的世界第二象棋强国，英文世界却几乎没有注意到。',
+  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won the championship itself. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
+    '把这两件事连起来读很有诱惑力，好像是禁赛替他打开了门。这个读法太齐整了。他1990年生于永隆，2022年拿下世界快棋冠军，2023年就打进过这项决赛，在加赛中输给孟辰。他在本页还出现过两次，2015年输给郑惟桐，2023年输给孟辰，也就是说他在拿到这项冠军之前已经来了十年。越南做了一代人的世界第二象棋强国，英文世界却几乎没有注意到。',
   'Where that leaves the title': '这个头衔的分量',
   'Nineteen editions, eleven winners, and a question that had the same answer for thirty-five years. The world title had never left China. Now it has, in the same decade the sport spent voiding its own results, and those two things are worth keeping separate.':
     '十九届，十一位冠军，还有一个三十五年来答案不变的问题。世界冠军从未离开过中国。现在它离开了，而这十年正是这项运动忙着推翻自己成绩的十年，这两件事值得分开来看。',
@@ -6389,8 +6378,8 @@ const ZH_HANS: Record<string, string> = {
   'Corrected how a face-down piece is described.': '更正了对暗子走法的说明。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
-  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
-    '删去了赵鑫鑫是最年轻世界冠军的说法；郑惟桐 2015 年夺冠时更年轻。',
+  'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
+    '更正了一句漏掉赖理兄 2022 年世界快棋冠军的话。',
   'Replaced the sample game with a game played against the engine on the site.':
     '示例对局换成了一盘在本站与引擎下的对局。',
   'Added a sample game from the site.': '新增一盘本站的示例对局。',
@@ -8490,8 +8479,7 @@ const ZH_HANT: Record<string, string> = {
     '[將死](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)',
   '[Checkmate](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)':
     '[將死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
-  // cao-yanlei (zh-Hant), machine-drafted 2026-09-25, not native-reviewed. Mainland
-  // players' names stay in one form in both scripts, as on the yin-sheng page.
+  // cao-yanlei (zh-Hant), machine-drafted 2026-09-25, not native-reviewed.
   'His 2026 record by event.': '他 2026 年各項賽事的戰績。',
   Event: '賽事',
   Dates: '日期',
@@ -8532,11 +8520,11 @@ const ZH_HANT: Record<string, string> = {
     '十項賽事，從一月對世界冠軍的十局番棋，到九月的中國象甲聯賽第一階段。全部 75 局我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
   'Baizuishan Cup': '百醉山盃',
   "**He fights.** Watching him win the Wuyang Cup last year, the veteran Lü Qin told 羊城晚报 that Cao's style is combative and he never picks the safe line. Cao said much the same: he likes to attack, and to keep varying his play.":
-    '**他敢打。** 去年看他拿下五羊盃時，老將吕钦對《羊城晚報》說，曹岩磊的棋風很「好鬥」，從不挑穩健的棋下。曹岩磊自己也這麼說：他喜歡進攻，也喜歡下出不同的變化。',
+    '**他敢打。** 去年看他拿下五羊盃時，老將呂欽對《羊城晚報》說，曹岩磊的棋風很「好鬥」，從不挑穩健的棋下。曹岩磊自己也這麼說：他喜歡進攻，也喜歡下出不同的變化。',
   '**He plays for the win with red.** Most of his wins come with the red pieces, and he opens with the central cannon, the most direct move in the game, almost as often as with the quiet soldier push. Yin Sheng did not play the central cannon once in his unbeaten month. With black he is happy to draw.':
     '**執紅他要贏。** 他的勝局大多是執紅下出來的，而且他開局走中炮（最直接的一步）幾乎跟走仙人指路一樣多。尹昇在他不敗的那個月一盤中炮都沒走過。執黑他樂於求和。',
   "**Zhao Panwei is his hardest opponent.** They met sixteen times this year, most of them in the April arena, and Cao's win is below. Against everyone else he loses about one game in twelve.":
-    '**赵攀伟是他最難對付的對手。** 兩人今年交手十六盤，大多在四月的擂台賽，曹岩磊贏下的那一盤就在下面。對其他所有人，他大約十二盤才輸一盤。',
+    '**趙攀偉是他最難對付的對手。** 兩人今年交手十六盤，大多在四月的擂台賽，曹岩磊贏下的那一盤就在下面。對其他所有人，他大約十二盤才輸一盤。',
   '**The sacrifices are real.** The engine confirms six this year, each a piece offered and never won back. Two are on the boards below: a cannon left hanging on move 16 in the long match win with black, and a horse against He Wenzhe in April.':
     '**棄子是真的。** 引擎確認他今年有六次真棄子，每次都是送出一子、再也沒有拿回來。下面的棋盤裡有兩次：番棋那盤執黑長局的勝局中，第 16 回合一門炮就那樣掛著；還有四月對何文哲送出的一匹馬。',
   'The ten-game match': '十局番棋',
@@ -8553,17 +8541,17 @@ const ZH_HANT: Record<string, string> = {
     '曹岩磊對賴理兄，2026 年 1 月 5 日，最後一盤。棋盤從黑方第 12 回合之後開始，輪到紅方走。',
   'The Baizuishan Cup': '百醉山盃',
   "The next day he went straight into an open and won seven of his ten games without losing one. On the first day he beat Wang Yongqiang in the cleanest game of his year, with an accuracy of 99. Wang's cannon slid across on move 11, Cao's chariot swung across in reply, and after Wang's 22nd move the engine sees mate in nine. Wang resigned two moves later.":
-    '第二天他直接去打一個公開賽，十盤贏七盤，一盤沒輸。第一天他贏了王永强，這是他今年下得最乾淨的一盤，準確率 99。王永强第 11 回合平炮，曹岩磊隨即把車平了過去；王永强走完第 22 回合，引擎已經看到九步殺。兩個回合後王永强認輸。',
+    '第二天他直接去打一個公開賽，十盤贏七盤，一盤沒輸。第一天他贏了王永強，這是他今年下得最乾淨的一盤，準確率 99。王永強第 11 回合平炮，曹岩磊隨即把車平了過去；王永強走完第 22 回合，引擎已經看到九步殺。兩個回合後王永強認輸。',
   "Cao Yanlei vs Wang Yongqiang, 6 January 2026. The board opens after black's 11th, with red to move.":
-    '曹岩磊對王永强，2026 年 1 月 6 日。棋盤從黑方第 11 回合之後開始，輪到紅方走。',
+    '曹岩磊對王永強，2026 年 1 月 6 日。棋盤從黑方第 11 回合之後開始，輪到紅方走。',
   '2026 Baizuishan Cup': '2026 百醉山盃',
   'The Chunqiu Daye arena': '春秋大業盃擂台賽',
   'King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice before Zhao knocked him out.':
-    '擂台賽：三人一組，一人守擂，每次挑戰先下一盤限時 20 分鐘的棋，再下五分鐘的快棋直到分出勝負。每人有四條命。四月曹岩磊先贏了赵攀伟一次、何文哲兩次，之後被赵攀伟淘汰。',
+    '擂台賽：三人一組，一人守擂，每次挑戰先下一盤限時 20 分鐘的棋，再下五分鐘的快棋直到分出勝負。每人有四條命。四月曹岩磊先贏了趙攀偉一次、何文哲兩次，之後被趙攀偉淘汰。',
   "The win over Zhao came with black. The game was level until Zhao pulled his chariot back on move 18. Cao's edge soldier crossed the river on that same move and kept walking, one file across on move 21 and another on move 22, straight after Zhao's horse went wrong. Zhao resigned after move 30.":
-    '贏赵攀伟的那盤他執黑。第 18 回合赵攀伟退車之前，局面一直均勢。曹岩磊的邊卒就在同一回合過河，接著一路往前：第 21 回合平一路，第 22 回合再平一路，正好在赵攀伟走錯馬之後。赵攀伟在第 30 回合後認輸。',
+    '贏趙攀偉的那盤他執黑。第 18 回合趙攀偉退車之前，局面一直均勢。曹岩磊的邊卒就在同一回合過河，接著一路往前：第 21 回合平一路，第 22 回合再平一路，正好在趙攀偉走錯馬之後。趙攀偉在第 30 回合後認輸。',
   "Zhao Panwei vs Cao Yanlei, 4 April 2026. The board opens after red's 18th, with Cao to play as black.":
-    '赵攀伟對曹岩磊，2026 年 4 月 4 日。棋盤從紅方第 18 回合之後開始，輪到執黑的曹岩磊走。',
+    '趙攀偉對曹岩磊，2026 年 4 月 4 日。棋盤從紅方第 18 回合之後開始，輪到執黑的曹岩磊走。',
   "Against He Wenzhe the next day he offered a horse on move 15, one of the six sacrifices the engine confirms this year. The game stayed level until He's cannon slid to the edge on move 27. Two moves later Cao's cannon went deep, his chariot ran the length of the board on move 36, and He resigned after the next move.":
     '第二天對何文哲，他第 15 回合送出一匹馬，這是引擎確認的今年六次棄子之一。直到第 27 回合何文哲把炮平到邊線，局面都是均勢。兩個回合後曹岩磊的炮長驅直入，第 36 回合車一路進到底線，何文哲在下一步之後認輸。',
   "Cao Yanlei vs He Wenzhe, 5 April 2026. The board opens after black's 14th, with Cao to move.":
@@ -8583,13 +8571,11 @@ const ZH_HANT: Record<string, string> = {
     '今年的每一盤都在 Mistboard 的一個研究裡，每盤都有引擎的判斷和變化；75 盤中有 71 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 9 月。',
   'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：對局、戰績與分析',
   'Portrait of Cao Yanlei.': '曹岩磊肖像。',
-  'Wang Yongqiang': '王永强',
-  'Zhao Panwei': '赵攀伟',
+  'Wang Yongqiang': '王永強',
+  'Zhao Panwei': '趙攀偉',
   'Meng Chen': '孟辰',
   // lai-ly-huynh (zh-Hant), machine-drafted 2026-10-01, not native-reviewed. After the
-  // spread, like cao-yanlei's. Mainland players' names stay simplified (赵攀伟, 程宇东);
-  // 賴理兄 and the foreign players (李銘堅, 莊宏明, 馮家俊, 鄭義霖, 萊恩) convert, as on
-  // the world championship page.
+  // spread, like cao-yanlei's.
   'Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis':
     '賴理兄，世界象棋冠軍：對局與分析',
   'The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.':
@@ -8670,9 +8656,9 @@ const ZH_HANT: Record<string, string> = {
     '曹岩磊對賴理兄，2026 年 1 月 5 日，番棋第 8 盤。棋盤從紅方第 15 回合之後開始，輪到執黑的賴理兄走。',
   '2026 ten-game match, game 8': '2026 春秋大業盃十局番棋，第 8 盤',
   "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions. In February it gave its first wildcard to Lại, and he reached the final. In the semi-final he beat Zhao Panwei, the opponent Cao Yanlei found hardest all year, winning the first game with red and drawing the second. Zhao's horse jumped forward on move 17; Lại's horses came forward and Zhao resigned after move 40. Cheng Yudong beat him in the final, a draw and then a loss. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
-    '廣州的五羊盃邀請的是中國的全國冠軍。今年二月它第一次發出外卡，給了賴理兄，他一路打進決賽。半決賽他擊敗赵攀伟，就是曹岩磊全年最難對付的那位對手：第一盤執紅獲勝，第二盤弈和。赵攀伟第 17 回合躍馬進擊，賴理兄的雙馬隨之躍出，赵攀伟在第 40 回合後認輸。決賽他負於程宇东，一和一負。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
+    '廣州的五羊盃邀請的是中國的全國冠軍。今年二月它第一次發出外卡，給了賴理兄，他一路打進決賽。半決賽他擊敗趙攀偉，就是曹岩磊全年最難對付的那位對手：第一盤執紅獲勝，第二盤弈和。趙攀偉第 17 回合躍馬進擊，賴理兄的雙馬隨之躍出，趙攀偉在第 40 回合後認輸。決賽他負於程宇東，一和一負。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
   "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.":
-    '賴理兄對赵攀伟，2026 年 2 月 28 日，五羊盃半決賽第 1 盤。棋盤從黑方第 17 回合之後開始，輪到賴理兄走。',
+    '賴理兄對趙攀偉，2026 年 2 月 28 日，五羊盃半決賽第 1 盤。棋盤從黑方第 17 回合之後開始，輪到賴理兄走。',
   '2026 Five Rams Cup, semi-final': '2026 五羊盃，半決賽',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '他在廣州說：「自從世錦賽奪冠之後，越南國內關注象棋的人越來越多了，開始下棋、喜歡象棋的人也明顯變多了。」',
@@ -8687,9 +8673,7 @@ const ZH_HANT: Record<string, string> = {
   'Mingjian Li': '李銘堅',
   'Chong Heung Ming': '莊宏明',
   // tony-fung-ga-zen (zh-Hant), machine-drafted 2026-10-03. After the spread, like
-  // lai-ly-huynh's. Mainland players' names stay simplified and come from the spread
-  // (王大禹, 吕皓, 王禹博, 程宇东); Hong Kong and Taiwan players convert (馮家俊, 黃學謙,
-  // 鄭彥隆, 趙奕帆), as do 賴理兄 and the place names. Cup is 盃, as on the other pages.
+  // lai-ly-huynh's. Cup is 盃, as on the other pages.
   "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis":
     '馮家俊，香港首位亞洲象棋個人冠軍：對局與分析',
   'Tony Fung 冯家俊': '馮家俊',
@@ -8739,7 +8723,7 @@ const ZH_HANT: Record<string, string> = {
     '馮家俊對王大禹，2026 象甲預選賽第 1 輪，2026 年 8 月 17 日。馮家俊執紅 28 回合取勝。棋盤從黑方第 13 回合之後開始，輪到馮家俊走。',
   '2026 China league qualifier, round 1': '2026 象甲預選賽，第 1 輪',
   "Tony Fung Ga Zen vs Lu Hao, 2026 China league qualifier, round 3, 18 August 2026. Fung won with red in 40 moves. The board opens after black's move 16, with Fung to move.":
-    '馮家俊對吕皓，2026 象甲預選賽第 3 輪，2026 年 8 月 18 日。馮家俊執紅 40 回合取勝。棋盤從黑方第 16 回合之後開始，輪到馮家俊走。',
+    '馮家俊對呂皓，2026 象甲預選賽第 3 輪，2026 年 8 月 18 日。馮家俊執紅 40 回合取勝。棋盤從黑方第 16 回合之後開始，輪到馮家俊走。',
   '2026 China league qualifier, round 3': '2026 象甲預選賽，第 3 輪',
   'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
     '與他並列最高分、並把上海嘉弘帶進聯賽的曹岩磊，也有[自己的專頁](/blog/cao-yanlei)。[這次預選賽](/broadcast/xiangqi/2026-league-qualifier)收在直播檔案裡。',
@@ -8749,7 +8733,7 @@ const ZH_HANT: Record<string, string> = {
     '趙奕帆對馮家俊，2026 五羊盃港澳台組選拔賽，2026 年 1 月 29 日。馮家俊執黑 81 回合取勝。棋盤從紅方第 40 回合之後開始，輪到馮家俊走。',
   '2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier': '2026 五羊盃，港澳台組選拔賽',
   "In the final stage in February he drew with black against China's Meng Fanrui, whom he had also held to a draw at the world championship in Shanghai. Wang Yubo then beat him twice, and the cup went to Cheng Yudong. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
-    '二月的決賽階段，他執黑和了中國的孟繁睿，在上海世錦賽上他也和孟繁睿下成和棋。隨後王禹博兩次擊敗他，五羊盃最後由程宇东奪得。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
+    '二月的決賽階段，他執黑和了中國的孟繁睿，在上海世錦賽上他也和孟繁睿下成和棋。隨後王禹博兩次擊敗他，五羊盃最後由程宇東奪得。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
   "Meng Fanrui vs Tony Fung Ga Zen, 2026 Five Rams Cup, final stage, 25 February 2026. Drawn in 28 moves. The board opens after red's move 12, with Fung to move.":
     '孟繁睿對馮家俊，2026 五羊盃決賽階段，2026 年 2 月 25 日。28 回合弈和。棋盤從紅方第 12 回合之後開始，輪到馮家俊走。',
   '2026 Five Rams Cup, final stage': '2026 五羊盃，決賽階段',
@@ -8781,17 +8765,14 @@ const ZH_HANT: Record<string, string> = {
   'Chao Yi-fan': '趙奕帆',
   'Cheng Yin Lung': '鄭彥隆',
   // zuo-wenjing (zh-Hant), machine-drafted 2026-10-11, not native-reviewed. After the
-  // spread, like tony-fung-ga-zen's. Mainland players' names stay simplified and come
-  // from the spread (左文静, 陈幸琳, 王琳娜, 王子涵, 唐丹 and her 2026 opponents);
-  // Taiwan, Singapore and Vietnam players convert (李孟儒, 陳茗芳, 阮黃燕, 吳蘭香),
-  // as do the place names. Cup is 盃, as on the other pages.
+  // spread, like tony-fung-ga-zen's. Cup is 盃, as on the other pages.
   "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
     '2022 年女子世界冠軍，2023 年亞運會兩枚金牌得主。她在古晉的奪冠之路和她的 2026 賽季，盤面上五盤對局，32 局附引擎分析。',
-  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑著舉起她的亞運會金牌。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文靜微笑著舉起她的亞運會金牌。',
   "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
     '關注女子象棋的說英語的棋友。她沒有公開的社群帳號，所以這一頁靠搜尋和本站被找到。',
   "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
-    '左文静在古晉以六勝一和奪得 2022 年女子世界冠軍，又在 2023 年亞運會上拿下兩枚金牌。',
+    '左文靜在古晉以六勝一和奪得 2022 年女子世界冠軍，又在 2023 年亞運會上拿下兩枚金牌。',
   "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
     '2026 年她在全國象棋團體賽上保持不敗，六勝一和，還打進了上海盃半決賽。',
   'With red she opens with the elephant: 15 of her 22 red games here start that way.':
@@ -8799,13 +8780,13 @@ const ZH_HANT: Record<string, string> = {
   'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
     '她在 2022 年世錦賽的準確率中位數是 96，而 2025 年 12 月以來的 26 盤對局是 91.7。',
   'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
-    '2023 年杭州亞運會上手持金牌的左文静。圖片：韓傳號 / 新華社。',
+    '2023 年杭州亞運會上手持金牌的左文靜。圖片：韓傳號 / 新華社。',
   'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
-    '左文静身穿白色中國隊外套，戴著圓框眼鏡微笑，一隻手拿著鮮花，另一隻手舉起金牌。',
+    '左文靜身穿白色中國隊外套，戴著圓框眼鏡微笑，一隻手拿著鮮花，另一隻手舉起金牌。',
   "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
-    '左文静是 2022 年女子世界象棋冠軍。那年十月在古晉，她七盤贏了六盤，另一盤與中國隊友陈幸琳弈和，最後一輪獲勝奪得冠軍。一年後在杭州亞運會上，她拿下兩枚金牌：一枚是女子個人賽，決賽擊敗王琳娜；另一枚是隨中國隊拿下的混合團體賽。',
+    '左文靜是 2022 年女子世界象棋冠軍。那年十月在古晉，她七盤贏了六盤，另一盤與中國隊友陳幸琳弈和，最後一輪獲勝奪得冠軍。一年後在杭州亞運會上，她拿下兩枚金牌：一枚是女子個人賽，決賽擊敗王琳娜；另一枚是隨中國隊拿下的混合團體賽。',
   'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
-    '她 1993 年生於山東淄博，代表湖北出賽，少年時加入湖北隊，師從柳大华。2006 年獲得象棋國家大師稱號，2022 年，也就是她奪得世界冠軍的那一年，成為象棋特級大師。世界象棋聯合會把她列為國際大師。',
+    '她 1993 年生於山東淄博，代表湖北出賽，少年時加入湖北隊，師從柳大華。2006 年獲得象棋國家大師稱號，2022 年，也就是她奪得世界冠軍的那一年，成為象棋特級大師。世界象棋聯合會把她列為國際大師。',
   'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
     '這一頁寫的是她的 2022 年世錦賽和她 2025 年 12 月以來的賽季，盤面上有她的五盤對局。我們收錄的 32 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
   'How she plays': '她的棋風',
@@ -8817,22 +8798,22 @@ const ZH_HANT: Record<string, string> = {
     '**對手先出錯。** 這裡她贏的 20 盤中有 16 盤，引擎標出的第一個錯著出自對手，早於她的任何錯著。',
   'The title': '奪冠',
   "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Taiwan, and the title with it.":
-    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文静前四盤全勝，第五輪與陈幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗台灣的彭柔安，冠軍也隨之到手。',
+    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文靜前四盤全勝，第五輪與陳幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗台灣的彭柔安，冠軍也隨之到手。',
   'Lee Meng Ju, Taiwan': '李孟儒，台灣',
   'Anna Yin Meixian, United States': 'Anna Yin Meixian，美國',
   'Ngo Lan Huang': '吳蘭香',
   'Fiona Tan Min Fang, Singapore': '陳茗芳，新加坡',
-  'Chen Xinglin, China': '陈幸琳，中國',
+  'Chen Xinglin, China': '陳幸琳，中國',
   'Nguyen Hoang Yen, Vietnam': '阮黃燕，越南',
   'Nguyen Hoang Yen': '阮黃燕',
   'Peng Jou-An, Taiwan': '彭柔安，台灣',
   "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
     '她的 2022 年世錦賽，逐輪戰績。姓名和所屬協會依照世界象棋聯合會棋譜集的寫法；第三輪的協會沒有列出，因為其他來源給出的不一樣。第一輪的棋譜無法回放，所以那盤不在盤面上。',
   "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
-    '阮黃燕對左文静，2022 世界象棋錦標賽女子組第 6 輪，2022 年 10 月 27 日。左文静執黑 37 回合取勝。棋盤從紅方第 10 回合之後開始，輪到左文静走。',
+    '阮黃燕對左文靜，2022 世界象棋錦標賽女子組第 6 輪，2022 年 10 月 27 日。左文靜執黑 37 回合取勝。棋盤從紅方第 10 回合之後開始，輪到左文靜走。',
   '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋錦標賽，女子組第 6 輪',
   "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
-    '左文静對彭柔安，2022 世界象棋錦標賽女子組第 7 輪，2022 年 10 月 29 日。左文静執紅 32 回合取勝。棋盤從黑方第 17 回合之後開始，輪到左文静走。',
+    '左文靜對彭柔安，2022 世界象棋錦標賽女子組第 7 輪，2022 年 10 月 29 日。左文靜執紅 32 回合取勝。棋盤從黑方第 17 回合之後開始，輪到左文靜走。',
   '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋錦標賽，女子組第 7 輪',
   "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
     '在同一屆世錦賽打進男子組決賽的香港棋手馮家俊，也有[自己的專頁](/blog/tony-fung-ga-zen)。',
@@ -8842,23 +8823,23 @@ const ZH_HANT: Record<string, string> = {
   'Her 2026 season': '她的 2026 賽季',
   'National Team Championship, Zhangjiakou': '全國象棋團體賽，張家口',
   "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
-    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。左文静代表湖北女隊打滿七輪，首輪執黑與黄蕾蕾弈和，其餘六輪全勝。',
+    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。左文靜代表湖北女隊打滿七輪，首輪執黑與黃蕾蕾弈和，其餘六輪全勝。',
   'Her national team championship, round by round.': '她的全國團體賽，逐輪戰績。',
   "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
-    '左文静對傅安欣，2026 全國象棋團體賽女子組，2026 年 3 月 28 日。左文静執紅 37 回合取勝。棋盤從黑方第 9 回合之後開始，輪到左文静走。',
+    '左文靜對傅安欣，2026 全國象棋團體賽女子組，2026 年 3 月 28 日。左文靜執紅 37 回合取勝。棋盤從黑方第 9 回合之後開始，輪到左文靜走。',
   '2026 National Team Championship, women': '2026 全國象棋團體賽，女子組',
   'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
     '[整項賽事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播檔案裡。',
   "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
     '9 月 9 日至 13 日的上海盃，她打進女子組半決賽，負於河北的王子涵。我們收錄了她在那裡的四盤執紅對局：兩勝一和，以及那盤敗局。',
   "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
-    '左文静對董毓男，2026 上海盃女子組，2026 年 9 月 10 日。左文静執紅 34 回合取勝。棋盤從黑方第 24 回合之後開始，輪到左文静走。',
+    '左文靜對董毓男，2026 上海盃女子組，2026 年 9 月 10 日。左文靜執紅 34 回合取勝。棋盤從黑方第 24 回合之後開始，輪到左文靜走。',
   '2026 Shanghai Cup, women': '2026 上海盃，女子組',
   "Women's league, Suifenhe": '女子甲級聯賽，綏芬河',
   "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
     '一週後，她在綏芬河接連參加兩項賽事：先是 9 月 20 日至 22 日的全國象棋女子甲級聯賽預選賽，接著是聯賽本身的第一階段，打到 9 月 27 日。預選賽她五勝一和一負，輸給了王琳娜，正是她在亞運會金牌之戰中擊敗的對手。聯賽中她六勝兩和兩負，第五輪兩次對陣王子涵，距上海盃半決賽只有兩週，執黑取勝，執紅弈和。',
   "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
-    '左文静對吴丹，2026 全國象棋女子甲級聯賽預選賽，2026 年 9 月 21 日。左文静執紅 21 回合取勝。棋盤從黑方第 5 回合之後開始，輪到左文静走。',
+    '左文靜對吳丹，2026 全國象棋女子甲級聯賽預選賽，2026 年 9 月 21 日。左文靜執紅 21 回合取勝。棋盤從黑方第 5 回合之後開始，輪到左文靜走。',
   "2026 Women's League qualifier": '2026 全國象棋女子甲級聯賽預選賽',
   'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
     '[預選賽](/broadcast/xiangqi/2026-womens-league-qualifier)和[聯賽](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播檔案裡。',
@@ -8877,16 +8858,15 @@ const ZH_HANT: Record<string, string> = {
     '古晉奪冠四年後，她仍然贏下大部分對局。春天的團體賽她一盤未輸，在上海打進四強，九月的兩項聯賽賽事 17 盤贏了 11 盤。此後世界冠軍另有歸屬：2023 年是唐思楠，2025 年是唐丹，唐丹還在 2025 年 12 月濟南的全國象棋個人賽上擊敗了她。2022 年以來沒有變的是開局：她仍然以飛相起手，她的勝局仍然來自對方的第一個錯著。',
   'Her games in the archive': '她在檔案裡的對局',
   "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
-    '左文静，2022 年女子世界象棋冠軍：對局與分析',
+    '左文靜，2022 年女子世界象棋冠軍：對局與分析',
   // tang-dan (zh-Hant), machine-drafted 2026-10-26, not native-reviewed. After the
-  // spread, like zuo-wenjing's: mainland names stay simplified (陈丽淳, 时凤兰);
-  // Li Sih-yi converts (李思誼), Taiwan is 台灣, Cup is 盃.
+  // spread, like zuo-wenjing's. Taiwan is 台灣, Cup is 盃.
   "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
     '十個全國冠軍，比任何一位女棋手都多，還有 2025 年女子世界冠軍。她從上海到馬尼拉奪得亞洲冠軍的這個賽季，盤面上五盤對局，50 局附引擎分析。',
   "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
-    '關注女子象棋和全國象棋個人賽的說英語的棋友。透過搜尋、本站以及左文静和尹昇的專頁找到這一頁。',
+    '關注女子象棋和全國象棋個人賽的說英語的棋友。透過搜尋、本站以及左文靜和尹昇的專頁找到這一頁。',
   "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
-    '唐丹十次奪得全國象棋個人賽女子冠軍，比任何一位女棋手都多；第十個冠軍在 2025 年 12 月到手，決賽對手是左文静。',
+    '唐丹十次奪得全國象棋個人賽女子冠軍，比任何一位女棋手都多；第十個冠軍在 2025 年 12 月到手，決賽對手是左文靜。',
   "Between September 2025 and October 2026 she won the women's world title in Shanghai, her fourth, and the Asian individual title in Manila.":
     '2025 年 9 月到 2026 年 10 月間，她在上海奪得女子世界冠軍，這是她的第四個世界冠軍，又在馬尼拉奪得亞洲個人賽冠軍。',
   'In the 50 games we hold from that stretch she lost twice, both with red; with black she won 15 and drew 9.':
@@ -8896,7 +8876,7 @@ const ZH_HANT: Record<string, string> = {
   'Tang Dan in glasses and a navy top with a white bow at the collar, arms folded, standing in front of a potted plant.':
     '唐丹戴著眼鏡，身穿領口繫白色蝴蝶結的藏青色上衣，雙臂交叉，站在一盆綠植前。',
   "Tang Dan 唐丹 has won China's national individual women's championship ten times, more than any other woman since the women's event began in 1979. The tenth came in December 2025 in Jinan, where she beat Zuo Wenjing in the final. Three months earlier, in Shanghai, she had won her fourth women's world title, and in October 2026 she added the Asian individual title in Manila.":
-    '唐丹十次奪得全國象棋個人賽女子組冠軍，是 1979 年設立女子組以來奪冠最多的女棋手。第十個冠軍是 2025 年 12 月在濟南拿下的，決賽她擊敗了左文静。三個月前在上海，她第四次奪得女子世界冠軍；2026 年 10 月，她又在馬尼拉拿下亞洲個人賽冠軍。',
+    '唐丹十次奪得全國象棋個人賽女子組冠軍，是 1979 年設立女子組以來奪冠最多的女棋手。第十個冠軍是 2025 年 12 月在濟南拿下的，決賽她擊敗了左文靜。三個月前在上海，她第四次奪得女子世界冠軍；2026 年 10 月，她又在馬尼拉拿下亞洲個人賽冠軍。',
   "She was born in 1990 in Anhui, moved to Beijing as a child, and plays for the Beijing Chess Academy. She is a Chinese grandmaster and a WXF International Grandmaster, and at the 2010 Asian Games in Guangzhou she won the women's individual gold, winning all seven rounds. On the Chinese Xiangqi Association's points list of 28 December 2025 she was the second woman, behind Li Qin.":
     '她 1990 年生於安徽，小時候遷居北京，代表北京棋院出賽。她是象棋特級大師，也是世界象棋聯合會國際特級大師；2010 年廣州亞運會上，她七輪全勝，奪得女子個人賽金牌。在中國象棋協會 2025 年 12 月 28 日的積分榜上，她在女棋手中排名第二，僅次於李沁。',
   'This page is her season from the 2025 world championship to Manila, with five of her games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
@@ -8911,22 +8891,22 @@ const ZH_HANT: Record<string, string> = {
     '2026 年 3 月她對《羊城晚報》說：「我不怕輸棋，只怕下不出高質量的棋局。」',
   'The titles': '她的冠軍',
   "The 19th World Xiangqi Championship was played in Shanghai from 21 to 27 September 2025. Tang Dan won the women's individual title, her fourth world title, and the women's team gold for China with Chen Lichun. We hold seven of her games there: five wins and two draws. The first was a win with black over Li Sih-yi of Taiwan.":
-    '第十九屆世界象棋錦標賽於 2025 年 9 月 21 日至 27 日在上海舉行。唐丹奪得女子個人冠軍，這是她的第四個世界冠軍；她還與陈丽淳一起為中國隊奪得女子團體金牌。我們收錄了她在那裡的七盤對局：五勝兩和。第一盤她執黑戰勝台灣的李思誼。',
+    '第十九屆世界象棋錦標賽於 2025 年 9 月 21 日至 27 日在上海舉行。唐丹奪得女子個人冠軍，這是她的第四個世界冠軍；她還與陳麗淳一起為中國隊奪得女子團體金牌。我們收錄了她在那裡的七盤對局：五勝兩和。第一盤她執黑戰勝台灣的李思誼。',
   "Li Sih-yi vs Tang Dan, 2025 World Xiangqi Championship, women, 22 September 2025. Tang Dan won with black in 32 moves. The board opens after red's move 23, with Tang Dan to move.":
     '李思誼對唐丹，2025 世界象棋錦標賽女子組，2025 年 9 月 22 日。唐丹執黑 32 回合取勝。棋盤從紅方第 23 回合之後開始，輪到唐丹走。',
   '2025 World Xiangqi Championship, women': '2025 世界象棋錦標賽，女子組',
   'National Championship, Jinan': '全國象棋個人賽，濟南',
   "China's national individual championship was played in Gangcheng, Jinan, from 6 to 13 December 2025, with 56 women in the field. After the group stage and three knockout rounds she met Zuo Wenjing in the final, drew the slow game, and won the rapid tie-break with black for her tenth national title.":
-    '全國象棋個人賽於 2025 年 12 月 6 日至 13 日在濟南鋼城舉行，女子組有 56 名棋手參賽。經過小組賽和三輪淘汰賽，她在決賽遇上左文静，慢棋弈和，快棋加賽執黑取勝，拿下她的第十個全國冠軍。',
+    '全國象棋個人賽於 2025 年 12 月 6 日至 13 日在濟南鋼城舉行，女子組有 56 名棋手參賽。經過小組賽和三輪淘汰賽，她在決賽遇上左文靜，慢棋弈和，快棋加賽執黑取勝，拿下她的第十個全國冠軍。',
   "It was the second time in a month that she beat Zuo for a title: in November she had won the women's individual open event at the 15th National Games, beating Zuo there too. Zuo, the 2022 world champion, has [her own page](/blog/zuo-wenjing).":
-    '這是一個月內她第二次在冠軍爭奪中擊敗左文静：11 月在第十五屆全運會上，她奪得女子個人公開組冠軍，擊敗的也是左文静。2022 年世界冠軍左文静也有[自己的專頁](/blog/zuo-wenjing)。',
+    '這是一個月內她第二次在冠軍爭奪中擊敗左文靜：11 月在第十五屆全運會上，她奪得女子個人公開組冠軍，擊敗的也是左文靜。2022 年世界冠軍左文靜也有[自己的專頁](/blog/zuo-wenjing)。',
   "Zuo Wenjing vs Tang Dan, 2025 National Individual Championship, women, final, 13 December 2025. Tang Dan won with black in 36 moves. The board opens after red's move 33, with Tang Dan to move.":
-    '左文静對唐丹，2025 全國象棋個人賽女子組決賽，2025 年 12 月 13 日。唐丹執黑 36 回合取勝。棋盤從紅方第 33 回合之後開始，輪到唐丹走。',
+    '左文靜對唐丹，2025 全國象棋個人賽女子組決賽，2025 年 12 月 13 日。唐丹執黑 36 回合取勝。棋盤從紅方第 33 回合之後開始，輪到唐丹走。',
   '2025 National Individual Championship, women, final': '2025 全國象棋個人賽，女子組決賽',
   'The season since': '此後的賽季',
   'CXA Year-End Finals, Chengmai': '中國象棋協會年終總決賽，澄邁',
   "Eleven days later she played the Chinese Xiangqi Association's year-end finals in Chengmai, Hainan, from 24 to 28 December 2025. We hold eight of her games there: five wins, two draws and a loss to Shi Fenglan. Her last game was a win with red over Li Qin.":
-    '十一天後，她在海南澄邁參加了 2025 年 12 月 24 日至 28 日的中國象棋協會年終總決賽。我們收錄了她在那裡的八盤對局：五勝兩和，另有一盤負於时凤兰。最後一盤她執紅戰勝李沁。',
+    '十一天後，她在海南澄邁參加了 2025 年 12 月 24 日至 28 日的中國象棋協會年終總決賽。我們收錄了她在那裡的八盤對局：五勝兩和，另有一盤負於時鳳蘭。最後一盤她執紅戰勝李沁。',
   "Tang Dan vs Li Qin, 2025 CXA Year-End Finals, women, 28 December 2025. Tang Dan won with red in 49 moves. The board opens after black's move 21, with Tang Dan to move.":
     '唐丹對李沁，2025 中國象棋協會年終總決賽女子組，2025 年 12 月 28 日。唐丹執紅 49 回合取勝。棋盤從黑方第 21 回合之後開始，輪到唐丹走。',
   '2025 CXA Year-End Finals, women': '2025 中國象棋協會年終總決賽，女子組',
@@ -9008,7 +8988,7 @@ const ZH_HANT: Record<string, string> = {
   'The Shanghai Cup in the archive': '棋譜庫裡的上海盃',
   'The league, stage one': '象甲第一階段',
   "Back in Hangzhou, September 14 to 16: three wins and six draws. This is the messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.":
-    '回到杭州，9 月 14 日至 16 日：三勝六和。這是最亂的一局。執黑對陈泓盛，引擎給紅方記了四步漏著，給尹昇記了一步真正的錯著，局面來回搖擺了二十個回合，直到紅方第 39 和第 42 回合把棋送掉。把它放上來，是因為光看上面那一節，你可能會誤解這些對局實際是怎樣展開的。',
+    '回到杭州，9 月 14 日至 16 日：三勝六和。這是最亂的一局。執黑對陳泓盛，引擎給紅方記了四步漏著，給尹昇記了一步真正的錯著，局面來回搖擺了二十個回合，直到紅方第 39 和第 42 回合把棋送掉。把它放上來，是因為光看上面那一節，你可能會誤解這些對局實際是怎樣展開的。',
   "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.":
     '陳泓盛 對 尹昇，2026 年 9 月 15 日。棋盤從紅方第 39 回合走完的局面開始，輪到黑方，棋局正在逆轉。',
   'Stage one in the archive': '棋譜庫裡的第一階段',
@@ -9026,16 +9006,16 @@ const ZH_HANT: Record<string, string> = {
   '1 win, 6 draws': '1 勝 6 和',
   'Cao Yanlei': '曹岩磊',
   '1 draw': '1 和',
-  'Xu Wenzhang': '许文章',
+  'Xu Wenzhang': '許文章',
   '2 draws': '2 和',
-  'Chen Hongsheng': '陈泓盛',
+  'Chen Hongsheng': '陳泓盛',
   '1 win, 1 draw': '1 勝 1 和',
-  'Huang Guangying': '黄光颖',
+  'Huang Guangying': '黃光穎',
   'He Wenzhe': '何文哲',
   '2 wins': '2 勝',
   'Jin Bo': '金波',
   'Liu Bohong': '劉柏宏',
-  'Jin Yuyan': '靳玉砚',
+  'Jin Yuyan': '靳玉硯',
   '1 win': '1 勝',
   'Yin Sheng': '尹昇',
   '11 wins, 20 draws, no losses': '11 勝 20 和 0 負',
@@ -9312,20 +9292,20 @@ const ZH_HANT: Record<string, string> = {
     '所以，為一盤本來多半也能贏下的棋付錢，並非不理智。買的不是這一分，而是決定下個賽季酬勞的等級分，以及比任何一屆賽事都長久的稱號。相較之下，一盤棋幾萬元並不算貴。',
   'A recording, and a whistleblower nobody could dismiss': '一段錄音，和一位無法被忽視的舉報人',
   'In April 2023 recordings of phone calls between two grandmasters, Hao Jichao 郝继超 and Wang Yuefei 王跃飞, appeared online. On them the two discuss buying and selling games, engine cheating, and manipulating rating points. Wang Tianyi is named on the tapes but was not on the calls. The Chinese press named the affair after them: 录音门, the recording gate.':
-    '2023年4月，兩名特級大師郝继超與王跃飞的通話錄音在網上流出。錄音中兩人談及買棋賣棋、軟件作弊與操縱等級分。王天一在錄音裡被提到，但並非通話當事人。中文媒體因此把這起事件稱為錄音門。',
+    '2023年4月，兩名特級大師郝繼超與王躍飛的通話錄音在網上流出。錄音中兩人談及買棋賣棋、軟件作弊與操縱等級分。王天一在錄音裡被提到，但並非通話當事人。中文媒體因此把這起事件稱為錄音門。',
   'Liu Dahua 柳大华, then 73 and the holder of a one-against-nineteen blindfold record, had been saying for years that opponents’ moves were 相当的精准，和软件一模一样, uncannily precise, identical to the software. On 17 October 2023 he and Dang Fei 党斐 made a 实名举报, a real-name accusation, against Guo Liping 郭莉萍, a deputy director at the sport administration’s chess and card centre. That turned a leaked tape into a governance scandal. Liu was attacked online for it and brought two private criminal prosecutions, one for criminal insult and one for defamation, winning both. Dang Fei is on the list below, at three years.':
-    '柳大华當時73歲，保持著一對十九的盲棋紀錄。多年來他一直說，對手的著法相當的精準，和軟件一模一樣。2023年10月17日，他與党斐實名舉報國家體育總局棋牌運動管理中心副主任郭莉萍。一段外流錄音由此變成了治理層面的風波。柳大华為此在網上遭到攻擊，他提起兩起刑事自訴，一起以侮辱罪、一起以誹謗罪，均獲勝訴。党斐本人也在下面的名單裡，被禁賽三年。',
+    '柳大華當時73歲，保持著一對十九的盲棋紀錄。多年來他一直說，對手的著法相當的精準，和軟件一模一樣。2023年10月17日，他與党斐實名舉報國家體育總局棋牌運動管理中心副主任郭莉萍。一段外流錄音由此變成了治理層面的風波。柳大華為此在網上遭到攻擊，他提起兩起刑事自訴，一起以侮辱罪、一起以誹謗罪，均獲勝訴。党斐本人也在下面的名單裡，被禁賽三年。',
   'How the recordings reached the internet is reported by one outlet and confirmed by none: that Hao Jichao made them himself, gave them to Hong Zhi 洪智 after a suspension he considered unjust, and that Hong passed them on. Hong Zhi was himself convicted in 2025 and banned for life the following April.':
-    '錄音如何流到網上，只有一家媒體報道過，無人證實：郝继超自己錄下這些通話，在一次他認為不公的停賽處理之後交給洪智，再由洪智轉出。洪智本人於2025年被判決有罪，次年4月被終身禁賽。',
+    '錄音如何流到網上，只有一家媒體報道過，無人證實：郝繼超自己錄下這些通話，在一次他認為不公的停賽處理之後交給洪智，再由洪智轉出。洪智本人於2025年被判決有罪，次年4月被終身禁賽。',
   Date: '日期',
   'What happened': '事件',
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
-    '本案的主線。柳大华更早的私下反映出自他本人的說法，並無確切日期可考。',
+    '本案的主線。柳大華更早的私下反映出自他本人的說法，並無確切日期可考。',
   'Two processes, one case': '兩條並行的程序，同一起案件',
   'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
     '紀律處理與刑事追訴是兩條獨立的程序：協會只能禁止棋手參賽，只有法院才能判處徒刑。兩者時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
-    '第三條線在公開層面沒有下文。案件進行期間，棋牌運動管理中心有三名官員去職：主任朱国平與紀檢書記郭玉军於2024年11月，郭莉萍於同年12月。沒有一份免職通知提到本案，也沒有任何官員被報道因此被追究或處罰。',
+    '第三條線在公開層面沒有下文。案件進行期間，棋牌運動管理中心有三名官員去職：主任朱國平與紀檢書記郭玉軍於2024年11月，郭莉萍於同年12月。沒有一份免職通知提到本案，也沒有任何官員被報道因此被追究或處罰。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
     '中國象棋協會分三批處罰了49人：2024年9月兩人，2025年1月四十一人，2026年4月六人。其中終身禁賽8人、限期禁賽37人、通報批評4人。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。只有2026年4月通報裡的三項限期禁賽公布了起止日期，均自2024年7月24日起算；1月的通報完全沒有公布日期，因此其中多數禁賽何時期滿並無公開記錄。',
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
@@ -9342,13 +9322,13 @@ const ZH_HANT: Record<string, string> = {
     '六人中只有洪智不認罪。他的上訴於2026年2月10日被駁回；由於他在宣判當日才被收押，比王天一晚約一年，儘管刑期較短，出獄時間反而晚得多。',
   'The cheating nobody charged': '未納入刑事指控的作弊',
   'Engine cheating runs through every account of this affair and appears in no ruling. It is the substance of the recordings, of Liu Dahua’s accusation, and of the press investigations, while the findings cite only bribery and the buying and selling of games. Nothing published resolves it either way.':
-    '軟件作弊貫穿這起事件的每一種敘述，卻不見於任何處罰。它是錄音的內容，是柳大华舉報的內容，也是媒體調查的內容；而官方認定只提行賄受賄與買棋賣棋。已公開的材料無法證實，也無法證偽。',
+    '軟件作弊貫穿這起事件的每一種敘述，卻不見於任何處罰。它是錄音的內容，是柳大華舉報的內容，也是媒體調查的內容；而官方認定只提行賄受賄與買棋賣棋。已公開的材料無法證實，也無法證偽。',
   'What exists is testimony. Liu Dahua says that at a league match in Ordos in October 2018 he was standing beside Hao Jichao’s game against a teammate of his own when he twice heard a voice call a move, 卒5平4, pawn five to the fourth file, and that Hao then played it. He suspected smartwatches as the capture device, and says that at an earlier fixture where watches were collected before play, Hao lost two games. This is his account, and no finding confirms any of it.':
-    '現有的只是證言。柳大华說，2018年10月鄂爾多斯的一場聯賽中，他站在郝继超對陣自己隊友的棋邊，兩次聽到有人報出卒5平4，隨後郝继超便走了這步棋。他懷疑智能手錶被用作採集工具，並說在更早一場賽前收走手錶的比賽中，郝继超輸了兩盤。這是他本人的說法，沒有任何認定加以證實。',
+    '現有的只是證言。柳大華說，2018年10月鄂爾多斯的一場聯賽中，他站在郝繼超對陣自己隊友的棋邊，兩次聽到有人報出卒5平4，隨後郝繼超便走了這步棋。他懷疑智能手錶被用作採集工具，並說在更早一場賽前收走手錶的比賽中，郝繼超輸了兩盤。這是他本人的說法，沒有任何認定加以證實。',
   'Xu Yinchuan, who won six national titles and three world titles and is named in none of the three notices, is quoted as saying 有了软件以后，就感觉自己的棋跟软件比就根本没法下, that once the software existed his own play felt unplayable measured against it. He is describing what engines did to a professional’s confidence in preparation rather than accusing anyone, which is worth keeping distinct.':
-    '六獲全國冠軍、三奪世界冠軍的许银川，未出現在三份通報中的任何一份裡。據引述，他說有了軟件以後，就感覺自己的棋跟軟件比就根本沒法下。他講的是引擎對一名職業棋手備戰時信心的衝擊，而不是在指控誰，這兩件事應當分開。',
+    '六獲全國冠軍、三奪世界冠軍的許銀川，未出現在三份通報中的任何一份裡。據引述，他說有了軟件以後，就感覺自己的棋跟軟件比就根本沒法下。他講的是引擎對一名職業棋手備戰時信心的衝擊，而不是在指控誰，這兩件事應當分開。',
   'Tao Hanming, the 1994 champion, spoke out against software cheating in January 2016 and retracted the next day, saying he had spoken out of turn after drinking. A friend later told Jiemian the drink was cover for pressure. Which version to believe is the kind of thing a disciplinary finding settles, and none did.':
-    '1994年的冠軍陶汉明在2016年1月公開抨擊軟件作弊，次日又收回，稱自己酒後失言。後來一位友人對界面新聞表示，酒是壓力之下的託詞。該信哪一種說法，本該由紀律認定來解決，而始終沒有。',
+    '1994年的冠軍陶漢明在2016年1月公開抨擊軟件作弊，次日又收回，稱自己酒後失言。後來一位友人對界面新聞表示，酒是壓力之下的託詞。該信哪一種說法，本該由紀律認定來解決，而始終沒有。',
   'No result has been struck from the record': '沒有一項成績被從記錄中抹去',
   'So the names stay on those pages with the finding beside them. Dropping them would assert something the rulings do not: that the games themselves were not real.':
     '因此這些名字仍留在那些頁面上，旁邊附著相應的認定。刪掉他們，等於斷言處罰並未認定的事：那些對局本身是假的。',
@@ -9356,7 +9336,7 @@ const ZH_HANT: Record<string, string> = {
   'The league came back. The 2025 national men’s league ran its preliminary from 30 July 2025 and opened the main stage in Harbin on 3 August, with revised eligibility rules and a reformed format: 25 teams, ten advancing to a double round-robin, four boards played in two waves of two, and a blitz tiebreak deciding drawn matches. Whether the format was designed against collusion is not stated anywhere official, but a match that cannot end level is harder to arrange.':
     '聯賽回來了。2025年全國象棋男子甲級聯賽自2025年7月30日起進行預賽，8月3日在哈爾濱開始正賽，參賽資格經過修訂，賽制也作了改革：25支隊伍，十支晉級雙循環，四台對局分兩批進行，每批兩台，平局由超快棋決勝。這一賽制是否為防串通而設，官方並無說明；但一場不可能打平的比賽，確實更難安排。',
   'Thirty-seven of the bans expire. Eight do not. The 2025 national championship was won by Wang Yubo 王禹博, the first title since Xu Yinchuan’s in 2009 that comes with no asterisk on it, and the 2025 world title left China for the first time.':
-    '三十七項禁賽有期滿之日，八項沒有。2025年全國個人賽冠軍是王禹博，這是自2009年许银川之後第一個無需加註的冠軍；同年的世界冠軍也首次離開中國。',
+    '三十七項禁賽有期滿之日，八項沒有。2025年全國個人賽冠軍是王禹博，這是自2009年許銀川之後第一個無需加註的冠軍；同年的世界冠軍也首次離開中國。',
   'Every national champion since 1956': '1956年以來的每一位全國冠軍',
   'Every world champion since 1990': '1990年以來的每一位世界冠軍',
   'All of it is Chinese-language reporting, listed so a reader who reads Chinese can check it rather than take our word for it.':
@@ -10513,7 +10493,7 @@ const ZH_HANT: Record<string, string> = {
   'Ask who the greatest chess player was and you get an argument with a shape to it: Fischer or Kasparov or Carlsen, measured against a title that has passed hand to hand since 1886. Ask the same about xiangqi and most English answers stop at the question.':
     '問國際象棋史上誰最強，你會得到一場有章法的爭論：菲舍爾、卡斯帕羅夫還是卡爾森，衡量的標尺是一個自1886年起代代相傳的頭銜。同樣的問題放到象棋上，多數英文的回答止步於提問本身。',
   'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell. What follows is every winner, and a game for thirteen of them in the order they first took the title. Our own engine annotates the boards; the analysis is Pikafish at a million nodes a position.':
-    '答案是有的，而且幾乎無人異議。胡荣华拿過十四次全國冠軍，十五歲奪得第一次，五十五歲奪得最後一次，1960年到1979年間舉辦的十屆全國賽，冠軍全部由他獨得或並列分享。更難解釋的是，他統治的這個頭銜為什麼只有六十九年歷史，而這門棋在南宋滅亡之時就已經是今天的模樣。下面列出每一位冠軍，並按他們首次奪冠的先後，為其中十三位各選一局棋。棋譜講解由我們自己的引擎完成，分析用的是 Pikafish，每個局面一百萬個節點。',
+    '答案是有的，而且幾乎無人異議。胡榮華拿過十四次全國冠軍，十五歲奪得第一次，五十五歲奪得最後一次，1960年到1979年間舉辦的十屆全國賽，冠軍全部由他獨得或並列分享。更難解釋的是，他統治的這個頭銜為什麼只有六十九年歷史，而這門棋在南宋滅亡之時就已經是今天的模樣。下面列出每一位冠軍，並按他們首次奪冠的先後，為其中十三位各選一局棋。棋譜講解由我們自己的引擎完成，分析用的是 Pikafish，每個局面一百萬個節點。',
   'Before there was a title': '頭銜出現之前',
   'Xiangqi reached its modern form at the end of the Northern Song: sixteen pieces a side, nine files by ten ranks, the river, the palace, the general and advisors confined to it. By the Southern Song it was played widely enough that Wen Tianxiang, the statesman the Mongols executed in 1283, grew up in a family of players and left a book of forty endgame problems. Nine hundred years of the game, and composed positions like his are nearly all that survives: not one record of a game anyone actually played.':
     '象棋在北宋末年定型為今天的樣子：每方十六子，縱九橫十，有河界，有九宮，將帥與士不出九宮。到南宋時它已流傳甚廣，被蒙古人於1283年處死的文天祥就出身棋弈之家，留下過一部四十局的殘局譜。九百年的棋史，存下來的幾乎只有這類擬局：沒有一份真人對局的記錄。',
@@ -10529,7 +10509,7 @@ const ZH_HANT: Record<string, string> = {
   'Hatched columns are years with no championship. The number after each name is that player’s title count.':
     '斜線填充的列是沒有舉辦世錦賽的年份。每個名字後面的數字是該棋手的奪冠次數。',
   'Three things fall out of the shape. Hu Ronghua holds the middle of the chart for forty years, in two long runs either side of a gap that history took rather than a rival, then four scattered singles that land after the men who replaced him had themselves come and gone. The 1980s and 1990s are the only stretch where four or five names trade the title year to year. And from 2005 the bars turn red: thirteen men have won it since, and ten of them have a ruling against them.':
-    '從圖形裡能看出三件事。胡荣华佔據圖表中段長達四十年，分成兩段長跑，中間的空檔是歷史造成的而不是對手造成的，此後又是四次零散奪冠，落在取代他的那批人自己也來了又走之後。八十年代和九十年代是唯一一段四五個名字逐年輪流拿冠軍的時期。而從2005年起橫條轉紅：此後共有十三人奪冠，其中十人身上有處罰決定。',
+    '從圖形裡能看出三件事。胡榮華佔據圖表中段長達四十年，分成兩段長跑，中間的空檔是歷史造成的而不是對手造成的，此後又是四次零散奪冠，落在取代他的那批人自己也來了又走之後。八十年代和九十年代是唯一一段四五個名字逐年輪流拿冠軍的時期。而從2005年起橫條轉紅：此後共有十三人奪冠，其中十人身上有處罰決定。',
   'Thirteen of these men have an annotated game further down the page, one each, in the same order. The nine without one are here because a list of champions that leaves people out is not a list of champions.':
     '其中十三人在本頁下方各有一局講解棋譜，順序相同。另外九人沒有棋譜，之所以列出，是因為漏掉人的冠軍名單算不上冠軍名單。',
   Champion: '冠軍',
@@ -10540,88 +10520,88 @@ const ZH_HANT: Record<string, string> = {
   "Four national titles: 1956, 1957, 1959, and a fourth in 1962 shared with the boy who had just taken the game off him. He came out of Guangdong, played for money in Hong Kong between 1949 and 1951, and by the time the sport was organised he was good enough that it called him 第一国手, the nation's foremost player. Other players called him 魔叔, Magic Uncle. His reputation rested on endgames, which is a polite way of saying he beat people in positions everyone had agreed were drawn.":
     '四次全國冠軍：1956、1957、1959，第四次在1962年，與剛剛把冠軍從他手裡拿走的那個少年並列。他出自廣東，1949到1951年間在香港以棋為生，等到這項運動被正式組織起來時，他已經強到被稱作第一國手。棋界叫他魔叔。他的名聲建立在殘局上，說得客氣些是這樣，說白了就是他能在所有人都認定是和棋的局面裡贏下對手。',
   'He was the answer for most of a decade, and for longer than the record suggests. Five years after Hu Ronghua took the title off him, Yang was still beating him.':
-    '在近十年的時間裡他就是那個答案，而且比紀錄顯示的還要久。胡荣华從他手裡拿走冠軍五年之後，杨官璘還在贏他。',
+    '在近十年的時間裡他就是那個答案，而且比紀錄顯示的還要久。胡榮華從他手裡拿走冠軍五年之後，楊官璘還在贏他。',
   'Yang Guanlin vs Hu Ronghua, 12 November 1965. Ninety moves of endgame, and move 41 is the cannon swing that finally breaks it.':
-    '杨官璘對胡荣华，1965年11月12日。九十個回合的殘局較量，第41回合的平炮終於撕開了局面。',
+    '楊官璘對胡榮華，1965年11月12日。九十個回合的殘局較量，第41回合的平炮終於撕開了局面。',
   'They called him 小神童, the little prodigy, and he had earned it by sixteen: a four-game match against Yang Guanlin in 1954 that finished two apiece. He beat Yang again at the first national championship, in the tournament Yang went on to win, and took the title himself in 1958 at twenty.':
-    '人稱小神童，他十六歲就當得起這個名號：1954年與杨官璘四局對抗，二比二打平。在首屆全國賽上他又贏了杨官璘一局，而那屆冠軍最終歸杨官璘；1958年他二十歲，自己拿下了冠軍。',
+    '人稱小神童，他十六歲就當得起這個名號：1954年與楊官璘四局對抗，二比二打平。在首屆全國賽上他又贏了楊官璘一局，而那屆冠軍最終歸楊官璘；1958年他二十歲，自己拿下了冠軍。',
   'Then he stopped. Poor health and the politics of the late 1960s ended his competitive career in 1966, at twenty-eight, which is the whole reason a player this good has one championship. He coached afterwards, and the player he pushed forward was Liu Dahua, two sections down.':
-    '然後他就停了。健康不佳加上六十年代後期的政治，讓他的競技生涯在1966年結束，那年他二十八歲，這就是一位這麼強的棋手只有一次冠軍的全部原因。此後他做教練，他推上來的棋手是柳大华，在下面第二節。',
+    '然後他就停了。健康不佳加上六十年代後期的政治，讓他的競技生涯在1966年結束，那年他二十八歲，這就是一位這麼強的棋手只有一次冠軍的全部原因。此後他做教練，他推上來的棋手是柳大華，在下面第二節。',
   'Li Yiting vs Yang Guanlin, 27 December 1956. Li was eighteen, and our engine grades him 99.0, the highest of any player here.':
-    '李义庭對杨官璘，1956年12月27日。李义庭當時十八歲，我們的引擎給他打出99.0分，是本頁所有棋手中最高的。',
+    '李義庭對楊官璘，1956年12月27日。李義庭當時十八歲，我們的引擎給他打出99.0分，是本頁所有棋手中最高的。',
   'Fourteen national titles, the first at fifteen and the last at fifty-five, and every one of the ten championships held between 1960 and 1979, one of them shared. They called him 胡司令, Commander Hu. He played out of Shanghai, on his own, against the strongest player every other province could field, and he did it by rebuilding the openings underneath the game: the flying elephant, the anti-palace horse and the same-direction cannon are all mainstream today because Hu kept winning with them.':
-    '十四次全國冠軍，第一次十五歲，最後一次五十五歲，1960到1979年間舉辦的十屆冠軍全部有他，其中一屆並列。棋界叫他胡司令。他代表上海出戰，孤身一人對抗其他各省能派出的最強棋手，而他做到這一點的辦法，是把棋的開局體系整個重建了一遍：飛相局、反宮馬、順炮，今天都是主流，因為胡荣华一直用它們贏棋。',
+    '十四次全國冠軍，第一次十五歲，最後一次五十五歲，1960到1979年間舉辦的十屆冠軍全部有他，其中一屆並列。棋界叫他胡司令。他代表上海出戰，孤身一人對抗其他各省能派出的最強棋手，而他做到這一點的辦法，是把棋的開局體系整個重建了一遍：飛相局、反宮馬、順炮，今天都是主流，因為胡榮華一直用它們贏棋。',
   'This is the game he arrived with. Round three of his first national tournament, Black against the reigning champion.':
     '這是他登場的那一局。首次參加全國賽的第三輪，執黑對陣衛冕冠軍。',
   'Yang Guanlin vs Hu Ronghua, 28 October 1960. Move 24 is the one to watch: a cannon Yang cannot take, marked brilliant.':
-    '杨官璘對胡荣华，1960年10月28日。第24回合值得一看：一步杨官璘吃不得的炮，被標為妙手。',
+    '楊官璘對胡榮華，1960年10月28日。第24回合值得一看：一步楊官璘吃不得的炮，被標為妙手。',
   'And this is thirty-four years later, in a tournament he did not win, against a man who had taken two national titles of his own in between.':
     '這是三十四年之後，在一場他沒有奪冠的比賽裡，對手是這期間自己拿過兩次全國冠軍的人。',
   'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-eight, six years before his fourteenth title.':
-    '胡荣华對柳大华，1994年10月15日。胡荣华時年四十八，距離他第十四次奪冠還有六年。',
+    '胡榮華對柳大華，1994年10月15日。胡榮華時年四十八，距離他第十四次奪冠還有六年。',
   'Two titles, 1980 and 1981, and the man who ended the longest run in the game: Hu had won every championship held for twenty years when Liu took the 1980 tournament off him. He is from Huangpi, in Hubei, and the sport knows him as 东方电脑, the Eastern Computer, for a memory that let him play nineteen simultaneous games blindfold in 1995. That was a world record until one of the champions further down this page broke it with twenty.':
-    '兩次冠軍，1980和1981年，他也是終結了這項運動中最長連霸的人：柳大华拿下1980年那屆時，此前二十年舉辦的全國賽冠軍全是胡荣华的。他是湖北黃陂人，棋界稱他東方電腦，因為他的記憶力讓他在1995年下出十九盤同時進行的盲棋。那是當時的世界紀錄，直到本頁下面的一位冠軍以二十盤打破它。',
+    '兩次冠軍，1980和1981年，他也是終結了這項運動中最長連霸的人：柳大華拿下1980年那屆時，此前二十年舉辦的全國賽冠軍全是胡榮華的。他是湖北黃陂人，棋界稱他東方電腦，因為他的記憶力讓他在1995年下出十九盤同時進行的盲棋。那是當時的世界紀錄，直到本頁下面的一位冠軍以二十盤打破它。',
   'He beat Li Laiqun in the 1980 tournament, then Yang Guanlin five days later.':
-    '他在1980年那屆比賽中贏了李来群，五天後又贏了杨官璘。',
+    '他在1980年那屆比賽中贏了李來群，五天後又贏了楊官璘。',
   'Li Laiqun vs Liu Dahua, 29 August 1980. Li would take four titles of his own starting two years later.':
-    '李来群對柳大华，1980年8月29日。兩年後李来群將開始自己的四次奪冠。',
+    '李來群對柳大華，1980年8月29日。兩年後李來群將開始自己的四次奪冠。',
   'Yang Guanlin vs Liu Dahua, 3 September 1980. The outgoing era losing to the incoming one in under thirty-five moves.':
-    '杨官璘對柳大华，1980年9月3日。將去的時代在三十五個回合之內輸給了將來的時代。',
+    '楊官璘對柳大華，1980年9月3日。將去的時代在三十五個回合之內輸給了將來的時代。',
   "Four titles between 1982 and 1991, and the first of them mattered past his own career. Li is from Handan in Hebei, and 1982 was the first time the men's championship crossed the Yellow River: until then it had belonged to the south, to Guangdong and Shanghai and Hubei. He went through that tournament unbeaten, and through Hu Ronghua directly rather than around him.":
-    '1982到1991年間四次奪冠，其中第一次的意義超出了他個人的生涯。李来群是河北邯鄲人，1982年是男子全國冠軍第一次跨過黃河：在此之前它一直屬於南方，屬於廣東、上海和湖北。那屆比賽他全程不敗，而且是正面贏過胡荣华，不是繞開他。',
+    '1982到1991年間四次奪冠，其中第一次的意義超出了他個人的生涯。李來群是河北邯鄲人，1982年是男子全國冠軍第一次跨過黃河：在此之前它一直屬於南方，屬於廣東、上海和湖北。那屆比賽他全程不敗，而且是正面贏過胡榮華，不是繞開他。',
   "Chinese writers reach for two images for his game: a needle wrapped in cotton, and a python's coils. Both mean the same thing, which is that the position has already closed before you notice it closing.":
     '中文的棋評用兩個比喻形容他的棋：綿裡藏針，以及蟒蛇纏身。兩者說的是同一件事，就是等你察覺局面在收緊時，它已經收緊完了。',
   'Li Laiqun vs Hu Ronghua, 7 December 1982, from the championship Li won. Move 23 is the cannon push, and Hu has nothing after it.':
-    '李来群對胡荣华，1982年12月7日，出自李来群奪冠的那屆比賽。第23回合是那步進炮，此後胡荣华無棋可下。',
+    '李來群對胡榮華，1982年12月7日，出自李來群奪冠的那屆比賽。第23回合是那步進炮，此後胡榮華無棋可下。',
   'Five national titles and five world titles, more of the latter than anyone before or since. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. In almost any other era that record is the headline of the sport. Here it reads as a long second place behind Hu Ronghua.':
-    '五次全國冠軍，五次世界冠軍，後者的數量前無古人後無來者。廣東叫他羊城少帥，又把他與许银川並稱嶺南雙雄。放在幾乎任何別的年代，這份紀錄都是這項運動的頭條。在這裡，它讀起來是長期屈居胡荣华之後的第二名。',
+    '五次全國冠軍，五次世界冠軍，後者的數量前無古人後無來者。廣東叫他羊城少帥，又把他與許銀川並稱嶺南雙雄。放在幾乎任何別的年代，這份紀錄都是這項運動的頭條。在這裡，它讀起來是長期屈居胡榮華之後的第二名。',
   "Lü Qin vs Yu Youhua, 23 November 1986. The only game where both players are marked brilliant: Lü Qin's cannon on 21, Yu Youhua's horse on 32.":
-    '吕钦對于幼华，1986年11月23日。本頁唯一一局雙方都被標出妙手的棋：吕钦第21回合的炮，于幼华第32回合的馬。',
+    '呂欽對于幼華，1986年11月23日。本頁唯一一局雙方都被標出妙手的棋：呂欽第21回合的炮，于幼華第32回合的馬。',
   'National champion in 1989, world champion in 1993 with six wins, three draws and no losses. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is the opposite of friendly: tight openings, very few holes, and a habit of grinding advantages too small to see into wins.':
     '1989年全國冠軍，1993年世界冠軍，六勝三和不敗。他是江蘇泰州人，棋界叫他笑面佛，因為他整局棋都在笑。笑容背後的東西一點也不友善：開局嚴密，幾乎沒有破綻，習慣把小到看不見的優勢磨成勝勢。',
   'The year after his national title he met a fifteen-year-old from Guangdong, at the same age and on the same stage where Hu Ronghua had beaten Yang Guanlin thirty years earlier. This time the champion won.':
-    '拿到全國冠軍的第二年，他遇上一位十五歲的廣東少年，年齡相同，舞臺也相同，三十年前胡荣华就是在這裡贏了杨官璘。這一次贏的是冠軍。',
+    '拿到全國冠軍的第二年，他遇上一位十五歲的廣東少年，年齡相同，舞臺也相同，三十年前胡榮華就是在這裡贏了楊官璘。這一次贏的是冠軍。',
   'Xu Tianhong vs Xu Yinchuan, 19 October 1990. No blunder from either side, which is the game Xu Tianhong wanted.':
-    '徐天红對许银川，1990年10月19日。雙方都沒有漏著，這正是徐天红要的那種棋。',
+    '徐天紅對許銀川，1990年10月19日。雙方都沒有漏著，這正是徐天紅要的那種棋。',
   'Four national titles spread across eighteen years, 1990 to 2008, plus the 1991 world championship. He learned in Harbin under Wang Jialiang, who was known as the Northeast Tiger, so the sport made Zhao the New Northeast Tiger. What people mean by it is that he plays bigger against stronger opponents, and that he fused the careful northern game with the sharper southern one.':
-    '四次全國冠軍分佈在十八年裡，從1990到2008年，另加1991年的世界冠軍。他在哈爾濱師從王嘉良，王嘉良人稱東北虎，於是棋界把赵国荣叫作新東北虎。這個說法的意思是他越遇強手，發揮越出色，也是說他把穩健的北派與鋒利的南派融到了一起。',
+    '四次全國冠軍分佈在十八年裡，從1990到2008年，另加1991年的世界冠軍。他在哈爾濱師從王嘉良，王嘉良人稱東北虎，於是棋界把趙國榮叫作新東北虎。這個說法的意思是他越遇強手，發揮越出色，也是說他把穩健的北派與鋒利的南派融到了一起。',
   'Zhao Guorong vs Hu Ronghua, 22 October 1989, the year before his first title. Move 30 is the chariot swing, and Hu does not recover.':
-    '赵国荣對胡荣华，1989年10月22日，奪得首個冠軍的前一年。第30回合是那步平車，此後胡荣华沒能挽回。',
+    '趙國榮對胡榮華，1989年10月22日，奪得首個冠軍的前一年。第30回合是那步平車，此後胡榮華沒能挽回。',
   "Six national titles and three world titles. He won the first at eighteen, second only to Hu's fifteen, and spent the 1990s and 2000s as the best player in the country not named Hu Ronghua. Like Yang Guanlin before him he built it on endgames, and like Yang he came out of Guangdong. He is one of the three men to have won a national title since 2005 with no ruling against him.":
-    '六次全國冠軍，三次世界冠軍。他十八歲拿下第一次，僅次於胡荣华的十五歲，整個九十年代和本世紀頭十年，他都是國內除胡荣华之外最強的棋手。和他之前的杨官璘一樣，他把棋建立在殘局上；也和杨官璘一樣，他出自廣東。2005年以後奪得全國冠軍而身上沒有處罰決定的，只有三人，他是其中之一。',
-  "Here he is against the man who ended Hu's run.": '下面是他對陣終結了胡荣华連霸的那個人。',
+    '六次全國冠軍，三次世界冠軍。他十八歲拿下第一次，僅次於胡榮華的十五歲，整個九十年代和本世紀頭十年，他都是國內除胡榮華之外最強的棋手。和他之前的楊官璘一樣，他把棋建立在殘局上；也和楊官璘一樣，他出自廣東。2005年以後奪得全國冠軍而身上沒有處罰決定的，只有三人，他是其中之一。',
+  "Here he is against the man who ended Hu's run.": '下面是他對陣終結了胡榮華連霸的那個人。',
   'Xu Yinchuan vs Liu Dahua, 11 October 1995. The only game here in which our engine finds neither a blunder nor a mistake from either player.':
-    '许银川對柳大华，1995年10月11日。這是本頁唯一一局，我們的引擎在雙方身上都沒有找到漏著或失著。',
+    '許銀川對柳大華，1995年10月11日。這是本頁唯一一局，我們的引擎在雙方身上都沒有找到漏著或失著。',
   'The only champion here who came up outside the system. Tao grew up on the street chess stalls of Haicheng in Liaoning, turned professional late, and in 1994 became the first amateur-trained player to win the national title, playing for Jilin and taking it from Lü Qin on tiebreak in the final round. The sport named him 绿林棋王, chess king of the greenwood, which is the Chinese phrase for outlaws in the forest, and it is a verdict on his game rather than his upbringing: unorthodox, and ferocious in the middlegame.':
-    '本頁唯一一位從體制外走上來的冠軍。陶汉明在遼寧海城的街頭棋攤上長大，很晚才轉為職業，1994年成為第一個以業餘出身奪得全國冠軍的棋手，他代表吉林出戰，在最後一輪憑小分從吕钦手裡拿走了冠軍。棋界給他的名號是綠林棋王，這是評他的棋而不是評他的出身：不循常規，中局兇悍。',
+    '本頁唯一一位從體制外走上來的冠軍。陶漢明在遼寧海城的街頭棋攤上長大，很晚才轉為職業，1994年成為第一個以業餘出身奪得全國冠軍的棋手，他代表吉林出戰，在最後一輪憑小分從呂欽手裡拿走了冠軍。棋界給他的名號是綠林棋王，這是評他的棋而不是評他的出身：不循常規，中局兇悍。',
   'His game is wild by the standards of every other champion in this sequence, built on prepared surprises rather than accumulation. Here he is two years after the title, against a two-time champion.':
     '以本篇其他任何一位冠軍的標準衡量，他的棋都算野，靠的是預先準備的奇招，而不是逐步累積優勢。下面是他奪冠兩年之後，對陣一位兩屆冠軍。',
   'Tao Hanming vs Liu Dahua, 21 October 1996. More chances for both players than a positional grind offers, and Tao was better at taking them.':
-    '陶汉明對柳大华，1996年10月21日。雙方的機會都比一盤陣地磨局多，而陶汉明更善於抓住它們。',
+    '陶漢明對柳大華，1996年10月21日。雙方的機會都比一盤陣地磨局多，而陶漢明更善於抓住它們。',
   'One title, in 2002, at forty-one, taken in the middle of the years that belonged to Hu Ronghua, Lü Qin and Xu Yinchuan. A Guangzhou newspaper writer had named him 拼命三郎 two decades earlier, roughly the desperado, after the 1981 championship: he finished sixth and did not draw a single one of his thirteen games. He plays for complications and accepts what comes with them.':
-    '一次冠軍，在2002年，時年四十一歲，奪自屬於胡荣华、吕钦和许银川的那些年份中間。二十年前，一位廣州的報紙作者在1981年全國賽之後給他起了拼命三郎這個名號：那屆他名列第六，十三局棋一盤和棋也沒有下過。他為複雜局面而戰，並接受隨之而來的一切。',
+    '一次冠軍，在2002年，時年四十一歲，奪自屬於胡榮華、呂欽和許銀川的那些年份中間。二十年前，一位廣州的報紙作者在1981年全國賽之後給他起了拼命三郎這個名號：那屆他名列第六，十三局棋一盤和棋也沒有下過。他為複雜局面而戰，並接受隨之而來的一切。',
   'Xu Tianhong vs Yu Youhua, 3 November 2002, from the championship Yu finally won. The Smiling Buddha against the desperado.':
-    '徐天红對于幼华，2002年11月3日，出自于幼华終於奪冠的那屆比賽。笑面佛對拼命三郎。',
+    '徐天紅對于幼華，2002年11月3日，出自于幼華終於奪冠的那屆比賽。笑面佛對拼命三郎。',
   'One title, in 2011, won without losing a game: five wins and six draws. He is where the list stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.':
     '一次冠軍，在2011年，全程不敗：五勝六和。到他這裡，這份名單不再是直截了當的了。2025年1月12日，中國象棋協會禁賽他四年三個月，並撤銷其特級大師稱號，同一份公告處罰了四十一人。',
   'Every man who won the national championship from 2010 to 2023 now has a ruling against him. What that means for the list is at the foot of the page.':
     '2010年到2023年間奪得全國冠軍的每一個人，如今身上都有處罰決定。這對這份名單意味著什麼，寫在本頁末尾。',
   'Xu Tianhong vs Sun Yongzheng, 18 October 2010, the year before his title. Sixty plies, the shortest game here.':
-    '徐天红對孙勇征，2010年10月18日，奪冠的前一年。六十著，是本頁最短的一局。',
+    '徐天紅對孫勇征，2010年10月18日，奪冠的前一年。六十著，是本頁最短的一局。',
   'The twenty-second man to win it, in Jinan in December 2025, a first title for a Beijing player coached by the grandmaster Zhang Qiang. His is the only game below in which the opponent appears nowhere else, and that is a consequence of the section above rather than an editorial choice.':
-    '第二十二位奪冠者，2025年12月在濟南奪冠，這是這位北京棋手的第一個冠軍頭銜，他的教練是特級大師张强。下面這局是唯一一局對手在別處再未出現的棋，這是上一節所述情況的後果，不是編排上的選擇。',
+    '第二十二位奪冠者，2025年12月在濟南奪冠，這是這位北京棋手的第一個冠軍頭銜，他的教練是特級大師張強。下面這局是唯一一局對手在別處再未出現的棋，這是上一節所述情況的後果，不是編排上的選擇。',
   'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.':
-    '王禹博對苏奕霖，2025年12月6日，他奪冠那屆的首輪。第32回合是引擎標出的那步躍馬。',
+    '王禹博對蘇奕霖，2025年12月6日，他奪冠那屆的首輪。第32回合是引擎標出的那步躍馬。',
   'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate, and it has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources.':
     '圖表裡的紅條就是這份名單需要加註的原因。2024到2026年間，中國象棋協會處理了一起中文媒體稱為錄音門的假棋案，它另有[專頁](/blog/xiangqi-match-fixing)：調查經過、全部受罰者、來龍去脈與資料來源。',
   'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.':
-    '把這些對照上面的表格，損害看得見，反而說不清楚。2005年以來共有十三人奪得全國冠軍，其中十人身上有處罰決定，包括2010到2023年間的每一位冠軍。沒有處罰的三人是许银川、赵国荣和王禹博。',
+    '把這些對照上面的表格，損害看得見，反而說不清楚。2005年以來共有十三人奪得全國冠軍，其中十人身上有處罰決定，包括2010到2023年間的每一位冠軍。沒有處罰的三人是許銀川、趙國榮和王禹博。',
   'The names stay in the table. A list that quietly dropped them would be a worse record of what happened, and these are published findings from the sport’s own governing body rather than allegations. What the rulings do not tell you is which games were fixed, or how a player at that level is supposed to be caught, and that is a longer story than a list of champions can hold.':
     '這些名字留在表格裡。悄悄刪掉他們，只會讓這份紀錄更差，何況這些是這項運動自身管理機構公佈的認定結論，不是指控。處罰決定沒有告訴你的是，哪些棋是假的，以及到了那個水平的棋手究竟應該怎樣才能被查出來，那是一份冠軍名單裝不下的更長的故事。',
   'The world title, and the same names': '世界冠軍，還是這些名字',
   'Where that leaves the list': '這份名單如今的樣子',
   'Sixty-nine years, fifty-seven championships, twenty-two winners. For the first fifty of those years the question had a clear answer and it was usually Hu Ronghua. For the fifteen after that it has an answer the sport has since taken back. Wang Yubo’s title in December 2025 is the first since Xu Yinchuan in 2009 that nobody has had to qualify.':
-    '六十九年，五十七屆，二十二位冠軍。頭五十年裡這個問題有明確的答案，而且答案通常是胡荣华。之後的十五年，答案存在，但這項運動後來自己收了回去。王禹博2025年12月的冠軍，是2009年许银川之後第一個無須附加保留說明的冠軍。',
+    '六十九年，五十七屆，二十二位冠軍。頭五十年裡這個問題有明確的答案，而且答案通常是胡榮華。之後的十五年，答案存在，但這項運動後來自己收了回去。王禹博2025年12月的冠軍，是2009年許銀川之後第一個無須附加保留說明的冠軍。',
   'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the same order, and the 2025 world final at the end.':
     '本頁的每一局棋都是一份研究裡的一章，你可以在那裡從頭到尾走一遍：完整的著法樹、引擎的變化作為可以走進去的分支、每位冠軍一章且順序相同，末尾還有2025年的世界賽決賽。',
   'Learn how the pieces move': '學習各子的走法',
@@ -10685,13 +10665,8 @@ const ZH_HANT: Record<string, string> = {
   // 資料庫 and 高水準, plus one rewrite where 默認 does not carry "assume" in
   // Taiwan usage.
   //
-  // Mainland players' names are held out of the conversion: a person's name is
-  // written in the script that person uses. The champions page could apply that
-  // rule to every name at once because all twenty-two of its champions are
-  // mainland. This page's are not, so the split is real here: 吳貴臨 of Chinese
-  // Taipei, 李錦歡 of Macau, 黃學謙 and 馮家俊 of Hong Kong, and 賴理兄 of
-  // Vietnam DO convert, because traditional characters are how those names are
-  // written. world-champion-name-script.test.ts enforces both halves.
+  // A person's name follows the page's script, wherever the player is from.
+  // world-champion-name-script.test.ts enforces it.
 
   'The Xiangqi World Championship': '世界象棋錦標賽',
   'Xiangqi World Championship: Every Winner, and Why It Is Not the Senior Title':
@@ -10713,39 +10688,39 @@ const ZH_HANT: Record<string, string> = {
     '與上圖相同的紀錄，把年份逐一寫出。最後一列的每一條都是中國象棋協會已公佈的處罰決定，不是指控；下面有一節專門說明。',
   'The national title, and every champion since 1956': '全國冠軍，以及1956年以來的每一位',
   'Five world titles across fifteen years and five Chinese national titles, 1986 to 2004. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and later paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. He is the most decorated player on this page and was never, in any single year, the best player in China.':
-    '十五年間五奪世界冠軍，另有五個全國個人賽冠軍，從1986年到2004年。廣東稱他為羊城少帥，後來又把他與许银川並稱嶺南雙雄。他是本頁榮譽最多的棋手，卻從來沒有在任何一個年份裡成為中國最強的棋手。',
+    '十五年間五奪世界冠軍，另有五個全國個人賽冠軍，從1986年到2004年。廣東稱他為羊城少帥，後來又把他與許銀川並稱嶺南雙雄。他是本頁榮譽最多的棋手，卻從來沒有在任何一個年份裡成為中國最強的棋手。',
   'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Taiwan was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
-    '這句話就是整篇文章的縮影。胡荣华在國內大部分時間都壓著他，卻從未參加過這項賽事；吕钦卻拿了五次。台灣的吳貴臨二十年間是大陸之外最強的棋手，也是"究竟誰能贏這些人"這個問題反覆出現的答案，而吕钦在1990、1995和1997年都贏了他。',
+    '這句話就是整篇文章的縮影。胡榮華在國內大部分時間都壓著他，卻從未參加過這項賽事；呂欽卻拿了五次。台灣的吳貴臨二十年間是大陸之外最強的棋手，也是"究竟誰能贏這些人"這個問題反覆出現的答案，而呂欽在1990、1995和1997年都贏了他。',
   'Lü Qin vs Wu Guilin, 1997, from the fifth championship and the third of his five titles.':
-    '吕钦對吳貴臨，1997年，第五屆世錦賽，也是他五個冠軍中的第三個。',
+    '呂欽對吳貴臨，1997年，第五屆世錦賽，也是他五個冠軍中的第三個。',
   'World champion in 1991 and four times Chinese national champion, spread across eighteen years from 1990 to 2008, which is a longer span at the top than anyone here except Hu Ronghua managed. He learned in Harbin under Wang Jialiang, known as the Northeast Tiger, and the sport made him the New Northeast Tiger in turn.':
-    '1991年的世界冠軍，四次全國個人賽冠軍，跨越1990年到2008年共十八年，這個在頂端停留的跨度，除胡荣华外本頁無人能及。他在哈爾濱師從王嘉良，人稱東北虎，棋壇後來又把他叫作新東北虎。',
+    '1991年的世界冠軍，四次全國個人賽冠軍，跨越1990年到2008年共十八年，這個在頂端停留的跨度，除胡榮華外本頁無人能及。他在哈爾濱師從王嘉良，人稱東北虎，棋壇後來又把他叫作新東北虎。',
   'He is one of three men on this list with no ruling against him.':
     '他是這份名單上三位沒有受到任何處罰的棋手之一。',
   'Zhao Guorong vs Wu Guilin, 1991, from the championship he won.':
-    '赵国荣對吳貴臨，1991年，出自他奪冠的那屆比賽。',
+    '趙國榮對吳貴臨，1991年，出自他奪冠的那屆比賽。',
   'World champion in 1993 in Beijing with seven and a half points from nine, the year after taking the Chinese national title. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is tight openings and a habit of grinding advantages too small to see into wins.':
     '1993年在北京奪得世界冠軍，九輪拿下七點五分，這是他獲得全國個人賽冠軍的第二年。他是江蘇泰州人，棋壇稱他笑面佛，因為他從頭到尾都在笑。笑容背後是滴水不漏的佈局，以及把小到看不見的優勢一點點磨成勝勢的功夫。',
   'He is the one champion here without a game, and that is a fact about the archives rather than about him. Four games survive from the 1993 edition in the databases this article draws on, and none of them are his. Showing a game from another event would be a different claim than the one this page makes.':
     '他是本頁唯一沒有配棋譜的冠軍，這說的是棋譜庫的問題，不是他的問題。本文所用的資料庫裡，1993年那屆只留下四局棋，沒有一局是他的。拿另一項賽事的棋來充數，說的就不是這一頁要說的事了。',
   'Three world titles, 1999, 2003 and 2007, alongside six Chinese national championships. He won his first national title at eighteen, second only to Hu Ronghua’s fifteen, and spent two decades as the best player in the country not named Hu Ronghua.':
-    '三個世界冠軍，1999、2003和2007年，另有六個全國個人賽冠軍。他十八歲首奪全國冠軍，僅次於胡荣华的十五歲，並且有二十年時間是這個國家裡除胡荣华之外最強的棋手。',
+    '三個世界冠軍，1999、2003和2007年，另有六個全國個人賽冠軍。他十八歲首奪全國冠軍，僅次於胡榮華的十五歲，並且有二十年時間是這個國家裡除胡榮華之外最強的棋手。',
   'Like Lü Qin he came out of Guangdong, like Lü Qin he built his game on endgames, and like Lü Qin he is one of the three men here with a clean record.':
-    '他和吕钦一樣出自廣東，一樣把棋建立在殘局功夫上，也一樣是本頁三位紀錄清白的棋手之一。',
+    '他和呂欽一樣出自廣東，一樣把棋建立在殘局功夫上，也一樣是本頁三位紀錄清白的棋手之一。',
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
-    '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
+    '許銀川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
   'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
     '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。這一冠讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
-    '赵鑫鑫對阮成保，2009年，出自他奪冠的那屆比賽。',
+    '趙鑫鑫對阮成保，2009年，出自他奪冠的那屆比賽。',
   'Born in Yongjia, Zhejiang, in 1984. He took the Chinese national title in 2010 and the world title in Jakarta the year after, and he was the first player to pass 2700 on the rating list.':
     '1984年生於浙江永嘉。2010年奪得全國個人賽冠軍，次年在雅加達奪得世界冠軍，他也是等級分榜上第一個突破2700分的棋手。',
   'He is better known outside the tournament hall for blindfold play. On 3 January 2011 he took nineteen boards at once against Liu Dahua’s record and beat it with twenty, ending a mark that had stood since February 1995; he went to twenty-two in 2013 and to twenty-six after that, which is where the Guinness entry sits. He drew a five-year ban in April 2026.':
     '在賽場之外，他更為人知的是盲棋。2011年1月3日，他為衝擊柳大華的紀錄一次盲戰十九臺，最終以二十臺破紀錄，終結了自1995年2月起保持的那個數字；2013年他打到二十二臺，此後又打到二十六臺，吉尼斯紀錄就停在這裡。2026年4月，他被處以五年禁賽。',
   'Jiang Chuan vs Lei Kam Fun, 2011, from the championship he won.':
-    '蒋川對李錦歡，2011年，出自他奪冠的那屆比賽。',
+    '蔣川對李錦歡，2011年，出自他奪冠的那屆比賽。',
   'Three world titles and four Chinese national ones, and ten consecutive years at the top of the world rating list. In May 2023 he became the first player to hold a live rating above 2800. Beijing called him 外星人, the alien, for arriving from outside the provincial team system and beating everyone anyway.':
     '三個世界冠軍，四個全國個人賽冠軍，連續十年位居世界等級分榜首。2023年5月，他成為第一個實時等級分突破2800的棋手。北京稱他外星人，因為他不是從省隊體系裡出來的，卻照樣把所有人都贏了。',
   'The Chinese Xiangqi Association banned him for life in September 2024 and revoked his grandmaster title. A court in Hangzhou convicted him a year later.':
@@ -10759,7 +10734,7 @@ const ZH_HANT: Record<string, string> = {
   'He was banned for life on 12 January 2025. His title year also produced the longest game in either of these articles, and the opponent is the reason to show it.':
     '2025年1月12日，他被終身禁賽。他奪冠的那一年也留下了這兩篇文章裡最長的一局棋，而選它的理由在於對手。',
   'Lại Lý Huynh vs Zheng Weitong, 2015. Two hundred and seventy-four plies, and the man who loses it here takes the world title himself ten years later.':
-    '賴理兄對郑惟桐，2015年。兩百七十四步，而在這裡落敗的人，十年後自己拿下了世界冠軍。',
+    '賴理兄對鄭惟桐，2015年。兩百七十四步，而在這裡落敗的人，十年後自己拿下了世界冠軍。',
   'From Wujiang in Suzhou, born 1981, playing from the age of seven and national youth champion at sixteen. He waited a long time for the senior title and took it in 2017 by beating the defending champion Wang Tianyi, becoming the nineteenth man to win the Chinese championship. The world title followed in Vancouver in 2019.':
     '蘇州吳江人，1981年生，七歲學棋，十六歲獲得全國少年冠軍。成年組的頭銜他等了很久，2017年他戰勝衛冕冠軍王天一奪得全國個人賽冠軍，成為第十九位全國冠軍。世界冠軍隨之而來，2019年在溫哥華。',
   'He was banned for life in April 2026.': '2026年4月，他被終身禁賽。',
@@ -10773,11 +10748,11 @@ const ZH_HANT: Record<string, string> = {
     '孟辰對賴理兄，2023年。未來的冠軍先輸給一位冠軍、然後自己成為冠軍，這是第二次。',
   'Why the national title is the harder one': '為什麼全國冠軍更難拿',
   'Lü Qin has five of the nineteen titles, Xu Yinchuan three and Wang Tianyi three, so eleven of the nineteen editions belong to three men. Nine of the eleven world champions also won the Chinese national championship. The two who did not are Meng Chen, who took the 2023 world title, and Lại Lý Huynh, who is Vietnamese and could never have entered the Chinese event.':
-    '十九個冠軍裡，吕钦佔五個，许银川三個，王天一三個，也就是說十九屆中有十一屆屬於三個人。十一位世界冠軍中有九位同時也拿過全國個人賽冠軍。沒拿過的兩位，一位是2023年奪冠的孟辰，另一位是賴理兄，他是越南人，本來就不可能參加中國的比賽。',
+    '十九個冠軍裡，呂欽佔五個，許銀川三個，王天一三個，也就是說十九屆中有十一屆屬於三個人。十一位世界冠軍中有九位同時也拿過全國個人賽冠軍。沒拿過的兩位，一位是2023年奪冠的孟辰，另一位是賴理兄，他是越南人，本來就不可能參加中國的比賽。',
   'That is the whole argument in one line. The world field is drawn from the same pool as the national field, minus most of it. China sends a small delegation, the rest of the entry is the strongest players from everywhere else, and for thirty-five years everywhere else was not close. A player who can win in Beijing can usually win in Singapore or Vancouver; the reverse has almost never been true.':
     '一句話就能說完整個論證。世錦賽的參賽者與全國賽出自同一個池子，只是被砍掉了絕大部分。中國只派出一支小型代表隊，其餘名額來自世界其他地方最強的棋手，而三十五年來，世界其他地方差得很遠。能在北京奪冠的棋手，通常也能在新加坡或溫哥華奪冠；反過來則幾乎從未發生。',
   'The comparison English readers reach for is the wrong way round. The world title here is closer to a strong invitational than to a world championship, and the national championship is the thing with the deep field, the long history and the names everyone knows. Lü Qin has five world titles and never finished a year as the best player in China; Hu Ronghua, who was that player for two decades, never won this event at all.':
-    '英文讀者習慣拿來類比的那組關係，方向正好反了。這裡的世界冠軍更接近一項高水準邀請賽，而不是世界錦標賽；全國個人賽才是那個參賽面深、歷史長、名字人人都認得的比賽。吕钦有五個世界冠軍，卻從未在哪一年成為中國最強的棋手；而二十年裡一直是那個人的胡荣华，根本沒有拿過這項賽事的冠軍。',
+    '英文讀者習慣拿來類比的那組關係，方向正好反了。這裡的世界冠軍更接近一項高水準邀請賽，而不是世界錦標賽；全國個人賽才是那個參賽面深、歷史長、名字人人都認得的比賽。呂欽有五個世界冠軍，卻從未在哪一年成為中國最強的棋手；而二十年裡一直是那個人的胡榮華，根本沒有拿過這項賽事的冠軍。',
   'The decade with a ruling on it': '被處罰覆蓋的那十年',
   'Every edition from 2009 to 2023 was won by a man who now has a published ruling against him. That is eight championships and six men: three banned for life, one convicted in court, one given five years, and one given six months.':
     '從2009年到2023年，每一屆的冠軍如今都揹著一份已公佈的處罰決定。這是八屆比賽、六個人：三人終身禁賽，一人被法院判罪，一人五年禁賽，一人六個月禁賽。',
@@ -10789,8 +10764,8 @@ const ZH_HANT: Record<string, string> = {
     '2025年的世錦賽9月在上海舉行，越南的賴理兄奪冠，他在27日的決賽中戰勝了中國的殷升。在這項賽事存在的三十五年裡，他是第一個把慢棋冠軍拿走的非中國棋手。',
   'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.':
     '賴理兄對馮家俊，2025年9月23日，決賽前四天。兩百一十七步，引擎認為直到第九十回合雙方仍然均勢。',
-  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
-    '把這兩件事連起來讀很有誘惑力，好像是禁賽替他打開了門。這個讀法太齊整了。他1990年生於永隆，2022年拿下世界快棋冠軍，2023年就打進過這項決賽，在加賽中輸給孟辰。他在本頁還出現過兩次，2015年輸給郑惟桐，2023年輸給孟辰，也就是說他在拿到任何東西之前已經來了十年。越南做了一代人的世界第二象棋強國，英文世界卻幾乎沒有注意到。',
+  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won the championship itself. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
+    '把這兩件事連起來讀很有誘惑力，好像是禁賽替他打開了門。這個讀法太齊整了。他1990年生於永隆，2022年拿下世界快棋冠軍，2023年就打進過這項決賽，在加賽中輸給孟辰。他在本頁還出現過兩次，2015年輸給鄭惟桐，2023年輸給孟辰，也就是說他在拿到這項冠軍之前已經來了十年。越南做了一代人的世界第二象棋強國，英文世界卻幾乎沒有注意到。',
   'Where that leaves the title': '這個頭銜的分量',
   'Nineteen editions, eleven winners, and a question that had the same answer for thirty-five years. The world title had never left China. Now it has, in the same decade the sport spent voiding its own results, and those two things are worth keeping separate.':
     '十九屆，十一位冠軍，還有一個三十五年來答案不變的問題。世界冠軍從未離開過中國。現在它離開了，而這十年正是這項運動忙著推翻自己成績的十年，這兩件事值得分開來看。',
@@ -10914,9 +10889,9 @@ const ZH_HANT: Record<string, string> = {
   'Crossed cannon': '過河炮',
   // The three tables, Traditional forks only. Player names and the all-digit
   // cells inherit from the Simplified spread above.
-  'Liu Dahua privately alleges engine cheating': '柳大华私下指認軟件作弊',
-  'The Hao Jichao and Wang Yuefei recordings appear online': '郝继超與王跃飞的通話錄音在網上流出',
-  'First sanctions: Wang Tianyi and Wang Yuefei, life': '首批處罰：王天一、王跃飞終身禁賽',
+  'Liu Dahua privately alleges engine cheating': '柳大華私下指認軟件作弊',
+  'The Hao Jichao and Wang Yuefei recordings appear online': '郝繼超與王躍飛的通話錄音在網上流出',
+  'First sanctions: Wang Tianyi and Wang Yuefei, life': '首批處罰：王天一、王躍飛終身禁賽',
   'Six grandmasters convicted in Hangzhou': '六名特級大師在杭州被判有罪',
   Life: '終身禁賽',
   Reprimand: '通報批評',
@@ -10942,7 +10917,7 @@ const ZH_HANT: Record<string, string> = {
   'The fullest timeline of the affair': '事件最完整的時間線',
   // Retune, 2026-10-21 (machine-drafted, not native-reviewed).
   'Wang Tianyi, China’s top-rated xiangqi player from 2014 to 2023, was banned for life in 2024 and sentenced to 2 years 9 months for bribery. Why he, Zheng Weitong and 47 others were sanctioned, the 12 games prosecutors named, and where the banned players are now.':
-    '王天一在2014到2023年間是中國等級分第一的象棋棋手，2024年被終身禁賽，後因行賄罪被判有期徒刑2年9個月。他、郑惟桐和另外47人為何受罰，檢方點名的12盤棋，以及被禁賽棋手的近況。',
+    '王天一在2014到2023年間是中國等級分第一的象棋棋手，2024年被終身禁賽，後因行賄罪被判有期徒刑2年9個月。他、鄭惟桐和另外47人為何受罰，檢方點名的12盤棋，以及被禁賽棋手的近況。',
   'No ruling names a game: the only games on record are 12 in the prosecution’s charges, as one newspaper reported them. Engine cheating is alleged in every account and charged in none.':
     '沒有任何處罰點名具體對局：有據可查的只有檢方指控中的12盤，且僅見於一家報紙的報導。各方說法都提到用軟件作弊，卻沒有一項指控涉及。',
   Ban: '禁賽',
@@ -10950,91 +10925,91 @@ const ZH_HANT: Record<string, string> = {
   'Wang\u00a0Tianyi 王天一': '王天一',
   'Bought and sold games': '買棋賣棋',
   '2\u00a0years 9\u00a0months': '2年9個月',
-  'Wang\u00a0Yuefei 王跃飞': '王跃飞',
+  'Wang\u00a0Yuefei 王跃飞': '王躍飛',
   Middleman: '中間人',
   '1\u00a0year': '1年',
-  'Hao\u00a0Jichao 郝继超': '郝继超',
+  'Hao\u00a0Jichao 郝继超': '郝繼超',
   'On the tapes': '錄音當事人',
   '4\u00a0years 3\u00a0months': '4年3個月',
   None: '無',
   'Hong\u00a0Zhi 洪智': '洪智',
   '2005 champion': '2005年冠軍',
   '2\u00a0years 7\u00a0months': '2年7個月',
-  'Zhao\u00a0Xinxin 赵鑫鑫': '赵鑫鑫',
+  'Zhao\u00a0Xinxin 赵鑫鑫': '趙鑫鑫',
   '4\u00a0years 9\u00a0months': '4年9個月',
-  'Xie\u00a0Jing 谢靖': '谢靖',
+  'Xie\u00a0Jing 谢靖': '謝靖',
   '2013 champion': '2013年冠軍',
   '2\u00a0years 6\u00a0months': '2年6個月',
   'Xu\u00a0Chao 徐超': '徐超',
   '2017 champion': '2017年冠軍',
-  'Liu\u00a0Dahua 柳大华': '柳大华',
+  'Liu\u00a0Dahua 柳大华': '柳大華',
   'Accused an official': '舉報官員',
   'Dang\u00a0Fei 党斐': '党斐',
-  'Backed Liu Dahua': '聲援柳大华',
+  'Backed Liu Dahua': '聲援柳大華',
   '3\u00a0years': '3年',
   'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating is gone: the association’s 2026 points ranking took effect on 30 January 2026 and replaced it with a rolling 52-week ranking. The association gave fairer measurement of players as the reason and did not mention the case.':
     '等級分不只是排名。在當時施行的制度下，它關係到出場費與對局費，也就成了職業棋手實際拿錢的依據。這帶來一種不對稱：等級分高的棋手贏下低分對手幾乎沒有收益，掉分卻損失慘重；低分棋手所得本就微薄，輸棋換來的報酬反而勝過戰績本身。棋手才溢在央視節目中舉例說，有贊助的團體賽裡，名將一盤或可得兩萬元，普通大師約四千元。這套等級分已不復存在：中國象棋協會的2026年積分排名於2026年1月30日生效，以按52週滾動計算的排名取而代之。協會給出的理由是更公平地衡量棋手，並未提及本案。',
   'From about 2012': '約2012年起',
   'The association opens a formal investigation': '中國象棋協會正式立案調查',
   'Wang Tianyi withdraws from the Asian Games, citing health': '王天一以身體原因退出亞運會',
-  'Liu Dahua accuses a sport official by name': '柳大华實名舉報一名體育官員',
+  'Liu Dahua accuses a sport official by name': '柳大華實名舉報一名體育官員',
   'Start date of the bans announced in April 2026': '2026年4月所公布禁賽的起算日',
   'National titles': '全國冠軍',
-  'Zheng\u00a0Weitong 郑惟桐': '郑惟桐',
+  'Zheng\u00a0Weitong 郑惟桐': '鄭惟桐',
   'Wang\u00a0Yang 汪洋': '汪洋',
-  'Shen\u00a0Peng 申鹏': '申鹏',
+  'Shen\u00a0Peng 申鹏': '申鵬',
   '8\u00a0years': '8年',
   'Wang\u00a0Kuo 王廓': '王廓',
   '7\u00a0years 6\u00a0months': '7年6個月',
-  'Sun\u00a0Yiyang 孙逸阳': '孙逸阳',
+  'Sun\u00a0Yiyang 孙逸阳': '孫逸陽',
   '7\u00a0years': '7年',
-  'Zhao\u00a0Jincheng 赵金成': '赵金成',
+  'Zhao\u00a0Jincheng 赵金成': '趙金成',
   '6\u00a0years': '6年',
-  'Jiang\u00a0Chuan 蒋川': '蒋川',
+  'Jiang\u00a0Chuan 蒋川': '蔣川',
   '5\u00a0years': '5年',
-  'Zhang\u00a0Shenhong 张申宏': '张申宏',
+  'Zhang\u00a0Shenhong 张申宏': '張申宏',
   '4\u00a0years 6\u00a0months': '4年6個月',
-  'Sun\u00a0Yongzheng 孙勇征': '孙勇征',
-  'Liu\u00a0Junda 刘俊达': '刘俊达',
+  'Sun\u00a0Yongzheng 孙勇征': '孫勇征',
+  'Liu\u00a0Junda 刘俊达': '劉俊達',
   'Yu\u00a0Yixiao 俞易肖': '俞易肖',
-  'Cheng\u00a0Ming 程鸣': '程鸣',
-  'Zheng\u00a0Yihong 郑一泓': '郑一泓',
+  'Cheng\u00a0Ming 程鸣': '程鳴',
+  'Zheng\u00a0Yihong 郑一泓': '鄭一泓',
   '4\u00a0years': '4年',
   'Li\u00a0Shaogeng 李少庚': '李少庚',
-  'Zhao\u00a0Dianyu 赵殿宇': '赵殿宇',
-  'Nie\u00a0Tiewen 聂铁文': '聂铁文',
-  'Wu\u00a0Junqiang 武俊强': '武俊强',
+  'Zhao\u00a0Dianyu 赵殿宇': '趙殿宇',
+  'Nie\u00a0Tiewen 聂铁文': '聶鐵文',
+  'Wu\u00a0Junqiang 武俊强': '武俊強',
   'Miao\u00a0Liming 苗利明': '苗利明',
   '2\u00a0years': '2年',
-  'Huang\u00a0Zhufeng 黄竹风': '黄竹风',
-  'Sun\u00a0Xinhao 孙昕昊': '孙昕昊',
-  'Yang\u00a0Ming 杨铭': '杨铭',
+  'Huang\u00a0Zhufeng 黄竹风': '黃竹風',
+  'Sun\u00a0Xinhao 孙昕昊': '孫昕昊',
+  'Yang\u00a0Ming 杨铭': '楊銘',
   'Xu\u00a0Chongfeng 徐崇峰': '徐崇峰',
-  'Zhao\u00a0Wei 赵玮': '赵玮',
-  'Lu\u00a0Weitao 陆伟韬': '陆伟韬',
-  'Yang\u00a0Hui 杨辉': '杨辉',
-  'Li\u00a0Xiaolong 李小龙': '李小龙',
-  'Zheng\u00a0Yuhang 郑宇航': '郑宇航',
-  'Ma\u00a0Tianyue 马天越': '马天越',
-  'Li\u00a0Aidong 李艾东': '李艾东',
+  'Zhao\u00a0Wei 赵玮': '趙瑋',
+  'Lu\u00a0Weitao 陆伟韬': '陸偉韜',
+  'Yang\u00a0Hui 杨辉': '楊輝',
+  'Li\u00a0Xiaolong 李小龙': '李小龍',
+  'Zheng\u00a0Yuhang 郑宇航': '鄭宇航',
+  'Ma\u00a0Tianyue 马天越': '馬天越',
+  'Li\u00a0Aidong 李艾东': '李艾東',
   'Wang\u00a0Yuhang 王宇航': '王宇航',
   '6\u00a0months': '6個月',
-  'Zhao\u00a0Yanghe 赵旸鹤': '赵旸鹤',
+  'Zhao\u00a0Yanghe 赵旸鹤': '趙暘鶴',
   'Cui\u00a0Ge 崔革': '崔革',
   'Meng\u00a0Chen 孟辰': '孟辰',
-  'Xie\u00a0Kui 谢岿': '谢岿',
-  'Zhao\u00a0Ziyu 赵子雨': '赵子雨',
+  'Xie\u00a0Kui 谢岿': '謝巋',
+  'Zhao\u00a0Ziyu 赵子雨': '趙子雨',
   'Cao\u00a0Yanlei 曹岩磊': '曹岩磊',
-  'Huang\u00a0Wenjun 黄文俊': '黄文俊',
-  'Cai\u00a0Youguang 蔡佑广': '蔡佑广',
-  'Liang\u00a0Yunlong 梁运龙': '梁运龙',
+  'Huang\u00a0Wenjun 黄文俊': '黃文俊',
+  'Cai\u00a0Youguang 蔡佑广': '蔡佑廣',
+  'Liang\u00a0Yunlong 梁运龙': '梁運龍',
   'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. The end dates that are public all come from the April 2026 batch: Xu Chongfeng’s two-year ban ran out on 23 July 2026, and Jiang Chuan’s five years, announced in that batch and not in January, run to 23 July 2029.':
-    '引發此案的錄音出自郝继超之手，他被禁賽四年三個月，且從未被刑事追訴，所受的只有體育處罰。已公開的截止日期全部來自2026年4月那一批：徐崇峰的兩年禁賽已於2026年7月23日期滿；蒋川的五年禁賽是在那一批而非1月公布的，至2029年7月23日止。',
+    '引發此案的錄音出自郝繼超之手，他被禁賽四年三個月，且從未被刑事追訴，所受的只有體育處罰。已公開的截止日期全部來自2026年4月那一批：徐崇峰的兩年禁賽已於2026年7月23日期滿；蔣川的五年禁賽是在那一批而非1月公布的，至2029年7月23日止。',
   'Why Wang Tianyi was banned for life': '王天一為何被終身禁賽',
   'The association banned Wang Tianyi for life on 19 September 2024, in its first notice, together with Wang Yuefei, for buying and selling games, and revoked his titles. The notice describes the conduct as long-running and frequent and names no game. A year later the Hangzhou court convicted him of bribery and sentenced him to 2 years 9 months. He pleaded guilty.':
-    '2024年9月19日，中國象棋協會在第一份通報中以買棋賣棋為由，對王天一與王跃飞作出終身禁賽，並撤銷了他的稱號。通報稱相關行為長期、頻繁，但未點名任何一盤棋。一年後，杭州的法院以行賄罪判處他有期徒刑2年9個月。他認罪。',
+    '2024年9月19日，中國象棋協會在第一份通報中以買棋賣棋為由，對王天一與王躍飛作出終身禁賽，並撤銷了他的稱號。通報稱相關行為長期、頻繁，但未點名任何一盤棋。一年後，杭州的法院以行賄罪判處他有期徒刑2年9個月。他認罪。',
   'He had been China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
-    '他在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
+    '他在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王躍飛。',
   'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them.':
     '每收一元，付出八元。他不是賣掉本就要輸的棋的弱手，而是最強的棋手在買棋。',
   'The 12 games prosecutors say were bought or sold': '檢方所稱被買賣的12盤棋',
@@ -11046,29 +11021,29 @@ const ZH_HANT: Record<string, string> = {
   'Opponent he paid to lose': '收他錢輸棋的對手',
   Yuan: '金額（元）',
   'National Championship': '全國個人賽',
-  'Sun Yiyang': '孙逸阳',
-  'Shen Peng': '申鹏',
-  'Yang Guanlin Cup': '杨官璘盃',
-  'Xie Jing*': '谢靖*',
+  'Sun Yiyang': '孫逸陽',
+  'Shen Peng': '申鵬',
+  'Yang Guanlin Cup': '楊官璘盃',
+  'Xie Jing*': '謝靖*',
   'Country Garden Cup': '碧桂園盃',
-  'Xie Jing, Hong Zhi, Zhao Xinxin*': '谢靖、洪智、赵鑫鑫*',
+  'Xie Jing, Hong Zhi, Zhao Xinxin*': '謝靖、洪智、趙鑫鑫*',
   'Han Xin Cup': '韓信盃',
-  'Cheng Ming; Xie Jing*': '程鸣；谢靖*',
+  'Cheng Ming; Xie Jing*': '程鳴；謝靖*',
   'Xu Chongfeng': '徐崇峰',
   'Men’s Team League': '象甲聯賽',
-  'Nie Tiewen, Liu Junda*': '聂铁文、刘俊达*',
-  'Nie Tiewen; Liu Junda*': '聂铁文；刘俊达*',
+  'Nie Tiewen, Liu Junda*': '聶鐵文、劉俊達*',
+  'Nie Tiewen; Liu Junda*': '聶鐵文；劉俊達*',
   'Huamu Cup': '花木盃',
   'Bought: he paid the opponent. Ten games, ¥525,000 in all. * Paid through Wang Yuefei.':
-    '買棋：他付錢給對手。共十盤，合計52.5萬元。* 經由王跃飞支付。',
+    '買棋：他付錢給對手。共十盤，合計52.5萬元。* 經由王躍飛支付。',
   'Opponent who paid him to lose': '付錢讓他輸棋的對手',
   'Wenling Cup, semi-final': '溫嶺盃半決賽',
   'Sold: the opponent paid him, and won. Two games, ¥116,000. Both tables are the prosecution’s charges as reported by the Economic Observer, 13 June 2025; no ruling or published judgment confirms any line.':
     '賣棋：對手付錢給他，並贏下了棋。共兩盤，11.6萬元。兩張表都是《經濟觀察報》2025年6月13日所報導的檢方指控，沒有任何處罰或公開的判決書證實其中任何一行。',
   'Ten of the lines have Wang Tianyi paying, and they add up to ¥525,000 of the ¥942,000 he was charged with giving; the reporting does not itemise the rest. The two lines where he was paid, ¥100,000 from Xu Chao and ¥16,000 from Zhao Xinxin, add up to exactly the ¥116,000 he was charged with taking. Xu Chao won that 2017 championship. Every player named in the list is also on the association’s sanctions list above.':
-    '其中十行是王天一付錢，合計52.5萬元，是他被控行賄總額94.2萬元的一部分；其餘部分報導沒有逐筆列出。他收錢的兩行，徐超的10萬元和赵鑫鑫的1.6萬元，加起來正好是他被控受賄的11.6萬元。那屆2017年全國個人賽的冠軍正是徐超。清單中點到的每一位棋手，也都在上文協會的處罰名單上。',
+    '其中十行是王天一付錢，合計52.5萬元，是他被控行賄總額94.2萬元的一部分；其餘部分報導沒有逐筆列出。他收錢的兩行，徐超的10萬元和趙鑫鑫的1.6萬元，加起來正好是他被控受賄的11.6萬元。那屆2017年全國個人賽的冠軍正是徐超。清單中點到的每一位棋手，也都在上文協會的處罰名單上。',
   'The same report describes the first game. Sun Yiyang, then 17, had Red and was ahead for a time, then made a run of errors and resigned at move 88; Wang Tianyi went on to win that 2012 championship. The move-by-move account is an unnamed observer’s, quoted by the paper.':
-    '同一篇報導描述了第一盤棋。時年17歲的孙逸阳執紅，一度佔優，隨後連續失誤，在第88回合認負；王天一最終奪得那屆2012年全國個人賽冠軍。逐著的描述出自一位未具名的觀察者，由該報引述。',
+    '同一篇報導描述了第一盤棋。時年17歲的孫逸陽執紅，一度佔優，隨後連續失誤，在第88回合認負；王天一最終奪得那屆2012年全國個人賽冠軍。逐著的描述出自一位未具名的觀察者，由該報引述。',
   'All of it rests on one newspaper. We read the report in two reprints, on Sina Finance and Tencent News, which agree on most lines; the two league seasons appear only in the Sina reprint. We have not seen the list in any other outlet’s account of the hearing. Wang Tianyi pleaded guilty to the charge, but the verdict as reported does not say which of these games the court accepted.':
     '這一切都只依據一家報紙。我們讀的是新浪財經和騰訊新聞上的兩份轉載，大部分條目一致；兩個聯賽賽季只出現在新浪的轉載中。在其他媒體對這次庭審的報導裡，我們沒有見到這份清單。王天一對指控認罪，但見報的判決並未說明法院認定了其中哪幾盤。',
   'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the rating itself was replaced when the 2026 points ranking took effect on 30 January 2026.':
@@ -11084,22 +11059,22 @@ const ZH_HANT: Record<string, string> = {
   'The January 2025 batch of 41': '2025年1月的41人處罰',
   'Hong Zhi’s refusal to plead guilty': '洪智不認罪',
   'Appearance fees and the motives': '出場費與動機',
-  'Liu Dahua’s account; how the tapes spread': '柳大华的說法；錄音如何流傳',
+  'Liu Dahua’s account; how the tapes spread': '柳大華的說法；錄音如何流傳',
   'The 12 charged games, 13 June 2025': '被指控的12盤棋，2025年6月13日',
   'Economic Observer, via [Sina](https://cj.sina.com.cn/articles/view/1641561812/61d83ed402701a2aa) and [Tencent](https://news.qq.com/rain/a/20250613A02A2500)':
     '《經濟觀察報》，經[新浪](https://cj.sina.com.cn/articles/view/1641561812/61d83ed402701a2aa)和[騰訊](https://news.qq.com/rain/a/20250613A02A2500)轉載',
   'Wang Tianyi’s apology, 21 October 2025': '王天一的致歉，2025年10月21日',
   '[Jiemian](https://www.jiemian.com/article/13494543.html)':
     '[界面新聞](https://www.jiemian.com/article/13494543.html)',
-  'Both notices, with Jiang Chuan’s dates': '兩份通報及蒋川的禁賽日期',
+  'Both notices, with Jiang Chuan’s dates': '兩份通報及蔣川的禁賽日期',
   '[Xinhua](https://www.news.cn/sports/20250112/cdc48783bc344002b69e179d7ae2fde1/c.html), [Yangtse Evening Post](https://www.yzwb.net/news/txs/202604/t20260413_341537.html)':
     '[新華社](https://www.news.cn/sports/20250112/cdc48783bc344002b69e179d7ae2fde1/c.html)、[揚子晚報](https://www.yzwb.net/news/txs/202604/t20260413_341537.html)',
   'The 2026 points ranking and its reason': '2026年積分排名及其理由',
   '[Beijing Daily](https://news.bjd.com.cn/2026/02/02/11561527.shtml)':
     '[北京日報](https://news.bjd.com.cn/2026/02/02/11561527.shtml)',
   'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, the 12 games are one newspaper’s report of the charges, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
-    '本頁有幾處依據較薄，正文中已在相應位置註明：六項刑期中有五項源自檢方而非已公開的判決書；那12盤棋來自一家報紙對指控的報導；柳大华的全部證言與许银川那句引述均為單一來源；錄音流入網絡的經過出自一家媒體的調查；官員去職並未被官方與本案相聯繫；而沒有成績被取消這一點，是從無人提及推出的，並非哪份處罰寫明。',
-  'Why Wang Tianyi 王天一 and Zheng Weitong 郑惟桐 Were Banned': '王天一、郑惟桐為何被終身禁賽',
+    '本頁有幾處依據較薄，正文中已在相應位置註明：六項刑期中有五項源自檢方而非已公開的判決書；那12盤棋來自一家報紙對指控的報導；柳大華的全部證言與許銀川那句引述均為單一來源；錄音流入網絡的經過出自一家媒體的調查；官員去職並未被官方與本案相聯繫；而沒有成績被取消這一點，是從無人提及推出的，並非哪份處罰寫明。',
+  'Why Wang Tianyi 王天一 and Zheng Weitong 郑惟桐 Were Banned': '王天一、鄭惟桐為何被終身禁賽',
   // Review refinements, 2026-10-19.
   'Sign in to request full-game analysis, then try different moves from your own game.':
     '登錄後請求整盤分析，再從自己的對局中嘗試不同著法。',
@@ -12712,8 +12687,8 @@ const ZH_HANT: Record<string, string> = {
   'Corrected how a face-down piece is described.': '更正了對暗子走法的說明。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
-  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
-    '刪去了赵鑫鑫是最年輕世界冠軍的說法；郑惟桐 2015 年奪冠時更年輕。',
+  'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
+    '更正了一句漏掉賴理兄 2022 年世界快棋冠軍的話。',
   'Replaced the sample game with a game played against the engine on the site.':
     '範例對局換成了一盤在本站與引擎下的對局。',
   'Added a sample game from the site.': '新增一盤本站的範例對局。',
@@ -13095,9 +13070,72 @@ const ZH_HANT: Record<string, string> = {
   "AB-JChess is open source under the GPL-3.0 licence at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). The network is downloaded from the authors' own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu (Kouza). Laoxu trains AB-JChess's networks and, for this release, tested four ways of searching a reveal and kept the best; he and Huorongrong worked out together the small, fast network it plays with. And thank you, Devin O'Keefe, for the code the new release stands on.":
     "AB-JChess 以 GPL-3.0 授權開源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。每次建置網站時，神經網路都從作者自己的發布版本下載，我們不另行託管。感謝 Huorongrong 和 Laoxu（Kouza）。Laoxu 負責訓練 AB-JChess 的神經網路，這次測試了四種翻子搜尋方法，保留了最好的一種；他與 Huorongrong 共同設計了這個小而快的網路。也感謝 Devin O'Keefe，新版本基於他提供的程式碼開發。",
   'TOP BOT AGAIN': '重回最強電腦',
-  // Mainland players' names stay Simplified (they fall through the spread); the rest of this line converts.
+  // Names the articles write the same way in both scripts until 2026-11-06, when
+  // the rule became that a name follows the page's script. Each entry here would
+  // otherwise fall through the spread and show Simplified on a Traditional page.
+  'Zheng Yichen': '鄭奕宸',
+  'Lu Hao': '呂皓',
+  'Liu Zehao': '劉澤昊',
+  'Zhang Rui': '張瑞',
+  'Zuo Wenjing 左文静': '左文靜',
+  'Zuo Wenjing': '左文靜',
+  'Huang Leilei': '黃蕾蕾',
+  'Zhang Jiawen': '張佳雯',
+  'Zhang Tingting': '張婷婷',
+  'Wu Dan': '吳丹',
+  'Yang Guanlin 杨官璘, 1956': '楊官璘，1956',
+  'Li Yiting 李义庭, 1958': '李義庭，1958',
+  'Hu Ronghua 胡荣华, 1960': '胡榮華，1960',
+  'Liu Dahua 柳大华, 1980': '柳大華，1980',
+  'Li Laiqun 李来群, 1982': '李來群，1982',
+  'Lü Qin 吕钦, 1986': '呂欽，1986',
+  'Xu Tianhong 徐天红, 1989': '徐天紅，1989',
+  'Zhao Guorong 赵国荣, 1990': '趙國榮，1990',
+  'Xu Yinchuan 许银川, 1993': '許銀川，1993',
+  'Tao Hanming 陶汉明, 1994': '陶漢明，1994',
+  'Yu Youhua 于幼华, 2002': '于幼華，2002',
+  'Sun Yongzheng 孙勇征, 2011': '孫勇征，2011',
+  'Yang Guanlin 杨官璘': '楊官璘',
+  'Li Yiting 李义庭': '李義庭',
+  'Hu Ronghua 胡荣华': '胡榮華',
+  'Liu Dahua 柳大华': '柳大華',
+  'Li Laiqun 李来群': '李來群',
+  'Lü Qin 吕钦': '呂欽',
+  'Xu Tianhong 徐天红': '徐天紅',
+  'Zhao Guorong 赵国荣': '趙國榮',
+  'Xu Yinchuan 许银川': '許銀川',
+  'Tao Hanming 陶汉明': '陶漢明',
+  'Yu Youhua 于幼华': '于幼華',
+  'Zhao Xinxin 赵鑫鑫': '趙鑫鑫',
+  'Jiang Chuan 蒋川': '蔣川',
+  'Sun Yongzheng 孙勇征': '孫勇征',
+  'Xie Jing 谢靖': '謝靖',
+  'Zheng Weitong 郑惟桐': '鄭惟桐',
+  'Hu Ronghua': '胡榮華',
+  'Li Laiqun': '李來群',
+  'Li Yiting': '李義庭',
+  'Liu Dahua': '柳大華',
+  'Lü Qin': '呂欽',
+  'Su Yilin': '蘇奕霖',
+  'Sun Yongzheng': '孫勇征',
+  'Tao Hanming': '陶漢明',
+  'Xu Tianhong': '徐天紅',
+  'Xu Yinchuan': '許銀川',
+  'Yang Guanlin': '楊官璘',
+  'Yu Youhua': '于幼華',
+  'Zhao Guorong': '趙國榮',
+  'Lü Qin 吕钦, 1990': '呂欽，1990',
+  'Zhao Guorong 赵国荣, 1991': '趙國榮，1991',
+  'Xu Tianhong 徐天红, 1993': '徐天紅，1993',
+  'Xu Yinchuan 许银川, 1999': '許銀川，1999',
+  'Zhao Xinxin 赵鑫鑫, 2009': '趙鑫鑫，2009',
+  'Jiang Chuan 蒋川, 2011': '蔣川，2011',
+  'Zheng Weitong 郑惟桐, 2015': '鄭惟桐，2015',
+  'Zhao Xinxin': '趙鑫鑫',
+  'Jiang Chuan': '蔣川',
+  'Zheng Weitong': '鄭惟桐',
   'Tang Dan. Card photo: Liu Cheng / Yangcheng Evening News, at the 2026 Five Rams Cup.':
-    '唐丹。卡片照片：刘程／《羊城晚報》，攝於 2026 年五羊杯。',
+    '唐丹。卡片照片：劉程／《羊城晚報》，攝於 2026 年五羊杯。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

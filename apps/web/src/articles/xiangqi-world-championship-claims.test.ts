@@ -170,8 +170,5 @@ describe('the world championship article states the record correctly', () => {
     expect(prose).toContain('thirty-five years the event has existed');
     const huynh = WORLD_CHAMPIONS.find((c) => c.name === 'Lại Lý Huynh');
     expect(huynh?.years).toEqual([2025]);
-    expect(huynh, 'the first non-mainland winner must declare his script').toHaveProperty(
-      'zhScript',
-    );
   });
 });
