@@ -75,15 +75,19 @@ describe('hidden Gomoku rules page', () => {
     }
   });
 
-  it('keeps the hidden rewrite directly readable in English during review', () => {
+  it('keeps the hidden page directly readable in every language', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
     expect(findArticle('gomoku')).toMatchObject({ kind: 'rules', status: 'published' });
     expect(canonicalArticleBase('gomoku')).toBe('rules');
-    for (const locale of [undefined, 'zh-Hans', 'zh-Hant'] as const) {
+    for (const [locale, title] of [
+      [undefined, 'Gomoku Rules'],
+      ['zh-Hans', '五子棋规则'],
+      ['zh-Hant', '五子棋規則'],
+    ] as const) {
       const page = buildArticlePage('gomoku', locale);
       expect(page.dataset.articleSlug).toBe('gomoku');
-      expect(page.querySelector('h1')?.textContent).toBe('Gomoku Rules');
+      expect(page.querySelector('h1')?.textContent).toBe(title);
       expect(page.querySelectorAll('svg[role="img"]')).toHaveLength(3);
       expect(page.querySelector('a[href*="gameSpecId=gomoku"]')).toBeNull();
     }
@@ -133,11 +137,13 @@ describe('hidden Gomoku rules page', () => {
       expect(articleIsIndexable('gomoku')).toBe(false);
       expect(rulesHrefForGameSpec('gomoku')).toBeNull();
       const prefix = locale ? `/${locale.toLowerCase()}` : '';
-      const href = '/rules/gomoku';
+      const href = `${prefix}/rules/gomoku`;
       const landing = buildRulesIndex(locale);
       const tile = landing.querySelector(`.rules-landing-tile[href="${href}"]`);
       expect(tile).not.toBeNull();
-      expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe('Gomoku');
+      expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe(
+        locale ? '五子棋' : 'Gomoku',
+      );
       for (const surface of [
         landing,
         buildArticlePage('xiangqi', locale),
@@ -167,8 +173,8 @@ describe('hidden Gomoku rules page', () => {
     expect(slugs[slugs.indexOf('xiangqi-mahjong-32') + 1]).toBe('gomoku');
   });
 
-  it('holds localized publication until the English rewrite is approved', () => {
-    expect(isArticleTranslationPublished('gomoku')).toBe(false);
+  it('publishes the Chinese pages now the English is signed off', () => {
+    expect(isArticleTranslationPublished('gomoku')).toBe(true);
   });
 });
 describe('Gomoku rules diagrams match the kernel and screened pool', () => {
@@ -228,14 +234,14 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
       'Five in a row wins',
       'Draws',
       'Dealt openings',
-      'Why openings are dealt',
-      'How openings are screened',
+      'Names and history',
+      'Common questions',
       'Play on Mistboard',
     ]);
     expect(
       page.querySelector('a[href="#black-wins-a-perfect-game-from-the-empty-board"]'),
     ).toBeNull();
-    expect(page.textContent).toContain('as the solved result explains');
+    expect(page.textContent).toContain('Black wins with perfect play from an empty 15×15 board');
     expect(
       articleProse(article)
         .map(({ text }) => text)
@@ -244,7 +250,7 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     for (const link of page.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
       expect(page.querySelector(link.hash)).not.toBeNull();
     }
-    expect(article.updatedAt).toBe('2026-11-05');
+    expect(article.updatedAt).toBe('2026-11-06');
     expect(article.updateNote).toBeTruthy();
     const wordCount = articleProse(article)
       .filter(({ path }) => path !== 'summary')

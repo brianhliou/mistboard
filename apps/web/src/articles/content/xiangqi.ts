@@ -29,9 +29,9 @@ export const xiangqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
-    updatedAt: '2026-11-03',
+    updatedAt: '2026-11-06',
     updateNote:
-      'Corrected the no-capture draw limit to 120 plies, or 60 moves by each player. Older games keep their original rule.',
+      'Corrected the Chinese wording of the repetition rule.',
     audience:
       'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },

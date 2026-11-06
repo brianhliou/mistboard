@@ -1257,8 +1257,12 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     h2.id = uniqueId(section.heading, usedIds, headingIndex++);
     body.append(h2);
     for (const node of renderSectionBody(section, articleLang)) {
-      // Gomoku's closing play row uses the header's labels, locale and links.
-      if (base.slug === 'gomoku' && node.classList.contains('article-cta-row')) {
+      // These closing play rows use the header's labels, locale and links, so
+      // a bot button appears only where the variant really offers a bot.
+      if (
+        (base.slug === 'gomoku' || base.slug === 'three-kingdoms-banqi') &&
+        node.classList.contains('article-cta-row')
+      ) {
         const playCta = buildRulesPlayCta(base.slug, article.title, locale);
         if (playCta) body.append(playCta);
         continue;

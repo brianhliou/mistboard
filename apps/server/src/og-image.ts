@@ -513,8 +513,7 @@ const BOARD_POSITION_CARDS: Record<
     localized: true,
     wrapTitle: true,
   },
-  // English only until the rewritten rules are reviewed and localized.
-  gomoku: { board: gomokuRulesCardBoard() },
+  gomoku: { board: gomokuRulesCardBoard(), localized: true },
 };
 
 /** The page languages a card has its own version for, as route prefixes. */
