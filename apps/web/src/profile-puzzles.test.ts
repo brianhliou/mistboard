@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadAppI18nDomains } from './i18n/catalog.js';
 import { mountProfile } from './profile.js';
+import type { PublicPuzzleRatingPoint } from './profile-puzzles.js';
 
 type Attempt = {
   puzzleId: string;
@@ -23,6 +24,20 @@ function attempt(index: number, overrides: Partial<Attempt> = {}): Attempt {
     ratingAfter: 1510 + index * 10,
     ratingDelta: 10,
     createdAt: new Date(Date.UTC(2026, 9, index + 1, 12)).toISOString(),
+    ...overrides,
+  };
+}
+
+function point(
+  index: number,
+  overrides: Partial<PublicPuzzleRatingPoint> = {},
+): PublicPuzzleRatingPoint {
+  return {
+    variant: 'xiangqi',
+    createdAt: new Date(Date.UTC(2026, 9, index + 1, 12)).toISOString(),
+    ratingBefore: 1500 + index * 10,
+    ratingAfter: 1510 + index * 10,
+    startsSegment: index === 0,
     ...overrides,
   };
 }
@@ -54,10 +69,12 @@ function mockProfile(
   isViewer = true,
   games: ReturnType<typeof game>[] = [],
   gamesTotal = games.length,
+  publicHistory: () => Response | Promise<Response> = () => json({ points: [] }),
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = new URL(String(input), 'http://localhost');
     if (url.pathname === '/api/puzzles/history') return history(url);
+    if (url.pathname === '/api/users/solver/puzzle-rating-history') return publicHistory();
     if (url.pathname.endsWith('/profile')) {
       return json({
         profile: {
@@ -125,20 +142,31 @@ const rowPills = (row: HTMLElement | undefined) =>
         : 'other',
   ]);
 
-describe('private puzzle history in the profile spotlight (#704, #827)', () => {
+describe('public puzzle chart and private Activity rows (#704, #827)', () => {
   it('selects puzzle history in the one spotlight with ranges without filtering games (#827)', async () => {
     const recent = new Date();
     recent.setDate(recent.getDate() - 5);
     const older = new Date(recent);
     older.setMonth(older.getMonth() - 4);
-    const fetchSpy = mockProfile(() =>
-      json({
-        attempts: [
-          attempt(0, { createdAt: older.toISOString() }),
-          attempt(1, { createdAt: recent.toISOString() }),
-        ],
-        nextOffset: null,
-      }),
+    const fetchSpy = mockProfile(
+      () =>
+        json({
+          attempts: [
+            attempt(0, { createdAt: older.toISOString() }),
+            attempt(1, { createdAt: recent.toISOString() }),
+          ],
+          nextOffset: null,
+        }),
+      true,
+      [],
+      0,
+      () =>
+        json({
+          points: [
+            point(0, { createdAt: older.toISOString() }),
+            point(1, { createdAt: recent.toISOString() }),
+          ],
+        }),
     );
     const root = await mount();
     const row = root.querySelector<HTMLButtonElement>('button.profile-puzzle-row');
@@ -185,23 +213,32 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
 
   it('loads existing history across API pages and plots ratings at their actual dates', async () => {
     const requests: URL[] = [];
-    mockProfile((url) => {
-      requests.push(url);
-      return json(
-        url.searchParams.get('offset') === '0'
-          ? { attempts: [attempt(0), attempt(1)], nextOffset: 2 }
-          : {
-              attempts: [attempt(9, { solved: false, ratingAfter: 1550, ratingDelta: -40 })],
-              nextOffset: null,
-            },
-      );
-    });
+    mockProfile(
+      (url) => {
+        requests.push(url);
+        return json(
+          url.searchParams.get('offset') === '0'
+            ? { attempts: [attempt(0), attempt(1)], nextOffset: 2 }
+            : {
+                attempts: [attempt(9, { solved: false, ratingAfter: 1550, ratingDelta: -40 })],
+                nextOffset: null,
+              },
+        );
+      },
+      true,
+      [],
+      0,
+      () =>
+        json({
+          points: [point(0), point(1), point(9, { ratingAfter: 1550, startsSegment: true })],
+        }),
+    );
     const root = await mount();
     selectPuzzleRating(root);
     await vi.waitFor(() =>
       expect(root.querySelectorAll('.profile-rating-chart-dot')).toHaveLength(3),
     );
-    // One walk of the history serves both the chart and the Activity rows.
+    // Private Activity pagination is independent of the public chart read.
     expect(requests.map((url) => url.searchParams.get('offset'))).toEqual(['0', '2']);
     expect(requests.every((url) => url.searchParams.get('variant') === 'xiangqi')).toBe(true);
     expect(requests.every((url) => !url.searchParams.has('userId'))).toBe(true);
@@ -249,16 +286,34 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
   });
 
   it('plots one point per day at the day closing rating', async () => {
-    mockProfile(() =>
-      json({
-        attempts: [
-          attempt(0, { createdAt: at(1, 10) }),
-          attempt(1, { createdAt: at(1, 11), solved: false, ratingAfter: 1490, ratingDelta: -30 }),
-          attempt(2, { createdAt: at(1, 12), ratingBefore: 1490, ratingAfter: 1505 }),
-          attempt(3, { createdAt: at(3, 12), ratingBefore: 1505, ratingAfter: 1540 }),
-        ],
-        nextOffset: null,
-      }),
+    mockProfile(
+      () =>
+        json({
+          attempts: [
+            attempt(0, { createdAt: at(1, 10) }),
+            attempt(1, {
+              createdAt: at(1, 11),
+              solved: false,
+              ratingAfter: 1490,
+              ratingDelta: -30,
+            }),
+            attempt(2, { createdAt: at(1, 12), ratingBefore: 1490, ratingAfter: 1505 }),
+            attempt(3, { createdAt: at(3, 12), ratingBefore: 1505, ratingAfter: 1540 }),
+          ],
+          nextOffset: null,
+        }),
+      true,
+      [],
+      0,
+      () =>
+        json({
+          points: [
+            point(0, { createdAt: at(1, 10) }),
+            point(1, { createdAt: at(1, 11), ratingAfter: 1490 }),
+            point(2, { createdAt: at(1, 12), ratingBefore: 1490, ratingAfter: 1505 }),
+            point(3, { createdAt: at(3, 12), ratingBefore: 1505, ratingAfter: 1540 }),
+          ],
+        }),
     );
     const root = await mount();
     selectPuzzleRating(root);
@@ -288,16 +343,21 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
   });
 
   it('keeps legacy and unrated results without inventing ratings or bridging missing snapshots', async () => {
-    mockProfile(() =>
-      json({
-        attempts: [
-          attempt(0),
-          attempt(1, { ratingBefore: null, ratingAfter: null, ratingDelta: null }),
-          attempt(2, { ratingBefore: 1510 }),
-          attempt(3, { rated: false, ratingBefore: 1530, ratingAfter: 1530, ratingDelta: 0 }),
-        ],
-        nextOffset: null,
-      }),
+    mockProfile(
+      () =>
+        json({
+          attempts: [
+            attempt(0),
+            attempt(1, { ratingBefore: null, ratingAfter: null, ratingDelta: null }),
+            attempt(2, { ratingBefore: 1510 }),
+            attempt(3, { rated: false, ratingBefore: 1530, ratingAfter: 1530, ratingDelta: 0 }),
+          ],
+          nextOffset: null,
+        }),
+      true,
+      [],
+      0,
+      () => json({ points: [point(0), point(2, { ratingBefore: 1510, startsSegment: true })] }),
     );
     const root = await mount();
     selectPuzzleRating(root);
@@ -305,7 +365,7 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
       expect(root.querySelectorAll('.profile-rating-chart-dot')).toHaveLength(2),
     );
     expect(root.querySelectorAll('.profile-rating-chart-line')).toHaveLength(2);
-    expect(root.querySelector('.profile-rating-spotlight')?.textContent).toContain('Older results');
+    expect(root.querySelector('.profile-rating-spotlight')?.textContent).not.toContain('Only you');
   });
 
   it('aggregates attempts into one Activity row per day, newest first, with zero games', async () => {
@@ -375,18 +435,41 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
     ]);
   });
 
-  it('never requests the owner history while viewing somebody else', async () => {
+  it('opens the public chart for visitors without requesting private attempts', async () => {
     const history = vi.fn(() => json({ attempts: [attempt(0)], nextOffset: null }));
-    mockProfile(history, false, [game('g-1', at(2))]);
+    const publicHistory = vi.fn(() => json({ points: [point(0)] }));
+    const fetchSpy = mockProfile(history, false, [game('g-1', at(2))], 1, publicHistory);
     const root = await mount();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.profile-rating-chart-dot')).toHaveLength(1),
+    );
     expect(history).not.toHaveBeenCalled();
-    expect(root.querySelector('button.profile-puzzle-row')).toBeNull();
-    expect(root.querySelector('.profile-puzzle-row')?.tagName).toBe('DIV');
-    expect(root.querySelector('.profile-puzzle-row')?.hasAttribute('aria-pressed')).toBe(false);
+    expect(
+      fetchSpy.mock.calls.some(([url]) => String(url).startsWith('/api/puzzles/history')),
+    ).toBe(false);
+    expect(publicHistory).toHaveBeenCalledOnce();
+    expect(root.querySelector('button.profile-puzzle-row')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(root.querySelector('.profile-chart-variant')?.textContent).toContain('Puzzles');
+    expect(root.textContent).not.toContain('Only you can see');
     expect(root.querySelector('.profile-puzzle-progress')).toBeNull();
     expect(activityRows(root).map(rowTitle)).toEqual(['Played 1 Xiangqi game']);
     expect(root.querySelector('.profile-activity-panel')?.textContent).not.toContain('puzzle');
+    const chart = root.querySelector('.profile-rating-chart')!;
+    expect(chart.querySelector('a')).toBeNull();
+    expect(chart.outerHTML).not.toMatch(/puzzleId|xq-0|solved|result|roomId/);
+    // A point remains a tooltip target without an attempt link or identifier.
+    chart
+      .querySelector('.profile-rating-chart-dot')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(window.location.pathname).toBe('/@/solver');
+    expect(chart.querySelector('title')?.textContent).toContain('1500 → 1510');
+    selectPuzzleRating(root);
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.profile-rating-chart-dot')).toHaveLength(1),
+    );
+    expect(publicHistory).toHaveBeenCalledOnce();
   });
 
   it('uses the shared chart empty state when there are no saved attempts', async () => {
@@ -405,29 +488,26 @@ describe('private puzzle history in the profile spotlight (#704, #827)', () => {
     expect(root.querySelector('.profile-activity-panel .landing-games-empty')).not.toBeNull();
   });
 
-  it('makes failed history requests retryable and fills the Activity rows on retry', async () => {
-    let calls = 0;
+  it('retries failed public chart reads independently of private Activity', async () => {
     let failing = true;
-    mockProfile(() => {
-      calls += 1;
-      return failing ? json({}, 503) : json({ attempts: [attempt(0)], nextOffset: null });
-    });
+    const history = vi.fn(() => json({ attempts: [attempt(0)], nextOffset: null }));
+    const publicHistory = vi.fn(() => (failing ? json({}, 503) : json({ points: [point(0)] })));
+    mockProfile(history, true, [], 0, publicHistory);
     const root = await mount();
-    selectPuzzleRating(root);
     await vi.waitFor(() =>
       expect(root.querySelector('.profile-rating-spotlight')?.textContent).toContain(
         'Could not load puzzle history.',
       ),
     );
-    expect(activityRows(root)).toHaveLength(0);
-    const beforeRetry = calls;
+    await vi.waitFor(() => expect(activityRows(root)).toHaveLength(1));
     failing = false;
     root.querySelector<HTMLButtonElement>('.profile-puzzle-history-retry')?.click();
     await vi.waitFor(() =>
       expect(root.querySelectorAll('.profile-rating-chart-dot')).toHaveLength(1),
     );
+    expect(publicHistory).toHaveBeenCalledTimes(2);
+    expect(history).toHaveBeenCalledOnce();
     expect(activityRows(root).map(rowTitle)).toEqual(['Played 1 Xiangqi puzzle']);
-    expect(calls).toBe(beforeRetry + 1);
   });
 
   it('keeps an all-legacy history visible with an explicit chart empty state', async () => {

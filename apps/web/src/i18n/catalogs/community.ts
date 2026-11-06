@@ -172,6 +172,7 @@ export const EN_COMMUNITY = {
   'profile.visibilityUnlisted': 'Unlisted',
   'profile.visibilityPrivate': 'Private',
   'profile.admin': 'Admin',
+  'profile.founder': 'Founder',
   'profile.patron': 'Patron',
   'profile.patronTitle': 'A Mistboard Patron. Thank you for supporting the site.',
   'profile.achievements': 'Achievements',
@@ -322,7 +323,6 @@ export const EN_COMMUNITY = {
   'profile.puzzleAttemptMany': '{count} attempts',
   'profile.puzzleFailed': '{count} failed',
   'profile.puzzleProgress': 'Puzzle progress',
-  'profile.puzzleHistoryPrivate': 'Xiangqi puzzle history. Only you can see this.',
   'profile.puzzleHistoryEmpty': 'No puzzle results yet.',
   'profile.puzzleChartEmpty': 'No saved rating points yet.',
   'profile.puzzleHistoryLegacy':
@@ -808,6 +808,7 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'profile.visibilityUnlisted',
   'profile.visibilityPrivate',
   'profile.admin',
+  'profile.founder',
   'profile.earlier',
   'profile.activity',
   'profile.activityPlayedOne',

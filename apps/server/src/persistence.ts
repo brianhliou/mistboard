@@ -466,6 +466,7 @@ export {
   getUserDmPolicy,
   getUserGamesPage,
   getUserProfileByHandle,
+  getUserPuzzleRatingHistory,
   getUserRatingHistory,
   isProfileGameResultFilter,
   listRecentFinishedCorrespondenceGames,
