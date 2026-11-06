@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Offline, serial, single-thread WASM. No browser, server, network or ratings.
+// Offline, serial, single-thread WASM (default) or live native server engine. No network or ratings.
+import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { Worker } from 'node:worker_threads';
 import { tsImport } from 'tsx/esm/api';
 
@@ -221,6 +223,48 @@ export async function runPairing({
   return result;
 }
 
+function searchTelemetry() {
+  return { searches: 0, wallTimeMs: 0, maxMoveMs: 0, ceilingHits: 0, moves: [] };
+}
+
+function recordSearch(telemetry, tier, state, { gameSeed, plySeed }, to, lines, elapsed) {
+  telemetry.searches += 1;
+  telemetry.wallTimeMs += elapsed;
+  telemetry.maxMoveMs = Math.max(telemetry.maxMoveMs, elapsed);
+  if (elapsed >= tier.timeMs) telemetry.ceilingHits += 1;
+  const completed = parseRapfiOutput(lines).find((candidate) => candidate.pvIndex === 0);
+  // Rapfi's structured TOTALNODES is exact through the last completed PV,
+  // not through an interrupted iteration. Its final human summary includes
+  // those extra nodes but rounds K/M units; preserve that precision and the
+  // source line. Human evaluations never enter move selection.
+  const summary = lines.findLast((line) => line.startsWith('MESSAGE Speed ')) ?? null;
+  const final =
+    summary &&
+    /\| Depth (\d+)-(\d+) \|.*\| Node (\d+(?:\.\d+)?)([KM]?) \| Time (\d+)ms$/.exec(summary);
+  const time = lines
+    .map((line) => /^MESSAGE OptiTime (\d+)ms \| MaxTime (\d+)ms$/.exec(line))
+    .find(Boolean);
+  const resolution = final ? { '': 1, K: 1000, M: 1000000 }[final[4]] : null;
+  telemetry.moves.push({
+    gameSeed: gameSeed ?? null,
+    plySeed,
+    ply: state.ply,
+    color: state.status.turn,
+    to,
+    elapsedMs: elapsed,
+    completedDepth: completed?.depth ?? null,
+    completedNodes: completed?.totalNodes ?? null,
+    depth: final ? Number(final[1]) : null,
+    seldepth: final ? Number(final[2]) : null,
+    reportedNodes: final ? Number(final[3]) * resolution : null,
+    nodeResolution: resolution,
+    engineTimeMs: final ? Number(final[5]) : null,
+    optimalTimeMs: time ? Number(time[1]) : null,
+    maxTimeMs: time ? Number(time[2]) : null,
+    summary,
+  });
+}
+
 /** Transport seam exercises exactly the browser command/parser/choice policy
  * with stub transcripts in tests and the pinned WASM in measurements. */
 export function createRapfiPlayer(tier, request) {
@@ -228,7 +272,7 @@ export function createRapfiPlayer(tier, request) {
     throw new Error('Rapfi eval margin requires a candidate count');
   const evalMargin = tier.evalMargin ?? 0;
   if (!Number.isFinite(evalMargin) || evalMargin < 0) throw new Error('Invalid Rapfi eval margin');
-  const telemetry = { searches: 0, wallTimeMs: 0, maxMoveMs: 0, ceilingHits: 0, moves: [] };
+  const telemetry = searchTelemetry();
   return {
     telemetry,
     async choose(state, { gameSeed, plySeed }) {
@@ -284,45 +328,111 @@ export function createRapfiPlayer(tier, request) {
               seed: plySeed,
               ...(tier.bestRate === undefined ? {} : { bestRate: tier.bestRate }),
             });
-      telemetry.searches += 1;
-      telemetry.wallTimeMs += elapsed;
-      telemetry.maxMoveMs = Math.max(telemetry.maxMoveMs, elapsed);
-      if (elapsed >= tier.timeMs) telemetry.ceilingHits += 1;
       const to = `${String.fromCharCode(97 + move.x)}${move.y + 1}`;
-      const completed = candidates.find((candidate) => candidate.pvIndex === 0);
-      // Rapfi's structured TOTALNODES is exact through the last completed PV,
-      // not through an interrupted iteration. Its final human summary includes
-      // those extra nodes but rounds K/M units; preserve that precision and the
-      // source line. Human evaluations never enter move selection.
-      const summary = lines.findLast((line) => line.startsWith('MESSAGE Speed ')) ?? null;
-      const final =
-        summary &&
-        /\| Depth (\d+)-(\d+) \|.*\| Node (\d+(?:\.\d+)?)([KM]?) \| Time (\d+)ms$/.exec(summary);
-      const time = lines
-        .map((line) => /^MESSAGE OptiTime (\d+)ms \| MaxTime (\d+)ms$/.exec(line))
-        .find(Boolean);
-      const resolution = final ? { '': 1, K: 1000, M: 1000000 }[final[4]] : null;
-      telemetry.moves.push({
-        gameSeed: gameSeed ?? null,
-        plySeed,
-        ply: state.ply,
-        color: state.status.turn,
-        to,
-        elapsedMs: elapsed,
-        completedDepth: completed?.depth ?? null,
-        completedNodes: completed?.totalNodes ?? null,
-        depth: final ? Number(final[1]) : null,
-        seldepth: final ? Number(final[2]) : null,
-        reportedNodes: final ? Number(final[3]) * resolution : null,
-        nodeResolution: resolution,
-        engineTimeMs: final ? Number(final[5]) : null,
-        optimalTimeMs: time ? Number(time[1]) : null,
-        maxTimeMs: time ? Number(time[2]) : null,
-        summary,
-      });
+      recordSearch(telemetry, tier, state, { gameSeed, plySeed }, to, lines, elapsed);
       return { to };
     },
   };
+}
+
+/** Every placement goes through the live provider, including its cold process,
+ * shared tier request, watchdog, parser, legality checks and seeded selection.
+ * Trial policies are WASM-only: never label an overridden tier as live policy. */
+export async function loadNativeRapfi() {
+  const { gomokuLiveEngineMove } = await tsImport(
+    '../apps/server/src/gomoku-engine.ts',
+    import.meta.url,
+  );
+  const { rapfiAnalysisBinaryPath } = await tsImport(
+    '../apps/server/src/gomoku-analysis.ts',
+    import.meta.url,
+  );
+  const binaryPath = rapfiAnalysisBinaryPath();
+  if (!existsSync(binaryPath))
+    throw new Error(
+      `Native Rapfi binary missing: ${binaryPath}. Set RAPFI_BIN or install it with scripts/engine-assets.sh.`,
+    );
+  const pin = { kind: 'native', binaryPath, sha256: sha256(readFileSync(binaryPath)) };
+  const children = new Map();
+  let stopped = false;
+  const kill = () => {
+    stopped = true;
+    for (const child of children.keys()) child.kill('SIGKILL');
+  };
+  const interrupt = () => {
+    kill();
+    process.exit(130);
+  };
+  const terminate = () => {
+    kill();
+    process.exit(143);
+  };
+  process.on('exit', kill);
+  process.on('SIGINT', interrupt);
+  process.on('SIGTERM', terminate);
+  return {
+    pin,
+    reset() {}, // Live PvE starts a fresh process on every move.
+    stop,
+    player(tier) {
+      if (
+        !isDeepStrictEqual(
+          tier,
+          RAPFI_LEVELS.find(({ level }) => level === tier.level),
+        )
+      )
+        throw new Error(
+          'Native calibration requires the live RAPFI_LEVELS policy; --tiers/--budgets overrides are WASM-only',
+        );
+      const telemetry = searchTelemetry();
+      return {
+        telemetry,
+        async choose(state, context) {
+          if (stopped) throw new Error('Native Rapfi stopped');
+          if (context.plySeed !== rapfiPlySeed(context.gameSeed, state.ply))
+            throw new Error('Native Rapfi seed does not match the absolute ply');
+          try {
+            return await gomokuLiveEngineMove(
+              { ...state, id: `ladder-${context.gameSeed}` },
+              `rapfi-level-${tier.level}`,
+              {
+                binaryPath,
+                gameSeed: context.gameSeed,
+                isCurrent: () => !stopped,
+                spawnProcess(path, cwd) {
+                  const child = spawn(path, [], { cwd });
+                  children.set(
+                    child,
+                    new Promise((done) =>
+                      child.once('close', () => {
+                        children.delete(child);
+                        done();
+                      }),
+                    ),
+                  );
+                  return child;
+                },
+                onSearch({ move, lines, elapsedMs }) {
+                  // The server already selected/validated the move. Observe only.
+                  recordSearch(telemetry, tier, state, context, move.to, lines, elapsedMs);
+                },
+              },
+            );
+          } catch (error) {
+            await stop();
+            throw error;
+          }
+        },
+      };
+    },
+  };
+  async function stop() {
+    kill();
+    await Promise.all(children.values());
+    process.off('exit', kill);
+    process.off('SIGINT', interrupt);
+    process.off('SIGTERM', terminate);
+  }
 }
 
 export async function loadRapfi() {
@@ -412,6 +522,7 @@ async function main() {
     return;
   }
   const allowed = new Set([
+    '--engine',
     '--games',
     '--seed',
     '--pairs',
@@ -426,6 +537,8 @@ async function main() {
   }
   const option = (name, fallback) =>
     args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
+  const engine = option('--engine', 'wasm');
+  if (!['native', 'wasm'].includes(engine)) throw new Error('--engine must be native or wasm');
   const games = Number(option('--games', '20'));
   const seed = Number(option('--seed', '20261101'));
   if (!Number.isInteger(games) || games < 2 || games % 2 || games / 2 > GOMOKU_OPENINGS.length)
@@ -445,6 +558,10 @@ async function main() {
     RAPFI_LEVELS.map((tier, index) => ({ ...tier, nodes: nodes[index] })),
     tierFile ? JSON.parse(readFileSync(tierFile, 'utf8')) : [],
   );
+  if (engine === 'native' && !isDeepStrictEqual(levels, RAPFI_LEVELS))
+    throw new Error(
+      'Native calibration requires the live RAPFI_LEVELS policy; --tiers/--budgets overrides are WASM-only',
+    );
   const plan = pairingPlan(levels, option('--pairs'));
   const output = option('--output');
   if (!output) throw new Error('--output <record.json> is required (existing runs are appended)');
@@ -458,10 +575,11 @@ async function main() {
     { length: games / 2 },
     () => pool.splice(Math.floor(random() * pool.length), 1)[0],
   );
-  const weakerEngine = await loadRapfi();
+  const loadEngine = engine === 'native' ? loadNativeRapfi : loadRapfi;
+  const weakerEngine = await loadEngine();
   let strongerEngine;
   try {
-    strongerEngine = await loadRapfi();
+    strongerEngine = await loadEngine();
     const pairings = [];
     for (const pair of plan) {
       const { id } = pair;
@@ -505,10 +623,14 @@ async function main() {
         levels,
         engine: strongerEngine.pin,
         hashPolicy:
-          'separate WASM heaps per side; YXHASHCLEAR before each game; browser START 15 before each move',
+          engine === 'native'
+            ? 'live server provider; fresh native process per move; one thread, 32 MB hash; no retained search state'
+            : 'separate WASM heaps per side; YXHASHCLEAR before each game; browser START 15 before each move',
         boardPolicy: 'side-to-move ordering fixed in ebb6b3637; final listed stone is the opponent',
         telemetryPolicy:
-          'INFO show_detail 2; BOARD remains best-move search; completedNodes is exact last completed PV TOTALNODES; final reportedNodes is rounded at nodeResolution; null means no search evidence emitted',
+          engine === 'native'
+            ? 'unchanged live search commands; elapsedMs includes process startup and search; completedNodes is exact last completed PV TOTALNODES when emitted; final reportedNodes is rounded at nodeResolution; null means no search evidence emitted'
+            : 'INFO show_detail 2; BOARD remains best-move search; completedNodes is exact last completed PV TOTALNODES; final reportedNodes is rounded at nodeResolution; null means no search evidence emitted',
         openingsSha256: sha256(
           readFileSync(resolve(root, 'packages/game/src/gomoku-openings.json')),
         ),

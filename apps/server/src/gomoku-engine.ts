@@ -37,7 +37,13 @@ const livePool = new UciEnginePool({
   queueTimeoutMessage: 'Rapfi PvE pool timed out',
 });
 
-type MoveOptions = GomokuAnalysisOptions & { isCurrent?: () => boolean };
+type MoveOptions = GomokuAnalysisOptions & {
+  isCurrent?: () => boolean;
+  /** Offline calibration supplies its recorded game seed; rooms derive it from id. */
+  gameSeed?: number;
+  /** Observe the successful native search without changing its commands or choice. */
+  onSearch?: (search: { move: GomokuMove; lines: string[]; elapsedMs: number }) => void;
+};
 export type GomokuMoveProvider = (
   state: GomokuRoomState,
   engineId: string,
@@ -76,13 +82,14 @@ export async function gomokuLiveEngineMove(
   const request = rapfiLevelRequest(
     position,
     Number(engineId.at(-1)) as RapfiLevel,
-    rapfiPlySeed(rapfiGameSeed(state.id), state.ply),
+    rapfiPlySeed(options.gameSeed ?? rapfiGameSeed(state.id), state.ply),
   );
   const release = await livePool.acquire();
   try {
     return await withEngineProcess(async (track) => {
       // A queued room may have paused, ended or taken back the searched turn.
       if (options.isCurrent && !options.isCurrent()) return null;
+      const started = performance.now();
       const session = new RapfiSession(options, track);
       try {
         await session.exchange(
@@ -112,6 +119,11 @@ export async function gomokuLiveEngineMove(
         const move = parseGomokuMove(`${String.fromCharCode(97 + selected.x)}${selected.y + 1}`);
         if (!move || !gomokuTenant.rules.isLegalMove(state, move))
           throw new Error('Rapfi returned an illegal placement');
+        options.onSearch?.({
+          move,
+          lines: output,
+          elapsedMs: Math.round(performance.now() - started),
+        });
         return move;
       } finally {
         // No parked network or hash memory between turns, including failures.
