@@ -387,7 +387,7 @@ test('an XMJ match card renders both players, final tai and winner to a full-siz
     events: async () => finishedXmjEvents() as { type: string; roomId: string }[],
   });
   const entry = await tenantGameCard(XMJ_ROOM, base);
-  assert.ok(entry, 'XMJ registers a finished-match card without a board or export binding');
+  assert.ok(entry, 'XMJ registers a finished-match card without a board');
   const svg = await renderTenantGameCard(entry, base);
   for (const text of [
     'alice',
@@ -402,7 +402,7 @@ test('an XMJ match card renders both players, final tai and winner to a full-siz
   }
   const meta = await tenantGamePageMeta(`/room/${XMJ_ROOM}`, base);
   assert.equal(meta?.title, 'alice vs bob · Xiangqi Mahjong | Mistboard');
-  assert.equal(meta?.urlPath, `/room/${XMJ_ROOM}`);
+  assert.equal(meta?.urlPath, `/xiangqi-mahjong/game/${XMJ_ROOM}`);
   assert.equal(meta?.imagePath, `/og/game/${XMJ_ROOM}.png?v=${TENANT_GAME_OG_IMAGE_VERSION}`);
   assert.match(meta?.description ?? '', /alice won on points/);
   assert.match(meta?.description ?? '', /12 tai.*6 tai/);

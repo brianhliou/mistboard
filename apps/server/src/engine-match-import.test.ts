@@ -444,7 +444,11 @@ test('engine match: every fixture game replays from its export alone to the lab 
     assert.ok(finished);
     const record = recordFor(built.value);
     const json = buildTenantGamePublicationJson(record, finished, '/jieqi/game');
-    const fromJson = replayHiddenPieceRecord(json);
+    const plies = json.plies.map((ply) => {
+      assert.ok(ply.uci, 'a hidden-piece export carries UCI rather than mahjong actions');
+      return { ...ply, uci: ply.uci };
+    });
+    const fromJson = replayHiddenPieceRecord({ ...json, plies });
     assert.ok(fromJson.ok, `${game.game}: ${JSON.stringify(fromJson)}`);
     // Board and clocks: a finished kernel state has no side to move, and the
     // replay's pool is the public one (face-down pieces plus dark captures, by

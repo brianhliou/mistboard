@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { gunzipSync } from 'node:zlib';
+import { createXmjSetup } from '@mistboard/game';
+import { resolveGameExport } from './game-export-tenant.js';
+import type { RecentEveGameRecord } from './persistence.js';
+import './xiangqi-mahjong-registration.js';
 import {
   BUILD_SLICE_MS,
   buildDataFileContent,
@@ -92,6 +96,8 @@ test('data variants are the export table minus the withheld list, PGN only where
   assert.ok(DATA_VARIANTS.includes('xiangqi'));
   assert.ok(DATA_VARIANTS.includes('jungle'));
   assert.ok(!DATA_VARIANTS.includes('mahjong'));
+  assert.ok(DATA_VARIANTS.includes('xiangqi-mahjong'));
+  assert.deepEqual(dataFormatsForVariant('xiangqi-mahjong'), ['jsonl']);
   // Nothing is withheld since #484: the all-variants file, built from
   // DATA_VARIANTS, holds the hidden-piece games too.
   assert.deepEqual(DATA_WITHHELD_VARIANTS, {});
@@ -101,6 +107,60 @@ test('data variants are the export table minus the withheld list, PGN only where
   }
   assert.deepEqual(dataFormatsForVariant('xiangqi'), ['pgn', 'jsonl']);
   assert.deepEqual(dataFormatsForVariant('mahjong'), []);
+});
+
+test('xiangqi mahjong monthly JSONL is byte-identical to its single-game download', async () => {
+  const roomId = 'xmj_data';
+  const setup = createXmjSetup(() => 0.5);
+  const events = [
+    { type: 'room-created', at: 1, roomId, gameSpecId: 'xiangqi-mahjong', setup },
+    { type: 'seat-resigned', at: 2, roomId, color: 'west' },
+  ];
+  const summary: RecentEveGameRecord = {
+    roomId,
+    variant: 'xiangqi-mahjong',
+    mode: 'pvp',
+    result: 'east-wins',
+    termination: 'resignation',
+    plyCount: 0,
+    startedAt: new Date(1),
+    endedAt: new Date(2),
+    whiteName: null,
+    blackName: null,
+    corpusId: null,
+    rated: false,
+    visibility: 'public',
+    participants: [],
+    jobId: null,
+    gameIndex: null,
+    whiteEngineId: null,
+    blackEngineId: null,
+    timeControl: null,
+    initialMs: null,
+    incrementMs: null,
+  };
+  const single = resolveGameExport({ roomId, format: 'json', summary, events });
+  assert.equal(single.status, 200);
+  if (single.status !== 200) return;
+  const built = await buildDataFileContent([roomId], 'jsonl', {
+    getGameSummaries: async () => new Map([[roomId, summary]]),
+    loadRoomsEvents: async () => new Map([[roomId, events]]),
+  });
+  assert.equal(built.gameCount, 1);
+  assert.deepEqual(built.skipped, []);
+  assert.equal(gunzipSync(built.content).toString('utf8'), `${single.body}\n`);
+  const listing = buildDataListing({
+    counts: [{ month: '2026-09', variant: 'xiangqi-mahjong', games: 1 }],
+    stored: [],
+    collections: [],
+    now: NOW,
+  });
+  assert.deepEqual(listing.variants, ['xiangqi-mahjong']);
+  assert.deepEqual(
+    listing.months[0]?.variants[0]?.files.map((file) => file.format),
+    ['jsonl'],
+  );
+  assert.equal(parseDataFilePath('/api/data/monthly/2026-09/xiangqi-mahjong.pgn.gz')?.ok, false);
 });
 
 test('only closed months are offered', () => {
