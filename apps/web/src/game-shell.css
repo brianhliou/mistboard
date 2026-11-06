@@ -820,7 +820,7 @@
   background: var(--clock-emerg-text);
 }
 
-/* Player line (dot + name + turn pill), rendered into the boxed table's
+/* Player line (presence + seat disc + name + turn pill), rendered into the boxed table's
    top/bottom player rows. Small: the big type belongs to the clocks. */
 .clock-player-line {
   display: flex;
@@ -828,6 +828,10 @@
   gap: 7px;
   min-width: 0;
   line-height: 1.1;
+}
+
+.clock-seat-disc {
+  --seat-disc-size: 12px;
 }
 
 .clock-name {

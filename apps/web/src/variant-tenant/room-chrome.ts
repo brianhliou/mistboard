@@ -40,9 +40,11 @@ import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile
 import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import { postWithBrowserIdentity } from '../room-create-retry.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
+import { seatInkFamily } from '../variant-seat-label.js';
 import { variantMiniIdForRawVariant } from '../variants.js';
 import { formatClock, formatDayClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
@@ -139,8 +141,8 @@ export type WebVariantTenant<C extends string> = {
   // ink ("Red"/"Black") once flipped, else the move order ("First"/"Second"). The tenant
   // reads its own live view for this; the chrome passes only the seat.
   seatLabel?(seat: C): TenantSeatKey;
-  // Optional companion to seatLabel: the INK a seat renders as, for the meta card's
-  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi)
+  // Optional companion to seatLabel: the INK a seat renders as, for the meta card
+  // and live clock name discs. Omit when the seat name IS the color (chess/xiangqi/jieqi)
   // and the chrome passes the seat straight through. Flip variants MUST implement it:
   // their seats are move-order slots and the ink binds on the opening flip, so a raw
   // seat paints the wrong disc for every game whose first flip turns up the opposite
@@ -173,10 +175,6 @@ export type WebVariantTenant<C extends string> = {
   // (already localized). Mahjong puts the dealer and the running points here on
   // a phone, where its table has no room for them.
   seatTags?(seat: C): readonly string[];
-  // Optional: a mark before a seat's name on the player rows, for a variant whose
-  // board gives no other cue to which side is whose. Gomoku's board starts empty,
-  // so "You" and the bot read colourless without a stone (Brian's phone, 2026-11-05).
-  seatMarker?(seat: C): HTMLElement | null;
 };
 
 /** A recorded clock at one ply of a finished match (the review page). */
@@ -406,11 +404,6 @@ export function createTenantRoomChrome<C extends string>(
     return color === ctx.seat() ? 'bottom' : 'top';
   }
 
-  function appendSeatMarker(playerLine: HTMLElement, color: C): void {
-    const marker = tenant.seatMarker?.(color) ?? null;
-    if (marker) playerLine.append(marker);
-  }
-
   function appendSeatTags(playerLine: HTMLElement, color: C): void {
     for (const tag of tenant.seatTags?.(color) ?? []) {
       const el = document.createElement('span');
@@ -418,6 +411,16 @@ export function createTenantRoomChrome<C extends string>(
       el.textContent = tag;
       playerLine.append(el);
     }
+  }
+
+  function appendSeatDisc(playerLine: HTMLElement, color: C): void {
+    if (!variantSeatsHaveInk(ctx.gameSpecId)) return;
+    const family = seatInkFamily(ctx.gameSpecId);
+    if (family) playerLine.dataset.seatInkFamily = family;
+    // A defined hook returning null means unbound, never the raw seat's ink.
+    playerLine.append(
+      seatDiscEl(tenant.seatInk ? tenant.seatInk(color) : color, 'clock-seat-disc'),
+    );
   }
 
   function renderClocks(): void {
@@ -483,7 +486,7 @@ export function createTenantRoomChrome<C extends string>(
         // "Black", dot-less, until the clock armed and the same row became "You"
         // with a dot, mid-game.
         playerLine.append(...presence(color));
-        appendSeatMarker(playerLine, color);
+        if (!recording) appendSeatDisc(playerLine, color);
         // The seat label is a placeholder for an unnamed seat, so only a
         // server-supplied name carries the seat's profile link.
         playerLine.append(
@@ -548,7 +551,7 @@ export function createTenantRoomChrome<C extends string>(
       const playerLine = document.createElement('span');
       playerLine.className = isActive ? 'clock-player-line active' : 'clock-player-line';
       playerLine.append(...presence(color));
-      appendSeatMarker(playerLine, color);
+      if (!recording) appendSeatDisc(playerLine, color);
       // playerName falls back to 'You' / the seat label when the server has no
       // name for the seat; those name nobody, so they stay plain text.
       playerLine.append(

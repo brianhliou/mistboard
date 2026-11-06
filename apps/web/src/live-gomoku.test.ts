@@ -271,13 +271,17 @@ describe('hidden Gomoku live room', () => {
     expect(document.querySelector('[data-gomoku-bot-action]')).toBeNull();
   });
 
-  it('marks each player row with the stone that seat plays (phone, 2026-11-05)', async () => {
+  it('marks each player row with the shared disc of the stone that seat plays (phone, 2026-11-05)', async () => {
     await mount(position(0), 'white', 0, pveFrame('white'));
     const rows = [...document.querySelectorAll('.clock-player-line')];
-    const stones = rows.map((row) => row.querySelector('.clock-seat-stone')?.className ?? null);
-    expect(stones.sort()).toEqual(['clock-seat-stone black', 'clock-seat-stone white']);
+    const discs = rows.map((row) => row.querySelector('.clock-seat-disc')?.className ?? null);
+    expect(discs.sort()).toEqual([
+      'clock-seat-disc seat-disc seat-disc--black',
+      'clock-seat-disc seat-disc seat-disc--white',
+    ]);
     const own = rows.find((row) => row.textContent?.includes('You'));
-    expect(own?.querySelector('.clock-seat-stone.white')).not.toBeNull();
+    expect(own?.querySelector('.seat-disc--white')).not.toBeNull();
+    expect(document.querySelector('.clock-seat-stone')).toBeNull();
   });
 
   it('shows no bot panel while Rapfi is idle on the human turn', async () => {

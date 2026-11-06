@@ -92,19 +92,3 @@
 .gomoku-pv-number--white {
   fill: #111;
 }
-
-/* The stone each seat plays, before its name on the player rows. */
-.clock-seat-stone {
-  display: inline-block;
-  flex: none;
-  width: 0.8em;
-  height: 0.8em;
-  border-radius: 50%;
-  border: 1px solid #080808;
-  background: #222;
-  vertical-align: -0.05em;
-}
-.clock-seat-stone.white {
-  border-color: #8a806d;
-  background: #faf7ee;
-}

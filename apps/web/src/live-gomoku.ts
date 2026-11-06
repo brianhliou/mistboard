@@ -56,12 +56,6 @@ const tenant: WebVariantTenant<GomokuColor> = {
   },
   isColor: isGomokuColor,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
-  seatMarker: (color) => {
-    const stone = document.createElement('span');
-    stone.className = `clock-seat-stone ${color}`;
-    stone.setAttribute('aria-hidden', 'true');
-    return stone;
-  },
   // Admission is enforced by the server, including admin playtests while hidden.
   enabled: () => true,
   reviewUrl: (roomId) => `/gomoku/game/${encodeURIComponent(roomId)}`,
