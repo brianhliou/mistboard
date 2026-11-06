@@ -188,7 +188,7 @@ const BOT_TIME_CONTROL_OVERRIDES: Readonly<Partial<Record<GameSpecId, TimeContro
 const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
   [XIANGQI_SPEC_ID]: '10m5',
   [JIEQI_SPEC_ID]: '10m5',
-  // Duck offers 3+2, 5+5 and 10+5 (registry.ts). This entry is a PREFERENCE,
+  // Duck offers all four paces (registry.ts). This entry is a PREFERENCE,
   // not a guard: a turn is a move plus a duck placement, so 3+2 buys 1.8s per
   // decision at the long end and 5+5 buys 3.8s. Both are playable, so 3+2 is
   // selectable, but the pace a first-time player is dropped into should be the

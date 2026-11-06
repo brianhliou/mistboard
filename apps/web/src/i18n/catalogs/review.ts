@@ -787,7 +787,7 @@ export const EN_REVIEW = {
   'study.visibilityPrivate': 'Private',
   'study.visibilityUnlisted': 'Unlisted',
   'study.visibilityPublic': 'Public',
-  'study.fieldVariant': 'Variant',
+  'study.fieldVariant': 'Game',
   'study.variantAria': 'Study variant',
   'study.fieldStartFen': 'Start position (FEN, optional)',
   'study.startFenPlaceholder': 'Standard start',

@@ -1497,3 +1497,357 @@ html.landing-setup-open body {
     display: none;
   }
 }
+
+/* Spike (?setup=open, tablet and desktop): every choice open as a labelled
+   row, so the dialog never changes height while the player goes down it.
+   One solid green on the panel, the Start button; a picked option is a raised
+   thumb on a quiet track, and a picked variant is a tinted tile with a ring. */
+.landing-setup-dialog--open {
+  --setup-track: color-mix(in srgb, var(--site-text) 6%, var(--site-panel));
+  --setup-thumb-shadow: 0 1px 2px rgb(0 0 0 / 0.14), 0 0 0 1px var(--site-border-soft);
+}
+@media (min-width: 760px) {
+  .landing-setup-dialog.landing-setup-dialog--open {
+    width: min(100%, 660px);
+  }
+}
+.landing-setup-dialog--open .landing-setup-header {
+  min-height: 0;
+  padding: 14px 54px 10px;
+  border-bottom: 0;
+}
+.landing-setup-dialog--open .landing-setup-close {
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 24px;
+  color: var(--site-muted);
+}
+.landing-setup-dialog--open .landing-setup-accordion {
+  gap: 11px;
+  padding: 2px 24px;
+  border-block: 0;
+}
+
+/* Labels sit beside their controls below the variant grid, which keeps the
+   panel short. A choice is one outlined group of full-height options; the
+   picked option (and the picked variant) is a green tint with a green ring
+   whose outer corners follow the group's rounding. */
+.landing-setup-dialog--open .landing-setup-row {
+  gap: 8px;
+}
+.landing-setup-dialog--open .landing-setup-row:not(:first-child) {
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.landing-setup-dialog--open .landing-variant-grid {
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  box-shadow: none;
+}
+.landing-setup-dialog--open .landing-variant-card {
+  position: relative;
+  background: var(--site-panel);
+  box-shadow:
+    inset -1px 0 0 var(--site-border-soft),
+    inset 0 -1px 0 var(--site-border-soft);
+}
+.landing-setup-dialog--open .landing-variant-card:hover:not(.selected) {
+  background: var(--site-hover);
+  outline: 0;
+}
+.landing-setup-dialog--open .landing-variant-card.selected,
+.landing-setup-dialog--open .landing-variant-card.selected:hover {
+  background: var(--site-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--site-accent);
+  color: var(--site-accent-strong);
+  text-shadow: none;
+  outline: 0;
+  --variant-marker-color: var(--site-accent);
+}
+/* "Soon" sits in the tile's corner so a two-line name plus the pill never
+   outgrows the row and scrolls the grid by a few pixels. */
+.landing-setup-dialog--open .landing-variant-card-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  margin: 0;
+}
+
+.landing-setup-dialog--open .landing-setup-row .landing-start-options:not(.landing-time-mode),
+.landing-setup-dialog--open .landing-setup-row .landing-time-presets {
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  overflow: hidden;
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-start-options:not(.landing-time-mode)
+  > .landing-start-option,
+.landing-setup-dialog--open .landing-setup-row .landing-time-presets > .landing-start-option {
+  min-height: 44px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--site-text);
+  font-weight: 700;
+  outline-offset: -2px;
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-start-options:not(.landing-time-mode)
+  > .landing-start-option
+  + .landing-start-option,
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-time-presets
+  > .landing-start-option
+  + .landing-start-option {
+  box-shadow: inset 1px 0 0 var(--site-border-soft);
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-start-options:not(.landing-time-mode)
+  > .landing-start-option:hover:not(:disabled):not(.selected),
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-time-presets
+  > .landing-start-option:hover:not(:disabled):not(.selected) {
+  background: var(--site-hover);
+  outline: 0;
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-start-options:not(.landing-time-mode)
+  > .landing-start-option.selected,
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-time-presets
+  > .landing-start-option.selected {
+  background: var(--site-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--site-accent);
+  color: var(--site-accent-strong);
+  font-weight: 800;
+}
+.landing-setup-dialog--open .landing-setup-row .landing-start-option:disabled {
+  background: transparent;
+  color: color-mix(in srgb, var(--site-text) 42%, transparent);
+}
+.landing-setup-dialog--open .landing-setup-row .landing-engine-select {
+  min-height: 44px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background-color: var(--site-panel);
+  padding: 8px 40px 8px 14px;
+}
+
+/* Real time / Correspondence: a small left-aligned switch above the presets;
+   the label lines up with the presets, not the middle of the pair. */
+.landing-setup-dialog--open .landing-setup-row .landing-time-mode {
+  justify-content: flex-start;
+  gap: 4px;
+  margin-bottom: 6px;
+  border: 0;
+}
+.landing-setup-dialog--open
+  .landing-setup-row:has(.landing-time-mode:not([hidden]))
+  > .landing-setup-row-label {
+  align-self: end;
+  padding-bottom: 14px;
+}
+.landing-setup-dialog--open .landing-setup-row .landing-time-mode > .landing-start-option {
+  min-height: 26px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.landing-setup-dialog--open .landing-setup-row .landing-time-mode > .landing-start-option.selected {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
+.landing-setup-dialog--open .landing-setup-actions {
+  padding: 14px 24px 20px;
+}
+
+.landing-setup-dialog--open:focus {
+  outline: 0;
+}
+
+/* The picked option's ring follows the group's rounded corners at either end,
+   and so does the picked variant in a corner of the grid. */
+.landing-setup-dialog--open {
+  --setup-inner-radius: calc(var(--site-radius) - 1px);
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-start-options:not(.landing-time-mode)
+  > .landing-start-option:first-child,
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-time-presets
+  > .landing-start-option:first-child {
+  border-radius: var(--setup-inner-radius) 0 0 var(--setup-inner-radius);
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-start-options:not(.landing-time-mode)
+  > .landing-start-option:last-child,
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-time-presets
+  > .landing-start-option:last-child {
+  border-radius: 0 var(--setup-inner-radius) var(--setup-inner-radius) 0;
+}
+.landing-setup-dialog--open .landing-variant-card:first-child {
+  border-top-left-radius: var(--setup-inner-radius);
+}
+.landing-setup-dialog--open .landing-variant-card:nth-child(5) {
+  border-top-right-radius: var(--setup-inner-radius);
+}
+
+/* The panel's top stays put while rows below Opponent come and go (Bot row,
+   Real time / Correspondence, Game type), so nothing above them jumps. The
+   offset centres the tallest (friend) panel. */
+.landing-setup-overlay:has(.landing-setup-dialog--open) {
+  place-items: start center;
+  padding-top: max(18px, calc((100vh - 700px) / 2));
+}
+
+/* A muted line under a row label: "min + sec per move" under Time control.
+   Correspondence swaps it for "days per move", and its options are bare numbers. */
+.landing-setup-row-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--site-muted);
+}
+
+/* Side pieces at one size: Red, both Random pieces and Black all 34px
+   (the phone row's 28px and 22px read small on a desktop panel). */
+.landing-setup-dialog--open .landing-setup-row .landing-color-glyph:has(.landing-color-piece) {
+  height: 34px;
+}
+.landing-setup-dialog--open .landing-setup-row .landing-color-piece.jungle,
+.landing-setup-dialog--open .landing-setup-row .landing-color-piece.chess,
+.landing-setup-dialog--open .landing-setup-row .landing-color-piece.xiangqi {
+  width: 34px;
+  height: 34px;
+}
+.landing-setup-dialog--open .landing-setup-row .landing-color-piece.stone {
+  width: 28px;
+  height: 28px;
+}
+
+/* Random: both sides' pieces, side by side at full size. */
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-color-glyph.random:has(.landing-color-piece) {
+  gap: 2px;
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-color-glyph.random
+  .landing-color-piece.jungle,
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-color-glyph.random
+  .landing-color-piece.chess,
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-color-glyph.random
+  .landing-color-piece.xiangqi {
+  width: 34px;
+  height: 34px;
+}
+.landing-setup-dialog--open
+  .landing-setup-row
+  .landing-color-glyph.random
+  .landing-color-piece.stone {
+  width: 28px;
+  height: 28px;
+}
+
+/* The open layout picks with a tint, not the old solid-green fill, so a
+   character glyph (banqi's 1 and 2) takes the label's green instead of white. */
+.landing-setup-dialog--open
+  .landing-color-option.selected
+  .landing-color-glyph:not(:has(.landing-color-piece)) {
+  color: var(--site-accent-strong);
+}
+
+/* Random for a seat picker (1 / 2, East / South): a slash so "1 2" never
+   reads as twelve. */
+.landing-setup-dialog--open
+  .landing-color-glyph.random:not(:has(.landing-color-piece))
+  > span
+  + span::before {
+  content: "/";
+  margin: 0 2px;
+  font-weight: 500;
+  color: var(--site-muted);
+}
+
+/* A variant with one bot names it in the Bot row, as plain text in the shape of
+   the picker, so every bot game shows the same rows. */
+.landing-setup-dialog--open .landing-setup-row .landing-engine-single {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+/* One bot: its name reads like the dropdown's selected option. */
+.landing-setup-dialog--open .landing-setup-row .landing-engine-single {
+  font-size: 14px;
+  font-weight: 760;
+}
+
+/* Bigger game markers: the tiles had room around a 40px mark. */
+.landing-setup-dialog--open .landing-variant-card-thumb {
+  max-width: 50px;
+}
+
+/* Jungle's elephants sit on the board's token: a cream rounded square with a
+   thin dark ring (jungle-art.ts JUNGLE_ART), so the picker shows the piece a
+   player will move. */
+.landing-color-piece.jungle {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #28323c;
+  border-radius: 30%;
+  background: #fff2cf;
+}
+/* The elephant spans 81% of its image's width and sits a little low (its
+   middle is at 55% of the height), so the art is drawn at 110% and lifted to
+   centre the animal: it fills the tile with a hairline of cream at the sides. */
+.landing-color-piece.jungle > img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: 110%;
+  max-width: none;
+  height: 110%;
+  transform: translate(-50%, -55%);
+}
