@@ -36,6 +36,11 @@ export function crosstableReviewUrl(
   variant: string,
   lookup: CrosstableTenantLookup = REGISTRY_LOOKUP,
 ): string | null {
+  // A table whose room is its finished page links the room even when it also
+  // has an export or review page (Xiangqi Mahjong), as the web's
+  // finishedGameHref does; the two must agree (variant-registry-sync.test.ts).
+  const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);
+  if (tenant?.finishedGameOpensRoom) return `/room/${encodeURIComponent(roomId)}`;
   const routeBase =
     lookup.forRoomId(roomId)?.export?.gameRouteBase ??
     lookup.forSpecId(variant)?.export?.gameRouteBase ??
@@ -43,8 +48,6 @@ export function crosstableReviewUrl(
     lookup.forSpecId(variant)?.reviewRouteBase ??
     null;
   if (routeBase) return `${routeBase}/${encodeURIComponent(roomId)}`;
-  const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);
-  if (tenant?.finishedGameOpensRoom) return `/room/${encodeURIComponent(roomId)}`;
   if (CHESS_STACK_VARIANTS.has(variant)) return `/game/${encodeURIComponent(roomId)}`;
   return null;
 }
