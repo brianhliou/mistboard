@@ -139,7 +139,8 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   // The regular page's info card sits on top, its rating hidden mid-run.
   const info = () => root.querySelector<HTMLElement>('.puzzle-info-card')!;
   expect(info().nextElementSibling?.classList.contains('puzzle-streak-side')).toBe(true);
-  expect(info().querySelector('a')?.getAttribute('href')).toContain(puzzles[0]!.id);
+  // No "Puzzle #code" line linking the page to itself.
+  expect(info().querySelector(`a[href*="${puzzles[0]!.id}"]`)).toBeNull();
   expect(info().textContent).toContain('Rating: hidden');
   const side = root.querySelector('.puzzle-streak-side')!;
   expect(side.textContent).toContain('No clock, one skip. Your puzzle rating does not change.');
@@ -206,7 +207,6 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   expect(board?.dataset.puzzleId).toBe(puzzles[2]!.id);
   // Game over reveals the failed puzzle's rating.
   expect(info().textContent).toContain('Rating: 1000');
-  expect(info().querySelector('a')?.getAttribute('href')).toContain(puzzles[2]!.id);
   expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy();
   expect(root.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
   expect(root.querySelector('.puzzle-move-variation')).toBeTruthy();
