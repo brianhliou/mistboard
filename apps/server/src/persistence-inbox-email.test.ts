@@ -201,6 +201,18 @@ definePersistenceTests('inbox email', () => {
     assert.deepEqual(await listInboxEmailCandidates({ now }), []);
   });
 
+  test('a message unread for over seven days sends nothing, so launch does not mail old threads', async () => {
+    await fixture();
+    assert.equal((await listInboxEmailCandidates({ now })).length, 1);
+    // stale is 12h before now; seven days after it the window has closed.
+    const weekAfter = new Date(stale.getTime() + 7 * 24 * HOUR);
+    assert.equal(
+      (await listInboxEmailCandidates({ now: new Date(weekAfter.getTime() - 1) })).length,
+      1,
+    );
+    assert.deepEqual(await listInboxEmailCandidates({ now: weekAfter }), []);
+  });
+
   test('one newest eligible candidate per account, independent of message id ordering and fresh threads', async () => {
     await fixture();
     await makeUser('z-sender');

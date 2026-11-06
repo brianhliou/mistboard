@@ -48,6 +48,9 @@ export async function listInboxEmailCandidates(
      ) m ON true
      WHERE t.last_read = false
        AND t.last_at <= $1::timestamptz - interval '12 hours'
+       -- A message unread for over a week gets no email: launch must not mail
+       -- every account about a months-old thread it already chose to ignore.
+       AND t.last_at > $1::timestamptz - interval '7 days'
        AND u.email_verified_at IS NOT NULL AND NULLIF(btrim(u.email), '') IS NOT NULL
        AND u.play_disabled_at IS NULL AND u.closed_at IS NULL
        AND COALESCE((u.account_preferences->>'inboxEmail')::boolean, true)
