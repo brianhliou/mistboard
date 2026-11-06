@@ -1025,25 +1025,30 @@ describe('rules variant sidebar', () => {
 
     expect(pageText).not.toContain('[VISUAL:');
     expect(pageText).not.toMatch(/\bsquares?\b/i);
-    expect(pageText).toContain('starting point it occupies');
-    expect(pageText).toContain('120 plies, or 60 moves by each player');
-    expect(pageText).toContain('Repetition follows xiangqi');
-    expect(pageText).toContain('perpetual check cannot save a lost game');
+    expect(pageText).toContain('the piece that normally starts on its point');
+    expect(pageText).toContain('120 plies pass without a capture');
+    expect(pageText).toContain(
+      'The same position with the same side to move occurs for the third time',
+    );
+    expect(pageText).toContain(
+      'A player who checked on every one of their turns in the repeating cycle loses',
+    );
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
     // The shuffled-start board is the section hero (a single enlarged board,
-    // matching the Xiangqi page); the movement diagrams are paired boards.
+    // matching the Xiangqi page); worked reveals use pairs and later moves use singles.
     const jieqiHero = jieqiSvgs.filter((svg) => svg.classList.contains('xq-article-svg--hero'));
     expect(jieqiHero).toHaveLength(1);
     expect(jieqiHero[0]!.getAttribute('data-xq-layout')).toBe('single');
     expect(articleStyles).toContain(
       '.article-figure-xq > .xq-article-svg.xq-article-svg--hero {\n  width: min(480px, 100%);',
     );
-    expect(
-      jieqiSvgs
-        .filter((svg) => !svg.classList.contains('xq-article-svg--hero'))
-        .every((svg) => svg.getAttribute('data-xq-layout') === 'pair'),
-    ).toBe(true);
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'pair')).toHaveLength(
+      3,
+    );
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'single')).toHaveLength(
+      4,
+    );
     const figureText = [...page.querySelectorAll('.article-figure')]
       .map((figure) => figure.textContent)
       .join('');
@@ -1059,8 +1064,11 @@ describe('rules variant sidebar', () => {
     const captions = [...page.querySelectorAll('.article-figure-caption')].map(
       (caption) => caption.textContent,
     );
-    expect(captions).toEqual([]);
+    expect(captions.length).toBeGreaterThanOrEqual(6);
     expect(pageText).toContain('BEFORE: HORSE POINT');
+    expect(pageText).toContain('AFTER: SOLDIER ON b10');
+    expect(pageText).toContain('only its capturer learns its identity');
+    expect(pageText).toContain('see a dark piece leave the board and nothing else');
     expect(pageText).toContain('CAPTURED PIECE KNOWLEDGE');
     expect(pageText).toContain('RED KNOWS');
     expect(pageText).toContain('BLACK KNOWS');

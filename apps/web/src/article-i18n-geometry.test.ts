@@ -1,6 +1,7 @@
 import { assertValidBanqiDeal, assertValidJieqiDeal } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { ARTICLE_GEOMETRY_KEYS, type ArticleLang, translateArticle } from './article-i18n.js';
+import { articleTranslationSource } from './articles/translation-source.js';
 import { articles } from './articles-data.js';
 
 // The zh render deep-translates every string in an article. On 2026-10-11 the
@@ -40,7 +41,9 @@ describe('zh article translation leaves board geometry alone', () => {
     it(`${lang}: every geometry field is unchanged`, () => {
       for (const article of articles) {
         const translated = translateArticle(article, lang);
-        expect(geometry(translated), article.slug).toEqual(geometry(article));
+        expect(geometry(translated), article.slug).toEqual(
+          geometry(articleTranslationSource(article)),
+        );
       }
     });
 

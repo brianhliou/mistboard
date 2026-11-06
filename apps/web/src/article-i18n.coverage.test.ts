@@ -11,6 +11,7 @@ import {
 } from './article-i18n.js';
 import { articleProse, articleTranslationSourceStrings } from './article-prose.js';
 import { articleCardLabels, articleDiagramLabels } from './articles/svg-labels.js';
+import { articleTranslationSource } from './articles/translation-source.js';
 import { type Article, articles } from './articles-data.js';
 
 // Slugs whose English copy is editorially frozen AND fully translated into
@@ -25,7 +26,7 @@ function truncate(text: string): string {
   return text.length > 64 ? `${text.slice(0, 61)}...` : text;
 }
 
-const published = articles.filter((a) => a.status === 'published');
+const published = articles.filter((a) => a.status === 'published').map(articleTranslationSource);
 
 // A reason that says the zh is merely late rather than deliberately absent.
 // Known blind spot: a backlog phrased without these words ("zh comes next
@@ -228,7 +229,7 @@ describe('article translation coverage', () => {
   });
 
   it('dictionaries contain only strings used by current articles', () => {
-    const liveStrings = articleTranslationSourceStrings(articles);
+    const liveStrings = articleTranslationSourceStrings(articles.map(articleTranslationSource));
 
     const orphans = ARTICLE_LANGS.flatMap((lang) =>
       translationKeys(lang)

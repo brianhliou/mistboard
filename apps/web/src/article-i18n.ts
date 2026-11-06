@@ -13,6 +13,7 @@
 // community; Traditional carries the Taiwan lexical forks, not a glyph conversion).
 import { hasOwnKey } from '@mistboard/game';
 import { MOVED_POSTS_ZH_HANS, MOVED_POSTS_ZH_HANT } from './article-i18n-moved-posts.js';
+import { articleTranslationSource } from './articles/translation-source.js';
 import { endgamePageDictionary } from './articles/xiangqi-endgames-text.js';
 import type { Article } from './articles-data.js';
 import { contentLocalePrefix, type Locale, localizedHref } from './i18n/locale.js';
@@ -12845,6 +12846,7 @@ function deepTranslate<T>(
 // Strings absent from the dictionary fall through as English (graceful partial
 // translation). Does not mutate the source article.
 export function translateArticle(article: Article, lang: ArticleLang): Article {
+  article = articleTranslationSource(article);
   const scoped = hasOwnKey(ARTICLE_SCOPED_DICTS[lang], article.slug)
     ? ARTICLE_SCOPED_DICTS[lang][article.slug]
     : undefined;
