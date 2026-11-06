@@ -49,6 +49,31 @@ describe('xiangqi study record loading', () => {
   }
 });
 
+describe('jieqi study face-down faces', () => {
+  it('draws a hover face on the face-down tiles, like the finished-game review', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const handle = await mountStudyReview('jieqi', root, {
+      title: 'Faces',
+      summary: '',
+      ariaLabel: 'Study board',
+      reviewSurface: 'study',
+      rootFen:
+        'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB',
+      initialTree: { version: 1, root: { children: [{ uci: 'i4i5', children: [] }] } },
+      initialPosition: 'end',
+    });
+    try {
+      await vi.waitFor(() =>
+        expect(root.querySelectorAll('.facedown-face').length).toBeGreaterThan(0),
+      );
+    } finally {
+      handle.destroy();
+      root.remove();
+    }
+  });
+});
+
 describe('jieqi study luck without analysis', () => {
   it('renders the move badge, calls the board luck marker and opens the reveal card', async () => {
     const root = document.createElement('div');

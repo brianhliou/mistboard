@@ -412,7 +412,7 @@ export function createReviewScaffold(
     stage.el.querySelector<HTMLElement>('.review-stage__slot--primary'),
   );
   // Matches .board-resize-grip; flush in the corner so its long line meets both edges.
-  const GRIP_SIZE_PX = 16;
+  const GRIP_SIZE_PX = 20;
   const GRIP_INSET_PX = 0;
   const positionGrip = (): void => {
     const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
