@@ -145,6 +145,28 @@ describe('article translation coverage', () => {
     ).toEqual([]);
   });
 
+  // The whole-page check above misses a partial loss: on the expanded jieqi rules
+  // page older Traditional overrides kept the page from matching, so 99 lines of
+  // Traditional sat above the spread, were discarded, and the suite stayed green.
+  it('no Traditional string falls through to Simplified', () => {
+    // Characters that exist only in Simplified. 炮 and 后 are left out because
+    // Traditional uses them too; mainland players' names keep one form by design.
+    const simplifiedOnly = /[将帅马车过双应这个们时说对开关门问题见长无从为国让选级复盘与条样难]/;
+    const fellThrough = (hans: string, hant: string) => hans === hant && simplifiedOnly.test(hant);
+    // Planted: the check has to catch a lost entry and pass a converted one.
+    expect(fellThrough('将帅明置', '将帅明置')).toBe(true);
+    expect(fellThrough('将帅明置', '將帥明置')).toBe(false);
+
+    const lost = translationKeys('zh-Hans').filter(
+      (key) =>
+        !/赵国荣|马天越/.test(translateArticleText('zh-Hans', key)) &&
+        fellThrough(translateArticleText('zh-Hans', key), translateArticleText('zh-Hant', key)),
+    );
+    expect(lost, 'These zh-Hant entries are missing or sit above the ...ZH_HANS spread').toEqual(
+      [],
+    );
+  });
+
   // The checks above only see slugs someone remembered to list, so an article
   // published without being added passed them all and shipped English zh pages
   // (fortress-and-atomic-xiangqi-on-hold, 2026-10-13). Every published article

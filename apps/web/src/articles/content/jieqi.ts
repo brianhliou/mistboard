@@ -1,215 +1,243 @@
-import {
-  JIEQI_CAPTURE_PRIVACY,
-  JIEQI_REVEAL_PAIR,
-  JIEQI_REVEALED_FREEDOMS,
-  JIEQI_RULES_THUMBNAIL,
-  JIEQI_START_BOARD,
-  playClosing,
-} from '../diagrams.js';
-import { JIEQI_SAMPLE_GAME } from '../../jieqi-sample-game.js';
+import { JIEQI_CAPTURE_PRIVACY, JIEQI_RULES_THUMBNAIL, playClosing } from '../diagrams.js';
+import { jieqiRulesDiagram } from '../../jieqi-rules-diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 export const jieqiArticle: Article = {
-    slug: 'jieqi',
-    gameSpecId: 'jieqi',
-    boardFamily: 'xiangqi',
-    kind: 'rules',
-    playableOnMistboard: true,
-    title: 'Jieqi Rules (Reveal Xiangqi)',
-    summary:
-      'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.',
-    showSummaryOnPage: false,
-    status: 'published',
-    publishedAt: '2026-06-15',
-    updatedAt: '2026-09-17',
-    updateNote:
-      'Added a capture table and an FAQ.',
-    audience:
-      'Xiangqi players and hidden-information fans who want a clean English rules reference for jieqi.',
-    thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
-    intro: [
-      {
-        kind: 'paragraph',
-        text:
-          "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.",
-      },
-      {
-        kind: 'paragraph',
-        text:
-          'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.',
-      },
-    ],
-    sections: [
-      {
-        heading: 'Setup',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              "Set each general face-up on its normal palace point. Shuffle each side's other fifteen pieces and deal them face-down onto the remaining starting points. Neither player knows any hidden identities, including their own.",
-          },
-          {
-            kind: 'raw-svg',
-            svg: JIEQI_START_BOARD,
-          },
-        ],
-      },
-      {
-        heading: 'First moves use starting points',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              'Before reveal, a dark piece uses the role of the starting point it occupies, not its hidden identity. A dark piece on a corner point plays like a chariot; dark pieces on horse, advisor, elephant, cannon, and soldier points use those matching moves.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'The normal restrictions still apply to that first move: horse legs, elephant eyes, cannon screens, palace limits for advisor points, and the river limit for elephant points. Once the move resolves, the piece flips face-up for both players.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: JIEQI_REVEAL_PAIR,
-          },
-        ],
-      },
-      {
-        heading: 'Revealed pieces use identity',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              "After reveal, use the piece's identity from its current point. Advisors may leave the palace, and elephants may cross the river. Their movement shapes do not change: advisors step one point diagonally; elephants move two points diagonally and are still eye-blocked.",
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'Horses, chariots, and cannons move normally. Soldiers use the normal river rule from wherever they reveal: forward only before crossing, forward or sideways after crossing, never backward.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: JIEQI_REVEALED_FREEDOMS,
-          },
-        ],
-      },
-      {
-        heading: 'Captured dark pieces',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              'If a dark piece is captured before revealing, only the capturer learns what it was. The owner sees one dark piece leave the board, but not its identity. Later, the capturer can rule out that hidden identity elsewhere.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: JIEQI_CAPTURE_PRIVACY,
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'Mistboard uses capturer-only reveal: the player who takes a dark piece learns its identity, while the former owner does not.',
-          },
-        ],
-      },
-      {
-        heading: 'Checks, wins, and draws',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              "Every occupied point is visible, so players can see when a general is attacked. An unmoved dark piece attacks using its starting point's role. Once it moves, it reveals immediately, and any attack from the destination uses its revealed identity.",
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'Normal check rules apply: a move may not leave your own general attacked, and a player in check must answer the threat. You win by checkmate or by leaving the opponent with no legal move. The facing-generals rule still applies, and dark pieces block the file like any other piece.',
-          },
-          {
-            kind: 'paragraph',
-            text: 'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.',
-          },
-        ],
-      },
-      {
-        heading: 'A sample game',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text: 'PikaJieQi against itself at the settings the site’s bot uses. Face-down pieces show as colored backs until they first move. Red’s advisor point on d1 turns out to hold a chariot on move 9, and between moves 13 and 23 Red’s chariots take five of Black’s pieces before they are ever turned over. The corners do not keep their promise either: Black’s a10 is an elephant, and Red’s a1 and i1 are an elephant and a soldier. Red mates on move 37.',
-          },
-          {
-            kind: 'embed',
-            path: '/embed/study/wd6c7qvG/FqAeRJhD',
-            title: 'Jieqi: an engine game, Red mates on move 37',
-            // Width-bound at the 702px column: the 9x10 board plus seat rows,
-            // controls, header and credit (measured on a local copy of the chapter).
-            aspect: [702, 692],
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text: 'The [companion study](/study/wd6c7qvG) has eighteen games played the same way, one chapter each.',
-          },
-        ],
-      },
-      {
-        heading: 'Common questions',
-        blocks: [
-          {
-            kind: 'faq',
-            items: [
-              {
-                question: 'Where can I play jieqi online?',
-                answer:
-                  'Here. Play vs computer starts a game against the engine at the level you choose; Challenge a friend makes an invite link. No account is needed, and finished games get a move-by-move review.',
-              },
-              {
-                question: 'Is there a jieqi app?',
-                answer:
-                  'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.',
-              },
-              {
-                question: 'Can I play jieqi against an AI?',
-                answer:
-                  'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.',
-              },
-              {
-                question: 'How is jieqi different from xiangqi?',
-                answer:
-                  'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.',
-              },
-              {
-                question: 'Can a revealed advisor leave the palace, and can an elephant cross the river?',
-                answer:
-                  'Both, yes. After revealing, a piece plays by its identity from wherever it stands, so an advisor that revealed on a chariot point is an advisor anywhere on the board. The movement shapes do not change: advisors still step one point diagonally and elephants still move two, still blocked at the eye.',
-              },
-              {
-                question: 'What happens when a dark piece is captured?',
-                answer:
-                  'On Mistboard only the capturer learns what it was. The owner sees a dark piece leave the board and nothing else, so the capturer can rule that identity out elsewhere and the owner cannot.',
-              },
-              {
-                question: 'Any tips for jieqi?',
-                answer:
-                  'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.',
-              },
-            ],
-          },
-        ],
-      },
-      playClosing({
-        heading: 'Play on Mistboard',
-        lead: 'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does. Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.',
-        playLabel: 'Play vs computer',
-        playHref: '/?play=computer&gameSpecId=jieqi',
-        secondary: [
-          { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },
-          { label: 'Eighteen engine games', href: '/study/wd6c7qvG', emphasis: 'secondary' },
-        ],
-      }),
-    ],
+  slug: 'jieqi',
+  gameSpecId: 'jieqi',
+  boardFamily: 'xiangqi',
+  kind: 'rules',
+  playableOnMistboard: true,
+  title: 'Jieqi Rules (Reveal Xiangqi)',
+  summary:
+    'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.',
+  showSummaryOnPage: false,
+  status: 'published',
+  publishedAt: '2026-06-15',
+  updatedAt: '2026-11-05',
+  updateNote: 'Added worked examples.',
+  audience: 'Players learning jieqi, with or without experience of xiangqi.',
+  thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
+  tldr: [
+    'A face-down piece makes its first move using the role of its starting point, then reveals to both players.',
+    'After revealing, it uses its own moves. Advisors can leave the palace and elephants can cross the river.',
+    'Checkmate wins. Leaving your opponent with no legal move also wins, even without check.',
+  ],
+  intro: [
+    {
+      kind: 'paragraph',
+      text: 'Jieqi, also called Reveal Xiangqi, is xiangqi with shuffled, hidden pieces. You can see where every piece stands and which side it belongs to. Only the generals start face-up. You learn the identity of one of your other pieces by moving it. Red moves first.',
+    },
+  ],
+  sections: [
+    {
+      heading: 'The board and setup',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Pieces stand on points where the lines meet. Red starts at the bottom of the diagrams and moves toward the top. Black moves toward the bottom. The river divides the board across the middle. Each general stays inside its own palace, the area marked with diagonal lines.',
+        },
+        {
+          kind: 'paragraph',
+          text: "Set each general face-up at the centre of its back rank. Shuffle each side's other fifteen pieces separately and deal them face-down onto its remaining starting points. Each side has two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. Neither player knows the hidden identities, including their own. Face-down pieces are often called dark pieces.",
+        },
+        {
+          kind: 'raw-svg',
+          svg: jieqiRulesDiagram('start', 'START: RED AT THE BOTTOM'),
+          caption: 'The generals are face-up. Every plain disc is a face-down piece, red-brown for Red and green for Black. The deal changes identities, while the starting points stay the same.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The coordinates in these examples name points. Files run from a on the left to i on the right, as Red sees them. Ranks run from 1 at the bottom to 10 at the top. So b1 is a horse starting point beside the left corner; e4 is the central soldier starting point.',
+        },
+      ],
+    },
+    {
+      heading: 'How a face-down piece moves',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'A face-down piece moves, attacks, and captures as the piece that normally starts on its point. The corners use chariot moves. Beside them are horse points, then elephant points, then advisor points beside the general. The two pieces set forward behind the soldiers use cannon moves. The front line uses soldier moves. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move on its own board.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'You move and reveal as a single turn. There is no separate turn for flipping a piece in place. Its hidden identity cannot change the path of this first move: the piece on b1 must make a horse move even if it will turn out to be a cannon or an advisor.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: jieqiRulesDiagram('horse', 'BEFORE: HORSE POINT b1', 'AFTER: ADVISOR ON c3'),
+          caption: 'Red moves b1 to c3 as a horse, which needs b2 empty. It lands and reveals as an advisor. The horse move from b1 to d2 is blocked by the piece on c1.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Both players see the identity when the piece lands, and from then on it moves and attacks as that piece.',
+        },
+        { kind: 'sub-heading', text: 'A cannon capture can reveal a soldier' },
+        {
+          kind: 'paragraph',
+          text: 'A cannon captures by jumping over exactly one piece, and a face-down piece on a cannon point does the same. At the start, Red can play b3 to b10 by jumping over the black piece on b8, which stays where it is.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: jieqiRulesDiagram('cannon', 'BEFORE: CANNON POINT b3', 'AFTER: SOLDIER ON b10'),
+          caption: 'The piece makes a cannon capture over b8, then reveals as a soldier. Red learns the captured identity. Black sees its face-down piece leave the board.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The revealed soldier has already crossed the river, so from b10 it can step sideways, but it cannot go back to b9.',
+        },
+      ],
+    },
+    {
+      heading: 'Revealed pieces use their own moves',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'A revealed advisor may leave the palace. A revealed elephant may cross the river. Their movement shapes stay the same: an advisor moves one point diagonally, and an elephant moves two diagonally, with the point between, called the eye, empty. The general always stays inside its own palace.',
+        },
+        {
+          kind: 'svg-row',
+          items: [
+            {
+              svg: jieqiRulesDiagram('advisor', 'REVEALED ADVISOR: c3 TO d4'),
+              caption: 'After the b1 to c3 reveal and a Black reply, the advisor can step from c3 to d4. It can continue playing outside the palace.',
+            },
+            {
+              svg: jieqiRulesDiagram('elephant', 'REVEALED ELEPHANT: a5 TO c7'),
+              caption: 'A different deal puts an elephant under a4. Red moves it to a5 as a soldier. After Black replies, the elephant can capture on c7 across the river because b6, its eye, is clear.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: "A soldier follows its river rule from wherever it reveals, so a corner reveal can leave you with a soldier far behind your front line.",
+        },
+        {
+          kind: 'raw-svg',
+          svg: jieqiRulesDiagram('corner', 'CORNER REVEAL: SOLDIER ON a3'),
+          caption: 'Red can slide the dark piece from a1 to a3 as a chariot. Here it reveals as a soldier. It will have to advance as a soldier on later turns; its own piece on a4 currently blocks it.',
+        },
+      ],
+    },
+    {
+      heading: 'Captured dark pieces',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'If a piece is captured face-down, only its capturer learns its identity. Its former owner and spectators see a dark piece leave the board and nothing else. The capturer can then rule that identity out among the pieces still hidden. If the piece had already revealed, everyone already knew what was taken. The piece that made the capture reveals to both players either way.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: JIEQI_CAPTURE_PRIVACY,
+        },
+      ],
+    },
+    {
+      heading: 'Check, checkmate, and draws',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'A general is in check when an enemy piece attacks its point. A face-down enemy piece attacks using its starting-point role. A piece that has just moved attacks using its revealed identity, so you must look again after every reveal.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'You must answer check on your turn, and a move that leaves your own general attacked is illegal. The generals also cannot face each other along a clear file. Any piece, including a face-down one, can block that file.',
+        },
+        {
+          kind: 'table',
+          wrap: true,
+          headers: ['Position or event', 'Result on Mistboard'],
+          rows: [
+            ['The player to move is in check and has no legal move.', 'Checkmate. That player loses.'],
+            ['The player to move has no legal move, even without check.', 'Stalemate. That player loses.'],
+            ['120 plies pass without a capture.', 'Draw. A ply is one move by one player, so this is 60 moves by each side. Revealing a piece alone does not reset the count.'],
+            ['The same position with the same side to move occurs for the third time.', 'A player who checked on every one of their turns in the repeating cycle loses. If neither player did, or both did, it is a draw.'],
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'Mistboard does not judge chases, so a repeated chase without check is a draw.',
+        },
+      ],
+    },
+    {
+      heading: 'A sample game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.',
+        },
+        {
+          kind: 'embed',
+          path: '/embed/study/SwSUugEY/SDQPHsxM',
+          title: 'Jieqi: AB-JChess against jqe, Black mates on move 30',
+          // A placeholder until the card reports its height: the 702px column
+          // holds the board, seat rows, win-chance graph, controls and credit.
+          aspect: [702, 800],
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through this one and four others, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.',
+        },
+      ],
+    },
+    {
+      heading: 'Common questions',
+      blocks: [
+        {
+          kind: 'faq',
+          items: [
+            {
+              question: 'How is jieqi different from xiangqi?',
+              answer:
+                'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.',
+            },
+            {
+              question: 'Can I look at or flip my own face-down pieces without moving them?',
+              answer: 'No. You learn a piece only when it moves, and a reveal is always part of a legal move.',
+            },
+            {
+              question: 'Can a revealed advisor leave the palace, and can an elephant cross the river?',
+              answer:
+                'Both, yes. After revealing, a piece plays by its identity anywhere on the board. Advisors still step one point diagonally and elephants still move two, blocked at the eye.',
+            },
+            {
+              question: 'Is stalemate a draw in jieqi?',
+              answer: 'No. The player with no legal move loses, even when their general is not in check.',
+            },
+            {
+              question: 'Where can I play jieqi online?',
+              answer:
+                'Here. Play a bot starts a game at the level you choose; Play a friend makes an invite link. No account is needed, and finished games get a move-by-move review.',
+            },
+            {
+              question: 'Is there a jieqi app?',
+              answer:
+                'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.',
+            },
+            {
+              question: 'Can I play jieqi against an AI?',
+              answer:
+                'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.',
+            },
+            {
+              question: 'Any tips for jieqi?',
+              answer:
+                'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.',
+            },
+          ],
+        },
+      ],
+    },
+    playClosing({
+      heading: 'Play on Mistboard',
+      lead: 'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.',
+      playLabel: 'Play a bot',
+      playHref: '/?play=computer&gameSpecId=jieqi',
+      layout: 'single-row',
+      secondary: [
+        { label: 'Play a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },
+      ],
+    }),
+  ],
 };
