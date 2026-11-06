@@ -4,15 +4,6 @@
   "gamesAgainstBots": 9031,
   "gamesWonAgainstBots": 1825,
   "gamesBetweenPeople": 98,
-  "longestGameBetweenPeople": {
-    "roomId": "jq_4d122891-6e54-41d9-9ad3-4e4e2863c457",
-    "variant": "jieqi",
-    "plies": 167,
-    "moves": 84,
-    "termination": "repetition",
-    "day": "2026-11-03",
-    "minutes": 27
-  },
   "countriesAndRegions": 41,
   "accounts": 107,
   "players": 1004,

@@ -76,18 +76,6 @@ const {
   JOIN game_participants b ON b.game_id = g.room_id AND b.subject_type NOT IN ('user', 'guest')
   WHERE ${countedPublicGame('g')} AND g.mode = 'pve'
     AND g.result LIKE '%-wins' AND g.result NOT LIKE b.color || '-%'`);
-// The longest game between two people, by plies. The post features one game
-// by name, and its test fails when this stops being that game.
-const {
-  rows: [longest],
-} = await client.query(`
-  SELECT g.room_id, g.variant, g.ply_count, g.termination,
-         to_char(g.ended_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
-         round(extract(epoch FROM g.ended_at - g.started_at) / 60)::int AS minutes
-  FROM games g
-  WHERE ${countedPublicGame('g')} AND g.mode = 'pvp'
-  ORDER BY g.ply_count DESC, g.room_id
-  LIMIT 1`);
 await client.end();
 
 const drift = Math.abs(dbTotal - stats.totalCompletedGames);
@@ -127,15 +115,6 @@ const record = {
   gamesAgainstBots: stats.modeTotals.pve,
   gamesWonAgainstBots,
   gamesBetweenPeople: stats.modeTotals.pvp,
-  longestGameBetweenPeople: {
-    roomId: longest.room_id,
-    variant: longest.variant,
-    plies: longest.ply_count,
-    moves: Math.ceil(longest.ply_count / 2),
-    termination: longest.termination,
-    day: longest.day,
-    minutes: longest.minutes,
-  },
   countriesAndRegions,
   accounts: stats.accounts,
   players: ranked.length,

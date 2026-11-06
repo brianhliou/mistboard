@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildTenThousandGamesArticle,
-  FEATURED_GAME,
   firstLastingThousandWeek,
   fullWeeks,
   type TenThousandGamesRecord,
@@ -38,7 +37,6 @@ function allowed(r: TenThousandGamesRecord) {
     milestone, nextGames, days, r.players, r.playersWithOneGame, r.playersWithTenGames,
     r.playersWithHundredGames, r.mostGamesByOnePlayer, r.gamesAgainstBots, r.gamesWonAgainstBots,
     r.gamesBetweenPeople, r.countriesAndRegions,
-    r.longestGameBetweenPeople.moves, r.longestGameBetweenPeople.minutes,
     r.atOneThousand.gamesBetweenPeople, r.peakWeek.games, r.peakWeek.gamesByItsBusiestPlayer,
     ...r.variants.map((v) => v.games),
     r.variants
@@ -57,7 +55,6 @@ function allowed(r: TenThousandGamesRecord) {
     dates: new Set([
       longDate(reached),
       longDate(r.peakWeek.weekStart),
-      longDate(r.longestGameBetweenPeople.day),
       longDate(firstLastingThousandWeek(r).weekStart),
       // Where counting started: a fact of the method, not a measurement.
       'June 1',
@@ -85,8 +82,6 @@ function recordProblems(r: TenThousandGamesRecord): string[] {
   if (sum(r.weeks.map((w) => w.games)) !== r.totalGames) out.push('weeks do not sum to the total');
   if (sum(r.variants.map((v) => v.games)) !== r.totalGames) out.push('variants do not sum to the total');
   if (r.gamesAgainstBots + r.gamesBetweenPeople !== r.totalGames) out.push('modes do not sum to the total');
-  if (r.longestGameBetweenPeople.roomId !== FEATURED_GAME) out.push('the featured game is no longer the longest');
-  if (r.longestGameBetweenPeople.termination !== 'repetition') out.push('the featured game did not end by repetition');
   const peak = fullWeeks(r).reduce((best, w) => (w.games > best.games ? w : best));
   if (peak.weekStart !== r.peakWeek.weekStart || peak.games !== r.peakWeek.games) {
     out.push('peak week is not the largest full week');
@@ -132,18 +127,6 @@ describe('the 10,000 games post holds to its record', () => {
     expect(recordProblems({ ...record, tenThousandOn: '2026-11-08' })).toContain(
       'crossing dated below 10,000',
     );
-    expect(
-      recordProblems({
-        ...record,
-        longestGameBetweenPeople: { ...record.longestGameBetweenPeople, roomId: 'jq_other' },
-      }),
-    ).toContain('the featured game is no longer the longest');
-    expect(
-      recordProblems({
-        ...record,
-        longestGameBetweenPeople: { ...record.longestGameBetweenPeople, termination: 'agreement' },
-      }),
-    ).toContain('the featured game did not end by repetition');
     expect(
       recordProblems({ ...record, gamesWonAgainstBots: record.gamesAgainstBots }),
     ).toContain('more wins than games against bots');

@@ -31,11 +31,6 @@ const longDate = (day: string): string =>
 const daysBetween = (from: string, to: string): number =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 
-// The one game the post shows. Pinned, because the sentence about it is written
-// for this game: a longer one appearing at the refresh fails the test beside
-// this file, and someone rereads the sentence.
-export const FEATURED_GAME = 'jq_4d122891-6e54-41d9-9ad3-4e4e2863c457';
-
 // Full weeks only: the last entry of the series is the week still in progress.
 export function fullWeeks(record: TenThousandGamesRecord) {
   return record.weeks.slice(0, -1);
@@ -140,16 +135,6 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
           {
             kind: 'paragraph',
             text: `${count(record.gamesAgainstBots)} games were against a bot, and people won ${count(record.gamesWonAgainstBots)} of those. ${count(record.gamesBetweenPeople)} were between two people, up from ${count(record.atOneThousand.gamesBetweenPeople)} in the first 1,000.`,
-          },
-          {
-            kind: 'paragraph',
-            text: `The longest of those was a jieqi game on ${longDate(record.longestGameBetweenPeople.day)} between two guests: ${count(record.longestGameBetweenPeople.moves)} moves in ${count(record.longestGameBetweenPeople.minutes)} minutes, drawn by repetition with each side down to a cannon and a soldier, and red still holding an elephant.`,
-          },
-          {
-            kind: 'embed',
-            path: `/embed/game/${FEATURED_GAME}?ply=${record.longestGameBetweenPeople.plies}&pov=white`,
-            title: 'The longest game between two people on Mistboard',
-            aspect: [702, 696],
           },
           {
             kind: 'paragraph',
