@@ -404,14 +404,15 @@ export async function mountPuzzles(
       scheduleAutoNext(navigation);
     });
     recordResult(session, false);
-    detail.querySelector('.puzzle-board-panel')?.append(
-      puzzleResultChips(sessionResults, session.puzzle.id, {
-        label: t('puzzle.sessionHistory'),
-        text: 'mark',
-        className: 'puzzle-session-chips',
-        onPick: pickSessionPuzzle,
-      }),
-    );
+    const chips = puzzleResultChips(sessionResults, session.puzzle.id, {
+      label: t('puzzle.sessionHistory'),
+      text: 'mark',
+      className: 'puzzle-session-chips',
+      onPick: pickSessionPuzzle,
+    });
+    detail.querySelector('.puzzle-board-panel')?.append(chips);
+    // The row scrolls sideways once it is full; keep the puzzle in play in view.
+    scrollChipIntoRow(chips);
     renderControls();
   };
 
@@ -2233,4 +2234,13 @@ async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFram
     }
   };
   await load();
+}
+
+/** Scroll a one-row chip strip so its current chip is visible, without moving the page. */
+export function scrollChipIntoRow(row: HTMLElement): void {
+  const current = row.querySelector<HTMLElement>('[aria-current]');
+  if (!current) return;
+  const overflow = current.offsetLeft + current.offsetWidth - row.clientWidth;
+  if (overflow > row.scrollLeft) row.scrollLeft = overflow;
+  else if (current.offsetLeft < row.scrollLeft) row.scrollLeft = current.offsetLeft;
 }

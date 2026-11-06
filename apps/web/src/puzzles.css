@@ -808,18 +808,6 @@ a.puzzle-streak-chip:focus-visible {
   font-weight: 500;
 }
 
-/* Stable puzzle code (e.g. "#bMpKA"), lichess-style: an accent link to the
-   puzzle's canonical URL, sitting inside the heading-styled first line. */
-.puzzle-code-link {
-  color: var(--site-link);
-  text-decoration: none;
-  font-variant-numeric: tabular-nums;
-}
-
-.puzzle-code-link:hover {
-  text-decoration: underline;
-}
-
 .puzzle-source-link {
   color: inherit;
   text-decoration: underline;
@@ -1695,6 +1683,27 @@ a.puzzle-tag--link:hover {
   .puzzles-sidebar {
     grid-row: 1 / span 2;
   }
+
+  /* The side panel spans both rows too, so the first row is the board's own
+     height and this visit's chips sit right under the board. When the panel
+     (move list, prompt and nav) was taller than the board it set that row's
+     height and left a gap of up to ~70px above the chips. */
+  .puzzle-side-panel {
+    grid-row: 1 / span 2;
+  }
+
+  /* One row that scrolls sideways, as on the phone: the desktop page does not
+     scroll, so a second wrapped row would run under the viewport's edge. */
+  .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
+    grid-row: 2;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .puzzles-shell .puzzle-board-panel > .puzzle-session-chips .puzzle-streak-chip {
+    flex: none;
+  }
 }
 
 @media (min-width: 1500px) and (min-height: 740px) {
@@ -2154,10 +2163,6 @@ a.puzzle-tag--link:hover {
     font-size: 16px;
     font-weight: 700;
     white-space: nowrap;
-  }
-
-  .puzzles-shell .puzzle-pm-head__title .puzzle-code-link {
-    color: inherit;
   }
 
   .puzzles-shell .puzzle-pm-head__status {

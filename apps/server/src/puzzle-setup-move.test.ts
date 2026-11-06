@@ -7,6 +7,7 @@ import {
 } from '@mistboard/game';
 import {
   englishSourcePlayerName,
+  isOnlinePlatformEvent,
   type PuzzleSourceGameRow,
   puzzleDetailSourceFields,
   resetPuzzleSetupMoveCacheForTests,
@@ -98,7 +99,7 @@ test('a missing game row leaves the puzzle as before: stored attribution, no his
 // The puzzle card named the platform and printed its pseudonyms
 // ("ElephantChess:cqM1Apb2GWRD"). The whole payload is checked, not the
 // rendered card, so no later field brings them back.
-test('an online platform game goes out as an online game and its year, nothing else', async () => {
+test('an online platform game goes out as an online game, its date and a link, nothing else', async () => {
   resetPuzzleSetupMoveCacheForTests();
   const base = puzzle('xq_ec', 4, {
     redName: 'ElephantChess:cqM1Apb2GWRD',
@@ -114,15 +115,20 @@ test('an online platform game goes out as an online game and its year, nothing e
     },
   };
   const expected = { gameId: 'hxq_src', ply: 4, playedOn: '2026-03-14', online: true };
+  // The stored row is listed, so the card links to the game's review page.
   const linked = await puzzleDetailSourceFields(stored, async () =>
     row({ redNameRaw: 'ElephantChess:cqM1Apb2GWRD', blackNameRaw: 'ElephantChess:H8Zr42oigB9S' }),
   );
-  assert.deepEqual(linked.sourceGame, expected);
+  assert.deepEqual(linked.sourceGame, { ...expected, hosted: true });
   // The moves before the puzzle still go out: they name no one.
   assert.deepEqual(linked.history, GAME.slice(0, 3));
   assert.doesNotMatch(JSON.stringify(linked), /ElephantChess/);
   resetPuzzleSetupMoveCacheForTests();
   assert.deepEqual(await puzzleDetailSourceFields(stored, null), { sourceGame: expected });
+  // A private row: no link.
+  resetPuzzleSetupMoveCacheForTests();
+  const hidden = await puzzleDetailSourceFields(stored, async () => row({ visibility: 'private' }));
+  assert.deepEqual(hidden.sourceGame, expected);
 });
 
 test('persistence off sends the stored attribution unlinked', async () => {
@@ -188,4 +194,11 @@ test('Chinese event and names get English forms beside the originals', async () 
 test('an English name needs no English form', () => {
   assert.equal(englishSourcePlayerName('HTown David Nguyen'), undefined);
   assert.equal(englishSourcePlayerName('越南 阮成保'), 'Nguyễn Thành Bảo (Vietnam)');
+});
+
+test('only the online platform event marks a game as an online platform game', () => {
+  assert.equal(isOnlinePlatformEvent('ElephantChess PvP'), true);
+  assert.equal(isOnlinePlatformEvent('Wuyang Cup'), false);
+  assert.equal(isOnlinePlatformEvent(null), false);
+  assert.equal(isOnlinePlatformEvent(undefined), false);
 });
