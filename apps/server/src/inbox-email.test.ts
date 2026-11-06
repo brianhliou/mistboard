@@ -9,7 +9,7 @@ import type { TransactionalEmail } from './send-email.js';
 delete process.env.RESEND_API_KEY;
 delete process.env.MISTBOARD_AUTH_EMAIL_FROM;
 delete process.env.RESEND_FROM_EMAIL;
-const { sweepInboxEmails } = await import('./inbox-email.js');
+const { inboxEmailEnabled, sweepInboxEmails } = await import('./inbox-email.js');
 
 const now = new Date('2026-11-06T18:00:00Z');
 const forbidden = 'FORBIDDEN-DM-BODY-913: private words must stay in the inbox';
@@ -212,4 +212,19 @@ test('list, signing, and marking failures are contained and later sweeps still r
   await sweepInboxEmails(now, { ...options, unsubscribe });
   assert.equal(sent, 1);
   await sweepInboxEmails(now, deps());
+});
+
+test('DM email stays off unless MISTBOARD_DM_EMAIL_ENABLED=1, even with every secret present', () => {
+  const ready = { MISTBOARD_ENGINE_SECRET: 's', MISTBOARD_AUTH_EMAIL_FROM: 'a@b.c' };
+  assert.equal(inboxEmailEnabled(ready, true), false);
+  assert.equal(inboxEmailEnabled({ ...ready, MISTBOARD_DM_EMAIL_ENABLED: 'true' }, true), false);
+  assert.equal(inboxEmailEnabled({ ...ready, MISTBOARD_DM_EMAIL_ENABLED: '1' }, true), true);
+  assert.equal(inboxEmailEnabled({ ...ready, MISTBOARD_DM_EMAIL_ENABLED: '1' }, false), false);
+  assert.equal(
+    inboxEmailEnabled(
+      { MISTBOARD_DM_EMAIL_ENABLED: '1', MISTBOARD_AUTH_EMAIL_FROM: 'a@b.c' },
+      true,
+    ),
+    false,
+  );
 });

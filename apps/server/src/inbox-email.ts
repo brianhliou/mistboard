@@ -8,7 +8,24 @@ import { emailLocale, inboxNoticeEmail } from './player-email.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
 
 const fromAddress = process.env.MISTBOARD_AUTH_EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
-const enabled = transactionalEmailConfigured && !!fromAddress && !!dmEmailUnsubscribeSecret();
+
+// Off unless MISTBOARD_DM_EMAIL_ENABLED=1: the unsubscribe key reuses a secret
+// prod already has, so without this switch the deploy that ships the code
+// would also start mailing players. Turning it on is a non-secret env change.
+export function inboxEmailEnabled(
+  env: Record<string, string | undefined> = process.env,
+  transactionalConfigured: boolean = transactionalEmailConfigured,
+): boolean {
+  const from = env.MISTBOARD_AUTH_EMAIL_FROM ?? env.RESEND_FROM_EMAIL;
+  return (
+    env.MISTBOARD_DM_EMAIL_ENABLED === '1' &&
+    transactionalConfigured &&
+    !!from &&
+    !!dmEmailUnsubscribeSecret(env)
+  );
+}
+
+const enabled = inboxEmailEnabled();
 
 export type InboxEmailDeps = {
   enabled: boolean;
