@@ -5435,7 +5435,7 @@ const ZH_HANS: Record<string, string> = {
   'Can a soldier capture a cannon?': '暗棋的兵可以吃炮吗？',
   'Can a horse capture a chariot?': '暗棋的马可以吃车吗？',
   'No. The chariot outranks the horse. A horse captures horses, cannons, and soldiers.':
-    '不行，车比马高一级。马能吃马、炮、卒。',
+    '不行，车比马高一级。马能吃马、炮、兵。',
   'What is the rank order in Jungle Chess?': '斗兽棋的大小顺序是什么？',
   'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
     '象 > 狮 > 虎 > 豹 > 狼 > 狗 > 猫 > 鼠。动物可以吃相邻的同等级或更低等级的敌方动物。唯一的例外：在陆地上的鼠可以吃象，而象永远不能吃鼠。',
@@ -5675,24 +5675,24 @@ const ZH_HANS: Record<string, string> = {
   // banqi rules page re-cut 2026-09-21: real-board diagrams, shorter prose.
   'Before the first flip. Nobody has a color yet.': '第一次翻子之前。谁都还没有颜色。',
   'The horse may take the soldier or the other horse, not the chariot above it.':
-    '马可以吃卒或另一只马，不能吃排在它上面的车。',
+    '马可以吃兵或另一只马，不能吃排在它上面的车。',
   'The lowest piece can take the highest.': '最小的子可以吃最大的。',
   'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
     '自己的子也能当炮架。象后面的暗子不是目标。',
   'As a target, the cannon is below the horse: the horse may take it.':
     '被吃的时候，炮排在马下面：马可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
-    '卒不能吃炮。它可以吃另一颗卒，或吃将。',
+    '兵不能吃炮。它可以吃另一颗兵，或吃将。',
   'An engine game': '一盘引擎对局',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到红，所以翻的人这盘是红方。',
   '**Flip** any face-down tile. It turns over for both players to see, whichever color it turns out to be, and your turn is over.':
-    '**翻**任何一颗暗子。它翻开給双方看，不管翻出什么颜色，你这一回合就结束了。',
+    '**翻**任何一颗暗子。它翻开给双方看，不管翻出什么颜色，你这一回合就结束了。',
   'The selected horse can move to the three marked squares. The face-down tile above it is not a destination.':
     '选中的马可以走到三个标记的格子。它上面的暗子不能当目的地。',
   'The general cannot take the soldier back; the advisor beside it, it can.':
-    '将不能回头吃卒；旁边的士，它可以吃。',
+    '将不能回头吃兵；旁边的士，它可以吃。',
   'One screen, then the target. Rank does not matter: the cannon takes the general.':
     '一颗炮架，再来是目标。大小不重要：炮吃将。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
