@@ -6517,8 +6517,9 @@ const ZH_HANS: Record<string, string> = {
   'AB-JChess-20261031 against jqe 0.1.0. Both engines are still being developed, so a later release of either may score differently.':
     'AB-JChess-20261031 对 jqe 0.1.0。两个引擎都还在开发中，任何一方的后续版本都可能得出不同的结果。',
   'The result': '比赛结果',
-  "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out.":
-    '这 600 盘棋来自 300 组暗子布局，每组红黑互换各下一次，用 4 个线程，每步 4 秒。和 jqe 对上一版 AB-JChess 的比赛一样，我们的裁判程序把任何三次重复局面，以及双方各连续 60 步无吃子，都判为和棋。暗子被吃时，裁判程序会向两个引擎公开它是什么；在 Mistboard 上，只有吃子方才会知道。',
+  "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
+    '这 600 盘棋来自 300 组暗子布局，每组红黑互换各下一次，用 4 个线程，每步 4 秒。和 jqe 对上一版 AB-JChess 的比赛一样，我们的裁判程序把任何三次重复局面，以及双方各连续 60 步无吃子，都判为和棋。暗子被吃时，裁判程序会向两个引擎公开它是什么；在 Mistboard 上，只有吃子方才会知道。[全部 600 盘棋](/study/fb5Wqzbs)都收在一个研究中，每组布局的两盘棋并排放在一起。',
+  'Added a link to a study of all 600 games.': '新增了收录全部 600 盘棋的研究链接。',
   'AB-JChess': 'AB-JChess',
   'Won-drawn-lost': '胜-和-负',
   'All 600 games': '全部 600 盘',
@@ -12684,8 +12685,9 @@ const ZH_HANT: Record<string, string> = {
   'AB-JChess-20261031 against jqe 0.1.0. Both engines are still being developed, so a later release of either may score differently.':
     'AB-JChess-20261031 對 jqe 0.1.0。兩個引擎都還在開發中，任何一方的後續版本都可能得出不同的結果。',
   'The result': '比賽結果',
-  "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out.":
-    '這 600 盤棋來自 300 組暗子佈局，每組紅黑互換各下一次，用 4 個執行緒，每步 4 秒。和 jqe 對上一版 AB-JChess 的比賽一樣，我們的裁判程式把任何三次重複局面，以及雙方各連續 60 步無吃子，都判為和棋。暗子被吃時，裁判程式會向兩個引擎公開它是什麼；在 Mistboard 上，只有吃子方才會知道。',
+  "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
+    '這 600 盤棋來自 300 組暗子佈局，每組紅黑互換各下一次，用 4 個執行緒，每步 4 秒。和 jqe 對上一版 AB-JChess 的比賽一樣，我們的裁判程式把任何三次重複局面，以及雙方各連續 60 步無吃子，都判為和棋。暗子被吃時，裁判程式會向兩個引擎公開它是什麼；在 Mistboard 上，只有吃子方才會知道。[全部 600 盤棋](/study/fb5Wqzbs)都收在一個研究中，每組佈局的兩盤棋並排放在一起。',
+  'Added a link to a study of all 600 games.': '新增了收錄全部 600 盤棋的研究連結。',
   'AB-JChess': 'AB-JChess',
   'Won-drawn-lost': '勝-和-負',
   'All 600 games': '全部 600 盤',
