@@ -21,6 +21,12 @@ const LOOKUP: CrosstableTenantLookup = {
       return { export: { gameRouteBase: '/banqi/game', finishedGame: () => null } };
     if (roomId.startsWith('dchx_')) return { export: null };
     // Three Kingdoms banqi: no export, but a review page of its own.
+    // Xiangqi Mahjong: an export and a review page, but its room is the finished page.
+    if (roomId.startsWith('xmj_'))
+      return {
+        export: { gameRouteBase: '/xiangqi-mahjong/game', finishedGame: () => null },
+        finishedGameOpensRoom: true,
+      };
     if (roomId.startsWith('tkb_'))
       return { export: null, reviewRouteBase: '/three-kingdoms-banqi/game' };
     return null;
@@ -267,6 +273,8 @@ test('crosstable review url: chess stack, tenant room, legacy room id, unknown v
     crosstableReviewUrl('tkb_1', 'three-kingdoms-banqi', LOOKUP),
     '/three-kingdoms-banqi/game/tkb_1',
   );
+  // A table whose finished room is its page links the room, export or not.
+  assert.equal(crosstableReviewUrl('xmj_1', 'xiangqi-mahjong', LOOKUP), '/room/xmj_1');
   // A legacy room id with no tenant prefix resolves through the spec.
   assert.equal(crosstableReviewUrl('legacy-1', 'xiangqi', LOOKUP), '/xiangqi/game/legacy-1');
   // Unknown variants and un-registered tenants get no URL, never a guess.
