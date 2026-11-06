@@ -4029,8 +4029,8 @@ const ZH_HANS: Record<string, string> = {
     '2025年的世锦赛9月在上海举行，越南的赖理兄夺冠，他在27日的决赛中战胜了中国的殷升。在这项赛事存在的三十五年里，他是第一个把慢棋冠军拿走的非中国棋手。',
   'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.':
     '赖理兄对冯家俊，2025年9月23日，决赛前四天。两百一十七步，引擎认为直到第九十回合双方仍然均势。',
-  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
-    '把这两件事连起来读很有诱惑力，好像是禁赛替他打开了门。这个读法太齐整了。他1990年生于永隆，2022年拿下世界快棋冠军，2023年就打进过这项决赛，在加赛中输给孟辰。他在本页还出现过两次，2015年输给郑惟桐，2023年输给孟辰，也就是说他在拿到任何东西之前已经来了十年。越南做了一代人的世界第二象棋强国，英文世界却几乎没有注意到。',
+  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won the championship itself. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
+    '把这两件事连起来读很有诱惑力，好像是禁赛替他打开了门。这个读法太齐整了。他1990年生于永隆，2022年拿下世界快棋冠军，2023年就打进过这项决赛，在加赛中输给孟辰。他在本页还出现过两次，2015年输给郑惟桐，2023年输给孟辰，也就是说他在拿到这项冠军之前已经来了十年。越南做了一代人的世界第二象棋强国，英文世界却几乎没有注意到。',
   'Where that leaves the title': '这个头衔的分量',
   'Nineteen editions, eleven winners, and a question that had the same answer for thirty-five years. The world title had never left China. Now it has, in the same decade the sport spent voiding its own results, and those two things are worth keeping separate.':
     '十九届，十一位冠军，还有一个三十五年来答案不变的问题。世界冠军从未离开过中国。现在它离开了，而这十年正是这项运动忙着推翻自己成绩的十年，这两件事值得分开来看。',
@@ -6389,8 +6389,8 @@ const ZH_HANS: Record<string, string> = {
   'Corrected how a face-down piece is described.': '更正了对暗子走法的说明。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
-  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
-    '删去了赵鑫鑫是最年轻世界冠军的说法；郑惟桐 2015 年夺冠时更年轻。',
+  'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
+    '更正了一句漏掉赖理兄 2022 年世界快棋冠军的话。',
   'Replaced the sample game with a game played against the engine on the site.':
     '示例对局换成了一盘在本站与引擎下的对局。',
   'Added a sample game from the site.': '新增一盘本站的示例对局。',
@@ -10789,8 +10789,8 @@ const ZH_HANT: Record<string, string> = {
     '2025年的世錦賽9月在上海舉行，越南的賴理兄奪冠，他在27日的決賽中戰勝了中國的殷升。在這項賽事存在的三十五年裡，他是第一個把慢棋冠軍拿走的非中國棋手。',
   'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.':
     '賴理兄對馮家俊，2025年9月23日，決賽前四天。兩百一十七步，引擎認為直到第九十回合雙方仍然均勢。',
-  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
-    '把這兩件事連起來讀很有誘惑力，好像是禁賽替他打開了門。這個讀法太齊整了。他1990年生於永隆，2022年拿下世界快棋冠軍，2023年就打進過這項決賽，在加賽中輸給孟辰。他在本頁還出現過兩次，2015年輸給郑惟桐，2023年輸給孟辰，也就是說他在拿到任何東西之前已經來了十年。越南做了一代人的世界第二象棋強國，英文世界卻幾乎沒有注意到。',
+  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won the championship itself. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
+    '把這兩件事連起來讀很有誘惑力，好像是禁賽替他打開了門。這個讀法太齊整了。他1990年生於永隆，2022年拿下世界快棋冠軍，2023年就打進過這項決賽，在加賽中輸給孟辰。他在本頁還出現過兩次，2015年輸給郑惟桐，2023年輸給孟辰，也就是說他在拿到這項冠軍之前已經來了十年。越南做了一代人的世界第二象棋強國，英文世界卻幾乎沒有注意到。',
   'Where that leaves the title': '這個頭銜的分量',
   'Nineteen editions, eleven winners, and a question that had the same answer for thirty-five years. The world title had never left China. Now it has, in the same decade the sport spent voiding its own results, and those two things are worth keeping separate.':
     '十九屆，十一位冠軍，還有一個三十五年來答案不變的問題。世界冠軍從未離開過中國。現在它離開了，而這十年正是這項運動忙著推翻自己成績的十年，這兩件事值得分開來看。',
@@ -12712,8 +12712,8 @@ const ZH_HANT: Record<string, string> = {
   'Corrected how a face-down piece is described.': '更正了對暗子走法的說明。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
-  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
-    '刪去了赵鑫鑫是最年輕世界冠軍的說法；郑惟桐 2015 年奪冠時更年輕。',
+  'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
+    '更正了一句漏掉賴理兄 2022 年世界快棋冠軍的話。',
   'Replaced the sample game with a game played against the engine on the site.':
     '範例對局換成了一盤在本站與引擎下的對局。',
   'Added a sample game from the site.': '新增一盤本站的範例對局。',
