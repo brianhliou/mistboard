@@ -29,6 +29,7 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
+  MAHJONG_SPEC_ID,
   maybeGameSpecForId,
   PLAYTEST_GAME_SPEC_IDS,
   publicSpecPredicate,
@@ -323,9 +324,12 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('retired specs: Fortress and Atomic Xiangqi, hidden but still resolvable', () => {
-  // Retired 2026-10-11: closed to new games, kept so finished games replay.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], [FORTRESS_XIANGQI_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID]);
+test('retired specs: Fortress, Atomic Xiangqi and Mahjong, hidden but still resolvable', () => {
+  // Closed to new games, kept so finished games stay readable.
+  assert.deepEqual(
+    [...RETIRED_GAME_SPEC_IDS],
+    [FORTRESS_XIANGQI_SPEC_ID, MAHJONG_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID],
+  );
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
     assert.equal(gameSpecForId(id).runtimeStatus, 'retired', id);

@@ -18,7 +18,9 @@ export const mahjongArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-13',
-  playableOnMistboard: true,
+  updatedAt: '2026-11-06',
+  updateNote: 'Hong Kong mahjong closed to new games on November 6, 2026.',
+  playableOnMistboard: false,
   audience:
     'Someone sitting down at the Mistboard table for the first time, and anyone who has played a hand and wants to know why it was not a win.',
   intro: [
@@ -279,11 +281,12 @@ export const mahjongArticle: Article = {
         },
       ],
     },
+    // Retired 2026-11-06: the closing points at the mahjong game still open here.
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Hong Kong mahjong is on Mistboard as a one-hand table against three bots. It is still being tested and is open to invited accounts.',
-      playLabel: 'Play a hand',
-      playHref: '/?play=computer&gameSpecId=mahjong',
+      lead: 'Hong Kong mahjong is no longer open for new games. The mahjong game here is Xiangqi Mahjong: two players, one xiangqi set used as tiles, five-tile hands.',
+      playLabel: 'Play Xiangqi Mahjong',
+      playHref: '/?play=computer&gameSpecId=xiangqi-mahjong',
     }),
   ],
 };

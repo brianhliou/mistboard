@@ -25,6 +25,7 @@ import {
   type GameSpecId,
   GOMOKU_SPEC_ID,
   isPublicGameSpec,
+  isRetiredGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -211,7 +212,9 @@ const THREE_KINGDOMS_BANQI_ENGINE_OPTIONS: readonly WebTenantEngineOption[] = [
 // launch switch (publicSurface) is on, the server drops it from the allowlist
 // and the flag alone decides.
 const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): boolean =>
-  enabled() && (isPublicGameSpec(gameSpecId) || hasLikelyVariantGrant(gameSpecId));
+  enabled() &&
+  !isRetiredGameSpec(gameSpecId) &&
+  (isPublicGameSpec(gameSpecId) || hasLikelyVariantGrant(gameSpecId));
 const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 // Xiangqi mahjong is gated the same way, on its own flag and its own grant.
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);

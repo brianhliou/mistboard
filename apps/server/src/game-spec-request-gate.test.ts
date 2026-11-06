@@ -180,8 +180,13 @@ test('game spec gate refuses every retired spec, by id and by legacy variant, wh
   // Retirement is decided in packages/game (runtimeStatus 'retired'); the
   // gate reads it and never consults a launch flag for a retired id. Fortress
   // and Atomic Xiangqi retired on 2026-10-11 with their tenants kept, so their
-  // finished games replay while every create path answers 410.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS].sort(), ['atomic-xiangqi', 'fortress-xiangqi']);
+  // finished games replay while every create path answers 410. Hong Kong
+  // mahjong followed on 2026-11-06.
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS].sort(), [
+    'atomic-xiangqi',
+    'fortress-xiangqi',
+    'mahjong',
+  ]);
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.deepEqual(gateGameSpecRequest({ gameSpecId: id }), RETIRED, `gameSpecId ${id}`);
     assert.deepEqual(gateGameSpecRequest({ variant: id }), RETIRED, `variant ${id}`);
