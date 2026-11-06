@@ -413,6 +413,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Shared scaffold role. Postgame is the default; standalone analysis and
    *  studies opt into their distinct roles at their route-level mount. */
   reviewSurface?: ReviewSurface;
+  /** The viewer's played seat in analysis slots (red = first seat, black = second).
+   *  Null/omitted hides retro on game reviews; analysis always uses the bottom side. */
+  retroSide?: RetroSide | null;
   /** Keep a study's existing shell and left rail while replacing its review. */
   reuseShell?: HTMLElement;
   /** Synchronize an external chapter chart with the board cursor. */
@@ -1756,9 +1759,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
 
   // ── Learn from your mistakes (retro mode) ──
   // The variant opts in with a move→squares mapping, and the flow needs a local
-  // engine to grade a free try; a study reads a document, it does not retry it.
+  // engine to grade a free try. Only a game's player retries their own seat;
+  // an analysis line belongs to its reader, and a study does not offer retro.
+  const analysisSurface = config.reviewSurface === 'analysis';
   const retroSupported = Boolean(
-    presentation.retro && presentation.engine && config.reviewSurface !== 'study',
+    presentation.retro &&
+      presentation.engine &&
+      config.reviewSurface !== 'study' &&
+      (analysisSurface || config.retroSide != null),
   );
   /** "12. h3-e3" / "12… h8-e8": the move-tree's own numbering, reused by the
    *  chart readout and the retro prompts so one move reads the same everywhere. */
@@ -1767,14 +1775,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const number = ply % 2 === 1 ? `${(ply + 1) / 2}.` : `${ply / 2}…`;
     return `${number} ${node.label}`;
   }
-  /** Which side sits at the bottom of the board: the side the reader is
-   *  looking from, and so the side whose mistakes they came to fix (lichess
-   *  bottomColor). */
+  /** On the analysis board the reader practises whichever side they face. */
   function bottomSide(): RetroSide {
     return orientation() === presentation.perspective(false) ? 'red' : 'black';
   }
   function openRetro(side: RetroSide): void {
-    if (!gameAnalysis) return;
+    if (!retroSupported || !gameAnalysis || (!analysisSurface && side !== config.retroSide)) return;
     const analysis = gameAnalysis;
     retro = null;
     retroPanel?.el.remove();
@@ -1809,11 +1815,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       labelFor: plyMoveLabel,
       discInk: reviewColorForSeat(side, config.seatColors),
       onClose: closeRetro,
-      onFlip: () => {
-        // Look at the game from the other side, then start on its mistakes.
-        flipBoard();
-        openRetro(side === 'red' ? 'black' : 'red');
-      },
+      onFlip: analysisSurface
+        ? () => {
+            // Look at the game from the other side, then start on its mistakes.
+            flipBoard();
+            openRetro(side === 'red' ? 'black' : 'red');
+          }
+        : undefined,
     });
     // The box rises over the bottom of the move list, on the board's bottom
     // line (lichess puts its retro box at the foot of the tools column).
@@ -1832,7 +1840,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   function toggleRetro(): void {
     if (retro) closeRetro();
-    else openRetro(bottomSide());
+    else {
+      const side = analysisSurface ? bottomSide() : config.retroSide;
+      if (side != null) openRetro(side);
+    }
   }
   /** The panel, the engine readout and the move-list hiding all read retro
    *  state; refresh them together after any retro transition. */

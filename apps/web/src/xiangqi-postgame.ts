@@ -21,12 +21,14 @@ import { t } from './i18n/catalog.js';
 // Reuse the shared dxq-postgame scaffold (.dxq-postgame__*) the other variants ride.
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
+import { type AuthUser, loadCachedCurrentUser } from './account-nav.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { xiangqiEnabled } from './feature-flags.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { retroSideForViewer } from './review/retro-side.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -54,6 +56,8 @@ export type XiangqiPostgameResponse = {
       name: string;
       rating: number | null;
       kind: 'account' | 'guest' | 'engine';
+      handle?: string | null;
+      botId?: string | null;
     }>;
   };
   state: {
@@ -89,10 +93,10 @@ export function mountXiangqiPostgame(root: HTMLElement, roomId: string): void {
     renderError(root, 'Xiangqi unavailable', 'This route is not enabled in this build.');
     return;
   }
-  void loadXiangqiPostgame(roomId)
-    .then((result) => {
+  void Promise.all([loadXiangqiPostgame(roomId), loadCachedCurrentUser()])
+    .then(([result, viewer]) => {
       if (result.ok) {
-        renderPostgame(root, result.postgame);
+        renderPostgame(root, result.postgame, viewer);
         return;
       }
       renderError(root, errorTitle(result.status), errorBody(result));
@@ -123,7 +127,11 @@ export function xiangqiPostgameApiUrl(roomId: string): string {
   return url.pathname;
 }
 
-function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): void {
+function renderPostgame(
+  root: HTMLElement,
+  postgame: XiangqiPostgameResponse,
+  viewer: AuthUser | null,
+): void {
   const moveEvents = postgame.timeline.filter((item) => item.type === 'move-played' && item.move);
   const moves = moveEvents.map((item) => item.move as XiangqiMove);
 
@@ -154,6 +162,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
   const truth = createStandardXiangqiStateFromSetup(postgame.game.roomId, postgame.view);
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
+    retroSide: postgame.game.mode === 'imported' ? null : retroSideForViewer(gamePlayers, viewer),
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Xiangqi postgame',
     title: 'Xiangqi',
