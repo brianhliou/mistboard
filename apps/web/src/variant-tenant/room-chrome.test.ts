@@ -574,6 +574,18 @@ describe('tenant room chrome player names', () => {
 });
 
 describe('tenant room chrome player discs', () => {
+  it.each(['mahjong', 'xiangqi-mahjong'])(
+    'omits live clock name discs for the inkless %s seats',
+    (gameSpecId) => {
+      const { chrome, refs } = chromeHarness({ gameSpecId });
+      chrome.renderClocks();
+      expect(refs.playerTop.querySelector('.seat-disc')).toBeNull();
+      expect(refs.playerBottom.querySelector('.seat-disc')).toBeNull();
+      expect(refs.playerTop.querySelector('.clock-name')).not.toBeNull();
+      expect(refs.playerBottom.querySelector('.clock-name')).not.toBeNull();
+    },
+  );
+
   function discClasses(refs: LiveRefs): string[] {
     return [...refs.gameInfo.querySelectorAll('.game-meta-card__disc')].map((disc) =>
       [...disc.classList].filter((name) => name.startsWith('seat-disc--')).join(' '),
