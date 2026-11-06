@@ -37,6 +37,7 @@ export type AccountPreferenceKey =
   | 'premoves'
   | 'confirmGameActions'
   | 'inboxBell'
+  | 'inboxEmail'
   | 'correspondenceBell'
   | 'challengesBell'
   | 'forumBell'
@@ -51,6 +52,7 @@ export type AccountPreferences = {
   premoves: boolean;
   confirmGameActions: boolean;
   inboxBell: boolean;
+  inboxEmail: boolean;
   correspondenceBell: boolean;
   // Bell mutes for the sources that arrived after the first two: pending
   // challenges, forum replies/quotes, new followers. All default on.
@@ -76,6 +78,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   premoves: true,
   confirmGameActions: true,
   inboxBell: true,
+  inboxEmail: true,
   correspondenceBell: true,
   challengesBell: true,
   forumBell: true,
@@ -407,6 +410,7 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
       DEFAULT_ACCOUNT_PREFERENCES.confirmGameActions,
     ),
     inboxBell: booleanOrDefault(parsed.inboxBell, DEFAULT_ACCOUNT_PREFERENCES.inboxBell),
+    inboxEmail: booleanOrDefault(parsed.inboxEmail, DEFAULT_ACCOUNT_PREFERENCES.inboxEmail),
     correspondenceBell: booleanOrDefault(
       parsed.correspondenceBell,
       DEFAULT_ACCOUNT_PREFERENCES.correspondenceBell,

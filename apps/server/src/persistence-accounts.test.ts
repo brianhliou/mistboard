@@ -1,8 +1,47 @@
-import { createUser, findUserByEmail, markUserEmailVerified } from './persistence.js';
+import {
+  createUser,
+  findUserByEmail,
+  markUserEmailVerified,
+  updateUserAccountPreference,
+} from './persistence.js';
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 
 definePersistenceTests('accounts', () => {
+  test('inbox email defaults on and persists independently of the bell', async () => {
+    const now = new Date();
+    const user = await createUser({
+      id: 'user_inbox_email',
+      email: 'inbox-email@example.com',
+      emailVerifiedAt: null,
+      handle: 'inbox-email',
+      displayName: 'Inbox Email',
+      now,
+    });
+    assert.equal(user.accountPreferences.inboxEmail, true);
+    assert.equal((await findUserByEmail(user.email))?.accountPreferences.inboxEmail, true);
+
+    // Existing rows lack the new key; malformed JSON values also keep the default.
+    for (const preferences of [{ inboxBell: false }, { inboxBell: false, inboxEmail: 'false' }]) {
+      await getPool().query('UPDATE users SET account_preferences = $2::jsonb WHERE id = $1', [
+        user.id,
+        JSON.stringify(preferences),
+      ]);
+      const legacy = await findUserByEmail(user.email);
+      assert.equal(legacy?.accountPreferences.inboxEmail, true);
+      assert.equal(legacy?.accountPreferences.inboxBell, false);
+    }
+
+    for (const enabled of [false, true]) {
+      const updated = await updateUserAccountPreference(user.id, 'inboxEmail', enabled, now);
+      assert.equal(updated?.accountPreferences.inboxEmail, enabled);
+      assert.equal(updated?.accountPreferences.inboxBell, false);
+      const stored = await findUserByEmail(user.email);
+      assert.equal(stored?.accountPreferences.inboxEmail, enabled);
+      assert.equal(stored?.accountPreferences.inboxBell, false);
+    }
+  });
+
   test('Gomoku and every historical rating bucket survive the migrated CHECK', async () => {
     await createUser({
       id: 'gomoku-check',

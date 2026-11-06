@@ -826,7 +826,7 @@ function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocal
       user,
       t('account.notificationDirectMessages', {}, locale),
       'inboxBell',
-      null,
+      'inboxEmail',
       locale,
     ),
     buildNotificationPreferenceRow(
@@ -898,6 +898,7 @@ type BellPreferenceId =
   | 'forumBell'
   | 'followersBell';
 type EmailPreferenceId =
+  | 'inboxEmail'
   | 'correspondenceDeadlineEmail'
   | 'correspondenceStartEmail'
   | 'correspondenceTurnDigest';
