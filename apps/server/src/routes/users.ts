@@ -130,6 +130,25 @@ export async function tryHandle(
     return true;
   }
 
+  const puzzleRatingHistoryMatch = pathname.match(/^\/api\/users\/([^/]+)\/puzzle-rating-history$/);
+  if (puzzleRatingHistoryMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const handle = decodeURIComponent(puzzleRatingHistoryMatch[1] ?? '').trim();
+    if (!HANDLE_PATTERN.test(handle)) {
+      writeJson(response, 400, { error: 'invalid_handle' });
+      return true;
+    }
+    const viewer = await currentAccountUser(request);
+    const points = await persistence.getUserPuzzleRatingHistory(handle, viewer?.id ?? null);
+    if (!points) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    writeJson(response, 200, { points }, { 'cache-control': 'private, no-store' });
+    return true;
+  }
+
   const ratingHistoryMatch = pathname.match(/^\/api\/users\/([^/]+)\/rating-history$/);
   if (ratingHistoryMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
