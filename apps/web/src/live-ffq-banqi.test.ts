@@ -112,8 +112,11 @@ describe('FFQ banqi live room', () => {
     expect(document.querySelector('.ffq-banqi-counters')?.textContent).toBe(
       'No progress 0/30 · Red chase 0/4 · Black chase 0/4',
     );
-    expect(document.querySelectorAll('.seat-disc--red')).toHaveLength(1);
-    expect(document.querySelectorAll('.seat-disc--black')).toHaveLength(1);
+    // One disc per seat on each surface: the meta card and the clock rows (#901).
+    for (const surface of ['.game-meta-card', '.clock-player-line']) {
+      expect(document.querySelectorAll(`${surface} .seat-disc--red`)).toHaveLength(1);
+      expect(document.querySelectorAll(`${surface} .seat-disc--black`)).toHaveLength(1);
+    }
     expect(document.querySelector('.seat-disc--unbound')).toBeNull();
     expect(document.body.textContent).not.toMatch(/First to move|Second to move|first flip|binds/i);
   });
@@ -136,8 +139,11 @@ describe('FFQ banqi live room', () => {
     click(flip.to);
     expect(moves().at(-1)).toEqual({ type: 'move', from: flip.to, to: flip.to });
     expect(document.querySelector('[data-player-top]')?.textContent).toContain('Red');
-    expect(document.querySelectorAll('.seat-disc--red')).toHaveLength(1);
-    expect(document.querySelectorAll('.seat-disc--black')).toHaveLength(1);
+    // One disc per seat on each surface: the meta card and the clock rows (#901).
+    for (const surface of ['.game-meta-card', '.clock-player-line']) {
+      expect(document.querySelectorAll(`${surface} .seat-disc--red`)).toHaveLength(1);
+      expect(document.querySelectorAll(`${surface} .seat-disc--black`)).toHaveLength(1);
+    }
   });
 
   it('selects and moves, rejects illegal clicks, and captures a covered cannon target', async () => {
