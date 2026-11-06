@@ -11,6 +11,7 @@ import {
   rapfiPlySeed,
   selectRapfiMove,
 } from '@mistboard/game';
+import { resolveValidatedEngineMove } from './engine-move-guard.js';
 import {
   GOMOKU_ANALYSIS_HASH_BYTES,
   type GomokuAnalysisOptions,
@@ -28,7 +29,11 @@ const livePool = new UciEnginePool({
   name: 'rapfi-gomoku-pve',
   maxProcessesEnvVar: 'RAPFI_MAX_PROCESSES',
   queueTimeoutEnvVar: 'RAPFI_QUEUE_TIMEOUT_MS',
-  defaultMaxProcesses: 2,
+  // Four single-threaded 32 MB searches leave room under the shared physical
+  // cap. Allow several Level 8 waves, including cold startup and child reaping,
+  // rather than shedding valid queued turns at the harness's 5 s default.
+  defaultMaxProcesses: 4,
+  defaultQueueTimeoutMs: 30_000,
   queueTimeoutMessage: 'Rapfi PvE pool timed out',
 });
 
@@ -92,7 +97,9 @@ export async function gomokuLiveEngineMove(
             ...request.lines.slice(1),
           ],
           (line) => /^\d+,\d+$/.test(line.trim()),
-          options.timeoutMs ?? request.timeMs + 250,
+          // Each move starts a fresh process; Rapfi loads its net on the first
+          // search. The engine's time budget does not cover cold startup.
+          options.timeoutMs ?? request.timeMs + 2_000,
         );
         // Require a valid final move even when structured candidates choose it.
         const [x, y] = output.at(-1)!.trim().split(',').map(Number);
@@ -165,22 +172,31 @@ export async function playGomokuEngineMoveIfReady(
   const seat = engineSeat(room);
   if (thinking.has(room) || seat === null || !engineToMove(room, seat)) return;
   const state = room.projection.state;
-  const revision = room.events.at(-1);
   const engineId = room.projection.seats[seat]!;
+  // Reconnects append seat-assigned without changing the searched position.
+  // Compare the turn/ply/board so metadata cannot repeatedly discard replies.
   const isCurrent = () =>
     engineToMove(room, seat) &&
-    room.projection.state === state &&
-    room.events.at(-1) === revision &&
+    room.projection.state.ply === state.ply &&
+    room.projection.state.board.every((color, index) => color === state.board[index]) &&
     room.projection.seats[seat] === engineId;
   thinking.add(room);
   try {
-    let move: GomokuMove | null = null;
-    let failure: unknown;
-    try {
-      move = await provider(state, engineId, { isCurrent });
-    } catch (error) {
-      failure = error;
-    }
+    const { chosen: move, aborted } = await resolveValidatedEngineMove<GomokuMove>({
+      maxAttempts: 2,
+      requestMove: async () => (await provider(state, engineId, { isCurrent }))?.to ?? null,
+      validate: (to) => {
+        const candidate = parseGomokuMove(to);
+        return candidate && gomokuTenant.rules.isLegalMove(state, candidate) ? candidate : null;
+      },
+      stillOnTurn: isCurrent,
+      onReject: ({ attempt, reason, error }) =>
+        logger.warn(
+          { kind: 'gomoku_engine_move_rejected', room_id: room.id, attempt, reason, error },
+          'Rapfi move rejected',
+        ),
+    });
+    if (aborted) return;
     // Drain writes queued while awaiting the previous tail too. The stale-turn
     // check and enqueue below must follow every earlier pause/move/resignation.
     let writes: Promise<void>;
@@ -189,29 +205,23 @@ export async function playGomokuEngineMoveIfReady(
       await writes;
     } while (writes !== room.pendingWrites);
     if (!isCurrent()) return;
-    if (!move || !gomokuTenant.rules.isLegalMove(state, move)) {
-      move = null;
+    // Engine forfeits use the shared engineFailureAbort summary path. Unlike
+    // seat-resigned, they are excluded from results and ratings, even after the
+    // pregame game-aborted window has closed. Never award an infrastructure win.
+    if (!move)
       logger.warn(
-        {
-          kind: 'gomoku_engine_failed_closed',
-          room_id: room.id,
-          error: String(failure ?? 'No legal Rapfi placement'),
-        },
-        'Rapfi failed; resigning bot seat',
+        { kind: 'gomoku_engine_failed_closed', room_id: room.id },
+        'Rapfi failed twice; aborting the game as an engine failure',
       );
-    }
-    // Match the other tenant bots: failure resigns the engine, never leaves a
-    // room waiting forever or substitutes a weaker move for the chosen level.
     const event = move
       ? { type: 'move-played' as const, at: Date.now(), roomId: room.id, color: seat, move }
-      : { type: 'seat-resigned' as const, at: Date.now(), roomId: room.id, color: seat };
+      : { type: 'seat-forfeited' as const, at: Date.now(), roomId: room.id, color: seat };
     const seq = await ctx.appendEvent(room, event);
     if (seq >= 0) ctx.broadcastEventAppended(room, event, seq);
   } finally {
     thinking.delete(room);
-    // Resume/reconnect/undo can invalidate a search while it is in flight.
+    // Pause/resume/undo can change the turn while a search is in flight.
     // Their scheduler saw `thinking`; arrange the current turn after cleanup.
-    if (room.events.at(-1) !== revision || room.projection.state !== state)
-      scheduleGomokuEngineMove(ctx, room, provider);
+    scheduleGomokuEngineMove(ctx, room, provider);
   }
 }

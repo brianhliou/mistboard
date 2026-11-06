@@ -3,11 +3,13 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { PassThrough, Writable } from 'node:stream';
 import { afterEach, test } from 'node:test';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
   GOMOKU_OPENINGS,
   type GomokuColor,
+  type GomokuMove,
   type GomokuRoomState,
   parseRapfiOutput,
   RAPFI_LEVELS,
@@ -15,6 +17,7 @@ import {
   rapfiPlySeed,
   selectRapfiMove,
 } from '@mistboard/game';
+import { ENGINE_FAILURE_ABORTED_REASON } from './engine-failure-abort.js';
 import {
   type GomokuEngineContext,
   type GomokuMoveProvider,
@@ -25,6 +28,7 @@ import {
 import { gomokuWs } from './gomoku-registration.js';
 import { type GomokuRuntimeRoom, gomokuTenant } from './gomoku-tenant.js';
 import { aggregateEnginePoolStats } from './uci-engine-harness.js';
+import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { resumeTenantRoom } from './variant-tenant/lifecycle.js';
 import {
   appendTenantRuntimeEvent,
@@ -326,7 +330,7 @@ test('a process ignoring END is killed before releasing its slot', async () => {
   assert.equal(engine.counts().active, 0);
 });
 
-test('engine errors, illegal moves and missing candidate output follow the tenant resignation path', async () => {
+test('engine errors, illegal moves and missing candidate output use the shared engine-failure abort', async () => {
   for (const output of ['ERROR unavailable network', '99,99', '5,6']) {
     const opening = GOMOKU_OPENINGS[0]!;
     const { room, ctx, broadcasts } = fixture(
@@ -339,8 +343,13 @@ test('engine errors, illegal moves and missing candidate output follow the tenan
       gomokuLiveEngineMove(state, id, { ...engine, ...opts }),
     );
     assert.equal(room.projection.state.status.type, 'finished');
-    assert.equal(room.events.at(-1)?.type, 'seat-resigned');
-    assert.deepEqual(broadcasts, ['seat-resigned']);
+    assert.equal(room.events.at(-1)?.type, 'seat-forfeited');
+    assert.deepEqual(broadcasts, ['seat-forfeited']);
+    assert.deepEqual(buildTenantGameSummary(gomokuTenant, room).abortedAs, {
+      termination: 'engine-failure',
+      abortedReason: ENGINE_FAILURE_ABORTED_REASON,
+    });
+    assert.equal(engine.commands.length, 2, 'retry once before aborting');
     assert.equal(engine.counts().active, 0);
   }
 });
@@ -405,8 +414,12 @@ test('duplicate scheduling coalesces; pause, resign and changed positions discar
           'white',
           'resignation',
         );
-      // Same ply but a new position identity (e.g. a restored takeback frame).
-      if (mutation === 'position') room.projection.state = { ...room.projection.state };
+      // A restored position can have the same ply and turn, but a different board.
+      if (mutation === 'position') {
+        const board = [...room.projection.state.board];
+        board[0] = 'white';
+        room.projection.state = { ...room.projection.state, board };
+      }
       release();
       await pending;
       clearTenantRuntimeTimers(room);
@@ -465,4 +478,124 @@ test('a paused room schedules no work and the durable resume schedules its bot t
   assert.equal(room.projection.state.ply, 1);
   assert.equal(room.projection.paused, undefined);
   assert.equal(engine.commands.length, 1);
+});
+
+test('reconnecting during a search preserves the position and lets the reply land', async () => {
+  const { room, ctx, broadcasts } = fixture();
+  let release!: () => void;
+  const pending = playGomokuEngineMoveIfReady(ctx, room, async (_state, _id, options) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    assert.equal(options.isCurrent?.(), true);
+    return { to: 'h8' };
+  });
+  // handleConnection durably appends this even when the human already owns the seat.
+  await ctx.appendEvent(room, {
+    type: 'seat-assigned',
+    at: Date.now(),
+    roomId: room.id,
+    seat: 'white',
+    clientId: 'human-player',
+  });
+  // Restoring the same position in a fresh object must also remain current.
+  room.projection.state = { ...room.projection.state, board: [...room.projection.state.board] };
+  release();
+  await pending;
+  assert.equal(room.projection.state.ply, 1);
+  assert.deepEqual(broadcasts, ['move-played']);
+});
+
+test('transient engine failure retries once and plays the recovered legal move', async () => {
+  const { room, ctx, broadcasts } = fixture();
+  let calls = 0;
+  await playGomokuEngineMoveIfReady(ctx, room, async () => {
+    if (++calls === 1) throw new Error('Rapfi spawn failed');
+    return { to: 'h8' };
+  });
+  assert.equal(calls, 2);
+  assert.equal(room.projection.state.ply, 1);
+  assert.deepEqual(broadcasts, ['move-played']);
+});
+
+test('infrastructure failure aborts results before and after either bot seat has moved', async () => {
+  for (const seat of ['black', 'white'] as const) {
+    for (const played of [false, true]) {
+      for (const error of [
+        'spawn ENOENT',
+        'spawn EACCES',
+        'Rapfi PvE pool timed out',
+        'Total engine process queue timed out',
+      ]) {
+        const { room, ctx } = fixture(seat);
+        const moves: GomokuMove['to'][] = played ? ['a1', 'b1', 'a2', 'b2'] : [];
+        if (seat === 'white') moves.push('a3');
+        for (const to of moves) {
+          const status = room.projection.state.status;
+          assert.equal(status.type, 'playing');
+          if (status.type !== 'playing') throw new Error('unexpected terminal fixture');
+          appendTenantRuntimeEvent(gomokuTenant, room, {
+            type: 'move-played',
+            at: Date.now(),
+            roomId: room.id,
+            color: status.turn,
+            move: { to },
+          });
+        }
+        let calls = 0;
+        await playGomokuEngineMoveIfReady(ctx, room, async () => {
+          calls++;
+          throw new Error(error);
+        });
+        assert.equal(calls, 2, error);
+        assert.equal(room.events.at(-1)?.type, 'seat-forfeited', error);
+        assert.deepEqual(buildTenantGameSummary(gomokuTenant, room).abortedAs, {
+          termination: 'engine-failure',
+          abortedReason: ENGINE_FAILURE_ABORTED_REASON,
+        });
+        assert.equal(buildTenantGameSummary(gomokuTenant, room).rated, false);
+      }
+    }
+  }
+});
+
+test('default live capacity serves queued Level 8 rooms beyond the old five-second deadline', async (t) => {
+  delete process.env.RAPFI_MAX_PROCESSES;
+  const pool = aggregateEnginePoolStats().pools.find((p) => p.name === 'rapfi-gomoku-pve')!;
+  // Force two slots so this also proves the queue deadline, independently of the cap.
+  process.env.RAPFI_MAX_PROCESSES = '2';
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const engine = fakeEngine({ delayMs: 3_500, reapMs: 50, output: '7,7' });
+  const pending = Promise.allSettled(
+    Array.from({ length: 6 }, (_, i) =>
+      gomokuLiveEngineMove(createGomokuRoomState(`gmk_burst_${i}`), 'rapfi-level-8', engine),
+    ),
+  );
+  await nextTurn();
+  for (let wave = 0; wave < 3; wave++) {
+    t.mock.timers.tick(3_500);
+    await nextTurn();
+    t.mock.timers.tick(50);
+    await nextTurn();
+  }
+  const results = await pending;
+  assert.equal(results.filter((r) => r.status === 'fulfilled').length, 6);
+  assert.deepEqual(engine.counts(), { active: 0, peak: 2, closed: 6 });
+  assert.equal(pool.maxProcesses, 4);
+});
+
+test('fresh-process search watchdog allows cold network startup beyond the search budget', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const engine = fakeEngine({ delayMs: 2_000, output: '7,7' });
+  const pending = Promise.allSettled([
+    gomokuLiveEngineMove(createGomokuRoomState('gmk_cold'), 'rapfi-level-1', engine),
+  ]);
+  await nextTurn();
+  t.mock.timers.tick(2_000);
+  await nextTurn();
+  t.mock.timers.tick(1);
+  await nextTurn();
+  assert.deepEqual(await pending, [{ status: 'fulfilled', value: { to: 'h8' } }]);
+  assert.deepEqual(engine.kills, []);
+  assert.equal(engine.counts().closed, 1);
 });
