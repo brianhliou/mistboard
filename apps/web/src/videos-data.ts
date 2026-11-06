@@ -1397,6 +1397,48 @@ const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
   },
   {
     source: 'bilibili',
+    bvid: 'BV1qq7czZECi',
+    title: '【揭棋】出完所有的暗子就立于不败之地',
+    author: '叶子Y小叶',
+    durationMinutes: 5,
+    tags: ['strategy'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/0b08bfc203704f1fe58d94a34870796b39815ffd.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV16P9jYXEcq',
+    title: '揭棋坚持炮打马开局',
+    author: '改个好昵称',
+    durationMinutes: 7,
+    tags: ['openings', 'games'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/5fb8075003af1240b86e50df2f89e4c71fb34451.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1bNpJeDEXg',
+    title: '【揭棋】有关单相擒王的残局',
+    author: '金银铜绿水',
+    durationMinutes: 10,
+    tags: ['endgames'],
+    level: 'advanced',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/cf03c17e845e6dcf41de839355366642166d95aa.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
     bvid: 'BV1da411S7Vf',
     title: '【中国象棋】零基础学棋 | 入门篇（全集）',
     author: '象棋研究者',
@@ -1465,6 +1507,34 @@ const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
     addedAt: '2026-11-05',
     thumbnailUrl:
       'https://i2.hdslb.com/bfs/archive/5e8cdd2d8fe66d95b6a01761dbd297594b0155a7.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1xp4y1V7sx',
+    title: '面向纯小白 象棋规则新手教程',
+    author: '黄桐树下黄桐过',
+    durationMinutes: 5,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/823ed5975129243dfafe2690ee278b5426fe7838.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1QrASzEExP',
+    title: '中国象棋古谱天花板梅花谱全局谱 下象棋必学课程布局精髓教程',
+    author: '不凡棋局',
+    durationMinutes: 8,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/69a42a0f233234c2d7f1b1e7f2517a257ad9305e.jpg@672w_378h_1c.jpg',
   },
 ];
 

@@ -3,6 +3,16 @@
 //
 //   npm run prod:db -- node scripts/account-flags.mjs @handle --disable-play
 //   npm run prod:db -- npm run -s study:edit -- --plan plan.json
+//   npm run prod:db -- --read-only node scripts/account-flags.mjs @handle
+//
+// --read-only appends `-c default_transaction_read_only=on` to the child's
+// PGOPTIONS. The repo's pg driver honours PGOPTIONS in its startup message,
+// so Postgres rejects accidental writes (SQLSTATE 25006). Without the flag,
+// the child's options are unchanged. This is a session default, not a
+// permissions boundary: explicit connection options, SET, or BEGIN READ WRITE
+// can override it. Do not use it to run untrusted scripts.
+// Local-only INSERT rejection + positive control (requires mistboard_test):
+//   MISTBOARD_TEST_PROD_DB_LOCAL=1 node --test scripts/prod-db.test.mjs
 //
 // Postgres has had no public TCP proxy since the 2026-10-21 secret rotation,
 // so DATABASE_PUBLIC_URL no longer exists. This opens
@@ -32,7 +42,7 @@ export function tunnelDatabaseUrl(env, port) {
   return `postgresql://${enc(env.PGUSER)}:${enc(env.PGPASSWORD)}@127.0.0.1:${port}/${enc(env.PGDATABASE)}`;
 }
 
-export function tunnelChildEnv(env, port) {
+export function tunnelChildEnv(env, port, readOnly = false) {
   const url = tunnelDatabaseUrl(env, port);
   return {
     ...env,
@@ -40,11 +50,21 @@ export function tunnelChildEnv(env, port) {
     DATABASE_PUBLIC_URL: url,
     PGHOST: '127.0.0.1',
     PGPORT: String(port),
+    ...(readOnly
+      ? {
+          PGOPTIONS: [env.PGOPTIONS, '-c default_transaction_read_only=on']
+            .filter(Boolean)
+            .join(' '),
+        }
+      : {}),
   };
 }
 
-// argv after the script: `--inner <port> <cwd> -- <command…>` or `<command…>`.
+// Optional --read-only precedes `--inner <port> <cwd> -- <command…>` or `<command…>`.
 export function parseArgs(argv) {
+  if (argv[0] === '--read-only') {
+    return { ...parseArgs(argv.slice(1)), readOnly: true };
+  }
   if (argv[0] === '--inner') {
     const [, port, cwd, separator, ...command] = argv;
     if (separator !== '--' || !port || !cwd || command.length === 0) {
@@ -130,7 +150,7 @@ function run(command, args, options) {
   });
 }
 
-async function outer(command) {
+async function outer(command, readOnly) {
   const root = mainCheckout();
   const port = await freePort();
   const tunnel = spawn('railway', ['connect', 'Postgres', '--tunnel-only', '-P', String(port)], {
@@ -164,6 +184,7 @@ async function outer(command) {
         '--',
         process.execPath,
         SELF,
+        ...(readOnly ? ['--read-only'] : []),
         '--inner',
         String(port),
         process.cwd(),
@@ -180,14 +201,17 @@ async function outer(command) {
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if (parsed.command.length === 0) {
-    console.error('usage: npm run prod:db -- <command> [args…]');
+    console.error('usage: npm run prod:db -- [--read-only] <command> [args…]');
     return 2;
   }
   if (parsed.inner) {
     const [command, ...args] = parsed.command;
-    return run(command, args, { cwd: parsed.cwd, env: tunnelChildEnv(process.env, parsed.port) });
+    return run(command, args, {
+      cwd: parsed.cwd,
+      env: tunnelChildEnv(process.env, parsed.port, parsed.readOnly),
+    });
   }
-  return outer(parsed.command);
+  return outer(parsed.command, parsed.readOnly);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === SELF) {

@@ -559,7 +559,8 @@ test('rated Gomoku friend rooms require counted accounts and official clocks on 
       (await ratedFriend({ timeControl: tc }, { ...account, statsExcludedAt: new Date() })).status,
       403,
     );
-    for (const timeControl of [undefined, { initialMs: 600_000, incrementMs: 5_000 }]) {
+    // An off-menu pace: every preset rates since 10+5 joined on 2026-11-06.
+    for (const timeControl of [undefined, { initialMs: 900_000, incrementMs: 10_000 }]) {
       assert.deepEqual(await ratedFriend({ timeControl }, account), {
         status: 400,
         body: { error: 'rated_time_control_unsupported' },

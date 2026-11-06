@@ -135,6 +135,44 @@ describe('Gomoku direct analysis mount', () => {
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
   });
 
+  it('uses the phone analysis tools without a flip and keeps the JSON form accessible', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    const root = await mountAt('gomoku', '?moves=a1 b1');
+    const button = (action: string) =>
+      root.querySelector<HTMLButtonElement>(`[data-analysis-bar="${action}"]`)!;
+    expect(root.classList.contains('has-analysis-phone-bar')).toBe(true);
+    expect(root.querySelector('[data-analysis-bar="flip"]')).toBeNull();
+    expect(root.querySelector('.analysis-phone-info')?.textContent).toContain('Black to move');
+    expect(button('next').disabled).toBe(true);
+    button('back').click();
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(1);
+    expect(root.querySelector('.analysis-phone-info')?.textContent).toContain('White to move');
+    expect(button('next').disabled).toBe(false);
+    button('back').click();
+    expect(button('back').disabled).toBe(true);
+    button('next').click();
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(1);
+
+    const form = root.querySelector<HTMLElement>('.review-import')!;
+    const home = form.parentElement;
+    const variantPicker = root.querySelector('.analysis-variant-picker');
+    const textarea = form.querySelector('textarea')!;
+    textarea.value = '{broken';
+    button('tools').click();
+    const sheet = root.querySelector<HTMLElement>('.analysis-tools-sheet')!;
+    expect(sheet.hidden).toBe(false);
+    expect(sheet.contains(form)).toBe(true);
+    expect(sheet.contains(variantPicker)).toBe(true);
+    expect(sheet.textContent).not.toContain('Flip board');
+    form.querySelector('button')!.click();
+    expect(form.querySelector('[role="alert"]')?.textContent).toContain('Invalid Gomoku JSON');
+    expect(window.location.search).toContain('moves=');
+    root.querySelector<HTMLButtonElement>('.analysis-tools-sheet__close')!.click();
+    expect(sheet.hidden).toBe(true);
+    expect(form.parentElement).toBe(home);
+    expect(textarea.value).toBe('{broken');
+  });
+
   it('imports a JSON export without losing its opening or mainline on navigation and side lines', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
     setResolvedAdmin(true);

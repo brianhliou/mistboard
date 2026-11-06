@@ -38,6 +38,8 @@ import {
   visibleRatingTimeClasses,
 } from './rating-buckets.js';
 
+const FOUNDER_USERNAMES = new Set(['brianhliou-dev']);
+
 // Maps a stored `games.variant` to its rating pool, IN SQL. Extracted so the
 // profile's per-variant game COUNT (the rating rail) and its per-variant game
 // LIST (the Games tab filter) are the same expression: if they disagreed, a rail
@@ -100,6 +102,7 @@ export type PublicProfileUser = {
   profileLinks: string[];
   profileVisibility: UserAccount['profileVisibility'];
   accountRole: AccountRole;
+  isFounder: boolean;
   // Verified player title; drives the title badge (flair) on the public
   // profile and user card. NULL = untitled.
   title: PlayerTitle | null;
@@ -764,6 +767,7 @@ export async function getUserProfileByHandle(
       profileLinks: user.profileLinks,
       profileVisibility: user.profileVisibility,
       accountRole: user.accountRole,
+      isFounder: FOUNDER_USERNAMES.has(user.handle.toLowerCase()),
       title: user.title,
       flair: user.flair,
       patronSince: user.patronSince,
@@ -796,6 +800,56 @@ export async function getUserGamesPage(
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const boundedOffset = Math.max(0, offset);
   return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters, before);
+}
+
+export type PublicPuzzleRatingPoint = {
+  variant: string;
+  createdAt: string;
+  ratingBefore: number;
+  ratingAfter: number;
+  startsSegment: boolean;
+};
+
+// Public chart data has an explicit allowlist, independent of the private
+// attempt serializer. Missing snapshots break the line, never invent a rating.
+export async function getUserPuzzleRatingHistory(
+  handle: string,
+  viewerUserId: string | null,
+): Promise<PublicPuzzleRatingPoint[] | null> {
+  const user = await loadProfileUser(handle);
+  if (!user || (user.profileVisibility === 'private' && viewerUserId !== user.id)) return null;
+
+  const { rows } = await getPool().query<{
+    variant: string;
+    created_at: Date;
+    user_rating_before: number | null;
+    user_rating_after: number | null;
+  }>(
+    `SELECT variant, created_at, user_rating_before, user_rating_after
+     FROM puzzle_attempts
+     WHERE user_id = $1 AND rated = TRUE
+     ORDER BY created_at ASC, puzzle_id ASC`,
+    [user.id],
+  );
+  const previous = new Map<string, number>();
+  const points: PublicPuzzleRatingPoint[] = [];
+  for (const row of rows) {
+    const before = row.user_rating_before;
+    const after = row.user_rating_after;
+    if (before === null || after === null || !Number.isFinite(before) || !Number.isFinite(after)) {
+      previous.delete(row.variant);
+      continue;
+    }
+    points.push({
+      variant: row.variant,
+      createdAt: row.created_at.toISOString(),
+      ratingBefore: before,
+      ratingAfter: after,
+      startsSegment: previous.get(row.variant) !== before,
+    });
+    previous.set(row.variant, after);
+  }
+  return points;
 }
 
 export async function getUserRatingHistory(

@@ -1274,6 +1274,11 @@
   color: #d4645d;
 }
 
+.profile-role-founder {
+  background: var(--site-brand-accent-soft);
+  color: var(--site-brand-accent-strong);
+}
+
 /* Patron badge: a warm cosmetic thank-you with the shared mist-heart mark. */
 .profile-role-patron {
   gap: 4px;
@@ -1368,13 +1373,6 @@
   line-height: 1;
 }
 
-.profile-chart-value-unrated {
-  color: var(--site-muted);
-  font-size: 18px;
-  font-weight: 500;
-  font-style: italic;
-}
-
 .profile-chart-value-empty {
   color: var(--site-muted);
   font-size: 22px;
@@ -1454,9 +1452,12 @@
 }
 
 .profile-chart-slider-input {
+  /* Block, or the taller box still stretches the line it sits on. */
+  display: block;
   width: 100%;
-  height: 14px;
-  margin: 0;
+  height: 44px;
+  /* A 44px touch target that still takes up the 14px row it always did. */
+  margin: -15px 0;
   cursor: pointer;
   accent-color: var(--site-accent);
 }
@@ -1600,9 +1601,28 @@
 }
 
 /* Never-played variants sit back so the rail reads intentional; played rows
-   (rated or casual) stay at full strength and lead via activity ordering. */
+   (rated or casual) stay at full strength and lead via activity ordering. They
+   hold only a name, so they also take less height, with the 32px thumb column
+   kept so names line up with the played rows. A touch screen keeps 44px. */
 .profile-rating-row-empty {
+  padding-block: 3px;
   opacity: 0.5;
+}
+
+.profile-rating-row-empty .profile-rating-thumb {
+  height: 26px;
+  justify-content: center;
+}
+
+.profile-rating-row-empty .profile-rating-thumb svg {
+  width: 26px;
+  height: 26px;
+}
+
+@media (pointer: coarse) {
+  .profile-rating-row-empty {
+    min-height: 44px;
+  }
 }
 
 .profile-rating-thumb {
@@ -1675,25 +1695,11 @@
   font-weight: 500;
 }
 
-.profile-rating-value-empty {
-  color: color-mix(in srgb, var(--site-muted) 55%, transparent);
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.profile-rating-value-unrated {
-  color: var(--site-muted);
-  font-size: 14px;
-  font-weight: 500;
-  font-style: italic;
-}
-
 .profile-rating-games {
   color: var(--site-muted);
   font-size: 12px;
   /* Room for descenders: overflow is hidden (for the ellipsis), so at 1.2 the
-     tail of the "g" in "games" was cut off. At 1.4 the box matches the
-     italic "Unrated" beside it; a row grows by under a pixel. */
+     tail of the "g" in "games" was cut off. */
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;

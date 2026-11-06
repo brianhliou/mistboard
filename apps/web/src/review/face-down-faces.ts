@@ -10,9 +10,9 @@
 // view's `board` never changes, because a flip is the self-move on a tile the
 // view says is face-down: a revealed board would stop the line being playable.
 //
-// Only the postgame mounts opt in (`showFaceDown`). A study or the analysis
-// board never gets the field, so a position someone shares never shows more
-// than the game showed.
+// The postgame mounts and jieqi study chapters opt in (`showFaceDown`). A study
+// chapter's root already holds every identity its Reveal identities shows, so the
+// hover adds no knowledge. The analysis board never gets the field.
 
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 import './face-down-faces.css';

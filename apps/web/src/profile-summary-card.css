@@ -81,6 +81,12 @@
   padding: 0.05rem 0.3rem;
 }
 
+.profile-summary-card-badge.profile-role-founder {
+  background: var(--site-brand-accent-soft);
+  color: var(--site-brand-accent-strong);
+  border-color: transparent;
+}
+
 @media (max-width: 600px) {
   .profile-summary-card-badge {
     font-size: 11px;

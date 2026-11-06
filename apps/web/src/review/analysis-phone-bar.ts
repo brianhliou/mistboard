@@ -4,9 +4,10 @@
 //   - an engine bar above the board (eval, best line, depth) while the engine
 //     is on;
 //   - an info row under the board (variant, side to move, Edit position);
-//   - a labelled bottom bar: Tools, Engine, Flip, Back, Next.
+//   - a labelled bottom bar: Tools, Engine, Flip, Back, Next (fixed-orientation
+//     boards omit Flip).
 // Tools opens a sheet with the review menu's items (study, clear, explorer,
-// board editor, ...) and the FEN + moves import block.
+// board editor, ...) and the import block, plus engine settings when requested.
 //
 // Nothing here runs the engine or owns its state. The engine bar (engine-bar.ts,
 // shared with the phone game review) is a view of the engine panel
@@ -32,7 +33,10 @@ export interface AnalysisPhoneBarOptions {
   engine: AnalysisPhoneEngine | null;
   /** Shown first in the info row ("Xiangqi"). */
   variantName: string;
-  onFlip(): void;
+  /** Omitted for placement boards with fixed coordinates. */
+  onFlip?(): void;
+  /** Keep engine settings in Tools instead of extending the phone stack. */
+  engineInTools?: boolean;
   onBack(): void;
   onNext(): void;
   /** The review menu's items, read each time the sheet opens (the explorer
@@ -163,7 +167,13 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
   const next = barButton('next', t('replay.next'));
   next.button.setAttribute('aria-label', t('watch.nextMove'));
   next.button.setAttribute('aria-keyshortcuts', 'ArrowRight');
-  bar.append(tools.button, engineBtn.button, flip.button, back.button, next.button);
+  bar.append(
+    tools.button,
+    engineBtn.button,
+    ...(opts.onFlip ? [flip.button] : []),
+    back.button,
+    next.button,
+  );
 
   engineBtn.button.addEventListener(
     'click',
@@ -173,7 +183,7 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
     },
     { signal },
   );
-  flip.button.addEventListener('click', () => opts.onFlip(), { signal });
+  flip.button.addEventListener('click', () => opts.onFlip?.(), { signal });
   back.button.addEventListener('click', () => opts.onBack(), { signal });
   next.button.addEventListener('click', () => opts.onNext(), { signal });
 
@@ -229,7 +239,9 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
   importSlot.className = 'analysis-tools-sheet__import';
   const metaSlot = document.createElement('div');
   metaSlot.className = 'analysis-tools-sheet__meta';
-  panel.append(head, list, metaSlot, importSlot);
+  const engineSlot = document.createElement('div');
+  engineSlot.hidden = !opts.engineInTools;
+  panel.append(head, list, metaSlot, importSlot, engineSlot);
   sheet.append(backdrop, panel);
 
   // Where the import block goes back to when the sheet closes.
@@ -278,6 +290,7 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
     homes = [];
     lend(opts.metaCard, metaSlot);
     lend(opts.importPanel, importSlot);
+    if (opts.engineInTools) lend(engine?.el, engineSlot);
     sheet.hidden = false;
     tools.button.setAttribute('aria-expanded', 'true');
     document.body.classList.add('analysis-tools-open');

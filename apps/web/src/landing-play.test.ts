@@ -156,8 +156,8 @@ describe('landing play panel', () => {
     openPlaySetup(panel, '挑戰好友');
 
     expect(document.querySelector('.landing-setup-title')?.textContent).toBe('開始對局');
-    expect(document.querySelector('[aria-label="對局類型"]')).not.toBeNull();
-    expect(document.querySelector('[aria-label="變體"]')).not.toBeNull();
+    expect(document.querySelector('[aria-label="計分方式"]')).not.toBeNull();
+    expect(document.querySelector('[aria-label="棋種"]')).not.toBeNull();
     expect(document.querySelector('[aria-label="用時"]')).not.toBeNull();
     // Xiangqi pivot: DMX is hidden from the picker; assert a still-visible
     // xiangqi variant card (Dark Xiangqi) localizes instead.
@@ -227,12 +227,12 @@ describe('landing play panel', () => {
       options.map((option) => option.querySelector('.landing-color-label')?.textContent),
     ).toEqual(['Red', 'Random', 'Blue']);
     expect(
-      [...options[0]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
+      [...options[0]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle img')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual(['/piece-sets/jungle/dobutsu/red-elephant.png?v=2']);
     expect(
-      [...options[1]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
+      [...options[1]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle img')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual([
@@ -240,7 +240,7 @@ describe('landing play panel', () => {
       '/piece-sets/jungle/dobutsu/black-elephant.png?v=2',
     ]);
     expect(
-      [...options[2]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
+      [...options[2]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle img')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual(['/piece-sets/jungle/dobutsu/black-elephant.png?v=2']);
@@ -999,19 +999,19 @@ describe('landing play panel', () => {
     const panel = buildLandingPlayPanel([]);
     document.body.append(panel);
 
-    // The default variant here is xiangqi, which carries the deliberate ladder:
-    // 10+5 is offered casually but is casual-ONLY (rated: false on the spec), so
-    // the rated toggle is what separates the two sets. A variant whose picker
-    // omits a pace still omits it rated: allowedTimePresetIds narrows the
-    // variant's own set.
+    // The default variant here is xiangqi, which offers all four paces, and
+    // all four rate since 2026-11-06 (10+5 shares the rapid rating with 5+5),
+    // so Casual and Rated show the same set. A variant whose picker omits a
+    // pace still omits it rated: allowedTimePresetIds narrows the variant's
+    // own set.
     openPlaySetup(panel, 'Find opponent');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalButton('Casual');
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalButton('Rated');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('keeps rated setup disabled for signed-out players', () => {
@@ -1056,7 +1056,7 @@ describe('landing play panel', () => {
     // Like Find opponent (and lichess challenges): a signed-in player starts on Rated,
     // and Rated narrows the clocks to the rated ones.
     expect(rated?.getAttribute('aria-checked')).toBe('true');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalTimeControl('3 + 2');
     [...document.querySelectorAll('button')]
@@ -1152,7 +1152,7 @@ describe('landing play panel', () => {
       ...document.querySelectorAll<HTMLButtonElement>('.landing-start-option'),
     ].find((button) => button.textContent === 'Rated');
     expect(ratedAfter?.getAttribute('aria-checked')).toBe('true');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('a signed-out player who picks Rated in a bot dialog is sent to sign in', () => {

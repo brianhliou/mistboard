@@ -413,6 +413,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Shared scaffold role. Postgame is the default; standalone analysis and
    *  studies opt into their distinct roles at their route-level mount. */
   reviewSurface?: ReviewSurface;
+  /** The viewer's played seat in analysis slots (red = first seat, black = second).
+   *  Null/omitted hides retro on game reviews; analysis always uses the bottom side. */
+  retroSide?: RetroSide | null;
   /** Keep a study's existing shell and left rail while replacing its review. */
   reuseShell?: HTMLElement;
   /** Synchronize an external chapter chart with the board cursor. */
@@ -420,7 +423,12 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** The standalone analysis page's phone chrome (analysis-phone-bar.ts): an
    *  engine bar over the board, an info row and a labelled bottom bar below
    *  600px. Off for embeds and every other surface. */
-  phoneAnalysisBar?: { variantName: string };
+  phoneAnalysisBar?: {
+    variantName: string;
+    /** Variant-specific import form, lent to Tools while it is open. */
+    importPanel?: HTMLElement;
+    engineInTools?: boolean;
+  };
   /** A played game's phone review (review-info-sheet.ts): below 600px the meta
    *  card and `details` (the chat) leave the rail for a sheet opened from the
    *  bar's ☰, with the advantage chart, the analysis summary and the engine
@@ -1252,7 +1260,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             // The engine bar above the board and the engine card under the
             // move list come and go with it; give the board what is left. Phone
             // only: wider screens keep the board as it was.
-            if (reviewEngine && window.matchMedia?.('(max-width: 600px)').matches) {
+            if ((reviewEngine || phoneBar) && window.matchMedia?.('(max-width: 600px)').matches) {
               scaffold.refit();
             }
           },
@@ -1751,9 +1759,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
 
   // ── Learn from your mistakes (retro mode) ──
   // The variant opts in with a move→squares mapping, and the flow needs a local
-  // engine to grade a free try; a study reads a document, it does not retry it.
+  // engine to grade a free try. Only a game's player retries their own seat;
+  // an analysis line belongs to its reader, and a study does not offer retro.
+  const analysisSurface = config.reviewSurface === 'analysis';
   const retroSupported = Boolean(
-    presentation.retro && presentation.engine && config.reviewSurface !== 'study',
+    presentation.retro &&
+      presentation.engine &&
+      config.reviewSurface !== 'study' &&
+      (analysisSurface || config.retroSide != null),
   );
   /** "12. h3-e3" / "12… h8-e8": the move-tree's own numbering, reused by the
    *  chart readout and the retro prompts so one move reads the same everywhere. */
@@ -1762,14 +1775,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const number = ply % 2 === 1 ? `${(ply + 1) / 2}.` : `${ply / 2}…`;
     return `${number} ${node.label}`;
   }
-  /** Which side sits at the bottom of the board: the side the reader is
-   *  looking from, and so the side whose mistakes they came to fix (lichess
-   *  bottomColor). */
+  /** On the analysis board the reader practises whichever side they face. */
   function bottomSide(): RetroSide {
     return orientation() === presentation.perspective(false) ? 'red' : 'black';
   }
   function openRetro(side: RetroSide): void {
-    if (!gameAnalysis) return;
+    if (!retroSupported || !gameAnalysis || (!analysisSurface && side !== config.retroSide)) return;
     const analysis = gameAnalysis;
     retro = null;
     retroPanel?.el.remove();
@@ -1804,11 +1815,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       labelFor: plyMoveLabel,
       discInk: reviewColorForSeat(side, config.seatColors),
       onClose: closeRetro,
-      onFlip: () => {
-        // Look at the game from the other side, then start on its mistakes.
-        flipBoard();
-        openRetro(side === 'red' ? 'black' : 'red');
-      },
+      onFlip: analysisSurface
+        ? () => {
+            // Look at the game from the other side, then start on its mistakes.
+            flipBoard();
+            openRetro(side === 'red' ? 'black' : 'red');
+          }
+        : undefined,
     });
     // The box rises over the bottom of the move list, on the board's bottom
     // line (lichess puts its retro box at the foot of the tools column).
@@ -1827,7 +1840,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   function toggleRetro(): void {
     if (retro) closeRetro();
-    else openRetro(bottomSide());
+    else {
+      const side = analysisSurface ? bottomSide() : config.retroSide;
+      if (side != null) openRetro(side);
+    }
   }
   /** The panel, the engine readout and the move-list hiding all read retro
    *  state; refresh them together after any retro transition. */
@@ -1992,7 +2008,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       config.underboardNote,
     ),
     underboardOverflows: true,
-    phoneOneScreen: phoneReview,
+    phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar),
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
@@ -2033,12 +2049,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // it, labelled bottom bar. CSS shows it below 600px only; the arrow strip and
   // the engine card it stands in for stay in the DOM for wider screens.
   if (config.phoneAnalysisBar && !config.embedded) {
-    const flipItem = menuItems[0];
+    const flipItem = presentation.fixedOrientation ? undefined : menuItems[0];
     phoneBar = createAnalysisPhoneBar({
       signal: mountAbort.signal,
       engine: enginePanel,
       variantName: config.phoneAnalysisBar.variantName,
-      onFlip: () => flipBoard(),
+      onFlip: presentation.fixedOrientation ? undefined : () => flipBoard(),
+      engineInTools: config.phoneAnalysisBar.engineInTools,
       onBack: () => go(tree.stepBack(currentPath)),
       onNext: () => {
         if (retro?.preventGoingToNextMove()) return;
@@ -2046,7 +2063,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       },
       // Flip has its own button on the bar; the sheet carries the rest.
       toolsItems: () => controls.menuItems.filter((item) => item !== flipItem),
-      importPanel: importPanel?.el ?? null,
+      importPanel: config.phoneAnalysisBar.importPanel ?? importPanel?.el ?? null,
       metaCard: config.metaCard ?? null,
     });
     const stageEl = scaffold.stage.el;
@@ -2054,11 +2071,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     stageEl.after(phoneBar.info);
     root.append(phoneBar.bar, phoneBar.sheet);
     root.classList.add('has-analysis-phone-bar');
+    root.classList.toggle(
+      'has-analysis-engine-tools',
+      Boolean(config.phoneAnalysisBar.engineInTools),
+    );
     const { bar, sheet } = phoneBar;
     mountAbort.signal.addEventListener(
       'abort',
       () => {
-        root.classList.remove('has-analysis-phone-bar');
+        root.classList.remove('has-analysis-phone-bar', 'has-analysis-engine-tools');
         bar.remove();
         sheet.remove();
       },
@@ -2283,6 +2304,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
     if (phoneBar) {
       const seat = view ? presentation.seatFor(view) : null;
+      // Flip variants return move-order seats; other boards return actual ink.
       phoneBar.sync({
         sideToMove:
           seat == null
@@ -2290,7 +2312,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             : inkWord(
                 seatStripDisplayInk(
                   String(seat),
-                  config.seatColors,
+                  config.seatInkBindsOnFlip ? config.seatColors : undefined,
                   config.seatInkBindsOnFlip ?? false,
                 ),
               ),

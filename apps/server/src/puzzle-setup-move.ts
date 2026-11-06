@@ -128,7 +128,9 @@ export async function puzzleDetailSourceFields(
   if (!stored) return {};
   const context = load ? await sourceContext(puzzle, load) : null;
   if (isOnlinePlatformGame(stored)) {
-    const fields: PuzzleDetailSourceFields = { sourceGame: onlineSourceGame(stored) };
+    const fields: PuzzleDetailSourceFields = {
+      sourceGame: onlineSourceGame(stored, context?.names != null),
+    };
     if (context?.setupMove) fields.setupMove = context.setupMove;
     if (context?.history && context.history.length > 0) fields.history = context.history;
     return fields;
@@ -156,18 +158,23 @@ const ONLINE_PLATFORM_EVENTS: ReadonlySet<string> = new Set(['ElephantChess PvP'
 // per-release pseudonyms as players ("ElephantChess:cqM1Apb2GWRD"), which tell
 // a solver nothing. The puzzle says only that it came from an online game, and
 // when, and leaves the platform unnamed. A credited source (#712) is never one.
-export function isOnlinePlatformGame(source: SourceGame): boolean {
-  return (
-    !source.attribution && source.event !== undefined && ONLINE_PLATFORM_EVENTS.has(source.event)
-  );
+export function isOnlinePlatformEvent(event: string | null | undefined): boolean {
+  return event != null && ONLINE_PLATFORM_EVENTS.has(event);
 }
 
-function onlineSourceGame(source: SourceGame): PuzzleDetailSourceGame {
+export function isOnlinePlatformGame(source: SourceGame): boolean {
+  return !source.attribution && isOnlinePlatformEvent(source.event);
+}
+
+// `hosted` when the game row is not private, so the card links to the game's
+// review page at the puzzle's move (an unlisted row opens by its id).
+function onlineSourceGame(source: SourceGame, hosted: boolean): PuzzleDetailSourceGame {
   return {
     gameId: source.gameId,
     ply: source.ply,
     ...(source.playedOn ? { playedOn: source.playedOn } : {}),
     online: true,
+    ...(hosted ? { hosted: true as const } : {}),
   };
 }
 

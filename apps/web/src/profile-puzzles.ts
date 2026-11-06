@@ -14,16 +14,40 @@ type PuzzleHistoryPage = {
   nextOffset: number | null;
 };
 
-type RatedEntry = PuzzleHistoryEntry & { ratingBefore: number; ratingAfter: number };
-// A day's rated attempts: ratingBefore from its first, ratingAfter and
-// createdAt from its last.
-type RatedDay = RatedEntry & { attempts: number };
+export type PublicPuzzleRatingPoint = {
+  variant: string;
+  createdAt: string;
+  ratingBefore: number;
+  ratingAfter: number;
+  startsSegment: boolean;
+};
+
+// Both owner and visitor charts use the same public read. Failed reads can be
+// retried; selecting a row again reuses this mount's successful read.
+export function createPublicProfilePuzzleHistory(
+  handle: string,
+): () => Promise<PublicPuzzleRatingPoint[]> {
+  let pending: Promise<PublicPuzzleRatingPoint[]> | null = null;
+  return () => {
+    pending ??= fetch(`/api/users/${encodeURIComponent(handle)}/puzzle-rating-history`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`puzzle rating history failed: ${response.status}`);
+        const data: { points: PublicPuzzleRatingPoint[] } = await response.json();
+        if (!Array.isArray(data.points)) throw new Error('invalid puzzle rating history');
+        return data.points;
+      })
+      .catch((error: unknown) => {
+        pending = null;
+        throw error;
+      });
+    return pending;
+  };
+}
 const localDay = (createdAt: string) => new Date(createdAt).toDateString();
 const HISTORY_PAGE_SIZE = 100;
 
-// The owner's xiangqi puzzle history, fetched once and shared by the spotlight
-// and the Activity tab's daily rows. A failed load is not cached, so selecting
-// the puzzle row or retrying can fetch again and notify every subscriber.
+// The owner's private xiangqi attempts feed only the Activity tab's daily
+// rows. A failed load is not cached, so a later load can notify subscribers.
 export type ProfilePuzzleHistory = {
   load(): Promise<PuzzleHistoryEntry[]>;
   subscribe(listener: (attempts: PuzzleHistoryEntry[]) => void): void;
@@ -123,52 +147,25 @@ export function profilePuzzleDays(
   return [...days.values()].sort((a, b) => b.time - a.time);
 }
 
-export function hasSavedPuzzleRating(entry: PuzzleHistoryEntry): entry is RatedEntry {
-  return (
-    entry.ratingBefore !== null &&
-    entry.ratingAfter !== null &&
-    Number.isFinite(entry.ratingBefore) &&
-    Number.isFinite(entry.ratingAfter)
-  );
-}
-
-// Daily saved ratings for the shared spotlight. Segment boundaries preserve
-// gaps where an older attempt has no snapshot or the saved ratings disagree.
+// One closing rating per local calendar day, preserving every server-marked
+// gap. These points contain no attempt identifiers or outcomes.
 export function profilePuzzleRatingPoints(
-  attempts: PuzzleHistoryEntry[],
-): (RatedDay & { startsSegment: boolean })[] {
-  const segments: RatedEntry[][] = [];
-  let segment: RatedEntry[] = [];
-  const daySegments: RatedDay[][] = [];
-  for (const entry of attempts) {
-    if (!entry.rated) continue;
-    if (!hasSavedPuzzleRating(entry)) {
-      segment = [];
-      continue;
+  points: PublicPuzzleRatingPoint[],
+): PublicPuzzleRatingPoint[] {
+  const days: PublicPuzzleRatingPoint[] = [];
+  for (const point of points) {
+    const day = days.at(-1);
+    if (
+      day &&
+      !point.startsSegment &&
+      day.variant === point.variant &&
+      localDay(day.createdAt) === localDay(point.createdAt)
+    ) {
+      day.ratingAfter = point.ratingAfter;
+      day.createdAt = point.createdAt;
+    } else {
+      days.push({ ...point });
     }
-    // A missing snapshot or a discontinuity starts a new segment. Never infer
-    // the rating of an old result from today's aggregate or the next result.
-    if (segment.at(-1)?.ratingAfter !== entry.ratingBefore) segment = [];
-    if (segment.length === 0) segments.push(segment);
-    segment.push(entry);
   }
-  // One point per day at the day's closing rating, as Lichess's rating graph
-  // does: a session of attempts plotted one by one stacked into a vertical bar.
-  for (const entries of segments) {
-    const days: RatedDay[] = [];
-    for (const entry of entries) {
-      const day = days.at(-1);
-      if (day && localDay(day.createdAt) === localDay(entry.createdAt)) {
-        day.ratingAfter = entry.ratingAfter;
-        day.createdAt = entry.createdAt;
-        day.attempts += 1;
-      } else {
-        days.push({ ...entry, attempts: 1 });
-      }
-    }
-    daySegments.push(days);
-  }
-  return daySegments.flatMap((days) =>
-    days.map((day, index) => ({ ...day, startsSegment: index === 0 })),
-  );
+  return days;
 }

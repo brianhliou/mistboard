@@ -187,8 +187,8 @@ export type ReviewScaffoldConfig = SizingInput & {
    *  fold instead of shrinking the board to keep everything above it. The board
    *  fills the viewport; the page scrolls to the chart. */
   underboardOverflows?: boolean;
-  /** Phone game review (#619): on the one-column stack the board, the arrow
-   *  bar and the move strip share one screen, so the board also shrinks to
+  /** Phone review and analysis: on the one-column stack the board, navigation
+   *  and the move strip share one screen, so the board also shrinks to
    *  leave room for what sits under it, down to the move list. */
   phoneOneScreen?: boolean;
   /** Fires after a secondary board is promoted; the caller re-renders (the
@@ -412,7 +412,7 @@ export function createReviewScaffold(
     stage.el.querySelector<HTMLElement>('.review-stage__slot--primary'),
   );
   // Matches .board-resize-grip; flush in the corner so its long line meets both edges.
-  const GRIP_SIZE_PX = 16;
+  const GRIP_SIZE_PX = 20;
   const GRIP_INSET_PX = 0;
   const positionGrip = (): void => {
     const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
@@ -682,7 +682,8 @@ function fitPrimaryToViewport(
  *  move list and the shell's bottom padding, inside the viewport (#619). What
  *  sits between the board and the move list (seat row, arrow bar, gaps) does
  *  not change with the board's size, so one measurement settles it. A running
- *  engine's card sits below the move list and is left to scroll. Phones only:
+ *  engine's card sits below the move list and is left to scroll unless it lives
+ *  in Tools. Standalone analysis also reserves its fixed toolbar. Phones only:
  *  the 601-799px stack keeps its full move list and its board size. */
 export function oneScreenBoardWidth(
   stageEl: HTMLElement,
@@ -698,7 +699,12 @@ export function oneScreenBoardWidth(
   const stageTop = stageEl.getBoundingClientRect().top + window.scrollY;
   const belowBoard = moves.getBoundingClientRect().bottom - stageEl.getBoundingClientRect().top;
   const shellBottomPad = Number.parseFloat(getComputedStyle(shell).paddingBottom) || 0;
-  const room = window.innerHeight - stageTop - shellBottomPad - (belowBoard - boardHeight);
+  const phonePage = shell.closest<HTMLElement>('.has-analysis-phone-bar');
+  const pageBottomPad = phonePage
+    ? Number.parseFloat(getComputedStyle(phonePage).paddingBottom) || 0
+    : 0;
+  const room =
+    window.innerHeight - stageTop - shellBottomPad - pageBottomPad - (belowBoard - boardHeight);
   if (room <= 0) return Number.POSITIVE_INFINITY;
   return Math.floor((room - 2) * aspect * currentBoardScale());
 }

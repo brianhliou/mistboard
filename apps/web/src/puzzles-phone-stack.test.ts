@@ -483,7 +483,9 @@ describe('puzzle phone menu rows', () => {
     const rows = puzzlePhoneMenuRows(props());
     expect(keys(rows)).toEqual(['rated', 'autoNext']);
     const head = puzzlePhoneMenuHead(props());
-    expect(head?.querySelector('[data-puzzle-code]')).not.toBeNull();
+    // The head names the puzzle without a code that links the page to itself.
+    expect(head?.querySelector('[data-puzzle-code]')).toBeNull();
+    expect(head?.querySelector('a')).toBeNull();
     expect(head?.textContent).toContain('Played locally');
     expect(head?.textContent).toContain('to move');
     expect(head?.textContent).not.toContain('Mate in');

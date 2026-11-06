@@ -121,6 +121,22 @@ function stones(root: HTMLElement) {
 function toggle(root: HTMLElement) {
   root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
 }
+
+it('keeps the first real tool when a fixed-orientation board uses phone chrome', () => {
+  const { root } = mount({
+    reviewSurface: 'analysis',
+    phoneAnalysisBar: { variantName: 'Gomoku' },
+    allowClearMoves: true,
+  });
+  root.querySelector<HTMLButtonElement>('[data-analysis-bar="tools"]')!.click();
+  const clear = [...root.querySelectorAll<HTMLButtonElement>('.analysis-tools-sheet__item')].find(
+    (item) => item.textContent === 'Clear moves',
+  );
+  expect(clear).toBeDefined();
+  clear!.click();
+  expect(stones(root)).toHaveLength(opening.stones.length);
+});
+
 async function ready() {
   latest().emit({ type: 'ready' });
   await vi.advanceTimersByTimeAsync(0);

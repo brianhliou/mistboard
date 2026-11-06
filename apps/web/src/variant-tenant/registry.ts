@@ -914,19 +914,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsRated: true,
         supportsTimeControl: true,
       },
-      // 1+1 is omitted; every other xiangqi tenant offers all four.
-      //
-      // The reason is not only that games are long (the seven seeded engine
-      // games run 120-229 plies, median 150). It is that a turn here is TWO
-      // decisions, a move and a duck placement, so a preset buys half the
-      // thinking time per decision that the same preset buys elsewhere. At the
-      // long end, ~115 turns a side, 1+1 affords 0.8s per decision and the
-      // clock decides the game. 3+2 affords 1.8s, which is roughly what plain
-      // xiangqi gives at 1+1, and that is offered — so 3+2 is offered here.
-      //
-      // 5+5 stays the preselected default (VARIANT_DEFAULT_TIME_CONTROLS in
-      // @mistboard/game); 3+2 is a pace a player has to choose deliberately.
-      timePresetIds: ['3m2', '5m5', '10m5'],
+      // All four paces, 1+1 included (Brian, 2026-11-06: "part of the
+      // challenge"). A turn here is a move plus a duck placement, so 1+1 is
+      // very fast; 5+5 stays the preselected default
+      // (VARIANT_DEFAULT_TIME_CONTROLS in @mistboard/game).
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // Both gated on the SAME predicate. The conformance test checks exactly
       // this, because gating the menu and the deep link on neighbouring flags
       // has shipped twice.
