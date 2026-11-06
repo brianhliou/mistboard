@@ -723,7 +723,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `announcements.test.ts` | The schedule gate: live at the publish moment not midnight, malformed date is live, production hides a future entry from the rail and `/feed`, dev shows it |
 | `variant-public-surfaces.ts` | Single public-surface switchboard per `GameSpecId`: controls variant discoverability in rules rails/tiles, homepage article cards, homepage News, and `/news` without per-content visibility flags |
 | `annotations.ts` | Annotation read/write for the research feedback workflow |
-| `analytics.ts` | PostHog wrapper + time-class inference; the game_started/game_finished lifecycle tracker; and the pure prop builders behind #372: `roomModeAnalyticsProps` (pve + bot_name on game_started), `reviewOpenedProps` (id-stripped route + spec for review_opened), `puzzleAttemptedProps` (terminal puzzle outcomes) |
+| `analytics.ts` | PostHog bootstrap and wrapper; suspect webdriver and pre-125 desktop Chrome/Edge/Firefox wait for trusted non-scroll input before SDK import, with bounded event queue and pre-input exceptions dropped; time-class inference, the game_started/game_finished lifecycle tracker, and the pure prop builders behind #372 |
+| `analytics-automation.test.ts` | Suspect UA fixtures, mobile/current-browser controls, trusted-input SDK deferral, bounded event queue, pre-input exception suppression and normal browser bootstrap (#899) |
 | `site-box.ts` | Shared homepage/rail widget shell (lichess `lobby__box` grammar): header row with optional "More »" link over a content body. Loads `site-box.css` |
 | `site-box.css` | Shared site-box widget styles (token-only) loaded by `site-box.ts` |
 | `site-box-fit.ts` | `fitRows` / `fitRowsToBody`: fit a site-box body's rows to a band-given box height (whole rows only, small slack shared via a fill class, refit on resize). Used by the homepage forum and Top studies widgets |
