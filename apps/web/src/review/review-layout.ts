@@ -411,21 +411,30 @@ export function createReviewScaffold(
   const grip = attachBoardResizeGrip(stage.el, () =>
     stage.el.querySelector<HTMLElement>('.review-stage__slot--primary'),
   );
-  // Matches .board-resize-grip; flush in the corner so its long line meets both edges.
-  const GRIP_SIZE_PX = 20;
-  const GRIP_INSET_PX = 0;
-  const positionGrip = (): void => {
-    const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
-    if (!slot) return;
-    const slotRect = slot.getBoundingClientRect();
-    const stageRect = stage.el.getBoundingClientRect();
-    if (slotRect.width === 0 || stageRect.width === 0) return;
-    // Tuck the handle just INSIDE the board's bottom-right corner (lichess), not
-    // hanging off the outside edge.
-    grip.style.right = `${Math.max(0, stageRect.right - slotRect.right) + GRIP_INSET_PX}px`;
-    grip.style.bottom = 'auto';
-    grip.style.top = `${slotRect.bottom - stageRect.top - GRIP_SIZE_PX - GRIP_INSET_PX}px`;
-  };
+  // The grip is hidden until its first placement. Its CSS default is the
+  // stage's corner, and the stage runs past the board into the seat-label
+  // margin, so a fresh stage (every study chapter switch) painted it under the
+  // board until this ran.
+  grip.classList.add('board-resize-grip--unplaced');
+  const positionGrip = (): void => placeReviewGrip(stage.el, grip);
+  // Re-place in the frame the board's box changes: refit places it from the
+  // fit's own animation frame (below), and this observer covers size changes
+  // that don't go through refit. Its callback runs after layout and before
+  // paint. Placement used to wait on a 60ms timer per refit, so during a drag
+  // (every pointermove refits) the grip trailed the board by up to 45px.
+  let observePrimarySlot = (): void => {};
+  if (typeof ResizeObserver !== 'undefined') {
+    const gripObserver = new ResizeObserver(() => positionGrip());
+    gripObserver.observe(stage.el);
+    // Fog review promotes a secondary board into the primary slot, so each
+    // refit observes whichever slot is primary now (observe() is idempotent).
+    observePrimarySlot = () => {
+      const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
+      if (slot) gripObserver.observe(slot);
+    };
+    observePrimarySlot();
+    config.signal?.addEventListener('abort', () => gripObserver.disconnect(), { once: true });
+  }
 
   function refit(): void {
     applyBoardSizing(
@@ -437,7 +446,16 @@ export function createReviewScaffold(
     fitPrimaryToViewport(stage.el, boardAspect, config.boardMaxPx, {
       underboardOverflows: config.underboardOverflows,
       phoneOneScreen: config.phoneOneScreen,
+      // Place the grip once the fit has written the board's final width, in
+      // the same animation frame, before paint. Not here, synchronously:
+      // applyBoardSizing leaves a provisional (larger) width until the fit
+      // runs, and a grip placed against it stayed there, because the observer
+      // above only fires when the size differs from the last one it saw, and
+      // the fitted size usually equals it.
+      onFitted: positionGrip,
     });
+    observePrimarySlot();
+    // Backstop for a board that settles its size a tick later.
     setTimeout(positionGrip, 60);
   }
 
@@ -585,7 +603,7 @@ function fitPrimaryToViewport(
   stageEl: HTMLElement,
   aspect: number,
   maxPx?: number,
-  opts?: { underboardOverflows?: boolean; phoneOneScreen?: boolean },
+  opts?: { underboardOverflows?: boolean; phoneOneScreen?: boolean; onFitted?: () => void },
 ): void {
   scheduleAnimationFrame(() => {
     if (typeof window === 'undefined') return;
@@ -675,7 +693,40 @@ function fitPrimaryToViewport(
     stageEl
       .closest<HTMLElement>('.review-shell__cluster')
       ?.style.setProperty('--uni-board-fit-w', `${targetWidth}px`);
+    opts?.onFitted?.();
   });
+}
+// Matches .board-resize-grip. The box sits flush in the corner; its lines are
+// drawn a little inside it (board-resize.css).
+const GRIP_SIZE_PX = 20;
+
+/**
+ * Put the resize grip in the primary board's bottom-right corner, inside the
+ * board, and show it. A no-op while the stage has no laid-out primary slot.
+ */
+export function placeReviewGrip(stageEl: HTMLElement, grip: HTMLElement): void {
+  const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
+  if (!slot) return;
+  const slotRect = slot.getBoundingClientRect();
+  const stageRect = stageEl.getBoundingClientRect();
+  if (slotRect.width === 0 || stageRect.width === 0) return;
+  grip.style.right = `${Math.max(0, stageRect.right - slotRect.right)}px`;
+  grip.style.bottom = 'auto';
+  // Fog review keeps its "viewing as" row inside the slot, under the board, so
+  // there the corner is the board's own (the slot's in-flow child that isn't
+  // the row), or the grip sits on the row's button.
+  const pov = slot.querySelector<HTMLElement>(':scope > .review-pov');
+  const board = pov
+    ? Array.from(slot.children).find((child) => {
+        const position = getComputedStyle(child).position;
+        return child !== pov && position !== 'absolute' && position !== 'fixed';
+      })
+    : undefined;
+  const bottom = board
+    ? board.getBoundingClientRect().bottom
+    : (pov?.getBoundingClientRect().top ?? slotRect.bottom);
+  grip.style.top = `${bottom - stageRect.top - GRIP_SIZE_PX}px`;
+  grip.classList.remove('board-resize-grip--unplaced');
 }
 
 /** The widest board that keeps the phone stack, from the board down to the

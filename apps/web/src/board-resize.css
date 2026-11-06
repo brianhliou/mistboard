@@ -7,7 +7,7 @@
    puzzles page) rendered an unstyled 16px button that also missed the
    coarse-pointer hide below. A component's styles belong with the component. */
 
-/* Flush in the board's corner, so both lines run out to the board's two edges. */
+/* The box sits flush in the board's corner; the lines are drawn inside it (below). */
 .board-resize-grip {
   position: absolute;
   right: 0;
@@ -33,11 +33,15 @@
 }
 
 /* Two short diagonal lines in the board's bottom-right corner (lichess handle),
-   drawn as `/` stripes clipped by the square box so the outer one reads shorter. */
+   drawn as `/` stripes clipped by the square box so the outer one reads shorter.
+   Drawn 4px up and left of the box: flush, the outer line's ends sat 8px from
+   the corner on each edge and ran past a rounded corner (about 12px on the
+   jieqi, puzzle and live boards), so it read as cut off. */
 .board-resize-grip::before {
   content: "";
   position: absolute;
   inset: 0;
+  transform: translate(-4px, -4px);
   background: linear-gradient(
     135deg,
     transparent 0 50%,
@@ -46,6 +50,12 @@
     var(--board-resize-ink, #3a322a) 70% 80%,
     transparent 80%
   );
+}
+
+/* A host that places the grip from script sets this until the first placement,
+   so the grip never paints at its CSS default corner (review-layout.ts). */
+.board-resize-grip--unplaced {
+  visibility: hidden;
 }
 
 .board-resize-grip:hover {
