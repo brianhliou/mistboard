@@ -173,6 +173,34 @@ describe('Gomoku watch replay', () => {
     expect(handle.gameResult?.()).toBe('white-wins');
   });
 
+  it('numbers placed stones on a board wide enough to read them and leaves the small cards plain', async () => {
+    const numbers = (root: HTMLElement) =>
+      [...root.querySelectorAll('.gomoku-move-number')].map((label) => [
+        label.closest('[data-square]')?.getAttribute('data-square'),
+        label.textContent,
+      ]);
+    // The /games cards render about 178px wide: no numbers.
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(178);
+    const small = await mount(finish(fixture(OPENING, ['a1', 'b1', 'a2']), 'white'));
+    small.root.querySelector<HTMLButtonElement>('[aria-label="Last move"]')!.click();
+    expect(small.root.querySelectorAll('.gomoku-stone')).toHaveLength(6);
+    expect(numbers(small.root)).toEqual([]);
+    // The homepage viewer is about 340px: placements numbered, dealt stones not.
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(340);
+    const large = await mount(finish(fixture(OPENING, ['a1', 'b1', 'a2']), 'white'));
+    large.root.querySelector<HTMLButtonElement>('[aria-label="Last move"]')!.click();
+    expect(numbers(large.root)).toEqual([
+      ['a1', '1'],
+      ['b1', '2'],
+      ['a2', '3'],
+    ]);
+    large.root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!.click();
+    expect(numbers(large.root)).toEqual([
+      ['a1', '1'],
+      ['b1', '2'],
+    ]);
+  });
+
   it('uses event plies and the view turn for a White-next dealt opening, keeping first=Black clocks', async () => {
     const payload = fixture(OPENING);
     const { root, handle } = await mount(payload, { compact: true, seatDiscs: true });

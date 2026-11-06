@@ -12,7 +12,7 @@ import { tryHandle } from './routes/rooms.js';
 // of each *-registration.ts module), so the registry-driven test below sees
 // the same tenant set the server boots with.
 import './variant-tenant/register-tenants.js';
-import { registeredVariantTenants } from './variant-tenant/registry.js';
+import { registeredVariantTenants, variantTenantForSpecId } from './variant-tenant/registry.js';
 
 test('game spec gate passes current chess requests', () => {
   assert.deepEqual(gateGameSpecRequest({ variant: 'dark-chess' }), { type: 'pass' });
@@ -203,21 +203,76 @@ test('game spec gate keeps rejecting legacy variant spellings for tenant specs',
   }
 });
 
-test('game spec gate rejects every runtimeStatus future spec, of which there are none today', () => {
-  // The five reserved ids (dark-antichess, sun-tzu, lao-tzu, dark-seirawan,
-  // dark-omega) left with the retirement sweep (#396). Should one come back,
-  // known-but-unrouted must stay distinguishable from unknown_game_spec.
-  for (const spec of GAME_SPECS.filter((s) => s.runtimeStatus === 'future')) {
-    assert.deepEqual(
-      gateGameSpecRequest({ gameSpecId: spec.id }),
-      {
-        type: 'reject',
-        error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
-        httpStatus: 501,
-        wsCloseReason: 'game spec not integrated',
-      },
-      spec.id,
-    );
+const FFQ_SELECTORS = [
+  { gameSpecId: 'ffq-banqi' },
+  { variant: 'ffq-banqi' },
+  { gameSpecId: 'ffq-banqi', variant: 'ffq-banqi' },
+  { gameSpecId: 'dark-chess', variant: 'ffq-banqi' },
+  { gameSpecId: 'ffq-banqi', variant: 'dark-chess' },
+  { gameSpecId: 'banqi', variant: 'ffq-banqi' },
+  { gameSpecId: 'unknown', variant: 'ffq-banqi' },
+];
+
+for (const registered of [false, true]) {
+  for (const flag of [undefined, false, true]) {
+    for (const accountRole of [null, 'player', 'admin'] as const) {
+      test(`FFQ selectors: registered=${registered}, flag=${flag}, account=${accountRole ?? 'guest'}`, () => {
+        const registration = variantTenantForSpecId('ffq-banqi');
+        assert.ok(registration);
+        const original = registration.gameSpecId;
+        if (!registered) registration.gameSpecId = 'test-missing-ffq';
+        try {
+          withFlag('MISTBOARD_FFQ_BANQI_ENABLED', flag, () => {
+            const enabled = flag === true && accountRole === 'admin';
+            for (const input of FFQ_SELECTORS) {
+              assert.deepEqual(
+                gateGameSpecRequest(input, accountRole ? { accountRole } : null),
+                enabled && registered
+                  ? { type: 'pass' }
+                  : {
+                      type: 'reject',
+                      error: enabled ? 'ffq_banqi_not_integrated' : 'ffq_banqi_disabled',
+                      httpStatus: enabled ? 501 : 404,
+                      wsCloseReason: enabled ? 'game spec not integrated' : 'game spec disabled',
+                    },
+                JSON.stringify(input),
+              );
+            }
+          });
+        } finally {
+          registration.gameSpecId = original;
+        }
+      });
+    }
+  }
+}
+
+test('FFQ registers its own tenant for enabled admin requests', () => {
+  assert.equal(
+    registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'ffq-banqi'),
+    true,
+  );
+});
+
+test('game spec gate rejects every runtimeStatus future spec by canonical and legacy selectors', () => {
+  // A kernel may exist before a tenant does. Known-but-unrouted must stay
+  // distinguishable from unknown_game_spec, and neither selector may fall
+  // through into a Fog Chess room. FFQ has its own flag/account matrix above.
+  for (const spec of GAME_SPECS.filter(
+    (s) => s.runtimeStatus === 'future' && s.id !== 'ffq-banqi',
+  )) {
+    for (const input of [{ gameSpecId: spec.id }, { variant: spec.id }]) {
+      assert.deepEqual(
+        gateGameSpecRequest(input),
+        {
+          type: 'reject',
+          error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
+          httpStatus: 501,
+          wsCloseReason: 'game spec not integrated',
+        },
+        JSON.stringify(input),
+      );
+    }
   }
 });
 
@@ -246,10 +301,10 @@ test('game spec gate fails closed for every registered tenant spec', () => {
   }
 });
 
-function withFlag(name: string, enabled: boolean, fn: () => void): void {
+function withFlag(name: string, enabled: boolean | undefined, fn: () => void): void {
   const before = process.env[name];
-  if (enabled) process.env[name] = 'true';
-  else delete process.env[name];
+  if (enabled === undefined) delete process.env[name];
+  else process.env[name] = String(enabled);
   try {
     fn();
   } finally {

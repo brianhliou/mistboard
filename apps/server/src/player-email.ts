@@ -61,6 +61,8 @@ export const notificationSettingsUrl = `${emailPublicHost}/account/settings/noti
 const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   gomoku: { en: 'Gomoku', 'zh-Hans': '五子棋', 'zh-Hant': '五子棋' },
   banqi: { en: 'Banqi', 'zh-Hans': '暗棋', 'zh-Hant': '暗棋' },
+  // Hidden, unrouted spec; no public catalog name or correspondence support.
+  'ffq-banqi': null,
   mahjong: null,
   'three-kingdoms-banqi': {
     en: 'Three Kingdoms Banqi',

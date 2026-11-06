@@ -16,7 +16,7 @@ import './gomoku-board.css';
 // figures have one image role and no per-point controls or keyboard stops.
 export function gomokuRulesBoard(state: GomokuRoomState): string {
   const paint: Record<string, string> = {
-    'gomoku-svg': 'width="384" style="display:block;width:min(100%, 384px);height:auto" role="img"',
+    'gomoku-svg': 'width="448" style="display:block;width:min(100%, 448px);height:auto" role="img"',
     'gomoku-wood': 'fill="#dcb975"',
     'gomoku-grid': 'fill="none" stroke="#6e542e" stroke-width="1"',
     'gomoku-star': 'fill="#6e542e"',

@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
@@ -272,6 +271,15 @@ describe('hidden Gomoku live room', () => {
     expect(document.querySelector('[data-gomoku-bot-action]')).toBeNull();
   });
 
+  it('marks each player row with the stone that seat plays (phone, 2026-11-05)', async () => {
+    await mount(position(0), 'white', 0, pveFrame('white'));
+    const rows = [...document.querySelectorAll('.clock-player-line')];
+    const stones = rows.map((row) => row.querySelector('.clock-seat-stone')?.className ?? null);
+    expect(stones.sort()).toEqual(['clock-seat-stone black', 'clock-seat-stone white']);
+    const own = rows.find((row) => row.textContent?.includes('You'));
+    expect(own?.querySelector('.clock-seat-stone.white')).not.toBeNull();
+  });
+
   it('shows no bot panel while Rapfi is idle on the human turn', async () => {
     await mount(position(0), 'black', 0, pveFrame('black'));
     expect(document.querySelector('[data-gomoku-bot]')).toBeNull();
@@ -487,9 +495,8 @@ describe('hidden Gomoku live room', () => {
 
 describe('hidden Gomoku setup conformance', () => {
   it('screens with the pinned evaluator despite CLI arguments and repeats with a cold hash', async () => {
-    const script = await import(
-      pathToFileURL(resolve(__dirname, '../../../scripts/screen-gomoku-openings.mjs')).href
-    );
+    // @ts-expect-error The standalone Node script has no TypeScript declaration.
+    const script = await import('../../../scripts/screen-gomoku-openings.mjs');
     const saved = process.argv;
     try {
       process.argv = [...saved, '--audit', '/tmp/unused-screen-test'];
@@ -516,6 +523,10 @@ describe('hidden Gomoku setup conformance', () => {
         }),
     );
     vi.stubGlobal('fetch', fetch);
+    const { setResolvedSignedIn } = await import('./signed-in-state.js');
+    setResolvedSignedIn(true);
+    const { setRatedModeEnabled } = await import('./rated-flag.js');
+    setRatedModeEnabled(true);
     const navigate = vi.fn();
     setRoomNavigator(navigate);
     try {
@@ -525,6 +536,7 @@ describe('hidden Gomoku setup conformance', () => {
           engineId: 'rapfi-level-1',
           initialGameSpecId: 'gomoku',
           initialColor: 'white',
+          initialRated: mode === 'pvp',
           locale: 'en',
         });
         expect(document.querySelector('[data-gomoku-free-opening]')).toBeNull();
@@ -535,7 +547,7 @@ describe('hidden Gomoku setup conformance', () => {
         expect(JSON.parse(call![1]!.body as string)).toMatchObject({
           gameSpecId: 'gomoku',
           preferredColor: 'white',
-          rated: false,
+          rated: mode === 'pvp',
         });
         expect(JSON.parse(call![1]!.body as string)).not.toHaveProperty('opening');
         fetch.mockClear();
@@ -545,6 +557,8 @@ describe('hidden Gomoku setup conformance', () => {
     } finally {
       closeActiveLandingDialog();
       setRoomNavigator(null);
+      setResolvedSignedIn(undefined);
+      setRatedModeEnabled(false);
       window.localStorage?.clear();
       vi.unstubAllGlobals();
     }

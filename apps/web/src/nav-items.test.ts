@@ -1,13 +1,38 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isBlockedForViewer } from './viewer-geo.js';
 
 // The Streamers nav link is derived from the curated directory, so these tests
 // drive nav-items.ts against a mocked list rather than the shipped (empty) one.
 afterEach(() => {
   vi.resetModules();
   vi.doUnmock('./streamers-data.js');
+  document.cookie = 'mb_cc=; Max-Age=0; Path=/';
 });
 
 describe('watch nav', () => {
+  it('drives CN video visibility from the manual catalogue gate in both menus', async () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const { watchNavItems, siteMenuSections, VIDEOS_OPEN_IN_CN } = await import('./nav-items.js');
+    const visible = (items: ReturnType<typeof watchNavItems>) =>
+      items.filter((item) => !isBlockedForViewer(item.blockedIn)).map((item) => item.href);
+    expect(visible(watchNavItems()).includes('/videos')).toBe(VIDEOS_OPEN_IN_CN);
+    const watch = siteMenuSections().find((section) => section.labelKey === 'nav.watch')!;
+    expect(visible(watch.items).includes('/videos')).toBe(VIDEOS_OPEN_IN_CN);
+  });
+
+  it.each([null, 'US', 'HK', 'TW', 'SG', 'MY', 'MO'])(
+    'keeps the library visible outside CN (%s)',
+    async (country) => {
+      if (country) document.cookie = `mb_cc=${country}; Path=/`;
+      const { watchNavItems, VIDEOS_OPEN_IN_CN, YOUTUBE_BLOCKED_IN } = await import(
+        './nav-items.js'
+      );
+      const video = watchNavItems().find((item) => item.href === '/videos')!;
+      expect(video.blockedIn).toEqual(VIDEOS_OPEN_IN_CN ? undefined : YOUTUBE_BLOCKED_IN);
+      expect(isBlockedForViewer(video.blockedIn)).toBe(false);
+    },
+  );
+
   it('hides Streamers while nobody is listed', async () => {
     vi.doMock('./streamers-data.js', () => ({ STREAMERS: [] }));
     const { watchNavItems } = await import('./nav-items.js');

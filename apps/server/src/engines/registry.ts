@@ -42,6 +42,13 @@ import {
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
 import {
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
+  THREE_KINGDOMS_BANQI_ENGINE_ID,
+  THREE_KINGDOMS_BANQI_ENGINE_NAME,
+  THREE_KINGDOMS_BANQI_ENGINE_VERSION,
+  threeKingdomsBanqiEngineDisplayName,
+} from '../three-kingdoms-banqi-engine.js';
+import {
   XIANGQI_FSF_ENGINE_REF,
   XIANGQI_FSF_ENGINE_VERSION,
   XIANGQI_FSF_NNUE_NET,
@@ -1210,6 +1217,39 @@ const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntri
   }),
 );
 
+// Includes the historical ID. L1 is both a live random mover and the EvE anchor.
+const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map((tier) => {
+    const random = tier.evaluation === 'random';
+    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}`;
+    return [
+      tier.id,
+      {
+        id: tier.id,
+        engineId: THREE_KINGDOMS_BANQI_ENGINE_ID,
+        engineName: THREE_KINGDOMS_BANQI_ENGINE_NAME,
+        name: threeKingdomsBanqiEngineDisplayName(tier.id),
+        kind: random ? 'builtin' : 'container',
+        gameSpecId: 'three-kingdoms-banqi',
+        configHash: signature,
+        playSignature: signature,
+        config:
+          tier.evaluation === 'random'
+            ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+            : {
+                kind: 'three-kingdoms-banqi-uci',
+                nodes: tier.nodes,
+                movetime_ms: tier.movetimeCapMs,
+                evaluation: tier.evaluation,
+                ...(tier.chance === undefined ? {} : { chance: tier.chance }),
+              },
+        notes:
+          'Admin-only TK playtest; provisional uncalibrated budgets. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2–L8 require advertised ChanceMix support; L1 and the historical ID do not configure it.',
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
@@ -1227,6 +1267,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...JUNGLE_FLIP_ENGINES,
   ...JUNGLE_ENGINES,
   ...KATAGO_JUNGLE_ENGINES,
+  ...THREE_KINGDOMS_BANQI_ENGINES,
 };
 
 /**

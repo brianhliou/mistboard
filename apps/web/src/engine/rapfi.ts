@@ -29,7 +29,7 @@ export interface RapfiTransport {
 }
 
 function browserTransport(): RapfiTransport {
-  const worker = new Worker('/engine/rapfi/worker.js?v=1387d11312');
+  const worker = new Worker('/engine/rapfi/worker.js?v=1387d11312.2');
   return {
     listen(onMessage, onError) {
       worker.onmessage = (event) => onMessage(event.data);
@@ -43,6 +43,11 @@ function browserTransport(): RapfiTransport {
     },
   };
 }
+
+/** Time past a level's search budget before a move counts as hung. Rapfi stops
+ * itself at ~97% of timeout_turn, so this covers worker overhead on a slow
+ * device, not extra thinking: a 250ms grace failed Level 1 on an iPhone (2026-11-05). */
+export const RAPFI_MOVE_GRACE_MS = 2_000;
 
 type Pending = {
   position: RapfiPosition;
@@ -113,7 +118,7 @@ export class Rapfi {
     clearTimeout(this.timer);
     this.timer = setTimeout(
       () => this.fail(new Error('Rapfi move timed out')),
-      this.pending.timeMs + 250,
+      this.pending.timeMs + RAPFI_MOVE_GRACE_MS,
     );
     this.worker.postMessage({ type: 'commands', commands: this.pending.lines });
   }
@@ -149,7 +154,7 @@ export class Rapfi {
         this.fail(new Error('Rapfi returned an invalid move'));
         return;
       }
-      if (message.elapsedMs > this.pending.timeMs + 250) {
+      if (message.elapsedMs > this.pending.timeMs + RAPFI_MOVE_GRACE_MS) {
         this.fail(new Error('Rapfi move timed out'));
         return;
       }

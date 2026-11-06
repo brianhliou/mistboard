@@ -83,11 +83,11 @@ test('Gomoku starts with an empty freestyle 15x15 board and Black to move', () =
   assert.deepEqual(game.mustBlock(state), []);
 });
 
-test('the Rapfi pool contains at least 50 distinct, legal, nonterminal near-even openings', async () => {
+test('the Rapfi pool contains at least 200 distinct, legal, nonterminal near-even openings', async () => {
   const { positionKey } = await import(
     new URL('../../../scripts/screen-gomoku-openings.mjs', import.meta.url).href
   );
-  assert.ok(game.GOMOKU_OPENINGS.length >= 50);
+  assert.ok(game.GOMOKU_OPENINGS.length >= 200);
   assert.equal(game.GOMOKU_OPENING_SCREEN.accepted, game.GOMOKU_OPENINGS.length);
   assert.equal(game.GOMOKU_OPENING_SCREEN.nodes, 1_000_000);
   const keys = new Set<string>();
@@ -98,7 +98,10 @@ test('the Rapfi pool contains at least 50 distinct, legal, nonterminal near-even
     assert.equal(winners(initial.board).size, 0, entry.id);
     const { score, finalScore, winrate, nodes, forcedWin, depth } = entry.screening;
     assert.ok(Math.abs(score) <= 40 && Math.abs(finalScore) <= 40, entry.id);
-    assert.ok(winrate >= 0.45 && winrate <= 0.55, entry.id);
+    const mined = entry.source === 'mined-2B3W-7x7';
+    assert.ok(winrate >= (mined ? 0.48 : 0.45) && winrate <= (mined ? 0.52 : 0.55), entry.id);
+    if (mined) assert.equal(entry.classicId, undefined);
+    else assert.equal(typeof entry.classicId, 'string');
     assert.ok(nodes >= 1_000_000 && depth > 0, entry.id);
     assert.equal(forcedWin, false);
     assert.ok(!keys.has(positionKey(entry)), 'symmetries must not inflate the pool');
@@ -110,6 +113,99 @@ test('the Rapfi pool contains at least 50 distinct, legal, nonterminal near-even
     assert.deepEqual(next.opening, room.opening);
     assert.equal(next.ply, initial.ply + 1);
   }
+});
+
+test('mined importer rejects score 41, forced wins and reflected pool duplicates', async () => {
+  const { importMinedOpenings } = await import(
+    new URL('../../../scripts/import-gomoku-mined-openings.mjs', import.meta.url).href
+  );
+  const classic = game.GOMOKU_OPENINGS[0]!;
+  const pool = { screening: { accepted: 1 }, openings: [classic] };
+  const deep = {
+    score: 0,
+    winrate: 0.5,
+    finalScore: 0,
+    nodes: 1_000_000,
+    depth: 20,
+    forcedWin: false,
+  };
+  const candidate = {
+    turn: 'black',
+    stones: [
+      { square: 'e5', color: 'black' },
+      { square: 'k11', color: 'black' },
+      { square: 'h8', color: 'white' },
+      { square: 'f9', color: 'white' },
+      { square: 'j7', color: 'white' },
+    ],
+  };
+  const fixture = {
+    config: { nb: 2, nw: 3, H: 3 },
+    band: [0.48, 0.52],
+    rows: [
+      { candidate, deep: { ...deep, score: 41 } },
+      { candidate, deep: { ...deep, forcedWin: true } },
+      {
+        candidate: {
+          turn: classic.turn,
+          stones: classic.stones.map((stone) => ({
+            ...stone,
+            square: `${String.fromCharCode(97 + 14 - (stone.square.charCodeAt(0) - 97))}${stone.square.slice(1)}`,
+          })),
+        },
+        deep,
+      },
+      { candidate, deep },
+    ],
+  };
+  const { pool: merged, report } = importMinedOpenings(pool, fixture);
+  assert.equal(report.imported, 1);
+  assert.equal(report.rejected, 3);
+  assert.equal(report.rejectedByFilter.score, 1);
+  assert.equal(report.rejectedByFilter.forcedWin, 1);
+  assert.equal(report.rejectedByFilter.duplicateExisting, 1);
+  assert.deepEqual(merged.openings, [
+    classic,
+    { id: 'gmk-002', source: 'mined-2B3W-7x7', ...candidate, screening: deep },
+  ]);
+  assert.equal(merged.screening.accepted, 2);
+  assert.deepEqual(pool, { screening: { accepted: 1 }, openings: [classic] });
+
+  for (const patch of [
+    { score: -41 },
+    { finalScore: 41 },
+    { finalScore: -41 },
+    { winrate: 0.47999 },
+    { winrate: 0.52001 },
+    { nodes: 999_999 },
+    { score: Number.NaN },
+    { depth: 0 },
+    { forcedWin: undefined },
+  ]) {
+    const result = importMinedOpenings(pool, {
+      ...fixture,
+      rows: [{ candidate, deep: { ...deep, ...patch } }],
+    });
+    assert.equal(result.report.imported, 0, JSON.stringify(patch));
+  }
+  for (const winrate of [0.48, 0.52]) {
+    const result = importMinedOpenings(pool, {
+      ...fixture,
+      rows: [{ candidate, deep: { ...deep, score: 40, finalScore: -40, winrate } }],
+    });
+    assert.equal(result.report.imported, 1, 'acceptance bounds are inclusive');
+  }
+  const duplicated = { ...fixture, rows: [...fixture.rows, { candidate, deep }] };
+  const result = importMinedOpenings(pool, duplicated);
+  assert.equal(result.report.rejectedByFilter.duplicateMined, 1);
+  assert.deepEqual(result.pool.openings, merged.openings);
+  assert.deepEqual(
+    importMinedOpenings(pool, { ...duplicated, rows: [...duplicated.rows].reverse() }).pool,
+    result.pool,
+  );
+  const rerun = importMinedOpenings(merged, fixture);
+  assert.equal(rerun.report.imported, 0);
+  assert.deepEqual(rerun.pool, merged, 'reimport preserves IDs and provenance');
 });
 
 test('opening screening generates all 26 classics and rejects missing, mate and under-budget telemetry', async () => {
@@ -237,6 +333,9 @@ test('Gomoku dealt openings validate counts, retain no caller-owned objects and 
   assert.equal(state.ply, 1);
   assert.deepEqual(play(state, 'i8').status, { type: 'playing', turn: 'black' });
   assert.deepEqual(opening(['h8'], ['i8']).status, { type: 'playing', turn: 'black' });
+  const mined = opening(['e5', 'k11'], ['h8', 'f9', 'j7'], 'black');
+  assert.equal(mined.ply, 5);
+  assert.deepEqual(play(mined, 'a1').status, { type: 'playing', turn: 'white' });
 });
 
 test('Gomoku rejects illegal openings: counts, turn, duplicates, bounds, colors and rules', () => {
@@ -246,6 +345,7 @@ test('Gomoku rejects illegal openings: counts, turn, duplicates, bounds, colors 
     [[], ['a1'], 'black'],
     [['a1', 'b1'], [], 'white'],
     [['a1'], ['b1'], 'white'],
+    [['e5', 'k11'], ['h8', 'f9', 'j7'], 'white'],
     [['a1'], ['a1'], 'black'],
     [['a1', 'a1'], ['b1'], 'white'],
   ] as const) {

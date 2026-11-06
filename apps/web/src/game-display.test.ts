@@ -236,6 +236,15 @@ describe('gameOutcome for wind seats', () => {
 // The watch meta card humanized the kebab code ("General captured") in every
 // locale; every persisted GameTermination now has a catalog entry.
 describe('terminationLabel', () => {
+  it('resolves the shared race code by variant without a Jungle fallback', () => {
+    expect(terminationLabel('race', 'en', 'gomoku')).toBe('Five in a row');
+    expect(terminationLabel('race', 'en', 'jungle')).toBe('Den entered');
+    expect(terminationLabel('race', 'en', 'jungle-flip')).toBe('Den entered');
+    expect(() => terminationLabel('race', 'en', 'xiangqi')).toThrow();
+    // A wire value can be newer than this client, so runtime dispatch also rejects it.
+    expect(() => terminationLabel('race', 'en', 'future-variant' as 'gomoku')).toThrow();
+  });
+
   it('names every persisted termination in English', () => {
     expect(terminationLabel('general-captured')).toBe('General captured');
     expect(terminationLabel('king-captured')).toBe('King captured');

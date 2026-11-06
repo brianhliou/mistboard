@@ -173,6 +173,10 @@ export type WebVariantTenant<C extends string> = {
   // (already localized). Mahjong puts the dealer and the running points here on
   // a phone, where its table has no room for them.
   seatTags?(seat: C): readonly string[];
+  // Optional: a mark before a seat's name on the player rows, for a variant whose
+  // board gives no other cue to which side is whose. Gomoku's board starts empty,
+  // so "You" and the bot read colourless without a stone (Brian's phone, 2026-11-05).
+  seatMarker?(seat: C): HTMLElement | null;
 };
 
 /** A recorded clock at one ply of a finished match (the review page). */
@@ -402,6 +406,11 @@ export function createTenantRoomChrome<C extends string>(
     return color === ctx.seat() ? 'bottom' : 'top';
   }
 
+  function appendSeatMarker(playerLine: HTMLElement, color: C): void {
+    const marker = tenant.seatMarker?.(color) ?? null;
+    if (marker) playerLine.append(marker);
+  }
+
   function appendSeatTags(playerLine: HTMLElement, color: C): void {
     for (const tag of tenant.seatTags?.(color) ?? []) {
       const el = document.createElement('span');
@@ -474,6 +483,7 @@ export function createTenantRoomChrome<C extends string>(
         // "Black", dot-less, until the clock armed and the same row became "You"
         // with a dot, mid-game.
         playerLine.append(...presence(color));
+        appendSeatMarker(playerLine, color);
         // The seat label is a placeholder for an unnamed seat, so only a
         // server-supplied name carries the seat's profile link.
         playerLine.append(
@@ -538,6 +548,7 @@ export function createTenantRoomChrome<C extends string>(
       const playerLine = document.createElement('span');
       playerLine.className = isActive ? 'clock-player-line active' : 'clock-player-line';
       playerLine.append(...presence(color));
+      appendSeatMarker(playerLine, color);
       // playerName falls back to 'You' / the seat label when the server has no
       // name for the seat; those name nobody, so they stay plain text.
       playerLine.append(

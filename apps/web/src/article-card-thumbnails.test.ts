@@ -28,11 +28,12 @@ function slugOf(href: string | null): string {
   return (href ?? '').split('?')[0]!.split('/').filter(Boolean).pop() ?? '';
 }
 
-// A thumbnail box has art when it holds an <svg>, an <img>, a chessground board
-// host or a variant marker (a masked span), and is not marked empty.
+// A thumbnail box has art when it holds a background image, an <svg>, an <img>,
+// a chessground board host or a variant marker, and is not marked empty.
 function hasArt(box: Element | null): boolean {
   if (!box || box.classList.contains('is-empty')) return false;
   return (
+    !!box.querySelector<HTMLElement>('.articles-index-card-thumb')?.style.backgroundImage ||
     box.querySelector(
       'svg, img, .articles-thumb-board, .variant-marker[data-variant-marker-id], .variant-marker[data-variant-marker-placeholder]',
     ) !== null
@@ -127,5 +128,21 @@ describe('article card thumbnails', () => {
       if (x !== 0 || y !== 0) handCropped.push(article.slug);
     }
     expect(handCropped.sort()).toEqual(['atomic-xiangqi', 'atomic-xiangqi-build', 'horde-xiangqi']);
+  });
+});
+
+// The server rasterises a thumbnail for feeds and the share card, and resvg
+// cannot decode WebP: the feed image comes out blank and the card falls back to
+// the site logo, with no error anywhere (set-up-your-board, 2026-11-04).
+describe('article thumbnail art the rasteriser can read', () => {
+  it('uses PNG or JPEG for every published or scheduled image thumbnail', () => {
+    const unreadable = articles
+      .filter((article) => article.status === 'published' && article.thumbnail?.kind === 'image')
+      .flatMap((article) => {
+        const thumb = article.thumbnail;
+        if (thumb?.kind !== 'image') return [];
+        return /\.(png|jpe?g)(?:[?#]|$)/i.test(thumb.src) ? [] : [`${article.slug}: ${thumb.src}`];
+      });
+    expect(unreadable).toEqual([]);
   });
 });

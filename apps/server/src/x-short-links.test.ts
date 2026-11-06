@@ -140,6 +140,16 @@ test('x short link: every campaign is unique and every slug is short', () => {
 // The analysis page parses ?fen= and reads ?moves= as coordinate moves from it,
 // stopping silently at the first illegal one, so a typo in a line would ship a
 // truncated solution. Replay each line here with the rules kernel instead.
+test('x short link: every problem in the 11-05 X queue has its link', () => {
+  // A missing slug is not an error: it lands on the homepage tagged x-unknown,
+  // so a post would go out pointing at the wrong page with nothing failing.
+  for (const slug of ['66', '84', '39', '53', '75', '67', '59']) {
+    const url = parseTarget(xShortLinkRedirect(`/x/${slug}`)!);
+    assert.equal(url.pathname, '/analysis/xiangqi', slug);
+    assert.equal(url.searchParams.get('ply'), '0', slug);
+  }
+});
+
 test('x short link: every seeded line replays legally from its FEN', () => {
   for (const [slug, { target }] of Object.entries(X_SHORT_LINKS)) {
     const parsed = parseStandardXiangqiFen(target.fen);

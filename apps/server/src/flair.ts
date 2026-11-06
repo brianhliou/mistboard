@@ -25,6 +25,7 @@ export const FLAIR_KEYS = [
   'variant-jungle-flip',
   'variant-dark-xiangqi',
   'variant-dark-chess',
+  'variant-gomoku',
   'piece-red-general',
   'piece-red-advisor',
   'piece-red-elephant',

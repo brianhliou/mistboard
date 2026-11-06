@@ -7,7 +7,7 @@ describe('article card URLs', () => {
   it.each([undefined, 'en', 'zh-Hans', 'zh-Hant'])(
     'shares the English Gomoku rules board in every shape until it is localized (%s)',
     (locale) => {
-      const wide = `${HOST}/og/article/gomoku.png?v=7`;
+      const wide = `${HOST}/og/article/gomoku.png?v=8`;
       expect(articleOgImageUrl(HOST, 'gomoku', locale)).toBe(wide);
       expect(articleStructuredDataImage(HOST, 'gomoku', locale)).toEqual(
         ['16x9', '4x3', '1x1'].map((aspect) => `${wide}&aspect=${aspect}`),
@@ -16,28 +16,28 @@ describe('article card URLs', () => {
   );
 
   it('og:image stays the wide card, with its ?v=', () => {
-    expect(articleOgImageUrl(HOST, 'banqi')).toBe('https://mistboard.com/og/article/banqi.png?v=7');
+    expect(articleOgImageUrl(HOST, 'banqi')).toBe('https://mistboard.com/og/article/banqi.png?v=8');
   });
 
   it('a rules page offers 16:9, 4:3 and 1:1 in its JSON-LD, widest first', () => {
     expect(articleStructuredDataImage(HOST, 'banqi')).toEqual([
-      'https://mistboard.com/og/article/banqi.png?v=7&aspect=16x9',
-      'https://mistboard.com/og/article/banqi.png?v=7&aspect=4x3',
-      'https://mistboard.com/og/article/banqi.png?v=7&aspect=1x1',
+      'https://mistboard.com/og/article/banqi.png?v=8&aspect=16x9',
+      'https://mistboard.com/og/article/banqi.png?v=8&aspect=4x3',
+      'https://mistboard.com/og/article/banqi.png?v=8&aspect=1x1',
     ]);
   });
 
   it('a blog page with no card of its own offers the site card in the same three shapes', () => {
     expect(articleStructuredDataImage(HOST, 'jieqi-platform')).toEqual([
-      'https://mistboard.com/og/article/jieqi-platform.png?v=7&aspect=16x9',
-      'https://mistboard.com/og/article/jieqi-platform.png?v=7&aspect=4x3',
-      'https://mistboard.com/og/article/jieqi-platform.png?v=7&aspect=1x1',
+      'https://mistboard.com/og/article/jieqi-platform.png?v=8&aspect=16x9',
+      'https://mistboard.com/og/article/jieqi-platform.png?v=8&aspect=4x3',
+      'https://mistboard.com/og/article/jieqi-platform.png?v=8&aspect=1x1',
     ]);
   });
 
   it('a hand-drawn card has no aspect versions, so the JSON-LD keeps the one wide card', () => {
     expect(articleStructuredDataImage(HOST, 'yin-sheng')).toBe(
-      'https://mistboard.com/og/article/yin-sheng.png?v=7',
+      'https://mistboard.com/og/article/yin-sheng.png?v=8',
     );
   });
 
@@ -47,8 +47,24 @@ describe('article card URLs', () => {
       ['zh-Hant', 'zh-hant'],
       ['zh-hant', 'zh-hant'],
     ] as const) {
-      for (const slug of ['banqi', 'pikafish']) {
-        const wide = `https://mistboard.com/og/article/${slug}.png?v=7&lang=${prefix}`;
+      for (const slug of [
+        'banqi',
+        'pikafish',
+        'shortest-stalemate-xiangqi',
+        'helpmates-in-xiangqi',
+        'jieqi-puzzle-search',
+        'xiangqi-endgames',
+        'duck-xiangqi-game-tree',
+        'en-passant-under-fog',
+        'most-played-move',
+        'chess960-starting-positions',
+        'lichess-analysis-accuracy',
+        'jieqi-openings',
+        'riverbank-cannon',
+        'dou-shou-qi-engine',
+        'jungle-den-term',
+      ]) {
+        const wide = `https://mistboard.com/og/article/${slug}.png?v=8&lang=${prefix}`;
         expect(articleOgImageUrl(HOST, slug, lang)).toBe(wide);
         expect(articleStructuredDataImage(HOST, slug, lang)).toEqual([
           `${wide}&aspect=16x9`,
@@ -61,9 +77,9 @@ describe('article card URLs', () => {
 
   it('pikafish has a board card: aspect versions in English too', () => {
     expect(articleStructuredDataImage(HOST, 'pikafish')).toEqual([
-      'https://mistboard.com/og/article/pikafish.png?v=7&aspect=16x9',
-      'https://mistboard.com/og/article/pikafish.png?v=7&aspect=4x3',
-      'https://mistboard.com/og/article/pikafish.png?v=7&aspect=1x1',
+      'https://mistboard.com/og/article/pikafish.png?v=8&aspect=16x9',
+      'https://mistboard.com/og/article/pikafish.png?v=8&aspect=4x3',
+      'https://mistboard.com/og/article/pikafish.png?v=8&aspect=1x1',
     ]);
   });
 
@@ -71,19 +87,19 @@ describe('article card URLs', () => {
     // A bare 'zh' names no script, so it gets no zh card rather than a guess.
     for (const lang of [null, undefined, 'en', 'vi', 'zh', 'zh-TW']) {
       expect(articleOgImageUrl(HOST, 'banqi', lang)).toBe(
-        'https://mistboard.com/og/article/banqi.png?v=7',
+        'https://mistboard.com/og/article/banqi.png?v=8',
       );
     }
     expect(articleOgImageUrl(HOST, 'jungle', 'zh-Hant')).toBe(
-      'https://mistboard.com/og/article/jungle.png?v=7',
+      'https://mistboard.com/og/article/jungle.png?v=8',
     );
     expect(articleStructuredDataImage(HOST, 'jieqi-platform', 'zh-Hant')).toEqual([
-      'https://mistboard.com/og/article/jieqi-platform.png?v=7&aspect=16x9',
-      'https://mistboard.com/og/article/jieqi-platform.png?v=7&aspect=4x3',
-      'https://mistboard.com/og/article/jieqi-platform.png?v=7&aspect=1x1',
+      'https://mistboard.com/og/article/jieqi-platform.png?v=8&aspect=16x9',
+      'https://mistboard.com/og/article/jieqi-platform.png?v=8&aspect=4x3',
+      'https://mistboard.com/og/article/jieqi-platform.png?v=8&aspect=1x1',
     ]);
     expect(articleStructuredDataImage(HOST, 'yin-sheng', 'zh-Hant')).toBe(
-      'https://mistboard.com/og/article/yin-sheng.png?v=7',
+      'https://mistboard.com/og/article/yin-sheng.png?v=8',
     );
   });
 });

@@ -81,6 +81,8 @@ export const OG_FONT_OPTIONS = {
 /** The zoom every OG card is rasterised at (svgToPng's default). */
 export const OG_CARD_ZOOM = 2;
 
+type RasterCrop = { left?: number; top?: number; right: number; bottom: number };
+
 // Render at 2x the SVG's nominal dimensions so the resulting PNG stays crisp
 // on retina displays and survives scraper recompression.
 /**
@@ -97,14 +99,14 @@ export const OG_CARD_ZOOM = 2;
  * manuals (each its own cache key) paged loop-lag warnings for a minute at a
  * time. Only the PNG encode (`asPng`, ~30 ms) still runs on the loop.
  *
- * `crop` keeps the top-left `right` x `bottom` pixels of the zoomed render
- * (article-thumb.ts draws on a taller canvas than it serves).
+ * `crop` keeps the rectangle between left/top (default 0) and right/bottom
+ * in output pixels (article-thumb.ts draws on a taller canvas than it serves).
  */
 export async function svgToPng(
   svg: string,
   background = '#0f1115',
   zoom = OG_CARD_ZOOM,
-  crop?: { right: number; bottom: number },
+  crop?: RasterCrop,
 ): Promise<Buffer> {
   return (await renderSvg(svg, background, zoom, crop)).asPng();
 }
@@ -114,18 +116,13 @@ export async function svgToRgba(
   svg: string,
   background: string,
   zoom: number,
-  crop?: { right: number; bottom: number },
+  crop?: RasterCrop,
 ): Promise<{ pixels: Buffer; width: number; height: number }> {
   const image = await renderSvg(svg, background, zoom, crop);
   return { pixels: image.pixels, width: image.width, height: image.height };
 }
 
-function renderSvg(
-  svg: string,
-  background: string,
-  zoom: number,
-  crop?: { right: number; bottom: number },
-) {
+function renderSvg(svg: string, background: string, zoom: number, crop?: RasterCrop) {
   return renderAsync(svg, {
     background,
     fitTo: { mode: 'zoom', value: zoom },

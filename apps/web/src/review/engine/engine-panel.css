@@ -108,6 +108,15 @@
   font-variant-numeric: tabular-nums;
   color: var(--site-text);
 }
+/* Gomoku names the side ("W+12.2", "W in 7"), wider than a signed score: a
+   fixed box at a smaller size, so the name beside it never shifts as the
+   score changes form (Brian, 2026-11-05). */
+.engine-panel[data-seat-ink-family="gomoku"] .engine-panel__eval {
+  width: 4.1em;
+  min-width: 0;
+  font-size: 17px;
+  white-space: nowrap;
+}
 .engine-panel:not(.engine-panel--on) .engine-panel__eval {
   display: none;
 }

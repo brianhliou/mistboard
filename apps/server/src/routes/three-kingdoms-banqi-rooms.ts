@@ -1,8 +1,8 @@
 // Create route for the Three Kingdoms banqi playtest (#628, #684). With the
 // local flag off, only an admin account may create a room (admits); everyone
 // else gets 404 three_kingdoms_banqi_disabled, the same answer as before. PvE
-// exists only when the engine binary resolves (three-kingdoms-banqi-engine.ts);
-// without it a PvE create answers the same 404.
+// search tiers need the engine binary, and L8 also needs its explicit net.
+// L1 needs neither. Unavailable tiers answer the same 404.
 
 import { type RoomTimeControl, THREE_KINGDOMS_BANQI_SPEC_ID } from '@mistboard/game';
 import type { DrainCreate } from '../deploy-gate.js';
@@ -44,7 +44,7 @@ const route = createTenantRoomsRoute<ThreeKingdomsBanqiCreateContext, Seat | 'ra
     defaultEngineId: THREE_KINGDOMS_BANQI_ENGINE_ID,
     isEngineClientId: isThreeKingdomsBanqiEngineClientId,
     heldEngineError: (engineId) =>
-      isThreeKingdomsBanqiEngineClientId(engineId) && !threeKingdomsBanqiEngineAvailable()
+      isThreeKingdomsBanqiEngineClientId(engineId) && !threeKingdomsBanqiEngineAvailable(engineId)
         ? 'three_kingdoms_banqi_disabled'
         : undefined,
     seats: ['red', 'black'],
