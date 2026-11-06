@@ -1,0 +1,217 @@
+import {
+  type GomokuColor,
+  type GomokuMove,
+  type GomokuRoomState,
+  parseGomokuMove,
+  parseRapfiOutput,
+  type RapfiLevel,
+  type RapfiPosition,
+  rapfiGameSeed,
+  rapfiLevelRequest,
+  rapfiPlySeed,
+  selectRapfiMove,
+} from '@mistboard/game';
+import {
+  GOMOKU_ANALYSIS_HASH_BYTES,
+  type GomokuAnalysisOptions,
+  RapfiSession,
+} from './gomoku-analysis.js';
+import { type GomokuRuntimeRoom, gomokuTenant, isGomokuEngineClientId } from './gomoku-tenant.js';
+import { logger } from './obs.js';
+import { UciEnginePool, withEngineProcess } from './uci-engine-harness.js';
+import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
+import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
+
+// All live Gomoku rooms share this cap. A slot is held until the child is reaped;
+// withEngineProcess also accounts for it in the server-wide physical process cap.
+const livePool = new UciEnginePool({
+  name: 'rapfi-gomoku-pve',
+  maxProcessesEnvVar: 'RAPFI_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'RAPFI_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  queueTimeoutMessage: 'Rapfi PvE pool timed out',
+});
+
+type MoveOptions = GomokuAnalysisOptions & { isCurrent?: () => boolean };
+export type GomokuMoveProvider = (
+  state: GomokuRoomState,
+  engineId: string,
+  options: MoveOptions,
+) => Promise<GomokuMove | null>;
+type GomokuEngineRoom = GomokuRuntimeRoom & { stopping?: boolean };
+export type GomokuEngineContext = TenantLifecycleContext<
+  GomokuColor,
+  GomokuMove,
+  GomokuRoomState,
+  'gomoku',
+  GomokuRuntimeRoom
+>;
+
+export async function gomokuLiveEngineMove(
+  state: GomokuRoomState,
+  engineId: string,
+  options: MoveOptions = {},
+): Promise<GomokuMove | null> {
+  if (!isGomokuEngineClientId(engineId)) throw new Error('Unknown Rapfi engine');
+  if (state.status.type !== 'playing') return null;
+  const position: RapfiPosition = {
+    turn: state.status.turn === 'black' ? 1 : 2,
+    stones: state.board.flatMap((color, index) =>
+      color
+        ? [
+            {
+              x: index % 15,
+              y: Math.floor(index / 15),
+              player: color === 'black' ? (1 as const) : (2 as const),
+            },
+          ]
+        : [],
+    ),
+  };
+  const request = rapfiLevelRequest(
+    position,
+    Number(engineId.at(-1)) as RapfiLevel,
+    rapfiPlySeed(rapfiGameSeed(state.id), state.ply),
+  );
+  const release = await livePool.acquire();
+  try {
+    return await withEngineProcess(async (track) => {
+      // A queued room may have paused, ended or taken back the searched turn.
+      if (options.isCurrent && !options.isCurrent()) return null;
+      const session = new RapfiSession(options, track);
+      try {
+        await session.exchange(
+          ['START 15'],
+          (line) => line.trim() === 'OK',
+          options.timeoutMs ?? 5_000,
+        );
+        const output = await session.exchange(
+          [
+            'INFO thread_num 1',
+            `INFO max_memory ${GOMOKU_ANALYSIS_HASH_BYTES}`,
+            ...request.lines.slice(1),
+          ],
+          (line) => /^\d+,\d+$/.test(line.trim()),
+          options.timeoutMs ?? request.timeMs + 250,
+        );
+        // Require a valid final move even when structured candidates choose it.
+        const [x, y] = output.at(-1)!.trim().split(',').map(Number);
+        const raw = parseGomokuMove(`${String.fromCharCode(97 + x!)}${y! + 1}`);
+        if (!raw || !gomokuTenant.rules.isLegalMove(state, raw))
+          throw new Error('Rapfi returned an illegal placement');
+        const selected = request.choice
+          ? selectRapfiMove(position, parseRapfiOutput(output), request.choice)
+          : { x: x!, y: y! };
+        const move = parseGomokuMove(`${String.fromCharCode(97 + selected.x)}${selected.y + 1}`);
+        if (!move || !gomokuTenant.rules.isLegalMove(state, move))
+          throw new Error('Rapfi returned an illegal placement');
+        return move;
+      } finally {
+        // No parked network or hash memory between turns, including failures.
+        await session.close();
+      }
+    });
+  } finally {
+    release();
+  }
+}
+
+const thinking = new WeakSet<GomokuRuntimeRoom>();
+
+function engineSeat(room: GomokuRuntimeRoom): GomokuColor | null {
+  for (const seat of gomokuTenant.colors)
+    if (isGomokuEngineClientId(room.projection.seats[seat])) return seat;
+  return null;
+}
+
+function engineToMove(room: GomokuEngineRoom, seat: GomokuColor): boolean {
+  const { state, seats, clock } = room.projection;
+  return (
+    !room.stopping &&
+    !room.projection.paused &&
+    !room.rated &&
+    !room.projection.rated &&
+    state.status.type === 'playing' &&
+    state.status.turn === seat &&
+    Boolean(seats.black && seats.white) &&
+    (!clock || tenantClockRemainingMs(clock, seat, Date.now()) > 0)
+  );
+}
+
+export function scheduleGomokuEngineMove(
+  ctx: GomokuEngineContext,
+  room: GomokuRuntimeRoom,
+  provider: GomokuMoveProvider = gomokuLiveEngineMove,
+): void {
+  const seat = engineSeat(room);
+  if (room.engineTimer || thinking.has(room) || seat === null || !engineToMove(room, seat)) return;
+  room.engineTimer = setTimeout(() => {
+    room.engineTimer = null;
+    void playGomokuEngineMoveIfReady(ctx, room, provider).catch((error: Error) => {
+      logger.error(
+        { kind: 'gomoku_engine_move_failure', room_id: room.id, error: error.message },
+        'Gomoku engine move failure',
+      );
+    });
+  }, 0);
+  room.engineTimer.unref();
+}
+
+export async function playGomokuEngineMoveIfReady(
+  ctx: GomokuEngineContext,
+  room: GomokuRuntimeRoom,
+  provider: GomokuMoveProvider = gomokuLiveEngineMove,
+): Promise<void> {
+  const seat = engineSeat(room);
+  if (thinking.has(room) || seat === null || !engineToMove(room, seat)) return;
+  const state = room.projection.state;
+  const revision = room.events.at(-1);
+  const engineId = room.projection.seats[seat]!;
+  const isCurrent = () =>
+    engineToMove(room, seat) &&
+    room.projection.state === state &&
+    room.events.at(-1) === revision &&
+    room.projection.seats[seat] === engineId;
+  thinking.add(room);
+  try {
+    let move: GomokuMove | null = null;
+    let failure: unknown;
+    try {
+      move = await provider(state, engineId, { isCurrent });
+    } catch (error) {
+      failure = error;
+    }
+    // Drain writes queued while awaiting the previous tail too. The stale-turn
+    // check and enqueue below must follow every earlier pause/move/resignation.
+    let writes: Promise<void>;
+    do {
+      writes = room.pendingWrites;
+      await writes;
+    } while (writes !== room.pendingWrites);
+    if (!isCurrent()) return;
+    if (!move || !gomokuTenant.rules.isLegalMove(state, move)) {
+      move = null;
+      logger.warn(
+        {
+          kind: 'gomoku_engine_failed_closed',
+          room_id: room.id,
+          error: String(failure ?? 'No legal Rapfi placement'),
+        },
+        'Rapfi failed; resigning bot seat',
+      );
+    }
+    // Match the other tenant bots: failure resigns the engine, never leaves a
+    // room waiting forever or substitutes a weaker move for the chosen level.
+    const event = move
+      ? { type: 'move-played' as const, at: Date.now(), roomId: room.id, color: seat, move }
+      : { type: 'seat-resigned' as const, at: Date.now(), roomId: room.id, color: seat };
+    const seq = await ctx.appendEvent(room, event);
+    if (seq >= 0) ctx.broadcastEventAppended(room, event, seq);
+  } finally {
+    thinking.delete(room);
+    // Resume/reconnect/undo can invalidate a search while it is in flight.
+    // Their scheduler saw `thinking`; arrange the current turn after cleanup.
+    if (room.events.at(-1) !== revision || room.projection.state !== state)
+      scheduleGomokuEngineMove(ctx, room, provider);
+  }
+}

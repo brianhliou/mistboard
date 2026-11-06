@@ -119,13 +119,12 @@ export const gomokuTenant: VariantTenant<
       return `Rapfi Level ${id.at(-1)}`;
     },
     engineVersion: () => '1387d11312',
-    reservationReleaseTag: 'gomoku-browser',
+    reservationReleaseTag: 'gomoku-rapfi',
   },
   wire: {
     snapshotExtras: (room, client) => ({
       roomMode: tenantPveEngineId(gomokuTenant, room) ? 'pve' : 'pvp',
       pveEngineId: tenantPveEngineId(gomokuTenant, room),
-      browserBotPaused: Boolean(room.projection.paused),
       forfeitDeadline: tenantForfeitDeadlineForClient(gomokuTenant, room, client),
     }),
   },

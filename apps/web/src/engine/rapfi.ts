@@ -3,75 +3,21 @@ import {
   parseRapfiOutput,
   type RapfiCandidate,
   type RapfiChoiceOptions,
+  type RapfiLevel,
   type RapfiPosition,
-  rapfiBoardLines,
-  rapfiPositionState,
+  rapfiLevelRequest,
   selectRapfiMove,
-  validateRapfiCandidateCount,
-  validateRapfiChoiceOptions,
 } from '@mistboard/game';
 
-export type { RapfiCandidate, RapfiChoiceOptions, RapfiPosition };
+export { RAPFI_LEVELS, rapfiCommands, rapfiGameSeed, rapfiPlySeed } from '@mistboard/game';
+export type { RapfiCandidate, RapfiChoiceOptions, RapfiLevel, RapfiPosition };
 export { parseRapfiOutput, selectRapfiMove };
-
-function validateSeed(seed: number): void {
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
-    throw new Error('Invalid Rapfi seed');
-}
-
-// FNV-1a over UTF-16 code units: identical in browser and Node, with explicit
-// domains and separators so game identities and plies cannot alias by joining.
-function hashSeed(identity: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < identity.length; index++)
-    hash = Math.imul(hash ^ identity.charCodeAt(index), 0x01000193);
-  return hash >>> 0;
-}
-
-/** Persist this seed with the game; a room id works without a run seed. */
-export function rapfiGameSeed(gameId: string, runSeed = 0): number {
-  validateSeed(runSeed);
-  if (typeof gameId !== 'string' || !gameId.length) throw new Error('Invalid Rapfi game identity');
-  return hashSeed(`game:${runSeed}:${gameId}`);
-}
-
-/** Use the kernel's absolute ply (including opening stones), never call order. */
-export function rapfiPlySeed(gameSeed: number, ply: number): number {
-  validateSeed(gameSeed);
-  if (!Number.isSafeInteger(ply) || ply < 0) throw new Error('Invalid Rapfi ply');
-  return hashSeed(`ply:${gameSeed}:${ply}`);
-}
-
-export type RapfiLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export const RAPFI_LEVELS: readonly {
-  readonly level: RapfiLevel;
-  readonly nodes: number;
-  readonly timeMs: number;
-  readonly candidateCount?: number;
-  readonly evalMargin?: number;
-  readonly bestRate?: number;
-}[] = Object.freeze([
-  // Retuned 2026-11-03 on the offline ladder (scripts/gomoku-level-ladder.mjs,
-  // 40 games per adjacent pair): each level scores 67-83% against the one below.
-  // L1-5 play the best move with probability bestRate, else a move from the
-  // candidate pool; below ~5,000 nodes Rapfi can return no candidates.
-  { level: 1, nodes: 5_000, timeMs: 1_000, candidateCount: 64, evalMargin: 20_000 },
-  { level: 2, nodes: 5_500, timeMs: 1_000, candidateCount: 64, evalMargin: 20_000, bestRate: 0.6 },
-  { level: 3, nodes: 6_000, timeMs: 1_500, candidateCount: 64, evalMargin: 20_000, bestRate: 0.85 },
-  { level: 4, nodes: 8_000, timeMs: 1_500, candidateCount: 8, evalMargin: 20_000, bestRate: 0.9 },
-  { level: 5, nodes: 10_000, timeMs: 2_000, candidateCount: 3, evalMargin: 20_000, bestRate: 0.97 },
-  { level: 6, nodes: 12_000, timeMs: 1_500 },
-  // The ladder ran L7-8 at 1.5s; the longer ceilings let a slow phone reach the
-  // node budget instead of stopping short of it.
-  { level: 7, nodes: 25_000, timeMs: 2_500 },
-  { level: 8, nodes: 80_000, timeMs: 3_500 },
-]);
 
 export interface RapfiMove {
   move: { x: number; y: number };
   /** Worker time, including lazy network initialization on the first move. */
   elapsedMs: number;
-  /** Present for nonempty L1-4 requests or an explicit YXNBEST override. */
+  /** Present for nonempty L1-5 requests or an explicit YXNBEST override. */
   candidates?: readonly RapfiCandidate[];
 }
 
@@ -95,43 +41,6 @@ function browserTransport(): RapfiTransport {
       worker.onerror = null;
       worker.terminate();
     },
-  };
-}
-
-/** Shared with the offline ladder so calibration exercises browser commands. */
-export function rapfiCommands(
-  position: RapfiPosition,
-  tier: { nodes: number; timeMs: number; candidateCount?: number },
-): { lines: string[]; timeMs: number } {
-  if (
-    !Number.isSafeInteger(tier.nodes) ||
-    tier.nodes < 1 ||
-    !Number.isSafeInteger(tier.timeMs) ||
-    tier.timeMs < 1
-  )
-    throw new Error('Invalid Rapfi budget');
-  rapfiPositionState(position);
-  const count = tier.candidateCount;
-  if (count !== undefined) validateRapfiCandidateCount(count);
-  return {
-    timeMs: tier.timeMs,
-    lines: [
-      'START 15',
-      'INFO rule 0',
-      `INFO max_node ${tier.nodes}`,
-      `INFO timeout_turn ${tier.timeMs}`,
-      ...(count !== undefined ? ['INFO show_detail 2'] : []),
-      // BOARD's 1 means us, 2 means opponent, regardless of stone color; the order decides
-      // who Rapfi searches for (rapfiBoardLines).
-      position.stones.length
-        ? [count !== undefined ? 'YXBOARD' : 'BOARD', ...rapfiBoardLines(position), 'DONE'].join(
-            '\n',
-          )
-        : count !== undefined
-          ? `YXNBEST ${count}`
-          : 'BEGIN',
-      ...(count !== undefined && position.stones.length ? [`YXNBEST ${count}`] : []),
-    ],
   };
 }
 
@@ -162,28 +71,7 @@ export class Rapfi {
     seedOrChoice: number | RapfiChoiceOptions = 0,
   ): Promise<RapfiMove> {
     if (this.pending) throw new Error('Rapfi is already searching');
-    const tier = RAPFI_LEVELS.find((entry) => entry.level === level);
-    if (!tier) throw new Error('Unknown Rapfi level');
-    if (typeof seedOrChoice === 'number') validateSeed(seedOrChoice);
-    // Rapfi short-circuits an empty board to centre without emitting PVs.
-    // Explicit candidate requests retain their fail-closed parsing contract.
-    const choice =
-      typeof seedOrChoice !== 'number'
-        ? seedOrChoice
-        : tier.candidateCount !== undefined && position.stones.length > 0
-          ? {
-              candidateCount: tier.candidateCount,
-              evalMargin: tier.evalMargin ?? 0,
-              seed: seedOrChoice,
-              ...(tier.bestRate === undefined ? {} : { bestRate: tier.bestRate }),
-            }
-          : undefined;
-    const { lines, timeMs } = rapfiCommands(position, {
-      ...tier,
-      candidateCount: choice?.candidateCount,
-    });
-    // Validate options before allocating a worker, including on an empty board.
-    if (choice) validateRapfiChoiceOptions(choice);
+    const { lines, timeMs, choice } = rapfiLevelRequest(position, level, seedOrChoice);
     return new Promise<RapfiMove>((resolve, reject) => {
       this.pending = {
         position: { turn: position.turn, stones: position.stones.map((stone) => ({ ...stone })) },

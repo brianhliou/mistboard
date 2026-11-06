@@ -1,4 +1,4 @@
-// Built-hidden admin playtest. Rapfi runs only in the human's browser.
+// Built-hidden admin playtest. Rapfi replies are computed on the server.
 import {
   GOMOKU_SPEC_ID,
   type GomokuColor,
@@ -9,6 +9,7 @@ import { currentAccountUser } from './account-session.js';
 import { gomokuEnabled } from './feature-flags.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import { gomokuAdmits } from './gomoku-access.js';
+import { scheduleGomokuEngineMove } from './gomoku-engine.js';
 import {
   type GomokuEvent,
   type GomokuRuntimeRoom,
@@ -44,7 +45,9 @@ import {
 } from './variant-tenant/ws.js';
 
 export const gomokuRooms = new Map<string, GomokuRuntimeRoom>();
-export const gomokuWs = createTenantWsRuntime(gomokuTenant, { allowBrowserEngineMoves: true });
+export const gomokuWs = createTenantWsRuntime(gomokuTenant, {
+  scheduleEngineMove: (ctx, room) => scheduleGomokuEngineMove(ctx, room),
+});
 const gomokuCorrespondence = tenantCorrespondenceBinding(
   // Live admin playtests bypass the flag at their own admission doors. Async
   // seeks use the registration flag and the shared per-account grant checks;
@@ -85,7 +88,7 @@ export async function createGomokuRoom(
     engine &&
     (!isGomokuEngineClientId(engine.engineId) || !gomokuTenant.rules.isColor(engine.seat))
   )
-    throw new Error('gomoku: invalid browser engine seat');
+    throw new Error('gomoku: invalid engine seat');
   const created = await createTenantLiveRoom(
     gomokuTenant,
     {
@@ -109,7 +112,7 @@ export async function createGomokuRoom(
   return created;
 }
 
-// The shared factory persists the bot seat; it schedules no server engine work.
+// The shared factory persists the bot seat; the WebSocket runtime schedules replies.
 const route = createTenantRoomsRoute<
   TenantRoomCreateBaseContext & { createGomokuRoom: typeof createGomokuRoom },
   GomokuColor | 'random',
