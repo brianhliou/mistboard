@@ -30,6 +30,10 @@ const BASELINE_PICKER_SPECS = [
 // /api/live-stats reads are shared through a module cache; start each test cold.
 beforeEach(() => resetLiveStatsCacheForTests());
 
+// These pin the old desktop accordion (still reachable with ?setup=accordion);
+// the default desktop layout opens every row, like the phone sheet.
+const useAccordionSetup = (): void => window.history.replaceState(null, '', '/?setup=accordion');
+
 describe('landing play panel', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', {
@@ -64,6 +68,7 @@ describe('landing play panel', () => {
   });
 
   it('hides the bot row when only one bot is available', () => {
+    useAccordionSetup();
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -169,6 +174,7 @@ describe('landing play panel', () => {
   });
 
   it('puts opponent near the end and only shows Bot when there are multiple choices', () => {
+    useAccordionSetup();
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
@@ -306,6 +312,7 @@ describe('landing play panel', () => {
   });
 
   it('starts setup on Variant and shows all offered variants together', () => {
+    useAccordionSetup();
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubGlobal(
@@ -932,6 +939,7 @@ describe('landing play panel', () => {
   });
 
   it('offers correspondence days for casual dark chess in both friend challenge and find opponent', () => {
+    useAccordionSetup();
     vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
@@ -1204,6 +1212,7 @@ describe('landing play panel', () => {
   });
 
   it('creates a Dark Xiangqi engine room with server-defaulted bot and selected color', async () => {
+    useAccordionSetup();
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });

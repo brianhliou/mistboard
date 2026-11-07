@@ -1780,9 +1780,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const existing = document.querySelector('.landing-setup-overlay');
   existing?.remove();
   const phone = isPhoneSetupViewport();
-  // Spike (?setup=open): tablet and desktop get the phone's every-choice-open
-  // rows instead of the one-open accordion, with a compact variant grid.
-  const openLayout = !phone && new URLSearchParams(window.location.search).get('setup') === 'open';
+  // Tablet and desktop get the phone's every-choice-open rows with a compact
+  // variant grid (default from 2026-11-07); ?setup=accordion keeps the old
+  // one-open accordion reachable for comparison.
+  const openLayout =
+    !phone && new URLSearchParams(window.location.search).get('setup') !== 'accordion';
   // The sheet covers most of a phone screen; the page behind it must not move
   // under a swipe (iOS scrolls the document when an inner scroller hits its end).
   document.documentElement.classList.toggle(SETUP_SCROLL_LOCK_CLASS, phone);
