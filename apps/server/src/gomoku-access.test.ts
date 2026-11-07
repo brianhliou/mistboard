@@ -215,9 +215,9 @@ test('Gomoku runtime listings close with the flag while launched games remain co
     collectLiveTvCandidates(ctx).some((candidate) => candidate.gameSpecId === 'gomoku'),
     false,
   );
-  // Positive control: the room is genuinely in play, so its absence above is the
-  // listing gate (flag and publicSurface), not an idle fixture.
+  // Positive control: the active human room would expose this spec once the
+  // flag opens the listing, rather than being absent because the fixture is idle.
   process.env[FLAG] = 'true';
   assert.equal(collectLiveRoomStats(ctx).playing, 1);
-  assert.equal(collectLiveRoomStats(ctx).playingBySpec.gomoku, undefined);
+  assert.equal(collectLiveRoomStats(ctx).playingBySpec.gomoku, 1);
 });
