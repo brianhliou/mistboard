@@ -52,12 +52,6 @@ export function gomokuEnabled(): boolean {
   return import.meta.env.VITE_GOMOKU_ENABLED === 'true';
 }
 
-// The playtest bot is offered only when the local build says the engine path
-// is set (the server refuses a PvE room without it, too).
-export function threeKingdomsBanqiEngineEnabled(): boolean {
-  return threeKingdomsBanqiEnabled() && import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENGINE === 'true';
-}
-
 // jqe, the jieqi bot above AB-JChess. Off by default and never on in dev: the
 // server holds the engine behind MISTBOARD_JQE_ENABLED until its author's OK, and
 // this build flag only adds it to the jieqi picker and the landing ladder.

@@ -21,7 +21,6 @@ function playButtons(page: HTMLElement): (string | null)[][][] {
 describe('Three Kingdoms Banqi rules page buttons', () => {
   it('offers no bot in either row from build flags alone', () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'true');
     setThreeKingdomsBanqiEngineOptions([]);
     const friendOnly = [
       ['Play Three Kingdoms Banqi', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
@@ -31,7 +30,6 @@ describe('Three Kingdoms Banqi rules page buttons', () => {
 
   it('offers the bot in both rows once the server reports an available tier', () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'true');
     setThreeKingdomsBanqiEngineOptions([
       { id: 'misty-three-kingdoms-banqi', name: 'Misty', familyName: 'Misty', kind: 'container' },
     ]);

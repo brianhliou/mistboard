@@ -12,7 +12,6 @@ describe('Three Kingdoms banqi is offered only to an admin session on prod', () 
       value: memoryStorage(),
     });
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'false');
   });
 
   afterEach(() => {

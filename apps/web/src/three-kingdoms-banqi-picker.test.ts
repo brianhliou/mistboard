@@ -30,7 +30,6 @@ describe('TK setup uses the server runtime roster', () => {
       },
     });
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'false');
     setResolvedAdmin(true);
     setRoomNavigator(vi.fn());
   });
@@ -123,7 +122,6 @@ describe('TK setup uses the server runtime roster', () => {
       expect(landing.engineOptions).toBeUndefined();
     }
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'true');
     expect(landing.engineOptions?.map((e) => e.id)).toEqual(options.map((e) => e.id));
     vi.stubGlobal(
       'fetch',

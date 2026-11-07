@@ -10,7 +10,7 @@
 // Nothing public lists the variant either way: its rules page, rail entry,
 // News, sitemap and article stay behind the build flag alone
 // (variant-public-surfaces.ts), which production never sets.
-import { threeKingdomsBanqiEnabled, threeKingdomsBanqiEngineEnabled } from './feature-flags.js';
+import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { isLikelyAdmin } from './signed-in-state.js';
 import type { WebTenantEngineOption } from './variant-tenant/registry.js';
 
@@ -32,7 +32,8 @@ export function threeKingdomsBanqiOffered(): boolean {
   return threeKingdomsBanqiEnabled() || isLikelyAdmin();
 }
 
-// The bot rides the same door and needs a runtime-available tier.
+// The bot rides the same door; the server's playable roster, not a build flag,
+// says whether a tier is there.
 export function threeKingdomsBanqiEngineOffered(): boolean {
-  return (threeKingdomsBanqiEngineEnabled() || isLikelyAdmin()) && runtimeEngines.length > 0;
+  return threeKingdomsBanqiOffered() && runtimeEngines.length > 0;
 }
