@@ -5,6 +5,10 @@ export type ClientMessage = {
   drop?: string;
   from?: string;
   to?: string;
+  /** Opt-in browser engine submission; still bound to the connected human's room. */
+  browserBot?: boolean;
+  roomId?: string;
+  expectedPly?: number;
   /** Duck Xiangqi: where the shared duck lands, second half of one turn. */
   duckTo?: string;
   promotion?: string;

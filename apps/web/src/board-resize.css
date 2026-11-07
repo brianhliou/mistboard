@@ -7,24 +7,24 @@
    puzzles page) rendered an unstyled 16px button that also missed the
    coarse-pointer hide below. A component's styles belong with the component. */
 
-/* Flush in the board's corner, so both lines run out to the board's two edges. */
+/* The box sits flush in the board's corner; the lines are drawn inside it (below). */
 .board-resize-grip {
   position: absolute;
   right: 0;
   bottom: 0;
   z-index: 3;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: nwse-resize;
-  opacity: 0.55;
+  opacity: 0.85;
   touch-action: none;
 }
 
 /* Touch: no drag handle. It is a pointer affordance with no touch equivalent,
-   and at 15px it sits over the board's corner square, competing with the tap
+   and at 20px it sits over the board's corner square, competing with the tap
    that should reach the piece there. */
 @media (pointer: coarse) {
   .board-resize-grip {
@@ -33,23 +33,33 @@
 }
 
 /* Two short diagonal lines in the board's bottom-right corner (lichess handle),
-   drawn as `/` stripes clipped by the square box so the outer one reads shorter. */
+   drawn as `/` stripes clipped by the square box so the outer one reads shorter.
+   Drawn 4px up and left of the box: flush, the outer line's ends sat 8px from
+   the corner on each edge and ran past a rounded corner (about 12px on the
+   jieqi, puzzle and live boards), so it read as cut off. */
 .board-resize-grip::before {
   content: "";
   position: absolute;
   inset: 0;
+  transform: translate(-4px, -4px);
   background: linear-gradient(
     135deg,
     transparent 0 50%,
-    var(--board-resize-ink, #3a322a) 50% 58%,
-    transparent 58% 71%,
-    var(--board-resize-ink, #3a322a) 71% 79%,
-    transparent 79%
+    var(--board-resize-ink, #3a322a) 50% 60%,
+    transparent 60% 70%,
+    var(--board-resize-ink, #3a322a) 70% 80%,
+    transparent 80%
   );
 }
 
+/* A host that places the grip from script sets this until the first placement,
+   so the grip never paints at its CSS default corner (review-layout.ts). */
+.board-resize-grip--unplaced {
+  visibility: hidden;
+}
+
 .board-resize-grip:hover {
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .board-resizing,

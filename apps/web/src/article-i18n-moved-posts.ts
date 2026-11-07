@@ -18,7 +18,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'python-chess writes the en passant square only when the capture is legal in standard chess. Under fog the capture is legal even in check, and a pawn that can take en passant sees that square, so the true position stopped matching what Misty had seen.':
     'python-chess 只在这步吃子在标准象棋中合法时才写出吃过路兵格。在迷雾规则下，即使被将军这步吃子也合法，而能吃过路兵的兵看得见那个格子，于是真实局面不再与 Misty 观察到的信息相符。',
   'The fix records the square whenever a pawn can take. Replaying all 271 games, lost-truth cases outside the sampled games went from four to none.':
-    '修正后，只要有兵能吃就记录该格。重放全部271局，抽样局面之外丢失真相的情形由四例降为零。',
+    '修正后，只要有兵能吃就记录该格。重放全部271局，抽样棋局之外丢失真相的情形由四例降为零。',
   'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
     '没有任何机制发现它：Rust 移植版逐字节照搬 python-chess，所以对比两者的测试通过了；而一个丢失真相的信念只会变得更自信，不会变得更不确定。',
   "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
@@ -26,7 +26,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
     '只要有兵能吃就记录该格，不管吃下去是否明智。这就是 `EnPassantMode.XFEN`，也正是迷雾规则。当旁边没有敌方兵时它仍然会省略该格，这样信念就不会因为一个谁都用不上的格子而分裂。',
   'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
-    '在出错的那一着，`P` 现在是从625变到617，真相得以保留。重放全部271局，抽样局面之外不再报告任何丢失真相的决策，此前是四例。',
+    '在出错的那一着，`P` 现在是从625变到617，真相得以保留。重放全部271局，抽样棋局之外不再报告任何丢失真相的决策，此前是四例。',
   'Why nothing caught it': '为什么没有任何机制发现它',
   "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
     '已于2026-09-10在引擎中修正，并随 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 发布。上面每一张棋盘都是引擎自己的可见性代码从该局面绘制的；绘图脚本一旦发现两个视图的差异不再恰好是 g3 和 g4，就会拒绝运行。',
@@ -99,7 +99,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
     '全部144个局面都在[这份研究](/study/ibFQtGAL)里，这十个排在最前，其余按涉及对局数乘以该着法损失的幅度排序。',
   'Reading the explorer': '怎么读局面浏览器',
   "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
-    '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有四个涉及吃子或拒收吃子。',
+    '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有四个涉及吃子或放弃吃子。',
   'How this was measured': '测量方法',
   'Open the 144 positions':
     '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打开这144个局面</a>',
@@ -132,7 +132,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Standard chess, SP-518': '标准国际象棋，SP-518',
   'Standard chess rank by balance': '标准国际象棋按均衡度的排名',
   'Starts more balanced than standard chess': '比标准国际象棋更均衡的开局局面',
-  'Move-1 castling best moves': '第 1 着即王车易位为最佳着法的局面',
+  'Move-1 castling best moves': '以王车易位为最佳第 1 着的局面',
   'Recent elite corpus overlap with highlighted starts': '近期顶级赛事棋局与重点开局局面的重合',
   'SP-482, once': 'SP-482，一次',
   "If you want the **most balanced Chess960 starting positions**, the clean candidates are **SP-418, SP-563, SP-269, SP-444, and SP-786**. All evaluate at +0.10 or below, far under standard chess's +0.31.":
@@ -421,7 +421,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   round: '轮次',
   broadcast: '直播',
   '[Las Vegas round-robin white tiebreak, game 1](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)':
-    '[拉斯维加斯循环赛白方加赛，第 1 局](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)',
+    '[拉斯维加斯循环赛白组加赛，第 1 局](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)',
   'Critical position after 20...d5. White to move. Lichess marks 21.c5? as the mistake; 21.cxd5 was best. Green arrow: best capture. Gray arrow: game move.':
     '<figcaption><strong>20...d5 之后的关键局面。</strong> 轮到白方走。Lichess 标注 21.c5? 为失误；21.cxd5 才是最佳。绿色箭头：最佳吃子。灰色箭头：实战着法。</figcaption>',
   'Critical midgame position after 20...d5 in Magnus Carlsen vs Levon Aronian, SP-482':
@@ -510,7 +510,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   "**Four Knights, Spanish, 4...d6.** 1.e4 e5 2.Nf3 Nc6 3.Bb5 Nf6 4.Nc3, and 31% of the club plays 4...d6, +0.69. Rubinstein's 4...Nd4 is 0.00, and it is the one line on this list where you can watch theory move: the masters' top choice was 4...Bb4 before 2018 and is 4...Nd4 now (39% of 2,666 games). The club never played either.":
     '**四马西班牙，4...d6。**1.e4 e5 2.Nf3 Nc6 3.Bb5 Nf6 4.Nc3，31%的俱乐部棋手走4...d6，+0.69。Rubinstein的4...Nd4是0.00，而这是名单上唯一一条能看到理论变迁的变例：2018年前大师的首选是4...Bb4，如今是4...Nd4（2,666局中占39%）。俱乐部棋手两手都没走过。',
   "**Stafford Gambit, move 6.** 1.e4 e5 2.Nf3 Nf6 3.Nxe5 Nc6 4.Nxc6 dxc6 5.Nc3 Bc5, the internet's favourite trap, 1.2 million club games. A quarter of White players play 6.Bc4, which walks into 6...Ng4 and the whole point of the gambit: −0.79. 6.h3 first is +1.74, a full piece's worth of difference, and the largest gap among the ten. Masters have played this position three times.":
-    '**Stafford弃兵，第6回合。**1.e4 e5 2.Nf3 Nf6 3.Nxe5 Nc6 4.Nxc6 dxc6 5.Nc3 Bc5，网上最受欢迎的陷阱，俱乐部对局120万局。四分之一的白方棋手走6.Bc4，正好撞上6...Ng4，落入这个弃兵的全部用意：−0.79。先走6.h3是+1.74，相差整整一个子，是这十个局面中差距最大的。大师只下过这个局面三次。',
+    '**Stafford弃兵，第6回合。**1.e4 e5 2.Nf3 Nf6 3.Nxe5 Nc6 4.Nxc6 dxc6 5.Nc3 Bc5，网上最受欢迎的陷阱，俱乐部对局120万局。四分之一的白方棋手走6.Bc4，正好落入6...Ng4的陷阱，而这正是这个弃兵的用意：−0.79。先走6.h3是+1.74，相差整整一个子，是这十个局面中差距最大的。大师只下过这个局面三次。',
   "Stafford Gambit: 6.Bc4 is the club move, 6.h3 the engine's":
     'Stafford弃兵：6.Bc4是俱乐部的一手，6.h3是引擎的一手',
   '**Busch-Gass, 2...Bc5.** 1.e4 e5 2.Nf3 Bc5 offers the e-pawn, and 48% of White players decline it with 3.Bc4. Just take it: 3.Nxe5 is +1.60 against +0.24, and after 3...d6 4.Nf3 the pawn stays. Seven million club games, five masters games in total.':
@@ -612,7 +612,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Two evaluation lines over 71 half-moves of one blitz game, Lichess at one million nodes and Stockfish at twenty million. They track each other for nineteen moves and split at move 20.':
     '一局快棋 71 个半着上的两条评估曲线，Lichess 为一百万节点，Stockfish 为两千万节点。两条线在前十九着彼此贴合，到第 20 着分开。',
   'My 20.Qd1 was that case: the better square was one file over, and the punishment starts three moves later than a one-second search looks.':
-    '我的 20.Qd1 就是这种情况：更好的格子只差一路，而惩罚要在三着之后才开始，超出了一秒搜索的视野。',
+    '我的 20.Qd1 就是这种情况：更好的格子只差一路，而惩罚要比一秒搜索所能看到的再晚三着才开始。',
   'What twenty times the budget changes': '二十倍预算改变了什么',
   'On 300 random rated games (1600 to 2400, from the August 2026 database), re-evaluated at 20,000,000 nodes with the same formula, and setting aside the 842 moves with a forced mate at either end, 19,385 moves compared:':
     '在 300 局随机等级分对局（1600 到 2400，取自 2026 年 8 月数据库）上，用同一套公式按 20,000,000 节点重新评估，并排除两端任一存在强制将死的 842 个着法，共比较了 19,385 个着法：',
@@ -641,7 +641,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Each position is from one of those games. The player made the move shown, the analysis gave it no mark, and a 20-million-node search calls it a mistake or worse against a best move that is unique. The board opens on the position before the move, so you can look for the better move first; step forward and you get the game move with the mark it should have had, and the refutation is the sideline in the study, one click under each board.':
     '每个局面都出自上述对局。棋手走了图示的着法，分析没有给出任何标记，而两千万节点的搜索判定它是失误或更糟，相对的最佳着法是唯一的。棋盘从走子前的局面打开，你可以先自己找更好的着法；往前一步就会看到对局中的着法以及它本应得到的标记，反击手段则是研究里的变例，就在每个棋盘下方一点即可。',
   "**Zhigalko, Black to move.** White has just played Be5, hitting the queen on c7, and Black did the natural thing: 20...Qd7, out of the attack. The analysis had it −1.38 before and −1.30 after, nothing lost. But the queen did not need saving. 20...Rxd2! gives up the exchange, and after 21.Rxd2 the pawn move 21...c3! forks the queen on b2 and the rook on d2 at once. White gets the queen back (22.Bxc7 cxb2 23.Rxb2 Rxc7) and is left with a rook against Black's two bishops and knight: −3.2 at depth, against −1.3 for the retreat. The refutation starts with a move that loses material, which is why a one-second search never sees it.":
-    '**Zhigalko，黑方走。** 白方刚走 Be5，攻击 c7 的后，黑方做了最自然的事：20...Qd7，把后撤出攻击。分析给出之前 −1.38、之后 −1.30，毫无损失。可是这个后并不需要救。20...Rxd2！弃车换马，21.Rxd2 之后兵走 21...c3！同时捉住 b2 的后和 d2 的车。白方把后吃回来（22.Bxc7 cxb2 23.Rxb2 Rxc7），最后是一车对黑方的双象加一马：深搜下 −3.2，而回撤只有 −1.3。反击手段以一个亏子的着法开头，这正是一秒搜索永远看不到它的原因。',
+    '**Zhigalko，黑方走。** 白方刚走 Be5，攻击 c7 的后，黑方做了最自然的事：20...Qd7，把后撤出攻击。分析给出之前 −1.38、之后 −1.30，毫无损失。可是这个后并不需要救。20...Rxd2！以车换轻子，21.Rxd2 之后兵走 21...c3！同时捉住 b2 的后和 d2 的车。白方把后吃回来（22.Bxc7 cxb2 23.Rxb2 Rxc7），最后是一车对黑方的双象加一马：深搜下 −3.2，而回撤只有 −1.3。反击手段以一个亏子的着法开头，这正是一秒搜索永远看不到它的原因。',
   'Zhigalko: 20...Qd7 got no mark at 1M; Rxd2 and c3 win':
     'Zhigalko：20...Qd7 在 1M 下没有标记；Rxd2 和 c3 取胜',
   '**Bortnyk, Black to move.** 20...b5 attacks the bishop on c4, and the analysis moved from −0.63 to −0.41. The bishop on f5 could simply have taken the knight: 20...Bxe4! 21.dxe4, and now the other knight lands on f4, with ...e5 to follow to push the bishop off d4. Black wins material inside five moves, −2.7 at depth; the second-best move, 20...Nf4 at once, is only −0.6.':
@@ -661,10 +661,10 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Gürel: 31.Nd4 got no mark at 1M; d6 deflects the rook and wins the knight':
     'Gürel：31.Nd4 在 1M 下没有标记；d6 引离车并赢马',
   "All 32 are in [the study](/study/fhC7BCG7), set as puzzles: the position first, the game move marked, the refutation as a sideline with the engine's numbers, and every later move of the game that the 20M search judges carries its own mark and the engine's line beside it. Forcing solutions come first, since a long tactic past the shallow horizon is something a person can find; the quiet ones are after.":
-    '全部 32 个都在[这套研究](/study/fhC7BCG7)里，按谜题形式编排：先给局面，标出对局中的着法，反击手段作为变例并附上引擎的数值，此外对局后面每一个被 20M 搜索判定的着法都带有自己的标记，旁边是引擎的变例。逼着性的解法排在前面，因为超出浅层视野的长战术是人能找到的；平静的那些排在后面。',
+    '全部 32 个都在[这套研究](/study/fhC7BCG7)里，按谜题形式编排：先给局面，标出对局中的着法，反击手段作为变例并附上引擎的数值，此外对局后面每一个被 20M 搜索判定的着法都带有自己的标记，旁边是引擎的变例。强制性解法排在前面，因为超出浅层视野的长战术是人能找到的；平静的那些排在后面。',
   'Reading your own report': '读懂你自己的报告',
   '"Zero mistakes" means zero visible at a million nodes. The blunders are real, the inaccuracies are half real, and the moves that let an opponent back into a game you were winning by a pawn or two are the ones most likely to carry no mark. If a game matters, put your own engine on it and let it sit past depth 25 on the positions between +0.5 and +3.':
-    '「零失误」意味着在一百万节点下看不到失误。严重失误是真的，不精确有一半是真的，而那些让对手重新回到你已多一两个兵的局面里的着法，恰恰最有可能不带任何标记。如果某局棋很重要，就用你自己的引擎去跑，让它在 +0.5 到 +3 之间的局面上搜过 25 层再停。',
+    '「零失误」意味着在一百万节点下看不到失误。严重失误是真的，不精确有一半是真的，而那些让对手重新回到你原本领先一两个兵的棋局里的着法，恰恰最有可能不带任何标记。如果某局棋很重要，就用你自己的引擎去跑，让它在 +0.5 到 +3 之间的局面上搜过 25 层再停。',
   "The random sample is every tenth analysed game in the [August 2026 Lichess database](https://database.lichess.org/) with both players between 1600 and 2400: 300 games, 20,227 moves with server evaluations. Each position went through Stockfish 18, the major version fishnet runs, at 20,000,000 nodes on one thread, and lila's own formula (`Advice.scala`: winning-chance deltas of 0.1, 0.2, 0.3) produced a second set of labels. On 222,183 moves from titled players' games, where Lichess stores its labels, that formula reproduces them from Lichess's own evaluations 99.08% of the time, so both sides of the comparison use it. The 842 moves with a forced mate at either end are excluded; lila judges those by separate rules.":
     '随机样本取自[2026 年 8 月 Lichess 数据库](https://database.lichess.org/)中每第十局已分析、且双方等级分都在 1600 到 2400 之间的对局：共 300 局，20,227 个带服务器评估的着法。每个局面都经过 Stockfish 18（fishnet 所用的主版本）在单线程、20,000,000 节点下的分析，再用 lila 自己的公式（`Advice.scala`：胜率落差 0.1、0.2、0.3）生成第二套标记。在有头衔棋手对局中 Lichess 存有标记的 222,183 个着法上，这套公式用 Lichess 自己的评估能以 99.08% 的比例复现这些标记，所以比较的两边都用它。两端任一存在强制将死的 842 个着法被排除；lila 对它们用另外的规则判断。',
   'Lichess label': 'Lichess 标记',
@@ -673,7 +673,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   mistake: '失误',
   blunder: '严重失误',
   "The nine players' games are up to their most recent hundred analysed rated blitz and rapid games (61 for Gürel, 20 for Giri) from the public API (the active seven in 2026; Carlsen and Firouzja have no analysed Lichess games this year, so theirs run back to 2021 and 2023), at a cheaper 4,000,000-node pass. On the random sample, 4M finds a little over half of what 20M finds, so the player rates are floors. A puzzle survives when the move played loses at least 0.2 winning chances at 20M against a best move that beats the second line by 0.1 or more, with three lines searched, and then again when a second, independent 20M search of the position still calls the game move a mistake: 35 passed the first gate, 32 the second. That is the size of the noise in a 20M search, and it is why the deeper pass is treated as twenty times closer to the truth rather than as the truth.":
-    '这九位棋手的对局，是公开 API 上他们最近至多一百局已分析的等级分快棋和中速棋（Gürel 为 61 局，Giri 为 20 局；其中七位在 2026 年仍活跃；Carlsen 和 Firouzja 今年没有已分析的 Lichess 对局，所以他们的分别回溯到 2021 年和 2023 年），用更省的 4,000,000 节点分析。在随机样本上，4M 能找到 20M 所找到的略多于一半，所以棋手的比率是下限。一个谜题要留下来，必须满足：所走着法在 20M 下相对最佳着法至少损失 0.2 胜率，且该最佳着法比第二变例好 0.1 以上，搜索三条变例；之后还要满足：对该局面进行第二次独立的 20M 搜索仍判对局着法为失误。第一道关通过 35 个，第二道通过 32 个。这就是 20M 搜索中噪声的量级，也是为什么把更深的分析当作比真相近二十倍、而不是当作真相本身。',
+    '这九位棋手的对局，是公开 API 上他们最近至多一百局已分析的等级分快棋和中速棋（Gürel 为 61 局，Giri 为 20 局；其中七位在 2026 年仍活跃；Carlsen 和 Firouzja 今年没有已分析的 Lichess 对局，所以他们的分别回溯到 2021 年和 2023 年），用更省的 4,000,000 节点分析。在随机样本上，4M 能找到 20M 所找到的略多于一半，所以棋手的比率是下限。一个谜题要留下来，必须满足：所走着法在 20M 下相对最佳着法至少损失 0.2 胜率，且该最佳着法比第二变例好 0.1 以上，搜索三条变例；之后还要满足：对该局面进行第二次独立的 20M 搜索仍判对局着法为失误。第一道关通过 35 个，第二道通过 32 个。这就是 20M 搜索中噪声的量级，也是为什么把更深的分析视为比浅层分析离真相近二十倍，而不是真相本身。',
   'Is a million the right number?': '一百万是对的数字吗？',
   'This measures one point on the curve. Whether a million is the right budget depends on the points in between: how much agreement each doubling buys at 2M, 4M and 8M, and whether extra search spent only where labels are unstable, on the inaccuracies and the half-pawn-to-three-pawn band, would get most of the twenty-times result at a fraction of the cost. On these numbers, the current budget gets the label people act on, the blunder, right five times in six.':
     '这只测量了曲线上的一个点。一百万是不是合适的预算，取决于中间的那些点：在 2M、4M 和 8M 下，每翻一倍能换来多少一致性；以及如果只在标记不稳定的地方，也就是不精确和半个兵到三个兵的区间上追加搜索，能否以一小部分成本拿到二十倍预算的大部分效果。按这些数字，现行预算在人们据以行动的那个标记，即严重失误上，六次有五次是对的。',
@@ -704,7 +704,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'A standalone Rust engine with a small UCI-style protocol, usable from the command line or from Python via PyO3. Strength is a **node budget, not a clock**, so the same position returns the same move on any machine.':
     '一个独立的 Rust 引擎，带有一套精简的 UCI 风格协议，可以从命令行使用，也可以通过 PyO3 从 Python 调用。强度由**节点预算决定，而不是时钟**，所以同一个局面在任何机器上都会返回同样的着法。',
   'The stack is conventional: negamax alpha-beta with iterative deepening, a Zobrist transposition table, quiescence on captures and den-entries, and killer/history move ordering with PVS and late-move reductions, over a handcrafted evaluation that scores material, distance to the enemy den, traps, water, and mobility. That ordering-and-pruning polish was worth a measured +49 Elo at a fixed node budget.':
-    '技术栈很常规：带迭代加深的 negamax alpha-beta、Zobrist 置换表、对吃子和进入兽穴着法的静态搜索，以及 killer/history 着法排序搭配 PVS 和后期着法削减，底层是一套手工评估，对子力、与敌方兽穴的距离、陷阱、水域和机动性进行打分。这些排序与剪枝的打磨在固定节点预算下实测值 +49 Elo。',
+    '技术栈很常规：带迭代加深的 negamax alpha-beta、Zobrist 置换表、对吃子和进入兽穴着法的静态搜索，以及 killer/history 着法排序搭配 PVS 和后期着法削减，底层是一套手工评估，对子力、与敌方兽穴的距离、陷阱、水域和机动性进行打分。这些排序与剪枝的打磨在固定节点预算下实测提升了 +49 Elo。',
   'The eval has to be exact before a learned correction can add anything. Dou Shou Qi is material-heavy but full of sharp exceptions: a rat stops an elephant, a trapped piece loses its rank, one step into the den ends the game.':
     '在学习型修正能带来任何收益之前，评估本身必须准确。斗兽棋很看重子力，但充满尖锐的例外：鼠能克象，落入陷阱的棋子失去等级，一步踏进兽穴就结束对局。',
   Specs: '规格',
@@ -715,7 +715,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Beyond plain capture-by-rank, three rules give the game its tactics:':
     '除了单纯按等级吃子，还有三条规则塑造了这个游戏的战术：',
   '**Rat beats elephant, but only on land.** The weakest piece captures the strongest. Captures can’t cross the bank, though, so a rat that swims into the water is safe from everything except another rat.':
-    '**鼠能吃象，但只限于陆地上。**最弱的棋子可以吃掉最强的棋子。不过吃子不能跨越岸边，所以游进水里的鼠除了另一只鼠之外谁都吃不到。',
+    '**鼠能吃象，但只限于陆地上。**最弱的棋子可以吃掉最强的棋子。不过吃子不能跨越岸边，所以游进水里的鼠，除了另一只鼠之外，谁都吃不到它。',
   '**Lions and tigers jump the rivers.** Only the rat may enter the water. The big cats instead leap a whole river to the far bank, sideways or lengthwise, unless a rat sits in the water and blocks the jump.':
     '**狮和虎可以跳河。**只有鼠能进入水中。大猫则跃过整条河落到对岸，横向或纵向均可，除非水里有鼠挡住跳跃路线。',
   '**A trapped piece loses its rank.** The three squares around each den are traps. An enemy piece standing on one drops to rank zero, so anything, even a rat, can capture it.':
@@ -732,7 +732,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   '779/800 matched, **0 WDL contradictions**': '779/800 一致，**0 处胜/和/负矛盾**',
   'Five and six pieces': '五子和六子',
   '**>99%** vs an 8x deeper search (proxy, not proof)':
-    '对阵深 8 倍的搜索 **>99%**（代理指标，非证明）',
+    '与搜索量为其 8 倍的搜索结果吻合率 **>99%**（代理指标，非证明）',
   'Tablebase at the search leaf': '搜索叶节点残局库',
   'W37-L40-D3, about **-13 Elo**': 'W37-L40-D3，约 **-13 Elo**',
   'Residual neural eval': '残差神经评估',
@@ -743,17 +743,17 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Small endgames yield to retrograde analysis, and they make excellent judges. Van Rijn and Vis solved four pieces at Leiden in 2013 (under the Leiden convention, which swaps dog and wolf), and I can find nothing larger published since. My engine matched exact four-piece play on 779 of 800 positions with no WDL contradictions, and tracked an 8x deeper search above 99% at five and six pieces.':
     '小规模残局可以用逆向分析攻克，而且它们是极好的裁判。Van Rijn 和 Vis 于 2013 年在莱顿解决了四子残局（采用莱顿约定，狗和狼互换），此后我没有找到更大的已发表结果。我的引擎在 800 个局面中有 779 个与精确四子着法一致，没有胜/和/负矛盾，在五子和六子上与深 8 倍的搜索吻合度超过 99%。',
   'That four-piece database is still the frontier, and the wall past it is storage, not solving technique. The board is the problem: 63 squares against the 16 of [Flip Jungle](/blog/flip-jungle-skill-ceiling), so each added piece has some 60 empty squares to stand on instead of a dozen, and the level sizes grow about five times faster. Five Flip Jungle pieces fit in 2.8 GB on my laptop; five Dou Shou Qi pieces run to roughly 7 TB. Eight pieces and up, half the starting material, is out of reach as a database, and nobody has a forward proof of the full sixteen-piece game either. Dou Shou Qi is solved to four pieces and open above it, and likely to stay that way.':
-    '四子数据库仍是当前的边界，越过它的那堵墙是存储，而不是求解技术。问题出在棋盘上：63 格，而[翻翻棋](/blog/flip-jungle-skill-ceiling)只有 16 格，所以每多一个棋子就有约 60 个空格可站，而不是十来个，各层的规模增长大约快五倍。翻翻棋的五子在我笔记本上只占 2.8 GB；斗兽棋的五子则要大约 7 TB。八子及以上，也就是初始子力的一半，作为数据库已经遥不可及，也没有人给出完整十六子游戏的前向证明。斗兽棋解到四子为止，再往上仍未解决，而且很可能会一直如此。',
+    '四子数据库仍是当前的边界，越过它的那堵墙是存储，而不是求解技术。问题出在棋盘上：63 格，而[翻翻兽棋](/blog/flip-jungle-skill-ceiling)只有 16 格，所以每多一个棋子就有约 60 个空格可站，而不是十来个，各层的规模增长大约快五倍。翻翻兽棋的五子在我笔记本上只占 2.8 GB；斗兽棋的五子则要大约 7 TB。八子及以上，也就是初始子力的一半，作为数据库已经遥不可及，也没有人给出完整十六子游戏的前向证明。斗兽棋解到四子为止，再往上仍未解决，而且很可能会一直如此。',
   'Corrected 27 September 2026: an earlier version put the frontier at seven pieces. That figure came from a citation in a 2019 paper, which on inspection points to a Leiden thesis on Jungle Checkers, a different game.':
     '2026 年 9 月 27 日更正：本文早先的版本称边界为七子。这个数字来自一篇 2019 年论文中的引用，核查后发现它指向莱顿一篇关于 Jungle Checkers 的论文，那是另一种游戏。',
   "A tablebase loaded at the search leaf also added nothing to playing strength (about -13 Elo): search already finds the answer at the sizes that fit, and the sizes where it would help don't ship. One caveat from the Flip Jungle build, where the same experiment first read as null and later turned out to be hiding a bug: those tables stored win/draw/loss with no distance, and a WDL-only leaf lets the engine hold a won endgame forever without finishing it, since every winning move grades the same. Adding distance-to-mate to the tables fixed the finishing there. My Jungle leaf probe was WDL-only too, so some of that -13 may be the same effect rather than tablebases being useless at the leaf. Untested; the classical engine ships without the probe either way.":
-    '在搜索叶节点加载残局库同样没有提升棋力（约 -13 Elo）：在能装得下的规模上搜索本来就能找到答案，而真正能帮上忙的规模又根本做不出来。有一点要提醒，来自翻翻棋那次构建：同样的实验一开始也读作零效果，后来发现是掩盖了一个 bug。那些表只存了胜/和/负而不带距离，只有胜/和/负的叶节点会让引擎把已经赢定的残局无限拖下去而不去终结，因为每一个获胜着法的分数都一样。给表加上将死距离之后，那边的收官问题就解决了。我在斗兽棋这边的叶节点探查也只有胜/和/负，所以这 -13 里有一部分可能是同样的效应，而不是说残局库在叶节点没用。这一点未经验证；无论如何，发布的经典引擎不带这个探查。',
+    '在搜索叶节点加载残局库同样没有提升棋力（约 -13 Elo）：在能装得下的规模上搜索本来就能找到答案，而真正能帮上忙的规模，目前还没有可用的残局库。有一点要提醒，来自翻翻兽棋那次构建：同样的实验一开始也被解读为没有效果，后来发现是掩盖了一个 bug。那些表只存了胜/和/负而不带距离，只有胜/和/负的叶节点会让引擎把已经赢定的残局无限拖下去而不去终结，因为每一个获胜着法的分数都一样。给表加上将死距离之后，那边的收官问题就解决了。我在斗兽棋这边的叶节点探查也只有胜/和/负，所以这 -13 里有一部分可能是同样的效应，而不是说残局库在叶节点没用。这一点未经验证；无论如何，发布的经典引擎不带这个探查。',
   'Learned eval': '学习型评估',
   'This stalled on data, not architecture. A residual net (the handcrafted score plus a bounded correction) climbed from -470 to about -70 Elo as I fixed the labels, but never beat the hand eval. The labels were weakest exactly where the net needed help: draw-heavy self-play underrepresents material swings, exact tablebase labels only cover small endgames, and search-score labels mostly teach the net to imitate the search it already has.':
     '卡住的是数据，不是架构。一个残差网络（手工分数加上一个有界修正）随着我修正标签，从 -470 爬升到约 -70 Elo，但始终没能胜过手工评估。标签最薄弱的地方，恰恰是网络最需要帮助的地方：和棋居多的自我对弈里子力波动的样本太少，精确残局库标签只覆盖小规模残局，而搜索分数标签主要是教网络去模仿它本来就有的搜索。',
   AlphaZero: 'AlphaZero',
   'Still open work. I did not run a full Jungle AZ climb. The adjacent Banqi AZ de-risk failed its gate, but that is a different game and does not falsify AZ for Jungle, which is friendlier ground: deterministic and perfect-information, with no chance-node reveal. I parked it because the cheap rung was negative and the classical engine already beat the benchmark.':
-    '仍是待做的工作。我没有完整跑过斗兽棋的 AZ 训练。相邻的暗棋 AZ 风险排查没有通过门槛，但那是另一个游戏，并不能否定 AZ 在斗兽棋上的可行性；斗兽棋的条件更友好：确定性、完全信息，没有随机节点翻开。我先搁置了，因为最便宜的那一档是负收益，而经典引擎已经打赢了基准。',
+    '仍是待做的工作。我没有完整跑过斗兽棋的 AZ 训练。相邻的暗棋 AZ 风险排查没有通过门槛，但那是另一个游戏，并不能否定 AZ 在斗兽棋上的可行性；斗兽棋的条件更友好：确定性、完全信息，没有翻子带来的随机节点。我先搁置了，因为最便宜的那一档是负收益，而经典引擎已经打赢了基准。',
   'Example games': '对局示例',
   'The match was mostly draws, but the decisive games show the shape of the edge: den pressure first, material second. The boards open near the conversion, so step back for the opening; all six are in a [study on Mistboard](/study/xzzhAld5). They were played under the lengthwise-only tiger rule Mistboard used until September 2026.':
     '这场对抗赛大多是和棋，但分出胜负的几局显示出优势的形态：先是兽穴压力，其次才是子力。棋盘展示从转化点附近开始，想看开局可以往回翻；六局全部收录在 [Mistboard 上的一个研究](/study/xzzhAld5)里。它们是在 Mistboard 2026 年 9 月之前采用的老虎仅可纵向跳河规则下进行的。',
@@ -811,7 +811,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Misty, Mistboard’s Jungle Chess engine, has no concept of a den race. It scores a position by material plus a per-piece bonus for advancing toward the enemy den, and never asks whether the runner heading for *its* den arrives first. It finds out when the search reaches the den, about twelve plies out.':
     'Misty 是 Mistboard 的斗兽棋引擎，它没有冲兽穴竞速这个概念。它对局面的评估是子力加上每个棋子朝对方兽穴推进的奖励，从不去问那个奔向*自己*兽穴的对手棋子是否会先到。等搜索抵达兽穴时它才发现，那大约是十二着之后。',
   'That looked like a clear gap, filed as an issue after a game where the bot shuffled a rat back and forth while an enemy rat walked in. In August we spent a day trying to close it. Three routes, all null or negative. This is what the measurements said and what we would keep from them.':
-    '这看上去是个明显的短板，在一局机器人把鼠来回挪动、任由对方鼠走进兽穴的对局之后，它被记成了一个 issue。8 月我们花了一天试着补上。三条路线，全是无效或负收益。以下是测量结果，以及我们会从中保留下来的东西。',
+    '这看上去是个明显的短板，在一局机器人把鼠来回挪动、任由对方鼠走进兽穴的对局之后，它被记成了一个问题单。8 月我们花了一天试着补上。三条路线，全是无效或负收益。以下是测量结果，以及我们会从中保留下来的东西。',
   'What the engine already does': '引擎本来会做的事',
   'Worth separating, because it framed everything after. The engine understands the win condition completely: reaching the den is scored as mate, ordered first among candidate moves, and searched in quiescence. What it lacks is foresight, not comprehension.':
     '这点值得单独说，因为它决定了后面的一切。引擎对胜利条件的理解是完整的：进入兽穴被算作将死，在候选着法里排在最前，并且在静态搜索中被搜索。它缺的是预见能力，不是理解力。',
@@ -828,13 +828,13 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'On move 20 Red’s tiger on d5 had two legal moves, forward or back, both still in the corridor. It went forward and took the wolf, which cost Blue 40 points and parked the tiger next to Blue’s elephant.':
     '第 20 回合时红方在 d5 的虎只有两个合法着法，向前或向后，都还在通道里。它选择向前吃掉了狼，这让蓝方损失 40 分，同时把虎停在了蓝方象的旁边。',
   'Blue’s elephant outranks a tiger, so this looks like a gift. Blue declined to take it at once, which is the move the issue asked us to explain. The engine’s reason is that the tiger could not escape: with the elephant on d7 the tiger’s only move was d5, and from d5 its only move was d4, walked down a one-lane corridor by a piece that beats it. Grabbing it costs a tempo to collect something already collected. Blue played a free improving move and took the tiger two moves later, on d5 instead of d6. Both lines reach identical material.':
-    '蓝方的象等级高于虎，所以这看起来像是送礼。蓝方没有立刻吃，这正是那个 issue 要我们解释的一着。引擎的理由是那只虎逃不掉：象在 d7 时，虎唯一的着法是 d5，而从 d5 出发唯一的着法是 d4，被一个能吃掉它的棋子沿着单车道通道一路赶下去。去吃它等于花一个先手收取已经到手的东西。蓝方走了一着白得的改善着法，两回合之后在 d5 而不是 d6 吃掉了虎。两条线路达到的子力完全相同。',
+    '蓝方的象等级高于虎，所以这看起来像是送礼。蓝方没有立刻吃，这正是那个问题单 要我们解释的一着。引擎的理由是那只虎逃不掉：象在 d7 时，虎唯一的着法是 d5，而从 d5 出发唯一的着法是 d4，被一个能吃掉它的棋子沿着单车道通道一路赶下去。去吃它等于花一个先手收取已经到手的东西。蓝方走了一着白得的改善着法，两回合之后在 d5 而不是 d6 吃掉了虎。两条线路达到的子力完全相同。',
   'The four moves that decided the game, by ply:': '决定这局胜负的四着，按着序编号：',
   'The tiger was bait. Not a sacrifice: it was nearly trapped anyway, and taking the wolf scored +10 against +6 for almost every alternative, a difference of four points rather than a plan. What it does on its way off the board is pull the one piece that outranks a lion down the d-file. At move 20 the lion jump scores **−195**, because c7 sits next to Blue’s elephant on d7. Two moves later the same jump wins, because the elephant left.':
     '那只虎是诱饵。不是弃子：它反正几乎已被困死，而吃掉狼得 +10，几乎所有其他选择都是 +6，差距是四分而非一个计划。它在离开棋盘的路上所做的，是把唯一等级高于狮的棋子拉下 d 路。第 20 回合时狮的跳跃评估值是 **−195**，因为 c7 紧邻 d7 上蓝方的象。两回合之后同样的跳跃就能取胜，因为象走开了。',
   'Blue ends the sequence 13 points ahead and loses.': '这段着法结束时蓝方领先 13 分，然后输掉了。',
   'Read the plan back and it sounds like the engine understood a den race. It did not. There is no den-race term anywhere in that evaluation, before or after this project. It searched five million nodes and the line came out. That is the whole result: the behaviour the issue wanted to install was already there, produced by depth rather than knowledge.':
-    '把这个计划复述一遍，听起来像是引擎理解了冲兽穴竞速。它并没有。那份评估函数里从头到尾都没有冲兽穴竞速项，在这个项目之前和之后都没有。它搜索了五百万个节点，这条线路就出来了。这就是全部结果：那个 issue 想装进去的行为本来就在，是由深度而不是知识产生的。',
+    '把这个计划复述一遍，听起来像是引擎理解了冲兽穴竞速。它并没有。那份评估函数里从头到尾都没有冲兽穴竞速项，在这个项目之前和之后都没有。它搜索了五百万个节点，这条线路就出来了。这就是全部结果：那个问题单 想装进去的行为本来就在，是由深度而不是知识产生的。',
   'Base rate: 4.7% of games, measured at full strength':
     '基础发生率：4.7% 的对局，在全力对弈强度下测量',
   '172 self-play games at the production budget of five million nodes a move.':
@@ -887,7 +887,7 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'Here is the evaluation as it stood. One loop over the board, and every piece contributes independently:':
     '这是当时的评估函数。在棋盘上做一次循环，每个棋子独立贡献：',
   'That advancement term is why the evaluation is blind to a race, and the reason is the symmetry. Our runner three squares from your den scores +39. Your runner three squares from ours scores −39. Both sides sprinting produces a number near zero, and the position reads quiet at exactly the moment it is most decided.':
-    '那个推进项正是评估函数对竞速视而不见的原因，而根源是对称性。我们的奔跑者距你的兽穴三格得 +39。你的奔跑者距我们的兽穴三格得 −39。双方同时冲刺得到的数字接近零，于是恰恰在局势最已定的那一刻，局面读起来风平浪静。',
+    '那个推进项正是评估函数对竞速视而不见的原因，而根源是对称性。我们的奔跑者距你的兽穴三格得 +39。你的奔跑者距我们的兽穴三格得 −39。双方同时冲刺得到的数字接近零，于是恰恰在胜负最为确定的那一刻，局面读起来风平浪静。',
   'So the term cannot be another per-piece bonus. It has to be one verdict per side, computed once, comparing the two runners against each other:':
     '所以这个项不能再是一个逐子奖励。它必须是每方一个判定，只计算一次，把两个奔跑者互相比较：',
   'The defender is measured to the **trap ring**, not to the den. That is the right interception zone because a den’s three neighbours *are* its three traps, and a piece standing on a trap can be captured by any defender regardless of rank. An elephant walking into your den has to cross a square where your rat can take it.':
@@ -895,14 +895,14 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
   'It changes the chosen move in 17% of the positions it was designed for, and costs about 17% wall clock at equal nodes. Over 300 colour-swapped pairs per weight, before charging that cost:':
     '在它专门针对的那些局面里，它改变了 17% 的选着，并且在节点数相同时实际耗时增加约 17%。每个权重跑 300 对交换先后手的对局，在还没把这项成本算进去之前：',
   Weight: '权重',
-  'Null, in the generous direction.': '无效，而且是在宽容的方向上。',
+  'Null, in the generous direction.': '无效，而且这还是在对它有利的条件下得出的结果。',
   'What we would keep': '我们会保留下来的东西',
   'Hold the budget constant, or you are measuring the budget. The free version of an experiment is the convenient one to build and it hands you a confident positive number. Whatever the change would have to take from, take it, and see whether the result survives.':
     '把预算固定住，否则你测的就是预算。实验的免费版本是建起来最方便的那个，而它会递给你一个自信的正数。不管这个改动本该从哪里挪用资源，就从那里挪，然后看结果还站不站得住。',
   'That trap caught us twice in one day. A contempt sweep the same afternoon showed decisive games rising from 32% to 50%, which is what higher contempt produces by construction, since both sides in a self-play sweep get the setting. Only the two values facing each other could say whether it cost anything. It did not, so that one shipped.':
     '这个陷阱在一天里坑了我们两次。同一个下午做的蔑视值扫描显示，分出胜负的对局从 32% 升到 50%，而这本来就是提高蔑视值必然产生的结果，因为自我对弈扫描中双方都用了同一个设置。只有让两个取值互相对抗，才能看出它是否付出了代价。它没有，所以那一项上线了。',
   'The evaluation gap was real and correctly diagnosed. It just had nothing behind it. Two constants found in the same games, a no-capture draw clock that was ending games early and a draw contempt near zero, took Jungle self-play from a quarter of games ending in a win to about half, and neither teaches the engine anything. The issue asked for understanding. Understanding was never the constraint.':
-    '评估函数的这个短板是真实的，诊断也没错。只是它背后什么都没有。在同一批对局里找到的两个常数，一个是过早结束对局的无吃子和棋限制，一个是接近零的和棋蔑视值，把斗兽棋自我对弈从四分之一的对局分出胜负提升到了大约一半，而这两者都没教引擎任何东西。那个 issue 要求的是理解。理解从来就不是瓶颈。',
+    '评估函数的这个短板是真实的，诊断也没错。只是它背后什么都没有。在同一批对局里找到的两个常数，一个是过早结束对局的无吃子和棋限制，一个是接近零的和棋蔑视值，把斗兽棋自我对弈从四分之一的对局分出胜负提升到了大约一半，而这两者都没教引擎任何东西。那个问题单 要求的是理解。理解从来就不是瓶颈。',
   'The games are public, and so is the position above. The analysis board runs the same engine, under today’s rule where the tiger can jump sideways out of the corridor, so if you think Blue should have taken the tiger you can make it play a line out.':
     '这些对局是公开的，上面那个局面也是。分析棋盘运行的是同一个引擎，采用的是如今虎可以横向跳出通道的规则，所以如果你觉得蓝方当时该吃掉那只虎，你可以让它把一条线路走完。',
   'Walk the 52 games': '浏览这 52 局',
@@ -943,7 +943,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
   'When the Most Played Move Is an Inaccuracy': '當最多人下的著法其實是不精確',
   "Half are gambits and sidelines the masters never play. Where masters reach the position, most already play the engine's move; only four share the club's mistake.":
-    '其中半數是大師從不採用的棄兵與冷門變例。在大師確實下到的局面裡，多數大師早已走引擎的著法；只有四個局面與俱樂部棋手犯同樣的錯。',
+    '其中半數是大師從不採用的棄兵與冷門變例。在大師確實下到的局面裡，多數大師早已走引擎的著法；只有四個局面中，大師與俱樂部棋手犯了同樣的錯。',
   'The biggest by games: after 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and 3.d3 is nearly a pawn better.':
     '以對局數計最大的一例：1.e4 e5 2.f4 d6 之後，85% 的俱樂部棋手走 3.Nf3，而 3.d3 幾乎好上一個兵。',
   "The fix is in the explorer's settings: the masters database, 2018 onward. All 144 are in a study.":
@@ -1010,7 +1010,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
     '全部 144 個都收在[這份研究](/study/ibFQtGAL)裡，這十個排在最前面，其餘按「涉及對局數乘以該著法所損失的幅度」排序。',
   'Reading the explorer': '如何閱讀局面瀏覽器',
   "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
-    '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局書會移動，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有四個是吃子或拒吃。',
+    '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局理論會隨時間改變，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有四個是吃子或拒吃。',
   'How this was measured': '測量方式',
   'Open the 144 positions':
     '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打開這 144 個局面</a>',
@@ -1043,7 +1043,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'Standard chess, SP-518': '標準西洋棋，SP-518',
   'Standard chess rank by balance': '標準西洋棋依均衡度的排名',
   'Starts more balanced than standard chess': '比標準西洋棋更均衡的開局',
-  'Move-1 castling best moves': '第 1 著即為王車易位的最佳著法',
+  'Move-1 castling best moves': '以王車易位為最佳第 1 著的局面',
   'Recent elite corpus overlap with highlighted starts': '近期頂級賽事棋譜與重點開局的重疊',
   'SP-482, once': 'SP-482，一次',
   "If you want the **most balanced Chess960 starting positions**, the clean candidates are **SP-418, SP-563, SP-269, SP-444, and SP-786**. All evaluate at +0.10 or below, far under standard chess's +0.31.":
@@ -1400,14 +1400,14 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'The enumerator raises only when `P` goes empty, and losing the truth from a set of 41 is silent, as it has to be: in play the engine never knows the truth. The test comparing the Rust port with python-chess stayed green across 178,145 move applications, because both made the same mistake. Replay records whether the truth is in `P`, but that column was only read on games past the sampling cap, where losing the truth is expected.':
     '列舉器只在 `P` 變成空集合時拋出錯誤，而從 41 個的集合中遺失真值是無聲的，也必然如此：實戰中引擎從來不知道真值。比對 Rust 移植版與 python-chess 的測試在 178,145 次著法套用中一直是綠的，因為兩者犯了同樣的錯誤。重播會記錄真值是否在 `P` 中，但那一欄只在超過抽樣上限的棋局上被讀過，在那些棋局中遺失真值是預期的。',
   'Retold as a bug story, with the code path production actually ran corrected.':
-    '改寫為一個錯誤的故事，並更正了正式環境實際執行的程式碼路徑。',
+    '改寫為一則關於程式錯誤的故事，並更正了正式環境實際執行的程式碼路徑。',
   // most-played-move: restored 2026-10-24, not native-reviewed; the rest of the 10-15 carry-over above: 19 strings reused from the brianhliou.com zh-hans and zh-hant posts (where their two versions differed in ASCII, harmonised to the current English), 13 machine-drafted for text the move changed or added.
   'In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.':
     '在 4,121 個常見開局局面中，有 144 個局面裡俱樂部棋手最常選的著法，在兩千萬節點的引擎面前會失去取勝機會。本文挑出十個，附上各年代大師的選擇，並以一份研究收錄全部 144 個。',
   'In 144 of 4,121 common opening positions, the move 1600 to 2200 Lichess players choose most often loses winning chances against Stockfish at twenty million nodes. One in 29.':
     '在 4,121 個常見開局局面中，有 144 個局面裡 1600 到 2200 分的 Lichess 棋手最常選的著法，在兩千萬節點的 Stockfish 面前會失去取勝機會。比例是 29 個裡有 1 個。',
   'Positions from the Lichess opening explorer at 1600 to 2200, blitz, rapid and classical: every position to 14 plies with at least 500,000 games.':
-    '局面取自 Lichess 開局瀏覽器，1600 到 2200 分，快棋、拉普與慢棋：14 著以內、對局數至少 500,000 局的每一個局面。',
+    '局面取自 Lichess 開局瀏覽器，1600 到 2200 分，超快棋、快棋與慢棋：14 著以內、對局數至少 500,000 局的每一個局面。',
   'Stockfish 18 at 20,000,000 nodes, MultiPV 3, one search per position.':
     'Stockfish 18，20,000,000 節點，MultiPV 3，每個局面一次搜尋。',
   "A miss is a gap of 0.1 or more in winning chances between the most played move and the engine's best, by lila's formula.":
@@ -1417,11 +1417,11 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   "The answer, over 4,121 positions that 1600 to 2200 players reach 500,000 times or more: **144 of them, one in 29.** In those positions the most played move loses at least a tenth of a winning chance against the engine's move at twenty million nodes, and a second, independent search agrees. Some are gambit lines only the club plays. Some are main lines where the masters have played the engine's move for a century. Four are positions where the masters make the same mistake the club does.":
     '答案是，在 1600 到 2200 分棋手下到 500,000 次以上的 4,121 個局面裡，**有 144 個，29 個裡有 1 個。**在這些局面中，最多人下的著法相對於引擎在兩千萬節點下的著法，至少損失十分之一的取勝機會，而第二次獨立搜尋也同意這個判斷。其中有些是只有俱樂部棋手才下的棄兵變例。有些是大師一個世紀以來都走引擎著法的主流變例。有四個局面是大師與俱樂部棋手犯了同樣的錯。',
   'The Lichess database is every rated game on the site, filtered by rating band and speed. I took blitz, rapid and classical between 1600 and 2200, walked the tree from the start position as far as it stays above 500,000 games (14 plies at most), and kept every position on the way: 4,121 of them. For each one the explorer gives the move table, so "most played" is a fact about that band, not about chess.':
-    'Lichess 資料庫收錄站上所有計分對局，可按分數段與棋速篩選。我取 1600 到 2200 分之間的快棋、拉普與慢棋，從起始局面沿著局面樹往下走，只要對局數維持在 500,000 以上就繼續（最多 14 著），並保留路上的每一個局面：共 4,121 個。每一個局面局面瀏覽器都會給出著法表，所以「最多人下」是關於那個分數段的事實，不是關於西洋棋本身的事實。',
+    'Lichess 資料庫收錄站上所有計分對局，可按分數段與棋速篩選。我取 1600 到 2200 分之間的超快棋、快棋與慢棋，從起始局面沿著局面樹往下走，只要對局數維持在 500,000 以上就繼續（最多 14 著），並保留路上的每一個局面：共 4,121 個。每一個局面局面瀏覽器都會給出著法表，所以「最多人下」是關於那個分數段的事實，不是關於西洋棋本身的事實。',
   "**Four Knights, Spanish, 4...d6.** 1.e4 e5 2.Nf3 Nc6 3.Bb5 Nf6 4.Nc3, and 31% of the club plays 4...d6, +0.69. Rubinstein's 4...Nd4 is 0.00, and it is the one line on this list where you can watch theory move: the masters' top choice was 4...Bb4 before 2018 and is 4...Nd4 now (39% of 2,666 games). The club never played either.":
-    '**四馬防禦，西班牙式，4...d6。**1.e4 e5 2.Nf3 Nc6 3.Bb5 Nf6 4.Nc3，31% 的俱樂部棋手走 4...d6，+0.69。Rubinstein 的 4...Nd4 是 0.00，而這是本清單上唯一能親眼看到理論移動的一條變例：大師在 2018 年前的首選是 4...Bb4，如今是 4...Nd4（2,666 局中佔 39%）。俱樂部棋手兩者都沒走過。',
+    '**四馬防禦，西班牙式，4...d6。**1.e4 e5 2.Nf3 Nc6 3.Bb5 Nf6 4.Nc3，31% 的俱樂部棋手走 4...d6，+0.69。Rubinstein 的 4...Nd4 是 0.00，而這是本清單上唯一能看到開局理論的演變的一條變例：大師在 2018 年前的首選是 4...Bb4，如今是 4...Nd4（2,666 局中佔 39%）。俱樂部棋手兩者都沒走過。',
   "**Stafford Gambit, move 6.** 1.e4 e5 2.Nf3 Nf6 3.Nxe5 Nc6 4.Nxc6 dxc6 5.Nc3 Bc5, the internet's favourite trap, 1.2 million club games. A quarter of White players play 6.Bc4, which walks into 6...Ng4 and the whole point of the gambit: −0.79. 6.h3 first is +1.74, a full piece's worth of difference, and the largest gap among the ten. Masters have played this position three times.":
-    '**Stafford 棄兵，第 6 著。**1.e4 e5 2.Nf3 Nf6 3.Nxe5 Nc6 4.Nxc6 dxc6 5.Nc3 Bc5，網路上最受歡迎的陷阱，有 120 萬局俱樂部對局。四分之一的白方走 6.Bc4，正好踩進 6...Ng4 與這個棄兵的全部用意：−0.79。先走 6.h3 是 +1.74，整整一個子的差距，也是這十個局面中最大的落差。大師下到這個局面只有三次。',
+    '**Stafford 棄兵，第 6 著。**1.e4 e5 2.Nf3 Nf6 3.Nxe5 Nc6 4.Nxc6 dxc6 5.Nc3 Bc5，網路上最受歡迎的陷阱，有 120 萬局俱樂部對局。四分之一的白方走 6.Bc4，正好落入 6...Ng4 的陷阱，而這正是這個棄兵的用意：−0.79。先走 6.h3 是 +1.74，整整一個子的差距，也是這十個局面中最大的落差。大師下到這個局面只有三次。',
   "Stafford Gambit: 6.Bc4 is the club move, 6.h3 the engine's":
     'Stafford 棄兵：6.Bc4 是俱樂部的著法，6.h3 是引擎的著法',
   '**Busch-Gass, 2...Bc5.** 1.e4 e5 2.Nf3 Bc5 offers the e-pawn, and 48% of White players decline it with 3.Bc4. Just take it: 3.Nxe5 is +1.60 against +0.24, and after 3...d6 4.Nf3 the pawn stays. Seven million club games, five masters games in total.':
@@ -1436,7 +1436,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
     '**接受后翼棄兵，3.e4 e5。**1.d4 d5 2.c4 dxc4 3.e4 e5，63% 的白方推 4.d5。它是 −1.02；4.Nf3 是 +0.43，而大師在每個年代都有 97% 到 100% 的對局走 4.Nf3。那一推看起來搶到了空間，實際上把中心交給了黑方。',
   '**Positions**': '**局面**',
   'The [Lichess opening explorer](https://lichess.org/analysis#explorer), database "Lichess", ratings 1600, 1800, 2000 and 2200, blitz, rapid and classical':
-    '[Lichess 開局瀏覽器](https://lichess.org/analysis#explorer)，資料庫選「Lichess」，分數 1600、1800、2000 與 2200，快棋、拉普與慢棋',
+    '[Lichess 開局瀏覽器](https://lichess.org/analysis#explorer)，資料庫選「Lichess」，分數 1600、1800、2000 與 2200，超快棋、快棋與慢棋',
   '**Walk**': '**走訪**',
   'From the start position to 14 plies, keeping every position with at least 500,000 games; stopped at 4,000 expanded nodes, with 55 left in the queue':
     '自起始局面往下走到 14 著深度，保留所有至少 500,000 局的局面；在展開 4,000 個節點時停止，佇列中還剩 55 個',
@@ -1552,7 +1552,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'Each position is from one of those games. The player made the move shown, the analysis gave it no mark, and a 20-million-node search calls it a mistake or worse against a best move that is unique. The board opens on the position before the move, so you can look for the better move first; step forward and you get the game move with the mark it should have had, and the refutation is the sideline in the study, one click under each board.':
     '以下每個局面都出自那些對局。棋手走了圖上那一著，分析沒給任何標記，而兩千萬節點的搜尋判定它是失誤或更糟，且最佳著法是唯一的。棋盤一開始停在該著之前的局面，所以你可以先自己找更好的著法；往前走一步就會看到對局實走的著法連同它本該有的標記，而反駁手段是研究裡的變例，就在每個棋盤下方點一下即可。',
   "**Zhigalko, Black to move.** White has just played Be5, hitting the queen on c7, and Black did the natural thing: 20...Qd7, out of the attack. The analysis had it −1.38 before and −1.30 after, nothing lost. But the queen did not need saving. 20...Rxd2! gives up the exchange, and after 21.Rxd2 the pawn move 21...c3! forks the queen on b2 and the rook on d2 at once. White gets the queen back (22.Bxc7 cxb2 23.Rxb2 Rxc7) and is left with a rook against Black's two bishops and knight: −3.2 at depth, against −1.3 for the retreat. The refutation starts with a move that loses material, which is why a one-second search never sees it.":
-    '**Zhigalko，黑方走。** 白方剛走 Be5，攻擊 c7 的后，黑方做了最自然的事：20...Qd7，讓后脫離攻擊。分析給出之前 −1.38、之後 −1.30，沒有損失。但那個后根本不需要救。20...Rxd2！棄車換馬，21.Rxd2 後，兵著 21...c3！同時捉住 b2 的后與 d2 的車。白方把后拿回來（22.Bxc7 cxb2 23.Rxb2 Rxc7），最後剩下一個車對黑方的雙象加一馬：深搜下 −3.2，而退后只有 −1.3。反駁手段的第一著是丟失子力的一著，這正是一秒搜尋永遠看不到它的原因。',
+    '**Zhigalko，黑方走。** 白方剛走 Be5，攻擊 c7 的后，黑方做了最自然的事：20...Qd7，讓后脫離攻擊。分析給出之前 −1.38、之後 −1.30，沒有損失。但那個后根本不需要救。20...Rxd2！以車換輕子，21.Rxd2 後，兵著 21...c3！同時捉住 b2 的后與 d2 的車。白方把后拿回來（22.Bxc7 cxb2 23.Rxb2 Rxc7），最後剩下一個車對黑方的雙象加一馬：深搜下 −3.2，而退后只有 −1.3。反駁手段的第一著是丟失子力的一著，這正是一秒搜尋永遠看不到它的原因。',
   'Zhigalko: 20...Qd7 got no mark at 1M; Rxd2 and c3 win':
     'Zhigalko：20...Qd7 在 1M 下沒有標記；Rxd2 與 c3 獲勝',
   '**Bortnyk, Black to move.** 20...b5 attacks the bishop on c4, and the analysis moved from −0.63 to −0.41. The bishop on f5 could simply have taken the knight: 20...Bxe4! 21.dxe4, and now the other knight lands on f4, with ...e5 to follow to push the bishop off d4. Black wins material inside five moves, −2.7 at depth; the second-best move, 20...Nf4 at once, is only −0.6.':
@@ -1615,7 +1615,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'A standalone Rust engine with a small UCI-style protocol, usable from the command line or from Python via PyO3. Strength is a **node budget, not a clock**, so the same position returns the same move on any machine.':
     '一個獨立的 Rust 引擎，附帶小型的 UCI 風格協定，可從命令列使用，也可透過 PyO3 從 Python 使用。棋力取決於**節點預算，而不是時鐘**，因此同一個局面在任何機器上都會回傳同一著。',
   'The stack is conventional: negamax alpha-beta with iterative deepening, a Zobrist transposition table, quiescence on captures and den-entries, and killer/history move ordering with PVS and late-move reductions, over a handcrafted evaluation that scores material, distance to the enemy den, traps, water, and mobility. That ordering-and-pruning polish was worth a measured +49 Elo at a fixed node budget.':
-    '技術堆疊很常規：帶迭代加深的 negamax alpha-beta、Zobrist 置換表、對吃子與進入獸穴著法的靜態搜尋、killer/history 著法排序搭配 PVS 與後期著法削減，底下是一套手工打造的評估，計算子力、與敵方獸穴的距離、陷阱、水域與機動性。這些排序與剪枝的打磨，在固定節點預算下實測值得 +49 Elo。',
+    '技術堆疊很常規：帶迭代加深的 negamax alpha-beta、Zobrist 置換表、對吃子與進入獸穴著法的靜態搜尋、killer/history 著法排序搭配 PVS 與後期著法削減，底下是一套手工打造的評估，計算子力、與敵方獸穴的距離、陷阱、水域與機動性。這些排序與剪枝的打磨，在固定節點預算下實測提升了 +49 Elo。',
   'The eval has to be exact before a learned correction can add anything. Dou Shou Qi is material-heavy but full of sharp exceptions: a rat stops an elephant, a trapped piece loses its rank, one step into the den ends the game.':
     '評估必須先做到精確，學習式修正才可能帶來任何增益。鬥獸棋很看重子力，卻充滿尖銳的例外：鼠能克象，落入陷阱的棋子失去等級，一步踏進獸穴就結束對局。',
   Specs: '規格',
@@ -1643,7 +1643,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   '779/800 matched, **0 WDL contradictions**': '779/800 相符，**0 處勝/和/負矛盾**',
   'Five and six pieces': '五子與六子',
   '**>99%** vs an 8x deeper search (proxy, not proof)':
-    '對上深度 8 倍的搜尋 **>99%**（代理指標，非證明）',
+    '與搜尋量為其 8 倍的搜尋結果吻合率 **>99%**（代理指標，非證明）',
   'Tablebase at the search leaf': '搜尋葉節點的殘局庫',
   'W37-L40-D3, about **-13 Elo**': 'W37-L40-D3，約 **-13 Elo**',
   'Residual neural eval': '殘差式神經評估',
@@ -1654,17 +1654,17 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'Small endgames yield to retrograde analysis, and they make excellent judges. Van Rijn and Vis solved four pieces at Leiden in 2013 (under the Leiden convention, which swaps dog and wolf), and I can find nothing larger published since. My engine matched exact four-piece play on 779 of 800 positions with no WDL contradictions, and tracked an 8x deeper search above 99% at five and six pieces.':
     '小型殘局可用逆向分析攻克，而且它們是極佳的裁判。Van Rijn 與 Vis 於 2013 年在萊頓解出四子殘局（依萊頓慣例，狗與狼互換），此後我找不到更大的已發表結果。我的引擎在 800 個局面中有 779 個與精確的四子著法相符，沒有勝/和/負矛盾，並在五子與六子上與深度 8 倍的搜尋吻合超過 99%。',
   'That four-piece database is still the frontier, and the wall past it is storage, not solving technique. The board is the problem: 63 squares against the 16 of [Flip Jungle](/blog/flip-jungle-skill-ceiling), so each added piece has some 60 empty squares to stand on instead of a dozen, and the level sizes grow about five times faster. Five Flip Jungle pieces fit in 2.8 GB on my laptop; five Dou Shou Qi pieces run to roughly 7 TB. Eight pieces and up, half the starting material, is out of reach as a database, and nobody has a forward proof of the full sixteen-piece game either. Dou Shou Qi is solved to four pieces and open above it, and likely to stay that way.':
-    '四子資料庫仍是前沿，而擋在其後的牆是儲存空間，不是求解技術。問題出在棋盤：63 格對上[翻翻棋](/blog/flip-jungle-skill-ceiling)的 16 格，因此每多一子就有大約 60 個空格可站，而不是十來個，每一層的大小成長速度約快五倍。五子的翻翻棋在我的筆電上只要 2.8 GB；五子的鬥獸棋則約需 7 TB。八子以上，也就是初始子力的一半，以資料庫形式已不可及，也沒有人對完整十六子的遊戲做出正向證明。鬥獸棋已解到四子，之上仍未解，而且很可能維持這樣。',
+    '四子資料庫仍是前沿，而擋在其後的牆是儲存空間，不是求解技術。問題出在棋盤：63 格對上[翻翻獸棋](/blog/flip-jungle-skill-ceiling)的 16 格，因此每多一子就有大約 60 個空格可站，而不是十來個，每一層的大小成長速度約快五倍。五子的翻翻獸棋在我的筆電上只要 2.8 GB；五子的鬥獸棋則約需 7 TB。八子以上，也就是初始子力的一半，以資料庫形式已不可及，也沒有人對完整十六子的遊戲做出正向證明。鬥獸棋已解到四子，之上仍未解，而且很可能維持這樣。',
   'Corrected 27 September 2026: an earlier version put the frontier at seven pieces. That figure came from a citation in a 2019 paper, which on inspection points to a Leiden thesis on Jungle Checkers, a different game.':
     '2026 年 9 月 27 日更正：本文先前的版本稱前沿為七子。這個數字來自一篇 2019 年論文中的引用，查證後發現它指向萊頓一篇關於 Jungle Checkers 的論文，那是另一種遊戲。',
   "A tablebase loaded at the search leaf also added nothing to playing strength (about -13 Elo): search already finds the answer at the sizes that fit, and the sizes where it would help don't ship. One caveat from the Flip Jungle build, where the same experiment first read as null and later turned out to be hiding a bug: those tables stored win/draw/loss with no distance, and a WDL-only leaf lets the engine hold a won endgame forever without finishing it, since every winning move grades the same. Adding distance-to-mate to the tables fixed the finishing there. My Jungle leaf probe was WDL-only too, so some of that -13 may be the same effect rather than tablebases being useless at the leaf. Untested; the classical engine ships without the probe either way.":
-    '在搜尋葉節點載入殘局庫對棋力也毫無助益（約 -13 Elo）：在容得下的規模上搜尋本來就能找到答案，而真正需要幫助的規模則根本做不出來。有一點提醒來自翻翻棋那次構建：同一個實驗一開始也顯示為無效，後來才發現藏著一個 bug。那些表只儲存勝/和/負而沒有距離，而只有勝/和/負的葉節點會讓引擎在已勝的殘局裡無限拖延而不收官，因為每一著獲勝著法的分數都一樣。把將死距離加進表裡，就修好了那邊的收官問題。我的鬥獸棋葉節點探查同樣只有勝/和/負，所以那 -13 有一部分可能是同樣的效應，而不是殘局庫在葉節點真的沒用。未經測試；無論如何，出貨的經典引擎都不帶這個探查。',
+    '在搜尋葉節點載入殘局庫對棋力也毫無助益（約 -13 Elo）：在容得下的規模上搜尋本來就能找到答案，而真正能幫上忙的規模，目前還沒有可用的殘局庫。有一點提醒來自翻翻獸棋那次構建：同一個實驗一開始也顯示為無效，後來才發現藏著一個 bug。那些表只儲存勝/和/負而沒有距離，而只有勝/和/負的葉節點會讓引擎在已勝的殘局裡無限拖延而不收官，因為每一著獲勝著法的分數都一樣。把將死距離加進表裡，就修好了那邊的收官問題。我的鬥獸棋葉節點探查同樣只有勝/和/負，所以那 -13 有一部分可能是同樣的效應，而不是殘局庫在葉節點真的沒用。未經測試；無論如何，出貨的經典引擎都不帶這個探查。',
   'Learned eval': '學習式評估',
   'This stalled on data, not architecture. A residual net (the handcrafted score plus a bounded correction) climbed from -470 to about -70 Elo as I fixed the labels, but never beat the hand eval. The labels were weakest exactly where the net needed help: draw-heavy self-play underrepresents material swings, exact tablebase labels only cover small endgames, and search-score labels mostly teach the net to imitate the search it already has.':
     '這部分卡在資料，而不是架構。一個殘差網路（手寫分數加上有界修正）隨著我修正標籤，從 -470 爬到約 -70 Elo，但始終沒能勝過手寫評估。標籤最弱的地方恰好正是網路最需要幫助的地方：和棋偏多的自我對弈對子力擺盪的呈現不足，精確的殘局庫標籤只涵蓋小型殘局，而搜尋分數的標籤大多只是教網路模仿它本來就有的搜尋。',
   AlphaZero: 'AlphaZero',
   'Still open work. I did not run a full Jungle AZ climb. The adjacent Banqi AZ de-risk failed its gate, but that is a different game and does not falsify AZ for Jungle, which is friendlier ground: deterministic and perfect-information, with no chance-node reveal. I parked it because the cheap rung was negative and the classical engine already beat the benchmark.':
-    '仍是未完成的工作。我沒有跑完整的鬥獸棋 AZ 攀升。鄰近的暗棋 AZ 風險驗證沒過門檻，但那是不同的遊戲，並不能否定 AZ 在鬥獸棋上的可行性；鬥獸棋是更友善的場地：決定性、完全資訊，沒有機率節點的揭示。我把它擱置，是因為便宜的那一階是負面的，而經典引擎已經勝過基準了。',
+    '仍是未完成的工作。我沒有跑完整的鬥獸棋 AZ 攀升。鄰近的暗棋 AZ 風險驗證沒過門檻，但那是不同的遊戲，並不能否定 AZ 在鬥獸棋上的可行性；鬥獸棋是更友善的場地：決定性、完全資訊，沒有翻子帶來的機率節點。我把它擱置，是因為便宜的那一階是負面的，而經典引擎已經勝過基準了。',
   'Example games': '對局範例',
   'The match was mostly draws, but the decisive games show the shape of the edge: den pressure first, material second. The boards open near the conversion, so step back for the opening; all six are in a [study on Mistboard](/study/xzzhAld5). They were played under the lengthwise-only tiger rule Mistboard used until September 2026.':
     '這場對抗賽大多是和棋，但分出勝負的棋局顯示了優勢的形狀：先施加獸穴壓力，子力其次。棋盤是從接近轉化的位置開始呈現的，想看開局請往前回放；全部六局都收在 [Mistboard 上的一份研究](/study/xzzhAld5)裡。它們是在 Mistboard 到 2026 年 9 月前使用的「虎只能縱向跳河」規則下進行的。',
@@ -1714,7 +1714,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'Hold the budget fixed or you are measuring the budget. Two constants from the same games, a draw clock and draw contempt, doubled the share of decisive games instead.':
     '要固定預算，否則你量到的只是預算本身。反倒是從同一批對局裡找出的兩個常數，和棋步數限制與和棋蔑視值，讓分出勝負的對局比例翻倍。',
   'Base rate from 172 self-play games at the production budget of five million nodes a move.':
-    '基準比率來自 172 局自我對弈，採用每著五百萬節點的生產預算。',
+    '基準比率來自 172 局自我對弈，採用正式環境中每著五百萬節點的預算。',
   'Headroom: in each of the 8 den races, the earliest ply at which five and sixty million nodes see the forced loss.':
     '餘裕：在 8 場衝獸穴競速中的每一場，五百萬節點與六千萬節點分別最早在哪一著看出必敗。',
   'The search extension tested as a harness policy that gives one side more nodes near an enemy den, 300 colour-swapped pairs per arm, with and without a fixed node budget.':
@@ -1722,7 +1722,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'Misty, Mistboard’s Jungle Chess engine, has no concept of a den race. It scores a position by material plus a per-piece bonus for advancing toward the enemy den, and never asks whether the runner heading for *its* den arrives first. It finds out when the search reaches the den, about twelve plies out.':
     'Misty 是 Mistboard 的鬥獸棋引擎，它沒有衝獸穴競速的概念。它以子力加上每個棋子朝敵方獸穴推進的獎勵來評估局面，從不去問那個衝向*自己*獸穴的跑者是不是先到。它要等搜尋抵達獸穴時才知道，大約在十二著之外。',
   'That looked like a clear gap, filed as an issue after a game where the bot shuffled a rat back and forth while an enemy rat walked in. In August we spent a day trying to close it. Three routes, all null or negative. This is what the measurements said and what we would keep from them.':
-    '這看起來是個明顯的缺口，在一局機器人把鼠來回挪動、而敵方鼠走進獸穴的對局之後，它被記成了一個 issue。8 月我們花了一天試著補上它。三條路線，全部無效或負向。以下是量測結果，以及我們會從中留下什麼。',
+    '這看起來是個明顯的缺口，在一局機器人把鼠來回挪動、而敵方鼠走進獸穴的對局之後，它被記成了一個問題單。8 月我們花了一天試著補上它。三條路線，全部無效或負向。以下是量測結果，以及我們會從中留下什麼。',
   'What the engine already does': '引擎本來就會做的事',
   'Worth separating, because it framed everything after. The engine understands the win condition completely: reaching the den is scored as mate, ordered first among candidate moves, and searched in quiescence. What it lacks is foresight, not comprehension.':
     '值得分開來講，因為它決定了後面的一切。引擎對取勝條件的理解是完整的：抵達獸穴被評為將死，在候選著法中排在第一位，也會在靜態搜尋中被搜到。它缺的是預見，不是理解。',
@@ -1739,17 +1739,17 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'On move 20 Red’s tiger on d5 had two legal moves, forward or back, both still in the corridor. It went forward and took the wolf, which cost Blue 40 points and parked the tiger next to Blue’s elephant.':
     '在第 20 回合，紅方位於 d5 的虎只有兩個合法著法，向前或向後，都還在走廊裡。它往前吃掉了狼，讓藍方損失 40 分，並把虎停在藍方象的旁邊。',
   'Blue’s elephant outranks a tiger, so this looks like a gift. Blue declined to take it at once, which is the move the issue asked us to explain. The engine’s reason is that the tiger could not escape: with the elephant on d7 the tiger’s only move was d5, and from d5 its only move was d4, walked down a one-lane corridor by a piece that beats it. Grabbing it costs a tempo to collect something already collected. Blue played a free improving move and took the tiger two moves later, on d5 instead of d6. Both lines reach identical material.':
-    '藍方的象等級高於虎，所以這看起來像是送禮。藍方沒有立刻吃掉它，而這正是那個 issue 要我們解釋的一著。引擎的理由是那隻虎逃不掉：象在 d7 時，虎唯一的著法是 d5，而從 d5 唯一的著法是 d4，被一個能吃掉它的棋子沿著單線走廊一路趕下去。馬上吃掉它，等於花一個先手去收一個已經收下的東西。藍方走了一步免費的改善著法，兩回合之後才吃掉虎，地點在 d5 而不是 d6。兩條變化到達的子力完全相同。',
+    '藍方的象等級高於虎，所以這看起來像是送禮。藍方沒有立刻吃掉它，而這正是那個問題單 要我們解釋的一著。引擎的理由是那隻虎逃不掉：象在 d7 時，虎唯一的著法是 d5，而從 d5 唯一的著法是 d4，被一個能吃掉它的棋子沿著單線走廊一路趕下去。馬上吃掉它，等於花一個先手去收一個已經收下的東西。藍方走了一步免費的改善著法，兩回合之後才吃掉虎，地點在 d5 而不是 d6。兩條變化到達的子力完全相同。',
   'The four moves that decided the game, by ply:': '決定這局勝負的四著，按著序編號：',
   'The tiger was bait. Not a sacrifice: it was nearly trapped anyway, and taking the wolf scored +10 against +6 for almost every alternative, a difference of four points rather than a plan. What it does on its way off the board is pull the one piece that outranks a lion down the d-file. At move 20 the lion jump scores **−195**, because c7 sits next to Blue’s elephant on d7. Two moves later the same jump wins, because the elephant left.':
-    '那隻虎是誘餌。不是棄子：它反正幾乎已被困住，而吃狼得 +10 分，幾乎所有其他選擇都是 +6，差距只有四分，而不是一套計畫。它在離開棋盤的路上做到的，是把唯一等級高於獅的棋子拉到 d 路下方。在第 20 回合，獅的跳躍評估為 **−195**，因為 c7 緊鄰藍方在 d7 的象。兩回合之後，同樣的跳躍就取勝了，因為象走開了。',
+    '那隻虎是誘餌。不是棄子：它反正幾乎已被困住，而吃狼得 +10 分，幾乎所有其他選擇都是 +6，差距只有四分，而不是一套計畫。它在離開棋盤的路上做到的，是把唯一等級高於獅的棋子沿著 d 路向下引走。在第 20 回合，獅的跳躍評估為 **−195**，因為 c7 緊鄰藍方在 d7 的象。兩回合之後，同樣的跳躍就取勝了，因為象走開了。',
   'Blue ends the sequence 13 points ahead and loses.': '藍方在這段變化結束時領先 13 分，然後輸了。',
   'Read the plan back and it sounds like the engine understood a den race. It did not. There is no den-race term anywhere in that evaluation, before or after this project. It searched five million nodes and the line came out. That is the whole result: the behaviour the issue wanted to install was already there, produced by depth rather than knowledge.':
-    '把這套計畫回述一遍，聽起來像引擎理解了衝獸穴競速。它並沒有。在那套評估裡，這個專案前後都不存在任何衝獸穴競速評估項。它搜了五百萬個節點，這條變化就出來了。整個結果就是這樣：那個 issue 想裝進去的行為本來就在，是由深度而不是知識產生的。',
+    '把這套計畫回述一遍，聽起來像引擎理解了衝獸穴競速。它並沒有。在那套評估裡，這個專案前後都不存在任何衝獸穴競速評估項。它搜了五百萬個節點，這條變化就出來了。整個結果就是這樣：那個問題單 想裝進去的行為本來就在，是由深度而不是知識產生的。',
   'Base rate: 4.7% of games, measured at full strength':
     '基準比率：4.7% 的對局，在全力對弈強度下量測',
   '172 self-play games at the production budget of five million nodes a move.':
-    '以每著五百萬節點的生產預算進行的 172 局自我對弈。',
+    '採用正式環境中每著五百萬節點預算的 172 局自我對弈。',
   'Game ended by': '終局方式',
   'Den entry': '進入獸穴',
   'of which a genuine race': '其中真正的競速',
@@ -1798,7 +1798,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'Here is the evaluation as it stood. One loop over the board, and every piece contributes independently:':
     '這是當時的評估函式。在棋盤上跑一圈，每個棋子各自獨立貢獻：',
   'That advancement term is why the evaluation is blind to a race, and the reason is the symmetry. Our runner three squares from your den scores +39. Your runner three squares from ours scores −39. Both sides sprinting produces a number near zero, and the position reads quiet at exactly the moment it is most decided.':
-    '那個推進項就是評估對競速視而不見的原因，而原因在於對稱性。我們的跑者離你的獸穴三格是 +39。你的跑者離我們的獸穴三格是 −39。雙方都在衝刺時算出來接近零，於是局面在最已成定局的那一刻讀起來一片平靜。',
+    '那個推進項就是評估對競速視而不見的原因，而原因在於對稱性。我們的跑者離你的獸穴三格是 +39。你的跑者離我們的獸穴三格是 −39。雙方都在衝刺時算出來接近零，於是局面恰恰在勝負最為確定的那一刻讀起來一片平靜。',
   'So the term cannot be another per-piece bonus. It has to be one verdict per side, computed once, comparing the two runners against each other:':
     '所以這個評估項不能是另一個逐棋子的獎勵。它必須是每方一個判定，只算一次，並把兩個跑者互相比較：',
   'The defender is measured to the **trap ring**, not to the den. That is the right interception zone because a den’s three neighbours *are* its three traps, and a piece standing on a trap can be captured by any defender regardless of rank. An elephant walking into your den has to cross a square where your rat can take it.':
@@ -1813,7 +1813,7 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
   'That trap caught us twice in one day. A contempt sweep the same afternoon showed decisive games rising from 32% to 50%, which is what higher contempt produces by construction, since both sides in a self-play sweep get the setting. Only the two values facing each other could say whether it cost anything. It did not, so that one shipped.':
     '這個陷阱一天之內抓到我們兩次。同一個下午的一次蔑視值掃描顯示分出勝負的對局從 32% 升到 50%，但這本來就是提高蔑視值在結構上必然產生的結果，因為自我對弈掃描中雙方都用了同樣的設定。只有讓兩個數值互相對抗，才能看出它有沒有代價。結果沒有，所以那一項上線了。',
   'The evaluation gap was real and correctly diagnosed. It just had nothing behind it. Two constants found in the same games, a no-capture draw clock that was ending games early and a draw contempt near zero, took Jungle self-play from a quarter of games ending in a win to about half, and neither teaches the engine anything. The issue asked for understanding. Understanding was never the constraint.':
-    '評估上的缺口是真的，診斷也正確。只是它背後什麼都沒有。從同一批對局中找到的兩個常數，一個是讓對局過早結束的無吃子和棋限制，另一個是接近零的和棋蔑視值，把鬥獸棋自我對弈從四分之一的對局分出勝負提升到大約一半，而兩者都沒有教引擎任何東西。那個 issue 要的是理解。理解從來不是瓶頸。',
+    '評估上的缺口是真的，診斷也正確。只是它背後什麼都沒有。從同一批對局中找到的兩個常數，一個是讓對局過早結束的無吃子和棋限制，另一個是接近零的和棋蔑視值，把鬥獸棋自我對弈從四分之一的對局分出勝負提升到大約一半，而兩者都沒有教引擎任何東西。那個問題單 要的是理解。理解從來不是瓶頸。',
   'The games are public, and so is the position above. The analysis board runs the same engine, under today’s rule where the tiger can jump sideways out of the corridor, so if you think Blue should have taken the tiger you can make it play a line out.':
     '這些對局是公開的，上面那個局面也是。分析棋盤跑的是同一個引擎，採用的是如今虎可以橫向跳出走廊的規則，所以如果你認為藍方當時該吃掉那隻虎，你可以讓它把一條變化走完。',
   'Walk the 52 games': '瀏覽這 52 局',

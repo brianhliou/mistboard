@@ -68,9 +68,9 @@ test('gate contract: a dual-solution position fails', () => {
   assert.equal(gateVerdict('cp 600', 'cp 550'), false);
 });
 
-test('gate contract: a decisive material gap separates two winning moves', () => {
-  // Both winning, but best is a whole piece better (>= materialGapCp 250).
-  assert.equal(gateVerdict('cp 900', 'cp 600'), true);
+test('gate contract: two winning moves fail however far apart', () => {
+  // +900 vs +600: the runner-up still wins, so it is a second answer.
+  assert.equal(gateVerdict('cp 900', 'cp 600'), false);
 });
 
 test('gate contract: hard floor rejects near ties before win-band classification', () => {

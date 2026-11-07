@@ -7,6 +7,7 @@ import {
   getFortressXiangqiPlayerView,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountCrazyhouseXiangqiWatchReplay } from './watch-crazyhouse-xiangqi-replay.js';
 import { mountFortressXiangqiWatchReplay } from './watch-fortress-xiangqi-replay.js';
 import { createWatchMaterialRail } from './watch-route.js';
@@ -111,6 +112,69 @@ describe('createWatchMaterialRail', () => {
     slots.pool.append(document.createElement('span'));
     createWatchMaterialRail(slots, () => null).sync();
     expect(slots.pool.childElementCount).toBe(0);
+  });
+  it('redraws the strips when the piece set or 3D look changes, until aborted', () => {
+    const slots = railSlots();
+    const fill = vi.fn();
+    const controller = new AbortController();
+    createWatchMaterialRail(slots, () => ({ fillMaterial: fill }), controller.signal);
+
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+    expect(fill).toHaveBeenCalledTimes(1);
+
+    controller.abort();
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+    expect(fill).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('compact drop viewer hands', () => {
+  // The homepage viewer puts each hand in its seat row (reservesInSeats) so a
+  // drop variant's viewer is no taller than a bare board; other compact hosts
+  // keep the strips above and below the board.
+  async function mountChx(reservesInSeats: boolean): Promise<HTMLElement> {
+    const start = getCrazyhouseXiangqiPlayerView(createInitialCrazyhouseXiangqiState('chx'), 'red');
+    const after = {
+      ...start,
+      hands: { red: { ...start.hands.red, soldier: 2 }, black: { ...start.hands.black } },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(dropPostgame('crazyhouse-xiangqi', start, after))),
+    );
+    const root = document.createElement('div');
+    const handle = await mountCrazyhouseXiangqiWatchReplay(root, 'chx', {
+      autoplay: false,
+      compact: true,
+      pov: 'white',
+      ...(reservesInSeats ? { reservesInSeats: true } : {}),
+    });
+    handle.jumpToPly?.(1);
+    return root;
+  }
+
+  it('rides each hand in its own seat row, before the clock', async () => {
+    const root = await mountChx(true);
+    const seats = [...root.querySelectorAll<HTMLElement>('.showcase-seat')];
+
+    expect(root.querySelector('.showcase-board-row')).toBeNull();
+    expect(seats).toHaveLength(2);
+    for (const seat of seats) {
+      const reserve = seat.querySelector(':scope > .showcase-reserve--in-seat');
+      expect(reserve).not.toBeNull();
+      expect(reserve?.nextElementSibling?.classList.contains('showcase-seat-clock')).toBe(true);
+    }
+    // Red holds the soldiers and sits at the bottom (red point of view).
+    const bottom = seats[1]?.querySelector('.showcase-reserve--in-seat');
+    expect(bottom?.querySelector('.drop-mini-reserve-piece:not(.is-empty)')).not.toBeNull();
+  });
+
+  it('keeps the strips around the board without the option', async () => {
+    const root = await mountChx(false);
+
+    expect(root.querySelector('.showcase-board-row > .showcase-reserve-left')).not.toBeNull();
+    expect(root.querySelector('.showcase-board-row > .showcase-reserve-right')).not.toBeNull();
+    expect(root.querySelector('.showcase-reserve--in-seat')).toBeNull();
   });
 });
 

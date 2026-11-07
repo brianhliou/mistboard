@@ -19,6 +19,7 @@ registerVariantTenant({
   kind: 'test-tenant',
   gameSpecId: 'test-tenant-spec',
   roomIdPrefix: 'ttest_',
+  enabled: () => true,
   rooms: fakeTenantRooms,
   activeGameCount: () => fakeTenantActiveGames,
 } as unknown as VariantTenantRegistration);

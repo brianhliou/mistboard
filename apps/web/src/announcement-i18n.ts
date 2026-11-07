@@ -35,6 +35,33 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-02 (AB-JChess-20261031) ── 电脑 / 级 follow the 2026-10-22 jqe entry.
+  'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成为最强揭棋电脑。',
+  "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
+    'AB-JChess-20261031 是 Huorongrong 和 Laoxu（Kouza）基于 jqe 开源代码推出的新版本。它与 jqe 对弈 600 盘，306 胜、67 和、227 负。它现在排在 jqe 上面一级，jqe 继续保留。',
+  'Play AB-JChess': '与 AB-JChess 对弈',
+  'Puzzle Dashboard: your results, your history, and the puzzles you missed.':
+    '解题面板上线：成绩、记录，以及做错的题。',
+  'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.':
+    '登录后，解题面板会显示你最近几天练了多少题、解开多少，以及表现如何。解题记录列出每一次尝试，“待重做”会把你做错的题再出一次。',
+  'Open the dashboard': '打开解题面板',
+  'Puzzle Storm: as many puzzles as you can in three minutes.':
+    '限时解题上线：三分钟内解尽可能多的题。',
+  'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.':
+    '限时解题开始后计时三分钟，题目一道接一道。走错一步扣 10 秒，连续解对可以加回时间。时间用完后，可以回看这一轮的每一道题。',
+  'Play Puzzle Storm': '开始限时解题',
+  'Choose a puzzle difficulty, and see your puzzle rating over time.':
+    '象棋题可以选难度，个人资料显示解题评分走势。',
+  'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.':
+    '在题目页可以从“最简单”到“最难”选择难度，下次访问会记住。你的个人资料现在会画出解题评分，每天一个点，并在动态中列出每个做题的日子。做完一道题后，也可以报告这道题的问题。',
+  'Open puzzles': '去做题',
+  'Puzzle Streak, and puzzles by theme.': '连续解题上线，还可以按主题练题。',
+  'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
+    '连续解题会出越来越难的题目，不计时，可跳过一次，走错一步即结束。新的题目主题页可以一次只练一个主题，例如某一种杀法。每道题开始前，会先播放它所出自的那盘对局的着法。',
+  'Start a streak': '开始连续解题',
+  '3D pieces, and banqi tiles that turn over.': '立体棋子上线，暗棋翻开时会翻面。',
+  'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.':
+    '象棋、揭棋、暗棋和翻翻兽棋的棋子现在可以显示为立体：在棋盘设置的“棋子”中选择“立体”。暗棋的棋子翻开时会翻面；逐步回看已结束的对局时，每一步都会滑到位。',
   // ── 2026-10-23 (batch 4 manuals) ── 书名沿用研究页的中文名。
   'The classical opening manuals are online.': '经典布局古谱已上线。',
   "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.":
@@ -159,16 +186,16 @@ const ZH_HANS: Record<string, string> = {
   // ── 2026-10-02 (rated on every game; homepage play panel) ── 计分 / 寻找对手 / 休闲 / 通信 / 再来一局 / 与真人对弈 follow the play catalog.
   'Every game on Mistboard can now be played rated.': 'Mistboard 上的每种棋现在都可以下计分对局。',
   'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.':
-    '登录后使用“寻找对手”。两位已登录玩家之间的计分对局现在在所有变体中都会计分：象棋、揭棋、暗棋、斗兽棋、翻翻棋，以及鸭子象棋、迷雾象棋、堡垒象棋和原子象棋。与好友或机器人的对局仍为休闲对局。',
+    '登录后使用“寻找对手”。两位已登录玩家之间的计分对局现在在所有变体中都会计分：象棋、揭棋、暗棋、斗兽棋、翻翻兽棋，以及鸭子象棋、迷雾象棋、堡垒象棋和原子象棋。与好友或机器人的对局仍为休闲对局。',
   'Find an opponent': '寻找对手',
   'The homepage starts a game in one click.': '在首页一键开始对局。',
   "Pick a game, set the bot's level and clock, and press Play. Each row remembers your last pick, and Play again reruns your last game. The Play a person tab shows anyone waiting and every open correspondence game, with a casual or rated switch.":
     '选择棋种，设置机器人的级别和用时，然后点击开始。每一行都会记住你上次的选择，“再来一局”会重开你的上一盘。“与真人对弈”标签显示正在等待的玩家和所有公开的通信对局，并可切换休闲或计分。',
-  // ── 2026-10-02 (game data downloads) ── 对局数据 follows data.heading; 暗棋 / 翻翻棋 follow variant names.
+  // ── 2026-10-02 (game data downloads) ── 对局数据 follows data.heading; 暗棋 / 翻翻兽棋 follow variant names.
   'Games played on Mistboard are now free to download.':
     '现在可以免费下载在 Mistboard 上下过的棋局。',
   'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.':
-    '新的对局数据页按变体和月份提供文件，从 6 月开始，目前约 1,100 盘，按 CC BY 4.0 免费使用。揭棋、暗棋和翻翻棋的文件记录了每个翻开的棋子是什么，所以每盘棋只靠文件就能完整复盘。对局搜索现在也覆盖所有变体。',
+    '新的对局数据页按变体和月份提供文件，从 6 月开始，目前约 1,100 盘，按 CC BY 4.0 免费使用。揭棋、暗棋和翻翻兽棋的文件记录了每个翻开的棋子是什么，所以每盘棋只靠文件就能完整复盘。对局搜索现在也覆盖所有变体。',
   'See the files': '查看文件',
   // ── 2026-10-02 (AB-JChess) ── 电脑 / 级 / 暗子 follow the ab-jchess article.
   'AB-JChess is the new top jieqi bot.': 'AB-JChess 成为新的最强揭棋电脑。',
@@ -203,7 +230,7 @@ const ZH_HANS: Record<string, string> = {
   'Read the rules': '阅读规则',
   'A Jungle board, and animal pieces without the disc.': '新的“丛林”棋盘，以及不带底盘的动物棋子。',
   'Xiangqi has a new board under Board: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind. Jungle and Flip Jungle turn green with it. The Animal (no disc) piece set draws the animal pieces without their cream disc, a little larger.':
-    '象棋在“棋盘”设置里多了一款新棋盘：方格棋盘铺在绿色草地上，两个九宫各有一块米色地毯，中间是画出来的河，专为孩子设计。斗兽棋和翻翻棋也会随之变绿。“动物（无底盘）”棋子去掉了动物棋子的米色圆底，棋子稍大一些。',
+    '象棋在“棋盘”设置里多了一款新棋盘：方格棋盘铺在绿色草地上，两个九宫各有一块米色地毯，中间是画出来的河，专为孩子设计。斗兽棋和翻翻兽棋也会随之变绿。“动物（无底盘）”棋子去掉了动物棋子的米色圆底，棋子稍大一些。',
   // ── 2026-09-11 (puzzles with more than one solution) ── 题目 / 将死 / 评分器 follow
   // article-i18n.ts for the same article.
   'Puzzles with more than one solution.': '有不止一个答案的题目。',
@@ -446,7 +473,7 @@ const ZH_HANS: Record<string, string> = {
   'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.':
     '两项规则改动。兵回到象棋本来的走法：在己方半场每次只向前走一点，过河之后才获得横走。过河是一次要付出代价的决断。宝从此留在家中，走子和打入都只限己方半场，被围攻的目标不能再空降到战场上。跨五套规则、上千局的引擎自战表明，真正让这个棋种变得锋利的是兵：和棋率从 34% 降到 9%，一局的长度增加约一半。',
   'Jungle Chess has launched.': '斗兽棋已上线。',
-  'Flip Jungle has launched.': '翻翻棋已上线。',
+  'Flip Jungle has launched.': '翻翻兽棋已上线。',
   'Fog Xiangqi is open for alpha play.': '迷雾象棋已开放内测对局。',
   'Banqi is open for alpha play.': '暗棋已开放内测对局。',
   'Jieqi is open for alpha play.': '揭棋已开放内测对局。',
@@ -462,7 +489,7 @@ const ZH_HANS: Record<string, string> = {
   'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
     '着法评注标记现在会显示在全部六种支持分析的棋类棋盘上，不再只有象棋，漏着还会指出反驳它的具体着法。揭棋的翻子半回合不再给出变化，而是列出引擎评分后的候选着法排名，因为翻子之后的局面无法预知。',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
-    '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。对局复盘把每次翻子拆成你做的决策和你翻到的棋子，文章用 52 盘人机对局验证了这一点。',
+    '暗棋、揭棋和翻翻兽棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。对局复盘把每次翻子拆成你做的决策和你翻到的棋子，文章用 52 盘人机对局验证了这一点。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」页面列出了每月的赞助金额、包含的内容（个人资料上的徽章，不影响对局），以及完整的计费与退款条款。结账尚未开放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
@@ -538,6 +565,33 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-02 (AB-JChess-20261031) ── 電腦 / 級 follow the 2026-10-22 jqe entry.
+  'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成為最強揭棋電腦。',
+  "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
+    'AB-JChess-20261031 是 Huorongrong 和 Laoxu（Kouza）基於 jqe 開源程式碼推出的新版本。它與 jqe 對弈 600 盤，306 勝、67 和、227 負。它現在排在 jqe 上面一級，jqe 繼續保留。',
+  'Play AB-JChess': '與 AB-JChess 對弈',
+  'Puzzle Dashboard: your results, your history, and the puzzles you missed.':
+    '解題面板上線：成績、紀錄，以及做錯的題。',
+  'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.':
+    '登入後，解題面板會顯示你最近幾天練了多少題、解開多少，以及表現如何。解題紀錄列出每一次嘗試，「待重做」會把你做錯的題再出一次。',
+  'Open the dashboard': '打開解題面板',
+  'Puzzle Storm: as many puzzles as you can in three minutes.':
+    '限時解題上線：三分鐘內解盡可能多的題。',
+  'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.':
+    '限時解題開始後計時三分鐘，題目一道接一道。走錯一步扣 10 秒，連續解對可以加回時間。時間用完後，可以回看這一輪的每一道題。',
+  'Play Puzzle Storm': '開始限時解題',
+  'Choose a puzzle difficulty, and see your puzzle rating over time.':
+    '象棋題可以選難度，個人資料顯示解題評分走勢。',
+  'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.':
+    '在題目頁可以從「最簡單」到「最難」選擇難度，下次造訪會記住。你的個人資料現在會畫出解題評分，每天一個點，並在動態中列出每個做題的日子。做完一道題後，也可以回報這道題的問題。',
+  'Open puzzles': '去做題',
+  'Puzzle Streak, and puzzles by theme.': '連續解題上線，還可以按主題練題。',
+  'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
+    '連續解題會出越來越難的題目，不計時，可跳過一次，走錯一步即結束。新的題目主題頁可以一次只練一個主題，例如某一種殺法。每道題開始前，會先播放它所出自的那盤對局的著法。',
+  'Start a streak': '開始連續解題',
+  '3D pieces, and banqi tiles that turn over.': '立體棋子上線，暗棋翻開時會翻面。',
+  'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.':
+    '象棋、揭棋、暗棋和翻翻獸棋的棋子現在可以顯示為立體：在棋盤設定的「棋子」中選擇「立體」。暗棋的棋子翻開時會翻面；逐步回看已結束的對局時，每一步都會滑到位。',
   // ── 2026-10-23 (batch 4 manuals) ── 書名沿用研究頁的中文名。
   'The classical opening manuals are online.': '經典布局古譜已上線。',
   "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.":
@@ -662,16 +716,16 @@ const ZH_HANT: Record<string, string> = {
   // ── 2026-10-02 (rated on every game; homepage play panel) ── 計分 / 尋找對手 / 休閒 / 通信 / 再來一局 / 與真人對弈 follow the play catalog.
   'Every game on Mistboard can now be played rated.': 'Mistboard 上的每種棋現在都可以下計分對局。',
   'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.':
-    '登入後使用「尋找對手」。兩位已登入玩家之間的計分對局現在在所有變體中都會計分：象棋、揭棋、暗棋、鬥獸棋、翻翻棋，以及鴨子象棋、迷霧象棋、堡壘象棋和原子象棋。與好友或機器人的對局仍為休閒對局。',
+    '登入後使用「尋找對手」。兩位已登入玩家之間的計分對局現在在所有變體中都會計分：象棋、揭棋、暗棋、鬥獸棋、翻翻獸棋，以及鴨子象棋、迷霧象棋、堡壘象棋和原子象棋。與好友或機器人的對局仍為休閒對局。',
   'Find an opponent': '尋找對手',
   'The homepage starts a game in one click.': '在首頁一鍵開始對局。',
   "Pick a game, set the bot's level and clock, and press Play. Each row remembers your last pick, and Play again reruns your last game. The Play a person tab shows anyone waiting and every open correspondence game, with a casual or rated switch.":
     '選擇棋種，設定機器人的級別和用時，然後點擊開始。每一列都會記住你上次的選擇，「再來一局」會重開你的上一盤。「與真人對弈」分頁顯示正在等待的玩家和所有公開的通信對局，並可切換休閒或計分。',
-  // ── 2026-10-02 (game data downloads) ── 對局資料 follows data.heading; 暗棋 / 翻翻棋 follow variant names.
+  // ── 2026-10-02 (game data downloads) ── 對局資料 follows data.heading; 暗棋 / 翻翻獸棋 follow variant names.
   'Games played on Mistboard are now free to download.':
     '現在可以免費下載在 Mistboard 上下過的棋局。',
   'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.':
-    '新的對局資料頁按變體和月份提供檔案，從 6 月開始，目前約 1,100 盤，依 CC BY 4.0 免費使用。揭棋、暗棋和翻翻棋的檔案記錄了每個翻開的棋子是什麼，所以每盤棋只靠檔案就能完整復盤。對局搜尋現在也涵蓋所有變體。',
+    '新的對局資料頁按變體和月份提供檔案，從 6 月開始，目前約 1,100 盤，依 CC BY 4.0 免費使用。揭棋、暗棋和翻翻獸棋的檔案記錄了每個翻開的棋子是什麼，所以每盤棋只靠檔案就能完整復盤。對局搜尋現在也涵蓋所有變體。',
   'See the files': '查看檔案',
   // ── 2026-10-02 (AB-JChess) ── 電腦 / 級 / 暗子 follow the ab-jchess article.
   'AB-JChess is the new top jieqi bot.': 'AB-JChess 成為新的最強揭棋電腦。',
@@ -707,7 +761,7 @@ const ZH_HANT: Record<string, string> = {
   'A Jungle board, and animal pieces without the disc.':
     '新的「叢林」棋盤，以及不帶底盤的動物棋子。',
   'Xiangqi has a new board under Board: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind. Jungle and Flip Jungle turn green with it. The Animal (no disc) piece set draws the animal pieces without their cream disc, a little larger.':
-    '象棋在「棋盤」設定裡多了一款新棋盤：方格棋盤鋪在綠色草地上，兩個九宮各有一塊米色地毯，中間是畫出來的河，專為孩子設計。鬥獸棋和翻翻棋也會隨之變綠。「動物（無底盤）」棋子去掉了動物棋子的米色圓底，棋子稍大一些。',
+    '象棋在「棋盤」設定裡多了一款新棋盤：方格棋盤鋪在綠色草地上，兩個九宮各有一塊米色地毯，中間是畫出來的河，專為孩子設計。鬥獸棋和翻翻獸棋也會隨之變綠。「動物（無底盤）」棋子去掉了動物棋子的米色圓底，棋子稍大一些。',
   // ── 2026-09-11 (puzzles with more than one solution) ── 題目 / 將死 / 評分器 follow
   // article-i18n.ts for the same article.
   'Puzzles with more than one solution.': '有不止一個答案的題目。',
@@ -936,7 +990,7 @@ const ZH_HANT: Record<string, string> = {
   'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.':
     '兩項規則改動。兵回到象棋本來的走法：在己方半場每次只向前走一點，過河之後才獲得橫走。過河是一次要付出代價的決斷。寶從此留在家中，走子和打入都只限己方半場，被圍攻的目標不能再空降到戰場上。跨五套規則、上千局的引擎自戰表明，真正讓這個棋種變得鋒利的是兵：和棋率從 34% 降到 9%，一局的長度增加約一半。',
   'Jungle Chess has launched.': '鬥獸棋已上線。',
-  'Flip Jungle has launched.': '翻翻棋已上線。',
+  'Flip Jungle has launched.': '翻翻獸棋已上線。',
   'Fog Xiangqi is open for alpha play.': '迷霧象棋已開放內測對局。',
   'Banqi is open for alpha play.': '暗棋已開放內測對局。',
   'Jieqi is open for alpha play.': '揭棋已開放內測對局。',
@@ -952,7 +1006,7 @@ const ZH_HANT: Record<string, string> = {
   'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
     '著法評註標記現在會顯示在全部六種支援分析的棋類棋盤上，不再只有象棋，漏著還會指出反駁它的具體著法。揭棋的翻子半回合不再給出變化，而是列出引擎評分後的候選著法排名，因為翻子之後的局面無法預知。',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
-    '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
+    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」頁面列出了每月的贊助金額、包含的內容（個人資料上的徽章，不影響對局），以及完整的計費與退款條款。結帳尚未開放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':

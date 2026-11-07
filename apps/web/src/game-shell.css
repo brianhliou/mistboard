@@ -820,7 +820,7 @@
   background: var(--clock-emerg-text);
 }
 
-/* Player line (dot + name + turn pill), rendered into the boxed table's
+/* Player line (presence + seat disc + name + turn pill), rendered into the boxed table's
    top/bottom player rows. Small: the big type belongs to the clocks. */
 .clock-player-line {
   display: flex;
@@ -828,6 +828,10 @@
   gap: 7px;
   min-width: 0;
   line-height: 1.1;
+}
+
+.clock-seat-disc {
+  --seat-disc-size: 12px;
 }
 
 .clock-name {
@@ -877,6 +881,12 @@ a.clock-name.player-name-link {
   font-weight: 600;
   color: var(--site-muted);
   white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .clock-to-move {
+    font-size: 11px;
+  }
 }
 
 .round-table__player .presence-dot {
@@ -1329,6 +1339,13 @@ a.clock-name.player-name-link {
 
 .round-table__box .room-actions .postgame-actions a,
 .round-table__box .room-actions .postgame-actions button {
+  /* Flex centres the label in the min-height box. New game, Review game and
+     Challenge a friend are links (display: block from .room-actions a), and a
+     block puts its text at the top: the hover box showed the label high (#825). */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 34px;

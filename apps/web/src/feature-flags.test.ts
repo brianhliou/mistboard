@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { darkXiangqiEnabled } from './feature-flags.js';
+import { darkXiangqiEnabled, gomokuEnabled } from './feature-flags.js';
 
 describe('client feature flags', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it.each([true, false])('keeps Gomoku opt-in with DEV=%s', (dev) => {
+    vi.stubEnv('DEV', dev);
+    for (const value of [undefined, 'false', '1', 'TRUE', 'true']) {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', value);
+      expect(gomokuEnabled()).toBe(value === 'true');
+    }
   });
 
   it.each([['Dark Xiangqi', 'VITE_DARK_XIANGQI_ENABLED', darkXiangqiEnabled]])(

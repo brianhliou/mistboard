@@ -3,21 +3,25 @@
     "hash": "eafcbf2f613d7011",
     "updatedAt": null
   },
+  "ab-jchess-vs-jqe": {
+    "hash": "b377501f3490f083",
+    "updatedAt": "2026-11-06"
+  },
   "anti-xiangqi": {
     "hash": "4d632cdd57f11194",
     "updatedAt": "2026-10-07"
   },
   "atomic-xiangqi": {
-    "hash": "071d24e616c5ffbc",
-    "updatedAt": "2026-10-07"
+    "hash": "f5369caac1459998",
+    "updatedAt": "2026-11-03"
   },
   "atomic-xiangqi-build": {
     "hash": "1bfea4fd5ead6c00",
     "updatedAt": null
   },
   "banqi": {
-    "hash": "586f90de83eaf853",
-    "updatedAt": "2026-10-17"
+    "hash": "ecae2ce5565f1e2c",
+    "updatedAt": "2026-10-29"
   },
   "banqi-chariot-endgame": {
     "hash": "82fb17bd22906b81",
@@ -99,21 +103,25 @@
     "hash": "2766874a101bfb37",
     "updatedAt": "2026-10-24"
   },
+  "gomoku": {
+    "hash": "8cbe8e6a246c2aaf",
+    "updatedAt": "2026-11-06"
+  },
   "helpmates-in-xiangqi": {
     "hash": "5beedc05bced4608",
     "updatedAt": null
   },
   "horde-xiangqi": {
-    "hash": "a3dd645eb7f9b040",
-    "updatedAt": "2026-10-07"
+    "hash": "00a6f1a1901a7af0",
+    "updatedAt": "2026-11-03"
   },
   "how-puzzle-mining-works": {
-    "hash": "d7d41509d334fb64",
-    "updatedAt": "2026-10-07"
+    "hash": "dd57578f76e8eb23",
+    "updatedAt": "2026-10-28"
   },
   "jieqi": {
-    "hash": "8e2145840ac94150",
-    "updatedAt": "2026-09-17"
+    "hash": "17f2a922526a2d96",
+    "updatedAt": "2026-11-05"
   },
   "jieqi-bot-wins": {
     "hash": "9afdcafc6219f322",
@@ -124,8 +132,8 @@
     "updatedAt": null
   },
   "jieqi-platform": {
-    "hash": "dab4f6d94af96b3d",
-    "updatedAt": "2026-10-19"
+    "hash": "29fe8f7049c2dc6b",
+    "updatedAt": "2026-11-06"
   },
   "jieqi-puzzle-search": {
     "hash": "32b508e6f756c6d1",
@@ -152,8 +160,8 @@
     "updatedAt": "2026-10-16"
   },
   "lai-ly-huynh": {
-    "hash": "86b1620ce708880b",
-    "updatedAt": null
+    "hash": "df8341ecdf8babba",
+    "updatedAt": "2026-10-26"
   },
   "lichess-analysis-accuracy": {
     "hash": "ef0c201c7e281461",
@@ -164,8 +172,8 @@
     "updatedAt": null
   },
   "mahjong": {
-    "hash": "becb55770f03ae73",
-    "updatedAt": null
+    "hash": "83d992e11d94b497",
+    "updatedAt": "2026-11-06"
   },
   "misty": {
     "hash": "ef5f445b2e398541",
@@ -203,12 +211,16 @@
     "hash": "0ed51d9643c6d857",
     "updatedAt": null
   },
+  "set-up-your-board": {
+    "hash": "c05fe103ab6b1fd0",
+    "updatedAt": null
+  },
   "shogi4": {
     "hash": "833315d6cd688a17",
     "updatedAt": "2026-06-06"
   },
   "shortest-stalemate-xiangqi": {
-    "hash": "c65df0acb8988851",
+    "hash": "8087e9a6ea932d7e",
     "updatedAt": null
   },
   "skill-vs-luck": {
@@ -219,12 +231,16 @@
     "hash": "b2bf65968f93f49e",
     "updatedAt": "2026-10-07"
   },
+  "tang-dan": {
+    "hash": "d5677459a1f9fff5",
+    "updatedAt": null
+  },
   "titled-players": {
     "hash": "ab311579f749c5a4",
     "updatedAt": null
   },
   "tony-fung-ga-zen": {
-    "hash": "0806fe8986d8fdda",
+    "hash": "c36dd27327d0b6a7",
     "updatedAt": "2026-10-08"
   },
   "unstyled-first-paint": {
@@ -232,8 +248,8 @@
     "updatedAt": null
   },
   "xiangqi": {
-    "hash": "d32e95dd321f063b",
-    "updatedAt": "2026-09-25"
+    "hash": "c4b40a85f52d7ff9",
+    "updatedAt": "2026-11-06"
   },
   "xiangqi-champions": {
     "hash": "3705491016d9f9f4",
@@ -244,23 +260,23 @@
     "updatedAt": null
   },
   "xiangqi-mahjong-32": {
-    "hash": "43845a58512c10af",
-    "updatedAt": "2026-10-25"
+    "hash": "da29b7d33f15564b",
+    "updatedAt": "2026-11-06"
   },
   "xiangqi-match-fixing": {
     "hash": "f55a00f41e970dc6",
     "updatedAt": null
   },
   "xiangqi-world-championship": {
-    "hash": "324ac24fcad65cfd",
-    "updatedAt": "2026-10-24"
+    "hash": "f6afff5de8e038bb",
+    "updatedAt": "2026-11-06"
   },
   "yin-sheng": {
     "hash": "b3e5c4a7d0f92a6f",
     "updatedAt": null
   },
   "zuo-wenjing": {
-    "hash": "00ec726e9f20c4a9",
+    "hash": "fa62ad1024c680ce",
     "updatedAt": null
   }
 }

@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import http from 'node:http';
+import { setImmediate } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import {
@@ -8,10 +10,13 @@ import {
 } from './articles/diagrams.js';
 import { articleIsLive } from './articles/publish-time.js';
 import {
+  buildArticleFooter,
   buildArticlePage,
   buildArticlesIndex,
   buildHomeArticleCards,
+  buildRulesArticleRailEntries,
   buildRulesIndex,
+  HOME_ARTICLE_ROW_SIZE,
   renderArticleThumbnail,
   renderBlock,
 } from './articles.js';
@@ -19,6 +24,11 @@ import { articles } from './articles-data.js';
 import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
+
+// happy-dom's selector caches use WeakRefs. Their targets stay alive until
+// the current JS task ends; synchronous tests plus promise-only hooks can
+// otherwise retain gigabytes of detached SVG trees across this whole file.
+afterEach(() => setImmediate());
 
 // These assertions are about which slugs are curated, how they order, and what
 // each card renders. None is about recency, and several name articles from June
@@ -141,9 +151,14 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The Xiangqi Mahjong how-to, a draft dated 2026-11-06 until its zh pages
-      // exist (DEV shows it early for review).
-      '/blog/how-to-play-xiangqi-mahjong',
+      // The board and piece settings showcase, scheduled for 2026-11-06
+      // (DEV shows it early for review).
+      '/blog/set-up-your-board',
+      // The sixth player page, the ten-time national women's champion Tang Dan,
+      // scheduled for 2026-11-05 (DEV shows it early for review).
+      '/blog/tang-dan',
+      // AB-JChess-20261031 against jqe, scheduled for 2026-11-04.
+      '/blog/ab-jchess-vs-jqe',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -276,7 +291,7 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('keeps only working Community and By Mistboard blog navigation', () => {
+  it('keeps only working Community posts and By Mistboard blog navigation', () => {
     const official = buildArticlesIndex();
     const community = buildArticlesIndex(undefined, 'community');
     const officialLinks = [
@@ -289,18 +304,64 @@ describe('article public listing gates', () => {
 
     expect(officialLinks).toEqual([
       { label: 'By Mistboard', href: '/blog', current: 'page' },
-      { label: 'Community', href: '/blog/community', current: null },
+      { label: 'Community posts', href: '/blog/community', current: null },
     ]);
     expect(
       community.querySelector('.articles-community-rail a[aria-current="page"]')?.textContent,
-    ).toBe('Community');
+    ).toBe('Community posts');
     expect(official.querySelector('.articles-index-controls')).toBeNull();
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
     expect(community.querySelector('.articles-index-card')).toBeNull();
-    expect(community.querySelector('.articles-index-empty')?.textContent).toBe(
-      'No community posts yet.',
-    );
+    // With no posts the view asks for contributors rather than reading as broken.
+    expect(community.querySelector('h1')?.textContent).toBe('Become a Mistboard contributor');
+    const pitch = community.querySelector<HTMLElement>('.articles-community-pitch');
+    expect(pitch).not.toBeNull();
+    expect(
+      [...community.querySelectorAll('.articles-community-pitch-benefits h3')].map(
+        (title) => title.textContent,
+      ),
+    ).toEqual([
+      'Read in three languages',
+      'Boards readers can play through',
+      'A place on the homepage',
+      'Your name and your links',
+    ]);
+    // Every column card links a live example post, so a retired slug fails here,
+    // and each shows that post's own card thumbnail.
+    const ideaCards = [
+      ...community.querySelectorAll<HTMLAnchorElement>('a.articles-community-pitch-idea'),
+    ];
+    expect(ideaCards.map((card) => card.getAttribute('href'))).toEqual([
+      '/blog/jieqi-bot-wins',
+      '/blog/jieqi-openings',
+      '/blog/yin-sheng',
+      '/blog/duck-xiangqi-strategy',
+    ]);
+    for (const card of ideaCards) {
+      expect(
+        card.querySelector('.articles-index-card-media .articles-index-card-thumb'),
+      ).not.toBeNull();
+      expect(card.querySelector('.articles-community-pitch-example')?.textContent).toMatch(
+        /^Example: /,
+      );
+    }
+    // No hand-drawn icons: the only SVG left is inside an example's thumbnail.
+    expect(community.querySelector('.articles-community-pitch-icon')).toBeNull();
+    for (const svg of pitch?.querySelectorAll('svg') ?? []) {
+      expect(svg.closest('.articles-index-card-thumb')).not.toBeNull();
+    }
+    expect(community.querySelectorAll('.articles-community-pitch-steps li')).toHaveLength(3);
+    const ctaLinks = [
+      ...community.querySelectorAll<HTMLAnchorElement>('.articles-community-pitch-cta a'),
+    ].map((link) => [link.textContent, link.getAttribute('href')]);
+    expect(ctaLinks).toEqual([
+      ['Apply to contribute', '/contact?about=/blog/community'],
+      ['Read the Mistboard blog', '/blog'],
+    ]);
+    // Nothing after the buttons.
+    expect(pitch?.lastElementChild?.classList.contains('articles-community-pitch-cta')).toBe(true);
+    expect(official.querySelector('.articles-community-pitch')).toBeNull();
   });
 
   it('filters community-authored posts out of the By Mistboard view', () => {
@@ -321,14 +382,40 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('localizes both blog rail destinations', () => {
-    const index = buildArticlesIndex('zh-Hans', 'community');
-    const hrefs = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')].map(
-      (link) => link.getAttribute('href'),
-    );
+  it.each([
+    ['en', '', 'By Mistboard', 'Community posts', 'Blog navigation'],
+    ['zh-Hans', '/zh-hans', 'Mistboard 官方文章', '社区文章', '博客导航'],
+    ['zh-Hant', '/zh-hant', 'Mistboard 官方文章', '社群文章', '網誌導覽'],
+  ] as const)(
+    '%s: localizes blog rail labels and canonical destinations',
+    (locale, prefix, officialLabel, communityLabel, navigationLabel) => {
+      for (const view of ['mistboard', 'community'] as const) {
+        const index = buildArticlesIndex(locale === 'en' ? undefined : locale, view);
+        const rail = index.querySelector('.articles-community-rail');
+        const links = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')];
 
-    expect(hrefs).toEqual(['/zh-hans/blog', '/zh-hans/blog/community']);
-  });
+        expect(rail?.getAttribute('aria-label')).toBe(navigationLabel);
+        expect(
+          links.map((link) => ({
+            label: link.textContent,
+            href: link.getAttribute('href'),
+            current: link.getAttribute('aria-current'),
+          })),
+        ).toEqual([
+          {
+            label: officialLabel,
+            href: `${prefix}/blog`,
+            current: view === 'mistboard' ? 'page' : null,
+          },
+          {
+            label: communityLabel,
+            href: `${prefix}/blog/community`,
+            current: view === 'community' ? 'page' : null,
+          },
+        ]);
+      }
+    },
+  );
 
   it('localizes only publication-ready zh-Hans article cards', () => {
     vi.stubEnv('DEV', false);
@@ -348,16 +435,17 @@ describe('article public listing gates', () => {
     vi.stubEnv('DEV', false);
 
     const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
-    expect(home?.getAttribute('aria-label')).toBe('最新動態');
+    expect(home?.getAttribute('aria-label')).toBe('網誌');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
-      '上一篇文章',
+      '上一組文章',
     );
     expect(home?.querySelector('.landing-carousel-nav-next')?.getAttribute('aria-label')).toBe(
       '更多文章',
     );
     expect(home?.querySelector('a[href="/zh-hant/blog/misty"]')).not.toBeNull();
-    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).not.toBeNull();
-    // An engineering post stays off the homepage in every language.
+    // An engineering post stays off the homepage in every language (MistyBanqi
+    // is one since 2026-10-28: it shows its Rust).
+    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).toBeNull();
     expect(home?.querySelector('a[href="/zh-hant/blog/server-enforced-fog"]')).toBeNull();
 
     const page = buildArticlePage('banqi', 'zh-Hant');
@@ -381,14 +469,14 @@ describe('article public listing gates', () => {
   it('names the cannon blind shot as the rejected banqi house rule, in every language', () => {
     // The 09-17 copy listed Mistboard's own rules as the house rules it rejects.
     const en = buildArticlePage('banqi').textContent ?? '';
-    expect(en).toContain('A common house rule lets a cannon also fire at a face-down tile');
+    expect(en).toContain('no cannon firing at a face-down tile');
     expect(en).not.toContain('house rules are deliberately not used');
     expect(en).not.toContain('Taiwan Computer Game Association');
     expect(buildArticlePage('banqi', 'zh-Hans').textContent).toContain(
-      '常见的一条家规允许炮隔子打暗子',
+      '炮不能打暗子（炮只吃已翻开的敌子）',
     );
     expect(buildArticlePage('banqi', 'zh-Hant').textContent).toContain(
-      '常見的一條家規允許砲隔子打暗子',
+      '炮不能打暗子（炮只吃已翻開的敵子）',
     );
   });
 
@@ -416,7 +504,8 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/how-to-play-xiangqi-mahjong',
+      '/blog/set-up-your-board',
+      '/blog/ab-jchess-vs-jqe',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
@@ -444,8 +533,6 @@ describe('article public listing gates', () => {
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
-      // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
-      '/blog/jungle-den-term',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
@@ -454,7 +541,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-06-27) on 2026-10-16.
       '/blog/dou-shou-qi-engine',
       '/blog/misty',
-      '/blog/mistybanqi',
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
@@ -470,6 +556,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/tang-dan',
       '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',
       '/blog/lai-ly-huynh',
@@ -481,36 +568,23 @@ describe('article public listing gates', () => {
     ]);
   });
 
-  it('keeps still-gated release announcements out of the homepage article widget by default', () => {
-    vi.stubEnv('DEV', false);
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Reveal Chess is open for alpha play.');
-  });
-
-  it('keeps the rated xiangqi announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Rated xiangqi is live.');
-    expect(cards?.querySelector('.landing-announcement-card[href="/leaderboard"]')).toBeNull();
-  });
-
-  it('keeps the Secret in the Tangerine announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
-    expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
-  });
-
-  it('does not show the Banqi alpha announcement in the homepage article widget', () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.querySelector('.landing-announcement-card[href="/rules/banqi"]')).toBeNull();
-    expect(cards?.textContent).not.toContain('Banqi (半棋) is open for alpha play.');
+  it('makes "From the blog" articles only, with More linking the blog index', () => {
+    // Brian, 2026-10-26: announcements live in the News box, not this row.
+    const section = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE);
+    expect(section?.querySelector('.landing-row-label')?.textContent).toBe('From the blog');
+    expect(section?.querySelector('.landing-row-more')?.getAttribute('href')).toBe('/blog');
+    const cards = [...(section?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].filter(
+      (link) => !link.classList.contains('landing-row-more'),
+    );
+    // HOME_CARD_MIN (4) keeps the row full of articles through a quiet month.
+    expect(cards.length).toBeGreaterThanOrEqual(4);
+    for (const card of cards) {
+      expect(card.dataset.cardKind).toBe('article');
+      expect(card.getAttribute('href')).toMatch(/^\/blog\//);
+    }
+    const zh = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, 'zh-Hans');
+    expect(zh?.querySelector('.landing-row-label')?.textContent).toBe('博客');
+    expect(zh?.querySelector('.landing-row-more')?.getAttribute('href')).toBe('/zh-hans/blog');
   });
 
   it('keeps Banqi rules surfaces on the variant marker while the MistyBanqi thumbnail renders a full-board card', () => {
@@ -541,14 +615,11 @@ describe('article public listing gates', () => {
       rulesIndex.querySelector('a[href="/rules/banqi"] span[data-variant-marker-id="banqi"]'),
     ).not.toBeNull();
 
-    // ...while the MistyBanqi editorial card keeps the full-board thumbnail in
-    // the homepage row.
+    // ...while the MistyBanqi card keeps the full-board thumbnail on /blog
+    // (above). It is an engineering post since 2026-10-28, so it is off the
+    // homepage row.
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector(
-        '.landing-article-card[href="/blog/mistybanqi"] svg g[data-banqi-thumbnail-layout="engine-full-board"]',
-      ),
-    ).not.toBeNull();
+    expect(home?.querySelector('.landing-article-card[href="/blog/mistybanqi"]')).toBeNull();
   });
 
   it('renders Misty with the generated thumbnail', () => {
@@ -561,9 +632,13 @@ describe('article public listing gates', () => {
     );
 
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector('.landing-article-card[href="/blog/misty"] img')?.getAttribute('src'),
-    ).toBe('/article-thumbs/misty-engine-belief-20260708.jpg');
+    const homeThumb = home?.querySelector<HTMLElement>(
+      '.landing-article-card[href="/blog/misty"] .articles-index-card-thumb',
+    );
+    expect(homeThumb?.querySelector('img')).toBeNull();
+    expect(homeThumb?.style.backgroundImage).toContain(
+      '/article-thumbs/misty-engine-belief-20260708.jpg',
+    );
   });
 
   it('renders the server-side truth article with the generated truth-core thumbnail', () => {
@@ -643,6 +718,37 @@ describe('article public listing gates', () => {
   // playableOnMistboard is true for every rules article that exists, so the
   // badge appeared on all of them and distinguished nothing. If a genuinely
   // unplayable variant ever gets a rules page, mark THAT one, not all the rest.
+  // A variant without marker art used to fall back to its article's board
+  // thumbnail, a full board picture in a column of one-colour icons
+  // (three-kingdoms-banqi, 2026-10-24). It gets the question-mark placeholder.
+  it('gives every rules tile a marker, the placeholder when the variant has no art', () => {
+    const tiles = [...buildRulesIndex().querySelectorAll('.rules-landing-tile')];
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const tile of tiles) {
+      const href = tile.getAttribute('href') ?? '';
+      expect(tile.querySelector('.variant-marker'), href).not.toBeNull();
+      expect(tile.querySelector('svg, img, .articles-thumb-board'), href).toBeNull();
+    }
+  });
+
+  // Three Kingdoms banqi became a game spec for the local playtest (#628), hidden
+  // like Xiangqi Mahjong, so its rules page follows the launch switch: reachable
+  // by URL, off the tiles and unindexed until the spec goes public.
+  it('keeps the three kingdoms banqi rules tile off while its spec is hidden', () => {
+    expect(rulesSlugPublicSurfaceEnabled('three-kingdoms-banqi')).toBe(false);
+    expect(
+      buildRulesIndex().querySelector('.rules-landing-tile[href="/rules/three-kingdoms-banqi"]'),
+    ).toBeNull();
+  });
+
+  it('sorts three kingdoms banqi right after banqi in the rules rail order', () => {
+    const rules = articles.filter((article) => article.kind === 'rules' && !article.sourceLang);
+    const slugs = buildRulesArticleRailEntries(rules).map((article) => article.slug);
+    const banqi = slugs.indexOf('banqi');
+    expect(banqi).toBeGreaterThanOrEqual(0);
+    expect(slugs[banqi + 1]).toBe('three-kingdoms-banqi');
+  });
+
   it('renders rules tiles as marker plus label, with no per-tile badge', () => {
     const index = buildRulesIndex();
     const tiles = [...index.querySelectorAll('.rules-landing-tile')];
@@ -919,25 +1025,30 @@ describe('rules variant sidebar', () => {
 
     expect(pageText).not.toContain('[VISUAL:');
     expect(pageText).not.toMatch(/\bsquares?\b/i);
-    expect(pageText).toContain('starting point it occupies');
-    expect(pageText).toContain('120 plies, or 60 moves by each player');
-    expect(pageText).toContain('Repetition follows xiangqi');
-    expect(pageText).toContain('perpetual check cannot save a lost game');
+    expect(pageText).toContain('the piece that normally starts on its point');
+    expect(pageText).toContain('120 plies pass without a capture');
+    expect(pageText).toContain(
+      'The same position with the same side to move occurs for the third time',
+    );
+    expect(pageText).toContain(
+      'A player who checked on every one of their turns in the repeating cycle loses',
+    );
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
     // The shuffled-start board is the section hero (a single enlarged board,
-    // matching the Xiangqi page); the movement diagrams are paired boards.
+    // matching the Xiangqi page); worked reveals use pairs and later moves use singles.
     const jieqiHero = jieqiSvgs.filter((svg) => svg.classList.contains('xq-article-svg--hero'));
     expect(jieqiHero).toHaveLength(1);
     expect(jieqiHero[0]!.getAttribute('data-xq-layout')).toBe('single');
     expect(articleStyles).toContain(
       '.article-figure-xq > .xq-article-svg.xq-article-svg--hero {\n  width: min(480px, 100%);',
     );
-    expect(
-      jieqiSvgs
-        .filter((svg) => !svg.classList.contains('xq-article-svg--hero'))
-        .every((svg) => svg.getAttribute('data-xq-layout') === 'pair'),
-    ).toBe(true);
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'pair')).toHaveLength(
+      3,
+    );
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'single')).toHaveLength(
+      4,
+    );
     const figureText = [...page.querySelectorAll('.article-figure')]
       .map((figure) => figure.textContent)
       .join('');
@@ -945,7 +1056,7 @@ describe('rules variant sidebar', () => {
     expect(page.querySelector('.xq-piece-back-mark')).not.toBeNull();
     expect(page.innerHTML).toContain('fill="#2f7d62"');
     expect(page.innerHTML).toContain('fill="#a95f4a"');
-    expect(page.innerHTML).toContain('stroke="#553025"');
+    expect(page.innerHTML).toContain('stroke="#202427"');
     expect(page.innerHTML).not.toContain('fill="#286d55"');
     expect(page.innerHTML).not.toContain('stroke="#c8ead2"');
     expect(page.innerHTML).not.toContain('fill="#2563eb"');
@@ -953,11 +1064,32 @@ describe('rules variant sidebar', () => {
     const captions = [...page.querySelectorAll('.article-figure-caption')].map(
       (caption) => caption.textContent,
     );
-    expect(captions).toEqual([]);
+    expect(captions.length).toBeGreaterThanOrEqual(6);
     expect(pageText).toContain('BEFORE: HORSE POINT');
+    expect(pageText).toContain('AFTER: SOLDIER ON b10');
+    expect(pageText).toContain('only its capturer learns its identity');
+    expect(pageText).toContain('see a dark piece leave the board and nothing else');
     expect(pageText).toContain('CAPTURED PIECE KNOWLEDGE');
     expect(pageText).toContain('RED KNOWS');
     expect(pageText).toContain('BLACK KNOWS');
+  });
+
+  it('bolds each Xiangqi Mahjong hand total in its caption', () => {
+    const page = buildArticlePage('xiangqi-mahjong-32');
+    const totals = [...page.querySelectorAll('.article-figure-caption strong')].map(
+      (el) => el.textContent,
+    );
+    expect(totals).toEqual([
+      '2 points',
+      '1 point',
+      '1 point',
+      '2 points',
+      '3 points',
+      '7 points',
+      '3 points',
+      '3 points',
+    ]);
+    expect(page.querySelector('.article-figure-caption')?.textContent).not.toContain('**');
   });
 
   it('renders Banqi diagrams and states the Mistboard cannon rule clearly', () => {
@@ -965,15 +1097,16 @@ describe('rules variant sidebar', () => {
     const pageText = page.textContent ?? '';
 
     expect(pageText).not.toContain('[VISUAL:');
-    expect(pageText).toContain('General > Advisor > Elephant > Chariot > Horse > Soldier');
+    expect(pageText).not.toContain('What is the capture order in banqi?');
     expect(pageText).toContain(
-      'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier',
+      'Strongest to weakest: general, advisor, elephant, chariot, horse, cannon, soldier',
     );
     expect(pageText).toContain('60 plies (single moves) with no flip or capture');
     expect(pageText).toContain('keeps the 40-ply limit it began under');
     expect(pageText).toContain('threefold repetition');
-    expect(pageText).toContain('On your turn you do exactly one of two things.');
-    expect(pageText).toContain('it captures by jumping, not by stepping');
+    expect(pageText).toContain('Flip any face-down tile');
+    expect(pageText).toContain('Can you chain captures in banqi?');
+    expect(pageText).toContain('only the cannon captures differently, by jumping');
     expect(pageText).toContain('jumping exactly one piece, the screen');
     expect(pageText).toContain('Without a capture it moves one square like everything else.');
     expect(pageText).not.toContain('Rules used on Mistboard');
@@ -1007,22 +1140,33 @@ describe('rules variant sidebar', () => {
     expect([...page.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain('Names');
   });
 
-  it('localizes zh-Hans Banqi diagram captions and the engine-game embed', () => {
-    const page = buildArticlePage('banqi', 'zh-Hans');
-    document.body.append(page);
+  it('localizes zh-Hans Banqi diagram captions and the engine-game embed', async () => {
+    // Loading the child page bypasses the usual global fetch mock. Fail if
+    // markup inspection ever opens a real localhost connection again.
+    const request = vi.spyOn(http, 'request').mockImplementation(() => {
+      throw new Error('Article markup tests must not load embed pages');
+    });
+    try {
+      const page = buildArticlePage('banqi', 'zh-Hans');
+      // Keep it detached: connecting an iframe starts happy-dom navigation.
 
-    const text = page.textContent ?? '';
-    expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
-    expect(text).toContain('最大在左，最小在右。');
-    expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
-    expect(text).not.toContain('Before the first flip.');
-    expect(text).not.toContain('One screen, then the target.');
-    // The engine game is a study-chapter embed, the same card every other
-    // variant's rules page uses; its title is localized like any string.
-    const embed = page.querySelector('iframe[src*="/embed/study/"]');
-    expect(embed).not.toBeNull();
-    expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
-    page.remove();
+      const text = page.textContent ?? '';
+      expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
+      expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
+      expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
+      expect(text).not.toContain('Before the first flip.');
+      expect(text).not.toContain('One screen, then the target.');
+      // The engine game is a study-chapter embed, the same card every other
+      // variant's rules page uses; its title is localized like any string.
+      const embed = page.querySelector('iframe[src*="/embed/study/"]');
+      expect(embed).not.toBeNull();
+      expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
+      await setImmediate();
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      request.mockRestore();
+      document.body.replaceChildren();
+    }
   });
 
   it('keeps fogged xiangqi blockers as question-mark pieces', () => {
@@ -1057,10 +1201,14 @@ describe('blog post read-next footer', () => {
       .map((article) => article.slug);
   };
 
-  const footerLinks = (slug: string): string[] =>
-    [...buildArticlePage(slug).querySelectorAll('.article-footer .articles-index-card')].map(
+  // Exercise the real footer without building every post's unrelated boards,
+  // diagrams and embeds again for each corpus-wide navigation assertion.
+  const footerLinks = (slug: string): string[] => {
+    const article = articles.find((article) => article.slug === slug)!;
+    return [...(buildArticleFooter(article)?.querySelectorAll('.articles-index-card') ?? [])].map(
       (card) => card.getAttribute('href') ?? '',
     );
+  };
 
   // The date ring has no topic signal, so a platform page whose neighbours by
   // date are unrelated variant write-ups names its own onward posts. Missing
@@ -1092,6 +1240,83 @@ describe('blog post read-next footer', () => {
       const onward = footerLinks(slug).map((href) => topicOf(href.split('/').pop() ?? ''));
       expect(onward, slug).toEqual([topicOf(slug), topicOf(slug), topicOf(slug)]);
     }
+  });
+
+  // Brian, 2026-10-28: zuo-wenjing ended on the fortress/atomic post and
+  // lai-ly-huynh on a jieqi post. A xiangqi deep dive's footer offers other
+  // xiangqi deep dives first, then other xiangqi player posts, and nothing else.
+  describe('xiangqi deep dives', () => {
+    const post = (slug: string) => {
+      const found = articles.find((a) => a.slug === slug);
+      return found?.kind === 'article' ? found : undefined;
+    };
+    const isXiangqiPlayerPost = (slug: string) =>
+      post(slug)?.game === 'xiangqi' && post(slug)?.topic !== 'engineering';
+    const isXiangqiDeepDive = (slug: string) =>
+      post(slug)?.homeRow === 'deep-dives' && isXiangqiPlayerPost(slug);
+    const onwardSlugs = (slug: string) =>
+      footerLinks(slug).map((href) => href.split('/').pop() ?? '');
+
+    it('offers only xiangqi posts, other deep dives first', () => {
+      vi.stubEnv('DEV', false);
+      const deepDives = publishedBlogSlugs().filter(isXiangqiDeepDive);
+      expect(deepDives).toEqual(expect.arrayContaining(['zuo-wenjing', 'lai-ly-huynh']));
+      for (const slug of deepDives) {
+        const onward = onwardSlugs(slug);
+        // A content-language page walks its own language's posts, which can hold
+        // fewer than three xiangqi posts; an English page always has three.
+        if (!post(slug)?.sourceLang) expect(onward, slug).toHaveLength(3);
+        expect(onward.length, slug).toBeGreaterThan(0);
+        expect(onward.filter(isXiangqiPlayerPost), slug).toEqual(onward);
+        // Deep dives lead: none follows a post that is not one.
+        const firstOther = onward.findIndex((s) => !isXiangqiDeepDive(s));
+        if (firstOther >= 0) {
+          expect(onward.slice(firstOther).filter(isXiangqiDeepDive), slug).toEqual([]);
+        }
+      }
+    });
+
+    it('fills from deep dives on the pages Brian reported', () => {
+      vi.stubEnv('DEV', false);
+      for (const slug of ['zuo-wenjing', 'lai-ly-huynh']) {
+        const onward = onwardSlugs(slug);
+        expect(onward, slug).toHaveLength(3);
+        expect(onward.filter(isXiangqiDeepDive), slug).toEqual(onward);
+      }
+    });
+
+    // The field is the only signal, so a deep dive that forgets it would fall
+    // back to the date ring's off-topic fill without a test noticing.
+    it('every deep dive names its game', () => {
+      const unmarked = articles
+        .filter((a) => a.kind === 'article' && a.homeRow === 'deep-dives')
+        .filter((a) => a.kind === 'article' && a.game === undefined)
+        .map((a) => a.slug);
+      expect(unmarked).toEqual([]);
+    });
+
+    // A post dated ahead is not offered before it goes live.
+    it('never offers a post that is not live yet', () => {
+      vi.stubEnv('DEV', false);
+      const scheduled = articles.filter(
+        (a) => a.kind === 'article' && a.game === 'xiangqi' && !articleIsLive(a),
+      );
+      for (const slug of publishedBlogSlugs().filter(isXiangqiDeepDive)) {
+        const onward = onwardSlugs(slug);
+        for (const a of scheduled) expect(onward, slug).not.toContain(a.slug);
+      }
+    });
+
+    // Every other post keeps the plain date ring: general-blunder-challenge's
+    // next-older neighbours are a deep dive and a variant post, offered as before.
+    it('leaves posts that are not deep dives on the date ring', () => {
+      vi.stubEnv('DEV', false);
+      expect(onwardSlugs('general-blunder-challenge')).toEqual([
+        'zuo-wenjing',
+        'fortress-and-atomic-xiangqi-on-hold',
+        'banqi-perpetual-chase',
+      ]);
+    });
   });
 
   it('closes a blog post with three onward posts instead of nothing', () => {
@@ -1135,16 +1360,23 @@ describe('blog post read-next footer', () => {
     expect(buildArticlePage('fog-xiangqi').querySelector('.article-footer')).toBeNull();
   });
 
-  // The zh rules pages are machine-translated; each ends in one line pointing a
-  // native reader at the review role on /contribute. English has nothing to review.
-  it('ends zh rules pages with a review invitation and leaves English without one', () => {
+  // The zh rules pages are machine-translated; each ends in one line sending a
+  // reader who spots a bad term to the contact form, labelled with the page.
+  // English has nothing to review.
+  it('ends zh rules pages with a translation report link and leaves English without one', () => {
     expect(buildArticlePage('banqi').querySelector('.article-translate-note')).toBeNull();
-    const hant = buildArticlePage('banqi', 'zh-Hant').querySelector('.article-translate-note');
-    expect(hant?.textContent).toContain('看到翻譯問題？');
-    expect(hant?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
-    const hans = buildArticlePage('banqi', 'zh-Hans').querySelector('.article-translate-note');
-    expect(hans?.textContent).toContain('看到翻译问题？');
-    expect(hans?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
+    for (const [lang, text] of [
+      ['zh-Hant', '看到翻譯問題？告訴我們'],
+      ['zh-Hans', '看到翻译问题？告诉我们'],
+    ] as const) {
+      const note = buildArticlePage('banqi', lang).querySelector('.article-translate-note');
+      expect(note?.textContent).toBe(text);
+      const link = note?.querySelector('a');
+      expect(link?.getAttribute('rel')).toBe('nofollow');
+      const url = new URL(link?.getAttribute('href') ?? '', 'https://mistboard.com');
+      expect(url.pathname).toMatch(/\/contact$/);
+      expect(url.searchParams.get('about')).toMatch(/\/rules\/banqi$/);
+    }
   });
 
   // The star marked a Mistboard post apart from a community one. With no
@@ -1174,14 +1406,21 @@ describe('blog post read-next footer', () => {
       // how many pages exist in that language. Three Vietnamese pages means two
       // onward links, not a broken footer: asserting a flat 3 here would force
       // the ring back to English and dead-end the reader it was built for.
+      // A xiangqi deep dive is likewise capped by how many xiangqi posts exist
+      // in its language: the Vietnamese Lại Lý Huynh page has one.
       const article = articles.find((a) => a.slug === slug);
+      const xiangqiDeepDive =
+        article?.kind === 'article' &&
+        article.homeRow === 'deep-dives' &&
+        article.game === 'xiangqi';
       const pool = articles.filter(
         (a) =>
           a.kind === 'article' &&
           a.status === 'published' &&
           a.publisher === 'mistboard' &&
           a.sourceLang === article?.sourceLang &&
-          a.slug !== slug,
+          a.slug !== slug &&
+          (!xiangqiDeepDive || (a.game === 'xiangqi' && a.topic !== 'engineering')),
       );
       const expected = Math.min(3, pool.length);
       expect(expected, `${slug} has no same-language siblings at all`).toBeGreaterThan(0);
@@ -1218,6 +1457,32 @@ describe('blog post read-next footer', () => {
     expect(articleStyles).toMatch(
       /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
     );
+  });
+});
+
+describe('image figure credit', () => {
+  // xiangqiqipu.com's portraits are used on condition of a credit and a link
+  // (permission of 2026-10-11), so an article figure can carry a linked credit.
+  it('renders the credit as a link after the caption, opening in a new tab', () => {
+    const el = renderBlock({
+      kind: 'image-figure',
+      src: '/player-photos/tang-dan.jpg',
+      alt: 'A portrait.',
+      caption: 'Tang Dan.',
+      credit: { text: 'xiangqiqipu.com', href: 'https://www.xiangqiqipu.com/Player/View-33.html' },
+    });
+    const cap = el.querySelector('figcaption');
+    expect(cap?.textContent).toBe('Tang Dan. Photo: xiangqiqipu.com');
+    const link = cap?.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://www.xiangqiqipu.com/Player/View-33.html');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toBe('noopener');
+  });
+
+  it('keeps a caption without a credit as plain text', () => {
+    const el = renderBlock({ kind: 'image-figure', src: '/a.jpg', alt: 'A.', caption: 'Plain.' });
+    expect(el.querySelector('figcaption')?.textContent).toBe('Plain.');
+    expect(el.querySelector('figcaption a')).toBeNull();
   });
 });
 
@@ -1260,5 +1525,23 @@ describe('image thumbnail crop', () => {
       position: 'center 12%',
     });
     expect(wrap.querySelector('img')?.style.objectPosition).toBe('center 12%');
+  });
+});
+
+describe('player article contact note', () => {
+  it('puts the corrections line below the article panel, about that article', () => {
+    const page = buildArticlePage('zuo-wenjing');
+    const notes = page.querySelectorAll('.article-contact-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.closest('.article-sheet')).toBeNull();
+    expect(notes[0]?.parentElement?.lastElementChild).toBe(notes[0]);
+    expect(notes[0]?.textContent).toBe('Corrections or rights requests: contact us.');
+    expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
+      '/contact?about=%2Fblog%2Fzuo-wenjing',
+    );
+  });
+
+  it('stays off articles that are not about a person', () => {
+    expect(buildArticlePage('pikafish').querySelector('.article-contact-note')).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ import { banqiTenant } from '../banqi-tenant.js';
 import { crazyhouseXiangqiTenant } from '../crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
+import { gomokuTenant } from '../gomoku-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
@@ -191,7 +192,7 @@ async function createFriendRoom(
   accountUser: UserAccount | null,
 ): Promise<{ status: number | null; json: Record<string, unknown> }> {
   const response = captureResponse();
-  const request = {} as IncomingMessage;
+  const request = { headers: {} } as IncomingMessage;
   const fullBody = { gameSpecId: registration.gameSpecId, ...body };
   assert.ok(
     registration.http.matchesCreateRequest(fullBody),
@@ -281,9 +282,11 @@ test('friend rooms: rated needs a signed-in creator, a rated pace and a human op
         assert.equal(guest.status, 401, registration.kind);
         assert.deepEqual(guest.json, { error: 'rated_requires_account' }, registration.kind);
 
+        // Every preset rates since 10+5 joined on 2026-11-06, so an off-menu
+        // pace stands in for an unrated one.
         const slow = await createFriendRoom(
           registration,
-          { mode: 'pvp', rated: true, timeControl: { initialMs: 600_000, incrementMs: 5_000 } },
+          { mode: 'pvp', rated: true, timeControl: { initialMs: 900_000, incrementMs: 10_000 } },
           ACCOUNT,
         );
         assert.equal(slow.status, 400, registration.kind);
@@ -362,6 +365,97 @@ test('friend rooms: a guest is refused either seat of a rated Jieqi friend room'
   );
 });
 
+// ── Stats-excluded accounts never rate (2026-10-26) ─────────────────────────
+//
+// An operator or QA account (users.stats_excluded_at) is not counted, so a game
+// it plays must not move a counted player's rating: a rated XMJ friend game on
+// 10-26 took an opponent from 1500 to 1338. Casual play is untouched.
+
+const EXCLUDED = {
+  ...ACCOUNT,
+  id: 'user-excluded',
+  handle: 'excluded',
+  statsExcludedAt: new Date('2026-09-25T00:00:00Z'),
+} as UserAccount;
+
+test('friend rooms: a stats-excluded creator is refused a rated friend room on every rated variant', async () => {
+  const rated = routingTenants().filter((registration) => registration.lobby?.supportsRated);
+  assert.ok(
+    rated.some((registration) => registration.gameSpecId === xiangqiMahjongTenant.gameSpecId),
+    'xiangqi mahjong is a rated friend-room variant',
+  );
+  await withRatedOn(async () => {
+    for (const registration of rated) {
+      await withTenantEnabled(registration, async () => {
+        const refused = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        assert.equal(refused.status, 403, `${registration.kind}: ${JSON.stringify(refused.json)}`);
+        assert.deepEqual(
+          refused.json,
+          { error: 'rated_requires_counted_account' },
+          registration.kind,
+        );
+        const casual = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: false, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        assert.equal(casual.status, 201, `${registration.kind}: casual stays open`);
+        assert.equal(casual.json.rated, false, registration.kind);
+      });
+    }
+  });
+});
+
+test('friend rooms: a stats-excluded account is refused either seat of a rated room, not a casual one', async () => {
+  for (const tenant of [jieqiTenant, xiangqiMahjongTenant] as unknown as AnyTenant[]) {
+    const registration = routingTenants().find(
+      (candidate) => candidate.gameSpecId === tenant.gameSpecId,
+    );
+    assert.ok(registration, `${tenant.kind} is registered`);
+    await withRatedOn(() =>
+      withTenantEnabled(registration, async () => {
+        const created = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          ACCOUNT,
+        );
+        assert.equal(created.status, 201, tenant.kind);
+        const room = registration.rooms.get(
+          created.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        // First seat: the excluded account arrives before the creator.
+        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-first', undefined, EXCLUDED), {
+          ok: false,
+          reason: 'rated requires counted account',
+        });
+        assert.ok(assignTenantSeat(tenant, room, 'creator', undefined, ACCOUNT).ok, tenant.kind);
+        // Second seat: the excluded account accepts the creator's rated link.
+        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-second', undefined, EXCLUDED), {
+          ok: false,
+          reason: 'rated requires counted account',
+        });
+
+        const casual = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: false, timeControl: BLITZ },
+          ACCOUNT,
+        );
+        const casualRoom = registration.rooms.get(
+          casual.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        assert.ok(
+          assignTenantSeat(tenant, casualRoom, 'excluded-casual', undefined, EXCLUDED).ok,
+          `${tenant.kind}: a casual seat stays open to an excluded account`,
+        );
+      }),
+    );
+  }
+});
+
 type AnyTenant = VariantTenant<
   string,
   string,
@@ -374,6 +468,7 @@ type AnyTenant = VariantTenant<
 // The tenant objects behind every rated lobby; the first assertion below fails
 // when a new rated lobby is missing here, so the summary check cannot go stale.
 const RATED_LOBBY_TENANTS = [
+  gomokuTenant,
   xiangqiTenant,
   crazyhouseXiangqiTenant,
   duckXiangqiTenant,

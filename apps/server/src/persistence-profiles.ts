@@ -5,6 +5,7 @@
 // Split out of persistence-accounts.ts; the shared users-row plumbing
 // (USER_COLUMNS, userFromRow) stays there.
 import type { FlairKey } from './flair.js';
+import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
 import {
   type AccountLocale,
@@ -20,7 +21,7 @@ import {
   userFromRow,
 } from './persistence-accounts.js';
 import { getUserAchievements, type UserAchievement } from './persistence-achievements.js';
-import { seatWonGame } from './persistence-counted-games.js';
+import { notFFQBanqiGame, seatWonGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -37,6 +38,8 @@ import {
   visibleRatingTimeClasses,
 } from './rating-buckets.js';
 
+const FOUNDER_USERNAMES = new Set(['brianhliou-dev']);
+
 // Maps a stored `games.variant` to its rating pool, IN SQL. Extracted so the
 // profile's per-variant game COUNT (the rating rail) and its per-variant game
 // LIST (the Games tab filter) are the same expression: if they disagreed, a rail
@@ -48,6 +51,7 @@ import {
 // fails the build here instead of its games counting as Fog Chess (Xiangqi
 // Mahjong, 2026-10-15, was missing from the hand-written CASE).
 export const GAME_VARIANTS_BY_RATING_POOL = {
+  gomoku: ['gomoku'],
   fog: ['dark-chess', 'fog'],
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
@@ -98,6 +102,7 @@ export type PublicProfileUser = {
   profileLinks: string[];
   profileVisibility: UserAccount['profileVisibility'];
   accountRole: AccountRole;
+  isFounder: boolean;
   // Verified player title; drives the title badge (flair) on the public
   // profile and user card. NULL = untitled.
   title: PlayerTitle | null;
@@ -494,7 +499,7 @@ function profileGameFilterSql(
 
 // One page of a user's completed games, newest first. total_count is a window
 // aggregate (COUNT(*) OVER()) so the caller learns the full match count in the
-// same round-trip — used to drive the profile "Load more" pager.
+// same round-trip, before the cursor is applied, for the Games tab count.
 async function queryUserGames(
   userId: string,
   isViewer: boolean,
@@ -504,8 +509,10 @@ async function queryUserGames(
   // spec ids AND their legacy spellings, so a pool's older rows ('fog') are not
   // silently dropped from its own history.
   filters: UserGamesQueryFilters = {},
+  before: GamePageCursor | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
   const filterSql = profileGameFilterSql(filters, 4);
+  const cursorParam = 4 + filterSql.params.length;
   const { rows } = await getPool().query<{
     room_id: string;
     player_color: GameParticipantColor;
@@ -525,7 +532,8 @@ async function queryUserGames(
     visibility: GameVisibility;
     total_count: string;
   }>(
-    `SELECT games.room_id, game_participants.color AS player_color,
+    `WITH matching_games AS (
+     SELECT games.room_id, game_participants.color AS player_color,
             games.variant, games.mode, games.result, games.termination,
             games.ply_count, games.started_at, games.ended_at,
             games.white_name, games.black_name, games.corpus_id,
@@ -537,14 +545,25 @@ async function queryUserGames(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        ${filterSql.sql}
        ${profileVisibilityClause(isViewer)}
-     ORDER BY games.ended_at DESC, games.room_id DESC
+     )
+     SELECT * FROM matching_games
+     WHERE ($${cursorParam}::timestamptz IS NULL
+       OR (ended_at, room_id) < ($${cursorParam}::timestamptz, $${cursorParam + 1}::text))
+     ORDER BY ended_at DESC, room_id DESC
      LIMIT $2 OFFSET $3`,
     // COUNT(*) OVER() sits inside the same WHERE, so `total` is the FILTERED
-    // total -- which is what the Games tab count and the "Load more" exhaustion
-    // check both need once a filter is set.
-    [userId, limit, offset, ...filterSql.params],
+    // total for the Games tab. The outer cursor only narrows the returned rows.
+    [
+      userId,
+      limit,
+      before ? 0 : offset,
+      ...filterSql.params,
+      before?.endedAt ?? null,
+      before?.roomId ?? null,
+    ],
   );
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   const games = rows.map(
@@ -654,6 +673,7 @@ export async function getUserProfileByHandle(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND ${RATED_POOL_VARIANTS_SQL}
        ${visibilityClause}
      GROUP BY 1`,
@@ -747,6 +767,7 @@ export async function getUserProfileByHandle(
       profileLinks: user.profileLinks,
       profileVisibility: user.profileVisibility,
       accountRole: user.accountRole,
+      isFounder: FOUNDER_USERNAMES.has(user.handle.toLowerCase()),
       title: user.title,
       flair: user.flair,
       patronSince: user.patronSince,
@@ -770,6 +791,7 @@ export async function getUserGamesPage(
   offset: number,
   limit: number,
   filters: ProfileGameFilters = {},
+  before: GamePageCursor | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number } | null> {
   const user = await loadProfileUser(handle);
   if (!user) return null;
@@ -777,7 +799,57 @@ export async function getUserGamesPage(
   if (user.profileVisibility === 'private' && !isViewer) return null;
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const boundedOffset = Math.max(0, offset);
-  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters);
+  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters, before);
+}
+
+export type PublicPuzzleRatingPoint = {
+  variant: string;
+  createdAt: string;
+  ratingBefore: number;
+  ratingAfter: number;
+  startsSegment: boolean;
+};
+
+// Public chart data has an explicit allowlist, independent of the private
+// attempt serializer. Missing snapshots break the line, never invent a rating.
+export async function getUserPuzzleRatingHistory(
+  handle: string,
+  viewerUserId: string | null,
+): Promise<PublicPuzzleRatingPoint[] | null> {
+  const user = await loadProfileUser(handle);
+  if (!user || (user.profileVisibility === 'private' && viewerUserId !== user.id)) return null;
+
+  const { rows } = await getPool().query<{
+    variant: string;
+    created_at: Date;
+    user_rating_before: number | null;
+    user_rating_after: number | null;
+  }>(
+    `SELECT variant, created_at, user_rating_before, user_rating_after
+     FROM puzzle_attempts
+     WHERE user_id = $1 AND rated = TRUE
+     ORDER BY created_at ASC, puzzle_id ASC`,
+    [user.id],
+  );
+  const previous = new Map<string, number>();
+  const points: PublicPuzzleRatingPoint[] = [];
+  for (const row of rows) {
+    const before = row.user_rating_before;
+    const after = row.user_rating_after;
+    if (before === null || after === null || !Number.isFinite(before) || !Number.isFinite(after)) {
+      previous.delete(row.variant);
+      continue;
+    }
+    points.push({
+      variant: row.variant,
+      createdAt: row.created_at.toISOString(),
+      ratingBefore: before,
+      ratingAfter: after,
+      startsSegment: previous.get(row.variant) !== before,
+    });
+    previous.set(row.variant, after);
+  }
+  return points;
 }
 
 export async function getUserRatingHistory(
@@ -808,6 +880,7 @@ export async function getUserRatingHistory(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pvp'
        AND COALESCE(games.rated, false) = true
        AND game_participants.elo_before IS NOT NULL

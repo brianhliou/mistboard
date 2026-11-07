@@ -4,13 +4,19 @@ import {
   createXmjSetup,
   XIANGQI_MAHJONG_SPEC_ID,
   type XmjMove,
+  type XmjPlayerView,
   type XmjRoomState,
+  type XmjSeat,
+  type XmjTile,
   xmjBotAction,
+  xmjOrderedTiles,
   xmjPendingAction,
   xmjReviewViewFor,
   xmjViewFor,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TenantLiveClientConfig, TenantLiveFrame } from './variant-tenant/live-client.js';
+import type { TenantSocketClientOptions } from './variant-tenant/socket-client.js';
 import {
   type XmjPostgameResponse,
   xmjInitialPly,
@@ -18,6 +24,64 @@ import {
   xmjPostgameLastPly,
   xmjRecordingFrame,
 } from './xiangqi-mahjong-postgame.js';
+
+const liveHarness = vi.hoisted(() => ({
+  config: null as unknown,
+  options: null as unknown,
+  sent: [] as unknown[],
+}));
+vi.mock('./variant-tenant/live-client.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./variant-tenant/live-client.js')>();
+  return {
+    ...actual,
+    createTenantLiveClient: ((config: Parameters<typeof actual.createTenantLiveClient>[0]) => {
+      liveHarness.config = config;
+      return actual.createTenantLiveClient({
+        ...config,
+        socketFactory: (options: TenantSocketClientOptions) => {
+          liveHarness.options = options;
+          return {
+            connect: () => {},
+            close: () => {},
+            reconnectNow: () => {},
+            send: (payload: unknown) => {
+              liveHarness.sent.push(payload);
+              return true;
+            },
+            startPing: () => {},
+            connection: () => 'connected',
+            noticeTier: () => 'none',
+            closeReason: () => '',
+            clientId: () => 'xmj-test',
+            latencyMs: () => null,
+            reconnectAttempt: () => 0,
+          };
+        },
+      });
+    }) as typeof actual.createTenantLiveClient,
+  };
+});
+
+function declarationStart(draw: XmjTile = 'rP'): XmjRoomState {
+  const tiles: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', draw];
+  const rest = xmjOrderedTiles();
+  for (const tile of tiles) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...tiles, ...rest];
+  return createXmjRoomState(
+    { walls: [wall, wall], firstDealer: 'east', taiTable: 3 },
+    'xmj_review',
+  );
+}
+
+const DECLARATION_MOVES: XmjMove[] = [
+  { by: 'east', at: 1000, action: 'declare-ready', tile: 'bH' },
+  { by: 'west', at: 3000, action: 'pass' },
+  { by: 'west', at: 4000, action: 'discard', tile: 'bR' },
+  { by: 'east', at: 6000, action: 'pass' },
+  { by: 'east', at: 7000, action: 'self-draw' },
+  { by: 'east', at: 8000, action: 'next-hand' },
+  { by: 'west', at: 9000, action: 'next-hand' },
+];
 
 // The review page is the live room (live-xiangqi-mahjong.ts) played back from
 // the finished-only route's per-ply views. These tests drive the real room.
@@ -80,6 +144,29 @@ function postgameFixture(): XmjPostgameResponse {
 
 const FIXTURE = postgameFixture();
 const LAST = xmjPostgameLastPly(FIXTURE);
+
+function declarationFixture(): XmjPostgameResponse {
+  let state = declarationStart();
+  const history = [{ ply: 0, view: xmjReviewViewFor(state) }];
+  const timeline: XmjPostgameResponse['timeline'] = [];
+  for (let ply = 1; state.status.type === 'playing'; ply += 1) {
+    if (ply > 5000) throw new Error('declaration match did not end');
+    const move = DECLARATION_MOVES[ply - 1] ?? botMove(state);
+    const after = applyXmjMove(state, move);
+    if (after === state) throw new Error(`illegal fixture move ${JSON.stringify(move)}`);
+    state = after;
+    timeline.push({ type: 'move-played', at: move.at, color: move.by, move, ply });
+    history.push({ ply, view: xmjReviewViewFor(state) });
+  }
+  return {
+    ...FIXTURE,
+    game: { ...FIXTURE.game, plyCount: timeline.length },
+    state: { status: state.status, moveNumber: state.moveNumber },
+    timeline,
+    history,
+    view: xmjReviewViewFor(state),
+  };
+}
 
 const TIMED: XmjPostgameResponse = {
   ...FIXTURE,
@@ -156,6 +243,147 @@ describe('Xiangqi Mahjong review page', () => {
   }
 
   const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+
+  it('rewinds declarations, their score, and their reset in an explicit table-3 recording', async () => {
+    const fixture = declarationFixture();
+    const root = await mount(fixture);
+    key('Home');
+    expect(root.querySelector('.xmj-badge--declared')).toBeNull();
+    key('ArrowRight');
+    expect(root.querySelectorAll('.xmj-badge--declared')).toHaveLength(1);
+    const row = root.querySelector<HTMLButtonElement>('[data-xmj-ply="1"]');
+    expect(row?.textContent).toContain('declares ready, discards');
+    key('ArrowLeft');
+    expect(root.querySelector('.xmj-badge--declared')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-xmj-hand="1"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-xmj-ply="1"]')?.click();
+    expect(root.querySelector('.xmj-badge--declared')).not.toBeNull();
+    for (let ply = 2; ply <= 5; ply += 1) key('ArrowRight');
+    expect(
+      [...root.querySelectorAll('.xmj-line--on')].find((line) =>
+        line.textContent?.includes('Declared ready'),
+      )?.textContent,
+    ).toContain('+1');
+    key('ArrowRight');
+    key('ArrowRight');
+    expect(root.querySelector('.xmj-badge--declared')).toBeNull();
+    expect(
+      root.querySelector('[data-xmj-declare], [data-xmj-tile], [data-xmj-selfdraw]'),
+    ).toBeNull();
+  });
+
+  async function mountLive(view: XmjPlayerView): Promise<(next?: XmjPlayerView) => void> {
+    vi.resetModules();
+    vi.stubGlobal('fetch', async () => jsonResponse({}, 404));
+    document.body.innerHTML = '<div id="app"></div>';
+    window.history.replaceState(null, '', '/room/xmj_review');
+    liveHarness.sent.length = 0;
+    const { bootstrapXiangqiMahjongLiveRoom } = await import('./live-xiangqi-mahjong.js');
+    bootstrapXiangqiMahjongLiveRoom();
+    const options = liveHarness.options as TenantSocketClientOptions;
+    const frame = (next = view) => {
+      view = next;
+      options.applySnapshot({
+        type: 'snapshot',
+        seat: view.perspective,
+        seats: {},
+        state: view,
+      } as unknown as TenantLiveFrame<XmjSeat, XmjPlayerView>);
+      options.render();
+    };
+    frame();
+    return frame;
+  }
+
+  const click = (selector: string) => {
+    const target = document.querySelector<HTMLElement>(selector);
+    expect(target, selector).not.toBeNull();
+    target?.click();
+  };
+
+  it('enters and cancels declaration mode, and sends one atomic discard', async () => {
+    const view = xmjViewFor(declarationStart(), 'east');
+    const redraw = await mountLive(view);
+    click('[data-xmj-declare]');
+    expect(document.querySelector('[data-xmj-declare]')?.getAttribute('aria-pressed')).toBe('true');
+    redraw();
+    expect(document.querySelector('[data-xmj-declare]')?.getAttribute('aria-pressed')).toBe('true');
+    click('[data-xmj-declare]');
+    expect(document.querySelector('[data-xmj-declare]')?.textContent).toBe('Declare ready');
+    expect(liveHarness.sent).toEqual([]);
+    click('[data-xmj-declare]');
+    click('[data-xmj-tile="bH"]');
+    expect(liveHarness.sent).toEqual([{ type: 'move', action: 'declare-ready', tiles: ['bH'] }]);
+
+    const config = liveHarness.config as TenantLiveClientConfig<XmjSeat, XmjPlayerView, XmjMove>;
+    expect(config.replayCapture?.positionKey?.(view)).not.toBe(
+      config.replayCapture?.positionKey?.({ ...view, declared: { east: true, west: false } }),
+    );
+    expect(config.moveList.notate(DECLARATION_MOVES[0]!)).toContain('Declare ready');
+    expect(config.moveList.playedByPlayer?.(DECLARATION_MOVES[0]!)).toBe(true);
+    click('[data-xmj-declare]');
+    redraw(xmjViewFor(applyXmjMove(declarationStart(), DECLARATION_MOVES[0]!), 'east'));
+    redraw(view);
+    expect(document.querySelector('[data-xmj-declare]')?.getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+  });
+
+  it('distinguishes a declaration discard from a twin in hand or the drawn slot', async () => {
+    let state = declarationStart('rA');
+    for (const original of DECLARATION_MOVES.slice(0, 4)) {
+      const move: XmjMove =
+        original.action === 'declare-ready' ? { ...original, action: 'discard' } : original;
+      state = applyXmjMove(state, move);
+    }
+    const view = xmjViewFor(state, 'east');
+    expect(view.legal.declareReady).toContain('rA');
+    await mountLive(view);
+    click('[data-xmj-declare]');
+    click('[data-xmj-tile="rA"]:not(.xmj-tile--drawn)');
+    expect(liveHarness.sent).toEqual([
+      { type: 'move', action: 'declare-ready-hand', tiles: ['rA'] },
+    ]);
+    await mountLive(view);
+    click('[data-xmj-declare]');
+    click('[data-xmj-tile="rA"].xmj-tile--drawn');
+    expect(liveHarness.sent).toEqual([{ type: 'move', action: 'declare-ready', tiles: ['rA'] }]);
+  });
+
+  it('sends only the drawn tile after locking, retaining confirmation for a winning draw', async () => {
+    for (const draw of ['rA', 'rP'] as const) {
+      let state = declarationStart(draw);
+      for (const move of DECLARATION_MOVES.slice(0, 4)) state = applyXmjMove(state, move);
+      await mountLive(xmjViewFor(state, 'east'));
+      expect(document.querySelectorAll('[data-xmj-tile]')).toHaveLength(1);
+      expect(document.querySelector('[data-xmj-declare]')).toBeNull();
+      expect(document.querySelector('[data-player-bottom]')?.textContent).toContain(
+        'Declared ready',
+      );
+      click('[data-xmj-tile].xmj-tile--drawn');
+      if (draw === 'rP') {
+        expect(liveHarness.sent).toEqual([]);
+        click('[data-xmj-tile].xmj-tile--drawn');
+      }
+      expect(liveHarness.sent).toEqual([{ type: 'move', action: 'discard', tiles: [draw] }]);
+    }
+  });
+
+  it('keeps the win-discard confirmation visible while choosing a declaration', async () => {
+    let state = declarationStart();
+    for (const original of DECLARATION_MOVES.slice(0, 4)) {
+      const move: XmjMove =
+        original.action === 'declare-ready' ? { ...original, action: 'discard' } : original;
+      state = applyXmjMove(state, move);
+    }
+    await mountLive(xmjViewFor(state, 'east'));
+    click('[data-xmj-declare]');
+    click('[data-xmj-tile="rP"].xmj-tile--drawn');
+    expect(liveHarness.sent).toEqual([]);
+    expect(document.querySelector('.xmj-actions__hint')?.textContent).toContain('again');
+    click('[data-xmj-tile="rP"].xmj-tile--drawn');
+    expect(liveHarness.sent).toEqual([{ type: 'move', action: 'declare-ready', tiles: ['rP'] }]);
+  });
 
   it('counts one review open and no gameplay events when stepping through the recording', async () => {
     const root = await mount(FIXTURE);

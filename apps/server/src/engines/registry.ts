@@ -42,6 +42,13 @@ import {
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
 import {
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
+  THREE_KINGDOMS_BANQI_ENGINE_ID,
+  THREE_KINGDOMS_BANQI_ENGINE_NAME,
+  THREE_KINGDOMS_BANQI_ENGINE_VERSION,
+  threeKingdomsBanqiEngineDisplayName,
+} from '../three-kingdoms-banqi-engine.js';
+import {
   XIANGQI_FSF_ENGINE_REF,
   XIANGQI_FSF_ENGINE_VERSION,
   XIANGQI_FSF_NNUE_NET,
@@ -995,9 +1002,9 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
         notes: tier.retired
           ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
           : tier.engine === 'ab-jchess'
-            ? "Jieqi top slot: AB-JChess 0.2d (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20261010 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
+            ? "Jieqi top slot: AB-JChess-20261031 (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza), built on jqe's MIT code) on its 20261030 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
             : tier.engine === 'jqe'
-              ? "Jieqi, above AB-JChess: jqe 331a6e61 (devinokeefe/jieqi, MIT, by Devin O'Keefe) on its it014 NNUE, 4000ms, Hash 256. Code and net are MIT and ship in our engines release. Held behind MISTBOARD_JQE_ENABLED."
+              ? "Jieqi, one rung under AB-JChess: jqe 331a6e61 (devinokeefe/jieqi, MIT, by Devin O'Keefe) on its it014 NNUE, 4000ms, Hash 256. Code and net are MIT and ship in our engines release. Held behind MISTBOARD_JQE_ENABLED."
               : tier.skill === undefined
                 ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
                 : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
@@ -1125,7 +1132,7 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // (amateur ≪ strong ≪ strongest, each step ~90-97%). Weakening is Skill Level
 // (CPU-independent); the budget is a node count (reproducible across the slow
 // prod vCPU) capped by movetime as a wall-clock guard.
-// Flip Jungle (兽棋 / 翻翻棋, 4x4 hidden-identity flip animal chess) plays via our own
+// Flip Jungle (翻翻兽棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
 // fog engine-worker). One versioned full-strength bot; strength is a node budget capped
 // by movetime.
@@ -1210,6 +1217,39 @@ const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntri
   }),
 );
 
+// Includes the historical ID. L1 is both a live random mover and the EvE anchor.
+const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map((tier) => {
+    const random = tier.evaluation === 'random';
+    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}`;
+    return [
+      tier.id,
+      {
+        id: tier.id,
+        engineId: THREE_KINGDOMS_BANQI_ENGINE_ID,
+        engineName: THREE_KINGDOMS_BANQI_ENGINE_NAME,
+        name: threeKingdomsBanqiEngineDisplayName(tier.id),
+        kind: random ? 'builtin' : 'container',
+        gameSpecId: 'three-kingdoms-banqi',
+        configHash: signature,
+        playSignature: signature,
+        config:
+          tier.evaluation === 'random'
+            ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+            : {
+                kind: 'three-kingdoms-banqi-uci',
+                nodes: tier.nodes,
+                movetime_ms: tier.movetimeCapMs,
+                evaluation: tier.evaluation,
+                ...(tier.chance === undefined ? {} : { chance: tier.chance }),
+              },
+        notes:
+          'Admin-only TK playtest; provisional uncalibrated budgets. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2–L8 require advertised ChanceMix support; L1 and the historical ID do not configure it.',
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
@@ -1227,6 +1267,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...JUNGLE_FLIP_ENGINES,
   ...JUNGLE_ENGINES,
   ...KATAGO_JUNGLE_ENGINES,
+  ...THREE_KINGDOMS_BANQI_ENGINES,
 };
 
 /**

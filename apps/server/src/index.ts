@@ -162,6 +162,8 @@ const rematchOrch: RematchOrchestrator = {
   ctx: roomMgrCtx,
   send,
   buildRoomUrl: (roomId) => `/?room=${encodeURIComponent(roomId)}`,
+  accountMayRate: async (userId) =>
+    !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
   createRoom: (spec) =>
     roomLifecycle.createRoom(
       spec.mode,
@@ -230,6 +232,7 @@ let seatVacateGraceMsOverride: number | null = null;
 
 export type StartServerOptions = {
   port?: number;
+  host?: string;
   seatVacateGraceMs?: number;
 };
 
@@ -312,8 +315,13 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   });
 
   const port = options.port ?? serverConfig.port;
-  await new Promise<void>((resolve) => {
-    httpServer.listen(port, () => resolve());
+  const host = options.host ?? serverConfig.host;
+  await new Promise<void>((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen({ port, host }, () => {
+      httpServer.off('error', reject);
+      resolve();
+    });
   });
   const address = httpServer.address();
   const boundPort = typeof address === 'object' && address ? address.port : port;

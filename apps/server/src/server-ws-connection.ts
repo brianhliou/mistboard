@@ -4,10 +4,12 @@ import type { VariantId } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from './account-session.js';
 import { darkChessLiveHistoryExtras } from './dark-chess-live-history.js';
+import { FFQ_BANQI_ROOM_ID_PREFIX, ffqBanqiAdmits, isFFQBanqiRequest } from './ffq-banqi-access.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import { parseVariantId } from './http-api.js';
 import { logger, wsCounters } from './obs.js';
 import { snapshotPayload } from './payloads.js';
+import type { UserAccount } from './persistence.js';
 import {
   cancelRematch,
   declineRematch,
@@ -78,18 +80,43 @@ export function isAllowedWebSocketRequest(request: IncomingMessage): boolean {
 // Route a room id to its live runtime. Live rooms route before flag checks so
 // an in-flight game keeps serving even if its tenant flag flips off; a
 // registry miss is the chess fallback (chess is deliberately unregistered
-// until its P2 migration).
+// until its P2 migration). A registration with admitsConnection (an
+// account-gated playtest) is the exception: its rule applies to live and
+// persisted rooms alike, on the requester's account (null = guest), resolved
+// only for such a registration.
 export async function resolveWebSocketLiveRuntime(
   registrations: readonly VariantTenantRegistration[],
   roomId: string,
+  accountUser: () => Promise<UserAccount | null> = async () => null,
 ): Promise<WebSocketLiveRuntime> {
+  const ffqRoom = roomId.startsWith(FFQ_BANQI_ROOM_ID_PREFIX);
+  if (ffqRoom && !ffqBanqiAdmits(await accountUser())) {
+    return { kind: 'variant-tenant-unavailable', reason: 'game spec disabled' };
+  }
+  if (ffqRoom) {
+    registrations = registrations.filter(
+      (entry) =>
+        entry.gameSpecId === 'ffq-banqi' && entry.roomIdPrefix === FFQ_BANQI_ROOM_ID_PREFIX,
+    );
+  }
+  const refused = async (registration: VariantTenantRegistration): Promise<boolean> =>
+    registration.admitsConnection !== undefined &&
+    !registration.admitsConnection(await accountUser());
   for (const registration of registrations) {
     const live = registration.rooms.get(roomId);
-    if (live) return { kind: 'variant-tenant', registration, room: live };
+    if (!live) continue;
+    if (await refused(registration)) {
+      return { kind: 'variant-tenant-unavailable', reason: 'game spec disabled' };
+    }
+    return { kind: 'variant-tenant', registration, room: live };
   }
   const registration = registrations.find((entry) => roomId.startsWith(entry.roomIdPrefix)) ?? null;
-  if (!registration) return { kind: 'chess' };
-  if (!registration.enabled()) {
+  if (!registration) {
+    return ffqRoom
+      ? { kind: 'variant-tenant-unavailable', reason: 'room unavailable' }
+      : { kind: 'chess' };
+  }
+  if (registration.admitsConnection ? await refused(registration) : !registration.enabled()) {
     return { kind: 'variant-tenant-unavailable', reason: 'game spec disabled' };
   }
   const hydrated = await registration.getOrLoadRoom(roomId);
@@ -104,7 +131,35 @@ export async function handleWebSocketConnection(
 ): Promise<void> {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
   const roomId = url.searchParams.get('room') ?? 'dev-room';
-  const runtime = await resolveWebSocketLiveRuntime(registeredVariantTenants(), roomId);
+  let account: Promise<UserAccount | null> | null = null;
+  const resolveAccount = () => (account ??= currentAccountUser(request));
+  const selectors = {
+    gameSpecId: url.searchParams.get('gameSpecId'),
+    variant: url.searchParams.get('variant'),
+  };
+  const ffqRoom = roomId.startsWith(FFQ_BANQI_ROOM_ID_PREFIX);
+  if (isFFQBanqiRequest(selectors) || ffqRoom) {
+    // The reserved namespace is itself an FFQ selector. Reject a conflicting
+    // URL even when neither explicit selector names FFQ.
+    const gate = gateGameSpecRequest({ gameSpecId: 'ffq-banqi' }, await resolveAccount());
+    if (gate.type === 'reject') {
+      socket.close(1008, gate.wsCloseReason);
+      return;
+    }
+    if (Object.values(selectors).some((id) => id !== null && id !== 'ffq-banqi')) {
+      socket.close(1008, 'unknown game spec');
+      return;
+    }
+    if (!ffqRoom) {
+      socket.close(1008, 'room unavailable');
+      return;
+    }
+  }
+  const runtime = await resolveWebSocketLiveRuntime(
+    registeredVariantTenants(),
+    roomId,
+    resolveAccount,
+  );
   if (runtime.kind === 'variant-tenant') {
     await runtime.registration.attachWebSocket(
       {
@@ -155,6 +210,12 @@ export async function handleWebSocketConnection(
     // room. Close with a distinct reason so the client surfaces a sign-in
     // prompt rather than the generic 'private room' / spectator message.
     socket.close(1008, 'rated requires account');
+    return;
+  }
+  if (assignment.deniedReason === 'rated-requires-counted-account') {
+    // A stats-excluded account in a rated room: distinct reason so the client
+    // says why instead of prompting a sign-in it already has.
+    socket.close(1008, 'rated requires counted account');
     return;
   }
   if (assignment.deniedReason === 'play-disabled') {

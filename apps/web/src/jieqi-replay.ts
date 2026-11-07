@@ -19,6 +19,7 @@ import {
 import type { ArticleLang } from './article-i18n.js';
 import {
   animateJieqiBoardMove,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
@@ -143,7 +144,18 @@ export function mountJieqiReplay(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = moves[(forward ? index : animateFrom) - 1];
-      if (move) animateJieqiBoardMove(frame, move, perspective, { reverse: !forward });
+      if (move) {
+        animateJieqiBoardMove(frame, move, perspective, { reverse: !forward });
+        if (forward) {
+          animateJieqiStepReveal(
+            frame,
+            move,
+            states[animateFrom]?.board,
+            states[index]!.board,
+            perspective,
+          );
+        }
+      }
     }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;

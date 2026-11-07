@@ -160,11 +160,25 @@ export type JieqiVisibleBoardEntry =
 export type JieqiPlayerBoard = Partial<Record<JieqiSquare, JieqiVisibleBoardEntry>>;
 
 // A captured piece as seen by one player. `role: null` => identity unknown to
-// this viewer (a dark piece they did not capture).
+// this viewer (a dark piece they did not capture). `takenFaceDown` marks a
+// piece this view NAMES although it was still face-down when taken (the
+// capturer's own view, a finished game's truth), so the pool can draw it apart
+// from a piece both players saw. That the capture was of a face-down piece is
+// public (both seats watched it); the flag rides only beside a role the view
+// already holds, so it never adds an entry or a field to a view that lacks the
+// identity: a victim's or spectator's pool is unchanged by it.
 export type JieqiCapturedView = {
   owner: JieqiColor;
   role: JieqiPieceRole | null;
+  takenFaceDown?: true;
 };
+
+/** A captured entry, with the face-down mark when the role it names was hidden at capture. */
+function capturedEntry(capture: JieqiCapture, role: JieqiPieceRole | null): JieqiCapturedView {
+  return role !== null && !capture.revealedAtCapture
+    ? { owner: capture.owner, role, takenFaceDown: true }
+    : { owner: capture.owner, role };
+}
 
 export type JieqiPlayerView = {
   id: string;
@@ -881,7 +895,7 @@ export function jieqiTruthBoard(state: JieqiGameState): JieqiPlayerBoard {
 
 /** Every captured role, except one captured before its identity was determined. */
 export function jieqiTruthCaptures(state: JieqiGameState): JieqiCapturedView[] {
-  return state.captures.map((c) => ({ owner: c.owner, role: c.unknown ? null : c.role }));
+  return state.captures.map((c) => capturedEntry(c, c.unknown ? null : c.role));
 }
 
 /** Home squares still face-down whose identity was never determined. */
@@ -917,7 +931,7 @@ export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): Ji
   const captured: JieqiCapturedView[] = state.captures.map((c) => {
     const capturer = oppositeJieqiColor(c.owner);
     const known = c.revealedAtCapture || capturer === color;
-    return { owner: c.owner, role: known ? c.role : null };
+    return capturedEntry(c, known ? c.role : null);
   });
 
   const legalMoves =

@@ -10,7 +10,7 @@ import {
   getJieqiPlayerView,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
@@ -19,10 +19,22 @@ import {
   CELL_LASTMOVE_ORIGIN_OPACITY,
   CELL_LASTMOVE_RING_WIDTH,
 } from './board-lastmove.js';
+import { xiangqiPieceCellBox } from './board-metrics.js';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { renderJungleBoardSvg } from './jungle-render.js';
 import { renderJieqiBoardSvg } from './live-jieqi-render.js';
+import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
+import { xiangqiPieceOuterRadius } from './xiangqi-piece-sets.js';
+
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
 
 // The destination band (2026-10-15) hugs the OUTSIDE of the drawn piece and
 // draws UNDER the piece layer with the origin wash: the piece covers none of it,
@@ -129,17 +141,23 @@ describe('the square grid marks the last move with an amber origin cell and a pi
     expect(svg.indexOf('xq-live-lastmove-origin')).toBeLessThan(svg.indexOf(pieceMarker));
     // The destination tint stays under the piece too.
     expect(svg.lastIndexOf('xq-live-lastmove-to')).toBeLessThan(svg.indexOf(pieceMarker));
-    // Ring: on the piece's own rounded-square outline (rect 4..96, rx 14 in its
-    // 100-unit box), 4.2 box units wide, inside the over group after every piece.
+    // Ring: just outside the piece's own rounded-square outline (rect 4..96, rx
+    // 14 at the stroke's centre, in the 100-unit box its art fills), 4.2 box
+    // units wide, concentric with it and still inside the square, in the over
+    // group after every piece (Brian, 2026-10-29: "draw the ring a little
+    // outside the black line").
     const over = svg.indexOf(OVER_GROUP);
     const ring = svg.indexOf('class="xq-live-lastmove-piece-ring"');
     expect(over).toBeGreaterThan(svg.lastIndexOf(pieceMarker));
     expect(ring).toBeGreaterThan(over);
     expect(svg.slice(over, ring)).not.toContain('</g>');
-    const k = pieceSize / 100;
+    const k = xiangqiPieceCellBox(pieceSize) / 100;
+    const outer = xiangqiPieceOuterRadius(readStoredXiangqiPieceSet());
     const tag = svg.slice(svg.lastIndexOf('<rect', ring), svg.indexOf('/>', ring));
-    expect(Number(tag.match(/ width="([\d.]+)"/)?.[1])).toBeCloseTo(92 * k, 1);
-    expect(Number(tag.match(/ rx="([\d.]+)"/)?.[1])).toBeCloseTo(14 * k, 1);
+    const width = Number(tag.match(/ width="([\d.]+)"/)?.[1]);
+    expect(width).toBeCloseTo(2 * (outer + 2.1) * k, 1);
+    expect(width + 4.2 * k).toBeLessThan(cell);
+    expect(Number(tag.match(/ rx="([\d.]+)"/)?.[1])).toBeCloseTo((14 + outer - 46 + 2.1) * k, 1);
     expect(tag).toContain('stroke="#f59e0b"');
     expect(Number(tag.match(/stroke-width="([\d.]+)"/)?.[1])).toBeCloseTo(4.2 * k, 1);
     expect(svg.match(/xq-live-lastmove-piece-ring/g)).toHaveLength(1);
@@ -156,18 +174,18 @@ describe('the square grid marks the last move with an amber origin cell and a pi
 
   it('splits into an under layer (cells) and an over layer (ring)', () => {
     const ends = { from: { x: 30, y: 30 }, to: { x: 90, y: 30 } };
-    const piece = { size: 100, shape: 'square' as const };
+    const piece = { size: 100, set: 'traditional' as const };
     const under = boardLastMoveCellMarksSvg(ends, 60, 'under', piece);
     const over = boardLastMoveCellMarksSvg(ends, 60, 'over', piece);
     expect(under).toContain('xq-live-lastmove-origin');
     expect(under).not.toContain('piece-ring');
     expect(over).toBe(
-      '<rect x="44" y="-16" width="92" height="92" rx="14" class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="4.2"/>',
+      '<rect class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="4.2" data-cx="90" data-cy="30" x="40.65" y="-19.35" width="98.7" height="98.7" rx="17.35"/>',
     );
     expect(boardLastMoveCellMarksSvg(ends, 60, 'both', piece)).toBe(under + over);
     // A disc-drawn set gets a circle on its disc instead.
-    expect(boardLastMoveCellMarksSvg(ends, 60, 'over', { size: 100, shape: 'disc' })).toMatch(
-      /^<circle [^>]*r="46"[^>]*class="xq-live-lastmove-piece-ring"/,
+    expect(boardLastMoveCellMarksSvg(ends, 60, 'over', { size: 100, set: 'wood' })).toMatch(
+      /^<circle class="xq-live-lastmove-piece-ring" [^>]*r="47.1"\/>$/,
     );
     // A drop (no origin) still rings the piece; nothing at all with no endpoints.
     expect(boardLastMoveCellMarksSvg({ to: ends.to }, 60, 'under', piece)).not.toContain(

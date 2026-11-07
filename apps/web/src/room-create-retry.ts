@@ -9,6 +9,8 @@
 // server takes the room, treating the restart gap (network errors, 502-504) as
 // part of the same wait, up to a limit.
 
+import { deviceIdForBrowser } from './live-state.js';
+
 export const RESTART_RETRY_MS = 4_000;
 export const RESTART_WAIT_LIMIT_MS = 10 * 60_000;
 
@@ -20,6 +22,17 @@ export type RoomCreateRetryOptions = {
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
 };
+
+// HTTP creates and live sockets must identify a guest by the same durable
+// browser id, rather than the per-room client id. This is attribution only;
+// neither this header nor the browser id grants a playing seat.
+export function postWithBrowserIdentity(url: string, init: RequestInit): Promise<Response> {
+  const deviceId = deviceIdForBrowser();
+  if (!deviceId) return fetch(url, init);
+  const headers = new Headers(init.headers);
+  headers.set('x-mistboard-device-id', deviceId);
+  return fetch(url, { ...init, headers: Object.fromEntries(headers) });
+}
 
 async function isDrainRefusal(response: Response): Promise<boolean> {
   if (response.status !== 503) return false;
@@ -50,7 +63,7 @@ export async function postThroughRestart(
   for (;;) {
     let response: Response | null = null;
     try {
-      response = await fetch(url, init);
+      response = await postWithBrowserIdentity(url, init);
     } catch (err) {
       if (restartingSince === null) throw err;
     }

@@ -10,8 +10,10 @@ import {
   DEFAULT_BREAKER,
   DEFAULT_DAILY_MISS_CAP,
   type ForumTranslationService,
-  forumContentHash,
+  forumTranslationCacheHash,
   isTranslationLocale,
+  legacyForumTranslationCacheHash,
+  PROMPT_KEY_VERSION,
   TRANSLATION_LOCALES,
   type TranslationLocale,
   translationNeeded,
@@ -106,17 +108,37 @@ async function translationOverlay(
   const textByHash = new Map<string, string>();
   for (const text of texts) {
     if (!text || !translationNeeded(text, locale)) continue;
-    textByHash.set(forumContentHash(text), text);
+    // The key the Translate route stores under: quotes and mixed-script posts
+    // are keyed apart from the whole-body rows written before segments.
+    textByHash.set(forumTranslationCacheHash(text, locale), text);
   }
   if (textByHash.size === 0) return NO_OVERLAY;
   const found = await persistence.listForumTranslations({
     contentHashes: [...textByHash.keys()],
     targetLocale: locale,
+    promptVersion: PROMPT_KEY_VERSION,
   });
   const overlay = new Map<string, string>();
   for (const [hash, translated] of found) {
     const text = textByHash.get(hash);
     if (text) overlay.set(text, translated);
+  }
+  // Only a miss tries the fixed legacy v2 recipe; v1 output is never eligible.
+  const legacyTextByHash = new Map<string, string>();
+  for (const text of textByHash.values()) {
+    if (!overlay.has(text))
+      legacyTextByHash.set(legacyForumTranslationCacheHash(text, locale), text);
+  }
+  if (legacyTextByHash.size > 0) {
+    const legacy = await persistence.listForumTranslations({
+      contentHashes: [...legacyTextByHash.keys()],
+      targetLocale: locale,
+      promptVersion: PROMPT_KEY_VERSION,
+    });
+    for (const [hash, translated] of legacy) {
+      const text = legacyTextByHash.get(hash);
+      if (text) overlay.set(text, translated);
+    }
   }
   return overlay;
 }

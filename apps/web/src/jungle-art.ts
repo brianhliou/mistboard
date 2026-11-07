@@ -48,9 +48,16 @@ export const JUNGLE_ART = {
   shadow: { dx: 0, dy: 1.5, std: 1, color: '#3a2c20', opacity: 0.34 },
   /** Flip Jungle face-down tile: a flat jade rounded square (neutral, the deal is
    *  hidden from both sides), the same outer size and shape as a face-up token, so
-   *  its reach is JUNGLE_TOKEN_REACH's.
-   *  Ratios ÷ cell: the stroke is today's 0.031 grown with the tile. */
-  faceDown: { fill: '#2f8f6b', stroke: '#184a38', reach: 1, strokeRatio: 0.039 },
+   *  its reach is JUNGLE_TOKEN_REACH's. Black edge like banqi's back (Brian, 2026-10-28).
+   *  Ratios ÷ cell. The stroke is a face-up token's ring (ringStrokeRatio over
+   *  the token's outer span), so a tile's outline keeps one weight when it
+   *  turns over (Brian, 2026-10-28: "standardize... to the thinner one"). */
+  faceDown: {
+    fill: '#2f8f6b',
+    stroke: '#202427',
+    reach: 1,
+    strokeRatio: 0.0274 / (2 * 0.45 + 0.0274),
+  },
 } as const;
 
 /** A token's outer edge (ring included) as a share of the cell on a board: the
@@ -414,8 +421,6 @@ export function jungleFaceDownDiscSvg(
  *  keep the marks visible in standalone SVGs such as OG cards.
  */
 export const JUNGLE_LAST_MOVE = {
-  /** Border on a flip's single cell, ÷ cell. */
-  flipStrokeRatio: 3 / 48,
   /** Tints keyed by the ink that ACTED. `null` is the pre-binding fallback. */
   fill: {
     red: { from: 'rgba(181,50,43,0.20)', to: 'rgba(181,50,43,0.38)' },
@@ -424,22 +429,15 @@ export const JUNGLE_LAST_MOVE = {
     black: { from: 'rgba(22,78,150,0.28)', to: 'rgba(22,78,150,0.5)' },
     none: { from: 'rgba(227,179,77,0.26)', to: 'rgba(227,179,77,0.44)' },
   },
-  stroke: {
-    red: 'rgba(140,32,26,0.38)',
-    black: 'rgba(20,38,60,0.44)',
-    none: 'rgba(227,179,77,0.44)',
-  },
 } as const;
 
 export type JungleLastMoveInk = 'red' | 'black' | null;
 export type JungleLastMoveKind = 'from' | 'to' | 'flip';
 
 /**
- * One last-move cell tint. `x`/`y` are the cell's top-left corner.
- *
- * A flip's border straddles the rect edge, so its rect comes in by half the
- * stroke -- an un-inset border paints its outer half into the next cell, which
- * is the whole failure a cell-bounded mark exists to avoid.
+ * One last-move cell tint. `x`/`y` are the cell's top-left corner. A flip takes
+ * a move's destination tint and no border (Brian, 2026-10-28: "I prefer it when
+ * it's a single shade"): one tinted cell already reads as a flip against two.
  */
 export function jungleLastMoveCellSvg(
   x: number,
@@ -448,13 +446,6 @@ export function jungleLastMoveCellSvg(
   kind: JungleLastMoveKind,
   ink: JungleLastMoveInk,
 ): string {
-  const key = ink ?? 'none';
-  const flip = kind === 'flip';
-  const inset = flip ? (cell * JUNGLE_LAST_MOVE.flipStrokeRatio) / 2 : 0;
-  const span = cell - inset * 2;
-  const fill = JUNGLE_LAST_MOVE.fill[key][kind === 'from' ? 'from' : 'to'];
-  const border = flip
-    ? ` stroke="${JUNGLE_LAST_MOVE.stroke[key]}" stroke-width="${cell * JUNGLE_LAST_MOVE.flipStrokeRatio}"`
-    : '';
-  return `<rect class="jungle-last-move-${kind}" x="${x + inset}" y="${y + inset}" width="${span}" height="${span}" fill="${fill}"${border}/>`;
+  const fill = JUNGLE_LAST_MOVE.fill[ink ?? 'none'][kind === 'from' ? 'from' : 'to'];
+  return `<rect class="jungle-last-move-${kind}" x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${fill}"/>`;
 }

@@ -61,12 +61,12 @@
       "sha": "cc414aa9c16a549d"
     },
     "xiangqi/lacquer": {
-      "version": 2,
-      "sha": "f0f19140a295f798"
+      "version": 3,
+      "sha": "327f29956c86ce6c"
     },
     "xiangqi/lacquer/tile": {
-      "version": 2,
-      "sha": "82adb9abb464cb98"
+      "version": 3,
+      "sha": "67f787a5a383d177"
     },
     "xiangqi/wood": {
       "version": 1,
@@ -82,11 +82,11 @@
     "sha": "c8317e1b6e5777e2",
     "versions": {
       "game": 7,
-      "article": 7,
-      "articleClient": 7,
+      "article": 8,
+      "articleClient": 8,
       "study": 7,
       "position": 5,
-      "broadcast": 4,
+      "broadcast": 5,
       "player": 4
     }
   }

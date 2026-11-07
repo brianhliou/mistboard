@@ -23,7 +23,7 @@ import {
 } from '../apps/server/dist/xiangqi-pikafish-engine.js';
 import { winPercent } from '../packages/game/dist/analysis.js';
 import { createInitialXiangqiState } from '../packages/game/dist/variants-xiangqi.js';
-import { applyStandardXiangqiMove } from '../packages/game/dist/variants-xiangqi-standard.js';
+import { applyXiangqiRecordMove } from '../packages/game/dist/variants-xiangqi-standard.js';
 import {
   classifyXiangqiMove,
   XIANGQI_POSITIVE_GLYPH_SYMBOL,
@@ -150,10 +150,8 @@ for (const file of files) {
   for (const row of anno.rows) {
     const move = game.moves[row.ply - 1];
     const before = state;
-    // The kernel may adjudicate an end (repetition, no-progress) before the
-    // record does; nothing after that is a position to classify.
     if (before.status.type !== 'playing') break;
-    const next = applyStandardXiangqiMove(before, move);
+    const next = applyXiangqiRecordMove(before, move);
     if (next === before) {
       console.log(`   (${key}: ply ${row.ply} rejected by the kernel; stopping here)`);
       break;

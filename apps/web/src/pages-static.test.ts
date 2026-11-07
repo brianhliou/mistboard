@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
-import { t } from './i18n/catalog.js';
+import { mountCreators } from './creators-page.js';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import {
   ARTICLE_ROUTE_CLASS,
   articlesIndexPrerenderHead,
@@ -36,6 +37,7 @@ describe('static pages', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
@@ -71,16 +73,28 @@ describe('static pages', () => {
       'Mistboard Patron',
       'Terms of Use',
       'Privacy',
-      'Title verification',
       'Source code',
-      'Contribute',
       'Work with us',
       'Engine champions',
       'Developers',
-      'Game data',
-      'API',
-      'Thank you',
-      'Is Mistboard lagging?',
+    ]);
+    expect(
+      [...root.querySelectorAll('.static-page-rail-group')].map((group) =>
+        [...group.querySelectorAll('a')].map((link) => link.getAttribute('href')),
+      ),
+    ).toEqual([
+      [
+        '/about',
+        '/stats',
+        '/feed',
+        '/changelog',
+        '/faq',
+        '/contact',
+        '/patron',
+        '/terms',
+        '/privacy',
+      ],
+      ['/source', '/creators', '/champions', '/developers'],
     ]);
     // Game totals live only on /stats (linked from the rail above); About
     // neither fetches nor shows them.
@@ -131,7 +145,7 @@ describe('static pages', () => {
     mountAbout(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('關於 Mistboard');
-    expect(root.textContent).toContain('與玩家共建，規則可供檢驗');
+    expect(root.textContent).toContain('公平對弈，規則公開');
     expect(root.textContent).not.toContain('玩家對局活動');
   });
 
@@ -148,6 +162,37 @@ describe('static pages', () => {
     expect(root.textContent).toContain('GitHub 儲存庫');
     expect(root.textContent).toContain('第三方元件');
     expect(root.textContent).toContain('專案身份');
+  });
+
+  it.each([
+    ['/source', ['Contribute', 'Developers', 'Game data', 'API', 'Thank you']],
+    ['/zh-hans/source', ['参与贡献', '开发者', '对局数据', 'API 文档', '致谢']],
+    ['/zh-hant/source', ['參與貢獻', '開發者', '對局資料', 'API 文件', '致謝']],
+  ] as const)('preserves resource links in the source page content at %s', (path, labels) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountSource(root);
+
+    const destinations = ['/contribute', '/developers', '/data', '/api-docs', '/thanks'];
+    for (const [index, href] of destinations.entries()) {
+      expect(root.querySelector(`.source-section a[href="${href}"]`)?.textContent).toBe(
+        labels[index],
+      );
+    }
+  });
+
+  it.each([
+    ['/creators', 'title verification'],
+    ['/zh-hans/creators', '称号认证'],
+    ['/zh-hant/creators', '稱號認證'],
+  ])('keeps title verification in the creators page content at %s', (path, label) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountCreators(root);
+
+    expect(root.querySelector('.creators-section a[href="/verify-title"]')?.textContent).toBe(
+      label,
+    );
   });
 
   it('credits Pikafish on the source page with its site, weights license and repository', () => {
@@ -173,6 +218,51 @@ describe('static pages', () => {
       ]);
       expect(line?.textContent).not.toContain('\u2014');
       root.remove();
+    }
+  });
+
+  it.each([
+    ['/source', 'en', 'Gomoku', 'neural networks', 'browser build', 'eight'],
+    ['/zh-hans/source', 'zh-Hans', '五子棋', '神经网络', '浏览器构建', '八个'],
+    ['/zh-hant/source', 'zh-Hant', '五子棋', '神經網路', '瀏覽器建置', '八個'],
+  ] as const)(
+    'credits Rapfi code, networks and build on %s when enabled',
+    async (path, locale, game, networks, build, levels) => {
+      await ensureLocaleCatalog(locale);
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      window.history.replaceState(null, '', path);
+      const root = document.createElement('main');
+      mountSource(root);
+      const engine = root.querySelector('a[href="https://github.com/dhbloo/rapfi"]');
+      expect(engine?.textContent).toContain('dhbloo');
+      expect(engine?.textContent).toContain(game);
+      expect(engine?.textContent).toContain(levels);
+      expect(engine?.textContent).toContain('GPL-3.0');
+      const weights = root.querySelector('a[href="/engine/rapfi/NETWORKS-CC0.txt"]');
+      expect(weights?.textContent).toContain(networks);
+      expect(weights?.textContent).toContain('CC0 1.0');
+      const wasm = root.querySelector('a[href="https://github.com/brianhliou/rapfi-wasm"]');
+      expect(wasm?.textContent).toContain(build);
+      expect(wasm?.textContent).toContain('Brian H. Liou');
+      for (const link of [engine, weights, wasm]) {
+        expect(link).not.toBeNull();
+        expect(link?.getAttribute('rel')).toContain('noopener');
+        expect(link?.textContent).not.toContain('—');
+      }
+    },
+  );
+
+  it.each([false, true])('omits every Rapfi source credit with the flag off (DEV=%s)', (dev) => {
+    vi.stubEnv('DEV', dev);
+    for (const flag of [undefined, 'false']) {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', flag);
+      for (const path of ['/source', '/zh-hans/source', '/zh-hant/source']) {
+        window.history.replaceState(null, '', path);
+        const root = document.createElement('main');
+        mountSource(root);
+        expect(root.outerHTML).not.toMatch(/rapfi|gomoku|五子棋/i);
+        expect(root.querySelector('.source-credit-pikafish')).not.toBeNull();
+      }
     }
   });
 
@@ -249,7 +339,7 @@ describe('static pages', () => {
     expect(root.textContent).toContain('Mistboard 上可以玩什麼？');
     expect(root.textContent).toContain('規則參考列出了目前遊戲。');
     expect(root.textContent).toContain('我需要帳號嗎？');
-    expect(root.textContent).toContain('如何回報 bug 或聯絡？');
+    expect(root.textContent).toContain('如何回報錯誤或聯絡我們？');
     expect(root.textContent).toContain('Mistboard 引擎會看到完整棋盤嗎？');
     expect(root.textContent).toContain('計分對局如何運作？');
   });
@@ -311,6 +401,18 @@ describe('static pages', () => {
     );
     expect(root.textContent).toContain('我們承諾什麼，以及不承諾什麼');
   });
+
+  it.each(['en', 'zh-hans', 'zh-hant'])(
+    'links 404 quick Play directly to the lobby in %s',
+    (locale) => {
+      window.history.replaceState(null, '', locale === 'en' ? '/missing' : `/${locale}/missing`);
+      const root = document.createElement('main');
+      mountNotFound(root);
+
+      expect(root.querySelector('.not-found-links a')?.getAttribute('href')).toBe('/');
+      expect(root.querySelector('.not-found-links a[href="/play"]')).toBeNull();
+    },
+  );
 
   it('localizes Traditional Chinese not-found page chrome', () => {
     window.history.replaceState(null, '', '/zh-hant/missing');

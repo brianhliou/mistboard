@@ -325,3 +325,85 @@ test('sweep enforcement aborts a due pregame room and expires a due clock', asyn
   assert.deepEqual(broadcasts, ['clock-expired']);
   assert.deepEqual(persistence.deadlineOps.at(-1), { op: 'delete', roomId: 'dchx_sweep_expire' });
 });
+
+test('expiry policy persists a legal move, moves the durable row, and rejects competing stale expiry', async () => {
+  const roomId = 'dchx_expiry_move';
+  const tenant = {
+    ...darkChessTenant,
+    rules: { ...darkChessTenant.rules, clockExpiryMove: () => ({ from: 'd2', to: 'd4' }) as Move },
+  };
+  const makeRoom = () =>
+    hydrate([
+      ...roomEvents(roomId),
+      move(roomId, 10_000, 'white', { from: 'e2', to: 'e4' }),
+      move(roomId, 20_000, 'black', { from: 'e7', to: 'e5' }),
+    ]);
+  const room = makeRoom();
+  const persistence = recordingPersistence();
+  const persisted: DarkChessTenantEvent[] = [];
+  persistence.appendRoomEvent = async (_id, _seq, event) => {
+    persisted.push(event);
+  };
+  const dueAt = 20_000 + ALLOWANCE_MS;
+  const broadcasts: string[] = [];
+  const ctx = {
+    appendEvent: (r: typeof room, event: DarkChessTenantEvent) =>
+      appendTenantEvent(tenant, r, event, { persistence }),
+    broadcastEventAppended: (_r: typeof room, event: DarkChessTenantEvent) => {
+      broadcasts.push(event.type);
+    },
+    now: () => dueAt,
+  };
+  await sweepTenantRoomDeadline(tenant, room, ctx);
+  assert.equal(room.projection.state.status.type, 'playing');
+  assert.equal(persisted.at(-1)?.type, 'move-played');
+  assert.deepEqual(broadcasts, ['move-played']);
+  assert.deepEqual(persistence.deadlineOps.at(-1), {
+    op: 'upsert',
+    roomId,
+    seat: 'black',
+    seatUserId: null,
+    dueAt: dueAt + ALLOWANCE_MS,
+  });
+  assert.deepEqual(hydrate(JSON.parse(JSON.stringify(room.events))).projection, room.projection);
+  assert.equal(await sweepTenantRoomDeadline(tenant, room, ctx), 'not-due');
+  assert.equal(persisted.length, 1);
+
+  // The player write is queued but has not updated the projection when the
+  // sweep sees its old deadline. The serialized writer must reject that expiry.
+  const competing = makeRoom();
+  const player = ctx.appendEvent(
+    competing,
+    move(roomId, dueAt - 1, 'white', { from: 'd2', to: 'd4' }),
+  );
+  const sweep = sweepTenantRoomDeadline(tenant, competing, ctx);
+  await player;
+  assert.equal(await sweep, 'not-due');
+  assert.equal(competing.events.length, 7);
+  assert.equal(competing.projection.state.status.type, 'playing');
+  assert.equal(competing.projection.clock?.activeColor, 'black');
+});
+
+test('an illegal expiry policy falls back to the normal timeout loss', async () => {
+  const roomId = 'dchx_illegal_expiry';
+  const tenant = {
+    ...darkChessTenant,
+    rules: { ...darkChessTenant.rules, clockExpiryMove: () => ({ from: 'e1', to: 'e8' }) as Move },
+  };
+  const room = hydrate([
+    ...roomEvents(roomId),
+    move(roomId, 10_000, 'white', { from: 'e2', to: 'e4' }),
+    move(roomId, 20_000, 'black', { from: 'e7', to: 'e5' }),
+  ]);
+  await sweepTenantRoomDeadline(tenant, room, {
+    appendEvent: (r, event) => appendTenantEvent(tenant, r, event),
+    broadcastEventAppended: () => {},
+    now: () => 20_000 + ALLOWANCE_MS,
+  });
+  assert.equal(room.events.at(-1)?.type, 'clock-expired');
+  assert.deepEqual(room.projection.state.status, {
+    type: 'finished',
+    winner: 'black',
+    reason: 'timeout',
+  });
+});

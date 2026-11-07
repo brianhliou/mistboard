@@ -12,10 +12,22 @@ import './captured-pool.css';
 // group together and draw through `renderHidden`; a caller whose variant has no
 // such case leaves it out, and any null it is handed is then skipped rather than
 // drawn wrong.
+//
+// A named entry marked `takenFaceDown` (jieqi: a piece the viewer knows only
+// because it captured it while it was still face-down, or a finished game's
+// truth) is its own group, drawn shaded (`is-taken-face-down`), so a face-down
+// horse and a face-up horse are two tiles. The mark is the view's; nothing here
+// infers it.
+
+type CapturedPoolEntry<Color extends string, Role extends string> = {
+  owner: Color;
+  role: Role | null;
+  takenFaceDown?: boolean;
+};
 
 export function fillCapturedPoolWith<Color extends string, Role extends string>(
   host: HTMLElement,
-  captured: ReadonlyArray<{ owner: Color; role: Role | null }>,
+  captured: ReadonlyArray<CapturedPoolEntry<Color, Role>>,
   owner: Color,
   renderPiece: (entry: { color: Color; role: Role }) => string,
   renderHidden?: (color: Color) => string,
@@ -25,19 +37,32 @@ export function fillCapturedPoolWith<Color extends string, Role extends string>(
   );
   host.classList.toggle('has-captures', mine.length > 0);
   if (mine.length === 0) return;
-  const order: (Role | null)[] = [];
-  const counts = new Map<Role | null, number>();
+  const groups = new Map<string, { role: Role | null; takenFaceDown: boolean; count: number }>();
   for (const entry of mine) {
-    if (!counts.has(entry.role)) order.push(entry.role);
-    counts.set(entry.role, (counts.get(entry.role) ?? 0) + 1);
+    const takenFaceDown = entry.role !== null && entry.takenFaceDown === true;
+    const key = `${entry.role ?? ''}:${takenFaceDown}`;
+    const group = groups.get(key);
+    if (group) group.count += 1;
+    else groups.set(key, { role: entry.role, takenFaceDown, count: 1 });
   }
+  // A role's shaded tile sits right after its plain one, in first-capture order.
+  const firstSeen = new Map<Role | null, number>();
+  for (const group of groups.values()) {
+    if (!firstSeen.has(group.role)) firstSeen.set(group.role, firstSeen.size);
+  }
+  const ordered = [...groups.values()].sort(
+    (a, b) =>
+      (firstSeen.get(a.role) ?? 0) - (firstSeen.get(b.role) ?? 0) ||
+      Number(a.takenFaceDown) - Number(b.takenFaceDown),
+  );
   const row = document.createElement('div');
   row.className = 'captures-row review-captures-row';
-  for (const role of order) {
-    const count = counts.get(role) ?? 1;
-    const label = role === null ? `${owner} hidden piece` : `${owner} ${role}`;
+  for (const { role, takenFaceDown, count } of ordered) {
+    const name = role === null ? `${owner} hidden piece` : `${owner} ${role}`;
+    const label = takenFaceDown ? `${name}, captured face-down` : name;
     const span = document.createElement('span');
     span.className = count > 1 ? 'review-capture-piece has-count' : 'review-capture-piece';
+    if (takenFaceDown) span.classList.add('is-taken-face-down');
     span.setAttribute('aria-label', count > 1 ? `${label} x${count}` : label);
     span.innerHTML =
       role === null
@@ -56,4 +81,28 @@ export function countBadge(count: number): HTMLSpanElement {
   badge.textContent = String(count);
   badge.setAttribute('aria-hidden', 'true');
   return badge;
+}
+
+/** Pieces removed since this tree's root. Open variants have no capture ledger;
+ *  comparing with their seeded root avoids calling absent setup pieces captures.
+ *  Only for variants without promotions, drops or changes of identity. */
+export function capturedBetweenBoards<Color extends string, Role extends string>(
+  root: Partial<Record<string, { color: Color; role: Role }>>,
+  board: Partial<Record<string, { color: Color; role: Role }>>,
+): { owner: Color; role: Role }[] {
+  const remaining = new Map<string, number>();
+  for (const piece of Object.values(board)) {
+    if (!piece) continue;
+    const key = `${piece.color}:${piece.role}`;
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  const captured: { owner: Color; role: Role }[] = [];
+  for (const piece of Object.values(root)) {
+    if (!piece) continue;
+    const key = `${piece.color}:${piece.role}`;
+    const count = remaining.get(key) ?? 0;
+    if (count > 0) remaining.set(key, count - 1);
+    else captured.push({ owner: piece.color, role: piece.role });
+  }
+  return captured;
 }

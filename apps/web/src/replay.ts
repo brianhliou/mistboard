@@ -319,9 +319,12 @@ export type ReplayMaterialSlots = {
 /** What a caller draws over a replay board at one ply. */
 export type ReplayBoardOverlay = {
   arrows: readonly SvgBoardSquareArrow[];
-  /** Judgment badges (?!, ?, ??) in a square's top-right corner, in the shared
-   *  board-glyph-marker.css palette (`className` = `xq-marker--<tone>`). */
-  glyphs: readonly SvgBoardSquareGlyph[];
+  /** Judgment badges in a square's top-right corner, or a flip's luck die in
+   *  the opposite corner. Each variant's marker renderer places them. */
+  glyphs: readonly (
+    | SvgBoardSquareGlyph
+    | { square: string; kind: 'luck'; luck: { luck: number } }
+  )[];
 };
 
 /** A per-ply clock snapshot, keyed by move order rather than colour so it carries across
@@ -619,14 +622,16 @@ export async function mountReplay(
               brush: arrow.className?.includes('best') ? 'blue' : 'paleGrey',
             }),
           ),
-          ...overlay.glyphs.map(
-            (glyph): DrawShape => ({
-              orig: glyph.square as Key,
-              // Chessground hands a custom shape the square as a 100x100 box; the badge
-              // is the same markup and palette every SVG board draws.
-              customSvg: { html: svgBoardGlyphMarker(glyph, { x: 50, y: 50 }, 17, 32) },
-            }),
-          ),
+          ...overlay.glyphs
+            .filter((glyph) => glyph.kind === 'glyph')
+            .map(
+              (glyph): DrawShape => ({
+                orig: glyph.square as Key,
+                // Chessground hands a custom shape the square as a 100x100 box; the badge
+                // is the same markup and palette every SVG board draws.
+                customSvg: { html: svgBoardGlyphMarker(glyph, { x: 50, y: 50 }, 17, 32) },
+              }),
+            ),
         ]
       : [];
     for (const cg of [whiteCg, truthCg, blackCg]) cg.setAutoShapes(shapes);

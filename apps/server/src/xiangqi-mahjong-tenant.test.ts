@@ -15,6 +15,7 @@ import {
 } from '@mistboard/game';
 import { botVsBotConfigFromEnv } from './bot-vs-bot-scheduler.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { logger } from './obs.js';
 import { isAllowlistedGameSpec } from './persistence-variant-access.js';
 import {
   isXmjBotClientId,
@@ -23,6 +24,11 @@ import {
   xmjBotDelayMs,
   xmjBotMove,
 } from './server-xiangqi-mahjong-bots.js';
+import {
+  isKnownUnreplayableGame,
+  resetTenantReplayGuardForTests,
+} from './variant-tenant/replay-guard.js';
+import { tenantReplayCheck } from './variant-tenant/runtime.js';
 import {
   getXmjClientView,
   type XmjEvent,
@@ -202,19 +208,19 @@ test('a bot claimant settles the window at the same moment, claim or not', () =>
 });
 
 // Launch-playbook rule 3: the surfaces Xiangqi Mahjong is left off on purpose.
-// No PGN/JSON export (no notation for a tile match). The share card carries
+// JSON exports the complete finished match; there is no PGN. The share card carries
 // final tai totals only. Its TV channel serves only the spectator view
 // (xiangqi-mahjong-spectate.test.ts). A finished game opens at its own room
 // instead (finishedGameOpensRoom). Bot-vs-bot never schedules it.
-test('xiangqi mahjong binds a match card without export or bot-vs-bot', async () => {
+test('xiangqi mahjong binds JSON export and a match card without bot-vs-bot', async () => {
   await import('./variant-tenant/register-tenants.js');
   const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
   const entry = registeredVariantTenants().find(
     (candidate) => candidate.gameSpecId === XIANGQI_MAHJONG_SPEC_ID,
   );
   assert.ok(entry, 'xiangqi mahjong is registered');
-  assert.deepEqual(exportFormatsForVariant(XIANGQI_MAHJONG_SPEC_ID), []);
-  assert.equal(entry.export ?? null, null);
+  assert.deepEqual(exportFormatsForVariant(XIANGQI_MAHJONG_SPEC_ID), ['json']);
+  assert.equal(entry.export?.gameRouteBase, '/xiangqi-mahjong/game');
   assert.equal(entry.card?.layout, 'match');
   assert.equal(entry.watch?.channelId, 'xiangqi-mahjong');
   assert.equal(entry.finishedGameOpensRoom, true);
@@ -223,4 +229,30 @@ test('xiangqi mahjong binds a match card without export or bot-vs-bot', async ()
   } as NodeJS.ProcessEnv);
   assert.deepEqual(eve.plans, []);
   assert.equal(eve.skipped[0]?.variant, XIANGQI_MAHJONG_SPEC_ID);
+});
+
+test('a stored match whose walls the current rules refuse is skipped, not thrown', () => {
+  // Pre-launch rooms were dealt 8 walls; the match is 6 hands now. Building
+  // the seed outside the replay guard let that throw 500 the /watch feed.
+  const rnd = seeded(5);
+  const setup = createXmjSetup(rnd);
+  const walls = [...setup.walls, setup.walls[0]!, setup.walls[1]!];
+  const events = [
+    {
+      type: 'room-created',
+      at: 1,
+      roomId: 'xmj_eight_walls',
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      setup: { ...setup, walls },
+    },
+  ];
+  resetTenantReplayGuardForTests();
+  const warn = logger.warn;
+  logger.warn = (() => {}) as typeof logger.warn;
+  try {
+    assert.equal(tenantReplayCheck(tenant)(events, 'xmj_eight_walls'), false);
+  } finally {
+    logger.warn = warn;
+  }
+  assert.equal(isKnownUnreplayableGame('xmj_eight_walls'), true);
 });

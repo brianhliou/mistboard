@@ -5,12 +5,17 @@
 // viewer's own follows, and anonymous visitors get a sign-in prompt instead of
 // a redirect so the deep link explains itself.
 //
+// Rows of friends online now get a dot, and a Watch link for one in a live
+// game (decorateFollowingRows, from the same list the header Friends menu
+// reads).
+//
 // /following?tab=followers is the private Followers list (2026-10-08): who
 // follows the viewer, newest first. Same self-only posture: the endpoint is
 // keyed by the session, and nobody else can see an account's followers.
 
 import './following.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
+import { decorateFollowingRows, fetchOnlineFriends, type OnlineFriend } from './friends-nav.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { prependTitleBadge } from './player-titles.js';
@@ -116,6 +121,8 @@ export async function mountFollowing(root: HTMLElement): Promise<void> {
     return;
   }
 
+  // Who is online, fetched beside the first page; rows are marked as it lands.
+  const online = fetchOnlineFriends();
   const first = await fetchFollowingPage(0);
   if (!first) {
     body.append(
@@ -124,7 +131,7 @@ export async function mountFollowing(root: HTMLElement): Promise<void> {
     return;
   }
 
-  renderFollowing(body, sub, first, locale);
+  renderFollowing(body, sub, first, locale, online);
 }
 
 function renderFollowing(
@@ -132,6 +139,7 @@ function renderFollowing(
   countLine: HTMLElement,
   first: FollowingPage,
   locale: Locale,
+  online: Promise<OnlineFriend[] | null>,
 ): void {
   let total = first.total;
   let loaded = first.entries.length;
@@ -174,6 +182,11 @@ function renderFollowing(
 
   for (const entry of first.entries) tbody.append(buildRow(entry, locale, onUnfollowed));
   body.replaceChildren(table);
+  const markOnline = () =>
+    void online.then((friends) => {
+      if (friends) decorateFollowingRows(tbody, friends, locale);
+    });
+  markOnline();
 
   if (loaded < total) {
     const more = document.createElement('button');
@@ -190,6 +203,7 @@ function renderFollowing(
         total = page.total;
         loaded += page.entries.length;
         for (const entry of page.entries) tbody.append(buildRow(entry, locale, onUnfollowed));
+        markOnline();
         updateCount();
         if (loaded < total && page.entries.length > 0) more.disabled = false;
         else more.remove();
@@ -345,6 +359,7 @@ function buildRow(
 ): HTMLTableRowElement {
   const row = document.createElement('tr');
   row.className = 'following-row';
+  row.dataset.handle = entry.handle;
 
   const playerCell = document.createElement('td');
   playerCell.className = 'following-player';

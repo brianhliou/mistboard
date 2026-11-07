@@ -20,13 +20,16 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   initialStartFen,
+  isAdminOnlyStudySpecId,
   isStudyEligibleSpecId,
   parsePracticeGoal,
   startIsDealt,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
-import { STUDY_PAGE_MAX } from './../persistence-studies.js';
+import { STUDY_PAGE_MAX, type StudyListAccess } from './../persistence-studies.js';
+import { studyHasAdminOnlyChapter } from './../study-admin-only.js';
+import { threeKingdomsBanqiAdmits } from './../three-kingdoms-banqi-access.js';
 import {
   readJsonBody,
   requireAdminSession,
@@ -40,11 +43,52 @@ const ID = '[A-Za-z0-9]+';
 const STUDY_PATH = new RegExp(`^/api/studies/(${ID})$`);
 const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
+const CHAPTER_DECISIONS_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})/decisions$`);
 const CHAPTER_ANALYSIS_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})/analysis$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
 const CLONE_PATH = new RegExp(`^/api/studies/(${ID})/clone$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
 const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
+
+// ── Admin-only study variants (#628) ──
+// Who may see a study in an ADMIN_ONLY_STUDY_SPEC_IDS variant: the same rule
+// as the Three Kingdoms banqi rooms (three-kingdoms-banqi-access.ts): an admin
+// account, or everyone when the local playtest flag is on (never in Railway).
+async function adminOnlyStudyAdmits(request: IncomingMessage): Promise<boolean> {
+  return threeKingdomsBanqiAdmits(await currentAccountUser(request));
+}
+
+type AdminOnlyStudyGate = (request: IncomingMessage) => Promise<boolean>;
+let adminOnlyStudyGate: AdminOnlyStudyGate = adminOnlyStudyAdmits;
+
+/** Tests only: replace the gate (a planted open gate must fail the refusal
+ *  test), or pass null to restore the real one. */
+export function setAdminOnlyStudyGateForTests(gate: AdminOnlyStudyGate | null): void {
+  adminOnlyStudyGate = gate ?? adminOnlyStudyAdmits;
+}
+
+// Every route that names one study (read, edit, delete, like, clone, chapters,
+// analysis) carries its id in the first path segment after /api/studies/.
+const STUDY_ITEM_PATH = new RegExp(`^/api/studies/(${ID})(?:/|$)`);
+const STUDY_COLLECTION_SEGMENTS = new Set(['public', 'staff', 'favorites', 'mine']);
+
+/** True when the study must read as missing to this requester: it has a
+ *  chapter in an admin-only variant and the requester is not admitted. Owner
+ *  or not, read or write, the answer is the same 404 a missing study gets, so
+ *  the study's existence does not leak either. */
+async function hiddenFromRequester(request: IncomingMessage, studyId: string): Promise<boolean> {
+  const variants = await persistence.getStudyChapterVariants(studyId);
+  if (
+    !studyHasAdminOnlyChapter(variants && { chapters: variants.map((variant) => ({ variant })) })
+  ) {
+    return false;
+  }
+  return !(await adminOnlyStudyGate(request));
+}
+
+async function listAccessFor(request: IncomingMessage): Promise<StudyListAccess> {
+  return { includeAdminOnly: await adminOnlyStudyGate(request) };
+}
 
 export function isSerializedTree(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -167,6 +211,9 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
     gamebook: chapter.gamebook,
     practice: chapter.practice,
     practiceGoal: chapter.practiceGoal,
+    // Only when set: the field is rare, and leaving it off keeps every other
+    // chapter's payload exactly as it was.
+    ...(chapter.scoreSeries ? { scoreSeries: chapter.scoreSeries } : {}),
   };
 }
 
@@ -259,7 +306,12 @@ export async function tryHandle(
     // ?limit lets the /study "All studies" browse ask for more than the homepage
     // widget's default 5. ?q filters by study name. listTopPublicStudies clamps.
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
-    const page = await pageOf(persistence.listTopPublicStudies, params, 5);
+    const access = await listAccessFor(request);
+    const page = await pageOf(
+      (limit, q, offset) => persistence.listTopPublicStudies(limit, q, offset, access),
+      params,
+      5,
+    );
     writeJson(response, 200, {
       studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
       hasMore: page.hasMore,
@@ -272,7 +324,12 @@ export async function tryHandle(
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
-    const page = await pageOf(persistence.listFeaturedStudies, params, 30);
+    const access = await listAccessFor(request);
+    const page = await pageOf(
+      (limit, q, offset) => persistence.listFeaturedStudies(limit, q, offset, access),
+      params,
+      30,
+    );
     writeJson(response, 200, {
       studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
       hasMore: page.hasMore,
@@ -294,6 +351,7 @@ export async function tryHandle(
       user.id,
       parseLimit(params, 30),
       params.get('q') ?? undefined,
+      await listAccessFor(request),
     );
     writeJson(response, 200, { studies: studies.map(publicStudyView) });
     return true;
@@ -310,7 +368,11 @@ export async function tryHandle(
     if (pathname === '/api/studies/mine') {
       if (!requireMethod(request, response, 'GET')) return true;
       const q = new URL(request.url ?? '', 'http://localhost').searchParams.get('q') ?? undefined;
-      const studies = await persistence.listStudiesForOwner(user.id, q);
+      const studies = await persistence.listStudiesForOwner(
+        user.id,
+        q,
+        await listAccessFor(request),
+      );
       writeJson(response, 200, {
         studies: studies.map((s) => ({
           ...studyView(s, true),
@@ -327,6 +389,18 @@ export async function tryHandle(
   }
 
   // ── Like a public study ──
+  // ── Admin-only variants (#628): one door for every single-study route ──
+  const itemMatch = STUDY_ITEM_PATH.exec(pathname);
+  if (
+    itemMatch &&
+    !STUDY_COLLECTION_SEGMENTS.has(itemMatch[1]!) &&
+    persistence.isInitialized() &&
+    (await hiddenFromRequester(request, itemMatch[1]!))
+  ) {
+    writeJson(response, 404, { error: 'not_found' });
+    return true;
+  }
+
   const likeMatch = LIKE_PATH.exec(pathname);
   if (likeMatch) {
     if (!requireMethod(request, response, 'PUT')) return true;
@@ -364,6 +438,27 @@ export async function tryHandle(
       return true;
     }
     writeJson(response, 201, { study: { id: result.study.id, name: result.study.name } });
+    return true;
+  }
+
+  const decisionsMatch = CHAPTER_DECISIONS_PATH.exec(pathname);
+  if (decisionsMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const found = await persistence.getStudyChapterDecisionsForRead(
+      decisionsMatch[1]!,
+      decisionsMatch[2]!,
+    );
+    const user = found?.visibility === 'private' ? await currentAccountUser(request) : null;
+    if (!found || (found.visibility === 'private' && user?.id !== found.ownerId)) {
+      writeJson(response, 404, { error: 'not_found' });
+    } else if (!found.decisions) {
+      response.writeHead(204);
+      response.end();
+    } else {
+      const { engineId, source, decisions } = found.decisions;
+      writeJson(response, 200, { engineId, source, decisions });
+    }
     return true;
   }
 
@@ -461,7 +556,12 @@ async function createStudy(
     return true;
   }
   const variant = typeof chapter.variant === 'string' ? chapter.variant : '';
-  if (!isStudyEligibleSpecId(variant)) {
+  // An admin-only variant answers a non-admin exactly as an unknown one does,
+  // so the refusal does not announce the variant.
+  if (
+    !isStudyEligibleSpecId(variant) ||
+    (isAdminOnlyStudySpecId(variant) && !(await adminOnlyStudyGate(request)))
+  ) {
     writeJson(response, 400, { error: 'unsupported_variant' });
     return true;
   }
@@ -535,6 +635,9 @@ async function readStudy(
   const analysed = await persistence.analysedStudyChapterIds(
     study.chapters.map((chapter) => chapter.id),
   );
+  const decided = await persistence.decidedStudyChapterIds(
+    study.chapters.map((chapter) => chapter.id),
+  );
   writeJson(response, 200, {
     study: {
       ...studyView(study, isOwner),
@@ -545,6 +648,7 @@ async function readStudy(
       ...chapterView(chapter),
       ...(solved.has(chapter.id) ? { solved: true } : {}),
       ...(analysed.has(chapter.id) ? { hasAnalysis: true } : {}),
+      ...(decided.has(chapter.id) ? { hasDecisions: true } : {}),
     })),
   });
   return true;

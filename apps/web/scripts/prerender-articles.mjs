@@ -1129,6 +1129,32 @@ try {
   await fs.writeFile(resolve(distDir, 'patron.html'), patronHtml, 'utf-8');
   console.log('prerendered /patron (patron.html)');
 
+  // Washington Xiangqi: the approved club copy in each interface locale,
+  // using the same renderer and canonical/alternate group as the static indexes.
+  const { renderClubWashingtonShellForPrerender, clubWashingtonPrerenderHead } =
+    await server.ssrLoadModule('/src/club-washington-page.ts');
+  const clubAssetLinks = routeAssetLinks(manifest, 'src/club-washington-page.ts', shell);
+  for (const v of baseVariants) {
+    const locale = v.lang ?? 'en';
+    const head = clubWashingtonPrerenderHead(host, locale);
+    win.happyDOM.setURL(head.url);
+    const inner = renderClubWashingtonShellForPrerender(locale);
+    let html = shell
+      .replace('<html lang="en">', `<html lang="${head.htmlLang}">`)
+      .replace(
+        '<div id="app"></div>',
+        `<div id="app" class="landing-page club-route">${inner}</div>`,
+      );
+    html = injectPageMeta(html, head);
+    const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
+    html = html.replace('</head>', `${head.headLinks}${clubAssetLinks}${localeLinks}</head>`);
+    const file = resolve(distDir, v.langDir ?? '', 'washington-xiangqi.html');
+    await fs.mkdir(dirname(file), { recursive: true });
+    await fs.writeFile(file, html, 'utf-8');
+    console.log(`prerendered ${v.urlPrefix}/washington-xiangqi`);
+  }
+  win.happyDOM.setURL(host);
+
   // Every baked page must link the stylesheets that style its markup, or it
   // paints unstyled until a lazy chunk brings them (the /rules flash, 10-16).
   // Fix a miss by linking the chunk that renders the page (dynamicChunkAssetLinks

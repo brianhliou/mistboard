@@ -4,18 +4,20 @@
 //   - an engine bar above the board (eval, best line, depth) while the engine
 //     is on;
 //   - an info row under the board (variant, side to move, Edit position);
-//   - a labelled bottom bar: Tools, Engine, Flip, Back, Next.
+//   - a labelled bottom bar: Tools, Engine, Flip, Back, Next (fixed-orientation
+//     boards omit Flip).
 // Tools opens a sheet with the review menu's items (study, clear, explorer,
-// board editor, ...) and the FEN + moves import block.
+// board editor, ...) and the import block, plus engine settings when requested.
 //
-// Nothing here runs the engine or owns its state. The engine bar is a view of
-// the engine panel (engine-panel.ts), which keeps rendering in the DOM where
-// the desktop layout and the ceval smoke read it; the Engine button calls the
-// panel's own setOn. Above 600px every piece here is display: none
+// Nothing here runs the engine or owns its state. The engine bar (engine-bar.ts,
+// shared with the phone game review) is a view of the engine panel
+// (engine-panel.ts), which keeps rendering in the DOM where the desktop layout
+// and the ceval smoke read it; the Engine button calls the panel's own setOn. Above 600px every piece here is display: none
 // (analysis-phone-bar.css), so tablet and desktop are unchanged.
 
 import './analysis-phone-bar.css';
 import { t } from '../i18n/catalog.js';
+import { createEngineBar } from './engine-bar.js';
 import type { ReviewMenuItem } from './review-controls.js';
 
 /** The slice of the engine panel the bar drives and mirrors. */
@@ -31,7 +33,10 @@ export interface AnalysisPhoneBarOptions {
   engine: AnalysisPhoneEngine | null;
   /** Shown first in the info row ("Xiangqi"). */
   variantName: string;
-  onFlip(): void;
+  /** Omitted for placement boards with fixed coordinates. */
+  onFlip?(): void;
+  /** Keep engine settings in Tools instead of extending the phone stack. */
+  engineInTools?: boolean;
   onBack(): void;
   onNext(): void;
   /** The review menu's items, read each time the sheet opens (the explorer
@@ -162,7 +167,13 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
   const next = barButton('next', t('replay.next'));
   next.button.setAttribute('aria-label', t('watch.nextMove'));
   next.button.setAttribute('aria-keyshortcuts', 'ArrowRight');
-  bar.append(tools.button, engineBtn.button, flip.button, back.button, next.button);
+  bar.append(
+    tools.button,
+    engineBtn.button,
+    ...(opts.onFlip ? [flip.button] : []),
+    back.button,
+    next.button,
+  );
 
   engineBtn.button.addEventListener(
     'click',
@@ -172,52 +183,20 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
     },
     { signal },
   );
-  flip.button.addEventListener('click', () => opts.onFlip(), { signal });
+  flip.button.addEventListener('click', () => opts.onFlip?.(), { signal });
   back.button.addEventListener('click', () => opts.onBack(), { signal });
   next.button.addEventListener('click', () => opts.onNext(), { signal });
 
-  // ── Engine bar (above the board) ──
-  const engineBar = document.createElement('div');
-  engineBar.className = 'analysis-engine-bar';
-  engineBar.hidden = true;
-  engineBar.setAttribute('aria-live', 'off');
-  const evalChip = document.createElement('span');
-  evalChip.className = 'analysis-engine-bar__eval';
-  const pv = document.createElement('span');
-  pv.className = 'analysis-engine-bar__pv';
-  const depth = document.createElement('span');
-  depth.className = 'analysis-engine-bar__depth';
-  engineBar.append(evalChip, pv, depth);
-
-  function syncEngine(): void {
-    engineBar.hidden = !(engineUsable && engineOn);
-    if (engineBar.hidden || !engine) return;
-    const panel = engine.el;
-    const evalText = panel.querySelector('.engine-panel__eval')?.textContent?.trim() ?? '';
-    const lineText = panel.querySelector('.engine-panel__line-pv')?.textContent?.trim() ?? '';
-    const subText = panel.querySelector('.engine-panel__sub')?.textContent?.trim() ?? '';
-    const depthMatch = /Depth (\d+)/.exec(subText);
-    evalChip.textContent = evalText || '–';
-    // Before the first line lands the PV slot carries the panel's status
-    // ("loading…", the net download progress), so the bar never sits blank.
-    pv.textContent = lineText || subText;
-    depth.textContent = depthMatch ? t('analysis.barDepth', { depth: depthMatch[1]! }) : '';
-  }
+  // ── Engine bar (above the board), shared with the phone game review ──
+  const engineBar = createEngineBar({ signal, engine });
+  const syncEngine = (): void => engineBar.sync();
 
   function setEngineOn(on: boolean): void {
     engineOn = on;
     engineBtn.button.setAttribute('aria-pressed', on ? 'true' : 'false');
     engineBtn.button.classList.toggle('is-on', on);
     engineBtn.text.textContent = on ? t('analysis.barEngineOn') : t('analysis.barEngineOff');
-    syncEngine();
-  }
-
-  // The panel streams progress text (net download, depth) between line
-  // updates; follow it so the bar's status matches the panel's.
-  if (engine && engineUsable && typeof MutationObserver !== 'undefined') {
-    const observer = new MutationObserver(() => syncEngine());
-    observer.observe(engine.el, { subtree: true, childList: true, characterData: true });
-    signal.addEventListener('abort', () => observer.disconnect(), { once: true });
+    engineBar.setOn(on);
   }
 
   // ── Info row (under the board) ──
@@ -260,7 +239,9 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
   importSlot.className = 'analysis-tools-sheet__import';
   const metaSlot = document.createElement('div');
   metaSlot.className = 'analysis-tools-sheet__meta';
-  panel.append(head, list, metaSlot, importSlot);
+  const engineSlot = document.createElement('div');
+  engineSlot.hidden = !opts.engineInTools;
+  panel.append(head, list, metaSlot, importSlot, engineSlot);
   sheet.append(backdrop, panel);
 
   // Where the import block goes back to when the sheet closes.
@@ -309,6 +290,7 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
     homes = [];
     lend(opts.metaCard, metaSlot);
     lend(opts.importPanel, importSlot);
+    if (opts.engineInTools) lend(engine?.el, engineSlot);
     sheet.hidden = false;
     tools.button.setAttribute('aria-expanded', 'true');
     document.body.classList.add('analysis-tools-open');
@@ -349,7 +331,7 @@ export function createAnalysisPhoneBar(opts: AnalysisPhoneBarOptions): AnalysisP
 
   return {
     bar,
-    engineBar,
+    engineBar: engineBar.el,
     info,
     sheet,
     sync(state) {

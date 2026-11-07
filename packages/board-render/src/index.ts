@@ -46,7 +46,6 @@ export type {
 export {
   CHAMPIONS,
   CHART_LAYOUT,
-  championsWithNonDefaultScript,
   championTableRows,
   EDITION_GAPS,
   EDITIONS,

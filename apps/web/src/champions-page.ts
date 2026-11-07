@@ -17,8 +17,14 @@
 // (jieqi-engine.ts, jungle-katago-engine.ts, jungle-engine.ts). TITLES is in
 // CANONICAL_VARIANT_ORDER (champions-page.test.ts checks it against VARIANTS).
 
+import { isPublicGameSpec } from '@mistboard/game';
 import { articleIsLive } from './articles/publish-time.js';
-import { jqeEnabled } from './feature-flags.js';
+import {
+  PIKAFISH_REPO_URL,
+  pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_REPO_URL,
+} from './engine-credits.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
@@ -44,8 +50,9 @@ export function mountChampions(root: HTMLElement): void {
 
 type Part = string | Node;
 
-// Either link may be missing while it is unpublished (jqe's write-up is the
-// 2026-11-03 article); the card and the history line show only the ones there are.
+// Either link may be missing while it is unpublished, or absent when there is no
+// public page or study for a match (AB-JChess-20261031's); the card and the history
+// line show only the ones there are.
 type TitleMatch = {
   writeUpHref?: string;
   gamesHref?: string;
@@ -57,9 +64,23 @@ type Reign = TitleMatch & {
   draws: number;
   losses: number;
   tookKey: I18nKey;
-  // The engine's own repository, linked after the about line.
-  sourceHref: string;
   about: (locale: Locale) => Part[];
+};
+
+// One linked credit: an engine's code or the network it loads. `nameKey` where
+// zh uses a published name (皮卡鱼); `href` may depend on the reader's language.
+type Credit = {
+  name: string;
+  nameKey?: I18nKey;
+  href: string | ((locale: Locale) => string);
+};
+
+// Who wrote what the holder runs, each linked to its source. `network` only for
+// an engine that loads a separate net or weights file. URLs are the ones /source,
+// /thanks and the bot pages already cite (engine-credits.ts, bots.ts botCredits).
+type Credits = {
+  code: readonly Credit[];
+  network?: readonly Credit[];
 };
 
 type Title = {
@@ -67,17 +88,26 @@ type Title = {
   nameKey: I18nKey;
   // The bot's name as the site shows it; `holderKey` where zh uses a
   // published translation (皮卡鱼 for Pikafish).
-  holder: string;
+  holder?: string;
   holderKey?: I18nKey;
-  botHref: string;
+  // The holder's bot page (/bot/<id>, keyed by the /api/bots id). The card's
+  // name links there like a profile. Open titles may have no holder or bot page.
+  botHref?: string;
+  // The holder's id in the variant's computer setup (variant-tenant/registry.ts
+  // engineOptions). "Play the champion" opens setup with it picked, through the
+  // deep link landing-play.ts maybeOpenPlayDeepLink reads; the test checks setup
+  // offers it, since setup ignores an id it does not offer.
+  setupEngineId?: string;
+  // Absent only where nothing public can be linked yet (Misty on Fog Xiangqi
+  // and Xiangqi Mahjong; champions-page.test.ts names them).
+  credits?: Credits;
   // Present once a challenger has taken the title; absent while it is open.
   reign?: Reign;
 };
 
 const JIEQI_MATCH: TitleMatch = { writeUpHref: '/blog/ab-jchess', gamesHref: '/data' };
 // jqe took the jieqi title from AB-JChess 0.2d (mistboard-engine lab/jieqi-match,
-// run jqe-vs-abj-0.2d, 2026-10-21). It reigns only once jqe is the bot you play,
-// so the swap rides VITE_JQE_ENABLED with the jieqi picker.
+// run jqe-vs-abj-0.2d, 2026-10-21) and held it until AB-JChess-20261031 took it back.
 // The jqe write-up goes live on its own date (articles/publish-time.ts); before
 // that the card links only the games and the bot. The test pins this date to
 // the article's publishedAt.
@@ -91,44 +121,87 @@ const JUNGLE_MATCH: TitleMatch = {
   gamesHref: '/study/0t8xpyv6',
 };
 
+const PIKAFISH_CODE: Credit = {
+  name: 'Pikafish',
+  nameKey: 'champions.enginePikafish',
+  href: PIKAFISH_REPO_URL,
+};
+// The official net prod pins (scripts/engine-assets.sh), credited through
+// pikafish.com's weights page like /source does.
+const PIKAFISH_NET: Credit = {
+  name: 'Pikafish NNUE',
+  nameKey: 'champions.netPikafish',
+  href: pikafishWeightsLicenseUrl,
+};
+
 const MISTY = { holder: 'Misty', botHref: '/bot/misty' } as const;
+// Misty is ours: a Misty card credits the public repo for that variant's engine,
+// the one its article already links (banqi-engine, misty for Fog Chess,
+// flip-jungle-skill-ceiling). Misty loads no separate net, so code only.
+const mistyRepo = (repo: string): Credits => ({
+  code: [{ name: repo, href: `https://github.com/brianhliou/${repo}` }],
+});
+// Duck and Crazyhouse Xiangqi run with NNUE off (duck-xiangqi-fsf-engine.ts,
+// crazyhouse-xiangqi-fsf-engine.ts): code only.
 const FAIRY_STOCKFISH_L8 = {
   holder: 'Fairy-Stockfish Level 8',
   holderKey: 'champions.engineFairyStockfish8',
   botHref: '/bot/fairy-stockfish-level-8',
-} as const;
+  credits: {
+    code: [{ name: 'Fairy-Stockfish', href: 'https://github.com/fairy-stockfish/Fairy-Stockfish' }],
+  },
+} as const satisfies Partial<Title>;
 
-const JIEQI_AB_JCHESS: Title = {
+// AB-JChess-20261031 took the jieqi title back from jqe (mistboard-engine
+// lab/jieqi-match/jqe-vs-abj-20261031, commit c01c608, 2026-10-31): 600 games at 4 s
+// and 4 threads, 306-67-227 (a 0.566 score). The write-up (blog/ab-jchess-vs-jqe)
+// goes live on its own date, as the jqe one did; the test pins this date to the
+// article's publishedAt and status. The match's study (SwSUugEY) is linked from the post.
+export const AB_JCHESS_2026_WRITE_UP = { status: 'published', publishedAt: '2026-11-04' } as const;
+const AB_JCHESS_2026_MATCH: TitleMatch = articleIsLive(AB_JCHESS_2026_WRITE_UP)
+  ? { writeUpHref: '/blog/ab-jchess-vs-jqe' }
+  : {};
+const JIEQI_AB_JCHESS_20261031: Title = {
   gameId: 'jieqi',
   nameKey: 'variant.jieqi.name',
   holder: 'AB-JChess',
   botHref: '/bot/ab-jchess',
+  setupEngineId: 'ab-jchess-jieqi',
+  // Built on jqe's MIT code. The net (abjchess-20261030.nnue) ships in the authors'
+  // AB-JChess-20261031 release (scripts/fetch-abjchess-net.sh), never re-hosted.
+  credits: {
+    code: [
+      { name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' },
+      { name: 'jqe', href: 'https://github.com/devinokeefe/jieqi' },
+    ],
+    network: [
+      {
+        name: 'abjchess-20261030.nnue',
+        href: 'https://github.com/lxsgx23/AB-JChess/releases/tag/AB-JChess-20261031',
+      },
+    ],
+  },
   reign: {
-    ...JIEQI_MATCH,
-    // AB-JChess won 248, lost 136, drew 16 (the write-up; a 0.64 score).
-    wins: 248,
-    draws: 16,
-    losses: 136,
-    tookKey: 'champions.tookJieqi',
-    sourceHref: 'https://github.com/lxsgx23/AB-JChess',
-    about: (locale) => [t('champions.aboutJieqi', {}, locale)],
+    wins: 306,
+    draws: 67,
+    losses: 227,
+    tookKey: 'champions.tookAbJchess2',
+    about: (locale) => [t('champions.aboutAbJchess2', {}, locale)],
+    ...AB_JCHESS_2026_MATCH,
   },
 };
 
-const JIEQI_JQE: Title = {
-  gameId: 'jieqi',
-  nameKey: 'variant.jieqi.name',
-  holder: 'jqe',
-  botHref: '/bot/jqe',
-  reign: {
-    ...JQE_MATCH,
-    // jqe won 171, lost 114, drew 15 over 150 paired deals (a 0.595 score).
-    wins: 171,
-    draws: 15,
-    losses: 114,
-    tookKey: 'champions.tookJqe',
-    sourceHref: 'https://github.com/devinokeefe/jieqi',
-    about: (locale) => [t('champions.aboutJqe', {}, locale)],
+// No title match has been played. Rapfi is credited as the available engine,
+// without asserting a holder or publishing the locally bundled network URL.
+export const GOMOKU_OPEN_TITLE: Title = {
+  gameId: 'gomoku',
+  nameKey: 'variant.gomoku.name',
+  setupEngineId: 'rapfi-level-8',
+  credits: {
+    code: [
+      { name: 'Rapfi', href: RAPFI_REPO_URL },
+      { name: 'Rapfi WASM', href: RAPFI_BUILD_URL },
+    ],
   },
 };
 
@@ -139,33 +212,63 @@ export const TITLES: readonly Title[] = [
     holder: 'Pikafish',
     holderKey: 'champions.enginePikafish',
     botHref: '/bot/pikafish',
+    credits: { code: [PIKAFISH_CODE], network: [PIKAFISH_NET] },
   },
-  jqeEnabled() ? JIEQI_JQE : JIEQI_AB_JCHESS,
-  { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY },
+  JIEQI_AB_JCHESS_20261031,
+  { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY, credits: mistyRepo('misty-banqi') },
   { gameId: 'duck-xiangqi', nameKey: 'variant.duckXiangqi.name', ...FAIRY_STOCKFISH_L8 },
   {
     gameId: 'crazyhouse-xiangqi',
     nameKey: 'variant.crazyhouseXiangqi.name',
     ...FAIRY_STOCKFISH_L8,
   },
+  // The public misty repo is the Fog Chess engine only; the Fog Xiangqi
+  // sibling is not published (articles/content/misty.ts), so no credit here.
   { gameId: 'dark-xiangqi', nameKey: 'variant.darkXiangqi.name', ...MISTY },
-  { gameId: 'dark-chess', nameKey: 'variant.darkChess.name', ...MISTY },
+  {
+    gameId: 'dark-chess',
+    nameKey: 'variant.darkChess.name',
+    ...MISTY,
+    credits: mistyRepo('misty'),
+  },
   {
     gameId: 'jungle',
     nameKey: 'variant.jungle.name',
     holder: 'KataGo-AnimalChess',
     botHref: '/bot/katago',
+    setupEngineId: 'katago-jungle',
+    // KataGomo is built on KataGo; the net is Kouza's, shipped in Dandelion 4
+    // (scripts/fetch-katago-jungle-net.sh). Same three links as /bot/katago.
+    credits: {
+      code: [
+        { name: 'KataGomo', href: 'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025' },
+        { name: 'KataGo', href: 'https://github.com/lightvector/KataGo' },
+      ],
+      network: [{ name: 'Dandelion 4', href: 'https://github.com/lxsgx23/Dandelion-Chess' }],
+    },
     reign: {
       ...JUNGLE_MATCH,
       wins: 82,
       draws: 118,
       losses: 0,
       tookKey: 'champions.tookJungle',
-      sourceHref: 'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
       about: (locale) => [t('champions.aboutJungle', {}, locale)],
     },
   },
-  { gameId: 'jungle-flip', nameKey: 'variant.jungleFlip.name', ...MISTY },
+  {
+    gameId: 'jungle-flip',
+    nameKey: 'variant.jungleFlip.name',
+    ...MISTY,
+    credits: mistyRepo('misty-flip-jungle'),
+  },
+  // No public repo yet (#725).
+  {
+    gameId: 'xiangqi-mahjong',
+    nameKey: 'variant.xiangqiMahjong.name',
+    ...MISTY,
+    credits: mistyRepo('misty-xiangqi-mahjong'),
+  },
+  ...(isPublicGameSpec('gomoku') ? [GOMOKU_OPEN_TITLE] : []),
 ];
 
 export const CHAMPIONS = TITLES.filter((title) => title.reign);
@@ -173,7 +276,8 @@ export const OPEN_TITLES = TITLES.filter((title) => !title.reign);
 
 // One line per title change, newest first.
 export const TITLE_HISTORY: ReadonlyArray<TitleMatch & { textKey: I18nKey }> = [
-  ...(jqeEnabled() ? [{ ...JQE_MATCH, textKey: 'champions.historyJqe' as const }] : []),
+  { ...AB_JCHESS_2026_MATCH, textKey: 'champions.historyAbJchess2' },
+  { ...JQE_MATCH, textKey: 'champions.historyJqe' },
   { ...JIEQI_MATCH, textKey: 'champions.historyJieqi' },
   { ...JUNGLE_MATCH, textKey: 'champions.historyJungle' },
 ];
@@ -204,7 +308,37 @@ function marker(gameId: VariantMiniId, size: number): HTMLElement {
 }
 
 function holderName(title: Title, locale: Locale): string {
-  return title.holderKey ? t(title.holderKey, {}, locale) : title.holder;
+  return title.holderKey ? t(title.holderKey, {}, locale) : (title.holder ?? '');
+}
+
+// "Code  A, B" and "Network  C" rows, each name linked to its source.
+function creditList(credits: Credits, locale: Locale): HTMLElement {
+  const listEl = el('dl', 'champions-credits');
+  const rows: Array<[I18nKey, readonly Credit[] | undefined]> = [
+    ['champions.creditCode', credits.code],
+    ['champions.creditNetwork', credits.network],
+  ];
+  for (const [labelKey, entries] of rows) {
+    if (!entries || entries.length === 0) continue;
+    const links: Part[] = [];
+    for (const credit of entries) {
+      if (links.length > 0) links.push(t('champions.linkSeparator', {}, locale));
+      const name = credit.nameKey ? t(credit.nameKey, {}, locale) : credit.name;
+      const href = typeof credit.href === 'string' ? credit.href : credit.href(locale);
+      links.push(proseExternalLink(name, href));
+    }
+    listEl.append(
+      el('div', 'champions-credit', [el('dt', '', [t(labelKey, {}, locale)]), el('dd', '', links)]),
+    );
+  }
+  return listEl;
+}
+
+// Computer setup on the holder's variant with the holder picked.
+function playHref(title: Title, locale: Locale): string {
+  const params = new URLSearchParams({ play: 'computer', gameSpecId: title.gameId });
+  if (title.setupEngineId) params.set('engineId', title.setupEngineId);
+  return localizedHref(`/?${params}`, locale);
 }
 
 function button(label: string, href: string): HTMLAnchorElement {
@@ -268,6 +402,10 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
   const card = el('article', 'champions-hero');
   card.dataset.game = title.gameId;
 
+  // The name links to the holder's bot page, like a profile.
+  const profileLink = proseLink(holderName(title, locale), title.botHref ?? '#challenge');
+  profileLink.className = 'champions-hero-name-link';
+
   const crown = el('span', 'champions-crown', [
     buildUiIcon('title-champion'),
     t('champions.championBadge', {}, locale),
@@ -279,7 +417,7 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
         el('p', 'champions-hero-game', [t(title.nameKey, {}, locale)]),
         crown,
       ]),
-      el('h3', 'champions-hero-name', [holderName(title, locale)]),
+      el('h3', 'champions-hero-name', [profileLink]),
     ]),
   ]);
 
@@ -288,18 +426,15 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
       ? [button(t('champions.readMatch', {}, locale), localizedHref(reign.writeUpHref, locale))]
       : []),
     ...(reign.gamesHref ? [button(t('champions.seeGames', {}, locale), reign.gamesHref)] : []),
-    button(t('champions.playChampion', {}, locale), title.botHref),
+    button(t('champions.playChampion', {}, locale), playHref(title, locale)),
   ]);
 
   card.append(
     head,
     scoreBlock(reign, locale),
     el('p', 'champions-took', [t(reign.tookKey, {}, locale)]),
-    el('p', 'champions-about', [
-      ...reign.about(locale),
-      ' ',
-      proseExternalLink(t('champions.sourceLink', {}, locale), reign.sourceHref),
-    ]),
+    el('p', 'champions-about', reign.about(locale)),
+    ...(title.credits ? [creditList(title.credits, locale)] : []),
     actions,
   );
   return card;
@@ -308,17 +443,22 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
 function openCard(title: Title, locale: Locale): HTMLElement {
   const card = el('article', 'champions-open');
   card.dataset.game = title.gameId;
-  const holder = proseLink(holderName(title, locale), title.botHref);
+  const holder = proseLink(holderName(title, locale), title.botHref ?? '#challenge');
   holder.className = 'champions-open-holder-link';
   card.append(
     el('div', 'champions-open-head', [
       marker(title.gameId, 26),
       el('h3', 'champions-open-game', [t(title.nameKey, {}, locale)]),
     ]),
-    el('p', 'champions-open-holder', [
-      el('span', 'champions-open-label', [t('champions.heldBy', {}, locale)]),
-      holder,
-    ]),
+    ...(title.holder
+      ? [
+          el('p', 'champions-open-holder', [
+            el('span', 'champions-open-label', [t('champions.heldBy', {}, locale)]),
+            holder,
+          ]),
+        ]
+      : []),
+    ...(title.credits ? [creditList(title.credits, locale)] : []),
     el('span', 'champions-open-badge', [t('champions.openBadge', {}, locale)]),
     button(t('champions.challengeCta', {}, locale), '#challenge'),
   );

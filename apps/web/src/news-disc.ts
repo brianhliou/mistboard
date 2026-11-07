@@ -1,95 +1,161 @@
-// The homepage News box marks each row with a xiangqi-style disc: the
-// international piece set's cream disc and its one dark ring (xiangqi-piece-sets.ts,
-// INTERNATIONAL_RING_STROKE; both sides share it since the piece look of
-// 2026-10-14) carrying a filled ink mark instead of a character.
+// The homepage News box marks each row with a small sticker drawing, one per
+// announcement kind, in the house sticker style of the broadcast card's TV
+// (landing-event-banners.ts, BROADCAST_ART) and the Dobutsu piece set it was
+// drawn after: flat fills from one five-colour palette, one uniform near-black
+// outline with round joins, a few chunky parts, no gradients, no faces.
 //
-// The marks are a house set drawn for a 36px disc, in the same 100-unit box
-// the piece art uses: filled silhouettes, no strokes thinner than 4 units, so
-// they still read once the box halves them. Line icons at this size are what
-// the box shipped with before, and they read as a ring with a smudge in it.
+// Redrawn 2026-10-27 (#711). The marks before this were filled ink glyphs on a
+// cream disc (a document, a red four-point spark, a wrench, a horn); next to
+// the TV they read as blurry and rough. These are vector, so they stay crisp
+// at every pixel ratio, where the TV needs @2x/@3x rasters.
 //
-// One mark per kind, and the ink alternates so a run of releases does not
-// read as one long red column: red for things to use (release, update),
-// black for things to read (article, status). Remapped 2026-09-20: the horn
-// (a notice) moved from release to status, the spark (something new) took
-// release, update got a wrench (a change to something that exists), and the
-// lantern went: at 36px it read as a plug, and nothing about a lantern says
-// "status".
+// Drawn in a 100-unit box for a 36px slot, so one unit is about 0.36px: the
+// 4.5-unit outline renders near 1.6px, the TV's weight at its 44px size, and
+// nothing that has to read (a text line, a tooth, a sound dash) is thinner
+// than 5 units. Each drawing is centred on x = 50, where the timeline's rail
+// runs, so the rail meets it top and bottom.
+//
+// Dark mode: as with the TV, the navy parts and the black outline sink into
+// the dark panel, so each drawing carries a cream sticker border behind it
+// (the halo group) that only the dark theme shows (landing-announcements.css).
 
 import type { AnnouncementKind } from './announcements.js';
 
-export type NewsDiscMark = 'horn' | 'scroll' | 'spark' | 'wrench';
-export type NewsDiscInk = 'red' | 'black';
+export type NewsDiscMark = 'page' | 'sparkle' | 'gear' | 'megaphone';
 
-// Same hexes as the international set's disc and ring, so a marker beside a
-// board on the homepage is visibly the same object. The ring is dark on every
-// disc, as on the pieces; the ink colours only the mark inside it.
-const CREAM = '#fef0d7';
-const RING = '#202427';
-const INK: Record<NewsDiscInk, string> = { red: '#c30d0d', black: '#202427' };
+// The TV's palette (scratchpad style sheet of 2026-10-26, sampled back from
+// the shipped art): outline, tomato red, slate navy, cream, warm gold.
+const INK = '#1a1a1a';
+const RED = '#e22b13';
+const NAVY = '#3a5a7a';
+const CREAM = '#f3e9c4';
+const GOLD = '#e8a23a';
+
+// Outline width, and the dark-theme halo's reach past the outline (1.25px at
+// the slot, the TV's halo width).
+const OUTLINE = 4.5;
+const HALO = 3.5;
 
 export function newsDiscMarkForKind(kind: AnnouncementKind): NewsDiscMark {
   switch (kind) {
     case 'release':
-      return 'spark';
+      return 'sparkle';
     case 'article':
-      return 'scroll';
+      return 'page';
     case 'update':
-      return 'wrench';
+      return 'gear';
     case 'status':
-      return 'horn';
+      return 'megaphone';
   }
 }
 
-export function newsDiscInkForKind(kind: AnnouncementKind): NewsDiscInk {
-  switch (kind) {
-    case 'release':
-    case 'update':
-      return 'red';
-    case 'article':
-    case 'status':
-      return 'black';
-  }
-}
-
-const MARKS: Record<NewsDiscMark, (ink: string) => string> = {
-  // A horn: flared bell, mouthpiece, and two sound arcs.
-  horn: (ink) =>
-    `<path d="M30 42 L58 30 L58 70 L30 58 Z" fill="${ink}"/>` +
-    `<rect x="22" y="43" width="9" height="14" rx="2.5" fill="${ink}"/>` +
-    `<rect x="34" y="57" width="10" height="14" rx="2" fill="${ink}"/>` +
-    `<path d="M64 38 A16 16 0 0 1 64 62" fill="none" stroke="${ink}" stroke-width="5" stroke-linecap="round"/>` +
-    `<path d="M72 31 A26 26 0 0 1 72 69" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round"/>`,
-  // A scroll: rolled edge on the left, three lines of text cut out.
-  scroll: (ink) =>
-    `<rect x="28" y="26" width="44" height="48" rx="5" fill="${ink}"/>` +
-    `<rect x="24" y="26" width="10" height="48" rx="5" fill="${ink}"/>` +
-    `<rect x="42" y="38" width="22" height="5" rx="2.5" fill="${CREAM}"/>` +
-    `<rect x="42" y="49" width="22" height="5" rx="2.5" fill="${CREAM}"/>` +
-    `<rect x="42" y="60" width="14" height="5" rx="2.5" fill="${CREAM}"/>`,
-  // A spark: one four-point star and a smaller companion.
-  spark: (ink) =>
-    `<path d="M46 22 C48 40 52 44 70 46 C52 48 48 52 46 70 C44 52 40 48 22 46 C40 44 44 40 46 22 Z" fill="${ink}"/>` +
-    `<path d="M70 60 C71 66 72 67 78 68 C72 69 71 70 70 76 C69 70 68 69 62 68 C68 67 69 66 70 60 Z" fill="${ink}"/>`,
-  // A wrench, diagonal: an open jaw at the top right (a round head with a
-  // cream notch cut out of it) and a straight handle to the bottom left, drawn
-  // as one rotated group so the silhouette stays a single filled shape.
-  wrench: (ink) =>
-    `<g transform="rotate(45 50 50)">` +
-    `<circle cx="50" cy="30" r="15" fill="${ink}"/>` +
-    `<rect x="45" y="12" width="10" height="20" fill="${CREAM}"/>` +
-    `<rect x="42" y="38" width="16" height="42" rx="6" fill="${ink}"/>` +
-    `</g>`,
+type Drawing = {
+  // The outer silhouette, unpainted: painted once as the dark-theme halo.
+  silhouette: string;
+  // How far the drawing's outline reaches past the silhouette's edge.
+  outlineReach: number;
+  art: string;
 };
 
-function discBackground(): string {
-  return `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${RING}" stroke-width="2.8"/>`;
-}
+const stroke = `stroke="${INK}" stroke-width="${OUTLINE}" stroke-linejoin="round" stroke-linecap="round"`;
 
-function discContents(kind: AnnouncementKind): string {
-  const mark = newsDiscMarkForKind(kind);
-  const ink = INK[newsDiscInkForKind(kind)];
-  return discBackground() + MARKS[mark](ink);
+// A sheet of paper with a folded corner: a red title bar over three navy
+// lines of text.
+const PAGE_SHEET =
+  'M26 9 H62 L78 25 V87 A4 4 0 0 1 74 91 H26 A4 4 0 0 1 22 87 V13 A4 4 0 0 1 26 9 Z';
+const page: Drawing = {
+  silhouette: `<path d="${PAGE_SHEET}"/>`,
+  outlineReach: OUTLINE / 2,
+  art:
+    `<path d="${PAGE_SHEET}" fill="${CREAM}" ${stroke}/>` +
+    `<path d="M62 9 V21 A4 4 0 0 0 66 25 H78" fill="none" ${stroke}/>` +
+    `<rect x="31" y="32" width="26" height="9" rx="4.5" fill="${RED}"/>` +
+    `<rect x="31" y="48" width="38" height="7" rx="3.5" fill="${NAVY}"/>` +
+    `<rect x="31" y="61" width="38" height="7" rx="3.5" fill="${NAVY}"/>` +
+    `<rect x="31" y="74" width="24" height="7" rx="3.5" fill="${NAVY}"/>`,
+};
+
+// Something new: one red four-point star with a small gold companion and a
+// gold dot.
+function star(cx: number, cy: number, r: number, waist: number): string {
+  const w = waist;
+  return (
+    `M${cx} ${cy - r} Q${cx + w} ${cy - w} ${cx + r} ${cy} Q${cx + w} ${cy + w} ${cx} ${cy + r} ` +
+    `Q${cx - w} ${cy + w} ${cx - r} ${cy} Q${cx - w} ${cy - w} ${cx} ${cy - r} Z`
+  );
+}
+const SPARKLE_MAIN = star(50, 55, 36, 9);
+const SPARKLE_SMALL = star(80, 20, 13, 3.5);
+const sparkle: Drawing = {
+  silhouette: `<path d="${SPARKLE_MAIN}"/><path d="${SPARKLE_SMALL}"/><circle cx="20" cy="22" r="5.5"/>`,
+  outlineReach: OUTLINE / 2,
+  art:
+    `<path d="${SPARKLE_MAIN}" fill="${RED}" ${stroke}/>` +
+    `<path d="${SPARKLE_SMALL}" fill="${GOLD}" ${stroke}/>` +
+    `<circle cx="20" cy="22" r="5.5" fill="${GOLD}" ${stroke}/>`,
+};
+
+// A change to something that exists: a navy cog with a cream hub. The body
+// is a disc plus eight teeth, so it is outlined as one union: a double-width
+// outline under an unstroked fill leaves only the outer half showing.
+const GEAR_BODY =
+  `<circle cx="50" cy="50" r="30"/>` +
+  Array.from(
+    { length: 8 },
+    (_, i) =>
+      `<rect x="42.5" y="9" width="15" height="22" rx="3.5" transform="rotate(${i * 45} 50 50)"/>`,
+  ).join('');
+const gear: Drawing = {
+  silhouette: GEAR_BODY,
+  outlineReach: OUTLINE,
+  art:
+    `<g fill="${INK}" stroke="${INK}" stroke-width="${OUTLINE * 2}" stroke-linejoin="round">${GEAR_BODY}</g>` +
+    `<g fill="${NAVY}">${GEAR_BODY}</g>` +
+    `<circle cx="50" cy="50" r="12" fill="${CREAM}" ${stroke}/>`,
+};
+
+// A notice: the Dobutsu sheet's megaphone, red cone, navy cap and handle,
+// cream mouth, three gold sound dashes. The handle hangs on x = 50 so the
+// rail runs into it.
+const MEGA_HANDLE = '<rect x="43.5" y="58" width="14" height="29" rx="6.5"/>';
+const MEGA_CAP = '<rect x="7" y="37" width="19" height="30" rx="9"/>';
+const MEGA_CONE = '<path d="M22 41 L66 20 Q71 18 71 24 V80 Q71 86 66 83 L22 63 Z"/>';
+const MEGA_MOUTH = '<ellipse cx="71" cy="52" rx="9" ry="31"/>';
+function paint(shape: string, attrs: string): string {
+  return shape.replace(/\/>$/, ` ${attrs}/>`);
+}
+const megaphone: Drawing = {
+  silhouette: MEGA_HANDLE + MEGA_CAP + MEGA_CONE + MEGA_MOUTH,
+  outlineReach: OUTLINE / 2,
+  art:
+    paint(MEGA_HANDLE, `fill="${NAVY}" ${stroke}`) +
+    paint(MEGA_CAP, `fill="${NAVY}" ${stroke}`) +
+    paint(MEGA_CONE, `fill="${RED}" ${stroke}`) +
+    paint(MEGA_MOUTH, `fill="${CREAM}" ${stroke}`) +
+    `<g stroke="${GOLD}" stroke-width="5.5" stroke-linecap="round">` +
+    `<path d="M87 29 L93 23"/><path d="M89 52 H96"/><path d="M87 75 L93 81"/></g>`,
+};
+
+// The timeline's terminal, the row that leads to the full archive on /feed:
+// a cream button with three dots.
+const MORE_BUTTON = '<circle cx="50" cy="50" r="33"/>';
+const more: Drawing = {
+  silhouette: MORE_BUTTON,
+  outlineReach: OUTLINE / 2,
+  art:
+    paint(MORE_BUTTON, `fill="${CREAM}" ${stroke}`) +
+    `<g fill="${INK}"><circle cx="34" cy="50" r="6"/><circle cx="50" cy="50" r="6"/><circle cx="66" cy="50" r="6"/></g>`,
+};
+
+const DRAWINGS: Record<NewsDiscMark | 'more', Drawing> = { page, sparkle, gear, megaphone, more };
+
+function drawingContents(mark: NewsDiscMark | 'more'): string {
+  const { silhouette, outlineReach, art } = DRAWINGS[mark];
+  const haloWidth = 2 * (outlineReach + HALO);
+  return (
+    `<g class="landing-news-disc-halo" fill="${CREAM}" stroke="${CREAM}" stroke-width="${haloWidth}" stroke-linejoin="round">${silhouette}</g>` +
+    art
+  );
 }
 
 function discAttributes(mark: NewsDiscMark | 'more'): Record<string, string> {
@@ -102,46 +168,36 @@ function discAttributes(mark: NewsDiscMark | 'more'): Record<string, string> {
   };
 }
 
-function discSvg(mark: NewsDiscMark | 'more', contents: string): string {
+function discSvg(mark: NewsDiscMark | 'more'): string {
   const attrs = Object.entries(discAttributes(mark))
     .map(([name, value]) => `${name}="${value}"`)
     .join(' ');
-  return `<svg ${attrs}>${contents}</svg>`;
+  return `<svg ${attrs}>${drawingContents(mark)}</svg>`;
 }
 
 export function newsDiscSvg(kind: AnnouncementKind): string {
-  return discSvg(newsDiscMarkForKind(kind), discContents(kind));
-}
-
-// The timeline's terminal disc: three dots in black ink, the row that leads
-// to the full archive on /feed.
-function moreDiscContents(): string {
-  const ink = INK.black;
-  return (
-    discBackground() +
-    `<circle cx="30" cy="50" r="6.5" fill="${ink}"/><circle cx="50" cy="50" r="6.5" fill="${ink}"/><circle cx="70" cy="50" r="6.5" fill="${ink}"/>`
-  );
+  return discSvg(newsDiscMarkForKind(kind));
 }
 
 export function newsMoreDiscSvg(): string {
-  return discSvg('more', moreDiscContents());
+  return discSvg('more');
 }
 
-function buildDisc(mark: NewsDiscMark | 'more', contents: string): SVGSVGElement {
+function buildDisc(mark: NewsDiscMark | 'more'): SVGSVGElement {
   // Create the root in the SVG namespace directly. Parsing an HTML template
   // then checking its constructor made a decorative icon abort the entire
   // homepage in two Chrome sessions. No constructor identity check is needed.
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   for (const [name, value] of Object.entries(discAttributes(mark))) svg.setAttribute(name, value);
   // All children are constant authored shapes, with no user input.
-  svg.innerHTML = contents;
+  svg.innerHTML = drawingContents(mark);
   return svg;
 }
 
 export function buildNewsDisc(kind: AnnouncementKind): SVGSVGElement {
-  return buildDisc(newsDiscMarkForKind(kind), discContents(kind));
+  return buildDisc(newsDiscMarkForKind(kind));
 }
 
 export function buildNewsMoreDisc(): SVGSVGElement {
-  return buildDisc('more', moreDiscContents());
+  return buildDisc('more');
 }

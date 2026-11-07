@@ -16,6 +16,7 @@ import {
   routePreloadLinksForPath,
   SITEMAP_SECTIONS,
   SITEMAP_STATIC_ROUTES,
+  SPA_ROUTE_META,
   serveArticlePage,
   serveArticlesIndexPage,
   serveGamePage,
@@ -1031,6 +1032,60 @@ test('the videos library serves all three locales, each distinct and cross-linke
 
 // Moved from brianhliou.com/challenges/ with its zh copies (2026-10-07), so
 // each language needs a URL of its own for the old pages to redirect to.
+test('Washington Xiangqi serves three distinct locale metas with canonical and all alternates', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const seenDescriptions = new Set<string>();
+  for (const [prefix, lang, expectedTitle] of [
+    ['', 'en', 'Washington Xiangqi: Chinese chess in Greater Seattle'],
+    ['/zh-hans', 'zh-Hans', '华州象棋 Washington Xiangqi：大西雅图地区的象棋'],
+    ['/zh-hant', 'zh-Hant', '華州象棋 Washington Xiangqi：大西雅圖地區的象棋'],
+  ]) {
+    const route = `${prefix}/washington-xiangqi`;
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is missing from the sitemap`);
+    const response = captureResponse();
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: route,
+        publicHost: 'https://mistboard.com',
+      }),
+      true,
+    );
+    assert.ok(response.body.includes(`<title>${expectedTitle}</title>`), route);
+    assert.ok(response.body.includes(`<html lang="${lang}">`), route);
+    assert.ok(
+      response.body.includes(`<link rel="canonical" href="https://mistboard.com${route}">`),
+      route,
+    );
+    for (const [alternatePrefix, alternateLang] of [
+      ['', 'en'],
+      ['/zh-hans', 'zh-Hans'],
+      ['/zh-hant', 'zh-Hant'],
+      ['', 'x-default'],
+    ]) {
+      assert.ok(
+        response.body.includes(
+          `<link rel="alternate" hreflang="${alternateLang}" href="https://mistboard.com${alternatePrefix}/washington-xiangqi">`,
+        ),
+        `${route}: ${alternateLang}`,
+      );
+    }
+    const description = SPA_ROUTE_META[route]!.description;
+    assert.ok(response.body.includes(`<meta name="description" content="${description}">`));
+    assert.doesNotMatch(
+      `${expectedTitle} ${description}`,
+      /\u2014|\bfirst\b|\bonly\b|首个|首個|唯一/i,
+    );
+    if (lang === 'en') assert.doesNotMatch(`${expectedTitle} ${description}`, /[\u4e00-\u9fff]/);
+    else assert.match(description, /象棋/);
+    seenDescriptions.add(description);
+  }
+  assert.equal(seenDescriptions.size, 3, 'descriptions must not fall back to English');
+  assert.ok(!isClientRoute('/zh-hans/washington-xiangqi/anything'));
+});
+
 test('the engine champions page serves all three locales, each distinct and cross-linked', async () => {
   const staticDir = await staticDirWithPreloadManifest();
   const titles = new Set<string>();
@@ -1162,6 +1217,7 @@ test('every locale-group SPA route names itself as canonical', async () => {
     '/bots',
     '/learn/xiangqi',
     '/champions',
+    '/washington-xiangqi',
     '/practice',
     '/analysis/xiangqi',
     '/editor/xiangqi',
@@ -1868,10 +1924,69 @@ test('/watch canonicalises to the bare path whatever its query', async () => {
   await serveSpaShellWithRoutePreloads({
     response: other,
     staticDir,
-    pathname: '/faq',
+    pathname: '/settings',
     publicHost: 'https://mistboard.com',
   });
   assert.doesNotMatch(other.body, /rel="canonical"/);
+});
+
+// Every player, team and broadcast page links /contact?about=<its own path>, so
+// each crawled page minted another contact URL; with no canonical, Search
+// Console filed 43 of them as "Duplicate without user-selected canonical"
+// (validation failed 2026-10-19). The contact page stays indexable.
+test('/contact canonicalises to the bare path whatever its ?about=', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const [pathname, search] of [
+    ['/contact', '?about=%2Fbroadcast%2Fxiangqi%2F2026-gaogang-cup'],
+    ['/contact', '?about=/players/teams/hubei-xiangqi-association'],
+    ['/contact/', '?about=/x'],
+    ['/contact', ''],
+  ] as const) {
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search,
+      publicHost: 'https://mistboard.com',
+      routeBody: async () => null,
+    });
+    assert.equal(served, true, `${pathname}${search}`);
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(
+      canonicals,
+      ['<link rel="canonical" href="https://mistboard.com/contact">'],
+      `${pathname}${search}`,
+    );
+    assert.doesNotMatch(response.body, /noindex/, `${pathname}${search} must stay indexable`);
+  }
+});
+
+// The other English-only pages with no canonical of their own: a ?utm= or
+// ?ref= copy of any of them would be filed the same way as the contact copies.
+test('/terms, /privacy, /thanks and /faq canonicalise to the bare path', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const pathname of ['/terms', '/privacy', '/thanks', '/faq']) {
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: '?utm_source=x&about=/y',
+      publicHost: 'https://mistboard.com',
+      routeBody: async () => null,
+    });
+    assert.equal(served, true, pathname);
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(
+      canonicals,
+      [`<link rel="canonical" href="https://mistboard.com${pathname}">`],
+      pathname,
+    );
+    assert.doesNotMatch(response.body, /noindex/, `${pathname} must stay indexable`);
+  }
 });
 
 test('the /games database carries its own route meta and sitemap entry', async () => {

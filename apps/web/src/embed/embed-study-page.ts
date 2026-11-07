@@ -12,6 +12,7 @@
 // can.
 
 import type { BanqiGameState, BanqiMove, EmbedPov } from '@mistboard/game';
+import { jieqiMoveLabel } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
@@ -43,9 +44,11 @@ import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import type { BanqiBoardArrow } from '../live-banqi-render.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
+import type { DecisionOverlay } from '../review/analysis-marks.js';
 import { createBanqiTablebasePanel } from '../review/banqi-tablebase-panel.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { hoverArrowStyle } from '../review/hover-arrow.js';
+import { fetchStudyChapterDecisions } from '../review/study-decisions.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
@@ -57,6 +60,7 @@ import {
   xiangqiResultLabel,
 } from '../xiangqi-replay.js';
 import {
+  type EmbedCard,
   embedColumnAspect,
   embedPovPicker,
   embedRailWidthPx,
@@ -64,6 +68,7 @@ import {
   type SolutionHiddenLabels,
 } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
+import { createEmbedScoreChart, embedScoreSeries } from './embed-score-chart.js';
 import './embed.css';
 
 type StudyPayload = {
@@ -119,6 +124,11 @@ export async function mountEmbedStudy(
   const neutralTitle = payload.study?.name ?? 'Study';
   const chapterNumber = (payload.chapters ?? []).indexOf(chapter) + 1;
   const hidden = options.hideSolution === true;
+  const decisions =
+    chapter.variant === 'jieqi' && chapter.hasDecisions
+      ? await fetchStudyChapterDecisions(route.studyId, chapter.id, chapter.root)
+      : null;
+  options = { ...options, decisions };
   await mountChapterEmbed(
     root,
     {
@@ -143,6 +153,7 @@ export type EmbedCredit = { href: string; text: string };
 
 /** Where a chapter opens: the ply, and for fog chess which seat's view. */
 export type ChapterEmbedOptions = {
+  decisions?: DecisionOverlay | null;
   startPly?: number | null;
   pov?: EmbedPov | null;
   /** Cover the sheet and result until the reader asks (`?solution=hidden`). */
@@ -674,7 +685,25 @@ async function mountJieqiEmbed(
   const tags = chapter.tags ?? {};
   const final = line.states[line.states.length - 1]!;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  await mountEmbedCard(root, {
+  // The win-chance graph under the board, inside the board column the way the
+  // article replay draws its chart, when the chapter carries one that fits
+  // this line (one value per position). A hidden solution keeps it off: the
+  // graph would give the answer's swing away.
+  const series = options.hideSolution
+    ? null
+    : embedScoreSeries(chapter.scoreSeries, line.states.length);
+  let card: EmbedCard | null = null;
+  const chart = series
+    ? createEmbedScoreChart(series, {
+        onJump: (ply) => card?.jumpToPly(ply),
+        moveLabel: (ply) => {
+          const move = line.played[ply - 1];
+          const after = line.states[ply];
+          return move && after ? jieqiMoveLabel(move, after) : '';
+        },
+      })
+    : null;
+  card = await mountEmbedCard(root, {
     header: tags.event ?? chapter.name ?? 'Study',
     seats: {
       first: { name: tags.red ?? 'Red', ink: 'red' },
@@ -686,12 +715,14 @@ async function mountJieqiEmbed(
     railWidthPx: embedRailWidthPx('jieqi'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
+    ...(chart ? { underBoard: chart.el } : {}),
     mountBoard: async (host, hooks) =>
       mountJieqiReplayBoard(
         host,
         line,
         {
           perspective: chapter.orientation === 'black' ? 'black' : 'red',
+          luck: options.decisions?.byPly,
           glyphs,
           notes,
           lines,
@@ -700,7 +731,14 @@ async function mountJieqiEmbed(
           openingArrowPly: options.openingMoveArrow === true ? (options.startPly ?? 0) : undefined,
           openingArrowMove: options.openingArrowMove,
         },
-        hooks,
+        chart
+          ? {
+              onPlyChange: (ply, maxPly) => {
+                chart.setPly(ply);
+                hooks.onPlyChange(ply, maxPly);
+              },
+            }
+          : hooks,
       ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;

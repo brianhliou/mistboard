@@ -262,14 +262,15 @@ export const SOCKET_HOST_SESSION_KEY = 'mistboard.socket.host';
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /**
- * Dev only: point a loopback socket URL at the page's own loopback name. The
- * dev pair's socket URL says `localhost`, and a page opened on 127.0.0.1 (the
+ * Dev only: point a loopback socket URL at the page's own hostname. A
+ * dev pair's socket URL may say `localhost`, and a page opened on 127.0.0.1 (the
  * e2e suite's default) holds its session cookie for 127.0.0.1 only, so the
  * socket arrived signed out and a signed-in player was seated as a guest: no
- * account on the seat, and the seat-gated player chat refused them.
+ * account on the seat, and the seat-gated player chat refused them. A phone
+ * visiting a LAN-enabled pair needs the Mac's hostname here too, since the
+ * phone's loopback points at itself.
  */
 export function alignLoopbackHost(socketUrl: string, pageHostname: string): string {
-  if (!LOOPBACK_HOSTS.has(pageHostname)) return socketUrl;
   try {
     const url = new URL(socketUrl);
     if (!LOOPBACK_HOSTS.has(url.hostname) || url.hostname === pageHostname) return socketUrl;

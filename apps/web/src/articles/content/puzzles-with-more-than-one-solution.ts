@@ -37,6 +37,7 @@ export const puzzleTwoAnswersArticle: Article = {
   slug: 'puzzles-with-more-than-one-solution',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   title: 'Puzzles with more than one solution',
   cardTitle: 'Multi-solution puzzles',
   seoTitle: 'Handling xiangqi puzzles with multiple solutions: why 382 were pulled',

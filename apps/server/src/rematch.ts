@@ -39,6 +39,10 @@ export interface RematchOrchestrator {
   issueSeatToken: RematchIssueToken;
   send: RematchSend;
   buildRoomUrl: RematchUrl;
+  // Whether an account may play rated (a stats-excluded account may not). The
+  // pre-issued tokens skip the seat gate that refuses it, so a rated game with
+  // such a seat rematches casual instead.
+  accountMayRate?: (userId: string) => Promise<boolean>;
 }
 
 function activeSeatTokenForClient(room: Room, client: Client): SeatTokenState | null {
@@ -145,11 +149,17 @@ export async function finalizeRematchIfReady(
 
   // Create the new room with all settings carried forward.
   if (room.mode !== 'pvp' && room.mode !== 'pve') return null;
+  let rated = room.rated;
+  if (rated && orch.accountMayRate) {
+    for (const token of [whiteToken, blackToken]) {
+      if (token.userId !== null && !(await orch.accountMayRate(token.userId))) rated = false;
+    }
+  }
   const newRoom = await orch.createRoom({
     variant: room.variant,
     gameSpecId: room.gameSpecId,
     timeControl: room.timeControl,
-    rated: room.rated,
+    rated,
     region: room.region,
     mode: room.mode,
     pveEngineId: room.pveEngineId,

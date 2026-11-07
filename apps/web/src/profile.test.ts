@@ -13,6 +13,272 @@ describe('profile ratings rail', () => {
     document.body.innerHTML = '';
   });
 
+  it.each([
+    ['/player', '/'],
+    ['/zh-hans', '/zh-hans/'],
+    ['/zh-hant', '/zh-hant/'],
+  ])('links the empty leaderboard directly to the lobby at %s', async (path, href) => {
+    window.history.replaceState(null, '', path);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response(JSON.stringify({ ladders: [], players: [] })),
+    );
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+
+    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe(href);
+  });
+
+  it.each([
+    ['en', 'Title verification'],
+    ['zh-Hans', '头衔认证'],
+    ['zh-Hant', '頭銜認證'],
+  ] as const)('leaves title verification to settings in %s', async (locale, label) => {
+    const { buildProfileOverview } = await import('./profile.js');
+    const profile: Parameters<typeof buildProfileOverview>[0] = {
+      isViewer: true,
+      relation: null,
+      user: {
+        handle: 'player',
+        displayName: 'Player',
+        profileVisibility: 'public',
+        accountRole: 'player',
+        createdAt: '2026-05-01T00:00:00.000Z',
+      },
+      ratings: [],
+      games: [],
+      gamesTotal: 0,
+    };
+    for (const title of [null, 'xgm']) {
+      profile.user.title = title;
+      const overview = buildProfileOverview(profile, document.createElement('div'), locale);
+      expect(overview.querySelector('a[href="/verify-title"]'), label).toBeNull();
+      expect(overview.querySelector('a[href="/account/settings"]')).not.toBeNull();
+      expect(overview.querySelector('a[href="/coach/edit"]') !== null).toBe(title === 'xgm');
+    }
+
+    profile.isViewer = false;
+    for (const relation of [null, { following: false, blocked: false }]) {
+      profile.relation = relation;
+      const overview = buildProfileOverview(profile, document.createElement('div'), locale);
+      expect(overview.querySelector('a[href="/verify-title"]')).toBeNull();
+    }
+  });
+
+  it.each([
+    ['brianhliou-dev', 'admin', true, ['Admin', 'Founder']],
+    ['another-admin', 'admin', false, ['Admin']],
+    ['player', 'player', false, []],
+  ] as const)(
+    'renders only server-assigned badges for %s',
+    async (handle, accountRole, isFounder, labels) => {
+      const { buildProfileOverview } = await import('./profile.js');
+      const profile: Parameters<typeof buildProfileOverview>[0] = {
+        user: {
+          handle,
+          displayName: handle,
+          accountRole,
+          isFounder,
+          profileVisibility: 'public',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+        ratings: [],
+        games: [],
+        gamesTotal: 0,
+      };
+      const overview = buildProfileOverview(profile, document.createElement('div'), 'en');
+      expect(
+        [...overview.querySelectorAll('.profile-role-badge')].map((badge) => badge.textContent),
+      ).toEqual(labels);
+      expect(
+        overview
+          .querySelector('.profile-role-founder')
+          ?.previousElementSibling?.classList.contains('profile-role-admin') ?? false,
+      ).toBe(isFounder);
+    },
+  );
+
+  it.each([
+    ['en', 'Founder'],
+    ['zh-Hans', '创始人'],
+    ['zh-Hant', '創辦人'],
+  ] as const)('localizes the founder badge in %s', async (locale, label) => {
+    const { buildProfileOverview } = await import('./profile.js');
+    const overview = buildProfileOverview(
+      {
+        user: {
+          handle: 'brianhliou-dev',
+          displayName: 'Brian',
+          accountRole: 'admin',
+          isFounder: true,
+          profileVisibility: 'public',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+        ratings: [],
+        games: [],
+        gamesTotal: 0,
+      },
+      document.createElement('div'),
+      locale,
+    );
+    expect(overview.querySelector('.profile-role-founder')?.textContent).toBe(label);
+  });
+
+  it.each([
+    [false, false, '', true],
+    [true, false, '', true],
+    [false, true, '', false],
+    [false, false, '?variant=xiangqi', false],
+  ] as const)(
+    'opens the puzzle chart with viewer=%s rated=%s url=%s',
+    async (isViewer, rated, search, opensPuzzle) => {
+      window.history.replaceState(null, '', `/@/solver${search}`);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = new URL(String(input), 'http://localhost');
+        if (url.pathname.endsWith('/profile'))
+          return new Response(
+            JSON.stringify({
+              profile: {
+                isViewer,
+                user: {
+                  handle: 'solver',
+                  displayName: 'Solver',
+                  accountRole: 'player',
+                  profileVisibility: 'public',
+                  createdAt: '2026-01-01T00:00:00Z',
+                },
+                ratings: [
+                  {
+                    variant: 'xiangqi',
+                    timeClass: 'blitz',
+                    eloRating: rated ? 1500 : null,
+                    ratedGamesPlayed: rated ? 3 : 0,
+                    totalGamesPlayed: 5,
+                    provisional: false,
+                  },
+                ],
+                puzzleRatings: [
+                  {
+                    variant: 'jungle',
+                    rating: 1700,
+                    provisional: false,
+                    solved: 100,
+                    attempts: 110,
+                  },
+                  {
+                    variant: 'fortress-xiangqi',
+                    rating: 1700,
+                    provisional: false,
+                    solved: 100,
+                    attempts: 110,
+                  },
+                  { variant: 'xiangqi', rating: 1520, provisional: false, solved: 2, attempts: 3 },
+                ],
+                games: [],
+                gamesTotal: 0,
+              },
+            }),
+          );
+        if (url.pathname.endsWith('/puzzle-rating-history'))
+          return new Response(
+            JSON.stringify({
+              points: [
+                {
+                  variant: 'xiangqi',
+                  createdAt: '2026-11-01T12:00:00Z',
+                  ratingBefore: 1500,
+                  ratingAfter: 1520,
+                  startsSegment: true,
+                },
+              ],
+            }),
+          );
+        return new Response(
+          JSON.stringify({
+            history: { points: [] },
+            attempts: [],
+            nextOffset: null,
+            players: [],
+            games: [],
+          }),
+        );
+      });
+      const { mountProfile } = await import('./profile.js');
+      const root = document.createElement('div');
+      await mountProfile(root, 'solver');
+      expect(root.querySelector('.profile-chart-variant')?.textContent?.includes('Puzzles')).toBe(
+        opensPuzzle,
+      );
+      expect(root.querySelector('.profile-puzzle-ratings')?.textContent).not.toMatch(
+        /Jungle|Fortress/,
+      );
+      expect(
+        root.querySelector('.profile-rating-row[data-variant="xiangqi"]')?.textContent,
+      ).not.toContain('Unrated');
+      if (opensPuzzle) {
+        await vi.waitFor(() =>
+          expect(root.querySelectorAll('.profile-rating-chart-dot')).toHaveLength(1),
+        );
+        expect(root.querySelector('.profile-rating-chart')?.outerHTML).not.toMatch(
+          /puzzleId|solved|roomId/,
+        );
+        expect(root.textContent).not.toContain('Only you can see');
+      } else if (!rated) {
+        expect(root.querySelector('.profile-chart-value')).toBeNull();
+        expect(root.querySelector('.profile-chart-detail')?.textContent).toBe('5 games');
+      }
+      expect(
+        fetchSpy.mock.calls.some(([url]) => String(url).startsWith('/api/puzzles/history')),
+      ).toBe(isViewer);
+      expect(
+        fetchSpy.mock.calls.some(([url]) => String(url).endsWith('/puzzle-rating-history')),
+      ).toBe(opensPuzzle);
+    },
+  );
+
+  it('opens on the puzzle rating only when there is no game rating to show', async () => {
+    const { openingPuzzleSpotlight } = await import('./profile.js');
+    type Ratings = Parameters<typeof openingPuzzleSpotlight>[0];
+    const puzzles = [
+      { variant: 'fortress-xiangqi', rating: 1500, provisional: true, solved: 90, attempts: 90 },
+      { variant: 'jungle', rating: 1500, provisional: true, solved: 80, attempts: 80 },
+      { variant: 'xiangqi', rating: 1673, provisional: true, solved: 56, attempts: 102 },
+    ];
+    const unrated = {
+      variant: 'banqi',
+      eloRating: null,
+      ratedGamesPlayed: 0,
+      totalGamesPlayed: 92,
+    };
+    const rated = { variant: 'banqi', eloRating: 1500, ratedGamesPlayed: 3, totalGamesPlayed: 92 };
+
+    expect(openingPuzzleSpotlight([unrated] as Ratings, puzzles)?.variant).toBe('xiangqi');
+    expect(openingPuzzleSpotlight([rated] as Ratings, puzzles)).toBeNull();
+    expect(openingPuzzleSpotlight([unrated] as Ratings, [])).toBeNull();
+    expect(openingPuzzleSpotlight([unrated] as Ratings, puzzles.slice(0, 2))).toBeNull();
+  });
+
+  it('writes activity results in the plural past one', async () => {
+    const { profileGameActivityRow } = await import('./profile.js');
+    const summary = (wins: number, draws: number, losses: number) =>
+      ({
+        key: 'k',
+        day: 'Today',
+        variant: 'Banqi',
+        time: 0,
+        count: wins + draws + losses,
+        wins,
+        draws,
+        losses,
+      }) as Parameters<typeof profileGameActivityRow>[0];
+    const pills = (s: Parameters<typeof profileGameActivityRow>[0], locale: 'en' | 'zh-Hans') =>
+      profileGameActivityRow(s, locale).pills.map((pill) => pill.text);
+
+    expect(pills(summary(2, 3, 4), 'en')).toEqual(['2 wins', '3 draws', '4 losses']);
+    expect(pills(summary(1, 1, 1), 'en')).toEqual(['1 win', '1 draw', '1 loss']);
+    expect(pills(summary(0, 0, 3), 'zh-Hans')).toEqual(['3 负']);
+  });
+
   it('shows soft-launch profile rows before rated games', async () => {
     // Pin prod semantics so dev-on variants (jieqi/banqi) don't add extra rows.
     vi.stubEnv('DEV', false);
@@ -100,6 +366,94 @@ describe('profile ratings rail', () => {
     expect(row.textContent).toContain('人類對人類');
     expect(row.textContent).toContain('12 手');
   });
+
+  it.each([false, true])(
+    'pages profile games past a new finish, filtered=%s (#630)',
+    async (filtered) => {
+      if (filtered)
+        window.history.replaceState(null, '', '/@/pager?variant=xiangqi&result=win&vs=bob');
+      const game = (index: number) => ({
+        roomId: `room_${String(index).padStart(3, '0')}`,
+        variant: 'xiangqi',
+        mode: 'pvp',
+        rated: false,
+        result: 'red-wins',
+        termination: 'resignation',
+        plyCount: 20,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        endedAt: '2026-07-01T12:00:00.000Z',
+        participants: [],
+        playerColor: 'red',
+      });
+      const original = Array.from({ length: 31 }, (_, i) => game(31 - i));
+      const dataset = [...original];
+      const requests: URL[] = [];
+      const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = new URL(String(input), 'http://localhost');
+        if (url.pathname.endsWith('/rating-history')) return json({ points: [] });
+        if (url.pathname.endsWith('/games')) {
+          requests.push(url);
+          const before = url.searchParams.get('before');
+          const rows = before
+            ? dataset.filter((row) => row.roomId < JSON.parse(before)[1])
+            : dataset.slice(Number(url.searchParams.get('offset') ?? 0));
+          return json({ games: rows.slice(0, 15), total: dataset.length });
+        }
+        return json({
+          profile: {
+            isViewer: false,
+            relation: null,
+            user: {
+              handle: 'pager',
+              displayName: 'pager',
+              bio: '',
+              profileVisibility: 'public',
+              accountRole: 'player',
+              createdAt: '2026-05-01T00:00:00.000Z',
+            },
+            ratings: [],
+            puzzleRatings: [],
+            games: original.slice(0, 15),
+            gamesTotal: 31,
+          },
+        });
+      });
+      const root = document.createElement('div');
+      const { mountProfile } = await import('./profile.js');
+      await mountProfile(root, 'pager');
+      const links = () =>
+        Array.from(root.querySelectorAll('.profile-games .profile-game-row-open'), (row) =>
+          row.getAttribute('href'),
+        );
+      await vi.waitFor(() => expect(links()).toHaveLength(15));
+      dataset.unshift(game(32));
+      const more = () =>
+        root.querySelector<HTMLButtonElement>('.profile-games .profile-games-more-btn');
+      more()?.click();
+      await vi.waitFor(() => expect(links()).toHaveLength(30));
+      expect(more()).not.toBeNull();
+      more()?.click();
+      await vi.waitFor(() => expect(more()).toBeNull());
+      expect(links()).toEqual(original.map((row) => `/xiangqi/game/${row.roomId}`));
+      const older = requests.filter((url) => url.searchParams.has('before'));
+      expect(older).toHaveLength(2);
+      expect(JSON.parse(older[1].searchParams.get('before') ?? 'null')).toEqual([
+        original[29].endedAt,
+        original[29].roomId,
+      ]);
+      for (const url of older) {
+        expect(url.searchParams.has('offset')).toBe(false);
+        if (filtered) {
+          expect(url.searchParams.get('variant')).toBe('xiangqi');
+          expect(url.searchParams.get('result')).toBe('win');
+          expect(url.searchParams.get('vs')).toBe('bob');
+        }
+      }
+    },
+  );
 
   it('mounts the profile dashboard with activity and games tabs', async () => {
     vi.stubEnv('DEV', false);
@@ -454,7 +808,9 @@ describe('profile ratings rail', () => {
     }
     // A played-but-unrated row shows its casual games count.
     const fogRow = rows.find((row) => row.dataset.variant === 'fog');
-    expect(fogRow?.textContent).toContain('Unrated');
+    expect(fogRow?.textContent).not.toContain('Unrated');
+    expect(fogRow?.querySelector('.profile-rating-value')).toBeNull();
+    expect(fogRow?.querySelector('.profile-rating-games')?.textContent).toBe('5 games');
     expect(fogRow?.textContent).toContain('5 games');
   });
 
@@ -815,7 +1171,7 @@ describe('profile ratings rail', () => {
     expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(0);
     expect(root.textContent).not.toContain('No rated games yet.');
     expect(root.textContent).toContain('The ladders open with the first rated game.');
-    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/play');
+    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/');
     // The online-players column still renders beside it.
     expect(root.textContent).toContain('Online players');
   });

@@ -15,7 +15,8 @@
  * types at the boundary, exactly like the live tenants do.
  */
 
-import { deepCloneJson, type XiangqiMotifId } from '@mistboard/game';
+import { deepCloneJson, type XiangqiMotifId, type XiangqiTrainingTagId } from '@mistboard/game';
+import type { PuzzleAttemptMode } from '../analytics.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import type { PuzzleVariant } from './variant-ids.js';
@@ -57,19 +58,39 @@ export type PuzzleSummary = {
   themes: string[];
   /** Named kill patterns (杀法) by id, standard-xiangqi mates only. */
   motifs: XiangqiMotifId[];
+  /**
+   * Every trainer tag (motifs plus mate-in-N, phase, goal, length), derived by
+   * the server at load. Absent from an older server: filter on `motifs` then.
+   */
+  tags?: XiangqiTrainingTagId[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
-  // Attribution for the "From game" card (standard-xiangqi mined puzzles). The
-  // source game is not hosted yet, so this is display-only, not a link.
+  /** What the queue matches against (#712): the rating folded with solution
+   *  length and observed outcomes. Sent on list responses; display stays
+   *  `rating`. */
+  servingRating?: number;
+  // Attribution for the "From game" card (standard-xiangqi mined puzzles).
+  // `attribution` is the credit a source such as DPXQ requires back to its
+  // original game page (#712). `hosted` (detail only) means the server holds
+  // the game and its page serves it, so the card links there; the names are
+  // then the game row's. The `*En` fields are English forms of the Chinese
+  // event and names, shown on English pages.
   sourceGame?: {
     gameId: string;
     ply: number;
     event?: string;
+    eventEn?: string;
     playedOn?: string;
     result?: string;
     redName?: string;
     blackName?: string;
+    redNameEn?: string;
+    blackNameEn?: string;
+    attribution?: { name: string; url: string };
+    hosted?: boolean;
+    // An online platform's game: the server sends no event, players or link.
+    online?: boolean;
   };
 };
 
@@ -82,11 +103,22 @@ export type PuzzleSetupMove = {
   captured: { color: PuzzleColor; role: string } | null;
 };
 
-export type PuzzleDetail = PuzzleSummary & { initial: PuzzleState; setupMove?: PuzzleSetupMove };
+export type PuzzleDetail = PuzzleSummary & {
+  initial: PuzzleState;
+  setupMove?: PuzzleSetupMove;
+  // The source game's moves before the setup move, from its opening position
+  // (standard xiangqi with a stored, listed source game). Never past the
+  // puzzle's start: the server cuts it there.
+  history?: PuzzleMove[];
+};
 
 export type FeedbackKind = 'neutral' | 'good' | 'bad' | 'pending';
 
 export type PuzzleSession = {
+  // Per-session identity: a late response must keep the mode of its own board.
+  mode?: PuzzleAttemptMode;
+  // Ended/disposed timed boards ignore input and outstanding responses.
+  locked?: boolean;
   // Fresh for every puzzle view and never reused across puzzles. This lets the
   // server aggregate anonymous quality outcomes without a cross-puzzle identity.
   qualitySessionId: string;
@@ -128,11 +160,37 @@ export type PuzzleSession = {
   // with input blocked, until the glide hands over (null from then on, or from
   // the start when animation is off or the variant cannot rebuild it exactly).
   setupIntro: PuzzleState | null;
+  // The source game's moves before the setup move, shown greyed at the top of
+  // the move list and steppable read-only (viewPly < 0, see firstPuzzleViewPly).
+  // Absent where the list starts at the setup move: no history sent, a variant
+  // without historyStart, or an embed.
+  history?: PuzzleMove[];
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists
   // across renderSession() rebuilds so the engine toggle + eval + arrows
   // survive a full re-render. Disposed when the session is replaced.
   analysis?: PuzzleAnalysisController | null;
+  // The miss that ended the attempt, kept when the board then plays the line
+  // out (Puzzle Streak's game over): the move list marks it beside the move
+  // that was right at that ply. `ply` indexes playedMoves.
+  wrongMove?: { ply: number; move: PuzzleMove } | null;
+  // Every wrong try on the regular page, which does not end the attempt: the
+  // move list keeps each as a ✗ row at its ply while the solver retries.
+  wrongTries?: { ply: number; move: PuzzleMove }[];
+  // The ply the solution line took over from (a reveal, or Streak's miss):
+  // moves from here on were shown, not found, and read as such in the list.
+  revealedFromPly?: number | null;
+  // A wrong try held on the board under its ✗ for a moment before it glides
+  // back (lichess): the position after the miss, painted instead of the live
+  // one, with input blocked until the take-back.
+  wrongPreview?: { state: PuzzleState; move: PuzzleMove } | null;
+  // The scripted reply's ply while it waits under the solver's ✓: kept out of
+  // the move list until it glides, so the list never shows it before the board.
+  pendingReplyPly?: number | null;
+  // When the mated general's slash first showed, so a repaint mid-animation
+  // keeps its phase; cleared when the board leaves the mate so a step back
+  // onto it replays the slash.
+  mateSlashAt?: number | null;
 };
 
 export type PuzzleNavigation = {
@@ -171,7 +229,12 @@ export type PuzzleBoardContext = {
   renderSession: () => void;
   /** Submit a candidate solution move through the shared attempt path. */
   submitMove: (move: PuzzleMove) => Promise<void>;
+  /** Verdict badges for the painted position: ✓ on a found solver move, ✗ on
+   *  a wrong try held before its take-back. Adapters pin each at `square`. */
+  moveMarks: readonly PuzzleMoveMark[];
 };
+
+export type PuzzleMoveMark = { square: string; verdict: 'right' | 'wrong' };
 
 /**
  * The per-variant contract. One adapter per GameSpecId with puzzles; the core
@@ -221,6 +284,14 @@ export type PuzzleBoardAdapter = {
    * information, or no capture record); the trainer then shows `initial` at once.
    */
   preSetupState?(puzzle: PuzzleDetail): PuzzleState | null;
+  /**
+   * OPTIONAL: the source game's opening position, from which `puzzle.history`
+   * replays to the board before the setup move, or null when this puzzle has
+   * none. Omit for a variant without stored source games.
+   */
+  historyStart?(puzzle: PuzzleDetail): PuzzleState | null;
+  /** OPTIONAL position-aware labels for `history`, played from historyStart. */
+  historyLabels?(puzzle: PuzzleDetail, history: readonly PuzzleMove[]): string[];
   /** Side icon SVG for the feedback panel (the variant's "general"). */
   sideIconSvg(puzzle: PuzzleDetail): string;
   /** Post-completion engine analysis; omit when the variant has no client engine. */
@@ -232,7 +303,21 @@ export type PuzzleBoardAdapter = {
 // The board shows the live position the solver can move from: not a scrubbed
 // replay, and not the pre-setup position of the opening glide.
 export function isReplayLive(session: PuzzleSession): boolean {
-  return session.setupIntro === null && session.viewPly >= session.playedMoves.length;
+  return (
+    !session.locked &&
+    session.setupIntro === null &&
+    !session.wrongPreview &&
+    session.viewPly >= session.playedMoves.length
+  );
+}
+
+// The replay cursor's floor. viewPly 0 is `initial` (the setup move just
+// played) and N > 0 is after the solution's Nth ply; with the source game's
+// history shown, -1 is the board before the setup move, -k the board after the
+// game's (H + 1 - k)th move, and -(H + 1) the game's opening position.
+export function firstPuzzleViewPly(session: PuzzleSession): number {
+  const length = session.history?.length ?? 0;
+  return length > 0 ? -(length + 1) : 0;
 }
 
 export function activeTurn(session: PuzzleSession): PuzzleColor {

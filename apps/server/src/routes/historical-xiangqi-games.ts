@@ -5,6 +5,7 @@ import { flipFirstColorForRoom, isFlipInkVariant } from './../flip-first-color.j
 import { PGN_CONTENT_TYPE } from './../game-export-shared.js';
 import { buildHistoricalXiangqiPgn } from './../historical-xiangqi-export.js';
 import * as persistence from './../persistence.js';
+import { isOnlinePlatformEvent } from './../puzzle-setup-move.js';
 import { listWatchChannels } from './../watch-channels.js';
 import { type HttpApiContext, requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -172,6 +173,9 @@ export async function tryHandle(
         ...game,
         tags: publicTags(game.tags),
         pgnExport: source?.licenseStatus === 'cleared',
+        // An online platform game: its event is the platform and its players
+        // are pseudonyms, so the page keeps both to the Game info tab.
+        onlinePlatform: isOnlinePlatformEvent(game.eventName),
       },
     });
     return true;

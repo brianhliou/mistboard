@@ -6,7 +6,7 @@ import { assert, definePersistenceTests, test } from './persistence-test-support
 type ParticipantFixture = {
   color: 'white' | 'black';
   subjectType: 'guest' | 'user' | 'engine-version';
-  subjectId: string;
+  subjectId: string | null;
 };
 
 async function insertGame(input: {
@@ -33,13 +33,151 @@ async function insertGame(input: {
         participant.color,
         participant.subjectType,
         participant.subjectId,
-        participant.subjectId,
+        participant.subjectId ?? 'Guest',
       ],
     );
   }
 }
 
 definePersistenceTests('admin metrics', () => {
+  test('login email delivery exposes only rolling aggregate counts, including empty windows', async () => {
+    const now = new Date('2026-11-03T20:00:00Z');
+    const zero = {
+      requested: 0,
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+      suppressed: 0,
+      complained: 0,
+      completed: 0,
+    };
+    assert.deepEqual((await getAdminMetrics({ now, weeks: 1 })).loginEmailDelivery, {
+      last7d: zero,
+      last30d: zero,
+    });
+    await getPool().query(
+      `INSERT INTO login_email_requests (request_id, email, requested_at, provider_email_id, completed_at)
+      VALUES ('login', 'private@example.com', $1::timestamptz - interval '20 days', 'login-provider', $1::timestamptz - interval '1 day')`,
+      [now],
+    );
+    await getPool().query(
+      `INSERT INTO email_delivery_events (event_id, provider_email_id, event_type, recipients, occurred_at)
+      VALUES ('sent', 'login-provider', 'email.sent', ARRAY['private@example.com'], $1::timestamptz - interval '20 days'),
+      ('delivered', 'login-provider', 'email.delivered', ARRAY['private@example.com'], $1::timestamptz - interval '1 day'),
+      ('retry', 'login-provider', 'email.delivered', ARRAY['private@example.com'], $1::timestamptz - interval '1 day'),
+      ('other', 'change-provider', 'email.delivered', ARRAY['private@example.com'], $1::timestamptz - interval '1 day')`,
+      [now],
+    );
+    const metrics = await getAdminMetrics({ now, weeks: 1 });
+    assert.deepEqual(metrics.loginEmailDelivery, {
+      last7d: { ...zero, delivered: 1, completed: 1 },
+      last30d: { ...zero, requested: 1, sent: 1, delivered: 1, completed: 1 },
+    });
+    const payload = JSON.stringify(metrics);
+    for (const privateValue of [
+      'private@example.com',
+      'login-provider',
+      'change-provider',
+      'requestId',
+      'providerEmailId',
+    ]) {
+      assert.ok(!payload.includes(privateValue));
+    }
+  });
+
+  test('first-game cohorts deduplicate players, split first variants and mature whole UTC weeks', async () => {
+    const now = new Date('2026-10-19T00:00:00Z');
+    for (const id of ['shared', 'established', 'operator']) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id,
+        displayName: id,
+        now,
+      });
+    }
+    await getPool().query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'operator'`);
+    await getPool().query(
+      `INSERT INTO stats_excluded_devices (device_id, account_id) VALUES ('internal-browser', 'operator')`,
+    );
+    let nextId = 0;
+    const game = async (
+      subjectId: string | null,
+      endedAt: string,
+      options: {
+        subjectType?: ParticipantFixture['subjectType'];
+        variant?: string;
+        mode?: 'pvp' | 'pve' | 'eve' | 'imported';
+        plyCount?: number;
+      } = {},
+    ) =>
+      insertGame({
+        roomId: `cohort-${nextId++}`,
+        variant: options.variant ?? 'jieqi',
+        mode: options.mode ?? 'pve',
+        plyCount: options.plyCount,
+        endedAt,
+        participants: [
+          { color: 'white', subjectType: options.subjectType ?? 'guest', subjectId },
+          { color: 'black', subjectType: 'engine-version', subjectId: 'bot' },
+        ],
+      });
+
+    // A browser and an account with the same id are two players. Ignored
+    // games must not establish their first week or inflate their returns.
+    await game('shared', '2026-05-31T23:59:59Z'); // before launch
+    await game('shared', '2026-09-01T00:00:00Z', { plyCount: 1 });
+    await game('shared', '2026-09-02T00:00:00Z', { mode: 'imported' });
+    await game('shared', '2026-09-14T00:00:00Z');
+    await game('shared', '2026-09-20T23:59:59Z', { subjectType: 'user', variant: 'xiangqi' });
+    await game('shared', '2026-09-21T00:00:00Z', { variant: 'xiangqi' });
+    await game('shared', '2026-09-27T23:59:59Z'); // same return week, counted once
+    await game('shared', '2026-09-23T00:00:00Z', { subjectType: 'user', mode: 'eve' });
+    await game('shared', '2026-09-24T00:00:00Z', { subjectType: 'user', plyCount: 1 });
+    await game('shared', '2026-10-18T23:59:59.999Z'); // last instant of W4
+    await game('later', '2026-09-21T00:00:00Z', { variant: 'xiangqi' });
+    await game('later', '2026-10-18T12:00:00Z'); // W3, not W4
+    await game('future', '2026-10-19T00:00:00Z'); // at now, not yet observed
+    await game(null, '2026-09-14T01:00:00Z'); // unidentified guests are not players
+    await game('internal-browser', '2026-09-14T02:00:00Z');
+    await game('operator', '2026-09-14T03:00:00Z', { subjectType: 'user' });
+    await game('established', '2026-06-01T00:00:00Z', { subjectType: 'user' });
+    await game('established', '2026-09-14T04:00:00Z', { subjectType: 'user' });
+
+    const metrics = await getAdminMetrics({ now, weeks: 6 });
+    const cohorts = metrics.retentionCohorts;
+    assert.equal(cohorts.length, 5); // all + each populated first-variant split
+    const all = cohorts.find((c) => c.weekStart === '2026-09-14' && c.segment === 'all');
+    assert.ok(all);
+    assert.equal(all.players, 2);
+    assert.deepEqual(all.returns, [
+      { week: 1, returned: 1, percentage: 50 },
+      { week: 2, returned: 0, percentage: 0 },
+      { week: 3, returned: 0, percentage: 0 },
+      { week: 4, returned: 1, percentage: 50 },
+      { week: 5, returned: null, percentage: null },
+    ]);
+    const jieqi = cohorts.find((c) => c.weekStart === '2026-09-14' && c.segment === 'jieqi');
+    assert.ok(jieqi);
+    assert.equal(jieqi.players, 1);
+    assert.deepEqual(jieqi.returns[0], { week: 1, returned: 1, percentage: 100 });
+    const other = cohorts.find((c) => c.weekStart === '2026-09-14' && c.segment === 'other');
+    assert.ok(other);
+    assert.equal(other.players, 1);
+    assert.deepEqual(other.returns[0], { week: 1, returned: 0, percentage: 0 });
+    const later = cohorts.find((c) => c.weekStart === '2026-09-21' && c.segment === 'other');
+    assert.ok(later);
+    assert.deepEqual(later.returns[2], { week: 3, returned: 1, percentage: 100 });
+    assert.deepEqual(later.returns[3], { week: 4, returned: null, percentage: null });
+
+    const before = await getAdminMetrics({ now: new Date(now.getTime() - 1), weeks: 6 });
+    const immature = before.retentionCohorts.find(
+      (c) => c.weekStart === '2026-09-14' && c.segment === 'all',
+    );
+    assert.deepEqual(immature?.returns[3], { week: 4, returned: null, percentage: null });
+  });
+
   test('weekly series count accounts and guest browsers, and keep engines apart', async () => {
     // now is a Wednesday; the current week starts Monday 2026-07-20 and the
     // 3-week window opens on 2026-07-06.

@@ -1,3 +1,16 @@
+/* Accessible page names for board tools without a visible title row. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .site-nav {
   /* Shared navigation is a brand-token boundary. Route palettes can safely
      redefine generic action colors without recoloring nav dropdowns. */
@@ -514,11 +527,6 @@ a.site-nav-link[hidden],
   font-weight: 600;
 }
 
-.landing-footer a:hover {
-  color: var(--site-text);
-  text-decoration: underline;
-}
-
 /* Phones keep the same four links (Brian 2026-10-17). After the base rules on
    purpose: the phone padding used to sit above them and never applied. Where
    the row runs out of width, the identity line wraps, centred, under the links. */
@@ -951,6 +959,21 @@ a.site-nav-link[hidden],
   }
 }
 
+/* Touch floor (#620): the quick buttons stay 38px wide as drawn, with a 1px
+   transparent border at each side making distinct 40px targets. Side margins
+   stay zero so a neighbouring button cannot intercept the target's edge. */
+@media (pointer: coarse) and (max-width: 600px) {
+  .site-nav-quick-button {
+    box-sizing: content-box;
+    margin: 0;
+    border-width: 0 1px;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: calc(var(--site-radius-sm) + 1px);
+    background-clip: padding-box;
+  }
+}
+
 /* The quick controls live on the phone bar only. */
 @media (min-width: 601px) {
   .site-nav-quick,
@@ -964,6 +987,15 @@ a.site-nav-link[hidden],
 @media (max-width: 389px) {
   .site-nav .site-nav-brand .site-nav-brand-name {
     display: none;
+  }
+}
+
+/* The logo alone is 32px wide (#620): pad it to a 40px target and give the
+   extra 8px back, so the row does not move. The link draws no background. */
+@media (pointer: coarse) and (max-width: 389px) {
+  .site-nav-brand {
+    margin-inline: -4px;
+    padding-inline: 6px;
   }
 }
 

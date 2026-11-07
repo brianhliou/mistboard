@@ -136,6 +136,10 @@ export const LAI_LY_HUYNH_CO_TUONG_VI: Record<string, string> = {
     'Lại Lý Huynh gặp Triệu Phàn Vĩ, 28 tháng 2 năm 2026, bán kết Ngũ Dương Bôi, ván 1. Bàn cờ mở ra sau nước thứ 17 của Đen, đến lượt Lại Lý Huynh đi.',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '“Từ khi tôi vô địch thế giới, ở Việt Nam có nhiều người theo dõi cờ tướng hơn,” anh nói ở Quảng Châu, “và cũng nhiều người bắt đầu chơi cờ hơn.”',
+  "In July he led Vietnam against Guangdong in Đà Nẵng, and the [1st Kim Long Motor Cup](/broadcast/xiangqi/2026-kim-long-motor-cup) is in the broadcast archive, from XQBase's game records.":
+    'Tháng 7, anh dẫn dắt đội tuyển Việt Nam đấu với Quảng Đông tại Đà Nẵng, và [Cup Kim Long Motor lần I](/broadcast/xiangqi/2026-kim-long-motor-cup) có trong kho lưu trữ giải đấu, theo biên bản ván đấu của XQBase.',
+  'Added a link to the Vietnam vs Guangdong match in the broadcast archive.':
+    'Thêm liên kết tới trận Việt Nam gặp Quảng Đông trong kho lưu trữ giải đấu.',
 
   // All 38 games
   'All 38 games': 'Toàn bộ 38 ván',

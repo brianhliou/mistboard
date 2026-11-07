@@ -14,7 +14,6 @@
 //
 // Pure + rng-injected so it is deterministic under test.
 
-import { ATOMIC_XIANGQI_PLAYABLE_ENGINES } from './atomic-xiangqi-fsf-engine.js';
 import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
@@ -43,15 +42,14 @@ export function xiangqiBotLadder(): string[] {
 // play scheduled games, so every published game shows a bot as prod serves it.
 const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   xiangqi: xiangqiBotLadder,
-  // jqe tops the jieqi ladder only while MISTBOARD_JQE_ENABLED is on (held until its
-  // author's OK), so no scheduled game publishes a bot players cannot pick.
+  // jqe (one rung under AB-JChess) plays the jieqi ladder only while
+  // MISTBOARD_JQE_ENABLED is on, so no scheduled game publishes a bot players cannot pick.
   jieqi: () =>
     JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id).filter(
       (id) => id !== JIEQI_JQE_ENGINE_ID || jqeEnabled(),
     ),
   'fortress-xiangqi': () => FORTRESS_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'duck-xiangqi': () => DUCK_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
-  'atomic-xiangqi': () => ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'crazyhouse-xiangqi': () => CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   banqi: () => BANQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   // JUNGLE_PLAYABLE_ENGINE_IDS runs strongest first.

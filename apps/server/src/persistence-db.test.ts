@@ -46,3 +46,21 @@ test('a pool error from a dropped idle client is logged, never thrown', async (t
     await close();
   }
 });
+
+// JIT compile time dwarfed the counted-game queries (5.3s against 0.65s for
+// public stats on prod, 2026-10-25), so every pool starts its sessions with it
+// off, guarded or not.
+test('every pool session starts with JIT off, beside any guards', async () => {
+  for (const guards of [undefined, { statementTimeoutMs: 1000 }]) {
+    init('postgres://mistboard@127.0.0.1:9/never', guards);
+    try {
+      const options = String(
+        (getPool() as unknown as { options: { options?: string } }).options.options,
+      );
+      assert.match(options, /(^| )-c jit=off( |$)/);
+      if (guards) assert.match(options, /-c statement_timeout=1000/);
+    } finally {
+      await close();
+    }
+  }
+});

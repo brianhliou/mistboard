@@ -255,7 +255,7 @@ async function main() {
   node scripts/broadcast-records-speed.mjs --source mistboard --tour <slug> --round 1 --log <jsonl>
   node scripts/broadcast-records-speed.mjs --report --log <jsonl> [--round-ended-at <ISO timestamp>]
 
-Read-only, one observation per run. See docs/xiangqi-broadcast-records-speed.md.`);
+Read-only, one observation per run.`);
     return;
   }
   if (!values.log) throw new Error('--log is required');

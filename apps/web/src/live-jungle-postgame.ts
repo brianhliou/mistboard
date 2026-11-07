@@ -5,11 +5,9 @@ import {
   type JungleMove,
   type JunglePlayerView,
   type JungleSquare,
-  jungleStateToEngineFen,
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import './live-xiangqi.css';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -173,8 +171,6 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
     playerProfiles: reviewSeatProfiles(gamePlayers),
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
-    analyseFromHere: (truth) => analysisHref('jungle', jungleStateToEngineFen(truth)),
-    boardEditorHref: (truth) => editorHref('jungle', jungleStateToEngineFen(truth)),
     ...gameExportShareExtra('jungle', postgame.game.roomId),
     // Server-side MistyJungle whole-game analysis, DB-cached: an already-analysed
     // game loads straight from cache on open (a GET that never computes). Requesting

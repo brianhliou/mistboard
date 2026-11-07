@@ -1,12 +1,26 @@
-import { describe, expect, it } from 'vitest';
-import { JUNGLE_FLIP_BOARD_VIEW, renderJungleFlipBoardSvg } from './jungle-flip-render.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  JUNGLE_FLIP_BOARD_VIEW,
+  JUNGLE_FLIP_TOKEN_REACH,
+  renderJungleFlipBoardSvg,
+} from './jungle-flip-render.js';
 import { JUNGLE_BOARD_VIEW, renderJungleBoardSvg } from './jungle-render.js';
+
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
 
 // Both boards draw grid lines on interior cell boundaries only, never a perimeter.
 // Between two cells the 1-unit line covers any gap under a tile's edge; at the board
 // edge nothing does, so a tile short of its cell left a strip of land against the
-// frame (2026-10-15). A tile in an edge cell must reach the board edge, and two
-// neighbours must meet on their shared boundary.
+// frame (2026-10-15). A Jungle tile in an edge cell must reach the board edge, and
+// two neighbours must meet on their shared boundary. Flip Jungle's smaller tiles
+// (2026-10-28) leave an even margin in every cell instead.
 
 type Box = { left: number; right: number; top: number; bottom: number };
 
@@ -78,22 +92,31 @@ describe('jungle edge tiles meet the board edge', () => {
     });
   }
 
-  it('Flip Jungle, face-down and revealed tiles', () => {
+  it('Flip Jungle, face-down and revealed tiles: centred at JUNGLE_FLIP_TOKEN_REACH', () => {
+    // Flip Jungle's tiles span 80% of the cell (Brian, 2026-10-28), so every tile
+    // has the same margin of land, edge cells included, and face-down and
+    // revealed tiles keep one size.
+    const board = {
+      a1: { faceDown: true },
+      b1: { faceDown: true },
+      d1: { color: 'red', role: 'lion', faceDown: false },
+      a4: { color: 'black', role: 'cat', faceDown: false },
+      d4: { faceDown: true },
+    } as const;
     const boxes = tileBoxes(
-      renderJungleFlipBoardSvg(
-        {
-          a1: { faceDown: true },
-          b1: { faceDown: true },
-          d1: { color: 'red', role: 'lion', faceDown: false },
-          a4: { color: 'black', role: 'cat', faceDown: false },
-          d4: { faceDown: true },
-        },
-        { boardSkin: 'bare', pieceSkin: 'animals' },
-      ),
+      renderJungleFlipBoardSvg(board, { boardSkin: 'bare', pieceSkin: 'animals' }),
     );
-    expectFlushEdges(boxes, JUNGLE_FLIP_BOARD_VIEW);
-    const a1 = boxes.get('a1');
-    const b1 = boxes.get('b1');
-    expect(Math.abs((a1?.right ?? 0) - (b1?.left ?? 0))).toBeLessThan(0.05);
+    const { cell } = JUNGLE_FLIP_BOARD_VIEW;
+    const inset = (cell * (1 - JUNGLE_FLIP_TOKEN_REACH)) / 2;
+    for (const square of Object.keys(board)) {
+      const box = boxes.get(square);
+      const x0 = 'abcd'.indexOf(square[0] ?? '') * cell;
+      const y0 = (4 - Number(square[1])) * cell;
+      // Within the quarter-unit token box.
+      expect(Math.abs((box?.left ?? 0) - (x0 + inset))).toBeLessThan(0.3);
+      expect(Math.abs((box?.right ?? 0) - (x0 + cell - inset))).toBeLessThan(0.3);
+      expect(Math.abs((box?.top ?? 0) - (y0 + inset))).toBeLessThan(0.3);
+      expect(Math.abs((box?.bottom ?? 0) - (y0 + cell - inset))).toBeLessThan(0.3);
+    }
   });
 });

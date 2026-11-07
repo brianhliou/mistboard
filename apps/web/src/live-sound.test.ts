@@ -1,7 +1,10 @@
 import type { GameEvent, PlayerView } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { holdBoardSettle, resetBoardSettleForTests, trackPieceAnimation } from './board-anim.js';
 import {
   initialOpponentMoveSoundForSnapshot,
+  initLiveSound,
+  playTerminalPlan,
   shouldDeferHiddenPveOpeningSound,
   terminalSoundPlan,
   tonesForSound,
@@ -372,3 +375,85 @@ function memoryStorage(): Storage {
     setItem: (key, value) => values.set(key, value),
   };
 }
+
+// #825: the result sounded as the final move began to glide. It now waits for
+// the board to settle: the frame's render, then the glide that render started.
+describe('playTerminalPlan waits for the final move to land', () => {
+  let started = 0;
+  // Any audio node: every method returns the node, every property is a node.
+  function audioNode(): unknown {
+    const fn = () => node;
+    const node: unknown = new Proxy(fn, {
+      get: (_target, key) => (key === 'then' ? undefined : node),
+      set: () => true,
+      apply: () => node,
+    });
+    return node;
+  }
+  class FakeAudioContext {
+    currentTime = 0;
+    sampleRate = 44100;
+    destination = audioNode();
+    resume() {
+      return Promise.resolve();
+    }
+    createGain() {
+      return audioNode();
+    }
+    createOscillator() {
+      started += 1;
+      return audioNode();
+    }
+    createBufferSource() {
+      started += 1;
+      return audioNode();
+    }
+    createBiquadFilter() {
+      return audioNode();
+    }
+    createBuffer(_channels: number, length: number) {
+      return { getChannelData: () => new Float32Array(length) };
+    }
+    decodeAudioData() {
+      return Promise.reject(new Error('no audio in tests'));
+    }
+  }
+  function fakeGlide(): EventTarget & { finish(): void } {
+    const target = new EventTarget();
+    return Object.assign(target, { finish: () => target.dispatchEvent(new Event('finish')) });
+  }
+  const flush = () => new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  beforeEach(() => {
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    initLiveSound();
+    window.dispatchEvent(new Event('pointerdown'));
+    started = 0;
+  });
+  afterEach(() => {
+    resetBoardSettleForTests();
+    vi.unstubAllGlobals();
+  });
+
+  it('plays at once when nothing is moving (a resignation, reduced motion)', () => {
+    playTerminalPlan('win', 'resignation');
+    expect(started).toBeGreaterThan(0);
+  });
+
+  it('holds the sound through the render and the final glide, then plays it', async () => {
+    // The live core holds the board from the frame until the render that draws it.
+    const release = holdBoardSettle();
+    playTerminalPlan('lose', 'score');
+    expect(started).toBe(0);
+    // The render: the hold goes, and the final move starts gliding.
+    release();
+    const glide = fakeGlide();
+    trackPieceAnimation(glide);
+    await flush();
+    expect(started).toBe(0);
+    glide.finish();
+    await flush();
+    expect(started).toBeGreaterThan(0);
+  });
+});

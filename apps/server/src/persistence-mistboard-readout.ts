@@ -9,6 +9,7 @@ import {
   isDisruptiveDrain,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
+  type MistboardReadoutComparison,
   type MistboardReadoutDeploys,
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
@@ -30,6 +31,7 @@ import {
   countedPlayerSeat,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
+import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
 import {
   listAllXiangqiBroadcastBoardsOn,
@@ -210,9 +212,24 @@ export async function listMistboardReadoutSummaries(
 
 export async function latestMistboardReadout(
   db: Queryable = getPool(),
+  options: { trigger?: MistboardReadoutTrigger } = {},
 ): Promise<MistboardReadoutV1 | null> {
   const result = await db.query<{ payload: unknown }>(
-    `SELECT payload FROM ops_readout_snapshots ORDER BY created_at DESC, id DESC LIMIT 1`,
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE ($1::text IS NULL OR trigger = $1)
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [options.trigger ?? null],
+  );
+  return result.rows[0] ? parseStoredReadout(result.rows[0].payload) : null;
+}
+
+export async function mistboardReadoutById(
+  id: string,
+  db: Queryable = getPool(),
+): Promise<MistboardReadoutV1 | null> {
+  const result = await db.query<{ payload: unknown }>(
+    'SELECT payload FROM ops_readout_snapshots WHERE id = $1',
+    [id],
   );
   return result.rows[0] ? parseStoredReadout(result.rows[0].payload) : null;
 }
@@ -254,7 +271,7 @@ export async function collectMistboardReadoutFacts(
   now: Date,
   extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
-  const [collectors, trend] = await Promise.all([
+  const [collectors, trend, comparison] = await Promise.all([
     Promise.allSettled([
       collectProduct(db, now),
       collectPuzzles(db, now),
@@ -263,10 +280,12 @@ export async function collectMistboardReadoutFacts(
       collectBroadcasts(db, extra.untrackedEvents),
       collectFeedback(db),
       collectDeploys(db, now),
+      collectLoginEmailDelivery(db, now),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
     recentWeeklyTrend(db).catch(() => []),
+    collectReadoutComparison(db, now).catch(() => null),
   ]);
   const sections: MistboardReadoutCollectorError['section'][] = [
     'product',
@@ -276,6 +295,7 @@ export async function collectMistboardReadoutFacts(
     'broadcasts',
     'feedback',
     'deploys',
+    'loginEmailDelivery',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -290,9 +310,59 @@ export async function collectMistboardReadoutFacts(
     broadcasts: settledValue(collectors[4]),
     feedback: settledValue(collectors[5]),
     deploys: settledValue(collectors[6]),
+    loginEmailDelivery: settledValue(collectors[7]),
     collectorErrors,
     trend,
+    comparison,
   };
+}
+
+export async function collectReadoutComparison(
+  db: Queryable,
+  now: Date,
+): Promise<MistboardReadoutComparison | null> {
+  const { previousPeriodStart, periodStart } = readoutPeriods(now);
+  const result = await db.query<{ payload: unknown }>(
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE trigger = 'weekly' AND period_start = $1 AND period_end = $2
+     ORDER BY created_at DESC LIMIT 1`,
+    [previousPeriodStart, periodStart],
+  );
+  if (!result.rows[0]) return null;
+  const previous = parseStoredReadout(result.rows[0].payload);
+  if (
+    previous.trigger !== 'weekly' ||
+    previous.periodStart !== previousPeriodStart.toISOString() ||
+    previous.periodEnd !== periodStart.toISOString()
+  )
+    return null;
+  return {
+    periodStart: previous.periodStart,
+    periodEnd: previous.periodEnd,
+    product: previous.product,
+    broadcastBoards: previous.broadcasts?.boards ?? null,
+    engineFailedTasks: previous.engines?.failedTasks ?? null,
+    actionKeys: previous.actions.map((action) => action.dedupeKey),
+  };
+}
+
+async function collectLoginEmailDelivery(db: Queryable, now: Date) {
+  const [metrics, complaints] = await Promise.all([
+    getLoginEmailDeliveryMetrics(now, db),
+    // Count messages rather than webhook retries, correlated by provider id.
+    // No time window: delayed arrivals and complaints aging out must not hide
+    // the next complaint. Only the count enters the stored readout.
+    Promise.resolve().then(() =>
+      db.query<{ received: number }>(
+        `SELECT count(DISTINCT e.provider_email_id)::int AS received
+       FROM email_delivery_events e
+       JOIN login_email_requests r USING (provider_email_id)
+       WHERE e.event_type = 'email.complained' AND e.occurred_at < $1`,
+        [now],
+      ),
+    ),
+  ]);
+  return { ...metrics, complaintsReceived: complaints.rows[0]!.received };
 }
 
 async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadoutProduct> {

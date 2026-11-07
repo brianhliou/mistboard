@@ -126,8 +126,8 @@
   color: #e5222c;
   font-weight: 700;
 }
-/* "Learn from your mistakes" (lichess): a full-width blue bar between the two
-   players, pressed while retro mode is open. */
+/* "Learn from your mistakes" (lichess): a full-width bar in the site green
+   between the two players, pressed (darker, inset) while retro mode is open. */
 .analysis-summary__learn {
   display: flex;
   align-items: center;
@@ -137,7 +137,7 @@
   padding: 6px 12px;
   border: 0;
   border-radius: 8px;
-  background: #3b73c4;
+  background: var(--site-accent);
   color: #fff;
   font: inherit;
   font-size: 12px;
@@ -146,13 +146,16 @@
   text-transform: uppercase;
   cursor: pointer;
 }
-.analysis-summary__learn:hover,
+.analysis-summary__learn:hover {
+  background: var(--site-accent-strong);
+}
 .analysis-summary__learn:focus-visible {
-  background: #2f62ab;
-  outline: none;
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
 }
 .analysis-summary__learn[aria-pressed="true"] {
-  background: #2f8a4d;
+  background: var(--site-accent-strong);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.25);
 }
 .analysis-summary__learn-icon {
   display: inline-flex;

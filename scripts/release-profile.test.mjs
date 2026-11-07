@@ -9,6 +9,7 @@ import {
   heldMs,
   holdRows,
   importTranscripts,
+  isRefusal,
   parseDuration,
   parseTranscriptRelease,
   parseWindow,
@@ -150,6 +151,46 @@ test('quantiles and summarize', () => {
   assert.equal(s.total.p50, 400_000);
   assert.deepEqual(s.stages, [{ label: 'a', n: 2, p50: 30, p90: 30, max: 30 }]);
   assert.deepEqual(s.failures, [['superseded by a later push', 1]]);
+});
+
+test('a guard refusal that ran nothing is counted apart from failed attempts', () => {
+  const queue = {
+    outcome: 'failed',
+    elapsedMs: 13,
+    stages: [],
+    error: 'ship queue is in use (1 entries); use --train',
+  };
+  const dupe = {
+    outcome: 'failed',
+    elapsedMs: 68,
+    stages: [],
+    error: '--changelog: CHANGELOG.md already has these lines:',
+  };
+  const gate = {
+    outcome: 'failed',
+    elapsedMs: 200_000,
+    stages: [{ label: 'local ci:quick', ms: 190_000, ok: false }],
+  };
+  // Planted: a long run with no stage recorded is not a refusal; it stays unknown.
+  const cut = { outcome: 'failed', elapsedMs: 600_000, stages: [], error: 'node exited with 1' };
+  assert.equal(failureClass(queue), 'refused: ship queue in use');
+  assert.equal(failureClass(dupe), 'refused: changelog line already present');
+  assert.equal(isRefusal(cut), false);
+  assert.equal(failureClass(cut), 'unknown (output cut short)');
+  const s = summarize([
+    { outcome: 'ok', elapsedMs: 300_000, stages: [] },
+    queue,
+    queue,
+    dupe,
+    gate,
+    cut,
+  ]);
+  assert.equal(s.count, 3);
+  assert.equal(s.failed, 2);
+  assert.deepEqual(s.refused, [
+    ['refused: ship queue in use', 2],
+    ['refused: changelog line already present', 1],
+  ]);
 });
 
 test('import dedupes by text hash and prefers the fuller copy of one release', () => {

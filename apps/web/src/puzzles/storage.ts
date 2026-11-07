@@ -4,12 +4,62 @@
  * built on the seen-set. All best-effort: puzzle play works without storage.
  */
 
+import { PUZZLE_NEW_PLAYER_RATING } from '@mistboard/game';
 import type { PuzzleSummary } from './adapter.js';
 
 const SOLVED_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:solved';
 const SEEN_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:seen';
 const AUTO_NEXT_STORAGE_KEY = 'mistboard:puzzles:auto-next';
 const RATED_STORAGE_KEY = 'mistboard:puzzles:rated';
+const DIFFICULTY_STORAGE_KEY = 'mistboard:puzzles:difficulty';
+export const PUZZLE_DIFFICULTIES = ['easiest', 'easier', 'normal', 'harder', 'hardest'] as const;
+export type PuzzleDifficulty = (typeof PUZZLE_DIFFICULTIES)[number];
+const DIFFICULTY_OFFSETS: Record<PuzzleDifficulty, number> = {
+  easiest: -600,
+  easier: -300,
+  normal: 0,
+  harder: 300,
+  hardest: 600,
+};
+
+export function parsePuzzleDifficulty(value: string | null): PuzzleDifficulty {
+  return PUZZLE_DIFFICULTIES.find((level) => level === value) ?? 'normal';
+}
+
+export function loadPuzzleDifficulty(): PuzzleDifficulty {
+  try {
+    return parsePuzzleDifficulty(window.localStorage?.getItem(DIFFICULTY_STORAGE_KEY) ?? null);
+  } catch {
+    return 'normal';
+  }
+}
+
+export function savePuzzleDifficulty(level: PuzzleDifficulty): void {
+  try {
+    window.localStorage?.setItem(DIFFICULTY_STORAGE_KEY, level);
+  } catch {
+    // Training works when storage is unavailable.
+  }
+}
+
+/** Availability in the active variant/theme, excluding local and account history.
+ * Twenty near puzzles support a short drill before the band has to widen. */
+export function puzzleDifficultyAvailability(
+  puzzles: readonly PuzzleSummary[],
+  seen: ReadonlyMap<string, number>,
+  targetRating: number,
+  level: PuzzleDifficulty,
+): { nearby: number; unseen: number } {
+  const target = targetRating + DIFFICULTY_OFFSETS[level];
+  let nearby = 0;
+  let unseen = 0;
+  for (const puzzle of puzzles) {
+    if (seen.has(puzzle.id)) continue;
+    unseen += 1;
+    if (Math.abs(matchRating(puzzle) - target) <= MATCH_BANDS[0]) nearby += 1;
+  }
+  return { nearby, unseen };
+}
 // The cap bounds localStorage growth, but it MUST stay ahead of the served
 // corpus or rotation quietly breaks: once eviction starts, "unseen first"
 // re-serves evicted puzzles while genuinely unseen ones are still waiting. At
@@ -49,6 +99,7 @@ export function rotatePuzzleOrder(
   puzzles: readonly PuzzleSummary[],
   seen: ReadonlyMap<string, number>,
   targetRatings: ReadonlyMap<string, number> = new Map(),
+  difficulty: PuzzleDifficulty = 'normal',
 ): PuzzleSummary[] {
   const unseen: PuzzleSummary[] = [];
   const seenList: PuzzleSummary[] = [];
@@ -63,7 +114,11 @@ export function rotatePuzzleOrder(
     unseenByVariant.set(puzzle.variant, group);
   }
   const adaptive = [...unseenByVariant.values()].flatMap((group) =>
-    adaptivePuzzleOrder(group, targetRatings.get(group[0]!.variant) ?? 1500),
+    adaptivePuzzleOrder(
+      group,
+      (targetRatings.get(group[0]!.variant) ?? PUZZLE_NEW_PLAYER_RATING) +
+        DIFFICULTY_OFFSETS[difficulty],
+    ),
   );
   seenList.sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0));
   return [...adaptive, ...seenList];
@@ -82,15 +137,18 @@ export function rotatePuzzleOrder(
 // get variety -- just the closest variety available, not the whole range.
 const EXPLORE_WINDOWS = [300, 600, 1200] as const;
 
-function exploreIndex(
-  remaining: readonly { puzzle: PuzzleSummary }[],
-  targetRating: number,
-): number {
+// Match on the serving rating when the server sent one (#712): the rating
+// folded with solution length and what players actually did. The displayed
+// rating alone was the prior for nearly every puzzle.
+function matchRating(puzzle: PuzzleSummary): number {
+  return puzzle.servingRating ?? puzzle.rating;
+}
+
+function exploreIndex(remaining: readonly PuzzleSummary[], targetRating: number): number {
   for (const window of EXPLORE_WINDOWS) {
     const withinBand: number[] = [];
     for (let index = 0; index < remaining.length; index += 1) {
-      if (Math.abs(remaining[index]!.puzzle.rating - targetRating) <= window)
-        withinBand.push(index);
+      if (Math.abs(matchRating(remaining[index]!) - targetRating) <= window) withinBand.push(index);
     }
     if (withinBand.length > 0) {
       return withinBand[Math.floor(Math.random() * withinBand.length)]!;
@@ -101,35 +159,62 @@ function exploreIndex(
   return Math.floor(Math.random() * remaining.length);
 }
 
+// The matched pick draws at random inside a rating band around the target
+// instead of taking the nearest puzzle. Nearest-first with a 0-30 jitter made
+// every fresh visit open on the same few puzzles in nearly the same order: with
+// an empty seen-set the queue was close to a pure function of the corpus and
+// the rating. Bands widen only when the closer one is empty, so the queue
+// still starts near the viewer and moves outward as the near puzzles are used.
+const MATCH_BANDS = [100, 200, 400, 800] as const;
+
+function matchedIndex(
+  remaining: readonly PuzzleSummary[],
+  targetRating: number,
+  recentThemes: ReadonlySet<string>,
+): number {
+  for (const band of MATCH_BANDS) {
+    const inBand: number[] = [];
+    for (let index = 0; index < remaining.length; index += 1) {
+      if (Math.abs(matchRating(remaining[index]!) - targetRating) <= band) inBand.push(index);
+    }
+    if (inBand.length === 0) continue;
+    // Prefer a puzzle whose lead theme the last two did not share.
+    const fresh = inBand.filter((index) => {
+      const theme = remaining[index]!.themes[0];
+      return !theme || !recentThemes.has(theme);
+    });
+    const pool = fresh.length > 0 ? fresh : inBand;
+    return pool[Math.floor(Math.random() * pool.length)]!;
+  }
+  // Nothing within the widest band: the nearest puzzle left.
+  let nearest = 0;
+  for (let index = 1; index < remaining.length; index += 1) {
+    if (
+      Math.abs(matchRating(remaining[index]!) - targetRating) <
+      Math.abs(matchRating(remaining[nearest]!) - targetRating)
+    ) {
+      nearest = index;
+    }
+  }
+  return nearest;
+}
+
 function adaptivePuzzleOrder(
   puzzles: readonly PuzzleSummary[],
   targetRating: number,
 ): PuzzleSummary[] {
-  const remaining = puzzles.map((puzzle) => ({ puzzle, jitter: Math.random() * 30 }));
+  const remaining = [...puzzles];
   const ordered: PuzzleSummary[] = [];
   while (remaining.length > 0) {
     const explore = ordered.length % 5 === 4;
-    let selectedIndex = 0;
-    if (explore) {
-      selectedIndex = exploreIndex(remaining, targetRating);
-    } else {
-      const recentThemes = new Set(
-        ordered.slice(-2).flatMap((puzzle) => puzzle.themes.slice(0, 1)),
-      );
-      let bestScore = Number.POSITIVE_INFINITY;
-      for (let index = 0; index < remaining.length; index += 1) {
-        const candidate = remaining[index]!;
-        const primaryTheme = candidate.puzzle.themes[0];
-        const repeatPenalty = primaryTheme && recentThemes.has(primaryTheme) ? 75 : 0;
-        const score =
-          Math.abs(candidate.puzzle.rating - targetRating) + repeatPenalty + candidate.jitter;
-        if (score < bestScore) {
-          bestScore = score;
-          selectedIndex = index;
-        }
-      }
-    }
-    ordered.push(remaining.splice(selectedIndex, 1)[0]!.puzzle);
+    const selectedIndex = explore
+      ? exploreIndex(remaining, targetRating)
+      : matchedIndex(
+          remaining,
+          targetRating,
+          new Set(ordered.slice(-2).flatMap((puzzle) => puzzle.themes.slice(0, 1))),
+        );
+    ordered.push(remaining.splice(selectedIndex, 1)[0]!);
   }
   return ordered;
 }

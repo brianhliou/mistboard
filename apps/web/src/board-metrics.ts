@@ -21,6 +21,25 @@ export function tokenPieceSize(cell: number): number {
 // the board's marks are tuned on (last-move halo, check glow, selection rings,
 // hit areas); only the piece drawing grows.
 export const XIANGQI_PIECE_REACH = 0.98;
+/**
+ * On the Square grid a flat piece spans 85% of its square instead, centred, so
+ * the grid shows between neighbours and round the edge (Brian, 2026-10-29: "85
+ * 90 that looks a bit better", matching Flip Jungle's "2d 85 and 3d 90"; the 3D
+ * piece's 90 is XIANGQI_PIECE_3D_CELL_REACH, and its face then lands near 85).
+ */
+export const XIANGQI_PIECE_CELL_REACH = 0.85;
+/** The margin the piece renderer adds round its 100-unit art on the Square grid,
+ *  so the art scales to XIANGQI_PIECE_CELL_REACH / XIANGQI_PIECE_REACH of the box
+ *  it is given (a hundredth, so the viewBox prints clean). */
+export const XIANGQI_PIECE_CELL_INSET =
+  Math.round(((100 * XIANGQI_PIECE_REACH) / XIANGQI_PIECE_CELL_REACH - 100) * 50) / 100;
+
+/** The box a Square-grid piece's art fills inside its given box `box`: what a
+ *  mark that traces the drawn outline (the last-move ring) sizes on. */
+export function xiangqiPieceCellBox(box: number): number {
+  return Math.round(((box * 100) / (100 + 2 * XIANGQI_PIECE_CELL_INSET)) * 100) / 100;
+}
+
 /** How much of its 100-unit box a xiangqi piece's outline spans. */
 export const XIANGQI_PIECE_OUTLINE_SHARE = 0.948;
 

@@ -11,7 +11,21 @@
   fill: #b91c1c;
   stroke: #b91c1c;
 }
+/* Two-engine studies: one engine's moves in blue, the other's in orange, the
+ * same pair as the eval-compare charts (--eval-compare-a / -b). */
+.xq-arrow--draw.xq-shape--blue,
+.xq-marker.xq-shape--blue {
+  fill: #1f7a8c;
+  stroke: #1f7a8c;
+}
+.xq-arrow--draw.xq-shape--orange,
+.xq-marker.xq-shape--orange {
+  fill: #d9822b;
+  stroke: #d9822b;
+}
 .xq-marker.xq-shape--green,
-.xq-marker.xq-shape--red {
+.xq-marker.xq-shape--red,
+.xq-marker.xq-shape--blue,
+.xq-marker.xq-shape--orange {
   fill: none;
 }

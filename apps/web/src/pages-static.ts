@@ -6,7 +6,15 @@ import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
 import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
-import { jqeEnabled } from './feature-flags.js';
+import {
+  PIKAFISH_REPO_URL,
+  PIKAFISH_SITE_URL,
+  pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_NETWORKS_LICENSE_URL,
+  RAPFI_REPO_URL,
+} from './engine-credits.js';
+import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
@@ -527,6 +535,9 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   heading.className = 'site-section-heading';
   heading.textContent = t('about.heading', {}, locale);
 
+  const mission = aboutParagraph([t('about.mission', {}, locale)]);
+  mission.className = 'about-mission';
+
   const lede = aboutParagraph([t('about.lede', {}, locale)]);
 
   const whyHeading = aboutSubheading(t('about.whyHeading', {}, locale));
@@ -582,6 +593,7 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(
     heading,
+    mission,
     lede,
     whyHeading,
     whyP,
@@ -649,6 +661,11 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.githubRepository', {}, locale), GITHUB_URL),
     textLine(t('source.licenseAgpl', {}, locale)),
     textLine(t('source.noWarranty', {}, locale)),
+    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+    aboutLink(t('developers.heading', {}, locale), localizedHref('/developers', locale)),
+    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    aboutLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    aboutLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
   ]);
 
   const thirdParty = sourceBlock(t('source.thirdParty', {}, locale), [
@@ -676,6 +693,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
+    ...(gomokuEnabled()
+      ? [
+          linkLine(t('source.rapfi', {}, locale), RAPFI_REPO_URL),
+          linkLine(t('source.rapfiNetworks', {}, locale), RAPFI_NETWORKS_LICENSE_URL),
+          linkLine(t('source.rapfiBuild', {}, locale), RAPFI_BUILD_URL),
+        ]
+      : []),
     // The tablebase in the explorer pane and practice grading read chessdb.cn
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
@@ -964,18 +989,6 @@ function textLine(value: string): HTMLSpanElement {
   return span;
 }
 
-export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
-export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
-const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
-  en: 'https://www.pikafish.com/en/list.html',
-  'zh-Hans': 'https://www.pikafish.com/list.html',
-  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
-};
-
-export function pikafishWeightsLicenseUrl(locale: Locale): string {
-  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
-}
-
 function pikafishCreditLine(locale: Locale): HTMLSpanElement {
   const line = document.createElement('span');
   line.className = 'source-credit-pikafish';
@@ -1046,7 +1059,7 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
   quick.className = 'not-found-links';
   quick.setAttribute('aria-label', t('notFound.quickLinks', {}, locale));
   for (const [labelKey, href] of [
-    ['nav.play', '/play'],
+    ['nav.play', '/'],
     ['nav.rules', '/rules'],
     ['nav.watch', '/watch'],
     ['nav.puzzles', '/puzzles'],

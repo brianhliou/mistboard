@@ -289,9 +289,11 @@ const G_QUALIFIER: XiangqiReplaySpec = {
 
 export const yinShengArticle: Article = {
   slug: 'yin-sheng',
+  contactNote: true,
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'Yin Sheng 尹昇',
   seoTitle: 'Yin Sheng 尹昇: games, results, and analysis',

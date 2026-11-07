@@ -246,8 +246,10 @@ export function parseFlipFen<Role extends string, Square extends string>(
   // The unbound turn is the opening and only the opening: the first action is a
   // flip, and a flipped tile stays revealed (captures need a revealed attacker),
   // so a board with every tile face-down has seen no action, and any other board
-  // has an ink bound to the mover.
-  const allFaceDown = faceDownSquares.length === spec.width * spec.height;
+  // has an ink bound to the mover. "Every tile" is the whole set, not the whole
+  // board: Three Kingdoms banqi deals its 32 tiles onto 45 points.
+  const setSize = 2 * spec.roleOrder.reduce((sum, role) => sum + spec.pieceCounts[role], 0);
+  const allFaceDown = faceDownSquares.length === setSize;
   if (allFaceDown && turn !== null) {
     return {
       ok: false,

@@ -7,7 +7,7 @@
 
 import type { ServerResponse } from 'node:http';
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   isStandardXiangqiLegalMove,
   standardXiangqiFen,
@@ -22,7 +22,7 @@ import * as persistence from './persistence.js';
 
 // v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
 // v4 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
-export const BROADCAST_OG_IMAGE_VERSION = 4;
+export const BROADCAST_OG_IMAGE_VERSION = 5;
 
 const cache = createPngCache(64);
 
@@ -32,12 +32,12 @@ function english(entity: Named): string {
   return entity.nameEn?.trim() || entity.name;
 }
 
-/** The position after the last move that replays under standard rules. */
+/** The position after the last legal move in the source record. */
 export function broadcastFinalFen(moves: readonly XiangqiMove[]): string {
   let state = createInitialXiangqiState('broadcast-og');
   for (const move of moves) {
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) break;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
   return standardXiangqiFen(state);
 }
@@ -72,6 +72,18 @@ export function broadcastOutcome(board: {
   return `In play, ${count} so far`;
 }
 
+/** A board page's share description: the outcome, then what the page holds. */
+export function broadcastBoardDescription(
+  board: Parameters<typeof broadcastOutcome>[0] & { recordWithheld?: string },
+): string {
+  if (board.recordWithheld) {
+    return `${broadcastOutcome(board)}. The source record of this game can be read two ways, so it isn't replayed. Every round in English, on Mistboard.`;
+  }
+  return board.moves.length > 0
+    ? `${broadcastOutcome(board)}. Replay it move by move with an engine eval, in English, on Mistboard.`
+    : `${broadcastOutcome(board)}. The result is in; the moves are not published. Every round in English, on Mistboard.`;
+}
+
 /** "2-8 Oct 2026", "30 Sep - 2 Oct 2026", or one day; null without a start. */
 export function eventDateRange(startsAt?: string, endsAt?: string): string | null {
   // The event's own calendar day: the stored instants carry its offset
@@ -98,7 +110,7 @@ export function eventDateRange(startsAt?: string, endsAt?: string): string | nul
 }
 
 /** The site's own card, for an event with no game to show yet. */
-export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=10';
+export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=11';
 
 /** Meta for an event page before any of its games has moves: the event's
  *  name, its dates and place, the site card. Without it a link shared before
@@ -156,10 +168,7 @@ export async function broadcastPageMeta(pathname: string): Promise<TenantGamePag
     const where = [round ? english(round) : null, tour ? english(tour) : null].filter(Boolean);
     return {
       title: `${english(board.red)} vs ${english(board.black)}${where.length > 0 ? ` · ${where.join(' · ')}` : ''} | Mistboard`,
-      description:
-        board.moves.length > 0
-          ? `${broadcastOutcome(board)}. Replay it move by move with an engine eval, in English, on Mistboard.`
-          : `${broadcastOutcome(board)}. The result is in; the moves are not published. Every round in English, on Mistboard.`,
+      description: broadcastBoardDescription(board),
       urlPath: pathname,
       imagePath: imagePath(board.id, board.moves.length),
     };

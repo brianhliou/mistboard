@@ -6,8 +6,12 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { ARTICLE_META } from './article-meta.js';
 import {
+  ARTICLE_OG_FITS,
+  type ArticleOgFit,
   coverBelowFrame,
+  inlineThumbImages,
   renderArticleThumbnail,
   resetArticleThumbs,
   serveArticleThumbnail,
@@ -97,6 +101,83 @@ test('a post with no thumbnail file falls back to its OG card', async () => {
   const missing = await serve('no-card-art');
   assert.equal(missing.status, 302);
   assert.equal(missing.headers.location, '/og/article/no-card-art.png');
+});
+
+test('embedded rasters choose their mip level at the output scale', async () => {
+  const photo = await svgToPng(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750"><rect width="1200" height="750" fill="#a33"/></svg>',
+    '#a33',
+    1,
+  );
+  mkdirSync(join(staticDir, 'img'), { recursive: true });
+  writeFileSync(join(staticDir, 'img', 'scaled-face.png'), photo);
+  const source = frame('<image href="/img/scaled-face.png" width="480" height="300"/>');
+  for (const [zoom, width] of [
+    [1, 600],
+    [5, 1200],
+  ] as const) {
+    const inlined = await inlineThumbImages(source, staticDir, zoom);
+    const uri = /href="data:image\/png;base64,([^"]+)"/.exec(inlined)?.[1];
+    assert.ok(uri);
+    assert.equal(pngSize(Buffer.from(uri, 'base64')).width, width, `zoom ${zoom}`);
+  }
+});
+
+test('the safe canvas also protects cropped board art at OG size', async () => {
+  const png = await renderArticleThumbnail(croppedCard, staticDir, 'og');
+  assert.ok(png);
+  assert.deepEqual(pngSize(png), { width: 2400, height: 1260 });
+});
+
+// A mark inside `strip` changes the card only if the card shows that strip.
+async function shows(strip: 'top' | 'bottom', fit?: ArticleOgFit): Promise<boolean> {
+  const y = strip === 'top' ? 4 : 286;
+  // The nested 160x100 viewport draws at 3x, the shape of the duck card.
+  const card = (extra: string) =>
+    frame(
+      `<svg x="0" y="0" width="480" height="300" preserveAspectRatio="xMidYMid meet" viewBox="0 0 160 100">${extra}</svg>`,
+    );
+  const mark = `<rect x="60" y="${y / 3}" width="40" height="3" fill="#e11"/>`;
+  const plain = await renderArticleThumbnail(card(''), staticDir, 'og', fit);
+  const marked = await renderArticleThumbnail(card(mark), staticDir, 'og', fit);
+  assert.ok(plain && marked);
+  assert.deepEqual(pngSize(marked), { width: 2400, height: 1260 });
+  return !plain.equals(marked);
+}
+
+test('the share card trims both strips unless the art names a fit', async () => {
+  assert.equal(await shows('top'), false);
+  assert.equal(await shows('bottom'), false);
+});
+
+test('a shifted crop brings back the strip it moves toward, and only that one', async () => {
+  assert.equal(await shows('bottom', { shift: 24 }), true);
+  assert.equal(await shows('top', { shift: 24 }), false);
+  assert.equal(await shows('top', { shift: -24 }), true);
+  assert.equal(await shows('bottom', { shift: -24 }), false);
+});
+
+test('a whole fit shows the art from top to bottom', async () => {
+  assert.equal(await shows('top', 'whole'), true);
+  assert.equal(await shows('bottom', 'whole'), true);
+});
+
+test('a whole fit gives up on art it cannot refit', async () => {
+  const raster = frame('<image href="/img/none.png" x="0" y="0" width="480" height="300"/>');
+  assert.equal(await renderArticleThumbnail(raster, staticDir, 'og', 'whole'), null);
+});
+
+test('a fit changes the share card only, never the feed thumbnail', async () => {
+  const feed = await renderArticleThumbnail(croppedCard, staticDir);
+  const fitted = await renderArticleThumbnail(croppedCard, staticDir, 'feed', { shift: 24 });
+  assert.ok(feed && fitted?.equals(feed));
+});
+
+test('every fit names a real article and stays inside the art', () => {
+  for (const [slug, fit] of Object.entries(ARTICLE_OG_FITS)) {
+    assert.ok(ARTICLE_META[slug], slug);
+    if (fit !== 'whole') assert.ok(Math.abs(fit.shift) <= 24, slug);
+  }
 });
 
 test('a slug outside [a-z0-9-] is a 404, so no path leaves the thumb directory', async () => {

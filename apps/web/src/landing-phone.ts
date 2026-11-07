@@ -6,12 +6,13 @@
 //   ("Live · Mistboard TV · Xiangqi") with a Watch link, since the phone board
 //   has no rail around it to say so.
 // - The shortcut tiles: the six places a phone visitor goes after playing,
-//   under the Play buttons, so they need not open the menu.
+//   under the Play buttons, so they need not open the menu. Each carries a
+//   sticker drawing in the broadcast TV's style (home-tile-art.ts).
+import { buildHomeTileArt, type HomeTileArt } from './home-tile-art.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { type Locale, localizedHref } from './i18n/locale.js';
 import type { LandingTvMode } from './landing-tv.js';
 import { navPhoneMediaQuery } from './site-shell.js';
-import { buildUiIcon, type UiIconName } from './ui-icon.js';
 
 /**
  * Whether the homepage mounts as the phone home: the site header's phone
@@ -77,14 +78,14 @@ export function buildLandingTvStrip(locale: Locale, watchHref: string): LandingT
 export const LANDING_PHONE_TILES: readonly {
   href: string;
   labelKey: I18nKey;
-  icon: UiIconName;
+  art: HomeTileArt;
 }[] = [
-  { href: '/puzzles', labelKey: 'nav.puzzles', icon: 'achievement-puzzle' },
-  { href: '/rules', labelKey: 'nav.rules', icon: 'home-rules' },
-  { href: '/study', labelKey: 'nav.studies', icon: 'home-study' },
-  { href: '/analysis/xiangqi', labelKey: 'home.tileAnalysis', icon: 'home-analysis' },
-  { href: '/forum', labelKey: 'nav.forum', icon: 'forum-topic' },
-  { href: '/watch', labelKey: 'nav.watch', icon: 'home-watch' },
+  { href: '/puzzles', labelKey: 'nav.puzzles', art: 'puzzles' },
+  { href: '/rules', labelKey: 'nav.rules', art: 'rules' },
+  { href: '/study', labelKey: 'nav.studies', art: 'study' },
+  { href: '/analysis/xiangqi', labelKey: 'home.tileAnalysis', art: 'analysis' },
+  { href: '/forum', labelKey: 'nav.forum', art: 'forum' },
+  { href: '/watch', labelKey: 'nav.watch', art: 'watch' },
 ];
 
 export function buildLandingPhoneTiles(locale: Locale): HTMLElement {
@@ -98,7 +99,7 @@ export function buildLandingPhoneTiles(locale: Locale): HTMLElement {
     const label = document.createElement('span');
     label.className = 'landing-phone-tile-label';
     label.textContent = t(tile.labelKey, {}, locale);
-    link.append(buildUiIcon(tile.icon, 'landing-phone-tile-icon'), label);
+    link.append(buildHomeTileArt(tile.art), label);
     nav.append(link);
   }
   return nav;

@@ -20,6 +20,7 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { redPovScore } from '@mistboard/game';
 import {
   runUciEval,
   UciEnginePool,
@@ -390,20 +391,8 @@ export function redPovSign(plyCount: number): 1 | -1 {
   return plyCount % 2 === 0 ? 1 : -1;
 }
 
-/** Flip one side-to-move score pair onto Red's POV. `mate 0` is the side to move
- *  being already checkmated; 0 cannot carry a sign, so encode it as decisive cp.
- *  Shared with the broadcast live eval so both surfaces agree on the sign. */
-export function redPovScore(
-  cp: number | null,
-  mate: number | null,
-  sign: 1 | -1,
-): { cp: number | null; mate: number | null } {
-  if (mate === 0) return { cp: sign * -30000, mate: null };
-  return {
-    cp: cp == null ? null : cp * sign,
-    mate: mate == null ? null : mate * sign,
-  };
-}
+// Preserve the server/broadcast import path; the browser sweep uses the same math.
+export { redPovScore };
 
 function redPovEval(evaluation: UciEval, plyCount: number): XiangqiPositionEval {
   const sign = redPovSign(plyCount);

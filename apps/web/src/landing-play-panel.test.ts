@@ -11,7 +11,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import { setResolvedSignedIn } from './signed-in-state.js';
+import { setResolvedSignedIn, setResolvedStatsExcluded } from './signed-in-state.js';
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -59,6 +59,7 @@ describe('homepage play panel', () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     setRatedModeEnabled(false);
+    setResolvedStatsExcluded(undefined);
     window.history.replaceState(null, '', '/');
   });
 
@@ -492,6 +493,30 @@ describe('homepage play panel', () => {
     );
     rated?.click();
     expect(window.location.href).toContain('/account?tab=login');
+  });
+
+  it('says in plain words why Rated is out of reach, per account state', async () => {
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    await ensureLocaleCatalog('zh-Hans');
+    await ensureLocaleCatalog('zh-Hant');
+    const note = (board: HTMLElement) => board.querySelector('.pp-note')?.textContent;
+    // Rated off on the server: no switch, no note.
+    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
+    setRatedModeEnabled(true);
+    // A guest is told to sign in.
+    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('Sign in to play rated games.');
+    // A signed-in counted account in Casual sees nothing.
+    setResolvedSignedIn(true);
+    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
+    // A stats-excluded account plays casual only.
+    setResolvedStatsExcluded(true);
+    const excluded = buildPlayPanel('en', { hydrate: false });
+    expect(note(excluded)).toBe('This account plays casual games only.');
+    expect(note(buildPlayPanel('zh-Hans', { hydrate: false }))).toBe('此账号只能下休闲对局。');
+    expect(note(buildPlayPanel('zh-Hant', { hydrate: false }))).toBe('此帳號只能下休閒對局。');
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      expect(note(buildPlayPanel(locale, { hydrate: false }))).not.toMatch(/counted|计入|計入|—/);
+    }
   });
 
   it('shows Casual/Rated once /api/server-status turns rated on after the panel is built', () => {

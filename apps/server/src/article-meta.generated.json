@@ -9,6 +9,16 @@
       "zh-hant": "AB-JChess：更強的揭棋電腦"
     }
   },
+  "ab-jchess-vs-jqe": {
+    "title": "AB-JChess takes the jieqi title back from jqe",
+    "kind": "article",
+    "description": "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. Five games read move by move by both engines, the two engines' chase rules, and how their play differs.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "AB-JChess 从 jqe 手中夺回揭棋榜首",
+      "zh-hant": "AB-JChess 從 jqe 手中奪回揭棋榜首"
+    }
+  },
   "anti-xiangqi": {
     "title": "Antichess on the Xiangqi Board Is a Draw",
     "kind": "article",
@@ -46,7 +56,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "暗棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "暗棋規則：玩法詳解與免費線上對弈"
+      "zh-hant": "暗棋規則：怎麼玩、大小順序與連吃"
     }
   },
   "banqi-chariot-endgame": {
@@ -207,8 +217,8 @@
     "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败",
-      "zh-hant": "翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
+      "zh-hans": "翻翻兽棋：搜索量提升 512 倍，仍有 23% 的对局落败",
+      "zh-hant": "翻翻獸棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
     }
   },
   "fog-chess": {
@@ -273,6 +283,16 @@
       "zh-hant": "你能讓 General Blunder 贏嗎？"
     }
   },
+  "gomoku": {
+    "title": "Gomoku Rules",
+    "kind": "rules",
+    "description": "Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "五子棋规则",
+      "zh-hant": "五子棋規則"
+    }
+  },
   "helpmates-in-xiangqi": {
     "title": "Helpmates in Xiangqi",
     "kind": "article",
@@ -296,18 +316,12 @@
   "how-puzzle-mining-works": {
     "title": "Mining puzzles from real games",
     "kind": "article",
-    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
+    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in twenty survives. Here is the algorithm, the code, and what it kept and threw away.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "从真实对局中挖掘象棋题目",
       "zh-hant": "從真實對局中挖掘象棋題目"
     }
-  },
-  "how-to-play-xiangqi-mahjong": {
-    "title": "How to Play Xiangqi Mahjong",
-    "kind": "article",
-    "description": "Xiangqi Mahjong is a folk game from Taiwan that plays one 32-piece xiangqi set as mahjong tiles. How a turn goes, what makes a winning hand, how it scores, and how to start a match on Mistboard.",
-    "status": "draft"
   },
   "jieqi": {
     "title": "Jieqi Rules (Reveal Xiangqi)",
@@ -395,8 +409,8 @@
     "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "翻翻棋規則：玩法詳解與免費線上對弈"
+      "zh-hans": "翻翻兽棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "翻翻獸棋規則：玩法詳解與免費線上對弈"
     }
   },
   "katago-jungle": {
@@ -553,6 +567,16 @@
       "zh-hant": "用伺服器端真實局面實現迷霧國際象棋"
     }
   },
+  "set-up-your-board": {
+    "title": "How to Change Your Board and Pieces",
+    "kind": "article",
+    "description": "Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "如何更改棋盘和棋子的样式",
+      "zh-hant": "如何更改棋盤和棋子的樣式"
+    }
+  },
   "shogi4": {
     "title": "Shogi4 (4×4 Shogi) Rules",
     "kind": "rules",
@@ -592,6 +616,22 @@
       "zh-hans": "求解器在古谱里发现了什么",
       "zh-hant": "求解器在古譜裡發現了什麼"
     }
+  },
+  "tang-dan": {
+    "title": "Tang Dan 唐丹",
+    "kind": "article",
+    "description": "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "唐丹",
+      "zh-hant": "唐丹"
+    }
+  },
+  "three-kingdoms-banqi": {
+    "title": "Three Kingdoms Banqi Rules",
+    "kind": "rules",
+    "description": "Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.",
+    "status": "draft"
   },
   "titled-players": {
     "title": "Bring your title to Mistboard",
@@ -700,7 +740,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "左文静",
-      "zh-hant": "左文静"
+      "zh-hant": "左文靜"
     }
   }
 }

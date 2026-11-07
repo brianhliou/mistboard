@@ -15,7 +15,18 @@ const OFF_DAY_EXCEPTIONS: Readonly<Record<string, string>> = {
   // Brian, 2026-10-17: pull the challenge up next to the bot it is about, which
   // shipped that evening; Monday had no article, and the next free slot was 11-03.
   'general-blunder-challenge': '2026-10-19',
+  // Brian, 2026-11-04: "pull up ab-jchess even earlier, maybe break schedule. The
+  // xiangqi player deep dive as well." AB-JChess goes out with the 11-04 09:00 ship,
+  // Tang Dan the day after, and the board how-to keeps Friday 11-06 to itself.
+  'ab-jchess-vs-jqe': '2026-11-04',
+  'tang-dan': '2026-11-05',
 };
+
+// How-tos for a launched feature and engineering posts that share a day with a
+// deep dive; they show up in a different homepage row (Brian, 2026-10-26: "if
+// they are a regular/engineering post and a xiangqi deep dive on the same day,
+// that is more ok"). Each names the day it shares.
+const SHARED_DAY_EXCEPTIONS: Readonly<Record<string, string>> = {};
 
 function publishedDays(from: string): [slug: string, day: string][] {
   return articles
@@ -32,6 +43,7 @@ describe('article schedule', () => {
   it('puts at most one published article on each day', () => {
     const byDay = new Map<string, string[]>();
     for (const [slug, day] of publishedDays(ONE_A_DAY_FROM)) {
+      if (SHARED_DAY_EXCEPTIONS[slug] === day) continue;
       byDay.set(day, [...(byDay.get(day) ?? []), slug]);
     }
     const crowded = [...byDay].filter(([, slugs]) => slugs.length > 1);

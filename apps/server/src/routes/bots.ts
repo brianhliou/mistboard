@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { maybeGameSpecForId } from '@mistboard/game';
+import { botEngineVersion } from '../bot-engine-versions.js';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
+import { parseGamePageCursor } from '../game-page-cursor.js';
 import {
   abJchessAvailable,
   JIEQI_ABJCHESS_ENGINE_ID,
@@ -27,6 +29,9 @@ type BotPlayOption = {
   gameSpecId: string;
   engineId: string;
   playable: boolean;
+  // The engine build this variant runs (bot-engine-versions.ts); absent when no
+  // version is recorded, so the page shows nothing instead of a guess.
+  version?: string;
 };
 
 // What botPlayOptions reads: the full profile and the lighter play profile
@@ -58,7 +63,13 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
           : engineId === KATAGO_JUNGLE_ENGINE_ID
             ? katagoJungleAvailable()
             : true;
-    options.push({ gameSpecId, engineId, playable: isBotSpecPlayable(gameSpecId) && serveable });
+    const version = botEngineVersion(engineId);
+    options.push({
+      gameSpecId,
+      engineId,
+      playable: isBotSpecPlayable(gameSpecId) && serveable,
+      ...(version ? { version } : {}),
+    });
   }
   return options;
 }
@@ -162,6 +173,11 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
+    const before = parseGamePageCursor(parsedUrl.searchParams.get('before'));
+    if (before === undefined) {
+      writeJson(response, 400, { error: 'invalid_before' });
+      return true;
+    }
     const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = clampInt(
       parsedUrl.searchParams.get('limit'),
@@ -169,7 +185,7 @@ export async function tryHandle(
       1,
       BOT_GAMES_PAGE_MAX,
     );
-    const games = await persistence.getBotGamesPage(botId, variant, offset, limit);
+    const games = await persistence.getBotGamesPage(botId, variant, offset, limit, before);
     writeJson(response, 200, { games: await markUnavailableGames(games) });
     return true;
   }

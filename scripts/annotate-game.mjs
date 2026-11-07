@@ -23,7 +23,7 @@ import {
   winPercent,
 } from '../packages/game/dist/analysis.js';
 import { createInitialXiangqiState } from '../packages/game/dist/variants-xiangqi.js';
-import { applyStandardXiangqiMove } from '../packages/game/dist/variants-xiangqi-standard.js';
+import { applyXiangqiRecordMove } from '../packages/game/dist/variants-xiangqi-standard.js';
 import { formatXiangqiMoves } from '../packages/game/dist/xiangqi-notation-format.js';
 import {
   pikafishUciToXiangqiSquares,
@@ -50,13 +50,13 @@ const zh = formatXiangqiMoves(game.moves, 'chinese-simplified');
 // state to thread, and an illegal continuation cannot be silently notated.
 function notatePv(prefixMoves, pvUci) {
   let state = createInitialXiangqiState('pv');
-  for (const move of prefixMoves) state = applyStandardXiangqiMove(state, move);
+  for (const move of prefixMoves) state = applyXiangqiRecordMove(state, move);
 
   const line = [];
   for (const uci of pvUci) {
     const squares = pikafishUciToXiangqiSquares(uci);
     if (!squares) break;
-    const next = applyStandardXiangqiMove(state, squares);
+    const next = applyXiangqiRecordMove(state, squares);
     // Rules reject it (apply is a no-op): stop rather than emit a fake line.
     if (next === state) break;
     line.push(squares);

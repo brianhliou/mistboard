@@ -17,6 +17,8 @@ const mainPath = ['src/main.ts', 'apps/web/src/main.ts']
   .map((candidate) => resolve(process.cwd(), candidate))
   .find((candidate) => existsSync(candidate));
 const main = readFileSync(mainPath as string, 'utf8');
+// Analytics boots from analytics.ts (#899); main.ts hands it the embed decision.
+const analytics = readFileSync(resolve(mainPath as string, '../analytics.ts'), 'utf8');
 
 describe('the embed document skips the site bootstrap', () => {
   it('decides before running anything', () => {
@@ -24,14 +26,24 @@ describe('the embed document skips the site bootstrap', () => {
     expect(decided, 'isEmbedDocument is gone').toBeGreaterThan(-1);
     // It has to be settled before the first thing it guards, or the guard is
     // decorative. Analytics is the earliest of them.
-    expect(decided).toBeLessThan(main.indexOf('VITE_POSTHOG_KEY'));
+    const analyticsCall = main.indexOf('initializeAnalytics(isEmbedDocument)');
+    expect(analyticsCall, 'analytics no longer receives the embed decision').toBeGreaterThan(-1);
+    expect(decided).toBeLessThan(analyticsCall);
+  });
+
+  it('guards analytics: the SDK init returns early in an embed', () => {
+    const start = analytics.indexOf('export async function initializeAnalytics(isEmbedDocument');
+    expect(start, 'initializeAnalytics is gone').toBeGreaterThan(-1);
+    // The first statement after the env reads is the gate; nothing may load
+    // or record before it.
+    const gate = analytics.indexOf('|| isEmbedDocument) return;', start);
+    expect(gate, 'the embed early return is gone').toBeGreaterThan(-1);
+    expect(analytics.slice(start, gate)).not.toMatch(/import\(|capture\(|initializeHumanInput/);
   });
 
   for (const [what, needle] of [
-    ['analytics', 'phKey && phHost && import.meta.env.PROD && !isEmbedDocument'],
     ['the account nav', 'localeReady.then(() => initializeAccountNav())'],
     ['the server-status poll', "fetch('/api/server-status')"],
-    ['the friends widget', "import('./friends-online.js')"],
   ] as const) {
     it(`guards ${what}`, () => {
       const at = main.indexOf(needle);
@@ -42,6 +54,13 @@ describe('the embed document skips the site bootstrap', () => {
       expect(before, `${what} is not behind the embed guard`).toContain('isEmbedDocument');
     });
   }
+
+  it('mounts no friends widget of its own; the header Friends menu rides on the account nav', () => {
+    // The old bottom-corner widget asked /api/auth/me from main.ts. The Friends
+    // menu is built by account-nav, which is behind the embed guard above.
+    expect(main).not.toContain('friends-online');
+    expect(main).not.toContain('friends-nav');
+  });
 
   it('never lets the embed ask who the viewer is', () => {
     // The credentialed call is the one that actually matters: it is a session

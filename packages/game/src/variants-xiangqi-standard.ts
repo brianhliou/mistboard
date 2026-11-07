@@ -28,6 +28,7 @@ import { makeSquare as eoMakeSquare, parseSquare as eoParseSquare } from 'elepha
 import { Xiangqi as EoXiangqi } from 'elephantops/xiangqi';
 import { checkSubjectColor } from './check-subject.js';
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   boardToEoBoard,
   createInitialXiangqiState,
   eoToRole,
@@ -40,12 +41,39 @@ import {
   type XiangqiSquare,
 } from './variants-xiangqi.js';
 
-// Standard xiangqi shares the whole kernel type surface, including the initial
-// state: reuse `createInitialXiangqiState` from variants-xiangqi.ts directly
-// (the opening position is identical to the FoW kernel's).
+// The stamp belongs only to standard xiangqi. The shared/Fog state and its
+// constructor retain their original semantics. Missing or unknown stamps are
+// legacy rules, including for stored puzzles and older client payloads.
+export type StandardXiangqiGameState = XiangqiGameState & { progressClockLimit?: number };
+export const DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT = 120;
 
-// Plies since the last capture. Matches the FoW kernel's convention.
-const DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT = 60;
+export function standardXiangqiProgressClockLimit(value: unknown): 60 | 120 {
+  return typeof value === 'object' &&
+    value !== null &&
+    'progressClockLimit' in value &&
+    value.progressClockLimit === 120
+    ? 120
+    : 60;
+}
+
+export function createInitialStandardXiangqiState(id: string): StandardXiangqiGameState {
+  return {
+    ...createInitialXiangqiState(id),
+    progressClockLimit: DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT,
+  };
+}
+
+// Stored setup is the replay/reconnect source of truth. Undefined means a game
+// created before the correction, never a request to use today's default.
+export function createStandardXiangqiStateFromSetup(
+  id: string,
+  setup?: unknown,
+): StandardXiangqiGameState {
+  return {
+    ...createInitialXiangqiState(id),
+    progressClockLimit: standardXiangqiProgressClockLimit(setup),
+  };
+}
 
 export type StandardXiangqiApplyMoveOptions = {
   progressClockLimit?: number;
@@ -61,6 +89,7 @@ export type StandardXiangqiPlayerView = {
   status: XiangqiGameStatus;
   moveNumber: number;
   lastMove?: XiangqiMove;
+  progressClockLimit?: number;
 };
 
 // ── elephantops boundary (CHECKED path) ─────────────────────────────────────
@@ -135,10 +164,10 @@ export function isStandardXiangqiLegalMove(state: XiangqiGameState, move: Xiangq
 // a check), so there is no 'general-captured' branch here.
 
 export function applyStandardXiangqiMove(
-  state: XiangqiGameState,
+  state: StandardXiangqiGameState,
   move: XiangqiMove,
   opts: StandardXiangqiApplyMoveOptions = {},
-): XiangqiGameState {
+): StandardXiangqiGameState {
   if (state.status.type !== 'playing') return state;
   const mover = state.status.turn;
 
@@ -180,7 +209,7 @@ export function applyStandardXiangqiMove(
   const newPositionCounts = { ...state.positionCounts };
   newPositionCounts[repKey] = (newPositionCounts[repKey] ?? 0) + 1;
 
-  const limit = opts.progressClockLimit ?? DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT;
+  const limit = opts.progressClockLimit ?? standardXiangqiProgressClockLimit(state);
   const ctx = position.ctx();
   let nextStatus: XiangqiGameStatus = { type: 'playing', turn: nextTurn };
   if (position.isCheckmate(ctx)) {
@@ -205,6 +234,36 @@ export function applyStandardXiangqiMove(
     positionCounts: newPositionCounts,
     moveLog: [...(state.moveLog ?? []), move],
   };
+}
+
+/** Restore the next mover when replaying a record past Mistboard's automatic
+ * draw ruling. Mate, stalemate and explicit game endings remain terminal.
+ * Read the last mover from the resulting board, so FEN-seeded Black-first
+ * lines work without callers maintaining their own ply parity. */
+export function resumeAdjudicatedDraw(state: XiangqiGameState): XiangqiGameState {
+  if (
+    state.status.type !== 'finished' ||
+    !ARBITER_ADJUDICATED_DRAWS.has(state.status.reason) ||
+    !state.lastMove
+  )
+    return state;
+  const mover = state.board[state.lastMove.to]?.color;
+  return mover
+    ? { ...state, status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' } }
+    : state;
+}
+
+/** Apply a checked move in a stored record, without deciding its result from
+ * repetition or the no-capture clock. Imported results belong to the source;
+ * live play and Mistboard result adjudication use applyStandardXiangqiMove.
+ * As in the kernel, an illegal move returns the original object unchanged. */
+export function applyXiangqiRecordMove(
+  state: XiangqiGameState,
+  move: XiangqiMove,
+): XiangqiGameState {
+  const playing = resumeAdjudicatedDraw(state);
+  const next = applyStandardXiangqiMove(playing, move);
+  return next === playing ? state : resumeAdjudicatedDraw(next);
 }
 
 // ── Check detection ─────────────────────────────────────────────────────────
@@ -341,5 +400,6 @@ export function getStandardXiangqiPlayerView(
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
+    progressClockLimit: standardXiangqiProgressClockLimit(state),
   };
 }

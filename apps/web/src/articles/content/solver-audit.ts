@@ -58,6 +58,7 @@ export const solverAuditArticle: Article = {
   slug: 'solver-audit',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'What the Solver Found in the Old Manuals',
   cardTitle: 'Auditing the Old Manuals',

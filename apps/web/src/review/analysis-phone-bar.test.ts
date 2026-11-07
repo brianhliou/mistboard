@@ -54,6 +54,8 @@ function mount(
     items?: ReviewMenuItem[];
     importPanel?: HTMLElement | null;
     metaCard?: HTMLElement | null;
+    fixedOrientation?: boolean;
+    engineInTools?: boolean;
   } = {},
 ) {
   const controller = new AbortController();
@@ -62,6 +64,7 @@ function mount(
   const home = document.createElement('div');
   const importPanel = opts.importPanel === undefined ? importBlock() : opts.importPanel;
   if (importPanel) home.append(importPanel);
+  if (engine) home.append(engine.el);
   document.body.append(home);
   const onFlip = vi.fn();
   const onBack = vi.fn();
@@ -70,7 +73,8 @@ function mount(
     signal: controller.signal,
     engine,
     variantName: 'Xiangqi',
-    onFlip,
+    onFlip: opts.fixedOrientation ? undefined : onFlip,
+    engineInTools: opts.engineInTools,
     onBack,
     onNext,
     toolsItems: () => opts.items ?? [],
@@ -163,6 +167,23 @@ describe('analysis phone bar', () => {
     expect(button('engine').hidden).toBe(true);
   });
 
+  it('hides Flip on a fixed-orientation board', () => {
+    const { phone } = mount({ fixedOrientation: true });
+    expect(phone.bar.querySelector('[data-analysis-bar="flip"]')).toBeNull();
+  });
+
+  it('lends engine settings to Tools and restores them without switching the engine', () => {
+    const { phone, button, engine, home } = mount({ engineInTools: true });
+    button('engine').click();
+    button('tools').click();
+    expect(phone.sheet.contains(engine!.el)).toBe(true);
+    expect(phone.engineBar.hidden).toBe(false);
+    phone.closeTools();
+    expect(engine!.el.parentElement).toBe(home);
+    expect(button('engine').getAttribute('aria-pressed')).toBe('true');
+    expect(engine!.setOn).toHaveBeenCalledTimes(1);
+  });
+
   it('Tools opens a sheet that carries the FEN box and the menu items, and gives the FEN box back on close', () => {
     const onStudy = vi.fn();
     const { phone, button, home, importPanel } = mount({
@@ -228,8 +249,13 @@ describe('analysis phone bar CSS', () => {
   it('shows nothing above 600px: every piece is display none outside the media query', () => {
     const outside = css.slice(0, css.indexOf('@media (max-width: 600px)'));
     expect(outside).toContain(
-      '.analysis-phone-bar, .analysis-engine-bar, .analysis-phone-info, .analysis-tools-sheet { display: none; }',
+      '.analysis-phone-bar, .analysis-phone-info, .analysis-tools-sheet { display: none; }',
     );
+    // The engine bar is shared with the phone game review and has its own sheet.
+    const engineCss = readFileSync('src/review/engine-bar.css', 'utf8').replace(/\s+/g, ' ');
+    const engineOutside = engineCss.slice(0, engineCss.indexOf('@media (max-width: 600px)'));
+    expect(engineOutside).toContain('.analysis-engine-bar { display: none; }');
+    expect(engineCss).toContain('.analysis-engine-bar[hidden] { display: none; }');
   });
 
   it('keeps the phone page to one screen: the variant card and import form are hidden inline', () => {
@@ -240,7 +266,6 @@ describe('analysis phone bar CSS', () => {
 
   it('keeps the hidden attribute winning over its own display rules', () => {
     for (const selector of [
-      '.analysis-engine-bar[hidden]',
       '.analysis-tools-sheet[hidden]',
       '.analysis-phone-bar__button[hidden]',
     ]) {

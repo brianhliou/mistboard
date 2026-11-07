@@ -57,6 +57,7 @@ import {
   lastSeat,
   TENANT_SERVER_ONLY_EVENT_TYPES,
   tenantSeatMayAct,
+  tenantTurnOrder,
 } from './tenant.js';
 
 export type TenantRoomCreation<
@@ -238,6 +239,42 @@ export function expireTenantClock<C extends string>(
     },
     runningSince: null,
   };
+}
+
+/** Resolve an expiry request only once it reaches the serialized event writer. */
+export function tenantClockExpiryEventFor<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  projection: TenantProjection<C, State, Spec>,
+  expiry: Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-expired' }>,
+): TenantRoomEvent<C, M, Spec> | null {
+  const clock = projection.clock;
+  if (
+    expiry.roomId !== projection.roomId ||
+    projection.state.status.type !== 'playing' ||
+    projection.paused ||
+    !clock ||
+    clock.activeColor !== expiry.color ||
+    clock.runningSince === null ||
+    expiry.at < clock.runningSince ||
+    tenantClockRemainingMs(clock, expiry.color, expiry.at) > 0
+  )
+    return null;
+  const move = tenant.rules.clockExpiryMove?.(projection.state, expiry.color, expiry.at);
+  if (
+    move != null &&
+    tenantSeatMayAct(tenant, projection.state, expiry.color) &&
+    tenant.rules.isLegalMove(projection.state, move)
+  ) {
+    return { type: 'move-played', at: expiry.at, roomId: expiry.roomId, color: expiry.color, move };
+  }
+  return { ...expiry, clock: expireTenantClock(clock, expiry.at, expiry.color)! };
 }
 
 export function freezeTenantClock<C extends string>(
@@ -473,23 +510,26 @@ export function replayTenantEvents<
   // therefore dealt a whole throwaway game before the event carrying the real
   // one was applied a line later. Harmless where a tenant tolerates a missing
   // setup, fatal where it refuses one, and wasted work in both cases.
-  const seed =
-    first?.type === 'room-created'
-      ? initialTenantProjection(
-          tenant,
-          first.roomId,
-          first.timeControl,
-          first.creatorPreference,
-          first.rated === true,
-          first.setup,
-        )
-      : initialTenantProjection(tenant, firstRoomId);
   // The replay boundary: a stored log the current rules refuse (a variant's
   // rules changed under an old game) becomes UnreplayableTenantGameError, which
-  // every read surface treats as "no such game" (replay-guard.ts).
-  return guardTenantReplay(tenant.kind, first?.roomId, () =>
-    events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed),
-  );
+  // every read surface treats as "no such game" (replay-guard.ts). The seed is
+  // inside it too: a setup the current rules refuse (an 8-hand mahjong wall
+  // after the match became 6) is the same kind of old game, and outside the
+  // guard its throw 500'd the whole /watch feed.
+  return guardTenantReplay(tenant.kind, first?.roomId, () => {
+    const seed =
+      first?.type === 'room-created'
+        ? initialTenantProjection(
+            tenant,
+            first.roomId,
+            first.timeControl,
+            first.creatorPreference,
+            first.rated === true,
+            first.setup,
+          )
+        : initialTenantProjection(tenant, firstRoomId);
+    return events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed);
+  });
 }
 
 /**
@@ -617,7 +657,9 @@ export function applyTenantEvent<
       clock:
         event.clock ??
         nextTenantClockForMove(
-          tenant,
+          tenant.firstMover
+            ? { ...tenant, colors: tenantTurnOrder(tenant, projection.state) }
+            : tenant,
           projection.clock,
           event.at,
           event.color,

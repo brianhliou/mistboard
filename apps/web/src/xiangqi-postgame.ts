@@ -4,6 +4,7 @@
 // renderXiangqiBoardSvg with no fog mask.
 
 import {
+  createStandardXiangqiStateFromSetup,
   type StandardXiangqiPlayerView,
   standardXiangqiFen,
   XIANGQI_SPEC_ID,
@@ -12,7 +13,6 @@ import {
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
@@ -21,12 +21,14 @@ import { t } from './i18n/catalog.js';
 // Reuse the shared dxq-postgame scaffold (.dxq-postgame__*) the other variants ride.
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
+import { type AuthUser, loadCachedCurrentUser } from './account-nav.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { xiangqiEnabled } from './feature-flags.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { retroSideForViewer } from './review/retro-side.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -54,6 +56,8 @@ export type XiangqiPostgameResponse = {
       name: string;
       rating: number | null;
       kind: 'account' | 'guest' | 'engine';
+      handle?: string | null;
+      botId?: string | null;
     }>;
   };
   state: {
@@ -89,10 +93,10 @@ export function mountXiangqiPostgame(root: HTMLElement, roomId: string): void {
     renderError(root, 'Xiangqi unavailable', 'This route is not enabled in this build.');
     return;
   }
-  void loadXiangqiPostgame(roomId)
-    .then((result) => {
+  void Promise.all([loadXiangqiPostgame(roomId), loadCachedCurrentUser()])
+    .then(([result, viewer]) => {
       if (result.ok) {
-        renderPostgame(root, result.postgame);
+        renderPostgame(root, result.postgame, viewer);
         return;
       }
       renderError(root, errorTitle(result.status), errorBody(result));
@@ -123,7 +127,11 @@ export function xiangqiPostgameApiUrl(roomId: string): string {
   return url.pathname;
 }
 
-function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): void {
+function renderPostgame(
+  root: HTMLElement,
+  postgame: XiangqiPostgameResponse,
+  viewer: AuthUser | null,
+): void {
   const moveEvents = postgame.timeline.filter((item) => item.type === 'move-played' && item.move);
   const moves = moveEvents.map((item) => item.move as XiangqiMove);
 
@@ -151,17 +159,22 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     status,
   });
 
+  const truth = createStandardXiangqiStateFromSetup(postgame.game.roomId, postgame.view);
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
+    retroSide: postgame.game.mode === 'imported' ? null : retroSideForViewer(gamePlayers, viewer),
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Xiangqi postgame',
     title: 'Xiangqi',
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
     details,
+    // Phone: board, bar and a move strip; card, chart and chat in a sheet (#619).
+    phoneInfoSheet: true,
     // The tree reconstructs positions from the move list client-side (open info,
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
+    root: { truth, fen: standardXiangqiFen(truth) },
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it
@@ -175,8 +188,6 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     urlPly: true,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
-    analyseFromHere: (truth) => analysisHref('xiangqi', standardXiangqiFen(truth)),
-    boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
     ...gameExportShareExtra('xiangqi', postgame.game.roomId),
     // "Study" in the review menu: one click turns the game you are looking at
     // into a private study you can annotate. Same path /analysis/xiangqi has
@@ -184,6 +195,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
       name: studyName(playerNames.red, playerNames.black),
+      label: t('review.newStudyFromGame'),
     },
     // Server Pikafish whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a

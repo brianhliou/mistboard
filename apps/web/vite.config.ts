@@ -15,7 +15,7 @@ import {
 import { INCLUDE_DEV_PUBLIC_ARTIFACTS_ENV, shouldCopyPublicAsset } from './src/public-assets';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEV_API_URL = process.env.MISTBOARD_DEV_API_URL ?? 'http://localhost:3001';
+const DEV_API_URL = process.env.MISTBOARD_DEV_API_URL ?? 'http://127.0.0.1:3001';
 const DEV_PUBLIC_STUDIES = publicStudiesEnabled(process.env);
 const DEV_PUBLIC_STUDIES_FROM =
   process.env.MISTBOARD_DEV_PUBLIC_STUDIES_ORIGIN ?? DEV_PUBLIC_STUDIES_ORIGIN;
@@ -250,6 +250,10 @@ export default defineConfig(({ command }) => {
       : null;
 
   return {
+    server: {
+      host: process.env.MISTBOARD_DEV_LAN === '1' ? '0.0.0.0' : '127.0.0.1',
+      strictPort: true,
+    },
     plugins: [
       crossOriginIsolationPlugin(),
       annotationsApiPlugin(),

@@ -53,9 +53,11 @@ export const jieqiPlatformArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-03',
-  updatedAt: '2026-10-19',
-  updateNote:
-    'Rewritten as a guide to playing and reviewing jieqi here.',
+  // The date ring used to lead with the puzzle-mining post; with that one an
+  // engineering post, it handed this page three xiangqi posts, yin-sheng's trio.
+  readNext: ['jieqi-openings', 'jieqi-bot-wins', 'jieqi-puzzle-search'],
+  updatedAt: '2026-11-06',
+  updateNote: 'Corrected how a face-down piece is described.',
   tldr: [
     'Play Level 1 or invite a friend, with no account needed for casual games.',
     'Full-game analysis grades your moves and measures reveal luck separately.',
@@ -226,7 +228,7 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'What is jieqi?',
               answer:
-                'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is also known as cờ úp in Vietnamese.',
+                'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over to show what it really is, and plays as that from then on. It is also known as cờ úp in Vietnamese.',
             },
             {
               question: 'How is jieqi different from xiangqi?',

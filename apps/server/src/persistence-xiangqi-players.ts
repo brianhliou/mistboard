@@ -20,6 +20,7 @@ import { xiangqiBroadcastTourLevel } from './xiangqi-broadcast-levels.js';
 import {
   romanizeXiangqiPlayerName,
   translateXiangqiRoundLabel,
+  xiangqiPlayerOwnScriptName,
 } from './xiangqi-broadcast-translate.js';
 
 export type XiangqiPlayerEventRecord = {
@@ -41,6 +42,10 @@ export type XiangqiPlayerRecord = {
   slug: string;
   name: string;
   nameEn: string | null;
+  /** The name in the characters the player writes it in, when the source's
+   *  simplified spelling is not that (趙奕帆 for the source's 赵奕帆, #605).
+   *  Display only: `name` stays the identity boards and lists are read by. */
+  nameOwn?: string;
   federation: string | null;
   federationEn: string | null;
   games: number;
@@ -315,6 +320,8 @@ export function foldPlayers(
       p.federation = latest.federation;
       p.federationEn = latest.federationEn;
     }
+    const own = xiangqiPlayerOwnScriptName(p.name, p.federation ?? undefined);
+    if (own) p.nameOwn = own;
   }
   players.sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'zh'));
   return players;

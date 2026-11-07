@@ -18,6 +18,7 @@ import type {
   TenantRuntimeRoom,
   VariantTenant,
 } from './tenant.js';
+import { tenantTurnOrder } from './tenant.js';
 
 // Set while the lobby route creates a matched room (routes/lobby.ts). Every
 // tenant's lobby.createRoom ends in createTenantLiveRoom through its own
@@ -181,7 +182,8 @@ export async function createTenantLiveRoom<
  * Generic over the tenant's colors: the seek stores MOVE ORDER ('first'/'second', migration
  * 106) and this maps it onto `tenant.colors`, whose [0] is the first mover by contract. That
  * is the whole reason a red/black variant can ride the same seek board as chess — callers
- * never name a color. Hoisted from the dark-chess-only original, which was already written
+ * never name a color. A tenant with a dealt first mover rotates that order from
+ * its recorded setup. Hoisted from the dark-chess-only original, which was already written
  * against generic Color/mintTenantSeatToken/appendTenantSeatAssigned and only looked
  * chess-specific because its args were named white/black.
  */
@@ -197,7 +199,7 @@ export async function createTenantCorrespondenceGameForSeek<
   ctx: TenantLiveRoomFactoryContext<Kind, C, M, State, Spec>,
   args: {
     timeControl: RoomTimeControl;
-    /** The account taking the first-mover seat (tenant.colors[0]). */
+    /** The account taking the first-mover seat of this game's turn order. */
     first: { userId: string };
     /** The account taking the second seat (tenant.colors[1]). */
     second: { userId: string };
@@ -213,9 +215,10 @@ export async function createTenantCorrespondenceGameForSeek<
   if (!created.ok) return created;
   const room = created.room;
   const at = Date.now();
+  const colors = tenantTurnOrder(tenant, room.projection.state);
   const seats: ReadonlyArray<readonly [C, { userId: string }]> = [
-    [tenant.colors[0], args.first],
-    [tenant.colors[1], args.second],
+    [colors[0]!, args.first],
+    [colors[1]!, args.second],
   ];
   for (const [seat, identity] of seats) {
     // The durable token stores only user_id. Resolve public names below once

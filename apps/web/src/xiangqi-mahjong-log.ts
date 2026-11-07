@@ -28,7 +28,7 @@ const XMJ_WALL_AT_DEAL = 32 - XMJ_DEALER_TILES - XMJ_OTHER_TILES;
 
 export type XmjLogRow =
   | {
-      readonly kind: 'discard';
+      readonly kind: 'discard' | 'declare-ready';
       readonly seat: XmjSeat;
       readonly tile: XmjTile;
       readonly drew: boolean;
@@ -104,7 +104,14 @@ export function xmjHandLog(moves: readonly XmjLogMove[]): XmjLogHand[] {
     lastPly = ply;
     switch (move.action) {
       case 'discard':
-        rows.push({ kind: 'discard', seat: move.by, tile: move.tile, drew: drew === move.by, ply });
+      case 'declare-ready':
+        rows.push({
+          kind: move.action,
+          seat: move.by,
+          tile: move.tile,
+          drew: drew === move.by,
+          ply,
+        });
         lastDiscard = { seat: move.by, tile: move.tile };
         drew = null;
         break;

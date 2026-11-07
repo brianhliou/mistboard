@@ -256,8 +256,9 @@
 }
 
 /* /champions. Titles won in a match are hero cards (crown, game marker, the
-   match score as a stat over a thin win/draw/loss bar, quiet buttons), two a
-   row on a wide panel and one on a phone. Every other game sits below in a
+   match score as a stat over a thin win/draw/loss bar, code and network
+   credits, quiet buttons), two a row when each card is at least 420px wide
+   (room for its three buttons on one line) and one a row below that. Every other game sits below in a
    quieter "Open titles" grid. Motion only on hover, and none under
    prefers-reduced-motion. */
 .static-prose {
@@ -282,7 +283,7 @@
 
 .champions-heroes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: 16px;
   margin: 8px 0 8px;
 }
@@ -351,6 +352,23 @@
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: break-word;
+}
+
+/* The name is the link to the bot's page, like a profile: heading colour at
+   rest, the open cards' holder-link hover. */
+.static-prose .champions-hero-name-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.static-prose .champions-hero-name-link:hover {
+  color: var(--site-accent);
+  text-decoration: underline;
+}
+
+.static-prose .champions-hero-name-link:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
 }
 
 .static-prose .champions-crown {
@@ -445,11 +463,58 @@
   line-height: 1.55;
 }
 
+/* Code and network credits: a small label column, the linked names beside it. */
+.static-prose .champions-credits {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.static-prose .champions-credit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  min-width: 0;
+}
+
+.static-prose .champions-credit dt {
+  flex: 0 0 4.5em;
+  color: var(--site-muted);
+  font-weight: 600;
+}
+
+.static-prose .champions-credit dd {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* One line on a desktop card: each button grows to share the row. When a
+   narrow card wraps them, every row still fills, so a phone gets two even
+   buttons over one full-width one, not a ragged edge. */
 .static-prose .champions-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-top: auto;
+}
+
+/* 13px like the open cards' button, so three fit a 420px card. */
+.static-prose .champions-actions .champions-btn {
+  flex: 1 1 auto;
+  padding: 6px 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Touch floor (#576): the 34px buttons grow to 40px on a phone. */
+@media (pointer: coarse), (max-width: 640px) {
+  .static-prose .champions-actions .champions-btn {
+    min-height: 40px;
+  }
 }
 
 .static-prose .champions-btn {
@@ -549,6 +614,14 @@
   text-decoration: underline;
 }
 
+.static-prose .champions-open .champions-credits {
+  font-size: 12px;
+}
+
+.static-prose .champions-open .champions-credit dt {
+  flex-basis: auto;
+}
+
 .static-prose .champions-open-badge {
   padding: 1px 8px;
   border: 1px dashed var(--site-border);
@@ -571,10 +644,6 @@
 }
 
 @media (max-width: 640px) {
-  .champions-heroes {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .champions-open-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

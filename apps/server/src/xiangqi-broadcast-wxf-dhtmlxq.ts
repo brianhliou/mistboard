@@ -283,7 +283,12 @@ function playedAtFromTags(date: string | undefined, event: string | undefined): 
   const eventYear = event?.match(/^\s*(\d{4})\s*年/)?.[1];
   const year = eventYear && eventYear !== parts[1] ? eventYear : parts[1];
   const pad = (value: string | undefined) => (value ?? '0').padStart(2, '0');
-  const iso = `${year}-${pad(parts[2])}-${pad(parts[3])}T${pad(parts[4])}:${pad(parts[5])}:00+08:00`;
+  const day = `${year}-${pad(parts[2])}-${pad(parts[3])}`;
+  // A record dated with no time stays a date: a guessed midnight shows as
+  // "12:00 AM" on the board page, and the site formats a date-only value as
+  // just the day.
+  if (parts[4] === undefined) return Number.isFinite(Date.parse(day)) ? day : undefined;
+  const iso = `${day}T${pad(parts[4])}:${pad(parts[5])}:00+08:00`;
   return Number.isFinite(Date.parse(iso)) ? iso : undefined;
 }
 

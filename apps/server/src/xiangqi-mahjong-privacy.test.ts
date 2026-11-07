@@ -3,14 +3,26 @@
 // At the first deal no tile is public, so even a single tile face is a leak.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createXmjSetup, XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
+import {
+  createXmjSetup,
+  XIANGQI_MAHJONG_SPEC_ID,
+  type XmjMove,
+  type XmjPlayerView,
+  type XmjRoomSetup,
+  type XmjTile,
+  xmjOrderedTiles,
+} from '@mistboard/game';
 import { resolveGameExport } from './game-export-tenant.js';
 import { tenantGameCard, tenantGamePageMeta } from './og-game-tenant.js';
 import type { RecentEveGameRecord } from './persistence.js';
 import { xiangqiMahjongPostgameForApi } from './routes/xiangqi-mahjong-games.js';
 import './variant-tenant/register-tenants.js';
+import { appendTenantEvent } from './variant-tenant/events.js';
 import {
+  appendTenantRuntimeEvent,
+  createTenantClock,
   createTenantRuntimeRoomFromEvents,
+  expireTenantClock,
   tenantEventsForClient,
   tenantLiveHistoryExtras,
   tenantSnapshotPayload,
@@ -21,7 +33,10 @@ import { xmjLiveWatchPayloadFor } from './xiangqi-mahjong-watch.js';
 
 const SPECTATOR = { id: 'privacy-spectator', seat: 'spectator' as const, solo: false };
 
-function unfinishedMatch(correspondence = false): XmjRuntimeRoom {
+function unfinishedMatch(
+  correspondence = false,
+  setup: XmjRoomSetup = createXmjSetup(() => 0.25, { correspondence }),
+): XmjRuntimeRoom {
   const roomId = correspondence ? 'xmj_privacy-correspondence' : 'xmj_privacy-live';
   const events: XmjEvent[] = [
     {
@@ -29,13 +44,14 @@ function unfinishedMatch(correspondence = false): XmjRuntimeRoom {
       at: 1_000,
       roomId,
       gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
-      setup: createXmjSetup(() => 0.25, { correspondence }),
+      setup,
       timeControl: {
         initialMs: 300_000,
         incrementMs: 5_000,
         ...(correspondence ? { daysPerMove: 3 as const } : {}),
       },
     },
+    { type: 'clock-started', at: 1_000, roomId, clock: createTenantClock(tenant, 300_000, 5_000) },
     { type: 'seat-assigned', at: 2_000, roomId, clientId: 'east-client', seat: 'east' },
     { type: 'seat-assigned', at: 3_000, roomId, clientId: 'west-client', seat: 'west' },
   ];
@@ -167,5 +183,155 @@ test('XMJ privacy: unfinished share/OG card payload has no concealed or wall til
     };
     assertNoPrivateTiles(payload, room);
     assert.deepEqual(payload, { card: null, meta: null });
+  }
+});
+
+test('table-3 complete player, spectator and reconnect payloads redact declaration hints and waits', () => {
+  const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'rP', 'rP', 'rH', 'bC'];
+  const rest = xmjOrderedTiles();
+  for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...front, ...rest];
+  for (const correspondence of [false, true]) {
+    const room = unfinishedMatch(correspondence, {
+      walls: [wall, wall],
+      firstDealer: 'east',
+      taiTable: 3,
+      ...(correspondence ? { correspondence: true } : {}),
+    });
+    const play = (move: XmjMove) => {
+      assert.notEqual(
+        appendTenantRuntimeEvent(tenant, room, {
+          type: 'move-played',
+          at: move.at,
+          roomId: room.id,
+          color: move.by,
+          move,
+        }),
+        -1,
+      );
+    };
+    play({ by: 'east', at: 4_000, action: 'discard', tile: 'bH' });
+    play({ by: 'west', at: 6_000, action: 'pass' });
+    play({ by: 'west', at: 7_000, action: 'declare-ready', tile: 'rP', handCopy: true });
+    assert.deepEqual(room.projection.state.match.hand.drawnDiscards[1], [false]);
+
+    const checkPayloads = (drawn = false) => {
+      const hydrated = createTenantRuntimeRoomFromEvents(
+        tenant,
+        JSON.parse(JSON.stringify(room.events)),
+      );
+      assert.ok(hydrated.ok);
+      assert.deepEqual(hydrated.room.projection.state, room.projection.state);
+      for (const seat of ['east', 'west', 'spectator'] as const) {
+        const client = { id: `${seat}-client`, seat, solo: false };
+        const snapshot = tenantSnapshotPayload(tenant, room, client);
+        const payload: Record<string, unknown> = {
+          snapshot,
+          history: tenantLiveHistoryExtras(tenant, room, client),
+          events: tenantEventsForClient(tenant, room, client),
+          reconnect: {
+            snapshot: tenantSnapshotPayload(tenant, hydrated.room, client),
+            history: tenantLiveHistoryExtras(tenant, hydrated.room, client),
+            events: tenantEventsForClient(tenant, hydrated.room, client),
+          },
+          watch:
+            !correspondence && seat === 'spectator' ? xmjLiveWatchPayloadFor(room.id, room) : null,
+        };
+        const json = JSON.stringify(payload);
+        const view: XmjPlayerView = snapshot.state;
+        assert.deepEqual(view.declared, { east: false, west: true });
+        assert.deepEqual(view.legal.declareReady, []);
+        for (const key of ['setup', 'wall', 'walls', 'handCopy']) {
+          assert.ok(!json.includes(`"${key}":`), `${seat} payload carries ${key}`);
+        }
+        for (const tile of seat === 'west'
+          ? ['rK', 'rA', 'rE']
+          : ['bK', 'bA', 'bE', ...(drawn ? ['bC'] : [])]) {
+          assert.ok(!json.includes(`"${tile}"`), `${seat} payload leaks ${tile}`);
+        }
+        if (seat === 'spectator') {
+          for (const tile of ['rK', 'rA', 'rE']) assert.ok(!json.includes(`"${tile}"`));
+        }
+        if (drawn && seat !== 'west') {
+          assert.ok(view.phase.type === 'discard' && view.phase.drawn === null);
+        }
+        assert.ok(json.includes('declare-ready'), 'the public declaration event is preserved');
+      }
+    };
+    checkPayloads();
+    play({ by: 'east', at: 9_000, action: 'pass' });
+    play({ by: 'east', at: 10_000, action: 'discard', tile: 'rH' });
+    play({ by: 'west', at: 12_000, action: 'pass' });
+    assert.equal(tenant.rules.pendingAction?.(room.projection.state)?.move.action, 'discard');
+    checkPayloads(true);
+  }
+});
+
+test('automatic clock discards serialize complete player, spectator and reconnect payloads without hidden tiles', async () => {
+  const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', 'rP'];
+  const rest = xmjOrderedTiles();
+  for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...front, ...rest];
+  for (const correspondence of [false, true]) {
+    const room = unfinishedMatch(correspondence, {
+      walls: [wall, wall],
+      firstDealer: 'east',
+      taiTable: 3,
+      correspondence,
+    });
+    for (const move of [
+      { by: 'east', at: 4_000, action: 'declare-ready', tile: 'bH' },
+      { by: 'west', at: 6_000, action: 'pass' },
+      { by: 'west', at: 7_000, action: 'discard', tile: 'bR' },
+      { by: 'east', at: 9_000, action: 'pass' },
+    ] as XmjMove[]) {
+      await appendTenantEvent(tenant, room, {
+        type: 'move-played',
+        at: move.at,
+        roomId: room.id,
+        color: move.by,
+        move,
+      });
+    }
+    const clock = room.projection.clock!;
+    const at = clock.runningSince! + clock.remainingMs.east;
+    await appendTenantEvent(tenant, room, {
+      type: 'clock-expired',
+      at,
+      roomId: room.id,
+      color: 'east',
+      clock: expireTenantClock(clock, at, 'east')!,
+    });
+    assert.equal(room.events.at(-1)?.type, 'move-played');
+    assert.equal(room.projection.state.status.type, 'playing');
+    const hydrated = createTenantRuntimeRoomFromEvents(
+      tenant,
+      JSON.parse(JSON.stringify(room.events)),
+    );
+    assert.ok(hydrated.ok);
+    assert.deepEqual(hydrated.room.projection, room.projection);
+    for (const seat of ['east', 'west', 'spectator'] as const) {
+      const client = { id: `${seat}-client`, seat, solo: false };
+      const serialize = (r: typeof room) => ({
+        snapshot: tenantSnapshotPayload(tenant, r, client),
+        events: tenantEventsForClient(tenant, r, client),
+        history: tenantLiveHistoryExtras(tenant, r, client),
+      });
+      const payload = {
+        ...serialize(room),
+        reconnect: serialize(hydrated.room),
+        watch:
+          !correspondence && seat === 'spectator' ? xmjLiveWatchPayloadFor(room.id, room) : null,
+      };
+      const json = JSON.stringify(payload);
+      for (const key of ['setup', 'walls', 'wall', 'handCopy'])
+        assert.ok(!json.includes(`"${key}":`), `${seat} leaked ${key}`);
+      const hidden = [
+        ...(seat !== 'east' ? ['rK', 'rA', 'rE'] : []),
+        ...(seat !== 'west' ? ['bK', 'bA', 'bE', 'bP'] : []),
+      ];
+      for (const tile of hidden) assert.ok(!json.includes(`"${tile}"`), `${seat} leaked ${tile}`);
+      assert.ok(json.includes('"tile":"rP"'), 'the automatic discard is public');
+    }
   }
 });

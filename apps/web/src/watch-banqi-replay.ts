@@ -17,6 +17,7 @@ import {
 } from './live-banqi-postgame.js';
 import {
   animateBanqiBoardMove,
+  animateBanqiReveal,
   type BanqiBoardArrow,
   type BanqiBoardMarker,
   installBanqiBoardStyles,
@@ -78,10 +79,16 @@ export function mountBanqiWatchReplay(
           coordinates: boardCoordinatesEnabled(),
         }),
       // One-ply steps glide: forward animates the newly rendered view's lastMove,
-      // a back step reverse-animates the move the previous ply carried.
+      // a back step reverse-animates the move the previous ply carried. A step
+      // forward onto a flip turns the tile over as it did live (#709); a step
+      // back over one just shows the back again.
       animateMove: (boardEl, view, prevView, direction) => {
         const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
         if (!move) return;
+        if (move.from === move.to) {
+          if (direction === 'forward') animateBanqiReveal(boardEl, move.to);
+          return;
+        }
         animateBanqiBoardMove(boardEl, move, { reverse: direction === 'back' });
       },
       // The same grouped pool the live room draws (review/captured-pool.ts); every
