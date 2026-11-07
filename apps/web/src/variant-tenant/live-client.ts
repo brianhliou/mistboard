@@ -98,6 +98,7 @@ export type TenantLiveFrame<C extends string, V> = {
   seatProfiles?: Partial<Record<C, ProfileIdentity>>;
   state: V;
   clock?: TenantLiveClock<C> | null;
+  paused?: boolean;
   connectedSeats?: Record<C, boolean>;
   abortDeadline?: number | null;
   forfeitDeadline?: number | null;
@@ -115,6 +116,7 @@ export type TenantLiveState<C extends string, V> = {
   seat: C | 'spectator' | null;
   view: V | null;
   clock: TenantLiveClock<C> | null;
+  paused: boolean;
   timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   seats: Partial<Record<C, string>>;
   seatDisplayNames: Partial<Record<C, string>>;
@@ -407,6 +409,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     seat: null,
     view: null,
     clock: null,
+    paused: false,
     timeControl: null,
     seats: {},
     seatDisplayNames: {},
@@ -455,6 +458,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   const replay = createTenantReplayController<V>();
 
   function send(payload: unknown): boolean {
+    if (state.paused && (payload as { type?: unknown } | null)?.type === 'move') return false;
     return socket?.send(payload) ?? false;
   }
 
@@ -489,7 +493,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   function canActNow(): boolean {
     const view = state.view;
     if (!view || !replay.isLive() || !tenant.isColor(state.seat)) return false;
-    if (view.status.type !== 'playing') return false;
+    if (view.status.type !== 'playing' || state.paused || connection() !== 'connected')
+      return false;
     // Tenants that let several seats act at once (mahjong claim windows) answer
     // for themselves; everybody else is strictly alternating.
     if (tenant.seatMayAct) return tenant.seatMayAct(view, state.seat);
@@ -518,6 +523,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     connectionState: () => connection(),
     closeReason: () => socket?.closeReason() ?? '',
     clock: () => state.clock,
+    paused: () => state.paused,
     timeControl: () => state.timeControl,
     connectedSeats: () => state.connectedSeats,
     seats: () => state.seats,
@@ -559,6 +565,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.seat = frame.seat;
     state.view = frame.state;
     state.clock = frame.clock ?? null;
+    state.paused = frame.paused === true;
     state.timeControl = frame.timeControl ?? state.timeControl;
     state.seats = frame.seats ?? state.seats;
     // Branded on the way in, not at each render site: the room paints these
@@ -689,6 +696,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       params.get('room') ??
       config.defaultRoomId;
     state.room = room;
+    state.paused = false;
     state.forfeitDeadline = null;
     state.abortDeadline = null;
     state.lobbyMatch = false;
@@ -825,6 +833,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       renderAll();
       return;
     }
+    // Clock and pause feedback must not wait for a board animation to finish.
+    chrome.renderClocks();
+    chrome.renderBoardStatus();
     if (heldRender) return;
     heldRender = setTimeout(() => {
       heldRender = null;

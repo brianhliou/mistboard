@@ -205,8 +205,12 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
         reconnectTimer = null;
       }
       reconnectAttempt = 0;
-      connectionState = 'connected';
-      clearNoticeTiers();
+      // After a drop, an open transport still holds the old room snapshot.
+      // Keep every shell's clocks frozen until a state frame restores it.
+      if (!clientId) {
+        connectionState = 'connected';
+        clearNoticeTiers();
+      }
       options.render();
     });
     next.addEventListener('close', (event) => {
@@ -408,6 +412,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     if (message.type === 'hello') {
       clearRestartingBanner();
       connectionState = 'connected';
+      clearNoticeTiers();
       clientId = message.clientId ?? clientId;
       if (message.seatToken && isPlayableSeat(message.seat)) {
         writeSeatTokenForRoom(options.room, { seat: message.seat, token: message.seatToken });
@@ -416,6 +421,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       lastSeq = null;
     } else if (message.type === 'snapshot') {
       connectionState = 'connected';
+      clearNoticeTiers();
       options.applySnapshot(message);
       lastSeq = null;
     } else if (message.type === 'event-appended') {
@@ -425,6 +431,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
         return;
       }
       connectionState = 'connected';
+      clearNoticeTiers();
       options.applyEvent(message);
       if (message.seq !== undefined) lastSeq = message.seq;
     } else {
