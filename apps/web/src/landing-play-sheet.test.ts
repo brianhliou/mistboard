@@ -188,10 +188,27 @@ describe('setup dialog on a phone', () => {
     expect(dialog()?.classList.contains('landing-setup-sheet')).toBe(false);
     expect(document.querySelector('.landing-variant-grid')).not.toBeNull();
     expect(document.querySelector('.landing-variant-row')).toBeNull();
-    expect(document.querySelector('.landing-setup-summary')).not.toBeNull();
+    // Every choice is open at once on desktop too: no accordion summaries.
+    expect(document.querySelector('.landing-setup-summary')).toBeNull();
+    const rows = [...document.querySelectorAll<HTMLElement>('.landing-setup-row')]
+      .filter((el) => !el.hidden)
+      .map((el) => el.dataset.setupSection);
+    expect(rows).toEqual(expect.arrayContaining(['variant', 'time', 'opponent']));
     expect(document.documentElement.classList.contains('landing-setup-open')).toBe(false);
     document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
     expect(document.activeElement).toBe(play);
+  });
+
+  it('keeps the old accordion on desktop behind ?setup=accordion', () => {
+    stubViewport(false);
+    window.history.replaceState(null, '', '/?setup=accordion');
+    try {
+      mountPanel().querySelector<HTMLButtonElement>('.landing-play-action')?.click();
+      expect(document.querySelector('.landing-variant-grid')).not.toBeNull();
+      expect(document.querySelector('.landing-setup-summary')).not.toBeNull();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 });
 
