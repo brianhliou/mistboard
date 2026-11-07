@@ -26,6 +26,7 @@
     "variant:catalog": "tsx scripts/variant-catalog.ts",
     "board:sweep": "tsx scripts/board-sweep.mts",
     "lab": "tsx scripts/variant-lab/lab/cli.ts",
+    "kit": "node --import tsx scripts/player-kit.mjs",
     "study:edit": "tsx apps/server/src/study-edit-cli.ts",
     "email:preview": "tsx apps/server/src/scripts/email-previews.ts",
     "study:analyse": "tsx apps/server/src/study-analysis-cli.ts",
