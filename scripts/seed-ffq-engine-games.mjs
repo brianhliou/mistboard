@@ -212,7 +212,7 @@ async function ensureAccount(pool, name) {
   const { rows } = await pool.query(
     `INSERT INTO users (id, email, handle, display_name, stats_excluded_at)
      VALUES ($1, $2, $3, $3, now())
-     ON CONFLICT (handle) DO UPDATE
+     ON CONFLICT ((lower(handle))) DO UPDATE
        SET stats_excluded_at = COALESCE(users.stats_excluded_at, now())
      RETURNING id, handle, display_name AS "displayName"`,
     [randomUUID(), `${name}@local.invalid`, name],
@@ -248,8 +248,16 @@ export async function persistFinishedGame(game, accounts, store, now = Date.now(
 async function writeGames(games, databaseUrl) {
   assertLocalDatabase(databaseUrl);
   const persistence = await tsImport('../apps/server/src/persistence.ts', import.meta.url);
-  const { getPool } = await tsImport('../apps/server/src/persistence-db.ts', import.meta.url);
+  // tsImport gives each call its own module graph, so this persistence-db is a
+  // separate instance from the one persistence.ts re-exports: initialize both.
+  const db = await tsImport('../apps/server/src/persistence-db.ts', import.meta.url);
+  const { getPool } = db;
   persistence.init(databaseUrl);
+  if (!db.isInitialized()) db.init(databaseUrl);
+  const closeAll = async () => {
+    await persistence.close();
+    if (db.isInitialized()) await db.close();
+  };
   let lock;
   let written = 0;
   let skipped = 0;
@@ -279,10 +287,10 @@ async function writeGames(games, databaseUrl) {
         await lock.query("SELECT pg_advisory_unlock(hashtext('seed-ffq-engine-games'))");
       } finally {
         lock.release();
-        await persistence.close();
+        await closeAll();
       }
     } else {
-      await persistence.close();
+      await closeAll();
     }
   }
   console.log(`Written ${written} games; skipped ${skipped} already imported games.`);
