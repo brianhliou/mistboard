@@ -3014,6 +3014,35 @@ export function banqiCellCenter(
   };
 }
 
+// The live banqi board's move marks, at article scale (live-banqi-render.ts,
+// live-banqi-board.css): the last move tints its two cells in the mover's ink,
+// lighter on the origin, and a legal step is a green dot. Inline fills, so a
+// page that does not load the live board's stylesheet draws them the same.
+const BANQI_LASTMOVE_FILL = {
+  red: ['rgba(194, 32, 26, 0.19)', 'rgba(194, 32, 26, 0.36)'],
+  black: ['rgba(22, 40, 58, 0.22)', 'rgba(22, 40, 58, 0.44)'],
+} as const;
+export function banqiLastMoveTint(
+  from: { col: number; row: number },
+  to: { col: number; row: number },
+  ink: 'red' | 'black',
+  x0: number,
+  y0: number,
+): string {
+  return [from, to]
+    .map(({ col, row }, k) => {
+      const { x, y } = banqiCellCenter(col, row, x0, y0);
+      const h = BANQI_CELL / 2;
+      return `<rect x="${x - h}" y="${y - h}" width="${BANQI_CELL}" height="${BANQI_CELL}" fill="${BANQI_LASTMOVE_FILL[ink][k]}"/>`;
+    })
+    .join('');
+}
+export function banqiStepDot(cell: { col: number; row: number }, x0: number, y0: number): string {
+  const { x, y } = banqiCellCenter(cell.col, cell.row, x0, y0);
+  // The live dot is r 10 on a 64-unit cell.
+  return `<circle cx="${x}" cy="${y}" r="${(10 * BANQI_CELL) / 64}" fill="rgba(31, 111, 91, 0.72)" opacity="0.7"/>`;
+}
+
 export function banqiBoardGrid(x0: number, y0: number): string {
   const left = x0 + BANQI_MARGIN;
   const top = y0 + BANQI_MARGIN;

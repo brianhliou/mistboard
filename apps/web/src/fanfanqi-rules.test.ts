@@ -15,6 +15,7 @@ import { isArticleTranslationPublished } from './article-i18n.js';
 import { articleProse } from './article-prose.js';
 import { buildArticlePage, buildRulesIndex } from './articles.js';
 import { findArticle } from './articles-data.js';
+import { FANFANQI_CHASE_RUN_STEPS } from './fanfanqi-rules-diagrams.js';
 import {
   gameSpecIdFromRulesSlug,
   rulesHrefForGameSpec,
@@ -134,5 +135,16 @@ describe('Fanfanqi rules match the kernel', () => {
     expect(prose).not.toContain('—');
     expect(prose).not.toMatch(/翻翻棋|Taiwan|mainland/);
     expect(article.sections.at(-1)?.blocks?.at(-1)?.kind).toBe('cta');
+  });
+
+  it('chase run: moves show as the live cell tint, and the last frame dots the one step left', () => {
+    const svgs = FANFANQI_CHASE_RUN_STEPS.map((step) => step.svg());
+    for (const svg of svgs.slice(1)) {
+      expect(svg).not.toContain('marker-end');
+      expect((svg.match(/<rect [^>]*fill="rgba\((194, 32, 26|22, 40, 58)/g) ?? []).length).toBe(2);
+    }
+    expect(svgs.slice(0, -1).every((svg) => !/rgba\(31, 111, 91/.test(svg))).toBe(true);
+    expect((svgs.at(-1)!.match(/<circle[^>]*rgba\(31, 111, 91/g) ?? []).length).toBe(1);
+    expect((svgs.at(-1)!.match(/stroke="rgba\(178, 34, 28/g) ?? []).length).toBe(2);
   });
 });
