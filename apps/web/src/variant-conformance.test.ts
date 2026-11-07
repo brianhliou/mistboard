@@ -509,7 +509,7 @@ describe('FFQ banqi canonical web metadata', () => {
   });
 });
 
-describe('Gomoku deliberate exclusions during hidden integration', () => {
+describe('Gomoku launch capabilities and deliberate exclusions', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it.each(['false', 'true'])('gates localized play-menu entries on flag %s', (flag) => {
@@ -526,17 +526,15 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     }
   });
 
-  it('has analysis capability but no public play, rating, study or editor surface', () => {
-    expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
+  it('offers public play, ratings and analysis while excluding study and editor', () => {
+    expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(true);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
     expect(tenant?.landing?.engineOptions).toHaveLength(8);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
-    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
-    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(
-      GOMOKU_SPEC_ID,
-    );
+    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
+    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(GOMOKU_SPEC_ID);
     expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);
     expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);

@@ -84,6 +84,7 @@ describe('/champions', () => {
       'dark-chess',
       'jungle-flip',
       'xiangqi-mahjong',
+      'gomoku',
     ]);
     const holder = (game: string) =>
       page.querySelector<HTMLAnchorElement>(
@@ -456,7 +457,7 @@ describe('Gomoku open title', () => {
       .GOMOKU_OPEN_TITLE;
     for (const field of ['holder', 'holderKey', 'botHref', 'reign'])
       expect(title).not.toHaveProperty(field);
-    expect(TITLES.some((title) => title.gameId === 'gomoku')).toBe(false);
+    expect(TITLES.some((title) => title.gameId === 'gomoku')).toBe(true);
   });
   it('renders the launched Rapfi open title last with supported public credit links', async () => {
     vi.resetModules();

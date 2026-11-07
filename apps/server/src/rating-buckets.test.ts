@@ -181,11 +181,11 @@ test('surfaces show no correspondence ladder while rated correspondence is held'
   }
 });
 
-test('hidden Gomoku has a private pool and every live lobby pace has its own bucket', () => {
-  assert.deepEqual(PRIVATE_RATING_POOLS, ['gomoku']);
-  assert.equal(isPublicRatingPool('gomoku'), false);
-  assert.equal(parseRatingVariant('gomoku'), null);
-  assert.equal(publicRatingPoolSql('r.variant'), "r.variant NOT IN ('gomoku')");
+test('launched Gomoku has a public pool and every live lobby pace has its own bucket', () => {
+  assert.deepEqual(PRIVATE_RATING_POOLS, []);
+  assert.equal(isPublicRatingPool('gomoku'), true);
+  assert.equal(parseRatingVariant('gomoku'), 'gomoku');
+  assert.equal(publicRatingPoolSql('r.variant'), 'TRUE');
   for (const pool of RATED_POOL_BASES) {
     if (pool !== 'gomoku') assert.equal(isPublicRatingPool(pool), true, pool);
   }

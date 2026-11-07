@@ -1368,15 +1368,16 @@ async function runSmoke({ deployRequired, headRevision }) {
   // page) — the class of failure the fetch-based smokes cannot see (they
   // verify serving/isolation, not a real run).
   runTimed('prod ceval smoke', npmCommand('prod:smoke:ceval', baseArgs()));
-  // Rapfi runs in the browser, outside FIRST_PARTY_BOT_PROFILES/server engine
-  // seats. Read this checkout's SOURCE launch switch (dist may be stale after
-  // the post-push cwd change). A hidden deploy must never open a gated route.
+  // The browser smoke validates the native bot's reply against the kernel and
+  // checks the room UI. Read this checkout's SOURCE launch switch (dist may
+  // be stale after the post-push cwd change). A hidden deploy must never open
+  // a gated route.
   const { isPublicGameSpec } = await tsImport(
     path.join(workdir, 'packages/game/src/game-specs.ts'),
     import.meta.url,
   );
   if (isPublicGameSpec('gomoku')) {
-    runTimed('prod Gomoku browser bot smoke', npmCommand('prod:smoke:gomoku', baseArgs()));
+    runTimed('prod Gomoku browser bot smoke', npmCommand('prod:smoke:gomoku-browser', baseArgs()));
   } else {
     console.log('skip: prod Gomoku browser bot smoke (publicSurface hidden)');
   }
@@ -1412,6 +1413,11 @@ async function runSmoke({ deployRequired, headRevision }) {
   // Retired variants (Fortress and Atomic Xiangqi, 2026-10-11) take no new
   // games, so a smoke that starts one can only fail; they are EXEMPT there.
   await runParallelSmokes([
+    {
+      label: 'prod Gomoku smoke',
+      tag: 'gomoku',
+      command: npmCommand('prod:smoke:gomoku', baseArgs()),
+    },
     {
       label: 'prod engine smoke',
       tag: 'engines',

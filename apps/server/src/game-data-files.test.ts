@@ -275,9 +275,9 @@ test('engine-game files have their own paths, keys and names, and fail closed th
 });
 
 test('hidden and retired variants are off /data: no rail entry, no count, no file', () => {
-  // Export support does not launch Gomoku or admit it to public bulk files.
+  // Public Gomoku exports are listed; retired variants remain excluded.
   assert.deepEqual(dataFormatsForVariant('gomoku'), ['jsonl']);
-  for (const variant of ['fortress-xiangqi', 'atomic-xiangqi', 'gomoku']) {
+  for (const variant of ['fortress-xiangqi', 'atomic-xiangqi']) {
     assert.ok(!DATA_VARIANTS.includes(variant), variant);
     assert.deepEqual(
       parseDataFilePath(`/api/data/monthly/2026-09/${variant}.jsonl.gz`),
@@ -305,12 +305,21 @@ test('hidden and retired variants are off /data: no rail entry, no count, no fil
     collections: [],
     now: NOW,
   });
-  assert.deepEqual(listing.variants, ['xiangqi']);
+  assert.deepEqual(listing.variants, ['xiangqi', 'gomoku']);
+  assert.ok(DATA_VARIANTS.includes('gomoku'));
+  assert.equal(parseDataFilePath('/api/data/monthly/2026-09/gomoku.jsonl.gz')?.ok, true);
   assert.deepEqual(
     listing.months.map((month) => [month.month, month.games, month.variants.map((v) => v.variant)]),
-    [['2026-09', 10, ['xiangqi']]],
+    [['2026-09', 17, ['xiangqi', 'gomoku']]],
   );
-  assert.deepEqual(listing.engineMonths, []);
+  assert.deepEqual(
+    listing.engineMonths.map((month) => [
+      month.month,
+      month.games,
+      month.variants.map((variant) => variant.variant),
+    ]),
+    [['2026-09', 8, ['gomoku']]],
+  );
 });
 
 test('engine games are listed in their own months, never folded into the human ones', () => {
