@@ -257,7 +257,7 @@ export const ZH_HANT_CONTENT = {
     'Mistboard 就是網頁版。打開瀏覽器就能下棋，電腦和手機都可以，無需下載或安裝。',
   'faq.playComputerQuestion': '可以和電腦下嗎？',
   'faq.playComputerAnswer':
-    '可以。人機對戰有八個難度等級，從入門到很強，最強的對手是皮卡魚（Pikafish）引擎。',
+    '可以。人機對戰的難度從入門到很強，最強的對手是皮卡魚（Pikafish）引擎。',
   'faq.playBotsLink': '挑選等級',
   'faq.playFriendQuestion': '怎麼和朋友下？',
   'faq.playFriendAnswer': '開始對局時選擇和朋友對弈，把連結傳給朋友，對方打開連結就能入座。',

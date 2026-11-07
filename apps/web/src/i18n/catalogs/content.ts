@@ -527,7 +527,7 @@ export const EN_CONTENT = {
     'Mistboard is the web version. Open it in a browser on a computer or a phone and play; there is nothing to download or install.',
   'faq.playComputerQuestion': 'Can I play against the computer?',
   'faq.playComputerAnswer':
-    'Yes. There are eight levels, from beginner to strong, and the strongest opponent is the Pikafish engine.',
+    'Yes. The levels run from beginner to strong, and the strongest opponent is the Pikafish engine.',
   'faq.playBotsLink': 'Choose a level',
   'faq.playFriendQuestion': 'How do I play a friend?',
   'faq.playFriendAnswer':
