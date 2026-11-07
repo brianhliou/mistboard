@@ -207,12 +207,29 @@ function loadGames() {
       iccs: rows.map((r) => r.uci).join(' '),
       byPly: annotationsOf(rows, game.key ?? file.replace(/\.json$/, '')),
       plies: rows.length,
+      series: winSeriesOf(rows, side),
     });
   }
   // Date, then source key: within a day the key is the only order the source
   // gives, and it is NOT play order (a seven-game match posts in one batch).
   games.sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
   return games;
+}
+
+/**
+ * The engine's win chance from `side`'s view, one value per position (start,
+ * then after each ply), for the study's Computer analysis graph. Rows hold the
+ * mover's win% before and after its move; a row without them means the game was
+ * not fully scored, so the chapter gets no graph rather than a wrong one.
+ */
+export function winSeriesOf(rows, side) {
+  const view = (row, win) => (row.side === side ? win : 100 - win) / 100;
+  if (
+    !rows.length ||
+    rows.some((r) => !Number.isFinite(r.winBefore) || !Number.isFinite(r.winAfter))
+  )
+    return null;
+  return [view(rows[0], rows[0].winBefore), ...rows.map((r) => view(r, r.winAfter))];
 }
 
 const chapterName = (g) => `${g.date} · ${enOf(g.red)} vs ${enOf(g.black)} · ${g.result}`;
@@ -338,14 +355,25 @@ async function main() {
   );
 
   if (PLAN) {
-    const [first, ...rest] = games.map(chapterFor);
-    const chapter = ({ name, variant, orientation, root, tags, i18n }) => ({
+    const [first, ...rest] = games.map((g) => ({
+      ...chapterFor(g),
+      ...(g.series
+        ? {
+            scoreSeries: {
+              side: g.side,
+              series: [{ name: 'Pikafish', color: 'a', values: g.series }],
+            },
+          }
+        : {}),
+    }));
+    const chapter = ({ name, variant, orientation, root, tags, i18n, scoreSeries }) => ({
       name,
       variant,
       orientation,
       tree: root,
       tags,
       i18n,
+      ...(scoreSeries ? { scoreSeries } : {}),
     });
     const plan = {
       create: {

@@ -126,6 +126,8 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
           uci,
           ply: index + 1,
           side: index % 2 ? 'black' : 'red',
+          winBefore: 50,
+          winAfter: 50,
           ...(index === 9 ? { lost: 18, best: 'b9c7', winBefore: 50 } : {}),
         })),
       },
@@ -153,6 +155,9 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   const draft = JSON.parse(await readFile(join(directory, 'study-draft.json'), 'utf8'));
   assert.equal(draft.create.chapter.orientation, 'red');
   assert.equal(draft.create.visibility, 'unlisted');
+  // The annotation's win chances become the chapter's Computer analysis graph.
+  assert.equal(draft.create.chapter.scoreSeries.side, 'red');
+  assert.equal(draft.create.chapter.scoreSeries.series[0].values.length, ucis.length + 1);
   await writeFile(
     join(directory, 'selection.json'),
     JSON.stringify({ boardIds: [id], puzzleIds: [id] }),
@@ -164,10 +169,12 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   const stored = await client.query('SELECT data FROM puzzles WHERE id=$1', [id]);
   assert.ok(stored.rows[0].data.tags.includes('player:fixture-player'));
   const chapters = await client.query(
-    'SELECT variant, gamebook FROM study_chapters WHERE study_id=$1',
+    "SELECT variant, gamebook, jsonb_array_length(score_series->'series'->0->'values') AS graph FROM study_chapters WHERE study_id=$1",
     [studyId],
   );
-  assert.deepEqual(chapters.rows, [{ variant: 'xiangqi', gamebook: false }]);
+  assert.deepEqual(chapters.rows, [
+    { variant: 'xiangqi', gamebook: false, graph: ucis.length + 1 },
+  ]);
   assert.deepEqual(await runKit({ ...options, apply: true }, services), receipt);
   const studyCount = await client.query('SELECT count(*) FROM studies');
   await assert.rejects(
