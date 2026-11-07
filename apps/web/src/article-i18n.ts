@@ -5667,8 +5667,8 @@ const ZH_HANS: Record<string, string> = {
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安装任何东西。Mistboard 在手机、平板或电脑的浏览器里直接运行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 对弈吗？',
-  'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
-    '可以，有八个等级，外加一个更强的机器人。第 1 到 8 级运行按揭棋规则打了补丁的皮卡鱼（Pikafish），它靠手写规则判断局面，高手能赢它。它们之上是 AB-JChess，一个自带神经网络的开源引擎，400 盘中赢了第 8 级 248 盘。两者都看不到你的暗子：它们拿到的都是和你一样背面朝上的棋盘，从不被告知底牌。',
+  'Yes. The levels run from beginner to strong, and stronger engines with their own neural networks sit above them. No bot can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
+    '可以。等级从入门到很强，它们之上还有自带神经网络的更强引擎。所有机器人都看不到你的暗子：它们拿到的都是和你一样背面朝上的棋盘，从不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同样的棋盘、同样的棋子、同样的将死目标。除将帅外的棋子开局全部洗匀背面朝上，第一步按所在起始位置的棋子走法走一次，然后翻开按真实身份行棋。翻开的士可以出九宫，翻开的象可以过河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':
@@ -12191,8 +12191,8 @@ const ZH_HANT: Record<string, string> = {
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安裝任何東西。Mistboard 在手機、平板或電腦的瀏覽器裡直接執行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 對弈嗎？',
-  'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
-    '可以，有八個等級，外加一個更強的機器人。第 1 到 8 級執行針對揭棋規則修改過的皮卡魚（Pikafish）版本，它靠手寫規則判斷局面，高手能贏它。它們之上是 AB-JChess，一個自帶類神經網路的開源引擎，400 盤中贏了第 8 級 248 盤。兩者都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
+  'Yes. The levels run from beginner to strong, and stronger engines with their own neural networks sit above them. No bot can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
+    '可以。等級從入門到很強，它們之上還有自帶類神經網路的更強引擎。所有機器人都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身分行棋。翻開的士可以出九宮，翻開的象可以過河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':

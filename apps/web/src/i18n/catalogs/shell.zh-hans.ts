@@ -76,7 +76,7 @@ export const ZH_HANS_SHELL = {
   'nav.boardAndPieces': '棋子',
   'nav.darkMode': '深色模式',
   'home.tagline': '中国象棋与世界经典策略游戏。免费且开源。关于 Mistboard...',
-  'home.playSummary': '免费网页版 · 无需下载和注册 · 人机对战八个等级 · 和朋友在线对弈',
+  'home.playSummary': '免费网页版 · 无需下载和注册 · 人机对战从入门到高手 · 和朋友在线对弈',
   'home.activityAria': '活跃度',
   'home.gamesPlayed': '局已下完',
   'home.gamesPlayedMonth': '局已下完（本月 {count} 局）',
