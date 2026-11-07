@@ -39,6 +39,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Finished xiangqi mahjong matches are now in the /data downloads, walls and all ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Jieqi studies show what a face-down piece turns out to be on hover, and the board resize grip is easier to see ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - On phones the game review board runs edge to edge, the underboard tabs fit on one line, and "Learn from your mistakes" is green and shows only to the game's players ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - The Gomoku analysis board fits one phone screen, with the moves under the board and the tools in a bar at the bottom ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
@@ -74,10 +75,15 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Removed
 
+- Hong Kong mahjong is closed to new games ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Retired Atomic Xiangqi games no longer get new computer analysis; finished games and stored analysis stay readable ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ### Fixed
 
+- Corrected a line on the world championship page that overlooked Lại Lý Huynh's 2022 world rapid title ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Traditional Chinese articles now write every player's name in Traditional ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- The board resize handle now stays on the board corner while you drag, no longer flashes under the board when you switch study chapters, and fits rounded corners ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- The staff page for reported messages now opens only conversations someone has reported ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Public game counts no longer include a few old test games from variants we deleted ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - Puzzle pages keep the move history right under the board, and archive game dates no longer show a day early ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - Corrected a soldier name and a character on the Simplified Chinese Banqi rules page ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))

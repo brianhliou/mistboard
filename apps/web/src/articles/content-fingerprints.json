@@ -172,8 +172,8 @@
     "updatedAt": null
   },
   "mahjong": {
-    "hash": "becb55770f03ae73",
-    "updatedAt": null
+    "hash": "83d992e11d94b497",
+    "updatedAt": "2026-11-06"
   },
   "misty": {
     "hash": "ef5f445b2e398541",
@@ -220,7 +220,7 @@
     "updatedAt": "2026-06-06"
   },
   "shortest-stalemate-xiangqi": {
-    "hash": "c65df0acb8988851",
+    "hash": "8087e9a6ea932d7e",
     "updatedAt": null
   },
   "skill-vs-luck": {
@@ -268,8 +268,8 @@
     "updatedAt": null
   },
   "xiangqi-world-championship": {
-    "hash": "6a88654548361124",
-    "updatedAt": "2026-10-24"
+    "hash": "f6afff5de8e038bb",
+    "updatedAt": "2026-11-06"
   },
   "yin-sheng": {
     "hash": "b3e5c4a7d0f92a6f",

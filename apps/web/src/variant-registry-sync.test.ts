@@ -304,7 +304,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
         drift.push(`${registration.gameSpecId}: server ${serverHasPage} != web ${webHasPage}`);
     }
     expect(drift, drift.join('\n')).toEqual([]);
-    // Mahjong is the live case: playable, with no page for a finished table.
+    // Mahjong never had a page for a finished table.
     expect(crosstableReviewUrl(`mj_${SAMPLE_ROOM_SUFFIX}`, 'mahjong')).toBeNull();
     // Xiangqi Mahjong's finished room is its page.
     expect(crosstableReviewUrl(`xmj_${SAMPLE_ROOM_SUFFIX}`, 'xiangqi-mahjong')).toBe(
@@ -503,7 +503,7 @@ describe('play deep links are gated on their own variant', () => {
   });
 });
 
-// A retired variant (Fortress and Atomic Xiangqi, 2026-10-11) keeps its tenant
+// A retired variant (Fortress and Atomic Xiangqi 2026-10-11, Mahjong 2026-11-06) keeps its tenant
 // on BOTH sides, so its finished games still have a review page and a server
 // that hydrates them, while no web surface offers it and no deep link starts
 // one. Dropping it from either registry would 404 every game ever played.
@@ -517,6 +517,8 @@ describe('retired variants: replay kept on both sides, play offered on neither',
     for (const id of RETIRED_GAME_SPEC_IDS) {
       expect(webSpecs.has(id), `${id}: web tenant`).toBe(true);
       expect(serverSpecs.has(id), `${id}: server tenant`).toBe(true);
+      // Mahjong never had a page for a finished table, so it has none to keep.
+      if (id === 'mahjong') continue;
       const tenant = webVariantTenants().find((candidate) => candidate.gameSpecId === id);
       expect(tenant?.gameRouteBase, `${id}: postgame route`).toBeTruthy();
       expect(

@@ -13,6 +13,7 @@ import {
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
   type GameSpecId,
+  isRetiredGameSpec,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
@@ -2719,11 +2720,19 @@ function playCtaOpenToViewer(href: string): boolean {
   );
 }
 
+/** A retired variant is closed to everyone, grant or not, so its rules page
+ *  shows neither the buttons nor the note about asking to join a playtest. */
+function playCtaIsRetired(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return id !== null && isRetiredGameSpec(id);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
-  const gated = block.buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
+  const buttons = block.buttons.filter((btn) => !playCtaIsRetired(btn.href));
+  const gated = buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
   if (gated.length > 0) {
     // A playtest variant's rules page: redraw once the account's real grants
     // are in, so a player granted since their last visit gets the buttons.
@@ -2735,7 +2744,7 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       { once: true },
     );
   }
-  for (const btn of block.buttons) {
+  for (const btn of buttons) {
     if (pointsAtHiddenArticle(btn.href)) continue;
     if (gated.includes(btn)) continue;
     const a = document.createElement('a');

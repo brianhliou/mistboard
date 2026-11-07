@@ -8,19 +8,20 @@ import {
   variantPublicSurfaceEnabled,
 } from './variant-public-surfaces.js';
 
-// HK mahjong remains a playtest after XMJ launches. A visitor without its
-// grant must not get buttons into a dialog that cannot offer that variant.
+// A visitor without a playtest grant must not get buttons into a dialog that
+// cannot offer that variant. Gomoku stands in for any playtest here; move this
+// file to the next one when it launches.
 const PLAYTEST_CTA: CtaBlock = {
   kind: 'cta',
   buttons: [
     {
       label: 'Play vs computer',
-      href: '/?play=computer&gameSpecId=mahjong',
+      href: '/?play=computer&gameSpecId=gomoku',
       emphasis: 'primary',
     },
     {
       label: 'Challenge a friend',
-      href: '/?play=friend&gameSpecId=mahjong',
+      href: '/?play=friend&gameSpecId=gomoku',
       emphasis: 'secondary',
     },
   ],
@@ -37,7 +38,7 @@ describe('play CTAs for a playtest variant', () => {
   });
 
   it('is a playtest variant while this holds', () => {
-    expect(variantPublicSurfaceEnabled('mahjong')).toBe(false);
+    expect(variantPublicSurfaceEnabled('gomoku')).toBe(false);
   });
 
   it('shows a visitor without a grant a note, not buttons into a xiangqi setup', () => {
@@ -50,7 +51,7 @@ describe('play CTAs for a playtest variant', () => {
   });
 
   it('keeps the buttons for a granted account', () => {
-    setResolvedVariantGrants(['mahjong']);
+    setResolvedVariantGrants(['gomoku']);
     const row = renderBlock(PLAYTEST_CTA);
     expect(links(row)).toEqual(PLAYTEST_CTA.buttons.map((b) => b.href));
     expect(row.querySelector('.article-cta-playtest-note')).toBeNull();
@@ -60,9 +61,23 @@ describe('play CTAs for a playtest variant', () => {
     const row = renderBlock(PLAYTEST_CTA);
     document.body.append(row);
     expect(links(row)).toEqual([]);
-    setResolvedVariantGrants(['mahjong']);
+    setResolvedVariantGrants(['gomoku']);
     const redrawn = document.body.querySelector('.article-cta-row') as HTMLElement;
     expect(links(redrawn)).toEqual(PLAYTEST_CTA.buttons.map((b) => b.href));
+  });
+
+  it('shows a retired variant no buttons and no note, even to an account holding a grant', () => {
+    setResolvedVariantGrants(['mahjong']);
+    const cta: CtaBlock = {
+      ...PLAYTEST_CTA,
+      buttons: PLAYTEST_CTA.buttons.map((button) => ({
+        ...button,
+        href: button.href.replace('gameSpecId=gomoku', 'gameSpecId=mahjong'),
+      })),
+    };
+    const row = renderBlock(cta);
+    expect(links(row)).toEqual([]);
+    expect(row.querySelector('.article-cta-playtest-note')).toBeNull();
   });
 
   it('offers launched XMJ play buttons without a grant', () => {
@@ -74,7 +89,7 @@ describe('play CTAs for a playtest variant', () => {
       ...PLAYTEST_CTA,
       buttons: PLAYTEST_CTA.buttons.map((button) => ({
         ...button,
-        href: button.href.replace('gameSpecId=mahjong', 'gameSpecId=xiangqi-mahjong'),
+        href: button.href.replace('gameSpecId=gomoku', 'gameSpecId=xiangqi-mahjong'),
       })),
     };
     const row = renderBlock(cta);

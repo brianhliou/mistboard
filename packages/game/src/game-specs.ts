@@ -567,12 +567,10 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'future',
   },
   {
-    // Hong Kong Old Style (清章). Four seats, one human against three bots to
-    // begin with. Registered so the fail-closed dispatch can see it; NOT built:
-    // there is no tenant, no route and no client yet, which is what
-    // runtimeStatus 'future' means. The scoring is also unverified - see
-    // docs-private/mahjong/hk-old-style.md section 8 - so this must not become
-    // discoverable before a player has checked the faan table.
+    // Hong Kong Old Style (清章). Four seats, one human against three bots.
+    // Parked for good (Brian, 2026-11-06): it never went public, so retiring it
+    // takes nothing from a public player. Its tenant stays so a table in
+    // progress finishes; a finished table never had a page.
     id: MAHJONG_SPEC_ID,
     publicName: 'Mahjong',
     family: 'mahjong',
@@ -585,11 +583,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'mahjong_hk',
     publicSurface: 'hidden',
-    // Built and playable, and deliberately not public: the same pairing Duck
-    // Xiangqi uses. 'future' was right while this was only a registered id, and
-    // it is what greys the variant out in the play menu as "coming soon", which
-    // is now the wrong statement about it.
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,

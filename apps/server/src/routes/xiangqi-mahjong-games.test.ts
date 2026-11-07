@@ -5,14 +5,20 @@ import {
   createXmjRoomState,
   createXmjSetup,
   XIANGQI_MAHJONG_SPEC_ID,
+  XMJ_GLYPHS,
+  XMJ_SEATS,
+  type XmjMove,
   type XmjRoomSetup,
   type XmjRoomState,
   type XmjSeat,
   xmjPendingAction,
 } from '@mistboard/game';
+import { resolveGameExport } from '../game-export-tenant.js';
 import type { RecentEveGameRecord } from '../persistence.js';
 import { xmjBotMove } from '../server-xiangqi-mahjong-bots.js';
-import type { XmjEvent } from '../xiangqi-mahjong-tenant.js';
+import '../xiangqi-mahjong-registration.js';
+import { replayTenantEvents } from '../variant-tenant/runtime.js';
+import { type XmjEvent, xiangqiMahjongTenant } from '../xiangqi-mahjong-tenant.js';
 import {
   type XmjPostgamePersistence,
   xiangqiMahjongFinalForApi,
@@ -36,8 +42,8 @@ function seeded(seed: number): () => number {
 type PlayedMatch = { setup: XmjRoomSetup; events: XmjEvent[]; states: XmjRoomState[] };
 
 /** Two bots play a whole match; `states[i]` is the state after the first i moves. */
-function playedMatch(seed: number): PlayedMatch {
-  const setup = createXmjSetup(seeded(seed));
+function playedMatch(seed: number, overrides: Partial<XmjRoomSetup> = {}): PlayedMatch {
+  const setup = { ...createXmjSetup(seeded(seed)), ...overrides };
   const events: XmjEvent[] = [
     {
       type: 'room-created',
@@ -120,6 +126,104 @@ function assertNoWalls(payload: unknown, setup: XmjRoomSetup): void {
 }
 
 const MATCH = playedMatch(3);
+
+test('the real registration exports a standalone six-hand JSON match that replays exactly', () => {
+  for (const match of [
+    MATCH,
+    playedMatch(7, { taiTable: undefined, firstDealer: 'west' }),
+    playedMatch(9, { taiTable: 3 }),
+    playedMatch(11, { correspondence: true, firstDealer: 'east' }),
+  ]) {
+    const server = replayTenantEvents(xiangqiMahjongTenant, match.events).state;
+    const response = resolveGameExport({
+      roomId: ROOM_ID,
+      format: 'json',
+      summary: gameRecord({
+        plyCount: server.moveNumber,
+      }),
+      events: match.events,
+    });
+    assert.equal(response.status, 200);
+    if (response.status !== 200) return;
+    const json = JSON.parse(response.body);
+    assert.equal(json.schema_version, '1.1');
+    assert.equal(json.license, 'CC BY 4.0');
+    assert.deepEqual(Object.keys(json.players), ['east', 'west']);
+    assert.equal(json.source.game_url, `https://mistboard.com/xiangqi-mahjong/game/${ROOM_ID}`);
+    assert.equal(json.ply_count, server.moveNumber);
+    assert.deepEqual(json.match.setup.walls, match.setup.walls);
+    assert.equal(json.match.setup.firstDealer, match.setup.firstDealer);
+    assert.equal(json.match.setup.taiTable, match.setup.taiTable ?? 1);
+    assert.equal(json.match.setup.correspondence, match.setup.correspondence ?? false);
+
+    // Only the downloaded setup and actions feed this reference replay.
+    let replay = createXmjRoomState(json.match.setup, ROOM_ID);
+    for (const [index, ply] of json.plies.entries()) {
+      const move = ply.move as XmjMove;
+      assert.equal(ply.ply, index + 1);
+      assert.equal(ply.mover, move.by);
+      assert.equal('uci' in ply, false);
+      assert.equal('san' in ply, false);
+      assert.ok(ply.notation.includes(move.action));
+      if (move.action === 'discard' || move.action === 'declare-ready') {
+        assert.ok(ply.notation.includes(XMJ_GLYPHS[move.tile]));
+      } else if (move.action === 'claim') {
+        assert.ok(ply.notation.includes(move.kind));
+        for (const tile of move.fromHand) assert.ok(ply.notation.includes(XMJ_GLYPHS[tile]));
+      }
+      replay = applyXmjMove(replay, move);
+    }
+    assert.deepEqual(replay.match.results, server.match.results);
+    assert.deepEqual(replay.match.scores, server.match.scores);
+    assert.deepEqual(replay.status, server.status);
+    assert.equal(json.match.hands.length, 6);
+    assert.deepEqual(json.match.hands, server.match.results);
+    assert.deepEqual(
+      json.match.final_score,
+      Object.fromEntries(XMJ_SEATS.map((seat, index) => [seat, server.match.scores[index]])),
+    );
+    assert.deepEqual(
+      json.plies.map((ply: { move: XmjMove }) => ply.move),
+      match.events.filter((event) => event.type === 'move-played').map((event) => event.move),
+    );
+  }
+});
+
+test('live, between-hand and aborted exports reveal no walls, hands or moves, including correspondence', () => {
+  for (const match of [MATCH, playedMatch(11, { correspondence: true, firstDealer: 'east' })]) {
+    const between = match.states.findIndex((state) => state.match.between);
+    assert.ok(between > 0);
+    for (const events of [
+      cutAfter(match, 0),
+      cutAfter(match, 1),
+      cutAfter(match, between),
+      [
+        ...cutAfter(match, 1),
+        {
+          type: 'game-aborted',
+          at: 100_000,
+          roomId: ROOM_ID,
+          reason: 'engine-unavailable',
+        },
+      ],
+    ]) {
+      const response = resolveGameExport({
+        roomId: ROOM_ID,
+        format: 'json',
+        summary: gameRecord(),
+        events,
+      });
+      assert.deepEqual(response, { status: 403, body: { error: 'game_not_public' } });
+      const serialized = JSON.stringify(response);
+      for (const tile of match.setup.walls.flat()) {
+        assert.equal(serialized.includes(JSON.stringify(tile)), false);
+      }
+      for (const key of ['setup', 'walls', 'hands', 'plies', 'move']) {
+        assert.equal(serialized.includes(`"${key}"`), false);
+      }
+    }
+  }
+});
 
 test('a finished match replays every move with both hands and every draw face up', async () => {
   const payload = await xiangqiMahjongPostgameForApi(ROOM_ID, deps(gameRecord(), MATCH.events));

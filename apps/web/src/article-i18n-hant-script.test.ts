@@ -12,28 +12,37 @@ const SIMPLIFIED_ONLY =
 // and a Japanese magazine title.
 const CITED_SPELLINGS = ['斗兽棋', '詰将棋パラダイス'];
 
-// A name is written in the script its owner uses, so a mainland player stays
-// Simplified on a Traditional page (champion-name-script.test.ts pins the rule).
-const MAINLAND_NAMES =
-  '刘俊达 吕钦 孙勇征 孙昕昊 孙逸阳 张申宏 杨官璘 杨辉 杨铭 聂铁文 蒋川 许文章 许银川 谢岿 谢靖 赵国荣 赵子雨 赵攀伟 赵旸鹤 赵殿宇 赵玮 赵金成 赵鑫鑫 郑一泓 郑宇航 郑惟桐 陈幸琳 陈泓盛 陆伟韬 马天越 黄光颖 黄文俊 黄竹风 左文静 徐天红 于幼华 吴丹 吕皓 苏奕霖 张强 黄蕾蕾 陈丽淳 朱国平 郭玉军 李来群 李义庭 梁运龙 胡荣华 王跃飞 程鸣 郝继超 陶汉明 申鹏 韩传号 柳大华 王永强 程宇东 时凤兰 靳玉砚 武俊强 李艾东 蔡佑广 李小龙 刘泽昊 郑奕宸 张瑞 张佳雯 张婷婷 刘程'.split(
-    ' ',
-  );
+// A name is not a word to convert blindly: these are the wrong Traditional
+// forms a character-by-character conversion produces. 党, 于, 征, 峰 and 岩 are
+// the correct characters in these names.
+const WRONG_NAME_FORMS = ['黨斐', '於幼華', '孫勇徵', '徐崇峯', '曹巖磊'];
 
 function simplifiedOnlyIn(text: string): string[] {
   let body = text;
-  for (const spelling of [...CITED_SPELLINGS, ...MAINLAND_NAMES]) {
+  for (const spelling of CITED_SPELLINGS) {
     body = body.replaceAll(spelling, '');
   }
   return [...new Set([...body].filter((ch) => SIMPLIFIED_ONLY.includes(ch)))];
 }
 
 describe('zh-Hant serves Traditional text', () => {
+  it('has none of the known wrong conversions of a name', () => {
+    const wrongName = (text: string) => WRONG_NAME_FORMS.some((form) => text.includes(form));
+    expect(wrongName('呂欽對於幼華')).toBe(true);
+    expect(wrongName('呂欽對于幼華')).toBe(false);
+    const bad = translationKeys('zh-Hant')
+      .map((key) => translateArticleText('zh-Hant', key))
+      .filter(wrongName);
+    expect(bad).toEqual([]);
+  });
+
   it('flags a planted Simplified string and passes its Traditional form', () => {
     expect(simplifiedOnlyIn('揭棋规则')).toEqual(['规', '则']);
     expect(simplifiedOnlyIn('揭棋規則')).toEqual([]);
-    // A listed name passes; the Simplified word beside it still fails.
-    expect(simplifiedOnlyIn('杨官璘的象棋規則')).toEqual([]);
-    expect(simplifiedOnlyIn('杨官璘的象棋规则')).toEqual(['规', '则']);
+    // A name is checked like any other text.
+    expect(simplifiedOnlyIn('楊官璘的象棋規則')).toEqual([]);
+    expect(simplifiedOnlyIn('杨官璘的象棋規則')).toEqual(['杨']);
+    expect(simplifiedOnlyIn('楊官璘的象棋规则')).toEqual(['规', '则']);
   });
 
   it('has no Simplified-only character in any article string', () => {
