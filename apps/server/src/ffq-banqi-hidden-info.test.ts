@@ -120,13 +120,8 @@ test('serialized FFQ seat and observer payloads mask identities at every ply, li
       assert.equal(wire.liveHistory.length, ply + 1);
       assert.deepEqual(
         wire.snapshot.state.captured,
-        replayTenantEvents(ffqBanqiTenant, eventsA.slice(0, 3 + ply)).state.captures.map(
-          (capture) => ({
-            ...capture,
-            role: capture.wasFaceDown && capture.capturedBy !== viewer ? null : capture.role,
-          }),
-        ),
-        'covered capture roles are only delivered to their capturer',
+        replayTenantEvents(ffqBanqiTenant, eventsA.slice(0, 3 + ply)).state.captures,
+        'off-board captures are public to both seats and observers',
       );
       if (viewer === 'spectator') {
         assert.equal(wire.snapshot.state.perspective, 'observer');
@@ -179,7 +174,7 @@ test('registered FFQ tenant retains its fallback gate and never reveals finished
   assert.equal(ffqBanqiTenant.visibility.truthView, undefined, 'FFQ has no finished-board reveal');
 });
 
-test('whole FFQ room payload keeps covered capture roles capturer-only in live and finished replay', () => {
+test('whole FFQ room payload names covered capture roles for both seats and observers live and finished', () => {
   const deal = [...createFFQBanqiDeal(800)];
   const place = (square: number, color: BanqiColor, role: string) => {
     const source = deal.findIndex((piece) => piece.color === color && piece.role === role);
@@ -206,19 +201,19 @@ test('whole FFQ room payload keeps covered capture roles capturer-only in live a
       b.push(ending);
     }
     assert.equal(replayTenantEvents(ffqBanqiTenant, a).state.captures.length, 1);
-    for (const viewer of ['black', 'spectator'] as const) {
-      assert.equal(
-        payload(a, viewer),
-        payload(b, viewer),
-        `${viewer}: capture leaks through room envelope`,
-      );
-      const wire = JSON.parse(payload(a, viewer));
-      assert.equal(wire.snapshot.state.captured[0].role, null);
-      assert.equal(wire.liveHistory.at(-1).view.captured[0].role, null);
+    for (const viewer of VIEWERS) {
+      assert.notEqual(payload(a, viewer), payload(b, viewer), `${viewer}: captured role is public`);
+      for (const [events, role] of [
+        [a, 'horse'],
+        [b, 'elephant'],
+      ] as const) {
+        const wire = JSON.parse(payload(events, viewer));
+        assert.equal(wire.snapshot.state.captured[0].role, role);
+        assert.deepEqual(wire.snapshot.state.unknownCaptured, { red: 0, black: 0 });
+        assert.equal(wire.liveHistory.at(-1).view.captured[0].role, role);
+        assert.deepEqual(wire.liveHistory.at(-1).view.unknownCaptured, { red: 0, black: 0 });
+        assert.ok(wire.fen.endsWith(' 0 0'));
+      }
     }
-    const red = JSON.parse(payload(a, 'red'));
-    assert.equal(red.snapshot.state.captured[0].role, 'horse');
-    assert.equal(red.liveHistory.at(-1).view.captured[0].role, 'horse');
-    assert.notEqual(payload(a, 'red'), payload(b, 'red'));
   }
 });

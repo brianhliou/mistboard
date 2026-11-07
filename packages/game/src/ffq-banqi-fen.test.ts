@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { ffqBanqiStateToFen } from './ffq-banqi-fen.js';
 import {
   applyFFQBanqiMove,
   createInitialFFQBanqiState,
   type FFQBanqiState,
 } from './variants-ffq-banqi.js';
+
+// Support targeted Vitest runs and the package's native node:test suite.
+const test: (name: string, run: () => void) => unknown = process.env.VITEST
+  ? (await import('vitest')).test
+  : (await import('node:test')).test;
 
 test('FFQ public FEN has eight top-first ranks, fixed ink turn, HP, clock and BOTH chase counts', () => {
   const state: FFQBanqiState = {
@@ -44,7 +48,7 @@ test('setup FEN masks 28 tiles, carries four revealed pieces and no per-square d
   assert.equal(ffqBanqiStateToFen(swapped), ffqBanqiStateToFen(state));
 });
 
-test('public FEN keeps covered capture roles in the pool, live AND finished', () => {
+test('public FEN subtracts every disclosed covered capture from the pool, live AND finished', () => {
   const initial: FFQBanqiState = {
     ...createInitialFFQBanqiState('fen', 800),
     board: Array.from({ length: 32 }, () => null),
@@ -70,10 +74,10 @@ test('public FEN keeps covered capture roles in the pool, live AND finished', ()
     assert.equal(horseFields.length, 11);
     assert.equal(horseFields.slice(0, 8).join(' '), '3X/4/4/4/4/C3/s3/4 b 60 55 0 0 0 1');
     assert.deepEqual(horseFields.slice(0, 8), elephantFields.slice(0, 8));
-    assert.equal(horseFields[8], 'G1A2E2R2H2C1S5g1a2e2r2h2c2s4');
-    assert.equal(elephantFields[8], 'G1A2E2R2H2C1S5g1a2e2r2h2c2s4');
-    assert.deepEqual(horseFields.slice(9), ['0', '1']);
-    assert.deepEqual(elephantFields.slice(9), ['0', '1']);
+    assert.equal(horseFields[8], 'G1A2E2R2H2C1S5g1a2e2r2h1c2s4');
+    assert.equal(elephantFields[8], 'G1A2E2R2H2C1S5g1a2e1r2h2c2s4');
+    assert.deepEqual(horseFields.slice(9), ['0', '0']);
+    assert.deepEqual(elephantFields.slice(9), ['0', '0']);
     // Changing an identity still on the board cannot change even the pool.
     const masked = {
       ...horse,

@@ -88,16 +88,19 @@ crypto-backed RNG and persists the initial deal with the action history.
 
 A board back serializes to exactly `{ faceDown: true }`, without ink or role.
 Legality and chase detection depend only on public occupancy and face-up pieces.
-A face-up capture's role is public. A covered capture's exact role is sent only
-to its capturer, including after game end; other seats and observers receive
-`role: null`. Public HP changes still disclose the victim's ink and damage
-class (some damage values uniquely identify a role). Canonical HP and movement
-rules are unchanged. Covered pieces still on the board remain masked.
+Every off-board capture's ink and exact role are **public to both seats and
+observers**, whether captured face up or covered, live or after game end.
+This FFQ exception follows the source engine's shared state, which removes the
+exact captured type from the face-down pool for both sides (decided 2026-11-06).
+`wasFaceDown` records how the piece was captured; it does not keep an off-board
+role private. Covered pieces **still on the board remain masked**, including
+after an HP-ending friendly capture or any other game end.
 
 Pools are calculated from the initial multiset minus revealed on-board pieces
-and captures whose roles the recipient knows. Unknown covered captures remain
-in that recipient's candidate pool, counted by ink in `unknownCaptured`.
-Observers receive their own projection, never either player's private captures.
+and **every capture**, never from identities under the remaining backs. Both
+seats and observers therefore see the same exact remaining pool without
+assigning identities to squares. `unknownCaptured` is retained for snapshot
+compatibility and is always `{ red: 0, black: 0 }` in newly generated views.
 
 The public FEN is an **observer snapshot**, not a save/import format:
 
@@ -108,12 +111,13 @@ The public FEN is an **observer snapshot**, not a save/import format:
 Ranks run y=7 to y=0, files x=0 to x=3. `X` is a back, upper/lowercase
 `G A E R H C S` denotes revealed red/black pieces, and digits collapse empty
 runs. Turn is `r` or `b`. Pool pairs are letter+count in descending rank order,
-red then black; `-` means empty. Covered captures stay in the observer's pool;
-the final two fields count their unknown roles by ink. Equal-damage covered
-roles cannot be distinguished through the pool. Permuting identities under
-on-board backs leaves the entire FEN and serialized views unchanged, live and
-finished. There is deliberately no dealt suffix or parser: canonical replay
-requires the secret initial deal and moves.
+red then black; `-` means empty. Every capture is subtracted from the pool,
+including covered captures with identical HP damage but different roles. The
+final two fields remain `0 0` in new snapshots; the 11-field format is retained
+for compatibility with old records containing unknown-capture counts. Permuting
+identities under on-board backs leaves the entire FEN and serialized views
+unchanged, live and finished. There is deliberately no dealt suffix or parser:
+canonical replay requires the secret initial deal and moves.
 This FFQ-specific dialect does not claim compatibility with an external engine.
 
 ## Unverified against Tencent's live app
@@ -189,8 +193,34 @@ Planted-failure proof: temporarily returning the canonical board from
 `getFFQBanqiClientView` made **serialized FFQ seat and observer payloads mask
 identities at every ply, live AND HP-finished** exit 1 with `red payload
 carries a covered identity`. Restoring the masked view made it pass again.
-The integration regression additionally masks covered capture roles for everyone
-except the capturer, including the full live and finished replay envelope.
+The integration regression additionally requires public covered capture roles
+for both seats and observers, including the full live and finished replay
+envelope, while inspecting every covered board entry for leaked identities.
 
 The integration onto current main also runs `flip-jungle-name.test.ts` and
 checks catalog key uniqueness. The branch remains hidden and unpushed.
+
+
+## Covered-capture disclosure restoration (2026-11-06)
+
+Restored the disclosure behavior from `326ed3029` after reviewing the reversal
+in merge `6d6fcd3c3`. Off-board captures of either ink are public in every
+recipient's live and finished views and histories; the remaining on-board backs
+stay masked. New snapshots retain the 11 FEN fields and emit `0 0` for unknown
+captures. No existing snapshot reader or old-record field was removed.
+
+Validation on `agent/ffq-covered-public`:
+
+- Game: from `packages/game`, `npx vitest run src/variants-ffq-banqi.test.ts src/ffq-banqi-fen.test.ts --testTimeout 30000`: **25 passed**, exit 0, including 2,000 seeded playouts. The two files retain native `node:test` support alongside Vitest; the longer timeout covers the playout test.
+- Web: from `apps/web`, `npx vitest run src/live-ffq-banqi.test.ts`: **13 passed**, exit 0, including non-capturer and observer capture labels live and finished.
+- Server: from `apps/server`, `npx tsx --test src/ffq-banqi-hidden-info.test.ts`: **blocked before test startup**, exit 1, because the sandbox rejects the tsx IPC socket with `listen EPERM`. No socket or Postgres workaround was attempted.
+- `npm run typecheck`: exit 0. Biome on the six changed TypeScript files by name: exit 0.
+
+The new non-capturer/observer regression failed before the fix with
+`null !== 'horse'`. Temporarily planting an on-board covered role in the view
+made the whole-payload permutation regression fail with the extra role;
+restoring the exact `{ faceDown: true }` projection returned it to green.
+
+Parked in `/Users/brianliou/projects/mistboard-ffq-covered-public` on
+`agent/ffq-covered-public` for the next authorized release. Changelog:
+`FFQ banqi: Show covered captures to both seats and observers while keeping on-board backs hidden.`
