@@ -252,9 +252,10 @@ export const fanfanqiArticle: Article = {
           buttons: [
             {
               label: 'Play Fanfanqi',
-              href: '/?play=friend&gameSpecId=ffq-banqi',
+              href: '/?play=computer&gameSpecId=ffq-banqi',
               emphasis: 'primary',
             },
+            { label: 'Play a friend', href: '/?play=friend&gameSpecId=ffq-banqi', emphasis: 'secondary' },
           ],
         },
       ],
