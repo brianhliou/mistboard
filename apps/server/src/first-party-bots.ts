@@ -19,6 +19,8 @@
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
 // names; migration 111 remaps persisted attribution to the merged ids.
 
+import { RAPFI_LEVELS } from '@mistboard/game';
+
 export type FirstPartyBotProfile = {
   id: string;
   displayName: string;
@@ -176,6 +178,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
   ...PIKAFISH_JIEQI_LEVELS.map(pikafishJieqiLevelProfile),
+  ...RAPFI_LEVELS.map(
+    ({ level }): FirstPartyBotProfile => ({
+      id: `rapfi-level-${level}`,
+      displayName: `Rapfi Level ${level}`,
+      engines: { gomoku: `rapfi-level-${level}` },
+      defaultGameSpecId: 'gomoku',
+    }),
+  ),
   // The top jieqi slot above Pikafish Level 8 (migration 152): named for its engine,
   // not a level number, so a stronger engine can replace it later.
   {
