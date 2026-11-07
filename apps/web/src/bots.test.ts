@@ -233,7 +233,7 @@ describe('bot pages', () => {
       recent: '最近對局',
       sample: 'Elo 來自 48 局引擎對局',
       railSample: '48 局引擎對局',
-      play: '下迷霧國際象棋',
+      play: '下迷霧西洋棋',
       random: '隨機執方',
       pending: '正在開始...',
       retry: '重試',

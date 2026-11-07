@@ -191,7 +191,7 @@ const RULES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
   'zh-Hant': {
     title: '象棋與變體規則 | Mistboard',
     description:
-      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、鴨子等各種象棋變體。',
+      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和西洋棋，以及迷霧、鴨子等各種象棋變體。',
   },
 };
 

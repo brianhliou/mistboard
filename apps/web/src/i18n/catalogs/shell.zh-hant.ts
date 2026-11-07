@@ -215,4 +215,5 @@ export const ZH_HANT_SHELL = {
   'home.setupErrorEngineUnavailable': '引擎服務暫時無法使用，請稍後再試。',
   'home.setupErrorEngineGame': '無法開始人機對局，請重試。',
   'home.setupErrorRoom': '無法建立房間，請重試。',
+  'home.gamesPlayedMonthTitle': '過去 30 天內完成的對局',
 } satisfies Partial<Record<ShellI18nKey, string>>;

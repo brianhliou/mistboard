@@ -126,7 +126,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "国际象棋规则",
-      "zh-hant": "國際象棋規則"
+      "zh-hant": "西洋棋規則"
     }
   },
   "chess960-starting-positions": {
@@ -228,7 +228,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "迷雾国际象棋规则",
-      "zh-hant": "迷霧國際象棋規則"
+      "zh-hant": "迷霧西洋棋規則"
     }
   },
   "fog-chess-concepts": {
@@ -329,8 +329,8 @@
     "description": "Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "揭棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "揭棋規則：玩法詳解與免費線上對弈"
+      "zh-hans": "揭棋规则",
+      "zh-hant": "揭棋規則"
     }
   },
   "jieqi-bot-wins": {
@@ -564,7 +564,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "用服务器端真实局面实现迷雾国际象棋",
-      "zh-hant": "用伺服器端真實局面實現迷霧國際象棋"
+      "zh-hant": "用伺服器端真實局面實現迷霧西洋棋"
     }
   },
   "set-up-your-board": {
