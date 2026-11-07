@@ -40,6 +40,11 @@ import {
   JQE_JIEQI_ENGINE_VERSION,
 } from '../jieqi-engine.js';
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
+import {
+  JUNGLE_FLIP_ENGINE_VERSION,
+  JUNGLE_FLIP_PLAYABLE_ENGINES,
+  JUNGLE_FLIP_RANDOM_ENGINE_ID,
+} from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
 import {
   THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
@@ -1134,8 +1139,8 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // prod vCPU) capped by movetime as a wall-clock guard.
 // Flip Jungle (翻翻兽棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
-// fog engine-worker). One versioned full-strength bot; strength is a node budget capped
-// by movetime.
+// fog engine-worker). The historical full-strength entry stays immutable; the
+// numbered ladder records both its node budget and any root-noise settings.
 const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
   'misty-jungle-flip': {
     id: 'misty-jungle-flip',
@@ -1158,6 +1163,43 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
       'since v0.4.0. Single full-strength bot at 2.5M nodes under a 5s latency cap ' +
       '(budget resized from 512K on 2026-09-06 to fit the ceiling; not a claimed strength ' +
       'gain). Chance-node (flip) search, not fog/belief.',
+  },
+  ...Object.fromEntries(
+    JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => {
+      const signature = `misty-jungle-flip-${tier.version}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+      return [
+        tier.id,
+        {
+          id: tier.id,
+          engineId: 'misty-jungle-flip',
+          engineName: 'MistyJungleFlip',
+          name: tier.name,
+          kind: 'container',
+          gameSpecId: 'jungle-flip',
+          configHash: signature,
+          playSignature: signature,
+          config: {
+            kind: 'jungle-flip-uci',
+            nodes: tier.nodes,
+            movetime_ms: tier.movetimeCapMs,
+            ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+          },
+          notes: `MistyJungleFlip ${JUNGLE_FLIP_ENGINE_VERSION} level ${tier.level}. L1–5 require advertised Noise, NoiseDepth and Seed. L7 budget is provisional pending calibration.`,
+        } satisfies EngineDefinition,
+      ];
+    }),
+  ),
+  [JUNGLE_FLIP_RANDOM_ENGINE_ID]: {
+    id: JUNGLE_FLIP_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-jungle-flip',
+    engineName: 'Random legal (Flip Jungle)',
+    name: 'Random legal (Flip Jungle)',
+    kind: 'builtin',
+    gameSpecId: 'jungle-flip',
+    configHash: 'random-legal-jungle-flip-v1',
+    playSignature: 'random-legal-jungle-flip-v1',
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes: 'EvE-only uniformly random rating anchor; not a playable level.',
   },
 };
 

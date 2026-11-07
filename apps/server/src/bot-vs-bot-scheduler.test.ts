@@ -338,7 +338,7 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
   assert.deepEqual(config.skipped, [
     // Retired 2026-11-06, and it never went public.
     { variant: 'mahjong', reason: 'not-live' },
-    { variant: 'jungle-flip', reason: 'no-eve-adapter' },
+    { variant: 'jungle-flip', reason: 'no-ladder' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },
     // Retired 2026-10-11: skipped even when a stale env names them, though

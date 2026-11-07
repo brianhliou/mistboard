@@ -29,7 +29,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BANQI_ENGINE_VERSION, BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
-import { JUNGLE_FLIP_ENGINE_VERSION, JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import {
+  JUNGLE_FLIP_ENGINE_VERSION,
+  JUNGLE_FLIP_PLAYABLE_ENGINES,
+  jungleFlipEngineTierFor,
+} from './jungle-flip-engine.js';
 import { THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS } from './three-kingdoms-banqi-engine.js';
 
 type TierSyncCase = {
@@ -71,9 +75,19 @@ const TIER_SYNC_CASES: readonly TierSyncCase[] = [
     (tier): TierSyncCase => ({
       family: 'jungle-flip',
       engineId: tier.id,
-      config: { kind: 'jungle-flip-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+      config: {
+        kind: 'jungle-flip-uci',
+        nodes: tier.nodes,
+        movetime_ms: tier.movetimeCapMs,
+        ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+      },
     }),
   ),
+  {
+    family: 'jungle-flip',
+    engineId: 'misty-jungle-flip',
+    config: { kind: 'jungle-flip-uci', nodes: 2_500_000, movetime_ms: 5000 },
+  },
 ];
 
 test('registry config matches the live tier it claims to describe', () => {
@@ -117,7 +131,7 @@ test('the two single-bot node-budget engines name their build and budget in the 
   const jungleFlip = loadEngine('misty-jungle-flip');
   assert.equal(
     jungleFlip.configHash,
-    `misty-jungle-flip-${JUNGLE_FLIP_ENGINE_VERSION}-nodes-${JUNGLE_FLIP_PLAYABLE_ENGINES[0].nodes}`,
+    `misty-jungle-flip-${JUNGLE_FLIP_ENGINE_VERSION}-nodes-${jungleFlipEngineTierFor('misty-jungle-flip')!.nodes}`,
   );
 });
 

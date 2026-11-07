@@ -32,7 +32,7 @@ export type FirstPartyBotProfile = {
   /** A bot that is no rung of its variant's strength ladder (the worst-move bot):
    *  bot-vs-bot pairing never seats it. */
   offLadder?: true;
-  /** Retired engine ids whose games attribute to this bot. */
+  /** Additional engine ids whose games attribute to this bot, including retired tiers. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
    *  bookmarked /bot/<id> URLs, replayed roomCreated events). */
@@ -124,7 +124,16 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-fdx-v1.1',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
+      ...([1, 2, 3, 4, 5, 6, 7, 8] as const).map(
+        (level) => `misty-jungle-flip-level-${level}` as const,
+      ),
     ],
+    seatNamesByEngineId: Object.fromEntries(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((level) => [
+        `misty-jungle-flip-level-${level}`,
+        `Misty Level ${level}`,
+      ]),
+    ),
     // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
     // rooms created before 2026-10-28 stored as their pveBotId; a resumed one
     // still finishes as Misty (migration 178 moved the rows already written).
