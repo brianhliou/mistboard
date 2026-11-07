@@ -167,7 +167,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         type: 'array',
         items: { type: 'string' },
         description:
-          'Trainer tags derived at load: kill patterns plus mate-in-N, phase, goal and length.',
+          'Trainer tags derived at load: kill patterns plus mate-in-N, phase, goal and length, followed by any stored player:<slug> provenance tags.',
       },
       solutionPlyCount: { type: 'integer' },
       rating: { type: 'integer' },
@@ -887,6 +887,11 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
               ],
             },
             'Restrict to any trainer tag: a mating pattern, mate-in-N, phase, goal or length. Intersects variant and motif.',
+          ),
+          query(
+            'player',
+            { type: 'string' },
+            'Canonical player slug. Matches an explicit player:<slug> provenance tag and intersects variant, motif and theme. Unknown slugs return an empty list; omit or leave empty for all.',
           ),
         ],
         responses: {
