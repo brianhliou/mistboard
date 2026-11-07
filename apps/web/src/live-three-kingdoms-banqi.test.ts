@@ -169,16 +169,18 @@ describe('Three Kingdoms banqi live room', () => {
     expect(pieces.length).toBe(Object.keys(states[0]!.board).length);
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(0);
     // Before the first flip no seat owns an ink and nothing can be taken:
-    // one block per ink with its face-down pieces, no points and no captured
-    // line; nothing beside the names. The game card names the variant alone
-    // and the panel has no "N face-down could be:" heading (#823).
+    // one block per ink with its face-down pieces, already at the full seat
+    // shape (0 points, Captured: None) so the first flip does not grow the
+    // panel. The game card names the variant alone and the panel has no
+    // "N face-down could be:" heading (#823).
     expect(document.querySelectorAll('.clock-seat-tag')).toHaveLength(0);
     const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
     expect(blocks.map((block) => block.dataset.ink).sort()).toEqual(['black', 'red']);
     for (const block of blocks) {
       expect(block.dataset.seat).toBeUndefined();
-      expect(block.querySelector('.tk-seat__points')).toBeNull();
-      expect(block.querySelector('[data-line="captured"]')).toBeNull();
+      expect(block.querySelector('.tk-seat__points')?.textContent).toBe('0 pts');
+      expect(block.querySelector('[data-line="captured"] .tk-seat__none')).not.toBeNull();
+      expect(block.querySelectorAll('.tk-seat__line')).toHaveLength(2);
       expect(
         block.querySelectorAll('[data-line="face-down"] .review-capture-piece').length,
       ).toBeGreaterThan(0);

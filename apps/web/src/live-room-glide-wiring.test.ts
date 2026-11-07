@@ -335,7 +335,7 @@ describe('Three Kingdoms banqi game end', () => {
   }
 
   // The tiles nobody flipped stay face down at the end (Brian, 2026-10-30), so
-  // the finish is the last move landing, then the badges.
+  // the finish is the last move landing.
   it('lands the last move and turns nothing else over', async () => {
     const animateBoard = await liveHook('./live-three-kingdoms-banqi.js', 'three-kingdoms-banqi');
     vi.useFakeTimers();
@@ -370,35 +370,11 @@ describe('Three Kingdoms banqi game end', () => {
       expect(played).toContain('b1');
       expect(played).not.toContain('piece-flip-back');
 
-      // The badges wait for the move to land.
-      expect(config().finishBadgeDelayMs as number).toBeGreaterThan(0);
+      // TK has no finish badges (removed 2026-11-07): nothing marks a general.
+      expect(config().finishBadges).toBeUndefined();
       el.remove();
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  it('badges each seat by the ink it bound, labelled in the shared words', async () => {
-    await liveHook('./live-three-kingdoms-banqi.js', 'three-kingdoms-banqi');
-    const finishBadges = config().finishBadges as (view: unknown) => Array<Record<string, unknown>>;
-    // Seat black flipped first and drew red, so seat red plays black.
-    const board = {
-      c1: { faceDown: false, color: 'red', role: 'general' },
-      d1: { faceDown: false, color: 'black', role: 'general' },
-    };
-    const badges = finishBadges({
-      ...finished,
-      board,
-      firstColor: 'black',
-      status: { type: 'finished', winner: 'red', reason: 'score' },
-    });
-    expect(badges).toEqual([
-      expect.objectContaining({ square: 'd1', kind: 'winner' }),
-      expect.objectContaining({ square: 'c1', kind: 'loser', label: 'On points' }),
-    ]);
-    // A general taken earlier has no badge.
-    expect(finishBadges(finished)).toEqual([
-      expect.objectContaining({ square: 'c1', kind: 'winner' }),
-    ]);
   });
 });
