@@ -286,7 +286,7 @@ export const FANFANQI_RANK_LADDER = (): string => {
   const arcLow = arcTop + 44;
   const arc = `<path d="M ${from} ${arcTop} C ${from} ${arcLow}, ${to} ${arcLow}, ${to} ${arcTop + 6}" fill="none" stroke="var(--site-accent, #2f7f6c)" stroke-width="2"/>
 <polygon points="${to},${arcTop - 1} ${to - 5},${arcTop + 9} ${to + 5},${arcTop + 9}" fill="var(--site-accent, #2f7f6c)"/>
-<text x="${width / 2}" y="${arcTop + 24}" font-size="12" text-anchor="middle" ${ink}>Exceptions: a ${up[0]!.attacker} takes a ${up[0]!.victim}; a ${down[0]!.attacker} cannot take a ${down[0]!.victim}</text>`;
-  const height = arcLow + 2;
+<text x="${width / 2}" y="${arcLow + 4}" font-size="12" text-anchor="middle" ${ink}>Exceptions: a ${up[0]!.attacker} takes a ${up[0]!.victim}; a ${down[0]!.attacker} cannot take a ${down[0]!.victim}</text>`;
+  const height = arcLow + 10;
   return `<svg data-fanfanqi-diagram="rank-ladder" viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" aria-label="The Fanfanqi pieces in rank order, strongest to weakest, with the soldier and general exceptions" ${FIGURE_STYLE(width)}>${lead}${pieces}${arc}</svg>`;
 };
