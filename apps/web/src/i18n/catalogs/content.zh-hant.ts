@@ -678,4 +678,11 @@ export const ZH_HANT_CONTENT = {
     '本站自己的機器人之間的對局，每天幾盤。它們有獨立的檔案，從不出現在上面的檔案中。',
   'data.engineAbout':
     '本站每天安排幾盤自己的機器人之間的對局，就是你可以對戰的那些機器人，涵蓋多個變體，並在本站自己的伺服器上進行。這些對局發布在獨立的月度檔案中，位於對局資料頁面的「機器人對局」下，mode 為 eve。它們從不出現在人類對局的檔案中，也不計入本站的統計或等級分。揭棋機器人對局和本站其他對局一樣在開局時分配棋子，因此帶有 deal_fen。',
+  'patron.amountOther': '其他',
+  'patron.customAmountLabel': '金額（美元）',
+  'patron.customAmountInvalid': '請輸入 5 至 1,000 美元的整數金額。',
+  'videos.ourHeading': 'Mistboard 出品',
+  'videos.ourIntro': '我們自製的節目，新節目會先在頻道發布。',
+  'videos.shortsHeading': '棋題短影片',
+  'videos.subscribe': '在 YouTube 訂閱',
 } satisfies Partial<Record<ContentI18nKey, string>>;

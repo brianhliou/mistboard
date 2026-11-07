@@ -678,4 +678,11 @@ export const ZH_HANS_CONTENT = {
     '本站自己的机器人之间的对局，每天几盘。它们有单独的文件，从不出现在上面的文件中。',
   'data.engineAbout':
     '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时分配棋子，因此带有 deal_fen。',
+  'patron.amountOther': '其他',
+  'patron.customAmountLabel': '金额（美元）',
+  'patron.customAmountInvalid': '请输入 5 至 1,000 美元的整数金额。',
+  'videos.ourHeading': 'Mistboard 出品',
+  'videos.ourIntro': '我们自制的节目，新节目会先在频道发布。',
+  'videos.shortsHeading': '棋题短视频',
+  'videos.subscribe': '在 YouTube 订阅',
 } satisfies Partial<Record<ContentI18nKey, string>>;

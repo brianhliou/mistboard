@@ -867,4 +867,11 @@ export const ZH_HANT_PLAY = {
   'lobby.panelVersus': '{variant} 對 {opponent}',
   'lobby.panelAnonymous': '匿名',
   'lobby.panelYours': '你的',
+  'variant.ffqBanqi.name': 'FFQ 暗棋',
+  'live.ffq.hp': '{hp}/{max} 生命值',
+  'live.ffq.noProgress': '無進展 {count}/{limit}',
+  'live.ffq.chase': '{side} 追捉 {count}/{limit}',
+  'live.ffq.captureDamage': '{capturer} 吃掉了{owner}的{piece}：{owner}生命值 −{damage}',
+  'live.ffq.adminOnly': '此試玩需要管理員帳號，並啟用 FFQ 暗棋功能開關。',
+  'result.hp': '生命值耗盡',
 } satisfies Partial<Record<PlayI18nKey, string>>;
