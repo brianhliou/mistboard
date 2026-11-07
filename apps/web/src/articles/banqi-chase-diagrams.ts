@@ -12,6 +12,7 @@ import {
   type BanqiSquare,
   createInitialBanqiState,
   getBanqiForbiddenChaseMoves,
+  getBanqiLegalMovesFrom,
   getBanqiPlayerView,
 } from '@mistboard/game';
 import { BANQI_CHASE_DRAW_GAME, BANQI_CHASE_HERD_GAME } from './content/banqi-chase-games.js';
@@ -23,7 +24,9 @@ import {
   banqiArrow,
   banqiBoardGrid,
   banqiCellCenter,
+  banqiLastMoveTint,
   banqiPiecesFromView,
+  banqiStepDot,
   banqiReplayViewAt,
   xqSvg,
   banqiThumbnailSvg,
@@ -264,7 +267,7 @@ export function banqiChaseRuleForbidden(): BanqiMove[] {
 
 const CHASE_RULE_NARRATIVES = [
   ...CHASE_DRAW_NARRATIVES.slice(0, CHASE_RULE_LAST_PLY - CHASE_DRAW_VIEW_PLY),
-  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The advisor must play something else, and the game goes on.',
+  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.',
 ];
 
 export const BANQI_CHASE_RULE_STEPS = CHASE_RULE_NARRATIVES.map((narrative, k) => {
@@ -273,14 +276,21 @@ export const BANQI_CHASE_RULE_STEPS = CHASE_RULE_NARRATIVES.map((narrative, k) =
   return {
     svg: () => {
       const state = chaseRuleStateAt(ply);
-      const forbidden = ply === CHASE_RULE_LAST_PLY ? getBanqiForbiddenChaseMoves(state) : [];
+      const last = ply === CHASE_RULE_LAST_PLY;
+      const forbidden = last ? getBanqiForbiddenChaseMoves(state) : [];
+      // The last frame marks what the advisor can still do with its own steps.
+      const steps = last
+        ? forbidden.flatMap((f) => getBanqiLegalMovesFrom(state, f.from)).filter((m) => m.from !== m.to)
+        : [];
+      const mover = move ? state.board[move.to]?.color : undefined;
       return xqSvg(
         BANQI_BOARD_W,
         BANQI_BOARD_H,
         [
           banqiBoardGrid(0, 0),
+          move && mover ? banqiLastMoveTint(cell(move.from), cell(move.to), mover, 0, 0) : '',
           banqiPiecesFromView(getBanqiPlayerView(state, 'red'), 0, 0),
-          move ? arrow(move.from, move.to, 0, `bq-chase-rule-${k}`) : '',
+          steps.map((m) => banqiStepDot(cell(m.to), 0, 0)).join(''),
           forbidden.map((m) => forbiddenCross(m.to)).join(''),
         ].join(''),
       );

@@ -205,5 +205,12 @@ describe('banqi perpetual-chase diagrams', () => {
     const crosses = (svg: string) => (svg.match(/stroke="rgba\(178, 34, 28/g) ?? []).length;
     expect(svgs.map(crosses)).toEqual([...svgs.slice(1).map(() => 0), 1]);
     expect(BANQI_CHASE_RULE_STEPS.at(-1)?.narrative).toContain('chased three times');
+    // Moves show as the live board's cell tint, never an arrow; the last frame
+    // dots the advisor's remaining steps.
+    for (const svg of svgs.slice(1)) {
+      expect(svg).not.toContain('marker-end');
+      expect((svg.match(/<rect [^>]*fill="rgba\((194, 32, 26|22, 40, 58)/g) ?? []).length).toBe(2);
+    }
+    expect((svgs.at(-1)!.match(/<circle[^>]*rgba\(31, 111, 91/g) ?? []).length).toBe(3);
   });
 });

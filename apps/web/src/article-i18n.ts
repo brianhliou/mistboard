@@ -275,8 +275,8 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 const ZH_HANS: Record<string, string> = {
   'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
-  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The advisor must play something else, and the game goes on.':
-    '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。士只能改走别的，棋局继续。',
+  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
+    '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。圆点标出它还能走的格子，棋局继续。',
   'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
     '新增一盘 Mistboard 实战的捉子例子，一步一步展示捉子规则禁止的那一步。',
   // Expanded jieqi rules (2026-11-05).
@@ -6771,8 +6771,8 @@ const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
   'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
-  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The advisor must play something else, and the game goes on.':
-    '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。士只能改走別的，棋局繼續。',
+  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
+    '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。圓點標出它還能走的格子，棋局繼續。',
   'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
     '新增一盤 Mistboard 實戰的捉子例子，一步一步展示捉子規則禁止的那一步。',
   // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
