@@ -16,7 +16,7 @@ import { tsImport } from 'tsx/esm/api';
 test('release-prod declares all its module state above the run block', () => {
   const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'release-prod.mjs');
   const lines = readFileSync(file, 'utf8').split('\n');
-  const runBlock = lines.findIndex((line) => line === 'try {');
+  const runBlock = lines.indexOf('try {');
   assert.ok(runBlock > 0, 'expected a top-level `try {` that runs the release');
   const late = lines
     .map((line, index) => ({ line, number: index + 1 }))
@@ -76,23 +76,18 @@ test('release-prod re-reads the active game count right before the push', () => 
   assert.match(between, /requireUsableDrainToken\(/);
 });
 
-// Web deploys on push whatever hosted CI says. A red run used to end the
-// release before the revision wait and smoke, so nothing checked the site that
-// was already serving the new code (2026-10-17: a Postgres image pull limit
-// failed three jobs before any test ran; the live checks were run by hand).
-test('release-prod still waits for the revision and smokes after a red CI run', () => {
+// The candidate push cannot deploy; a red run must stop before main advances.
+test('release-prod promotes main only after the candidate CI wait', () => {
   const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'release-prod.mjs');
   const source = readFileSync(file, 'utf8');
-  assert.match(source, /throw Object\.assign\(new Error\(decision\.message\), \{ ciRed:/);
+  const candidate = source.indexOf("'git push release candidate'");
   const ciWait = source.indexOf("timedStage('hosted CI wait'");
+  const promote = source.indexOf("runTimed('git push release head'");
   const revisionWait = source.indexOf("runTimed('production revision wait'");
   const smoke = source.indexOf('await runSmoke({');
-  const rethrow = source.indexOf('throw ciRed;');
-  assert.ok(ciWait > 0 && revisionWait > ciWait && smoke > revisionWait && rethrow > smoke);
-  const handler = source.slice(ciWait, revisionWait);
-  assert.match(handler, /if \(!release\.pushCompleted \|\| !error\?\.ciRed\) throw error;/);
-  assert.match(handler, /ciRed = error;/);
-  assert.ok(source.indexOf('announceNews(') > rethrow, 'News and IndexNow stay behind a green CI');
+  assert.ok(candidate > 0 && ciWait > candidate && promote > ciWait);
+  assert.ok(revisionWait > promote && smoke > revisionWait);
+  assert.doesNotMatch(source.slice(ciWait, promote), /catch \(error\)/);
 });
 
 // Exercise the actual release smoke dispatcher without pushing, fetching or
@@ -138,4 +133,29 @@ test('Gomoku browser smoke runs only for a public spec in web/full releases', as
       if (expected) assert.equal(gomoku[0].command[2], 'https://example.test');
     }
   }
+});
+
+test('release-prod runs the local smoke gate before any push or drain', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const localGate = source.indexOf('await runLocalGate(gate, ciPlan.changedFiles)');
+  const smoke = source.indexOf("runTimed('local production smokes'");
+  const push = source.indexOf("'git push release candidate'");
+  const drain = source.indexOf("runTimed('production drain start'");
+  assert.ok(localGate > 0 && smoke > localGate, 'local smokes must follow the build/test gate');
+  assert.ok(smoke < drain && smoke < push, 'a smoke failure must prevent draining and pushing');
+  assert.match(source.slice(localGate, smoke), /if \(release\.deployRequired\)/);
+});
+
+test('release-prod rebuilds and smokes the merged revision when main moves during the gate', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function catchUpWithMain()');
+  const end = source.indexOf('function mergeRemoteTip(', start);
+  const catchUp = source.slice(start, end);
+  const smoke = catchUp.indexOf("runTimed('local production smokes (after merge)'");
+  assert.ok(smoke > catchUp.indexOf('release.headRevision = git('));
+  assert.match(
+    catchUp.slice(smoke),
+    /'release:local-smoke',[\s\S]*'--revision',\s*release.headRevision/,
+  );
+  assert.ok(!catchUp.slice(smoke).includes('--skip-build'), 'the merge needs a fresh full build');
 });
