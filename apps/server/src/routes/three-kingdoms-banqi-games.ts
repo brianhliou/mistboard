@@ -10,6 +10,13 @@ import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
 import { threeKingdomsBanqiAdmits } from './../three-kingdoms-banqi-access.js';
 import {
+  resolveThreeKingdomsBanqiAnalysis,
+  THREE_KINGDOMS_BANQI_ANALYSIS_TIER,
+  type ThreeKingdomsBanqiAnalysisCache,
+  type ThreeKingdomsBanqiGameAnalysis,
+} from './../three-kingdoms-banqi-analysis.js';
+import { threeKingdomsBanqiEngineAvailable } from './../three-kingdoms-banqi-engine.js';
+import {
   getThreeKingdomsBanqiTruthView,
   type ThreeKingdomsBanqiEvent,
   threeKingdomsBanqiTenant,
@@ -19,6 +26,7 @@ import {
   isTenantEventLog,
   replayTenantEvents,
 } from './../variant-tenant/runtime.js';
+import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
 
 // Three Kingdoms banqi (#628) postgame review: GET /api/three-kingdoms-banqi/games/:roomId.
@@ -38,7 +46,7 @@ import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } fr
 // the red seat's view, identical for both seats), and the revealed board at every
 // ply (`history.revealed`). Regression: routes/three-kingdoms-banqi-games.test.ts.
 //
-// No analysis tier: TK has no review engine yet. Pure replay.
+// Whole-game analysis uses the live engine's public information state at L8.
 
 type ThreeKingdomsBanqiPostgameSnapshot = { ply: number; view: ThreeKingdomsBanqiPlayerView };
 
@@ -75,6 +83,72 @@ const defaultDeps: ThreeKingdomsBanqiPostgameRouteDeps = {
 };
 
 const POSTGAME_ROUTE = /^\/api\/three-kingdoms-banqi\/games\/([^/]+)$/;
+const ANALYSIS_ROUTE = /^\/api\/three-kingdoms-banqi\/games\/[^/]+\/analysis(?:\/jobs\/[^/]+)?$/;
+
+export function createThreeKingdomsBanqiAnalysisRoutes(
+  deps: ThreeKingdomsBanqiPostgameRouteDeps = defaultDeps,
+  options: {
+    cache?: ThreeKingdomsBanqiAnalysisCache;
+    analyze?: (
+      events: readonly ThreeKingdomsBanqiEvent[],
+    ) => Promise<ThreeKingdomsBanqiGameAnalysis>;
+    engineAvailable?: () => boolean;
+    route?: GameAnalysisRouteDeps;
+  } = {},
+) {
+  const handle = createGameAnalysisRoutes(
+    {
+      routeId: 'three-kingdoms-banqi',
+      logPrefix: 'three_kingdoms_banqi',
+      variantLabel: 'Three Kingdoms banqi',
+      // Request-specific admission wraps EVERY path, including job polls and GETs.
+      enabled: () => true,
+      requiresPersistence: false,
+      engineBinary: {
+        available:
+          options.engineAvailable ??
+          (() => threeKingdomsBanqiEngineAvailable(THREE_KINGDOMS_BANQI_ANALYSIS_TIER)),
+        label: 'Three Kingdoms L8 engine and NNUE net',
+      },
+      loadInputs: async (roomId) => (await loadFinishedGame(roomId, deps))?.events ?? null,
+      countPlies: (events) => events.filter((event) => event.type === 'move-played').length,
+      resolveAnalysis: (roomId, events, computeIfMissing) =>
+        resolveThreeKingdomsBanqiAnalysis(
+          roomId,
+          events,
+          options.cache,
+          options.analyze,
+          computeIfMissing,
+        ),
+      // Flips mix choice and reveal luck; leave them unjudged until a separate
+      // decisions pass exists. This endpoint never launches that follow-on pass.
+      analysisExtras: (events) => ({
+        chancePlies: events
+          .filter((event) => event.type === 'move-played')
+          .flatMap((event, index) => (event.move.from === event.move.to ? [index + 1] : [])),
+      }),
+    },
+    options.route,
+  );
+  return async (
+    request: IncomingMessage,
+    response: ServerResponse,
+    pathname: string,
+  ): Promise<boolean> => {
+    if (!ANALYSIS_ROUTE.test(pathname)) return false;
+    if (!(await deps.admits(request))) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    if (!deps.persistenceReady()) {
+      writeJson(response, 503, { error: 'persistence_disabled' });
+      return true;
+    }
+    return handle(request, response, pathname);
+  };
+}
+
+const handleAnalysis = createThreeKingdomsBanqiAnalysisRoutes();
 
 export async function tryHandle(
   _ctx: HttpApiContext,
@@ -83,6 +157,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleAnalysis(request, response, pathname)) return true;
   return handleThreeKingdomsBanqiPostgame(request, response, pathname);
 }
 
@@ -118,15 +193,9 @@ export async function threeKingdomsBanqiPostgameForApi(
   roomId: string,
   deps: ThreeKingdomsBanqiPostgamePersistence = defaultDeps,
 ) {
-  const [game, events] = await Promise.all([
-    deps.getGameSummary(roomId),
-    deps.loadRoomEvents(roomId),
-  ]);
-  if (!game || game.variant !== THREE_KINGDOMS_BANQI_SPEC_ID) return null;
-  if (!events || !isTenantEventLog(threeKingdomsBanqiTenant, events, roomId)) return null;
-
-  const projection = replayTenantEvents(threeKingdomsBanqiTenant, events);
-  if (projection.state.status.type !== 'finished') return null;
+  const loaded = await loadFinishedGame(roomId, deps);
+  if (!loaded) return null;
+  const { game, events, projection } = loaded;
 
   return {
     game: postgameGameSummary(game),
@@ -141,6 +210,20 @@ export async function threeKingdomsBanqiPostgameForApi(
     view: getThreeKingdomsBanqiTruthView(projection.state),
     history: threeKingdomsBanqiPostgameHistory(events),
   };
+}
+
+async function loadFinishedGame(roomId: string, deps: ThreeKingdomsBanqiPostgamePersistence) {
+  const [game, events] = await Promise.all([
+    deps.getGameSummary(roomId),
+    deps.loadRoomEvents(roomId),
+  ]);
+  if (!game || game.variant !== THREE_KINGDOMS_BANQI_SPEC_ID) return null;
+  if (!events || !isTenantEventLog(threeKingdomsBanqiTenant, events, roomId)) return null;
+
+  const projection = replayTenantEvents(threeKingdomsBanqiTenant, events);
+  if (projection.state.status.type !== 'finished') return null;
+
+  return { game, events, projection };
 }
 
 // Per-ply snapshots in banqi's two tracks: 'truth' is the as-played masked board

@@ -21,10 +21,17 @@ import {
   THREE_KINGDOMS_BANQI_SPEC_ID,
   type ThreeKingdomsBanqiMove,
 } from '@mistboard/game';
+import { getAnalysisJob, resetAnalysisJobsForTests } from '../game-analysis-jobs.js';
 import type { RecentEveGameRecord } from '../persistence.js';
+import {
+  THREE_KINGDOMS_BANQI_ANALYSIS_DEPTH,
+  THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID,
+  type ThreeKingdomsBanqiGameAnalysis,
+} from '../three-kingdoms-banqi-analysis.js';
 import type { ThreeKingdomsBanqiEvent } from '../three-kingdoms-banqi-tenant.js';
 import type { HttpApiContext } from './lib.js';
 import {
+  createThreeKingdomsBanqiAnalysisRoutes,
   handleThreeKingdomsBanqiPostgame,
   type ThreeKingdomsBanqiPostgameRouteDeps,
   threeKingdomsBanqiPostgameForApi,
@@ -333,6 +340,23 @@ test('the wired route refuses a guest with the flag off (the prod gate)', async 
     await tryHandle({} as HttpApiContext, GET, guest.response, PATH, new URL(PATH, 'http://x'));
     assert.equal(guest.captured.status, 404);
     assert.deepEqual(guest.captured.body, { error: 'not_found' });
+    for (const suffix of ['/analysis', '/analysis/jobs/private-job']) {
+      for (const method of ['GET', 'POST']) {
+        const denied = fakeResponse();
+        assert.equal(
+          await tryHandle(
+            {} as HttpApiContext,
+            { ...GET, method } as IncomingMessage,
+            denied.response,
+            PATH + suffix,
+            new URL(PATH + suffix, 'http://x'),
+          ),
+          true,
+        );
+        assert.equal(denied.captured.status, 404);
+        assert.deepEqual(denied.captured.body, { error: 'not_found' });
+      }
+    }
 
     // With the local flag on the gate admits, and this test has no database.
     process.env[FLAG] = 'true';
@@ -342,5 +366,187 @@ test('the wired route refuses a guest with the flag off (the prod gate)', async 
   } finally {
     if (before === undefined) delete process.env[FLAG];
     else process.env[FLAG] = before;
+  }
+});
+
+test('analysis GET, POST and job polls apply the playtest gate before any lookup', async () => {
+  const calls = { lookups: 0 };
+  let engineChecks = 0;
+  const handler = createThreeKingdomsBanqiAnalysisRoutes(
+    deps(gameRecord(), finishedEvents(), { admits: false }, calls),
+    {
+      engineAvailable: () => {
+        engineChecks += 1;
+        return false;
+      },
+    },
+  );
+  for (const suffix of ['/analysis', '/analysis/jobs/sensitive-id']) {
+    for (const method of ['GET', 'POST']) {
+      const res = fakeResponse();
+      assert.equal(
+        await handler({ ...GET, method } as IncomingMessage, res.response, PATH + suffix),
+        true,
+      );
+      assert.equal(res.captured.status, 404);
+      assert.deepEqual(res.captured.body, { error: 'not_found' });
+    }
+  }
+  assert.equal(calls.lookups, 0);
+  assert.equal(engineChecks, 0);
+});
+
+const analysis: ThreeKingdomsBanqiGameAnalysis = {
+  engineId: THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID,
+  depth: THREE_KINGDOMS_BANQI_ANALYSIS_DEPTH,
+  plies: Array.from({ length: MOVES.length + 1 }, (_, ply) => ({
+    ply,
+    cp: 42,
+    mate: null,
+    best: null,
+  })),
+};
+
+test('analysis GET misses, POST queues, job fills, and a reload reads the saved analysis', async () => {
+  await resetAnalysisJobsForTests();
+  let cached: typeof analysis.plies | null = null;
+  let computes = 0;
+  const handler = createThreeKingdomsBanqiAnalysisRoutes(deps(gameRecord(), finishedEvents()), {
+    route: { currentUser: async () => ({ id: 'tk-admin' }) },
+    engineAvailable: () => true,
+    cache: {
+      get: async () => cached,
+      save: async (_room, _engine, _depth, plies) => {
+        cached = plies;
+      },
+    },
+    analyze: async (events) => {
+      computes += 1;
+      assert.deepEqual(
+        events[0],
+        finishedEvents()[0],
+        'the room-created deal reaches reconstruction',
+      );
+      return analysis;
+    },
+  });
+  try {
+    const miss = fakeResponse();
+    await handler(GET, miss.response, `${PATH}/analysis`);
+    assert.equal(miss.captured.status, 204);
+    assert.equal(computes, 0);
+    const post = fakeResponse();
+    await handler(
+      { method: 'POST', headers: {}, socket: { remoteAddress: '127.0.0.1' } } as IncomingMessage,
+      post.response,
+      `${PATH}/analysis`,
+    );
+    assert.equal(post.captured.status, 202);
+    const jobId = (post.captured.body as { jobId: string }).jobId;
+    for (let i = 0; i < 20 && getAnalysisJob(jobId)?.status === 'pending'; i += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    const poll = fakeResponse();
+    await handler(GET, poll.response, `${PATH}/analysis/jobs/${jobId}`);
+    assert.equal(poll.captured.status, 200);
+    assert.deepEqual(poll.captured.body, {
+      status: 'done',
+      result: { ...analysis, chancePlies: MOVES.map((_, i) => i + 1) },
+    });
+    const reload = fakeResponse();
+    await handler(GET, reload.response, `${PATH}/analysis`);
+    assert.equal(reload.captured.status, 200);
+    assert.deepEqual(reload.captured.body, (poll.captured.body as { result: unknown }).result);
+    assert.equal(computes, 1);
+    const wrongGame = fakeResponse();
+    await handler(
+      GET,
+      wrongGame.response,
+      `${PATH.replace(ROOM_ID, 'tkb_other')}/analysis/jobs/${jobId}`,
+    );
+    assert.equal(wrongGame.captured.status, 404);
+  } finally {
+    await resetAnalysisJobsForTests();
+  }
+});
+
+test('analysis rejects live, aborted, missing and wrong-variant games, and never opens decisions', async () => {
+  for (const [record, log] of [
+    [gameRecord(), liveEvents()],
+    [
+      gameRecord(),
+      [
+        ...liveEvents().slice(0, 3),
+        { type: 'game-aborted', at: 4, roomId: ROOM_ID, reason: 'user-abort' },
+      ],
+    ],
+    [null, null],
+    [gameRecord({ variant: BANQI_SPEC_ID }), finishedEvents()],
+  ] as const) {
+    const handler = createThreeKingdomsBanqiAnalysisRoutes(deps(record, log ? [...log] : null));
+    const res = fakeResponse();
+    await handler(GET, res.response, `${PATH}/analysis`);
+    assert.equal(res.captured.status, 404);
+    assert.equal(await handler(GET, res.response, `${PATH}/decisions`), false);
+  }
+});
+
+test('analysis fails closed for a missing strongest engine and a vacuous sweep', async () => {
+  const calls = { lookups: 0 };
+  const missing = createThreeKingdomsBanqiAnalysisRoutes(
+    deps(gameRecord(), finishedEvents(), {}, calls),
+    {
+      route: { currentUser: async () => ({ id: 'admin' }) },
+      engineAvailable: () => false,
+    },
+  );
+  const post = fakeResponse();
+  await missing(
+    { method: 'POST', headers: {} } as IncomingMessage,
+    post.response,
+    `${PATH}/analysis`,
+  );
+  assert.equal(post.captured.status, 503);
+  assert.deepEqual(post.captured.body, { error: 'analysis_engine_unavailable' });
+  assert.equal(calls.lookups, 0);
+
+  await resetAnalysisJobsForTests();
+  let saves = 0;
+  const vacuous = createThreeKingdomsBanqiAnalysisRoutes(deps(gameRecord(), finishedEvents()), {
+    route: { currentUser: async () => ({ id: 'admin' }) },
+    engineAvailable: () => true,
+    cache: {
+      get: async () => null,
+      save: async () => {
+        saves += 1;
+      },
+    },
+    analyze: async () => ({
+      ...analysis,
+      plies: analysis.plies.map((entry) => ({ ...entry, cp: null })),
+    }),
+  });
+  try {
+    const queued = fakeResponse();
+    await vacuous(
+      { method: 'POST', headers: {}, socket: { remoteAddress: '127.0.0.1' } } as IncomingMessage,
+      queued.response,
+      `${PATH}/analysis`,
+    );
+    assert.equal(queued.captured.status, 202);
+    const jobId = (queued.captured.body as { jobId: string }).jobId;
+    for (let i = 0; i < 20 && getAnalysisJob(jobId)?.status === 'pending'; i += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    const poll = fakeResponse();
+    await vacuous(GET, poll.response, `${PATH}/analysis/jobs/${jobId}`);
+    assert.deepEqual(poll.captured.body, {
+      status: 'failed',
+      error: 'analysis_engine_unavailable',
+    });
+    assert.equal(saves, 0);
+    assert.equal(getAnalysisJob(jobId)?.error, 'analysis_engine_unavailable');
+  } finally {
+    await resetAnalysisJobsForTests();
   }
 });

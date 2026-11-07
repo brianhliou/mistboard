@@ -12,14 +12,17 @@ import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { banqiOutcome } from './banqi-result-label.js';
 import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
 import { mountThreeKingdomsBanqiReview } from './review/three-kingdoms-banqi-review.js';
 import { recoverThreeKingdomsBanqiDeal } from './review/three-kingdoms-banqi-tree-adapter.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
 
@@ -185,7 +188,7 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
     // from the menu (#824). The payload already carries the whole deal.
     showFaceDown: true,
     root: start,
-    pageClassName: 'banqi-review',
+    pageClassName: 'banqi-review tk-banqi-review',
     ariaLabel: variantName,
     title: variantName,
     summary: `${status} · ${postgame.game.plyCount} plies`,
@@ -202,8 +205,14 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
     // Seats are move-order slots; the opening flip decides the ink.
     seatInkBindsOnFlip: true,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
-    // No Three Kingdoms review engine, so no analysis tier.
-    analysis: null,
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? t('replay.requestComputerAnalysis')
+        : t('replay.signInToRequestAnalysis'),
+      requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
+      fetchCached: () => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId),
+      run: () => requestGameAnalysis(VARIANT, postgame.game.roomId),
+    },
   });
 }
 

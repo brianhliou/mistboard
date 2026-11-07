@@ -34,6 +34,16 @@
   white-space: nowrap;
 }
 
+/* Match the live room's column budget so the ten-file board can reach its
+   720px cap on desktop. The move rail stays alongside it; phones retain the
+   shared single-column fit and full-width board. */
+.review-shell.tk-banqi-review {
+  --uni-side-min: 230px;
+  --uni-side-max: 300px;
+  --uni-table-min: 280px;
+  --uni-table-max: 350px;
+}
+
 /* The material panel under the board (live room, live-three-kingdoms-banqi.ts
    renderMaterial): one block per seat, the opponent's first like the board,
    each its name over its points and two named lines at one disc size, the
