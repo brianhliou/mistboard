@@ -70,6 +70,27 @@ export type PuzzleStoreSnapshot = {
   source: 'database' | 'seed';
 };
 
+// Jungle is omitted from the discoverable pool (list + random) while its
+// puzzle surface is parked. Its puzzles stay resolvable by id/short-code below
+// (puzzleById scans the whole store), so existing links do not hard-404.
+// Remove a variant from this filter to surface it again.
+const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID]);
+
+export function discoverablePuzzles(store: PuzzleStoreSnapshot): StoredPuzzle[] {
+  return store.puzzles.filter((puzzle) => !UNDISCOVERABLE_PUZZLE_VARIANTS.has(puzzle.variant));
+}
+
+/** Count only the pool the public list can discover, with exact player tags. */
+export async function playerPuzzleCount(
+  slug: string,
+  store?: PuzzleStoreSnapshot,
+): Promise<number> {
+  const snapshot = store ?? (await getPuzzleStore());
+  return discoverablePuzzles(snapshot).filter((puzzle) =>
+    snapshot.tagsById.get(puzzle.id)?.includes(`player:${slug}`),
+  ).length;
+}
+
 const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID, XIANGQI_SPEC_ID]);
 
 const SEED_SYNC_SLOT = 'puzzles';

@@ -61,7 +61,7 @@ describe('player pages', () => {
       '',
       locale === 'en' ? '/' : `/${locale.toLowerCase()}/players`,
     );
-    const fixture = player({ name: 'Fixture Player', games: 2 });
+    const fixture = { ...player({ name: 'Fixture Player', games: 2 }), puzzleCount: 1 };
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => new Response(JSON.stringify({ player: fixture, boards: [] }))),
@@ -76,6 +76,23 @@ describe('player pages', () => {
       expect(link?.classList.contains('xqb-link')).toBe(true);
     } finally {
       window.history.replaceState(null, '', previousPath);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('omits player training when the server reports zero puzzles without fetching puzzles', async () => {
+    const fixture = { ...player({ name: 'Fixture Player', games: 2 }), puzzleCount: 0 };
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ player: fixture, boards: [] })),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      const root = document.createElement('div');
+      await mountXiangqiPlayer(root, fixture.slug);
+      expect(root.querySelector('a[href="/puzzles?player=fixture-player"]')).toBeNull();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher).toHaveBeenCalledWith('/api/xiangqi/players/fixture-player');
+    } finally {
       vi.unstubAllGlobals();
     }
   });

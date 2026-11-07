@@ -23,6 +23,7 @@ import {
   referenceTitle,
   TITLE_WORDS,
 } from './player-reference.js';
+import { playerPuzzleCount } from './puzzle-store.js';
 import { escapeHtml } from './study-page-body.js';
 
 // v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
@@ -323,12 +324,16 @@ export function renderPlayerBody(
   player: XiangqiPlayerRecord,
   boards: readonly XiangqiPlayerBoardRecord[],
   reference: PlayerReference,
+  puzzleCount = 0,
 ): string {
   const title = referenceTitle(reference, player);
   const parts = [
     `<h1>${title ? `<abbr title="${escapeHtml(TITLE_WORDS[title])}">${title}</abbr> ` : ''}${nameHtml(player)}</h1>`,
-    `<p><a href="/puzzles?player=${escapeHtml(encodeURIComponent(player.slug))}">Puzzles from this player</a></p>`,
   ];
+  if (puzzleCount > 0)
+    parts.push(
+      `<p><a href="/puzzles?player=${escapeHtml(encodeURIComponent(player.slug))}">Puzzles from this player</a></p>`,
+    );
   const sanction = reference.sanctions[player.name];
   if (sanction) {
     parts.push(
@@ -460,6 +465,7 @@ export type PlayerPageSources = {
     players: readonly XiangqiPlayerRecord[],
   ): Promise<XiangqiPlayerBoardRecord[]>;
   reference(): Promise<PlayerReference>;
+  puzzleCount?(slug: string): Promise<number>;
 };
 
 // The index folds every stored board; a page view (meta and body are one
@@ -483,6 +489,7 @@ export function cachedPlayers(): Promise<XiangqiPlayerRecord[]> {
 export function livePlayerSources(staticDir: string): PlayerPageSources {
   return {
     listPlayers: cachedPlayers,
+    puzzleCount: playerPuzzleCount,
     listBoards: (player, players) =>
       persistence.listXiangqiPlayerBoards(
         player,
@@ -546,7 +553,12 @@ export async function playerPageFor(
           urlPath: playerHref(player.slug),
           imagePath: playerCardPath(player.slug, playerCardContent(player, boards, reference)),
         },
-        body: renderPlayerBody(player, boards, reference),
+        body: renderPlayerBody(
+          player,
+          boards,
+          reference,
+          (await sources.puzzleCount?.(player.slug)) ?? 0,
+        ),
       };
     }
   }

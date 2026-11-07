@@ -24,27 +24,31 @@ import {
   readPlayerReference,
 } from './player-reference.js';
 
-test('player crawler body links to player-scoped puzzles', () => {
-  const body = renderPlayerBody(
-    {
-      slug: 'fixture-player',
-      name: 'Fixture Player',
-      nameEn: null,
-      federation: null,
-      federationEn: null,
-      games: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      events: [],
-      firstPlayedOn: null,
-      lastPlayedOn: null,
-    },
-    [],
-    EMPTY_PLAYER_REFERENCE,
-  );
-  assert.match(body, /href="\/puzzles\?player=fixture-player">Puzzles from this player<\/a>/);
-});
+for (const count of [0, 1])
+  test(`player crawler body links only with discoverable puzzles: ${count}`, () => {
+    const body = renderPlayerBody(
+      {
+        slug: 'fixture-player',
+        name: 'Fixture Player',
+        nameEn: null,
+        federation: null,
+        federationEn: null,
+        games: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        events: [],
+        firstPlayedOn: null,
+        lastPlayedOn: null,
+      },
+      [],
+      EMPTY_PLAYER_REFERENCE,
+      count,
+    );
+    assert.equal(body.includes('href="/puzzles?player=fixture-player"'), count > 0);
+    if (count > 0)
+      assert.match(body, /href="\/puzzles\?player=fixture-player">Puzzles from this player<\/a>/);
+  });
 
 function player(overrides: Partial<XiangqiPlayerRecord>): XiangqiPlayerRecord {
   return {

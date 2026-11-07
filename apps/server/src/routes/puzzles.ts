@@ -58,6 +58,7 @@ import {
 } from '../puzzle-rating.js';
 import { type PuzzleDetailSourceFields, puzzleDetailSourceFields } from '../puzzle-setup-move.js';
 import {
+  discoverablePuzzles,
   getPuzzleStore,
   listPuzzleReports,
   PUZZLE_REPORT_REASONS,
@@ -118,16 +119,6 @@ const puzzleReportRateLimiter = createAuthRateLimiter(10, 60_000);
 export type PublicPuzzle = JunglePuzzle | XiangqiPuzzle;
 type PublicPuzzleVariant = typeof JUNGLE_SPEC_ID | typeof XIANGQI_SPEC_ID;
 type PublicPuzzleMove = JungleMove | XiangqiMove;
-
-// Jungle is omitted from the discoverable pool (list + random) while its
-// puzzle surface is parked. Its puzzles stay resolvable by id/short-code below
-// (puzzleById scans the whole store), so existing links do not hard-404.
-// Remove a variant from this filter to surface it again.
-const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID]);
-
-function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
-  return store.puzzles.filter((puzzle) => !UNDISCOVERABLE_PUZZLE_VARIANTS.has(puzzle.variant));
-}
 
 type PuzzleSummary = {
   id: string;

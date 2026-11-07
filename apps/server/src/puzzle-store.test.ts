@@ -9,7 +9,7 @@ import test from 'node:test';
 import { xiangqiPuzzleTrainingTags } from '@mistboard/game';
 import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import { close, getPool, init, isInitialized } from './persistence-db.js';
-import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
+import { getPuzzleStore, playerPuzzleCount, resetPuzzleStoreForTests } from './puzzle-store.js';
 
 test('persistence-off store serves the seed corpus byte-identically, in order', async () => {
   assert.equal(isInitialized(), false, 'this test expects a persistence-off runtime');
@@ -75,4 +75,22 @@ test('player provenance survives JSON storage and reload alongside derived train
     resetPuzzleStoreForTests();
   }
   assert.equal(reads, 2);
+});
+
+test('player puzzle count matches exact tags in the discoverable snapshot only', async () => {
+  resetPuzzleStoreForTests();
+  const seed = await getPuzzleStore();
+  const puzzle = seed.puzzles.find((puzzle) => puzzle.variant === 'xiangqi')!;
+  const parked = seed.puzzles.find((puzzle) => puzzle.variant === 'jungle')!;
+  const store = {
+    ...seed,
+    puzzles: [puzzle, parked],
+    tagsById: new Map([
+      [puzzle.id, ['player:fixture-player'] as const],
+      [parked.id, ['player:fixture-parked'] as const],
+    ]),
+  };
+  assert.equal(await playerPuzzleCount('fixture-player', store), 1);
+  assert.equal(await playerPuzzleCount('fixture', store), 0);
+  assert.equal(await playerPuzzleCount('fixture-parked', store), 0);
 });
