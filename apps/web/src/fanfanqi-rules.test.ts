@@ -95,7 +95,7 @@ describe('Fanfanqi rules match the kernel', () => {
     expect(prose).toContain(`${FFQ_BANQI_RULES.startingHP} HP`);
     expect(prose).toContain(`After ${FFQ_BANQI_RULES.noProgressPlies} plies`);
     expect(prose).not.toContain('—');
-    expect(prose.match(/翻翻棋/g)).toHaveLength(1);
+    expect(prose).not.toMatch(/翻翻棋|Taiwan|mainland/);
     expect(article.sections.at(-1)?.blocks?.at(-1)?.kind).toBe('cta');
   });
 });
