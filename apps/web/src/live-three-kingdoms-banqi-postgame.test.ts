@@ -184,8 +184,16 @@ describe('Three Kingdoms banqi postgame page', () => {
     expect(root.textContent).toContain('This Three Kingdoms Banqi game is not available.');
   });
 
-  it('requests analysis, fills the chart, and loads it from cache on a second mount', async () => {
+  it('runs decisions after analysis, grades flips with luck, and reloads both caches', async () => {
     let cached = false;
+    let decisionsCached = false;
+    const decisions = {
+      engineId: 'tk-decisions@test',
+      depth: 12,
+      decisions: [
+        { ply: 1, mover: 'red', bestWin: 80, playedWin: 40, realizedWin: 25, playedRank: 2 },
+      ],
+    };
     const analysis = {
       engineId: 'misty-three-kingdoms-banqi-analysis@test',
       depth: 12,
@@ -197,6 +205,13 @@ describe('Three Kingdoms banqi postgame page', () => {
     };
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url.endsWith('/decisions')) {
+        if (init?.method === 'POST') {
+          expect(cached).toBe(true);
+          decisionsCached = true;
+        }
+        return decisionsCached ? jsonResponse(decisions) : new Response(null, { status: 204 });
+      }
       if (!url.endsWith('/analysis')) return jsonResponse(postgameFixture());
       if (init?.method === 'POST') cached = true;
       return cached ? jsonResponse(analysis) : new Response(null, { status: 204 });
@@ -208,18 +223,79 @@ describe('Three Kingdoms banqi postgame page', () => {
     expect(root.querySelector('.advantage-chart')).toBeNull();
     root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')?.click();
     await flushPromises();
+    await flushPromises();
     expect(root.querySelector('.advantage-chart__line')).not.toBeNull();
-    // The reveal's swing is luck, so this pass gives it no error glyph.
-    expect(root.querySelector('.review-move--blunder')).toBeNull();
+    expect(root.querySelector('.review-move--blunder')).not.toBeNull();
+    expect(root.querySelector('.review-move-list__luck')?.textContent).toContain('-15%');
+    expect(root.querySelectorAll('.analysis-summary__player')).toHaveLength(2);
 
     const reloaded = document.createElement('div');
     mountThreeKingdomsBanqiPostgame(reloaded, ROOM);
     await flushPromises();
+    await flushPromises();
     expect(reloaded.querySelector('.advantage-chart__line')).not.toBeNull();
     expect(reloaded.querySelector('.xiangqi-review__analyse')).toBeNull();
-    expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/decisions'))).toBe(false);
+    expect(reloaded.querySelector('.review-move--blunder')).not.toBeNull();
+    expect(reloaded.querySelector('.review-move-list__luck')?.textContent).toContain('-15%');
+    expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(2);
+    expect(
+      fetchSpy.mock.calls.some(
+        ([url, init]) => String(url).endsWith('/decisions') && init?.method === 'GET',
+      ),
+    ).toBe(true);
   });
+
+  it.each([true, false])(
+    'signed-out review reads decisions cache (hit=%s) without POST',
+    async (hit) => {
+      setResolvedSignedIn(false);
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/analysis'))
+          return jsonResponse({
+            engineId: 'tk-analysis@test',
+            depth: 12,
+            plies: [
+              { ply: 0, cp: 0, mate: null, best: null },
+              { ply: 1, cp: -900, mate: null, best: null },
+            ],
+            chancePlies: [1],
+          });
+        if (url.endsWith('/decisions'))
+          return hit
+            ? jsonResponse({
+                engineId: 'tk-decisions@test',
+                depth: 12,
+                decisions: [
+                  {
+                    ply: 1,
+                    mover: 'red',
+                    bestWin: 80,
+                    playedWin: 40,
+                    realizedWin: 25,
+                    playedRank: 2,
+                  },
+                ],
+              })
+            : new Response(null, { status: 204 });
+        return jsonResponse(postgameFixture());
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      mountThreeKingdomsBanqiPostgame(root, ROOM);
+      await flushPromises();
+      await flushPromises();
+      expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/decisions`, {
+        method: 'GET',
+      });
+      expect(
+        fetchSpy.mock.calls.every(
+          (call) => (call as unknown as [unknown, RequestInit?])[1]?.method !== 'POST',
+        ),
+      ).toBe(true);
+      expect(root.querySelector('.review-move--blunder') !== null).toBe(hit);
+    },
+  );
 
   it('offers a sign-in link to a signed-out reviewer', async () => {
     setResolvedSignedIn(false);

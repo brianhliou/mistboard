@@ -15,6 +15,11 @@ import {
   type ThreeKingdomsBanqiAnalysisCache,
   type ThreeKingdomsBanqiGameAnalysis,
 } from './../three-kingdoms-banqi-analysis.js';
+import {
+  resolveThreeKingdomsBanqiDecisions,
+  type ThreeKingdomsBanqiDecision,
+  type ThreeKingdomsBanqiDecisionsCache,
+} from './../three-kingdoms-banqi-decisions.js';
 import { threeKingdomsBanqiEngineAvailable } from './../three-kingdoms-banqi-engine.js';
 import {
   getThreeKingdomsBanqiTruthView,
@@ -83,7 +88,8 @@ const defaultDeps: ThreeKingdomsBanqiPostgameRouteDeps = {
 };
 
 const POSTGAME_ROUTE = /^\/api\/three-kingdoms-banqi\/games\/([^/]+)$/;
-const ANALYSIS_ROUTE = /^\/api\/three-kingdoms-banqi\/games\/[^/]+\/analysis(?:\/jobs\/[^/]+)?$/;
+const ANALYSIS_ROUTE =
+  /^\/api\/three-kingdoms-banqi\/games\/[^/]+\/(analysis|decisions)(?:\/jobs\/[^/]+)?$/;
 
 export function createThreeKingdomsBanqiAnalysisRoutes(
   deps: ThreeKingdomsBanqiPostgameRouteDeps = defaultDeps,
@@ -93,6 +99,10 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
       events: readonly ThreeKingdomsBanqiEvent[],
     ) => Promise<ThreeKingdomsBanqiGameAnalysis>;
     engineAvailable?: () => boolean;
+    decisionsCache?: ThreeKingdomsBanqiDecisionsCache;
+    analyzeDecisions?: (
+      events: readonly ThreeKingdomsBanqiEvent[],
+    ) => Promise<ThreeKingdomsBanqiDecision[]>;
     route?: GameAnalysisRouteDeps;
   } = {},
 ) {
@@ -101,7 +111,7 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
       routeId: 'three-kingdoms-banqi',
       logPrefix: 'three_kingdoms_banqi',
       variantLabel: 'Three Kingdoms banqi',
-      // Request-specific admission wraps EVERY path, including job polls and GETs.
+      // The wrapper applies playtest admission, with public decisions reads.
       enabled: () => true,
       requiresPersistence: false,
       engineBinary: {
@@ -120,8 +130,16 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
           options.analyze,
           computeIfMissing,
         ),
-      // Flips mix choice and reveal luck; leave them unjudged until a separate
-      // decisions pass exists. This endpoint never launches that follow-on pass.
+      resolveDecisions: (roomId, events, computeIfMissing) =>
+        resolveThreeKingdomsBanqiDecisions(
+          roomId,
+          events,
+          options.decisionsCache,
+          options.analyzeDecisions,
+          computeIfMissing,
+        ),
+      // Base scores include reveal luck. The follow-on decisions overlay
+      // supplies luck-free judgments; never grade the raw flip swing.
       analysisExtras: (events) => ({
         chancePlies: events
           .filter((event) => event.type === 'move-played')
@@ -136,7 +154,13 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
     pathname: string,
   ): Promise<boolean> => {
     if (!ANALYSIS_ROUTE.test(pathname)) return false;
-    if (!(await deps.admits(request))) {
+    // Decisions contain public-information values only. Cached GETs (including
+    // job results) are readable signed out, like banqi; POST still needs the
+    // playtest admission and the factory's account gate. Other TK paths retain
+    // their existing admission policy.
+    const publicDecisionsRead =
+      request.method === 'GET' && ANALYSIS_ROUTE.exec(pathname)?.[1] === 'decisions';
+    if (!publicDecisionsRead && !(await deps.admits(request))) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }

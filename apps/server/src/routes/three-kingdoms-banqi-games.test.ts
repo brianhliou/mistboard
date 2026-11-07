@@ -28,6 +28,7 @@ import {
   THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID,
   type ThreeKingdomsBanqiGameAnalysis,
 } from '../three-kingdoms-banqi-analysis.js';
+import type { ThreeKingdomsBanqiDecision } from '../three-kingdoms-banqi-decisions.js';
 import type { ThreeKingdomsBanqiEvent } from '../three-kingdoms-banqi-tenant.js';
 import type { HttpApiContext } from './lib.js';
 import {
@@ -470,7 +471,7 @@ test('analysis GET misses, POST queues, job fills, and a reload reads the saved 
   }
 });
 
-test('analysis rejects live, aborted, missing and wrong-variant games, and never opens decisions', async () => {
+test('analysis and decisions reject live, aborted, missing and wrong-variant games', async () => {
   for (const [record, log] of [
     [gameRecord(), liveEvents()],
     [
@@ -487,7 +488,102 @@ test('analysis rejects live, aborted, missing and wrong-variant games, and never
     const res = fakeResponse();
     await handler(GET, res.response, `${PATH}/analysis`);
     assert.equal(res.captured.status, 404);
-    assert.equal(await handler(GET, res.response, `${PATH}/decisions`), false);
+    const decisions = fakeResponse();
+    assert.equal(await handler(GET, decisions.response, `${PATH}/decisions`), true);
+    assert.equal(decisions.captured.status, 404);
+  }
+});
+
+test('decisions GET is public and cache-only; POST needs an account and follows base analysis', async () => {
+  await resetAnalysisJobsForTests();
+  let cachedAnalysis: typeof analysis.plies | null = null;
+  let cachedDecisions: ThreeKingdomsBanqiDecision[] | null = null;
+  let runs = 0;
+  let signedIn = false;
+  let admitted = false;
+  let engineAvailable = true;
+  const order: string[] = [];
+  const decision: ThreeKingdomsBanqiDecision = {
+    ply: 1,
+    mover: 'red',
+    bestWin: 80,
+    playedWin: 50,
+    realizedWin: 40,
+    playedRank: 2,
+  };
+  const handler = createThreeKingdomsBanqiAnalysisRoutes(
+    {
+      ...deps(gameRecord(), finishedEvents()),
+      admits: async () => admitted,
+    },
+    {
+      cache: {
+        get: async () => cachedAnalysis,
+        save: async (_r, _e, _d, value) => {
+          cachedAnalysis = value;
+        },
+      },
+      decisionsCache: {
+        get: async () => cachedDecisions,
+        save: async (_r, _e, _d, value) => {
+          cachedDecisions = value;
+        },
+      },
+      analyze: async () => {
+        order.push('analysis');
+        return analysis;
+      },
+      analyzeDecisions: async () => {
+        order.push('decisions');
+        runs += 1;
+        return [decision];
+      },
+      engineAvailable: () => engineAvailable,
+      route: { currentUser: async () => (signedIn ? { id: 'tk-decision-account' } : null) },
+    },
+  );
+  try {
+    const miss = fakeResponse();
+    await handler(GET, miss.response, `${PATH}/decisions`);
+    assert.equal(miss.captured.status, 204);
+    assert.equal(runs, 0);
+    // Once admitted to the playtest, a guest still cannot enqueue work.
+    admitted = true;
+    const refused = fakeResponse();
+    await handler(
+      { method: 'POST', headers: {} } as IncomingMessage,
+      refused.response,
+      `${PATH}/decisions`,
+    );
+    assert.equal(refused.captured.status, 401);
+    assert.equal(runs, 0);
+    signedIn = true;
+    const post = fakeResponse();
+    await handler(
+      { method: 'POST', headers: {}, socket: { remoteAddress: '127.0.0.1' } } as IncomingMessage,
+      post.response,
+      `${PATH}/decisions`,
+    );
+    assert.equal(post.captured.status, 202);
+    const jobId = (post.captured.body as { jobId: string }).jobId;
+    for (let i = 0; i < 20 && getAnalysisJob(jobId)?.status === 'pending'; i += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    assert.equal(getAnalysisJob(jobId)?.status, 'done');
+    assert.deepEqual(order, ['analysis', 'decisions']);
+    admitted = signedIn = engineAvailable = false;
+    for (let i = 0; i < 2; i += 1) {
+      const get = fakeResponse();
+      await handler(GET, get.response, `${PATH}/decisions`);
+      assert.equal(get.captured.status, 200);
+      assert.deepEqual((get.captured.body as { decisions: unknown }).decisions, [decision]);
+    }
+    const poll = fakeResponse();
+    await handler(GET, poll.response, `${PATH}/decisions/jobs/${jobId}`);
+    assert.equal(poll.captured.status, 200);
+    assert.equal(runs, 1);
+  } finally {
+    await resetAnalysisJobsForTests();
   }
 });
 
