@@ -9,7 +9,7 @@ import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import {
   cxaGroupFor,
   cxaPointsFor,
@@ -35,12 +35,7 @@ import {
   searchFromFilter,
 } from './players/player-stats.js';
 import { playerTitleFor } from './players/player-title.js';
-import {
-  PLAYER_PROFILES,
-  PLAYER_TITLE_LABEL,
-  PLAYER_TITLES,
-  type PlayerTitle,
-} from './players/profiles.js';
+import { PLAYER_PROFILES, PLAYER_TITLES, type PlayerTitle } from './players/profiles.js';
 import { ratingHistoryFigure } from './players/rating-history-chart.js';
 import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
 import {
@@ -53,6 +48,10 @@ import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { countText, localName, localTitle } from './xiangqi-broadcast-names.js';
 import {
   type BroadcastRailItem,
+  broadcastCount,
+  broadcastName,
+  broadcastRoundName,
+  broadcastSecondaryName,
   broadcastSectionLayout,
   rightsContactNote,
 } from './xiangqi-broadcast-pages.js';
@@ -103,7 +102,7 @@ export type PlayerBoardRecord = {
   roundNameEn?: string | null;
   playedOn: string | null;
   colour: 'red' | 'black';
-  opponent: { name: string; nameEn: string | null; slug: string | null };
+  opponent: { name: string; nameEn: string | null; nameOwn?: string; slug: string | null };
   result: '1-0' | '0-1' | '1/2-1/2' | '*';
   outcome: 'win' | 'draw' | 'loss';
   plyCount: number;
@@ -116,7 +115,7 @@ type PlayersIndexResponse = { players: PlayerRecord[] };
 type PlayerResponse = { player: PlayerRecord; boards: PlayerBoardRecord[] };
 
 export async function mountXiangqiPlayersIndex(root: HTMLElement): Promise<void> {
-  setRoot(root, 'Loading players');
+  setRoot(root, t('broadcast.loadingPlayers'));
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
     root.replaceChildren(buildNav(), renderIndex(data.players).main);
@@ -126,7 +125,7 @@ export async function mountXiangqiPlayersIndex(root: HTMLElement): Promise<void>
 }
 
 export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promise<void> {
-  setRoot(root, 'Loading player');
+  setRoot(root, t('broadcast.loadingPlayer'));
   try {
     const data = await fetchJson<PlayerResponse>(
       `/api/xiangqi/players/${encodeURIComponent(slug)}`,
@@ -141,7 +140,7 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
 }
 
 export async function mountXiangqiTeamsIndex(root: HTMLElement): Promise<void> {
-  setRoot(root, 'Loading teams');
+  setRoot(root, t('broadcast.loadingTeams'));
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
     root.replaceChildren(buildNav(), renderTeams(data.players).main);
@@ -151,12 +150,12 @@ export async function mountXiangqiTeamsIndex(root: HTMLElement): Promise<void> {
 }
 
 export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<void> {
-  setRoot(root, 'Loading team');
+  setRoot(root, t('broadcast.loadingTeam'));
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
     const canonical = TEAM_KEY_ALIASES[key] ?? key;
     const team = teamsOf(data.players).find((entry) => entry.key === canonical);
-    if (!team) throw new Error('No team by that name');
+    if (!team) throw new Error(t('broadcast.noSuchTeam'));
     if (canonical !== key) history.replaceState(history.state, '', teamHref(canonical));
     document.title = `${teamLabel(team)} · Mistboard`;
     const page = renderTeam(team);
@@ -175,20 +174,20 @@ function setRoot(root: HTMLElement, loadingLabel: string): void {
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
   if (!response.ok) {
-    if (response.status === 404) throw new Error('No such player');
-    throw new Error(`Players API failed: ${response.status}`);
+    if (response.status === 404) throw new Error(t('broadcast.playerNotFound'));
+    throw new Error(t('broadcast.playersApiFailed', { status: response.status }));
   }
   return (await response.json()) as T;
 }
 
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
-  root.replaceChildren(buildNav(), buildNotice('Players unavailable', message));
+  root.replaceChildren(buildNav(), buildNotice(t('broadcast.playersUnavailable'), message));
 }
 
 /** The Chinese name as the player writes it. */
 export function chineseName(player: Pick<PlayerRecord, 'name' | 'nameOwn'>): string {
-  return player.nameOwn ?? player.name;
+  return player.nameOwn?.trim() || player.name;
 }
 
 /** English with the Chinese beside it for an English reader; the Chinese
@@ -198,14 +197,13 @@ export function displayName(
   locale: Locale = currentLocale(),
 ): string {
   if (locale !== 'en') return chineseName(player);
-  return player.nameEn && player.nameEn !== player.name
-    ? `${player.nameEn} ${chineseName(player)}`
-    : chineseName(player);
+  const en = player.nameEn?.trim();
+  return en && en !== chineseName(player) ? `${en} ${chineseName(player)}` : chineseName(player);
 }
 
 /** The one name the locale reads: English for `en`, the player's own Chinese otherwise. */
 function playerName(player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>): string {
-  return currentLocale() === 'en' ? (player.nameEn ?? chineseName(player)) : chineseName(player);
+  return broadcastName(player);
 }
 
 export function recordText(r: { wins: number; draws: number; losses: number }): string {
@@ -252,8 +250,9 @@ function listOrder(player: PlayerRecord): number {
 export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): PlayerRecord[] {
   const out = [...players];
   const byGames = (a: PlayerRecord, b: PlayerRecord) =>
-    b.games - a.games || displayName(a).localeCompare(displayName(b));
-  if (sort === 'name') out.sort((a, b) => displayName(a).localeCompare(displayName(b)));
+    b.games - a.games || displayName(a).localeCompare(displayName(b), currentLocale());
+  if (sort === 'name')
+    out.sort((a, b) => displayName(a).localeCompare(displayName(b), currentLocale()));
   else if (sort === 'score')
     out.sort(
       (a, b) =>
@@ -381,7 +380,7 @@ function boardHead(title: HTMLElement, search?: HTMLInputElement): HTMLElement {
     const button = document.createElement('button');
     button.type = 'submit';
     button.className = 'xqp-search-button';
-    button.setAttribute('aria-label', 'Search');
+    button.setAttribute('aria-label', t('broadcast.search'));
     button.innerHTML = SEARCH_ICON;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -485,8 +484,8 @@ function sortableTable<T, K extends string>(input: {
       shown.length > 0
         ? ''
         : query.trim()
-          ? `Nothing matches “${query.trim()}”.`
-          : 'Nothing matches.';
+          ? t('broadcast.nothingMatchesQuery', { query: query.trim() })
+          : t('broadcast.nothingMatches');
     input.onPaint?.(shown.length);
   }
   input.search?.addEventListener('input', paint);
@@ -552,6 +551,7 @@ function playersTable(
 }
 
 function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  document.title = `${t('broadcast.playersTitle')} · Mistboard`;
   const main = shell('players');
   const title = document.createElement('h1');
   title.className = 'xqp-board-title';
@@ -566,7 +566,7 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   const table = playersTable(players, search, true, {
     filter: (p) => matchesFilter(p, state.filter),
     onPaint: (shown) => {
-      count.textContent = t('broadcast.playersCount', { n: shown });
+      count.textContent = broadcastCount(shown, 'player');
     },
   });
   const apply = (next: IndexFilter): void => {
@@ -743,7 +743,8 @@ export function sortTeams(teams: readonly TeamRecord[], sort: TeamSort): TeamRec
   const out = [...teams];
   const byPlayers = (a: TeamRecord, b: TeamRecord) =>
     b.players.length - a.players.length || b.games - a.games;
-  if (sort === 'name') out.sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+  if (sort === 'name')
+    out.sort((a, b) => teamLabel(a).localeCompare(teamLabel(b), currentLocale()));
   else if (sort === 'players') out.sort(byPlayers);
   else if (sort === 'games') out.sort((a, b) => b.games - a.games);
   else if (sort === 'score')
@@ -757,7 +758,7 @@ function teamLabel(team: Pick<TeamRecord, 'name' | 'nameEn'>): string {
 }
 
 function teamHref(key: string): string {
-  return `/players/teams/${encodeURIComponent(key)}`;
+  return localizedHref(`/players/teams/${encodeURIComponent(key)}`);
 }
 
 const TEAM_INKS = ['#a63328', '#237960', '#3b4f8f', '#9a6419', '#7a3b69'] as const;
@@ -790,7 +791,7 @@ function teamNameCell(team: TeamRecord): HTMLTableCellElement {
   if (currentLocale() === 'en' && team.nameEn && team.nameEn !== team.name) {
     const zh = document.createElement('span');
     zh.className = 'xqp-team';
-    zh.textContent = team.name;
+    zh.textContent = broadcastSecondaryName(team);
     wrap.append(zh);
   }
   td.append(teamBadge(team, 'row'), wrap);
@@ -798,6 +799,7 @@ function teamNameCell(team: TeamRecord): HTMLTableCellElement {
 }
 
 function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  document.title = `${t('broadcast.teamsTitle')} · Mistboard`;
   const main = shell('teams');
   const title = document.createElement('h1');
   title.className = 'xqp-board-title';
@@ -883,7 +885,7 @@ function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
 }
 
 function playerHref(player: Pick<PlayerRecord, 'slug'>): string {
-  return `/players/${encodeURIComponent(player.slug)}`;
+  return localizedHref(`/players/${encodeURIComponent(player.slug)}`);
 }
 
 const XIANGQIQIPU_SITE = 'https://www.xiangqiqipu.com/';
@@ -999,7 +1001,11 @@ function titleTag(title: PlayerTitle | null): HTMLElement | null {
   const tag = document.createElement('span');
   tag.className = 'xqp-title';
   tag.textContent = localTitle(title);
-  tag.title = PLAYER_TITLE_LABEL[title];
+  tag.title = t(
+    ({ GM: 'title.xgm', IM: 'title.xim', FM: 'broadcast.titleFm', NM: 'title.xnm' } as const)[
+      title
+    ],
+  );
   return tag;
 }
 
@@ -1071,7 +1077,7 @@ function renderPlayer(
   if (currentLocale() === 'en' && player.nameEn && player.nameEn !== player.name) {
     const zh = document.createElement('span');
     zh.className = 'xqp-h1-zh';
-    zh.textContent = chineseName(player);
+    zh.textContent = broadcastSecondaryName(player);
     h1.append(' ', zh);
   }
   // The key facts as one strip of label-over-value pairs, from data the page
@@ -1106,7 +1112,9 @@ function renderPlayer(
     fact(
       t('broadcast.playerFactLastRating'),
       String(lastRating.rating),
-      list ? `CXA 等级分, last list ${list.label}` : 'CXA 等级分',
+      list
+        ? t('broadcast.lastRatingList', { list: list.label })
+        : t('broadcast.playerFactLastRating'),
     );
     if (lastRating.rank !== null) {
       fact(t('broadcast.playerFactRank'), rankText(lastRating.rank, list?.size ?? null));
@@ -1138,7 +1146,7 @@ function renderPlayer(
     fact(
       t('broadcast.playerFactSeen'),
       from === to ? from : t('broadcast.playerFactSeenRange', { from, to }),
-      `${player.firstPlayedOn} to ${player.lastPlayedOn}`,
+      t('broadcast.playerFactSeenRange', { from: player.firstPlayedOn, to: player.lastPlayedOn }),
     );
   }
   // No "All players" link: the rail's Pro players entry is the way back.
@@ -1152,7 +1160,7 @@ function renderPlayer(
     note.className = 'xqp-sanction';
     note.setAttribute('role', 'note');
     const link = document.createElement('a');
-    link.href = MATCH_FIXING_ARTICLE_PATH;
+    link.href = localizedHref(MATCH_FIXING_ARTICLE_PATH);
     link.textContent = t('broadcast.playerAboutCase');
     note.append(`${sanctionSentence(sanction)} `, link);
     copy.append(note);
@@ -1162,7 +1170,7 @@ function renderPlayer(
     actions.className = 'xqb-hero-actions xqp-header-actions';
     const link = document.createElement('a');
     link.className = 'xqb-link xqb-link-primary';
-    link.href = profile.profileHref;
+    link.href = localizedHref(profile.profileHref);
     link.textContent = t('broadcast.playerReadProfile');
     actions.append(link);
     copy.append(actions);
@@ -1288,7 +1296,9 @@ function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): 
     t('broadcast.playerFilterOpponent'),
     [
       ['', t('broadcast.playerFilterAnyOpponent')],
-      ...opponents.map((o) => [o.key, `${localName(o)} (${o.record.games})`] as [string, string]),
+      ...opponents.map(
+        (o) => [o.key, `${broadcastName(o)} (${o.record.games})`] as [string, string],
+      ),
     ],
     filter.opponent ?? '',
     (value) => view.set({ ...filter, opponent: value || undefined }),
@@ -1555,7 +1565,7 @@ function openingsSection(
 function eventCard(event: PlayerEventRecord): HTMLElement {
   const card = document.createElement('a');
   card.className = 'xqp-event';
-  card.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
+  card.href = localizedHref(`/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`);
   const dates = document.createElement('span');
   dates.className = 'xqp-event-dates';
   dates.textContent =
@@ -1683,7 +1693,7 @@ export function sparkline(values: readonly number[], labels: readonly string[]):
 function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   const row = document.createElement('a');
   row.className = `xqp-game xqp-game-${board.outcome}`;
-  row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.boardId)}`;
+  row.href = localizedHref(`/broadcast/xiangqi/board/${encodeURIComponent(board.boardId)}`);
 
   const outcome = document.createElement('span');
   outcome.className = 'xqp-outcome';
@@ -1701,9 +1711,9 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   me.textContent = playerName(player);
   const vs = document.createElement('span');
   vs.className = 'xqp-vs';
-  vs.textContent = ' vs ';
+  vs.textContent = t('broadcast.vs');
   const them = document.createElement('span');
-  them.textContent = localName(board.opponent);
+  them.textContent = broadcastName(board.opponent);
   // Red is listed first on every board on the site; keep that order here.
   if (board.colour === 'red') who.append(me, vs, them);
   else who.append(them, vs, me);
@@ -1718,7 +1728,7 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   meta.className = 'xqp-game-meta';
   meta.textContent = [
     localName({ name: board.tourName, nameEn: board.tourNameEn }),
-    localName({ name: board.roundName, nameEn: board.roundNameEn }),
+    broadcastRoundName({ name: board.roundName, nameEn: board.roundNameEn }),
     board.playedOn ?? '',
     board.plyCount > 0 ? t('broadcast.playerMoves', { n: Math.ceil(board.plyCount / 2) }) : '',
     board.result,

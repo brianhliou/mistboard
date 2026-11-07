@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
+import { createAdvantageChart } from './review/advantage-chart.js';
+import { mountBroadcastBoardReview, mountBroadcastHeldBoard } from './xiangqi-broadcast-review.js';
+
+vi.mock('./review/advantage-chart.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./review/advantage-chart.js')>();
+  return { ...actual, createAdvantageChart: vi.fn(actual.createAdvantageChart) };
+});
 
 // A finished broadcast game seats its players the way lichess does: a strip
 // above and below the board with the name, the team, and a link to the
@@ -163,4 +169,151 @@ describe('broadcast board review links and PGN', () => {
     expect(pgn?.getAttribute('download')).toBe('Yin Sheng vs Liu Baihong.pgn');
     expect(decodeURIComponent(pgn?.href ?? '')).toContain('[Red "Yin Sheng"]');
   });
+});
+
+describe('finished broadcast locale fixtures', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(createAdvantageChart).mockClear();
+    window.history.replaceState(null, '', '/');
+    window.localStorage?.clear();
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'keeps the held-record view and the game date localized in %s',
+    (locale) => {
+      const english = locale === 'en';
+      window.history.replaceState(
+        null,
+        '',
+        `${english ? '' : `/${locale.toLowerCase()}`}/broadcast/xiangqi/board/held`,
+      );
+      const root = document.createElement('div');
+      const ownName = { nameOwn: '趙奕帆' };
+      mountBroadcastHeldBoard(root, {
+        board: {
+          id: 'held',
+          tourSlug: 'test',
+          roundId: 'r1',
+          boardNumber: 1,
+          red: { ...ownName, name: '赵奕帆', nameEn: 'Chao Yi-fan' },
+          black: { name: '無名', nameEn: ' ' },
+          result: '1-0',
+          recordWithheld: 'ambiguous',
+          details: { playedAt: '2026-09-11' },
+          sourceUrl: 'https://example.com/record',
+        },
+        context: {
+          tour: { name: '测试杯', nameEn: 'Test Cup' },
+          round: { name: '第1轮', nameEn: 'Round 1', startsAt: '2026-09-13T14:30:00+08:00' },
+        },
+      });
+      expect(root.querySelector('h1')?.textContent).toBe(
+        english
+          ? 'Chao Yi-fan vs 無名'
+          : locale === 'zh-Hans'
+            ? '趙奕帆 对 無名'
+            : '趙奕帆 對 無名',
+      );
+      expect(root.querySelector('.xqb-held-note')?.textContent).toBe(
+        english
+          ? "The source record of this game can be read two ways, so it isn't replayed."
+          : locale === 'zh-Hans'
+            ? '本局的来源棋谱有两种读法，因此不提供回放。'
+            : '本局的來源棋譜有兩種讀法，因此不提供回放。',
+      );
+      expect(root.querySelector('.xqb-held-note a')?.getAttribute('href')).toBe(
+        'https://example.com/record',
+      );
+      expect(root.querySelector('.review-provenance')?.textContent).toContain(
+        english ? 'Sep 11, 2026' : '2026年9月11日',
+      );
+      expect(root.querySelector('.review-board-host')).toBeNull();
+    },
+  );
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'localizes seats, provenance and chart phases while preserving PGN in %s',
+    async (locale) => {
+      const english = locale === 'en';
+      window.history.replaceState(
+        null,
+        '',
+        `${english ? '' : `/${locale.toLowerCase()}`}/broadcast/xiangqi/board/test-b1`,
+      );
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: unknown) =>
+          String(url).endsWith('/analysis')
+            ? {
+                ok: true,
+                status: 200,
+                json: async () => ({
+                  engineId: 'pikafish',
+                  depth: 10,
+                  plies: [0, 1].map((ply) => ({ ply, cp: 0, mate: null, best: null })),
+                }),
+              }
+            : new Response(null, { status: 204 }),
+        ),
+      );
+      const root = document.createElement('div');
+      const ownName = { nameOwn: '趙奕帆' };
+      const review = mountBroadcastBoardReview(root, {
+        board: {
+          id: 'test-b1',
+          tourSlug: 'test',
+          roundId: 'r1',
+          boardNumber: 1,
+          red: {
+            ...ownName,
+            name: '赵奕帆',
+            nameEn: 'Chao Yi-fan',
+            federation: '台灣',
+            federationEn: 'Taiwan',
+          },
+          black: { name: '無名', nameEn: ' ' },
+          result: '1-0',
+        },
+        timeline: [{ ply: 1, color: 'red', move: { from: 'h3', to: 'h10' } }],
+        context: {
+          tour: { name: '测试杯', nameEn: 'Test Cup' },
+          round: { name: '第1轮', nameEn: 'Round 1' },
+        },
+      });
+      expect(root.querySelector('.review-seat--bottom')?.textContent).toContain(
+        english ? 'Chao Yi-fan' : '趙奕帆',
+      );
+      expect(root.querySelector('.review-seat--bottom .review-seat__detail')?.textContent).toBe(
+        english ? 'Taiwan' : '台灣',
+      );
+      expect(root.querySelector('.review-provenance')?.textContent).toContain(
+        english ? 'Round 1' : locale === 'zh-Hans' ? '第1轮' : '第1輪',
+      );
+      await vi.waitFor(() => expect(createAdvantageChart).toHaveBeenCalled());
+      expect(vi.mocked(createAdvantageChart).mock.calls.at(-1)?.[1]?.phaseLabels).toEqual(
+        english
+          ? { opening: 'Opening', middlegame: 'Middlegame', endgame: 'Endgame' }
+          : locale === 'zh-Hans'
+            ? { opening: '开局', middlegame: '中局', endgame: '残局' }
+            : { opening: '開局', middlegame: '中局', endgame: '殘局' },
+      );
+      expect(
+        [...root.querySelectorAll('.advantage-chart__phase-label')].map((el) => el.textContent),
+      ).toEqual(
+        english
+          ? ['Opening', 'Middlegame']
+          : locale === 'zh-Hans'
+            ? ['开局', '中局']
+            : ['開局', '中局'],
+      );
+      const pgn = [...root.querySelectorAll<HTMLAnchorElement>('a.review-share__download')].find(
+        (link) => link.textContent === 'PGN',
+      )!;
+      expect(decodeURIComponent(pgn.href)).toContain('[Red "Chao Yi-fan"]');
+      expect(decodeURIComponent(pgn.href)).toContain('[Event "Test Cup"]');
+      expect(decodeURIComponent(pgn.href)).toContain('[Round "Round 1"]');
+      review.destroy();
+    },
+  );
 });

@@ -30,6 +30,7 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
+import { localizedHref } from './i18n/locale.js';
 import type { ProfileTarget } from './profile-link.js';
 import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
@@ -39,7 +40,12 @@ import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
-import { localFederation, localName, localTitle } from './xiangqi-broadcast-names.js';
+import { localFederation, localTitle } from './xiangqi-broadcast-names.js';
+import {
+  broadcastCount,
+  broadcastRoundName,
+  broadcastName as primary,
+} from './xiangqi-broadcast-pages.js';
 import { formatEventDateTime } from './xiangqi-broadcast-time.js';
 
 export type BroadcastReviewBoard = {
@@ -87,10 +93,10 @@ export function mountBroadcastBoardReview(
   const black = playerLabel(data.board.black);
   const result = resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
-  const roundName = context ? primary(context.round) : null;
+  const roundName = context ? broadcastRoundName(context.round) : null;
   const playedOn = context ? formatEventDateTime(gameDate(data.board, context)) : null;
 
-  document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
+  document.title = `${red}${t('broadcast.vs')}${black} · ${eventName ?? 'Mistboard'}`;
   if (!opts.embedded) {
     root.classList.add('landing-page', 'xiangqi-postgame-route', 'xqb-review-route');
   }
@@ -99,11 +105,13 @@ export function mountBroadcastBoardReview(
     markerId: 'xiangqi',
     headline: [eventName ?? t('broadcast.eyebrow')],
     // Lichess's board view names its event as the way back to the boards.
-    headlineHref: `/broadcast/xiangqi/${encodeURIComponent(
-      data.board.tourSlug,
-    )}/round/${encodeURIComponent(data.board.roundId)}`,
+    headlineHref: localizedHref(
+      `/broadcast/xiangqi/${encodeURIComponent(
+        data.board.tourSlug,
+      )}/round/${encodeURIComponent(data.board.roundId)}`,
+    ),
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
-    subline: [roundName, `${t('broadcast.board')} ${data.board.boardNumber}`, playedOn]
+    subline: [roundName, t('broadcast.boardNumber', { n: data.board.boardNumber }), playedOn]
       .filter(Boolean)
       .join(' · '),
     // The players are named in the strips above and below the board, the way
@@ -132,8 +140,8 @@ export function mountBroadcastBoardReview(
     embedded: opts.embedded,
     pageClassName: 'xiangqi-review',
     ariaLabel: t('broadcast.boardAriaLabel'),
-    title: `${red} vs ${black}`,
-    summary: `${result.label} · ${replay.maxPly} plies`,
+    title: `${red}${t('broadcast.vs')}${black}`,
+    summary: `${result.label} · ${broadcastCount(replay.maxPly, 'ply')}`,
     boardAriaLabel: t('broadcast.boardAriaLabel'),
     ...(opts.embedded ? {} : { metaCard: metaCard.el }),
     ...(opts.rail && !opts.embedded ? { details: opts.rail } : {}),
@@ -156,11 +164,13 @@ export function mountBroadcastBoardReview(
         },
         exportLink(data.board.id),
       ]),
-      embedRow(data.board.id, `${red} vs ${black} · Mistboard`),
+      embedRow(data.board.id, `${red}${t('broadcast.vs')}${black} · Mistboard`),
     ],
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
-      name: eventName ? `${red} vs ${black} (${eventName})` : `${red} vs ${black}`,
+      name: eventName
+        ? `${red}${t('broadcast.vs')}${black} (${eventName})`
+        : `${red}${t('broadcast.vs')}${black}`,
       label: t('review.newStudyFromGame'),
     },
     // The server analyses every finished broadcast game once and stores it
@@ -188,13 +198,13 @@ export function mountBroadcastHeldBoard(
   const black = playerLabel(data.board.black);
   const result = resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
-  document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
+  document.title = `${red}${t('broadcast.vs')}${black} · ${eventName ?? 'Mistboard'}`;
 
   const view = document.createElement('section');
   view.className = 'xqb-held';
   const title = document.createElement('h1');
   title.className = 'xqb-held-title';
-  title.textContent = `${red} vs ${black}`;
+  title.textContent = `${red}${t('broadcast.vs')}${black}`;
   const seats = document.createElement('div');
   seats.className = 'xqb-held-seats';
   const [redScore = '', blackScore = ''] =
@@ -294,7 +304,7 @@ function provenance(
   details.className = 'review-provenance';
   if (context) {
     addDetail(details, t('broadcast.event'), primary(context.tour));
-    addDetail(details, t('broadcast.round'), primary(context.round));
+    addDetail(details, t('broadcast.round'), broadcastRoundName(context.round));
     const date = formatEventDateTime(gameDate(data.board, context));
     if (date) addDetail(details, t('broadcast.date'), date);
   }
@@ -326,9 +336,6 @@ function addDetail(details: HTMLElement, label: string, value: string): void {
   dd.textContent = value;
   details.append(dt, dd);
 }
-
-// Names in the reader's language only (xiangqi-broadcast-names.ts).
-const primary = localName;
 
 /** The player's team, for the strip's muted line. */
 function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
