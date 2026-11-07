@@ -3,6 +3,7 @@ import http from 'node:http';
 import { setImmediate } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
+import { articleProse } from './article-prose.js';
 import {
   BANQI_BOARD_W,
   BANQI_ENGINE_THUMBNAIL,
@@ -20,7 +21,7 @@ import {
   renderArticleThumbnail,
   renderBlock,
 } from './articles.js';
-import { articles } from './articles-data.js';
+import { articles, type BilibiliBlock } from './articles-data.js';
 import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
@@ -1457,6 +1458,64 @@ describe('blog post read-next footer', () => {
     expect(articleStyles).toMatch(
       /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
     );
+  });
+});
+
+describe('Bilibili article block', () => {
+  const block = {
+    kind: 'bilibili',
+    bvid: 'BV1xx411c7mD',
+    title: 'A xiangqi lesson',
+    caption: 'The cannon controls the river.',
+  } satisfies BilibiliBlock;
+
+  it('renders a lazy 16:9 player without autoplay and a plain watch link underneath', () => {
+    const figure = renderBlock(block);
+    const frame = figure.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe(
+      'https://player.bilibili.com/player.html?bvid=BV1xx411c7mD&autoplay=0',
+    );
+    expect(frame?.getAttribute('loading')).toBe('lazy');
+    expect(frame?.title).toBe(block.title);
+    expect(frame?.style.aspectRatio).toBe('16 / 9');
+    expect(frame?.getAttribute('width')).toBe('560');
+    expect(frame?.getAttribute('height')).toBe('315');
+    expect(frame?.hasAttribute('allowfullscreen')).toBe(true);
+    expect(frame?.classList.contains('article-embed-frame')).toBe(false);
+    const link = figure.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://www.bilibili.com/video/BV1xx411c7mD');
+    expect(link?.textContent).toBe('Watch on Bilibili');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toBe('noopener');
+    expect(figure.firstElementChild).toBe(frame);
+    expect(figure.lastElementChild?.contains(link)).toBe(true);
+    expect(figure.querySelector('figcaption')?.textContent).toContain(block.caption);
+    expect(articleStyles).toMatch(/\.article-bilibili-frame \{[^}]*width: 100%;[^}]*height: auto;/);
+  });
+
+  it('keeps the fallback link without a caption and encodes the video ID in both URLs', () => {
+    const figure = renderBlock({ ...block, bvid: 'BV1&autoplay=1#test', caption: undefined });
+    const player = new URL(figure.querySelector('iframe')!.src);
+    expect(player.searchParams.get('bvid')).toBe('BV1&autoplay=1#test');
+    expect(player.searchParams.getAll('autoplay')).toEqual(['0']);
+    expect(player.hash).toBe('');
+    expect(figure.querySelector('a')?.getAttribute('href')).toBe(
+      'https://www.bilibili.com/video/BV1%26autoplay%3D1%23test',
+    );
+    expect(figure.querySelector('figcaption')?.textContent).toBe('Watch on Bilibili');
+  });
+
+  it('extracts titles and captions in intros and sections while excluding the video ID', () => {
+    const prose = articleProse({
+      ...articles[0],
+      intro: [block],
+      sections: [{ heading: 'Lesson', blocks: [{ ...block, caption: undefined }] }],
+    }).filter(({ path }) => path.includes('.bilibili['));
+    expect(prose).toEqual([
+      { path: 'intro[0].bilibili[0]', text: block.caption },
+      { path: 'intro[0].bilibili[1]', text: block.title },
+      { path: 'sections[0].blocks[0].bilibili[0]', text: block.title },
+    ]);
   });
 });
 

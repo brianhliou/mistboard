@@ -2682,6 +2682,20 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
      room for the site's header so the board and move list fit together. */
 }
 
+/* Video keeps its 16:9 aspect on phones too; the site's board embeds below
+   instead reserve extra height for their stacked move lists. */
+.article-figure-bilibili {
+  align-items: stretch;
+  width: 100%;
+}
+
+.article-bilibili-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 0;
+}
+
 /* In a narrow article column the board and move list
    share ONE column. The block's aspect is the side-by-side shape: kept on a
    phone it gave a 390px screen a 316x360 frame, a 200px board, seat names cut

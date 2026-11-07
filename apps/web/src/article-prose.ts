@@ -146,6 +146,7 @@ const BLOCK_PROSE: {
   'jungle-flip-replay': replay,
   code: caption,
   embed: (b) => [...caption(b), b.title],
+  bilibili: (b) => [...caption(b), b.title],
   // Headers, caption, and any cell carrying Latin script. Cells were once treated as
   // data because most of them are numbers, and the match-fixing article then
   // shipped three tables of English prose that the gate read as fully covered:

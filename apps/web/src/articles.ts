@@ -43,6 +43,7 @@ import {
   type AtomicXiangqiReplayBlock,
   articles,
   type BanqiReplayBlock,
+  type BilibiliBlock,
   type ChessReplayBlock,
   type CodeBlock,
   type CrazyhouseXiangqiReplayBlock,
@@ -1778,6 +1779,7 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'step-game-set') return renderStepGameSetBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'embed') return renderEmbedBlock(block);
+  if (block.kind === 'bilibili') return renderBilibiliBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
   if (block.kind === 'faq') return renderFaqBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
@@ -2515,6 +2517,33 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
     caption.textContent = block.caption;
     figure.append(caption);
   }
+  return figure;
+}
+
+function renderBilibiliBlock(block: BilibiliBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-bilibili';
+  const bvid = encodeURIComponent(block.bvid);
+  const iframe = document.createElement('iframe');
+  iframe.className = 'article-bilibili-frame';
+  iframe.src = `https://player.bilibili.com/player.html?bvid=${bvid}&autoplay=0`;
+  iframe.title = block.title;
+  iframe.setAttribute('loading', 'lazy');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.width = '560';
+  iframe.height = '315';
+  iframe.style.aspectRatio = '16 / 9';
+  figure.append(iframe);
+
+  const caption = document.createElement('figcaption');
+  if (block.caption) caption.append(`${block.caption} `);
+  const link = document.createElement('a');
+  link.href = `https://www.bilibili.com/video/${bvid}`;
+  link.textContent = 'Watch on Bilibili';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  caption.append(link);
+  figure.append(caption);
   return figure;
 }
 

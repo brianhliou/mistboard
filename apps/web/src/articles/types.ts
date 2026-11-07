@@ -365,6 +365,15 @@ export type EmbedBlock = {
   hideSolution?: boolean;
 };
 
+/** A third-party video player with a watch-page fallback below it. Store the
+ *  Bilibili BV id, not an arbitrary iframe URL. */
+export type BilibiliBlock = {
+  kind: 'bilibili';
+  bvid: string;
+  title: string;
+  caption?: string;
+};
+
 /**
  * A data table. Added for articles whose argument IS the numbers (opening
  * statistics, engine comparisons), where prose or a code block would bury the
@@ -468,7 +477,8 @@ export type ArticleBlock =
   | JungleReplayBlock
   | JungleFlipReplayBlock
   | CodeBlock
-  | EmbedBlock;
+  | EmbedBlock
+  | BilibiliBlock;
 
 // `blocks` is the structured body. `paragraphs` is the legacy outline body
 // that still carries `[VISUAL: ...]` markers — sections are migrated to
