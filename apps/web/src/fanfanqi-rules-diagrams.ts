@@ -23,11 +23,14 @@ function renderPosition(
   state: FFQBanqiState,
   from?: number,
   maxWidth = FULL_WIDTH,
+  forbidden: readonly number[] = [],
 ): string {
   const seat = state.ply % 2 === 0 ? 'red' : 'black';
+  const square = from === undefined ? null : ffqBanqiSquare(from);
   return renderFFQBanqiBoardSvg(getFFQBanqiPlayerView(state, seat), {
-    selectedSquare: from === undefined ? null : ffqBanqiSquare(from),
+    selectedSquare: square,
     pieceSet: activeXiangqiPieceSet,
+    forbiddenMoves: square ? forbidden.map((to) => ({ from: square, to: ffqBanqiSquare(to) })) : [],
   })
     .trim()
     .replace(
@@ -119,17 +122,94 @@ const chaseState = (chases: number): FFQBanqiState => ({
   ...tacticalState(chaseBoard),
   chaseCounts: { red: chases, black: 0 },
 });
-export const FANFANQI_CHASE_ALLOWED = fanfanqiMoveDiagram({
-  id: 'chase-allowed',
-  state: chaseState(FFQ_BANQI_RULES.consecutiveChaseLimit - 1),
+export const FANFANQI_CHASE_COUNTS = fanfanqiMoveDiagram({
+  id: 'chase-counts',
+  state: chaseState(0),
   from: 9,
   expect: [5, 8, 10, 13],
 });
-export const FANFANQI_CHASE_BLOCKED = fanfanqiMoveDiagram({
-  id: 'chase-blocked',
-  state: chaseState(FFQ_BANQI_RULES.consecutiveChaseLimit),
-  from: 9,
-  expect: [5, 8, 13],
+
+const stepTargets = (state: FFQBanqiState, from: number): number[] =>
+  getFFQBanqiLegalMoves(state)
+    .filter((m) => m.from === from && m.from !== m.to)
+    .map((m) => m.to)
+    .sort((a, b) => a - b);
+
+// The steps the chase limit removes: legal with the mover's count at zero,
+// gone at its real count.
+function chaseLimitedTargets(state: FFQBanqiState, from: number): number[] {
+  const seat = state.ply % 2 === 0 ? 'red' : 'black';
+  const fresh = stepTargets({ ...state, chaseCounts: { ...state.chaseCounts, [seat]: 0 } }, from);
+  const real = new Set(stepTargets(state, from));
+  return fresh.filter((to) => !real.has(to));
+}
+
+// A chase run to the limit. The black horse on 12 has one other free square,
+// 13; covered pieces close 8, 9 and 14. The red chariot steps beside it from
+// 16 or 17, and the horse runs between the two. Every frame is the kernel's
+// own position after these moves.
+const runBoard: FFQBanqiState['board'] = Array(32).fill(null);
+runBoard[12] = { color: 'black', role: 'horse', faceDown: false };
+runBoard[20] = { color: 'red', role: 'chariot', faceDown: false };
+runBoard[7] = { color: 'black', role: 'soldier', faceDown: false };
+runBoard[30] = { color: 'red', role: 'advisor', faceDown: false };
+for (const [k, index] of [0, 2, 3, 5, 8, 9, 14, 18, 24, 27, 29, 31].entries()) {
+  runBoard[index] = { color: k % 2 ? 'red' : 'black', role: 'soldier', faceDown: true };
+}
+const CHASE_RUN_MOVES: readonly [number, number][] = [
+  [20, 16],
+  [12, 13],
+  [16, 17],
+  [13, 12],
+  [17, 16],
+  [12, 13],
+  [16, 17],
+  [13, 12],
+];
+const CHASE_RUN_NOTES = [
+  'The black horse has two free squares. The red chariot outranks it, so any step that ends beside the horse is a chase.',
+  'Chase 1.',
+  'The horse runs to its other square.',
+  'Chase 2.',
+  'The horse runs back.',
+  'Chase 3.',
+  'The horse runs again.',
+  'Chase 4.',
+  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can step away, or Red can flip a piece, which resets both counts.',
+];
+const CHASE_RUN_FROM = 17;
+const chaseRunStates = CHASE_RUN_MOVES.reduce<FFQBanqiState[]>(
+  (states, [from, to], k) => {
+    const before = states.at(-1)!;
+    const after = applyFFQBanqiMove(before, { from, to });
+    if (after === before) throw new Error(`Fanfanqi chase run: move ${k + 1} is illegal`);
+    return [...states, after];
+  },
+  [tacticalState(runBoard)],
+);
+
+export const FANFANQI_CHASE_RUN_STEPS = chaseRunStates.map((state, k) => {
+  const move = k === 0 ? null : CHASE_RUN_MOVES[k - 1]!;
+  const last = k === chaseRunStates.length - 1;
+  return {
+    svg: () => {
+      if (!last) return renderPosition(`chase-run-${k}`, state, undefined, SINGLE_WIDTH);
+      const steps = stepTargets(state, CHASE_RUN_FROM).join(' ');
+      const crossed = chaseLimitedTargets(state, CHASE_RUN_FROM);
+      if (
+        state.chaseCounts.red !== FFQ_BANQI_RULES.consecutiveChaseLimit ||
+        steps !== '21' ||
+        crossed.join(' ') !== '13 16'
+      ) {
+        throw new Error(
+          `Fanfanqi chase run: count ${state.chaseCounts.red}, steps [${steps}], crossed [${crossed.join(' ')}]`,
+        );
+      }
+      return renderPosition(`chase-run-${k}`, state, CHASE_RUN_FROM, SINGLE_WIDTH, crossed);
+    },
+    move: move ? `${ffqBanqiSquare(move[0])}-${ffqBanqiSquare(move[1])}` : undefined,
+    narrative: CHASE_RUN_NOTES[k],
+  };
 });
 
 // Seed 2 deals a red cannon face up beside two face-down screens. Every square

@@ -1,8 +1,8 @@
 import {
   FANFANQI_CANNON_SHOT,
   FANFANQI_CAPTURE_CARDS,
-  FANFANQI_CHASE_ALLOWED,
-  FANFANQI_CHASE_BLOCKED,
+  FANFANQI_CHASE_COUNTS,
+  FANFANQI_CHASE_RUN_STEPS,
   FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
   FANFANQI_RANK_LADDER,
   FANFANQI_SETUP,
@@ -164,20 +164,21 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'You may chase four times in a row. A fifth chase in a row is not allowed, so the game does not offer that move and you must pick another. Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either. After three chases in a row the horse may still make the chase step (left). After four, the game removes it (right).',
+          text: 'Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            {
-              svg: FANFANQI_CHASE_ALLOWED,
-              caption: 'After three chases. Dots mark the steps the horse can make.',
-            },
-            {
-              svg: FANFANQI_CHASE_BLOCKED,
-              caption: 'After four chases.',
-            },
-          ],
+          kind: 'raw-svg',
+          svg: FANFANQI_CHASE_COUNTS,
+          caption: 'Dots mark the horse’s steps.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'You may chase four times in a row. The game does not offer a fifth chase in a row, so you pick another move instead; it is never an automatic loss. Below, a red chariot chases a black horse back and forth until it reaches the limit.',
+        },
+        {
+          kind: 'raw-svg-stepper',
+          steps: FANFANQI_CHASE_RUN_STEPS,
+          caption: 'A cross marks a step the chase limit removes.',
         },
         {
           kind: 'paragraph',
