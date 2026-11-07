@@ -337,7 +337,11 @@ async function moverWinAfter(
     return winner === mover ? 100 : winner === null ? 50 : 0;
   }
   const { cp, mate } = await evalPosition(banqiStateToEngineFen(post), repetitionWindow);
-  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate);
+  return winPercent(
+    cp == null ? null : -cp,
+    mate == null ? null : -mate,
+    BANQI_DECISIONS_ENGINE_ID,
+  );
 }
 
 // The TRUE pool-mean baseline (win%, mover POV) of `move` from a pre-move `state`, plus the realized

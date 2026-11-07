@@ -77,6 +77,72 @@ test('winPercent clamps extreme cp so it never exceeds the bounds', () => {
   assert.ok(winPercent(-100000, null) >= 0);
 });
 
+test('Three Kingdoms Misty scores are expected score times 1000, not centipawns', () => {
+  for (const engineId of [
+    'misty-three-kingdoms-banqi',
+    'misty-three-kingdoms-banqi-level-8',
+    'misty-three-kingdoms-banqi-analysis@1',
+    'misty-three-kingdoms-banqi-decisions@1',
+  ]) {
+    for (const [cp, expected] of [
+      [0, 50],
+      [100, 55],
+      [300, 65],
+      [500, 75],
+      [-500, 25],
+      [1000, 100],
+      [-1000, 0],
+      [1500, 100],
+      [-1500, 0],
+      [30000, 100],
+      [-30000, 0],
+    ] as const) {
+      assert.equal(winPercent(cp, null, engineId), expected, `${engineId}: ${cp}`);
+    }
+    assert.equal(winPercent(null, null, engineId), 50);
+    for (const mate of [1, 10, 30]) {
+      assert.equal(winPercent(null, mate, engineId), 100);
+      assert.equal(winPercent(null, -mate, engineId), 0);
+    }
+    assert.equal(winPercent(null, 0, engineId), 0);
+    assert.equal(winPercent(-500, 1, engineId), 100, 'mate takes precedence over cp');
+  }
+});
+
+test('a Misty 120-point swing is an inaccuracy rather than a chess-curve mistake', () => {
+  const engineId = 'misty-three-kingdoms-banqi-analysis@1';
+  assert.equal(moveJudgment(winPercent(0, null), winPercent(-120, null)), 'mistake');
+  assert.equal(
+    moveJudgment(winPercent(0, null, engineId), winPercent(-120, null, engineId)),
+    'inaccuracy',
+  );
+});
+
+test('engine-id win models preserve existing curves unless the score scale is confirmed', () => {
+  for (const engineId of [
+    'pikafish',
+    'fairy-stockfish',
+    'misty-banqi-analysis@0.2.5+history1',
+    'misty-jungle-analysis@0.2.0',
+    'misty-jungle-flip-analysis@0.2.0+history1',
+    'misty-analysis@0.2.0+sf18+i200',
+    'misty-unconfirmed-analysis@1',
+    'misty-three-kingdoms-banqix-analysis@1',
+    'ab-jchess-jieqi-analysis@0.1.0+1ae95ca6',
+    'ab-jchess-jieqi-decisions@2+efc83867+abjchess-20261030+nodes20000',
+    'rapfi-gomoku-analysis@1',
+    undefined,
+    null,
+  ]) {
+    const k = winPercentK(engineId);
+    for (const cp of [-30000, -500, 0, 500, 30000, null]) {
+      assert.equal(winPercent(cp, null, engineId), winPercent(cp, null, k));
+    }
+    assert.equal(winPercent(null, 3, engineId), winPercent(null, 3, k));
+  }
+  assert.equal(winPercentK('fairy-stockfish'), WIN_PCT_K);
+});
+
 test('accuracyPercent is 100 for a non-losing move and falls with the win drop', () => {
   assert.equal(accuracyPercent(60, 60), 100);
   assert.equal(accuracyPercent(60, 62), 100); // gained win% -> no penalty
