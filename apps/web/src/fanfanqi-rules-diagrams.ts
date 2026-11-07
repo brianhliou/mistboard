@@ -12,10 +12,11 @@ import {
   activeXiangqiPieceSet,
   BANQI_BOARD_H,
   BANQI_BOARD_W,
-  banqiArrow,
   banqiBoardGrid,
   banqiCellCenter,
+  banqiLastMoveTint,
   banqiPiecesFromView,
+  banqiStepDot,
   xqSvg,
 } from './articles/diagrams.js';
 import { ffqBanqiBoardView, ffqBanqiSquare } from './ffq-banqi-board.js';
@@ -181,7 +182,7 @@ const CHASE_RUN_NOTES = [
   'Chase 3.',
   'The horse runs again.',
   'Chase 4.',
-  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can step away, or Red can flip a piece, which resets both counts.',
+  'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can still step away to the dot, or Red can flip a piece, which resets both counts.',
 ];
 const CHASE_RUN_FROM = 17;
 const chaseRunStates: FFQBanqiState[] = [tacticalState(runBoard)];
@@ -205,23 +206,26 @@ function chaseCross(index: number): string {
   return `<path d="M${x - h} ${y - h}L${x + h} ${y + h}M${x + h} ${y - h}L${x - h} ${y + h}" fill="none" stroke="rgba(178, 34, 28, 0.85)" stroke-width="4" stroke-linecap="round"/>`;
 }
 
-// Same format as the banqi chase steppers: the article board, an arrow for the
-// move into the frame, and keyed piece slots the card glides.
+// Same format as the live board: the move into the frame tints its two cells
+// in the mover's ink, the pieces are keyed slots the card glides, and the
+// last frame marks the chariot's remaining step and the crossed-out chases.
 function runFrame(
   state: FFQBanqiState,
   move: readonly [number, number] | null,
-  id: string,
   crossed: readonly number[] = [],
+  steps: readonly number[] = [],
 ): string {
   const seat = state.ply % 2 === 0 ? 'red' : 'black';
+  const mover = seat === 'red' ? 'black' : 'red';
   const view = ffqBanqiBoardView(getFFQBanqiPlayerView(state, seat));
   return xqSvg(
     BANQI_BOARD_W,
     BANQI_BOARD_H,
     [
       banqiBoardGrid(0, 0),
+      move ? banqiLastMoveTint(runCell(move[0]), runCell(move[1]), mover, 0, 0) : '',
       banqiPiecesFromView(view, 0, 0),
-      move ? banqiArrow(runCell(move[0]), runCell(move[1]), 0, 0, id, 14) : '',
+      steps.map((index) => banqiStepDot(runCell(index), 0, 0)).join(''),
       crossed.map(chaseCross).join(''),
     ].join(''),
   );
@@ -234,19 +238,19 @@ export const FANFANQI_CHASE_RUN_STEPS = chaseRunStates.map((state, k) => {
   const to = move ? ffqBanqiSquare(move[1]) : null;
   return {
     svg: () => {
-      if (!last) return runFrame(state, move, `ffq-chase-run-${k}`);
-      const steps = stepTargets(state, CHASE_RUN_FROM).join(' ');
+      if (!last) return runFrame(state, move);
+      const steps = stepTargets(state, CHASE_RUN_FROM);
       const crossed = chaseLimitedTargets(state, CHASE_RUN_FROM);
       if (
         state.chaseCounts.red !== FFQ_BANQI_RULES.consecutiveChaseLimit ||
-        steps !== '21' ||
+        steps.join(' ') !== '21' ||
         crossed.join(' ') !== '13 16'
       ) {
         throw new Error(
-          `Fanfanqi chase run: count ${state.chaseCounts.red}, steps [${steps}], crossed [${crossed.join(' ')}]`,
+          `Fanfanqi chase run: count ${state.chaseCounts.red}, steps [${steps.join(' ')}], crossed [${crossed.join(' ')}]`,
         );
       }
-      return runFrame(state, move, `ffq-chase-run-${k}`, crossed);
+      return runFrame(state, move, crossed, steps);
     },
     move: from && to ? `${from}-${to}` : undefined,
     motion: from && to ? { from, to } : undefined,
