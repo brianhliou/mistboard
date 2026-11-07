@@ -26,6 +26,7 @@ import {
   applyMove,
   createInitialXiangqiState,
   judgmentComment,
+  personNameForLocale,
   type XiangqiGameState,
   type XiangqiJudgment,
   type XiangqiMove,
@@ -448,11 +449,6 @@ export function traditionalEvent(raw: string): string {
       // Sponsor and place names in the event title: 华能杯, 农行杯, 民生实业杯,
       // 吴县市杯. These are companies and places, not people, so they DO convert
       // for a Traditional reader; the name rule is about persons.
-      //
-      // 华 is the character that makes this only safe here: it is also in 胡荣华,
-      // 柳大华 and 于幼华, three champions whose names must not convert. This
-      // function is called on an event field and nothing else, which is what
-      // keeps those apart.
       .replaceAll('华', '華')
       .replaceAll('农', '農')
       .replaceAll('实', '實')
@@ -546,7 +542,7 @@ function praiseComment(hit: PositiveHit): string {
   return 'Great: the only move that punishes the error before it, and every alternative is at least a mistake worse.';
 }
 
-function chapterFor(
+export function chapterFor(
   game: HarvestedGame,
   anno: AnnotationFile,
   meta: (typeof CHAPTERS)[number],
@@ -565,26 +561,16 @@ function chapterFor(
   const redZh = game.red.trim().split(/\s+/).slice(-1)[0] ?? red;
   const blackZh = game.black.trim().split(/\s+/).slice(-1)[0] ?? black;
   const provenanceZh = (locale: keyof Localized): string => {
-    const won =
-      game.result === '1-0' ? `${redZh}胜` : game.result === '0-1' ? `${blackZh}胜` : '和棋';
-    // The EVENT is converted before it goes into the line, not by the
-    // replacements below. Those run over the whole sentence, and the sentence
-    // contains the players' names: adding 国 -> 國 to that chain to fix
-    // "全国象棋个人赛" would also rewrite 赵国荣, whose name is not supposed to
-    // convert. Narrowing the conversion to the one field that needs it is the
-    // only version that does not corrupt a name.
-    const event = locale === 'zh-Hans' ? game.event : traditionalEvent(game.event);
-    const line = `${redZh}（红）对${blackZh}（黑）· ${event} · ${game.date.slice(0, 10)} · ${won}。引擎注解为 Pikafish，每步一百万节点，与复盘页所用相同。准确率：红 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
-    return locale === 'zh-Hans'
-      ? line
-      : line
-          .replaceAll('胜', '勝')
-          .replaceAll('红', '紅')
-          .replaceAll('对', '對')
-          .replaceAll('复盘页所用相同', '複盤頁所用相同')
-          .replaceAll('节点', '節點')
-          .replaceAll('准确率', '準確率')
-          .replaceAll('注解', '註解');
+    const redName = personNameForLocale({ name: redZh }, locale);
+    const blackName = personNameForLocale({ name: blackZh }, locale);
+    const winner = game.result === '1-0' ? redName : game.result === '0-1' ? blackName : null;
+    const date = game.date.slice(0, 10);
+    if (locale === 'zh-Hant') {
+      const outcome = winner ? `${winner}勝` : '和棋';
+      return `${redName}（紅）對${blackName}（黑）· ${traditionalEvent(game.event)} · ${date} · ${outcome}。引擎註解為 Pikafish，每步一百萬節點，與複盤頁所用相同。準確率：紅 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
+    }
+    const outcome = winner ? `${winner}胜` : '和棋';
+    return `${redName}（红）对${blackName}（黑）· ${game.event} · ${date} · ${outcome}。引擎注解为 Pikafish，每步一百万节点，与复盘页所用相同。准确率：红 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
   };
   const root: SerializedNode = {
     annotations: {
@@ -668,8 +654,16 @@ function chapterFor(
   // a person's name is written in the script that person uses, and these are
   // mainland players.
   const tagsI18n = {
-    'zh-Hans': { red: redZh, black: blackZh, event: game.event },
-    'zh-Hant': { red: redZh, black: blackZh, event: traditionalEvent(game.event) },
+    'zh-Hans': {
+      red: personNameForLocale({ name: redZh }, 'zh-Hans'),
+      black: personNameForLocale({ name: blackZh }, 'zh-Hans'),
+      event: game.event,
+    },
+    'zh-Hant': {
+      red: personNameForLocale({ name: redZh }, 'zh-Hant'),
+      black: personNameForLocale({ name: blackZh }, 'zh-Hant'),
+      event: traditionalEvent(game.event),
+    },
   };
   return {
     name: meta.name,
