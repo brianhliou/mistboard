@@ -101,33 +101,19 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**. If nothing stands behind the screen, there is no shot along that line.',
+          text: 'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.',
         },
+        { kind: 'raw-svg', svg: FANFANQI_CANNON_SHOT, caption: 'The ring marks the target.' },
         {
           kind: 'paragraph',
-          text: 'The target must be a face-up enemy, of any rank, or a face-down piece of either color. A face-up piece of your own blocks the shot, and the cannon cannot skip past it to a piece farther away. Below, a shot, a gamble and a cannon with no move.',
+          text: 'The target must be a face-up enemy or a face-down piece of either color. A shot at a face-down piece is a gamble. The piece leaves the board and both players see its color and type. If it is yours, you lose its HP, and a shot that takes you to zero loses the game. Pieces still face down on the board stay hidden, even after the game ends. Below, the cannon’s own soldier is the screen, and the face-down piece behind it could be either color.',
         },
-        {
-          kind: 'svg-row',
-          items: [
-            {
-              svg: FANFANQI_CANNON_SHOT,
-              caption: 'The soldier is the screen. The general behind it is the target, though it outranks the cannon.',
-            },
-            {
-              svg: FANFANQI_CANNON_GAMBLE,
-              caption: 'Your own soldier is the screen. The face-down piece behind it may be yours.',
-            },
-            {
-              svg: FANFANQI_CANNON_NO_SHOT,
-              caption: 'No shot, so no move: nothing screens the horse above, and the red horse blocks the line to the general.',
-            },
-          ],
-        },
+        { kind: 'raw-svg', svg: FANFANQI_CANNON_GAMBLE, caption: 'The dot marks a face-down target.' },
         {
           kind: 'paragraph',
-          text: 'A shot at a face-down piece is a gamble. The piece leaves the board and both players see its color and type. If it is yours, you lose its HP, and a shot that takes you to zero loses the game. Pieces still face down on the board stay hidden, even after the game ends.',
+          text: 'With nothing between the cannon and a piece, there is no screen and no shot. A face-up piece of your own after the screen blocks the line, and the cannon cannot skip past it to a piece farther away. Below, the cannon has no move at all. Nothing screens the black horse above it. To the right, the chariot is the screen, and the red horse behind it shields the general.',
         },
+        { kind: 'raw-svg', svg: FANFANQI_CANNON_NO_SHOT, caption: 'No marks: this cannon cannot move.' },
       ],
     },
     {
