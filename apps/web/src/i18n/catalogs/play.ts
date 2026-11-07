@@ -678,6 +678,8 @@ export const EN_PLAY = {
   'live.ffq.hp': '{hp}/{max} HP',
   'live.ffq.noProgress': 'No progress {count}/{limit}',
   'live.ffq.chase': '{side} chase {count}/{limit}',
+  'live.ffq.chaseForbidden':
+    'Fanfanqi allows only four chases in a row. This move would be your fifth. Play another move.',
   'live.ffq.captureDamage': '{capturer} captured {owner} {piece}: {owner} −{damage} HP',
   'live.ffq.adminOnly': 'This playtest requires an admin account and the Fanfanqi flag.',
   'result.hp': 'HP depletion',
@@ -1272,6 +1274,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.atomicCheckYour',
   'live.atomicCheckColor',
   'live.banqiChaseForbidden',
+  'live.ffq.chaseForbidden',
   'live.tk.points',
   'live.tk.captured',
   'live.tk.none',
