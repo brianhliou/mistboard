@@ -56,10 +56,11 @@ test('canonical display order contains exactly the current public variant shelf'
     JUNGLE_SPEC_ID,
     JUNGLE_FLIP_SPEC_ID,
     XIANGQI_MAHJONG_SPEC_ID,
+    GOMOKU_SPEC_ID,
   ]);
 });
 
-test('Gomoku is a built-hidden, rated freestyle placement game', () => {
+test('Gomoku is a public casual, rated freestyle placement game', () => {
   const spec = gameSpecForId(GOMOKU_SPEC_ID);
   assert.equal(spec.publicName, 'Gomoku');
   assert.equal(spec.family, 'gomoku');
@@ -71,22 +72,28 @@ test('Gomoku is a built-hidden, rated freestyle placement game', () => {
   assert.equal(spec.reserves, 'none');
   assert.equal(spec.dropPolicy, 'none');
   assert.equal(spec.runtimeStatus, 'live');
-  assert.equal(spec.publicSurface, 'hidden');
+  assert.equal(spec.publicSurface, 'casual');
   assert.equal(spec.rated, true);
   assert.equal(spec.legacyLiveRoom, undefined);
-  assert.equal(isPublicGameSpec(spec.id), false);
+  assert.equal(isPublicGameSpec(spec.id), true);
   assert.equal(ratingPoolForSpec(spec.id), 'gomoku');
   assert.equal(isRatedPoolBase('gomoku'), true);
-  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), true);
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
-  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), true);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
   assert.equal(isCorrespondenceRatedSpec(spec.id), false);
   assert.equal(isStudyEligibleSpecId(spec.id), false);
 });
 
 test('Gomoku is allowlisted while hidden and takes its shelf place only at launch', () => {
   assert.ok(PLAYTEST_GAME_SPEC_IDS.includes(GOMOKU_SPEC_ID));
-  const hidden = deriveLaunchLists(isPublicGameSpec);
+  const hidden = deriveLaunchLists(
+    publicSpecPredicate(
+      GAME_SPECS.map((spec) =>
+        spec.id === GOMOKU_SPEC_ID ? { ...spec, publicSurface: 'hidden' as const } : spec,
+      ),
+    ),
+  );
   assert.ok(hidden.allowlisted.includes(GOMOKU_SPEC_ID));
   assert.ok(!hidden.canonicalVariantOrder.includes(GOMOKU_SPEC_ID));
   assert.ok(hidden.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
@@ -104,10 +111,8 @@ test('Gomoku is allowlisted while hidden and takes its shelf place only at launc
     ...hidden.canonicalVariantOrder,
     GOMOKU_SPEC_ID,
   ]);
-  assert.deepEqual(launched.correspondenceEligible, [
-    ...hidden.correspondenceEligible,
-    GOMOKU_SPEC_ID,
-  ]);
+  assert.deepEqual(launched.correspondenceEligible, hidden.correspondenceEligible);
+  assert.ok(!launched.correspondenceEligible.includes(GOMOKU_SPEC_ID));
   assert.ok(!launched.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
 });
 

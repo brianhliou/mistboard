@@ -217,6 +217,7 @@ test('searchable variants are the launched channels in the canonical shelf order
     'JUNGLE_FLIP',
     'XIANGQI_MAHJONG',
     'MAHJONG',
+    'GOMOKU',
   ];
   const saved = flags.map((flag) => process.env[`MISTBOARD_${flag}_ENABLED`]);
   try {

@@ -433,13 +433,13 @@ test('canonical Gomoku export HTTP surface serves JSON only while its flag is on
   }
 });
 
-test('Gomoku live payload builder and watch capability keep listings closed while rooms may be rated', () => {
+test('Gomoku live payload builder and watch capability support public listings and rated play', () => {
   assert.equal(hasLiveWatchPayloadBuilder('gomoku'), true);
   const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;
   assert.equal(registration.watch?.channelId, GOMOKU_SPEC_ID);
   assert.equal(registration.export?.gameRouteBase, '/gomoku/game');
   assert.equal(registration.lobby?.supportsRated, true);
-  assert.equal(gameSpecForId(GOMOKU_SPEC_ID).publicSurface, 'hidden');
+  assert.equal(gameSpecForId(GOMOKU_SPEC_ID).publicSurface, 'casual');
   const live = room();
   gomokuRooms.set(ROOM_ID, live);
   try {
