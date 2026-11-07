@@ -3,8 +3,8 @@
 // Every value is read from the constant the server already pins that engine with
 // (the `*_ENGINE_REF` short shas that key analysis caches and configHashes, the
 // `*_ENGINE_VERSION` strings the binaries self-report, the Misty registry entry),
-// so a bumped pin moves the page with it. The two values with no server constant
-// of their own, mainline Pikafish and the stock Fairy-Stockfish release, are
+// so a bumped pin moves the page with it. Values with no server constant
+// of their own (mainline Pikafish, Rapfi and the stock Fairy-Stockfish release) are
 // pinned to their pin files by bot-engine-versions.test.ts. An engine with no
 // recorded version (the in-process xiangqi mahjong bot) returns null and the page
 // shows nothing; a version is never guessed.
@@ -37,6 +37,9 @@ const PIKAFISH_XIANGQI_COMMIT = PIKAFISH_XIANGQI_VERSION.slice(
 // The stock Fairy-Stockfish largeboard release behind Fortress and Crazyhouse
 // Xiangqi (scripts/fetch-fairy-stockfish-largeboard.sh downloads tag fairy_sf_14).
 export const FAIRY_STOCKFISH_RELEASE_VERSION = '14';
+
+// Native Rapfi's rapfi.ref source commit; the pin test catches build drift.
+const RAPFI_ENGINE_REF = '1387d113';
 
 // "abj-20261031-net-20261030" -> "AB-JChess-20261031 (net 20261030)": the release
 // as its author tags it, and the net, since either one changes its play.
@@ -72,6 +75,7 @@ function registryVersion(engineId: string): string | null {
 
 /** The version string for one engine id, or null when none is recorded. */
 export function botEngineVersion(engineId: string): string | null {
+  if (engineId.startsWith('rapfi-level-')) return RAPFI_ENGINE_REF;
   if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_COMMIT;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;
   if (engineId.startsWith('fairy-stockfish-xiangqi-')) return XIANGQI_FSF_ENGINE_REF;

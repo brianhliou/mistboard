@@ -78,7 +78,8 @@ test('hidden Gomoku stays out of channels, Featured, Engines, current games and 
       collectLiveTvCandidates(ctx, now).find((g) => g.roomId === roomId),
     ]) {
       assert.ok(game, 'public, enabled fixture must be eligible');
-      assert.equal(game.players.find((p) => p.isEngine)?.name, 'Rapfi');
+      // Live listings resolve the first-party bot profile before the engine name.
+      assert.equal(game.players.find((p) => p.isEngine)?.name, 'Rapfi Level 8');
     }
     process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
     assert.equal(watchChannelForId('gomoku'), null);

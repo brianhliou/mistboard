@@ -26,6 +26,8 @@ test('mainline Pikafish shows the pikafish.ref commit under its own release name
 
 test('pinned source builds show the short sha of their .ref', () => {
   const cases: [engineId: string, refFile: string][] = [
+    ['rapfi-level-1', 'rapfi.ref'],
+    ['rapfi-level-8', 'rapfi.ref'],
     ['pikafish-jieqi-level-3', 'pikafish-jieqi.ref'],
     ['pikafish-jieqi-strongest', 'pikafish-jieqi.ref'],
     ['fairy-stockfish-xiangqi-level-5', 'fairy-stockfish-xiangqi.ref'],
