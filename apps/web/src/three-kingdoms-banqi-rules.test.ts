@@ -5,8 +5,12 @@ import { threeKingdomsBanqiArticle } from './articles/content/three-kingdoms-ban
 import { articleDiagramLabels } from './articles/svg-labels.js';
 import { buildArticlePage } from './articles.js';
 import type { Article } from './articles-data.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  setThreeKingdomsBanqiEngineOptions([]);
+  vi.unstubAllEnvs();
+});
 
 function playButtons(page: HTMLElement): (string | null)[][][] {
   return [...page.querySelectorAll('.article-cta-row')].map((row) =>
@@ -15,17 +19,22 @@ function playButtons(page: HTMLElement): (string | null)[][][] {
 }
 
 describe('Three Kingdoms Banqi rules page buttons', () => {
-  it('offers no bot in either row while the variant has none', () => {
+  it('offers no bot in either row from build flags alone', () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'true');
+    setThreeKingdomsBanqiEngineOptions([]);
     const friendOnly = [
       ['Play Three Kingdoms Banqi', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
     ];
     expect(playButtons(buildArticlePage('three-kingdoms-banqi'))).toEqual([friendOnly, friendOnly]);
   });
 
-  it('offers the bot in both rows once the engine flag is on', () => {
+  it('offers the bot in both rows once the server reports an available tier', () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENGINE', 'true');
+    setThreeKingdomsBanqiEngineOptions([
+      { id: 'misty-three-kingdoms-banqi', name: 'Misty', familyName: 'Misty', kind: 'container' },
+    ]);
     const both = [
       ['Play Three Kingdoms Banqi', '/?play=computer&gameSpecId=three-kingdoms-banqi'],
       ['Play a friend', '/?play=friend&gameSpecId=three-kingdoms-banqi'],

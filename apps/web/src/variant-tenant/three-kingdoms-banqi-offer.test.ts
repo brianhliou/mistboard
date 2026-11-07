@@ -46,6 +46,12 @@ describe('Three Kingdoms banqi is offered only to an admin session on prod', () 
     const { webVariantOfferedInMenu, webVariantTenantForSpecId } = await import('./registry.js');
     const { enabledLandingVariantGameSpecs } = await import('../landing-play.js');
     const tenant = webVariantTenantForSpecId('three-kingdoms-banqi');
+    const { setThreeKingdomsBanqiEngineOptions } = await import(
+      '../three-kingdoms-banqi-access.js'
+    );
+    setThreeKingdomsBanqiEngineOptions([
+      { id: 'misty-three-kingdoms-banqi', name: 'Misty', familyName: 'Misty', kind: 'container' },
+    ]);
 
     setResolvedAdmin(true);
     expect(tenant?.enabled()).toBe(true);

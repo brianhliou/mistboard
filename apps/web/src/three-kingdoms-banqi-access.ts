@@ -12,13 +12,27 @@
 // (variant-public-surfaces.ts), which production never sets.
 import { threeKingdomsBanqiEnabled, threeKingdomsBanqiEngineEnabled } from './feature-flags.js';
 import { isLikelyAdmin } from './signed-in-state.js';
+import type { WebTenantEngineOption } from './variant-tenant/registry.js';
+
+// A build flag cannot know which assets the running server has. Start closed
+// and replace this roster from /api/engines/playable; never persist it.
+let runtimeEngines: readonly WebTenantEngineOption[] = [];
+
+export function setThreeKingdomsBanqiEngineOptions(
+  engines: readonly WebTenantEngineOption[],
+): void {
+  runtimeEngines = engines;
+}
+
+export function threeKingdomsBanqiEngineOptions(): readonly WebTenantEngineOption[] | undefined {
+  return threeKingdomsBanqiEngineOffered() ? runtimeEngines : undefined;
+}
 
 export function threeKingdomsBanqiOffered(): boolean {
   return threeKingdomsBanqiEnabled() || isLikelyAdmin();
 }
 
-// The bot rides the same door. On prod the server has the fetched engine
-// binary (railpack), so an admin is offered it; locally the build says so.
+// The bot rides the same door and needs a runtime-available tier.
 export function threeKingdomsBanqiEngineOffered(): boolean {
-  return threeKingdomsBanqiEngineEnabled() || isLikelyAdmin();
+  return (threeKingdomsBanqiEngineEnabled() || isLikelyAdmin()) && runtimeEngines.length > 0;
 }

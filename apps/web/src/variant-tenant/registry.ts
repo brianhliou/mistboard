@@ -60,7 +60,7 @@ import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../lan
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { hasLikelyVariantGrant, isLikelyAdmin } from '../signed-in-state.js';
 import {
-  threeKingdomsBanqiEngineOffered,
+  threeKingdomsBanqiEngineOptions,
   threeKingdomsBanqiOffered,
 } from '../three-kingdoms-banqi-access.js';
 
@@ -199,10 +199,6 @@ const XIANGQI_CAPABILITIES_BASE = {
 } as const;
 
 const alwaysEnabled = () => true;
-
-const THREE_KINGDOMS_BANQI_ENGINE_OPTIONS: readonly WebTenantEngineOption[] = [
-  { id: 'misty-three-kingdoms-banqi', name: 'Misty', familyName: 'Misty', kind: 'container' },
-];
 
 // Offered only to an account the server would actually seat: the build flag
 // plus, while the spec is a hidden playtest, a grant named on /api/auth/me
@@ -1232,15 +1228,18 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // with /api/auth/me after the registry is built.
       offerInMenu: threeKingdomsBanqiOffered,
       acceptsDeepLink: threeKingdomsBanqiOffered,
-      // The Rust UCI engine: for an admin on prod (the server fetches the
-      // binary) and in a local build that says the server has it
-      // (VITE_THREE_KINGDOMS_BANQI_ENGINE). Without an option the variant offers
-      // no Play-the-computer path at all. Getters for the same reason as above.
+      // Runtime tiers come from the gated playable API, never build-time
+      // guesses about binaries or nets. The historical classical bot stays
+      // the default when available; L1 works even without a binary.
       get engineOptions() {
-        return threeKingdomsBanqiEngineOffered() ? THREE_KINGDOMS_BANQI_ENGINE_OPTIONS : undefined;
+        return threeKingdomsBanqiEngineOptions();
       },
       get defaultEngineId() {
-        return threeKingdomsBanqiEngineOffered() ? 'misty-three-kingdoms-banqi' : undefined;
+        const options = threeKingdomsBanqiEngineOptions();
+        return (
+          options?.find((engine) => engine.id === 'misty-three-kingdoms-banqi')?.id ??
+          options?.[0]?.id
+        );
       },
     },
   },
