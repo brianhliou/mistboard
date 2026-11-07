@@ -277,6 +277,8 @@ export type TenantPublicationPly = {
   // move turned over, and the face-down piece it captured (jieqi).
   revealed?: HiddenPieceIdentity;
   captured_hidden?: HiddenPieceIdentity;
+  hp_after?: Record<string, number>;
+  damage?: Record<string, number>;
 } & (
   | { uci: string; san: string | null; move?: never; notation?: never }
   // Mahjong actions have no UCI/SAN. Automatic draws follow from the setup.
@@ -307,6 +309,7 @@ export type TenantGamePublication = {
   // game, never an imported one): the start as the variant's dealt FEN, the public FEN
   // plus a sixth field naming each face-down piece in board order.
   deal_fen?: string;
+  initial_fen?: string;
   // Gomoku: played plies start AFTER these recorded stones.
   opening?: GomokuOpening;
   // Imported games only (a game played elsewhere, e.g. an off-site engine match):
@@ -358,6 +361,8 @@ function publicationPlies(game: TenantExportGame): TenantPublicationPly[] {
       ...(ply.move ? { move: ply.move, notation: ply.notation } : { uci: ply.uci, san: ply.san }),
       ...(ply.revealed ? { revealed: { ...ply.revealed } } : {}),
       ...(ply.capturedHidden ? { captured_hidden: { ...ply.capturedHidden } } : {}),
+      ...(ply.hpAfter ? { hp_after: { ...ply.hpAfter } } : {}),
+      ...(ply.damage ? { damage: { ...ply.damage } } : {}),
       ...clocks,
     } as TenantPublicationPly;
   });
@@ -409,6 +414,7 @@ export function buildTenantGamePublicationJson(
     license: LICENSE,
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
     ...(game.dealFen ? { deal_fen: game.dealFen } : {}),
+    ...(game.initialFen ? { initial_fen: game.initialFen } : {}),
     ...(game.opening
       ? {
           opening: {

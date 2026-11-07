@@ -68,6 +68,7 @@ async function storedGameReplays(
   store: TenantGameCardStore,
 ): Promise<boolean> {
   return isReplayableGame(roomId, {
+    includeFFQ: true,
     registrationForRoomId: () => registration,
     loadRoomsEvents: async () => {
       const events = await store.events(roomId);
@@ -108,11 +109,13 @@ export async function tenantGameCard(
   if (!registration || !card || !cardEnabled(registration)) return null;
   if (!gameRouteBase && !registration.finishedGameOpensRoom) return null;
   const label =
-    card.layout === 'match' || card.layout === 'gomoku'
-      ? card.label
-      : isPositionOgVariant(card.variant)
-        ? positionOgVariantLabel(card.variant)
-        : null;
+    registration.gameSpecId === 'ffq-banqi'
+      ? maybeGameSpecForId(registration.gameSpecId)?.publicName
+      : card.layout === 'match' || card.layout === 'gomoku'
+        ? card.label
+        : isPositionOgVariant(card.variant)
+          ? positionOgVariantLabel(card.variant)
+          : null;
   if (!label) return null;
   const game = await store.summary(roomId);
   if (!game || game.variant !== registration.gameSpecId) return null;
@@ -325,10 +328,20 @@ export async function serveTenantGameOgImage(
     redirectToDefault(response);
     return;
   }
+  const writeImage = (png: Buffer, status: 'HIT' | 'MISS') => {
+    if (registration.gameSpecId === 'ffq-banqi') {
+      response.writeHead(200, {
+        'content-type': 'image/png',
+        'cache-control': 'no-store',
+        'x-og-cache': status,
+      });
+      response.end(png);
+    } else writePng(response, png, status);
+  };
   const key = `tenant-game:v${TENANT_GAME_OG_IMAGE_VERSION}:${roomId}`;
   const cached = cache.get(key);
   if (cached) {
-    writePng(response, cached, 'HIT');
+    writeImage(cached, 'HIT');
     return;
   }
   const entry = await tenantGameCard(roomId, store);
@@ -340,7 +353,7 @@ export async function serveTenantGameOgImage(
   const svg = await renderTenantGameCard(entry, store, art);
   const png = await svgToPng(svg);
   cache.set(key, png);
-  writePng(response, png, 'MISS');
+  writeImage(png, 'MISS');
 }
 
 /** The card SVG: the chosen position at full height, the pairing and the

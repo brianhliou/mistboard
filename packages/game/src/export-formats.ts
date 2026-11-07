@@ -26,9 +26,8 @@ export const GAME_EXPORT_FORMATS = {
   'dark-xiangqi': ['pgn', 'json'],
   jieqi: ['pgn', 'json'],
   banqi: ['pgn', 'json'],
-  // The FFQ FEN is a masked observer snapshot, not a replay/import format.
-  // No tenant or export adapter exists; never expose the canonical hidden deal.
-  'ffq-banqi': [],
+  // Public reveals and covered captures only, never the initial deal.
+  'ffq-banqi': ['pgn', 'json'],
   'fortress-xiangqi': ['json'],
   // JSON only, for the same reason as the others: a turn here is a piece move
   // AND a duck placement, and neither WXF nor ICCS has anything to say about the

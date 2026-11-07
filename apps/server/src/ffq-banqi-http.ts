@@ -64,8 +64,7 @@ export function ffqBanqiHttpTarget(url: URL): Target | null {
 
 // Invoked BEFORE API route dispatch or HTML/OG/static handling. FFQ never
 // falls through to another variant's serializer, even for an enabled admin.
-// Only the canonical live room shell and minimal summaries are open; masked
-// state/history arrives over the independently gated room socket.
+// Owned review, export and card serializers run only after this gate.
 export async function guardFFQBanqiHttpRead(
   ctx: ReadContext,
   request: IncomingMessage,
@@ -92,10 +91,22 @@ export async function guardFFQBanqiHttpRead(
     writeJson(response, 404, { error: 'not_found' });
     return true;
   };
-  if ((!target.summary && !target.shell) || request.method !== 'GET') return refuse();
+  const path = url.pathname;
+  const review = /^\/ffq-banqi\/game\/[^/]+\/?$/.test(path);
+  const replay = /^\/api\/ffq-banqi\/games\/[^/]+$/.test(path);
+  const publication = /^\/api\/games\/[^/]+\/export\.(pgn|json)$/.test(path);
+  const card = /^\/og\/game\/[^/]+\.png$/.test(path);
+  if (
+    (!target.summary && !target.shell && !review && !replay && !publication && !card) ||
+    request.method !== 'GET'
+  )
+    return refuse();
   if (!ffqBanqiEnabled() || !ffqBanqiAdmits(await currentAccountUser(request))) return refuse();
+  // Only these owned serializers may run after the gate. Aliases, raw events,
+  // artifacts, embeds and all other descendants remain closed.
+  if (review || replay || publication || card) return false;
   // Continue through the normal static shell only AFTER authorization, keeping
-  // the private cache/robots headers. No replay, share or alias page opens.
+  // the private cache/robots headers. Other alias pages remain closed.
   if (target.shell) return false;
 
   const game =

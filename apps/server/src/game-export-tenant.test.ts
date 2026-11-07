@@ -549,9 +549,9 @@ test('unknown variants and spec mismatches are 501, never another builder', () =
 
 // ── registry conformance ─────────────────────────────────────────────────────
 
-test('FFQ banqi explicitly exports nothing and returns no replay data', () => {
+test('FFQ export fails closed without its own tenant binding', () => {
   assert.ok(Object.hasOwn(GAME_EXPORT_FORMATS, 'ffq-banqi'), 'explicit unavailable capability');
-  assert.deepEqual(exportFormatsForVariant('ffq-banqi'), []);
+  assert.deepEqual(exportFormatsForVariant('ffq-banqi'), ['pgn', 'json']);
   for (const format of ['pgn', 'json'] as const) {
     const response = resolveGameExport({
       roomId: 'ffq_export',
@@ -563,8 +563,8 @@ test('FFQ banqi explicitly exports nothing and returns no replay data', () => {
     assert.equal(
       JSON.stringify(response),
       JSON.stringify({
-        status: 501,
-        body: { error: 'export_not_supported_for_variant', variant: 'ffq-banqi' },
+        status: 403,
+        body: { error: 'game_not_public' },
       }),
       format,
     );

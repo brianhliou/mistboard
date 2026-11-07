@@ -1224,6 +1224,7 @@ export async function listFavoriteGames(
 // and its win-rate readout describe the exact same slice of completed games.
 
 export type GameQueryFilters = {
+  excludeFFQ?: boolean;
   // Ordering. Only the /games union passes this; it must match the key that
   // union merges on, or a page is drawn from the wrong candidate set.
   sort?: XiangqiGameSort;
@@ -1299,6 +1300,7 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
     values.push(value);
     return `$${values.length}`;
   };
+  if (filters.excludeFFQ) conditions.push(notFFQBanqiGame());
   if (filters.variant) conditions.push(`games.variant = ${bind(filters.variant)}`);
   if (filters.variants) {
     conditions.push(
@@ -1483,7 +1485,7 @@ export async function gameAggregates(filters: GameQueryFilters): Promise<GameAgg
 
 // Distinct values present in completed games, for populating filter dropdowns
 // from real data rather than a hardcoded list.
-export async function gameFacets(): Promise<GameFacets> {
+export async function gameFacets(excludeFFQ = false): Promise<GameFacets> {
   const { rows } = await getPool().query<{
     variants: string[] | null;
     modes: string[] | null;
@@ -1495,7 +1497,7 @@ export async function gameFacets(): Promise<GameFacets> {
             array_agg(DISTINCT termination) AS terminations,
             array_agg(DISTINCT result) AS results
      FROM games
-     WHERE status = 'completed'`,
+     WHERE status = 'completed' ${excludeFFQ ? `AND ${notFFQBanqiGame()}` : ''}`,
   );
   const row = rows[0];
   const clean = (xs: string[] | null | undefined): string[] =>

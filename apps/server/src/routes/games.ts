@@ -12,7 +12,7 @@ import {
   devArtifactPayloads,
   devArtifactSummaries,
 } from './../dev-decision-log-artifacts.js';
-import { isFFQBanqiGame } from '../ffq-banqi-access.js';
+import { ffqBanqiAdmits, isFFQBanqiGame } from '../ffq-banqi-access.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
@@ -473,10 +473,13 @@ export async function tryHandle(
       writeJson(response, 400, { error: parsed.error });
       return true;
     }
+    response.setHeader('Cache-Control', 'no-store');
+    const excludeFFQ = !ffqBanqiAdmits(await currentAccountUser(request));
+    const filters = { ...parsed.value, excludeFFQ };
     const [page, aggregates, facets] = await Promise.all([
-      persistence.queryGames(parsed.value),
-      persistence.gameAggregates(parsed.value),
-      persistence.gameFacets(),
+      persistence.queryGames(filters),
+      persistence.gameAggregates(filters),
+      persistence.gameFacets(excludeFFQ),
     ]);
     writeJson(response, 200, {
       games: page.games,
@@ -565,10 +568,15 @@ export async function tryHandle(
     const format = exportMatch[2] as GameExportFormat;
     // Chess-family logs take the legacy builders; every variant tenant resolves
     // through its registry export binding (see game-export-tenant.ts).
-    const [summary, events] = await Promise.all([
-      gameSummaryForApi(ctx, roomId),
-      gameEventsForApi(ctx, roomId),
-    ]);
+    const summary = await gameSummaryForApi(ctx, roomId);
+    if (summary && isFFQBanqiGame(summary)) {
+      response.setHeader('Cache-Control', 'no-store');
+      if (!ffqBanqiAdmits(await currentAccountUser(request))) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+    }
+    const events = await gameEventsForApi(ctx, roomId);
     const resolved = resolveGameExport({ roomId, format, summary, events });
     if (resolved.status !== 200) {
       writeJson(response, resolved.status, resolved.body);

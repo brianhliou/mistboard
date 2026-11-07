@@ -22,6 +22,7 @@ import {
   ffqBanqiIndex,
   ffqBanqiSquare,
 } from './ffq-banqi-board.js';
+import { variantDisplayLabel } from './game-display.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -80,7 +81,7 @@ const tenant: WebVariantTenant<BanqiColor> = {
   isColor: isSeat,
   oppositeColor: (seat) => (seat === 'red' ? 'black' : 'red'),
   enabled: ffqBanqiEnabled,
-  reviewUrl: (room) => `/room/${encodeURIComponent(room)}`,
+  reviewUrl: (room) => `/ffq-banqi/game/${encodeURIComponent(room)}`,
   reasonPhrase,
   rejectedBodyByReason: { 'game spec disabled': 'live.ffq.adminOnly' },
   spectatorBody: 'live.spectatorWatchingGame',
@@ -252,7 +253,7 @@ function canInteract(): boolean {
 
 function renderBoard(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   refs.board.className = 'board banqi-live-board';
-  refs.board.setAttribute('aria-label', 'FFQ Banqi board');
+  refs.board.setAttribute('aria-label', variantDisplayLabel(FFQ_BANQI_SPEC_ID));
   if (!view) {
     refs.board.replaceChildren();
     return;

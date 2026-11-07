@@ -3,7 +3,16 @@ import { type BanqiColor, FFQ_BANQI_SPEC_ID, type RoomTimeControl } from '@mistb
 import { currentAccountUser } from './account-session.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiAdmits, isFFQBanqiRequest } from './ffq-banqi-access.js';
+import {
+  ffqBanqiCardFen,
+  ffqBanqiPlyReveal,
+  ffqBanqiRecordSquare,
+  writeFFQBanqiPgn,
+} from './ffq-banqi-publication.js';
+import { ffqBanqiPostgameHistory } from './ffq-banqi-replay.js';
 import { type FFQBanqiRuntimeRoom, ffqBanqiTenant } from './ffq-banqi-tenant.js';
+import { tenantCardBinding } from './game-card-tenant.js';
+import { flipOrBoardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import * as persistence from './persistence.js';
 import { writeJson } from './routes/lib.js';
@@ -64,6 +73,16 @@ const route = createTenantRoomsRoute<
   engine: { kind: 'none', rejectEngineId: true },
   createRoom: (ctx, { timeControl, preferredColor }) =>
     createFFQBanqiRoom(ctx.accountUser, timeControl, preferredColor),
+});
+
+const ffqExport = tenantExportBinding(ffqBanqiTenant, {
+  gameRouteBase: '/ffq-banqi/game',
+  uci: (move) =>
+    flipOrBoardMoveUci({
+      from: ffqBanqiRecordSquare(move.from),
+      to: ffqBanqiRecordSquare(move.to),
+    }),
+  hiddenPieces: { variant: 'banqi', reveal: ffqBanqiPlyReveal },
 });
 
 registerVariantTenant({
@@ -127,8 +146,30 @@ registerVariantTenant({
   },
   watch: null,
   lobby: null,
-  export: null,
-  card: null,
+  reviewRouteBase: '/ffq-banqi/game',
+  export: {
+    gameRouteBase: ffqExport.gameRouteBase,
+    finishedGame: (events, roomId) => {
+      const game = ffqExport.finishedGame(events, roomId);
+      if (!game) return null;
+      const frames = ffqBanqiPostgameHistory(events as FFQBanqiRuntimeRoom['events']).truth;
+      return {
+        ...game,
+        initialFen: frames[0]!.fen,
+        plies: game.plies.map((ply, index) => ({
+          ...ply,
+          hpAfter: frames[index + 1]!.view.hp,
+          damage: frames[index + 1]!.damage,
+        })),
+        writePgn: (tags, result) => writeFFQBanqiPgn(tags, result, game, frames),
+      };
+    },
+  },
+  card: tenantCardBinding(ffqBanqiTenant, {
+    variant: 'banqi',
+    analysis: null,
+    fen: ffqBanqiCardFen,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

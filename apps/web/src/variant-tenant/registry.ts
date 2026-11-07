@@ -327,8 +327,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../live-ffq-banqi.js').then(
         ({ bootstrapFFQBanqiLiveRoom }) => bootstrapFFQBanqiLiveRoom,
       ),
-    // No postgame route, watch channel or public listing. Finished rooms keep
-    // the same masked live client; shared discovery never links them.
+    gameRouteBase: '/ffq-banqi/game',
+    reviewRouteBase: '/ffq-banqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../live-ffq-banqi-postgame.js').then(({ mountFFQBanqiPostgame }) =>
+        mountFFQBanqiPostgame(root, roomId),
+      ),
+    // No watch channel or public discovery. Spectators use the gated room.
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
