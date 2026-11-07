@@ -60,6 +60,9 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   '2026-tianchang-cup': 'B',
   '2026-xintai-cup': 'B',
   '2026-baizuishan-cup': 'B',
+  // The continental championship, the strongest event in North America: A, so
+  // its field gets player pages. Graded 2026-11-07.
+  '2026-north-american-championship': 'A',
   // LA-hosted four-club invitational. Former North American champions play,
   // but this mixed club field does not qualify new professional player pages.
   '2026-us-qitian-cup': 'B',

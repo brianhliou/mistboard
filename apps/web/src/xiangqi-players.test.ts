@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import {
   currentSeason,
   displayName,
@@ -48,6 +49,54 @@ function player(input: {
 }
 
 describe('player pages', () => {
+  it.each([
+    ['en', 'Puzzles from this player'],
+    ['zh-Hans', '这位棋手的习题'],
+    ['zh-Hant', '這位棋手的習題'],
+  ] as const)('links to player-scoped training in %s', async (locale, label) => {
+    await ensureLocaleCatalog(locale);
+    const previousPath = window.location.pathname;
+    window.history.replaceState(
+      null,
+      '',
+      locale === 'en' ? '/' : `/${locale.toLowerCase()}/players`,
+    );
+    const fixture = { ...player({ name: 'Fixture Player', games: 2 }), puzzleCount: 1 };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ player: fixture, boards: [] }))),
+    );
+    try {
+      const root = document.createElement('div');
+      await mountXiangqiPlayer(root, fixture.slug);
+      const link = root.querySelector<HTMLAnchorElement>(
+        '.xqp-header-actions a[href="/puzzles?player=fixture-player"]',
+      );
+      expect(link?.textContent).toBe(label);
+      expect(link?.classList.contains('xqb-link')).toBe(true);
+    } finally {
+      window.history.replaceState(null, '', previousPath);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('omits player training when the server reports zero puzzles without fetching puzzles', async () => {
+    const fixture = { ...player({ name: 'Fixture Player', games: 2 }), puzzleCount: 0 };
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ player: fixture, boards: [] })),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      const root = document.createElement('div');
+      await mountXiangqiPlayer(root, fixture.slug);
+      expect(root.querySelector('a[href="/puzzles?player=fixture-player"]')).toBeNull();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher).toHaveBeenCalledWith('/api/xiangqi/players/fixture-player');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('shows both scripts of a name, once', () => {
     expect(displayName({ name: '尹昇', nameEn: 'Yin Sheng' })).toBe('Yin Sheng 尹昇');
     expect(displayName({ name: '尹昇', nameEn: null })).toBe('尹昇');

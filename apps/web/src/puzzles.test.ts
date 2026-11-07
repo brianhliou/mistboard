@@ -24,7 +24,7 @@ import { displayPreferenceStorageKey } from './display-preferences.js';
 import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
 import type { PuzzleMove } from './puzzles/adapter.js';
-import type { PuzzleAttempt } from './puzzles/api.js';
+import { fetchPuzzleListWithAttempts, type PuzzleAttempt } from './puzzles/api.js';
 import { mountPuzzleHistory, puzzleHistorySessions, puzzleHistoryTime } from './puzzles/history.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { playerWithoutTeam } from './puzzles/queue-panel.js';
@@ -119,6 +119,188 @@ describe('puzzles route', () => {
     literal: 'cannon behind the horse',
     gloss: 'The horse pens the general in and screens the cannon behind it.',
   }));
+
+  function playerPuzzleApi() {
+    const puzzles = [
+      RED_MATE,
+      BLACK_MATE,
+      XIANGQI_PUZZLES.find((puzzle) => puzzle.id !== RED_MATE.id && puzzle.id !== BLACK_MATE.id)!,
+    ];
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/puzzles' || url.startsWith('/api/puzzles?')) {
+        const player = new URL(url, window.location.origin).searchParams.get('player');
+        const pool =
+          player === 'empty-player'
+            ? []
+            : puzzles.filter(
+                (_, index) => !player || (player === 'fixture-player' ? index < 2 : index === 2),
+              );
+        return json({
+          puzzles: pool.map((puzzle) => ({
+            ...publicSummary(puzzle),
+            tags: [
+              'matein2',
+              `player:${puzzle === puzzles[2] ? 'other-player' : 'fixture-player'}`,
+            ],
+          })),
+        });
+      }
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      if (url.endsWith('/reveal')) return json({ move: RED_MATE.solution[0] });
+      const puzzle = puzzles.find((candidate) => url === `/api/puzzles/${candidate.id}`);
+      return puzzle ? json({ puzzle: publicDetail(puzzle) }) : json({}, 404);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    stubWindowLocalStorage(memoryStorage());
+    return { puzzles, fetchSpy };
+  }
+
+  it('requires matching player provenance if a server returns an unfiltered pool', async () => {
+    const matching = { ...publicSummary(RED_MATE), tags: ['player:fixture-player'] };
+    const fetchSpy = vi.fn(async () =>
+      json({
+        puzzles: [
+          matching,
+          { ...publicSummary(BLACK_MATE), tags: ['player:other-player'] },
+          publicSummary(BLACK_MATE),
+        ],
+      }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    expect((await fetchPuzzleListWithAttempts('fixture-player')).puzzles).toEqual([matching]);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles?player=fixture-player');
+  });
+
+  it('keeps player scope in the API, Next and browser history across player sets', async () => {
+    const { puzzles, fetchSpy } = playerPuzzleApi();
+    window.history.replaceState(
+      null,
+      '',
+      `/puzzles/${RED_MATE.id}?player=fixture-player&theme=matein2`,
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root, RED_MATE.id);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles?player=fixture-player');
+    expect(root.textContent).toContain('0 solved of 2');
+    root.querySelector<HTMLButtonElement>('[data-puzzle-hint]')!.click();
+    await vi.waitFor(() => expect(root.querySelector('[data-puzzle-skip]')).not.toBeNull());
+    root.querySelector<HTMLButtonElement>('[data-puzzle-skip]')!.click();
+    await vi.waitFor(() => expect(window.location.pathname).toBe(`/puzzles/${BLACK_MATE.id}`));
+    expect(new URLSearchParams(window.location.search).get('player')).toBe('fixture-player');
+    expect(new URLSearchParams(window.location.search).get('theme')).toBe('matein2');
+    expect(fetchSpy).not.toHaveBeenCalledWith(`/api/puzzles/${puzzles[2]!.id}`);
+
+    window.history.replaceState(null, '', `/puzzles/${puzzles[2]!.id}?player=other-player`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(
+        puzzles[2]!.id,
+      ),
+    );
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles?player=other-player');
+    expect(root.textContent).toContain('0 solved of 1');
+    window.history.replaceState(
+      null,
+      '',
+      `/puzzles/${RED_MATE.id}?player=fixture-player&theme=matein2`,
+    );
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(RED_MATE.id),
+    );
+    expect(root.textContent).toContain('0 solved of 2');
+  });
+
+  it('keeps a reload past a solved puzzle inside the player set', async () => {
+    const { fetchSpy } = playerPuzzleApi();
+    stubWindowLocalStorage(
+      memoryStorage({
+        'mistboard:puzzles:solved': JSON.stringify([RED_MATE.id]),
+        'mistboard:puzzles:seen': JSON.stringify({ [RED_MATE.id]: Date.now() }),
+      }),
+    );
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+      { type: 'reload' } as PerformanceNavigationTiming,
+    ]);
+    resetPuzzleReloadCheckForTest();
+    window.history.replaceState(null, '', `/puzzles/${RED_MATE.id}?player=fixture-player`);
+    const root = document.createElement('div');
+    await mountPuzzles(root, RED_MATE.id);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles?player=fixture-player');
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(BLACK_MATE.id);
+    expect(window.location.pathname + window.location.search).toBe(
+      `/puzzles/${BLACK_MATE.id}?player=fixture-player`,
+    );
+  });
+
+  it('excludes an out-of-scope puzzle in direct links and popstate', async () => {
+    const { puzzles, fetchSpy } = playerPuzzleApi();
+    const outsider = puzzles[2]!;
+    window.history.replaceState(null, '', `/puzzles/${outsider.id}?player=fixture-player`);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root, outsider.id);
+    window.history.replaceState(null, '', `/puzzles/${outsider.id}?player=fixture-player`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetchSpy).not.toHaveBeenCalledWith(`/api/puzzles/${outsider.id}`);
+    expect([RED_MATE.id, BLACK_MATE.id]).toContain(
+      root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id'),
+    );
+  });
+
+  it('shows an empty player set and keeps theme recovery inside that player set', async () => {
+    const { fetchSpy } = playerPuzzleApi();
+    window.history.replaceState(null, '', '/puzzles?player=empty-player&theme=matein2');
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles?player=empty-player');
+    expect(root.textContent).toContain('No puzzles from this player yet.');
+    expect(root.querySelector('.puzzle-board')).toBeNull();
+    expect(root.querySelector('a[href="/puzzles"]')?.textContent).toBeTruthy();
+
+    window.history.replaceState(null, '', '/puzzles?player=fixture-player&theme=men-gong');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzles-status')?.textContent).toContain(
+        'No puzzles for this theme',
+      ),
+    );
+    expect(root.querySelector('.puzzle-detail a')?.getAttribute('href')).toBe(
+      '/puzzles?player=fixture-player&theme=',
+    );
+  });
+
+  it('restores the player set when Back overtakes a pending player request', async () => {
+    const { fetchSpy, puzzles } = playerPuzzleApi();
+    window.history.replaceState(null, '', `/puzzles/${RED_MATE.id}?player=fixture-player`);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root, RED_MATE.id);
+    let finish!: (response: Response) => void;
+    fetchSpy.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    window.history.replaceState(null, '', `/puzzles/${puzzles[2]!.id}?player=other-player`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    window.history.replaceState(null, '', `/puzzles/${BLACK_MATE.id}?player=fixture-player`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(
+        BLACK_MATE.id,
+      ),
+    );
+    finish(json({ puzzles: [{ ...publicSummary(puzzles[2]!), tags: ['player:other-player'] }] }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(BLACK_MATE.id);
+    expect(root.textContent).toContain('0 solved of 2');
+  });
 
   it('replays Dashboard failures oldest first instead of opening puzzle replay', async () => {
     stubWindowLocalStorage(memoryStorage());

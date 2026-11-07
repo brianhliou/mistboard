@@ -83,6 +83,9 @@ export type XiangqiPuzzle = {
   solution: XiangqiMove[];
   goal: XiangqiPuzzleGoal;
   themes: XiangqiPuzzleTheme[];
+  /** Explicit provenance, persisted with the puzzle. Training tags are derived
+   *  separately; player identity is never inferred from source display names. */
+  tags?: `player:${string}`[];
   // Pointer to the real game this position came from: replaying the source
   // game's first `ply` moves from the standard opening reproduces `initial`
   // (modulo the puzzle-state reset of progressClock/positionCounts).

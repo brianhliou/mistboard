@@ -38,6 +38,7 @@ import type pg from 'pg';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
 
 export type StoredPuzzle = JunglePuzzle | XiangqiPuzzle;
+export type PuzzleTagId = XiangqiTrainingTagId | NonNullable<XiangqiPuzzle['tags']>[number];
 
 export type PuzzleStoreSnapshot = {
   // Every stored puzzle (including hidden-from-discovery variants), seq order.
@@ -64,9 +65,31 @@ export type PuzzleStoreSnapshot = {
   // patterns plus mate-in-N, phase, goal and length, derived here for the same
   // reason. The `themes` stored at mining time are not read, so a tag rule
   // added later (matein4, 2026-10-28) covers the whole corpus on the next load.
-  tagsById: ReadonlyMap<string, readonly XiangqiTrainingTagId[]>;
+  // Explicit player provenance is appended from the stored record.
+  tagsById: ReadonlyMap<string, readonly PuzzleTagId[]>;
   source: 'database' | 'seed';
 };
+
+// Jungle is omitted from the discoverable pool (list + random) while its
+// puzzle surface is parked. Its puzzles stay resolvable by id/short-code below
+// (puzzleById scans the whole store), so existing links do not hard-404.
+// Remove a variant from this filter to surface it again.
+const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID]);
+
+export function discoverablePuzzles(store: PuzzleStoreSnapshot): StoredPuzzle[] {
+  return store.puzzles.filter((puzzle) => !UNDISCOVERABLE_PUZZLE_VARIANTS.has(puzzle.variant));
+}
+
+/** Count only the pool the public list can discover, with exact player tags. */
+export async function playerPuzzleCount(
+  slug: string,
+  store?: PuzzleStoreSnapshot,
+): Promise<number> {
+  const snapshot = store ?? (await getPuzzleStore());
+  return discoverablePuzzles(snapshot).filter((puzzle) =>
+    snapshot.tagsById.get(puzzle.id)?.includes(`player:${slug}`),
+  ).length;
+}
 
 const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID, XIANGQI_SPEC_ID]);
 
@@ -291,7 +314,7 @@ function buildSnapshot(
 ): PuzzleStoreSnapshot {
   const difficultyById = new Map<string, number>();
   const motifsById = new Map<string, readonly XiangqiMotifId[]>();
-  const tagsById = new Map<string, readonly XiangqiTrainingTagId[]>();
+  const tagsById = new Map<string, readonly PuzzleTagId[]>();
   for (const puzzle of puzzles) {
     if (puzzle.variant !== XIANGQI_SPEC_ID) continue;
     // Read off the record without replaying it, so even a line that will not
@@ -318,6 +341,12 @@ function buildSnapshot(
       console.warn(`puzzle-store: difficulty derivation failed for ${puzzle.id}`, {
         message: error instanceof Error ? error.message : String(error),
       });
+    }
+    if (Array.isArray(puzzle.tags)) {
+      const players = puzzle.tags.filter(
+        (tag) => typeof tag === 'string' && tag.startsWith('player:') && tag.length > 7,
+      );
+      tagsById.set(puzzle.id, [...new Set([...(tagsById.get(puzzle.id) ?? []), ...players])]);
     }
   }
   return {

@@ -58,11 +58,13 @@ import {
 } from '../puzzle-rating.js';
 import { type PuzzleDetailSourceFields, puzzleDetailSourceFields } from '../puzzle-setup-move.js';
 import {
+  discoverablePuzzles,
   getPuzzleStore,
   listPuzzleReports,
   PUZZLE_REPORT_REASONS,
   type PuzzleReportReason,
   type PuzzleStoreSnapshot,
+  type PuzzleTagId,
   recordPuzzleReport,
   reviewPuzzleReports,
 } from '../puzzle-store.js';
@@ -118,16 +120,6 @@ export type PublicPuzzle = JunglePuzzle | XiangqiPuzzle;
 type PublicPuzzleVariant = typeof JUNGLE_SPEC_ID | typeof XIANGQI_SPEC_ID;
 type PublicPuzzleMove = JungleMove | XiangqiMove;
 
-// Jungle is omitted from the discoverable pool (list + random) while its
-// puzzle surface is parked. Its puzzles stay resolvable by id/short-code below
-// (puzzleById scans the whole store), so existing links do not hard-404.
-// Remove a variant from this filter to surface it again.
-const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([JUNGLE_SPEC_ID]);
-
-function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
-  return store.puzzles.filter((puzzle) => !UNDISCOVERABLE_PUZZLE_VARIANTS.has(puzzle.variant));
-}
-
 type PuzzleSummary = {
   id: string;
   variant: PublicPuzzleVariant;
@@ -138,10 +130,10 @@ type PuzzleSummary = {
   /** Named kill patterns (杀法) by id; empty outside standard-xiangqi mates. */
   motifs: readonly XiangqiMotifId[];
   /**
-   * Every trainer tag, derived at load: the motifs plus mate-in-N, phase,
-   * goal and length. Empty outside standard xiangqi.
+   * Derived motifs, mate-in-N, phase, goal and length, plus stored player
+   * provenance. Empty outside standard xiangqi.
    */
-  tags: readonly XiangqiTrainingTagId[];
+  tags: readonly PuzzleTagId[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
@@ -510,6 +502,7 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_theme' });
       return true;
     }
+    const player = parsedUrl.searchParams.get('player');
     const store = await getPuzzleStore();
     const discoverable = discoverablePuzzles(store);
     const variantPuzzles = variant
@@ -518,12 +511,13 @@ export async function tryHandle(
     const puzzles = variantPuzzles.filter(
       (puzzle) =>
         (!motif || store.motifsById.get(puzzle.id)?.includes(motif)) &&
-        (!theme || store.tagsById.get(puzzle.id)?.includes(theme)),
+        (!theme || store.tagsById.get(puzzle.id)?.includes(theme)) &&
+        (!player || store.tagsById.get(puzzle.id)?.includes(`player:${player}`)),
     );
     // Counts describe the variant's whole discoverable pool, so selecting one
     // theme does not erase the other choices. Hidden/withheld puzzles never count.
     const counts = new Map<XiangqiMotifId, number>();
-    const tagCounts: Partial<Record<XiangqiTrainingTagId, number>> = {};
+    const tagCounts: Partial<Record<PuzzleTagId, number>> = {};
     for (const id of XIANGQI_MOTIFS.map((m) => m.id)) tagCounts[id] = 0;
     for (const tag of XIANGQI_TRAINING_TAGS) tagCounts[tag.id] = 0;
     for (const puzzle of variantPuzzles) {

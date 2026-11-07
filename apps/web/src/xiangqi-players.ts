@@ -90,6 +90,7 @@ export type PlayerRecord = {
    *  (cxa-listed-players.ts): the page is the list's facts and an empty games
    *  state. Absent on every player with games. */
   cxaOnly?: boolean;
+  puzzleCount?: number;
 };
 
 export type PlayerBoardRecord = {
@@ -1178,16 +1179,23 @@ function renderPlayer(
     note.append(`${sanctionSentence(sanction)} `, link);
     copy.append(note);
   }
+  const actions = document.createElement('div');
+  actions.className = 'xqb-hero-actions xqp-header-actions';
+  if ((player.puzzleCount ?? 0) > 0) {
+    const puzzles = document.createElement('a');
+    puzzles.className = 'xqb-link';
+    puzzles.href = `/puzzles?player=${encodeURIComponent(player.slug)}`;
+    puzzles.textContent = t('puzzle.fromPlayer');
+    actions.append(puzzles);
+  }
   if (profile?.profileHref) {
-    const actions = document.createElement('div');
-    actions.className = 'xqb-hero-actions xqp-header-actions';
     const link = document.createElement('a');
     link.className = 'xqb-link xqb-link-primary';
     link.href = localizedHref(profile.profileHref);
     link.textContent = t('broadcast.playerReadProfile');
     actions.append(link);
-    copy.append(actions);
   }
+  copy.append(actions);
   header.append(figure, copy);
   main.append(header);
 
