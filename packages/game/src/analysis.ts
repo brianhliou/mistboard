@@ -1,4 +1,4 @@
-// Postgame analysis math (P3): centipawn eval -> win probability -> per-move
+// Postgame analysis math (P3): engine eval -> win probability -> per-move
 // judgment + accuracy. Formulas ported from lichess/lila.
 //
 // CALIBRATED AND LEFT ALONE, 2026-08-27. The note here used to say the chess
@@ -134,12 +134,10 @@ export const RAPFI_WIN_PCT_K = 1 / 200;
 const ABJCHESS_JQE_SCALE_NETS = ['abjchess-20261030'] as const;
 
 /**
- * The win-curve constant for an analysis stored under `engineId`. Every surface
- * that turns STORED engine cp into win% asks this with the engineId the analysis
- * came back with, so a game analysed by AB-JChess is drawn and graded on AB's
- * curve and an older PikaJieQi analysis on lila's; AB-JChess ids pick the curve
- * of the net they name. Unknown or absent ids get lila's constant, which is what
- * every engine but AB-JChess has always used.
+ * The logistic win-curve constant for an analysis stored under `engineId`.
+ * AB-JChess ids pick the curve of the net they name; Rapfi has its own scale.
+ * Unknown or absent ids get lila's constant. For stored scores, pass the id
+ * directly to winPercent instead: not every engine uses a logistic model.
  */
 export function winPercentK(engineId: string | null | undefined): number {
   if (engineId?.startsWith('rapfi-')) return RAPFI_WIN_PCT_K;
@@ -150,13 +148,33 @@ export function winPercentK(engineId: string | null | undefined): number {
 }
 
 /**
- * Centipawns / mate (from ONE side's POV) -> that side's win probability in
- * [0, 100]. A mate maps through lila's mate->cp ladder ((21 - min(10, N)) * 100,
- * so mate-in-1 reads as 2000cp and a distant mate as 1100cp) rather than
+ * Engine score / mate (from ONE side's POV) -> that side's win probability in
+ * [0, 100]. Pass the producing engineId to select its score model. Confirmed
+ * expected-score engines transport a value in [-1, 1] as cp = value * 1000;
+ * their win% is linear, with mates and finished-game ±30000 scores decisive.
+ * Other engines use their logistic curve. A mate maps through lila's mate->cp
+ * ladder ((21 - min(10, N)) * 100, so mate-in-1 reads as 2000cp and a distant
+ * mate as 1100cp) rather than
  * short-circuiting to certainty: swings between mate distances still register.
- * `k` is the engine's curve constant (winPercentK); the default is lila's.
+ * A numeric third argument explicitly selects a logistic curve constant
+ * (winPercentK); the default is lila's. See docs/misty-analysis-win-scale.md.
  */
-export function winPercent(cp: number | null, mate: number | null, k: number = WIN_PCT_K): number {
+export function winPercent(
+  cp: number | null,
+  mate: number | null,
+  engineIdOrK: string | number | null = WIN_PCT_K,
+): number {
+  // Only this family is confirmed to emit expected score * 1000. Other Misty
+  // engines use native scores or a Stockfish eval track; do not match misty-*.
+  if (
+    typeof engineIdOrK === 'string' &&
+    (engineIdOrK === 'misty-three-kingdoms-banqi' ||
+      engineIdOrK.startsWith('misty-three-kingdoms-banqi-'))
+  ) {
+    if (mate != null) return mate > 0 ? 100 : 0;
+    return 50 + 50 * Math.max(-1, Math.min(1, (cp ?? 0) / 1000));
+  }
+  const k = typeof engineIdOrK === 'number' ? engineIdOrK : winPercentK(engineIdOrK);
   if (mate != null) {
     const mateCp = (21 - Math.min(10, Math.abs(mate))) * 100;
     return logisticWinPercent(mate > 0 ? mateCp : -mateCp, k);

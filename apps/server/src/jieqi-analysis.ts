@@ -14,7 +14,7 @@
 // resolve (prod since 2026-10, #482), else PikaJieQi (Pikafish jieqi_old), chosen per compute
 // by jieqiAnalysisEngine(). Each engine has its own profile below (budgets, cache ids, win
 // curve), and a stored analysis keeps the id of the engine that computed it: the client draws
-// and grades it on that engine's curve (winPercentK), and a read falls back to whichever
+// and grades it on that engine's model (winPercent), and a read falls back to whichever
 // engine's row exists, so games analysed before the switch keep their PikaJieQi analysis. A
 // missing binary fails closed at the route (503), and an all-null sweep throws
 // VacuousAnalysisError (never cached) — so a broken or score-less engine can't cache a flat,
@@ -739,7 +739,7 @@ export function jieqiDecisionDepsFromSession(
               mover,
               rankPosition,
               repWindow,
-              profile.winK,
+              profile.decisionsEngineId,
             );
             lines.push({
               index: 0,
@@ -776,7 +776,7 @@ export function jieqiDecisionDepsFromSession(
         // Compare on the same win% curve as the true means. For equal mate
         // values, prefer shorter wins and longer losses.
         const score = (line: (typeof lines)[number]) =>
-          line.win ?? winPercent(line.cp, line.mate, profile.winK);
+          line.win ?? winPercent(line.cp, line.mate, profile.decisionsEngineId);
         lines.sort((a, b) => score(b) - score(a) || (a.mate ?? 0) - (b.mate ?? 0));
         return lines.map((line, i) => ({ ...line, index: i + 1 }));
       }
@@ -836,7 +836,7 @@ async function moverWinAfter(
   mover: JieqiColor,
   evalPosition: JieqiDecisionDeps['evalPosition'],
   repWindow: JieqiDecisionWindow,
-  winK: number,
+  engineId: string,
 ): Promise<number> {
   if (post.status.type === 'finished') {
     const winner = post.status.winner;
@@ -846,8 +846,7 @@ async function moverWinAfter(
     gradingFen(post, mover),
     renderDecisionWindow(repWindow, mover),
   );
-  // The engine's own curve: AB-JChess cp mean more win% than PikaJieQi cp.
-  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate, winK);
+  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate, engineId);
 }
 
 // The identities the MOVER believes one of its dark squares may hold (#487): its dark tiles on
@@ -934,7 +933,7 @@ async function poolMeanWin(
   mover: JieqiColor,
   evalPosition: JieqiDecisionDeps['evalPosition'],
   repWindow: JieqiDecisionWindow,
-  winK: number,
+  engineId: string,
 ): Promise<{ baseline: number; realized: number }> {
   const source = state.board[move.from];
   const moverPool = source?.faceDown ? believedMoverPool(state, mover) : null;
@@ -949,7 +948,7 @@ async function poolMeanWin(
       mover,
       evalPosition,
       jieqiDecisionWindowAfterMove(cf, move, post, repWindow),
-      winK,
+      engineId,
     );
   });
   const total = moverPool ? [...moverPool.values()].reduce((a, b) => a + b, 0) : 1;
@@ -1041,7 +1040,7 @@ export async function analyzeJieqiDecisions(
           mover,
           deps.evalPosition,
           repWindow,
-          profile.winK,
+          profile.decisionsEngineId,
         );
         scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {

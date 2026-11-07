@@ -292,7 +292,11 @@ async function moverWinAfter(
     jungleFlipStateToEngineFen(post),
     jungleFlipRepSeedFens([...history, post]),
   );
-  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate);
+  return winPercent(
+    cp == null ? null : -cp,
+    mate == null ? null : -mate,
+    JUNGLE_FLIP_DECISIONS_ENGINE_ID,
+  );
 }
 
 // The TRUE pool-mean baseline (win%, mover POV) of `move` from a pre-move `state`, plus the
