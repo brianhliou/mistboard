@@ -19,6 +19,7 @@ import {
   FFQ_BANQI_WIDTH,
   type FFQBanqiBoard,
   type FFQBanqiState,
+  getFFQBanqiForbiddenChaseMoves,
   getFFQBanqiLegalMoves,
   getFFQBanqiPlayerView,
   getFFQBanqiResult,
@@ -435,15 +436,121 @@ test('chase4_forbid5: count starts at first chase, fourth allowed, fifth illegal
     assert.equal(state.chaseCounts.red, count, 'opponent quiet move preserves the count');
   }
   assert.ok(!dests(state, 0).includes(1));
+  assert.deepEqual(getFFQBanqiForbiddenChaseMoves(state), [
+    { from: 0, to: 1 },
+    { from: 0, to: 4 },
+  ]);
   assert.equal(applyFFQBanqiMove(state, { from: 0, to: 1 }), state);
   assert.ok(dests(state, 31).includes(30), 'non-chase remains legal');
   const forced = { ...state, board: [...state.board] };
   forced.board[31] = null;
+  assert.deepEqual(getFFQBanqiForbiddenChaseMoves(forced), [
+    { from: 0, to: 1 },
+    { from: 0, to: 4 },
+  ]);
   assert.deepEqual(getFFQBanqiResult(forced), {
     type: 'finished',
     winner: 'black',
     reason: 'no-legal-move',
   });
+});
+
+test('forbidden chase moves are exactly the steps removed at the real count, for either seat', () => {
+  for (const seat of ['red', 'black'] as const) {
+    const enemy = seat === 'red' ? 'black' : 'red';
+    const state = playing(
+      {
+        0: up(seat, 'chariot'),
+        2: up(enemy, 'horse'),
+        4: up(seat, 'soldier'),
+        9: up(seat, 'cannon'),
+        10: down(seat, 'horse'),
+        11: down(enemy, 'chariot'),
+      },
+      { ply: seat === 'red' ? 0 : 1, status: { type: 'playing', turn: seat } },
+    );
+    const unrestricted = getFFQBanqiLegalMoves(state);
+    for (let count = 0; count <= 4; count += 1) {
+      state.chaseCounts[seat] = count;
+      // The other seat's count must never restrict the mover.
+      state.chaseCounts[enemy] = 4;
+      const before = JSON.stringify(state);
+      const forbidden = getFFQBanqiForbiddenChaseMoves(state);
+      assert.deepEqual(forbidden, count === 4 ? [{ from: 0, to: 1 }] : []);
+      const legal = getFFQBanqiLegalMoves(state);
+      assert.deepEqual(
+        forbidden,
+        unrestricted.filter((m) => !legal.some((n) => n.from === m.from && n.to === m.to)),
+      );
+      assert.ok(
+        legal.some((m) => m.from === 10 && m.to === 10),
+        'flips stay legal',
+      );
+      assert.ok(
+        legal.some((m) => m.from === 9 && m.to === 11),
+        'captures stay legal',
+      );
+      assert.ok(
+        legal.some((m) => m.from === 4 && m.to === 8),
+        'non-chases stay legal',
+      );
+      assert.equal(JSON.stringify(state), before, 'enumeration does not mutate state');
+    }
+    for (const terminal of [
+      { ...state, status: { type: 'finished', winner: enemy, reason: 'resignation' } },
+      { ...state, status: { type: 'aborted', reason: 'user-abort' } },
+      { ...state, hp: { red: 0, black: 60 } },
+      { ...state, noProgressClock: 30 },
+    ] satisfies FFQBanqiState[]) {
+      assert.deepEqual(getFFQBanqiForbiddenChaseMoves(terminal), []);
+      assert.ok(!('forbiddenMoves' in getFFQBanqiPlayerView(terminal, seat)));
+    }
+  }
+});
+
+test('forbidden chase moves serialize only for the mover and never depend on covered identities', () => {
+  for (const seat of ['red', 'black'] as const) {
+    const enemy = seat === 'red' ? 'black' : 'red';
+    const state = playing(
+      {
+        0: up(seat, 'chariot'),
+        2: up(enemy, 'horse'),
+        10: down('red', 'general'),
+        11: down('black', 'soldier'),
+      },
+      {
+        ply: seat === 'red' ? 0 : 1,
+        status: { type: 'playing', turn: seat },
+        chaseCounts: { red: 4, black: 4 },
+      },
+    );
+    const swapped = { ...state, board: [...state.board] };
+    [swapped.board[10], swapped.board[11]] = [swapped.board[11], swapped.board[10]];
+    for (const perspective of ['red', 'black', 'observer'] as const) {
+      const serialized = JSON.stringify(getFFQBanqiPlayerView(state, perspective));
+      assert.equal(serialized, JSON.stringify(getFFQBanqiPlayerView(swapped, perspective)));
+      const payload = JSON.parse(serialized);
+      assert.deepEqual(payload.board[10], { faceDown: true });
+      assert.deepEqual(payload.board[11], { faceDown: true });
+      if (perspective === seat) assert.deepEqual(payload.forbiddenMoves, [{ from: 0, to: 1 }]);
+      else assert.ok(!('forbiddenMoves' in payload));
+      assert.ok(
+        !(
+          'forbiddenMoves' in
+          getFFQBanqiPlayerView(
+            {
+              ...state,
+              chaseCounts: { red: 0, black: 0 },
+            },
+            perspective,
+          )
+        ),
+      );
+    }
+    const view = getFFQBanqiPlayerView(state, seat);
+    view.forbiddenMoves![0].to = 31;
+    assert.deepEqual(getFFQBanqiForbiddenChaseMoves(state), [{ from: 0, to: 1 }]);
+  }
 });
 
 test('rule 8: chase means capturable adjacent revealed enemy after the step; non-chase resets only mover', () => {

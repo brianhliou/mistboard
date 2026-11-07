@@ -839,6 +839,7 @@ export const ZH_HANS_PLAY = {
   'live.atomicCheckYour': '你的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
   'live.atomicCheckColor': '{color}的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
   'live.banqiChaseForbidden': '长捉：这步棋会让同一局面第三次出现。请走别的着法。',
+  'live.ffq.chaseForbidden': '翻翻棋最多允许连续捉子四次。这步棋会是第五次。请走别的着法。',
   'live.tk.points': '{count} 分',
   'live.tk.captured': '吃子',
   'live.tk.none': '无',

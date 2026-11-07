@@ -31,6 +31,7 @@ export function ffqBanqiBoardView(view: FFQBanqiPlayerView): BanqiPlayerView {
     perspective: view.perspective === 'black' ? 'black' : 'red',
     board,
     legalMoves: view.legalMoves.map(move),
+    ...(view.forbiddenMoves ? { forbiddenMoves: view.forbiddenMoves.map(move) } : {}),
     captured: view.captured
       .filter((capture) => capture.role !== null)
       .map((capture) => ({
