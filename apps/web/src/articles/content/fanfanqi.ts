@@ -1,12 +1,11 @@
 import {
-  FANFANQI_CANNON_GAMBLE,
-  FANFANQI_CANNON_NO_SHOT,
   FANFANQI_CANNON_SHOT,
   FANFANQI_CAPTURE_CARDS,
-  FANFANQI_COVERED_CAPTURE,
   FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
   FANFANQI_RANK_LADDER,
   FANFANQI_SETUP,
+  FANFANQI_SHOT_AFTER,
+  FANFANQI_SHOT_BEFORE,
   FANFANQI_SOLDIER_TAKES_GENERAL,
 } from '../../fanfanqi-rules-diagrams.js';
 import type { Article } from '../types.js';
@@ -46,14 +45,10 @@ export const fanfanqiArticle: Article = {
           kind: 'paragraph',
           text: 'Red moves first. The seats have fixed colors from the start, and flipping a piece never changes your color. Both players can see which pieces remain covered, but not which piece is under each back. Below, one deal before the first turn.',
         },
-        {
-          kind: 'raw-svg',
-          svg: FANFANQI_SETUP,
-          caption: 'The red cannon is selected. The dots mark its two shots.',
-        },
+        { kind: 'raw-svg', svg: FANFANQI_SETUP },
         {
           kind: 'paragraph',
-          text: 'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or, if a red cannon starts face up, shoots with it. In this deal the red cannon can jump the back beside it and take the covered piece behind, in two directions. Then Black takes a turn, and the players alternate from there.',
+          text: 'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or shoots with a face-up red cannon, like the one in this deal. Then Black moves, and the players alternate from there.',
         },
       ],
     },
@@ -98,30 +93,6 @@ export const fanfanqiArticle: Article = {
       ],
     },
     {
-      heading: 'Cannons only capture',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.',
-        },
-        { kind: 'raw-svg', svg: FANFANQI_CANNON_SHOT, caption: 'The ring marks the target.' },
-        {
-          kind: 'paragraph',
-          text: 'The target must be a face-up enemy or a face-down piece of either color. A shot at a face-down piece is a gamble, because it may be your own. A section further down shows what both players learn from it. Below, the cannon’s own soldier is the screen, and the face-down piece behind it could be either color.',
-        },
-        { kind: 'raw-svg', svg: FANFANQI_CANNON_GAMBLE, caption: 'The dot marks a face-down target.' },
-        {
-          kind: 'paragraph',
-          text: 'With nothing between the cannon and a piece, there is no screen and no shot. A face-up piece of your own after the screen blocks the line, and the cannon cannot skip past it to a piece farther away. Below, the cannon has no move at all. Nothing screens the black horse above it. To the right, the chariot is the screen, and the red horse behind it shields the general.',
-        },
-        { kind: 'raw-svg', svg: FANFANQI_CANNON_NO_SHOT, caption: 'No marks: this cannon cannot move.' },
-      ],
-    },
-    {
       heading: 'HP and capture damage',
       blocks: [
         {
@@ -149,21 +120,36 @@ export const fanfanqiArticle: Article = {
       ],
     },
     {
-      heading: 'Captured face-down pieces',
+      heading: 'Cannons only capture',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Only a cannon can capture a covered piece. The piece is turned face up as it leaves the board, so both players see its color and type, and its owner loses its HP. Below, the red cannon from the opening deal has taken one of its two targets. It was a black cannon.',
+          text: 'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.',
         },
         {
-          kind: 'raw-svg',
-          svg: FANFANQI_COVERED_CAPTURE,
-          caption: 'The tint marks where the cannon stood and where it landed.',
+          kind: 'paragraph',
+          text: 'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**, and rank does not matter. Below, the black soldier is the screen, and the cannon can take the general behind it.',
+        },
+        { kind: 'raw-svg', svg: FANFANQI_CANNON_SHOT, caption: 'The ring marks the target.' },
+        {
+          kind: 'paragraph',
+          text: 'The target must be a face-up enemy or a face-down piece of either color. If the next piece after the screen is a face-up piece of your own, there is no shot along that line. Only a cannon can capture a face-down piece, and the shot is a gamble, because it may be your own. Below, the red cannon from the opening deal shoots down, over the back beside it.',
+        },
+        {
+          kind: 'svg-row',
+          items: [
+            { svg: FANFANQI_SHOT_BEFORE, caption: 'Before: the dots mark the cannon’s two shots.' },
+            { svg: FANFANQI_SHOT_AFTER, caption: 'After: the tint marks the shot.' },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'The captured piece is turned face up as it leaves the board, so both players see its color and type. Here it was a black soldier, and Black loses its HP.',
         },
         { kind: 'raw-svg', svg: FANFANQI_CAPTURE_CARDS },
         {
           kind: 'paragraph',
-          text: 'Had it been a red piece, Red would have lost the HP instead, and a shot that takes you to zero loses the game. Either way the capture resets the 30-ply draw count. Pieces still face down on the board stay hidden from both players, even after the game ends.',
+          text: 'Had it been a red piece, Red would have lost the HP instead. Pieces still face down on the board stay hidden from both players, even after the game ends.',
         },
       ],
     },
