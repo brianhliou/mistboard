@@ -2,6 +2,7 @@
 import type { BanqiMove, FFQBanqiPlayerView } from '@mistboard/game';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiBoardView, ffqBanqiSquare } from './ffq-banqi-board.js';
+import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
 import { installBanqiBoardStyles, renderBanqiBoardSvg } from './live-banqi-render.js';
 import { type FFQBanqiPostgameResponse, loadFFQBanqiPostgame } from './live-ffq-banqi-postgame.js';
 import { ffqBanqiReviewMoveLabel } from './review/ffq-banqi-tree-adapter.js';
@@ -48,7 +49,7 @@ export function mountFFQBanqiWatchReplay(
       }),
     fillCaptures: (host, view, owner) => {
       const seat = owner === 'red' ? 'black' : 'red';
-      host.textContent = `${view.hp[seat]} HP`;
+      host.append(createFFQBanqiHpRow(view, seat));
     },
     moveLabels: (record) =>
       record.timeline.flatMap((entry) => {

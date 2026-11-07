@@ -7,7 +7,6 @@ import {
   FFQ_BANQI_DAMAGE,
   FFQ_BANQI_NO_PROGRESS_LIMIT,
   FFQ_BANQI_SPEC_ID,
-  FFQ_BANQI_START_HP,
   type FFQBanqiMove,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
@@ -17,6 +16,7 @@ import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiClickResult, ffqBanqiIndex, ffqBanqiSquare } from './ffq-banqi-board.js';
+import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
 import { variantDisplayLabel } from './game-display.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
@@ -267,19 +267,7 @@ function renderProgress(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   const panel = document.createElement('div');
   panel.className = 'ffq-banqi-progress';
   for (const side of tenant.colors) {
-    const row = document.createElement('div');
-    row.className = 'ffq-banqi-hp';
-    row.dataset.side = side;
-    const name = document.createElement('span');
-    name.textContent = t(side === 'red' ? 'setup.red' : 'setup.black');
-    const bar = document.createElement('progress');
-    bar.max = FFQ_BANQI_START_HP;
-    bar.value = view.hp[side];
-    bar.setAttribute('aria-label', name.textContent);
-    const value = document.createElement('span');
-    value.textContent = t('live.ffq.hp', { hp: view.hp[side], max: FFQ_BANQI_START_HP });
-    row.append(name, bar, value);
-    panel.append(row);
+    panel.append(createFFQBanqiHpRow(view, side));
   }
   const counters = document.createElement('div');
   counters.className = 'ffq-banqi-counters';

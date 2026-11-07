@@ -2,13 +2,12 @@ import {
   type BanqiMove,
   type BanqiSeat,
   FFQ_BANQI_SPEC_ID,
-  FFQ_BANQI_START_HP,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { ffqBanqiBoardView } from '../ffq-banqi-board.js';
+import { createFFQBanqiHpRow } from '../ffq-banqi-hp.js';
 import { variantDisplayLabel } from '../game-display.js';
-import { t } from '../i18n/catalog.js';
 import {
   animateBanqiBoardMove,
   animateBanqiReveal,
@@ -76,13 +75,14 @@ export function mountFFQBanqiReview(
       if (owner !== 'red' && owner !== 'black') return;
       fillCapturedPoolWith(host, view.captured, owner, banqiPieceGhostSvg);
       const seat = owner === 'red' ? 'black' : 'red';
-      const hp = document.createElement('span');
-      hp.className = 'ffq-banqi-review-hp';
-      hp.dataset.side = seat;
-      hp.textContent = t('live.ffq.hp', { hp: view.hp[seat], max: FFQ_BANQI_START_HP });
+      const hp = createFFQBanqiHpRow(view, seat);
       const damage = snapshots[view.ply]?.damage[seat] ?? 0;
-      if (damage) hp.textContent += ` · ${damage} damage`;
       host.append(hp);
+      if (damage) {
+        const note = document.createElement('span');
+        note.textContent = ` · ${damage} damage`;
+        host.append(note);
+      }
     },
   };
   return mountTreeReview(root, presentation, config);
