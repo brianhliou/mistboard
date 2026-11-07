@@ -201,7 +201,7 @@ test('FFQ banqi has canonical metadata matching its distinct kernel rules', () =
   assert.ok(spec, 'FFQ banqi must be a canonical spec');
   assert.deepEqual(spec, {
     id: 'ffq-banqi',
-    publicName: 'FFQ Banqi',
+    publicName: 'Fanfanqi',
     family: 'xiangqi',
     board: `banqi-${FFQ_BANQI_RULES.board.width}x${FFQ_BANQI_RULES.board.height}`,
     movement: 'ffq-banqi',

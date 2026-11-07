@@ -211,6 +211,12 @@
       "zh-hant": "迷霧下的一個吃過路兵錯誤"
     }
   },
+  "fanfanqi": {
+    "title": "Fanfanqi Rules",
+    "kind": "rules",
+    "description": "Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.",
+    "status": "draft"
+  },
   "flip-jungle-skill-ceiling": {
     "title": "Flip Jungle: 512 times the search still loses 23% of games",
     "kind": "article",

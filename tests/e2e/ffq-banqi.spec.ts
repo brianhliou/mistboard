@@ -77,7 +77,7 @@ test('FFQ: two admins flip in fixed seats and both see HP 60/60', async ({
     await red.goto('/');
     await expect(red.locator('.site-nav-menu-admin')).toHaveCount(1);
     await red.goto('/?play=friend&gameSpecId=ffq-banqi&side=red');
-    await expect(red.locator('.landing-setup-dialog')).toContainText('FFQ Banqi');
+    await expect(red.locator('.landing-setup-dialog')).toContainText('Fanfanqi');
     const creating = red.waitForResponse(
       (res) => new URL(res.url()).pathname === '/api/rooms' && res.request().method() === 'POST',
     );

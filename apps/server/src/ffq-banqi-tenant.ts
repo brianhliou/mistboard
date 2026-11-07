@@ -144,6 +144,6 @@ export const ffqBanqiTenant: FFQBanqiTenant = {
       return TERMINATION[reason as FFQBanqiEndReason];
     },
     logKindPrefix: 'ffq_banqi',
-    logLabel: 'FFQ Banqi',
+    logLabel: 'Fanfanqi',
   },
 };
