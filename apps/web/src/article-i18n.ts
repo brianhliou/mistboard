@@ -3319,7 +3319,7 @@ const ZH_HANS: Record<string, string> = {
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻兽棋规则：玩法详解与免费在线对弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
     '斗兽棋的 4×4 翻面版本，又称翻翻兽棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
-  'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
+  'Jieqi Rules (Reveal Xiangqi)': '揭棋规则',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
     '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
@@ -5663,7 +5663,7 @@ const ZH_HANS: Record<string, string> = {
   'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.':
     '棋子放在 9×10 的交叉点上，而不是格子里。楚河汉界把棋盘分成两半，九宫限制将和士的活动。炮隔子吃，马会被蹩腿，象不能过河，兵没有升变。困毙算输而不是和棋。',
   'Where can I play jieqi online?': '揭棋在线哪里可以玩？',
-  'Is there a jieqi app?': '揭棋有 app 吗？',
+  'Is there a jieqi app?': '揭棋有应用程序吗？',
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安装任何东西。Mistboard 在手机、平板或电脑的浏览器里直接运行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 对弈吗？',
@@ -5675,7 +5675,7 @@ const ZH_HANS: Record<string, string> = {
     '揭棋翻开的士可以出九宫吗？象可以过河吗？',
   'Any tips for jieqi?': '揭棋有什么技巧？',
   'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.':
-    '暗子是一次性的选择权：在车位上它只在这一步是车，之后就是它真正的身份。不要把这一步花在便宜的活上。高手会先挺兵再翻炮，抢着翻出真车，翻出三个大子之后就不再翻。这些都还没有被测量过；本站的开局文章把这场争论连同出处写了下来。',
+    '暗子是一次性的选择权：在车位上它只在这一步是车，之后就是它真正的身份。不要把这一步用在无足轻重的事上。高手会先挺兵再翻炮，抢着翻出真车，翻出三个大子之后就不再翻。这些都还没有被测量过；本站的开局文章把这场争论连同出处写了下来。',
   // banqi rule variants (2026-09-17)
   'Rule variants': '规则版本',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
@@ -10152,7 +10152,7 @@ const ZH_HANT: Record<string, string> = {
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻獸棋規則：玩法詳解與免費線上對弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
     '鬥獸棋的 4×4 翻面版本，又稱翻翻獸棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
-  'Jieqi Rules (Reveal Xiangqi)': '揭棋規則：玩法詳解與免費線上對弈',
+  'Jieqi Rules (Reveal Xiangqi)': '揭棋規則',
   'Ranks and captures': '等級與吃子',
   'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank.':
     '雙方各有相同的八種動物。從強到弱是：象、獅、虎、豹、狼、狗、貓、鼠。棋子可吃相鄰的同級或低級敵子。',
@@ -12101,7 +12101,7 @@ const ZH_HANT: Record<string, string> = {
   // Overrides for every zh-Hans key that fell through to Simplified on the zh-Hant pages (2026-09-17). OpenCC s2twp, then 炮→砲 and 機器人→電腦 to match the rest of this table; prose re-read by hand.
   'The rat takes the elephant.': '鼠吃掉象。',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
-    '揭棋是一種暗子玩法的象棋變體，這裡詳解它的規則。除將帥外，所有棋子開局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻開，此後按真實身份行棋。',
+    '揭棋是一種暗子玩法的象棋變體，這裡詳解它的規則。除將帥外，所有棋子開局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻開，此後按真實身分行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
     '暗棋怎麼玩？三十二顆象棋棋子蓋著鋪滿半張棋盤，輪到你就翻一顆或走一格。大小順序是將、士、象、車、馬、兵，兵能吃將，炮隔一子吃子不看大小。可以連吃嗎？看圖解答。採用台灣標準暗棋，免註冊直接線上對弈。',
   "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
@@ -12187,19 +12187,19 @@ const ZH_HANT: Record<string, string> = {
   'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.':
     '棋子放在 9×10 的交叉點上，而不是格子裡。楚河漢界把棋盤分成兩半，九宮限制將和士的活動。砲隔子吃，馬會被蹩腿，象不能過河，兵沒有升變。困斃算輸而不是和棋。',
   'Where can I play jieqi online?': '揭棋線上哪裡可以玩？',
-  'Is there a jieqi app?': '揭棋有 app 嗎？',
+  'Is there a jieqi app?': '揭棋有應用程式嗎？',
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安裝任何東西。Mistboard 在手機、平板或電腦的瀏覽器裡直接執行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 對弈嗎？',
   'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
-    '可以，有八個等級，外加一個更強的機器人。第 1 到 8 級運行按揭棋規則打了補丁的皮卡魚（Pikafish），它靠手寫規則判斷局面，高手能贏它。它們之上是 AB-JChess，一個自帶類神經網路的開源引擎，400 盤中贏了第 8 級 248 盤。兩者都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
+    '可以，有八個等級，外加一個更強的機器人。第 1 到 8 級執行套用揭棋規則修補程式的皮卡魚（Pikafish），它靠手寫規則判斷局面，高手能贏它。它們之上是 AB-JChess，一個自帶類神經網路的開源引擎，400 盤中贏了第 8 級 248 盤。兩者都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
-    '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身份行棋。翻開的士可以出九宮，翻開的象可以過河。',
+    '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身分行棋。翻開的士可以出九宮，翻開的象可以過河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':
     '揭棋翻開的士可以出九宮嗎？象可以過河嗎？',
   'Any tips for jieqi?': '揭棋有什麼技巧？',
   'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.':
-    '暗子是一次性的選擇權：在車位上它只在這一步是車，之後就是它真正的身份。不要把這一步花在便宜的活上。高手會先挺兵再翻砲，搶著翻出真車，翻出三個大子之後就不再翻。這些都還沒有被測量過；本站的開局文章把這場爭論連同出處寫了下來。',
+    '暗子是一次性的選擇權：在車位上它只在這一步是車，之後就是它真正的身分。不要把這一步用在無足輕重的事上。高手會先挺兵再翻砲，搶著翻出真車，翻出三個大子之後就不再翻。這些都還沒有被測量過；本站的開局文章把這場爭論連同出處寫了下來。',
   // banqi rule variants (2026-09-17)
   'Rule variants': '規則版本',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
