@@ -25,6 +25,7 @@ import {
   resolveThreeKingdomsBanqiDecisions,
   THREE_KINGDOMS_BANQI_DECISION_MOVETIME_CAP_MS,
   THREE_KINGDOMS_BANQI_DECISION_NODES,
+  THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID,
   type ThreeKingdomsBanqiDecision,
   type ThreeKingdomsBanqiDecisionsCache,
 } from './three-kingdoms-banqi-decisions.js';
@@ -144,9 +145,14 @@ test('best flip loses zero; an average hanging flip grades as a blunder', async 
   );
   assert.ok(['mistake', 'blunder'].includes(moveJudgment(bad.bestWin, bad.playedWin) ?? ''));
   assert.ok(
-    Math.abs(bad.playedWin - (2 * winPercent(-1200, null) + winPercent(200, null)) / 3) < 1e-9,
+    Math.abs(
+      bad.playedWin -
+        (2 * winPercent(-1200, null, THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID) +
+          winPercent(200, null, THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID)) /
+          3,
+    ) < 1e-9,
   );
-  assert.equal(bad.realizedWin, winPercent(-1200, null));
+  assert.equal(bad.realizedWin, winPercent(-1200, null, THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID));
   assert.ok(
     bad.candidates?.some((entry) => entry.move.slice(0, 2) !== entry.move.slice(2)),
     'board alternative',
@@ -196,8 +202,15 @@ test('uses mover-seat POV for either ink and seat, L8 NNUE/ChanceMix, and bounde
         },
       );
       assert.equal(result.mover, turn);
-      assert.ok(Math.abs(result.playedWin - winPercent(-300, null)) < 1e-9);
-      assert.equal(result.realizedWin, winPercent(-300, null));
+      assert.ok(
+        Math.abs(
+          result.playedWin - winPercent(-300, null, THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID),
+        ) < 1e-9,
+      );
+      assert.equal(
+        result.realizedWin,
+        winPercent(-300, null, THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID),
+      );
       assert.ok(requests.length <= 3 + 4 * 3);
       for (const request of requests) {
         assert.equal(request.nodes, THREE_KINGDOMS_BANQI_DECISION_NODES);

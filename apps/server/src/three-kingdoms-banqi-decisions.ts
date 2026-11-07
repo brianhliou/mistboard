@@ -178,6 +178,7 @@ export async function evaluateThreeKingdomsBanqiFlipDecision(
     return winPercent(
       evaluation.cp === null ? null : -evaluation.cp,
       evaluation.mate === null ? null : -evaluation.mate,
+      THREE_KINGDOMS_BANQI_DECISIONS_ENGINE_ID,
     );
   };
   const total = pool.reduce((sum, entry) => sum + entry.count, 0);
