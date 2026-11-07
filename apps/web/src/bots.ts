@@ -10,6 +10,7 @@ import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
 import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
+import { RAPFI_BUILD_URL, RAPFI_REPO_URL } from './engine-credits.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
 import { buildBotSummaryCard } from './profile-summary-card.js';
@@ -411,6 +412,12 @@ function systemBotBio(bot: BotProfile): string | undefined {
 type BotCredit = { label: string; href: string };
 
 export function botCredits(botId: string): BotCredit[] {
+  if (/^rapfi-level-[1-8]$/.test(botId)) {
+    return [
+      { label: t('thanks.rapfiAuthors'), href: RAPFI_REPO_URL },
+      { label: t('thanks.rapfiBuildAuthor'), href: RAPFI_BUILD_URL },
+    ];
+  }
   if (botId === 'jqe') {
     return [{ label: t('bots.jqeCredit'), href: 'https://github.com/devinokeefe/jieqi' }];
   }
