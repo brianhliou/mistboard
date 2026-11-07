@@ -92,9 +92,12 @@ const lastToken = (raw) =>
     .trim()
     .split(/\s+/)
     .at(-1) ?? '';
+const HAN = /\p{Script=Han}/u;
 function zhOf(raw) {
   for (const zh of Object.keys(NAMES)) if (String(raw ?? '').includes(zh)) return zh;
-  return lastToken(raw);
+  // A name with no Chinese is already the English form; its last word would be
+  // only the surname ("Nguyen" for "David Nguyen").
+  return HAN.test(String(raw ?? '')) ? lastToken(raw) : String(raw ?? '').trim();
 }
 function enOf(raw) {
   const zh = zhOf(raw);
@@ -199,6 +202,7 @@ function loadGames() {
       key: game.key ?? file.replace(/\.json$/, ''),
       date: fixDate(game.date),
       event: String(game.event ?? ''),
+      eventZh: String(game.eventZh ?? game.event ?? ''),
       red,
       black,
       side,
@@ -242,7 +246,11 @@ function chapterFor(g) {
   ]) {
     i18n[locale] = {
       name: `${g.date} · ${zhScript(g.red, script)} 对 ${zhScript(g.black, script)} · ${g.result}`,
-      tags: { red: zhScript(g.red, script), black: zhScript(g.black, script), event: g.event },
+      tags: {
+        red: zhScript(g.red, script),
+        black: zhScript(g.black, script),
+        event: g.eventZh,
+      },
     };
   }
   return {

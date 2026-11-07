@@ -92,7 +92,7 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
       red,
       black,
       result: game.result ?? board.result,
-      event: game.event ?? board.tourName ?? '',
+      event: game.event ?? board.tourNameEn ?? board.tourName ?? '',
       ...(game.date || board.playedOn
         ? {
             date: String(game.date || board.playedOn)

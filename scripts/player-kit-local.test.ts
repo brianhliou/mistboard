@@ -28,7 +28,8 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   const root = await mkdtemp(join(tmpdir(), 'mistboard-kit-db-'));
   const id = `kit-${randomUUID()}`;
   const red = { name: 'Fixture Player', nameEn: 'Fixture Player' };
-  const black = { name: 'Fixture Opponent', nameEn: 'Fixture Opponent' };
+  // No nameEn: a relayed Western name is stored in English already.
+  const black = { name: 'Fixture Opponent' };
   const ucis = [
     'a3a4',
     'a6a5',
@@ -156,6 +157,9 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   assert.equal(draft.create.chapter.orientation, 'red');
   assert.equal(draft.create.visibility, 'unlisted');
   // The annotation's win chances become the chapter's Computer analysis graph.
+  // An English name stays whole, not cut to its last word.
+  assert.match(draft.create.chapter.name, /Fixture Player vs Fixture Opponent/);
+  assert.ok(!manifest.missing.some((m) => m.kind === 'name-map'), JSON.stringify(manifest.missing));
   assert.equal(draft.create.chapter.scoreSeries.side, 'red');
   assert.equal(draft.create.chapter.scoreSeries.series[0].values.length, ucis.length + 1);
   await writeFile(

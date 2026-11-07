@@ -101,8 +101,11 @@ async function loadPlayer(slug, dbUrl) {
     const player = (await players.listXiangqiPlayers()).find((p) => p.slug === slug) ?? null;
     const names = {};
     if (!player) return { player, names, boards: [] };
+    // A name with no Chinese is already English (players relayed from Western events).
     const translated = (side) =>
-      side?.nameEn || (side?.name ? romanizeXiangqiPlayerName(side.name, side.federation) : null);
+      side?.nameEn ||
+      (side?.name && !/\p{Script=Han}/u.test(side.name) ? side.name.trim() : null) ||
+      (side?.name ? romanizeXiangqiPlayerName(side.name, side.federation) : null);
     const playerName = translated(player);
     if (playerName) names[player.name] = playerName;
     const linked = await players.listXiangqiPlayerBoards(player, () => null);
@@ -135,7 +138,9 @@ async function prepareGame(board, { directory, engine, budgets, dbUrl }) {
   const game = {
     key,
     title: `${board.boardId}: ${board.result}`,
-    event: board.tourName,
+    // English for the study's own tags; the Chinese name serves its zh locales.
+    event: board.tourNameEn || board.tourName,
+    eventZh: board.tourName,
     date: board.playedOn ?? '',
     result: board.result,
     red: board.red.name,
