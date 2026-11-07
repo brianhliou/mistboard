@@ -329,8 +329,8 @@
     "description": "Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "揭棋规则",
-      "zh-hant": "揭棋規則"
+      "zh-hans": "揭棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "揭棋規則：玩法詳解與免費線上對弈"
     }
   },
   "jieqi-bot-wins": {
