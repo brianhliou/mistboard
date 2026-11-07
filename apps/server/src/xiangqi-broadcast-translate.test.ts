@@ -6,6 +6,7 @@ import {
   FEDERATION_PLAYER_TRADITIONAL_NAMES,
   romanizeXiangqiPlayerName,
   TRADITIONAL_SCRIPT_REGIONS,
+  translatedXiangqiBroadcastBoard,
   translatedXiangqiBroadcastPlayerTag,
   translatedXiangqiBroadcastRound,
   translatedXiangqiBroadcastTour,
@@ -492,4 +493,19 @@ test('every Taiwan, Hong Kong, Macau and Vietnamese spelling has its traditional
     Array.from(own).some((char) => simplifiedOnly.has(char)),
   );
   assert.deepEqual(still, []);
+});
+
+test('page-script names do not rewrite broadcast payload source fields', () => {
+  const board = {
+    red: { name: '于幼华', federation: '台湾' },
+    black: { name: '孙勇征', federation: '上海' },
+    details: { match: '台湾-上海' },
+  };
+  const before = JSON.stringify(board);
+  const translated = translatedXiangqiBroadcastBoard(board);
+  assert.equal(JSON.stringify(board), before);
+  assert.equal(translated.red.name, '于幼华');
+  assert.equal(translated.black.name, '孙勇征');
+  assert.equal(translated.red.federation, '台湾');
+  assert.equal(translated.details.match, '台湾-上海');
 });

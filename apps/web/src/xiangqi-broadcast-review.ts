@@ -40,7 +40,7 @@ import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
-import { localFederation, localTitle } from './xiangqi-broadcast-names.js';
+import { localFederation, localPersonName, localTitle } from './xiangqi-broadcast-names.js';
 import {
   broadcastCount,
   broadcastRoundName,
@@ -343,7 +343,7 @@ function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
 }
 
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {
-  const name = primary(player);
+  const name = localPersonName(player);
   return player.title ? `${localTitle(player.title)} ${name}` : name;
 }
 

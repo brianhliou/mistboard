@@ -11,6 +11,7 @@ import {
   EMAIL_VARIANT_NAMES,
   type EmailLocale,
   emailLocale,
+  inboxNoticeEmail,
   notificationSettingsUrl,
   type PlayerEmail,
   variantName,
@@ -20,6 +21,94 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const LOCALES: EmailLocale[] = ['en', 'zh-Hans', 'zh-Hant'];
 const NOW = new Date('2026-10-08T15:00:00Z');
+
+const INBOX_COPY = {
+  en: {
+    subject: 'Unread message from Fox <Chess> (@fox333)',
+    button: 'Open your inbox',
+    reason: 'You received this email because you have an unread message on Mistboard.',
+    unsubscribe: 'Unsubscribe from message emails',
+  },
+  'zh-Hans': {
+    subject: 'Fox <Chess>（@fox333）发来的未读私信',
+    button: '打开收件箱',
+    reason: '你收到这封邮件，是因为你在 Mistboard 有未读私信。',
+    unsubscribe: '退订私信邮件通知',
+  },
+  'zh-Hant': {
+    subject: 'Fox <Chess>（@fox333）發來的未讀私訊',
+    button: '打開收件匣',
+    reason: '你收到這封電子郵件，是因為你在 Mistboard 有未讀私訊。',
+    unsubscribe: '取消訂閱私訊郵件通知',
+  },
+};
+
+for (const locale of LOCALES) {
+  test(`${locale} inbox notice localizes all copy, escapes identity, and ignores message bodies`, () => {
+    const forbidden = 'FORBIDDEN-DM-BODY-913: private words must stay in the inbox';
+    const input = {
+      senderHandle: 'fox333',
+      senderName: 'Fox <Chess>',
+      unsubscribeUrl: 'https://mistboard.com/api/inbox/email/unsubscribe?t=test-token',
+      // Untrusted extra properties must never become content or a preview.
+      bodyText: forbidden,
+      lastText: forbidden,
+      text: forbidden,
+    };
+    const email = inboxNoticeEmail(input, locale);
+    assert.deepEqual(
+      email,
+      inboxNoticeEmail(
+        {
+          senderHandle: input.senderHandle,
+          senderName: input.senderName,
+          unsubscribeUrl: input.unsubscribeUrl,
+        },
+        locale,
+      ),
+      'extra body fields cannot affect any part of the email, even as a truncated preview',
+    );
+    const copy = INBOX_COPY[locale];
+    assert.equal(email.subject, copy.subject);
+    assert.ok(email.text.includes(copy.subject));
+    assert.ok(email.html.includes(`<html lang="${locale}">`));
+    assert.ok(email.html.includes('Fox &lt;Chess&gt;'));
+    assert.ok(!email.html.includes('Fox <Chess>'));
+    for (const part of [email.text, email.html]) {
+      for (const expected of [
+        '@fox333',
+        copy.button,
+        copy.reason,
+        copy.unsubscribe,
+        'https://mistboard.com/inbox',
+        input.unsubscribeUrl,
+      ])
+        assert.ok(part.includes(expected), expected);
+      assert.ok(!part.includes('\u2014'));
+    }
+    assert.ok(
+      email.text.includes(`--\n${copy.reason}\n${copy.unsubscribe}: ${input.unsubscribeUrl}`),
+    );
+    assert.ok(email.html.includes(`href="${input.unsubscribeUrl}"`));
+    assert.ok(!JSON.stringify(email).includes(forbidden));
+    assert.ok(!JSON.stringify(email).includes('FORBIDDEN-DM'));
+  });
+}
+
+// Keep the renderer's public contract metadata-only, including at compile time.
+function inboxRendererRejectsMessageText() {
+  inboxNoticeEmail(
+    {
+      senderHandle: 'fox333',
+      senderName: 'Fox',
+      unsubscribeUrl: 'https://mistboard.com/unsubscribe',
+      // @ts-expect-error Message text is deliberately not a renderer input.
+      bodyText: 'FORBIDDEN-DM-BODY-913',
+    },
+    'en',
+  );
+}
+void inboxRendererRejectsMessageText;
 
 function startEmail(locale: EmailLocale, overrides: { creatorOnMove?: boolean } = {}) {
   return correspondenceStartEmail(

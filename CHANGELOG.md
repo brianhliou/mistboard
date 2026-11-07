@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Gomoku is open to everyone: play the Rapfi bot at eight levels or a rated game with a friend, each starting from a dealt opening ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Live rooms show each player's colour disc beside their name ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - 10+5 games can now be rated; they share the rapid rating with 5+5 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - Duck Xiangqi now offers 1+1 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
@@ -57,10 +58,12 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Community
 
+- A message left unread for 12 hours now sends you an email reminder, at most one a day, with a one-click unsubscribe ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Player profiles now show the puzzle rating graph to every visitor, a shorter ratings column, and a Founder badge ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 
 ### Site
 
+- Player, broadcast, study and video names now follow the page's Chinese script ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Corrected Chinese wording across articles and the interface, and Traditional Chinese pages that showed Simplified text ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - The video page adds Shorts 5 and 6, and visitors from mainland China see 14 Bilibili picks ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Homepage article cards show their photos, and shared articles get a whole-board preview card ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
@@ -80,6 +83,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Corrected Chinese copy across news, emails, lessons and studies, and filled missing translations ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Corrected a line on the world championship page that overlooked Lại Lý Huynh's 2022 world rapid title ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Traditional Chinese articles now write every player's name in Traditional ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - The board resize handle now stays on the board corner while you drag, no longer flashes under the board when you switch study chapters, and fits rounded corners ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))

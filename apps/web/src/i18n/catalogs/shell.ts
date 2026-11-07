@@ -72,7 +72,7 @@ export const EN_SHELL = {
   'home.tagline':
     "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
   'home.playSummary':
-    'Free in the browser · No download or sign-up · Eight computer levels · Play a friend',
+    'Free in the browser · No download or sign-up · Bots for every level · Play a friend',
   'home.supportTitle': 'Mistboard Patron',
   'home.supportSubtitle': 'Become a patron',
   'home.storeTitle': 'Store',

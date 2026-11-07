@@ -2321,10 +2321,12 @@ describe('broadcast locale fixtures', () => {
           : data,
       );
       await mountXiangqiBroadcastBoard(root, board.id);
-      expect(document.title).toContain(english ? 'Chao Yi-fan (Taiwan)' : '趙奕帆 (台灣)');
+      expect(document.title).toContain(
+        english ? 'Chao Yi-fan (Taiwan)' : locale === 'zh-Hans' ? '赵奕帆 (台灣)' : '趙奕帆 (台灣)',
+      );
       expect(document.title).toContain('无名');
       expect(root.querySelector('.xqb-player')?.parentElement?.textContent).toContain(
-        english ? 'Chao Yi-fan' : '趙奕帆',
+        english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
       );
     },
   );

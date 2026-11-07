@@ -212,7 +212,7 @@ describe('finished broadcast locale fixtures', () => {
         english
           ? 'Chao Yi-fan vs 無名'
           : locale === 'zh-Hans'
-            ? '趙奕帆 对 無名'
+            ? '赵奕帆 对 無名'
             : '趙奕帆 對 無名',
       );
       expect(root.querySelector('.xqb-held-note')?.textContent).toBe(
@@ -282,7 +282,7 @@ describe('finished broadcast locale fixtures', () => {
         },
       });
       expect(root.querySelector('.review-seat--bottom')?.textContent).toContain(
-        english ? 'Chao Yi-fan' : '趙奕帆',
+        english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
       );
       expect(root.querySelector('.review-seat--bottom .review-seat__detail')?.textContent).toBe(
         english ? 'Taiwan' : '台灣',

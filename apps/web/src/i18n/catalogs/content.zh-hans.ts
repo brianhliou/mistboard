@@ -214,10 +214,10 @@ export const ZH_HANS_CONTENT = {
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：斗兽棋版 KataGo（AnimalChess2025 分支），本站最强的斗兽棋机器人，MIT；经作者许可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基于的引擎，MIT。',
-  'source.rapfi': 'Rapfi，作者 dhbloo 及贡献者：在浏览器中运行的八个五子棋机器人等级，GPL-3.0。',
+  'source.rapfi': 'Rapfi，作者 dhbloo 及贡献者：八个五子棋机器人等级，GPL-3.0。',
   'source.rapfiNetworks': 'Rapfi 项目提供的 Rapfi 神经网络，CC0 1.0。',
   'source.rapfiBuild':
-    'rapfi-wasm，作者 Brian H. Liou：本站使用的可复现 Rapfi 浏览器构建，GPL-3.0。',
+    'rapfi-wasm，作者 Brian H. Liou：五子棋复盘分析使用的可复现 Rapfi 浏览器构建，GPL-3.0。',
   'source.dandelion':
     'Dandelion 4，作者 Kouza（lxsgx23）：本站最强斗兽棋机器人的神经网络来源，从其发布页获取，不在本站转存。',
   'source.chessdb': '象棋云库（chessdb.cn）：象棋分析棋盘和练习中的残局精确结果。',
@@ -257,7 +257,7 @@ export const ZH_HANS_CONTENT = {
     'Mistboard 就是网页版。打开浏览器就能下棋，电脑和手机都可以，无需下载或安装。',
   'faq.playComputerQuestion': '可以和电脑下吗？',
   'faq.playComputerAnswer':
-    '可以。人机对战有八个难度等级，从入门到很强，最强的对手是皮卡鱼（Pikafish）引擎。',
+    '可以。人机对战的难度从入门到很强，最强的对手是皮卡鱼（Pikafish）引擎。',
   'faq.playBotsLink': '挑选等级',
   'faq.playFriendQuestion': '怎么和朋友下？',
   'faq.playFriendAnswer': '开始对局时选择和朋友对弈，把链接发给朋友，对方打开链接就能入座。',
@@ -547,7 +547,7 @@ export const ZH_HANS_CONTENT = {
   'thanks.rapfiAuthors': 'dhbloo 和 Rapfi 的贡献者',
   'thanks.rapfiBuildAuthor': '浏览器构建：Brian H. Liou',
   'thanks.rapfiBody':
-    '在浏览器中运行全部八个五子棋机器人等级，使用 Rapfi 项目提供的神经网络和 rapfi-wasm 构建。',
+    '驱动全部八个五子棋机器人等级，使用 Rapfi 项目提供的神经网络；rapfi-wasm 构建负责五子棋复盘页面的分析。',
   'thanks.communityBotBy': '来自社区开发者的机器人。',
   'thanks.statGames': 'Mistboard 上的对局',
   'thanks.statRating': '{variant}等级分',
@@ -678,4 +678,11 @@ export const ZH_HANS_CONTENT = {
     '本站自己的机器人之间的对局，每天几盘。它们有单独的文件，从不出现在上面的文件中。',
   'data.engineAbout':
     '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时分配棋子，因此带有 deal_fen。',
+  'patron.amountOther': '其他',
+  'patron.customAmountLabel': '金额（美元）',
+  'patron.customAmountInvalid': '请输入 5 至 1,000 美元的整数金额。',
+  'videos.ourHeading': 'Mistboard 出品',
+  'videos.ourIntro': '我们自制的节目，新节目会先在频道发布。',
+  'videos.shortsHeading': '棋题短视频',
+  'videos.subscribe': '在 YouTube 订阅',
 } satisfies Partial<Record<ContentI18nKey, string>>;

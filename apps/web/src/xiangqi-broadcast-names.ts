@@ -1,3 +1,4 @@
+import { personNameForLocale, personOwnScriptName } from '@mistboard/game';
 // Names on the broadcast pages, in the reader's language.
 //
 // Ingestion keeps a source's own name (Chinese for a Chinese event) and caches
@@ -18,6 +19,18 @@ function english(entity: Named): string | undefined {
 export function localName(entity: Named, locale: Locale = currentLocale()): string {
   const name = locale === 'en' ? (english(entity) ?? entity.name) : entity.name;
   return localRoundName(name, locale);
+}
+
+/** People follow the page script; event/team/source fields use localName. */
+export function localPersonName(
+  player: Named & { nameOwn?: string | null; federation?: string },
+  locale: Locale = currentLocale(),
+): string {
+  if (locale === 'en' && english(player)) return english(player)!;
+  return personNameForLocale(
+    { ...player, nameOwn: player.nameOwn ?? personOwnScriptName(player.name, player.federation) },
+    locale,
+  );
 }
 
 /** The form the page does not show, for a tooltip; null when there is only one. */

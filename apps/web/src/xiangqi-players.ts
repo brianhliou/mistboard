@@ -1,3 +1,4 @@
+import { personNameForLocale } from '@mistboard/game';
 // Player pages over the broadcast archive (docs-private/players/
 // players-surface-spec.md): /players, the index, and /players/<slug>, one
 // player with every board they sat at. Both read the derived index the server
@@ -49,7 +50,6 @@ import { countText, localName, localTitle } from './xiangqi-broadcast-names.js';
 import {
   type BroadcastRailItem,
   broadcastCount,
-  broadcastName,
   broadcastRoundName,
   broadcastSecondaryName,
   broadcastSectionLayout,
@@ -185,9 +185,12 @@ function renderError(root: HTMLElement, err: unknown): void {
   root.replaceChildren(buildNav(), buildNotice(t('broadcast.playersUnavailable'), message));
 }
 
-/** The Chinese name as the player writes it. */
-export function chineseName(player: Pick<PlayerRecord, 'name' | 'nameOwn'>): string {
-  return player.nameOwn?.trim() || player.name;
+/** Person display follows the page script (2026-11-06). */
+export function chineseName(
+  player: Pick<PlayerRecord, 'name' | 'nameOwn'>,
+  locale: Locale = currentLocale(),
+): string {
+  return personNameForLocale(player, locale);
 }
 
 /** English with the Chinese beside it for an English reader; the Chinese
@@ -196,14 +199,18 @@ export function displayName(
   player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>,
   locale: Locale = currentLocale(),
 ): string {
-  if (locale !== 'en') return chineseName(player);
+  if (locale !== 'en') return chineseName(player, locale);
   const en = player.nameEn?.trim();
-  return en && en !== chineseName(player) ? `${en} ${chineseName(player)}` : chineseName(player);
+  return en && en !== player.name
+    ? `${en} ${chineseName(player, locale)}`
+    : chineseName(player, locale);
 }
 
 /** The one name the locale reads: English for `en`, the player's own Chinese otherwise. */
 function playerName(player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>): string {
-  return broadcastName(player);
+  const locale = currentLocale();
+  if (locale !== 'en') return chineseName(player, locale);
+  return player.nameEn?.trim() || chineseName(player, locale);
 }
 
 export function recordText(r: { wins: number; draws: number; losses: number }): string {
@@ -284,9 +291,15 @@ export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): 
 export function matchesQuery(player: PlayerRecord, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [player.name, player.nameOwn, player.nameEn, player.federation, player.federationEn].some(
-    (s) => s?.toLowerCase().includes(q),
-  );
+  return [
+    player.name,
+    player.nameOwn,
+    personNameForLocale(player, 'zh-Hant'),
+    personNameForLocale(player, 'zh-Hans'),
+    player.nameEn,
+    player.federation,
+    player.federationEn,
+  ].some((s) => s?.toLowerCase().includes(q));
 }
 
 /** Men's or women's: the CXA list the player is on, else the events they
@@ -1297,7 +1310,11 @@ function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): 
     [
       ['', t('broadcast.playerFilterAnyOpponent')],
       ...opponents.map(
-        (o) => [o.key, `${broadcastName(o)} (${o.record.games})`] as [string, string],
+        (o) =>
+          [
+            o.key,
+            `${currentLocale() === 'en' ? o.nameEn?.trim() || o.name : personNameForLocale(o, currentLocale())} (${o.record.games})`,
+          ] as [string, string],
       ),
     ],
     filter.opponent ?? '',
@@ -1713,7 +1730,10 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   vs.className = 'xqp-vs';
   vs.textContent = t('broadcast.vs');
   const them = document.createElement('span');
-  them.textContent = broadcastName(board.opponent);
+  them.textContent =
+    currentLocale() === 'en'
+      ? board.opponent.nameEn?.trim() || personNameForLocale(board.opponent, 'en')
+      : personNameForLocale(board.opponent, currentLocale());
   // Red is listed first on every board on the site; keep that order here.
   if (board.colour === 'red') who.append(me, vs, them);
   else who.append(them, vs, me);

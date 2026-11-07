@@ -218,7 +218,7 @@ export const jieqiArticle: Article = {
             {
               question: 'Can I play jieqi against an AI?',
               answer:
-                'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.',
+                'Yes. The levels run from beginner to strong, and stronger engines with their own neural networks sit above them. No bot can see your hidden pieces: each gets the same face-down board you do and is never told the deal.',
             },
             {
               question: 'Any tips for jieqi?',

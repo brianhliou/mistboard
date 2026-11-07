@@ -33,6 +33,7 @@ import {
   type VideoLevel,
   type VideoTag,
   type VideoVariant,
+  videoDisplayCopy,
   videoKey,
 } from './videos-data.js';
 
@@ -855,4 +856,33 @@ describe('filterVideos', () => {
     expect(chinese.length).toBeGreaterThan(0);
     expect(chinese).toEqual(VIDEOS.filter((v) => v.language === 'zh'));
   });
+});
+
+it('shows page-script names in video cards while preserving the verbatim catalog', () => {
+  const video = VIDEOS.find((v) => v.author === '趙奕帆象棋教學')!;
+  expect(video).toBeDefined();
+  const before = JSON.stringify(VIDEOS);
+  const hans = buildVideoCard(video, 'zh-Hans');
+  const hant = buildVideoCard(video, 'zh-Hant');
+  expect(hans.querySelector('.videos-card-title')?.textContent).toContain('赵奕帆');
+  expect(hans.querySelector('.videos-card-meta')?.textContent).toContain('赵奕帆');
+  expect(hant.querySelector('.videos-card-title')?.textContent).toContain('趙奕帆');
+  expect(hant.querySelector('.videos-card-meta')?.textContent).toContain('趙奕帆');
+  expect(videoDisplayCopy(video, 'en')).toEqual({ title: video.title, author: video.author });
+  const fixture = { title: '党斐对于幼华、孙勇征', author: '杨官璘' };
+  expect(videoDisplayCopy(fixture, 'zh-Hant')).toEqual({
+    title: '党斐对于幼華、孫勇征',
+    author: '楊官璘',
+  });
+  expect(JSON.stringify(VIDEOS)).toBe(before);
+  const filters: VideoFilters = {
+    query: '赵奕帆',
+    tags: new Set(),
+    levels: new Set(),
+    variants: new Set(),
+    sources: new Set(),
+    languages: new Set(),
+  };
+  expect(filterVideos(VIDEOS, filters)).toContain(video);
+  expect(hans.querySelector('a')?.getAttribute('href')).toBe(videoWatchUrl(video));
 });

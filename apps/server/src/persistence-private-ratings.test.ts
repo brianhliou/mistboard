@@ -7,8 +7,15 @@ import {
   getLeaderboardSummary,
 } from './persistence-leaderboards.js';
 import { getUserProfileByHandle } from './persistence-profiles.js';
+import { PRIVATE_RATING_POOLS, type RatingVariant } from './rating-buckets.js';
 
 test('hidden Gomoku is excluded by every cross-pool leaderboard SQL read', async (t) => {
+  const pools = PRIVATE_RATING_POOLS as RatingVariant[];
+  const originalPools = [...pools];
+  pools.splice(0, pools.length, 'gomoku');
+  t.after(() => {
+    pools.splice(0, pools.length, ...originalPools);
+  });
   init('postgres://localhost/unused-private-rating-test');
   t.after(close);
   const query = t.mock.method(getPool(), 'query', async () => ({ rows: [] }));
@@ -21,6 +28,12 @@ test('hidden Gomoku is excluded by every cross-pool leaderboard SQL read', async
 });
 
 test('hidden Gomoku profile ratings are filtered in SQL and dropped from returned activity rows', async (t) => {
+  const pools = PRIVATE_RATING_POOLS as RatingVariant[];
+  const originalPools = [...pools];
+  pools.splice(0, pools.length, 'gomoku');
+  t.after(() => {
+    pools.splice(0, pools.length, ...originalPools);
+  });
   init('postgres://localhost/unused-private-rating-test');
   t.after(close);
   const sql: string[] = [];

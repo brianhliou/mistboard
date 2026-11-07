@@ -76,7 +76,7 @@ export const ZH_HANT_SHELL = {
   'nav.boardAndPieces': '棋子',
   'nav.darkMode': '深色模式',
   'home.tagline': '象棋與世界經典策略遊戲。免費且開源。關於 Mistboard...',
-  'home.playSummary': '免費網頁版 · 無需下載和註冊 · 人機對戰八個等級 · 和朋友線上對弈',
+  'home.playSummary': '免費網頁版 · 無需下載和註冊 · 人機對戰從入門到高手 · 和朋友線上對弈',
   'home.activityAria': '活躍度',
   'home.gamesPlayed': '局已下完',
   'home.gamesPlayedMonth': '局已下完（本月 {count} 局）',
@@ -215,4 +215,5 @@ export const ZH_HANT_SHELL = {
   'home.setupErrorEngineUnavailable': '引擎服務暫時無法使用，請稍後再試。',
   'home.setupErrorEngineGame': '無法開始人機對局，請重試。',
   'home.setupErrorRoom': '無法建立房間，請重試。',
+  'home.gamesPlayedMonthTitle': '過去 30 天內完成的對局',
 } satisfies Partial<Record<ShellI18nKey, string>>;

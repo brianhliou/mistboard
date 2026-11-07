@@ -387,9 +387,10 @@ describe('professional player locale fixtures', () => {
       await mountXiangqiPlayersIndex(root);
       expect(root.querySelector('h1')?.textContent).toBe(english ? 'Xiangqi players' : '象棋棋手');
       expect(root.querySelector('.xqp-name-link')?.textContent).toContain(
-        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆',
+        english ? 'Chao Yi-fan 趙奕帆' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
       );
-      expect(root.textContent).toContain('無名');
+      // English falls back to the own-script form; a Chinese page keeps the stored name (#918).
+      expect(root.textContent).toContain(english ? '無名' : '无名');
       const search = root.querySelector<HTMLInputElement>('input[type=search]')!;
       search.value = '趙';
       search.dispatchEvent(new Event('input'));
@@ -410,10 +411,10 @@ describe('professional player locale fixtures', () => {
       );
       await mountXiangqiPlayer(root, chao.slug);
       expect(root.querySelector('.xqp-h1')?.textContent).toContain(
-        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆',
+        english ? 'Chao Yi-fan 趙奕帆' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
       );
       expect(root.querySelector('.xqp-who')?.textContent).toContain(
-        english ? 'Chao Yi-fan' : '趙奕帆',
+        english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
       );
       expect(root.querySelector('.xqp-game-meta')?.textContent).toContain(
         english ? 'Test Cup' : '测试杯',
@@ -429,4 +430,19 @@ describe('professional player locale fixtures', () => {
       );
     },
   );
+});
+
+it('uses the page script while rejecting planted wrong surname forms (#918)', () => {
+  for (const [name, hant, wrong] of [
+    ['党斐', '党斐', '黨斐'],
+    ['于幼华', '于幼華', '於幼華'],
+    ['孙勇征', '孫勇征', '孫勇徵'],
+    ['赵奕帆', '趙奕帆', '趙奕帆'],
+  ]) {
+    const p = { ...player({ name: name!, games: 1 }), nameOwn: wrong! };
+    expect(displayName(p, 'zh-Hant')).toBe(hant);
+    expect(displayName(p, 'zh-Hans')).toBe(name);
+    expect(matchesQuery(p, hant!)).toBe(true);
+    expect(p.name).toBe(name);
+  }
 });

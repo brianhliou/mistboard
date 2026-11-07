@@ -90,7 +90,7 @@ const COPY: Record<
     jieqiTitle: '揭棋：按等級挑選',
     jieqiIntro: '剛開始下揭棋？從第 2 級開始。贏幾盤之後，再往上挑戰一級。',
     otherTitle: '其他棋類',
-    misty: 'Mistboard 自研引擎，下迷霧國際象棋、迷霧象棋、暗棋、鬥獸棋和翻翻獸棋。',
+    misty: 'Mistboard 自研引擎，下迷霧西洋棋、迷霧象棋、暗棋、鬥獸棋和翻翻獸棋。',
     katago:
       '我們所知最強的鬥獸棋引擎：hzyhhzy 的 KataGomo，基於 lightvector 的 KataGo，神經網路來自 Kouza 的 Dandelion 4。',
   },

@@ -38,6 +38,7 @@ import * as gamesRoute from './routes/games.js';
 import * as gomokuGamesRoute from './routes/gomoku-games.js';
 import * as historicalXiangqiGamesRoute from './routes/historical-xiangqi-games.js';
 import * as inboxRoute from './routes/inbox.js';
+import * as inboxEmailUnsubscribeRoute from './routes/inbox-email-unsubscribe.js';
 import * as jieqiGamesRoute from './routes/jieqi-games.js';
 import * as jungleFlipGamesRoute from './routes/jungle-flip-games.js';
 import * as jungleGamesRoute from './routes/jungle-games.js';
@@ -106,6 +107,7 @@ export const routes: RouteModule[] = [
   feedbackRoute,
   clubSignupRoute,
   forumRoute,
+  inboxEmailUnsubscribeRoute,
   inboxRoute,
   notificationsRoute,
   metaRoute,

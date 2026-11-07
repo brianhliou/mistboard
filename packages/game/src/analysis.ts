@@ -120,6 +120,12 @@ export const ABJCHESS_WIN_PCT_K = 0.00985;
 // positions with |cp| <= 1000, the range winPercent reads. +409cp is 75%.
 export const ABJCHESS_20261031_WIN_PCT_K = 0.00269;
 
+// Rapfi (Gomoku) reports EVAL on its own scale: the pinned build's win rate is
+// sigmoid(EVAL / 200) (Rapfi eval/scoretables.h, default ScalingFactor 200), so
+// K = 1/200. On lila's chess K, Rapfi's EVAL 414 read as 82% where Rapfi itself
+// says 89%. Only the curve changes; the 5/10/15 judgment bars stay.
+export const RAPFI_WIN_PCT_K = 1 / 200;
+
 // The AB-JChess nets on the jqe-lineage scale, as the analysis ids carry them
 // (`+<net tag>+`). Older ids (v0.2b/v0.2d nets, or none) keep 0.00985, so a game
 // analysed before the switch is still drawn on the curve its cp was made on. A new
@@ -136,6 +142,7 @@ const ABJCHESS_JQE_SCALE_NETS = ['abjchess-20261030'] as const;
  * every engine but AB-JChess has always used.
  */
 export function winPercentK(engineId: string | null | undefined): number {
+  if (engineId?.startsWith('rapfi-')) return RAPFI_WIN_PCT_K;
   if (!engineId?.startsWith('ab-jchess')) return WIN_PCT_K;
   return ABJCHESS_JQE_SCALE_NETS.some((net) => engineId.includes(`+${net}+`))
     ? ABJCHESS_20261031_WIN_PCT_K

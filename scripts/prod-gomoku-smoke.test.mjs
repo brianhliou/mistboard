@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import test from 'node:test';
+import { promisify } from 'node:util';
 import { tsImport } from 'tsx/esm/api';
+import { WebSocketServer } from 'ws';
 
 const { applyGomokuRoomMove, createGomokuRoomState, getGomokuPlayerView, GOMOKU_OPENINGS } =
   await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
@@ -91,7 +95,7 @@ function fixture({
 }
 
 async function run(f, options = {}) {
-  const { checkGomokuRoom } = await import('./prod-gomoku-smoke.mjs');
+  const { checkGomokuRoom } = await import('./prod-gomoku-browser-smoke.mjs');
   return checkGomokuRoom(f.browser, {
     baseUrl: 'https://example.test',
     timeoutMs: 100,
@@ -102,6 +106,81 @@ async function run(f, options = {}) {
 test('prod:smoke:gomoku is a runnable package entry', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(pkg.scripts['prod:smoke:gomoku'], 'node scripts/prod-gomoku-smoke.mjs');
+  assert.equal(
+    pkg.scripts['prod:smoke:gomoku-browser'],
+    'node scripts/prod-gomoku-browser-smoke.mjs',
+  );
+});
+
+test('shared Gomoku entry retries an aborted human-first deal and requires a Rapfi move', async () => {
+  let attempts = 0;
+  const aborted = [];
+  const states = new Map();
+  const server = createServer(async (request, response) => {
+    let body = '';
+    for await (const chunk of request) body += chunk;
+    const created = JSON.parse(body);
+    assert.equal(created.gameSpecId, 'gomoku');
+    assert.equal(created.preferredColor, 'black');
+    const turn = ++attempts === 1 ? 'black' : 'white';
+    const roomId = `gmk_smoke_${attempts}`;
+    states.set(
+      roomId,
+      createGomokuRoomState(
+        roomId,
+        GOMOKU_OPENINGS.find((o) => o.turn === turn),
+      ),
+    );
+    response.writeHead(201, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ roomId, mode: 'pve', gameSpecId: 'gomoku' }));
+  });
+  const sockets = new WebSocketServer({ server });
+  sockets.on('connection', (socket, request) => {
+    const roomId = new URL(request.url, 'http://localhost').searchParams.get('room');
+    let state = states.get(roomId);
+    const send = (type) =>
+      socket.send(
+        JSON.stringify({
+          type,
+          seat: 'black',
+          seatToken: 'token',
+          seats: { black: 'human', white: 'rapfi-level-8' },
+          state: getGomokuPlayerView(state, 'black'),
+        }),
+      );
+    send('hello');
+    if (state.status.turn === 'white') {
+      state = applyGomokuRoomMove(state, { to: 'a1' });
+      send('event-appended');
+    }
+    socket.on('message', (raw) => {
+      assert.deepEqual(JSON.parse(raw.toString()), { type: 'abort' });
+      aborted.push(roomId);
+      state = { ...state, status: { type: 'aborted', reason: 'manual' } };
+      send('event-appended');
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const { stdout } = await promisify(execFile)(process.execPath, [
+      new URL('./prod-gomoku-smoke.mjs', import.meta.url).pathname,
+      '--base',
+      `http://127.0.0.1:${server.address().port}`,
+      '--timeout-ms',
+      '3000',
+    ]);
+    const result = JSON.parse(stdout);
+    assert.equal(result.ok, true);
+    assert.equal(result.retry, undefined);
+    assert.equal(result.roomId, 'gmk_smoke_2');
+    assert.deepEqual(result.engineReplyState.lastMove, { to: 'a1' });
+    assert.equal(result.finalStatus.type, 'aborted');
+    assert.deepEqual(aborted, ['gmk_smoke_1', 'gmk_smoke_2']);
+  } finally {
+    for (const socket of sockets.clients) socket.terminate();
+    await new Promise((resolve) => sockets.close(resolve));
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 test('a kernel-legal server socket reply passes without browser bot frames, workers or network downloads', async () => {

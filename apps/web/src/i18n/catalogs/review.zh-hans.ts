@@ -1070,4 +1070,24 @@ export const ZH_HANS_REVIEW = {
   'replay.solutionHidden': '找出杀法。',
   'replay.showSolution': '显示答案',
   'replay.solutionHiddenHeader': '{study} · 第{n}章',
+  'analysis.banqiTablebase.clockDraw': '依 {limit} 步规则判和',
+  'analysis.banqiTablebase.clockDrawTitle':
+    '双方走出最佳着法时，在下一次吃子前就会达到 {limit} 步限着，所以实战中应判和。',
+  'analysis.banqiTablebase.footnote':
+    '双方均走最佳着法时的精确结果，步数合计双方的着法。除标注的行外，不考虑 {limit} 步规则。重复局面和追捉规则不会改变胜局。',
+  'analysis.banqiTablebase.holdDraw': '{total} 种着法中有 {count} 种守住和棋',
+  'analysis.banqiTablebase.keepWin': '{total} 种着法中有 {count} 种保住胜势',
+  'analysis.banqiTablebase.losesIn': '{count} 步后落败',
+  'analysis.banqiTablebase.nextCapture': '{count} 步后再次吃子',
+  'analysis.banqiTablebase.pastClock':
+    '依 {limit} 步规则，实战中这盘棋早在 {count} 步前就已判和。研习棋盘继续走棋，以便查看后续着法。',
+  'analysis.banqiTablebase.positionClockDraw':
+    '双方走出最佳着法时，下一次吃子还需 {count} 步，而 {limit} 步规则会在 {left} 步后结束对局，所以实战中应判和。',
+  'analysis.banqiTablebase.sideWinsIn': '{side} {count} 步获胜',
+  'analysis.banqiTablebase.winsIn': '{count} 步获胜',
+  'review.gradeCard.best': '更好的是 {move}',
+  'review.gradeCard.blunder': '漏着',
+  'review.gradeCard.inaccuracy': '失准',
+  'review.gradeCard.loss': '胜率损失 {points} 个百分点',
+  'review.gradeCard.mistake': '错着',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

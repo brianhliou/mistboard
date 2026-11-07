@@ -414,7 +414,7 @@ export const ZH_HANT_REVIEW = {
   'watch.noOtherCompleted': '目前回放範圍內沒有其他已結束的對局。',
   'watch.importedGame': '匯入的對局',
   'watch.manualGame': '手動擺局',
-  'watch.fogChessGame': '迷霧國際象棋對局',
+  'watch.fogChessGame': '迷霧西洋棋對局',
   'replay.firstPosition': '起始局面',
   'replay.latestPosition': '最新局面',
   'replay.flip': '翻轉',
@@ -1070,4 +1070,24 @@ export const ZH_HANT_REVIEW = {
   'replay.solutionHidden': '找出殺法。',
   'replay.showSolution': '顯示答案',
   'replay.solutionHiddenHeader': '{study} · 第{n}章',
+  'analysis.banqiTablebase.clockDraw': '依 {limit} 步規則判和',
+  'analysis.banqiTablebase.clockDrawTitle':
+    '雙方走出最佳著法時，在下一次吃子前就會達到 {limit} 步限著，所以實戰中應判和。',
+  'analysis.banqiTablebase.footnote':
+    '雙方均走最佳著法時的精確結果，步數合計雙方的著法。除標註的列外，不考慮 {limit} 步規則。重複局面和追捉規則不會改變勝局。',
+  'analysis.banqiTablebase.holdDraw': '{total} 種著法中有 {count} 種守住和棋',
+  'analysis.banqiTablebase.keepWin': '{total} 種著法中有 {count} 種保住勝勢',
+  'analysis.banqiTablebase.losesIn': '{count} 步後落敗',
+  'analysis.banqiTablebase.nextCapture': '{count} 步後再次吃子',
+  'analysis.banqiTablebase.pastClock':
+    '依 {limit} 步規則，實戰中這盤棋早在 {count} 步前就已判和。研習棋盤繼續走棋，以便查看後續著法。',
+  'analysis.banqiTablebase.positionClockDraw':
+    '雙方走出最佳著法時，下一次吃子還需 {count} 步，而 {limit} 步規則會在 {left} 步後結束對局，所以實戰中應判和。',
+  'analysis.banqiTablebase.sideWinsIn': '{side} {count} 步獲勝',
+  'analysis.banqiTablebase.winsIn': '{count} 步獲勝',
+  'review.gradeCard.best': '更好的是 {move}',
+  'review.gradeCard.blunder': '漏著',
+  'review.gradeCard.inaccuracy': '失準',
+  'review.gradeCard.loss': '勝率損失 {points} 個百分點',
+  'review.gradeCard.mistake': '錯著',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

@@ -23,6 +23,7 @@ import {
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
   reloadForChunkLoadError,
+  stylesheetServedDespiteFailure,
 } from './chunk-load-recovery.js';
 import { editorVariantFromPath } from './editor/editor-catalog.js';
 import { coordinateTrainerEnabled, correspondenceEnabled } from './feature-flags.js';
@@ -1104,10 +1105,16 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
-    captureException(err, {
+    // A stylesheet the server still serves was blocked by this browser, not
+    // lost in a deploy, so it stays out of Error Tracking. The probe runs
+    // beside the error panel rather than before it.
+    const failure = {
       context: 'route_mount',
       path: window.location.pathname,
       ...chunkLoadFailureContext(err),
+    };
+    void stylesheetServedDespiteFailure(err).then((blockedByBrowser) => {
+      if (!blockedByBrowser) captureException(err, failure);
     });
     if (serverRender.present) return;
     appRoot.replaceChildren();
