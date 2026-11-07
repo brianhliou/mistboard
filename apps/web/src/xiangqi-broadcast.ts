@@ -52,6 +52,7 @@ import {
   countText,
   localFederation,
   localName,
+  localPersonName,
   localPlace,
   localTitle,
   otherName,
@@ -2061,7 +2062,7 @@ function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): 
       tag.textContent = localTitle(title);
       name.append(tag, ' ');
     }
-    name.append(primaryName(row.player));
+    name.append(localPersonName(row.player));
     player.append(name);
     const sub = primaryFederation(row.player);
     if (sub) {
@@ -2416,7 +2417,7 @@ function renderBoardReplay(
     exportLink(data.board.id),
     embedCodeButton(
       data.board.id,
-      `${primaryName(data.board.red)} vs ${primaryName(data.board.black)} · Mistboard`,
+      `${localPersonName(data.board.red)} vs ${localPersonName(data.board.black)} · Mistboard`,
     ),
   );
   movesPanel.append(moveHeading, moveList, actions);
@@ -2846,7 +2847,7 @@ function cardSeat(
     tag.textContent = localTitle(title);
     name.append(tag, ' ');
   }
-  name.append(primaryName(player));
+  name.append(localPersonName(player));
   name.title = [otherName(player), primaryFederation(player)].filter(Boolean).join(' · ');
   const points = document.createElement('span');
   points.className = 'xqb-score';
@@ -3234,7 +3235,7 @@ function playerName(player: XiangqiBroadcastPlayerTag): string {
   const prefix = player.title ? `${localTitle(player.title)} ` : '';
   const federation = primaryFederation(player);
   const suffix = federation ? ` (${federation})` : '';
-  return `${prefix}${primaryName(player)}${suffix}`;
+  return `${prefix}${localPersonName(player)}${suffix}`;
 }
 
 function resultLabel(board: Pick<BroadcastBoardSummary, 'result' | 'status'>): string {

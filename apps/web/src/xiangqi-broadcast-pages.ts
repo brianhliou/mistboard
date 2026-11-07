@@ -11,7 +11,7 @@ import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
-import { localName, localPlace, localTitle } from './xiangqi-broadcast-names.js';
+import { localName, localPersonName, localPlace, localTitle } from './xiangqi-broadcast-names.js';
 import { formatEventDateRange } from './xiangqi-broadcast-time.js';
 
 export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
@@ -114,7 +114,7 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
         (b.rating ?? 0) - (a.rating ?? 0),
     );
   return ranked.slice(0, count).map(({ player }) => {
-    const name = localName(player);
+    const name = localPersonName(player);
     // The same tag the player pages show, so a grade the match-fixing
     // rulings may have revoked is hidden here too (players/sanctions.ts).
     const shown = player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn });

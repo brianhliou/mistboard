@@ -1,6 +1,51 @@
 // Checked whole-person forms; display only. Decision: 2026-11-06.
 // Never use a character converter: 党 and 于 are surnames; 征 stays 征.
 export const PERSON_NAME_SCRIPTS: Readonly<Record<string, string>> = {
+  徐腾飞: '徐騰飛',
+  周开薪: '周開薪',
+  储般若: '儲般若',
+  高飞: '高飛',
+  杨应东: '楊應東',
+  彭国庆: '彭國慶',
+  李彦阳: '李彥陽',
+  傅安欣: '傅安欣',
+  于文彬: '于文彬',
+  刘亿豪: '劉億豪',
+  刘凯: '劉凱',
+  可儿宏晖: '可兒宏暉',
+  叶乃传: '葉乃傳',
+  周盈萱: '周盈萱',
+  唐语萱: '唐語萱',
+  孙一鸣: '孫一鳴',
+  孟健: '孟健',
+  庄力铭: '莊力銘',
+  廖建国: '廖建國',
+  张文鑫: '張文鑫',
+  彭佳文: '彭佳文',
+  彭铂: '彭鉑',
+  曹智聪: '曹智聰',
+  李铭坚: '李銘堅',
+  杜国胜: '杜國勝',
+  林年浩: '林年浩',
+  林廷安: '林廷安',
+  沈浩: '沈浩',
+  王安泰: '王安泰',
+  罗健文: '羅健文',
+  胡全: '胡全',
+  胡敬斌: '胡敬斌',
+  胡玉山: '胡玉山',
+  范志: '范志',
+  许正豪: '許正豪',
+  许鲁斌: '許魯斌',
+  谢光平: '謝光平',
+  谢文川: '謝文川',
+  阮友科: '阮友科',
+  阮文: '阮文',
+  阮日光: '阮日光',
+  黎日: '黎日',
+  黎日光: '黎日光',
+  黎英豪: '黎英豪',
+
   刘俊达: '劉俊達',
   孙勇征: '孫勇征',
   孙昕昊: '孫昕昊',
@@ -508,4 +553,48 @@ export function personNamesInText(text: string, locale: string): string {
   return text.replace(new RegExp(forms.join('|'), 'gu'), (name) =>
     personNameForLocale({ name }, locale),
   );
+}
+
+export const FEDERATION_PLAYER_TRADITIONAL_NAMES = new Map<string, string>([
+  ['VN:武国达', '武國達'],
+  ['VN:阮明日光', '阮明日光'],
+  ['VN:阮黄燕', '阮黃燕'],
+  ['VN:阮成保', '阮成保'],
+  ['VN:黎氏金鸾', '黎氏金鸞'],
+  ['HK:黄学谦', '黃學謙'],
+  ['HK:郑彦隆', '鄭彥隆'],
+  ['HK:林嘉欣', '林嘉欣'],
+  ['HK:冯家俊', '馮家俊'],
+  // 杰 is a traditional character too; no source shows him writing 傑.
+  ['HK:陈振杰', '陳振杰'],
+  ['MO:苏俊豪', '蘇俊豪'],
+  ['MO:伍子骏', '伍子駿'],
+  ['MO:李凯雯', '李凱雯'],
+  ['MO:甘建希', '甘建希'],
+  ['TW:葛振衣', '葛振衣'],
+  ['TW:蔡安爵', '蔡安爵'],
+  ['TW:李思谊', '李思誼'],
+  ['TW:刘国华', '劉國華'],
+  ['TW:彭柔安', '彭柔安'],
+  ['TW:赵奕帆', '趙奕帆'],
+  ['TW:林友轩', '林友軒'],
+  // The 1990 world champion, as the world championship article writes him.
+  ['TW:吴贵临', '吳貴臨'],
+  // 2025 WXF world championship, men, round 1 (fixture article-1844).
+  ['TW:郭胜文', '郭勝文'],
+]);
+
+/** Own-form fallback metadata; Chinese displays use personNameForLocale. */
+export function personOwnScriptName(name: string, federation?: string): string | undefined {
+  if (name === '赖理兄') return '賴理兄';
+  const region = /香港/.test(federation ?? '')
+    ? 'HK'
+    : /澳门|澳門/.test(federation ?? '')
+      ? 'MO'
+      : /台湾|台灣|臺灣|台北|臺北/.test(federation ?? '')
+        ? 'TW'
+        : /越南/.test(federation ?? '')
+          ? 'VN'
+          : undefined;
+  return region ? FEDERATION_PLAYER_TRADITIONAL_NAMES.get(`${region}:${name}`) : undefined;
 }
