@@ -103,8 +103,9 @@ describe('FFQ hidden admin room entry', () => {
     expect(tenant?.landing?.engineOptions).toBeUndefined();
     expect(variantSupportsPve(FFQ_BANQI_SPEC_ID)).toBe(false);
     expect(tenant?.watch).toBeUndefined();
-    expect(tenant?.gameRouteBase).toBeUndefined();
-    expect(tenant?.mountPostgame).toBeUndefined();
+    // Finished games open the private review page (#808).
+    expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
+    expect(tenant?.mountPostgame).toBeTypeOf('function');
     for (const preferredColor of ['red', 'black', 'random'] as const) {
       expect(
         roomCreationRequestBody('pvp', {
