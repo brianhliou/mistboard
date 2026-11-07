@@ -294,6 +294,11 @@ describe('FFQ banqi live room', () => {
     await mount(view);
     expect(document.querySelector('[data-side="red"]')?.textContent).toContain('58/60 HP');
     expect(document.querySelector('[data-side="black"]')?.textContent).toContain('15/60 HP');
+    const bars = [...document.querySelectorAll<HTMLProgressElement>('.ffq-banqi-hp progress')];
+    expect(bars.map((bar) => [bar.value, bar.max, bar.getAttribute('aria-label')])).toEqual([
+      [58, 60, 'Red'],
+      [15, 60, 'Black'],
+    ]);
     const damage = [...document.querySelectorAll('.ffq-banqi-captures li')].map(
       (li) => li.textContent,
     );

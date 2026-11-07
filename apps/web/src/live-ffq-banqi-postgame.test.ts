@@ -3,6 +3,7 @@ import {
   createInitialFFQBanqiState,
   FFQ_BANQI_DAMAGE,
   FFQ_BANQI_SPEC_ID,
+  FFQ_BANQI_START_HP,
   type FFQBanqiMove,
   ffqBanqiStateToFen,
   gameSpecForId,
@@ -105,6 +106,19 @@ function assertMasked(payload: unknown) {
   });
 }
 
+function assertHpBars(host: HTMLElement, ply: number): void {
+  expect(host.querySelectorAll('progress')).toHaveLength(2);
+  for (const side of ['red', 'black'] as const) {
+    const bars = host.querySelectorAll<HTMLProgressElement>(
+      `.ffq-banqi-hp[data-side="${side}"] progress`,
+    );
+    expect(bars).toHaveLength(1);
+    expect(bars[0]!.max).toBe(FFQ_BANQI_START_HP);
+    expect(bars[0]!.value).toBe(record.history.truth[ply]!.view.hp[side]);
+    expect(bars[0]!.getAttribute('aria-label')).toBe(side === 'red' ? 'Red' : 'Black');
+  }
+}
+
 beforeEach(() => {
   vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
   window.history.replaceState(null, '', '/');
@@ -154,12 +168,13 @@ describe('FFQ masked review', () => {
       played.length,
     ]) {
       handle.jumpToPly(ply);
-      for (const side of ['red', 'black'] as const) {
-        expect(host.querySelector(`[data-side="${side}"]`)?.textContent).toContain(
-          `${record.history.truth[ply]!.view.hp[side]}`,
-        );
-      }
+      assertHpBars(host, ply);
       const damage = record.history.truth[ply]!.damage;
+      for (const side of ['red', 'black'] as const) {
+        const material = host.querySelector(`[data-side="${side}"]`)!.parentElement!;
+        if (damage[side]) expect(material.textContent).toContain(`${damage[side]} damage`);
+        else expect(material.textContent).not.toContain('damage');
+      }
       if (damage.red + damage.black)
         expect(handle.mainlineMoveLabel(ply)).toContain(`${damage.red + damage.black} damage`);
       expect(host.querySelectorAll('.face-down-face')).toHaveLength(0);
@@ -202,10 +217,15 @@ describe('FFQ masked review', () => {
     const host = root();
     const handle = await mountFFQBanqiWatchReplay(host, ROOM, { autoplay: false });
     destroy.push(handle.destroy);
-    handle.jumpToPly?.(0);
-    expect(host.textContent).toContain('60 HP');
-    handle.jumpToPly?.(played.length);
-    expect(host.textContent).toContain(`${record.view.hp.red} HP`);
+    for (const ply of [
+      0,
+      record.history.truth.find((frame) => frame.damage.red + frame.damage.black > 0)!.ply,
+      played.length,
+      0,
+    ]) {
+      handle.jumpToPly?.(ply);
+      assertHpBars(host, ply);
+    }
     expect(host.querySelectorAll('.face-down-face')).toHaveLength(0);
   });
 });
