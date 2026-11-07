@@ -65,7 +65,7 @@ it('publishes the actual Gomoku launch once at the November 7 boundary with a pl
     const entry = launches[0]!;
     expect(entry.kind).toBe('release');
     expect(entry.headline).toBe('Gomoku is open to everyone.');
-    for (const phrase of ['15x15', 'freestyle', 'dealt openings', 'Rapfi', 'browser', 'rated'])
+    for (const phrase of ['15x15', 'freestyle', 'dealt openings', 'Rapfi', 'eight levels', 'rated'])
       expect(entry.body).toContain(phrase);
     const url = new URL(entry.href!, 'https://mistboard.com');
     expect(url.pathname).toBe('/');

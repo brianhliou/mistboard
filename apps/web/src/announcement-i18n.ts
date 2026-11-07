@@ -36,8 +36,8 @@ export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
   'Gomoku is open to everyone.': '五子棋向所有人开放。',
-  'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play Rapfi in your browser. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
-    '在 15×15 棋盘上玩休闲自由五子棋，从预设开局开始。可以邀请朋友下一盘计分对局，也可以在浏览器中与 Rapfi 对弈。计分对局采用 1+1、3+2 或 5+5 时限，双方均须登录。',
+  'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
+    '在 15×15 棋盘上玩休闲自由五子棋，从预设开局开始。可以邀请朋友下一盘计分对局，也可以与八个等级的 Rapfi 机器人对弈。计分对局采用 1+1、3+2 或 5+5 时限，双方均须登录。',
   'Play Gomoku': '开始下五子棋',
   // ── 2026-11-02 (AB-JChess-20261031) ── 电脑 / 级 follow the 2026-10-22 jqe entry.
   'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成为最强揭棋电脑。',
@@ -570,8 +570,8 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   'Gomoku is open to everyone.': '五子棋向所有人開放。',
-  'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play Rapfi in your browser. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
-    '在 15×15 棋盤上玩休閒自由五子棋，從預設開局開始。可以邀請朋友下一盤計分對局，也可以在瀏覽器中與 Rapfi 對弈。計分對局採用 1+1、3+2 或 5+5 時限，雙方均須登入。',
+  'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
+    '在 15×15 棋盤上玩休閒自由五子棋，從預設開局開始。可以邀請朋友下一盤計分對局，也可以與八個等級的 Rapfi 機器人對弈。計分對局採用 1+1、3+2 或 5+5 時限，雙方均須登入。',
   'Play Gomoku': '開始下五子棋',
   // ── 2026-11-02 (AB-JChess-20261031) ── 電腦 / 級 follow the 2026-10-22 jqe entry.
   'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成為最強揭棋電腦。',

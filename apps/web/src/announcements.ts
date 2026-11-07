@@ -46,7 +46,7 @@ const baseAnnouncements: Announcement[] = [
     date: '2026-11-07',
     kind: 'release',
     headline: 'Gomoku is open to everyone.',
-    body: 'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play Rapfi in your browser. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.',
+    body: 'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.',
     href: '/?play=computer&gameSpecId=gomoku',
     cta: 'Play Gomoku',
   },
