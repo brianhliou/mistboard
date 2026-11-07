@@ -6,6 +6,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import { MOMENT_RULES } from './lib/player-kit-moments.mjs';
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const MAX_GAMES = 12;
@@ -178,7 +179,28 @@ export async function runKit(options, services) {
       kind: 'budget',
       detail: `Preview limited to ${maxGames} ranked games; final selections remain open`,
     });
-  const plan = annotations.length
+  let moments = [];
+  if (annotations.length) {
+    try {
+      moments = await services.findMoments({
+        annotations,
+        names: data.names,
+        engine,
+        budgets: BUDGETS,
+      });
+    } catch {
+      missing.push({
+        kind: 'moments',
+        detail: 'Local moment verification failed; retry preparation',
+      });
+    }
+  }
+  if (moments.length < MOMENT_RULES.minExpected)
+    missing.push({
+      kind: 'moments',
+      detail: `Only ${moments.length} critical moments passed; fewer than ${MOMENT_RULES.minExpected}`,
+    });
+  const gamePlan = annotations.length
     ? await services.buildStudy({
         directory,
         player: data.player,
@@ -187,7 +209,9 @@ export async function runKit(options, services) {
         annotations,
       })
     : { create: null, ops: [] };
-  const artifacts = { plan, puzzles, annotations };
+  const plan = appendMoments(gamePlan, moments);
+  const momentManifest = moments.map(({ chapter: _chapter, ...moment }) => moment);
+  const artifacts = { plan, puzzles, annotations, moments: momentManifest };
   const manifest = {
     version: 1,
     slug,
@@ -203,8 +227,9 @@ export async function runKit(options, services) {
     missing,
     engine,
     budgets: { ...BUDGETS, maxGames },
+    moments: momentManifest,
     candidates: candidates.map(({ moves: _moves, ...candidate }) => candidate),
-    selection: { boardIds: [], puzzleIds: [] },
+    selection: { boardIds: [], puzzleIds: [], momentIds: [] },
     artifacts: {
       studyDraft: 'study-draft.json',
       puzzles: 'candidate-puzzles.json',
@@ -228,6 +253,15 @@ export async function runKit(options, services) {
   return manifest;
 }
 
+function appendMoments(plan, moments) {
+  for (const { id, chapter } of moments) {
+    const add = { op: 'add', ref: `moment:${id}`, ...chapter };
+    if (plan.create.chapter) plan.ops.push(add);
+    else plan.create.chapter = { variant: 'xiangqi', ...chapter };
+  }
+  return plan;
+}
+
 async function applyKit({ directory, slug, target, dbUrl }, services) {
   const manifest = await readJson(join(directory, 'manifest.json'));
   const plan = await readJson(join(directory, 'study-draft.json'));
@@ -236,16 +270,22 @@ async function applyKit({ directory, slug, target, dbUrl }, services) {
   if (
     manifest.version !== 1 ||
     manifest.slug !== slug ||
-    digest({ plan, puzzles, annotations }) !== manifest.artifactsSha256
+    !Array.isArray(manifest.moments) ||
+    digest({ plan, puzzles, annotations, moments: manifest.moments }) !== manifest.artifactsSha256
   )
     throw new KitError('kit artifacts changed; run a fresh dry run');
   const selection = await readJson(join(directory, 'selection.json'));
+  // Existing selection files remain usable after a fresh preview adds moments.
+  if (selection.momentIds === undefined) selection.momentIds = [];
   if (
     !Array.isArray(selection.boardIds) ||
     !Array.isArray(selection.puzzleIds) ||
-    (!selection.boardIds.length && !selection.puzzleIds.length)
+    !Array.isArray(selection.momentIds) ||
+    (!selection.boardIds.length && !selection.puzzleIds.length && !selection.momentIds.length)
   )
-    throw new KitError('Select boardIds and/or puzzleIds in selection.json before --apply');
+    throw new KitError(
+      'Select boardIds, puzzleIds and/or momentIds in selection.json before --apply',
+    );
   const boards = selection.boardIds.map((id) => {
     const entry = annotations.find((a) => a.board.boardId === id);
     if (!entry) throw new KitError('selected board is not a prepared candidate');
@@ -257,9 +297,18 @@ async function applyKit({ directory, slug, target, dbUrl }, services) {
       throw new KitError('selected puzzle is not a tagged candidate');
     return puzzle;
   });
+  const selectedMoments = selection.momentIds.map((id) => {
+    const moment = manifest.moments.find((m) => m.id === id);
+    const chapter = plan.ops.find((op) => op.op === 'add' && op.ref === `moment:${id}`);
+    if (!moment || !chapter?.gamebook)
+      throw new KitError('selected moment is not a prepared candidate');
+    const { op: _op, ref: _ref, ...content } = chapter;
+    return { ...moment, chapter: content };
+  });
   if (
     new Set(selection.boardIds).size !== boards.length ||
-    new Set(selection.puzzleIds).size !== selectedPuzzles.length
+    new Set(selection.puzzleIds).size !== selectedPuzzles.length ||
+    new Set(selection.momentIds).size !== selectedMoments.length
   )
     throw new KitError('duplicate selections');
   const fingerprint = digest({ artifacts: manifest.artifactsSha256, selection, target });
@@ -286,7 +335,10 @@ async function applyKit({ directory, slug, target, dbUrl }, services) {
         annotations: boards,
         selected: true,
       })
-    : null;
+    : selectedMoments.length
+      ? { create: { ...plan.create, chapter: null }, ops: [] }
+      : null;
+  if (selectedPlan) appendMoments(selectedPlan, selectedMoments);
   const result = await services.publish({ dbUrl, plan: selectedPlan, puzzles: selectedPuzzles });
   const receipt = { ...result, fingerprint, target, appliedAt: new Date().toISOString() };
   await writeJson(receiptPath, receipt);

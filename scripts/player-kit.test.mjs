@@ -53,6 +53,7 @@ async function setup(t) {
         puzzles: [{ id: `p-${board.boardId}`, variant: 'xiangqi', tags: [] }],
       };
     },
+    findMoments: async () => [],
     buildStudy: async ({ boards }) => ({
       create: { name: 'Fixture study', chapter: { name: boards[0].boardId } },
       ops: boards.slice(1).map((b) => ({ op: 'add', name: b.boardId })),
@@ -90,7 +91,7 @@ test('default and explicit dry runs rank only finished A games, tag candidates, 
       ['win', 'draw'],
     );
     assert.ok(manifest.candidates.every((c) => c.reasons.length && c.rank > 0));
-    assert.deepEqual(manifest.selection, { boardIds: [], puzzleIds: [] });
+    assert.deepEqual(manifest.selection, { boardIds: [], puzzleIds: [], momentIds: [] });
     assert.ok(manifest.missing.some((item) => item.boardId === 'missing'));
     const puzzles = JSON.parse(await readFile(join(ctx.dir, 'candidate-puzzles.json'), 'utf8'));
     assert.ok(puzzles.every((p) => p.tags.includes('player:fixture-player')));
@@ -201,7 +202,7 @@ test('editor can preview a different ranked game without finalizing the selectio
   );
   assert.deepEqual(ctx.prepared, ['draw']);
   assert.equal(manifest.candidates.find((c) => c.boardId === 'draw').preview, true);
-  assert.deepEqual(manifest.selection, { boardIds: [], puzzleIds: [] });
+  assert.deepEqual(manifest.selection, { boardIds: [], puzzleIds: [], momentIds: [] });
   await assert.rejects(
     runKit({ slug: 'fixture-player', dbUrl, root: ctx.root, boardIds: ['live'] }, ctx.services),
     /eligible candidate/,
@@ -234,4 +235,232 @@ test('prepares each preview serially', async (t) => {
   };
   await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
   assert.deepEqual(ctx.prepared, ['win', 'draw']);
+});
+
+const momentMoves = [
+  'a3a4',
+  'a6a5',
+  'c3c4',
+  'c6c5',
+  'e3e4',
+  'e6e5',
+  'g3g4',
+  'g6g5',
+  'i3i4',
+  'i6i5',
+  'b0c2',
+  'b9c7',
+  'h0g2',
+  'h9g7',
+];
+const momentBoard = (boardId = 'moment-game') => ({
+  ...fixture.boards[0],
+  boardId,
+  roundNameEn: 'Round 4',
+  red: { name: 'Fixture Player' },
+  black: { name: 'Fixture Opponent' },
+  moves: momentMoves.map((uci) => ({
+    from: `${uci[0]}${Number(uci[1]) + 1}`,
+    to: `${uci[2]}${Number(uci[3]) + 1}`,
+  })),
+  plyCount: momentMoves.length,
+});
+const momentRow = (ply, extra = {}) => ({
+  ply,
+  side: ply % 2 ? 'red' : 'black',
+  uci: momentMoves[ply - 1],
+  best: { 10: 'b9c7', 11: 'h0g2', 12: 'h9g7' }[ply] ?? 'a0a1',
+  lost: 18,
+  winBefore: 50,
+  ...extra,
+});
+const scoredLines = (ply, secondCp = 0) => [
+  {
+    rank: 1,
+    score: { cp: 150, mate: null },
+    pvUci: {
+      10: ['b9c7', 'b0c2', 'h9g7'],
+      11: ['h0g2', 'b9c7'],
+      12: ['h9g7', 'h0g2'],
+    }[ply],
+  },
+  { rank: 2, score: { cp: secondCp, mate: null }, pvUci: [momentMoves[ply - 1]] },
+];
+
+async function momentSetup(t, rows = [momentRow(10)]) {
+  const ctx = await setup(t);
+  const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
+  ctx.services.loadPlayer = async () => ({ ...fixture, boards: [momentBoard()] });
+  ctx.services.prepareGame = async (board) => ({
+    annotation: { game: { key: board.boardId }, rows },
+    puzzles: [],
+  });
+  ctx.services.findMoments = (args) =>
+    findCriticalMoments({
+      ...args,
+      analyzeMoves: async (moves, limits, multipv) => {
+        assert.equal(limits.nodes, args.budgets.verifyNodes);
+        assert.equal(multipv, 2);
+        assert.deepEqual(moves, momentMoves.slice(0, moves.length));
+        return scoredLines(moves.length + 1, moves.length === 10 ? 145 : 0);
+      },
+    });
+  return ctx;
+}
+
+test('critical moments require a meaningful loss, a unique answer, and an undecided position', async (t) => {
+  const ctx = await momentSetup(t, [
+    momentRow(10),
+    momentRow(11),
+    momentRow(12, { lost: 9.9 }),
+    momentRow(13, { winBefore: 86 }),
+    momentRow(14, { winBefore: 14 }),
+    momentRow(9),
+    momentRow(12, { best: momentMoves[11] }),
+  ]);
+  const manifest = await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
+  assert.equal(manifest.moments.length, 1);
+  const moment = manifest.moments[0];
+  assert.equal(moment.boardId, 'moment-game');
+  assert.equal(moment.ply, 10);
+  assert.equal(moment.side, 'black');
+  assert.equal(moment.best, 'b9c7');
+  assert.equal(moment.played, 'i6i5');
+  assert.ok(moment.gap >= 8);
+  assert.ok(manifest.missing.some((m) => m.kind === 'moments'));
+  assert.deepEqual(manifest.selection.momentIds, []);
+  const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
+  const chapter = plan.ops.at(-1);
+  assert.equal(chapter.gamebook, true);
+  assert.equal(chapter.orientation, 'black');
+  assert.equal(chapter.name, 'Moment 1 · Round 4 · Black to play');
+  assert.equal(chapter.tags.ply, '10');
+  assert.equal(chapter.tags.black, 'Fixture Opponent');
+  assert.match(chapter.tree.rootFen, / b - - \d+ 5$/);
+  const root = chapter.tree.root;
+  assert.equal(root.annotations.comments[0].text, 'Black to play. Find the strongest move.');
+  const [best, played] = root.children;
+  assert.equal(best.uci, 'b10c8');
+  assert.equal(best.children[0].uci, 'b1c3');
+  assert.deepEqual(best.children[0].children, []);
+  assert.match(best.annotations.comments[0].text, /^Pikafish continues H2\+3 H8\+7 H8\+7\.$/);
+  assert.equal(played.uci, 'i7i6');
+  assert.match(
+    played.annotations.comments[0].text,
+    /In the game, Fixture Opponent played .* in Round 4 and gave up about 18% of their winning chances\./,
+  );
+  assert.doesNotMatch(JSON.stringify(chapter), /—|square|knight|bishop|pawn/i);
+});
+
+test('critical moments rank by loss, board id and ply, capped per game and overall', async () => {
+  const { findCriticalMoments, MOMENT_RULES } = await import('./lib/player-kit-moments.mjs');
+  const annotations = ['f', 'e', 'd', 'c', 'b', 'a'].map((id) => ({
+    board: momentBoard(id),
+    annotation: { rows: [momentRow(12), momentRow(11), momentRow(10)] },
+  }));
+  const args = {
+    annotations,
+    names: {},
+    budgets: { verifyNodes: 123 },
+    analyzeMoves: async (moves) => scoredLines(moves.length + 1),
+  };
+  const moments = await findCriticalMoments(args);
+  assert.equal(moments.length, MOMENT_RULES.maxOverall);
+  assert.deepEqual(
+    moments.map((m) => [m.boardId, m.ply]),
+    ['a', 'b', 'c', 'd', 'e'].flatMap((id) => [
+      [id, 10],
+      [id, 11],
+    ]),
+  );
+  assert.ok(
+    moments.every(
+      (m) => moments.filter((n) => n.boardId === m.boardId).length <= MOMENT_RULES.maxPerGame,
+    ),
+  );
+  assert.match(
+    moments[0].chapter.tree.root.children[1].annotations.comments[0].text,
+    /Black played/,
+  );
+  annotations[0].annotation.rows[0].lost = 30;
+  assert.equal((await findCriticalMoments(args))[0].boardId, 'f');
+});
+
+test('apply excludes unselected moments and permits a selected moment with or without its game', async (t) => {
+  for (const [selectMoment, selectGame] of [
+    [false, true],
+    [true, false],
+    [true, true],
+  ]) {
+    const ctx = await momentSetup(t);
+    const options = { slug: 'fixture-player', dbUrl, root: ctx.root };
+    const manifest = await runKit(options, ctx.services);
+    await writeFile(
+      join(ctx.dir, 'selection.json'),
+      JSON.stringify({
+        boardIds: selectGame ? ['moment-game'] : [],
+        puzzleIds: [],
+        momentIds: selectMoment ? [manifest.moments[0].id] : [],
+      }),
+    );
+    ctx.services.findMoments = async () => assert.fail('apply must use the reviewed analysis');
+    ctx.services.publish = async ({ plan }) => {
+      assert.equal(Boolean(plan.create.chapter.gamebook), selectMoment && !selectGame);
+      assert.equal(plan.ops.length, Number(selectMoment && selectGame));
+      if (selectMoment && selectGame) assert.equal(plan.ops[0].gamebook, true);
+      return { studyId: 'local-study' };
+    };
+    const receipt = await runKit({ ...options, apply: true }, ctx.services);
+    assert.deepEqual(await runKit({ ...options, apply: true }, ctx.services), receipt);
+  }
+});
+
+test('moment selections reject unknown ids, duplicates, changed metadata and changed receipts', async (t) => {
+  const ctx = await momentSetup(t);
+  const options = { slug: 'fixture-player', dbUrl, root: ctx.root };
+  const manifest = await runKit(options, ctx.services);
+  const selectionPath = join(ctx.dir, 'selection.json');
+  const id = manifest.moments[0].id;
+  for (const [momentIds, error] of [
+    [['unknown'], /candidate/],
+    [[id, id], /duplicate/],
+  ]) {
+    await writeFile(selectionPath, JSON.stringify({ boardIds: [], puzzleIds: [], momentIds }));
+    await assert.rejects(runKit({ ...options, apply: true }, ctx.services), error);
+  }
+  await writeFile(selectionPath, JSON.stringify({ boardIds: [], puzzleIds: [], momentIds: [id] }));
+  ctx.services.publish = async () => ({ studyId: 'local-study' });
+  await runKit({ ...options, apply: true }, ctx.services);
+  await writeFile(
+    selectionPath,
+    JSON.stringify({ boardIds: ['moment-game'], puzzleIds: [], momentIds: [] }),
+  );
+  await assert.rejects(runKit({ ...options, apply: true }, ctx.services), /already applied/);
+  manifest.moments[0].gap += 1;
+  await writeFile(join(ctx.dir, 'manifest.json'), JSON.stringify(manifest));
+  await assert.rejects(runKit({ ...options, apply: true }, ctx.services), /artifacts changed/);
+});
+
+test('critical moments accept the boundary rules and a one-ply engine line', async () => {
+  const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
+  for (const winBefore of [15, 85]) {
+    const moments = await findCriticalMoments({
+      annotations: [
+        { board: momentBoard(), annotation: { rows: [momentRow(10, { lost: 10, winBefore })] } },
+      ],
+      names: { 'Fixture Opponent': { en: 'Fixture Rival' } },
+      budgets: { verifyNodes: 123 },
+      analyzeMoves: async () => {
+        const lines = scoredLines(10);
+        lines[0].pvUci = ['b9c7'];
+        return lines;
+      },
+    });
+    assert.equal(moments.length, 1);
+    assert.deepEqual(moments[0].chapter.tree.root.children[0].children, []);
+    assert.match(
+      moments[0].chapter.tree.root.children[1].annotations.comments[0].text,
+      /Fixture Rival played/,
+    );
+  }
 });

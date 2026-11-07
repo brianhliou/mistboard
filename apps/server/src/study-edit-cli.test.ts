@@ -315,6 +315,21 @@ test('create checks the name, the variant and the first chapter before writing',
   );
 });
 
+test('create preserves a first gamebook chapter and rejects a non-boolean flag', () => {
+  const spec: StudyCreateSpec = {
+    owner: 'mistboard',
+    name: 'Fixture lesson',
+    chapter: { name: 'Find the move', variant: 'xiangqi', tree: line(2), gamebook: true },
+  };
+  const checked = checkCreate(spec);
+  assert.equal(checked.study.chapters[0].gamebook, true);
+  assert.match(checked.lines[0], /2 plies, gamebook/);
+  assert.throws(
+    () => checkCreate({ ...spec, chapter: { ...spec.chapter, gamebook: 'yes' as never } }),
+    /gamebook must be true or false/,
+  );
+});
+
 test('a create plan is described, and its ops check against the new study', () => {
   const planned = checkCreate(createSpec());
   assert.deepEqual(planned.lines, [

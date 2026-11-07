@@ -7,6 +7,7 @@ import test from 'node:test';
 import { loadAllSeedPuzzles } from '@mistboard/game/puzzle-seed';
 import pg from 'pg';
 import { localKitServices, publishLocal } from './lib/player-kit-local.mjs';
+import { findCriticalMoments } from './lib/player-kit-moments.mjs';
 import { assertLocalDatabase, runKit } from './player-kit.mjs';
 
 const dbUrl = process.env.TEST_DATABASE_URL;
@@ -28,10 +29,26 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   const id = `kit-${randomUUID()}`;
   const red = { name: 'Fixture Player', nameEn: 'Fixture Player' };
   const black = { name: 'Fixture Opponent', nameEn: 'Fixture Opponent' };
-  const moves = [
-    { from: 'a4', to: 'a5' },
-    { from: 'a7', to: 'a6' },
+  const ucis = [
+    'a3a4',
+    'a6a5',
+    'c3c4',
+    'c6c5',
+    'e3e4',
+    'e6e5',
+    'g3g4',
+    'g6g5',
+    'i3i4',
+    'i6i5',
+    'b0c2',
+    'b9c7',
+    'h0g2',
+    'h9g7',
   ];
+  const moves = ucis.map((uci) => ({
+    from: `${uci[0]}${Number(uci[1]) + 1}`,
+    to: `${uci[2]}${Number(uci[3]) + 1}`,
+  }));
   const payload = {
     id,
     tourSlug: '2025-wxc-sample',
@@ -45,11 +62,12 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
     moves,
     sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_999999.html',
   };
-  let studyId: string | undefined;
+  const studyIds: string[] = [];
   let ownerCreated = false;
   let tourCreated = false;
   t.after(async () => {
-    if (studyId) await client.query('DELETE FROM studies WHERE id=$1', [studyId]);
+    for (const createdId of studyIds)
+      await client.query('DELETE FROM studies WHERE id=$1', [createdId]);
     await client.query('DELETE FROM puzzles WHERE id=$1', [id]);
     await client.query('DELETE FROM xiangqi_broadcast_boards WHERE id=$1', [id]);
     await client.query('DELETE FROM xiangqi_broadcast_rounds WHERE id=$1', [id]);
@@ -71,7 +89,7 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   );
   await client.query(
     `INSERT INTO xiangqi_broadcast_boards (id,tour_slug,round_id,source_board_id,board_number,red,black,status,result,moves,ply_count,final_status,payload,source_url)
-    VALUES ($1,'2025-wxc-sample',$1,$1,1,$2,$3,'complete','1-0',$4,2,'{"type":"win","winner":"red"}',$5,$6)`,
+    VALUES ($1,'2025-wxc-sample',$1,$1,1,$2,$3,'complete','1-0',$4,$7,'{"type":"win","winner":"red"}',$5,$6)`,
     [
       id,
       JSON.stringify(red),
@@ -79,6 +97,7 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
       JSON.stringify(moves),
       JSON.stringify(payload),
       payload.sourceUrl,
+      moves.length,
     ],
   );
   const owner = await client.query(
@@ -103,10 +122,23 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
           result: '1-0',
           event: 'Fixture A event',
         },
-        rows: [{ uci: 'a3a4' }, { uci: 'a6a5' }],
+        rows: ucis.map((uci, index) => ({
+          uci,
+          ply: index + 1,
+          side: index % 2 ? 'black' : 'red',
+          ...(index === 9 ? { lost: 18, best: 'b9c7', winBefore: 50 } : {}),
+        })),
       },
       puzzles: [{ ...seed, id, tags: [] }],
     }),
+    findMoments: (args) =>
+      findCriticalMoments({
+        ...args,
+        analyzeMoves: async () => [
+          { rank: 1, score: { cp: 150, mate: null }, pvUci: ['b9c7', 'b0c2'] },
+          { rank: 2, score: { cp: 0, mate: null }, pvUci: ['i6i5'] },
+        ],
+      }),
   };
   const options = { slug: 'fixture-player', dbUrl, root, maxGames: 1 };
   const manifest = await runKit(options, services);
@@ -126,14 +158,16 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
     JSON.stringify({ boardIds: [id], puzzleIds: [id] }),
   );
   const receipt = await runKit({ ...options, apply: true }, services);
-  studyId = receipt.studyId;
+  const studyId = receipt.studyId;
   assert.ok(studyId);
+  studyIds.push(studyId);
   const stored = await client.query('SELECT data FROM puzzles WHERE id=$1', [id]);
   assert.ok(stored.rows[0].data.tags.includes('player:fixture-player'));
-  const chapters = await client.query('SELECT variant FROM study_chapters WHERE study_id=$1', [
-    studyId,
-  ]);
-  assert.deepEqual(chapters.rows, [{ variant: 'xiangqi' }]);
+  const chapters = await client.query(
+    'SELECT variant, gamebook FROM study_chapters WHERE study_id=$1',
+    [studyId],
+  );
+  assert.deepEqual(chapters.rows, [{ variant: 'xiangqi', gamebook: false }]);
   assert.deepEqual(await runKit({ ...options, apply: true }, services), receipt);
   const studyCount = await client.query('SELECT count(*) FROM studies');
   await assert.rejects(
@@ -149,6 +183,25 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
     studyCount.rows,
     'failed publication removes its new study',
   );
+
+  const momentOptions = { ...options, root: join(root, 'moment-only') };
+  const momentManifest = await runKit(momentOptions, services);
+  assert.equal(momentManifest.moments.length, 1);
+  await writeFile(
+    join(momentOptions.root, 'docs-private/players/kits/fixture-player/selection.json'),
+    JSON.stringify({ boardIds: [], puzzleIds: [], momentIds: [momentManifest.moments[0].id] }),
+  );
+  const momentReceipt = await runKit({ ...momentOptions, apply: true }, services);
+  studyIds.push(momentReceipt.studyId);
+  const momentChapters = await client.query(
+    'SELECT gamebook, orientation, tags, root FROM study_chapters WHERE study_id=$1',
+    [momentReceipt.studyId],
+  );
+  assert.equal(momentChapters.rows.length, 1);
+  assert.equal(momentChapters.rows[0].gamebook, true);
+  assert.equal(momentChapters.rows[0].orientation, 'black');
+  assert.equal(momentChapters.rows[0].tags.ply, '10');
+  assert.equal(momentChapters.rows[0].root.root.children[0].uci, 'b10c8');
 
   if (process.env.MISTBOARD_KIT_ENGINE_SMOKE === '1') {
     const real = await runKit({ ...options, root: join(root, 'real-engine') }, localKitServices);

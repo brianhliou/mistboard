@@ -117,6 +117,8 @@ export type StudyChapterTags = {
   date?: string;
   round?: string;
   site?: string;
+  /** Source game's one-based ply for a teaching position. */
+  ply?: string;
 };
 
 export type NewChapterInput = {

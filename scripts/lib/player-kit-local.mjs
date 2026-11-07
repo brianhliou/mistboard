@@ -7,6 +7,7 @@ import { access, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promis
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { assertLocalDatabase, REPO_ROOT } from '../player-kit.mjs';
+import { findCriticalMoments } from './player-kit-moments.mjs';
 
 const json = async (path) => JSON.parse(await readFile(path, 'utf8'));
 const save = async (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
@@ -248,6 +249,28 @@ async function buildStudy({ directory, player, names, annotations, selected = fa
   return json(path);
 }
 
+async function findMoments({ annotations, names, engine, budgets }) {
+  const { PikafishEngine } = await import('../variant-lab/xiangqi-pikafish-uci.ts');
+  let session;
+  try {
+    return await findCriticalMoments({
+      annotations,
+      names,
+      budgets,
+      analyzeMoves: async (moves, limits, multipv) => {
+        if (!session) {
+          session = new PikafishEngine(engine.binary, engine.net);
+          await session.init();
+          await session.newGame();
+        }
+        return session.analyzeMoves(moves, limits, multipv);
+      },
+    });
+  } finally {
+    session?.kill();
+  }
+}
+
 export async function publishLocal({ dbUrl, plan, puzzles }) {
   assertLocalDatabase(dbUrl);
   const { validateStandardXiangqiPuzzle } = await import('../../packages/game/src/index.ts');
@@ -305,6 +328,7 @@ export const localKitServices = {
   loadPlayer,
   engine: pinnedEngine,
   prepareGame,
+  findMoments,
   buildStudy,
   publish: publishLocal,
 };
