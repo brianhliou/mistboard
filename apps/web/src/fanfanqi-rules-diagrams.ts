@@ -107,51 +107,22 @@ export const FANFANQI_CANNON_SHOT = fanfanqiMoveDiagram({
   maxWidth: SINGLE_WIDTH,
 });
 
-const gambleBoard: FFQBanqiState['board'] = Array(32).fill(null);
-gambleBoard[9] = { color: 'red', role: 'cannon', faceDown: false };
-gambleBoard[10] = { color: 'red', role: 'soldier', faceDown: false };
-gambleBoard[11] = { color: 'red', role: 'advisor', faceDown: true };
-export const FANFANQI_CANNON_GAMBLE = fanfanqiMoveDiagram({
-  id: 'cannon-gamble',
-  state: tacticalState(gambleBoard),
-  from: 9,
-  expect: [11],
-  maxWidth: SINGLE_WIDTH,
-});
-
-const stuckBoard: FFQBanqiState['board'] = Array(32).fill(null);
-stuckBoard[9] = { color: 'red', role: 'cannon', faceDown: false };
-stuckBoard[11] = { color: 'black', role: 'horse', faceDown: false };
-stuckBoard[13] = { color: 'black', role: 'chariot', faceDown: false };
-stuckBoard[17] = { color: 'red', role: 'horse', faceDown: false };
-stuckBoard[25] = { color: 'black', role: 'general', faceDown: false };
-export const FANFANQI_CANNON_NO_SHOT = fanfanqiMoveDiagram({
-  id: 'cannon-no-shot',
-  state: tacticalState(stuckBoard),
-  from: 9,
-  expect: [],
-  maxWidth: SINGLE_WIDTH,
-});
-
-// Seed 2 deals a red cannon face up beside two face-down screens, so the
-// opening board shows Red's only kinds of first move: a flip or that cannon's
-// shots. Every square is full, so nothing can step.
+// Seed 2 deals a red cannon face up beside two face-down screens. Every square
+// is full, so Red's first move is a flip or one of that cannon's shots.
 const setup = createInitialFFQBanqiState('fanfanqi-setup', 2);
-export const FANFANQI_SETUP = fanfanqiMoveDiagram({
-  id: 'setup',
+export const FANFANQI_SETUP = fanfanqiPositionDiagram({ id: 'setup', state: setup });
+
+// The cannon section's before and after: the same deal with the cannon
+// selected, then one ply later, after it shot the face-down piece below it.
+export const FANFANQI_SHOT_BEFORE = fanfanqiMoveDiagram({
+  id: 'shot-before',
   state: setup,
   from: 6,
   expect: [4, 14],
 });
-
-// The same game one ply later: the cannon has shot the face-down piece at the
-// end of its row. The board is drawn from Black's seat, Black being to move.
-const SHOT_TO = 14;
+const SHOT_TO = 4;
 const afterShot = applyFFQBanqiMove(setup, { from: 6, to: SHOT_TO });
-export const FANFANQI_COVERED_CAPTURE = fanfanqiPositionDiagram({
-  id: 'covered-capture',
-  state: afterShot,
-});
+export const FANFANQI_SHOT_AFTER = fanfanqiPositionDiagram({ id: 'shot-after', state: afterShot });
 
 const ROLE_NAME: Record<BanqiPieceRole, string> = {
   general: 'general',
@@ -246,47 +217,39 @@ export function ladderExceptions(): Array<{
 
 export const FANFANQI_RANK_LADDER = (): string => {
   const order = FFQ_BANQI_RULES.captureRankOrder as readonly BanqiPieceRole[];
-  const exceptions = ladderExceptions();
-  const up = exceptions.filter((e) => e.captures);
-  const down = exceptions.filter((e) => !e.captures);
-  if (up.length !== 1 || down.length !== 1) {
-    throw new Error(
-      `Fanfanqi ladder: expected one exception each way, kernel gives ${JSON.stringify(exceptions)}`,
-    );
-  }
   const slot = 76;
   const token = 46;
+  const rowGap = 54;
   const width = order.length * slot;
-  const cx = (role: BanqiPieceRole) => order.indexOf(role) * slot + slot / 2;
-  const pieceY = 60;
-  const labelY = pieceY + token / 2 + 18;
+  const cx = (i: number) => i * slot + slot / 2;
+  const rows = (['red', 'black'] as const).map((color, r) => ({
+    color,
+    y: 6 + token / 2 + r * rowGap,
+  }));
+  const labelY = rows[1]!.y + token / 2 + 18;
   const ink = 'fill="currentColor"';
-  const pieces = order
+  const body = order
     .map((role, i) =>
       [
-        renderXiangqiPieceGlyphed({ color: 'red', role }, activeXiangqiPieceSet, {
-          x: cx(role) - token / 2,
-          y: pieceY - token / 2,
-          size: token,
-          shape: 'disc',
-        }),
-        `<text x="${cx(role)}" y="${labelY}" font-size="12" font-weight="600" text-anchor="middle" ${ink}>${cap(ROLE_NAME[role])}</text>`,
+        ...rows.map(({ color, y }) =>
+          renderXiangqiPieceGlyphed({ color, role }, activeXiangqiPieceSet, {
+            x: cx(i) - token / 2,
+            y: y - token / 2,
+            size: token,
+            shape: 'disc',
+          }),
+        ),
+        `<text x="${cx(i)}" y="${labelY}" font-size="12" font-weight="600" text-anchor="middle" ${ink}>${cap(ROLE_NAME[role])}</text>`,
         i > 0
-          ? `<text x="${i * slot}" y="${pieceY + 6}" font-size="18" text-anchor="middle" ${ink} opacity="0.6">&gt;</text>`
+          ? rows
+              .map(
+                ({ y }) =>
+                  `<text x="${i * slot}" y="${y + 6}" font-size="18" text-anchor="middle" ${ink} opacity="0.6">&gt;</text>`,
+              )
+              .join('')
           : '',
       ].join(''),
     )
     .join('');
-  const lead = `<text x="${width / 2}" y="13" font-size="12" text-anchor="middle" ${ink}>Each piece captures its own rank and every rank to its right</text>
-<line x1="8" y1="24" x2="${width - 14}" y2="24" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
-<polygon points="${width - 6},24 ${width - 15},19 ${width - 15},29" ${ink} opacity="0.6"/>`;
-  const from = cx(up[0]!.attacker);
-  const to = cx(up[0]!.victim);
-  const arcTop = labelY + 8;
-  const arcLow = arcTop + 44;
-  const arc = `<path d="M ${from} ${arcTop} C ${from} ${arcLow}, ${to} ${arcLow}, ${to} ${arcTop + 6}" fill="none" stroke="var(--site-accent, #2f7f6c)" stroke-width="2"/>
-<polygon points="${to},${arcTop - 1} ${to - 5},${arcTop + 9} ${to + 5},${arcTop + 9}" fill="var(--site-accent, #2f7f6c)"/>
-<text x="${width / 2}" y="${arcLow + 4}" font-size="12" text-anchor="middle" ${ink}>Exceptions: a ${up[0]!.attacker} takes a ${up[0]!.victim}; a ${down[0]!.attacker} cannot take a ${down[0]!.victim}</text>`;
-  const height = arcLow + 10;
-  return `<svg data-fanfanqi-diagram="rank-ladder" viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" aria-label="The Fanfanqi pieces in rank order, strongest to weakest, with the soldier and general exceptions" ${FIGURE_STYLE(width)}>${lead}${pieces}${arc}</svg>`;
+  return `<svg data-fanfanqi-diagram="rank-ladder" viewBox="0 0 ${width} ${labelY + 6}" role="img" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" aria-label="The Fanfanqi pieces of both colors in rank order, strongest to weakest" ${FIGURE_STYLE(width)}>${body}</svg>`;
 };
