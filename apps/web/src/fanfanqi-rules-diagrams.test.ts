@@ -7,7 +7,6 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { fanfanqiArticle } from './articles/content/fanfanqi.js';
-import { BANQI_RANK_LADDER } from './banqi-rules-diagrams.js';
 import * as diagrams from './fanfanqi-rules-diagrams.js';
 import { ffqBanqiBoardView, ffqBanqiSquare } from './ffq-banqi-board.js';
 import { renderBanqiBoardSvg } from './live-banqi-render.js';
@@ -25,8 +24,9 @@ function figure(svg: string): HTMLDivElement {
 describe('Fanfanqi rules diagrams', () => {
   const figures = {
     FANFANQI_SETUP: diagrams.FANFANQI_SETUP,
-    FANFANQI_FIRST_FLIP: diagrams.FANFANQI_FIRST_FLIP,
-    FANFANQI_REPLY_FLIP: diagrams.FANFANQI_REPLY_FLIP,
+    FANFANQI_COVERED_CAPTURE: diagrams.FANFANQI_COVERED_CAPTURE,
+    FANFANQI_CAPTURE_CARDS: diagrams.FANFANQI_CAPTURE_CARDS,
+    FANFANQI_RANK_LADDER: diagrams.FANFANQI_RANK_LADDER,
     FANFANQI_SOLDIER_TAKES_GENERAL: diagrams.FANFANQI_SOLDIER_TAKES_GENERAL,
     FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER: diagrams.FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
     FANFANQI_CANNON_SHOT: diagrams.FANFANQI_CANNON_SHOT,
@@ -41,18 +41,28 @@ describe('Fanfanqi rules diagrams', () => {
     });
   }
 
-  it('places every figure in its matching section and reuses the ladder unchanged', () => {
+  it('places every figure in its matching section', () => {
     const sections = fanfanqiArticle.sections;
-    const setup = sections.find((s) => s.heading === 'Board and setup')!.blocks!;
-    expect(setup.find((b) => b.kind === 'svg-row')).toMatchObject({
-      items: [
-        { svg: figures.FANFANQI_SETUP },
-        { svg: figures.FANFANQI_FIRST_FLIP },
-        { svg: figures.FANFANQI_REPLY_FLIP },
-      ],
-    });
+    const shape = (heading: string) =>
+      sections
+        .find((s) => s.heading === heading)!
+        .blocks!.map((b) => (b.kind === 'raw-svg' ? b.svg : b.kind));
+    expect(shape('Board and setup')).toEqual([
+      'paragraph',
+      'paragraph',
+      figures.FANFANQI_SETUP,
+      'paragraph',
+    ]);
+    expect(shape('Captured face-down pieces')).toEqual([
+      'paragraph',
+      figures.FANFANQI_COVERED_CAPTURE,
+      figures.FANFANQI_CAPTURE_CARDS,
+      'paragraph',
+    ]);
     const ranks = sections.find((s) => s.heading === 'Steps and the rank ladder')!.blocks!;
-    expect(ranks.find((b) => b.kind === 'raw-svg')).toMatchObject({ svg: BANQI_RANK_LADDER });
+    expect(ranks.find((b) => b.kind === 'raw-svg')).toMatchObject({
+      svg: figures.FANFANQI_RANK_LADDER,
+    });
     expect(ranks.find((b) => b.kind === 'svg-row')).toMatchObject({
       items: [
         { svg: figures.FANFANQI_SOLDIER_TAKES_GENERAL },
@@ -70,10 +80,9 @@ describe('Fanfanqi rules diagrams', () => {
       'paragraph',
       figures.FANFANQI_CANNON_NO_SHOT,
     ]);
-    expect(BANQI_RANK_LADDER()).toContain('<svg');
   });
 
-  it('starts with 28 backs and four fixed face-up squares of both colors', () => {
+  it('starts with 28 backs, four fixed face-up squares of both colors, and a cannon’s two shots', () => {
     const host = figure(figures.FANFANQI_SETUP());
     expect(host.querySelectorAll('.banqi-back')).toHaveLength(28);
     const squares = [...host.querySelectorAll('[data-piece-square]')]
@@ -83,18 +92,48 @@ describe('Fanfanqi rules diagrams', () => {
     expect(host.querySelector('[aria-label^="red "]')).not.toBeNull();
     expect(host.querySelector('[aria-label^="black "]')).not.toBeNull();
     expect(host.querySelector('.banqi-lastmove')).toBeNull();
+    // Every square is full: the only non-flip moves are the cannon's shots.
+    const setup = createInitialFFQBanqiState('fanfanqi-setup', 2);
+    expect(
+      getFFQBanqiLegalMoves(setup)
+        .filter((m) => m.from !== m.to)
+        .map((m) => `${m.from}-${m.to}`),
+    ).toEqual(['6-4', '6-14']);
+    expect(host.querySelectorAll('.banqi-hint')).toHaveLength(2);
   });
 
-  it('advances the setup through two flips, tinting each tile with the mover’s color', () => {
-    for (const [draw, backs, ink] of [
-      [figures.FANFANQI_FIRST_FLIP, 27, 'red'],
-      [figures.FANFANQI_REPLY_FLIP, 26, 'black'],
-    ] as const) {
-      const host = figure(draw());
-      expect(host.querySelectorAll('.banqi-back')).toHaveLength(backs);
-      expect(host.querySelectorAll('.banqi-lastmove')).toHaveLength(1);
-      expect(host.querySelector(`.banqi-lastmove-flip.banqi-lastmove--${ink}`)).not.toBeNull();
-    }
+  it('shows the covered capture from the next seat, with the shot tinted', () => {
+    const host = figure(figures.FANFANQI_COVERED_CAPTURE());
+    expect(host.querySelectorAll('.banqi-back')).toHaveLength(27);
+    // The room tints both ends of a move: where the cannon stood and where it landed.
+    expect(host.querySelectorAll('.banqi-lastmove')).toHaveLength(2);
+  });
+
+  it('gives both players the same capture card, read from each seat’s own view', () => {
+    const setup = createInitialFFQBanqiState('fanfanqi-setup', 2);
+    const after = applyFFQBanqiMove(setup, { from: 6, to: 14 });
+    const cards = diagrams.coveredCaptureKnowledge(setup, after);
+    expect(cards).toEqual([
+      { seat: 'red', owner: 'black', role: 'cannon', hpBefore: 60, hpAfter: 55 },
+      { seat: 'black', owner: 'black', role: 'cannon', hpBefore: 60, hpAfter: 55 },
+    ]);
+    const text = figure(figures.FANFANQI_CAPTURE_CARDS()).textContent!;
+    expect(text).toContain('RED SEES');
+    expect(text).toContain('BLACK SEES');
+    expect(text.match(/a black cannon was taken/g)).toHaveLength(2);
+    expect(text.match(/Black HP: 60 → 55/g)).toHaveLength(2);
+    // Planted: a position with no covered capture cannot draw the cards.
+    expect(() => diagrams.coveredCaptureKnowledge(setup, setup)).toThrow(/no face-down capture/);
+  });
+
+  it('draws the ladder exceptions the kernel reports, one each way', () => {
+    expect(diagrams.ladderExceptions()).toEqual([
+      { attacker: 'general', victim: 'soldier', captures: false },
+      { attacker: 'soldier', victim: 'general', captures: true },
+    ]);
+    const host = figure(figures.FANFANQI_RANK_LADDER());
+    expect(host.querySelectorAll('[aria-label^="red "]')).toHaveLength(7);
+    expect(host.textContent).toContain('a soldier takes a general');
   });
 
   it('shows the soldier capture and refuses the reverse capture', () => {
