@@ -37,7 +37,8 @@ test('phone: paused Xiangqi blocks touch moves and reconnect freezes both clocks
     });
   }
 
-  await page.routeWebSocket(/.*/, (route) => {
+  // Only the room socket: Vite's hot-reload socket opens first and would take the hello.
+  await page.routeWebSocket(/[?&]room=/, (route) => {
     socket = route;
     connections += 1;
     route.onMessage((message) => {
