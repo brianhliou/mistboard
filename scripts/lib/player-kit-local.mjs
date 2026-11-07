@@ -237,6 +237,17 @@ async function buildStudy({ directory, player, names, annotations, selected = fa
   const namesPath = join(work, 'names.json');
   await save(namesPath, names);
   const path = join(work, 'plan.json');
+  // The draft is what a partner opens, so it carries reader-facing copy.
+  const english = names[player.name] || player.name;
+  const events = [
+    ...new Set(annotations.map(({ annotation }) => annotation.game?.event).filter(Boolean)),
+  ];
+  const from =
+    events.length === 1
+      ? `the ${events[0]}`
+      : events.length === 2
+        ? `the ${events[0]} and the ${events[1]}`
+        : `${events.length} events`;
   await runLocalScript('scripts/player-study.mjs', [
     '--dir',
     join(work, 'annotations'),
@@ -245,9 +256,9 @@ async function buildStudy({ directory, player, names, annotations, selected = fa
     '--player',
     player.name,
     '--name',
-    `Player teaching kit: ${player.slug}`,
+    `${english}: annotated games`,
     '--description',
-    'Candidate games annotated locally for editorial review.',
+    `${english}'s games from ${from}, with Pikafish analysis.`,
     '--plan',
     path,
   ]);

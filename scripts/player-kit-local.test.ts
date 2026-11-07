@@ -156,6 +156,12 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   const draft = JSON.parse(await readFile(join(directory, 'study-draft.json'), 'utf8'));
   assert.equal(draft.create.chapter.orientation, 'red');
   assert.equal(draft.create.visibility, 'unlisted');
+  // The draft is the partner-facing study: English name and event, no slug.
+  assert.equal(draft.create.name, 'Fixture Player: annotated games');
+  assert.equal(
+    draft.create.description,
+    "Fixture Player's games from the Fixture A event, with Pikafish analysis.",
+  );
   // The annotation's win chances become the chapter's Computer analysis graph.
   // An English name stays whole, not cut to its last word.
   assert.match(draft.create.chapter.name, /Fixture Player vs Fixture Opponent/);
