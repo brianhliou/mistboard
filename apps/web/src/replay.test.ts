@@ -1,5 +1,6 @@
-import type { GameEvent } from '@mistboard/game';
+import type { Color, GameEvent } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { t } from './i18n/catalog.js';
 import { mountReplay } from './replay.js';
 import {
   compactReplayClockSidesForOrientation,
@@ -24,37 +25,80 @@ describe('compactReplayClockSidesForOrientation', () => {
 });
 
 describe('mountReplay capture rows', () => {
-  it('keeps split captures aligned to the shared board orientation across the triptych', async () => {
+  // Lesson-enforces: mistboard:477fb24 (repeat: mistboard:746055b).
+  // Historical bug fixtures: tests/fixtures/replay-capture-orientation/.
+  it.each(['white', 'black'] as const)(
+    'aligns every pane to the shared %s orientation while scrubbing',
+    async (orientation) => {
+      const root = document.createElement('div');
+      document.body.append(root);
+      const replay = await mountReplay(root, 'review-captures-test', {
+        autoplay: false,
+        captureLayout: 'split',
+        initialPly: 4,
+        loaderForId: async () => reviewCaptureEvents,
+        orientation,
+        revealOnFinish: false,
+        showControls: false,
+      });
+
+      try {
+        expectSplitCaptures(root, orientation, 4);
+        replay.jumpToPly?.(3);
+        expectSplitCaptures(root, orientation, 3);
+        replay.jumpToPly?.(0);
+        expectSplitCaptures(root, orientation, 0);
+        replay.jumpToPly?.(4);
+        expectSplitCaptures(root, orientation, 4);
+      } finally {
+        replay.destroy();
+        root.remove();
+      }
+    },
+  );
+
+  it.each([
+    ['white', 'button'],
+    ['black', 'button'],
+    ['white', 'keyboard'],
+    ['black', 'keyboard'],
+  ] as const)('flips %s-oriented capture rows immediately via %s', async (orientation, control) => {
     const root = document.createElement('div');
     document.body.append(root);
     const replay = await mountReplay(root, 'review-captures-test', {
       autoplay: false,
       captureLayout: 'split',
       initialPly: 4,
+      keyboardNav: control === 'keyboard',
       loaderForId: async () => reviewCaptureEvents,
+      orientation,
       revealOnFinish: false,
-      showControls: false,
+      showControls: true,
     });
 
     try {
-      expect(captureLabels(root, '.replay-pane-white .replay-captures-top')).toEqual([
-        'white pawn',
-      ]);
-      expect(captureLabels(root, '.replay-pane-white .replay-captures-bottom')).toEqual([
-        'black pawn',
-      ]);
-      expect(captureLabels(root, '.replay-pane-truth .replay-captures-top')).toEqual([
-        'white pawn',
-      ]);
-      expect(captureLabels(root, '.replay-pane-truth .replay-captures-bottom')).toEqual([
-        'black pawn',
-      ]);
-      expect(captureLabels(root, '.replay-pane-black .replay-captures-top')).toEqual([
-        'white pawn',
-      ]);
-      expect(captureLabels(root, '.replay-pane-black .replay-captures-bottom')).toEqual([
-        'black pawn',
-      ]);
+      const flip = () => {
+        if (control === 'keyboard') {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+        } else {
+          const button = root.querySelector<HTMLButtonElement>(
+            `button[title="${t('replay.flipAllBoards')}"]`,
+          );
+          expect(button).not.toBeNull();
+          button?.click();
+        }
+      };
+
+      expectSplitCaptures(root, orientation, 4);
+      flip();
+      const flipped = orientation === 'white' ? 'black' : 'white';
+      // Assert before any navigation can cause an unrelated rerender.
+      expectSplitCaptures(root, flipped, 4);
+      flip();
+      expectSplitCaptures(root, orientation, 4);
+      replay.jumpToPly?.(3);
+      flip();
+      expectSplitCaptures(root, flipped, 3);
     } finally {
       replay.destroy();
       root.remove();
@@ -186,9 +230,28 @@ function slotLabels(slot: ParentNode): string[] {
 
 function captureLabels(root: ParentNode, selector: string): string[] {
   const strip = root.querySelector(selector);
+  expect(strip, selector).not.toBeNull();
   return [...(strip?.querySelectorAll('.captures-piece') ?? [])].map(
     (piece) => piece.getAttribute('aria-label') ?? '',
   );
+}
+
+function expectSplitCaptures(root: ParentNode, orientation: Color, ply: 0 | 3 | 4): void {
+  const whiteCaptured = ply >= 3 ? ['black pawn'] : [];
+  const blackCaptured = ply >= 4 ? ['white pawn'] : [];
+  for (const kind of ['white', 'truth', 'black']) {
+    const pane = root.querySelector(`.replay-pane-${kind}`);
+    expect(pane, `${kind} pane`).not.toBeNull();
+    expect(
+      pane?.querySelector('.replay-board')?.classList.contains(`orientation-${orientation}`),
+    ).toBe(true);
+    expect(captureLabels(root, `.replay-pane-${kind} .replay-captures-top`)).toEqual(
+      orientation === 'white' ? blackCaptured : whiteCaptured,
+    );
+    expect(captureLabels(root, `.replay-pane-${kind} .replay-captures-bottom`)).toEqual(
+      orientation === 'white' ? whiteCaptured : blackCaptured,
+    );
+  }
 }
 
 const reviewCaptureEvents: GameEvent[] = [
