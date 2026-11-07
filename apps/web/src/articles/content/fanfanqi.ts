@@ -1,6 +1,8 @@
 import { BANQI_RANK_LADDER } from '../../banqi-rules-diagrams.js';
 import {
-  FANFANQI_CANNON_CAPTURES,
+  FANFANQI_CANNON_GAMBLE,
+  FANFANQI_CANNON_NO_SHOT,
+  FANFANQI_CANNON_SHOT,
   FANFANQI_FIRST_FLIP,
   FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
   FANFANQI_REPLY_FLIP,
@@ -42,7 +44,7 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Red moves before Black. The seats have fixed colors from the start. Flipping a piece never changes your color. Both players can see which pieces remain covered, but cannot see which piece is under each back.',
+          text: 'Red moves before Black. The seats have fixed colors from the start. Flipping a piece never changes your color. Both players can see which pieces remain covered, but cannot see which piece is under each back. Below, one deal before the first turn and after each player’s first flip.',
         },
         {
           kind: 'svg-row',
@@ -72,7 +74,7 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. Two exceptions apply: a general cannot capture a soldier, and a soldier can capture a soldier or a general. There is no check. Capturing the general follows the same HP rules as any other capture.',
+          text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. Two exceptions apply: a general cannot capture a soldier, and a soldier can capture a soldier or a general. There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.',
         },
         { kind: 'raw-svg', svg: BANQI_RANK_LADDER },
         {
@@ -95,16 +97,36 @@ export const fanfanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A cannon cannot move to an empty square. To capture along a row or column, it jumps exactly one occupied square, called the screen. The screen may be face up or face down and may belong to either player. The next occupied square is the target. The cannon cannot skip it to reach a piece farther away.',
+          text: 'In banqi a cannon can step one square like any other piece. In Fanfanqi it cannot: a cannon moves only to capture. A cannon with no shot stays where it is, and a threatened cannon cannot step out of danger.',
         },
         {
           kind: 'paragraph',
-          text: 'The target may be a face-up enemy of any rank or a covered piece of either color. A shot at a covered piece is a gamble: if it turns out to be yours, you take the damage. A cannon cannot capture a face-up friendly piece. A covered capture is shown to both players, including its color and piece type. Pieces still covered on the board stay hidden, even after the game ends.',
+          text: 'To find a shot, pick a row or column and count out from the cannon. The first piece in the way is the **screen**, and the cannon jumps over it. The screen can be any piece: yours or your opponent’s, face up or face down. The next piece after the screen, however far, is the **target**. If nothing stands behind the screen, there is no shot along that line.',
         },
         {
-          kind: 'raw-svg',
-          svg: FANFANQI_CANNON_CAPTURES,
-          caption: 'The dot on the back and the ring on the face-up piece mark capture targets.',
+          kind: 'paragraph',
+          text: 'The target must be a face-up enemy, of any rank, or a face-down piece of either color. A face-up piece of your own blocks the shot, and the cannon cannot skip past it to a piece farther away. Below, a shot, a gamble and a cannon with no move.',
+        },
+        {
+          kind: 'svg-row',
+          items: [
+            {
+              svg: FANFANQI_CANNON_SHOT,
+              caption: 'The soldier is the screen. The general behind it is the target, though it outranks the cannon.',
+            },
+            {
+              svg: FANFANQI_CANNON_GAMBLE,
+              caption: 'Your own soldier is the screen. The face-down piece behind it may be yours.',
+            },
+            {
+              svg: FANFANQI_CANNON_NO_SHOT,
+              caption: 'No shot, so no move: nothing screens the horse above, and the red horse blocks the line to the general.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'A shot at a face-down piece is a gamble. The piece leaves the board and both players see its color and type. If it is yours, you lose its HP, and a shot that takes you to zero loses the game. Pieces still face down on the board stay hidden, even after the game ends.',
         },
       ],
     },
@@ -132,6 +154,10 @@ export const fanfanqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'If your cannon captures a covered piece of your own color, you lose the HP. This can lose you the game. HP stops at zero, and a player at zero loses.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.',
         },
       ],
     },
@@ -162,6 +188,67 @@ export const fanfanqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'HP is checked before the draw count. The draw count is checked before the no-legal-move loss. At 30 quiet plies, the game draws even if a player cannot move.',
+        },
+      ],
+    },
+    {
+      heading: 'How Fanfanqi differs from banqi',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'The rank ladder and the one-square steps are the same as in [banqi](/rules/banqi). Six rules differ:',
+        },
+        {
+          kind: 'table',
+          keyColumn: true,
+          wrap: true,
+          headers: ['Rule', 'Banqi', 'Fanfanqi'],
+          rows: [
+            ['Colors', 'Set by the first flip', 'Fixed by seat: the first player is Red'],
+            ['Start', 'All 32 pieces face down', 'Four face up, 28 face down'],
+            [
+              'Cannon',
+              'Steps one square, or captures over a screen',
+              'Only captures, and may shoot a face-down piece of either color',
+            ],
+            ['Winning', 'Your opponent has no legal move', 'Your opponent reaches zero HP or has no legal move'],
+            [
+              'Draws',
+              '60 plies with no flip or capture, or a threefold repetition',
+              '30 plies with no flip or capture',
+            ],
+            ['Chases', 'A chase may not repeat a position a third time', 'At most four chases in a row'],
+          ],
+        },
+      ],
+    },
+    {
+      heading: 'Common questions',
+      blocks: [
+        {
+          kind: 'faq',
+          items: [
+            {
+              question: 'Which player is Red?',
+              answer:
+                'The player who moves first. Colors belong to the seats from the start, so flipping a black piece on your first turn does not make you Black.',
+            },
+            {
+              question: 'Can I flip one of my opponent’s pieces?',
+              answer:
+                'Yes. You may flip any face-down piece. If it turns out to be your opponent’s, it stays theirs and they can move it on their turn.',
+            },
+            {
+              question: 'Can a cannon move without capturing?',
+              answer:
+                'No. A cannon only moves by capturing over a screen. When it has no shot, it cannot move at all.',
+            },
+            {
+              question: 'What happens if my cannon captures my own face-down piece?',
+              answer:
+                'You lose that piece’s HP: 30 for your own general. The capture still counts as progress, so it resets the 30-ply draw count.',
+            },
+          ],
         },
       ],
     },

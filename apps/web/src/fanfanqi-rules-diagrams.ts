@@ -106,16 +106,39 @@ export const FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER = fanfanqiMoveDiagram({
   expect: [5, 8, 13],
 });
 
-const cannonBoard: FFQBanqiState['board'] = Array(32).fill(null);
-cannonBoard[9] = { color: 'red', role: 'cannon', faceDown: false };
-cannonBoard[10] = { color: 'red', role: 'soldier', faceDown: false };
-cannonBoard[11] = { color: 'red', role: 'horse', faceDown: true };
-cannonBoard[17] = { color: 'black', role: 'soldier', faceDown: true };
-cannonBoard[25] = { color: 'black', role: 'general', faceDown: false };
-export const FANFANQI_CANNON_CAPTURES = fanfanqiMoveDiagram({
-  id: 'cannon-captures',
-  state: tacticalState(cannonBoard),
+// The walk-through: one screen then the target, a shot at a back, and a
+// cannon with no shot, which also has no move at all.
+const shotBoard: FFQBanqiState['board'] = Array(32).fill(null);
+shotBoard[9] = { color: 'red', role: 'cannon', faceDown: false };
+shotBoard[13] = { color: 'black', role: 'soldier', faceDown: false };
+shotBoard[21] = { color: 'black', role: 'general', faceDown: false };
+export const FANFANQI_CANNON_SHOT = fanfanqiMoveDiagram({
+  id: 'cannon-shot',
+  state: tacticalState(shotBoard),
   from: 9,
-  expect: [11, 25],
-  maxWidth: SINGLE_WIDTH,
+  expect: [21],
+});
+
+const gambleBoard: FFQBanqiState['board'] = Array(32).fill(null);
+gambleBoard[9] = { color: 'red', role: 'cannon', faceDown: false };
+gambleBoard[10] = { color: 'red', role: 'soldier', faceDown: false };
+gambleBoard[11] = { color: 'red', role: 'advisor', faceDown: true };
+export const FANFANQI_CANNON_GAMBLE = fanfanqiMoveDiagram({
+  id: 'cannon-gamble',
+  state: tacticalState(gambleBoard),
+  from: 9,
+  expect: [11],
+});
+
+const stuckBoard: FFQBanqiState['board'] = Array(32).fill(null);
+stuckBoard[9] = { color: 'red', role: 'cannon', faceDown: false };
+stuckBoard[11] = { color: 'black', role: 'horse', faceDown: false };
+stuckBoard[13] = { color: 'black', role: 'chariot', faceDown: false };
+stuckBoard[17] = { color: 'red', role: 'horse', faceDown: false };
+stuckBoard[25] = { color: 'black', role: 'general', faceDown: false };
+export const FANFANQI_CANNON_NO_SHOT = fanfanqiMoveDiagram({
+  id: 'cannon-no-shot',
+  state: tacticalState(stuckBoard),
+  from: 9,
+  expect: [],
 });
