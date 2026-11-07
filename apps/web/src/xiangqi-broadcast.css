@@ -921,6 +921,13 @@
   gap: 4px;
 }
 
+/* The News box's "scroll for more" fade at the list's foot, on only while
+   rows sit below the visible part (scroll-fade.ts), so it goes at the bottom
+   and never shows on a list that fits. A mask, so clicks reach the last row. */
+.xqb-rail-list.xqb-rail-list-more {
+  mask-image: var(--site-scroll-fade);
+}
+
 .xqb-rail-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1002,7 +1009,24 @@
 
 .xqb-event-layout-with-rail {
   grid-template-columns: minmax(190px, 250px) minmax(0, 1fr);
-  grid-template-areas: "rail content";
+  /* The rights note is the content column's last row, so the pinned left
+     column's grid area runs to the foot of the page and the column never
+     moves: with the note below the layout, the column was pushed up by the
+     note's height at the bottom of the page. The second row takes whatever
+     height the column has beyond the content, so the note sits right under
+     the content rather than halfway down the leftover space. */
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "rail content"
+    "rail foot";
+}
+
+.xqb-event-layout-with-rail > .xqb-rights-note {
+  grid-area: foot;
+  align-self: start;
+  /* The layout's 16px row gap plus this is the 22px the note had below the
+     layout (the shell's 14px gap and the note's own 8px). */
+  margin-top: 6px;
 }
 
 .xqb-event-layout-with-rail .xqb-side-rail {
@@ -1134,62 +1158,6 @@
   border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
 }
 
-.xqb-share {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.xqb-share-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "label label" "url copy";
-  gap: 4px 8px;
-  align-items: center;
-}
-
-.xqb-share-label {
-  grid-area: label;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--site-text);
-}
-
-.xqb-share-url {
-  grid-area: url;
-  min-width: 0;
-  min-height: 34px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel);
-  color: var(--site-muted);
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 13px;
-}
-
-.xqb-share-copy {
-  grid-area: copy;
-  min-height: 34px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel);
-  color: var(--site-text);
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.xqb-share-copy:hover,
-.xqb-share-copy:focus-visible {
-  border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
-  background: var(--site-accent-soft);
-  color: var(--site-accent-strong);
-}
-
 .xqb-standings {
   width: 100%;
   border-collapse: collapse;
@@ -1265,7 +1233,8 @@
 @media (max-width: 900px) {
   .xqb-event-layout-with-rail {
     grid-template-columns: 1fr;
-    grid-template-areas: "content" "rail";
+    grid-template-rows: none;
+    grid-template-areas: "content" "rail" "foot";
   }
 
   .xqb-event-layout-with-rail .xqb-side-rail {
@@ -1481,7 +1450,7 @@
   font-size: 14px;
 }
 
-/* Calendar rows, on the calendar page and the index's "Coming up". */
+/* Calendar rows, on the calendar page and the index's "Other events". */
 .xqb-coming-up-head {
   display: flex;
   align-items: baseline;
@@ -1793,8 +1762,10 @@
   top: var(--xqb-side-top, 12px);
   align-self: start;
   /* Ends where the page's bottom padding starts (.xqb-shell, 36px), so at the
-     foot of the page the column is not pushed up by its own container. */
-  height: calc(100vh - var(--xqb-side-top, 12px) - 36px);
+     foot of the page the column is not pushed up by its own container. One
+     more pixel for a page whose height is fractional: the last fraction of a
+     pixel cannot be scrolled to, and without it the column moved by it. */
+  height: calc(100vh - var(--xqb-side-top, 12px) - 37px);
   min-height: 360px;
   display: flex;
   flex-direction: column;
@@ -1932,7 +1903,7 @@
   height: 16px;
   margin: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--site-text) 22%, transparent);
+  background-color: color-mix(in srgb, var(--site-text) 22%, transparent);
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -1961,8 +1932,11 @@
   }
 }
 
+/* background-color, never the `background` shorthand: the shorthand resets
+   background-clip to border-box, and this rule outranks the coarse one, so on
+   a phone the checked switch painted its 12px touch border green (54x40). */
 .xqb-gauge-toggle input:checked {
-  background: var(--site-accent);
+  background-color: var(--site-accent);
 }
 
 .xqb-gauge-toggle input:checked::after {
@@ -2324,31 +2298,6 @@ a.xqb-standings-name:focus-visible {
   text-underline-offset: 2px;
 }
 
-.xqb-overview-share {
-  border-radius: var(--site-radius);
-  background: color-mix(in srgb, var(--site-panel) 92%, var(--site-text));
-  padding: 4px 22px 18px;
-}
-
-.xqb-overview-share > summary {
-  cursor: pointer;
-  padding: 12px 0;
-  color: var(--site-heading);
-  font-size: 15px;
-  font-weight: 600;
-  list-style-position: inside;
-}
-
-.xqb-overview-share:not([open]) {
-  padding-bottom: 4px;
-}
-
-.xqb-overview-share {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
 /* ── Boards pager, lichess's (2026-09-23) ────────────────────────────────────
    Page buttons and the count, the team filter, the page size; the switches
    sit on the row below. */
@@ -2551,130 +2500,8 @@ a.xqb-standings-name:focus-visible {
   color: var(--site-accent);
 }
 
-/* The share box: the title is a tab sitting on the box's top-right edge. */
-.xqb-overview-share {
-  position: relative;
-  margin-top: 30px;
-  padding: 34px 28px 26px;
-  gap: 22px;
-}
-
-.xqb-overview-share:not([open]) {
-  padding: 0;
-  min-height: 12px;
-}
-
-.xqb-share-tab {
-  position: absolute;
-  top: -22px;
-  right: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 12px 12px 0 0;
-  background: inherit;
-  padding: 10px 18px 8px;
-  color: var(--site-text);
-  font-size: 15px;
-  font-weight: 500;
-  list-style: none;
-  cursor: pointer;
-}
-
-.xqb-share-tab::-webkit-details-marker {
-  display: none;
-}
-
-.xqb-share-chevron {
-  display: inline-flex;
-  transform: rotate(180deg);
-  transition: transform 120ms ease;
-}
-
-.xqb-overview-share:not([open]) .xqb-share-chevron {
-  transform: none;
-}
-
-.xqb-overview-share .xqb-share-row {
-  display: grid;
-  gap: 8px;
-}
-
-.xqb-share-label {
-  color: var(--site-heading);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.xqb-share-field {
-  display: flex;
-  border: 1px solid var(--site-border-soft);
-  border-radius: 10px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--site-panel) 70%, var(--site-bg, #000));
-}
-
-.xqb-share-field .xqb-share-url {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--site-text);
-  padding: 11px 16px;
-  font: inherit;
-  font-size: 14px;
-}
-
-.xqb-share-field .xqb-share-url:focus {
-  outline: none;
-}
-
-.xqb-share-field:focus-within {
-  border-color: color-mix(in srgb, var(--site-accent) 55%, var(--site-border-soft));
-}
-
-.xqb-share-field .xqb-share-copy {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  border: 0;
-  border-left: 1px solid var(--site-border-soft);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--site-text) 6%, transparent);
-  color: var(--site-text);
-  padding: 0;
-  cursor: pointer;
-}
-
-.xqb-share-field .xqb-share-copy:hover,
-.xqb-share-field .xqb-share-copy:focus-visible {
-  color: var(--site-accent-strong);
-  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
-}
-
-.xqb-share-field .xqb-share-copied {
-  color: #4f8a2a;
-}
-
 :root[data-effective-theme="dark"] .xqb-round-option-current .xqb-round-status-check {
   color: inherit;
-}
-
-/* <details> does not lay its content out as flex everywhere; space the rows
-   with margins instead. */
-.xqb-overview-share .xqb-share-row + .xqb-share-row {
-  margin-top: 24px;
-}
-
-.xqb-overview-share[open] .xqb-share-tab {
-  box-shadow: 0 -1px 0 var(--site-border-soft);
-}
-
-.xqb-overview-share[open] {
-  border-top: 1px solid var(--site-border-soft);
 }
 
 /* Centred rows (lichess's strip): a wrapped second row sits under the first
@@ -2726,7 +2553,7 @@ a.xqb-standings-name:focus-visible {
   color: var(--xqb-art-ink);
 }
 
-.xqb-event-art-zh {
+.xqb-event-art-title {
   max-width: 100%;
   font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
   font-size: clamp(16px, 2.2cqw, 30px);
@@ -2737,18 +2564,6 @@ a.xqb-standings-name:focus-visible {
   background: #f1dcb0;
   padding: 2px 8px;
   border-radius: 4px;
-}
-
-.xqb-event-art-en {
-  max-width: 100%;
-  color: #3b2a1c;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  text-wrap: balance;
-  background: #f1dcb0;
-  padding: 1px 6px;
-  border-radius: 3px;
 }
 
 .xqb-event-art-meta {
@@ -2779,6 +2594,31 @@ a.xqb-standings-name:focus-visible {
   grid-area: actions;
 }
 
+/* Copy link sits on the round picker's line, as tall as it, so the header
+   gains no row. */
+.xqb-event-header > .xqb-hero-actions {
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.xqb-event-header .xqb-round-picker {
+  flex: 0 1 560px;
+  min-width: 0;
+}
+
+.xqb-event-header .xqb-copy-link {
+  flex: none;
+  min-height: 40px;
+  padding-inline: 14px;
+  border-radius: 12px;
+}
+
+@media (pointer: coarse) {
+  .xqb-event-header .xqb-copy-link {
+    min-height: 44px;
+  }
+}
+
 .xqb-event-header > .xqb-event-art {
   grid-area: art;
   align-self: stretch;
@@ -2788,7 +2628,7 @@ a.xqb-standings-name:focus-visible {
   border-radius: 0 var(--site-radius) 0 0;
 }
 
-.xqb-event-header > .xqb-event-art .xqb-event-art-zh {
+.xqb-event-header > .xqb-event-art .xqb-event-art-title {
   font-size: 24px;
 }
 
@@ -2806,24 +2646,64 @@ a.xqb-standings-name:focus-visible {
 }
 
 /* The list's cards: the art on top, lichess's card image. */
-.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+.xqb-tour-card > .xqb-event-art .xqb-event-art-title {
   font-size: 17px;
 }
 
-.xqb-tour-card > .xqb-event-art .xqb-event-art-en {
-  font-size: 11px;
-}
-
-.xqb-tour-card-featured > .xqb-event-art .xqb-event-art-zh {
+.xqb-tour-card-featured > .xqb-event-art .xqb-event-art-title {
   font-size: 22px;
 }
 
-/* Card-size art: a ten-character name fits on one line. */
-.xqb-tour-card > .xqb-event-art {
-  padding: 10px 10px;
+/* Card-size art: a ten-character name fits on one line. The art fills the
+   card's top edge to edge, the article cards' frame; only the copy is inset. */
+.xqb-tour-card {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
 }
 
-.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+.xqb-tour-card > .xqb-event-art {
+  padding: 10px 10px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.xqb-tour-card > .xqb-tour-card-copy {
+  padding: 10px 12px 12px;
+}
+
+/* The featured card: the art fills the left column top to bottom. */
+.xqb-tour-card-featured {
+  align-items: stretch;
+  column-gap: 18px;
+}
+
+/* A grid item with an aspect ratio starts at its own width instead of
+   stretching, so pin the width to the column: on a phone the stacked art left
+   a gap on the right. */
+.xqb-tour-card-featured > .xqb-event-art {
+  justify-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.xqb-tour-card-featured > .xqb-tour-card-copy {
+  align-self: center;
+  padding: 14px 16px 14px 0;
+}
+
+@media (max-width: 760px) {
+  .xqb-tour-card-featured > .xqb-event-art {
+    height: auto;
+  }
+
+  .xqb-tour-card-featured > .xqb-tour-card-copy {
+    padding: 12px 14px 14px;
+  }
+}
+
+.xqb-tour-card > .xqb-event-art .xqb-event-art-title {
   font-size: 15px;
   letter-spacing: 0.02em;
 }
@@ -2991,4 +2871,70 @@ a.xqb-standings-name:focus-visible {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
+}
+
+/* ── Withheld records (2026-10-26) ───────────────────────────────────────────
+   A finished game whose source record reads two ways: the card dims the start
+   position under "Not replayed" like a results-only card, but it opens (its
+   page says why and links the source), so it keeps the card's hover. */
+.xqb-board-card-withheld .xqb-card-board {
+  position: relative;
+}
+
+.xqb-board-card-withheld .xqb-card-board svg {
+  opacity: 0.45;
+}
+
+/* The board page of the same game: players, result, the reason and the
+   source link, and no board, so the start position never stands in for it. */
+.xqb-held {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.xqb-held-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.xqb-held-seats {
+  display: grid;
+  gap: 6px;
+}
+
+.xqb-held-seat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--site-panel);
+}
+
+.xqb-held-team {
+  color: var(--site-muted);
+  font-size: 0.85em;
+}
+
+.xqb-held-score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-held-result {
+  margin: 0;
+  font-weight: 600;
+}
+
+.xqb-held-note {
+  margin: 0;
+  color: var(--site-muted);
+  line-height: 1.5;
 }

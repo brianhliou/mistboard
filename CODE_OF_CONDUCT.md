@@ -1,27 +1,20 @@
 # Code of Conduct
 
-Mistboard is a focused technical and chess community. Keep discussion useful, specific, and respectful.
+This applies on mistboard.com and in this repository.
 
-## Expected Behavior
+- Treat people with respect. No harassment, threats, slurs or personal attacks.
+- No spam, impersonation, or posting someone's private information.
+- Report security problems privately, as [SECURITY.md](SECURITY.md) describes.
 
-- Be direct without being hostile.
-- Critique ideas and code, not personal identity.
-- Assume hidden-information bugs are serious until proven otherwise.
-- Keep disagreements grounded in rules, tests, logs, or product goals.
-- Respect maintainer decisions even when you disagree.
+## Fair play
 
-## Unacceptable Behavior
-
-- harassment or threats
-- personal attacks
-- spam or repeated off-topic promotion
-- cheating assistance against live Mistboard games
-- publishing security vulnerabilities before a fix is available
-- doxxing or exposing private information
-- impersonating maintainers, sponsors, players, or the official project
+Human accounts are for human play. A game played from a human account gets no
+help from an engine, another person or any outside tool. Bots play only from
+accounts we have approved and labelled as bots; to run one, write to
+[mistboard.com/contact](https://mistboard.com/contact) first.
 
 ## Enforcement
 
-The maintainer may remove comments, close issues, reject contributions, block users, or restrict participation to protect the project.
-
-This project is founder-led. Participation is welcome, but access to project spaces is conditional on behavior that keeps Mistboard useful and trustworthy.
+We may remove content, close issues, reject contributions, and restrict,
+suspend or close accounts that break these rules. Report a problem through
+[mistboard.com/contact](https://mistboard.com/contact).

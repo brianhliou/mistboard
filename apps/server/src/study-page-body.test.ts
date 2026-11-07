@@ -30,6 +30,7 @@ function chapter(overrides: Partial<StudyChapterRecord> = {}): StudyChapterRecor
     gamebook: false,
     practice: false,
     practiceGoal: null,
+    scoreSeries: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -402,4 +403,14 @@ test('a hidden-information study meta does not depend on the moves themselves', 
     );
     assert.deepEqual(studyPageMeta({ study: a.s, locale }), studyPageMeta({ study: b.s, locale }));
   }
+});
+
+test('a 600-chapter study lists every chapter in the served body', () => {
+  const chapters = Array.from({ length: 600 }, (_, i) =>
+    chapter({ id: `ch${i + 1}`, ordinal: i, name: `Deal ${Math.floor(i / 2) + 1} game ${i + 1}` }),
+  );
+  const html = renderStudyBody({ study: study({ chapters }), locale: 'en', localePath: '' });
+  assert.equal(html.match(/<li/g)?.length, 600);
+  assert.ok(html.includes('Deal 300 game 600'));
+  assert.ok(html.length < 150_000, `body is ${html.length} bytes`);
 });

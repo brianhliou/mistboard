@@ -338,8 +338,8 @@ function positiveModulo(value: number, divisor: number): number {
 // Every public bot a variant can be played against, weakest first, so the
 // stepper walks the real ladder: xiangqi's Fairy-Stockfish Levels 1-8 then
 // full-strength Pikafish; jieqi's Pikafish Levels 1-8 (Level 8 is the
-// `pikafish` bot, the strongest Pikafish setting), then AB-JChess, then jqe where
-// the server can seat it; the other
+// `pikafish` bot, the strongest Pikafish setting), then jqe where the server can
+// seat it, then AB-JChess on top; the other
 // Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo; the other
 // house-built variants a single Misty (no stepper). Mirrors the server roster in
 // apps/server/src/first-party-bots.ts; a rung the server cannot serve fails the
@@ -359,7 +359,7 @@ export type LandingBotRung = {
    *  neural net but not an NNUE, so it gets the general tag. */
   net: 'nnue' | 'neural' | null;
   /** The engine needs a binary and net the server box may lack (KataGo), or a flag
-   *  that is off (jqe, MISTBOARD_JQE_ENABLED), so the rung is offered only where
+   *  that can be off (jqe, MISTBOARD_JQE_ENABLED), so the rung is offered only where
    *  GET /api/bots reports it playable. */
   gated?: boolean;
 };
@@ -428,10 +428,11 @@ export function landingBotLadder(
         engine: 'Pikafish',
         net: null,
       },
-      { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', net: 'nnue' },
-      // jqe (2026-10-16) above AB-JChess: held behind the server's MISTBOARD_JQE_ENABLED
-      // until its author's OK, so off, /api/bots never lists it and the rung is left off.
+      // jqe (2026-10-16), one rung under AB-JChess since AB-JChess-20261031 took the top
+      // back: gated on the server's MISTBOARD_JQE_ENABLED, which prod has on, so
+      // /api/bots lists it; where the flag is off the rung is left out.
       { botId: 'jqe', level: null, name: 'jqe', engine: 'jqe', net: 'nnue', gated: true },
+      { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', net: 'nnue' },
     ];
     return rungs.filter((rung) => !rung.gated || playable.has(rung.botId));
   }

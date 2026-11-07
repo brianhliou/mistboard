@@ -10,7 +10,9 @@
 // also lives here; live-xiangqi.ts re-exports it for its existing importers.
 
 // This board builds the judgment badge in its own intersection geometry rather
-// than through svg-board-marker, so it imports the badge palette directly.
+// than through svg-board-marker (it borrows only the drawn ✓/✗ icon), so it
+// imports the badge palette directly.
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import './board-glyph-marker.css';
 // Its circle markers take a brush class (`xq-marker xq-shape--green`) whose
 // colours live here; without the import a page that draws one but loads no
@@ -25,7 +27,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
@@ -34,10 +36,27 @@ import {
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
   boardLastMovePiece,
+  type RaisedPieceOutline,
+  raisedCellPieceOutline,
+  raisedPieceOutline,
 } from './board-lastmove.js';
-import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
+import {
+  SELECT_3D_GROUP_ATTRS,
+  select3dCaptureFaceSvg,
+  select3dHoverEdgeSvg,
+  select3dSelectedSvg,
+} from './board-select-3d.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import {
+  piece3dEnabled,
+  xiangqiPiece3dApplies,
+  xiangqiPiece3dCellMark,
+  xiangqiPiece3dMarkPiece,
+  xiangqiPiece3dMarkup,
+} from './piece-3d.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import { type SvgBoardGlyphIcon, svgBoardGlyphIcon } from './svg-board-marker.js';
 import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { escapeHtml } from './web-utils.js';
@@ -64,11 +83,7 @@ import {
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
-import {
-  type XiangqiPieceSet,
-  xiangqiPieceSetShape,
-  xiangqiPieceShapeForLayout,
-} from './xiangqi-piece-sets.js';
+import { type XiangqiPieceSet, xiangqiPieceShapeForLayout } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 const FILES = 'abcdefghi';
@@ -131,7 +146,7 @@ export function renderXiangqiBoardSvg(
   perspective: XiangqiColor = view.perspective,
   options: Pick<
     XiangqiBoardSvgState,
-    'layout' | 'coordinates' | 'arrows' | 'markers' | 'checkSquare'
+    'layout' | 'coordinates' | 'arrows' | 'markers' | 'checkSquare' | 'pieceSet' | 'tile3d'
   > = {},
 ): string {
   return xiangqiBoardSvg(view, perspective, {
@@ -185,6 +200,9 @@ export interface XiangqiBoardSvgState {
    *  with its variant's rule. Absent or null = no glow, which is what every
    *  surface without check (Fog Xiangqi, diagrams) gets by default. */
   checkSquare?: XiangqiSquare | null;
+  /** Draw each piece as a 3D disc with a rim (piece-3d.ts) where the set and
+   *  layout draw discs. Off unless asked: no surface turns it on yet. */
+  tile3d?: boolean;
 }
 
 /** A decoration pinned to one intersection: 'star' = a collectible item
@@ -197,6 +215,8 @@ export interface XiangqiBoardMarker {
   kind: 'star' | 'circle' | 'glyph';
   /** Disc label for kind 'glyph' (e.g. '??'). Ignored by the other kinds. */
   text?: string;
+  /** A drawn mark for kind 'glyph' in place of the label (puzzle ✓ / ✗). */
+  icon?: SvgBoardGlyphIcon;
   className?: string;
 }
 
@@ -259,10 +279,22 @@ export function xiangqiBoardSvg(
   // ring its outline (the asset sets keep their disc there), the intersection
   // band the outside of its disc.
   const markSet = state.pieceSet ?? readStoredXiangqiPieceSet();
+  const tile3d = state.tile3d ?? piece3dEnabled();
   const markPiece: MarkPiece = {
-    cell: { size: PIECE_SIZE, shape: xiangqiPieceSetShape(markSet, 'square') },
-    band: boardLastMovePiece(PIECE_SIZE, markSet),
+    cell: tile3d
+      ? xiangqiPiece3dCellMark(markSet, CELL)
+      : { size: xiangqiPieceCellBox(PIECE_SIZE), set: markSet },
+    band:
+      tile3d && xiangqiPiece3dApplies(markSet, xiangqiPieceShapeForLayout(layout))
+        ? xiangqiPiece3dMarkPiece(markSet, CELL)
+        : boardLastMovePiece(PIECE_SIZE, markSet),
   };
+  // A 3D piece is marked on the piece itself (board-select-3d.ts): no rings.
+  const outline3d: RaisedPieceOutline | null = tile3d
+    ? layout === 'cell'
+      ? raisedCellPieceOutline(markPiece.cell)
+      : raisedPieceOutline(markPiece.band)
+    : null;
   const lastMoveMarks = (layer: BoardLastMoveLayer) =>
     state.lastDropSquare
       ? lastDropLayer(state.lastDropSquare, perspective, layout, layer, markPiece)
@@ -276,15 +308,15 @@ export function xiangqiBoardSvg(
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
       <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${lastMoveMarks('under')}</g>
-      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout) : ''}</g>
-      <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
-      <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
-      <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet)}</g>
-      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarks('over')}</g>
+      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout, markSet) : ''}</g>
+      <g class="xq-live-selection">${outline3d ? '' : selectionLayer(state.selectedSquare, perspective, layout)}</g>
+      <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout, outline3d !== null)}</g>
+      <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet, tile3d)}</g>
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarks('over')}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, perspective, state.selectedSquare, layout, outline3d)}</g>` : ''}
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${arrowLayer(state.arrows ?? [], perspective, layout)}</g>
       <g class="xq-live-glyphs" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'glyph')}</g>
-      <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare, layout, state.dropTargets) : ''}</g>
+      <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare, layout, state.dropTargets, outline3d) : ''}</g>
     </svg>
   `;
 }
@@ -333,9 +365,13 @@ function checkLayer(
   square: XiangqiSquare,
   perspective: XiangqiColor,
   layout: XiangqiBoardLayout,
+  set: XiangqiPieceSet,
 ): string {
   const { file, rank } = coordOf(square);
-  return boardCheckGlowSvg(intersection(file, rank, perspective, layout), MARK_PIECE_SIZE);
+  const center = intersection(file, rank, perspective, layout);
+  return layout === 'cell'
+    ? boardCheckCellSvg(center, CELL, set, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 function lastDropLayer(
@@ -417,14 +453,16 @@ export function xiangqiMarkerSvg(
   if (marker.kind === 'glyph') {
     // Offsets are in SCREEN space (intersection() has already applied the
     // perspective flip), so the badge sits in the same corner whichever way the
-    // board faces. Empty text draws nothing rather than an unlabelled disc.
-    if (!marker.text) return '';
+    // board faces. No text and no icon draws nothing rather than an unlabelled disc.
+    if (!marker.text && !marker.icon) return '';
     const cx = center.x + GLYPH_OFFSET;
     const cy = center.y - GLYPH_OFFSET;
     return (
       `<g class="${className} xq-marker--glyph">` +
       `<circle class="xq-marker__disc" cx="${cx}" cy="${cy}" r="${GLYPH_RADIUS}"/>` +
-      `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${GLYPH_FONT_SIZE}">${escapeHtml(marker.text)}</text>` +
+      (marker.icon
+        ? svgBoardGlyphIcon(marker.icon, cx, cy, GLYPH_RADIUS)
+        : `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${GLYPH_FONT_SIZE}">${escapeHtml(marker.text ?? '')}</text>`) +
       `</g>`
     );
   }
@@ -466,6 +504,7 @@ function hintLayer(
   perspective: XiangqiColor,
   selectedSquare: XiangqiSquare | null,
   layout: XiangqiBoardLayout,
+  raised = false,
 ): string {
   if (!selectedSquare) return '';
   return view.legalMoves
@@ -474,11 +513,39 @@ function hintLayer(
       const coord = coordOf(move.to);
       const center = intersection(coord.file, coord.rank, perspective, layout);
       const occupied = view.board[move.to] !== undefined;
+      // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
+      if (occupied && raised) return '';
       return occupied
         ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="28"/>`
         : `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`;
     })
     .join('');
+}
+
+/**
+ * The selection on a board of 3D pieces (board-select-3d.ts): the selected
+ * piece's side in green and every capture target's face tinted, over
+ * the pieces and the last move's gold edge.
+ */
+function select3dLayer(
+  view: StandardXiangqiPlayerView,
+  perspective: XiangqiColor,
+  selectedSquare: XiangqiSquare | null,
+  layout: XiangqiBoardLayout,
+  outline: RaisedPieceOutline,
+): string {
+  if (!selectedSquare || !view.board[selectedSquare]) return '';
+  const at = (square: XiangqiSquare) => {
+    const coord = coordOf(square);
+    return intersection(coord.file, coord.rank, perspective, layout);
+  };
+  const parts = [select3dSelectedSvg(at(selectedSquare), outline)];
+  for (const move of view.legalMoves) {
+    if (move.from === selectedSquare && view.board[move.to] !== undefined) {
+      parts.push(select3dCaptureFaceSvg(at(move.to), outline));
+    }
+  }
+  return parts.join('');
 }
 
 function pieceLayer(
@@ -487,8 +554,11 @@ function pieceLayer(
   draggingFromSquare: XiangqiSquare | null,
   layout: XiangqiBoardLayout,
   pieceSet?: XiangqiPieceSet,
+  tile3d = false,
 ): string {
   const parts: string[] = [];
+  const set3d = tile3d ? (pieceSet ?? readStoredXiangqiPieceSet()) : null;
+  const draw3d = set3d !== null && xiangqiPiece3dApplies(set3d, xiangqiPieceShapeForLayout(layout));
   for (const [square, piece] of Object.entries(view.board)) {
     if (!piece) continue;
     const dragSource = square === draggingFromSquare;
@@ -499,6 +569,22 @@ function pieceLayer(
     // 6-10); coordOf().rank is the same 1-10 rank those use.
     const crossed =
       piece.role === 'soldier' && (piece.color === 'red' ? coord.rank >= 6 : coord.rank <= 5);
+    if (draw3d && set3d) {
+      const piece3d = xiangqiPiece3dMarkup(
+        center,
+        CELL,
+        piece,
+        set3d,
+        {
+          className: dragSource ? 'xq-piece xq-piece--drag-source' : 'xq-piece',
+          crossed,
+        },
+        dragSource ? 'xq-piece-rim xq-piece--drag-source' : 'xq-piece-rim',
+        xiangqiPieceShapeForLayout(layout),
+      );
+      parts.push(`<g class="xq-piece-slot" data-piece-square="${square}">${piece3d}</g>`);
+      continue;
+    }
     const pieceSvg = renderXiangqiPiece(piece, {
       x: center.x - PIECE_SIZE / 2,
       y: center.y - PIECE_SIZE / 2,
@@ -543,6 +629,7 @@ export function animateXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective, layout);
   const to = intersection(settle.file, settle.rank, perspective, layout);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // Forward moves only: on intersection boards the gold band rides on the
   // piece for the whole glide; on square grids the destination-cell wash and
   // the amber ring on the piece fade in as it lands. A reverse step renders the
@@ -559,6 +646,7 @@ function clickLayer(
   selectedSquare: XiangqiSquare | null,
   layout: XiangqiBoardLayout,
   dropTargets: readonly XiangqiSquare[] = [],
+  outline3d: RaisedPieceOutline | null = null,
 ): string {
   const targets = new Map<XiangqiSquare, { capture: boolean }>();
   for (const square of dropTargets) targets.set(square, { capture: false });
@@ -575,13 +663,20 @@ function clickLayer(
       const square = `${FILES[file]}${rank}` as XiangqiSquare;
       const center = intersection(file, rank, perspective, layout);
       const target = targets.get(square);
+      // A 3D capture target carries its marks on the piece: its face tint over
+      // the pieces (select3dLayer) and, under the pointer, its side in green.
+      const raised = target?.capture && outline3d;
       const marker = target
-        ? target.capture
-          ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="28"/>`
-          : `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`
+        ? raised
+          ? ''
+          : target.capture
+            ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="28"/>`
+            : `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`
         : '';
       const hover = target
-        ? `<circle class="xq-live-target-hover" cx="${center.x}" cy="${center.y}" r="31"/>`
+        ? raised
+          ? select3dHoverEdgeSvg(center, outline3d)
+          : `<circle class="xq-live-target-hover" cx="${center.x}" cy="${center.y}" r="31"/>`
         : '';
       parts.push(
         `<g class="xq-live-hit${target ? ' xq-live-hit--target' : ''}" data-square="${square}">${hover}${marker}<rect x="${center.x - HIT_HALF}" y="${center.y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`,

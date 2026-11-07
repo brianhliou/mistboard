@@ -152,6 +152,47 @@ definePersistenceTests('patron', () => {
 
     assert.equal(await expireLapsedPatrons(new Date('2027-01-01T00:00:00.000Z')), 0, 'idempotent');
   });
+
+  // A custom monthly amount has no preset tier key, so nothing that reads the
+  // standing may key on the tier list: status alone makes it a patron, and a
+  // renewal (customer.subscription.updated on the same subscription id) keeps it.
+  test('a monthly custom-amount subscription counts as an active patron, through renewal', async () => {
+    const now = new Date('2026-10-26T00:00:00.000Z');
+    await createUser({
+      id: 'custom_user',
+      email: 'custom_user@example.com',
+      emailVerifiedAt: now,
+      handle: 'custom-user',
+      displayName: 'custom_user',
+      now,
+    });
+    const custom: PatronSubscriptionInput = {
+      accountId: 'custom_user',
+      stripeCustomerId: 'cus_custom',
+      stripeSubscriptionId: 'sub_custom',
+      status: 'active',
+      tier: 'monthly_custom',
+      currentPeriodEnd: new Date('2026-11-26T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+      isLifetime: false,
+    };
+    await applyPatronSubscription(custom);
+    assert.ok(await patronSince('custom_user'), 'custom monthly sets the badge');
+    assert.deepEqual(await getPatronStanding('custom_user', now), {
+      active: true,
+      subscription: true,
+      until: null,
+    });
+
+    await applyPatronSubscription({
+      ...custom,
+      currentPeriodEnd: new Date('2026-12-26T00:00:00.000Z'),
+    });
+    const afterRenewal = new Date('2026-12-01T00:00:00.000Z');
+    assert.equal((await getPatronStanding('custom_user', afterRenewal)).active, true);
+    assert.equal(await expireLapsedPatrons(afterRenewal), 0);
+    assert.ok(await patronSince('custom_user'), 'renewed custom patron untouched');
+  });
 });
 
 async function patronSince(accountId: string): Promise<Date | null> {

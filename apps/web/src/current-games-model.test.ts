@@ -5,8 +5,12 @@ import {
   type CurrentGame,
   deadlineFractionLeft,
   FINISHED_POOL_URL,
+  finishedBoardAspect,
+  finishedBoardBoxAspect,
+  finishedHandsUrl,
   finishedPoolDue,
   finishedTileKind,
+  finishedWinnerColor,
   isLowClock,
   liveTileKind,
   settleAwaitingFinish,
@@ -104,6 +108,17 @@ describe('finishedTileKind', () => {
     expect(finishedTileKind('no-such-variant')).toBe('fog');
   });
 
+  // Every Xiangqi Mahjong card was the misty tile, whatever its move count
+  // (xmj_942676f6, 2026-10-30): a finished match is open, so it draws both
+  // final hands from the server's finished-match read instead.
+  it('draws the final hands for Xiangqi Mahjong and nothing else', () => {
+    expect(finishedTileKind('xiangqi-mahjong')).toBe('hands');
+    expect(
+      GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'hands').map((s) => s.id),
+    ).toEqual(['xiangqi-mahjong']);
+    expect(finishedHandsUrl('xmj_a b')).toBe('/api/xiangqi-mahjong/games/xmj_a%20b?final=1');
+  });
+
   it('draws exactly the open and fog specs plus jieqi, banqi and Flip Jungle', () => {
     const drawn = GAME_SPECS.filter((spec) => finishedTileKind(spec.id) === 'board').map(
       (spec) => spec.id,
@@ -152,5 +167,39 @@ describe('just finished after a game leaves the wall', () => {
     ]);
     settleAwaitingFinish(awaiting, [{ roomId: 'arrived' }, { roomId: 'older' }], 2_000);
     expect([...awaiting.keys()]).toEqual(['still-coming']);
+  });
+});
+
+describe('finishedBoardAspect', () => {
+  it("is each compact board's drawn width over height", () => {
+    expect(finishedBoardAspect('xiangqi')).toBeCloseTo(552 / 612, 4);
+    expect(finishedBoardAspect('jieqi')).toBeCloseTo(660 / 732, 3);
+    expect(finishedBoardAspect('banqi')).toBeCloseTo(568 / 312, 4);
+    expect(finishedBoardAspect('jungle')).toBeCloseTo(336 / 432, 4);
+    expect(finishedBoardAspect('jungle-flip')).toBe(1);
+    expect(finishedBoardAspect('chess')).toBe(1);
+    expect(finishedBoardAspect('fog')).toBe(1);
+  });
+
+  it("gives the hands and misty tiles a xiangqi board's ratio", () => {
+    expect(finishedBoardAspect('xiangqi-mahjong')).toBeCloseTo(552 / 612, 4);
+    expect(finishedBoardAspect('no-such-variant')).toBeCloseTo(552 / 612, 4);
+  });
+});
+
+describe('finishedBoardBoxAspect', () => {
+  it('boxes a banqi board in a xiangqi-shaped card and leaves the rest alone', () => {
+    expect(finishedBoardBoxAspect(finishedBoardAspect('banqi'))).toBeCloseTo(552 / 612, 4);
+    expect(finishedBoardBoxAspect(finishedBoardAspect('xiangqi'))).toBeCloseTo(552 / 612, 4);
+    expect(finishedBoardBoxAspect(1)).toBe(1);
+  });
+});
+
+describe('finishedWinnerColor', () => {
+  it('reads the winning seat from the result', () => {
+    expect(finishedWinnerColor('red-wins')).toBe('red');
+    expect(finishedWinnerColor('east-wins')).toBe('east');
+    expect(finishedWinnerColor('draw')).toBeNull();
+    expect(finishedWinnerColor('aborted')).toBeNull();
   });
 });

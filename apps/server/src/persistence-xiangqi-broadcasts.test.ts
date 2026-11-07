@@ -262,6 +262,36 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(logs[0]?.kind, 'illegal_move');
   });
 
+  test('a withheld record imports as a result with its reason, and one with moves is refused', async () => {
+    const pack = await fixturePack();
+    const validBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    const held: XiangqiBroadcastBoard = {
+      ...validBoard,
+      status: 'complete',
+      result: '0-1',
+      moves: [],
+      recordWithheld: 'ambiguous',
+      sourceUrl: 'https://fixture.invalid/game.html',
+    };
+    const imported = await importXiangqiBroadcastPack({ ...pack, boards: [held] });
+    assert.equal(imported.boardsImported, 1);
+    const stored = await getXiangqiBroadcastBoard(validBoard.id);
+    assert.equal(stored?.recordWithheld, 'ambiguous');
+    assert.equal(stored?.moves.length, 0);
+    assert.equal(stored?.result, '0-1');
+
+    // A withheld record never carries a game: the validator refuses it and
+    // the stored board stays as it was.
+    const refused = await importXiangqiBroadcastPack({
+      ...pack,
+      boards: [{ ...held, moves: validBoard.moves }],
+    });
+    assert.equal(refused.boardsImported, 0);
+    assert.equal(refused.boardsSkipped, 1);
+    assert.equal(refused.errors[0]?.kind, 'schema_validation_failed');
+    assert.equal((await getXiangqiBroadcastBoard(validBoard.id))?.moves.length, 0);
+  });
+
   test('including individual game files exercises invalid fixture rejection', async () => {
     const result = await importXiangqiBroadcastPack(await fixturePack(true));
 
@@ -710,17 +740,23 @@ definePersistenceTests('xiangqi broadcasts', () => {
       })),
       boards: stale,
     });
+    // The captures predate the 比赛时间 read; live pages state it, and an
+    // undated round of results is read again until a page dates it.
+    const dated = (html: string, day: string) =>
+      `${html}<td style="text-align:left;">比赛时间：${day}</td>`;
     const poll = () =>
       pollXiangqiBroadcastSourceOnce({
         sourceUrl,
         tourSlug: slug,
         fetchImpl: multiSourceFetch({
-          'http://www.dpxq.com/hldcg/round_12776.html': dpxqFixture(
-            'round_12776-womens-league-2026-latest-r10.html',
+          'http://www.dpxq.com/hldcg/round_12776.html': dated(
+            dpxqFixture('round_12776-womens-league-2026-latest-r10.html'),
+            '2026-10-03',
           ),
-          'http://www.dpxq.com/hldcg/round_12776_1.html': roundOnePage,
-          'http://www.dpxq.com/hldcg/round_12776_2.html': dpxqFixture(
-            'round_12776_2-womens-league-2026-r02.html',
+          'http://www.dpxq.com/hldcg/round_12776_1.html': dated(roundOnePage, '2026-09-12'),
+          'http://www.dpxq.com/hldcg/round_12776_2.html': dated(
+            dpxqFixture('round_12776_2-womens-league-2026-r02.html'),
+            '2026-09-13',
           ),
           'http://www.dpxq.com/hldcg/movelist_12776.html': '<html><body></body></html>',
         }),
@@ -729,15 +765,12 @@ definePersistenceTests('xiangqi broadcasts', () => {
     const ids = async (round: number) =>
       (await listXiangqiBroadcastBoards(`${slug}-r0${round}`)).map((b) => b.sourceBoardId);
 
-    // Round 2 lands keyed by match; round 1 is still settled for this pass.
+    // Round 2 lands keyed by match. Round 1's stale boards carry no date, so
+    // the same pass reads round 1 again and re-files it by match.
     const first = await poll();
     assert.equal(first.ok, true, first.ok ? '' : first.message);
     assert.equal((await ids(2)).length, 16);
     assert.ok((await ids(2)).every((id) => /^r02m\d+t\d+$/.test(id)));
-
-    // The tour is now keyed by match, so round 1 is read again and re-filed.
-    const second = await poll();
-    assert.equal(second.ok, true, second.ok ? '' : second.message);
     const roundOne = await ids(1);
     assert.equal(roundOne.length, 19);
     assert.equal(
@@ -747,8 +780,9 @@ definePersistenceTests('xiangqi broadcasts', () => {
     const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
     assert.equal(logs.filter((log) => log.kind === 'superseded').length, 6);
 
-    const third = await poll();
-    assert.equal(third.ok ? 'ok' : third.message, 'every listed board is already imported');
+    // Both rounds are dated and keyed by match now, so they settle.
+    const second = await poll();
+    assert.equal(second.ok ? 'ok' : second.message, 'every listed board is already imported');
   });
 
   test('explicit correction can replace a non-prefix legal board update', async () => {

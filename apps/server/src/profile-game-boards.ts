@@ -6,9 +6,9 @@
 // in the browser (what /games "Just finished" does per tile). Finished games
 // never change, so each room's answer is kept per process.
 //
-// The position is the share card's (og-game-tenant.ts): the tenant card's
-// PUBLIC FEN of the finished game, projected by resolvePositionOg. The thumbnail
-// then keeps less than the card: each piece is only a point and an ink, never a
+// The position is the share card's (og-game-tenant.ts): Gomoku's final stones,
+// or the tenant card's PUBLIC FEN projected by resolvePositionOg. The thumbnail
+// keeps less than the card: each piece is only a point and an ink, never a
 // role, so a jieqi piece nobody turned over is "a red piece here" and a banqi or
 // Flip Jungle tile still face-down has no ink at all. Fog games draw revealed,
 // as a finished room is open to spectators (roomViewPolicy).
@@ -17,10 +17,12 @@ import { boardToPieces } from '@mistboard/board-render';
 import {
   applyGameEvent,
   type GameEvent,
+  GOMOKU_BOARD_SIZE,
   initialGameProjection,
   JUNGLE_HEIGHT,
   JUNGLE_WIDTH,
 } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
 import { resolvePositionOg } from './og-position.js';
 import * as persistence from './persistence.js';
 import { type VariantTenantCard, variantTenantForRoomId } from './variant-tenant/registry.js';
@@ -41,7 +43,7 @@ export type ProfileBoardMark =
 export type ProfileBoardPiece = [number, number, ProfileBoardMark];
 
 /** Mirrored by apps/web/src/profile-game-board.ts. `shape` picks the drawing:
- *  pieces on line crossings (the xiangqi family) or in cells. */
+ *  pieces on line crossings (xiangqi and Gomoku) or in cells. */
 export type ProfileBoardThumb =
   | {
       shape: 'intersection';
@@ -96,8 +98,13 @@ export async function attachProfileBoards<T extends { roomId: string; variant: s
   rows: readonly T[],
   deps: ProfileBoardDeps = liveDeps,
 ): Promise<Array<T & { finalBoard: ProfileBoardThumb | null }>> {
+  // A disabled playtest neither loads its event log nor serves a warmed
+  // thumbnail. Do not cache a flag denial as a missing final position.
+  const canDraw = (roomId: string) =>
+    gomokuEnabled() || deps.cardForRoomId(roomId)?.layout !== 'gomoku';
   const wanted = rows.filter(
     (row) =>
+      canDraw(row.roomId) &&
       !cache.has(row.roomId) &&
       (deps.cardForRoomId(row.roomId) !== null || CHESS_STACK_BOARD_VARIANTS.has(row.variant)),
   );
@@ -116,7 +123,10 @@ export async function attachProfileBoards<T extends { roomId: string; variant: s
       }
     }
   }
-  return rows.map((row) => ({ ...row, finalBoard: cache.get(row.roomId) ?? null }));
+  return rows.map((row) => ({
+    ...row,
+    finalBoard: canDraw(row.roomId) ? (cache.get(row.roomId) ?? null) : null,
+  }));
 }
 
 function finalBoardOf(
@@ -127,7 +137,22 @@ function finalBoardOf(
   try {
     const card = deps.cardForRoomId(roomId);
     if (!card) return chessFinalBoard(roomId, events);
-    // A tile match has totals, not a position (VariantTenantMatchCard).
+    // Gomoku's card replays placements and the recorded opening directly;
+    // there is no FEN. Keep the same ink-only thumbnail contract.
+    if (card.layout === 'gomoku') {
+      const position = card.finalPosition(events, roomId);
+      if (!position) return null;
+      return {
+        shape: 'intersection',
+        files: GOMOKU_BOARD_SIZE,
+        ranks: GOMOKU_BOARD_SIZE,
+        river: null,
+        palaces: [],
+        pieces: position.board.flatMap((ink, index): ProfileBoardPiece[] =>
+          ink ? [[index % GOMOKU_BOARD_SIZE, Math.floor(index / GOMOKU_BOARD_SIZE) + 1, ink]] : [],
+        ),
+      };
+    }
     if (card.layout === 'match') return null;
     const plies = events.filter(
       (event) => (event as { type?: unknown } | null)?.type === 'move-played',

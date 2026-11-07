@@ -13,3 +13,10 @@
   stop-color: var(--board-check, #e11d1d);
   stop-opacity: 0;
 }
+
+/* The square grid's mark (boardCheckCellSvg): the cell in red under the tile,
+   showing as a red frame round it. */
+.board-check__cell {
+  fill: var(--board-check, #e11d1d);
+  fill-opacity: 0.55;
+}

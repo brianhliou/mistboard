@@ -8,7 +8,10 @@
 // so it shows the pieces the opponent has captured (the viewer's lost pieces).
 // A null role (a dark piece this view was never told the identity of) renders as
 // the board's own face-down disc (the brown / green back), grouped with a count,
-// not a "?" token: the pool then reads in the board's vocabulary.
+// not a "?" token: the pool then reads in the board's vocabulary. A named piece
+// the view marks `takenFaceDown` (the capturer's own pool, a revealed review)
+// is drawn shaded (captured-pool.css), so it reads apart from a piece both
+// players saw face-up when it was taken.
 //
 // Jieqi does NOT render the "still face-down" pool the other flip variants do
 // (hidden-pool-panel.ts): under capturer-only reveal the viewer's own pool cannot
@@ -36,7 +39,11 @@ export type JieqiMaterialSlots = {
  *  payload's per-ply view both carry them. */
 export type JieqiMaterialView = {
   board: Partial<Record<string, unknown>>;
-  captured: ReadonlyArray<{ owner: JieqiColor; role: JieqiPieceRole | null }>;
+  captured: ReadonlyArray<{
+    owner: JieqiColor;
+    role: JieqiPieceRole | null;
+    takenFaceDown?: boolean;
+  }>;
 };
 
 export function renderJieqiMaterial(

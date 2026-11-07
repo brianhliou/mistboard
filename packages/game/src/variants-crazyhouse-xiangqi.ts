@@ -31,7 +31,7 @@
 // Sweeps 9-11); it replaced "one-sentence C" (standard start, palace-bound
 // advisors, no drop check) on 2026-10-02. The engine is stock Fairy-Stockfish
 // with apps/server/src/crazyhouse-xiangqi.ini;
-// packages/game/src/fixtures/crazyhouse-xiangqi-parity.json holds its legal
+// packages/game/fixtures/crazyhouse-xiangqi-parity.json holds its legal
 // moves and perft-2 counts over real game positions, and the test beside this
 // file requires this kernel to agree at every one of them.
 //

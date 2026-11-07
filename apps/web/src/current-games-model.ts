@@ -3,7 +3,11 @@
 // the tile kinds. DOM-free so it is unit-tested directly
 // (current-games-model.test.ts).
 
-import { CRAZYHOUSE_XIANGQI_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
+import {
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
+  maybeGameSpecForId,
+  XIANGQI_MAHJONG_SPEC_ID,
+} from '@mistboard/game';
 import { clockEmergencyMs } from './clock-emphasis.js';
 
 export type CurrentGamePlayer = {
@@ -139,21 +143,73 @@ export function liveCardShowsHands(gameSpecId: string): boolean {
 // channel.
 const FINISHED_PUBLIC_VIEW_SPECS: ReadonlySet<string> = new Set(['jieqi', 'banqi', 'jungle-flip']);
 
-// Whether a finished game's tile draws its final position or the misty tile.
-// Open-information variants and the public-view list above draw a board, and so
-// do the fog variants (Fog Chess, Fog Xiangqi): the server opens every finished
-// room in full to spectators (roomViewPolicy, 2026-09-06), and the showcase
-// renderer reveals the board at the end (revealOnFinish). Concealed hands and
-// unknown ids keep the mist, so this page never decides on its own what a
-// hidden game may reveal.
-export function finishedTileKind(variant: string): 'board' | 'fog' {
+// Whether a finished game's tile draws its final position, its final hands, or
+// the misty tile. Open-information variants and the public-view list above draw
+// a board, and so do the fog variants (Fog Chess, Fog Xiangqi): the server opens
+// every finished room in full to spectators (roomViewPolicy, 2026-09-06), and
+// the showcase renderer reveals the board at the end (revealOnFinish). Xiangqi
+// Mahjong draws both final hands face up from the server's finished-match read
+// (/api/xiangqi-mahjong/games/:id?final=1), which answers only once the log
+// replays to 'finished' and 404s a live match. Other concealed hands and unknown
+// ids keep the mist, so this page never decides on its own what a hidden game
+// may reveal.
+export type FinishedTileKind = 'board' | 'hands' | 'fog';
+
+export function finishedTileKind(variant: string): FinishedTileKind {
   const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
   if (!spec) return 'fog';
   if (spec.visibility === 'open' || spec.visibility === 'dark') return 'board';
   if (spec.visibility === 'hidden-identity' && FINISHED_PUBLIC_VIEW_SPECS.has(spec.id)) {
     return 'board';
   }
+  if (spec.id === XIANGQI_MAHJONG_SPEC_ID) return 'hands';
   return 'fog';
+}
+
+// The finished-game read a Xiangqi Mahjong card draws its hands from: the last
+// position only, not the full per-ply review.
+export function finishedHandsUrl(roomId: string): string {
+  return `/api/xiangqi-mahjong/games/${encodeURIComponent(roomId)}?final=1`;
+}
+
+// A finished card's board box takes its board's own width-to-height ratio, so
+// the board fills the card edge to edge with no band above, below or beside
+// it. These are the compact renderers' drawn ratios (their SVG viewBox); the
+// box is corrected from the mounted SVG (current-games.ts), and an unlisted
+// board falls back to its files over ranks. The hands card keeps a xiangqi
+// board's ratio so it sits level with the boards beside it.
+const XIANGQI_BOARD_ASPECT = 552 / 612;
+const BOARD_ASPECT: Readonly<Record<string, number>> = {
+  'xiangqi-9x10': XIANGQI_BOARD_ASPECT,
+  'banqi-8x4': 568 / 312,
+  'jungle-7x9': 336 / 432,
+  'jungle-flip-4x4': 1,
+  'chess-8x8': 1,
+};
+
+export function finishedBoardAspect(variant: string): number {
+  const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
+  if (!spec || finishedTileKind(variant) !== 'board') return XIANGQI_BOARD_ASPECT;
+  const known = BOARD_ASPECT[spec.board];
+  if (known) return known;
+  const dims = /-(\d+)x(\d+)$/.exec(spec.board);
+  if (!dims) return 1;
+  return Number(dims[1]) / Number(dims[2]);
+}
+
+// The card's board box: a board much wider than tall (banqi's 8x4) sits small
+// and centred in a box of a xiangqi board's shape, blank above and below, so
+// every card in the grid is one size (Brian, 2026-10-30).
+export function finishedBoardBoxAspect(boardAspect: number): number {
+  return boardAspect >= 1.4 ? XIANGQI_BOARD_ASPECT : boardAspect;
+}
+
+// The winning seat's colour in a finished game's result ('red-wins' -> 'red',
+// 'east-wins' -> 'east'), matched against each seat row's colour so the
+// winner's name reads first; null for a draw or anything else.
+export function finishedWinnerColor(result: string): string | null {
+  const match = /^([a-z]+)-wins$/.exec(result);
+  return match ? (match[1] ?? null) : null;
 }
 
 // How every "Just finished" thumbnail mounts (current-games.ts

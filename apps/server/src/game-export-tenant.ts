@@ -36,11 +36,13 @@ import {
   fortressXiangqiMoveToFsfUci,
   type GameEvent,
   type GameExportFormat,
+  type GomokuOpening,
   type HiddenPieceIdentity,
   type HiddenPieceReveal,
   type HiddenPieceVariant,
   maybeGameSpecForId,
   writeHiddenPiecePgn,
+  type XmjMove,
 } from '@mistboard/game';
 import { buildGamePgn, buildGamePublicationJson } from './game-export.js';
 import {
@@ -68,6 +70,7 @@ import {
   type VariantTenantExport,
   type VariantTenantRegistration,
   variantTenantForRoomId,
+  type XmjExportMatch,
 } from './variant-tenant/registry.js';
 import {
   applyTenantEvent,
@@ -118,14 +121,16 @@ export type TenantExportOptions<M, State> = {
   uci: (move: M) => string;
   // Whole-line labeler, so notations that depend on the position (WXF) replay
   // the line once. Omit for tenants with no notation; every `san` is then null.
-  san?: (moves: readonly M[]) => readonly (string | null)[];
+  san?: (moves: readonly M[], state: State) => readonly (string | null)[];
   // Flip variants: read the ink the first-mover seat bound, off the final state.
   firstMoverInk?: (state: State) => string | null;
+  // Gomoku retains the original opening on its state throughout replay.
+  opening?: (state: State) => GomokuOpening;
   // Hidden-identity variants: squares per color still holding a piece whose
   // identity the game never determined (see TenantExportGame.neverRevealed).
   neverRevealed?: (state: State) => Record<string, string[]> | null;
   // Tenants with an honest movetext notation bind the PGN writer here.
-  writePgn?: (moves: readonly M[]) => NonNullable<TenantExportGame['writePgn']>;
+  writePgn?: (moves: readonly M[], state: State) => NonNullable<TenantExportGame['writePgn']>;
   // Hidden-piece tenants (jieqi, banqi, jungle-flip): how a ply's reveals read
   // off the position before it, and the start as the variant's dealt FEN. The
   // binding then writes the reveals into every ply, the deal when it is real,
@@ -200,7 +205,7 @@ export function tenantExportBinding<
           event.type === 'move-played',
       );
       const moves = moveEvents.map((event) => event.move);
-      const labels = options.san ? options.san(moves) : null;
+      const labels = options.san ? options.san(moves, projection.state) : null;
       // Hidden-piece tenants read each ply's reveals off the position before it,
       // replaying the log exactly as replayTenantEvents does.
       const hidden = options.hiddenPieces;
@@ -232,14 +237,17 @@ export function tenantExportBinding<
               tags,
               result,
               dealFen,
-              plies: plies.map((ply) => ({
-                uci: ply.uci,
-                revealed: ply.revealed ?? null,
-                captured_hidden: ply.capturedHidden ?? null,
-              })),
+              plies: plies.map((ply) => {
+                if (ply.uci === undefined) throw new Error('hidden-piece export missing uci');
+                return {
+                  uci: ply.uci,
+                  revealed: ply.revealed ?? null,
+                  captured_hidden: ply.capturedHidden ?? null,
+                };
+              }),
             })
         : undefined;
-      const writePgn = options.writePgn ? options.writePgn(moves) : hiddenPgn;
+      const writePgn = options.writePgn ? options.writePgn(moves, projection.state) : hiddenPgn;
       return {
         colors: tenant.colors,
         plies,
@@ -253,6 +261,7 @@ export function tenantExportBinding<
           ? { neverRevealed: options.neverRevealed(projection.state) }
           : {}),
         ...(dealFen ? { dealFen } : {}),
+        ...(options.opening ? { opening: options.opening(projection.state) } : {}),
         ...(writePgn ? { writePgn } : {}),
       };
     },
@@ -264,13 +273,16 @@ export function tenantExportBinding<
 export type TenantPublicationPly = {
   ply: number;
   mover: string;
-  uci: string;
-  san: string | null;
   // Hidden-piece variants only, and only on a ply that did it: the piece this
   // move turned over, and the face-down piece it captured (jieqi).
   revealed?: HiddenPieceIdentity;
   captured_hidden?: HiddenPieceIdentity;
-} & Record<`${string}_clock_ms_after`, number | null>;
+} & (
+  | { uci: string; san: string | null; move?: never; notation?: never }
+  // Mahjong actions have no UCI/SAN. Automatic draws follow from the setup.
+  | { move: XmjMove; notation: string; uci?: never; san?: never }
+) &
+  Record<`${string}_clock_ms_after`, number | null>;
 
 // Same top-level shape as the chess GamePublication; `players` and the per-ply
 // clock keys are named by the tenant's colors instead of white/black.
@@ -295,6 +307,8 @@ export type TenantGamePublication = {
   // game, never an imported one): the start as the variant's dealt FEN, the public FEN
   // plus a sixth field naming each face-down piece in board order.
   deal_fen?: string;
+  // Gomoku: played plies start AFTER these recorded stones.
+  opening?: GomokuOpening;
   // Imported games only (a game played elsewhere, e.g. an off-site engine match):
   //   event: the event it was played in;
   //   credit: the credited work, its authors (as written) and link;
@@ -308,6 +322,7 @@ export type TenantGamePublication = {
     never_revealed?: Record<string, string[]>;
   };
   plies: TenantPublicationPly[];
+  match?: XmjExportMatch;
 };
 
 // Display names by color, through the same private-seat redaction and corpus
@@ -340,8 +355,7 @@ function publicationPlies(game: TenantExportGame): TenantPublicationPly[] {
     return {
       ply: ply.ply,
       mover: ply.mover,
-      uci: ply.uci,
-      san: ply.san,
+      ...(ply.move ? { move: ply.move, notation: ply.notation } : { uci: ply.uci, san: ply.san }),
       ...(ply.revealed ? { revealed: { ...ply.revealed } } : {}),
       ...(ply.capturedHidden ? { captured_hidden: { ...ply.capturedHidden } } : {}),
       ...clocks,
@@ -395,8 +409,17 @@ export function buildTenantGamePublicationJson(
     license: LICENSE,
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
     ...(game.dealFen ? { deal_fen: game.dealFen } : {}),
+    ...(game.opening
+      ? {
+          opening: {
+            stones: game.opening.stones.map((stone) => ({ ...stone })),
+            turn: game.opening.turn,
+          },
+        }
+      : {}),
     ...(game.origin ? { origin: publicationOrigin(game) } : {}),
     plies: publicationPlies(game),
+    ...(game.match ? { match: game.match } : {}),
   };
 }
 

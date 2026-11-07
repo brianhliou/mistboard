@@ -65,6 +65,7 @@ export const jungleDenTermArticle: Article = {
   slug: 'jungle-den-term',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'Teaching our Jungle Chess engine the den race bought nothing',
   cardTitle: 'Teaching Misty the den race',
   seoTitle: 'Dou Shou Qi Engine: Does a Den-Race Term Help?',

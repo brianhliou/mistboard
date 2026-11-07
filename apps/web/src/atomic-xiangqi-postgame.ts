@@ -4,7 +4,6 @@ import {
   type AtomicXiangqiGameStatus,
   type AtomicXiangqiMove,
   type AtomicXiangqiPlayerView,
-  atomicXiangqiFen,
 } from '@mistboard/game';
 import './landing.css';
 import './game-route.css';
@@ -19,7 +18,6 @@ import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-anal
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -182,8 +180,6 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
     playerProfiles: reviewSeatProfiles(gamePlayers),
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
-    analyseFromHere: (truth) => analysisHref('atomic-xiangqi', atomicXiangqiFen(truth)),
-    boardEditorHref: (truth) => editorHref('atomic-xiangqi', atomicXiangqiFen(truth)),
     ...gameExportShareExtra('atomic-xiangqi', postgame.game.roomId),
     // Server whole-game analysis on the patched Fairy-Stockfish, DB-cached: an
     // already-analysed game loads from cache on open (a GET that never

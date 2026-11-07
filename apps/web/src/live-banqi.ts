@@ -28,6 +28,8 @@ import type {
 import { banqiMoveLabel, banqiMoveLabelOnBoard } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
+import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
+import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
@@ -40,8 +42,10 @@ import {
 import { banqiClickResult, banqiForbiddenMove } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
+  animateBanqiReveal,
   BANQI_PIECE_PX,
   banqiPieceGhostSvg,
+  banqiRevealFlipSquare,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
@@ -205,22 +209,36 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   // move already re-rendered synchronously at input time, so animating the server
   // echo would double-play it. Scrubs glide the stepped-into move forward and
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
-  // drag ghost, and a no-op for flips, which travel nowhere.
+  // drag ghost. A live flip turns the tile over instead (#709), own flips
+  // included: the face exists only from the server's echo, so the echo is the
+  // first time anyone sees it.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
+      const flipped = banqiRevealFlipSquare(pending, view.board);
+      if (flipped) {
+        animateBanqiReveal(liveRefs.board, flipped);
+        // Held for the core: the bot's instant reply waits for the turn-over.
+        return pieceFlipDurationMs();
+      }
       if (pending.color === core?.state.seat) return;
       animateBanqiBoardMove(liveRefs.board, pending.move);
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateBanqiBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      // A scrub onto a flip turns the tile over, as it did live.
+      if (stepped.from === stepped.to) animateBanqiReveal(liveRefs.board, stepped.to);
+      else animateBanqiBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;
-    if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    if (undone && undone.from !== undone.to) {
+      animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    }
   },
   renderExtras: (refs, view) => {
     renderCapturedPools(refs, view);
@@ -327,20 +345,25 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
 
   const perspective = orientationFor(view);
   const drawn = drawnBoardOverlays<BanqiSquare>(annotations?.shapes() ?? []);
-  liveRefs.board.innerHTML = renderBanqiBoardSvg(view, perspective, {
-    arrows: drawn.arrows,
-    markers: drawn.markers,
-    interactive: true,
-    selectedSquare,
-    draggingFrom,
-    coordinates: boardCoordinatesEnabled(),
-    // A face-down tile is clicked directly to flip, so the renderer wants only
-    // the selected piece's board moves (it already excludes self-move flips).
-    legalMoves: selectedSquare
-      ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
-      : [],
-    forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
-  });
+  // A finished room keeps the tiles nobody turned over face down.
+  liveRefs.board.innerHTML = renderBanqiBoardSvg(
+    banqiBoardAsPlayed(view, playedMoves()),
+    perspective,
+    {
+      arrows: drawn.arrows,
+      markers: drawn.markers,
+      interactive: true,
+      selectedSquare,
+      draggingFrom,
+      coordinates: boardCoordinatesEnabled(),
+      // A face-down tile is clicked directly to flip, so the renderer wants only
+      // the selected piece's board moves (it already excludes self-move flips).
+      legalMoves: selectedSquare
+        ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
+        : [],
+      forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
+    },
+  );
   // Click + drag are delegated to the persistent board container once at mount
   // (installBanqiBoardInteraction), so they survive these innerHTML re-renders.
   syncChaseNotice(view);
@@ -492,8 +515,11 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
 // has unrevealed: public arithmetic (start minus revealed minus captured) that
 // the player would otherwise do by hand.
 function renderCapturedPools(liveRefs: LiveRefs, view: BanqiWireView | null): void {
-  const moves = (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
-  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, moves);
+  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, playedMoves());
+}
+
+function playedMoves() {
+  return (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
 }
 
 // The viewer's INK (glyph colour), once the first flip binds it. Falls back to

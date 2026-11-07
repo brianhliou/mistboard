@@ -19,8 +19,10 @@ import {
 } from './../account-session.js';
 import { captureServerEvent, clientIpForAnalytics } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
-import { authCounters } from './../obs.js';
+import { emailDomainAcceptsMail } from './../email-domain.js';
+import { authCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { emailLocale } from './../player-email.js';
 import { isProductionLikeRuntime } from './../server-policy.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -129,7 +131,49 @@ export async function tryHandle(
       writeJson(response, 429, { error: 'rate_limited' });
       return true;
     }
+    if (authEmailDeliveryEnabled && !(await emailDomainAcceptsMail(email.split('@')[1]!))) {
+      authCounters.recordStart('rejected');
+      void captureServerEvent({
+        event: 'auth_email_domain_rejected',
+        distinctId: randomUUID(),
+        properties: { reason: 'no_mail_records' },
+      });
+      writeJson(response, 400, { error: 'email_cannot_receive' });
+      return true;
+    }
     const loginId = randomUUID();
+    // Challenge IDs also identify durable requests, independently of challenge
+    // cleanup, failed sends, expiry, or a later request superseding this one.
+    // Delivery bookkeeping is best-effort; database errors may contain email
+    // addresses, so warnings include only the write name and request identity.
+    try {
+      await persistence.recordLoginEmailRequest({ requestId: loginId, email, requestedAt: now });
+    } catch {
+      logger.warn(
+        {
+          kind: 'login_email_bookkeeping_failed',
+          write: 'recordLoginEmailRequest',
+          requestId: loginId,
+        },
+        'Login email bookkeeping failed',
+      );
+    }
+    // This check depends only on delivery evidence, never account existence.
+    // Preserve rate-limit consumption and request accounting even when blocked.
+    let blocked = false;
+    try {
+      blocked = (await persistence.getEmailDeliveryAddress(email))?.blocked ?? false;
+    } catch {
+      logger.warn(
+        { kind: 'login_email_delivery_lookup_failed' },
+        'Login email delivery lookup failed',
+      );
+    }
+    if (blocked) {
+      authCounters.recordStart('rejected');
+      writeJson(response, 422, { error: 'login_email_unreceivable' });
+      return true;
+    }
     const code = randomEmailLoginCode();
     const expiresAt = new Date(now.getTime() + emailLoginCodeTtlMs);
     await persistence.createEmailLoginChallenge({
@@ -139,16 +183,34 @@ export async function tryHandle(
       expiresAt,
     });
     if (authEmailDeliveryEnabled) {
-      const delivery = await sendEmailLoginCode(email, code);
+      const delivery = await sendEmailLoginCode(
+        email,
+        code,
+        emailLocale(typeof body.locale === 'string' ? body.locale : null),
+      );
       if (!delivery.ok) {
         await persistence.deleteEmailLoginChallenge(loginId);
         authCounters.recordStart('delivery_failed');
         writeJson(response, 502, { error: 'email_delivery_failed' });
         return true;
       }
+      if (delivery.providerEmailId) {
+        try {
+          await persistence.correlateLoginEmailRequest(loginId, delivery.providerEmailId);
+        } catch {
+          logger.warn(
+            {
+              kind: 'login_email_bookkeeping_failed',
+              write: 'correlateLoginEmailRequest',
+              requestId: loginId,
+            },
+            'Login email bookkeeping failed',
+          );
+        }
+      }
     }
     await persistence.supersedeEmailLoginChallenges(email, loginId, now);
-    authCounters.recordStart('sent');
+    authCounters.recordStart(authEmailDeliveryEnabled ? 'sent' : 'dev-response');
     writeJson(response, 202, {
       loginId,
       email,
@@ -214,6 +276,18 @@ export async function tryHandle(
       expiresAt,
       userAgent: sessionUserAgent(request),
     });
+    try {
+      await persistence.completeLoginEmailRequest(loginId, now);
+    } catch {
+      logger.warn(
+        {
+          kind: 'login_email_bookkeeping_failed',
+          write: 'completeLoginEmailRequest',
+          requestId: loginId,
+        },
+        'Login email bookkeeping failed',
+      );
+    }
     authCounters.recordConfirm('success');
     // The server owns signup_completed (analytics-server.ts): the browser's
     // copy missed ad-blocked signups, so the web no longer fires it. Same

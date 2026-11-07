@@ -56,6 +56,19 @@
 //                 "chapter": { "name": "…", "variant": "jieqi", "tree": "…",
 //                              "orientation": "red", "tags": { "red": "…" } } },
 //     "ops": [ { "op": "add", … } ] }
+//
+// `series` sets or clears a chapter's win-chance graph (migration 184), drawn
+// under the board in the study embed. Values are one side's win chance in
+// [0, 1], one per position: index 0 the start, index n after mainline ply n,
+// so each series holds exactly mainline plies + 1 values. Colour is a token:
+// "a" teal (--eval-compare-a), "b" orange (--eval-compare-b), "c", "d".
+//       { "op": "series", "chapter": "ZmPpVH90",
+//         "scoreSeries": { "side": "red", "series": [
+//           { "name": "AB-JChess", "color": "a", "values": [0.5, 0.52, …] },
+//           { "name": "jqe", "color": "b", "values": [0.5, 0.49, …] } ] } }
+//       { "op": "series", "chapter": "ref:g2", "scoreSeries": null }   # clear
+// `chapter` may be a `ref:` from an earlier add. An `add`, and a create's first
+// chapter, also take `"scoreSeries": { … }` inline, checked against its own tree.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -76,11 +89,14 @@ import {
   type StudyVisibility,
   type StudyWithChapters,
   setChapterGamebook,
+  setChapterOrientation,
+  setChapterScoreSeries,
   setChapterTags,
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
 import { ensureDealtRoot, isSerializedTree, parseChapterTags } from './routes/studies.js';
+import { type ChapterScoreSeries, parseChapterScoreSeries } from './study-score-series.js';
 
 export type StudyEditOp =
   | {
@@ -104,6 +120,8 @@ export type StudyEditOp =
       expect?: string;
       /** The chapter's whole new tag set; tags it leaves out are cleared. */
       tags?: unknown;
+      /** Turn the chapter's board to face this side (an added chapter takes it on `add`). */
+      orientation?: 'red' | 'black';
     }
   | { op: 'tree'; chapter: string; tree: unknown }
   | {
@@ -118,8 +136,16 @@ export type StudyEditOp =
       /** A gamebook (guess-the-move) chapter, the same flag the study page's
        *  lesson toggle sets. Absent or false: a plain chapter. */
       gamebook?: boolean;
+      /** Optional win-chance graph for the new chapter, as the `series` op takes it. */
+      scoreSeries?: unknown;
     }
   | { op: 'delete'; chapter: string }
+  | {
+      op: 'series';
+      chapter: string;
+      /** The chapter's whole score series (study-score-series.ts), or null to clear. */
+      scoreSeries: unknown;
+    }
   | { op: 'order'; chapters: string[] }
   | { op: 'delete-study'; expect: string };
 
@@ -135,6 +161,7 @@ export type StudyCreateSpec = {
     orientation?: 'red' | 'black';
     tags?: Record<string, string>;
     i18n?: Record<string, unknown>;
+    scoreSeries?: unknown;
   };
 };
 
@@ -199,6 +226,22 @@ export function mainlinePlies(tree: unknown): number {
   return plies;
 }
 
+/** The dry-run line's tail for a score series: `2 series from red's view
+ *  (AB-JChess a, jqe b), 121 values`. Throws what the parser throws, with the op. */
+function describeSeries(value: unknown, plies: number, label: string): string {
+  let parsed: ChapterScoreSeries;
+  try {
+    parsed = parseChapterScoreSeries(value, plies);
+  } catch (error) {
+    throw new Error(`${label}: ${(error as Error).message}`);
+  }
+  return (
+    `${parsed.series.length} series from ${parsed.side}'s view ` +
+    `(${parsed.series.map((s) => `${s.name} ${s.color}`).join(', ')}), ` +
+    `${parsed.series[0]!.values.length} values`
+  );
+}
+
 /** Load a plan file, inlining any `tree` given as a path (relative to the plan). */
 export function readPlan(path: string): StudyEditPlan {
   const plan = JSON.parse(readFileSync(path, 'utf8')) as StudyEditPlan;
@@ -254,6 +297,12 @@ export function checkPlan(
   const variant = study.chapters[0]?.variant ?? '';
   const names = new Map(study.chapters.map((c) => [c.id, c.name]));
   const order = study.chapters.map((c) => c.id);
+  // Mainline length per chapter as it stands at each op, so a series is checked
+  // against the tree it will sit beside (after any earlier tree or add op).
+  const plyCount = new Map(study.chapters.map((c) => [c.id, mainlinePlies(c.root)]));
+  const seriesLength = new Map(
+    study.chapters.map((c) => [c.id, c.scoreSeries?.series[0]?.values.length ?? null]),
+  );
   const refs = new Set<string>();
   const lines: string[] = [];
   let studyName = study.name;
@@ -303,11 +352,19 @@ export function checkPlan(
             throw new Error(`op ${i + 1}: empty ${locale} name`);
           }
         }
+        if (
+          op.orientation !== undefined &&
+          op.orientation !== 'red' &&
+          op.orientation !== 'black'
+        ) {
+          throw new Error(`op ${i + 1}: orientation "${op.orientation}"`);
+        }
         const locales = Object.entries(op.i18n ?? {})
           .map(([locale, entry]) => ` ${locale} "${entry.name}"`)
           .join('');
+        const turned = op.orientation === undefined ? '' : `, as ${op.orientation}`;
         lines.push(
-          `rename ${op.chapter}: "${current}" -> "${op.name}"${locales}${renameTags(op, i)}`,
+          `rename ${op.chapter}: "${current}" -> "${op.name}"${locales}${renameTags(op, i)}${turned}`,
         );
         names.set(op.chapter, op.name);
         return;
@@ -315,10 +372,18 @@ export function checkPlan(
       case 'tree': {
         const before = study.chapters.find((c) => c.id === op.chapter);
         const plies = tree(op.tree, i);
+        const stored = seriesLength.get(op.chapter);
+        // A tree that changes the mainline length strands a stored series: the
+        // embed then draws no graph. Say so, so the plan can reset it.
+        const stale =
+          stored != null && stored !== plies + 1
+            ? ` (score series now stale: ${stored} values for ${plies + 1} positions)`
+            : '';
         lines.push(
           `replace ${op.chapter} "${known(op.chapter, i)}": ` +
-            `${before ? mainlinePlies(before.root) : '?'} -> ${plies} plies`,
+            `${before ? mainlinePlies(before.root) : '?'} -> ${plies} plies${stale}`,
         );
+        plyCount.set(op.chapter, plies);
         return;
       }
       case 'add': {
@@ -341,9 +406,13 @@ export function checkPlan(
         const id = op.ref === undefined ? `new${i + 1}` : `ref:${op.ref}`;
         names.set(id, op.name);
         order.push(id);
+        plyCount.set(id, plies);
         const extras = [
           ...(op.orientation === undefined ? [] : [`as ${op.orientation}`]),
           ...(op.gamebook ? ['gamebook'] : []),
+          ...(op.scoreSeries === undefined || op.scoreSeries === null
+            ? []
+            : [describeSeries(op.scoreSeries, plies, `op ${i + 1}`)]),
         ];
         lines.push(`add "${op.name}" (${[variant, `${plies} plies`, ...extras].join(', ')})`);
         return;
@@ -353,6 +422,20 @@ export function checkPlan(
         if (order.length <= 1) throw new Error(`op ${i + 1}: a study keeps at least one chapter`);
         names.delete(op.chapter);
         order.splice(order.indexOf(op.chapter), 1);
+        return;
+      }
+      case 'series': {
+        const name = known(op.chapter, i);
+        if (op.scoreSeries === null) {
+          lines.push(`series ${op.chapter} "${name}": cleared`);
+          seriesLength.set(op.chapter, null);
+          return;
+        }
+        const plies = plyCount.get(op.chapter) ?? 0;
+        lines.push(
+          `series ${op.chapter} "${name}": ${describeSeries(op.scoreSeries, plies, `op ${i + 1}`)}`,
+        );
+        seriesLength.set(op.chapter, plies + 1);
         return;
       }
       case 'delete-study': {
@@ -410,6 +493,10 @@ export function checkCreate(
     throw new Error('create: first chapter is not a SerializedTree');
   const visibility = spec.visibility ?? 'private';
   const plies = mainlinePlies(chapter.tree);
+  const series =
+    chapter.scoreSeries === undefined || chapter.scoreSeries === null
+      ? ''
+      : `, ${describeSeries(chapter.scoreSeries, plies, 'create')}`;
   const study = {
     id: '(new)',
     ownerId: '(new)',
@@ -423,7 +510,7 @@ export function checkCreate(
   return {
     lines: [
       `create "${study.name}" for @${spec.owner} (${visibility}), first chapter ` +
-        `"${chapter.name.trim()}" (${chapter.variant}, ${plies} plies)`,
+        `"${chapter.name.trim()}" (${chapter.variant}, ${plies} plies${series})`,
     ],
     study,
   };
@@ -453,6 +540,12 @@ export async function applyCreate(
     },
   });
   if (!created) throw new Error('create: persistence is not initialized');
+  const first = created.chapters[0];
+  if (first && chapter.scoreSeries !== undefined && chapter.scoreSeries !== null) {
+    const scoreSeries = parseChapterScoreSeries(chapter.scoreSeries, mainlinePlies(first.root));
+    must('create series', await setChapterScoreSeries(first.id, ownerId, scoreSeries));
+    return (await getStudyById(created.id)) ?? created;
+  }
   return created;
 }
 
@@ -492,6 +585,9 @@ export async function applyPlan(
         if (op.tags !== undefined) {
           must(op.chapter, await setChapterTags(op.chapter, owner, parseChapterTags(op.tags)));
         }
+        if (op.orientation !== undefined) {
+          must(op.chapter, await setChapterOrientation(op.chapter, owner, op.orientation));
+        }
         break;
       }
       case 'tree':
@@ -512,6 +608,16 @@ export async function applyPlan(
             ...(op.i18n === undefined ? {} : { i18n: op.i18n }),
           }),
         );
+        if (added.ok && op.scoreSeries !== undefined && op.scoreSeries !== null) {
+          const scoreSeries = parseChapterScoreSeries(
+            op.scoreSeries,
+            mainlinePlies(added.chapter.root),
+          );
+          must(
+            `series ${op.name}`,
+            await setChapterScoreSeries(added.chapter.id, owner, scoreSeries),
+          );
+        }
         if (added.ok && op.gamebook) {
           must(`gamebook ${op.name}`, await setChapterGamebook(added.chapter.id, owner, true));
         }
@@ -522,6 +628,20 @@ export async function applyPlan(
       case 'delete':
         must(op.chapter, await deleteChapter(op.chapter, owner));
         break;
+      case 'series': {
+        const id = idOf(op.chapter);
+        let value: ChapterScoreSeries | null = null;
+        if (op.scoreSeries !== null) {
+          // Checked against the tree as stored now, which is the tree this plan
+          // left it with: checkPlan already refused a length that would not fit.
+          const current = await getStudyById(study.id);
+          const chapter = current?.chapters.find((c) => c.id === id);
+          if (!chapter) throw new Error(`series: chapter ${op.chapter} is gone`);
+          value = parseChapterScoreSeries(op.scoreSeries, mainlinePlies(chapter.root));
+        }
+        must(`series ${op.chapter}`, await setChapterScoreSeries(id, owner, value));
+        break;
+      }
       case 'order':
         must('order', await reorderStudyChapters(study.id, owner, op.chapters.map(idOf)));
         break;
@@ -537,7 +657,11 @@ function describeStudy(study: StudyWithChapters): string {
   return [
     `${study.id} "${study.name}" by @${study.ownerHandle ?? '?'} (${study.visibility})`,
     ...study.chapters.map(
-      (c, i) => `  ${i + 1}. ${c.id} "${c.name}" ${mainlinePlies(c.root)} plies`,
+      (c, i) =>
+        `  ${i + 1}. ${c.id} "${c.name}" ${mainlinePlies(c.root)} plies` +
+        (c.scoreSeries
+          ? `, score series ${c.scoreSeries.series.map((s) => s.name).join(' + ')}`
+          : ''),
     ),
   ].join('\n');
 }

@@ -5,9 +5,10 @@ import { test } from './xmj-fixture';
 
 // #674: on a 360px phone the signed-in friends-online pill (fixed to the
 // bottom-right corner) sat on the move-nav bar's right-hand buttons, so a tap
-// on "latest" landed on the pill. Any page whose move controls reach the foot
-// of the screen had it; this pins a plain live room, the XMJ spec pins the
-// tenant review.
+// on "latest" landed on the pill. The pill is gone (friends live in the header
+// menu now); this keeps anything else from floating there. Any page whose move
+// controls reach the foot of the screen had it; this pins a plain live room,
+// the XMJ spec pins the tenant review.
 test('phone: nothing floats over the move-nav bar of a signed-in room', async ({
   page,
   isMobile,
@@ -17,13 +18,10 @@ test('phone: nothing floats over the move-nav bar of a signed-in room', async ({
   expect(grantedAccount).toBeTruthy();
   await page.setViewportSize({ width: 360, height: 800 });
   const errors = trackPageErrors(page);
-  // The widget mounts for a signed-in viewer and shows after its first poll.
-  const firstPoll = page.waitForResponse((response) =>
-    response.url().includes('/api/relations/online-following'),
-  );
   const room = uniqueRoom('phone-chrome', testInfo);
   await page.goto(`/room/${encodeURIComponent(room)}?reset=1&variant=fog-of-war`);
-  expect((await firstPoll).status()).toBe(200);
+  // Signed-in chrome (the account nav) has mounted before the check runs.
+  await expect(page.locator('[data-account-nav]').first()).toBeAttached();
   await expect(page.locator('.move-nav-bar [data-replay="latest"]').first()).toBeVisible();
   expect(await coveredNavButtons(page)).toEqual([]);
   expectNoErrors(errors);

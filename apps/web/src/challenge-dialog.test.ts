@@ -19,7 +19,7 @@ describe('openChallengeDialog', () => {
     // is eligible but is still in the DOM.
     expect(dialog?.querySelectorAll('select')).toHaveLength(4);
     expect(dialog?.textContent).toContain('alice');
-    const variant = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Variant"]');
+    const variant = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Game"]');
     expect([...variant!.options].map((option) => option.value)).toEqual([
       ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
     ]);
@@ -78,7 +78,7 @@ describe('openChallengeDialog', () => {
     const open = () => {
       openChallengeDialog({ handle: 'kim' });
       const dialog = document.querySelector('dialog[data-challenge-dialog]');
-      const rated = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Game type"]');
+      const rated = dialog?.querySelector<HTMLSelectElement>('select[aria-label="Rating"]');
       return { dialog, rated };
     };
 

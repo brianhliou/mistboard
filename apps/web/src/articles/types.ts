@@ -148,7 +148,7 @@ export type JungleReplayBlock = {
   caption?: string;
 };
 
-// Flip Jungle (兽棋 / 翻翻棋) analogue of the banqi replay: a 4x4 board stepped
+// Flip Jungle (翻翻兽棋) analogue of the banqi replay: a 4x4 board stepped
 // through a move list + hidden deal, each position replayed through the real
 // flip-jungle kernel; tiles flip to their dealt animal on first turn-over and
 // equal ranks trade off the board.
@@ -431,6 +431,10 @@ export type ImageFigureBlock = {
   darkSrc?: string;
   alt: string;
   caption?: string;
+  // A credit that must carry a link (a photo used on condition of a credit
+  // and a link, like the xiangqiqipu.com portraits): rendered after the
+  // caption as "Photo: <a href>text</a>", opening in a new tab.
+  credit?: { text: string; href: string };
   // 'article-figure-full' lets the image fill the column instead of the
   // default 560px cap.
   className?: string;
@@ -592,6 +596,10 @@ type ArticleBase = {
   // article lands on the homepage with no second edit; 'deep-dives' moves it to
   // the row beneath (player pages and game deep dives).
   homeRow?: 'deep-dives';
+  // A page about a person (the player articles): one gray line below the
+  // article panel, "Corrections or rights requests: contact us.", the same
+  // small print the player pages carry, linked to /contact about this article.
+  contactNote?: boolean;
   status: 'outline' | 'draft' | 'published';
   audience: string;
   // ISO-8601 dates (YYYY-MM-DD). When present, rendered in the article meta.
@@ -643,5 +651,12 @@ export type Article = ArticleBase &
         // rules, history, players, results). Drives the /blog?topic= chips
         // (ARTICLE_TOPICS in articles.ts), so a reader can keep one kind.
         topic?: 'engineering';
+        // The game a player post is about, when it is standard xiangqi (not a
+        // xiangqi variant such as jieqi, banqi, fog or duck). Read next keeps a
+        // xiangqi deep dive (`homeRow: 'deep-dives'`) among posts marked here,
+        // so an unmarked post never fills one's footer. Every deep dive must
+        // name its game (articles.test.ts); widen the union when a deep dive on
+        // another game needs the same footer.
+        game?: 'xiangqi';
       }
   );

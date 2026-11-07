@@ -15,6 +15,8 @@ let hintEl: HTMLSpanElement | null = null;
 // The phase on screen, so a locale chunk landing after the banner was painted
 // (a zh page loaded mid-drain) can repaint it in the right language.
 let currentPhase: RestartBannerPhase | null = null;
+let currentRestartAt: number | null = null;
+let countdownTimer: number | null = null;
 
 export type RestartBannerPhase = 'pending' | 'restarting';
 
@@ -34,17 +36,55 @@ export function mountRestartBanner(): void {
   hintEl = el.querySelector<HTMLSpanElement>('[data-hint]');
 }
 
-export function setRestartBanner(phase: RestartBannerPhase | null): void {
+export function setRestartBanner(
+  phase: RestartBannerPhase | null,
+  restartAt?: number | null,
+): void {
   if (!bannerEl) mountRestartBanner();
+  clearCountdown();
   currentPhase = phase;
+  currentRestartAt =
+    phase === 'pending' && typeof restartAt === 'number' && Number.isFinite(restartAt)
+      ? restartAt
+      : null;
+  renderRestartBanner();
+  if (currentRestartAt !== null && currentRestartAt > Date.now()) {
+    countdownTimer = window.setInterval(renderRestartBanner, 1_000);
+  }
+}
+
+/** A new connection's hello: clear "restarting now", which that hello proves
+ *  is over, but keep "update pending". A socket that reconnects to a server
+ *  still draining (page boot mid-drain, a network blip, a phone tab waking)
+ *  says hello too, and the drain it was warned about has not happened yet. */
+export function clearRestartingBanner(): void {
+  if (currentPhase === 'restarting') setRestartBanner(null);
+}
+
+function clearCountdown(): void {
+  if (countdownTimer !== null) window.clearInterval(countdownTimer);
+  countdownTimer = null;
+}
+
+function renderRestartBanner(): void {
+  const phase = currentPhase;
   if (phase === null) {
     if (bannerEl) bannerEl.hidden = true;
     return;
   }
   if (bannerEl) bannerEl.hidden = false;
   if (phase === 'pending') {
-    if (labelEl) labelEl.textContent = t('connection.restartPending');
+    const seconds =
+      currentRestartAt === null
+        ? null
+        : Math.max(0, Math.ceil((currentRestartAt - Date.now()) / 1_000));
+    const countdown =
+      seconds === null
+        ? ''
+        : ` · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    if (labelEl) labelEl.textContent = t('connection.restartPending') + countdown;
     if (hintEl) hintEl.textContent = t('connection.restartPendingHint');
+    if (seconds === 0) clearCountdown();
   } else {
     if (labelEl) labelEl.textContent = t('connection.restartNow');
     if (hintEl) hintEl.textContent = t('connection.restartNowHint');
@@ -54,5 +94,5 @@ export function setRestartBanner(phase: RestartBannerPhase | null): void {
 /** Repaint the visible phase, if any, in the current locale (called once the
  *  locale chunk has loaded; before that `t()` answers in English). */
 export function refreshRestartBanner(): void {
-  if (currentPhase !== null) setRestartBanner(currentPhase);
+  if (currentPhase !== null) renderRestartBanner();
 }

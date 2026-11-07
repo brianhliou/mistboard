@@ -16,6 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
+import { clockPolicyKindFor } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
@@ -38,10 +39,13 @@ import {
   type TenantEventWriterContext,
 } from './events.js';
 import {
+  clearTenantResumeTimer,
   clearTenantRuntimeTimers,
+  resumeTenantRoom,
   scheduleTenantLifecycleTimers,
   type TenantLifecycleContext,
 } from './lifecycle.js';
+import { registerTenantPauseRecovery } from './pause-recovery.js';
 import {
   cancelTenantRematch,
   declineTenantRematch,
@@ -101,6 +105,8 @@ export type TenantLiveRoom<
   Spec extends string = string,
 > = Omit<TenantRuntimeRoom<Kind, C, M, State, Spec>, 'clients'> & {
   clients: Set<TenantLiveClient<C>>;
+  // The shutdown lifecycle sets this before persisting the pause.
+  stopping?: boolean;
 };
 
 export type TenantWebSocketContext = {
@@ -207,6 +213,25 @@ export function createTenantWsRuntime<
     appendEvent: (room, event) => appendTenantEvent(tenant, room, event, eventWriterCtx),
     broadcastEventAppended,
   };
+
+  registerTenantPauseRecovery(tenant.kind, async (managedRoom, at, staleAfterMs) => {
+    const room = managedRoom as unknown as LiveRoom;
+    await room.pendingWrites;
+    // The DB selection can race a reconnect, a move, or another shutdown.
+    // Recheck canonical state and preserve an already-open reconnect grace.
+    if (
+      room.stopping ||
+      !room.projection.paused ||
+      room.projection.paused.at >= at - staleAfterMs ||
+      room.projection.state.status.type !== 'playing' ||
+      clockPolicyKindFor(room.projection.timeControl) === 'days-per-move' ||
+      (room.resumeDeadline != null && room.resumeDeadline > at)
+    )
+      return false;
+    clearTenantResumeTimer(room);
+    await resumeTenantRoom(tenant, room, lifecycleCtx, at, 'grace-elapsed');
+    return true;
+  });
 
   function scheduleLifecycleTimers(room: LiveRoom): void {
     scheduleTenantLifecycleTimers(tenant, room, lifecycleCtx);
@@ -485,7 +510,7 @@ export function createTenantWsRuntime<
     // `color: seat` with no seat validation, so a spectator resign would
     // otherwise append `color:'spectator'` and corrupt the event log. After this
     // guard client.seat narrows to a real color; `seat` threads it downstream.
-    if (client.seat === 'spectator') return;
+    if (client.displaced || client.seat === 'spectator') return;
     const seat: C = client.seat;
     if (message.type === 'resign') {
       await handleResign(room, client, seat);
@@ -532,7 +557,17 @@ export function createTenantWsRuntime<
     for (const color of tenant.colors) {
       if (!room.projection.seats[color]) return;
     }
-    if (!tenantSeatMayAct(tenant, room.projection.state, seat)) return;
+    // Network clients can only act for their own human seat. Engine seats
+    // are server-owned, including clients using the retired delegation flag.
+    if (
+      message.browserBot === true ||
+      tenant.engine?.isEngineClientId(client.id) ||
+      tenant.engine?.isEngineClientId(room.projection.seats[seat]) ||
+      room.projection.seats[seat] !== client.id
+    )
+      return;
+    const mover = seat;
+    if (!tenantSeatMayAct(tenant, room.projection.state, mover)) return;
     // A move that arrives after the mover's flag fell but before the clock
     // timer fired ends the game by expiry instead of landing the move (the
     // chess-stack rule; closes the timer race for every tenant). The guard is
@@ -552,14 +587,14 @@ export function createTenantWsRuntime<
     // a chess-family tenant re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
-      ? tenant.rules.canonicalMove(room.projection.state, move, seat)
+      ? tenant.rules.canonicalMove(room.projection.state, move, mover)
       : tenant.rules.isLegalMove(room.projection.state, move)
         ? move
         : null;
     if (canonical === null) {
       // A tenant may turn a rejection into a per-mover signal (a drop bounce).
       // Sent only to this client, so it never leaks to others.
-      const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, seat);
+      const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, mover);
       if (rejection) sendPayload(client, rejection);
       return;
     }
@@ -567,7 +602,7 @@ export function createTenantWsRuntime<
       type: 'move-played',
       at: Date.now(),
       roomId: room.id,
-      color: seat,
+      color: mover,
       move: canonical,
     };
     let seq: number;
@@ -578,6 +613,7 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
+    if (seq < 0) return; // A concurrent duplicate was rejected by the serialized writer.
     broadcastEventAppended(room, event, seq);
     // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
     scheduleEngineMove(room);
@@ -607,7 +643,12 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
-    broadcastEventAppended(room, event, seq);
+    // The writer may refuse a stale expiry (-1) or store a policy move in its
+    // place (a declared Xiangqi Mahjong draw is discarded), so broadcast what
+    // landed, never the request.
+    if (seq < 0) return;
+    const appended = room.events[seq];
+    if (appended) broadcastEventAppended(room, appended, seq);
   }
 
   // `seat` is the caller's read-only-guarded color (never 'spectator').

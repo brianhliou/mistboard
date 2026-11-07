@@ -40,6 +40,7 @@ import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  fitXmjRackBadges,
   toggleXmjLogHand,
   XMJ_TILE_LOOKS,
   xiangqiMahjongTableHtml,
@@ -176,6 +177,7 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
     if (!view) return [];
     const tags = [xmjPoints(view.scores[seat])];
     if (view.dealer === seat) tags.unshift(t('live.xmj.dealer'));
+    if (view.declared?.[seat]) tags.unshift(t('live.xmj.declaredReady'));
     return tags;
   },
 };
@@ -192,6 +194,8 @@ function notate(move: XmjMove): string {
   switch (move.action) {
     case 'discard':
       return XMJ_GLYPHS[move.tile];
+    case 'declare-ready':
+      return `${t('live.xmj.declareReady')} ${XMJ_GLYPHS[move.tile]}`;
     case 'claim':
       return t(CLAIM_LABEL[move.kind]);
     case 'self-draw':
@@ -224,6 +228,7 @@ function replayPositionKey(view: XmjPlayerView): string {
     phase: view.phase,
     between: view.between,
     ready: view.ready,
+    declared: view.declared,
   });
 }
 
@@ -248,6 +253,7 @@ function maybePlayTerminalSound(): void {
 let tappedTile: { rect: DOMRect; at: number } | null = null;
 // A discard tapped once while a self-drawn win is on offer (see armedDiscard).
 let armedDiscard: { tile: XmjTile; drawn: boolean; hand: number } | null = null;
+let declarationMode: { hand: number; move: number } | null = null;
 const TAP_FRESH_MS = 3000;
 /** The counts the table was last drawn with, to tell a move from a redraw. */
 let drawnCounts: {
@@ -400,6 +406,26 @@ function renderHandsUnderBoard(board: HTMLElement, view: XmjPlayerView | null): 
   if (host.innerHTML !== html) host.innerHTML = html;
 }
 
+let rackFitObserver: ResizeObserver | null = null;
+let rackFitBoard: HTMLElement | null = null;
+let rackFitWidth = -1;
+
+/**
+ * Keep every rack's badges inside the felt: on each redraw, and when the
+ * table's width changes (its tiles scale with the column on desktop).
+ */
+function fitRacks(board: HTMLElement): void {
+  fitXmjRackBadges(board);
+  rackFitWidth = board.clientWidth;
+  if (rackFitBoard === board || typeof ResizeObserver !== 'function') return;
+  rackFitObserver?.disconnect();
+  rackFitBoard = board;
+  rackFitObserver = new ResizeObserver(() => {
+    if (board.isConnected && board.clientWidth !== rackFitWidth) fitRacks(board);
+  });
+  rackFitObserver.observe(board);
+}
+
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   renderHandsUnderBoard(refs.board, view);
   const felt = xmjFeltFromSearch(window.location.search);
@@ -412,6 +438,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     refs.board.innerHTML = '';
     lastTableHtml = '';
     drawnCounts = null;
+    declarationMode = null;
     startTicker(refs.board);
     return;
   }
@@ -419,6 +446,14 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   if (armedDiscard && (!view.legal.selfDraw || armedDiscard.hand !== view.handNumber)) {
     armedDiscard = null;
   }
+  if (
+    declarationMode &&
+    (!core?.canActNow() ||
+      !view.legal.declareReady?.length ||
+      declarationMode.hand !== view.handNumber ||
+      declarationMode.move !== view.moveNumber)
+  )
+    declarationMode = null;
   const html = xiangqiMahjongTableHtml(view, {
     canAct: core?.canActNow() === true,
     names: seatNames(),
@@ -427,6 +462,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     pieceSet: readStoredXiangqiPieceSet(),
     tileLook: look,
     armedDiscard,
+    declaring: declarationMode !== null,
   });
   // The room redraws on every frame and clock tick; most change nothing here.
   if (html === lastTableHtml && refs.board.firstElementChild) {
@@ -440,6 +476,8 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   const resultShown = refs.board.querySelector('.xmj-result') !== null;
   refs.board.innerHTML = html;
   lastTableHtml = html;
+  // Before the flights: they measure where each tile lands.
+  fitRacks(refs.board);
   if (resultShown) refs.board.querySelector('.xmj-result')?.classList.add('xmj-result--settled');
   if (sources) animateMoves(refs.board, view, sources);
   else drawnCounts = null;
@@ -526,6 +564,8 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
     forfeitDeadline = null;
     offsetSamples.length = 0;
     clearQueuedPass();
+    declarationMode = null;
+    armedDiscard = null;
   },
   renderBoard: renderTable,
   setup: (ctx) => {
@@ -546,7 +586,10 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
     // the seat's turn), a pass (an empty hand passes on its own), the runtime's
     // timeout and next-hand all ride the seat's colour without a choice.
     playedByPlayer: (move) =>
-      move.action === 'discard' || move.action === 'claim' || move.action === 'self-draw',
+      move.action === 'discard' ||
+      move.action === 'declare-ready' ||
+      move.action === 'claim' ||
+      move.action === 'self-draw',
     render: renderMoveLog,
   },
   replayCapture: {
@@ -573,10 +616,18 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
 function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayerView>): void {
   ctx.refs.board.addEventListener('click', (event) => {
     const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-      '[data-xmj-tile], [data-xmj-claim], [data-xmj-pass], [data-xmj-selfdraw], [data-xmj-next]',
+      '[data-xmj-tile], [data-xmj-claim], [data-xmj-pass], [data-xmj-selfdraw], [data-xmj-next], [data-xmj-declare]',
     );
-    if (!target || !ctx.canActNow()) return;
+    if (!target || !ctx.canActNow() || ctx.state.view?.perspective === 'spectator') return;
     const data = target.dataset;
+    if (data.xmjDeclare !== undefined) {
+      const view = ctx.state.view;
+      if (!view?.legal.declareReady?.length) return;
+      declarationMode = declarationMode ? null : { hand: view.handNumber, move: view.moveNumber };
+      armedDiscard = null;
+      ctx.renderAll();
+      return;
+    }
     if (data.xmjSelfdraw !== undefined) ctx.send({ type: 'move', action: 'self-draw' });
     else if (data.xmjPass !== undefined) sendPass(ctx);
     else if (data.xmjNext !== undefined) ctx.send({ type: 'move', action: 'next-hand' });
@@ -589,23 +640,38 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
       // drawn tile played from the hand says so, and the opponent sees it
       // leave the hand rather than the drawn slot.
       const view = ctx.state.view;
-      const phase = view?.phase;
+      if (!view || view.perspective === 'spectator') return;
+      const phase = view.phase;
       const drawn = phase?.type === 'discard' ? phase.drawn : null;
       const tile = data.xmjTile as XmjTile;
       const fromDrawnSlot = target.classList.contains('xmj-tile--drawn');
       const fromHand = drawn === tile && !fromDrawnSlot;
+      if (
+        !view.legal.discard.includes(tile) ||
+        (view.declared?.[view.perspective] && !fromDrawnSlot)
+      )
+        return;
+      const declaring = declarationMode !== null;
+      if (declaring && !view.legal.declareReady?.includes(tile)) return;
       // With a win on offer, the first tap only raises the tile: a slip next
       // to the Win button must not throw the hand away.
-      if (view?.legal.selfDraw && !target.classList.contains('xmj-tile--armed')) {
+      if (view.legal.selfDraw && !target.classList.contains('xmj-tile--armed')) {
         armedDiscard = { tile, drawn: fromDrawnSlot, hand: view.handNumber };
         ctx.renderAll();
         return;
       }
       armedDiscard = null;
+      declarationMode = null;
       tappedTile = { rect: target.getBoundingClientRect(), at: Date.now() };
       ctx.send({
         type: 'move',
-        action: fromHand ? 'discard-hand' : 'discard',
+        action: declaring
+          ? fromHand
+            ? 'declare-ready-hand'
+            : 'declare-ready'
+          : fromHand
+            ? 'discard-hand'
+            : 'discard',
         tiles: [tile],
       });
     }

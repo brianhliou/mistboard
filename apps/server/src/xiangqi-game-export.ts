@@ -16,6 +16,7 @@ import {
   formatXiangqiMoves,
   isStandardXiangqiLegalMove,
   writeXiangqiPgn,
+  type XiangqiGameState,
   type XiangqiMove,
   type XiangqiNotationStyle,
   type XiangqiPgnNode,
@@ -31,8 +32,11 @@ export function xiangqiExportUci(move: XiangqiMove): string {
 
 // True when the whole line is legal under standard xiangqi rules from the
 // opening position, so position-relative notation can be trusted for every ply.
-export function standardXiangqiLineReplays(moves: readonly XiangqiMove[]): boolean {
-  let state = createInitialXiangqiState('export-replay');
+export function standardXiangqiLineReplays(
+  moves: readonly XiangqiMove[],
+  initialState?: XiangqiGameState,
+): boolean {
+  let state = initialState ?? createInitialXiangqiState('export-replay');
   for (const move of moves) {
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) return false;
     state = applyXiangqiRecordMove(state, move);
@@ -42,14 +46,20 @@ export function standardXiangqiLineReplays(moves: readonly XiangqiMove[]): boole
 
 // WXF labels for the JSON `san` field, or null for every ply when the line does
 // not replay (a coordinate pair is not a notation, so it is not offered as one).
-export function xiangqiWxfLabels(moves: readonly XiangqiMove[]): readonly (string | null)[] {
-  if (!standardXiangqiLineReplays(moves)) return moves.map(() => null);
-  return formatXiangqiMoves(moves, 'wxf');
+export function xiangqiWxfLabels(
+  moves: readonly XiangqiMove[],
+  initialState?: XiangqiGameState,
+): readonly (string | null)[] {
+  if (!standardXiangqiLineReplays(moves, initialState)) return moves.map(() => null);
+  return formatXiangqiMoves(moves, 'wxf', initialState);
 }
 
 // The PGN movetext style a line can honestly carry.
-export function xiangqiPgnStyle(moves: readonly XiangqiMove[]): XiangqiNotationStyle {
-  return standardXiangqiLineReplays(moves) ? 'wxf' : 'iccs';
+export function xiangqiPgnStyle(
+  moves: readonly XiangqiMove[],
+  initialState?: XiangqiGameState,
+): XiangqiNotationStyle {
+  return standardXiangqiLineReplays(moves, initialState) ? 'wxf' : 'iccs';
 }
 
 // A flat mainline as the writer's node tree (no variations, no comments).
@@ -75,7 +85,12 @@ function pgnMainline(moves: readonly XiangqiMove[]): XiangqiPgnNode[] {
 export function xiangqiPgnWriter(
   moves: readonly XiangqiMove[],
   style: XiangqiNotationStyle,
+  initialState: XiangqiGameState = createInitialXiangqiState('export-replay'),
 ): NonNullable<TenantExportGame['writePgn']> {
   const children = pgnMainline(moves);
-  return (tags, result) => writeXiangqiPgn({ tags: { ...tags }, result, children }, { style });
+  return (tags, result) =>
+    writeXiangqiPgn(
+      { tags: { ...tags }, result, children },
+      { style, replay: { start: initialState, apply: applyXiangqiRecordMove } },
+    );
 }

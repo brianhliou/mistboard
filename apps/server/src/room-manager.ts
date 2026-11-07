@@ -909,6 +909,8 @@ export async function pauseRoomOnShutdown(
     reason: 'shutdown',
     ...(frozenClock ? { clock: frozenClock } : {}),
   });
+  // Deliver the frozen, per-recipient view while the sockets are still open.
+  broadcastSnapshot(ctx, room);
   await recordRoomLifecycleAuditSafe({
     roomId: room.id,
     kind: 'pause_on_shutdown',

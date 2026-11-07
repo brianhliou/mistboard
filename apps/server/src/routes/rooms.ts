@@ -10,6 +10,7 @@ import { currentAccountUser } from './../account-session.js';
 import { isBotSpecPlayable, parsePublicBotId } from './../bot-profile-policy.js';
 import { playableLiveEngines } from './../engine-registry.js';
 import { ratedEnabled } from './../feature-flags.js';
+import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { InternalEngineClientError } from './../internal-engine-client.js';
@@ -36,6 +37,23 @@ export async function tryHandle(
   if (pathname === '/api/rooms') {
     if (!requireMethod(request, response, 'POST')) return true;
     const rawBody = await readJsonBody(request);
+    // Claim either FFQ selector before bot resolution or another tenant.
+    // A missing registration must retain the fallback gate's rejection.
+    if (isFFQBanqiRequest(rawBody)) {
+      const account = await currentAccountUser(request);
+      const gate = gateGameSpecRequest(rawBody, account);
+      const registration = registeredVariantTenants().find(
+        (entry) => entry.gameSpecId === 'ffq-banqi',
+      );
+      if (gate.type === 'reject') {
+        writeJson(response, gate.httpStatus, { error: gate.error });
+        return true;
+      }
+      if (registration) {
+        await registration.http.handleCreate(ctx, request, response, rawBody, account);
+        return true;
+      }
+    }
     const body = await resolveBotRoomRequest(response, rawBody);
     if (!body) return true;
     // Variant tenants claim their create requests via the registry; each

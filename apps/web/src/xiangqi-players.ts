@@ -45,6 +45,7 @@ import {
 } from './players/xiangqiqipu-photos.js';
 import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { countText, localName, localTitle } from './xiangqi-broadcast-names.js';
 import {
   type BroadcastRailItem,
   broadcastCount,
@@ -131,7 +132,7 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
     );
     document.title = `${displayName(data.player)} · Mistboard`;
     const page = renderPlayer(data.player, data.boards);
-    page.append(rightsContactNote(playerHref(data.player)));
+    page.append(rightsContactNote(playerHref(data.player), 'corrections'));
     root.replaceChildren(buildNav(), page.main);
   } catch (err) {
     renderError(root, err);
@@ -158,7 +159,7 @@ export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<
     if (canonical !== key) history.replaceState(history.state, '', teamHref(canonical));
     document.title = `${teamLabel(team)} · Mistboard`;
     const page = renderTeam(team);
-    page.append(rightsContactNote(teamHref(team.key)));
+    page.append(rightsContactNote(teamHref(team.key), 'corrections'));
     root.replaceChildren(buildNav(), page.main);
   } catch (err) {
     renderError(root, err);
@@ -189,8 +190,20 @@ export function chineseName(player: Pick<PlayerRecord, 'name' | 'nameOwn'>): str
   return player.nameOwn?.trim() || player.name;
 }
 
-export function displayName(player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>): string {
-  return [broadcastName(player), broadcastSecondaryName(player)].filter(Boolean).join(' ');
+/** English with the Chinese beside it for an English reader; the Chinese
+ *  alone for a Chinese one, who never needs the romanisation. */
+export function displayName(
+  player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>,
+  locale: Locale = currentLocale(),
+): string {
+  if (locale !== 'en') return chineseName(player);
+  const en = player.nameEn?.trim();
+  return en && en !== chineseName(player) ? `${en} ${chineseName(player)}` : chineseName(player);
+}
+
+/** The one name the locale reads: English for `en`, the player's own Chinese otherwise. */
+function playerName(player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>): string {
+  return broadcastName(player);
 }
 
 export function recordText(r: { wins: number; draws: number; losses: number }): string {
@@ -383,7 +396,7 @@ function searchInput(label: string): HTMLInputElement {
   const search = document.createElement('input');
   search.type = 'search';
   search.className = 'xqp-search';
-  search.placeholder = t('broadcast.search');
+  search.placeholder = t('broadcast.playersSearchShort');
   search.setAttribute('aria-label', label);
   return search;
 }
@@ -488,21 +501,21 @@ function numberCell(value: number | null | undefined, suffix = ''): HTMLTableCel
 function playerColumns(showTeam: boolean): Column<PlayerRecord, IndexSort>[] {
   return [
     {
-      label: t('broadcast.playerNameHeading'),
+      label: t('broadcast.playersColName'),
       sort: 'name',
       className: 'xqp-col-name',
       value: (p) => nameCell(p, showTeam),
     },
     {
-      label: t('broadcast.playerPointsHeading'),
+      label: t('broadcast.playersColPoints'),
       sort: 'points',
-      hint: t('broadcast.playerPointsHint'),
+      hint: t('broadcast.playersHintPoints'),
       value: (p) => numberCell(latestPoints(p.name)?.points),
     },
     {
-      label: t('broadcast.playerRatingHeading'),
+      label: t('broadcast.playersColRating'),
       sort: 'rating',
-      hint: t('broadcast.playerRatingHint'),
+      hint: t('broadcast.playersHintRating'),
       value: (p) => numberCell(latestRating(p.name)),
     },
     // A CXA-only player has no games to count, which is not the same as none won.
@@ -512,7 +525,7 @@ function playerColumns(showTeam: boolean): Column<PlayerRecord, IndexSort>[] {
       value: (p) => numberCell(p.cxaOnly ? null : p.games),
     },
     {
-      label: t('broadcast.score'),
+      label: t('broadcast.playerScorePct'),
       sort: 'score',
       value: (p) => numberCell(p.games > 0 ? scorePercent(p) : null, '%'),
     },
@@ -542,8 +555,8 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   const main = shell('players');
   const title = document.createElement('h1');
   title.className = 'xqp-board-title';
-  title.textContent = t('broadcast.playersTitle');
-  const search = searchInput(t('broadcast.searchPlayers'));
+  title.textContent = t('broadcast.playersHeading');
+  const search = searchInput(t('broadcast.playersSearch'));
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
   const season = currentSeason(players);
@@ -741,7 +754,7 @@ export function sortTeams(teams: readonly TeamRecord[], sort: TeamSort): TeamRec
 }
 
 function teamLabel(team: Pick<TeamRecord, 'name' | 'nameEn'>): string {
-  return broadcastName(team);
+  return currentLocale() === 'en' ? (team.nameEn ?? team.name) : team.name;
 }
 
 function teamHref(key: string): string {
@@ -775,7 +788,7 @@ function teamNameCell(team: TeamRecord): HTMLTableCellElement {
   link.href = teamHref(team.key);
   link.textContent = teamLabel(team);
   wrap.append(link);
-  if (broadcastSecondaryName(team)) {
+  if (currentLocale() === 'en' && team.nameEn && team.nameEn !== team.name) {
     const zh = document.createElement('span');
     zh.className = 'xqp-team';
     zh.textContent = broadcastSecondaryName(team);
@@ -790,8 +803,8 @@ function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   const main = shell('teams');
   const title = document.createElement('h1');
   title.className = 'xqp-board-title';
-  title.textContent = t('broadcast.teamsTitle');
-  const search = searchInput(t('broadcast.searchTeams'));
+  title.textContent = t('broadcast.teamsHeading');
+  const search = searchInput(t('broadcast.teamsSearch'));
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
   panel.append(
@@ -800,25 +813,25 @@ function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
       rows: teamsOf(players),
       columns: [
         {
-          label: t('broadcast.team'),
+          label: t('broadcast.teamsColTeam'),
           sort: 'name',
           className: 'xqp-col-name',
           value: teamNameCell,
         },
         {
-          label: t('broadcast.players'),
+          label: t('broadcast.teamsColPlayers'),
           sort: 'players',
-          value: (t) => numberCell(t.players.length),
+          value: (team) => numberCell(team.players.length),
         },
         {
-          label: t('broadcast.teamTopPoints'),
+          label: t('broadcast.teamsColTop5'),
           sort: 'strength',
-          hint: t('broadcast.teamTopPointsHint'),
+          hint: t('broadcast.teamsHintTop5'),
           value: (t) => numberCell(teamStrength(t)),
         },
-        { label: t('broadcast.games'), sort: 'games', value: (t) => numberCell(t.games) },
+        { label: t('broadcast.games'), sort: 'games', value: (team) => numberCell(team.games) },
         {
-          label: t('broadcast.score'),
+          label: t('broadcast.playerScorePct'),
           sort: 'score',
           value: (t) => numberCell(scorePercent(t), '%'),
         },
@@ -849,10 +862,12 @@ function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
   const meta = document.createElement('p');
   meta.className = 'xqp-team-meta';
   meta.textContent = [
-    broadcastSecondaryName(team),
-    broadcastCount(team.players.length, 'player'),
-    t('broadcast.gamesRecord', {
-      games: broadcastCount(team.games, 'game'),
+    currentLocale() === 'en' && team.nameEn && team.nameEn !== team.name ? team.name : null,
+    t(team.players.length === 1 ? 'broadcast.teamPlayersOne' : 'broadcast.teamPlayers', {
+      n: team.players.length,
+    }),
+    t('broadcast.teamGamesRecord', {
+      games: countText(team.games, 'broadcast.gameCount'),
       record: recordText(team),
     }),
   ]
@@ -929,7 +944,7 @@ export function playerPortrait(
     figure.append(avatar(player, 'page'));
     if (profile?.photoCredit) {
       const cap = document.createElement('figcaption');
-      cap.textContent = t('broadcast.photoCredit', { source: profile.photoCredit });
+      cap.textContent = t('broadcast.playerCredit', { source: profile.photoCredit });
       figure.append(cap);
     }
     return figure;
@@ -985,7 +1000,7 @@ function titleTag(title: PlayerTitle | null): HTMLElement | null {
   if (!title) return null;
   const tag = document.createElement('span');
   tag.className = 'xqp-title';
-  tag.textContent = title;
+  tag.textContent = localTitle(title);
   tag.title = t(
     ({ GM: 'title.xgm', IM: 'title.xim', FM: 'broadcast.titleFm', NM: 'title.xnm' } as const)[
       title
@@ -1058,8 +1073,8 @@ function renderPlayer(
   h1.className = 'xqp-h1';
   const tag = titleTag(playerTitle(player));
   if (tag) h1.append(tag, ' ');
-  h1.append(broadcastName(player));
-  if (broadcastSecondaryName(player)) {
+  h1.append(playerName(player));
+  if (currentLocale() === 'en' && player.nameEn && player.nameEn !== player.name) {
     const zh = document.createElement('span');
     zh.className = 'xqp-h1-zh';
     zh.textContent = broadcastSecondaryName(player);
@@ -1146,7 +1161,7 @@ function renderPlayer(
     note.setAttribute('role', 'note');
     const link = document.createElement('a');
     link.href = localizedHref(MATCH_FIXING_ARTICLE_PATH);
-    link.textContent = t('broadcast.aboutCase');
+    link.textContent = t('broadcast.playerAboutCase');
     note.append(`${sanctionSentence(sanction)} `, link);
     copy.append(note);
   }
@@ -1156,7 +1171,7 @@ function renderPlayer(
     const link = document.createElement('a');
     link.className = 'xqb-link xqb-link-primary';
     link.href = localizedHref(profile.profileHref);
-    link.textContent = t('broadcast.readProfile');
+    link.textContent = t('broadcast.playerReadProfile');
     actions.append(link);
     copy.append(actions);
   }
@@ -1170,7 +1185,7 @@ function renderPlayer(
     const cards = document.createElement('div');
     cards.className = 'xqp-rating-row';
     cards.append(...officialRating);
-    main.append(section(t('broadcast.officialRating'), cards));
+    main.append(section(t('broadcast.playerOfficialRating'), cards));
   }
 
   const history = ratingHistoryFigure(cxaRatingsFor(player.name), cxaPointsFor(player.name));
@@ -1185,9 +1200,9 @@ function renderPlayer(
     title.className = 'xqp-no-games-title';
     title.textContent = t('broadcast.playerNoGames');
     const body = document.createElement('p');
-    body.textContent = t('broadcast.playerNoGamesBody', { name: broadcastName(player) });
+    body.textContent = t('broadcast.playerNoGamesBody', { name: playerName(player) });
     empty.append(title, body);
-    main.append(section(t('broadcast.gamesHeading', { n: 0 }), empty));
+    main.append(section(t('broadcast.playerGamesHeading', { n: 0 }), empty));
     return main;
   }
 
@@ -1200,7 +1215,7 @@ function renderPlayer(
     const grid = document.createElement('div');
     grid.className = 'xqp-events';
     for (const event of player.events) grid.append(eventCard(event));
-    main.append(section(t('broadcast.events'), grid));
+    main.append(section(t('broadcast.playerEvents'), grid));
   }
   main.append(view.section);
   return main;
@@ -1230,7 +1245,7 @@ type GamesView = {
 function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): GamesView {
   let filter = filterFromSearch(window.location.search, boards);
   const listeners: ((filter: BoardFilter) => void)[] = [];
-  const wrap = section(t('broadcast.gamesHeading', { n: boards.length }));
+  const wrap = section(t('broadcast.playerGamesHeading', { n: boards.length }));
   wrap.id = 'games';
   const href = (next: BoardFilter): string =>
     `${window.location.pathname}${searchFromFilter(next)}#games`;
@@ -1394,7 +1409,7 @@ function recordSection(boards: readonly PlayerBoardRecord[], view: GamesView): H
     t('broadcast.playerWon'),
     t('broadcast.playerDrawn'),
     t('broadcast.playerLost'),
-    t('broadcast.score'),
+    t('broadcast.playerScorePct'),
     '',
   ]) {
     const th = document.createElement('th');
@@ -1561,10 +1576,10 @@ function eventCard(event: PlayerEventRecord): HTMLElement {
       : '';
   const name = document.createElement('span');
   name.className = 'xqp-event-name';
-  name.textContent = broadcastName({ name: event.tourName, nameEn: event.tourNameEn });
+  name.textContent = localName({ name: event.tourName, nameEn: event.tourNameEn });
   const record = document.createElement('span');
   record.className = 'xqp-event-record';
-  record.textContent = `${broadcastCount(event.games, 'game')} · ${recordText(event)} · ${scorePercent(event)}%`;
+  record.textContent = `${countText(event.games, 'broadcast.gameCount')} · ${recordText(event)} · ${scorePercent(event)}%`;
   card.append(dates, name, record);
   return card;
 }
@@ -1584,7 +1599,7 @@ function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   head.className = 'xqp-rating-head';
   const label = document.createElement('span');
   label.className = 'xqp-rating-label';
-  label.textContent = t('broadcast.pointsLabel');
+  label.textContent = t('broadcast.playerPointsLabel');
   const value = document.createElement('span');
   value.className = 'xqp-rating-value';
   value.textContent = String(last.points);
@@ -1593,8 +1608,8 @@ function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   sub.className = 'xqp-rating-sub';
   sub.textContent = [
     size !== null ? t('broadcast.playerFactRankOf', { rank: last.rank, size }) : `#${last.rank}`,
-    t('broadcast.pointsEvents', { n: last.events, best: last.best }),
-    list?.window ? t('broadcast.pointsWindow', { date: list.window[0] }) : null,
+    t('broadcast.playerPointsEvents', { events: last.events, best: last.best }),
+    list?.window ? t('broadcast.playerPointsWindow', { date: list.window[0] }) : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1616,7 +1631,7 @@ function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   head.className = 'xqp-rating-head';
   const label = document.createElement('span');
   label.className = 'xqp-rating-label';
-  label.textContent = t('broadcast.ratingLabel');
+  label.textContent = t('broadcast.playerRatingLabel');
   const value = document.createElement('span');
   value.className = 'xqp-rating-value';
   value.textContent = String(last.rating);
@@ -1627,8 +1642,8 @@ function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
     last.rank !== null && lastList
       ? t('broadcast.playerFactRankOf', { rank: last.rank, size: lastList.size })
       : null,
-    lastList ? t('broadcast.lastList', { list: lastList.label }) : null,
-    t('broadcast.ratingReplaced'),
+    lastList ? t('broadcast.playerRatingLastList', { label: lastList.label }) : null,
+    t('broadcast.playerRatingReplaced'),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1684,16 +1699,16 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   outcome.className = 'xqp-outcome';
   outcome.textContent = t(
     board.outcome === 'win'
-      ? 'broadcast.recordWin'
+      ? 'broadcast.playerOutcomeWin'
       : board.outcome === 'loss'
-        ? 'broadcast.recordLoss'
-        : 'broadcast.recordDraw',
+        ? 'broadcast.playerOutcomeLoss'
+        : 'broadcast.playerOutcomeDraw',
   );
 
   const who = document.createElement('span');
   who.className = 'xqp-who';
   const me = document.createElement('span');
-  me.textContent = broadcastName(player);
+  me.textContent = playerName(player);
   const vs = document.createElement('span');
   vs.className = 'xqp-vs';
   vs.textContent = t('broadcast.vs');
@@ -1706,16 +1721,16 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   const colour = document.createElement('span');
   colour.className = `xqp-colour xqp-colour-${board.colour}`;
   colour.textContent = t(
-    board.colour === 'red' ? 'broadcast.playerFilterRed' : 'broadcast.playerFilterBlack',
+    board.colour === 'red' ? 'broadcast.playerSeatRed' : 'broadcast.playerSeatBlack',
   );
 
   const meta = document.createElement('span');
   meta.className = 'xqp-game-meta';
   meta.textContent = [
-    broadcastName({ name: board.tourName, nameEn: board.tourNameEn }),
+    localName({ name: board.tourName, nameEn: board.tourNameEn }),
     broadcastRoundName({ name: board.roundName, nameEn: board.roundNameEn }),
     board.playedOn ?? '',
-    broadcastCount(Math.ceil(board.plyCount / 2), 'move'),
+    board.plyCount > 0 ? t('broadcast.playerMoves', { n: Math.ceil(board.plyCount / 2) }) : '',
     board.result,
   ]
     .filter(Boolean)

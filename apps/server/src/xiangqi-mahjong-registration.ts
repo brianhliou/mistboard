@@ -1,5 +1,5 @@
 /**
- * Xiangqi mahjong registry entry. Narrow on purpose: no export. Its TV channel
+ * Xiangqi mahjong registry entry. Finished matches export JSON. Its TV channel
  * follows the spectator view and lists only when the spec is public.
  * A room is PvE (the in-process bot takes the other seat), PvP (a friend room,
  * or a Find opponent pairing through the lobby), or correspondence (a seek or
@@ -49,6 +49,7 @@ import {
   type TenantLiveRoom,
 } from './variant-tenant/ws.js';
 import { registerLiveWatchPayloadBuilder } from './watch-live.js';
+import { xiangqiMahjongExport } from './xiangqi-mahjong-game-export.js';
 import { type XmjEvent, xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 import { xmjLiveWatchPayloadFor } from './xiangqi-mahjong-watch.js';
 
@@ -82,7 +83,7 @@ const xiangqiMahjongWs = createTenantWsRuntime(xiangqiMahjongTenant, {
  * The paces the table offers (web registry timePresetIds): every site preset.
  * A match is about 32 discards a player over six hands, and no clock runs
  * while a claim is open (xmjClockOwner), so even 1+1 leaves a few seconds a
- * discard. 1+1, 3+2 and 5+5 are rated, as everywhere.
+ * discard. All four are rated, as everywhere.
  */
 const XMJ_LOBBY_TIME_CONTROL_IDS: ReadonlySet<string> = new Set(['1m1', '3m2', '5m5', '10m5']);
 
@@ -115,7 +116,8 @@ export async function createXiangqiMahjongRoom(
           creatorPreference: xiangqiMahjongTenant.oppositeColor(engine.seat),
           // Seated at creation, so the bot is in the initial event log and
           // survives hydration. A bot game never rates. A homepage start names
-          // the persona that fronts the bot (Misty); a direct create names none.
+          // the persona that fronts the bot; a setup-dialog create or a rematch
+          // names none and gets the same one, Misty, never the engine id.
           engine: {
             engineId: XMJ_BOT_CLIENT_ID,
             seat: engine.seat,
@@ -215,8 +217,7 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
-  // No export binding: there is no record format for this game here.
-  export: null,
+  export: xiangqiMahjongExport,
   card: {
     layout: 'match',
     variant: xiangqiMahjongTenant.gameSpecId,

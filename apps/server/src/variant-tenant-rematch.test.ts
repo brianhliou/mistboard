@@ -23,13 +23,16 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { mahjongTenant } from './mahjong-tenant.js';
 import { close, getPool, init } from './persistence-db.js';
 import { isAllowlistedGameSpec } from './persistence-variant-access.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import './variant-tenant/register-tenants.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
 import { tenantRoomOffersRematch, tenantSnapshotPayload } from './variant-tenant/runtime.js';
@@ -44,6 +47,7 @@ for (const flag of [
   'ATOMIC_XIANGQI',
   'DUCK_XIANGQI',
   'FORTRESS_XIANGQI',
+  'GOMOKU',
   'JIEQI',
   'JUNGLE',
   'JUNGLE_FLIP',
@@ -74,11 +78,14 @@ const TENANTS: Record<string, AnyTenant> = Object.fromEntries(
     darkChessTenant,
     darkXiangqiTenant,
     duckXiangqiTenant,
+    ffqBanqiTenant,
     fortressXiangqiTenant,
+    gomokuTenant,
     jieqiTenant,
     jungleFlipTenant,
     jungleTenant,
     mahjongTenant,
+    threeKingdomsBanqiTenant,
     xiangqiMahjongTenant,
     xiangqiTenant,
   ].map((tenant) => [tenant.kind, tenant as unknown as AnyTenant]),
@@ -240,6 +247,7 @@ test('every registered tenant is held to the rematch contract', () => {
   }
   assert.ok(TENANTS.mahjong?.rematch, 'mahjong (four seats) opts out');
   assert.ok(TENANTS['dark-chess']?.rematch, 'dark chess (correspondence only, #531) opts out');
+  assert.ok(TENANTS['ffq-banqi']?.rematch, 'FFQ requires creation through the admin gate');
 });
 
 test('a retired variant offers no rematch: it opens no new rooms', async () => {

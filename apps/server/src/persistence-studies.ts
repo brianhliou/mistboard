@@ -6,12 +6,14 @@
 // All reads/writes no-op (null / no-op) when persistence is disabled.
 
 import { randomBytes } from 'node:crypto';
+import { ADMIN_ONLY_STUDY_SPEC_IDS } from '@mistboard/game';
 import { getPool, isInitialized } from './persistence-db.js';
 import {
   STUDY_PREVIEW_PLIES,
   type StudyPreviewBoard,
   studyPreviewBoard,
 } from './study-preview-board.js';
+import type { ChapterScoreSeries } from './study-score-series.js';
 
 export type StudyVisibility = 'private' | 'unlisted' | 'public';
 
@@ -45,6 +47,9 @@ export type StudyChapterRecord = {
   /** Authored goal text ("mate in 3", "win", "draw in 20"); parsed by
    *  parsePracticeGoal. Non-null whenever `practice` is true (DB CHECK). */
   practiceGoal: string | null;
+  /** Named win-chance series drawn under the board in the study embed
+   *  (study-score-series.ts). Null on almost every chapter. */
+  scoreSeries: ChapterScoreSeries | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -182,6 +187,7 @@ type ChapterRow = {
   gamebook: boolean;
   practice: boolean;
   practice_goal: string | null;
+  score_series: ChapterScoreSeries | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -219,6 +225,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
     gamebook: row.gamebook,
     practice: row.practice,
     practiceGoal: row.practice_goal,
+    scoreSeries: row.score_series ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -227,7 +234,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
 const STUDY_COLS =
   'id, owner_id, slug, name, description, i18n, visibility, featured_at, created_at, updated_at';
 const CHAPTER_COLS =
-  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, created_at, updated_at';
+  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, score_series, created_at, updated_at';
 
 /** Correlated scalar subquery yielding the first few chapters (by ordinal) as a
  *  jsonb array of `{name, i18n}`, for a study aliased `s`. This is the preview
@@ -290,6 +297,24 @@ function nameFilter(q: string | undefined, paramIndex: number): { clause: string
   if (!trimmed) return { clause: '' };
   const escaped = trimmed.replace(/[\\%_]/g, (ch) => `\\${ch}`);
   return { clause: ` AND s.name ILIKE $${paramIndex}`, value: `%${escaped}%` };
+}
+
+/** Who a list is for. Admin-only study variants (ADMIN_ONLY_STUDY_SPEC_IDS,
+ *  #628) stay out of every list unless the caller says the reader is an admin,
+ *  so a list call that forgets the option hides them rather than leaks them. */
+export type StudyListAccess = { includeAdminOnly?: boolean };
+
+/** ` AND NOT EXISTS (...)` dropping a study with any chapter in an admin-only
+ *  variant, for a study aliased `s`. The ids are spliced as literals: they are
+ *  constants checked to be plain slugs (game-specs.test.ts), never input. */
+export function adminOnlyStudyFilter(access: StudyListAccess | undefined): string {
+  if (access?.includeAdminOnly || ADMIN_ONLY_STUDY_SPEC_IDS.length === 0) return '';
+  const ids = ADMIN_ONLY_STUDY_SPEC_IDS.map((id) => {
+    if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`unsafe study variant id: ${id}`);
+    return `'${id}'`;
+  }).join(', ');
+  return ` AND NOT EXISTS (SELECT 1 FROM study_chapters admin_only
+                    WHERE admin_only.study_id = s.id AND admin_only.variant IN (${ids}))`;
 }
 
 type PublicStudyRow = StudyRow & {
@@ -401,8 +426,8 @@ export async function cloneStudy(sourceId: string, ownerId: string): Promise<Clo
       await client.query(
         `INSERT INTO study_chapters
            (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags,
-            gamebook, practice, practice_goal)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13)`,
+            gamebook, practice, practice_goal, score_series)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14::jsonb)`,
         [
           shortId(),
           studyId,
@@ -417,6 +442,7 @@ export async function cloneStudy(sourceId: string, ownerId: string): Promise<Clo
           chapter.gamebook,
           chapter.practice,
           chapter.practiceGoal,
+          chapter.scoreSeries ? JSON.stringify(chapter.scoreSeries) : null,
         ],
       );
     }
@@ -454,6 +480,21 @@ export async function getStudyById(id: string): Promise<StudyWithChapters | null
     [id],
   );
   return { ...mapStudy(row), chapters: chapters.rows.map(mapChapter) };
+}
+
+/** The variants of a study's chapters, without their trees; null when the
+ *  study does not exist. The route's admin-only check (#628) reads this
+ *  before any handler, so it costs one indexed lookup, not a whole study. */
+export async function getStudyChapterVariants(id: string): Promise<string[] | null> {
+  if (!isInitialized()) return null;
+  const { rows } = await getPool().query<{ variant: string | null }>(
+    `SELECT c.variant FROM studies s
+       LEFT JOIN study_chapters c ON c.study_id = s.id
+      WHERE s.id = $1`,
+    [id],
+  );
+  if (rows.length === 0) return null;
+  return rows.flatMap((row) => (row.variant === null ? [] : [row.variant]));
 }
 
 /**
@@ -523,7 +564,11 @@ export async function getPracticeStudiesBySlug(
   }));
 }
 
-export async function listStudiesForOwner(ownerId: string, q?: string): Promise<StudySummary[]> {
+export async function listStudiesForOwner(
+  ownerId: string,
+  q?: string,
+  access?: StudyListAccess,
+): Promise<StudySummary[]> {
   if (!isInitialized()) return [];
   const filter = nameFilter(q, 2);
   const params: unknown[] = [ownerId];
@@ -537,7 +582,8 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
        (SELECT count(*) FROM study_chapters c WHERE c.study_id = s.id) AS chapter_count,
        ${CHAPTER_PREVIEW},
        ${PREVIEW_BOARD}
-       FROM studies s WHERE s.owner_id = $1${filter.clause} ORDER BY s.updated_at DESC`,
+       FROM studies s WHERE s.owner_id = $1${filter.clause}${adminOnlyStudyFilter(access)}
+       ORDER BY s.updated_at DESC`,
     params,
   );
   return rows.map((row) => ({
@@ -563,6 +609,7 @@ export async function listTopPublicStudies(
   limit = 5,
   q?: string,
   offset = 0,
+  access?: StudyListAccess,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
@@ -589,7 +636,7 @@ export async function listTopPublicStudies(
        LEFT JOIN study_chapters c ON c.study_id = s.id
        LEFT JOIN study_likes l ON l.study_id = s.id
       WHERE s.visibility = 'public'
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
+        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
       GROUP BY s.id, u.handle, u.display_name
       -- Newest first by creation, not by last edit: an edit to an old study
       -- (a fixed comment, a new translation) must not put it back at the top
@@ -607,6 +654,7 @@ export async function listFeaturedStudies(
   limit = 30,
   q?: string,
   offset = 0,
+  access?: StudyListAccess,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
@@ -634,7 +682,7 @@ export async function listFeaturedStudies(
        LEFT JOIN study_likes l ON l.study_id = s.id
       WHERE s.visibility = 'public'
         AND s.featured_at IS NOT NULL
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
+        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.featured_at DESC, s.updated_at DESC, s.id
       LIMIT $1 OFFSET ${offsetParam}`,
@@ -710,6 +758,7 @@ export async function listFavoriteStudies(
   userId: string,
   limit = 30,
   q?: string,
+  access?: StudyListAccess,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX));
@@ -733,7 +782,7 @@ export async function listFavoriteStudies(
        LEFT JOIN study_likes l ON l.study_id = s.id
       WHERE fav.user_id = $1
         AND s.visibility = 'public'
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
+        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.updated_at DESC, s.id
       LIMIT $2`,
@@ -1142,6 +1191,34 @@ export async function setChapterPractice(
     `UPDATE study_chapters SET practice = $1, practice_goal = $2, updated_at = now()
        WHERE id = $3 RETURNING ${CHAPTER_COLS}`,
     [practice, practice ? goal : null, chapterId],
+  );
+  return { ok: true, chapter: mapChapter(updated.rows[0]!) };
+}
+
+/**
+ * Set or clear a chapter's score series (owner). The caller validates the shape
+ * (parseChapterScoreSeries); null clears. No version bump: the series rides
+ * beside the tree, not in it, so it never races a tree autosave.
+ */
+export async function setChapterScoreSeries(
+  chapterId: string,
+  ownerId: string,
+  scoreSeries: ChapterScoreSeries | null,
+): Promise<UpdateChapterResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  const { rows } = await getPool().query<{ owner_id: string }>(
+    `SELECT s.owner_id
+       FROM study_chapters c JOIN studies s ON s.id = c.study_id
+       WHERE c.id = $1`,
+    [chapterId],
+  );
+  const found = rows[0];
+  if (!found) return { ok: false, error: 'not_found' };
+  if (found.owner_id !== ownerId) return { ok: false, error: 'forbidden' };
+  const updated = await getPool().query<ChapterRow>(
+    `UPDATE study_chapters SET score_series = $1::jsonb, updated_at = now()
+       WHERE id = $2 RETURNING ${CHAPTER_COLS}`,
+    [scoreSeries ? JSON.stringify(scoreSeries) : null, chapterId],
   );
   return { ok: true, chapter: mapChapter(updated.rows[0]!) };
 }

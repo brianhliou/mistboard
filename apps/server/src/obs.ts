@@ -14,6 +14,10 @@ import pino, { type Logger } from 'pino';
 import { DailyRttAccumulator, normalizeLatencyRegion } from './daily-rtt.js';
 import { type EngineAlertEmailPayload, sendEngineAlertNotification } from './engine-alert-email.js';
 import { isTimeoutish, type KnownEngineFailure } from './engine-known-failures.js';
+import {
+  deliverEnginePoolWaitDigest,
+  persistEnginePoolWait,
+} from './persistence-engine-capacity.js';
 
 const isProd = process.env.NODE_ENV === 'production' || !process.stdout.isTTY;
 const level = process.env.LOG_LEVEL ?? 'info';
@@ -309,7 +313,12 @@ export class EngineCounters {
 
 export const engineCounters = new EngineCounters();
 
-export type AuthStartOutcome = 'delivery_failed' | 'rate_limited' | 'rejected' | 'sent';
+export type AuthStartOutcome =
+  | 'delivery_failed'
+  | 'dev-response'
+  | 'rate_limited'
+  | 'rejected'
+  | 'sent';
 export type AuthConfirmOutcome = 'rate_limited' | 'rejected' | 'success';
 
 // Aggregate auth outcomes only. These counters deliberately never receive an
@@ -619,7 +628,7 @@ export const wsCounters = new WsCounters();
 
 // Fire-and-forget an alert email, logging the delivery outcome. Shared by the
 // engine-counter alerts and the infra (memory / loop-lag) alerts.
-function dispatchAlertEmail(alert: EngineAlertEmailPayload): void {
+export function dispatchAlertEmail(alert: EngineAlertEmailPayload): void {
   void sendEngineAlertNotification(alert)
     .then((result) => {
       if (result.status === 'sent') {
@@ -654,10 +663,77 @@ function dispatchAlertEmail(alert: EngineAlertEmailPayload): void {
     });
 }
 
+// Capacity waits are early warnings, not pages. Keep one bounded summary per pool
+// and send the completed 24-hour window even if no further waits arrive.
+const poolWaits = new Map<string, { count: number; maxWaitMs: number; maxQueueDepth: number }>();
+let poolWaitDigestTimer: ReturnType<typeof setTimeout> | undefined;
+
+export function recordEnginePoolWait(pool: string, waitMs: number, queueDepth: number): void {
+  logger.warn({ kind: 'engine_pool_queue_wait', pool, wait_ms: waitMs, queue_depth: queueDepth });
+  void persistEnginePoolWait(pool, waitMs, queueDepth)
+    .then((stored) => {
+      if (!stored) recordMemoryPoolWait(pool, waitMs, queueDepth);
+    })
+    .catch(() => {
+      logger.error({ kind: 'engine_pool_wait_persistence_failed', pool });
+      recordMemoryPoolWait(pool, waitMs, queueDepth);
+    });
+}
+
+// Memory-only dev/CLI mode also gets a digest; production uses the durable UTC
+// day above, since a process-local 24-hour timer cannot survive regular deploys.
+function recordMemoryPoolWait(pool: string, waitMs: number, queueDepth: number): void {
+  const summary = poolWaits.get(pool) ?? { count: 0, maxWaitMs: 0, maxQueueDepth: 0 };
+  summary.count += 1;
+  summary.maxWaitMs = Math.max(summary.maxWaitMs, waitMs);
+  summary.maxQueueDepth = Math.max(summary.maxQueueDepth, queueDepth);
+  poolWaits.set(pool, summary);
+  if (poolWaitDigestTimer) return;
+  poolWaitDigestTimer = setTimeout(
+    () => {
+      const summaries = [...poolWaits];
+      poolWaits.clear();
+      poolWaitDigestTimer = undefined;
+      dispatchAlertEmail({
+        severity: 'warning',
+        kind: 'engine_pool_queue_wait',
+        window_hours: 24,
+        wait_count: summaries.reduce((sum, [, s]) => sum + s.count, 0),
+        pools: summaries
+          .map(
+            ([name, s]) =>
+              `${name}: count=${s.count}, max_wait_ms=${s.maxWaitMs}, max_queue_depth=${s.maxQueueDepth}`,
+          )
+          .join('; '),
+      });
+    },
+    24 * 60 * 60 * 1_000,
+  );
+  poolWaitDigestTimer.unref();
+}
+
 export function startObservability(sources: ObsSources, intervalMs = 5_000): () => void {
   const histogram = monitorEventLoopDelay({ resolution: 20 });
   histogram.enable();
   let lastTickAt = Date.now();
+  let digestRunning = false;
+  const deliverDigest = (): void => {
+    if (digestRunning) return;
+    digestRunning = true;
+    void deliverEnginePoolWaitDigest()
+      .then((result) => {
+        if (result?.status === 'failed') logger.error({ kind: 'engine_pool_wait_digest_failed' });
+      })
+      .catch(() => {
+        logger.error({ kind: 'engine_pool_wait_digest_failed' });
+      })
+      .finally(() => {
+        digestRunning = false;
+      });
+  };
+  deliverDigest();
+  const digestTimer = setInterval(deliverDigest, 60_000);
+  digestTimer.unref();
 
   const timer = setInterval(() => {
     const now = Date.now();
@@ -780,6 +856,7 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
 
   return () => {
     clearInterval(timer);
+    clearInterval(digestTimer);
     histogram.disable();
   };
 }

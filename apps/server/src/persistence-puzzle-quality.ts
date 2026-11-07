@@ -307,3 +307,32 @@ export async function listPuzzleQualityAggregates(
     ratingDeviation: row.rating_deviation,
   }));
 }
+
+/**
+ * Per-puzzle outcome counts for the serving rating (#712): sessions that made
+ * a move and finished (solved, revealed, or abandoned after moving), and how
+ * many of those were clean solves. Same human-session floor as the quality
+ * aggregates. A light grouped read over one table, cached by the list route;
+ * empty when persistence is off.
+ */
+export async function listPuzzleServingEvidence(): Promise<
+  Map<string, { finished: number; clean: number }>
+> {
+  const evidence = new Map<string, { finished: number; clean: number }>();
+  if (!isInitialized()) return evidence;
+  const { rows } = await getPool().query<{ puzzle_id: string; finished: number; clean: number }>(
+    `SELECT puzzle_id,
+            count(*)::int AS finished,
+            count(*) FILTER (
+              WHERE outcome = 'solved' AND wrong_attempts = 0 AND hint_count = 0
+            )::int AS clean
+       FROM puzzle_quality_sessions
+      WHERE started_at IS NOT NULL
+        AND outcome IN ('solved', 'revealed', 'abandoned')
+        AND completed_at - viewed_at >= make_interval(secs => $1)
+      GROUP BY puzzle_id`,
+    [MIN_HUMAN_SESSION_SECONDS],
+  );
+  for (const row of rows) evidence.set(row.puzzle_id, { finished: row.finished, clean: row.clean });
+  return evidence;
+}

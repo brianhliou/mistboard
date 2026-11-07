@@ -343,3 +343,48 @@ test('/thumb/article/<slug>.png renders the build thumbnail, else redirects to t
     await new Promise<void>((done) => server.close(() => done()));
   }
 });
+
+// The server must read the localized file, rather than falling through to a
+// shell that silently discards the locale's body.
+test('Washington Xiangqi serves each locale prerender and localized fallback meta', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-club-'));
+  await writeFile(
+    join(staticDir, 'index.html'),
+    '<html lang="en"><head><title>shell</title><meta name="description" content="old"></head><body><div id="app"></div></body></html>',
+  );
+  const routes = ['', '/zh-hans', '/zh-hant'];
+  for (const prefix of routes) {
+    await mkdir(join(staticDir, prefix), { recursive: true });
+    await writeFile(
+      join(staticDir, prefix, 'washington-xiangqi.html'),
+      `<h1>club ${prefix || 'en'}</h1>`,
+    );
+  }
+  const handler = createHttpRequestHandler({
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    drainController: { isDraining: () => false },
+  } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+  const server = createServer(handler);
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    for (const prefix of routes) {
+      for (const suffix of ['', '/']) {
+        const response = await fetch(`${base}${prefix}/washington-xiangqi${suffix}`);
+        assert.equal(response.status, 200);
+        assert.equal(await response.text(), `<h1>club ${prefix || 'en'}</h1>`);
+      }
+    }
+    const { unlink } = await import('node:fs/promises');
+    await unlink(join(staticDir, 'zh-hant', 'washington-xiangqi.html'));
+    const fallback = await fetch(`${base}/zh-hant/washington-xiangqi`);
+    assert.equal(fallback.status, 200);
+    assert.match(
+      await fallback.text(),
+      /<title>華州象棋 Washington Xiangqi：大西雅圖地區的象棋<\/title>/,
+    );
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+});

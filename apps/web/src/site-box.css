@@ -33,11 +33,6 @@
   white-space: nowrap;
 }
 
-a.site-box-top:hover .site-box-more,
-a.site-box-top:focus-visible .site-box-more {
-  color: var(--site-link);
-}
-
 .site-box-body {
   display: block;
 }
@@ -47,7 +42,9 @@ a.site-box-top:focus-visible .site-box-more {
    Widgets that change the layout (grid columns, align-items, padding) must do
    it with a two-class selector (.site-box-row.my-row): this file is shared, so
    Vite may emit it in a later CSS chunk than the widget's own stylesheet, and a
-   same-specificity override then loses on source order. */
+   same-specificity override then loses on source order.
+   Zebra sets --site-box-row-bg, never background, so the hover tint
+   (hover-grammar.css .hover-row) wins on every row, odd or even. */
 .site-box-row {
   display: flex;
   align-items: baseline;
@@ -56,15 +53,11 @@ a.site-box-top:focus-visible .site-box-more {
   font-size: 13px;
   color: var(--site-text);
   text-decoration: none;
+  background: var(--site-box-row-bg, transparent);
 }
 
 .site-box-body > .site-box-row:nth-child(even) {
-  background: var(--site-zebra);
-}
-
-a.site-box-row:hover,
-a.site-box-row:focus-visible {
-  background: var(--site-accent-soft);
+  --site-box-row-bg: var(--site-zebra);
 }
 
 .site-box-row-meta {
@@ -114,15 +107,6 @@ a.site-box-row:focus-visible {
   font-size: 13px;
   line-height: 1.45;
   text-decoration: none;
-}
-
-.landing-activity-link:hover,
-.landing-activity-link:focus-visible,
-.landing-activity-live a:hover,
-.landing-activity-live a:focus-visible {
-  color: var(--site-link);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .landing-activity-value {

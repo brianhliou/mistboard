@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { writeAccountPreference } from '../account-preferences.js';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
+import { lastBotGame } from '../pve-memory.js';
 import {
   createTenantRoomChrome,
   type TenantChromeContext,
   type TenantWebView,
   type WebVariantTenant,
+  withRoomBot,
 } from './room-chrome.js';
 
 // Direct pins for the chrome branches the per-tenant suites do not reach:
@@ -66,6 +68,7 @@ type CtxOverrides = Partial<{
   abortDeadline: number | null;
   roomMode: string;
   playAgainRequestBody: Record<string, unknown>;
+  pveEngineId: string | null;
   gameSpecId: string;
   drawOffer: Color | null;
   drawOfferCooldown: number;
@@ -96,6 +99,7 @@ function chromeHarness(
     isReplayLive: () => overrides.isReplayLive ?? true,
     orientation: () => 'white',
     playAgainRequestBody: () => overrides.playAgainRequestBody ?? {},
+    pveEngineId: () => overrides.pveEngineId ?? null,
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
     rated: () => overrides.rated ?? false,
@@ -570,6 +574,18 @@ describe('tenant room chrome player names', () => {
 });
 
 describe('tenant room chrome player discs', () => {
+  it.each(['mahjong', 'xiangqi-mahjong'])(
+    'omits live clock name discs for the inkless %s seats',
+    (gameSpecId) => {
+      const { chrome, refs } = chromeHarness({ gameSpecId });
+      chrome.renderClocks();
+      expect(refs.playerTop.querySelector('.seat-disc')).toBeNull();
+      expect(refs.playerBottom.querySelector('.seat-disc')).toBeNull();
+      expect(refs.playerTop.querySelector('.clock-name')).not.toBeNull();
+      expect(refs.playerBottom.querySelector('.clock-name')).not.toBeNull();
+    },
+  );
+
   function discClasses(refs: LiveRefs): string[] {
     return [...refs.gameInfo.querySelectorAll('.game-meta-card__disc')].map((disc) =>
       [...disc.classList].filter((name) => name.startsWith('seat-disc--')).join(' '),
@@ -690,6 +706,36 @@ describe('tenant room chrome bot rematch', () => {
     moveNumber: 9,
   };
 
+  it('keeps every tenant action in the phone sheet across finished-room snapshots', () => {
+    const media = window.matchMedia('(max-width: 600px)');
+    Object.defineProperty(media, 'matches', { value: true });
+    const spy = vi.spyOn(window, 'matchMedia').mockReturnValue(media);
+    const console = document.createElement('section');
+    console.className = 'game-console';
+    const { chrome, refs } = chromeHarness({
+      view: finished,
+      roomMode: 'pve',
+      playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi' },
+    });
+    console.append(refs.roomActions);
+    document.body.append(console);
+    try {
+      chrome.renderRoomActions();
+      const sheet = console.querySelector<HTMLDialogElement>('.postgame-sheet');
+      expect(sheet?.open).toBe(true);
+      expect(
+        [...sheet!.querySelectorAll('.postgame-actions > *')].map((el) => el.textContent),
+      ).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
+      sheet?.querySelector<HTMLButtonElement>('.postgame-sheet__close')?.click();
+      chrome.renderRoomActions();
+      expect(console.querySelector('dialog')).toBe(sheet);
+      expect(sheet?.open).toBe(false);
+    } finally {
+      spy.mockRestore();
+      console.remove();
+    }
+  });
+
   async function rematchBody(seat: Color): Promise<Record<string, unknown>> {
     const fetchSpy = vi.fn(async () => new Response('{}', { status: 500 }));
     vi.stubGlobal('fetch', fetchSpy);
@@ -720,6 +766,102 @@ describe('tenant room chrome bot rematch', () => {
       preferredColor: 'red',
     });
     expect(await rematchBody('red')).toMatchObject({ preferredColor: 'white' });
+  });
+
+  // Duck Xiangqi, Flip Jungle and both mahjongs sent a rematch body with no
+  // bot: the server picked its default bot, and the home panel's Play again
+  // row (which reads the last bot game this device started) skipped the
+  // rematch and kept naming an older game.
+  it('rematches the same bot and records it for the home Play again row', async () => {
+    localStorage.removeItem('mistboard:last-bot-game');
+    const fetchSpy = vi.fn(
+      async () => new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    try {
+      const { chrome, refs } = chromeHarness({
+        view: finished,
+        seat: 'white',
+        roomMode: 'pve',
+        pveEngineId: 'fairy-stockfish-duck-level-3',
+        playAgainRequestBody: {
+          mode: 'pve',
+          gameSpecId: 'duck-xiangqi',
+          preferredColor: 'random',
+          timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+        },
+      });
+      chrome.renderRoomActions();
+      refs.roomActions
+        .querySelector<HTMLButtonElement>('button.postgame-actions__rematch')
+        ?.click();
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
+      const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit;
+      expect(JSON.parse(String(init.body))).toMatchObject({
+        engineId: 'fairy-stockfish-duck-level-3',
+      });
+      expect(lastBotGame()).toEqual({
+        gameSpecId: 'duck-xiangqi',
+        botId: 'fairy-stockfish-duck-level-3',
+        timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+      });
+    } finally {
+      assign.mockRestore();
+      vi.unstubAllGlobals();
+      localStorage.removeItem('mistboard:last-bot-game');
+    }
+  });
+
+  // #825: the rematch opened the new game, but Back restored this page (from
+  // the back/forward cache) with the button stuck on a disabled "Creating".
+  it('is Rematch again once the room exists, and a second click reuses that room', async () => {
+    let resolveFetch: (response: Response) => void = () => {};
+    const fetchSpy = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    try {
+      const { chrome, refs } = chromeHarness({
+        view: finished,
+        seat: 'white',
+        roomMode: 'pve',
+        playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi' },
+      });
+      chrome.renderRoomActions();
+      const button = () =>
+        refs.roomActions.querySelector<HTMLButtonElement>('button.postgame-actions__rematch');
+      button()?.click();
+      await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+      expect(button()?.textContent).toBe('Creating');
+      expect(button()?.disabled).toBe(true);
+      // A double click while the request is out makes no second room.
+      button()?.dispatchEvent(new MouseEvent('click'));
+      resolveFetch(new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }));
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
+      // The page as Back finds it.
+      expect(button()?.textContent).toBe('Rematch');
+      expect(button()?.disabled).toBe(false);
+      button()?.click();
+      expect(assign).toHaveBeenCalledTimes(2);
+      expect(assign).toHaveBeenLastCalledWith('/r/next');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      assign.mockRestore();
+      vi.unstubAllGlobals();
+      localStorage.removeItem('mistboard:last-bot-game');
+    }
+  });
+
+  it('keeps a bot the tenant body already names', () => {
+    const body = { mode: 'pve', gameSpecId: 'xiangqi', engineId: 'pikafish-level-4' };
+    expect(withRoomBot(body, 'pikafish-level-8')).toBe(body);
+    expect(withRoomBot({ mode: 'pvp' }, 'pikafish-level-8')).toEqual({ mode: 'pvp' });
+    expect(withRoomBot({ mode: 'pve' }, null)).toEqual({ mode: 'pve' });
   });
 });
 

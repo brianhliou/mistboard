@@ -1,3 +1,16 @@
+/* Accessible page names for board tools without a visible title row. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .site-nav {
   /* Shared navigation is a brand-token boundary. Route palettes can safely
      redefine generic action colors without recoloring nav dropdowns. */
@@ -512,11 +525,6 @@ a.site-nav-link[hidden],
   color: var(--site-muted);
   text-decoration: none;
   font-weight: 600;
-}
-
-.landing-footer a:hover {
-  color: var(--site-text);
-  text-decoration: underline;
 }
 
 /* Phones keep the same four links (Brian 2026-10-17). After the base rules on

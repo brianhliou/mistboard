@@ -15,7 +15,7 @@ const MATCH_FIXING_THUMBNAIL = [
       `<rect x="${28 + i * 20}" y="88" width="13" height="26" rx="3" fill="${kind === 'R' ? '#c96f62' : '#5da271'}"/>`,
   ),
   '<text x="28" y="142" font-family="Roboto, system-ui, sans-serif" font-size="15" font-weight="600" fill="#5a4626">10 of the last 13 champions</text>',
-  '<text x="28" y="166" font-family="Roboto, system-ui, sans-serif" font-size="12" letter-spacing="1.6" fill="#5a4626" opacity="0.72">CHINESE XIANGQI ASSOCIATION RULINGS</text>',
+  '<text x="28" y="166" font-family="Roboto, system-ui, sans-serif" font-size="11" letter-spacing="1.2" fill="#5a4626" opacity="0.72">CHINESE XIANGQI ASSOCIATION RULINGS</text>',
   '</svg>',
 ].join('');
 
@@ -46,6 +46,7 @@ export const xiangqiMatchFixingArticle: Article = {
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   // The title names the people searched for. Search Console (to 2026-10-17):
   // 232 impressions at about position 6 and 3 clicks under the old title, "The

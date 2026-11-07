@@ -11,15 +11,12 @@
 // no "?" case. Under the strips, the face-down pool lists what each ink still
 // has unrevealed: public arithmetic (start minus revealed minus captured) that
 // the player would otherwise do by hand.
-import type {
-  BanqiCapturedView,
-  BanqiColor,
-  BanqiGameStatus,
-  BanqiMove,
-  BanqiPieceRole,
-  BanqiPlayerBoard,
-} from '@mistboard/game';
-import { banqiFaceDownAtEnd, banqiRevealOdds } from './banqi-reveal-odds.js';
+//
+// Three Kingdoms banqi (live-three-kingdoms-banqi.ts) renders the same material:
+// the same 32 pieces, revealed captures and face-down tiles that never move,
+// only on a 9x5 grid, so the view is generic over the square type.
+import type { BanqiCapturedView, BanqiColor, BanqiPieceRole, BanqiSquare } from '@mistboard/game';
+import { type BanqiFamilyBoard, banqiFaceDownAtEnd, banqiRevealOdds } from './banqi-reveal-odds.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { t } from './i18n/catalog.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
@@ -35,10 +32,10 @@ export type BanqiMaterialSlots = {
 
 /** The masked view fields the material reads: the live wire view and the
  *  postgame per-ply view both carry them. */
-export type BanqiMaterialView = {
-  board: BanqiPlayerBoard;
+export type BanqiMaterialView<S extends string = BanqiSquare> = {
+  board: BanqiFamilyBoard<S>;
   captured: readonly BanqiCapturedView[];
-  status: BanqiGameStatus;
+  status: { type: string };
   ply: number;
 };
 
@@ -49,11 +46,12 @@ export type BanqiMaterialView = {
 // `moves` is the game's move log. A finished room's truth view has every tile
 // face up, which would empty the tally (#544); the log recovers which tiles were
 // still face-down when play ended, and the tally keeps showing those.
-export function renderBanqiMaterial<V extends BanqiMaterialView>(
+export function renderBanqiMaterial<S extends string, V extends BanqiMaterialView<S>>(
   slots: BanqiMaterialSlots,
   view: V | null,
   viewerInk: BanqiColor | null,
-  moves: readonly BanqiMove[] = [],
+  moves: readonly { from: S; to: S }[] = [],
+  options: { keepFinishedOdds?: boolean } = {},
 ): void {
   slots.capturesTop.replaceChildren();
   slots.capturesBottom.replaceChildren();
@@ -74,7 +72,13 @@ export function renderBanqiMaterial<V extends BanqiMaterialView>(
   const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
   const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
   const finished = view.status.type === 'finished';
-  const poolView = finished ? banqiFaceDownAtEnd(view, moves) : view;
+  // TK's final PlayerView already masks the remaining tiles, so it can keep
+  // its odds even without a complete log. Older truth views still need the
+  // log to recover the masked final position before computing the pool.
+  const maskedFinal =
+    options.keepFinishedOdds &&
+    Object.keys(view.board).some((square) => view.board[square as S]?.faceDown);
+  const poolView = finished && !maskedFinal ? banqiFaceDownAtEnd<S, V>(view, moves) : view;
   if (!poolView) return;
   const odds = banqiRevealOdds(poolView);
   renderHiddenPoolPanel(
@@ -84,10 +88,13 @@ export function renderBanqiMaterial<V extends BanqiMaterialView>(
       { color: bottom, label: banqiInkLabel(bottom), side: odds.pool[bottom] },
     ],
     glyph,
-    // While the game is on, each disc carries its reveal odds (#542); a finished
-    // game's tally is a record of what stayed hidden, so it carries none.
+    // TK keeps the last position's odds after play stops. poolView masks the
+    // unturned tiles before the same public pool arithmetic used during play.
     finished
-      ? { caption: t('live.faceDownAtEnd') }
+      ? {
+          caption: t('live.faceDownAtEnd'),
+          ...(options.keepFinishedOdds ? { odds } : {}),
+        }
       : view.status.type === 'playing' && odds.total > 0
         ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
         : {},

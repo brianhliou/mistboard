@@ -12,10 +12,16 @@ import {
 export type CrosstableTenantLookup = {
   forRoomId: (
     roomId: string,
-  ) => Pick<VariantTenantRegistration, 'export' | 'finishedGameOpensRoom'> | null;
+  ) => Pick<
+    VariantTenantRegistration,
+    'export' | 'finishedGameOpensRoom' | 'reviewRouteBase'
+  > | null;
   forSpecId: (
     gameSpecId: string,
-  ) => Pick<VariantTenantRegistration, 'export' | 'finishedGameOpensRoom'> | null;
+  ) => Pick<
+    VariantTenantRegistration,
+    'export' | 'finishedGameOpensRoom' | 'reviewRouteBase'
+  > | null;
 };
 
 export const REGISTRY_LOOKUP: CrosstableTenantLookup = {
@@ -30,13 +36,18 @@ export function crosstableReviewUrl(
   variant: string,
   lookup: CrosstableTenantLookup = REGISTRY_LOOKUP,
 ): string | null {
+  // A table whose room is its finished page links the room even when it also
+  // has an export or review page (Xiangqi Mahjong), as the web's
+  // finishedGameHref does; the two must agree (variant-registry-sync.test.ts).
+  const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);
+  if (tenant?.finishedGameOpensRoom) return `/room/${encodeURIComponent(roomId)}`;
   const routeBase =
     lookup.forRoomId(roomId)?.export?.gameRouteBase ??
     lookup.forSpecId(variant)?.export?.gameRouteBase ??
+    lookup.forRoomId(roomId)?.reviewRouteBase ??
+    lookup.forSpecId(variant)?.reviewRouteBase ??
     null;
   if (routeBase) return `${routeBase}/${encodeURIComponent(roomId)}`;
-  const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);
-  if (tenant?.finishedGameOpensRoom) return `/room/${encodeURIComponent(roomId)}`;
   if (CHESS_STACK_VARIANTS.has(variant)) return `/game/${encodeURIComponent(roomId)}`;
   return null;
 }

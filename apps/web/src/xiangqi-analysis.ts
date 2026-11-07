@@ -19,7 +19,7 @@ import {
 import {
   type GameOutcome,
   outcomeLabel,
-  terminationLabel,
+  terminationReason,
   variantDisplayLabel,
 } from './game-display.js';
 import { seatColorWord } from './variant-seat-label.js';
@@ -59,7 +59,7 @@ function finishedStatusLine(status: Extract<XiangqiGameStatus, { type: 'finished
     : { draw: true };
   return t('watch.resultByReason', {
     result: outcomeLabel(outcome),
-    reason: terminationLabel(status.reason),
+    reason: terminationReason(status.reason),
   });
 }
 

@@ -50,7 +50,7 @@ export function xiangqiFogRegion(
     "background-image:url('/fog/fog.webp')",
     'background-repeat:repeat',
     `background-size:${geo.cell}px ${geo.cell}px`,
-    `background-position:${off - x}px ${off - y}px`,
+    `background-position:${Math.round((off - x) * 100) / 100}px ${Math.round((off - y) * 100) / 100}px`,
   ].join(';');
   return `
     <defs>

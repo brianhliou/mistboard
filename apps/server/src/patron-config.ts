@@ -4,10 +4,12 @@
 // feature can land dark on main and be switched on by setting Railway env, the
 // same shape as the VITE_*_ENABLED variant flags.
 //
-// The tier catalog is the contract shared with the web donate selector: the
-// client sends a tier KEY (never an amount), the server maps it to a Stripe
-// price id from env. That keeps price selection server-authoritative — a client
-// can never name its own amount.
+// The tier catalog is the contract shared with the web donate selector: for a
+// preset the client sends a tier KEY (never an amount), the server maps it to a
+// Stripe price id from env. The one exception is the custom ("Other") amount:
+// the client names whole US dollars, the server validates the number on its own
+// (parseCustomAmountUsd) and builds the price inline, so the range is still
+// server-authoritative.
 
 export type PatronTierMode = 'subscription' | 'payment';
 
@@ -20,10 +22,12 @@ export type PatronTier = {
   // How long a one-time payment carries the badge (lichess's rule: one month
   // per $5). null for recurring tiers, whose period comes from Stripe.
   months: number | null;
+  // The preset's price in whole US dollars, stamped as usd_cents metadata.
+  amountUsd: number;
 };
 
-// USD-only v1. Multi-currency / a custom-amount slider are deferred (see
-// patron-track.md). The same amount ladder under two frequencies: monthly
+// USD-only v1. Multi-currency is deferred (see patron-track.md); the custom
+// amount below sits beside these presets. The same amount ladder under two frequencies: monthly
 // subscriptions and one-time payments. One-time exists because Alipay and
 // WeChat Pay, the wallets a mainland Chinese player actually holds, cannot be
 // charged in Checkout subscription mode; in payment mode Stripe offers them
@@ -39,6 +43,7 @@ export const PATRON_TIERS: readonly PatronTier[] = [
       mode: 'subscription',
       priceEnvVar: `STRIPE_PRICE_MONTHLY_${amount}`,
       months: null,
+      amountUsd: amount,
     }),
   ),
   ...AMOUNTS_USD.map(
@@ -47,6 +52,7 @@ export const PATRON_TIERS: readonly PatronTier[] = [
       mode: 'payment',
       priceEnvVar: `STRIPE_PRICE_ONCE_${amount}`,
       months: (amount / 5) * MONTHS_PER_5_USD,
+      amountUsd: amount,
     }),
   ),
 ];
@@ -57,6 +63,44 @@ export const PATRON_TIERS: readonly PatronTier[] = [
 export function oneTimeMonthsForAmount(amountTotalCents: number | null | undefined): number {
   if (typeof amountTotalCents !== 'number' || !Number.isFinite(amountTotalCents)) return 1;
   return Math.max(1, Math.floor(amountTotalCents / 500) * MONTHS_PER_5_USD);
+}
+
+// Custom ("Other") amounts: whole US dollars in [5, 1000]. They have no Stripe
+// price id; checkout builds price_data inline, and the server stamps the amount
+// as usd_cents metadata, which the webhook reads for one-time months. Months
+// never come from amount_total: Adaptive Pricing is on, so the session's
+// amount_total can be in the buyer's local currency.
+export const PATRON_CUSTOM_MIN_USD = 5;
+export const PATRON_CUSTOM_MAX_USD = 1000;
+export const PATRON_CUSTOM_TIER_KEYS = {
+  subscription: 'monthly_custom',
+  payment: 'once_custom',
+} as const satisfies Record<PatronTierMode, string>;
+
+export function customTierMode(key: string): PatronTierMode | null {
+  if (key === PATRON_CUSTOM_TIER_KEYS.subscription) return 'subscription';
+  if (key === PATRON_CUSTOM_TIER_KEYS.payment) return 'payment';
+  return null;
+}
+
+// A client-named amount: only an integer JSON number in range passes. Strings,
+// fractions, NaN and out-of-range numbers all fail, so the route answers 400.
+export function parseCustomAmountUsd(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  if (value < PATRON_CUSTOM_MIN_USD || value > PATRON_CUSTOM_MAX_USD) return null;
+  return value;
+}
+
+// One month per $5 of the USD amount the server stamped, floor, never zero.
+export function oneTimeMonthsForUsdCents(usdCents: number): number {
+  return Math.max(1, Math.floor(usdCents / 500) * MONTHS_PER_5_USD);
+}
+
+// The usd_cents metadata value the server wrote at checkout, or null when it is
+// missing or not a positive whole number of cents.
+export function usdCentsFromMetadata(value: string | null | undefined): number | null {
+  if (typeof value !== 'string' || !/^[1-9]\d{0,8}$/.test(value)) return null;
+  return Number(value);
 }
 
 export function findPatronTier(key: string): PatronTier | null {
@@ -70,6 +114,10 @@ export type PatronConfig = {
   priceByTier: ReadonlyMap<string, string>;
   // Where Stripe Checkout / Billing Portal redirect back to.
   publicHost: string;
+  // The existing Stripe patron product, when set (STRIPE_PATRON_PRODUCT_ID), so
+  // custom-amount prices attach to it; otherwise checkout names the product
+  // inline.
+  productId: string | null;
 };
 
 export function loadPatronConfig(env: NodeJS.ProcessEnv = process.env): PatronConfig | null {
@@ -88,6 +136,7 @@ export function loadPatronConfig(env: NodeJS.ProcessEnv = process.env): PatronCo
     webhookSecret,
     priceByTier,
     publicHost: env.MISTBOARD_HOST ?? 'https://mistboard.com',
+    productId: env.STRIPE_PATRON_PRODUCT_ID?.trim() || null,
   };
 }
 

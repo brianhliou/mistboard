@@ -4,7 +4,8 @@ import type { Article } from '../types.js';
 // Card art: the challenge as a question over the mate it asks for, Black's
 // chariots on c1 and g2 closing Red's general on e1. The headline template of
 // xqHalfBoardThumbnailSvg.
-const GENERAL_BLUNDER_CHALLENGE_THUMBNAIL = xqHalfBoardThumbnailSvg({
+const GENERAL_BLUNDER_CHALLENGE_THUMBNAIL = (): string =>
+  xqHalfBoardThumbnailSvg({
   state: xqVisionDemoState('general-blunder-challenge-thumb', {
     e1: { color: 'red', role: 'general' },
     c1: { color: 'black', role: 'chariot' },
@@ -36,6 +37,7 @@ export const generalBlunderChallengeArticle: Article = {
   slug: 'general-blunder-challenge',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   title: 'Can you make General Blunder win?',
   cardTitle: 'Make General Blunder win',
   seoTitle: 'The General Blunder challenge: draw or lose to a xiangqi bot that tries to lose',

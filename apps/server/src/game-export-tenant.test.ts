@@ -5,6 +5,7 @@ import {
   banqiPlyReveal,
   banqiStateToDealtFen,
   createInitialBanqiState,
+  createStandardXiangqiStateFromSetup,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   exportFormatsForVariant,
@@ -51,8 +52,12 @@ import { xiangqiTenant } from './xiangqi-tenant.js';
 const xiangqiExport = tenantExportBinding(xiangqiTenant, {
   gameRouteBase: '/xiangqi/game',
   uci: xiangqiExportUci,
-  san: xiangqiWxfLabels,
-  writePgn: (moves) => xiangqiPgnWriter(moves, xiangqiPgnStyle(moves)),
+  san: (moves, state) =>
+    xiangqiWxfLabels(moves, createStandardXiangqiStateFromSetup(state.id, state)),
+  writePgn: (moves, state) => {
+    const initial = createStandardXiangqiStateFromSetup(state.id, state);
+    return xiangqiPgnWriter(moves, xiangqiPgnStyle(moves, initial), initial);
+  },
 });
 const darkXiangqiExport = tenantExportBinding(darkXiangqiTenant, {
   gameRouteBase: '/dark-xiangqi/game',
@@ -143,9 +148,9 @@ const xiangqiClock = {
   runningSince: 10,
 };
 
-function finishedXiangqiEvents(): unknown[] {
+function finishedXiangqiEvents(setup?: unknown): unknown[] {
   return [
-    ...preamble(XQ_ROOM, XIANGQI_SPEC_ID),
+    ...preamble(XQ_ROOM, XIANGQI_SPEC_ID, setup),
     {
       type: 'move-played',
       at: 10,
@@ -198,6 +203,18 @@ test('xiangqi JSON publication is keyed red/black with ICCS uci and WXF san', ()
   assert.equal(payload.plies[1]?.red_clock_ms_after, null);
   assert.equal(payload.plies[2]?.uci, 'b0c2');
   assert.equal(payload.plies[2]?.san, 'H8+7');
+
+  // The stored rule stamp controls replay without changing the publication schema.
+  const stampedGame = xiangqiExport.finishedGame(
+    finishedXiangqiEvents({ progressClockLimit: 120 }),
+    XQ_ROOM,
+  );
+  assert.ok(stampedGame);
+  assert.deepEqual(
+    buildTenantGamePublicationJson(summary, stampedGame, xiangqiExport.gameRouteBase),
+    payload,
+  );
+  assert.equal(JSON.stringify(payload).includes('progressClockLimit'), false);
 });
 
 test('xiangqi PGN carries Red/Black tags, the review URL, and WXF movetext', () => {
@@ -532,6 +549,28 @@ test('unknown variants and spec mismatches are 501, never another builder', () =
 
 // ── registry conformance ─────────────────────────────────────────────────────
 
+test('FFQ banqi explicitly exports nothing and returns no replay data', () => {
+  assert.ok(Object.hasOwn(GAME_EXPORT_FORMATS, 'ffq-banqi'), 'explicit unavailable capability');
+  assert.deepEqual(exportFormatsForVariant('ffq-banqi'), []);
+  for (const format of ['pgn', 'json'] as const) {
+    const response = resolveGameExport({
+      roomId: 'ffq_export',
+      format,
+      summary: gameRecord({ roomId: 'ffq_export', variant: 'ffq-banqi' }),
+      events: preamble('ffq_export', 'ffq-banqi'),
+      tenantForRoomId: () => null,
+    });
+    assert.equal(
+      JSON.stringify(response),
+      JSON.stringify({
+        status: 501,
+        body: { error: 'export_not_supported_for_variant', variant: 'ffq-banqi' },
+      }),
+      format,
+    );
+  }
+});
+
 test('every registered tenant binds an export exactly when the format table lists it', async () => {
   // Side-effect import: populates the registry with the real registrations.
   await import('./variant-tenant/register-tenants.js');
@@ -570,11 +609,15 @@ test('the PGN Variant tag is the registry public name for every exported tenant 
     'crazyhouse-xiangqi': 'Crazyhouse Xiangqi',
     jungle: 'Jungle Chess',
     'jungle-flip': 'Flip Jungle',
+    gomoku: 'Gomoku',
+    'xiangqi-mahjong': 'Xiangqi Mahjong',
   };
   // A variant that starts exporting must be pinned here.
   assert.deepEqual(
     Object.keys(GAME_EXPORT_FORMATS)
-      .filter((variant) => variant !== DARK_CHESS_SPEC_ID)
+      .filter(
+        (variant) => variant !== DARK_CHESS_SPEC_ID && exportFormatsForVariant(variant).length > 0,
+      )
       .sort(),
     Object.keys(expected).sort(),
   );

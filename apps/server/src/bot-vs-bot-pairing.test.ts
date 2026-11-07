@@ -74,7 +74,6 @@ test('each variant ladder is the engines its first-party bots play, and only its
     'xiangqi',
     'jieqi',
     'duck-xiangqi',
-    'atomic-xiangqi',
     'crazyhouse-xiangqi',
     'fortress-xiangqi',
     'banqi',
@@ -103,7 +102,7 @@ test('each variant ladder is the engines its first-party bots play, and only its
   assert.equal(botLadderFor('constructor'), null);
 });
 
-test('the jieqi EvE ladder schedules jqe only while MISTBOARD_JQE_ENABLED is on, above AB-JChess', () => {
+test('the jieqi EvE ladder schedules jqe only while MISTBOARD_JQE_ENABLED is on, under AB-JChess', () => {
   const prior = process.env.MISTBOARD_JQE_ENABLED;
   try {
     delete process.env.MISTBOARD_JQE_ENABLED;
@@ -112,10 +111,18 @@ test('the jieqi EvE ladder schedules jqe only while MISTBOARD_JQE_ENABLED is on,
     assert.equal(off.at(-1), JIEQI_ABJCHESS_ENGINE_ID);
     process.env.MISTBOARD_JQE_ENABLED = '1';
     const on = botLadderFor('jieqi')!;
-    assert.deepEqual(on.slice(-2), [JIEQI_ABJCHESS_ENGINE_ID, JIEQI_JQE_ENGINE_ID]);
-    assert.deepEqual(on.slice(0, -1), off);
+    // AB-JChess-20261031 took the top back from jqe (2026-10-31): jqe is one rung under it.
+    assert.deepEqual(on.slice(-2), [JIEQI_JQE_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID]);
+    assert.deepEqual(
+      on.filter((id) => id !== JIEQI_JQE_ENGINE_ID),
+      off,
+    );
   } finally {
     if (prior === undefined) delete process.env.MISTBOARD_JQE_ENABLED;
     else process.env.MISTBOARD_JQE_ENABLED = prior;
   }
+});
+
+test('retired atomic has no scheduled bot ladder', () => {
+  assert.equal(botLadderFor('atomic-xiangqi'), null);
 });

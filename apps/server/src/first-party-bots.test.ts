@@ -90,7 +90,7 @@ test('live Jieqi seats keep every ladder label while linking to the bot identity
 test('live seat labels preserve other bot brands, historical tiers and unknown engines', () => {
   assert.equal(
     liveSeatEngineName('pikafish-xiangqi-level-8', 'pikafish', () => 'Tier'),
-    'Pikafish Level 8',
+    'Pikafish',
   );
   assert.equal(
     liveSeatEngineName('pikafish-jieqi-amateur', 'pikafish', () => 'Old tier'),
@@ -116,9 +116,14 @@ test('a finished bot seat stored with the bare bot name reads back with its rung
     engineId: 'pikafish-jieqi-strongest',
   };
   assert.equal(persistedSeatDisplayName(stored), 'Pikafish Level 8');
+  // A xiangqi seat stored as "Pikafish Level 8" (10-23 to this fix) reads plain.
   assert.equal(
-    persistedSeatDisplayName({ ...stored, engineId: 'pikafish-xiangqi-level-8' }),
-    'Pikafish Level 8',
+    persistedSeatDisplayName({
+      ...stored,
+      displayName: 'Pikafish Level 8',
+      engineId: 'pikafish-xiangqi-level-8',
+    }),
+    'Pikafish',
   );
   // A legacy bot id still resolves to the merged profile.
   assert.equal(

@@ -47,3 +47,12 @@
   stroke-opacity: 0.8;
   pointer-events: none;
 }
+
+/* A 3D piece's destination: its edge in gold, multiplied onto the edge's own
+   shading so it still reads as the side of the piece (boardLastMoveEdgeSvg). */
+.xq-live-lastmove-edge {
+  fill: var(--board-highlight, #d6af4e);
+  fill-opacity: 0.9;
+  stroke: none;
+  mix-blend-mode: multiply;
+}

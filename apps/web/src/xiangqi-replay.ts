@@ -19,7 +19,8 @@ import {
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import { articleAnalysisLoader } from './article-replay-analysis.js';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import './board-glyph-marker.css';
 import './embed/embed-credit.css';
 import {
@@ -31,7 +32,7 @@ import {
   boardLastMoveOuterRadius,
   boardLastMovePiece,
 } from './board-lastmove.js';
-import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
@@ -59,11 +60,7 @@ import {
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
-import {
-  renderXiangqiPieceGlyphed,
-  XIANGQI_PIECE_SETS,
-  xiangqiPieceSetShape,
-} from './xiangqi-piece-sets.js';
+import { renderXiangqiPieceGlyphed, XIANGQI_PIECE_SETS } from './xiangqi-piece-sets.js';
 import type { ReplayChartSource } from './xiangqi-replay-chart.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
@@ -333,7 +330,7 @@ function gridSvg(board: ReplayBoard): string {
   } else {
     parts.push(
       `<g class="xq-diagram-line" stroke-width="1">${xiangqiSurfacePalace(surface, perspective, layout)}</g>`,
-      xiangqiDiagramRiverText(margin + 4 * cell, margin + 4.5 * cell + 1),
+      xiangqiDiagramRiverText(margin + 4 * cell, margin + 4.5 * cell + 1, cell),
     );
   }
   if (board.coords) {
@@ -422,12 +419,12 @@ function glideReplayMove(
   const from = pointXY(o.file, o.rank, board);
   const to = pointXY(s.file, s.rank, board);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(frame, duration);
   // Forward only: a back step draws the PRIOR move's markers somewhere else, so
   // neither would track this glide. The gold band rides on the piece; the
-  // judgment badge fades in as the piece lands.
+  // judgment badge fades in after the piece lands.
   if (!reverse) {
     animateBoardLastMoveArrival(frame, from, to, duration);
-    drawMarkerOnArrival(frame.querySelector('.xq-marker--glyph'), duration);
   }
 }
 
@@ -441,8 +438,8 @@ function lastMoveSvg(move: XiangqiMove, board: ReplayBoard, layer: BoardLastMove
   // The square grid gets its own marks (board-lastmove.ts), traced on the piece drawn.
   if (board.layout === 'cell') {
     return boardLastMoveCellMarksSvg(ends, board.surface.geo.cell, layer, {
-      size: PIECE_DRAWN,
-      shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
+      size: xiangqiPieceCellBox(PIECE_DRAWN),
+      set: readStoredXiangqiPieceSet(),
     });
   }
   return boardLastMoveMarkersSvg(

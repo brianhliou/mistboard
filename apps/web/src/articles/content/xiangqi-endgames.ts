@@ -91,6 +91,7 @@ export const xiangqiEndgamesArticle: Article = {
   slug: 'xiangqi-endgames',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: T.title.en,
   seoTitle: T.seoTitle.en,

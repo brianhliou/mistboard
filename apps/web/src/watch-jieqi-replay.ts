@@ -20,6 +20,7 @@ import {
 } from './live-jieqi-postgame.js';
 import {
   animateJieqiBoardMove,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   type JieqiBoardArrow,
   type JieqiBoardMarker,
@@ -108,10 +109,14 @@ export function mountJieqiWatchReplay(
       // One-ply steps glide (pieceAnimation pref): forward animates the newly
       // rendered view's lastMove; a back step reverse-animates the move the
       // previous ply carried. Moves come from the watch payload's views only.
+      // A forward step that turned its piece face up turns it over on the way.
       animateMove: (boardEl, view, prevView, direction, orientation) => {
         const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
         if (!move) return;
         animateJieqiBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
+        if (direction === 'forward') {
+          animateJieqiStepReveal(boardEl, move, prevView?.board, view.board, orientation);
+        }
       },
       // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
       moveSound: watchJieqiMoveSound,

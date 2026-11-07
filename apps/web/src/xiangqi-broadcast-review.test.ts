@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAdvantageChart } from './review/advantage-chart.js';
-import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
+import { mountBroadcastBoardReview, mountBroadcastHeldBoard } from './xiangqi-broadcast-review.js';
 
 vi.mock('./review/advantage-chart.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./review/advantage-chart.js')>();
@@ -180,6 +180,59 @@ describe('finished broadcast locale fixtures', () => {
   });
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'keeps the held-record view and the game date localized in %s',
+    (locale) => {
+      const english = locale === 'en';
+      window.history.replaceState(
+        null,
+        '',
+        `${english ? '' : `/${locale.toLowerCase()}`}/broadcast/xiangqi/board/held`,
+      );
+      const root = document.createElement('div');
+      const ownName = { nameOwn: '趙奕帆' };
+      mountBroadcastHeldBoard(root, {
+        board: {
+          id: 'held',
+          tourSlug: 'test',
+          roundId: 'r1',
+          boardNumber: 1,
+          red: { ...ownName, name: '赵奕帆', nameEn: 'Chao Yi-fan' },
+          black: { name: '無名', nameEn: ' ' },
+          result: '1-0',
+          recordWithheld: 'ambiguous',
+          details: { playedAt: '2026-09-11' },
+          sourceUrl: 'https://example.com/record',
+        },
+        context: {
+          tour: { name: '测试杯', nameEn: 'Test Cup' },
+          round: { name: '第1轮', nameEn: 'Round 1', startsAt: '2026-09-13T14:30:00+08:00' },
+        },
+      });
+      expect(root.querySelector('h1')?.textContent).toBe(
+        english
+          ? 'Chao Yi-fan vs 無名'
+          : locale === 'zh-Hans'
+            ? '趙奕帆 对 無名'
+            : '趙奕帆 對 無名',
+      );
+      expect(root.querySelector('.xqb-held-note')?.textContent).toBe(
+        english
+          ? "The source record of this game can be read two ways, so it isn't replayed."
+          : locale === 'zh-Hans'
+            ? '本局的来源棋谱有两种读法，因此不提供回放。'
+            : '本局的來源棋譜有兩種讀法，因此不提供回放。',
+      );
+      expect(root.querySelector('.xqb-held-note a')?.getAttribute('href')).toBe(
+        'https://example.com/record',
+      );
+      expect(root.querySelector('.review-provenance')?.textContent).toContain(
+        english ? 'Sep 11, 2026' : '2026年9月11日',
+      );
+      expect(root.querySelector('.review-board-host')).toBeNull();
+    },
+  );
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
     'localizes seats, provenance and chart phases while preserving PGN in %s',
     async (locale) => {
       const english = locale === 'en';
@@ -235,7 +288,7 @@ describe('finished broadcast locale fixtures', () => {
         english ? 'Taiwan' : '台灣',
       );
       expect(root.querySelector('.review-provenance')?.textContent).toContain(
-        english ? 'Round 1' : locale === 'zh-Hans' ? '第 1 轮' : '第 1 輪',
+        english ? 'Round 1' : locale === 'zh-Hans' ? '第1轮' : '第1輪',
       );
       await vi.waitFor(() => expect(createAdvantageChart).toHaveBeenCalled());
       expect(vi.mocked(createAdvantageChart).mock.calls.at(-1)?.[1]?.phaseLabels).toEqual(

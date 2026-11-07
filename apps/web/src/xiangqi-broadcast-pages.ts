@@ -11,16 +11,16 @@ import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
-import { formatEventDay } from './xiangqi-broadcast-time.js';
+import { localName, localPlace, localTitle } from './xiangqi-broadcast-names.js';
+import { formatEventDateRange } from './xiangqi-broadcast-time.js';
 
 type BroadcastName = { name: string; nameEn?: string | null; nameOwn?: string };
 
-/** Names are source text: choose a translation, never convert their script.
- * The player's own spelling wins over an archive's normalized Chinese key. */
+/** Keep the source's own spelling, including Taiwanese names, in either Chinese locale. */
 export function broadcastName(entity: BroadcastName, locale: Locale = currentLocale()): string {
   const own = entity.nameOwn?.trim() || entity.name.trim();
   const en = entity.nameEn?.trim();
-  return locale === 'en' ? en || own : own || en || '';
+  return localName({ name: own || en || '', nameEn: en }, locale);
 }
 
 export function broadcastSecondaryName(entity: BroadcastName): string | null {
@@ -28,33 +28,17 @@ export function broadcastSecondaryName(entity: BroadcastName): string | null {
   return other && other !== broadcastName(entity) ? other : null;
 }
 
-/** Translate only generated round labels; keep authored stage names intact. */
+/** Only generated round numbers are translated; authored stage names stay intact. */
 export function broadcastRoundName(entity: BroadcastName): string {
-  const match = entity.name.match(/^\s*(?:第\s*(\d+)\s*[轮輪]|Round\s+(\d+))\s*$/i);
-  return match ? t('study.rowRound', { n: match[1] ?? match[2]! }) : broadcastName(entity);
+  const name = broadcastName(entity);
+  const match = name.match(/^\s*(?:第\s*(\d+)\s*[轮輪]|Round\s+(\d+))\s*$/i);
+  return match ? t('broadcast.roundNumber', { n: Number(match[1] ?? match[2]) }) : name;
 }
 
-export function broadcastCount(
-  n: number,
-  kind: 'round' | 'board' | 'game' | 'ply' | 'player' | 'move',
-): string {
-  const keys = {
-    round: ['broadcast.roundCountOne', 'broadcast.roundCount'],
-    board: ['broadcast.boardCountOne', 'broadcast.boardCount'],
-    game: ['broadcast.gameCountOne', 'broadcast.gameCount'],
-    ply: ['broadcast.plyCountOne', 'broadcast.plyCount'],
-    player: ['broadcast.playersCountOne', 'broadcast.playersCount'],
-    move: ['broadcast.moveCountOne', 'broadcast.moveCount'],
-  } as const;
-  return t(keys[kind][n === 1 ? 0 : 1], { n });
-}
-
-export function broadcastDateRange(startsAt?: string, endsAt?: string): string | null {
-  const start = formatEventDay(startsAt, currentLocale());
-  const end = formatEventDay(endsAt, currentLocale());
-  return start && end && start !== end
-    ? t('broadcast.playerFactSeenRange', { from: start, to: end })
-    : (start ?? end);
+export function broadcastCount(n: number, kind: 'ply' | 'player'): string {
+  return kind === 'player'
+    ? t(n === 1 ? 'broadcast.playersCountOne' : 'broadcast.playersCount', { n })
+    : t(n === 1 ? 'broadcast.plyCountOne' : 'broadcast.plyCount', { n });
 }
 
 export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
@@ -108,13 +92,27 @@ export function broadcastSectionLayout(
  * `?about=`, so the message arrives labelled with the page it is about.
  * One element for all of them, so every page says it the same way.
  */
-export function rightsContactNote(path: string = window.location.pathname): HTMLElement {
+// 'event' is the broadcast wording (organisers, game rights); 'corrections' is
+// the shorter line for player and team pages and player articles.
+export function rightsContactNote(
+  path: string = window.location.pathname,
+  kind: 'event' | 'corrections' = 'event',
+): HTMLElement {
   const note = document.createElement('p');
   note.className = 'xqb-rights-note';
   const link = document.createElement('a');
   link.href = localizedHref(`/contact?about=${encodeURIComponent(path)}`);
-  link.textContent = t('contact.rightsLink');
-  note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  // Each page's ?about= copy of /contact read to a crawler as another URL for
+  // it (Search Console, 2026-10-19); /contact canonicalises to the bare path,
+  // and nofollow stops crawlers minting new copies. The form still prefills.
+  link.rel = 'nofollow';
+  if (kind === 'corrections') {
+    link.textContent = t('contact.correctionsLink');
+    note.append(t('contact.correctionsPrefix'), link, t('contact.correctionsSuffix'));
+  } else {
+    link.textContent = t('contact.rightsLink');
+    note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  }
   return note;
 }
 
@@ -148,7 +146,7 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
     // rulings may have revoked is hidden here too (players/sanctions.ts).
     const shown =
       player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn ?? undefined });
-    return shown ? `${shown} ${name}` : name;
+    return shown ? `${localTitle(shown)} ${name}` : name;
   });
 }
 
@@ -189,14 +187,14 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   const when = document.createElement('span');
   when.className = 'xqb-cal-when';
   when.textContent =
-    broadcastDateRange(`${event.startsOn}T12:00:00+08:00`, `${event.endsOn}T12:00:00+08:00`) ??
+    formatEventDateRange(`${event.startsOn}T12:00:00+08:00`, `${event.endsOn}T12:00:00+08:00`) ??
     event.startsOn;
   const what = document.createElement('span');
   what.className = 'xqb-cal-what';
   const name = document.createElement('strong');
   name.textContent = broadcastName(event);
   what.append(name);
-  const sub = [broadcastSecondaryName(event), event.location || null].filter(Boolean).join(' · ');
+  const sub = localPlace(event.location) ?? '';
   if (sub) {
     const line = document.createElement('span');
     line.className = 'xqb-cal-sub';

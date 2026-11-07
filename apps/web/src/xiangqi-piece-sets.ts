@@ -18,6 +18,7 @@ import {
   type XiangqiPiece,
   type XiangqiPieceRole,
 } from '@mistboard/game';
+import { XIANGQI_PIECE_CELL_INSET } from './board-metrics.js';
 
 export type XiangqiPieceSet =
   | 'international'
@@ -151,7 +152,7 @@ export function xiangqiPieceSetShape(
 const frameShape = xiangqiPieceSetShape;
 
 /** Corner radius of the rounded square per unit of half-width (14 at 46). */
-const SQUARE_CORNER_PER_HALF = 14 / 46;
+export const SQUARE_CORNER_PER_HALF = 14 / 46;
 
 /**
  * A disc of radius `half`, or the rounded square of the same half-width, centred
@@ -175,6 +176,9 @@ export type XiangqiPieceRenderOptions = {
   ariaLabel?: string;
   shrouded?: boolean;
   shroudedStyle?: XiangqiShroudedStyle;
+  /** The back's outline width in the 100-unit box (default BACK_STROKE); a 3D
+   *  piece passes its face's ring width. */
+  backStroke?: number;
   className?: string;
   x?: number;
   y?: number;
@@ -188,7 +192,12 @@ export type XiangqiPieceRenderOptions = {
   shadow?: boolean;
   // The board's outline for the piece (xiangqiPieceShapeForLayout). The image and
   // character sets draw the square; the asset sets stay discs. Default disc.
+  // Asked for the square, the art also draws inset to XIANGQI_PIECE_CELL_REACH
+  // of its square (every set: it is the Square grid's size, not the outline's).
   shape?: XiangqiPieceShape;
+  // Fill the given box even on the Square grid: for a caller that sized the box
+  // itself (the 3D piece's face).
+  fullBox?: boolean;
 };
 
 export function xiangqiGlyph(
@@ -297,7 +306,11 @@ export function renderXiangqiPieceGlyphed(
     (opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
       ? ` x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${opts.size ?? 100}" height="${opts.size ?? 100}"`
       : '') + overflowAttr;
-  const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
+  const inset = opts.shape === 'square' && !opts.fullBox ? XIANGQI_PIECE_CELL_INSET : 0;
+  const viewBox = inset
+    ? `${-inset} ${-inset} ${100 + 2 * inset} ${100 + 2 * inset}`
+    : '0 0 100 100';
+  const open = `<svg${classAttr}${posAttrs} viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
   if (isAssetPieceSet(set)) {
     if (!opts.shrouded) {
       return `${open}${shadow}${assetImageMark(assetPieceHref(set, piece.color, piece.role))}</svg>`;
@@ -309,7 +322,7 @@ export function renderXiangqiPieceGlyphed(
     return `${open}${shadow}${assetImageMark(assetPieceHref(set, piece.color, 'back'))}${question}</svg>`;
   }
   if (opts.shrouded && opts.shroudedStyle === 'back') {
-    return [open, shadow, pieceBackMark(piece.color, shape), `</svg>`].join('');
+    return [open, shadow, pieceBackMark(piece.color, shape, opts.backStroke), `</svg>`].join('');
   }
   // A shrouded "?" token on an image set (international / animal) draws over that
   // set's single-ring disc so the hidden token sits flush with its revealed
@@ -424,9 +437,15 @@ export function xiangqiPieceShadowMarks(
   cy = 50,
   box = 100,
   shape: XiangqiPieceShape = 'disc',
+  tune: {
+    dy: number;
+    spread: readonly number[];
+    opacity: number;
+    color: string;
+  } = XIANGQI_PIECE_SHADOW,
 ): string {
   const k = box / 100;
-  const { dy, spread, opacity, color } = XIANGQI_PIECE_SHADOW;
+  const { dy, spread, opacity, color } = tune;
   // One translate on the group instead of cx/cy on every circle: an article
   // diagram draws this under every piece, and its markup budget is per board.
   const layers = spread
@@ -455,6 +474,16 @@ export function xiangqiPieceDiscShadow(
     100,
     frameShape(set, opts.shape),
   );
+}
+
+/** The width of a face-up piece's outer ring in the 100-unit box: the glyph
+ *  sets' 2.5 (xiangqiGlyphFrameMarks), the image sets' 2.8. A 3D piece draws its
+ *  back and its rim's lower edge at this width, so the piece reads as one
+ *  object face up or down (piece-3d.ts). */
+export function xiangqiPieceRingWidth(set: XiangqiPieceSet): number {
+  return isAssetPieceSet(set) || set === 'international' || isAnimalPieceSet(set)
+    ? IMAGE_RING
+    : 2.5;
 }
 
 /** The outer radius (half-width, for a square) of the outline a set draws,
@@ -497,16 +526,22 @@ const PIECE_EDGE = 46;
 /** The image sets' ring (international and Dobutsu alike). */
 const IMAGE_RING = 2.8;
 const BACK_STROKE = 3;
+/** Banqi's face-down edge (.banqi-back > circle, live-banqi-render.ts). */
+const BACK_EDGE = '#202427';
 
-function pieceBackMark(color: XiangqiColor, shape: XiangqiPieceShape = 'disc'): string {
+function pieceBackMark(
+  color: XiangqiColor,
+  shape: XiangqiPieceShape = 'disc',
+  width = BACK_STROKE,
+): string {
   const fill = color === 'red' ? '#a95f4a' : '#2f7d62';
-  // Each outline about half its fill's brightness, so the red back's edge
-  // reads as firmly as the green one's (Brian, 2026-10-17).
-  const stroke = color === 'red' ? '#553025' : '#174536';
+  // One black edge on both backs, banqi's (Brian, 2026-10-28: "a black
+  // outline like Banqi"; was each fill at half brightness from 2026-10-17).
+  const stroke = BACK_EDGE;
   return xiangqiPieceFrameOutline(
     shape,
     PIECE_EDGE,
-    `class="xq-piece-back-mark" fill="${fill}" stroke="${stroke}" stroke-width="${BACK_STROKE}"`,
+    `class="xq-piece-back-mark" fill="${fill}" stroke="${stroke}" stroke-width="${width}"`,
   );
 }
 
@@ -607,7 +642,7 @@ type AssetSetSpec = {
 };
 
 const ASSET_SETS: Record<AssetXiangqiPieceSet, AssetSetSpec> = {
-  lacquer: { version: 2, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
+  lacquer: { version: 3, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
   wood: { version: 1, ink: { red: '#ae1d04', black: '#1e1e1a' }, neutralBack: 'red' },
   book: { version: 1, ink: { red: '#ff0000', black: '#000000' }, neutralBack: null },
   brush: { version: 2, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
@@ -791,7 +826,7 @@ export function animalDuckHref(): string {
 const DUCK_ART_FILL = 0.796;
 
 /** A box whose DRAWN art reaches `radius`, given the master's own padding. */
-function duckBoxForRadius(radius: number): number {
+function _duckBoxForRadius(radius: number): number {
   return Math.round((2 * radius) / DUCK_ART_FILL);
 }
 

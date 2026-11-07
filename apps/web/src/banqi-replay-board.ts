@@ -15,6 +15,7 @@ import {
 } from '@mistboard/game';
 import {
   animateBanqiBoardMove,
+  animateBanqiReveal,
   type BanqiBoardArrow,
   banqiArrowSvg,
   installBanqiBoardStyles,
@@ -126,7 +127,14 @@ export function mountBanqiReplayBoard(
   };
   const render = (glide?: { move: BanqiMove | undefined; reverse: boolean }): void => {
     paint();
-    if (glide?.move) animateBanqiBoardMove(frame, glide.move, { reverse: glide.reverse });
+    // A step onto a flip turns the tile over; a step back over one just
+    // shows the back again.
+    const move = glide?.move;
+    if (move && move.from === move.to) {
+      if (!glide.reverse) animateBanqiReveal(frame, move.to);
+    } else if (move) {
+      animateBanqiBoardMove(frame, move, { reverse: glide.reverse });
+    }
     if (inLine) hooks.onLineChange?.(inLine.atPly, inLine.cursor);
     else hooks.onPlyChange?.(index, total);
   };

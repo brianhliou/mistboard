@@ -57,6 +57,7 @@ import {
   lastSeat,
   TENANT_SERVER_ONLY_EVENT_TYPES,
   tenantSeatMayAct,
+  tenantTurnOrder,
 } from './tenant.js';
 
 export type TenantRoomCreation<
@@ -238,6 +239,42 @@ export function expireTenantClock<C extends string>(
     },
     runningSince: null,
   };
+}
+
+/** Resolve an expiry request only once it reaches the serialized event writer. */
+export function tenantClockExpiryEventFor<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  projection: TenantProjection<C, State, Spec>,
+  expiry: Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-expired' }>,
+): TenantRoomEvent<C, M, Spec> | null {
+  const clock = projection.clock;
+  if (
+    expiry.roomId !== projection.roomId ||
+    projection.state.status.type !== 'playing' ||
+    projection.paused ||
+    !clock ||
+    clock.activeColor !== expiry.color ||
+    clock.runningSince === null ||
+    expiry.at < clock.runningSince ||
+    tenantClockRemainingMs(clock, expiry.color, expiry.at) > 0
+  )
+    return null;
+  const move = tenant.rules.clockExpiryMove?.(projection.state, expiry.color, expiry.at);
+  if (
+    move != null &&
+    tenantSeatMayAct(tenant, projection.state, expiry.color) &&
+    tenant.rules.isLegalMove(projection.state, move)
+  ) {
+    return { type: 'move-played', at: expiry.at, roomId: expiry.roomId, color: expiry.color, move };
+  }
+  return { ...expiry, clock: expireTenantClock(clock, expiry.at, expiry.color)! };
 }
 
 export function freezeTenantClock<C extends string>(
@@ -620,7 +657,9 @@ export function applyTenantEvent<
       clock:
         event.clock ??
         nextTenantClockForMove(
-          tenant,
+          tenant.firstMover
+            ? { ...tenant, colors: tenantTurnOrder(tenant, projection.state) }
+            : tenant,
           projection.clock,
           event.at,
           event.color,

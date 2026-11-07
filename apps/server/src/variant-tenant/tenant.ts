@@ -403,6 +403,9 @@ export type VariantTenant<
   // all. Read positions through firstSeat/lastSeat/seatAfter rather than by
   // index, so a tenant with more than two seats cannot be silently mis-read.
   colors: readonly C[];
+  /** A dealt opening may start with a different seat. Its recorded first
+   * mover rotates colors into this game's turn order for seats and clocks. */
+  firstMover?(state: State): C;
   /**
    * Mutual-confirm PvP rematch (rematch.ts) is ON by default for every tenant:
    * a finished two-seat PvP live room carries the offer flags in its snapshot
@@ -546,6 +549,13 @@ export type VariantTenant<
     // new state, so a hook that settles a four-seat window one seat at a time
     // costs four round trips through the event writer.
     pendingAction?(state: State): TenantPendingAction<C, M> | null;
+    /**
+     * Replace a real clock expiry with a legal move for the expired seat.
+     * Called inside the serialized writer against the current state, never
+     * during replay. Null retains the normal timeout loss. The replacement is
+     * persisted as move-played and uses ordinary move clock accounting.
+     */
+    clockExpiryMove?(state: State, color: C, at: number): M | null;
   };
   visibility: {
     // Per-seat wire-event redaction. Fog tenants hide opponent moves and
@@ -684,6 +694,18 @@ export function firstSeat<C extends string>(tenant: { colors: readonly C[] }): C
   const seat = tenant.colors[0];
   if (seat === undefined) throw new Error('tenant declares no seats');
   return seat;
+}
+
+/** Stable turn order for this recorded deal; never depends on the current turn. */
+export function tenantTurnOrder<C extends string, State>(
+  tenant: { colors: readonly C[]; firstMover?(state: State): C },
+  state: State,
+): readonly C[] {
+  if (!tenant.firstMover) return tenant.colors;
+  const first = tenant.firstMover(state);
+  const index = tenant.colors.indexOf(first);
+  if (index < 0) throw new Error(`first mover ${first} is not one of this tenant's seats`);
+  return [...tenant.colors.slice(index), ...tenant.colors.slice(0, index)];
 }
 
 /** The seat that moves last in a go-around. For two seats this is the second

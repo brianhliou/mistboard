@@ -7,6 +7,7 @@ import {
   dpxqPairingBoard,
   pairingSourceBoardId,
   parseDpxqRoundPage,
+  parseDpxqRoundTime,
   resultFromDpxqScore,
   roundPageUrl,
 } from './xiangqi-broadcast-dpxq-pairings.js';
@@ -40,7 +41,10 @@ test('a round page yields every table with players, federations and result', () 
     black: { name: '庄宏明', federation: '菲律宾' },
     result: '0-1',
     recordIds: [],
+    // The title states the day only (比赛时间2024年12月3日).
+    playedAt: '2024-12-03T00:00:00+08:00',
   });
+  assert.equal(page.playedAt, '2024-12-03T00:00:00+08:00');
   assert.equal(page.pairings[1]!.result, '1/2-1/2');
   // Non-Chinese names come through as written.
   assert.equal(page.pairings[2]!.black.name, 'Wajono Jong');
@@ -62,6 +66,7 @@ test('a table that played a slow game and a playoff yields both games, not the a
     black: { name: '刘柏宏', federation: '中国' },
     result: '1/2-1/2',
     recordIds: ['128342'],
+    playedAt: '2024-12-05T00:00:00+08:00',
   });
   assert.equal(rapid!.game, 2);
   assert.equal(rapid!.kind, 'rapid');
@@ -173,7 +178,7 @@ test('a pairing becomes a valid board with no moves, keyed by round and table', 
   assert.equal(board.boardNumber, 2);
   assert.equal(board.status, 'complete');
   assert.deepEqual(board.moves, []);
-  assert.deepEqual(board.details, { table: 2 });
+  assert.deepEqual(board.details, { table: 2, playedAt: '2024-12-05T00:00:00+08:00' });
   assert.equal(validateXiangqiBroadcastBoard(board).ok, true);
 
   const unplayed = dpxqPairingBoard({
@@ -184,4 +189,20 @@ test('a pairing becomes a valid board with no moves, keyed by round and table', 
   });
   assert.equal(unplayed.status, 'scheduled');
   assert.equal(validateXiangqiBroadcastBoard(unplayed).ok, true);
+});
+
+test("a round page's 比赛时间 is the round's date, its time when the page gives one", () => {
+  // The 2026 league's round 12 page: the info row has the time, the title the day.
+  const page =
+    '<title>…第12轮对阵，结果，棋谱，比赛时间2026年10月28日 - 象棋棋谱仓库</title>' +
+    '<td style="text-align:left;">比赛时间：2026-10-28 13:00</td>';
+  assert.equal(parseDpxqRoundTime(page), '2026-10-28T13:00:00+08:00');
+  assert.equal(
+    parseDpxqRoundTime('<title>第1轮，比赛时间2024年12月3日 - 东萍</title>'),
+    '2024-12-03T00:00:00+08:00',
+  );
+  assert.equal(parseDpxqRoundTime('<td>比赛时间：2026-3-7</td>'), '2026-03-07T00:00:00+08:00');
+  // The page's keywords name the field with no date after it.
+  assert.equal(parseDpxqRoundTime('<meta content="比赛结果,比赛时间,象棋" />'), undefined);
+  assert.equal(parseDpxqRoundTime('<td>比赛时间：2026-13-40 13:00</td>'), undefined);
 });

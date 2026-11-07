@@ -4,32 +4,17 @@ import { ARTICLE_LANGS, hasTranslation, translateArticleText } from '../article-
 import { articleProse, articleTranslationSourceStrings } from '../article-prose.js';
 import { xiangqiWorldChampionshipArticle as article } from './content/xiangqi-world-championship.js';
 
-// A person's name is written in the script that person uses. The national
-// champions page could state that as one rule for all twenty-two of its names,
-// because every one of them is a mainland player. This page cannot: eleven
-// world champions and their opponents include Chinese Taipei, Hong Kong, Macau
-// and Vietnam, and for those players traditional characters ARE the name.
-//
-// So the rule has two halves here, and a test for only the first half would
-// pass while the second silently broke.
-const MAINLAND = [
-  '吕钦',
-  '赵国荣',
-  '徐天红',
-  '许银川',
-  '赵鑫鑫',
-  '蒋川',
-  '王天一',
-  '郑惟桐',
-  '徐超',
-  '孟辰',
-  '王廓',
-  '殷升',
-  '胡荣华',
-];
-
-// Simplified rendering -> the traditional rendering that must appear instead.
-const NOT_MAINLAND: Array<[string, string]> = [
+// A person's name follows the page's script (Brian, 2026-11-06), wherever the
+// player is from. Simplified rendering -> Traditional rendering.
+const NAMES: Array<[string, string]> = [
+  ['吕钦', '呂欽'],
+  ['赵国荣', '趙國榮'],
+  ['徐天红', '徐天紅'],
+  ['许银川', '許銀川'],
+  ['赵鑫鑫', '趙鑫鑫'],
+  ['蒋川', '蔣川'],
+  ['郑惟桐', '鄭惟桐'],
+  ['胡荣华', '胡榮華'],
   ['吴贵临', '吳貴臨'], // Chinese Taipei
   ['李锦欢', '李錦歡'], // Macau
   ['黄学谦', '黃學謙'], // Hong Kong
@@ -48,48 +33,28 @@ const sources = [
 ];
 
 describe('world champion names under translation', () => {
-  it('keeps a mainland name in simplified for the Traditional reader', () => {
+  it('writes every name in the script of the page', () => {
     const wrong: string[] = [];
-    let checked = 0;
+    const seen = new Set<string>();
     for (const source of sources) {
       if (!hasTranslation('zh-Hans', source)) continue;
       const hans = translateArticleText('zh-Hans', source);
-      for (const name of MAINLAND) {
-        if (!hans.includes(name)) continue;
-        checked += 1;
-        const hant = translateArticleText('zh-Hant', source);
-        if (!hant.includes(name)) {
-          wrong.push(`${name}: converted in zh-Hant, from "${hans.slice(0, 44)}"`);
-        }
-      }
-    }
-    expect(wrong, wrong.join('\n')).toEqual([]);
-    // Guards the guard: with no mainland name found, the loop above passes for
-    // free, which is exactly what a broken extraction looks like.
-    expect(checked, 'no mainland name was found to protect').toBeGreaterThan(MAINLAND.length);
-  });
-
-  it('writes a non-mainland name in the script that player uses', () => {
-    const wrong: string[] = [];
-    let checked = 0;
-    for (const source of sources) {
-      if (!hasTranslation('zh-Hans', source)) continue;
-      const hans = translateArticleText('zh-Hans', source);
-      for (const [simplified, traditional] of NOT_MAINLAND) {
+      for (const [simplified, traditional] of NAMES) {
         if (!hans.includes(simplified)) continue;
-        checked += 1;
+        seen.add(simplified);
         const hant = translateArticleText('zh-Hant', source);
         if (!hant.includes(traditional)) {
-          wrong.push(
-            `${simplified}: expected ${traditional} in zh-Hant, got "${hant.slice(0, 44)}"`,
-          );
+          wrong.push(`${simplified}: expected ${traditional}, got "${hant.slice(0, 44)}"`);
         }
+      }
+      for (const [, traditional] of NAMES) {
+        if (hans.includes(traditional)) wrong.push(`${traditional}: Traditional on a Simplified page`);
       }
     }
     expect(wrong, wrong.join('\n')).toEqual([]);
-    expect(checked, 'no non-mainland name was found to convert').toBeGreaterThanOrEqual(
-      NOT_MAINLAND.length,
-    );
+    // Guards the guard: with no name found, the loop passes for free, which is
+    // exactly what a broken extraction looks like.
+    expect([...seen].sort()).toEqual(NAMES.map(([s]) => s).sort());
   });
 
   it('names every world champion in both scripts', () => {

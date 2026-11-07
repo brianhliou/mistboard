@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
-import { buildFairyStockfishCommands } from './uci-engine-harness.js';
+import {
+  buildFairyStockfishCommands,
+  UciWarmSessionCache,
+  type WarmSessionSpec,
+} from './uci-engine-harness.js';
 import {
   fsfXiangqiUciToPikafishUci,
   pikafishUciToFsfXiangqiUci,
   XIANGQI_FSF_NNUE_NET,
   XIANGQI_FSF_PLAYABLE_ENGINES,
   xiangqiFsfEngineTierFor,
+  xiangqiFsfLiveEngineMove,
 } from './xiangqi-fsf-engine.js';
 
 test('FSF Xiangqi levels 1-7 keep the Lichess/PlayStrategy weakening profiles', () => {
@@ -153,4 +161,56 @@ test('translates between Pikafish and Fairy-Stockfish Xiangqi ranks', () => {
   assert.equal(fsfXiangqiUciToPikafishUci('h3h10'), 'h2h9');
   assert.throws(() => pikafishUciToFsfXiangqiUci('b1c10'), /invalid Pikafish/);
   assert.throws(() => fsfXiangqiUciToPikafishUci('b0c2'), /invalid Fairy-Stockfish/);
+});
+
+// An ini-defined xiangqi variant silently runs classical evaluation even when it
+// inherits xiangqi and sets nnueAlias. Keep the served variant built-in so NNUE
+// tiers (including L8) use their net; the game server adjudicates the draw.
+test('standard xiangqi FSF sessions use built-in xiangqi and the NNUE EvalFile for net tiers', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'xiangqi-fsf-session-'));
+  const bin = join(dir, 'fairy-stockfish-xiangqi');
+  const net = join(dir, XIANGQI_FSF_NNUE_NET);
+  writeFileSync(bin, '');
+  writeFileSync(net, '');
+  const savedPath = process.env.MISTBOARD_FSF_XIANGQI_PATH;
+  const savedNet = process.env.MISTBOARD_FSF_XIANGQI_NET;
+  t.after(() => {
+    if (savedPath === undefined) delete process.env.MISTBOARD_FSF_XIANGQI_PATH;
+    else process.env.MISTBOARD_FSF_XIANGQI_PATH = savedPath;
+    if (savedNet === undefined) delete process.env.MISTBOARD_FSF_XIANGQI_NET;
+    else process.env.MISTBOARD_FSF_XIANGQI_NET = savedNet;
+    rmSync(dir, { recursive: true, force: true });
+  });
+  process.env.MISTBOARD_FSF_XIANGQI_PATH = bin;
+  process.env.MISTBOARD_FSF_XIANGQI_NET = net;
+  const sessions: WarmSessionSpec[] = [];
+  t.mock.method(UciWarmSessionCache.prototype, 'withSession', async (spec: WarmSessionSpec) => {
+    sessions.push(spec);
+    return { best: null };
+  });
+
+  for (const tier of XIANGQI_FSF_PLAYABLE_ENGINES) {
+    await xiangqiFsfLiveEngineMove(tier.id, []);
+    const session = sessions.at(-1)!;
+    assert.equal(session.bin, bin);
+    assert.deepEqual(
+      session.initCommands.filter((command) => command.startsWith('setoption name UCI_Variant ')),
+      ['setoption name UCI_Variant value xiangqi'],
+      tier.id,
+    );
+    assert.equal(
+      session.initCommands.some((command) => command.includes('VariantPath')),
+      false,
+    );
+    assert.ok(
+      session.initCommands.includes(`setoption name Use NNUE value ${Boolean(tier.nnue)}`),
+      tier.id,
+    );
+    assert.deepEqual(
+      session.initCommands.filter((command) => command.startsWith('setoption name EvalFile ')),
+      tier.nnue ? [`setoption name EvalFile value ${net}`] : [],
+      tier.id,
+    );
+  }
+  assert.equal(sessions.length, XIANGQI_FSF_PLAYABLE_ENGINES.length);
 });

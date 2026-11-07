@@ -23,6 +23,7 @@ import { jieqiStateToDealtFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen } from './jungle-flip-fen.js';
 import { hasStartFen, normalizeStartFen, START_FEN_SPEC_IDS } from './start-fen.js';
+import { threeKingdomsBanqiStateToDealtFen } from './three-kingdoms-banqi-fen.js';
 import { darkChessVariant, parseDarkChessFen } from './variants.js';
 import { createInitialBanqiState } from './variants-banqi.js';
 import {
@@ -39,6 +40,7 @@ import {
 import { createInitialJieqiState } from './variants-jieqi.js';
 import { createInitialJungleState } from './variants-jungle.js';
 import { createInitialJungleFlipState } from './variants-jungle-flip.js';
+import { createInitialThreeKingdomsBanqiState } from './variants-three-kingdoms-banqi.js';
 import { createInitialXiangqiState } from './variants-xiangqi.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
 
@@ -62,6 +64,9 @@ test('every start-fen spec round-trips its own standard start', () => {
     banqi: banqiStateToDealtFen(createInitialBanqiState('t')),
     jieqi: jieqiStateToDealtFen(createInitialJieqiState('t')),
     'jungle-flip': jungleFlipStateToDealtFen(createInitialJungleFlipState('t')),
+    'three-kingdoms-banqi': threeKingdomsBanqiStateToDealtFen(
+      createInitialThreeKingdomsBanqiState('t', 7),
+    ),
   };
   for (const spec of START_FEN_SPEC_IDS) {
     const fen = starts[spec];
@@ -113,6 +118,11 @@ test('a public five-field paste for a dealt variant is pinned as a six-field dea
       'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1',
     ],
     ['jungle-flip', 'XXXX/XXXX/XXXX/XXXX - R1C1D1W1P1T1L1E1r1c1d1w1p1t1l1e1 0 0'],
+    // 32 tiles on 45 points: file e and rank 3 start empty.
+    [
+      'three-kingdoms-banqi',
+      'XXXX1XXXX/XXXX1XXXX/9/XXXX1XXXX/XXXX1XXXX - G1A2E2R2H2C2S5g1a2e2r2h2c2s5 0 1',
+    ],
   ];
   for (const [spec, publicFen] of cases) {
     assert.equal(hasStartFen(spec), true);

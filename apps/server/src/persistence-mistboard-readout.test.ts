@@ -1,6 +1,7 @@
 import { getPool } from './persistence-db.js';
 import {
   collectDeploys,
+  collectMistboardReadoutFacts,
   generateMistboardReadout,
   latestMistboardReadout,
 } from './persistence-mistboard-readout.js';
@@ -53,6 +54,193 @@ async function insertGame(input: {
 }
 
 definePersistenceTests('Mistboard readout', () => {
+  const deliveryRuntime = {
+    revision: null,
+    activeGames: 0,
+    databaseRequired: true,
+    persistence: 'enabled' as const,
+    persistenceErrors: { count1m: 0, lastAt: null },
+  };
+  const deliveryNow = new Date('2026-11-03T17:23:00Z');
+  const deliveryReport = (now = deliveryNow) =>
+    generateMistboardReadout({
+      trigger: 'manual',
+      now,
+      runtime: deliveryRuntime,
+      db: getPool(),
+    });
+  async function sends(count: number) {
+    await getPool().query(
+      `INSERT INTO login_email_requests (request_id, email, requested_at, provider_email_id)
+      SELECT 'login-' || n, 'player@example.com', $1::timestamptz - interval '1 hour', 'provider-' || n
+      FROM generate_series(1, $2::int) n ON CONFLICT DO NOTHING`,
+      [deliveryNow, count],
+    );
+    await getPool().query(
+      `INSERT INTO email_delivery_events
+      (event_id, provider_email_id, event_type, recipients, occurred_at)
+      SELECT 'sent-' || n, 'provider-' || n, 'email.sent', ARRAY['player@example.com'], $1::timestamptz - interval '1 hour'
+      FROM generate_series(1, $2::int) n ON CONFLICT DO NOTHING`,
+      [deliveryNow, count],
+    );
+  }
+  async function deliveryEvent(
+    id: string,
+    provider: string,
+    type: string,
+    at = new Date(deliveryNow.getTime() - 1000),
+  ) {
+    await getPool().query(
+      `INSERT INTO email_delivery_events
+      (event_id, provider_email_id, event_type, recipients, occurred_at)
+      VALUES ($1, $2, $3, ARRAY['player@example.com'], $4)`,
+      [id, provider, type, at],
+    );
+  }
+
+  test('login delivery aggregates enforce rate boundaries, dedupe snapshots, recover, and re-cross', async () => {
+    const zero = await deliveryReport();
+    assert.equal(zero.report.loginEmailDelivery?.last7d.sent, 0);
+    assert.ok(!zero.report.collectorErrors.some((e) => e.section === 'loginEmailDelivery'));
+    await sends(19);
+    await deliveryEvent('bounce-1', 'provider-1', 'email.bounced');
+    await deliveryEvent('suppressed-1', 'provider-2', 'email.suppressed');
+    await deliveryEvent('bounce-retry', 'provider-1', 'email.bounced');
+    await deliveryEvent('unrelated', 'non-login', 'email.complained');
+    const belowFloor = await deliveryReport();
+    assert.equal(belowFloor.report.loginEmailDelivery?.last7d.sent, 19);
+    assert.equal(belowFloor.report.loginEmailDelivery?.last7d.bounced, 1);
+    assert.ok(!belowFloor.report.actions.some((a) => a.code === 'login-email-delivery-rate'));
+    await sends(20);
+    const crossed = await deliveryReport();
+    assert.ok(crossed.report.actions.some((a) => a.code === 'login-email-delivery-rate'));
+    const unchanged = await deliveryReport();
+    assert.equal(unchanged.report.alertKey, crossed.report.alertKey);
+    assert.equal(unchanged.previousAlertKey, crossed.report.alertKey);
+    await sends(40);
+    const exactly = await deliveryReport();
+    assert.ok(!exactly.report.actions.some((a) => a.code === 'login-email-delivery-rate'));
+    await deliveryEvent('bounce-2', 'provider-3', 'email.bounced');
+    const recrossed = await deliveryReport();
+    assert.ok(recrossed.report.actions.some((a) => a.code === 'login-email-delivery-rate'));
+    assert.notEqual(recrossed.report.alertKey, exactly.report.alertKey);
+    assert.doesNotMatch(
+      JSON.stringify(recrossed.report.loginEmailDelivery),
+      /player@example|provider-/,
+    );
+    const input = {
+      trigger: 'daily' as const,
+      now: deliveryNow,
+      runtime: deliveryRuntime,
+      db: getPool(),
+    };
+    const first = await generateMistboardReadout(input);
+    const reused = await generateMistboardReadout(input);
+    assert.equal(reused.reused, true);
+    assert.deepEqual(reused.report.loginEmailDelivery, first.report.loginEmailDelivery);
+  });
+
+  test('login complaints alert on new messages even when the rolling count stays flat', async () => {
+    await sends(20);
+    await deliveryEvent(
+      'old-complaint',
+      'provider-1',
+      'email.complained',
+      new Date(deliveryNow.getTime() - 7 * 86400000 + 1000),
+    );
+    const first = await deliveryReport();
+    assert.equal(first.report.loginEmailDelivery?.last7d.complained, 1);
+    assert.equal(
+      first.report.actions.find((a) => a.code === 'login-email-complaint-new')?.dedupeKey,
+      'login-email-complaint-new:1',
+    );
+    const unchanged = await deliveryReport();
+    assert.ok(!unchanged.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+    await deliveryEvent('old-retry', 'provider-1', 'email.complained');
+    const retry = await deliveryReport();
+    assert.equal(retry.report.loginEmailDelivery?.complaintsReceived, 1);
+    assert.ok(!retry.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+    // Age the first complaint and its duplicate out before a different message
+    // arrives. Occurrence counts stay at one; cumulative arrivals rise to two.
+    const later = new Date(deliveryNow.getTime() + 8 * 86400000);
+    await deliveryEvent(
+      'new-complaint',
+      'provider-2',
+      'email.complained',
+      new Date(later.getTime() - 1000),
+    );
+    const next = await deliveryReport(later);
+    assert.equal(next.report.loginEmailDelivery?.last7d.complained, 1);
+    assert.equal(next.report.loginEmailDelivery?.complaintsReceived, 2);
+    assert.ok(next.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+    assert.notEqual(next.report.alertKey, first.report.alertKey);
+    // A late webhook for a third message predating both rolling windows still
+    // counts as a new complaint at collection time.
+    await deliveryEvent(
+      'late-complaint',
+      'provider-3',
+      'email.complained',
+      new Date('2026-09-01T00:00:00Z'),
+    );
+    const late = await deliveryReport(later);
+    assert.equal(late.report.loginEmailDelivery?.last30d.complained, 2);
+    assert.equal(late.report.loginEmailDelivery?.complaintsReceived, 3);
+    assert.ok(late.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+  });
+
+  test('login collector failure is null and unknown; recovery retains complaint observations', async (t) => {
+    await sends(20);
+    await deliveryEvent('complaint', 'provider-1', 'email.complained');
+    const initial = await deliveryReport();
+    const pool = getPool();
+    const mock = t.mock.method(
+      pool,
+      'query',
+      new Proxy(pool.query, {
+        apply(target, self, args) {
+          if (typeof args[0] === 'string' && args[0].includes('FROM email_delivery_events')) {
+            throw new Error('collector test failure');
+          }
+          return Reflect.apply(target, self, args);
+        },
+      }),
+    );
+    try {
+      const facts = await collectMistboardReadoutFacts(pool, deliveryNow);
+      assert.equal(facts.loginEmailDelivery, null);
+      assert.ok(facts.collectorErrors?.some((e) => e.section === 'loginEmailDelivery'));
+      const failed = await deliveryReport();
+      assert.equal(failed.report.verdict, 'unknown');
+      assert.equal(failed.report.loginEmailComplaintsSeen, 1);
+    } finally {
+      mock.mock.restore();
+    }
+    const recovered = await deliveryReport();
+    assert.equal(recovered.report.loginEmailDelivery?.complaintsReceived, 1);
+    assert.ok(!recovered.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+    assert.equal(
+      initial.report.loginEmailComplaintsSeen,
+      recovered.report.loginEmailComplaintsSeen,
+    );
+  });
+
+  test('stored older snapshots without login delivery facts remain usable', async () => {
+    const first = await deliveryReport();
+    await getPool().query(
+      `UPDATE ops_readout_snapshots SET schema_version = 1,
+      payload = (payload - 'loginEmailDelivery' - 'loginEmailComplaintsSeen') || '{"schemaVersion":1}'::jsonb
+      WHERE id = $1`,
+      [first.report.snapshotId],
+    );
+    const old = await latestMistboardReadout();
+    assert.equal(old?.schemaVersion, 1);
+    assert.equal(old?.loginEmailDelivery, undefined);
+    await sends(20);
+    await deliveryEvent('new-complaint', 'provider-1', 'email.complained');
+    const next = await deliveryReport();
+    assert.ok(next.report.actions.some((a) => a.code === 'login-email-complaint-new'));
+  });
+
   test('weekly generation is durable and idempotent', async () => {
     const input = {
       trigger: 'weekly' as const,

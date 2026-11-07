@@ -21,8 +21,6 @@ export interface StudyPhoneOptions {
   studyTitle: string;
   chapters: readonly StudyPhoneChapter[];
   activeId: string;
-  /** The study's focus player, so a game row's result chip reads win/draw/loss. */
-  gameFocus: string | null;
   /** The event heading that opens a group before this chapter, if any. */
   groupHeading: (id: string) => string | null;
   chapterHref: (id: string) => string;
@@ -203,7 +201,7 @@ export function createStudyPhone(options: StudyPhoneOptions): StudyPhoneHandle {
     num.className = 'study-sheet__num';
     num.textContent = String(position + 1);
     const name = chapterLabel(chapter);
-    const game = buildChapterGameRow(chapter, options.gameFocus);
+    const game = buildChapterGameRow(chapter);
     if (game) {
       link.setAttribute('aria-label', `${position + 1}. ${name}`);
       link.append(num, game);

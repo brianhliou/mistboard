@@ -11,7 +11,11 @@ import type {
   XiangqiColor,
   XiangqiMove,
 } from '@mistboard/game';
-import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  broadcastRecordsSourceName,
+  XIANGQI_SPEC_ID,
+  xiangqiBroadcastRoundStart,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
@@ -26,7 +30,7 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
-import { currentLocale, localizedHref } from './i18n/locale.js';
+import { localizedHref } from './i18n/locale.js';
 import type { ProfileTarget } from './profile-link.js';
 import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
@@ -36,11 +40,11 @@ import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
+import { localFederation, localTitle } from './xiangqi-broadcast-names.js';
 import {
   broadcastCount,
   broadcastRoundName,
   broadcastName as primary,
-  broadcastSecondaryName as secondary,
 } from './xiangqi-broadcast-pages.js';
 import { formatEventDateTime } from './xiangqi-broadcast-time.js';
 
@@ -53,6 +57,9 @@ export type BroadcastReviewBoard = {
   black: XiangqiBroadcastPlayerTag;
   result: XiangqiBroadcastResult;
   sourceUrl?: string;
+  /** A record we do not replay (it reads two legal ways); see the schema. */
+  recordWithheld?: 'ambiguous';
+  details?: { playedAt?: string };
 };
 
 export type BroadcastReviewInput = {
@@ -87,7 +94,7 @@ export function mountBroadcastBoardReview(
   const result = resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
   const roundName = context ? broadcastRoundName(context.round) : null;
-  const playedOn = context ? formatEventDateTime(context.round.startsAt, currentLocale()) : null;
+  const playedOn = context ? formatEventDateTime(gameDate(data.board, context)) : null;
 
   document.title = `${red}${t('broadcast.vs')}${black} · ${eventName ?? 'Mistboard'}`;
   if (!opts.embedded) {
@@ -124,6 +131,7 @@ export function mountBroadcastBoardReview(
     moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
     tour: context?.tour ?? null,
     round: context?.round ?? null,
+    ...(data.board.details?.playedAt ? { playedAt: data.board.details.playedAt } : {}),
     origin: window.location.origin,
   };
   if (opts.embedded) root.replaceChildren();
@@ -163,6 +171,7 @@ export function mountBroadcastBoardReview(
       name: eventName
         ? `${red}${t('broadcast.vs')}${black} (${eventName})`
         : `${red}${t('broadcast.vs')}${black}`,
+      label: t('review.newStudyFromGame'),
     },
     // The server analyses every finished broadcast game once and stores it
     // (xiangqi-broadcast-analysis.ts), so the review opens with the chart and
@@ -172,6 +181,82 @@ export function mountBroadcastBoardReview(
   });
   if (moves.length === 0) markNoRecord(root);
   return review;
+}
+
+/**
+ * A finished game whose source record we do not replay (`recordWithheld`):
+ * the players, the result, why, and the source page, with no board. A board
+ * here would be the start position standing in for a game that was played.
+ */
+export function mountBroadcastHeldBoard(
+  root: HTMLElement,
+  data: Pick<BroadcastReviewInput, 'board' | 'context'>,
+  opts: { context?: BroadcastReviewInput['context']; embedded?: boolean } = {},
+): void {
+  const context = opts.context ?? data.context ?? null;
+  const red = playerLabel(data.board.red);
+  const black = playerLabel(data.board.black);
+  const result = resultOf(data.board.result);
+  const eventName = context ? primary(context.tour) : null;
+  document.title = `${red}${t('broadcast.vs')}${black} · ${eventName ?? 'Mistboard'}`;
+
+  const view = document.createElement('section');
+  view.className = 'xqb-held';
+  const title = document.createElement('h1');
+  title.className = 'xqb-held-title';
+  title.textContent = `${red}${t('broadcast.vs')}${black}`;
+  const seats = document.createElement('div');
+  seats.className = 'xqb-held-seats';
+  const [redScore = '', blackScore = ''] =
+    data.board.result === '1/2-1/2' ? ['½', '½'] : result.score.split('-');
+  for (const [side, player, score] of [
+    ['red', data.board.red, redScore],
+    ['black', data.board.black, blackScore],
+  ] as const) {
+    const seat = document.createElement('p');
+    seat.className = `xqb-held-seat xqb-held-seat-${side}`;
+    const name = document.createElement('span');
+    name.className = 'xqb-held-name';
+    name.textContent = playerLabel(player);
+    const team = teamOf(player);
+    if (team) {
+      const muted = document.createElement('span');
+      muted.className = 'xqb-held-team';
+      muted.textContent = team;
+      name.append(' ', muted);
+    }
+    const points = document.createElement('span');
+    points.className = 'xqb-held-score';
+    points.textContent = score;
+    seat.append(name, points);
+    seats.append(seat);
+  }
+  const status = document.createElement('p');
+  status.className = 'xqb-held-result';
+  status.textContent = result.label;
+  view.append(title, seats, status, heldRecordNote(data.board.sourceUrl));
+  view.append(provenance({ board: data.board, timeline: [] }, context));
+  if (opts.embedded) root.replaceChildren(view);
+  else root.replaceChildren(buildNav(), view);
+}
+
+/** "The source record of this game can be read two ways, so it isn't
+ *  replayed.", the source record linking the game's page at the source. */
+export function heldRecordNote(sourceUrl: string | undefined): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'xqb-held-note';
+  const [before = '', after = ''] = t('broadcast.recordAmbiguous').split('{source}');
+  const label = t('broadcast.recordAmbiguousSource');
+  let source: Node = document.createTextNode(label);
+  if (sourceUrl) {
+    const link = document.createElement('a');
+    link.href = sourceUrl;
+    link.rel = 'noreferrer';
+    link.textContent = label;
+    source = link;
+  }
+  note.append(before, source, after);
+  return note;
 }
 
 /**
@@ -202,6 +287,15 @@ function broadcastAnalysisSource(
   };
 }
 
+// A game's date is its own when the record states one; the round's seed is
+// a guess (the 2026 league's seeds ran up to two days late).
+function gameDate(
+  board: BroadcastReviewBoard,
+  context: NonNullable<BroadcastReviewInput['context']>,
+): string | undefined {
+  return xiangqiBroadcastRoundStart([board.details?.playedAt], context.round.startsAt);
+}
+
 function provenance(
   data: BroadcastReviewInput,
   context: BroadcastReviewInput['context'],
@@ -209,14 +303,9 @@ function provenance(
   const details = document.createElement('dl');
   details.className = 'review-provenance';
   if (context) {
-    addDetail(details, t('broadcast.event'), primary(context.tour), secondary(context.tour));
-    addDetail(
-      details,
-      t('broadcast.round'),
-      broadcastRoundName(context.round),
-      secondary(context.round),
-    );
-    const date = formatEventDateTime(context.round.startsAt, currentLocale());
+    addDetail(details, t('broadcast.event'), primary(context.tour));
+    addDetail(details, t('broadcast.round'), broadcastRoundName(context.round));
+    const date = formatEventDateTime(gameDate(data.board, context));
     if (date) addDetail(details, t('broadcast.date'), date);
   }
   addDetail(details, t('broadcast.board'), String(data.board.boardNumber));
@@ -229,43 +318,38 @@ function provenance(
     const link = document.createElement('a');
     link.href = data.board.sourceUrl;
     link.rel = 'noreferrer';
-    link.textContent = hostOf(data.board.sourceUrl) ?? data.board.sourceUrl;
+    // A named database (XQBase on vietnamchess.vn) is credited by name.
+    link.textContent =
+      broadcastRecordsSourceName(data.board.sourceUrl) ??
+      hostOf(data.board.sourceUrl) ??
+      data.board.sourceUrl;
     dd.append(link);
     details.append(dt, dd);
   }
   return details;
 }
 
-function addDetail(
-  details: HTMLElement,
-  label: string,
-  value: string,
-  secondaryValue?: string | null,
-): void {
+function addDetail(details: HTMLElement, label: string, value: string): void {
   const dt = document.createElement('dt');
   dt.textContent = label;
   const dd = document.createElement('dd');
-  dd.textContent =
-    secondaryValue && secondaryValue !== value ? `${value} (${secondaryValue})` : value;
+  dd.textContent = value;
   details.append(dt, dd);
 }
 
-/** The player's team in the reader's locale, for the strip's muted line. */
+/** The player's team, for the strip's muted line. */
 function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
-  return primary({ name: player.federation ?? '', nameEn: player.federationEn }) || undefined;
+  return localFederation(player);
 }
 
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {
   const name = primary(player);
-  return player.title ? `${player.title} ${name}` : name;
+  return player.title ? `${localTitle(player.title)} ${name}` : name;
 }
 
 function playerLine(player: XiangqiBroadcastPlayerTag): string {
-  const zh = secondary(player);
   const team = teamOf(player);
-  return [playerLabel(player), zh ? `(${zh})` : null, team ? `· ${team}` : null]
-    .filter(Boolean)
-    .join(' ');
+  return [playerLabel(player), team ? `· ${team}` : null].filter(Boolean).join(' ');
 }
 
 function resultOf(result: XiangqiBroadcastResult): { score: string; label: string } {

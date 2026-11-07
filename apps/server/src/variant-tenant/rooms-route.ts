@@ -138,6 +138,12 @@ export type TenantRoomsRouteConfig<
   // Whether the game-spec gate can report `${errorPrefix}_disabled` (a launch
   // flag). Mini Xiangqi has no flag, so it never runs the disabled branch.
   hasDisabledFlag: boolean;
+  // A playtest open to some accounts while its flag is off (Three Kingdoms
+  // banqi: admins, #684). With the flag off the gate reports
+  // `${errorPrefix}_disabled`; this hook decides whether THIS requester is
+  // let through anyway. Absent, the flag alone decides. The caller must hand
+  // handleCreate the resolved account (null = guest, which it should refuse).
+  admits?(accountUser: UserAccount | null): boolean;
   // Accepted preferredColor values (validation set); the parsed value forwards
   // to the factory as-is.
   preferredColors: readonly Pref[];
@@ -221,7 +227,12 @@ export function createTenantRoomsRoute<
       writeJson(response, 501, { error: notIntegratedError });
       return;
     }
-    if (config.hasDisabledFlag && gate.type === 'reject' && gate.error === disabledError) {
+    if (
+      config.hasDisabledFlag &&
+      gate.type === 'reject' &&
+      gate.error === disabledError &&
+      !(config.admits?.(accountUser) ?? false)
+    ) {
       writeJson(response, gate.httpStatus, { error: gate.error });
       return;
     }

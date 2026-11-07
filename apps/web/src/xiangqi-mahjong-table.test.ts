@@ -83,6 +83,126 @@ function afterDiscard(west: XmjTile[]): XmjRoomState {
 }
 
 describe('xiangqi mahjong table', () => {
+  function declarationState(taiTable: 1 | 2 | 3 = 3, draw: XmjTile = 'rA'): XmjRoomState {
+    const tiles: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', draw];
+    const rest = xmjOrderedTiles();
+    for (const tile of tiles) rest.splice(rest.indexOf(tile), 1);
+    const wall = [...tiles, ...rest];
+    return createXmjRoomState({ walls: [wall, wall], firstDealer: 'east', taiTable });
+  }
+
+  it('offers declaration only from projected eligibility and filters tiles in declaration mode', () => {
+    const view = xmjViewFor(declarationState(), 'east');
+    expect(view.legal.declareReady).toContain('bH');
+    const normal = doc(xiangqiMahjongTableHtml(view, opts(true)));
+    expect(normal.querySelector('[data-xmj-declare]')?.textContent).toBe('Declare ready');
+    const choosing = doc(xiangqiMahjongTableHtml(view, opts(true, { declaring: true })));
+    expect(choosing.textContent).toContain(
+      'Choose a discard to declare ready. Your hand will be locked.',
+    );
+    expect(choosing.querySelector('[data-xmj-declare]')?.textContent).toBe('Cancel');
+    const eligible = [...choosing.querySelectorAll<HTMLElement>('[data-xmj-tile]')];
+    expect(eligible.length).toBeGreaterThan(0);
+    expect(
+      eligible.every((tile) => view.legal.declareReady?.includes(tile.dataset.xmjTile as XmjTile)),
+    ).toBe(true);
+    for (const taiTable of [1, 2] as const) {
+      const legacy = doc(
+        xiangqiMahjongTableHtml(xmjViewFor(declarationState(taiTable), 'east'), opts(true)),
+      );
+      expect(legacy.querySelector('[data-xmj-declare], .xmj-badge--declared')).toBeNull();
+    }
+    for (const perspective of ['west', 'spectator'] as const) {
+      const idle = doc(
+        xiangqiMahjongTableHtml(xmjViewFor(declarationState(), perspective), opts(true)),
+      );
+      expect(idle.querySelector('[data-xmj-declare], [data-xmj-tile]')).toBeNull();
+    }
+    const noEligibility = { ...view, legal: { ...view.legal, declareReady: [] } };
+    expect(
+      doc(xiangqiMahjongTableHtml(noEligibility, opts(true))).querySelector('[data-xmj-declare]'),
+    ).toBeNull();
+  });
+
+  it('shows public badges and only the drawn slot when a locked draw has a duplicate', () => {
+    let locked = declarationState();
+    const moves: XmjMove[] = [
+      { by: 'east', at: 1000, action: 'declare-ready', tile: 'bH' },
+      { by: 'west', at: 3000, action: 'pass' },
+      { by: 'west', at: 4000, action: 'discard', tile: 'bR' },
+      { by: 'east', at: 6000, action: 'pass' },
+    ];
+    for (const move of moves) locked = applyXmjMove(locked, move);
+    const view = xmjViewFor(locked, 'east');
+    const host = doc(xiangqiMahjongTableHtml(view, opts(true)));
+    expect(host.querySelectorAll('[data-xmj-tile]')).toHaveLength(1);
+    expect(host.querySelector('[data-xmj-tile="rA"]')?.classList).toContain('xmj-tile--drawn');
+    expect(host.querySelector('[data-xmj-declare]')).toBeNull();
+    expect(host.querySelector('[data-xmj-seat="east"] .xmj-badge--declared')?.textContent).toBe(
+      'Declared ready',
+    );
+    const spectator = doc(xiangqiMahjongTableHtml(xmjViewFor(locked, 'spectator'), opts(true)));
+    expect(spectator.querySelectorAll('.xmj-badge--declared')).toHaveLength(1);
+    expect(spectator.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('shows the +1 tai only when earned, with declaration copy in all three locales', async () => {
+    for (const taiTable of [1, 2, 3] as const) {
+      let state = declarationState(taiTable, 'rP');
+      const moves: XmjMove[] = [
+        { by: 'east', at: 1000, action: taiTable === 3 ? 'declare-ready' : 'discard', tile: 'bH' },
+        { by: 'west', at: 3000, action: 'pass' },
+        { by: 'west', at: 4000, action: 'discard', tile: 'bR' },
+        { by: 'east', at: 6000, action: 'pass' },
+        { by: 'east', at: 7000, action: 'self-draw' },
+      ];
+      for (const move of moves) state = applyXmjMove(state, move);
+      for (const [locale, button, badge, score] of [
+        ['en', 'Declare ready', 'Declared ready', 'Declared ready'],
+        ['zh-Hans', '听牌', '已听牌', '听牌'],
+        ['zh-Hant', '聽牌', '已聽牌', '聽牌'],
+      ] as const) {
+        await ensureLocaleCatalog(locale);
+        window.history.pushState(null, '', locale === 'en' ? '/' : `/${locale.toLowerCase()}/play`);
+        try {
+          const initial = doc(
+            xiangqiMahjongTableHtml(xmjViewFor(declarationState(taiTable), 'east'), opts(true)),
+          );
+          const result = doc(xiangqiMahjongTableHtml(xmjViewFor(state, 'east'), opts(true)));
+          const scoring = [...result.querySelectorAll('.xmj-lines li')].find((line) =>
+            line.textContent?.includes(score),
+          );
+          if (taiTable === 3) {
+            expect(initial.querySelector('[data-xmj-declare]')?.textContent).toBe(button);
+            expect(result.querySelector('.xmj-badge--declared')?.textContent).toBe(badge);
+            expect(scoring?.textContent).toContain('+1');
+            expect(scoring?.classList).toContain('xmj-line--on');
+          } else {
+            expect(scoring).toBeUndefined();
+            expect(result.querySelector('[data-xmj-declare], .xmj-badge--declared')).toBeNull();
+          }
+        } finally {
+          window.history.pushState(null, '', '/');
+        }
+      }
+    }
+    // Table 3 alone does not earn the row.
+    let undeclared = declarationState(3, 'rP');
+    const moves: XmjMove[] = [
+      { by: 'east', at: 1000, action: 'discard', tile: 'bH' },
+      { by: 'west', at: 3000, action: 'pass' },
+      { by: 'west', at: 4000, action: 'discard', tile: 'bR' },
+      { by: 'east', at: 6000, action: 'pass' },
+      { by: 'east', at: 7000, action: 'self-draw' },
+    ];
+    for (const move of moves) undeclared = applyXmjMove(undeclared, move);
+    expect(
+      doc(xiangqiMahjongTableHtml(xmjViewFor(undeclared, 'east'), opts(true))).querySelector(
+        '.xmj-lines',
+      )?.textContent,
+    ).not.toContain('Declared ready');
+  });
+
   const state = createXmjRoomState(createXmjSetup(seeded(7)), 'xmj_test');
   const mover = state.status.type === 'playing' ? state.status.turn : ('east' as XmjSeat);
   const idle: XmjSeat = mover === 'east' ? 'west' : 'east';
@@ -293,16 +413,73 @@ describe('xiangqi mahjong table', () => {
     expect(current.status.type).toBe('finished');
     expect(wins).toBeGreaterThan(0);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), opts(true)));
-    // A finished match says its result in the foot, in plain points, and has
-    // no running match line.
-    expect(host.querySelector('.xmj-result__foot')?.textContent).toMatch(
-      /^Match to (You|Bot), \d+ to \d+\.$|^Match drawn, \d+ points each\.$/,
+    // A finished match heads the result with the match, its score large and
+    // the last hand underneath; no foot repeats it.
+    expect(host.querySelector('.xmj-result__title')?.textContent).toMatch(
+      /^(You win|Bot wins) on points$|^Match drawn on points$/,
     );
+    expect(host.querySelector('.xmj-result__total--match b')?.textContent).toMatch(/^\d+–\d+$/);
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toMatch(/hand 6|Hand 6/);
+    expect(host.querySelector('.xmj-result__foot')).toBeNull();
     expect(host.querySelector('.xmj-result__match')).toBeNull();
     expect(host.querySelector('.xmj-centre .xmj-message--held')).not.toBeNull();
     expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 6 of 6');
     // The running score lives in the points table under the board, not by the names.
     expect(host.querySelector('.xmj-points')).toBeNull();
+  });
+
+  const tableFor = (view: XmjPlayerView) => xiangqiMahjongTableHtml(view, opts(false));
+
+  it('heads a finished match with the match, not a last hand the loser won', () => {
+    // Play until a hand is won, then end the match there for the other seat.
+    let current = state;
+    for (let steps = 0; steps < 5000; steps += 1) {
+      const view = xmjViewFor(current, 'spectator');
+      if (view.phase.type === 'won') break;
+      current = botStep(current);
+    }
+    const base = xmjViewFor(current, 'spectator');
+    if (base.phase.type !== 'won') throw new Error('no hand was won');
+    // The seat that won the last hand lost the match, 7 to 9 (the TV case).
+    const handWinner = base.phase.winner;
+    const matchWinner: XmjSeat = handWinner === 'east' ? 'west' : 'east';
+    const view: XmjPlayerView = {
+      ...base,
+      status: { type: 'finished', winner: matchWinner, reason: 'points' },
+      scores: { [matchWinner]: 9, [handWinner]: 7 } as XmjPlayerView['scores'],
+    };
+    const host = doc(tableFor(view));
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe(
+      `${NAMES[matchWinner]} wins on points`,
+    );
+    expect(host.querySelector('.xmj-result__total--match b')?.textContent).toBe('9–7');
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toContain(
+      `${NAMES[handWinner]} wins hand ${view.handNumber}`,
+    );
+    // Between hands the hand is still the headline.
+    const between = doc(
+      tableFor({ ...base, status: { type: 'playing', turn: 'east' }, between: true }),
+    );
+    expect(between.querySelector('.xmj-result__title')?.textContent).toBe(
+      `${NAMES[handWinner]} wins`,
+    );
+    expect(between.querySelector('.xmj-result__total--match')).toBeNull();
+  });
+
+  it('heads a match lost on time mid-hand with the match and the hand it stopped in', () => {
+    const base = xmjViewFor(state, 'spectator');
+    const view: XmjPlayerView = {
+      ...base,
+      status: { type: 'finished', winner: 'west', reason: 'timeout' },
+    };
+    const host = doc(tableFor(view));
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Bot wins on time');
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toBe(
+      `Ended during hand ${view.handNumber} of ${Math.max(view.handsInMatch, view.handNumber)}`,
+    );
+    expect(host.querySelector('.xmj-result__total--match b')?.textContent).toBe(
+      `${view.scores.west}–${view.scores.east}`,
+    );
   });
 
   it('lays the table out opponent, middle band, viewer, with the hand and the wall in the centre', () => {

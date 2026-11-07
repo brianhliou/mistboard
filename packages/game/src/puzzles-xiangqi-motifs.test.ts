@@ -9,6 +9,7 @@ import {
   type XiangqiMotifId,
 } from './puzzles-xiangqi-motifs.js';
 import type { XiangqiMove } from './variants-xiangqi.js';
+import { applyStandardXiangqiMove } from './variants-xiangqi-standard.js';
 import { parseStandardXiangqiFen } from './xiangqi-position.js';
 
 // Every fixture is built from the pattern's written definition in
@@ -230,6 +231,18 @@ test('a winning-advantage puzzle carries no kill pattern', () => {
 test('a line that does not end in mate carries no kill pattern', () => {
   const found = detectXiangqiPuzzleMotifs(puzzle('4k4/R8/2N6/9/9/9/9/9/9/3K5 r - - 0 1', 'a9a8'));
   assert.deepEqual(found, []);
+});
+
+test('shuang-ju-cuo needs the two chariots on neighbouring parallel lines', () => {
+  // Two chariot checks end in mate and the chariots stand one rank apart (e7
+  // and i8), but the mate runs down the e-file while the other chariot holds
+  // rank 8: the lines cross. The old check accepted any one-rank or one-file
+  // gap and tagged this as shuang-ju-cuo.
+  const loose = puzzle('4n4/3n1c3/3ak4/R8/9/9/9/9/9/3K4R r - - 0 1', 'i1i8 e8e9 a7e7');
+  let state = loose.initial;
+  for (const move of loose.solution) state = applyStandardXiangqiMove(state, move);
+  assert.deepEqual(state.status, { type: 'finished', winner: 'red', reason: 'checkmate' });
+  assert.ok(!detectXiangqiPuzzleMotifs(loose).includes('shuang-ju-cuo'));
 });
 
 test('catalogue ids, hanzi and labels are unique', () => {

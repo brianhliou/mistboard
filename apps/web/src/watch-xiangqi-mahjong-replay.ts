@@ -23,11 +23,13 @@ import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import './xiangqi-mahjong.css';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  fitXmjRackBadges,
   toggleXmjLogHand,
   xiangqiMahjongTableHtml,
   xmjHandsTableHtml,
   xmjLogHtml,
   xmjPoints,
+  xmjTagOverflow,
 } from './xiangqi-mahjong-table.js';
 import { xmjMoveSound } from './xiangqi-mahjong-terminal-sound.js';
 
@@ -187,6 +189,8 @@ export function xmjClockAtPly(
   };
 }
 
+export { xmjTagOverflow };
+
 /** What the table needs when laid out at a given width, in unzoomed px. */
 export type XmjTableMeasure = { height: number; overflow: number };
 
@@ -196,9 +200,9 @@ export type XmjTableMeasure = { height: number; overflow: number };
  * square narrower than the table wants: unscaled, the bottom rack fell below
  * it and the seat badges spilled past the table's edge, and both were clipped.
  * Laying out wider at a smaller zoom gives the badges their columns back and
- * shrinks tiles and badges together. `overflow` is how far the widest thing
- * reaches past the table's edge on its worse side; the badge columns share
- * any extra width, so each side gets half of it.
+ * shrinks tiles and badges together. `overflow` is how far the widest badge
+ * reaches past its own column on its worse side; the badge columns share any
+ * extra width, so each side gets half of it.
  */
 export function xmjCompactFit(
   availW: number,
@@ -271,6 +275,8 @@ export function mountXiangqiMahjongWatchReplay(
     board.style.removeProperty('zoom');
     board.style.removeProperty('width');
     board.style.removeProperty('max-width');
+    const table = board.querySelector<HTMLElement>('.xmj-table');
+    table?.style.removeProperty('min-height');
     const availW = board.offsetWidth;
     const shown = [...layout.children].filter(
       (child): child is HTMLElement => child instanceof HTMLElement && child.offsetHeight > 0,
@@ -278,18 +284,15 @@ export function mountXiangqiMahjongWatchReplay(
     const rows = shown.reduce((sum, child) => sum + child.offsetHeight, 0) - board.offsetHeight;
     // A pixel spare, so a rounded box never clips the rack's bottom edge.
     const availH = root.clientHeight - rows - 1;
-    const table = board.querySelector<HTMLElement>('.xmj-table');
     if (!table || availW <= 0 || availH <= 0) return;
     const { zoom, width } = xmjCompactFit(availW, availH, (at) => {
       board.style.width = `${at}px`;
       board.style.maxWidth = 'none';
-      const edge = table.getBoundingClientRect();
-      let overflow = 0;
-      for (const el of table.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')) {
-        const box = el.getBoundingClientRect();
-        overflow = Math.max(overflow, edge.left - box.left, box.right - edge.right);
-      }
-      return { height: board.offsetHeight, overflow };
+      const tags = [...table.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')].map((el) => ({
+        column: (el.parentElement ?? el).getBoundingClientRect(),
+        badge: el.getBoundingClientRect(),
+      }));
+      return { height: board.offsetHeight, overflow: xmjTagOverflow(tags) };
     });
     if (zoom >= 1) {
       board.style.removeProperty('width');
@@ -299,12 +302,24 @@ export function mountXiangqiMahjongWatchReplay(
       board.style.maxWidth = 'none';
       board.style.zoom = String(zoom);
     }
+    // Two cards whose tables zoom differently (a longer hand, a claimed set)
+    // stood at different heights side by side. The felt fills the host's box
+    // instead, racks at its top and bottom, so every card in a row lines up.
+    table.style.minHeight = `${Math.floor(availH / zoom)}px`;
     fitted = `${root.clientWidth}x${root.clientHeight}`;
   };
+  // A full-size table keeps its zoom; each rack scales its own tiles instead,
+  // as the room does, so a claimed set never pushes a badge off the felt.
+  let rackWidth = 0;
   const resized = new ResizeObserver(() => {
-    if (`${root.clientWidth}x${root.clientHeight}` !== fitted) fitToHost();
+    if (options.compact) {
+      if (`${root.clientWidth}x${root.clientHeight}` !== fitted) fitToHost();
+    } else if (board.clientWidth !== rackWidth) {
+      rackWidth = board.clientWidth;
+      fitXmjRackBadges(board);
+    }
   });
-  if (options.compact) resized.observe(root);
+  resized.observe(options.compact ? root : board);
 
   const render = (): void => {
     if (!match) return;
@@ -329,7 +344,8 @@ export function mountXiangqiMahjongWatchReplay(
       );
       row.classList.toggle('result-win', winner === seat);
     }
-    fitToHost();
+    if (options.compact) fitToHost();
+    else if (board.isConnected) fitXmjRackBadges(board);
     log?.render(ply);
     options.onPlyChange?.(ply, maxPly());
   };

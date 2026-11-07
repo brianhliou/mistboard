@@ -15,15 +15,15 @@
 // piece was on the board for both players to see; nothing hidden travels here.
 
 import type { XiangqiPuzzle } from './puzzles-xiangqi.js';
-import {
-  createInitialXiangqiState,
-  type XiangqiBoard,
-  type XiangqiGameState,
-  type XiangqiMove,
-  type XiangqiPiece,
+import type {
+  XiangqiBoard,
+  XiangqiGameState,
+  XiangqiMove,
+  XiangqiPiece,
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  createStandardXiangqiStateFromSetup,
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
 
@@ -56,7 +56,7 @@ export function deriveXiangqiPuzzleSetupMove(
   const ply = puzzle.sourceGame?.ply;
   if (!last || ply === undefined) return null;
   if (!Number.isInteger(ply) || ply < 1 || ply > gameMoves.length) return null;
-  let state = createInitialXiangqiState('puzzle-setup');
+  let state = createStandardXiangqiStateFromSetup('puzzle-setup', puzzle.initial);
   for (let index = 0; index < ply - 1; index += 1) {
     const move = gameMoves[index]!;
     if (!isStandardXiangqiLegalMove(state, move)) return null;
@@ -103,6 +103,7 @@ export function xiangqiPuzzlePreSetupState(
   if (setup.captured) board[setup.to] = { ...setup.captured };
   else delete board[setup.to];
   const pre: XiangqiGameState = {
+    ...createStandardXiangqiStateFromSetup(initial.id, initial),
     id: initial.id,
     board,
     status: { type: 'playing', turn: mover.color },

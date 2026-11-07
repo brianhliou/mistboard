@@ -13,6 +13,7 @@
 import type { StudyVariantId } from '../study-catalog.js';
 import './../game-route.css';
 import './../dark-xiangqi-postgame.css';
+import type { DecisionOverlay } from './analysis-marks.js';
 import type { GameAnalysis } from './game-analysis.js';
 import { storedStudyAnalysisSource } from './study-analysis.js';
 import type { TreeReviewConfig, TreeReviewHandle } from './tree-review.js';
@@ -47,6 +48,7 @@ export type StudyReviewConfig = Omit<
 > & {
   /** SerializedTree.rootFen — the chapter's hand-set start, if it has one. */
   rootFen?: string;
+  storedDecisions?: Promise<DecisionOverlay | null> | null;
   /** The chapter's stored engine analysis, already cut to the mainline prefix
    *  it covers (review/study-analysis.ts). Awaited alongside the board chunk;
    *  null or absent leaves the page exactly as it is without one: no analysis
@@ -59,7 +61,7 @@ export async function mountStudyReview(
   root: HTMLElement,
   config: StudyReviewConfig,
 ): Promise<TreeReviewHandle> {
-  const { rootFen, storedAnalysis, ...rest } = config;
+  const { rootFen, storedAnalysis, storedDecisions, ...rest } = config;
   // Each case awaits this only after its own chunk import has started, so the
   // analysis fetch and the board chunk load side by side.
   const baseReady = Promise.resolve(storedAnalysis ?? null).then((analysis) => ({
@@ -241,8 +243,16 @@ export async function mountStudyReview(
       installJieqiBoardStyles();
       const parsed = rootFen ? parseJieqiFen(rootFen) : null;
       if (!parsed?.ok) throw new Error('jieqi study chapter needs a dealt root position');
+      const overlay = await storedDecisions;
       return mountJieqiReview(root, STUDY_GAME_ID, null, {
         ...(await baseReady),
+        decisions: overlay
+          ? { canRun: false, fetchCached: async () => overlay, run: async () => overlay }
+          : null,
+        revealLuckOnly: true,
+        // Hover faces like the finished-game review: the chapter's root carries no
+        // identity its own Reveal identities does not already show.
+        showFaceDown: true,
         root: { truth: parsed.state, fen: jieqiStateToDealtFen(parsed.state) },
       });
     }
@@ -254,6 +264,29 @@ export async function mountStudyReview(
       return mountJungleFlipReview(root, STUDY_GAME_ID, null, {
         ...(await baseReady),
         root: { truth: parsed.state, fen: jungleFlipStateToDealtFen(parsed.state) },
+      });
+    }
+    case 'three-kingdoms-banqi': {
+      const [
+        { mountThreeKingdomsBanqiReview },
+        { installBanqiBoardStyles },
+        { parseThreeKingdomsBanqiFen, threeKingdomsBanqiStateToDealtFen },
+      ] = await Promise.all([
+        import('./three-kingdoms-banqi-review.js'),
+        import('./../live-banqi-render.js'),
+        import('@mistboard/game'),
+      ]);
+      // The face-down backs and hit targets are styled by banqi's installed sheet.
+      installBanqiBoardStyles();
+      const parsed = rootFen
+        ? parseThreeKingdomsBanqiFen(rootFen, { gameId: STUDY_GAME_ID })
+        : null;
+      if (!parsed?.ok) {
+        throw new Error('three kingdoms banqi study chapter needs a dealt root position');
+      }
+      return mountThreeKingdomsBanqiReview(root, {
+        ...(await baseReady),
+        root: { truth: parsed.state, fen: threeKingdomsBanqiStateToDealtFen(parsed.state) },
       });
     }
     default: {

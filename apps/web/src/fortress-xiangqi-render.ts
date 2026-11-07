@@ -11,7 +11,7 @@ import {
   fortressXiangqiSquareOf,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   boardLastMoveMarkersSvg,
@@ -20,6 +20,7 @@ import {
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -195,7 +196,7 @@ export function renderFortressXiangqiBoardSvg(
       ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>` : ''}
       ${coords ? `<g class="fxq-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective, pieceSet)}
-      ${options.check === false ? '' : checkGlow(view, perspective)}
+      ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
       ${options.interactive ? '' : blockedMarks(options.blockedSquares ?? [], perspective)}
@@ -207,11 +208,18 @@ export function renderFortressXiangqiBoardSvg(
   `;
 }
 
-function checkGlow(view: FortressXiangqiPlayerView, perspective: FortressXiangqiColor): string {
+function checkGlow(
+  view: FortressXiangqiPlayerView,
+  perspective: FortressXiangqiColor,
+  pieceSet: XiangqiPieceSet,
+): string {
   const square = fortressXiangqiCheckedGeneral(view.board, view.status);
   if (!square) return '';
   const coord = fortressXiangqiCoordOf(square);
-  return boardCheckGlowSvg(intersection(coord.file, coord.rank, perspective), MARK_PIECE_SIZE);
+  const center = intersection(coord.file, coord.rank, perspective);
+  return activeLayout === 'cell'
+    ? boardCheckCellSvg(center, CELL, pieceSet, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 export function fortressXiangqiMarkerSvg(
@@ -371,6 +379,7 @@ export function animateFortressXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // The gold band rides on the piece for the whole glide (forward moves only):
   // a reverse step renders the prior move's marks at a different square.
   if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);

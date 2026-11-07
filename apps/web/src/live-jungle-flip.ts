@@ -1,4 +1,4 @@
-// Live multiplayer room client for Flip Jungle (兽棋 / 翻翻棋) — a SYMMETRIC-information
+// Live multiplayer room client for Flip Jungle (翻翻兽棋) — a SYMMETRIC-information
 // tenant on the generic live-client core (variant-tenant/live-client.ts owns
 // bootstrap, frame application, the renderAll skeleton, replay capture, and the
 // two-column move list). Modeled on live-banqi.ts (symmetric hidden identity,
@@ -28,11 +28,13 @@ import {
   jungleFlipMoveLabelOnBoard,
 } from '@mistboard/game';
 import './live-xiangqi.css';
+import { pieceFlipDurationMs } from './board-anim.js';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { renderJungleFlipMaterial } from './jungle-flip-material.js';
 import {
   animateJungleFlipBoardMove,
+  animateJungleFlipReveal,
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipRenderBoard,
   jungleFlipPieceGhostSvg,
@@ -182,18 +184,28 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
   // move already re-rendered synchronously at input time, so animating the server
   // echo would double-play it. Scrubs glide the stepped-into move forward and
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
-  // drag ghost, and a no-op for flips, which travel nowhere.
+  // drag ghost. A flip turns the tile over, the player's own included: its face
+  // is unknown until the server answers, so nothing played it at input (Brian,
+  // 2026-10-30: the flip never animated live).
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
+      if (pending.move.from === pending.move.to) {
+        animateJungleFlipReveal(liveRefs.board, pending.move.to);
+        // Held for the core: the bot's instant reply waits for the turn-over.
+        return pieceFlipDurationMs();
+      }
       if (pending.color === core?.state.seat) return;
       animateJungleFlipBoardMove(liveRefs.board, pending.move);
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateJungleFlipBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      if (stepped.from === stepped.to) animateJungleFlipReveal(liveRefs.board, stepped.to);
+      else animateJungleFlipBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;

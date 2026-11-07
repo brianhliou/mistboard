@@ -30,7 +30,7 @@ describe('home puzzle widget', () => {
     expect(widget?.className).toBe('home-puzzle-widget');
     expect((widget as HTMLAnchorElement).getAttribute('href')).toBe(`/puzzles/${puzzle.id}`);
     expect(widget?.querySelector('.home-puzzle-widget-title')?.textContent).toBe(
-      'Puzzle of the day - Xiangqi',
+      'Puzzle of the day',
     );
     expect(widget?.getAttribute('aria-label')).toBe(`Puzzle of the day: ${puzzle.title}`);
     expect(widget?.querySelector('.xq-live-svg')).not.toBeNull();
@@ -116,7 +116,7 @@ describe('home puzzle widget', () => {
 
     expect(widget).not.toBeNull();
     expect(widget?.querySelector('.home-puzzle-widget-title')?.textContent).toBe(
-      'Puzzle of the day - Xiangqi',
+      'Puzzle of the day',
     );
     expect((widget as HTMLAnchorElement).getAttribute('href')).toBe(`/puzzles/${puzzle.id}`);
     // The canonical intersection board, no reserve column.

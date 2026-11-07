@@ -141,8 +141,16 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // Explicit and exhaustive over the hidden-identity specs: a new one fails
 // hiddenIdentityLiveObservePolicy's key check in watch-live.test.ts until it is
 // classified here, and an unclassified spec falls through to 'masked'.
-const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['banqi', 'jungle-flip'] as const;
-const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi'] as const;
+// Three Kingdoms banqi (#628, hidden playtest) serves a spectator the red seat's
+// masked board, the same for both seats (three-kingdoms-banqi-hidden-info.test.ts).
+// FFQ uses an observer projection that masks capturer-only covered roles,
+// including in finished room histories (ffq-banqi-hidden-info.test.ts).
+const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = [
+  'banqi',
+  'jungle-flip',
+  'three-kingdoms-banqi',
+] as const;
+const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi', 'ffq-banqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
   ...Object.fromEntries(SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'open' as const])),
@@ -297,6 +305,20 @@ export function legacyPageRedirect(pathname: string): string | null {
   return null;
 }
 
+// Puzzles have one URL in every language: the trainer is translated by the
+// stored locale, not a path prefix. A /zh-hans/puzzles or /zh-hant/puzzles link
+// (hand-typed, or guessed from the rules and blog pages that do have one) used
+// to land on the 404 shell; it hops to the same page without the prefix and
+// carries the language as ?lang=, which the client stores and then drops.
+export function localePuzzlesRedirect(pathname: string, search: string): string | null {
+  const match = /^\/(zh-hans|zh-hant)(\/puzzles(?:\/[^?#]*)?)$/i.exec(pathname);
+  if (!match) return null;
+  const rest = match[2]!.replace(/\/+$/, '');
+  const params = new URLSearchParams(search);
+  params.set('lang', match[1]!.toLowerCase());
+  return `${rest}?${params.toString()}`;
+}
+
 // The games database's filter links carried their query on /games for three
 // weeks (2026-08-13 to 2026-09-02). A hit on /games with any database parameter
 // is one of those links, not the current-games page, so it hops to
@@ -410,6 +432,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/thanks' ||
     normalized === '/lag' ||
     normalized === '/washington-xiangqi' ||
+    normalized === '/zh-hans/washington-xiangqi' ||
+    normalized === '/zh-hant/washington-xiangqi' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
@@ -429,6 +453,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/forum/etiquette' ||
     normalized === '/database' ||
     normalized === '/stats' ||
+    normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/verify-title' ||
     normalized === '/titles' ||
@@ -479,6 +504,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/historical-xiangqi/game/') ||
     normalized.startsWith('/dark-xiangqi/game/') ||
     normalized.startsWith('/banqi/game/') ||
+    normalized.startsWith('/three-kingdoms-banqi/game/') ||
     normalized.startsWith('/jungle/game/') ||
     normalized.startsWith('/jungle-flip/game/') ||
     normalized.startsWith('/jieqi/game/') ||
@@ -487,6 +513,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/atomic-xiangqi/game/') ||
     normalized.startsWith('/crazyhouse-xiangqi/game/') ||
     normalized.startsWith('/xiangqi-mahjong/game/') ||
+    normalized.startsWith('/gomoku/game/') ||
     normalized.startsWith('/game/') ||
     // Study browse index (/study) + persisted study chapters. The study pages
     // serves the review SPA shell + mounts the ceval engine, so it is also a
@@ -517,8 +544,12 @@ export function isClientRoute(pathname: string): boolean {
     // Standalone analysis board: bare /analysis (opens the flagship variant) or
     // /analysis/:variant, fed by a move list rather than a room. Serves the
     // review SPA shell and mounts the ceval engine, so it must also be a
-    // review-shell route (COOP/COEP) below.
-    /^\/analysis(?:\/[a-z0-9-]+)?$/.test(normalized) ||
+    // review-shell route (COOP/COEP) below. Mirror analysis-catalog.ts, including
+    // Gomoku's gated roomless board. The client checks gomokuOffered before
+    // mounting; protected game data independently requires gomokuAdmits.
+    /^\/analysis(?:\/(?:xiangqi|jieqi|banqi|duck-xiangqi|crazyhouse-xiangqi|dark-xiangqi|dark-chess|jungle|jungle-flip|gomoku|fortress-xiangqi|atomic-xiangqi))?$/.test(
+      normalized,
+    ) ||
     // Board editor: bare /editor (the flagship) or /editor/:variant, the same
     // catalog as /analysis. Plain client page: no engine, so not a review-shell
     // route.
@@ -563,6 +594,10 @@ export function isClientRoute(pathname: string): boolean {
 export function isNoindexRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
+    // Admin reporting shells have no public search content.
+    normalized === '/ops' ||
+    normalized === '/metrics' ||
+    normalized === '/readouts' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||

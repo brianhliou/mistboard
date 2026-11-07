@@ -148,6 +148,7 @@ describe('web variant launch registry', () => {
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
       // XMJ closes the public shelf ahead of the retired tail.
       [XIANGQI_MAHJONG_SPEC_ID, 'xiangqi-mahjong'],
+      ['gomoku', 'gomoku'],
       // Retired 2026-10-11: off the canonical order, kept at the tail so
       // labels and finished games resolve, and on no rating surface.
       [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
@@ -189,4 +190,16 @@ describe('web variant launch registry', () => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
+});
+
+it('defines the hidden rated Gomoku registry without exposing it on public grids', () => {
+  expect(VARIANTS.find((variant) => variant.gameSpecId === 'gomoku')).toMatchObject({
+    id: 'gomoku',
+    apiParam: 'gomoku',
+    miniId: 'gomoku',
+    onLeaderboard: false,
+    onProfile: false,
+  });
+  expect(leaderboardVariants.some((variant) => variant.id === 'gomoku')).toBe(false);
+  expect(profileRatingVariants.some((variant) => variant.id === 'gomoku')).toBe(false);
 });

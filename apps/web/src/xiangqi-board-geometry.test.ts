@@ -82,3 +82,29 @@ describe('xiangqiBoardViewBox', () => {
     });
   });
 });
+
+describe('square grid edge (2026-10-29)', () => {
+  const geo = { fileCount: 9, rankCount: 10, cell: 60, margin: 36, riverGap: 12 };
+
+  it('keeps full edge squares on a coordinate-free square grid', () => {
+    expect(xiangqiBoardViewBox('cell', geo)).toEqual({
+      minX: 6,
+      minY: 6,
+      width: 540,
+      height: 612,
+    });
+  });
+
+  it('keeps full squares when a coordinate gutter frames them', () => {
+    expect(xiangqiBoardViewBox('cell', { ...geo, coordGutter: 12 })).toEqual({
+      minX: -6,
+      minY: -6,
+      width: 564,
+      height: 636,
+    });
+  });
+
+  it('leaves the intersection board alone', () => {
+    expect(xiangqiBoardViewBox('intersection', { ...geo, riverGap: 0 }).minX).toBe(0);
+  });
+});

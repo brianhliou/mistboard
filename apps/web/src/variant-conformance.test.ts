@@ -4,42 +4,121 @@ import { fileURLToPath } from 'node:url';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
+  isAdminOnlyStudySpecId,
   isPublicGameSpec,
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
+  maybeGameSpecForId,
   RETIRED_GAME_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
+import { mountDevelopers } from './developers-page.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
+import {
+  EMBED_ANALYSIS_VARIANTS,
+  embedAnalysisVariant,
+  loadEmbedAnalysis,
+} from './embed/embed-analysis.js';
+import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
+import {
+  firstMoverColorName,
+  secondMoverColorName,
+  VARIANT_NAME_KEYS,
+  variantDisplayLabel,
+  variantNameKeyForSpecId,
+} from './game-display.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
+  enabledLandingVariantGameSpecs,
   type LandingRoomSetup,
+  landingVariantSupportsPve,
   roomCreationGameSpecId,
   roomCreationRequestBody,
+  variantLabelForGameSpec,
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
-import { embedRendererKindForVariant } from './showcase-dispatch.js';
-import { STUDY_VARIANTS } from './study-catalog.js';
-import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
+import {
+  embedRendererKindForVariant,
+  showcaseRendererKindForSpec,
+  specIdForShowcaseVariant,
+} from './showcase-dispatch.js';
+import { buildStudyVariantSelect, STUDY_VARIANTS } from './study-catalog.js';
+import {
+  gameSpecIdFromRulesSlug,
+  rulesHrefForGameSpec,
+  rulesSlugForGameSpec,
+} from './variant-public-surfaces.js';
+import { SEAT_NAMING, seatsNamePlayers } from './variant-seat-label.js';
 import {
   finishedGameHref,
   legacyGameRouteForRoomId,
+  webVariantTenantForSpecId,
   webVariantTenants,
 } from './variant-tenant/registry.js';
 import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import {
   leaderboardVariants,
   profileRatingVariants,
+  VARIANT_MINI_BY_GAME_SPEC,
   VARIANTS,
   variantMiniIdForGameSpec,
 } from './variants.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
+import { mountGomokuWatchReplay } from './watch-gomoku-replay.js';
+
+vi.mock('./watch-gomoku-replay.js', () => ({ mountGomokuWatchReplay: vi.fn() }));
+
+describe('Gomoku renderer integration', () => {
+  it('documents the Gomoku TV channel only when public and enabled', () => {
+    const spec = maybeGameSpecForId('gomoku')!;
+    const original = spec.publicSurface;
+    try {
+      for (const surface of ['hidden', 'casual'] as const) {
+        spec.publicSurface = surface;
+        for (const enabled of ['false', 'true']) {
+          vi.stubEnv('VITE_GOMOKU_ENABLED', enabled);
+          const root = document.createElement('div');
+          mountDevelopers(root);
+          expect(root.textContent?.includes('gomoku')).toBe(
+            surface === 'casual' && enabled === 'true',
+          );
+        }
+      }
+    } finally {
+      spec.publicSurface = original;
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('resolves showcase and game embeds to Gomoku', () => {
+    expect(showcaseRendererKindForSpec('gomoku')).toBe('gomoku');
+    expect(embedRendererKindForVariant('gomoku')).toBe('gomoku');
+    expect(specIdForShowcaseVariant('gomoku')).toBe('gomoku');
+  });
+
+  it('loads the Gomoku watch renderer with compact/embed options intact', async () => {
+    const root = document.createElement('div');
+    const options = {
+      compact: true,
+      autoplay: false,
+      pov: 'black' as const,
+      metadataByRoomId: {},
+    };
+    const watch = webVariantTenantForSpecId('gomoku')?.watch;
+    expect(watch?.family).toBe('gomoku');
+    await watch?.mountReplay(root, 'gmk_test', options);
+    expect(mountGomokuWatchReplay).toHaveBeenCalledWith(root, 'gmk_test', options);
+  });
+});
 
 // Variant-wiring conformance. Adding a variant touches ~12 scattered sites; the
 // create-request builders are the ones that fail SILENTLY when missed —
@@ -62,7 +141,58 @@ function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup 
   };
 }
 
+describe('Chinese variant names', () => {
+  it.each([
+    { language: 'zh-CN', locale: 'zh-Hans', flipName: '翻翻兽棋', jungleName: '斗兽棋' },
+    { language: 'zh-TW', locale: 'zh-Hant', flipName: '翻翻獸棋', jungleName: '鬥獸棋' },
+  ] as const)(
+    'names jungle-flip in $language while preserving Jungle',
+    ({ locale, flipName, jungleName }) => {
+      expect(variantLabelForGameSpec('jungle-flip', locale)).toBe(flipName);
+      expect(variantLabelForGameSpec('jungle', locale)).toBe(jungleName);
+    },
+  );
+});
+
 describe('variant create-request conformance', () => {
+  it('preserves the eight browser Rapfi choices and both human colours in hidden setup', () => {
+    expect(landingVariantSupportsPve(GOMOKU_SPEC_ID)).toBe(true);
+    for (const preferredColor of ['black', 'white'] as const) {
+      for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
+        expect(
+          roomCreationRequestBody(
+            'pve',
+            {
+              ...setupFor(GOMOKU_SPEC_ID),
+              preferredColor,
+            },
+            `rapfi-level-${level}`,
+          ),
+        ).toMatchObject({
+          gameSpecId: GOMOKU_SPEC_ID,
+          preferredColor,
+          engineId: `rapfi-level-${level}`,
+          mode: 'pve',
+          rated: false,
+        });
+      }
+    }
+  });
+  it('preserves Gomoku setup ids, colors and rated PvP while keeping PvE casual', () => {
+    for (const mode of ['pvp', 'pve'] as const) {
+      for (const preferredColor of ['black', 'white', 'random'] as const) {
+        const setup = { ...setupFor(GOMOKU_SPEC_ID), rated: true, preferredColor };
+        expect(roomCreationGameSpecId(setup)).toBe('gomoku');
+        expect(roomCreationRequestBody(mode, setup)).toMatchObject({
+          gameSpecId: 'gomoku',
+          mode,
+          rated: mode === 'pvp',
+          preferredColor,
+        });
+      }
+    }
+  });
+
   it('has at least one selectable picker variant to check', () => {
     expect(pickerTenants.length).toBeGreaterThan(0);
   });
@@ -144,8 +274,14 @@ describe('variant correspondence conformance', () => {
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
   // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
+  // Nor is Three Kingdoms banqi, a hidden playtest (#628, #684) only an admin
+  // reaches on prod. FFQ also stays without a public marker in its admin test.
   const markedTenants = webVariantTenants().filter(
-    (tenant) => tenant.gameSpecId !== MAHJONG_SPEC_ID,
+    (tenant) =>
+      tenant.gameSpecId !== MAHJONG_SPEC_ID &&
+      tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID &&
+      tenant.gameSpecId !== FFQ_BANQI_SPEC_ID &&
+      tenant.gameSpecId !== GOMOKU_SPEC_ID,
   );
 
   it('marks Xiangqi Mahjong with its own tile marker', () => {
@@ -283,16 +419,131 @@ describe('rules link conformance', () => {
   // A meta card, a review page and a rules page's play button all link a variant
   // to rulesHrefForGameSpec. A variant whose rules page has a different slug
   // must say so (RULES_GAME_SPEC_BY_SLUG), or the link 404s the day it goes
-  // public. `chess` is study-only: /rules/chess is the primer, not its page.
+  // public. Future specs reserve metadata before they have a page; live hidden
+  // playtests still need rules. `chess` is study-only: /rules/chess is the primer.
   it('every live variant links to a rules page that exists and points back', () => {
     const rulesSlugs = new Set(articles.filter((a) => a.kind === 'rules').map((a) => a.slug));
     for (const spec of GAME_SPECS) {
-      if (isRetiredGameSpec(spec.id) || spec.id === 'chess') continue;
+      if (
+        isRetiredGameSpec(spec.id) ||
+        spec.id === 'chess' ||
+        spec.id === GOMOKU_SPEC_ID ||
+        spec.id === FFQ_BANQI_SPEC_ID
+      )
+        continue;
       const slug = rulesSlugForGameSpec(spec.id);
       expect(rulesSlugs.has(slug), `${spec.id}: no /rules/${slug}`).toBe(true);
       expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
     }
     expect(rulesSlugForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong-32');
+  });
+});
+
+describe('FFQ banqi canonical web metadata', () => {
+  it.each(['variants.ts', 'variant-seat-label.ts', 'game-display.ts', 'embed/embed-analysis.ts'])(
+    'keeps %s exhaustive over canonical GameSpecId without registration bypasses',
+    (file) => {
+      // A literal union can mask a missing canonical registration. Once registered,
+      // FFQ must use the same typed maps and metadata lookup as every other spec.
+      const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+      expect(source).toMatch(/\bRecord\s*<\s*GameSpecId\s*,/);
+      expect(source).not.toMatch(/===\s*['"]ffq-banqi['"]/);
+    },
+  );
+
+  it('keys every dispatch map exactly by the registered game specs', () => {
+    const ids = GAME_SPECS.map((spec) => spec.id).sort();
+    expect(ids).toContain(FFQ_BANQI_SPEC_ID);
+    for (const map of [
+      VARIANT_MINI_BY_GAME_SPEC,
+      SEAT_NAMING,
+      VARIANT_NAME_KEYS,
+      EMBED_ANALYSIS_VARIANTS,
+    ]) {
+      expect(Object.keys(map).sort()).toEqual(ids);
+    }
+  });
+
+  it('uses FFQ banqi canonical name metadata without borrowing the Banqi name', () => {
+    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
+    expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
+    expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('FFQ Banqi');
+  });
+
+  it('keeps FFQ banqi fixed Red/Black seats after canonical registration', () => {
+    expect(SEAT_NAMING).toHaveProperty('ffq-banqi', 'seat-word');
+    expect(seatsNamePlayers('ffq-banqi')).toBe(false);
+    expect(isFlipSeatVariant('ffq-banqi')).toBe(false);
+    expect(firstMoverColorName('ffq-banqi')).toBe('Red');
+    expect(secondMoverColorName('ffq-banqi')).toBe('Black');
+    // A Banqi-style firstColor must not swap the fixed FFQ seats.
+    expect(seatInkForVariant('ffq-banqi', 'red', 'black')).toBe('red');
+    expect(seatInkForVariant('ffq-banqi', 'black', 'black')).toBe('black');
+  });
+
+  it('explicitly has no embed analysis and never loads replay inputs for it', async () => {
+    expect(EMBED_ANALYSIS_VARIANTS).toHaveProperty('ffq-banqi', null);
+    expect(embedAnalysisVariant('ffq-banqi')).toBeNull();
+    const playedMoves = vi.fn();
+    const events = vi.fn();
+    expect(
+      await loadEmbedAnalysis('ffq-banqi', 'reserved-room', { playedMoves, events }),
+    ).toBeNull();
+    expect(playedMoves).not.toHaveBeenCalled();
+    expect(events).not.toHaveBeenCalled();
+  });
+
+  it('has no public play, rating, rules, watch, analysis, editor, study or embed listing', () => {
+    const id = 'ffq-banqi';
+    // It has a marker, like the hidden Three Kingdoms playtest; no listing below uses it.
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).not.toContain(id);
+    expect(WATCH_CHANNEL_MINI_IDS).not.toHaveProperty(id);
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(id);
+    expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(id);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(id);
+    expect(rulesHrefForGameSpec(id)).toBeNull();
+    expect(articles.some((article) => article.kind === 'rules' && article.slug === id)).toBe(false);
+    expect(embedRendererKindForVariant(id)).toBeNull();
+  });
+});
+
+describe('Gomoku deliberate exclusions during hidden integration', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(['false', 'true'])('gates localized play-menu entries on flag %s', (flag) => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', flag);
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      const entries = enabledLandingVariantGameSpecs('pvp', locale).filter(
+        (entry) => entry.gameSpecId === GOMOKU_SPEC_ID,
+      );
+      expect(entries).toEqual(
+        flag === 'true'
+          ? [{ gameSpecId: GOMOKU_SPEC_ID, label: locale === 'en' ? 'Gomoku' : '五子棋' }]
+          : [],
+      );
+    }
+  });
+
+  it('has analysis capability but no public play, rating, study or editor surface', () => {
+    expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
+    const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
+    expect(tenant?.landing?.offerInMenu()).toBe(false);
+    expect(tenant?.landing?.engineOptions).toHaveLength(8);
+    expect(tenant?.landing?.capabilities.supportsRated).toBe(true);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
+    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(
+      GOMOKU_SPEC_ID,
+    );
+    expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(GOMOKU_SPEC_ID);
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);
+    expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
+    expect(EMBED_ANALYSIS_VARIANTS[GOMOKU_SPEC_ID]).toBeNull();
+    expect(embedRendererKindForVariant(GOMOKU_SPEC_ID)).toBe('gomoku');
+    expect(variantMiniIdForGameSpec(GOMOKU_SPEC_ID)).toBe('gomoku');
   });
 });
 
@@ -349,5 +600,20 @@ describe('Xiangqi Mahjong deliberate exclusions', () => {
     expect(row?.miniId).toBe('xiangqi-mahjong');
     expect(leaderboardVariants.map((variant) => variant.gameSpecId).includes(XMJ)).toBe(launched);
     expect(profileRatingVariants.map((variant) => variant.gameSpecId).includes(XMJ)).toBe(launched);
+  });
+});
+
+// Three Kingdoms banqi studies (#628) are built and admin-only until the public
+// launch: a study variant, on the admin-only list the server gates every study
+// route and list on, and never in the create picker for a non-admin. Making it
+// public is a launch decision: drop it from ADMIN_ONLY_STUDY_SPEC_IDS with it.
+describe('Three Kingdoms banqi study surface', () => {
+  it('is a study variant, admin-only, and absent from the public picker', () => {
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).toContain(THREE_KINGDOMS_BANQI_SPEC_ID);
+    expect(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID)).toBe(true);
+    const offered = [...buildStudyVariantSelect('variant', 'xiangqi', () => false).options].map(
+      (option) => option.value,
+    );
+    expect(offered).not.toContain(THREE_KINGDOMS_BANQI_SPEC_ID);
   });
 });

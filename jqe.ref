@@ -9,6 +9,10 @@
 # +67 Elo [+31, +104] (mistboard-engine lab/jieqi-match/jqe-vs-abj-0.2d). Against
 # v0.2b, the pin before, it was 71-4-25 over 100 games, +173.
 #
+# AB-JChess-20261031 (ab-jchess.ref efc83867, built on this code) took the top
+# slot back on 2026-10-31: 306-67-227 against this pin over 600 games, +46 Elo
+# [+20, +73] (lab/jieqi-match/jqe-vs-abj-20261031). jqe stays live one rung under it.
+#
 # Unlike AB-JChess and KataGo, the net (engine/nets/it014.jqn at this commit,
 # sha256 pinned in engine-assets.sh JQE_NET_SHA256) is MIT, so it ships in our
 # engines release beside the binary. Moving this pin means re-checking which net

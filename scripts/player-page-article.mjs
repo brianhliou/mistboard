@@ -22,6 +22,9 @@
 //   ---                              front matter, `key: value` per line:
 //   slug: cao-yanlei                 slug, export, title, seoTitle, summary,
 //   ---                              status, updatedAt, publishedAt, thumbnail,
+//                                    updateNote (one English line saying what
+//                                    changed; required when updatedAt differs
+//                                    from publishedAt, as articles.test.ts asks),
 //                                    thumbnailAlt, thumbnailPosition (CSS
 //                                    object-position for the card crop),
 //                                    audience, readNext (comma list),
@@ -42,6 +45,14 @@
 //   ## Heading                       starts a section; anything above the first
 //                                    one is the intro
 //   [figure src=/a.jpg alt="…"] Caption
+//   [figure src=… alt="…" credit="Site" creditHref=https://…] Caption
+//   [figure src=… alt="…" native=1] Caption
+//                                    native: the image at its own size and
+//                                    aspect, never stretched to the column
+//                                    (a small portrait); narrower screens
+//                                    still shrink it
+//                                    a credit that must link: rendered after
+//                                    the caption as "Photo: <a>Site</a>"
 //   [board key=m_139844 ply=24]      const name defaults to G_<key>;
 //                                    perspective=red|black overrides `player:`;
 //                                    the caption is generated from the record
@@ -108,6 +119,14 @@ if (tldr.length > 4) fail(`tldr has ${tldr.length} lines; keep it to 2-4`);
 for (const k of ['slug', 'export', 'title', 'summary', 'audience']) {
   if (!meta[k]) fail(`front matter needs ${k}`);
 }
+// The article test fails a page whose updatedAt differs from its publishedAt
+// with no updateNote, so a draft missing one refuses here rather than writing
+// a page that fails the gate (a regenerated page used to drop the note).
+if (meta.updatedAt && meta.updatedAt !== meta.publishedAt && !meta.updateNote) {
+  fail(
+    `updatedAt ${meta.updatedAt} differs from publishedAt: add an updateNote line saying what changed`,
+  );
+}
 
 function attrs(s) {
   const o = {};
@@ -160,7 +179,16 @@ for (const chunk of chunks) {
     .join(' ');
   if (name === 'figure') {
     if (!a.src || !a.alt) fail(`[figure] needs src and alt: ${head}`);
-    target.push({ kind: 'image-figure', src: a.src, alt: a.alt, ...(caption ? { caption } : {}) });
+    if (Boolean(a.credit) !== Boolean(a.creditHref))
+      fail(`[figure] credit and creditHref go together: ${head}`);
+    target.push({
+      kind: 'image-figure',
+      src: a.src,
+      alt: a.alt,
+      ...(caption ? { caption } : {}),
+      ...(a.credit ? { credit: { text: a.credit, href: a.creditHref } } : {}),
+      ...(a.native ? { className: 'article-figure-native' } : {}),
+    });
   } else if (name === 'board') {
     if (!a.key) fail(`[board] needs key: ${head}`);
     const constName = a.const ?? `G_${a.key.toUpperCase()}`;
@@ -429,12 +457,13 @@ export const ${meta.export}: Article = {
   slug: ${q(meta.slug)},
 ${meta.homeRow ? `  homeRow: ${q(meta.homeRow)},\n` : ''}  kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: ${q(meta.title)},
 ${meta.seoTitle ? `  seoTitle: ${q(meta.seoTitle)},\n` : ''}  summary: ${q(meta.summary)},
   showSummaryOnPage: false,
   status: ${q(meta.status ?? 'draft')},
-${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
+${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${meta.updateNote ? `  updateNote: ${q(meta.updateNote)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
 ${readNext}${tldr.length ? `  tldr: ${q(tldr)},\n` : ''}  intro: [
 ${intro.map((b) => emitBlock(b, 4)).join('')}  ],
   sections: [

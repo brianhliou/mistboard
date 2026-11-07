@@ -15,7 +15,7 @@
 import {
   applyStandardXiangqiMove,
   coordOf,
-  createInitialXiangqiState,
+  createStandardXiangqiStateFromSetup,
   formatXiangqiMoves,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -125,7 +125,7 @@ export function xiangqiReasonPhrase(reason: string): TenantReasonKey {
     case 'chasing':
       return 'result.perpetualCheck';
     case 'progress-clock':
-      return 'result.sixtyPliesNoCapture';
+      return 'result.noCaptureLimit';
     default:
       return 'result.gameRules';
   }
@@ -250,7 +250,7 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   replayHistory: {
     rebuild: ({ events, view, state }) => {
       const perspective = isXiangqiColor(state.seat) ? state.seat : view.perspective;
-      let gameState = createInitialXiangqiState(view.id);
+      let gameState = createStandardXiangqiStateFromSetup(view.id, view);
       const snapshots = [{ ply: 0, view: getStandardXiangqiPlayerView(gameState, perspective) }];
       for (const event of events) {
         if (!isXiangqiMoveEvent(event)) continue;

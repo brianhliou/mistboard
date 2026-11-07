@@ -356,6 +356,7 @@ export const helpmatesInXiangqiArticle: Article = {
   slug: 'helpmates-in-xiangqi',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'Helpmates in Xiangqi',
   seoTitle: 'Helpmates in Xiangqi (Chinese Chess): 164 Two-Move Problems',

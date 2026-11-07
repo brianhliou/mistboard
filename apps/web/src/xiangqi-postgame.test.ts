@@ -7,6 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { gameChatApiUrl } from './review/spectator-chat.js';
 import { mountXiangqiPostgame, xiangqiPostgameApiUrl } from './xiangqi-postgame.js';
 
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
+
 describe('Xiangqi postgame page', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
@@ -67,6 +76,105 @@ describe('Xiangqi postgame page', () => {
     expect(root.textContent).not.toContain('Play again');
     expect(root.textContent).not.toContain('Back home');
     expect(root.querySelector<HTMLAnchorElement>('a[href="/room/xq_postgame"]')).toBeNull();
+  });
+
+  // #619: on a phone the game card, the analysis summary and the Move times
+  // and Share tabs are in a Game info sheet and the chat in a Chat sheet, both
+  // from the bar's menu; the engine card stays on the page. Each goes back
+  // where it was on close.
+  it('lends the game card to a Game info sheet and the chat to a Chat sheet', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/xiangqi/games/xq_postgame') return jsonResponse(postgameFixture());
+        if (url === '/api/chat/game/xq_postgame') return jsonResponse(chatFixture());
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountXiangqiPostgame(root, 'xq_postgame');
+    await flushPromises();
+
+    expect(root.classList.contains('has-review-info-sheet')).toBe(true);
+    const card = root.querySelector<HTMLElement>('.game-meta-card');
+    const summary = root.querySelector<HTMLElement>('.review-analysis-summary-slot');
+    const tabs = root.querySelector<HTMLElement>('.review-underboard-panel');
+    const engine = root.querySelector<HTMLElement>('.engine-panel');
+    const chat = root.querySelector<HTMLElement>('.review-spectator-chat');
+    for (const el of [card, summary, tabs, engine, chat]) expect(el).not.toBeNull();
+
+    const rows = [
+      ...root.querySelectorAll<HTMLButtonElement>('.review-controls [data-review-info]'),
+    ];
+    expect(rows.map((row) => [row.dataset.reviewInfo, row.textContent?.trim()])).toEqual([
+      ['game', 'Game info'],
+      ['chat', 'Chat'],
+    ]);
+    const gameSheet = root.querySelector<HTMLElement>(
+      '.review-info-sheet[data-review-info="game"]',
+    );
+    const chatSheet = root.querySelector<HTMLElement>(
+      '.review-info-sheet[data-review-info="chat"]',
+    );
+    expect(gameSheet?.hidden).toBe(true);
+    expect(chatSheet?.hidden).toBe(true);
+
+    rows[0]?.click();
+    expect(gameSheet?.hidden).toBe(false);
+    for (const el of [card, summary, tabs]) expect(gameSheet?.contains(el ?? null)).toBe(true);
+    for (const el of [engine, chat]) expect(gameSheet?.contains(el ?? null)).toBe(false);
+    // It opens on a tab it shows (Move times, else Share & export).
+    const active = gameSheet?.querySelector<HTMLElement>('.review-underboard-tab--active');
+    expect(['times', 'share']).toContain(active?.dataset.tab);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(gameSheet?.hidden).toBe(true);
+    expect(card?.closest('.review-rail-group')).not.toBeNull();
+    expect(tabs?.closest('[data-col1-area="under"]')).not.toBeNull();
+    expect(summary?.closest('.review-info-sheet')).toBeNull();
+
+    rows[1]?.click();
+    expect(chatSheet?.hidden).toBe(false);
+    expect(chatSheet?.contains(chat)).toBe(true);
+    expect(chatSheet?.contains(card)).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(chatSheet?.hidden).toBe(true);
+    expect(chat?.closest('.review-rail-group')).not.toBeNull();
+    expect(engine?.closest('.review-rail-main')).not.toBeNull();
+    root.remove();
+  });
+
+  // #619: the board editor and the analysis board hand-offs left the game
+  // review menu; /analysis keeps both.
+  it('offers no Board editor or Analyse from here in the review menu', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/xiangqi/games/xq_postgame') return jsonResponse(postgameFixture());
+        if (url === '/api/chat/game/xq_postgame') return jsonResponse(chatFixture());
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountXiangqiPostgame(root, 'xq_postgame');
+    await flushPromises();
+
+    const labels = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].map(
+      (item) => item.textContent?.trim(),
+    );
+    expect(labels).toEqual([
+      'Flip board',
+      'Opening explorer',
+      'New study from this game',
+      'Game info',
+      'Chat',
+    ]);
+    root.remove();
   });
 
   it('builds the game-scoped spectator chat API URL', () => {

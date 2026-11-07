@@ -126,6 +126,21 @@ test('puzzle gates and qualified outliers become owned, deduplicated actions', (
   assert.match(renderMistboardReadoutMarkdown(report), /1 sample-qualified outliers/);
 });
 
+test('a changed puzzle set alerts again while an unchanged set stays quiet', () => {
+  const facts = (puzzleId: string) => ({
+    ...emptyFacts,
+    puzzles: buildElephantChessPuzzleQualityReport({
+      aggregates: [qualityAggregate({ puzzleId, starts: 20, wrongAttempts: 60 })],
+      pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    }),
+  });
+  const first = reportWith(facts('puzzle-one'));
+  const same = reportWith(facts('puzzle-one'), first);
+  const changed = reportWith(facts('puzzle-two'), first);
+  assert.equal(first.alertKey, same.alertKey);
+  assert.notEqual(first.alertKey, changed.alertKey);
+});
+
 test('collector failure produces unknown rather than healthy', () => {
   const report = buildMistboardReadout({
     snapshotId: 'readout_partial',
@@ -835,4 +850,110 @@ test('the operations section carries the broadcast viewer peak only when the run
   });
   assert.equal(report.production.broadcastViewersPeak, 14);
   assert.match(renderMistboardReadoutMarkdown(report), /Broadcast viewers: peak 14 open streams/);
+});
+
+function deliveryFacts(
+  sent = 20,
+  bounced = 1,
+  suppressed = 1,
+  complaintsReceived = 0,
+): MistboardReadoutFacts {
+  const counts = {
+    requested: sent,
+    sent,
+    delivered: 0,
+    bounced,
+    suppressed,
+    complained: 0,
+    completed: 0,
+  };
+  return {
+    ...emptyFacts,
+    loginEmailDelivery: { last7d: counts, last30d: counts, complaintsReceived },
+  };
+}
+
+test('login delivery rate needs 20 sends and strictly more than 5 percent', () => {
+  for (const [sent, bounced, suppressed, alerts] of [
+    [19, 1, 1, false],
+    [20, 1, 0, false],
+    [20, 0, 1, false],
+    [20, 1, 1, true],
+    [40, 1, 1, false],
+    [40, 2, 1, true],
+    [0, 4, 1, false],
+  ] as const) {
+    const report = reportWith(deliveryFacts(sent, bounced, suppressed));
+    assert.equal(
+      report.actions.some((a) => a.code === 'login-email-delivery-rate'),
+      alerts,
+      `${sent} sends, ${bounced} bounces, ${suppressed} suppressions`,
+    );
+  }
+});
+
+test('login delivery rate holds its alert key, clears, and alerts on re-crossing', () => {
+  const first = reportWith(deliveryFacts());
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]?.ownerIssue, 841);
+  const unchanged = reportWith(deliveryFacts(30, 2, 1), first);
+  assert.equal(unchanged.alertKey, first.alertKey);
+  assert.notEqual(unchanged.decisionFingerprint, first.decisionFingerprint);
+  const recovered = reportWith(deliveryFacts(40, 1, 1), unchanged);
+  assert.equal(recovered.verdict, 'healthy');
+  assert.notEqual(recovered.alertKey, unchanged.alertKey);
+  const recrossed = reportWith(deliveryFacts(40, 2, 1), recovered);
+  assert.equal(recrossed.verdict, 'action');
+  assert.notEqual(recrossed.alertKey, recovered.alertKey);
+});
+
+test('login complaint arrivals alert independently of rolling totals and send volume', () => {
+  const baseline = reportWith(deliveryFacts(0, 0, 0));
+  const first = reportWith(deliveryFacts(0, 0, 0, 1), baseline);
+  assert.equal(first.actions[0]?.code, 'login-email-complaint-new');
+  assert.equal(first.verdict, 'action');
+  const second = reportWith(deliveryFacts(0, 0, 0, 2), first);
+  assert.notEqual(second.alertKey, first.alertKey);
+  assert.match(second.actions[0]!.text, /1 new login email spam complaint/);
+  const unchanged = reportWith(deliveryFacts(0, 0, 0, 2), second);
+  assert.equal(unchanged.actions.length, 0);
+  assert.equal(unchanged.verdict, 'healthy');
+  assert.equal(reportWith(deliveryFacts(0, 0, 0, 1)).verdict, 'action');
+});
+
+test('login collection failure is unknown, preserves the complaint cursor, and does not invent zero events', () => {
+  const initial = reportWith(deliveryFacts(20, 0, 0, 2));
+  const failed = reportWith(
+    {
+      ...emptyFacts,
+      loginEmailDelivery: null,
+      collectorErrors: [{ section: 'loginEmailDelivery', code: 'collector_failed' }],
+    },
+    initial,
+  );
+  assert.equal(failed.verdict, 'unknown');
+  assert.equal(failed.loginEmailDelivery, null);
+  assert.equal(failed.loginEmailComplaintsSeen, 2);
+  assert.match(renderMistboardReadoutMarkdown(failed), /Login email delivery unavailable/);
+  const stillFailed = reportWith(
+    {
+      ...emptyFacts,
+      loginEmailDelivery: null,
+      collectorErrors: [{ section: 'loginEmailDelivery', code: 'collector_failed' }],
+    },
+    failed,
+  );
+  assert.equal(stillFailed.alertKey, failed.alertKey);
+  const recovered = reportWith(deliveryFacts(20, 0, 0, 2), stillFailed);
+  assert.equal(recovered.verdict, 'healthy');
+  const arrivedDuringFailure = reportWith(deliveryFacts(20, 0, 0, 3), stillFailed);
+  assert.equal(arrivedDuringFailure.actions[0]?.code, 'login-email-complaint-new');
+  const zero = reportWith(deliveryFacts(0, 0, 0));
+  assert.equal(zero.verdict, 'healthy');
+  assert.match(renderMistboardReadoutMarkdown(zero), /Login email.*0 sent/);
+  const legacy = reportWith(emptyFacts);
+  delete legacy.loginEmailDelivery;
+  delete legacy.loginEmailComplaintsSeen;
+  assert.doesNotThrow(() => renderMistboardReadoutMarkdown(legacy));
+  assert.equal(reportWith(deliveryFacts(0, 0, 0, 1), legacy).verdict, 'action');
 });

@@ -3,6 +3,7 @@ import { t } from './i18n/catalog.js';
 import { buildSiteBox } from './site-box.js';
 import { fitRowsToBody } from './site-box-fit.js';
 import { localizedStudyName } from './study-i18n.js';
+import './hover-grammar.css';
 import './landing-forum-preview.css';
 
 type ForumAuthor = {
@@ -74,14 +75,17 @@ async function hydrateForumPreview(body: HTMLElement): Promise<void> {
 
 function topicRow(topic: ForumTopicSummary): HTMLElement {
   const row = document.createElement('a');
-  row.className = 'site-box-row landing-forum-topic';
+  row.className = 'site-box-row landing-forum-topic hover-row';
   row.href = topicActivityHref(topic);
   if (topic.pinned) row.classList.add('is-pinned');
   if (topic.locked) row.classList.add('is-locked');
 
   const main = document.createElement('span');
   main.className = 'landing-forum-topic-main';
-  const title = span('landing-forum-topic-title', topic.translated?.title ?? topic.title);
+  const title = span(
+    'landing-forum-topic-title hover-title',
+    topic.translated?.title ?? topic.title,
+  );
   if (topic.translated?.title) title.title = topic.title;
   main.append(title);
   const excerpt = (topic.translated?.excerpt ?? topic.latestPost?.excerpt)?.trim() ?? '';

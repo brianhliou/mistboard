@@ -26,6 +26,21 @@ describe('locale helpers', () => {
     vi.restoreAllMocks();
   });
 
+  it('takes a puzzle page language from ?lang= and drops the parameter', () => {
+    window.history.replaceState(null, '', '/puzzles/xq-1?lang=zh-hans&theme=x#top');
+    expect(initializeLocaleFromCurrentUrl()).toBe('zh-Hans');
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('zh-Hans');
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      '/puzzles/xq-1?theme=x#top',
+    );
+    // Only the puzzle pages read it: elsewhere ?lang= is someone else's parameter.
+    window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+    window.history.replaceState(null, '', '/club/confirm?lang=zh-hant');
+    initializeLocaleFromCurrentUrl();
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBeNull();
+    expect(window.location.search).toBe('?lang=zh-hant');
+  });
+
   it('detects locales from current path prefixes', () => {
     expect(localeFromPath('/zh-hans/rules/banqi')).toBe('zh-Hans');
     expect(localeFromPath('/zh-hant/blog')).toBe('zh-Hant');
@@ -169,6 +184,14 @@ describe('locale helpers', () => {
     expect(localizedHref('/editor/jieqi', 'zh-Hans')).toBe('/editor/jieqi');
     expect(localizedHref('/analysis', 'zh-Hans')).toBe('/analysis');
     expect(localizedHref('/zh-hans/analysis/xiangqi', 'en')).toBe('/analysis/xiangqi');
+  });
+
+  it('switches the club page locale with its fragment and query intact', () => {
+    expect(localizedHref('/washington-xiangqi', 'zh-Hans')).toBe('/zh-hans/washington-xiangqi');
+    expect(
+      localeSwitchNavigation('/zh-hans/washington-xiangqi?source=club#contact', 'zh-Hant'),
+    ).toEqual({ kind: 'navigate', href: '/zh-hant/washington-xiangqi?source=club#contact' });
+    expect(localizedHref('/zh-hant/washington-xiangqi', 'en')).toBe('/washington-xiangqi');
   });
 
   it('strips existing locale prefixes before rebuilding hrefs', () => {

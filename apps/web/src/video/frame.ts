@@ -64,6 +64,9 @@ export function renderShotSvg(plan: ScenePlan, shot: Shot): string {
     // math depends on.
     layout: 'intersection',
     pieceSet: VIDEO_PIECE_SET,
+    // Flat pieces: the overlays aim at the flat piece's centre, and the
+    // channel keeps one look across Shorts whatever the site's default.
+    tile3d: false,
     arrows: shot.overlays.arrows.map((arrow) => ({
       from: arrow.from,
       to: arrow.to,

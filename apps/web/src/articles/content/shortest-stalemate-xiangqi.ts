@@ -78,6 +78,7 @@ export const shortestStalemateXiangqiArticle: Article = {
   slug: 'shortest-stalemate-xiangqi',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'The Shortest Xiangqi Stalemate We Know',
   cardTitle: 'A 21-Ply Xiangqi Stalemate',
@@ -160,7 +161,7 @@ export const shortestStalemateXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: `Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](${STUDY}) with the others.`,
+          text: 'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies.',
         },
       ],
     },

@@ -161,6 +161,31 @@ describe('coarse-pointer touch floor', () => {
     expect(Math.min(...widths) + 2 * borderX).toBeGreaterThanOrEqual(TAP_MIN);
   });
 
+  // The `background` shorthand resets background-clip to border-box, so a
+  // state rule (:checked, :hover, :disabled) that sets it outranks the coarse
+  // padding-box clip and paints the transparent border: the 30x16 broadcast
+  // Results switch drew as a 54x40 green blob over its label on phones. State
+  // rules on these controls set background-color only.
+  it.each([
+    { file: 'src/review/engine/engine-panel.css', selector: '.engine-panel__switch' },
+    { file: 'src/xiangqi-broadcast.css', selector: '.xqb-gauge-toggle input' },
+    { file: 'src/landing-play-panel.css', selector: '.pp-step-btn' },
+  ])('$selector state rules keep the padding-box clip', ({ file, selector }) => {
+    const states = parse(file).filter(
+      (r) =>
+        r.selector.startsWith(selector) && /^(:(?!:)|\[)/.test(r.selector.slice(selector.length)),
+    );
+    // Every one of these has a state rule; none found means the match broke.
+    expect(states.length).toBeGreaterThan(0);
+    for (const rule of states) {
+      const clipped = rule.decls.get('background-clip') === 'padding-box';
+      expect(
+        rule.decls.has('background') && !clipped,
+        `${rule.selector} under ${rule.media ?? 'no media'} sets the background shorthand`,
+      ).toBe(false);
+    }
+  });
+
   it('keeps the embed result rule level with the taller control bar', () => {
     const rules = parse('src/embed/embed.css');
     // The bar adds a 1px top rule; the result's min-height includes its own.

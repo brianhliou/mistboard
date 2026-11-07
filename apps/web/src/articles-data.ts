@@ -9,17 +9,20 @@ export { withXiangqiBoardLayout, withXiangqiPieceSet } from './articles/diagrams
 import type { Article } from './articles/types.js';
 import { SERVER_FOG_SNAPSHOT_JSON_TEXT } from './articles/diagrams.js';
 import { banqiArticle } from './articles/content/banqi.js';
+import { threeKingdomsBanqiArticle } from './articles/content/three-kingdoms-banqi.js';
 import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
 import { banqiChariotEndgameArticle } from './articles/content/banqi-chariot-endgame.js';
 import { banqiPerpetualChaseArticle } from './articles/content/banqi-perpetual-chase.js';
+import { setUpYourBoardArticle } from './articles/content/set-up-your-board.js';
 import { chessArticle } from './articles/content/chess.js';
 import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
 import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
+import { abJchessVsJqeArticle } from './articles/content/ab-jchess-vs-jqe.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { jqeArticle } from './articles/content/jqe.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
@@ -48,6 +51,7 @@ import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
 import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { atomicXiangqiBuildArticle } from './articles/content/atomic-xiangqi-build.js';
 import { crazyhouseXiangqiArticle } from './articles/content/crazyhouse-xiangqi.js';
+import { gomokuArticle } from './articles/content/gomoku.js';
 import { duckXiangqiStrategyArticle } from './articles/content/duck-xiangqi-strategy.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
@@ -58,7 +62,6 @@ import { douShouQiEngineArticle } from './articles/content/dou-shou-qi-engine.js
 import { jungleDenTermArticle } from './articles/content/jungle-den-term.js';
 import { mahjongArticle } from './articles/content/mahjong.js';
 import { xiangqiMahjong32Article } from './articles/content/xiangqi-mahjong-32.js';
-import { howToPlayXiangqiMahjongArticle } from './articles/content/how-to-play-xiangqi-mahjong.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
 import { mistyArticle } from './articles/content/misty.js';
@@ -82,10 +85,11 @@ import { laiLyHuynhCoTuongArticle } from './articles/content/lai-ly-huynh-co-tuo
 import { tonyFungGaZenArticle } from './articles/content/tony-fung-ga-zen.js';
 import { fortressAndAtomicXiangqiOnHoldArticle } from './articles/content/fortress-and-atomic-xiangqi-on-hold.js';
 import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
+import { tangDanArticle } from './articles/content/tang-dan.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
-  howToPlayXiangqiMahjongArticle,
+  tangDanArticle,
   shortestStalemateXiangqiArticle,
   generalBlunderChallengeArticle,
   helpmatesInXiangqiArticle,
@@ -98,6 +102,7 @@ export const articles: Article[] = [
   solverAuditArticle,
   pikafishRevealBugArticle,
   katagoJungleArticle,
+  abJchessVsJqeArticle,
   jqeArticle,
   abJchessArticle,
   jieqiBotWinsArticle,
@@ -136,6 +141,7 @@ export const articles: Article[] = [
   atomicXiangqiArticle,
   atomicXiangqiBuildArticle,
   crazyhouseXiangqiArticle,
+  gomokuArticle,
   antiXiangqiArticle,
   benedictXiangqiArticle,
   hordeXiangqiArticle,
@@ -147,6 +153,7 @@ export const articles: Article[] = [
   mahjongArticle,
   xiangqiMahjong32Article,
   banqiArticle,
+  threeKingdomsBanqiArticle,
   banqiStatisticsArticle,
   banqiEngineArticle,
   douShouQiEngineArticle,
@@ -154,6 +161,7 @@ export const articles: Article[] = [
   banqiLuckArticle,
   banqiPerpetualChaseArticle,
   banqiChariotEndgameArticle,
+  setUpYourBoardArticle,
   flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,

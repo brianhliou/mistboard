@@ -3,9 +3,12 @@ import {
   DARK_XIANGQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   isPublicGameSpec,
   isRetiredGameSpec,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
+import { gomokuEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { localizedHref } from './i18n/locale.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
@@ -77,11 +80,25 @@ export function localizedRulesHrefForRoom(roomId: string): string | null {
   return localizedRulesHref(webVariantTenantForRoomId(roomId)?.gameSpecId);
 }
 
+/** A hidden spec whose local playtest build is on:
+ *  its rules page lists in the rail and offers the board in that build only.
+ *  Production never sets the flag, so there the page stays hidden. */
+export function variantPlaytestSurfaceEnabled(id: GameSpecId): boolean {
+  return (
+    (id === THREE_KINGDOMS_BANQI_SPEC_ID && threeKingdomsBanqiEnabled()) ||
+    (id === GOMOKU_SPEC_ID && gomokuEnabled())
+  );
+}
+
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
   if (HIDDEN_RULES_SLUGS.has(slug)) return false;
   if (RULES_SLUGS_NOT_A_SPEC.has(slug)) return true;
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
-  return !isGameSpecId(gameSpecId) || variantPublicSurfaceEnabled(gameSpecId);
+  return (
+    !isGameSpecId(gameSpecId) ||
+    variantPublicSurfaceEnabled(gameSpecId) ||
+    variantPlaytestSurfaceEnabled(gameSpecId)
+  );
 }
 
 /** Whether a published page carries `noindex, follow`: a rules page whose

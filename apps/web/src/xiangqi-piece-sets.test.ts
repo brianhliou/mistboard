@@ -256,7 +256,7 @@ describe('asset piece sets', () => {
   // The cache-busting ?v= per set; brush and clerical went to 2 when their
   // baked disc shadow came out (2026-10-08).
   const ASSET_VERSIONS: Record<AssetXiangqiPieceSet, number> = {
-    lacquer: 2,
+    lacquer: 3,
     wood: 1,
     book: 1,
     brush: 2,
@@ -362,7 +362,7 @@ describe('asset piece sets', () => {
       expect(marks).toContain('fill="#5a3018"');
     }
     const lacquer = xiangqiBanqiBackMarks('lacquer') ?? '';
-    expect(hrefs(lacquer)).toEqual(['/piece-sets/xiangqi/lacquer/banqi-back.svg?v=2']);
+    expect(hrefs(lacquer)).toEqual(['/piece-sets/xiangqi/lacquer/banqi-back.svg?v=3']);
     expect(fileExists(hrefs(lacquer)[0]!)).toBe(true);
     const book = xiangqiBanqiBackMarks('book') ?? '';
     expect(book).not.toMatch(/red-|black-/);

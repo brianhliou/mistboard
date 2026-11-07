@@ -11,8 +11,15 @@
 // Imported by study.ts and study-index.ts; keep it tiny (no review/board
 // imports) so the create dialog does not pull a board stack.
 
-import { type GameSpecId, gameSpecForId, hasStartFen, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  type GameSpecId,
+  gameSpecForId,
+  hasStartFen,
+  isAdminOnlyStudySpecId,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
+import { isLikelyAdmin } from './signed-in-state.js';
 import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 // The literal mirror of STUDY_ELIGIBLE_SPEC_IDS. It exists so the client gets a
@@ -30,6 +37,8 @@ const STUDY_VARIANT_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  // Unlaunched (#628): admin-only on the server until the public launch.
+  'three-kingdoms-banqi',
   // Retired 2026-10-11, off the canonical order so at the tail: existing
   // studies in these variants keep opening.
   'fortress-xiangqi',
@@ -86,16 +95,22 @@ export function studyVariantChip(variant: StudyVariantId): HTMLElement {
  *  is a capability ("does this variant have a tree-review stack"), and it stays
  *  whole so an existing study of an unlaunched variant still opens. This list is
  *  a public surface, so it offers only what has launched, plus whatever is
- *  already selected. */
+ *  already selected, plus the admin-only study variants (#628) to an admin.
+ *  That last part is cosmetic: the server refuses a non-admin's create. */
 export function buildStudyVariantSelect(
   ariaLabel: string,
   selected: StudyVariantId,
+  isAdmin: () => boolean = isLikelyAdmin,
 ): HTMLSelectElement {
   const select = document.createElement('select');
   select.className = 'study-create-dialog__control';
   select.setAttribute('aria-label', ariaLabel);
+  const admin = isAdmin();
   const offered = STUDY_VARIANTS.filter(
-    (variant) => variant.id === selected || variantPublicSurfaceEnabled(variant.id),
+    (variant) =>
+      variant.id === selected ||
+      variantPublicSurfaceEnabled(variant.id) ||
+      (admin && isAdminOnlyStudySpecId(variant.id)),
   );
   for (const variant of offered) {
     const option = document.createElement('option');

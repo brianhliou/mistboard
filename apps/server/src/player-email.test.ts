@@ -71,6 +71,87 @@ function correspondenceEmails(locale: EmailLocale): Array<[string, PlayerEmail]>
 
 const CODE_PURPOSES = ['login', 'email-change', 'account-closure'] as const;
 
+const CODE_COPY = {
+  en: {
+    subjects: [
+      'Your Mistboard login code',
+      'Confirm your new Mistboard email',
+      'Confirm closing your Mistboard account',
+    ],
+    headings: ['Your login code', 'Your email-change code', 'Your account-closure code'],
+    intros: [
+      'Your Mistboard login code is',
+      'Your Mistboard email-change code is',
+      'Your Mistboard account-closure code is',
+    ],
+    instructions: 'Enter it on Mistboard to continue. The code expires in 10 minutes.',
+    footer: 'If you did not request this code, you can ignore this email.',
+  },
+  'zh-Hans': {
+    subjects: [
+      '你的 Mistboard 登录验证码',
+      '确认你的 Mistboard 新邮箱',
+      '确认关闭你的 Mistboard 账号',
+    ],
+    headings: ['你的登录验证码', '你的邮箱变更验证码', '你的账号关闭验证码'],
+    intros: [
+      '你的 Mistboard 登录验证码是',
+      '你的 Mistboard 邮箱变更验证码是',
+      '你的 Mistboard 账号关闭验证码是',
+    ],
+    instructions: '请在 Mistboard 输入此验证码以继续。验证码将在 10 分钟后过期。',
+    footer: '如果你没有请求此验证码，可以忽略这封邮件。',
+  },
+  'zh-Hant': {
+    subjects: [
+      '你的 Mistboard 登入驗證碼',
+      '確認你的 Mistboard 新信箱',
+      '確認關閉你的 Mistboard 帳號',
+    ],
+    headings: ['你的登入驗證碼', '你的信箱變更驗證碼', '你的帳號關閉驗證碼'],
+    intros: [
+      '你的 Mistboard 登入驗證碼是',
+      '你的 Mistboard 信箱變更驗證碼是',
+      '你的 Mistboard 帳號關閉驗證碼是',
+    ],
+    instructions: '請在 Mistboard 輸入此驗證碼以繼續。驗證碼將在 10 分鐘後過期。',
+    footer: '如果你沒有請求此驗證碼，可以忽略這封郵件。',
+  },
+};
+
+for (const locale of LOCALES) {
+  for (const [index, purpose] of CODE_PURPOSES.entries()) {
+    test(`${locale} ${purpose} translates every part of the account email`, () => {
+      const email = accountCodeEmail('01234567', purpose, locale);
+      const copy = CODE_COPY[locale];
+      assert.equal(email.subject, copy.subjects[index]);
+      assert.ok(email.html.includes(`<html lang="${locale}">`));
+      assert.ok(email.html.includes(`${copy.intros[index]} 01234567.`), 'preheader');
+      for (const part of [email.text, email.html]) {
+        for (const expected of [
+          copy.headings[index]!,
+          copy.instructions,
+          copy.footer,
+          '01234567',
+        ]) {
+          assert.ok(part.includes(expected), `${purpose}: ${expected}`);
+        }
+        assert.ok(!part.includes('/account/settings'));
+        assert.ok(!part.includes('\u2014'));
+      }
+    });
+  }
+}
+
+test('all account code purposes default omitted and unsupported locales to English', () => {
+  for (const purpose of CODE_PURPOSES) {
+    const english = accountCodeEmail('01234567', purpose, 'en');
+    for (const locale of [undefined, null, 'fr', 'zh', 'zh-hans']) {
+      assert.deepEqual(accountCodeEmail('01234567', purpose, locale), english);
+    }
+  }
+});
+
 test('English subjects name the variant and the opponent', () => {
   assert.equal(startEmail('en').subject, 'Banqi with rebirthfox333 has started: your move');
   assert.equal(

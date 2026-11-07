@@ -14,6 +14,19 @@
 // same row/cell/highlight machinery, with branch children added later.
 import './move-list.css';
 
+/** Fill a luck badge ("🎲 -7%"), the die in its own span so a narrow sheet (the embed) can
+ *  shrink the die without the number; the badge's text is unchanged. */
+export function fillLuckBadge(el: HTMLElement, text: string): void {
+  if (!text.startsWith('🎲')) {
+    el.textContent = text;
+    return;
+  }
+  const die = document.createElement('span');
+  die.className = 'review-move-list__luck-die';
+  die.textContent = '🎲';
+  el.replaceChildren(die, document.createTextNode(text.slice('🎲'.length)));
+}
+
 export type MoveListEntry = {
   /** 1-based ply this move produced (the ply you land on by clicking it). */
   ply: number;
@@ -28,6 +41,9 @@ export type MoveListEntry = {
    *  right-aligned eval slot the way a study's tree view shows an assessment NAG.
    *  A chapter that plays a line out to a verdict puts it on the last move. */
   assessment?: string;
+  /** Reveal or flip luck, independent of move judgment; the shared luck card is keyed by
+   *  this entry's ply. */
+  luck?: number;
   /** The author's or the engine's note on this move, shown under its row. */
   note?: string;
   /** A sideline hung off the position this move was played in: what should have
@@ -304,6 +320,13 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     if (entry.assessment) evalEl.textContent = entry.assessment;
     button.append(san, evalEl);
     if (entry.suffix) appendGlyph(button, entry.suffix, entry.suffixClass);
+    if (entry.luck !== undefined) {
+      const luck = document.createElement('span');
+      luck.className = `review-move-list__luck review-move-list__luck--${entry.luck > 0 ? 'lucky' : entry.luck < 0 ? 'unlucky' : 'even'}`;
+      luck.dataset.luckPath = String(entry.ply);
+      fillLuckBadge(luck, `🎲 ${entry.luck > 0 ? '+' : ''}${entry.luck}%`);
+      button.querySelector('.review-move-list__eval')!.before(luck);
+    }
     button.addEventListener('click', () => onJump?.(entry.ply));
     cellsByPly.set(entry.ply, button);
     return button;

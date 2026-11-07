@@ -3,11 +3,9 @@ import {
   type FortressXiangqiColor,
   type FortressXiangqiMove,
   type FortressXiangqiPlayerView,
-  fortressXiangqiEngineFen,
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import './drop-reserve.css';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -182,8 +180,6 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     playerProfiles: reviewSeatProfiles(gamePlayers),
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
-    analyseFromHere: (truth) => analysisHref('fortress-xiangqi', fortressXiangqiEngineFen(truth)),
-    boardEditorHref: (truth) => editorHref('fortress-xiangqi', fortressXiangqiEngineFen(truth)),
     ...gameExportShareExtra('fortress-xiangqi', postgame.game.roomId),
     // Server whole-game FSF analysis, DB-cached: an already-analysed game loads from
     // cache on open (a GET that never computes). Requesting a fresh compute is

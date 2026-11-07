@@ -256,8 +256,7 @@ describe('rights note', () => {
     vi.unstubAllGlobals();
   });
 
-  const RIGHTS_TEXT =
-    "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.";
+  const RIGHTS_TEXT = 'Corrections or rights requests: contact us.';
 
   const zhejiang = {
     ...player({ name: '尹昇', nameEn: 'Yin Sheng', games: 0 }),
@@ -388,7 +387,7 @@ describe('professional player locale fixtures', () => {
       await mountXiangqiPlayersIndex(root);
       expect(root.querySelector('h1')?.textContent).toBe(english ? 'Xiangqi players' : '象棋棋手');
       expect(root.querySelector('.xqp-name-link')?.textContent).toContain(
-        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆 Chao Yi-fan',
+        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆',
       );
       expect(root.textContent).toContain('無名');
       const search = root.querySelector<HTMLInputElement>('input[type=search]')!;
@@ -411,7 +410,7 @@ describe('professional player locale fixtures', () => {
       );
       await mountXiangqiPlayer(root, chao.slug);
       expect(root.querySelector('.xqp-h1')?.textContent).toContain(
-        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆 Chao Yi-fan',
+        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆',
       );
       expect(root.querySelector('.xqp-who')?.textContent).toContain(
         english ? 'Chao Yi-fan' : '趙奕帆',
@@ -420,7 +419,7 @@ describe('professional player locale fixtures', () => {
         english ? 'Test Cup' : '测试杯',
       );
       expect(root.querySelector('.xqp-colour')?.textContent).toBe(
-        english ? 'Red' : locale === 'zh-Hans' ? '红' : '紅',
+        english ? 'red' : locale === 'zh-Hans' ? '红方' : '紅方',
       );
       expect(root.querySelector('.xqp-event-record')?.textContent).toContain(
         english ? '1 game' : '1 局',

@@ -11,6 +11,9 @@
 // deliberately absent; documenting them would promise a contract they do not
 // have. Version 0: shapes may change, and the description says so.
 
+import { isPublicGameSpec, XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
+
 type Schema = Record<string, unknown>;
 
 const ref = (name: string): Schema => ({ $ref: `#/components/schemas/${name}` });
@@ -57,6 +60,7 @@ export const WATCH_CHANNEL_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'gomoku',
   'engines',
 ] as const;
 
@@ -67,6 +71,10 @@ const GAME_ID_NOTE =
   'request line, so it takes no query string at all.';
 
 export function buildOpenApiDocument(origin: string): Record<string, unknown> {
+  // Keep hidden playtest channels out of the public API reference.
+  const watchChannelIds = WATCH_CHANNEL_IDS.filter(
+    (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
+  );
   const gameRecord: Schema = {
     type: 'object',
     description: 'A finished game as the site lists it.',
@@ -154,6 +162,13 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         },
       },
       themes: { type: 'array', items: { type: 'string' } },
+      motifs: { type: 'array', items: { type: 'string' } },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Trainer tags derived at load: kill patterns plus mate-in-N, phase, goal and length.',
+      },
       solutionPlyCount: { type: 'integer' },
       rating: { type: 'integer' },
       ratingProvisional: { type: 'boolean' },
@@ -472,7 +487,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         tags: ['Games'],
         summary: 'A finished game with its per-ply views',
         description:
-          'The postgame payload the review pages render: the game envelope, the final view, and every position of the game. One route per variant: `/api/xiangqi/games/{roomId}`, `/api/banqi/games/{roomId}`, `/api/jieqi/games/{roomId}`, `/api/dark-xiangqi/games/{roomId}`, and so on for every variant with a game route. Finished games only; a variant mismatch is a 404.',
+          'The postgame payload the review pages render: the game envelope, the final view, and every position of the game. One route per variant: `/api/xiangqi/games/{roomId}`, `/api/banqi/games/{roomId}`, `/api/jieqi/games/{roomId}`, `/api/dark-xiangqi/games/{roomId}`, and so on for every variant with a game route. Finished games only; a variant mismatch is a 404. `/api/three-kingdoms-banqi/games/{roomId}` (an admin-only playtest) answers only an admin session; anyone else gets the same 404 as an unknown game.',
         parameters: [
           pathParam('variant', 'A game spec id with a review route, e.g. `xiangqi`.'),
           pathParam('roomId', 'Room id.'),
@@ -506,7 +521,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         parameters: [
           query(
             'channel',
-            { type: 'string', enum: [...WATCH_CHANNEL_IDS], default: 'top' },
+            { type: 'string', enum: [...watchChannelIds], default: 'top' },
             'Which channel. The set is what /watch offers and can change as variants launch.',
           ),
           query(
@@ -544,7 +559,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         parameters: [
           query(
             'channel',
-            { type: 'string', enum: [...WATCH_CHANNEL_IDS], default: 'top' },
+            { type: 'string', enum: [...watchChannelIds], default: 'top' },
             'Which channel.',
           ),
           query('room', { type: 'string' }, 'The room you are following.'),
@@ -853,9 +868,25 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             'variant',
             {
               type: 'string',
-              enum: ['xiangqi', 'fortress-xiangqi', 'jungle'],
+              enum: ['xiangqi', 'jungle'],
             },
             'Restrict to one variant; omit for all.',
+          ),
+          query(
+            'motif',
+            { type: 'string', enum: XIANGQI_MOTIFS.map((motif) => motif.id) },
+            'Restrict to a named xiangqi mating pattern. Intersects variant; omit or leave empty for all.',
+          ),
+          query(
+            'theme',
+            {
+              type: 'string',
+              enum: [
+                ...XIANGQI_MOTIFS.map((motif) => motif.id),
+                ...XIANGQI_TRAINING_TAGS.map((tag) => tag.id),
+              ],
+            },
+            'Restrict to any trainer tag: a mating pattern, mate-in-N, phase, goal or length. Intersects variant and motif.',
           ),
         ],
         responses: {
@@ -864,9 +895,33 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             properties: {
               puzzles: { type: 'array', items: ref('PuzzleSummary') },
               attemptedIds: { type: 'array', items: { type: 'string' } },
+              themes: {
+                type: 'array',
+                description:
+                  'All classified themes and counts for the discoverable variant pool, before the theme filter.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    label: { type: 'string' },
+                    hanzi: { type: 'string' },
+                    pinyin: { type: 'string' },
+                    literal: { type: 'string' },
+                    gloss: { type: 'string' },
+                    tier: { type: 'string' },
+                    count: { type: 'integer', minimum: 0 },
+                  },
+                },
+              },
+              tagCounts: {
+                type: 'object',
+                description:
+                  'Puzzles per trainer tag (every tag, zeros included) in the discoverable variant pool, before the motif and theme filters.',
+                additionalProperties: { type: 'integer', minimum: 0 },
+              },
             },
           }),
-          '400': ERROR_RESPONSE('`invalid_variant`'),
+          '400': ERROR_RESPONSE('`invalid_variant`, `invalid_motif`, `invalid_theme`'),
         },
       },
     },

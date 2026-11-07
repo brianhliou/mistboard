@@ -22,7 +22,7 @@ import {
   oppositeDuckXiangqiColor,
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
-import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
+import { animateDuckXiangqiTurn, duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 import './live-xiangqi.css';
 import { replayStepperCopy } from './replay-stepper-copy.js';
@@ -166,7 +166,7 @@ export function mountDuckXiangqiReplay(
   host.append(header, frame, controls, slider, narrative);
 
   let index = 0;
-  function render(): void {
+  function render(from?: number): void {
     const state = states[index]!;
     const view = getDuckXiangqiPlayerView(state, perspective);
     // A replay is never interactive and has no phase of its own: the board is
@@ -176,6 +176,7 @@ export function mountDuckXiangqiReplay(
       phase: { kind: 'piece', selected: null },
       targets: [],
     });
+    animateDuckStep(board, states, from, index, perspective);
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
@@ -192,11 +193,13 @@ export function mountDuckXiangqiReplay(
     }
   }
 
+  const repaint = (): void => render();
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);
@@ -219,7 +222,7 @@ export function mountDuckXiangqiReplay(
     }
   };
   host.addEventListener('keydown', onKey);
-  window.addEventListener(xiangqiAppearanceChangedEvent, render);
+  window.addEventListener(xiangqiAppearanceChangedEvent, repaint);
 
   render();
 
@@ -231,7 +234,7 @@ export function mountDuckXiangqiReplay(
       last.removeEventListener('click', onLast);
       slider.removeEventListener('input', onSlider);
       host.removeEventListener('keydown', onKey);
-      window.removeEventListener(xiangqiAppearanceChangedEvent, render);
+      window.removeEventListener(xiangqiAppearanceChangedEvent, repaint);
       host.replaceChildren();
       host.classList.remove('xq-replay', 'stepper', 'notranslate');
       host.removeAttribute('translate');
@@ -279,7 +282,8 @@ export function mountDuckXiangqiReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
-  const render = (): void => {
+  // `from` is the ply a one-ply step left: the turn between them glides.
+  const render = (from?: number): void => {
     const state = states[index]!;
     frame.innerHTML = duckXiangqiBoardSvg(
       getDuckXiangqiPlayerView(state, perspective),
@@ -290,6 +294,7 @@ export function mountDuckXiangqiReplayBoard(
         targets: [],
       },
     );
+    animateDuckStep(frame, states, from, index, perspective);
     hooks.onPlyChange?.(index, total);
   };
   render();
@@ -297,8 +302,9 @@ export function mountDuckXiangqiReplayBoard(
   return {
     destroy: () => host.replaceChildren(),
     jumpToPly: (ply: number) => {
+      const from = index;
       index = Math.max(0, Math.min(total, Math.trunc(ply)));
-      render();
+      render(from);
     },
     plyCount: () => total,
     moveEntries: () => turns.map((turn, i) => ({ ply: i + 1, label: duckXiangqiTurnLabel(turn) })),
@@ -306,4 +312,26 @@ export function mountDuckXiangqiReplayBoard(
     // first mover at the bottom.
     bottomSeat: () => (perspective === 'red' ? 'first' : 'second'),
   };
+}
+
+/** A one-ply step glides the turn between `from` and `to`; a jump, the first
+ *  render and an appearance repaint cut. */
+function animateDuckStep(
+  board: HTMLElement,
+  states: readonly DuckXiangqiGameState[],
+  from: number | undefined,
+  to: number,
+  perspective: DuckXiangqiColor,
+): void {
+  if (from === undefined || Math.abs(to - from) !== 1) return;
+  const before = states[Math.min(from, to)];
+  const after = states[Math.max(from, to)];
+  if (!before || !after) return;
+  animateDuckXiangqiTurn(
+    board,
+    getDuckXiangqiPlayerView(before, perspective),
+    getDuckXiangqiPlayerView(after, perspective),
+    perspective,
+    { reverse: to < from },
+  );
 }

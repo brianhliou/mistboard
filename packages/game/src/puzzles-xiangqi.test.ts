@@ -283,6 +283,7 @@ const MINED_THEMES: ReadonlySet<string> = new Set([
   'matein1',
   'matein2',
   'matein3',
+  'matein4',
   'winning',
   'winning-material',
   'crushing',

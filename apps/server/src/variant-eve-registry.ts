@@ -3,13 +3,13 @@
 // playable engines without an adapter, so a new variant cannot ship a ladder
 // that nothing can rate.
 
-import { atomicXiangqiEveAdapter } from './atomic-xiangqi-eve-adapter.js';
 import { banqiEveAdapter } from './banqi-eve-adapter.js';
 import { crazyhouseXiangqiEveAdapter } from './crazyhouse-xiangqi-eve-adapter.js';
 import { duckXiangqiEveAdapter } from './duck-xiangqi-eve-adapter.js';
 import { fortressXiangqiEveAdapter } from './fortress-xiangqi-eve-adapter.js';
 import { jieqiEveAdapter } from './jieqi-eve-adapter.js';
 import { jungleEveAdapter } from './jungle-eve-adapter.js';
+import { threeKingdomsBanqiEveAdapter } from './three-kingdoms-banqi-eve-adapter.js';
 import type { AnyVariantEveAdapter } from './variant-eve.js';
 import { xiangqiEveAdapter } from './xiangqi-eve-adapter.js';
 
@@ -17,9 +17,9 @@ const VARIANT_EVE_ADAPTERS: readonly AnyVariantEveAdapter[] = [
   xiangqiEveAdapter,
   fortressXiangqiEveAdapter,
   duckXiangqiEveAdapter,
-  atomicXiangqiEveAdapter,
   crazyhouseXiangqiEveAdapter,
   jieqiEveAdapter,
+  threeKingdomsBanqiEveAdapter,
   // Data-only (#488): no random floor, so they play scheduled games but are
   // never ladder-rated.
   banqiEveAdapter,

@@ -4,6 +4,7 @@ import {
   ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  type GomokuOpening,
   JIEQI_SPEC_ID,
   STANDARD_JIEQI_DEAL,
   XIANGQI_SPEC_ID,
@@ -15,6 +16,114 @@ import {
   resetProfileBoardCache,
   thumbOf,
 } from './profile-game-boards.js';
+
+const GOMOKU_SETUP: GomokuOpening = {
+  stones: [
+    { square: 'h8', color: 'white' },
+    { square: 'i8', color: 'black' },
+    { square: 'h9', color: 'white' },
+    { square: 'i9', color: 'black' },
+  ],
+  turn: 'black',
+};
+
+function gomokuEvents(roomId: string, setup?: GomokuOpening): unknown[] {
+  return [
+    { type: 'room-created', at: 1, roomId, gameSpecId: 'gomoku', ...(setup ? { setup } : {}) },
+    ...['a1', 'a15', 'b1', 'c15', 'c1', 'e15', 'd1', 'g15', 'e1'].map((to, index) => ({
+      type: 'move-played',
+      at: index + 2,
+      roomId,
+      color: index % 2 ? 'white' : 'black',
+      move: { to },
+    })),
+  ];
+}
+
+test('Gomoku profile thumbnails include dealt stones and the deciding placement', async () => {
+  const original = process.env.MISTBOARD_GOMOKU_ENABLED;
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+  try {
+    for (const setup of [undefined, GOMOKU_SETUP]) {
+      resetProfileBoardCache();
+      const roomId = `gmk_profile_${setup ? 'dealt' : 'legacy'}`;
+      const [row] = await attachProfileBoards(
+        [{ roomId, variant: 'gomoku' }],
+        await deps({ [roomId]: gomokuEvents(roomId, setup) }),
+      );
+      const board = row?.finalBoard;
+      assert.ok(board && board.shape === 'intersection');
+      assert.deepEqual([board.files, board.ranks, board.river, board.palaces], [15, 15, null, []]);
+      assert.equal(board.pieces.length, 9 + (setup?.stones.length ?? 0));
+      assert.ok(board.pieces.some(([f, r, ink]) => f === 4 && r === 1 && ink === 'black'));
+      assert.ok(board.pieces.some(([f, r, ink]) => f === 0 && r === 15 && ink === 'white'));
+      if (setup)
+        assert.ok(board.pieces.some(([f, r, ink]) => f === 7 && r === 8 && ink === 'white'));
+      assert.deepEqual(
+        Object.keys(board).sort(),
+        ['shape', 'files', 'ranks', 'river', 'palaces', 'pieces'].sort(),
+      );
+    }
+  } finally {
+    if (original === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = original;
+    resetProfileBoardCache();
+  }
+});
+
+test('Gomoku thumbnails refuse live, aborted and illegal logs', async () => {
+  const original = process.env.MISTBOARD_GOMOKU_ENABLED;
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+  try {
+    const roomId = 'gmk_profile_invalid';
+    const full = gomokuEvents(roomId, GOMOKU_SETUP);
+    for (const events of [
+      full.slice(0, -1),
+      [full[0], { type: 'game-aborted', at: 2, roomId, reason: 'no-start' }],
+      full.map((event, index) =>
+        index === 2
+          ? { type: 'move-played', at: 3, roomId, color: 'white', move: { to: 'a1' } }
+          : event,
+      ),
+    ]) {
+      resetProfileBoardCache();
+      const rows = await attachProfileBoards(
+        [{ roomId, variant: 'gomoku' }],
+        await deps({ [roomId]: events }),
+      );
+      assert.equal(rows[0]?.finalBoard, null);
+    }
+  } finally {
+    if (original === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = original;
+    resetProfileBoardCache();
+  }
+});
+
+test('Gomoku profile boards respect the flag before and after the cache is warm', async () => {
+  const original = process.env.MISTBOARD_GOMOKU_ENABLED;
+  const roomId = 'gmk_profile_flag';
+  const loads: string[][] = [];
+  const boardDeps = await deps({ [roomId]: gomokuEvents(roomId, GOMOKU_SETUP) }, loads);
+  const rows = [{ roomId, variant: 'gomoku' }];
+  resetProfileBoardCache();
+  try {
+    delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    assert.equal((await attachProfileBoards(rows, boardDeps))[0]?.finalBoard, null);
+    assert.deepEqual(loads, [], 'disabled thumbnail must not read its log');
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+    assert.ok((await attachProfileBoards(rows, boardDeps))[0]?.finalBoard);
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+    assert.equal((await attachProfileBoards(rows, boardDeps))[0]?.finalBoard, null);
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+    assert.ok((await attachProfileBoards(rows, boardDeps))[0]?.finalBoard);
+    assert.equal(loads.length, 1);
+  } finally {
+    if (original === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = original;
+    resetProfileBoardCache();
+  }
+});
 
 // Same fixture shapes as og-game-tenant.test.ts: real tenant logs replayed by
 // the real registered cards.
@@ -116,7 +225,7 @@ test('a xiangqi game ending on a move keeps the deciding move in its final board
   ];
   const boardDeps = await deps({ [roomId]: events });
   const card = boardDeps.cardForRoomId(roomId);
-  assert.ok(card && card.layout !== 'match');
+  assert.ok(card && card.layout !== 'match' && card.layout !== 'gomoku');
   const terminalFen = card.fenAtPly(events, roomId, plies);
   assert.ok(terminalFen);
   assert.equal(terminalFen.split(/\s+/)[1], '-');
@@ -188,7 +297,7 @@ for (const fixture of [
     ];
     const boardDeps = await deps({ [roomId]: events });
     const card = boardDeps.cardForRoomId(roomId);
-    assert.ok(card && card.layout !== 'match');
+    assert.ok(card && card.layout !== 'match' && card.layout !== 'gomoku');
     const terminalFen = card.fenAtPly(events, roomId, moves.length);
     assert.ok(terminalFen, 'the real tenant replay finishes on the capture');
     assert.ok(!terminalFen.split(' ')[0]?.includes('k'), 'the black general is gone');

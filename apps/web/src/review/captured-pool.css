@@ -20,3 +20,13 @@
   width: 100%;
   height: 100%;
 }
+
+/* A piece named only because it was captured while still face-down (jieqi: the
+   capturer's own pool, a revealed review) is drawn shaded, so it reads apart
+   from a piece both players saw (Brian, 2026-10-26). Opacity lets the strip's
+   own background through, so the wash follows light and dark themes and every
+   piece set; the count badge is a sibling of the svg and stays crisp. */
+.review-capture-piece.is-taken-face-down > svg {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+}
