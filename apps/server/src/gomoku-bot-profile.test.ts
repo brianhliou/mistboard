@@ -4,6 +4,7 @@ import test from 'node:test';
 import { gameSpecForId } from '@mistboard/game';
 import pg from 'pg';
 import './gomoku-registration.js';
+import { botEngineVersion } from './bot-engine-versions.js';
 import {
   firstPartyBotEngineFor,
   firstPartyBotForEngine,
@@ -69,7 +70,10 @@ test('Rapfi bot pages are playable only while Gomoku is public and enabled', (t)
     };
     process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
     spec.publicSurface = 'casual';
-    assert.deepEqual(botPlayOptions(bot), [{ gameSpecId: 'gomoku', engineId: id, playable: true }]);
+    assert.deepEqual(botPlayOptions(bot), [
+      { gameSpecId: 'gomoku', engineId: id, playable: true, version: botEngineVersion(id) },
+    ]);
+    assert.ok(botEngineVersion(id), `${id} shows its rapfi.ref version`);
     process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
     assert.equal(
       botPlayOptions(bot).some((option) => option.playable),
