@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Flip Jungle (jungle-flip) review surface: the jungle-flip presentation bundle over
 // the generic tree-review controller (mountTreeReview). It drives the in-browser
 // MistyJungleFlip wasm client engine (positionMode 'fen', per-node redacted FEN), mirroring
@@ -15,6 +16,7 @@ import {
   jungleFlipMoveLabel,
   jungleFlipStateToEngineFen,
 } from '@mistboard/game';
+
 import { rectangularGridAspect } from '../board-metrics.js';
 import { createJungleFlipInteractiveBoard } from '../jungle-flip-board.js';
 import {
@@ -100,6 +102,8 @@ function makeJungleFlipPresentation(
     boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
     defaultBoardAriaLabel: 'Flip Jungle board',
     boardAspect: rectangularGridAspect(JUNGLE_FLIP_BOARD_VIEW),
+    // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     // 4×4 board: keep capture tiles compact so the board grows to fill the box.
     boardCols: 8,
     // Cap the width so four cells don't balloon to fill a large square area (the

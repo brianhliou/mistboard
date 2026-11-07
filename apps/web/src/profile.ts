@@ -37,7 +37,7 @@ import {
 } from './profile-games-tools.js';
 import {
   createProfilePuzzleHistory,
-  hasSavedPuzzleRating,
+  createPublicProfilePuzzleHistory,
   PROFILE_PUZZLE_HISTORY_VARIANT,
   type ProfilePuzzleDay,
   type ProfilePuzzleHistory,
@@ -81,7 +81,6 @@ type ProfileBucketRating = {
 };
 
 type ProfileRatingHistoryPoint = {
-  roomId: string;
   endedAt: string;
   ratingBefore: number;
   ratingAfter: number;
@@ -118,6 +117,7 @@ type UserProfile = {
     profileLinks?: string[];
     profileVisibility: 'private' | 'unlisted' | 'public';
     accountRole: 'player' | 'admin';
+    isFounder?: boolean;
     // Verified title key ('xgm', 'gm', ...). Absent/null = untitled. Granted
     // only through the /verify-title pipeline (see routes/titles.ts); unknown
     // values render no badge (fail-closed in player-titles.ts).
@@ -228,6 +228,7 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   // Rated, but allowlisted: the server keeps this pool off every profile, and
   // its VARIANTS entry stays out of PROFILE_VARIANT_ORDER until the spec is public.
   xiangqi_mahjong: 'variant.xiangqiMahjong.name',
+  gomoku: 'variant.gomoku.name',
 };
 
 // Profile rating grid is subject-scoped and follows the baseline rating variant
@@ -303,8 +304,8 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   const overview = buildProfileOverview(profile, spotlight, locale);
   void hydrateProfilePresence(overview, profile.user.handle, locale);
 
-  // The owner's puzzle history feeds both the spotlight and the Activity
-  // tab's daily puzzle rows; visitors never request it.
+  // Private attempts feed only the owner's Activity rows; visitors never
+  // request them. The chart below uses a separate public rating read.
   const puzzleHistory = profile.isViewer ? createProfilePuzzleHistory() : null;
   const tabs = buildProfileTabs(profile, locale, initialFilter, puzzleHistory);
   void puzzleHistory?.load().catch(() => {});
@@ -327,21 +328,27 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
       tabs.setGamesVariant(variant);
     },
   });
+  const publicPuzzleHistory = createPublicProfilePuzzleHistory(handle);
+  const selectPuzzle = (entry: ProfilePuzzleRating) => {
+    const next = buildProfilePuzzleSpotlight(entry, locale);
+    spotlight.replaceWith(next);
+    spotlight = next;
+    syncSelectedRating(ratings, null, entry.variant);
+    void hydrateProfilePuzzleSpotlight(next, entry.variant, publicPuzzleHistory, locale);
+  };
   appendProfilePuzzleRatings(
     ratings,
     profile.puzzleRatings ?? [],
     profile.puzzleStreak ?? null,
     locale,
-    puzzleHistory
-      ? (entry) => {
-          const next = buildProfilePuzzleSpotlight(entry, locale);
-          spotlight.replaceWith(next);
-          spotlight = next;
-          syncSelectedRating(ratings, null, entry.variant);
-          void hydrateProfilePuzzleSpotlight(next, entry.variant, puzzleHistory, locale);
-        }
-      : undefined,
+    selectPuzzle,
   );
+  // With no rated game there is no game rating to graph, so every visitor
+  // opens on the player's puzzle rating. A variant in the URL still wins.
+  const openingPuzzle = initialFilter.variant
+    ? null
+    : openingPuzzleSpotlight(profile.ratings, profile.puzzleRatings ?? []);
+  if (openingPuzzle) selectPuzzle(openingPuzzle);
 
   const dashboard = buildProfileDashboard(ratings, overview, tabs.el);
   shell.append(dashboard);
@@ -1108,6 +1115,12 @@ export function buildProfileIdentity(
   }
   const roleBadge = buildRoleBadge(profile.user.accountRole, locale);
   if (roleBadge) metaParts.push(roleBadge);
+  if (profile.user.isFounder) {
+    const founder = document.createElement('span');
+    founder.className = 'profile-role-badge profile-role-founder';
+    founder.textContent = t('profile.founder', {}, locale);
+    metaParts.push(founder);
+  }
   const patronBadge = buildPatronBadge(profile.user.patronSince, locale);
   if (patronBadge) metaParts.push(patronBadge);
 
@@ -1154,8 +1167,9 @@ function buildProfileActions(
   return null;
 }
 
-// Your own profile offers its editor and title verification; someone else's
-// profile offers the social actions assembled above.
+// Your own profile offers its editor; someone else's profile offers the social
+// actions assembled above. Title verification lives in settings: most players
+// hold no title, so it does not earn a button here.
 function buildOwnerActions(locale: Locale = currentLocale(), title?: unknown): HTMLElement {
   const row = document.createElement('div');
   row.className = 'profile-relation-actions profile-owner-actions';
@@ -1164,11 +1178,6 @@ function buildOwnerActions(locale: Locale = currentLocale(), title?: unknown): H
   edit.href = localizedHref('/account/settings', locale);
   edit.textContent = t('profile.editProfile', {}, locale);
   row.append(edit);
-  const verifyTitle = document.createElement('a');
-  verifyTitle.className = 'landing-setup-back';
-  verifyTitle.href = localizedHref('/verify-title', locale);
-  verifyTitle.textContent = t('verifyTitle.heading', {}, locale);
-  row.append(verifyTitle);
   // A held title unlocks the coach directory: offer the editor entry point.
   if (isPlayerTitle(title)) {
     const coach = document.createElement('a');
@@ -1437,6 +1446,22 @@ function defaultSelectedProfileVariant(ratings: ProfileBucketRating[]): ProfileR
   return PROFILE_VARIANT_ORDER[0] ?? 'fog';
 }
 
+// The puzzle rating a profile opens on: only when no game rating exists to show,
+// and then the variant with the most solves among those the rail lists.
+export function openingPuzzleSpotlight(
+  ratings: ProfileBucketRating[],
+  puzzleRatings: ProfilePuzzleRating[],
+): ProfilePuzzleRating | null {
+  if (ratings.some((rating) => rating.eloRating != null && rating.ratedGamesPlayed > 0)) {
+    return null;
+  }
+  return (
+    puzzleRatings
+      .filter((entry) => !HIDDEN_PROFILE_PUZZLE_VARIANTS.has(entry.variant))
+      .sort((a, b) => b.solved - a.solved)[0] ?? null
+  );
+}
+
 // Range presets for the rating graph (lichess/playstrategy parity). ALL is the
 // default so a sparse history still shows every point on first paint.
 type ChartRange = '1M' | '3M' | '6M' | 'YTD' | '1Y' | 'ALL';
@@ -1493,19 +1518,15 @@ function buildProfileRatingSpotlight(
       locale,
     );
   } else if (bucket && bucket.totalGamesPlayed > 0) {
-    value.textContent = t('profile.unrated', {}, locale);
-    value.classList.add('profile-chart-value-unrated');
     detail.textContent = `${bucket.totalGamesPlayed} ${t(
       bucket.totalGamesPlayed === 1 ? 'profile.gameSingular' : 'profile.gamePlural',
       {},
       locale,
     ).toLowerCase()}`;
   } else {
-    value.textContent = '—';
-    value.classList.add('profile-chart-value-empty');
     detail.textContent = t('profile.noGamesYet', {}, locale);
   }
-  headline.append(name, value, detail);
+  headline.append(name, ...(value.textContent ? [value] : []), detail);
   return buildProfileChartSpotlight(headline, locale);
 }
 
@@ -1614,7 +1635,7 @@ async function hydrateProfileRatingSpotlight(
 async function hydrateProfilePuzzleSpotlight(
   section: HTMLElement,
   variant: string,
-  history: ProfilePuzzleHistory,
+  history: ReturnType<typeof createPublicProfilePuzzleHistory>,
   locale: Locale,
 ): Promise<void> {
   const status = document.createElement('div');
@@ -1625,9 +1646,8 @@ async function hydrateProfilePuzzleSpotlight(
     section.setAttribute('aria-busy', 'true');
     status.textContent = t('profile.loading', {}, locale);
     try {
-      const attempts = (await history.load()).filter((entry) => entry.variant === variant);
-      const points = profilePuzzleRatingPoints(attempts).map((entry) => ({
-        roomId: entry.puzzleId,
+      const ratings = (await history()).filter((entry) => entry.variant === variant);
+      const points = profilePuzzleRatingPoints(ratings).map((entry) => ({
         endedAt: entry.createdAt,
         ratingBefore: entry.ratingBefore,
         ratingAfter: entry.ratingAfter,
@@ -1635,12 +1655,7 @@ async function hydrateProfilePuzzleSpotlight(
       }));
       spotlightHistory.set(section, points);
       renderSpotlightChart(section, locale, true);
-      status.textContent = t('profile.puzzleHistoryPrivate', {}, locale);
-      if (attempts.some((entry) => entry.rated && !hasSavedPuzzleRating(entry))) {
-        const note = document.createElement('p');
-        note.textContent = t('profile.puzzleHistoryLegacy', {}, locale);
-        status.append(note);
-      }
+      status.textContent = '';
     } catch {
       status.textContent = t('profile.puzzleHistoryFailed', {}, locale);
       const retry = document.createElement('button');
@@ -1740,7 +1755,8 @@ function filterPointsByStartFraction(
   });
 }
 
-// Year labels bracketing the slider (empty when there is no span to scrub).
+// Date labels bracketing the slider (empty when there is no span to scrub): the
+// year, or month and year when the whole span sits inside one year.
 function renderSliderAxis(section: HTMLElement, times: number[], locale: Locale): void {
   const axis = section.querySelector<HTMLElement>('.profile-chart-slider-axis');
   if (!axis) return;
@@ -1748,11 +1764,18 @@ function renderSliderAxis(section: HTMLElement, times: number[], locale: Locale)
     axis.replaceChildren();
     return;
   }
-  const fmt = new Intl.DateTimeFormat(LOCALE_META[locale].dateLocale, { year: 'numeric' });
+  const first = new Date(times[0]!);
+  const last = new Date(times[times.length - 1]!);
+  const fmt = new Intl.DateTimeFormat(
+    LOCALE_META[locale].dateLocale,
+    first.getFullYear() === last.getFullYear()
+      ? { month: 'short', year: 'numeric' }
+      : { year: 'numeric' },
+  );
   const start = document.createElement('span');
-  start.textContent = fmt.format(new Date(times[0]!));
+  start.textContent = fmt.format(first);
   const end = document.createElement('span');
-  end.textContent = fmt.format(new Date(times[times.length - 1]!));
+  end.textContent = fmt.format(last);
   axis.replaceChildren(start, end);
 }
 
@@ -2331,17 +2354,18 @@ function profileActivitySummaries(
   return [...summaries.values()];
 }
 
-function profileGameActivityRow(
+export function profileGameActivityRow(
   summary: ProfileActivitySummary,
   locale: Locale = currentLocale(),
 ): ProfileActivityRow {
   const pills: ProfileActivityRow['pills'] = [];
-  const pill = (count: number, key: I18nKey, tone: 'win' | 'loss' | 'draw') => {
-    if (count > 0) pills.push({ text: `${count} ${t(key, {}, locale).toLowerCase()}`, tone });
+  const pill = (count: number, one: I18nKey, many: I18nKey, tone: 'win' | 'loss' | 'draw') => {
+    if (count === 0) return;
+    pills.push({ text: `${count} ${t(count === 1 ? one : many, {}, locale).toLowerCase()}`, tone });
   };
-  pill(summary.wins, 'result.win', 'win');
-  pill(summary.draws, 'result.draw', 'draw');
-  pill(summary.losses, 'result.loss', 'loss');
+  pill(summary.wins, 'result.win', 'profile.filterWins', 'win');
+  pill(summary.draws, 'result.draw', 'profile.filterDraws', 'draw');
+  pill(summary.losses, 'result.loss', 'profile.filterLosses', 'loss');
   return {
     day: summary.day,
     time: summary.time,
@@ -2822,10 +2846,6 @@ function buildRatingRailRow(
     );
     figures.append(count);
   } else if (bucket != null && bucket.totalGamesPlayed > 0) {
-    value.textContent = t('profile.unrated', {}, locale);
-    value.classList.add('profile-rating-value-unrated');
-    figures.append(value);
-
     // Casual activity still counts as a record: show the total games figure the
     // same way rated rows show their rated-games figure.
     const count = document.createElement('span');
@@ -2836,10 +2856,6 @@ function buildRatingRailRow(
       locale,
     ).toLowerCase()}`;
     figures.append(count);
-  } else {
-    value.textContent = '—';
-    value.classList.add('profile-rating-value-empty');
-    figures.append(value);
   }
 
   meta.append(figures);

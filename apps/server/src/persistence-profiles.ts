@@ -21,7 +21,7 @@ import {
   userFromRow,
 } from './persistence-accounts.js';
 import { getUserAchievements, type UserAchievement } from './persistence-achievements.js';
-import { seatWonGame } from './persistence-counted-games.js';
+import { notFFQBanqiGame, seatWonGame } from './persistence-counted-games.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -38,6 +38,8 @@ import {
   visibleRatingTimeClasses,
 } from './rating-buckets.js';
 
+const FOUNDER_USERNAMES = new Set(['brianhliou-dev']);
+
 // Maps a stored `games.variant` to its rating pool, IN SQL. Extracted so the
 // profile's per-variant game COUNT (the rating rail) and its per-variant game
 // LIST (the Games tab filter) are the same expression: if they disagreed, a rail
@@ -49,6 +51,7 @@ import {
 // fails the build here instead of its games counting as Fog Chess (Xiangqi
 // Mahjong, 2026-10-15, was missing from the hand-written CASE).
 export const GAME_VARIANTS_BY_RATING_POOL = {
+  gomoku: ['gomoku'],
   fog: ['dark-chess', 'fog'],
   dark_xiangqi: ['dark-xiangqi'],
   jieqi: ['jieqi'],
@@ -99,6 +102,7 @@ export type PublicProfileUser = {
   profileLinks: string[];
   profileVisibility: UserAccount['profileVisibility'];
   accountRole: AccountRole;
+  isFounder: boolean;
   // Verified player title; drives the title badge (flair) on the public
   // profile and user card. NULL = untitled.
   title: PlayerTitle | null;
@@ -541,6 +545,7 @@ async function queryUserGames(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        ${filterSql.sql}
        ${profileVisibilityClause(isViewer)}
      )
@@ -668,6 +673,7 @@ export async function getUserProfileByHandle(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND ${RATED_POOL_VARIANTS_SQL}
        ${visibilityClause}
      GROUP BY 1`,
@@ -761,6 +767,7 @@ export async function getUserProfileByHandle(
       profileLinks: user.profileLinks,
       profileVisibility: user.profileVisibility,
       accountRole: user.accountRole,
+      isFounder: FOUNDER_USERNAMES.has(user.handle.toLowerCase()),
       title: user.title,
       flair: user.flair,
       patronSince: user.patronSince,
@@ -795,6 +802,56 @@ export async function getUserGamesPage(
   return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters, before);
 }
 
+export type PublicPuzzleRatingPoint = {
+  variant: string;
+  createdAt: string;
+  ratingBefore: number;
+  ratingAfter: number;
+  startsSegment: boolean;
+};
+
+// Public chart data has an explicit allowlist, independent of the private
+// attempt serializer. Missing snapshots break the line, never invent a rating.
+export async function getUserPuzzleRatingHistory(
+  handle: string,
+  viewerUserId: string | null,
+): Promise<PublicPuzzleRatingPoint[] | null> {
+  const user = await loadProfileUser(handle);
+  if (!user || (user.profileVisibility === 'private' && viewerUserId !== user.id)) return null;
+
+  const { rows } = await getPool().query<{
+    variant: string;
+    created_at: Date;
+    user_rating_before: number | null;
+    user_rating_after: number | null;
+  }>(
+    `SELECT variant, created_at, user_rating_before, user_rating_after
+     FROM puzzle_attempts
+     WHERE user_id = $1 AND rated = TRUE
+     ORDER BY created_at ASC, puzzle_id ASC`,
+    [user.id],
+  );
+  const previous = new Map<string, number>();
+  const points: PublicPuzzleRatingPoint[] = [];
+  for (const row of rows) {
+    const before = row.user_rating_before;
+    const after = row.user_rating_after;
+    if (before === null || after === null || !Number.isFinite(before) || !Number.isFinite(after)) {
+      previous.delete(row.variant);
+      continue;
+    }
+    points.push({
+      variant: row.variant,
+      createdAt: row.created_at.toISOString(),
+      ratingBefore: before,
+      ratingAfter: after,
+      startsSegment: previous.get(row.variant) !== before,
+    });
+    previous.set(row.variant, after);
+  }
+  return points;
+}
+
 export async function getUserRatingHistory(
   handle: string,
   viewerUserId: string | null,
@@ -823,6 +880,7 @@ export async function getUserRatingHistory(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
        AND games.mode = 'pvp'
        AND COALESCE(games.rated, false) = true
        AND game_participants.elo_before IS NOT NULL

@@ -101,6 +101,12 @@ export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
 }
 
+// Hidden FFQ banqi playtest. This opt-in never grants access on its own;
+// ffq-banqi-access.ts also requires an admin account at every entry point.
+export function ffqBanqiEnabled(): boolean {
+  return process.env.MISTBOARD_FFQ_BANQI_ENABLED === 'true';
+}
+
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the in-process α-β bot + rated pool come later).
@@ -123,8 +129,8 @@ export function threeKingdomsBanqiEnabled(): boolean {
   return process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED === 'true';
 }
 
-// Hidden Gomoku playtest (#768). Local opt-in only, off by default. This
-// cannot open rooms until a tenant is integrated; it is not a launch switch.
+// Gomoku runtime kill-switch, off by default. It admits everyone when enabled;
+// coordinate it with the publicSurface launch release, never before the flip.
 export function gomokuEnabled(): boolean {
   return process.env.MISTBOARD_GOMOKU_ENABLED === 'true';
 }

@@ -32,8 +32,8 @@ export const maxRoomClockIncrementMs = 60_000;
 //
 // 10+5 is offered only by the deliberate variants (jieqi, xiangqi) but sits in
 // the shared set for that reason: it is not the lobby's job to re-derive which
-// tenant offers what. It is casual-only via the spec's `rated` flag, which
-// isRatedTimeControl enforces separately.
+// tenant offers what. Whether it rates is the spec's `rated` flag, which
+// isRatedTimeControl enforces separately (rated since 2026-11-06).
 //
 // (An earlier comment here claimed dark chess was scoped to bullet + blitz with
 // 5+5 dropped. That has not been true since dark-chess PvE was pinned to 5+5;

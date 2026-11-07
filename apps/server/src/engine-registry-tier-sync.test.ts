@@ -30,6 +30,7 @@ import test from 'node:test';
 import { BANQI_ENGINE_VERSION, BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
 import { JUNGLE_FLIP_ENGINE_VERSION, JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import { THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS } from './three-kingdoms-banqi-engine.js';
 
 type TierSyncCase = {
   /** Which tier table this expectation was derived from, for the failure message. */
@@ -43,6 +44,22 @@ type TierSyncCase = {
 // list (see the exemptions below) a row here would only echo the generator, so
 // only the hand-written entries are covered.
 const TIER_SYNC_CASES: readonly TierSyncCase[] = [
+  ...THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map(
+    (tier): TierSyncCase => ({
+      family: 'three-kingdoms-banqi',
+      engineId: tier.id,
+      config:
+        tier.evaluation === 'random'
+          ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+          : {
+              kind: 'three-kingdoms-banqi-uci',
+              nodes: tier.nodes,
+              movetime_ms: tier.movetimeCapMs,
+              evaluation: tier.evaluation,
+              ...(tier.level === undefined ? {} : { chance: 'mix' as const }),
+            },
+    }),
+  ),
   ...BANQI_PLAYABLE_ENGINES.map(
     (tier): TierSyncCase => ({
       family: 'banqi',
@@ -114,6 +131,7 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
   'pikafish',
   'pikafish-xiangqi',
   'banqi-uci',
+  'three-kingdoms-banqi-uci',
   'jungle-flip-uci',
   'jungle-uci',
   'katago-gtp',

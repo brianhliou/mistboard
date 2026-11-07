@@ -318,11 +318,12 @@
   border-bottom: 1px solid var(--site-border);
   background: transparent;
 }
-/* Tabs share the strip equally (lichess): each takes the same width, label
-   centered, so the active underline cells are evenly spaced across the bar. */
+/* Tabs share the strip by label length, each on one line: equal shares put
+   "Computer analysis" on two lines below a ~500px strip. */
 .review-underboard-tab {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
   padding: 7px 6px;
   border: none;
   background: transparent;
@@ -495,7 +496,7 @@
   color: var(--seat-first-ink, #c0563f);
 }
 .review-move-times__clock--black {
-  color: var(--seat-second-ink, #34302e);
+  color: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
 }
 /* White ink on the light panel is invisible at a wash's opacity, so the white
    clock takes the white bar's outline tone. */
@@ -508,7 +509,7 @@
   background: var(--seat-first-ink, #c0563f);
 }
 .review-move-times__bar--black {
-  background: var(--seat-second-ink, #34302e);
+  background: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
 }
 /* Chess: the first seat plays White. This used to be a `.dark-chess-review
    .review-move-times__bar--red` override -- the bar was still CALLED red and a page

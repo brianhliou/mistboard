@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   GOMOKU_SPEC_ID,
   publicSpecPredicate,
@@ -9,6 +10,7 @@ import {
 import {
   countedHumanGame,
   countedPublicGame,
+  DELETED_GAME_SPEC_IDS,
   notRetiredVariant,
   OFF_PUBLIC_GAME_SPEC_IDS,
   offPublicGameSpecIds,
@@ -22,6 +24,17 @@ test('notRetiredVariant excludes every retired spec id, derived from the registr
   assert.match(clause, /^g\.variant NOT IN \(/);
   for (const id of RETIRED_GAME_SPEC_IDS) assert.ok(clause.includes(`'${id}'`), id);
   assert.ok(!clause.includes("'xiangqi'"));
+});
+
+test('variants deleted from the registry stay out of public figures', () => {
+  // Their spec is gone, so runtimeStatus cannot exclude them; their games remain.
+  for (const id of DELETED_GAME_SPEC_IDS) {
+    assert.ok(countedPublicGame('g').includes(`'${id}'`), id);
+    assert.ok(!countedHumanGame('g').includes(`'${id}'`), id);
+    assert.ok(!GAME_SPECS.some((spec) => spec.id === id), `${id} is back in the registry`);
+  }
+  assert.ok(DELETED_GAME_SPEC_IDS.includes('dark-crazyhouse'));
+  assert.ok(DELETED_GAME_SPEC_IDS.includes('dark-mini-xiangqi'));
 });
 
 test('every hidden spec is excluded from public figures independently of access grants', () => {
@@ -50,7 +63,9 @@ test('Gomoku games enter public figures only when its publicSurface becomes publ
   );
   assert.deepEqual(
     offPublicGameSpecIds(() => true),
-    RETIRED_GAME_SPEC_IDS,
+    GAME_SPECS.map((spec) => spec.id).filter(
+      (id) => id === FFQ_BANQI_SPEC_ID || RETIRED_GAME_SPEC_IDS.includes(id),
+    ),
   );
 });
 

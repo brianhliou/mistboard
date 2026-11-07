@@ -1,84 +1,101 @@
-import { CHAMPIONS, championsWithNonDefaultScript } from '@mistboard/board-render';
+import { CHAMPIONS } from '@mistboard/board-render';
 import { describe, expect, it } from 'vitest';
 import { ARTICLE_LANGS, hasTranslation, translateArticleText } from '../article-i18n.js';
 import { articleProse } from '../article-prose.js';
 import { xiangqiChampionsArticle } from './content/xiangqi-champions.js';
 
-// A person's name is written in the script that person uses. It is not a word
-// to be converted along with the sentence around it: a mainland player stays in
-// simplified for a Traditional reader, because that is his name.
-//
-// This matters at exactly one moment, and it has not arrived yet: when this
-// article is translated, a zh-Hant pass over "Yang Guanlin 杨官璘, 1956" will be
-// tempted to render 楊官璘. These tests are vacuous until the dictionary exists
-// and start biting the moment it does, which is the point of writing them now
-// rather than after the translation lands.
+// A person's name follows the page's script (Brian, 2026-11-06): a Traditional
+// page shows 楊官璘, a Simplified page shows 杨官璘, wherever the player is from.
+// The conversion is a hand-checked list rather than a rule, because a surname
+// can convert wrongly: 于幼華 keeps 于 and 孫勇征 keeps 征.
 
 const strings = articleProse(xiangqiChampionsArticle).map((entry) => entry.text);
 
-// The rule is about people, not about the champion list, and this article names
-// mainland people who never won the title: Wang Yubo's opponent and his coach.
-// Protecting only CHAMPIONS put "王禹博對蘇奕霖" in the Traditional text, two
-// mainland players in one game caption with one name converted and one not.
-//
-// Pre-simplification figures are deliberately absent. 謝俠遜 died in 1987 and
-// 周恩來 in 1976, and their names are conventionally written in traditional
-// characters, so converting those is the correct treatment rather than a miss.
-const OTHER_MAINLAND_NAMES = ['苏奕霖', '张强'];
+const TRADITIONAL: Record<string, string> = {
+  杨官璘: '楊官璘',
+  李义庭: '李義庭',
+  胡荣华: '胡榮華',
+  柳大华: '柳大華',
+  李来群: '李來群',
+  吕钦: '呂欽',
+  徐天红: '徐天紅',
+  赵国荣: '趙國榮',
+  许银川: '許銀川',
+  陶汉明: '陶漢明',
+  于幼华: '于幼華',
+  洪智: '洪智',
+  赵鑫鑫: '趙鑫鑫',
+  蒋川: '蔣川',
+  孙勇征: '孫勇征',
+  王天一: '王天一',
+  谢靖: '謝靖',
+  郑惟桐: '鄭惟桐',
+  徐超: '徐超',
+  汪洋: '汪洋',
+  王廓: '王廓',
+  王禹博: '王禹博',
+};
+
+// People the article names who never won the title, and who appear only in the
+// translations: the English writes them in romanization.
+const OTHER_NAMES: Array<[string, string]> = [
+  ['苏奕霖', '蘇奕霖'],
+  ['张强', '張強'],
+];
 
 describe('champion names under translation', () => {
-  it('keeps each name in its own script wherever a translation exists', () => {
+  it('has a hand-checked Traditional form for every champion', () => {
+    expect(CHAMPIONS.filter((c) => !TRADITIONAL[c.zh]).map((c) => c.name)).toEqual([]);
+  });
+
+  it('writes each champion in the script of the page', () => {
     const wrong: string[] = [];
-    const people = [
-      ...CHAMPIONS.map((c) => ({ label: c.name, zh: c.zh })),
-      ...OTHER_MAINLAND_NAMES.map((zh) => ({ label: zh, zh })),
-    ];
-    for (const person of people) {
+    let checked = 0;
+    for (const champ of CHAMPIONS) {
+      const hant = TRADITIONAL[champ.zh];
       for (const source of strings) {
-        if (!source.includes(person.zh)) continue;
+        if (!source.includes(champ.zh)) continue;
         for (const lang of ARTICLE_LANGS) {
           if (!hasTranslation(lang, source)) continue;
-          const translated = translateArticleText(lang, source);
-          if (!translated.includes(person.zh)) {
-            wrong.push(`[${lang}] ${person.label}: expected ${person.zh} to survive translation`);
+          checked += 1;
+          const expected = lang === 'zh-Hant' ? hant : champ.zh;
+          if (!translateArticleText(lang, source).includes(expected)) {
+            wrong.push(`[${lang}] ${champ.name}: expected ${expected}`);
           }
         }
       }
     }
     expect(wrong, wrong.join('\n')).toEqual([]);
+    expect(checked).toBeGreaterThanOrEqual(CHAMPIONS.length);
   });
 
   // The loop above reads the ENGLISH source, which only carries hanzi for the
-  // champions: the article writes every other person in romanization, so
-  // "Su Yilin" has no 苏奕霖 to find and the check never fires for him. The name
-  // exists only inside the translation, so the comparison has to be between the
-  // two translations: whatever Simplified writes, Traditional must not convert.
-  it('does not convert a mainland name that exists only in the translation', () => {
+  // champions: "Su Yilin" has no 苏奕霖 to find. So these are compared between
+  // the two translations.
+  it('writes a name that exists only in the translation in the script of the page', () => {
     const wrong: string[] = [];
-    let checked = 0;
+    const seen = new Set<string>();
     for (const source of strings) {
       if (!hasTranslation('zh-Hans', source) || !hasTranslation('zh-Hant', source)) continue;
       const hans = translateArticleText('zh-Hans', source);
       const hant = translateArticleText('zh-Hant', source);
-      for (const zh of OTHER_MAINLAND_NAMES) {
-        if (!hans.includes(zh)) continue;
-        checked++;
-        if (!hant.includes(zh)) wrong.push(`${zh}: converted in zh-Hant, from "${hans.slice(0, 40)}"`);
+      for (const [simplified, traditional] of OTHER_NAMES) {
+        if (!hans.includes(simplified)) continue;
+        seen.add(simplified);
+        if (!hant.includes(traditional)) wrong.push(`${simplified}: not ${traditional} in zh-Hant`);
       }
     }
     expect(wrong, wrong.join('\n')).toEqual([]);
-    expect(checked, 'no protected non-champion name was found to check').toBeGreaterThanOrEqual(
-      OTHER_MAINLAND_NAMES.length,
-    );
+    expect([...seen].sort()).toEqual(OTHER_NAMES.map(([s]) => s).sort());
   });
 
-  it('records a script for anyone whose name is not in the page default', () => {
-    // Every champion to date is from the mainland. When that stops being true,
-    // the record has to say so, and this is what makes the omission loud.
-    for (const champ of championsWithNonDefaultScript()) {
-      expect(champ.zhScript, `${champ.name} needs an explicit script`).toBeTruthy();
-    }
-    expect(CHAMPIONS.every((c) => c.zh.length > 0)).toBe(true);
+  it('writes each champion in the script of the page in the figure and table', () => {
+    // Both are built from `Name 名字` keys rather than prose. A key with no
+    // Traditional entry falls through to Simplified on a Traditional page.
+    const wrong = CHAMPIONS.filter(
+      (c) => !translateArticleText('zh-Hant', `${c.name} ${c.zh}`).includes(TRADITIONAL[c.zh]),
+    ).map((c) => c.name);
+    expect(wrong).toEqual([]);
   });
 
   it('has at least one champion name in the prose to protect', () => {

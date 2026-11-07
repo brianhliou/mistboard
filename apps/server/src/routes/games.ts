@@ -12,6 +12,7 @@ import {
   devArtifactPayloads,
   devArtifactSummaries,
 } from './../dev-decision-log-artifacts.js';
+import { isFFQBanqiGame } from '../ffq-banqi-access.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
@@ -354,7 +355,15 @@ export async function tryHandle(
           variants: candidate.legacyVariants,
         }),
       ]);
-      return { channel: candidate, sealedCount, topPlayer: channelTopPlayer(unlocked), unlocked };
+      // Also protect rail metadata (including top-player names) before it is
+      // cached or serialized. Active replay validation happens below.
+      const discoverable = unlocked.filter((game) => !isFFQBanqiGame(game));
+      return {
+        channel: candidate,
+        sealedCount,
+        topPlayer: channelTopPlayer(discoverable),
+        unlocked: discoverable,
+      };
     };
     const railRow = (result: Awaited<ReturnType<typeof loadChannel>>): WatchRailRow => ({
       family: result.channel.family,

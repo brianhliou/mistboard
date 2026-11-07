@@ -1031,6 +1031,9 @@ describe('account page auth flow', () => {
     await flushDom();
 
     expect(document.querySelector('h1')?.textContent).toBe('Edit profile');
+    expect(
+      document.querySelector('.account-public-profile-form a[href="/verify-title"]')?.textContent,
+    ).toBe('Title verification');
     const bio = document.querySelector<HTMLTextAreaElement>('textarea[name="bio"]');
     const location = document.querySelector<HTMLInputElement>('input[name="location"]');
     const links = document.querySelector<HTMLTextAreaElement>('textarea[name="profileLinks"]');

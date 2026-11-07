@@ -2268,6 +2268,9 @@ describe('standard xiangqi puzzles', () => {
     );
     expect(shownRow?.getAttribute('aria-label')).toBe('Puzzle themes');
     expect(root.querySelector('.puzzle-info-card .puzzle-tag')).toBeNull();
+    // No "Puzzle #code" line linking the page to itself.
+    expect(root.querySelector(`.puzzle-info-card a[href="/puzzles/${puzzle!.id}"]`)).toBeNull();
+    expect(root.querySelector('.puzzle-info-card')?.textContent).not.toMatch(/Puzzle #/);
     expect(root.querySelector('.puzzle-theme-card')?.lastElementChild).toBe(shownRow);
     const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
     // English names only in en: no hanzi, no pinyin tooltip.
@@ -3045,17 +3048,34 @@ describe('sourceGameLines', () => {
     expect(names[2]?.title).toBe('');
   });
 
-  it('names an online platform game only as an online game and its year', () => {
-    const online = { gameId: 'g', ply: 4, online: true };
-    expect(
-      sourceGameLines({
-        variant: XIANGQI_SPEC_ID,
-        sourceGame: { ...online, playedOn: '2026-03-14' },
-      }).map((l) => l.textContent),
-    ).toEqual(['From a 2026 online game']);
-    expect(
-      sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: online }).map((l) => l.textContent),
-    ).toEqual(['From an online game']);
+  it('names an online platform game only by a short id of our copy', () => {
+    const online = { gameId: 'hxq_0b6935dc88a8de427fc12816', ply: 4, online: true };
+    const [plain] = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { ...online, playedOn: '2026-03-14' },
+    });
+    expect(plain!.textContent).toBe('From game #0b6935dc');
+    // Not hosted: plain text, no link.
+    expect(plain!.querySelector('a')).toBeNull();
+  });
+
+  it("links a hosted online game to its review page at the puzzle's move", () => {
+    const [line] = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'hxq_0b6935dc88a8de427fc12816',
+        ply: 22,
+        playedOn: '2026-03-26',
+        online: true,
+        hosted: true,
+      },
+    });
+    const link = line!.querySelector<HTMLAnchorElement>('a.puzzle-source-link');
+    expect(link?.getAttribute('href')).toBe(
+      '/historical-xiangqi/game/hxq_0b6935dc88a8de427fc12816?ply=22',
+    );
+    expect(link?.textContent).toBe('From game #0b6935dc');
+    expect(line!.textContent).not.toMatch(/ElephantChess|online/i);
   });
 
   it('falls back to "From set <variant>" without attribution', () => {

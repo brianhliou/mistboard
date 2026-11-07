@@ -252,14 +252,16 @@ export const TK_THUMBNAIL = (): string =>
 
 // ── Points ───────────────────────────────────────────────────────────────────
 
-const POINTS_ORDER: Array<{ role: BanqiPieceRole; label: string }> = [
+// Keyed labels: the site's banqi prose says 兵 and 炮, where the shared xiangqi
+// labels give 卒 and, in Traditional, 砲.
+const POINTS_ORDER: Array<{ role: BanqiPieceRole; label: string; i18nKey?: string }> = [
   { role: 'general', label: 'General' },
   { role: 'chariot', label: 'Chariot' },
   { role: 'horse', label: 'Horse' },
-  { role: 'cannon', label: 'Cannon' },
+  { role: 'cannon', label: 'Cannon', i18nKey: 'banqi cannon' },
   { role: 'elephant', label: 'Elephant' },
   { role: 'advisor', label: 'Advisor' },
-  { role: 'soldier', label: 'Soldier' },
+  { role: 'soldier', label: 'Soldier', i18nKey: 'banqi soldier' },
 ];
 
 /** Red row, black row, name and points under each: banqi's ladder, scored. */
@@ -272,7 +274,7 @@ export const TK_POINTS = (): string => {
   const pointsY = labelY + 17;
   const width = POINTS_ORDER.length * slot;
   const height = pointsY + 8;
-  const cells = POINTS_ORDER.map(({ role, label }, i) => {
+  const cells = POINTS_ORDER.map(({ role, label, i18nKey }, i) => {
     const cx = i * slot + slot / 2;
     const piece = (color: 'red' | 'black', cy: number) =>
       renderXiangqiPieceGlyphed({ color, role }, activeXiangqiPieceSet, {
@@ -283,7 +285,7 @@ export const TK_POINTS = (): string => {
     return [
       piece('red', redCy),
       piece('black', blackCy),
-      `<text x="${cx}" y="${labelY}" font-size="12" fill="currentColor" text-anchor="middle" font-weight="600">${label}</text>`,
+      `<text x="${cx}" y="${labelY}" font-size="12" fill="currentColor" text-anchor="middle" font-weight="600"${i18nKey ? ` data-i18n-key="${i18nKey}"` : ''}>${label}</text>`,
       `<text x="${cx}" y="${pointsY}" font-size="13" fill="currentColor" text-anchor="middle" font-weight="700">${THREE_KINGDOMS_BANQI_POINTS[role]}</text>`,
     ].join('');
   }).join('');

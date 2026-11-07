@@ -8,7 +8,6 @@ import {
   GOMOKU_OPENINGS,
   type GomokuColor,
   type GomokuMove,
-  type GomokuOpening,
   type GomokuRoomState,
   type GomokuSquare,
   getGomokuLegalMoves,
@@ -21,6 +20,7 @@ import {
   handleGomokuCreate,
 } from './gomoku-registration.js';
 import { type GomokuEvent, gomokuTenant, isGomokuEngineClientId } from './gomoku-tenant.js';
+import type { UserAccount } from './persistence.js';
 import { variantTenantForSpecId } from './variant-tenant/registry.js';
 import {
   appendTenantRuntimeEvent,
@@ -76,20 +76,21 @@ test('new Gomoku games deal an opening instead of giving Black an empty board', 
     assert.ok(boards.has(JSON.stringify(state.board)));
     dealt.add(JSON.stringify(state.board));
     assert.equal(state.moveNumber, 1);
-    assert.deepEqual(state.status, { type: 'playing', turn: state.ply % 2 ? 'white' : 'black' });
+    const turn = state.opening!.turn;
+    assert.deepEqual(state.status, { type: 'playing', turn });
     assert.deepEqual(
       replayTenantEvents(gomokuTenant, JSON.parse(JSON.stringify(created.room.events))),
       created.room.projection,
     );
     const move = getGomokuLegalMoves({
       ...state,
-      status: { type: 'playing', turn: state.ply % 2 ? 'white' : 'black' },
+      status: { type: 'playing', turn },
     })[0]!;
     appendTenantRuntimeEvent(gomokuTenant, created.room, {
       type: 'move-played',
       at: Date.now(),
       roomId: state.id,
-      color: state.ply % 2 ? 'white' : 'black',
+      color: turn,
       move,
     });
     assert.equal(created.room.projection.state.ply, state.ply + 1);
@@ -133,17 +134,16 @@ test('Gomoku legacy logs replay from empty, and corrupt opening setups fail clos
 });
 
 test('dealt 3/4/5-stone rooms start their clocks and move numbers from human play', () => {
-  for (const count of [3, 4, 5]) {
-    const opening: GomokuOpening = {
-      stones: ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
-        square: square as GomokuSquare,
-        color: i % 2 ? 'white' : 'black',
-      })),
-      turn: count % 2 ? 'white' : 'black',
-    };
+  const openings = [
+    ...[3, 4, 5].map(
+      (count) => GOMOKU_OPENINGS.find((entry) => entry.stones.length === count && entry.classicId)!,
+    ),
+    GOMOKU_OPENINGS.find((entry) => entry.source === 'mined-2B3W-7x7')!,
+  ];
+  for (const [index, opening] of openings.entries()) {
     const created = createTenantRuntimeRoom(
       { ...gomokuTenant, rules: { ...gomokuTenant.rules, createSetup: () => opening } },
-      `gmk_clock_${count}`,
+      `gmk_clock_${index}`,
       { now: 1, timeControl: { initialMs: 60_000, incrementMs: 1_000 } },
     );
     assert.ok(created.ok);
@@ -355,12 +355,8 @@ test('Gomoku friend creation preserves Black/White preference and exposes comple
   }
 });
 
-test('Gomoku route rejects rated and unsupported modes before calling its factory', async () => {
-  for (const body of [
-    { mode: 'pvp', rated: true },
-    { mode: 'pve', rated: true },
-    { mode: 'correspondence' },
-  ]) {
+test('Gomoku route rejects rated PvE and unsupported modes before calling its factory', async () => {
+  for (const body of [{ mode: 'pve', rated: true }, { mode: 'correspondence' }]) {
     let status = 0;
     let payload = '';
     const response = {
@@ -491,20 +487,131 @@ test('Gomoku PvE still defaults to Rapfi level 1', async () => {
   assert.equal(live.rated, false);
 });
 
-test('Gomoku casual lobby creates a random-seat room and refuses a rated room', async () => {
-  const registration = variantTenantForSpecId('gomoku');
-  assert.ok(registration?.lobby);
-  assert.equal(registration.lobby.supportsRated, false);
+test('Gomoku lobby forwards rated and casual choices into replayed rooms', async () => {
+  const lobby = variantTenantForSpecId('gomoku')!.lobby!;
+  assert.equal(lobby.supportsRated, true);
   const tc = { initialMs: 180_000, incrementMs: 2_000 };
-  assert.ok(registration.lobby.allowsTimeControl(tc));
-  const match = await registration.lobby.createRoom(tc, false);
-  const live = gomokuRooms.get(match.id);
-  assert.ok(live);
-  assert.ok(live.projection.state.ply >= 3);
-  assert.equal(match.region, 'global');
-  assert.equal(live.projection.creatorPreference, 'random');
-  assert.deepEqual(live.projection.timeControl, tc);
-  await assert.rejects(registration.lobby.createRoom(tc, true), /unsupported_surface/);
+  for (const rated of [false, true]) {
+    const match = await lobby.createRoom(tc, rated);
+    const live = gomokuRooms.get(match.id)!;
+    assert.equal(live.rated, rated);
+    assert.equal(live.projection.rated, rated);
+    assert.equal(live.projection.creatorPreference, 'random');
+    assert.deepEqual(live.projection.timeControl, tc);
+    const hydrated = createTenantRuntimeRoomFromEvents(
+      gomokuTenant,
+      JSON.parse(JSON.stringify(live.events)),
+    );
+    assert.ok(hydrated.ok);
+    assert.equal(hydrated.room.rated, rated);
+    const wire = JSON.parse(
+      JSON.stringify(
+        tenantSnapshotPayload(gomokuTenant, hydrated.room, {
+          id: 'viewer',
+          seat: 'spectator',
+          solo: false,
+        }),
+      ),
+    );
+    assert.equal(wire.rated, rated);
+  }
+});
+
+async function ratedFriend(body: Record<string, unknown>, account: UserAccount | null) {
+  let status = 0;
+  let payload = '';
+  await handleGomokuCreate(
+    {
+      databaseRequired: false,
+      refusesCreate: () => false,
+      drainDeadlineMs: () => null,
+      createGomokuRoom,
+    },
+    {
+      writeHead(value: number) {
+        status = value;
+      },
+      end(value: string) {
+        payload = value;
+      },
+    } as unknown as ServerResponse,
+    { gameSpecId: 'gomoku', mode: 'pvp', rated: true, ...body },
+    account,
+  );
+  return { status, body: JSON.parse(payload) };
+}
+
+test('rated Gomoku friend rooms require counted accounts and official clocks on both seats', async () => {
+  const prior = process.env.MISTBOARD_RATED_ENABLED;
+  process.env.MISTBOARD_RATED_ENABLED = 'true';
+  const account = {
+    id: 'gomoku-test-one',
+    handle: 'gomokutestone',
+    displayName: 'Test fixture',
+  } as UserAccount;
+  const tc = { initialMs: 300_000, incrementMs: 5_000 };
+  try {
+    assert.deepEqual(await ratedFriend({ timeControl: tc }, null), {
+      status: 401,
+      body: { error: 'rated_requires_account' },
+    });
+    assert.equal(
+      (await ratedFriend({ timeControl: tc }, { ...account, statsExcludedAt: new Date() })).status,
+      403,
+    );
+    // An off-menu pace: every preset rates since 10+5 joined on 2026-11-06.
+    for (const timeControl of [undefined, { initialMs: 900_000, incrementMs: 10_000 }]) {
+      assert.deepEqual(await ratedFriend({ timeControl }, account), {
+        status: 400,
+        body: { error: 'rated_time_control_unsupported' },
+      });
+    }
+    const created = await ratedFriend({ timeControl: tc, preferredColor: 'white' }, account);
+    assert.equal(created.status, 201);
+    assert.equal(created.body.rated, true);
+    const live = gomokuRooms.get(created.body.roomId)!;
+    assert.equal(live.projection.rated, true);
+    assert.deepEqual(
+      assignTenantSeat(gomokuTenant, live, 'guest-one', undefined, null, null, true),
+      { ok: false, reason: 'rated requires account' },
+    );
+    assert.ok(assignTenantSeat(gomokuTenant, live, 'creator', undefined, account, null, true).ok);
+    assert.deepEqual(
+      assignTenantSeat(gomokuTenant, live, 'guest-two', undefined, null, null, true),
+      { ok: false, reason: 'rated requires account' },
+    );
+    assert.ok(
+      assignTenantSeat(
+        gomokuTenant,
+        live,
+        'friend',
+        undefined,
+        { ...account, id: 'gomoku-test-two' },
+        null,
+        true,
+      ).ok,
+    );
+    const hydrated = createTenantRuntimeRoomFromEvents(
+      gomokuTenant,
+      JSON.parse(JSON.stringify(live.events)),
+    );
+    assert.ok(hydrated.ok);
+    assert.equal(
+      JSON.parse(
+        JSON.stringify(
+          tenantSnapshotPayload(gomokuTenant, hydrated.room, {
+            id: 'creator',
+            seat: 'white',
+            solo: false,
+          }),
+        ),
+      ).rated,
+      true,
+    );
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_RATED_ENABLED;
+    else process.env.MISTBOARD_RATED_ENABLED = prior;
+  }
 });
 
 test('Gomoku WebSocket refuses ungranted seats and binds placements to reserved seats', async () => {

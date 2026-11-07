@@ -64,6 +64,8 @@ export function createAdvantageChart(
   opts: {
     onJump: (ply: number) => void;
     seatColors?: ReviewSeatColors;
+    /** The variant's eval text, so the readout matches the move list. */
+    formatScore?: (cp: number | null, mate: number | null) => string;
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
@@ -327,7 +329,7 @@ export function createAdvantageChart(
 
     // Same formatter as the move list's eval column right beside the chart: two
     // readings of one number must not disagree about its scale.
-    const score = formatEval(point.cp, point.mate);
+    const score = (opts.formatScore ?? formatEval)(point.cp, point.mate);
     showChartTip(tip, {
       move: opts.moveLabel?.(ply) ?? null,
       value: score,

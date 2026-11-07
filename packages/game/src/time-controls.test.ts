@@ -46,8 +46,8 @@ test('every rated pace sits in a time class user_ratings can store', () => {
 test('10+5 shares the rapid bucket with 5+5, so it adds no rating pool', () => {
   assert.equal(timeClassFromTimeControl(300_000, 5_000), 'rapid');
   assert.equal(timeClassFromTimeControl(600_000, 5_000), 'rapid');
-  // Casual-only on arrival: nothing it does can reach a rating bucket at all.
-  assert.equal(findTimeControl(600_000, 5_000)?.rated, false);
+  // Rated since 2026-11-06, in that same rapid bucket.
+  assert.equal(findTimeControl(600_000, 5_000)?.rated, true);
 });
 
 test('TIME_CONTROLS entries have consistent label/initialMs derivation', () => {
@@ -161,7 +161,7 @@ test('isOfficialCorrespondenceTimeControl accepts only the official shapes', () 
 test('every official live pace is rated-eligible', () => {
   assert.deepEqual(
     RATED_TIME_CONTROLS.map((tc) => tc.id),
-    ['1m1', '3m2', '5m5'],
+    ['1m1', '3m2', '5m5', '10m5'],
   );
   for (const tc of TIME_CONTROLS) {
     assert.equal(

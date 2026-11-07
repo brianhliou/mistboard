@@ -46,8 +46,8 @@ export function threeKingdomsBanqiEnabled(): boolean {
   return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
 }
 
-// Built-hidden Gomoku (#768). Explicit local opt-in, including in dev; no
-// public listing or room creation is enabled by this build flag alone.
+// Gomoku build-time play gate, off by default, including in dev. Public
+// listings derive from publicSurface; coordinate this flag with the launch.
 export function gomokuEnabled(): boolean {
   return import.meta.env.VITE_GOMOKU_ENABLED === 'true';
 }
@@ -95,6 +95,12 @@ export function jieqiEnabled(): boolean {
 // in; mirrors the jieqi gate.
 export function banqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_BANQI_ENABLED === 'true';
+}
+
+// FFQ's admin-only playtest remains off even in dev. The server checks the
+// account independently; this flag only enables its renderer when routed.
+export function ffqBanqiEnabled(): boolean {
+  return import.meta.env.VITE_FFQ_BANQI_ENABLED === 'true';
 }
 
 // Jungle / Dou Shou Qi (perfect-information 7×9 animal-rank game) play surface.

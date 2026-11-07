@@ -5,6 +5,9 @@
  */
 let engine = null;
 let initializing = false;
+// The net loads lazily on the first search and outside Rapfi's own clock; a
+// throwaway search during init keeps that load off the first real move.
+let warming = false;
 
 self.onmessage = async ({ data }) => {
   try {
@@ -19,10 +22,16 @@ self.onmessage = async ({ data }) => {
       importScripts(asset('rapfi-single-simd128.js'));
       engine = await Rapfi({
         locateFile: asset,
-        onReceiveStdout: (line) => self.postMessage({ type: 'line', line }),
+        onReceiveStdout: (line) => {
+          if (!warming) self.postMessage({ type: 'line', line });
+        },
         onReceiveStderr: (line) => self.postMessage({ type: 'error', error: line }),
         onAbort: (reason) => self.postMessage({ type: 'error', error: String(reason) }),
       });
+      warming = true;
+      for (const command of ['START 15', 'INFO max_node 100', 'BOARD\n7,7,2\nDONE'])
+        engine.sendCommand(command);
+      warming = false;
       initializing = false;
       self.postMessage({ type: 'ready' });
     } else if (data.type === 'commands') {
@@ -36,6 +45,7 @@ self.onmessage = async ({ data }) => {
     }
   } catch (error) {
     initializing = false;
+    warming = false;
     self.postMessage({ type: 'error', error: String(error) });
   }
 };

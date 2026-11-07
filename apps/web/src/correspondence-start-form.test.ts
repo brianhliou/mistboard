@@ -7,7 +7,7 @@ import { setRatedModeEnabled } from './rated-flag.js';
 // the control is absent until /api/server-status says otherwise.
 function gameTypeField(form: HTMLElement): HTMLElement | undefined {
   return [...form.querySelectorAll<HTMLElement>('.correspondence-field')].find(
-    (field) => field.querySelector('.correspondence-field-label')?.textContent === 'Game type',
+    (field) => field.querySelector('.correspondence-field-label')?.textContent === 'Rating',
   );
 }
 

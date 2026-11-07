@@ -15,11 +15,19 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Live rooms show each player's colour disc beside their name ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- 10+5 games can now be rated; they share the rapid rating with 5+5 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Duck Xiangqi now offers 1+1 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- On phones the side picker fits the xiangqi generals ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - New xiangqi games are drawn after 120 plies (60 moves each) without a capture, as the rules page now says; games started before keep the old limit ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
 
 ### Learning and puzzles
 
+- Jieqi rules: worked examples and a sample game from the AB-JChess vs jqe match ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The Gomoku rules page is rewritten and now reads in Simplified and Traditional Chinese, with a matching share card ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The AB-JChess vs jqe match is one study of all 600 games, and studies now list up to 1,000 chapters ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Study result chips take the winner's colour, draws show as an outline, and the move controls sit under the move list ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Puzzle Storm is now in the Puzzles menu on desktop and phone ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 - New article, [AB-JChess takes the jieqi title back from jqe](/blog/ab-jchess-vs-jqe): a 600-game jieqi engine match read move by move by both engines, with the games in a study ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
@@ -31,6 +39,11 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Finished xiangqi mahjong matches are now in the /data downloads, walls and all ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Jieqi studies show what a face-down piece turns out to be on hover, and the board resize grip is easier to see ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- On phones the game review board runs edge to edge, the underboard tabs fit on one line, and "Learn from your mistakes" is green and shows only to the game's players ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The Gomoku analysis board fits one phone screen, with the moves under the board and the tools in a bar at the bottom ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Added five Bilibili videos to the video library, on jieqi, the basic rules and the Plum Blossom manual ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - Engine match studies chart both engines' win chance in the Computer analysis tab, and hovering the chart names the move ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
 - Study board controls sit under the move list, and the board sits closer to the tabs below it ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
 - Study result badges are colored by the winning side, with draws drawn as an outline ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
@@ -42,8 +55,15 @@ What changed on mistboard.com, month by month, newest first.
 - On a finished banqi, Flip Jungle or jieqi game's review, hover a face-down piece or turn on Reveal identities to see what it was ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Move glyphs in review fade once the pieces land ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
 
+### Community
+
+- Player profiles now show the puzzle rating graph to every visitor, a shorter ratings column, and a Founder badge ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+
 ### Site
 
+- Corrected Chinese wording across articles and the interface, and Traditional Chinese pages that showed Simplified text ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The video page adds Shorts 5 and 6, and visitors from mainland China see 14 Bilibili picks ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Homepage article cards show their photos, and shared articles get a whole-board preview card ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - The browser tab icon now fills its space ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
 - A Washington Xiangqi club page for Greater Seattle, in English, Simplified and Traditional Chinese ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
 - Google results show Mistboard search cards and a tab icon that reads when cropped to a circle ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
@@ -55,10 +75,21 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Removed
 
+- Hong Kong mahjong is closed to new games ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Retired Atomic Xiangqi games no longer get new computer analysis; finished games and stored analysis stay readable ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ### Fixed
 
+- Corrected a line on the world championship page that overlooked Lại Lý Huynh's 2022 world rapid title ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Traditional Chinese articles now write every player's name in Traditional ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- The board resize handle now stays on the board corner while you drag, no longer flashes under the board when you switch study chapters, and fits rounded corners ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- The staff page for reported messages now opens only conversations someone has reported ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Public game counts no longer include a few old test games from variants we deleted ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Puzzle pages keep the move history right under the board, and archive game dates no longer show a day early ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Corrected a soldier name and a character on the Simplified Chinese Banqi rules page ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Corrected the repetition rule on the Chinese Xiangqi rules page and fixed terms on other Chinese rules pages ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The coordinates toggle redraws every board on a review page ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- The contact note sits below the article instead of inside it ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Switching chapters in a study keeps the side panel in place ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
 - The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
 - Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
@@ -66,6 +97,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Search engines are told only about pages that changed in a release ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Visitor analytics now flags browsers with real input, so headless crawlers can be filtered out ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ## 2026-10

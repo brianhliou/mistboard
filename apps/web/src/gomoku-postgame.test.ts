@@ -155,10 +155,13 @@ async function mount(
   status = 200,
   admin?: boolean,
   analysis?: XiangqiGameAnalysisResponse,
+  options: { signedIn?: boolean; cached?: boolean } = {},
 ) {
   vi.resetModules();
   const { setResolvedAdmin } = await import('./signed-in-state.js');
   setResolvedAdmin(admin);
+  const { setResolvedSignedIn } = await import('./signed-in-state.js');
+  setResolvedSignedIn(options.signedIn ?? true);
   const { setPostHogInstance } = await import('./analytics.js');
   setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
   const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -167,7 +170,9 @@ async function mount(
     if (String(input).endsWith('/analysis'))
       return init?.method === 'POST'
         ? Response.json({ jobId: 'sweep' }, { status: 202 })
-        : new Response(null, { status: 204 });
+        : options.cached
+          ? Response.json(analysis)
+          : new Response(null, { status: 204 });
     return new Response(
       JSON.stringify(String(input).startsWith('/api/gomoku/games/') ? payload : {}),
       {
@@ -182,7 +187,7 @@ async function mount(
   await ensureLocaleCatalog(currentLocale());
   const { mountGomokuPostgame } = await import('./gomoku-postgame.js');
   const root = document.querySelector<HTMLDivElement>('#app')!;
-  mountGomokuPostgame(root, ROOM);
+  await mountGomokuPostgame(root, ROOM);
   await vi.advanceTimersByTimeAsync(0);
   return { root, fetchSpy };
 }
@@ -190,6 +195,53 @@ async function mount(
 const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
 
 describe('Gomoku finished-game review', () => {
+  it.each([
+    ['en', 'Five in a row • White is victorious'],
+    ['zh-Hans', '五子连线 • 白方获胜'],
+    ['zh-Hant', '五子連線 • 白方獲勝'],
+  ])('names a persisted race termination as five in a row in %s', async (locale, outcome) => {
+    window.history.replaceState(null, '', `/${locale.toLowerCase()}/gomoku/game/${ROOM}`);
+    const payload = fixture();
+    payload.game.result = 'white-wins';
+    payload.game.termination = 'race';
+    const { root } = await mount(payload);
+    expect(root.querySelector('.game-meta-card__status')?.textContent).toBe(outcome);
+  });
+
+  it('penalizes both players for blunders when the dealt opening has White to move', async () => {
+    const opening = GOMOKU_OPENINGS.find((entry) => entry.stones.length === 5)!;
+    const analysis = {
+      engineId: 'rapfi-gomoku',
+      depth: 9,
+      // Black-POV evaluations: White loses a forced win, then Black loses it back.
+      plies: [-6, 6, -6, -6].map((mate, ply) => ({ ply, cp: null, mate, best: null })),
+    };
+    const { root } = await mount(fixture(opening), 200, false, analysis, { cached: true });
+    expect(root.querySelectorAll('.review-move-list__suffix.review-move--blunder')).toHaveLength(2);
+    for (const player of root.querySelectorAll('.analysis-summary__player')) {
+      expect(player.querySelector('.analysis-summary__stat--blunder strong')?.textContent).toBe(
+        '1',
+      );
+      const accuracy = player.querySelector(
+        '.analysis-summary__phase--headline strong',
+      )?.textContent;
+      expect(Number.parseInt(accuracy!, 10)).toBeLessThan(100);
+    }
+  });
+
+  it('omits centipawn loss from the Gomoku summary', async () => {
+    const analysis = {
+      engineId: 'rapfi-gomoku',
+      depth: 9,
+      plies: [0, -600, 600, 0].map((cp, ply) => ({ ply, cp, mate: null, best: null })),
+    };
+    const { root } = await mount(fixture(), 200, false, analysis, { cached: true });
+    const summary = root.querySelector('.analysis-summary')!;
+    expect(summary).not.toBeNull();
+    expect(summary.textContent).not.toContain('Average centipawn loss');
+    expect(summary.querySelectorAll('.analysis-summary__stat')).toHaveLength(6);
+  });
+
   it('requests the existing sweep and keeps the shared graph in sync with navigation', async () => {
     const analysis = {
       engineId: 'rapfi-gomoku',
@@ -202,7 +254,7 @@ describe('Gomoku finished-game review', () => {
       ],
     };
     const { root, fetchSpy } = await mount(fixture(), 200, true, analysis);
-    const button = root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]');
+    const button = root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse');
     expect(button).not.toBeNull();
     button!.click();
     await vi.advanceTimersByTimeAsync(2000);
@@ -219,9 +271,50 @@ describe('Gomoku finished-game review', () => {
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(1);
   });
 
-  it('keeps server analysis and the local switch admin-only even with the flag on', async () => {
+  it('shows signed-out viewers the shared sign-in link without requesting a sweep', async () => {
+    const { root, fetchSpy } = await mount(fixture(), 200, false, undefined, { signedIn: false });
+    const request = root.querySelector<HTMLAnchorElement>('a.xiangqi-review__analyse')!;
+    expect(request.textContent).toBe('Sign in to request analysis');
+    expect(request.pathname).toBe('/account');
+    expect(root.querySelector('.engine-panel')).not.toBeNull();
+    expect(fetchSpy.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
+  it.each([3, 4, 5])(
+    'loads cached analysis into marks and the correct players for a %i-stone opening',
+    async (count) => {
+      const opening = GOMOKU_OPENINGS.find((entry) => entry.stones.length === count)!;
+      const response = {
+        engineId: 'rapfi-gomoku',
+        depth: 9,
+        plies: [0, -1000, -1000, -1000].map((cp, ply) => ({ ply, cp, mate: null, best: null })),
+      };
+      const { root, fetchSpy } = await mount(fixture(opening), 200, false, response, {
+        cached: true,
+      });
+      expect(root.querySelector('.advantage-chart__line')).not.toBeNull();
+      expect(root.querySelector('.xiangqi-review__analyse')).toBeNull();
+      expect(root.querySelectorAll('.analysis-summary__player')).toHaveLength(2);
+      expect(root.querySelectorAll('.review-move-list__suffix.review-move--blunder')).toHaveLength(
+        count === 4 ? 1 : 0,
+      );
+      const players = [...root.querySelectorAll('.analysis-summary__player')];
+      expect(players[0]?.textContent).toContain('Alice');
+      expect(players[1]?.textContent).toContain('Bob');
+      expect(players[0]?.querySelectorAll('.analysis-summary__stat--blunder')).toHaveLength(
+        count === 4 ? 1 : 0,
+      );
+      expect(fetchSpy.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+      expect(root.querySelector('.review-move-times__bar')?.classList).toContain(
+        count === 4 ? 'review-move-times__bar--black' : 'review-move-times__bar--white',
+      );
+    },
+  );
+
+  it('offers server analysis and the local switch to every player once the flag is on', async () => {
     const { root } = await mount(fixture(), 200, false);
-    expect(root.querySelector('[data-gomoku-analyse], .engine-panel')).toBeNull();
+    expect(root.querySelector('.xiangqi-review__analyse')).not.toBeNull();
+    expect(root.querySelector('.engine-panel')).not.toBeNull();
   });
 
   it('draws local Rapfi best move and numbered PV at the selected ply and clears stale output', async () => {
@@ -238,7 +331,7 @@ describe('Gomoku finished-game review', () => {
     worker.output();
     await vi.advanceTimersByTimeAsync(0);
     expect(root.querySelector('.gomoku-best')?.getAttribute('data-square')).toBe('b2');
-    expect(root.querySelectorAll('.gomoku-pv-number')).toHaveLength(2);
+    expect(root.querySelectorAll('.gomoku-pv .gomoku-pv-number')).toHaveLength(2);
     key('ArrowRight');
     expect(root.querySelector('.gomoku-best')).toBeNull();
     expect(worker.terminate).toHaveBeenCalled();
@@ -258,8 +351,8 @@ describe('Gomoku finished-game review', () => {
       window.history.replaceState(null, '', `/gomoku/game/${ROOM}?lang=${locale}`);
       const { root, fetchSpy } = await mount(fixture(), 200, true);
       const { t } = await import('./i18n/catalog.js');
-      const button = root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!;
-      expect(button.textContent).toBe(t('replay.analyse'));
+      const button = root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!;
+      expect(button.textContent).toBe(t('replay.requestComputerAnalysis'));
       fetchSpy.mockImplementation(async () =>
         Response.json({ status: 'failed', error: 'analysis_engine_unavailable' }),
       );
@@ -276,7 +369,7 @@ describe('Gomoku finished-game review', () => {
       );
       button.click();
       await vi.advanceTimersByTimeAsync(2000);
-      expect(button.textContent).toBe(t('engine.unavailable', { error: 'Rapfi' }));
+      expect(button.textContent).toBe(t('replay.analysisFailed'));
       expect(button.disabled).toBe(false);
       key('Home');
       root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
@@ -285,7 +378,12 @@ describe('Gomoku finished-game review', () => {
       await vi.advanceTimersByTimeAsync(0);
       worker.output('+M5');
       await vi.advanceTimersByTimeAsync(0);
-      expect(root.querySelector('.engine-panel__eval')?.textContent).toBe(
+      // The headline box holds the short form; the long words ride on its title.
+      const headline = root.querySelector<HTMLElement>('.engine-panel__eval');
+      expect(headline?.textContent).toBe(
+        locale === 'en' ? 'B in 3' : locale === 'zh-Hans' ? '黑 3 步胜' : '黑 3 步勝',
+      );
+      expect(headline?.title).toBe(
         locale === 'en'
           ? 'Black wins in 3'
           : locale === 'zh-Hans'
@@ -303,7 +401,7 @@ describe('Gomoku finished-game review', () => {
     const { root } = await mount(fixture());
     const stone = root.querySelector('[data-piece-square="a1"]')!;
     expect([stone.getAttribute('cx'), stone.getAttribute('cy')]).toEqual(['32', '480']);
-    expect(root.querySelector('[data-replay-flip]:not([hidden]), .gomoku-ghost')).toBeNull();
+    expect(root.querySelector('[data-replay-flip]:not([hidden])')).toBeNull();
     expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
     writeDisplayPreference('boardCoordinates', true);
     expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(30);
@@ -326,6 +424,21 @@ describe('Gomoku finished-game review', () => {
       locale === 'en' ? 'Download' : locale === 'zh-Hans' ? '下载' : '下載',
     );
   });
+  it.each([false, true])('mounts the shared review columns and tabs (admin: %s)', async (admin) => {
+    const { root } = await mount(fixture(), 200, admin);
+    expect(root.querySelector('.review-shell__center .gomoku-live-board')).not.toBeNull();
+    expect(root.querySelector('.review-shell__right .engine-panel')).not.toBeNull();
+    expect(root.querySelector('.review-shell__right .move-tree')).not.toBeNull();
+    expect(root.querySelector('.review-shell__right .review-controls')).not.toBeNull();
+    expect(root.querySelector('.review-share a[download$=".json"]')).not.toBeNull();
+    expect(
+      [...root.querySelectorAll('.review-underboard-tabs button')].map((el) => el.textContent),
+    ).toEqual(['Computer analysis', 'Move times', 'Share & export']);
+    expect(root.querySelector('.review-spectator-chat')).not.toBeNull();
+    expect(root.querySelector('.review-info-sheet')).not.toBeNull();
+    expect(root.querySelector('.review-seat--bottom')?.textContent).toContain('Alice');
+    expect(root.querySelector('.review-seat--top')?.textContent).toContain('Bob');
+  });
   for (const enabled of [false, true]) {
     it.each([undefined, false, true])(
       `admits review by role with flag ${enabled}: admin %s`,
@@ -337,7 +450,8 @@ describe('Gomoku finished-game review', () => {
           fetchSpy.mock.calls.some(([input]) => String(input).startsWith('/api/gomoku/')),
         ).toBe(admitted);
         expect(Boolean(root.querySelector('.gomoku-live-board'))).toBe(admitted);
-        expect(Boolean(root.querySelector('[data-replay-analysis]:not([hidden])'))).toBe(admitted);
+        expect(Boolean(root.querySelector('.xiangqi-review__analyse'))).toBe(admitted);
+        expect(Boolean(root.querySelector('.engine-panel'))).toBe(admitted);
       },
     );
   }
@@ -351,7 +465,7 @@ describe('Gomoku finished-game review', () => {
       expect(fetchSpy).toHaveBeenCalledWith(`/api/gomoku/games/${ROOM}`);
       expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(count + 3);
       expect(root.querySelector('.game-meta-card')?.textContent).toContain('Gomoku');
-      expect(root.querySelector('.move-list')?.textContent).toContain('a1');
+      expect(root.querySelector('.move-tree')?.textContent).toContain('a1');
       key('Home');
       expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(count);
       for (const { square, color } of opening.stones) {
@@ -362,8 +476,8 @@ describe('Gomoku finished-game review', () => {
       key('ArrowRight');
       expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(count + 1);
       const second = [
-        ...root.querySelectorAll<HTMLButtonElement>('.move-list button.move-jump'),
-      ].find((button) => button.textContent === 'b1');
+        ...root.querySelectorAll<HTMLButtonElement>('.move-tree button.move-tree__move'),
+      ].find((button) => button.querySelector('.review-move-list__san')?.textContent === 'b1');
       expect(second).toBeDefined();
       second?.click();
       expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(count + 2);
@@ -371,9 +485,8 @@ describe('Gomoku finished-game review', () => {
       expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(count + 3);
       root.querySelector<HTMLElement>('[data-replay="first"]')?.click();
       expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(count);
-      expect(
-        root.querySelector('[data-square="b2"] .gomoku-hit')?.getAttribute('tabindex'),
-      ).not.toBe('0');
+      expect(root.querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      expect(root.querySelectorAll('.gomoku-ghost')).not.toHaveLength(0);
       expect(root.querySelector('.presence-dot, .postgame-actions')).toBeNull();
       expect(capture.mock.calls.filter(([name]) => name === 'review_opened')).toEqual([
         [
@@ -399,11 +512,14 @@ describe('Gomoku finished-game review', () => {
     const { root } = await mount(fixture(opening), 200, true);
     key('Home');
     key('ArrowRight');
-    const link = root.querySelector<HTMLAnchorElement>('[data-replay-analysis]:not([hidden])')!;
-    expect(link).not.toBeNull();
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
     root.querySelector<HTMLButtonElement>('[data-move-nav-menu]')!.click();
-    expect(link.textContent).toContain('Analyse from here');
-    const url = new URL(link.href);
+    const action = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].find(
+      (button) => button.textContent?.includes('Analyse from here'),
+    )!;
+    expect(action).toBeDefined();
+    action.click();
+    const url = new URL(String(assign.mock.calls[0]![0]), window.location.href);
     expect(url.pathname).toBe('/analysis/gomoku');
     expect(url.searchParams.get('ply')).toBe('1');
     // Follow the actual link through the analysis mount, without browser navigation.
@@ -441,9 +557,9 @@ describe('Gomoku finished-game review', () => {
     const { root } = await mount(payload);
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(4);
     const clocks = () =>
-      [...root.querySelectorAll('.clock-time-row strong')].map((el) => el.textContent);
-    expect(clocks()).toContain('00:59');
-    expect(clocks()).toContain('00:58');
+      [...root.querySelectorAll('.review-seat__clock')].map((el) => el.textContent);
+    expect(clocks()).toContain('0:59');
+    expect(clocks()).toContain('0:58');
     const before = clocks();
     await vi.advanceTimersByTimeAsync(5000);
     expect(clocks()).toEqual(before);
@@ -493,7 +609,23 @@ describe('Gomoku finished-game review', () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  it.each(['unfinished', 'missing-root', 'wrong-room', 'wrong-variant', 'rated'])(
+  it('loads a valid finished rated recording', async () => {
+    const payload = fixture();
+    payload.game.rated = true;
+    const { root } = await mount(payload);
+    expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(3);
+    expect(root.textContent).not.toContain('Postgame unavailable');
+    expect(root.textContent).toContain('Rated');
+    expect(root.textContent).not.toContain('Casual');
+    key('Home');
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
+    key('End');
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(3);
+    expect(capture).toHaveBeenCalledWith('review_opened', expect.any(Object));
+  });
+
+  it.each(['unfinished', 'missing-root', 'wrong-room', 'wrong-variant'])(
     'refuses a %s recording',
     async (kind) => {
       const payload = fixture();
@@ -501,7 +633,6 @@ describe('Gomoku finished-game review', () => {
       if (kind === 'missing-root') payload.history.truth = payload.history.truth.slice(1);
       if (kind === 'wrong-room') payload.game.roomId = 'gmk_other';
       if (kind === 'wrong-variant') (payload.game as { variant: string }).variant = 'xiangqi';
-      if (kind === 'rated') payload.game.rated = true;
       const { root } = await mount(payload);
       expect(root.querySelector('.gomoku-live-board')).toBeNull();
       expect(capture).not.toHaveBeenCalled();
@@ -548,7 +679,7 @@ describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => 
 
   it('Analyse polls the sweep into one shared graph point per position', async () => {
     const { root } = await mount(longRecording(long), 200, true, long.analysis);
-    root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
+    root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     expect(
       root.querySelector('.advantage-chart__line')?.getAttribute('points')?.split(' '),
@@ -560,7 +691,7 @@ describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => 
 
   it('steps board and graph to k, then jumps from the graph to another recorded ply', async () => {
     const { root } = await mount(longRecording(long), 200, true, long.analysis);
-    root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
+    root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     key('Home');
     for (let i = 0; i < 12; i += 1) key('ArrowRight');
@@ -579,16 +710,12 @@ describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => 
     expect(root.querySelector('.advantage-chart__cursor')?.getAttribute('x1')).toBe(
       ((300 * 40) / last).toFixed(2),
     );
-    expect(
-      new URL(
-        root.querySelector<HTMLAnchorElement>('[data-replay-analysis]')!.href,
-      ).searchParams.get('ply'),
-    ).toBe('40');
+    expect(new URLSearchParams(window.location.search).get('ply')).toBe('40');
   });
 
   it('local analysis draws recorded best-move/PV ink while retaining the graph', async () => {
     const { root } = await mount(longRecording(long), 200, true, long.analysis);
-    root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
+    root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     const graph = root.querySelector('.advantage-chart');
     key('Home');
@@ -603,14 +730,14 @@ describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => 
     expect(root.querySelector('.gomoku-best')?.getAttribute('data-square')).toBe(
       long.analysis.plies[0]!.best,
     );
-    expect(root.querySelector('.gomoku-pv-number')?.textContent).toBe('1');
+    expect(root.querySelector('.gomoku-pv .gomoku-pv-number')?.textContent).toBe('1');
     expect(root.querySelector('.advantage-chart')).toBe(graph);
-    expect(root.querySelector('[data-square] .gomoku-hit[aria-disabled="false"]')).toBeNull();
+    expect(root.querySelector('[data-square] .gomoku-hit[aria-disabled="false"]')).not.toBeNull();
   });
 
   it('a recorded forced five clips at the shared graph edge and reads as win in N locally', async () => {
     const { root } = await mount(longRecording(long), 200, true, long.analysis);
-    root.querySelector<HTMLButtonElement>('[data-gomoku-analyse]')!.click();
+    root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
     await vi.advanceTimersByTimeAsync(2000);
     const forced = [...long.analysis.plies].reverse().find((point) => point.mate !== null)!;
     const point = root.querySelector('.advantage-chart__line')!.getAttribute('points')!.split(' ')[
@@ -619,8 +746,14 @@ describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => 
     const y = Number(point.split(',')[1]);
     expect(y).toBeGreaterThanOrEqual(forced.mate! > 0 ? 4 : 95);
     expect(y).toBeLessThanOrEqual(forced.mate! > 0 ? 5 : 96);
-    key('Home');
-    for (let i = 0; i < forced.ply; i += 1) key('ArrowRight');
+    // Score presentation does not need to repaint every preceding position;
+    // keyboard stepping is covered by the navigation case above.
+    const square = long.plies[forced.ply - 1]!.uci;
+    const move = [...root.querySelectorAll<HTMLButtonElement>('.move-tree__move')].find(
+      (button) => button.querySelector('.review-move-list__san')?.textContent === square,
+    );
+    expect(move).toBeDefined();
+    move!.click();
     root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
     const worker = WorkerStub.instances.at(-1)!;
     worker.emit({ type: 'ready' });
@@ -633,14 +766,12 @@ describe.skipIf(!longGame)('s-da96: recorded long-game Rapfi acceptance', () => 
     expect(root.querySelector('.engine-panel__eval')?.textContent).toBe(
       `${forced.mate! > 0 ? 'Black' : 'White'} wins in ${Math.abs(forced.mate!)}`,
     );
-    // Stepping to the forced ply re-renders board and graph once per move:
-    // about 4s locally and past 15s on a hosted CI runner (2026-11-01).
   }, 60_000);
 
   it('a non-admin with the flag off sees no Analyse or board and never fetches the recording', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
     const { root, fetchSpy } = await mount(longRecording(long), 200, false);
-    expect(root.querySelector('[data-gomoku-analyse], .engine-panel, .gomoku-svg')).toBeNull();
+    expect(root.querySelector('.xiangqi-review__analyse, .engine-panel, .gomoku-svg')).toBeNull();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).startsWith('/api/gomoku/'))).toBe(
       false,
     );

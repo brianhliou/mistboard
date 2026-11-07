@@ -4,6 +4,8 @@ export const EN_CONTENT = {
   'videos.heading': 'Video library',
   'videos.intro':
     'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
+  'videos.introMainland':
+    'Curated Chinese-language xiangqi and jieqi videos: rules, openings, tactics, and strategy.',
   'videos.ourHeading': 'From Mistboard',
   'videos.ourIntro': 'Our own episodes. New ones land on the channel first.',
   'videos.shortsHeading': 'Puzzle Shorts',
@@ -15,7 +17,10 @@ export const EN_CONTENT = {
   'videos.count': '{count} videos',
   'videos.countOne': '1 video',
   'videos.empty': 'No videos match your filters.',
+  'videos.unavailableInCountry': 'No videos are available in your country yet.',
   'videos.opensOnYoutube': 'Videos open on YouTube in a new tab.',
+  'videos.opensOnBilibili': 'Videos open on Bilibili in a new tab.',
+  'videos.opensExternally': 'Videos open on their hosting platform in a new tab.',
   'videos.duration': '{count} min',
   'videos.tag.basics': 'Basics',
   'videos.tag.openings': 'Openings',
@@ -28,6 +33,8 @@ export const EN_CONTENT = {
   'videos.levelLabel': 'Level',
   'videos.variantLabel': 'Game',
   'videos.sourceLabel': 'Source',
+  'videos.source.youtube': 'YouTube',
+  'videos.source.bilibili': 'Bilibili',
   'videos.languageLabel': 'Language',
   'videos.allLanguages': 'All languages',
   'videos.language.en': 'English',
@@ -36,6 +43,7 @@ export const EN_CONTENT = {
   'videos.level.intermediate': 'Intermediate',
   'videos.level.advanced': 'Advanced',
   'videos.variant.xiangqi': 'Xiangqi',
+  'videos.variant.jieqi': 'Jieqi',
   'videos.variant.fog': 'Fog of War',
   'videos.source.mistboard': 'Made by Mistboard',
   'videos.badge.mistboard': 'Mistboard',
@@ -615,7 +623,7 @@ export const EN_CONTENT = {
     'This page describes what we collect on the hosted site at mistboard.com. It is always the current version.',
   'privacy.collectHeading': 'What we collect',
   'privacy.collectBody':
-    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
+    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest. Direct messages are stored on our servers so we can deliver them and keep them in your inbox. We may review them when a conversation is reported, to enforce the site rules, or when the law requires it.',
   'privacy.noDoHeading': "What we don't do",
   'privacy.noDoBody':
     "No ads. We don't sell your data. No recordings of your screen. We respect Do Not Track. Casual play needs no account.",

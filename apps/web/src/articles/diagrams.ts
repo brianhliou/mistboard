@@ -137,6 +137,7 @@ export function playClosing(opts: {
   playLabel: string;
   playHref: string;
   secondary?: CtaButton[];
+  layout?: 'single-row';
 }): ArticleSection {
   return {
     heading: opts.heading,
@@ -148,6 +149,7 @@ export function playClosing(opts: {
           { label: opts.playLabel, href: opts.playHref, emphasis: 'primary' },
           ...(opts.secondary ?? []),
         ],
+        ...(opts.layout ? { layout: opts.layout } : {}),
       },
     ],
   };

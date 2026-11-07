@@ -19,6 +19,7 @@ import { banqiTenant } from '../banqi-tenant.js';
 import { crazyhouseXiangqiTenant } from '../crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
+import { gomokuTenant } from '../gomoku-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
@@ -191,7 +192,7 @@ async function createFriendRoom(
   accountUser: UserAccount | null,
 ): Promise<{ status: number | null; json: Record<string, unknown> }> {
   const response = captureResponse();
-  const request = {} as IncomingMessage;
+  const request = { headers: {} } as IncomingMessage;
   const fullBody = { gameSpecId: registration.gameSpecId, ...body };
   assert.ok(
     registration.http.matchesCreateRequest(fullBody),
@@ -281,9 +282,11 @@ test('friend rooms: rated needs a signed-in creator, a rated pace and a human op
         assert.equal(guest.status, 401, registration.kind);
         assert.deepEqual(guest.json, { error: 'rated_requires_account' }, registration.kind);
 
+        // Every preset rates since 10+5 joined on 2026-11-06, so an off-menu
+        // pace stands in for an unrated one.
         const slow = await createFriendRoom(
           registration,
-          { mode: 'pvp', rated: true, timeControl: { initialMs: 600_000, incrementMs: 5_000 } },
+          { mode: 'pvp', rated: true, timeControl: { initialMs: 900_000, incrementMs: 10_000 } },
           ACCOUNT,
         );
         assert.equal(slow.status, 400, registration.kind);
@@ -465,6 +468,7 @@ type AnyTenant = VariantTenant<
 // The tenant objects behind every rated lobby; the first assertion below fails
 // when a new rated lobby is missing here, so the summary check cannot go stale.
 const RATED_LOBBY_TENANTS = [
+  gomokuTenant,
   xiangqiTenant,
   crazyhouseXiangqiTenant,
   duckXiangqiTenant,

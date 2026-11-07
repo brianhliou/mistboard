@@ -126,7 +126,7 @@ describe('restart-banner', () => {
       window.history.replaceState(null, '', '/zh-hans/');
       refreshRestartBanner();
       expect(getLabelText()).toBe('服务器正在重启');
-      expect(getHintText()).toBe('请稍后重新连接。');
+      expect(getHintText()).toBe('几秒后恢复。');
 
       window.history.replaceState(null, '', '/zh-hant/');
       setRestartBanner('pending');

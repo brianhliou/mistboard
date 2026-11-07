@@ -250,6 +250,9 @@ export async function mountStudyReview(
           ? { canRun: false, fetchCached: async () => overlay, run: async () => overlay }
           : null,
         revealLuckOnly: true,
+        // Hover faces like the finished-game review: the chapter's root carries no
+        // identity its own Reveal identities does not already show.
+        showFaceDown: true,
         root: { truth: parsed.state, fen: jieqiStateToDealtFen(parsed.state) },
       });
     }

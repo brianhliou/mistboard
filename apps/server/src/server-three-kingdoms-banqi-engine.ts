@@ -24,10 +24,11 @@ import { logger } from './obs.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
   THREE_KINGDOMS_BANQI_ENGINE_MOVETIME_CAP_MS,
-  THREE_KINGDOMS_BANQI_ENGINE_NODES,
   type ThreeKingdomsBanqiEngineProvider,
   type ThreeKingdomsBanqiEngineRequest,
+  threeKingdomsBanqiEngineTierFor,
   threeKingdomsBanqiLiveEngineMove,
+  threeKingdomsBanqiNetPath,
 } from './three-kingdoms-banqi-engine.js';
 import {
   isThreeKingdomsBanqiSquare,
@@ -98,7 +99,7 @@ function engineToMove(room: ThreeKingdomsBanqiEngineRoom, seat: BanqiSeat): bool
 export function threeKingdomsBanqiEngineRequestFor(
   events: readonly ThreeKingdomsBanqiEvent[],
   state: ThreeKingdomsBanqiState,
-  budget: { nodes: number; movetimeCapMs: number },
+  budget: Pick<ThreeKingdomsBanqiEngineRequest, 'nodes' | 'movetimeCapMs' | 'evalFile' | 'chance'>,
 ): ThreeKingdomsBanqiEngineRequest {
   const moveEvents = events.filter(
     (e): e is Extract<ThreeKingdomsBanqiEvent, { type: 'move-played' }> => e.type === 'move-played',
@@ -120,6 +121,28 @@ export function threeKingdomsBanqiEngineRequestFor(
       ? getThreeKingdomsBanqiLegalMoves(state).map(threeKingdomsBanqiMoveToUci)
       : undefined;
   return { fen, moves, ...(searchMoves ? { searchMoves } : {}), ...budget };
+}
+
+/** Shared by live play and EvE: identical redaction, chase root and tier options. */
+export function threeKingdomsBanqiTierRequestFor(
+  events: readonly ThreeKingdomsBanqiEvent[],
+  state: ThreeKingdomsBanqiState,
+  engineId: string,
+  movetimeCapMs: number,
+): ThreeKingdomsBanqiEngineRequest {
+  const tier = threeKingdomsBanqiEngineTierFor(engineId);
+  if (!tier || tier.evaluation === 'random')
+    throw new Error(`TK search tier required: ${engineId}`);
+  const evalFile = tier.evaluation === 'nnue' ? threeKingdomsBanqiNetPath() : null;
+  if (tier.evaluation === 'nnue' && evalFile === null) {
+    throw new Error('Three Kingdoms banqi net is not available');
+  }
+  return threeKingdomsBanqiEngineRequestFor(events, state, {
+    nodes: tier.nodes,
+    movetimeCapMs: Math.min(movetimeCapMs, tier.movetimeCapMs),
+    ...(evalFile === null ? {} : { evalFile }),
+    ...(tier.chance === undefined ? {} : { chance: tier.chance }),
+  });
 }
 
 export function scheduleThreeKingdomsBanqiEngineMove(
@@ -149,6 +172,7 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
   ctx: EngineContext,
   room: ThreeKingdomsBanqiEngineRoom,
   moveProvider: ThreeKingdomsBanqiEngineProvider = threeKingdomsBanqiLiveEngineMove,
+  rng: () => number = Math.random,
 ): Promise<void> {
   const seat = threeKingdomsBanqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
@@ -156,6 +180,8 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
   const clock = room.projection.clock;
   const remainingMs = clock ? tenantClockRemainingMs(clock, seat, now) : null;
   if (remainingMs !== null && remainingMs <= 0) return;
+  const engineId = room.projection.seats[seat]!;
+  const tier = threeKingdomsBanqiEngineTierFor(engineId)!;
   const { computeBudgetMs: movetimeCapMs } = budgetForMove({
     remainingMs,
     incrementMs: clock?.incrementMs ?? 0,
@@ -164,33 +190,48 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
     floorMs: MIN_MOVETIME_MS,
   });
   const state = room.projection.state;
-  const request = threeKingdomsBanqiEngineRequestFor(
-    room.events as readonly ThreeKingdomsBanqiEvent[],
-    state,
-    { nodes: THREE_KINGDOMS_BANQI_ENGINE_NODES, movetimeCapMs },
-  );
-  const { chosen, aborted } = await resolveValidatedEngineMove<ThreeKingdomsBanqiMove>({
-    maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: async () => (await moveProvider(request)).best,
-    validate: (uci) => {
-      const parsed = uciToThreeKingdomsBanqiMove(uci);
-      return parsed && isThreeKingdomsBanqiLegalMove(room.projection.state, parsed) ? parsed : null;
-    },
-    stillOnTurn: () => engineToMove(room, seat),
-    onReject: ({ attempt, uci, reason, error }) =>
-      logger.warn(
-        {
-          kind: 'three_kingdoms_banqi_engine_move_rejected',
-          room_id: room.id,
-          attempt,
-          uci,
-          reject_reason: reason,
-          error,
-        },
-        'Three Kingdoms banqi engine output rejected by kernel; retrying',
-      ),
-  });
-  if (aborted || !engineToMove(room, seat)) return;
+  let chosen: ThreeKingdomsBanqiMove | null;
+  if (tier.evaluation === 'random') {
+    const legal = getThreeKingdomsBanqiLegalMoves(state);
+    chosen = legal[Math.min(legal.length - 1, Math.floor(rng() * legal.length))] ?? null;
+  } else {
+    const result = await resolveValidatedEngineMove<ThreeKingdomsBanqiMove>({
+      maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
+      requestMove: async () =>
+        (
+          await moveProvider(
+            threeKingdomsBanqiTierRequestFor(
+              room.events as readonly ThreeKingdomsBanqiEvent[],
+              state,
+              engineId,
+              movetimeCapMs,
+            ),
+          )
+        ).best,
+      validate: (uci) => {
+        const parsed = uciToThreeKingdomsBanqiMove(uci);
+        return parsed && isThreeKingdomsBanqiLegalMove(room.projection.state, parsed)
+          ? parsed
+          : null;
+      },
+      stillOnTurn: () => engineToMove(room, seat),
+      onReject: ({ attempt, uci, reason, error }) =>
+        logger.warn(
+          {
+            kind: 'three_kingdoms_banqi_engine_move_rejected',
+            room_id: room.id,
+            attempt,
+            uci,
+            reject_reason: reason,
+            error,
+          },
+          'Three Kingdoms banqi engine output rejected by kernel; retrying',
+        ),
+    });
+    if (result.aborted) return;
+    chosen = result.chosen;
+  }
+  if (!engineToMove(room, seat)) return;
   // A playtest bot that cannot answer resigns, as banqi's does (fail closed):
   // a silent random move would hide an engine/kernel disagreement.
   const event: ThreeKingdomsBanqiEvent =
@@ -199,7 +240,11 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
       : { type: 'move-played', at: Date.now(), roomId: room.id, color: seat, move: chosen };
   if (chosen === null) {
     logger.warn(
-      { kind: 'three_kingdoms_banqi_engine_failed_closed', room_id: room.id, fen: request.fen },
+      {
+        kind: 'three_kingdoms_banqi_engine_failed_closed',
+        room_id: room.id,
+        fen: threeKingdomsBanqiStateToEngineFen(state),
+      },
       'Three Kingdoms banqi engine gave no legal move; resigning its seat',
     );
   }

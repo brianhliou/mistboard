@@ -25,10 +25,12 @@ import type { ServerResponse } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
 import { loadCardArt } from './og-card-board.js';
+import { OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import {
   createPngCache,
   halveImage,
   halvePng,
+  OG_CARD_ZOOM,
   OG_FONT_OPTIONS,
   pngSize,
   svgToPng,
@@ -65,7 +67,6 @@ const MIME: Readonly<Record<string, string>> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
 };
 
 let thumbCache = createPngCache(96);
@@ -246,9 +247,15 @@ function placedImages(svg: string): Placed[] {
 }
 
 /** `svg` with each root-relative image inlined as a data URI at the mip level
- *  its drawn size needs (an unreadable one is dropped). The render is 1:1 with
- *  the frame, so an image's drawn size is its size in SVG units. */
-export async function inlineThumbImages(svg: string, staticDir: string): Promise<string> {
+ *  its drawn size needs (an unreadable one is dropped). `zoom` converts SVG
+ *  units to output pixels, including the wide OG card's larger frame. OG
+ *  requires every image so unavailable art falls back instead of going blank. */
+export async function inlineThumbImages(
+  svg: string,
+  staticDir: string,
+  zoom = 1,
+  requireImages = false,
+): Promise<string> {
   const placed = placedImages(svg);
   const resolved = await Promise.all(
     placed.map(async (image) => {
@@ -263,8 +270,11 @@ export async function inlineThumbImages(svg: string, staticDir: string): Promise
   for (const { image, raster, unitsPerPixel } of resolved) {
     out += svg.slice(cursor, image.start);
     cursor = image.end;
-    if (!raster) continue;
-    const need = Math.max(raster.width, raster.height) * unitsPerPixel;
+    if (!raster) {
+      if (requireImages) throw new Error('thumbnail image unavailable');
+      continue;
+    }
+    const need = Math.max(raster.width, raster.height) * unitsPerPixel * zoom;
     let pick = raster.levels[0]!;
     for (const level of raster.levels) if (level.px >= need) pick = level;
     const attrs = image.attrs.replace(/\s(?:xlink:)?href="[^"]*"/g, '');
@@ -308,15 +318,83 @@ export function coverBelowFrame(svg: string): string | null {
   return root.replace(frame, tall) + svg.slice(root.length);
 }
 
-/** A thumbnail SVG from the build as its 480x300 PNG: images inlined, the
- *  canvas grown to cover its art, cropped back to the frame, palette-encoded.
- *  Null when it cannot be drawn safely. */
+/** The share card is wider than the art, so its crop loses 24 units off the top
+ *  and bottom of a 300-unit thumbnail. Art with something in those strips names
+ *  a fit: `shift` moves the crop down (or up, negative) by that many units, up
+ *  to 24; `whole` draws all 300 units in the frame, wider and a little smaller,
+ *  and needs vector art that extends past its own sides or sits on the panel. */
+export type ArticleOgFit = { shift: number } | 'whole';
+
+export const ARTICLE_OG_FITS: Readonly<Record<string, ArticleOgFit>> = {
+  // Text cards: a title high up and a row of pieces low down.
+  'jieqi-platform': { shift: 15 },
+  'co-up': { shift: 15 },
+  'luat-co-up': { shift: 15 },
+  // Half boards with their pieces against the bottom or the top edge.
+  'set-up-your-board': { shift: 24 },
+  'horde-xiangqi': { shift: -24 },
+  'jieqi-bot-wins': { shift: -13 },
+  'pikafish-reveal-bug': { shift: -13 },
+  // The duck disc is taller than the crop; the atomic art is a window on a full board.
+  'duck-xiangqi-strategy': 'whole',
+  'atomic-xiangqi-build': 'whole',
+};
+
+const NESTED_ART = new RegExp(
+  `<svg x="0" y="0" width="${ARTICLE_THUMB_WIDTH}" height="${ARTICLE_THUMB_HEIGHT}"([^>]*) viewBox="(-?[\\d.]+) (-?[\\d.]+) ([\\d.]+) ([\\d.]+)"`,
+);
+
+/** Refit a thumbnail's nested art to the share card's own frame, keeping its
+ *  full height. Null when the art is not a nested vector. */
+function fitWholeArt(svg: string): string | null {
+  const match = NESTED_ART.exec(svg);
+  if (!match) return null;
+  const [found, attrs, x, y, width, height] = match as unknown as [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  const frameHeight = (ARTICLE_THUMB_WIDTH * OG_HEIGHT) / OG_WIDTH;
+  const wide = (Number(height) * OG_WIDTH) / OG_HEIGHT;
+  const left = Number(x) - (wide - Number(width)) / 2;
+  const frameTop = (ARTICLE_THUMB_HEIGHT - frameHeight) / 2;
+  return svg.replace(
+    found,
+    `<svg x="0" y="${frameTop}" width="${ARTICLE_THUMB_WIDTH}" height="${frameHeight}"${attrs} viewBox="${left} ${y} ${wide} ${height}"`,
+  );
+}
+
+/** A build thumbnail as a PNG: images inlined at their drawn size and the
+ *  canvas grown to cover its art safely. Feeds keep their 480x300 palette PNG;
+ *  OG renders the vectors at 2400x1500 and keeps the 2400x1260 its `fit` names
+ *  (the centre by default), the size every page declares for its card, with
+ *  full colour for photos. Null when it cannot be drawn safely. */
 export async function renderArticleThumbnail(
   source: string,
   staticDir: string,
+  format: 'feed' | 'og' = 'feed',
+  fit?: ArticleOgFit,
 ): Promise<Buffer | null> {
-  const covered = coverBelowFrame(await inlineThumbImages(source, staticDir));
+  const zoom = format === 'og' ? (OG_WIDTH * OG_CARD_ZOOM) / ARTICLE_THUMB_WIDTH : 1;
+  const fitted = format === 'og' && fit === 'whole' ? fitWholeArt(source) : source;
+  if (!fitted) return null;
+  const covered = coverBelowFrame(
+    await inlineThumbImages(fitted, staticDir, zoom, format === 'og'),
+  );
   if (!covered) return null;
+  if (format === 'og') {
+    const height = OG_HEIGHT * OG_CARD_ZOOM;
+    const shift = fit && fit !== 'whole' ? fit.shift : 0;
+    const top = (ARTICLE_THUMB_HEIGHT * zoom - height) / 2 + shift * zoom;
+    return svgToPng(covered, PANEL_SOFT, zoom, {
+      top,
+      right: OG_WIDTH * OG_CARD_ZOOM,
+      bottom: top + height,
+    });
+  }
   const crop = { right: ARTICLE_THUMB_WIDTH, bottom: ARTICLE_THUMB_HEIGHT };
   const { pixels, width, height } = await svgToRgba(covered, PANEL_SOFT, 1, crop);
   const png = encodePalettePng(pixels, width, height);

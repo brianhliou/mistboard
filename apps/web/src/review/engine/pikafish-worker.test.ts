@@ -5,7 +5,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import vm from 'node:vm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { requireTestEngineNet } from '../../engine/test-net.js';
+
+beforeAll(() => requireTestEngineNet('pikafish'));
 
 const WORKER_SOURCE = readFileSync(
   resolve(__dirname, '../../../public/engine/pikafish/worker.js'),

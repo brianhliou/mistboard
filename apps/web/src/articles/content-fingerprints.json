@@ -4,8 +4,8 @@
     "updatedAt": null
   },
   "ab-jchess-vs-jqe": {
-    "hash": "92077a33555c871c",
-    "updatedAt": null
+    "hash": "b377501f3490f083",
+    "updatedAt": "2026-11-06"
   },
   "anti-xiangqi": {
     "hash": "4d632cdd57f11194",
@@ -104,8 +104,8 @@
     "updatedAt": "2026-10-24"
   },
   "gomoku": {
-    "hash": "1517c2f732f7045f",
-    "updatedAt": "2026-11-01"
+    "hash": "8cbe8e6a246c2aaf",
+    "updatedAt": "2026-11-06"
   },
   "helpmates-in-xiangqi": {
     "hash": "5beedc05bced4608",
@@ -120,8 +120,8 @@
     "updatedAt": "2026-10-28"
   },
   "jieqi": {
-    "hash": "8e2145840ac94150",
-    "updatedAt": "2026-09-17"
+    "hash": "17f2a922526a2d96",
+    "updatedAt": "2026-11-05"
   },
   "jieqi-bot-wins": {
     "hash": "9afdcafc6219f322",
@@ -132,8 +132,8 @@
     "updatedAt": null
   },
   "jieqi-platform": {
-    "hash": "dab4f6d94af96b3d",
-    "updatedAt": "2026-10-19"
+    "hash": "29fe8f7049c2dc6b",
+    "updatedAt": "2026-11-06"
   },
   "jieqi-puzzle-search": {
     "hash": "32b508e6f756c6d1",
@@ -172,8 +172,8 @@
     "updatedAt": null
   },
   "mahjong": {
-    "hash": "becb55770f03ae73",
-    "updatedAt": null
+    "hash": "83d992e11d94b497",
+    "updatedAt": "2026-11-06"
   },
   "misty": {
     "hash": "ef5f445b2e398541",
@@ -220,7 +220,7 @@
     "updatedAt": "2026-06-06"
   },
   "shortest-stalemate-xiangqi": {
-    "hash": "c65df0acb8988851",
+    "hash": "8087e9a6ea932d7e",
     "updatedAt": null
   },
   "skill-vs-luck": {
@@ -249,7 +249,7 @@
   },
   "xiangqi": {
     "hash": "c4b40a85f52d7ff9",
-    "updatedAt": "2026-11-03"
+    "updatedAt": "2026-11-06"
   },
   "xiangqi-champions": {
     "hash": "3705491016d9f9f4",
@@ -260,16 +260,16 @@
     "updatedAt": null
   },
   "xiangqi-mahjong-32": {
-    "hash": "48c9e9d23f89557d",
-    "updatedAt": "2026-10-26"
+    "hash": "da29b7d33f15564b",
+    "updatedAt": "2026-11-06"
   },
   "xiangqi-match-fixing": {
     "hash": "f55a00f41e970dc6",
     "updatedAt": null
   },
   "xiangqi-world-championship": {
-    "hash": "6a88654548361124",
-    "updatedAt": "2026-10-24"
+    "hash": "f6afff5de8e038bb",
+    "updatedAt": "2026-11-06"
   },
   "yin-sheng": {
     "hash": "b3e5c4a7d0f92a6f",

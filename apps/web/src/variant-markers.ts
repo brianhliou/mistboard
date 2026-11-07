@@ -38,6 +38,11 @@ export const FINAL_VARIANT_MARKERS = {
   'three-kingdoms-banqi': {
     path: '/variant-markers/final/three-kingdoms-banqi.png',
   },
+  // Banqi's frame with its top and bottom edges drawn as HP bars, each partly
+  // drained: FFQ plays banqi for HP.
+  'ffq-banqi': {
+    path: '/variant-markers/final/ffq-banqi.png',
+  },
   jungle: {
     path: '/variant-markers/final/jungle-chess.png',
   },

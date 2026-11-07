@@ -1,6 +1,13 @@
 import { ABOUT_NAV_GROUPS } from './about-nav-items.js';
 import type { I18nKey } from './i18n/catalog.js';
 import { STREAMERS } from './streamers-data.js';
+import { YOUTUBE_BLOCKED_IN } from './viewer-geo.js';
+
+export { YOUTUBE_BLOCKED_IN };
+
+// Flip by hand once the Bilibili catalogue reaches BILIBILI_NAV_MIN_ENTRIES.
+// A sync test enforces this so the catalogue stays outside the eager shell.
+export const VIDEOS_OPEN_IN_CN = true;
 
 export interface NavItem {
   label: string;
@@ -30,18 +37,6 @@ export interface NavItem {
 // has to gate on this list.
 export const DISCORD_BLOCKED_IN: readonly string[] = ['CN'];
 export const DISCORD_INVITE_URL = 'https://discord.gg/Qp6AZ6qAYm';
-
-// Every entry in the video catalogue is a YouTube video, and the card art is
-// derived from img.youtube.com, so a mainland visitor gets neither the video nor
-// the thumbnail: the shelf renders as broken images, not as a quiet dead end.
-// CN was 23% of visitors over the 30 days to 2026-09-06, second only to the US.
-//
-// COUNTRY, NOT LANGUAGE. Taiwan, Hong Kong, Macau, Singapore and Malaysia all
-// reach YouTube, and together they were ~59 visitors in that same window, so the
-// Chinese-language shelf serves them perfectly well. Gating on the zh locale
-// rather than on CN would break the catalogue for precisely the readers it was
-// built for, which is the wrong inference this constant exists to prevent. #378.
-export const YOUTUBE_BLOCKED_IN: readonly string[] = ['CN'];
 
 // ORDER IS LOAD-BEARING: site-shell destructures this positionally
 // (`const [play, puzzles, watch] = primaryNavItems()`), so inserting an entry
@@ -189,8 +184,8 @@ export function watchNavItems(): NavItem[] {
       label: 'Video library',
       labelKey: 'nav.videoLibrary',
       href: '/videos',
-      // An on-site page, but every card on it links out to YouTube.
-      blockedIn: YOUTUBE_BLOCKED_IN,
+      // Direct visits remain available; promote in CN once Bilibili has depth.
+      blockedIn: VIDEOS_OPEN_IN_CN ? undefined : YOUTUBE_BLOCKED_IN,
     },
   ];
 }

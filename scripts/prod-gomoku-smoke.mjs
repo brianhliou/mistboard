@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-// Rapfi is a browser worker, so an engine-seat WS smoke cannot prove it runs.
-// Use a fresh, unrated bot-first room: download the real ~40 MB network pack,
-// observe a browser-bot submission AND the server's kernel-legal reply, then
-// abort before the human moves. No counted human game or rating is produced.
+// Verify native server Rapfi in a fresh, unrated bot-first room: observe the
+// server's socket reply, validate it against the kernel, then abort before the
+// human moves. No counted human game or rating is produced.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,7 +14,6 @@ import { reportResult } from './lib/smoke-report.mjs';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const ENGINE_ID = 'rapfi-level-1';
-const NETWORK_PATH = '/engine/rapfi/rapfi-single-simd128.data';
 
 export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const { applyGomokuRoomMove, createGomokuRoomState } = await tsImport(
@@ -28,11 +26,8 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
   let failure;
   let roomId;
   let initial;
-  let submitted;
   let reply;
   let finalStatus;
-  let workerLoaded = false;
-  let networkLoaded = false;
   const fail = (error) => {
     failure ??= error;
   };
@@ -41,46 +36,14 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
     while (true) {
       if (failure) throw failure;
       if (performance.now() >= deadline)
-        throw new Error(
-          `Gomoku smoke timed out waiting for ${label} (worker=${workerLoaded}, network=${networkLoaded}, reply=${!!reply})`,
-        );
+        throw new Error(`Gomoku smoke timed out waiting for ${label} (reply=${!!reply})`);
       if (predicate()) return;
       await delay(Math.min(50, remaining()));
     }
   };
 
   page.on('pageerror', fail);
-  page.on('worker', (worker) => {
-    if (new URL(worker.url()).pathname === '/engine/rapfi/worker.js') workerLoaded = true;
-  });
-  page.on('response', (response) => {
-    if (new URL(response.url()).pathname !== NETWORK_PATH) return;
-    if (!response.ok()) {
-      fail(new Error(`Rapfi networks returned HTTP ${response.status()}`));
-      return;
-    }
-    // Headers alone do not prove a 40 MB download completed.
-    void response
-      .finished()
-      .then((error) => {
-        if (error) fail(error);
-        else networkLoaded = true;
-      })
-      .catch(fail);
-  });
-  page.on('requestfailed', (request) => {
-    if (new URL(request.url()).pathname.startsWith('/engine/rapfi/'))
-      fail(new Error(`Rapfi asset request failed: ${new URL(request.url()).pathname}`));
-  });
   page.on('websocket', (socket) => {
-    socket.on('framesent', ({ payload }) => {
-      try {
-        const frame = JSON.parse(String(payload));
-        if (frame.type === 'move' && frame.browserBot === true) submitted = frame;
-      } catch (error) {
-        fail(error);
-      }
-    });
     socket.on('framereceived', ({ payload }) => {
       try {
         const frame = JSON.parse(String(payload));
@@ -101,12 +64,6 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
           assert.deepEqual(state.status, initial.status);
         } else if (state.ply === initial?.ply + 1 && !reply) {
           assert.ok(initial, 'missing initial Gomoku frame');
-          assert.ok(
-            submitted?.roomId === roomId &&
-              submitted.expectedPly === 0 &&
-              submitted.to === state.lastMove?.to,
-            'missing matching browser bot submission',
-          );
           const expected = applyGomokuRoomMove(initial, state.lastMove);
           assert.notEqual(expected, initial, 'bot move must be kernel-legal');
           assert.deepEqual(state.board, expected.board, 'server board differs from kernel');
@@ -125,8 +82,7 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
     // A dealt opening can start with either colour. Abort human-first deals
     // and retry within the same deadline, without playing any human moves.
     while (true) {
-      initial = submitted = reply = finalStatus = undefined;
-      workerLoaded = networkLoaded = false;
+      initial = reply = finalStatus = undefined;
       const created = await page.request.post(new URL('/api/rooms', baseUrl).href, {
         timeout: remaining(),
         data: {
@@ -161,17 +117,14 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
       await page.locator('[data-game-action="confirm-yes"]').click({ timeout: remaining() });
       await waitFor(() => finalStatus, 'aborting the human-first deal');
     }
-    await waitFor(
-      () => initial && submitted && reply && workerLoaded && networkLoaded,
-      'Rapfi networks and a legal bot reply',
-    );
+    await waitFor(() => reply, 'a legal server bot reply');
     const elapsedMs = Math.round(performance.now() - startedAt);
     await page.locator('[data-game-action="abort"]').click({ timeout: remaining() });
     await page.locator('[data-game-action="confirm-yes"]').click({ timeout: remaining() });
     await waitFor(() => finalStatus, 'confirmed pregame abort');
     return {
       ok: true,
-      check: 'gomoku-browser-bot',
+      check: 'gomoku-server-bot',
       baseUrl,
       roomId,
       engineId: ENGINE_ID,
@@ -187,8 +140,7 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
 async function main() {
   const options = parseSmokeArgs(process.argv.slice(2), {
     usage: 'npm run prod:smoke:gomoku -- [options]',
-    description:
-      'Open an unrated Gomoku bot game, load Rapfi networks, verify one legal move, then abort.',
+    description: 'Open an unrated Gomoku bot game, verify one legal server bot move, then abort.',
     flags: {
       '--base': {
         key: 'baseUrl',
@@ -199,7 +151,7 @@ async function main() {
         key: 'timeoutMs',
         placeholder: '<ms>',
         kind: 'positive-int',
-        help: `Total room/load/move/abort deadline, default ${DEFAULT_TIMEOUT_MS}`,
+        help: `Total room/move/abort deadline, default ${DEFAULT_TIMEOUT_MS}`,
       },
     },
   });
@@ -219,7 +171,7 @@ async function main() {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(JSON.stringify({ ok: false, check: 'gomoku-browser-bot', error: error.message }));
+    console.error(JSON.stringify({ ok: false, check: 'gomoku-server-bot', error: error.message }));
     process.exitCode = 1;
   });
 }

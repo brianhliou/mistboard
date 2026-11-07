@@ -20,10 +20,12 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   GOMOKU_SPEC_ID,
   isPublicGameSpec,
+  isRetiredGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -41,6 +43,7 @@ import {
   crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
+  ffqBanqiEnabled,
   fortressXiangqiEnabled,
   gomokuEnabled,
   jieqiEnabled,
@@ -55,7 +58,7 @@ import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
-import { hasLikelyVariantGrant } from '../signed-in-state.js';
+import { hasLikelyVariantGrant, isLikelyAdmin } from '../signed-in-state.js';
 import {
   threeKingdomsBanqiEngineOffered,
   threeKingdomsBanqiOffered,
@@ -96,6 +99,9 @@ export type WebTenantLandingConfig = {
   timePresetIds: readonly TimeControlId[];
   // Whether the variant appears in normal play-menu entry points.
   offerInMenu(): boolean;
+  // Restricted playtests can offer only supported entry modes. Omitted keeps
+  // the usual picker behavior (including disabled cards for missing bots).
+  modes?: readonly ('pvp' | 'pve' | 'lobby')[];
   // Whether a ?play deep link may select the variant (soft-launch links can be
   // live while the menu entry is still hidden).
   acceptsDeepLink(): boolean;
@@ -206,10 +212,15 @@ const THREE_KINGDOMS_BANQI_ENGINE_OPTIONS: readonly WebTenantEngineOption[] = [
 // launch switch (publicSurface) is on, the server drops it from the allowlist
 // and the flag alone decides.
 const playtestOffered = (enabled: () => boolean, gameSpecId: GameSpecId) => (): boolean =>
-  enabled() && (isPublicGameSpec(gameSpecId) || hasLikelyVariantGrant(gameSpecId));
+  enabled() &&
+  !isRetiredGameSpec(gameSpecId) &&
+  (isPublicGameSpec(gameSpecId) || hasLikelyVariantGrant(gameSpecId));
 const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 // Xiangqi mahjong is gated the same way, on its own flag and its own grant.
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
+// Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
+// The server repeats this check for create, HTTP shells and every connection.
+const ffqBanqiOffered = () => ffqBanqiEnabled() && isLikelyAdmin();
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -306,6 +317,31 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
 // (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
+    gameSpecId: FFQ_BANQI_SPEC_ID,
+    roomIdPrefix: 'ffq_',
+    // A cold authorized room load does not have its admin hint yet. The HTTP
+    // shell and socket enforce the account check before any state is sent.
+    enabled: ffqBanqiEnabled,
+    pageTitleKey: 'variant.ffqBanqi.name',
+    loadLiveRoomClient: () =>
+      import('../live-ffq-banqi.js').then(
+        ({ bootstrapFFQBanqiLiveRoom }) => bootstrapFFQBanqiLiveRoom,
+      ),
+    // No postgame route, watch channel or public listing. Finished rooms keep
+    // the same masked live client; shared discovery never links them.
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      offerInMenu: ffqBanqiOffered,
+      acceptsDeepLink: ffqBanqiOffered,
+      modes: ['pvp'],
+    },
+  },
+  {
     gameSpecId: GOMOKU_SPEC_ID,
     roomIdPrefix: 'gmk_',
     enabled: gomokuOffered,
@@ -331,10 +367,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         firstColor: 'black',
         firstGlyph: '●',
         firstLabel: 'Black',
+        glyphClass: 'stone',
         secondColor: 'white',
         secondGlyph: '○',
         secondLabel: 'White',
-        supportsRated: false,
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -880,19 +917,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsRated: true,
         supportsTimeControl: true,
       },
-      // 1+1 is omitted; every other xiangqi tenant offers all four.
-      //
-      // The reason is not only that games are long (the seven seeded engine
-      // games run 120-229 plies, median 150). It is that a turn here is TWO
-      // decisions, a move and a duck placement, so a preset buys half the
-      // thinking time per decision that the same preset buys elsewhere. At the
-      // long end, ~115 turns a side, 1+1 affords 0.8s per decision and the
-      // clock decides the game. 3+2 affords 1.8s, which is roughly what plain
-      // xiangqi gives at 1+1, and that is offered — so 3+2 is offered here.
-      //
-      // 5+5 stays the preselected default (VARIANT_DEFAULT_TIME_CONTROLS in
-      // @mistboard/game); 3+2 is a pace a player has to choose deliberately.
-      timePresetIds: ['3m2', '5m5', '10m5'],
+      // All four paces, 1+1 included (Brian, 2026-11-06: "part of the
+      // challenge"). A turn here is a move plus a duck placement, so 1+1 is
+      // very fast; 5+5 stays the preselected default
+      // (VARIANT_DEFAULT_TIME_CONTROLS in @mistboard/game).
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // Both gated on the SAME predicate. The conformance test checks exactly
       // this, because gating the menu and the deep link on neighbouring flags
       // has shipped twice.

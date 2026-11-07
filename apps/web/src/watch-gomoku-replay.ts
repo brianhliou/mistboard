@@ -4,7 +4,7 @@
 // describe this contract. Capability registration belongs to the integration.
 import type { GomokuColor, GomokuMove, GomokuPlayerView } from '@mistboard/game';
 import { terminationLabel } from './game-display.js';
-import { gomokuBoardSvg } from './gomoku-board.js';
+import { GOMOKU_MOVE_NUMBER_MIN_PX, gomokuBoardSvg, numberGomokuStones } from './gomoku-board.js';
 import './gomoku-board.css';
 import { t } from './i18n/catalog.js';
 import { currentLocale } from './i18n/locale.js';
@@ -48,6 +48,14 @@ export type GomokuWatchPayload = Omit<WatchPostgameMeta, 'game' | 'timeline'> & 
 export type GomokuWatchReplayOptions = TenantWatchReplayOptions;
 type Seat = 'first' | 'second';
 const COLORS = ['black', 'white'] as const;
+
+/** The stones placed in frames 1..ply, in order; dealt opening stones are not placements. */
+export function placementsThrough(frames: readonly Frame[], ply: number): GomokuMove[] {
+  const placed: GomokuMove[] = [];
+  for (const frame of frames.slice(1, ply + 1))
+    if (frame.view.lastMove) placed.push(frame.view.lastMove);
+  return placed;
+}
 const sideFor = (color: GomokuColor): Seat => (color === 'black' ? 'first' : 'second');
 
 function readPayload(value: unknown): GomokuWatchPayload | null {
@@ -190,6 +198,10 @@ export async function mountGomokuWatchReplay(
     const current = frame();
     if (!payload || !current || destroyed) return;
     pane.boardEl.innerHTML = gomokuBoardSvg(current.view, false);
+    // Numbered stones on a board big enough to read them (the homepage viewer,
+    // /watch), plain stones on the small /games cards.
+    if (pane.boardEl.clientWidth >= GOMOKU_MOVE_NUMBER_MIN_PX)
+      numberGomokuStones(pane.boardEl, placementsThrough(payload.history.truth, ply));
     paintClocks();
     progress.textContent = atEnd()
       ? t(
