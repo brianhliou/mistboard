@@ -1,4 +1,9 @@
-import { FFQ_BANQI_RULES, FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
+import {
+  FFQ_BANQI_FACE_UP_SQUARES,
+  FFQ_BANQI_RULES,
+  FFQ_BANQI_SPEC_ID,
+  gameSpecForId,
+} from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ARTICLE_META,
@@ -80,19 +85,42 @@ describe('Fanfanqi rules registration', () => {
 describe('Fanfanqi rules match the kernel', () => {
   it('keeps every damage value and the rank ladder aligned with FFQ_BANQI_RULES', () => {
     const article = findArticle('fanfanqi')!;
-    const tables = article.sections.flatMap((section) =>
-      (section.blocks ?? []).filter((block) => block.kind === 'table'),
-    );
-    expect(tables).toHaveLength(1);
+    const tableIn = (heading: string) => {
+      const block = article.sections
+        .find((section) => section.heading === heading)
+        ?.blocks?.find((b) => b.kind === 'table');
+      if (block?.kind !== 'table') throw new Error(`no table under ${heading}`);
+      return block;
+    };
     const damage = Object.fromEntries(
-      tables[0]!.rows.map(([piece, value]) => [piece!.toLowerCase(), Number(value)]),
+      tableIn('HP and capture damage').rows.map(([piece, value]) => [
+        piece!.toLowerCase(),
+        Number(value),
+      ]),
     );
     expect(damage).toEqual(FFQ_BANQI_RULES.captureDamage);
+    // One general, five soldiers, two of every other piece.
+    const sideTotal = Object.entries(FFQ_BANQI_RULES.captureDamage).reduce(
+      (sum, [role, hp]) => sum + hp * (role === 'general' ? 1 : role === 'soldier' ? 5 : 2),
+      0,
+    );
+    const compared = Object.fromEntries(
+      tableIn('How Fanfanqi differs from banqi').rows.map(([rule, , ffq]) => [rule, ffq]),
+    );
+    expect(compared.Draws).toBe(`${FFQ_BANQI_RULES.noProgressPlies} plies with no flip or capture`);
+    const spelled = ['one', 'two', 'three', 'four', 'five', 'six'];
+    expect(compared.Chases).toBe(
+      `At most ${spelled[FFQ_BANQI_RULES.consecutiveChaseLimit - 1]} chases in a row`,
+    );
+    expect(compared.Start).toBe(`Four face up, ${32 - FFQ_BANQI_FACE_UP_SQUARES.length} face down`);
     const prose = articleProse(article)
       .map(({ text }) => text)
       .join('\n');
     expect(prose).toContain(FFQ_BANQI_RULES.captureRankOrder.join(' > '));
     expect(prose).toContain(`${FFQ_BANQI_RULES.startingHP} HP`);
+    expect(prose).toContain(
+      `add up to ${sideTotal} HP of damage against a start of ${FFQ_BANQI_RULES.startingHP}`,
+    );
     expect(prose).toContain(`After ${FFQ_BANQI_RULES.noProgressPlies} plies`);
     expect(prose).not.toContain('—');
     expect(prose).not.toMatch(/翻翻棋|Taiwan|mainland/);

@@ -29,7 +29,9 @@ describe('Fanfanqi rules diagrams', () => {
     FANFANQI_REPLY_FLIP: diagrams.FANFANQI_REPLY_FLIP,
     FANFANQI_SOLDIER_TAKES_GENERAL: diagrams.FANFANQI_SOLDIER_TAKES_GENERAL,
     FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER: diagrams.FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
-    FANFANQI_CANNON_CAPTURES: diagrams.FANFANQI_CANNON_CAPTURES,
+    FANFANQI_CANNON_SHOT: diagrams.FANFANQI_CANNON_SHOT,
+    FANFANQI_CANNON_GAMBLE: diagrams.FANFANQI_CANNON_GAMBLE,
+    FANFANQI_CANNON_NO_SHOT: diagrams.FANFANQI_CANNON_NO_SHOT,
   };
 
   for (const [name, draw] of Object.entries(figures)) {
@@ -58,8 +60,12 @@ describe('Fanfanqi rules diagrams', () => {
       ],
     });
     const cannons = sections.find((s) => s.heading === 'Cannons only capture')!.blocks!;
-    expect(cannons.find((b) => b.kind === 'raw-svg')).toMatchObject({
-      svg: figures.FANFANQI_CANNON_CAPTURES,
+    expect(cannons.find((b) => b.kind === 'svg-row')).toMatchObject({
+      items: [
+        { svg: figures.FANFANQI_CANNON_SHOT },
+        { svg: figures.FANFANQI_CANNON_GAMBLE },
+        { svg: figures.FANFANQI_CANNON_NO_SHOT },
+      ],
     });
     expect(BANQI_RANK_LADDER()).toContain('<svg');
   });
@@ -99,22 +105,25 @@ describe('Fanfanqi rules diagrams', () => {
     ).toHaveLength(0);
   });
 
-  it('marks only the two cannon captures, with no mark on an empty square', () => {
-    const host = figure(figures.FANFANQI_CANNON_CAPTURES());
-    const marks = [...host.querySelectorAll('.banqi-hint, .banqi-hint-capture')];
-    expect(marks).toHaveLength(2);
+  it('marks each cannon target with the room’s dot or ring, and nothing else', () => {
     // The room uses a dot on a covered target, a ring on a revealed target.
-    for (const [index, markClass] of [
-      [11, 'banqi-hint'],
-      [25, 'banqi-hint-capture'],
+    for (const [draw, targets] of [
+      [figures.FANFANQI_CANNON_SHOT, [[21, 'banqi-hint-capture']]],
+      [figures.FANFANQI_CANNON_GAMBLE, [[11, 'banqi-hint']]],
+      [figures.FANFANQI_CANNON_NO_SHOT, []],
     ] as const) {
-      const mark = host.querySelector(`.${markClass}`)!;
-      const target = host.querySelector(`[data-piece-square="${ffqBanqiSquare(index)}"]`)!;
-      expect(target).not.toBeNull();
-      expect(mark.getAttribute('cx')).toBe(String(28 + 64 * (Math.floor(index / 4) + 0.5)));
-      expect(mark.getAttribute('cy')).toBe(String(28 + 64 * (3.5 - (index % 4))));
+      const host = figure(draw());
+      expect(host.querySelectorAll('.banqi-hint, .banqi-hint-capture')).toHaveLength(
+        targets.length,
+      );
+      for (const [index, markClass] of targets) {
+        const mark = host.querySelector(`.${markClass}`)!;
+        expect(host.querySelector(`[data-piece-square="${ffqBanqiSquare(index)}"]`)).not.toBeNull();
+        expect(mark.getAttribute('cx')).toBe(String(28 + 64 * (Math.floor(index / 4) + 0.5)));
+        expect(mark.getAttribute('cy')).toBe(String(28 + 64 * (3.5 - (index % 4))));
+      }
+      expect(host.querySelectorAll('.banqi-selection')).toHaveLength(1);
     }
-    expect(host.querySelectorAll('.banqi-selection')).toHaveLength(1);
   });
 
   it('throws for a planted wrong expectation', () => {
