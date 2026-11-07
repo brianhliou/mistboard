@@ -13,7 +13,7 @@
 //
 // Variant names follow the play catalog exactly (variant.*.name), so a reader
 // sees the same term in the feed and in the lobby.
-import { hasOwnKey } from '@mistboard/game';
+import { hasOwnKey, personNamesInText } from '@mistboard/game';
 import type { Announcement } from './announcements.js';
 import type { Locale } from './i18n/locale.js';
 
@@ -90,7 +90,7 @@ const ZH_HANS: Record<string, string> = {
     '一种来自台湾的民间玩法，把一副象棋当作麻将牌来打。摸牌、打牌，凑齐五张牌，组成一个面子和一个将眼就胡了。可以和 Misty 对局、邀请朋友、在大厅下 1+1 到 10+5 的对局；积分对局按整场六手牌计算。规则页画出了每一种胡牌牌型。',
   'Meet jqe, the new top jieqi bot.': '认识 jqe：新的最强揭棋电脑。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
-    'jqe 是 Devin O’Keefe 开发的开源揭棋引擎。它与此前的最强电脑 AB-JChess 对弈 300 盘，171 胜、15 和、114 负。它现在排在 AB-JChess 上面一级，AB-JChess 继续保留。整场比赛的每一盘棋都收在一个研究里。',
+    'jqe 是 Devin O’Keefe 开发的开源揭棋引擎。它与此前的最强电脑 AB-JChess 对弈 300 盘，171 胜、15 和、114 负。它现在排在 AB-JChess 上面一级，AB-JChess 继续保留。整场比赛的每一盘棋都收在一个研习里。',
   'Play jqe': '与 jqe 对弈',
   // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
   'Meet General Blunder, a xiangqi bot that tries to lose.':
@@ -136,7 +136,7 @@ const ZH_HANS: Record<string, string> = {
   // ── 2026-10-09 (longest forced mates) ── 困毙 / 半回合 / 研究 follow the longest-forced-mates-xiangqi article text.
   'The longest forced mates in xiangqi, played out move by move.': '象棋最长的必胜杀局，逐着演示。',
   'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.':
-    '马兵对士象全，双方都走最佳着法，要65回合才能成杀，这是从象棋残局库中找出的七项纪录里最长的一项。每一条着法都是研究中可以逐着演示的一章，七局中有五局以负方无着可走（困毙）告终，而不是将死。',
+    '马兵对士象全，双方都走最佳着法，要65回合才能成杀，这是从象棋残局库中找出的七项纪录里最长的一项。每一条着法都是研习中可以逐着演示的一章，七局中有五局以负方无着可走（困毙）告终，而不是将死。',
   // ── 2026-10-10 (batch 3 manuals) ── 书名沿用研究页的中文名。
   'Secrets of Strategy and the Dream of Divine Strategy are online.':
     '《韬略元机》与《梦入神机》已上线。',
@@ -146,7 +146,7 @@ const ZH_HANS: Record<string, string> = {
   'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.':
     '象棋基本残局：哪些子力能赢，哪些只能和，46局可练习。',
   'A reference table of 35 common xiangqi endgames, graded the way Chinese endgame manuals grade them, from certain win to certain draw, each checked against the chessdb.cn cloud database and shown on its own small board. The Practice page now has 46 endgames to play out against the computer, sorted by piece, wins first, then draws to hold, and the tablebase tells you when a move throws the result away. You can also set up any position in the board editor and play it out from there.':
-    '35个常见象棋残局的胜和表，按中国残局书的分法从必胜到必和分级，每一个都经云库 chessdb.cn 核对，并配有小棋图。练习页现有46个残局可以和电脑对下，按子力分类，先练胜局，再练守和；走错一步把结果走丢时，残局库会告诉你。也可以在棋盘编辑器里摆出任意局面，从那里开始下。',
+    '35个常见象棋残局的胜和表，按中国残局书的分法从必胜到必和分级，每一个都经云库 chessdb.cn 核对，并配有小棋图。练习页现有46个残局可以和电脑下，按子力分类，先练胜局，再练守和；走错一步把结果走丢时，残局库会告诉你。也可以在棋盘编辑器里摆出任意局面，从那里开始下。',
   // ── 2026-10-08 (jieqi reveal odds) ── 暗子 / 翻子 / 被吃的子 follow the jieqi rules article.
   'Jieqi games now show what your face-down pieces could be.':
     '揭棋对局现在显示你的暗子可能是什么。',
@@ -182,7 +182,7 @@ const ZH_HANS: Record<string, string> = {
   'Forty-five of 172 classical xiangqi problems have only one solution.':
     '172局古典象棋排局中，只有45局的解法是唯一的。',
   'An exhaustive solver went through every short continuous-check composition in a Ming manual, a Qing manual and a modern collection, asking whether the printed solution is the only one. Most of the rest have a second winning line somewhere in the tree, and nine records in the wider corpus are refuted inside their own printed solution. Every finding replays in a study.':
-    '我们用穷尽求解器检验了一部明代古谱、一部清代古谱和一部现代集子中每一局较短的连将杀排局，问的是书中所印的解法是否唯一。其余的大多在变化树的某处有第二种取胜续着；在更大的语料库中，还有九局棋谱在书中自己的着法之内就被驳倒。每一项发现都可以在研究里逐着演示。',
+    '我们用穷尽求解器检验了一部明代古谱、一部清代古谱和一部现代集子中每一局较短的连将杀排局，问的是书中所印的解法是否唯一。其余的大多在变化树的某处有第二种取胜续着；在更大的语料库中，还有九局棋谱在书中自己的着法之内就被驳倒。每一项发现都可以在研习里逐着演示。',
   // ── 2026-10-03 (KataGo) ── 电脑 / 斗兽棋 follow the katago-jungle article.
   'KataGo is the new top Jungle Chess bot.': 'KataGo 成为新的最强斗兽棋电脑。',
   "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.":
@@ -262,7 +262,7 @@ const ZH_HANS: Record<string, string> = {
   'Pikafish now runs in your browser for xiangqi analysis.':
     '象棋的本地分析现在在你的浏览器里运行皮卡鱼。',
   'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.':
-    '象棋的本地分析此前用的是 Fairy-Stockfish 加一个小权重。现在直接运行皮卡鱼本身：全强度，带它自己的权重，也就是我们服务器上的电脑所用的那一份；分析棋盘和对局复盘都用它，齿轮里的设置（最佳着法箭头、多条变化、搜索深度）照旧。权重 51 MB，只需下载一次；之后你分析的内容不会离开你的电脑。堡垒象棋、原子象棋和鸭子象棋仍用 Fairy-Stockfish，暗子类玩法仍用 Misty。',
+    '象棋的本地分析此前用的是 Fairy-Stockfish 加一个小权重。现在直接运行皮卡鱼本身：全强度，带它自己的权重，也就是我们服务器上的电脑所用的那一份；分析棋盘和对局复盘都用它，齿轮里的设置（最佳着法箭头、多条变化、搜索强度）照旧。权重 51 MB，只需下载一次；之后你分析的内容不会离开你的电脑。堡垒象棋、原子象棋和鸭子象棋仍用 Fairy-Stockfish，暗子类玩法仍用 Misty。',
   'Open the analysis board': '打开分析棋盘',
   // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
   'The Jungle tiger now jumps the river sideways.': '斗兽棋的虎现在可以横向跳河了。',
@@ -271,7 +271,7 @@ const ZH_HANS: Record<string, string> = {
   'Jungle rules': '斗兽棋规则',
   'Wanted: a neural network for jieqi.': '征集：揭棋神经网络。',
   "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.":
-    '我们的揭棋电脑是手写的传统引擎，强手能赢它。皮卡鱼的揭棋分支有搜索和专为揭棋设计的 NNUE 结构，但从未发布过可加载的权重；我们用传统引擎自己的评估训练过十个网络，没有一个能赢过它。如果你的网络在两百局对抗中赢了它，它就会成为本站的电脑，并署上你的名字。暗棋和斗兽棋以同样的条件开放，棋手还可以挑战与揭棋电脑的八局三胜。',
+    '我们的揭棋电脑是手写的传统引擎，强手能赢它。皮卡鱼的揭棋分支有搜索和专为揭棋设计的 NNUE 结构，但从未发布过可加载的权重；我们用传统引擎自己的评估训练过十个网络，没有一个能赢过它。如果你的网络在两百局对抗中赢了它，它就会成为本站的电脑，并署上你的名字。暗棋和斗兽棋以同样的条件开放，棋手还可以挑战与揭棋电脑的八局比赛。',
   'See the open challenges': '查看公开挑战',
   // ── 2026-10-01 (Crazyhouse Xiangqi launch) ── 持子 / 打入 follow the rules page.
   'Crazyhouse Xiangqi has launched.': '疯狂屋象棋已上线。',
@@ -326,12 +326,12 @@ const ZH_HANS: Record<string, string> = {
   // ── 2026-09-04 (jieqi openings) ── 开局术语跟文章一致：仙人指路、炮二进四、揭子。
   'What strong jieqi players believe about the opening.': '强手眼中的揭棋开局。',
   'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.':
-    '揭棋没有开局书。它有的是一场争论，多年来跑在中文论坛上，参与的人下过几千盘棋，而这场争论从未用英文写出来过。五个第一步的排名，为什么一个暗子是一次用掉就没有的权利，以及在你可能揭出的全部六种结果上，把仙人指路和炮二进四放在一起称一称。我们自己的五十盘棋并不同意这个排名，而引擎干脆连这份名单都不用。',
+    '揭棋没有开局书。它有的是一场争论，在中文论坛上持续多年，参与的人下过几千盘棋，而这场争论从未用英文写出来过。五个第一步的排名，为什么一个暗子是一次用掉就没有的权利，以及在你可能揭出的全部六种结果上，把仙人指路和炮二进四放在一起称一称。我们自己的五十盘棋并不同意这个排名，而引擎干脆连这份名单都不用。',
 
   // ── 2026-09-03 (jieqi platform, zh + vi) ── 揭子、复盘、分析棋盘 与文章用词一致。
   'What the site does with jieqi, on one page.': '这个站点为揭棋做的事，都在一页上。',
   'The jieqi page now says it in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese too.':
-    '揭棋页面现在把话说在一处：和引擎或朋友对弈，得到一份把每一次揭子的运气和你每一个选择分开计价的复盘，并在自己的浏览器里用同一个引擎打开分析棋盘。页面也有简体和繁体两版。',
+    '揭棋页面现在把话说在一处：和引擎或朋友对弈，得到一份把每一次揭子的运气和你每一个选择分开评估的复盘，并在自己的浏览器里用同一个引擎打开分析棋盘。页面也有简体和繁体两版。',
 
   // ── 2026-09-03 (current games) ── 进行中的对局 is the nav label the
   // Watch menu renders (nav.currentGames), 通信对局 the correspondence
@@ -419,7 +419,7 @@ const ZH_HANS: Record<string, string> = {
 
   // ── 2026-08-23 .. 2026-08-27 backfill ──
   'Set up any position, then share it.': '任意摆一个局面，然后分享出去。',
-  'A head-to-head record on every finished game.': '每局终局都有对阵记录。',
+  'A head-to-head record on every finished game.': '每盘已结束的对局都有交手记录。',
   'Board coordinates, on every board that has them.': '棋盘坐标，凡是有坐标的棋盘都能显示。',
   'Follow a forum thread without refreshing it.': '关注论坛主题，不用反复刷新。',
   'Chess titles count for verification now.': '国际象棋头衔现在也可以认证。',
@@ -432,13 +432,13 @@ const ZH_HANS: Record<string, string> = {
   'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
     '复盘页新增对阵表，显示你在该变体中与这位对手的交手记录，引擎也算在内；分享与导出可以把整局导出为 PGN 或 JSON。',
   'One switch in Display settings reaches the xiangqi family, the chess boards, and jungle. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
-    '显示设置里的一个开关，现在管得到象棋系列、国际象棋类棋盘、斗兽棋和将棋。象棋的纵线从各自的右手边数起，所以标注会跟随你的着法记谱设置，并在翻转棋盘时换边。',
+    '显示设置里的一个开关，现在管得到象棋系列、国际象棋类棋盘、斗兽棋。象棋的纵线从各自的右手边数起，所以标注会跟随你的着法记谱设置，并在翻转棋盘时换边。',
   'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
     '关注一个主题，铃铛就会统计它的未读回复。引用他人现在也会通知对方，铃铛报告的每一类消息都有各自的开关。',
   'GM, IM, FM and the rest join the xiangqi titles. A verified title puts a badge beside your name wherever people are listed, and opens a coaching page students can find. Verification takes about two minutes.':
     'GM、IM、FM 等头衔加入了原有的象棋头衔。认证通过后，凡是列出棋手的地方，你的名字旁都会显示头衔徽章，并会开通一个学生能找到的教练页面。认证大约需要两分钟。',
   'Import a PGN to build a study, export one chapter or all of them, and add a finished game to a study from its link. The opening explorer sits beside the board while you work.':
-    '导入 PGN 即可建立研习，可以导出单个章节或全部章节，也可以凭链接把一局终局加入研习。编写时，开局库就在棋盘旁边。',
+    '导入 PGN 即可建立研习，可以导出单个章节或全部章节，也可以凭链接把一盘已结束的对局加入研习。编写时，开局库就在棋盘旁边。',
   'A puzzle’s rating used to come from how many moves the mate took, which says little about how hard it is to find. It now comes from the position itself, so what you are served sits closer to your rating.':
     '题目的等级分以前取自杀棋的步数，而步数说明不了它有多难找。现在等级分来自局面本身，所以派给你的题目会更贴近你的水平。',
   'Choose a small icon that shows beside your handle across the site, from the variant markers and xiangqi characters the boards already use. The bell also reports new followers and incoming challenges now.':
@@ -475,14 +475,14 @@ const ZH_HANS: Record<string, string> = {
   'Read the updated rules': '阅读更新后的规则',
   'Storm the Fortress: the Soldier crosses the river again.': '堡垒象棋：兵重新需要过河。',
   'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.':
-    '两项规则改动。兵回到象棋本来的走法：在己方半场每次只向前走一点，过河之后才获得横走。过河是一次要付出代价的决断。宝从此留在家中，走子和打入都只限己方半场，被围攻的目标不能再空降到战场上。跨五套规则、上千局的引擎自战表明，真正让这个棋种变得锋利的是兵：和棋率从 34% 降到 9%，一局的长度增加约一半。',
+    '两项规则改动。兵回到象棋本来的走法：在己方半场每次只向前走一点，过河之后才获得横走。过河是一次要付出代价的决断。宝从此留在家中，走子和打入都只限己方半场，被围攻的目标不能再空降到战场上。跨五套规则、一千局的引擎自战表明，真正让这个棋种变得锋利的是兵：和棋率从 34% 降到 9%，一局的长度增加约一半。',
   'Jungle Chess has launched.': '斗兽棋已上线。',
   'Flip Jungle has launched.': '翻翻兽棋已上线。',
-  'Fog Xiangqi is open for alpha play.': '迷雾象棋已开放内测对局。',
-  'Banqi is open for alpha play.': '暗棋已开放内测对局。',
-  'Jieqi is open for alpha play.': '揭棋已开放内测对局。',
-  'Fog Chess is open for alpha play.': '迷雾国际象棋已开放内测对局。',
-  'Mistboard is in alpha.': 'Mistboard 处于内测阶段。',
+  'Fog Xiangqi is open for alpha play.': '迷雾象棋已开放早期测试对局。',
+  'Banqi is open for alpha play.': '暗棋已开放早期测试对局。',
+  'Jieqi is open for alpha play.': '揭棋已开放早期测试对局。',
+  'Fog Chess is open for alpha play.': '迷雾国际象棋已开放早期测试对局。',
+  'Mistboard is in alpha.': 'Mistboard 处于早期测试阶段。',
   'Misty 1.0 has launched.': 'Misty 1.0 已上线。',
 
   // ── bodies ──
@@ -546,7 +546,8 @@ const ZH_HANS: Record<string, string> = {
     '隐藏身份的象棋：除将帅外的棋子开局均背面朝上，走动时翻开。可挑战我们的揭棋引擎 PikaJieQi。',
   'Fog of War chess is live on Mistboard, with private vision, no check warnings, and king capture wins.':
     '迷雾国际象棋已在 Mistboard 上线：视野不公开，没有将军提示，擒王即胜。',
-  'Casual dark chess is open. Rated beta is coming.': '休闲迷雾棋已开放，等级分公测即将推出。',
+  'Casual dark chess is open. Rated beta is coming.':
+    '休闲迷雾国际象棋已开放，等级分公测即将推出。',
   'Our Fog of War dark chess engine is now live to play.': '我们的迷雾国际象棋引擎现已开放对弈。',
 
   // ── CTA labels ──
@@ -624,7 +625,7 @@ const ZH_HANT: Record<string, string> = {
     '一種來自台灣的民間玩法，把一副象棋當作麻將牌來打。摸牌、打牌，湊齊五張牌，組成一個面子和一個將眼就胡了。可以和 Misty 對局、邀請朋友、在大廳下 1+1 到 10+5 的對局；積分對局按整場六手牌計算。規則頁畫出了每一種胡牌牌型。',
   'Meet jqe, the new top jieqi bot.': '認識 jqe：新的最強揭棋電腦。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
-    'jqe 是 Devin O’Keefe 開發的開源揭棋引擎。它與此前的最強電腦 AB-JChess 對弈 300 盤，171 勝、15 和、114 負。它現在排在 AB-JChess 上面一級，AB-JChess 繼續保留。整場比賽的每一盤棋都收在一個研究裡。',
+    'jqe 是 Devin O’Keefe 開發的開源揭棋引擎。它與此前的最強電腦 AB-JChess 對弈 300 盤，171 勝、15 和、114 負。它現在排在 AB-JChess 上面一級，AB-JChess 繼續保留。整場比賽的每一盤棋都收在一個研習裡。',
   'Play jqe': '與 jqe 對弈',
   // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
   'Meet General Blunder, a xiangqi bot that tries to lose.':
@@ -670,7 +671,7 @@ const ZH_HANT: Record<string, string> = {
   // ── 2026-10-09 (longest forced mates) ── 困斃 / 半回合 / 研究 follow the longest-forced-mates-xiangqi article text.
   'The longest forced mates in xiangqi, played out move by move.': '象棋最長的必勝殺局，逐著演示。',
   'A horse and a soldier against a general with both advisors and both elephants takes 65 moves to mate with best play on both sides, the longest of seven records pulled from xiangqi endgame tablebases. Every line is a chapter in a study you can step through, and five of the seven end with the loser having no legal move rather than in checkmate.':
-    '馬兵對士象全，雙方都走最佳著法，要65回合才能成殺，這是從象棋殘局庫中找出的七項紀錄裡最長的一項。每一條著法都是研究中可以逐著演示的一章，七局中有五局以負方無著可走（困斃）告終，而不是將死。',
+    '馬兵對士象全，雙方都走最佳著法，要65回合才能成殺，這是從象棋殘局庫中找出的七項紀錄裡最長的一項。每一條著法都是研習中可以逐著演示的一章，七局中有五局以負方無著可走（困斃）告終，而不是將死。',
   // ── 2026-10-10 (batch 3 manuals) ── 書名沿用研究頁的中文名。
   'Secrets of Strategy and the Dream of Divine Strategy are online.':
     '《韜略元機》與《夢入神機》已上線。',
@@ -680,7 +681,7 @@ const ZH_HANT: Record<string, string> = {
   'Xiangqi basic endgames: which material wins, which draws, and 46 to practice.':
     '象棋基本殘局：哪些子力能贏，哪些只能和，46局可練習。',
   'A reference table of 35 common xiangqi endgames, graded the way Chinese endgame manuals grade them, from certain win to certain draw, each checked against the chessdb.cn cloud database and shown on its own small board. The Practice page now has 46 endgames to play out against the computer, sorted by piece, wins first, then draws to hold, and the tablebase tells you when a move throws the result away. You can also set up any position in the board editor and play it out from there.':
-    '35個常見象棋殘局的勝和表，按中國殘局書的分法從必勝到必和分級，每一個都經雲庫 chessdb.cn 核對，並配有小棋圖。練習頁現有46個殘局可以和電腦對下，按子力分類，先練勝局，再練守和；走錯一步把結果走丟時，殘局庫會告訴你。也可以在棋盤編輯器裡擺出任意局面，從那裡開始下。',
+    '35個常見象棋殘局的勝和表，按中國殘局書的分法從必勝到必和分級，每一個都經雲庫 chessdb.cn 核對，並配有小棋圖。練習頁現有46個殘局可以和電腦下，按子力分類，先練勝局，再練守和；走錯一步把結果走丟時，殘局庫會告訴你。也可以在棋盤編輯器裡擺出任意局面，從那裡開始下。',
   // ── 2026-10-08 (jieqi reveal odds) ── 暗子 / 翻子 / 被吃的子 follow the jieqi rules article.
   'Jieqi games now show what your face-down pieces could be.':
     '揭棋對局現在顯示你的暗子可能是什麼。',
@@ -689,9 +690,9 @@ const ZH_HANT: Record<string, string> = {
   'Play jieqi': '下揭棋',
   // ── 2026-10-07 (jieqi luck die) ── 翻子 / 暗子 / 評註 follow the review luck card and the jieqi rules article.
   'Jieqi review now marks the luck of every reveal with a die.':
-    '揭棋復盤現在用骰子標出每次翻子的運氣。',
+    '揭棋覆盤現在用骰子標出每次翻子的運氣。',
   'In a jieqi game review, every reveal and every capture of a face-down piece now has a die on the board: teal when the draw helped, violet when it hurt, and more pips for a bigger swing. Hover or tap the piece to see what it was, how likely it was, and what it could have been. The move marks on a capture of a face-down piece now judge what the capturer could know, not what the piece turned out to be.':
-    '在揭棋對局復盤中，每次翻子和每次吃掉暗子，棋盤上都會出現一個骰子：青綠色表示運氣幫了忙，紫色表示運氣不好，點數越多，勝率變化越大。懸停或點按棋子，可以看到它是什麼子、它出現的機率，以及它本來可能是什麼子。吃暗子的著法評註現在按吃子一方當時能知道的資訊來判斷，而不是按那枚子最後翻出來是什麼。',
+    '在揭棋對局覆盤中，每次翻子和每次吃掉暗子，棋盤上都會出現一個骰子：青綠色表示運氣幫了忙，紫色表示運氣不好，點數越多，勝率變化越大。懸停或點按棋子，可以看到它是什麼子、它出現的機率，以及它本來可能是什麼子。吃暗子的著法評註現在按吃子一方當時能知道的資訊來判斷，而不是按那枚子最後翻出來是什麼。',
   // ── 2026-10-07 (jieqi repetition) ── 長將 / 半回合 / 重複局面 follow the jieqi rules article.
   'Jieqi now has a repetition rule: perpetual check loses.': '揭棋新增重複局面規則：長將判負。',
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
@@ -700,7 +701,7 @@ const ZH_HANT: Record<string, string> = {
   // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and the retired homepage card.
   "Master games now show the engine's advantage chart.": '大師對局現在顯示引擎的優勢圖。',
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
-    'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
+    'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局覆盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',
   'See the Cao Yanlei page': '查看曹岩磊的頁面',
   'A player page for Zuo Wenjing.': '左文静有了自己的棋手頁面。',
   "The 2022 women's world champion, and a double gold medallist at the 2023 Asian Games. The page follows her title run in Kuching and her 2026 season, with five of her games on the board, in English and Chinese. All 32 of her games are in a study with the engine's judgments and lines.":
@@ -716,7 +717,7 @@ const ZH_HANT: Record<string, string> = {
   'Forty-five of 172 classical xiangqi problems have only one solution.':
     '172局古典象棋排局中，只有45局的解法是唯一的。',
   'An exhaustive solver went through every short continuous-check composition in a Ming manual, a Qing manual and a modern collection, asking whether the printed solution is the only one. Most of the rest have a second winning line somewhere in the tree, and nine records in the wider corpus are refuted inside their own printed solution. Every finding replays in a study.':
-    '我們用窮盡求解器檢驗了一部明代古譜、一部清代古譜和一部現代集子中每一局較短的連將殺排局，問的是書中所印的解法是否唯一。其餘的大多在變化樹的某處有第二種取勝續著；在更大的語料庫中，還有九局棋譜在書中自己的著法之內就被駁倒。每一項發現都可以在研究裡逐著演示。',
+    '我們用窮盡求解器檢驗了一部明代古譜、一部清代古譜和一部現代集子中每一局較短的連將殺排局，問的是書中所印的解法是否唯一。其餘的大多在變化樹的某處有第二種取勝續著；在更大的語料庫中，還有九局棋譜在書中自己的著法之內就被駁倒。每一項發現都可以在研習裡逐著演示。',
   // ── 2026-10-03 (KataGo) ── 電腦 / 鬥獸棋 follow the katago-jungle article.
   'KataGo is the new top Jungle Chess bot.': 'KataGo 成為新的最強鬥獸棋電腦。',
   "hzyhhzy's KataGomo, built on KataGo with Kouza's Dandelion 4 network, learned Jungle Chess by playing itself and now sits above Misty. It beat Misty 82 to 0 in 200 games, with 118 draws. Misty stays the default; KataGo is the stronger pick.":
@@ -733,7 +734,7 @@ const ZH_HANT: Record<string, string> = {
   'Games played on Mistboard are now free to download.':
     '現在可以免費下載在 Mistboard 上下過的棋局。',
   'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.':
-    '新的對局資料頁按變體和月份提供檔案，從 6 月開始，目前約 1,100 盤，依 CC BY 4.0 免費使用。揭棋、暗棋和翻翻獸棋的檔案記錄了每個翻開的棋子是什麼，所以每盤棋只靠檔案就能完整復盤。對局搜尋現在也涵蓋所有變體。',
+    '新的對局資料頁按變體和月份提供檔案，從 6 月開始，目前約 1,100 盤，依 CC BY 4.0 免費使用。揭棋、暗棋和翻翻獸棋的檔案記錄了每個翻開的棋子是什麼，所以每盤棋只靠檔案就能完整覆盤。對局搜尋現在也涵蓋所有變體。',
   'See the files': '查看檔案',
   // ── 2026-10-02 (AB-JChess) ── 電腦 / 級 / 暗子 follow the ab-jchess article.
   'AB-JChess is the new top jieqi bot.': 'AB-JChess 成為新的最強揭棋電腦。',
@@ -762,9 +763,9 @@ const ZH_HANT: Record<string, string> = {
   "Every player on the Chinese Xiangqi Association's lists now has a page: record by colour, head to head, openings named in English, and rating history since 2019. Titles (GM, IM, FM, NM) come from the CXA's grade lists and the WXF's international titles, each with its source. Pro teams rank by their top five players.":
     '中國象棋協會名單上的每一位棋手現在都有頁面：執紅執黑的戰績、交手記錄、以英文命名的開局，以及 2019 年以來的等級分走勢。稱號（特級大師、大師等）來自中國象棋協會的等級稱號名單和世界象棋聯合會的國際稱號，每一項都註明出處。職業隊伍按隊中前五名棋手排名。',
   'Find a player': '查找棋手',
-  'The xiangqi rules, rewritten for chess players.': '象棋規則頁為國際象棋玩家重寫。',
+  'The xiangqi rules, rewritten for chess players.': '象棋規則頁為西洋棋玩家重寫。',
   'The rules page now starts from what a chess player already knows: the six rules that catch you out, the setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations and a first opening. A famous game plays out in the page.':
-    '規則頁現在從國際象棋玩家已經懂的東西講起：最容易讓人出錯的六條規則、開局擺法、本站如何判定重複局面（長將判負）、常見錯誤、三種記譜法，以及第一套開局。頁面裡還能直接看一盤名局。',
+    '規則頁現在從西洋棋玩家已經懂的東西講起：最容易讓人出錯的六條規則、開局擺法、本站如何判定重複局面（長將判負）、常見錯誤、三種記譜法，以及第一套開局。頁面裡還能直接看一盤名局。',
   'Read the rules': '閱讀規則',
   'A Jungle board, and animal pieces without the disc.':
     '新的「叢林」棋盤，以及不帶底盤的動物棋子。',
@@ -787,17 +788,17 @@ const ZH_HANT: Record<string, string> = {
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋裡，被吃掉的暗子只有吃子的一方知道是什麼。此前電腦拿到的是它自己按真實局面剩餘的暗子，所以你每吃掉它一個暗子，它就知道自己失去了什麼，並據此重新估算其餘暗子。現在它只按它這個座位的棋手能知道的資訊來判斷。它吃掉的對方棋子仍然對它可見，這是規則允許的。',
   'Read the changelog': '查看更新記錄',
-  // ── 2026-09-22 (Pikafish article) ── 皮卡魚 / 人機階梯 / 復盤 follow article-i18n.ts
+  // ── 2026-09-22 (Pikafish article) ── 皮卡魚 / 人機階梯 / 覆盤 follow article-i18n.ts
   // for the same article; the body reuses its intro sentence.
   'Pikafish on Mistboard.': '皮卡魚在 Mistboard。',
   'Pikafish is the open-source xiangqi engine built from Stockfish, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '皮卡魚是由 Stockfish 改造而來的開源象棋引擎，多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡跑：可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+    '皮卡魚是由 Stockfish 改造而來的開源象棋引擎，多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡跑：可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它覆盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
   // ── 2026-09-21 (Pikafish in the browser) ── 分析棋盤 follows analysis.board; 權重 follows
   // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
   'Pikafish now runs in your browser for xiangqi analysis.':
     '象棋的本機分析現在在你的瀏覽器裡執行皮卡魚。',
   'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.':
-    '象棋的本機分析先前用的是 Fairy-Stockfish 加一個小權重。現在直接執行皮卡魚本身：全強度，帶它自己的權重，也就是我們伺服器上的電腦所用的那一份；分析棋盤和對局復盤都用它，齒輪裡的設定（最佳著法箭頭、多條變化、搜尋深度）照舊。權重 51 MB，只需下載一次；之後你分析的內容不會離開你的電腦。堡壘象棋、原子象棋和鴨子象棋仍用 Fairy-Stockfish，暗子類玩法仍用 Misty。',
+    '象棋的本機分析先前用的是 Fairy-Stockfish 加一個小權重。現在直接執行皮卡魚本身：全強度，帶它自己的權重，也就是我們伺服器上的電腦所用的那一份；分析棋盤和對局覆盤都用它，齒輪裡的設定（最佳著法箭頭、多條變化、搜尋強度）照舊。權重 51 MB，只需下載一次；之後你分析的內容不會離開你的電腦。堡壘象棋、原子象棋和鴨子象棋仍用 Fairy-Stockfish，暗子類玩法仍用 Misty。',
   'Open the analysis board': '打開分析棋盤',
   // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
   'The Jungle tiger now jumps the river sideways.': '鬥獸棋的虎現在可以橫向跳河了。',
@@ -806,13 +807,13 @@ const ZH_HANT: Record<string, string> = {
   'Jungle rules': '鬥獸棋規則',
   'Wanted: a neural network for jieqi.': '徵集：揭棋類神經網路。',
   "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.":
-    '我們的揭棋電腦是手寫的傳統引擎，強手能贏它。皮卡魚的揭棋分支有搜尋和專為揭棋設計的 NNUE 結構，但從未發布過可載入的權重；我們用傳統引擎自己的評估訓練過十個網路，沒有一個能贏過它。如果你的網路在兩百局對抗中贏了它，它就會成為本站的電腦，並署上你的名字。暗棋和鬥獸棋以同樣的條件開放，棋手還可以挑戰與揭棋電腦的八局三勝。',
+    '我們的揭棋電腦是手寫的傳統引擎，強手能贏它。皮卡魚的揭棋分支有搜尋和專為揭棋設計的 NNUE 結構，但從未發布過可載入的權重；我們用傳統引擎自己的評估訓練過十個網路，沒有一個能贏過它。如果你的網路在兩百局對抗中贏了它，它就會成為本站的電腦，並署上你的名字。暗棋和鬥獸棋以同樣的條件開放，棋手還可以挑戰與揭棋電腦的八局比賽。',
   'See the open challenges': '查看公開挑戰',
   // ── 2026-10-01 (Crazyhouse Xiangqi launch) ── see the ZH_HANS note above.
   'Crazyhouse Xiangqi has launched.': '瘋狂屋象棋已上線。',
   'Play Crazyhouse Xiangqi': '下瘋狂屋象棋',
   'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.':
-    '帶打入規則的象棋：吃掉的棋子進入你的持子，輪到你時可以不走子，而把它打入任何一個該棋子能站的空點。雙方開局時士和象都在持子裡，可以在己方半盤隨意走動。打入可以將軍，也可以將死。八級電腦、好友或大廳對手；分析棋盤在你的瀏覽器裡運行 Fairy-Stockfish。',
+    '帶打入規則的象棋：吃掉的棋子進入你的持子，輪到你時可以不走子，而把它打入任何一個該棋子能站的空點。雙方開局時士和象都在持子裡，可以在己方半盤隨意走動。打入可以將軍，也可以將死。八級電腦、好友或大廳對手；分析棋盤在你的瀏覽器裡執行 Fairy-Stockfish。',
   // ── 2026-09-17 (Atomic Xiangqi launch) ──
   'Atomic Xiangqi has launched.': '原子象棋已上線。',
   'Chinese chess where every capture is an explosion: the piece that captures, the piece it takes and everything on the four points beside it are removed. Soldiers survive a blast; a general does not, so a capture next to the enemy general wins on the spot and you can never capture next to your own. The cannon is the one exception, its shot takes only its target. A threat to blow up the general counts as check for the repetition rule. Same set, same array, eight bot levels or a friend.':
@@ -830,7 +831,7 @@ const ZH_HANT: Record<string, string> = {
     '《竹香齋象戲譜》（1800 年，三集）與《百局象棋譜》（1801 年）——清代四大排局譜的另外兩部——一同上架，同時上線的還有《百變象棋譜》（1522 年）及其同治年間的續編《神妙變化象棋譜》，這是現存最早的象棋排局刻本。新增三百九十二局，每局獨立成章，以書中著法作為主變，英文局名旁保留原標題。棋譜來源為 dpxq.com，每局均註明出處。',
   'Two of the four great Qing composition manuals are online.': '清代四大排局譜中的兩部已上線。',
   "Fragments of a Martial Mind (1800) and Deep Abyss, Wide Sea (1808) join the Elegant Pastime Manual: four hundred and seventy problems, each on its own board, with the book's line played out as the mainline and the original four-character title kept beside the English one. Positions come from dpxq.com and are credited on every composition. A problem whose recorded line does not survive replay, or whose diagram the engine reads differently from the book, is held back rather than published wrong. The other manuals on the same shelf follow over the coming weeks.":
-    '《心武殘編》（1800 年）與《淵深海闊》（1808 年）繼《適情雅趣》之後上線：共四百七十局，每局獨立成章，以書中著法作為主變，英文局名旁保留原四字標題。棋譜來源為 dpxq.com，每局均註明出處。凡所記著法無法完整復盤，或引擎對棋圖的判斷與原書不符的局，寧可暫不發布，也不發布錯誤的內容。同一書架上的其他古譜將在接下來幾週陸續上線。',
+    '《心武殘編》（1800 年）與《淵深海闊》（1808 年）繼《適情雅趣》之後上線：共四百七十局，每局獨立成章，以書中著法作為主變，英文局名旁保留原四字標題。棋譜來源為 dpxq.com，每局均註明出處。凡所記著法無法完整覆盤，或引擎對棋圖的判斷與原書不符的局，寧可暫不發布，也不發布錯誤的內容。同一書架上的其他古譜將在接下來幾週陸續上線。',
   'Open the manual': '打開棋譜',
   // ── 2026-09-11 (Elegant Pastime Manual) ──
   'All six volumes of the Elegant Pastime Manual are online.': '《適情雅趣》六卷已全部上線。',
@@ -851,24 +852,24 @@ const ZH_HANT: Record<string, string> = {
   // ── 2026-09-06 (Misty open source) ── 引擎名 Misty、套件名 misty-chess 保持原文。
   'Misty is open source.': 'Misty 已開源。',
   'The Fog of War chess engine you play here is on GitHub under the GPL, and installs from PyPI as misty-chess. It is a build of the architecture behind Obscuro, the first superhuman Fog of War chess AI, whose own code was never released. The engine article now says how it works, what version 1.6 fixed, and what is still wrong with it.':
-    '你在這裡對弈的迷霧國際象棋引擎已以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。它實作的是 Obscuro 背後的架構；Obscuro 是第一個達到超人水準的迷霧國際象棋 AI，其自身程式碼從未公開。引擎文章現在講清楚了它如何運作、1.6 版修正了什麼，以及它還有哪些問題。',
+    '你在這裡對弈的迷霧西洋棋引擎已以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。它實作的是 Obscuro 背後的架構；Obscuro 是第一個達到超人水準的迷霧西洋棋 AI，其自身程式碼從未公開。引擎文章現在講清楚了它如何運作、1.6 版修正了什麼，以及它還有哪些問題。',
   'How Misty plays': 'Misty 如何思考',
 
   // ── 2026-09-04 (jieqi openings) ── 開局術語與文章一致：仙人指路、炮二進四、揭子。
   'What strong jieqi players believe about the opening.': '強手眼中的揭棋開局。',
   'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.':
-    '揭棋沒有開局書。它有的是一場爭論，多年來跑在中文論壇上，參與的人下過幾千盤棋，而這場爭論從未用英文寫出來過。五個第一步的排名，為什麼一個暗子是一次用掉就沒有的權利，以及在你可能揭出的全部六種結果上，把仙人指路和炮二進四放在一起稱一稱。我們自己的五十盤棋並不同意這個排名，而引擎乾脆連這份名單都不用。',
+    '揭棋沒有開局書。它有的是一場爭論，在中文論壇上持續多年，參與的人下過幾千盤棋，而這場爭論從未用英文寫出來過。五個第一步的排名，為什麼一個暗子是一次用掉就沒有的權利，以及在你可能揭出的全部六種結果上，把仙人指路和炮二進四放在一起稱一稱。我們自己的五十盤棋並不同意這個排名，而引擎乾脆連這份名單都不用。',
 
-  // ── 2026-09-03 (jieqi platform, zh + vi) ── 揭子、複盤、分析棋盤 與文章用詞一致。
+  // ── 2026-09-03 (jieqi platform, zh + vi) ── 揭子、覆盤、分析棋盤 與文章用詞一致。
   'What the site does with jieqi, on one page.': '這個站點為揭棋做的事，都在一頁上。',
   'The jieqi page now says it in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese too.':
-    '揭棋頁面現在把話說在一處：和引擎或朋友對弈，得到一份把每一次揭子的運氣和你每一個選擇分開計價的複盤，並在自己的瀏覽器裡用同一個引擎打開分析棋盤。頁面也有簡體和繁體兩版。',
+    '揭棋頁面現在把話說在一處：和引擎或朋友對弈，得到一份把每一次揭子的運氣和你每一個選擇分開評估的覆盤，並在自己的瀏覽器裡用同一個引擎打開分析棋盤。頁面也有簡體和繁體兩版。',
 
   // ── 2026-09-03 (current games) ── Traditional forms of the Simplified
-  // entry above: 進行中的對局 (nav.currentGames), 通訊對局, 進階搜尋.
+  // entry above: 進行中的對局 (nav.currentGames), 通信對局, 進階搜尋.
   'Every game in progress, on one page.': '所有進行中的對局，都在一頁上。',
   'Current games lists everything being played right now, across every variant: live games with their clocks, and correspondence games waiting on a move, each as a small board you can click into. Fog games appear as cards without a board until they end. When nothing is running, the page shows the open correspondence seeks and the most recent finished games instead. The games database moved to Advanced search under Tools.':
-    '「進行中的對局」列出此刻正在進行的所有對局，涵蓋每一種變體：帶時鐘的即時對局，以及等待走棋的通訊對局，每局都是一張可以點進去的小棋盤。迷霧對局在結束前只顯示為沒有棋盤的卡片。沒有對局進行時，頁面轉而顯示公開的通訊對局邀請和最近結束的對局。棋譜資料庫移到了「工具」選單下的「進階搜尋」。',
+    '「進行中的對局」列出此刻正在進行的所有對局，涵蓋每一種變體：帶時鐘的即時對局，以及等待走棋的通信對局，每局都是一張可以點進去的小棋盤。迷霧對局在結束前只顯示為沒有棋盤的卡片。沒有對局進行時，頁面轉而顯示公開的通信對局邀請和最近結束的對局。棋譜資料庫移到了「工具」選單下的「進階搜尋」。',
   'See current games': '查看進行中的對局',
 
   // ── 2026-09-02 (embeds) ── Same terms as the Simplified entry above, in
@@ -912,7 +913,7 @@ const ZH_HANT: Record<string, string> = {
     '1990年以來十九屆，十一位冠軍，而這個頭銜直到去年九月都留在中國。每一位冠軍，其中十位各配一局講解棋譜，以及中國全國個人賽為什麼更難拿。',
 
   // ── 2026-08-28 batch two ── Same vocabulary rule:
-  // 復盤 is watch.review, 妙手 is annotate.brilliantMove, 匯入棋譜 is
+  // 覆盤 is watch.review, 妙手 is annotate.brilliantMove, 匯入棋譜 is
   // nav.import, 棋譜 is nav.games, 論壇 is nav.forum.
   'Paste a game, get a board.': '貼上一局棋，得到一張棋盤。',
   'Import takes a xiangqi game in whatever notation you happen to have: PGN, coordinates, WXF, or Chinese move text. It works out which one you pasted by replaying it, then hands you a browsable board with engine analysis. Nothing is published, and the game travels in the link.':
@@ -920,7 +921,7 @@ const ZH_HANT: Record<string, string> = {
   'Import a game': '匯入棋譜',
   'Brilliant moves are marked now.': '現在會標出妙手。',
   'Xiangqi review adds !! and ! beside the mistake glyphs it already showed. A move earns !! when you give material up and the engine agrees it does not come back. Blunders were never the only thing worth seeing in your own game.':
-    '象棋復盤在原有的失誤符號之外，新增了 !! 和 ! 。當你棄子而引擎認可這子確實收不回來時，這一著會被標為 !! 。自己的棋裡值得看的，從來不只是漏著。',
+    '象棋覆盤在原有的失誤符號之外，新增了 !! 和 ! 。當你棄子而引擎認可這子確實收不回來時，這一著會被標為 !! 。自己的棋裡值得看的，從來不只是漏著。',
   'Find a game': '找一局棋',
   'Who Is the Greatest Xiangqi Player?': '誰是最偉大的象棋棋手？',
   'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
@@ -940,10 +941,10 @@ const ZH_HANT: Record<string, string> = {
 
   // ── 2026-08-23 .. 2026-08-27 backfill ──
   'Set up any position, then share it.': '任意擺一個局面，然後分享出去。',
-  'A head-to-head record on every finished game.': '每局終局都有對陣記錄。',
+  'A head-to-head record on every finished game.': '每盤已結束的對局都有交手紀錄。',
   'Board coordinates, on every board that has them.': '棋盤座標，凡是有座標的棋盤都能顯示。',
   'Follow a forum thread without refreshing it.': '關注論壇主題，不用反覆重新整理。',
-  'Chess titles count for verification now.': '國際象棋頭銜現在也可以認證。',
+  'Chess titles count for verification now.': '西洋棋頭銜現在也可以認證。',
   'Studies read and write PGN.': '研習支援匯入和匯出 PGN。',
   'The Riverbank Cannon Problem.': '巡河炮問題。',
   'Puzzles are rated by how hard they play.': '題目難度改按實際難解程度評定。',
@@ -951,15 +952,15 @@ const ZH_HANT: Record<string, string> = {
   'A board editor for eight variants: place pieces by hand, set the side to move, and hand the position straight to the analysis board. The analysis board also takes a FEN directly, and every position you build has its own link.':
     '八種變體都有了棋盤編輯器：手動擺子、指定輪誰走，再把局面直接交給分析棋盤。分析棋盤也可以直接讀入 FEN，你擺出的每個局面都有自己的連結。',
   'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
-    '復盤頁新增對陣表，顯示你在該變體中與這位對手的交手記錄，引擎也算在內；分享與匯出可以把整局匯出為 PGN 或 JSON。',
+    '覆盤頁新增對陣表，顯示你在該變體中與這位對手的交手記錄，引擎也算在內；分享與匯出可以把整局匯出為 PGN 或 JSON。',
   'One switch in Display settings reaches the xiangqi family, the chess boards, and jungle. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
-    '顯示設定裡的一個開關，現在管得到象棋系列、國際象棋類棋盤、鬥獸棋和將棋。象棋的縱線從各自的右手邊數起，所以標註會跟隨你的著法記譜設定，並在翻轉棋盤時換邊。',
+    '顯示設定裡的一個開關，現在管得到象棋系列、西洋棋類棋盤、鬥獸棋。象棋的縱線從各自的右手邊數起，所以標註會跟隨你的著法記譜設定，並在翻轉棋盤時換邊。',
   'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
     '關注一個主題，鈴鐺就會統計它的未讀回覆。引用他人現在也會通知對方，鈴鐺報告的每一類訊息都有各自的開關。',
   'GM, IM, FM and the rest join the xiangqi titles. A verified title puts a badge beside your name wherever people are listed, and opens a coaching page students can find. Verification takes about two minutes.':
     'GM、IM、FM 等頭銜加入了原有的象棋頭銜。認證通過後，凡是列出棋手的地方，你的名字旁都會顯示頭銜徽章，並會開通一個學生能找到的教練頁面。認證大約需要兩分鐘。',
   'Import a PGN to build a study, export one chapter or all of them, and add a finished game to a study from its link. The opening explorer sits beside the board while you work.':
-    '匯入 PGN 即可建立研習，可以匯出單個章節或全部章節，也可以憑連結把一局終局加入研習。編寫時，開局庫就在棋盤旁邊。',
+    '匯入 PGN 即可建立研習，可以匯出單個章節或全部章節，也可以憑連結把一盤已結束的對局加入研習。編寫時，開局庫就在棋盤旁邊。',
   'A puzzle’s rating used to come from how many moves the mate took, which says little about how hard it is to find. It now comes from the position itself, so what you are served sits closer to your rating.':
     '題目的等級分以前取自殺棋的步數，而步數說明不了它有多難找。現在等級分來自局面本身，所以派給你的題目會更貼近你的水準。',
   'Choose a small icon that shows beside your handle across the site, from the variant markers and xiangqi characters the boards already use. The bell also reports new followers and incoming challenges now.':
@@ -982,7 +983,7 @@ const ZH_HANT: Record<string, string> = {
   'Rated games at every time control.': '各種時限都可下等級分對局。',
   'An opening explorer for xiangqi.': '象棋開局庫。',
   'Rated xiangqi is live.': '等級分象棋已上線。',
-  'Secret in the Tangerine, both game volumes.': '《橘中祕》全部對局卷。',
+  'Secret in the Tangerine, both game volumes.': '《橘中秘》全部對局卷。',
   'Classical xiangqi, from the original woodblocks.': '古譜象棋，源自原始刻本。',
   'Correspondence play has launched.': '通信對局已上線。',
   'An analysis board for every game.': '每種棋類都有分析棋盤。',
@@ -996,25 +997,25 @@ const ZH_HANT: Record<string, string> = {
   'Read the updated rules': '閱讀更新後的規則',
   'Storm the Fortress: the Soldier crosses the river again.': '堡壘象棋：兵重新需要過河。',
   'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.':
-    '兩項規則改動。兵回到象棋本來的走法：在己方半場每次只向前走一點，過河之後才獲得橫走。過河是一次要付出代價的決斷。寶從此留在家中，走子和打入都只限己方半場，被圍攻的目標不能再空降到戰場上。跨五套規則、上千局的引擎自戰表明，真正讓這個棋種變得鋒利的是兵：和棋率從 34% 降到 9%，一局的長度增加約一半。',
+    '兩項規則改動。兵回到象棋本來的走法：在己方半場每次只向前走一點，過河之後才獲得橫走。過河是一次要付出代價的決斷。寶從此留在家中，走子和打入都只限己方半場，被圍攻的目標不能再空降到戰場上。跨五套規則、一千局的引擎自戰表明，真正讓這個棋種變得鋒利的是兵：和棋率從 34% 降到 9%，一局的長度增加約一半。',
   'Jungle Chess has launched.': '鬥獸棋已上線。',
   'Flip Jungle has launched.': '翻翻獸棋已上線。',
-  'Fog Xiangqi is open for alpha play.': '迷霧象棋已開放內測對局。',
-  'Banqi is open for alpha play.': '暗棋已開放內測對局。',
-  'Jieqi is open for alpha play.': '揭棋已開放內測對局。',
-  'Fog Chess is open for alpha play.': '迷霧國際象棋已開放內測對局。',
-  'Mistboard is in alpha.': 'Mistboard 處於內測階段。',
+  'Fog Xiangqi is open for alpha play.': '迷霧象棋已開放早期測試對局。',
+  'Banqi is open for alpha play.': '暗棋已開放早期測試對局。',
+  'Jieqi is open for alpha play.': '揭棋已開放早期測試對局。',
+  'Fog Chess is open for alpha play.': '迷霧西洋棋已開放早期測試對局。',
+  'Mistboard is in alpha.': 'Mistboard 處於早期測試階段。',
   'Misty 1.0 has launched.': 'Misty 1.0 已上線。',
 
   // ── bodies ──
   'Misty runs version 1.6 in Fog Chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
-    '迷霧國際象棋中的 Misty 已升級到 1.6 版，修正了以往會送后的一類失誤。揭棋中的 Pikafish 現在會搜尋到完整深度；此前它過早停止搜尋，因此比應有的水準更容易被擊敗。',
+    '迷霧西洋棋中的 Misty 已升級到 1.6 版，修正了以往會送后的一類失誤。揭棋中的 Pikafish 現在會搜尋到完整深度；此前它過早停止搜尋，因此比應有的水準更容易被擊敗。',
   'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
     '標準象棋題庫從 394 題增加到 1,605 題，每一題都取自已結束的對局，並在上線前經過引擎校驗。',
   'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
     '著法評註標記現在會顯示在全部六種支援分析的棋類棋盤上，不再只有象棋，漏著還會指出反駁它的具體著法。揭棋的翻子半回合不再給出變化，而是列出引擎評分後的候選著法排名，因為翻子之後的局面無法預知。',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
-    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
+    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬西洋棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」頁面列出了每月的贊助金額、包含的內容（個人資料上的徽章，不影響對局），以及完整的計費與退款條款。結帳尚未開放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
@@ -1066,9 +1067,9 @@ const ZH_HANT: Record<string, string> = {
   'Hidden-identity xiangqi: every non-general piece starts face-down and reveals as it moves. Take on PikaJieQi, our jieqi engine.':
     '隱藏身分的象棋：除將帥外的棋子開局均背面朝上，走動時翻開。可挑戰我們的揭棋引擎 PikaJieQi。',
   'Fog of War chess is live on Mistboard, with private vision, no check warnings, and king capture wins.':
-    '迷霧國際象棋已在 Mistboard 上線：視野不公開，沒有將軍提示，擒王即勝。',
-  'Casual dark chess is open. Rated beta is coming.': '休閒迷霧棋已開放，等級分公測即將推出。',
-  'Our Fog of War dark chess engine is now live to play.': '我們的迷霧國際象棋引擎現已開放對弈。',
+    '迷霧西洋棋已在 Mistboard 上線：視野不公開，沒有將軍提示，擒王即勝。',
+  'Casual dark chess is open. Rated beta is coming.': '休閒迷霧西洋棋已開放，等級分公測即將推出。',
+  'Our Fog of War dark chess engine is now live to play.': '我們的迷霧西洋棋引擎現已開放對弈。',
 
   // ── CTA labels ──
   'Search the games': '檢索對局',
@@ -1100,7 +1101,7 @@ function dictFor(locale: Locale): Record<string, string> | null {
 
 /** Translate one announcement string, falling back to the English source. */
 export function localizeAnnouncementString(text: string, locale: Locale): string {
-  return dictFor(locale)?.[text] ?? text;
+  return personNamesInText(dictFor(locale)?.[text] ?? text, locale);
 }
 
 /**
@@ -1113,9 +1114,9 @@ export function localizeAnnouncement(entry: Announcement, locale: Locale): Annou
   if (!dict) return entry;
   return {
     ...entry,
-    headline: dict[entry.headline] ?? entry.headline,
-    body: entry.body === undefined ? undefined : (dict[entry.body] ?? entry.body),
-    cta: entry.cta === undefined ? undefined : (dict[entry.cta] ?? entry.cta),
+    headline: localizeAnnouncementString(entry.headline, locale),
+    body: entry.body === undefined ? undefined : localizeAnnouncementString(entry.body, locale),
+    cta: entry.cta === undefined ? undefined : localizeAnnouncementString(entry.cta, locale),
   };
 }
 

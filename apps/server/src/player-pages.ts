@@ -1,3 +1,4 @@
+import { personNameForLocale } from '@mistboard/game';
 // Server-side SEO for the player pages (#458): /players, /players/<slug>,
 // /players/teams and /players/teams/<key> are client routes
 // (apps/web/src/xiangqi-players.ts), so a crawler that does not run the bundle
@@ -143,8 +144,9 @@ type Named = { name: string; nameEn: string | null; nameOwn?: string };
 
 /** "Meng Fanrui (孟繁睿)", or the one spelling when there is only one. The
  *  Chinese is the player's own characters when they write traditional. */
-export function bothScripts(entity: Named): string {
-  const zh = entity.nameOwn ?? entity.name;
+export function bothScripts(entity: Named, locale = 'en'): string {
+  const zh = personNameForLocale(entity, locale);
+  if (locale === 'zh-Hans' || locale === 'zh-Hant') return zh;
   return entity.nameEn && entity.nameEn !== entity.name ? `${entity.nameEn} (${zh})` : zh;
 }
 

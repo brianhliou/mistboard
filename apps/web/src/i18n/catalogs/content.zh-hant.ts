@@ -205,7 +205,7 @@ export const ZH_HANT_CONTENT = {
   'source.noWarranty': '不提供任何擔保。完整條款請查看儲存庫授權。',
   'source.thirdParty': '第三方元件',
   'source.chessground': 'chessground：棋盤互動和棋子渲染，GPL-3.0-or-later。',
-  'source.chessops': 'chessops：國際象棋規則基礎元件，GPL-3.0-or-later。',
+  'source.chessops': 'chessops：西洋棋規則基礎元件，GPL-3.0-or-later。',
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可選引擎/執行時依賴，GPL 系列。',
   'source.abJchess':
     'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：揭棋引擎，GPL-3.0；其神經網路經作者許可使用。',
@@ -240,7 +240,7 @@ export const ZH_HANT_CONTENT = {
     'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
   'source.pikafishJieqi': '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋機器人和揭棋分析，GPL-3.0。',
   'source.chessPieceSets':
-    '國際象棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
+    '西洋棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
     '音效：Futuristic、NES、Piano 和 SFX 音效取自 lichess，作者 Enigmahack，AGPL-3.0；Wood 音效作者 el_boss，終局音效作者 Kenney，鴨子象棋的鴨叫作者 D4XX，皆為 CC0。',
   'source.fonts':
@@ -257,7 +257,7 @@ export const ZH_HANT_CONTENT = {
     'Mistboard 就是網頁版。打開瀏覽器就能下棋，電腦和手機都可以，無需下載或安裝。',
   'faq.playComputerQuestion': '可以和電腦下嗎？',
   'faq.playComputerAnswer':
-    '可以。人機對戰有八個難度等級，從入門到很強，最強的對手是皮卡魚（Pikafish）引擎。',
+    '可以。人機對戰的難度從入門到很強，最強的對手是皮卡魚（Pikafish）引擎。',
   'faq.playBotsLink': '挑選等級',
   'faq.playFriendQuestion': '怎麼和朋友下？',
   'faq.playFriendAnswer': '開始對局時選擇和朋友對弈，把連結傳給朋友，對方打開連結就能入座。',
@@ -580,7 +580,7 @@ export const ZH_HANT_CONTENT = {
   'thanks.lichessLead':
     'Mistboard 的設計很大程度上得益於 lichess。每當我們不知道某樣東西該怎麼做，就去看 lichess 是怎麼做的。',
   'thanks.lichessTook':
-    '我們從 lichess 學來了大廳和使用 Glicko-2 的計分對局、對局室的版面、直播和職業棋手頁面、殺棋題的規則、更新日誌和這個頁面，以及我們國際象棋棋盤底下的棋盤程式碼。',
+    '我們從 lichess 學來了大廳和使用 Glicko-2 的計分對局、對局室的版面、直播和職業棋手頁面、殺棋題的規則、更新日誌和這個頁面，以及我們西洋棋棋盤底下的棋盤程式碼。',
   'thanks.lichessCloseLink': 'Lichess',
   'thanks.lichessCloseMiddle':
     ' 免費、沒有廣告、開源，由非營利組織靠玩家捐款營運。感謝創辦它的 Thibault Duplessis，也感謝',
@@ -639,7 +639,7 @@ export const ZH_HANT_CONTENT = {
   'data.formatMoves':
     'uci 著法是座標：h2e2 是走子，@c3 是翻開一枚暗子，R@d4 是從手中打入（瘋狂屋象棋），b3e3@e6 是一回合鴨子象棋，最後是鴨子的落點。',
   'data.formatPgn':
-    'PGN：用於著法能寫成可獨立重播文字的變體：迷霧國際象棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋和揭棋用 ICCS 座標，暗棋用 ICGA 記譜法，翻翻獸棋用座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。其他變體只提供 JSONL。',
+    'PGN：用於著法能寫成可獨立重播文字的變體：迷霧西洋棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋和揭棋用 ICCS 座標，暗棋用 ICGA 記譜法，翻翻獸棋用座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。其他變體只提供 JSONL。',
   'data.licenseHeading': '授權',
   'data.licensePrefix': '這些檔案依 ',
   'data.licenseSuffix':
@@ -678,4 +678,11 @@ export const ZH_HANT_CONTENT = {
     '本站自己的機器人之間的對局，每天幾盤。它們有獨立的檔案，從不出現在上面的檔案中。',
   'data.engineAbout':
     '本站每天安排幾盤自己的機器人之間的對局，就是你可以對戰的那些機器人，涵蓋多個變體，並在本站自己的伺服器上進行。這些對局發布在獨立的月度檔案中，位於對局資料頁面的「機器人對局」下，mode 為 eve。它們從不出現在人類對局的檔案中，也不計入本站的統計或等級分。揭棋機器人對局和本站其他對局一樣在開局時分配棋子，因此帶有 deal_fen。',
+  'patron.amountOther': '其他',
+  'patron.customAmountLabel': '金額（美元）',
+  'patron.customAmountInvalid': '請輸入 5 至 1,000 美元的整數金額。',
+  'videos.ourHeading': 'Mistboard 出品',
+  'videos.ourIntro': '我們自製的節目，新節目會先在頻道發布。',
+  'videos.shortsHeading': '棋題短影片',
+  'videos.subscribe': '在 YouTube 訂閱',
 } satisfies Partial<Record<ContentI18nKey, string>>;

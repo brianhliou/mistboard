@@ -8,6 +8,7 @@ import type {
   XiangqiPlayerRecord,
 } from './persistence-xiangqi-players.js';
 import {
+  bothScripts,
   type PlayerPageSources,
   parsePlayerRoute,
   playerCardContent,
@@ -346,4 +347,11 @@ test('a player the match-fixing rulings named carries the ruling in the descript
     / Banned for 6 months by the Chinese Xiangqi Association in the 2024 to 2026 match-fixing case\.$/,
   );
   assert.doesNotMatch(playerDescription(MENG, REFERENCE), /match-fixing/);
+});
+
+test('person names select a page script and keep the non-Chinese own form', () => {
+  const person = { name: '赵奕帆', nameOwn: '趙奕帆', nameEn: 'Chao Yi-fan' };
+  assert.equal(bothScripts(person, 'zh-Hans'), '赵奕帆');
+  assert.equal(bothScripts(person, 'zh-Hant'), '趙奕帆');
+  assert.equal(bothScripts(person), 'Chao Yi-fan (趙奕帆)');
 });

@@ -33,6 +33,7 @@ import {
   type VideoSource,
   type VideoTag,
   type VideoVariant,
+  videoDisplayCopy,
   videoKey,
   videoThumbUrl,
   videoWatchUrl,
@@ -402,9 +403,12 @@ export function filterVideos(videos: readonly VideoEntry[], filters: VideoFilter
     if (filters.sources.size > 0 && !filters.sources.has(video.source)) return false;
     if (filters.languages.size > 0 && !filters.languages.has(video.language)) return false;
     if (needle === '') return true;
-    return (
-      video.title.toLowerCase().includes(needle) || video.author.toLowerCase().includes(needle)
-    );
+    return [
+      video.title,
+      video.author,
+      ...Object.values(videoDisplayCopy(video, 'zh-Hans')),
+      ...Object.values(videoDisplayCopy(video, 'zh-Hant')),
+    ].some((text) => text.toLowerCase().includes(needle));
   });
 }
 
@@ -586,14 +590,15 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
 
   const title = document.createElement('span');
   title.className = 'videos-card-title';
-  title.textContent = video.title;
+  const copy = videoDisplayCopy(video, locale);
+  title.textContent = copy.title;
 
   const meta = document.createElement('span');
   meta.className = 'videos-card-meta';
   meta.textContent =
     video.durationMinutes === undefined
-      ? video.author
-      : `${video.author} · ${t('videos.duration', { count: video.durationMinutes }, locale)}`;
+      ? copy.author
+      : `${copy.author} · ${t('videos.duration', { count: video.durationMinutes }, locale)}`;
 
   const tags = document.createElement('span');
   tags.className = 'videos-card-tags';
