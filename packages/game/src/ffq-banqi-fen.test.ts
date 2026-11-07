@@ -1,15 +1,11 @@
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { ffqBanqiStateToFen } from './ffq-banqi-fen.js';
 import {
   applyFFQBanqiMove,
   createInitialFFQBanqiState,
   type FFQBanqiState,
 } from './variants-ffq-banqi.js';
-
-// Support targeted Vitest runs and the package's native node:test suite.
-const test: (name: string, run: () => void) => unknown = process.env.VITEST
-  ? (await import('vitest')).test
-  : (await import('node:test')).test;
 
 test('FFQ public FEN has eight top-first ranks, fixed ink turn, HP, clock and BOTH chase counts', () => {
   const state: FFQBanqiState = {

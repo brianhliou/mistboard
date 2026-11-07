@@ -208,19 +208,3 @@ in merge `6d6fcd3c3`. Off-board captures of either ink are public in every
 recipient's live and finished views and histories; the remaining on-board backs
 stay masked. New snapshots retain the 11 FEN fields and emit `0 0` for unknown
 captures. No existing snapshot reader or old-record field was removed.
-
-Validation on `agent/ffq-covered-public`:
-
-- Game: from `packages/game`, `npx vitest run src/variants-ffq-banqi.test.ts src/ffq-banqi-fen.test.ts --testTimeout 30000`: **25 passed**, exit 0, including 2,000 seeded playouts. The two files retain native `node:test` support alongside Vitest; the longer timeout covers the playout test.
-- Web: from `apps/web`, `npx vitest run src/live-ffq-banqi.test.ts`: **13 passed**, exit 0, including non-capturer and observer capture labels live and finished.
-- Server: from `apps/server`, `npx tsx --test src/ffq-banqi-hidden-info.test.ts`: **blocked before test startup**, exit 1, because the sandbox rejects the tsx IPC socket with `listen EPERM`. No socket or Postgres workaround was attempted.
-- `npm run typecheck`: exit 0. Biome on the six changed TypeScript files by name: exit 0.
-
-The new non-capturer/observer regression failed before the fix with
-`null !== 'horse'`. Temporarily planting an on-board covered role in the view
-made the whole-payload permutation regression fail with the extra role;
-restoring the exact `{ faceDown: true }` projection returned it to green.
-
-Parked in `/Users/brianliou/projects/mistboard-ffq-covered-public` on
-`agent/ffq-covered-public` for the next authorized release. Changelog:
-`FFQ banqi: Show covered captures to both seats and observers while keeping on-board backs hidden.`

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { ffqBanqiStateToFen } from './ffq-banqi-fen.js';
 import {
   BANQI_PIECE_COUNTS,
@@ -22,11 +23,6 @@ import {
   getFFQBanqiPlayerView,
   getFFQBanqiResult,
 } from './variants-ffq-banqi.js';
-
-// Support targeted Vitest runs and the package's native node:test suite.
-const test: (name: string, run: () => void) => unknown = process.env.VITEST
-  ? (await import('vitest')).test
-  : (await import('node:test')).test;
 
 const up = (color: BanqiColor, role: BanqiPieceRole): BanqiPiece => ({
   color,
