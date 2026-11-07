@@ -36,7 +36,13 @@ export function init(connectionString: string, guards?: PoolSessionGuards): void
   // the planner's cost past the JIT thresholds on tables of a few thousand
   // rows, and compiling then costs more than the query: on 2026-10-25 prod's
   // public stats took 5.3s with JIT and 0.65s without, /metrics 3.4s and 0.2s.
-  const settings: string[] = ['-c jit=off'];
+  //
+  // PGOPTIONS from the environment goes first: pg reads it only when no
+  // `options` is passed, and this pool always passes one, so without this
+  // `prod:db --read-only` handed scripts a read-write session.
+  const settings: string[] = [process.env.PGOPTIONS, '-c jit=off'].filter(
+    (setting): setting is string => Boolean(setting?.trim()),
+  );
   if (guards?.statementTimeoutMs !== undefined) {
     settings.push(`-c statement_timeout=${Math.trunc(guards.statementTimeoutMs)}`);
   }
