@@ -177,6 +177,7 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'raw-svg-stepper',
+          gameSpecId: 'ffq-banqi',
           steps: FANFANQI_CHASE_RUN_STEPS,
           caption: 'A cross marks a step the chase limit removes.',
         },

@@ -8,8 +8,17 @@ import {
   getFFQBanqiLegalMoves,
   getFFQBanqiPlayerView,
 } from '@mistboard/game';
-import { activeXiangqiPieceSet } from './articles/diagrams.js';
-import { ffqBanqiSquare } from './ffq-banqi-board.js';
+import {
+  activeXiangqiPieceSet,
+  BANQI_BOARD_H,
+  BANQI_BOARD_W,
+  banqiArrow,
+  banqiBoardGrid,
+  banqiCellCenter,
+  banqiPiecesFromView,
+  xqSvg,
+} from './articles/diagrams.js';
+import { ffqBanqiBoardView, ffqBanqiSquare } from './ffq-banqi-board.js';
 import './live-banqi-board.css';
 import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -23,14 +32,11 @@ function renderPosition(
   state: FFQBanqiState,
   from?: number,
   maxWidth = FULL_WIDTH,
-  forbidden: readonly number[] = [],
 ): string {
   const seat = state.ply % 2 === 0 ? 'red' : 'black';
-  const square = from === undefined ? null : ffqBanqiSquare(from);
   return renderFFQBanqiBoardSvg(getFFQBanqiPlayerView(state, seat), {
-    selectedSquare: square,
+    selectedSquare: from === undefined ? null : ffqBanqiSquare(from),
     pieceSet: activeXiangqiPieceSet,
-    forbiddenMoves: square ? forbidden.map((to) => ({ from: square, to: ffqBanqiSquare(to) })) : [],
   })
     .trim()
     .replace(
@@ -178,22 +184,57 @@ const CHASE_RUN_NOTES = [
   'Red has chased four times in a row, so both steps beside the horse are crossed out. The chariot can step away, or Red can flip a piece, which resets both counts.',
 ];
 const CHASE_RUN_FROM = 17;
-const chaseRunStates = CHASE_RUN_MOVES.reduce<FFQBanqiState[]>(
-  (states, [from, to], k) => {
-    const before = states.at(-1)!;
-    const after = applyFFQBanqiMove(before, { from, to });
-    if (after === before) throw new Error(`Fanfanqi chase run: move ${k + 1} is illegal`);
-    return [...states, after];
-  },
-  [tacticalState(runBoard)],
-);
+const chaseRunStates: FFQBanqiState[] = [tacticalState(runBoard)];
+for (const [k, [from, to]] of CHASE_RUN_MOVES.entries()) {
+  const before = chaseRunStates.at(-1)!;
+  const after = applyFFQBanqiMove(before, { from, to });
+  if (after === before) throw new Error(`Fanfanqi chase run: move ${k + 1} is illegal`);
+  chaseRunStates.push(after);
+}
+
+const runCell = (index: number) => {
+  const square = ffqBanqiSquare(index);
+  return { col: square.charCodeAt(0) - 97, row: 4 - Number(square[1]) };
+};
+
+// The live board's chase cross, drawn in the article diagram's own units.
+function chaseCross(index: number): string {
+  const { col, row } = runCell(index);
+  const { x, y } = banqiCellCenter(col, row, 0, 0);
+  const h = 9;
+  return `<path d="M${x - h} ${y - h}L${x + h} ${y + h}M${x + h} ${y - h}L${x - h} ${y + h}" fill="none" stroke="rgba(178, 34, 28, 0.85)" stroke-width="4" stroke-linecap="round"/>`;
+}
+
+// Same format as the banqi chase steppers: the article board, an arrow for the
+// move into the frame, and keyed piece slots the card glides.
+function runFrame(
+  state: FFQBanqiState,
+  move: readonly [number, number] | null,
+  id: string,
+  crossed: readonly number[] = [],
+): string {
+  const seat = state.ply % 2 === 0 ? 'red' : 'black';
+  const view = ffqBanqiBoardView(getFFQBanqiPlayerView(state, seat));
+  return xqSvg(
+    BANQI_BOARD_W,
+    BANQI_BOARD_H,
+    [
+      banqiBoardGrid(0, 0),
+      banqiPiecesFromView(view, 0, 0),
+      move ? banqiArrow(runCell(move[0]), runCell(move[1]), 0, 0, id, 14) : '',
+      crossed.map(chaseCross).join(''),
+    ].join(''),
+  );
+}
 
 export const FANFANQI_CHASE_RUN_STEPS = chaseRunStates.map((state, k) => {
   const move = k === 0 ? null : CHASE_RUN_MOVES[k - 1]!;
   const last = k === chaseRunStates.length - 1;
+  const from = move ? ffqBanqiSquare(move[0]) : null;
+  const to = move ? ffqBanqiSquare(move[1]) : null;
   return {
     svg: () => {
-      if (!last) return renderPosition(`chase-run-${k}`, state, undefined, SINGLE_WIDTH);
+      if (!last) return runFrame(state, move, `ffq-chase-run-${k}`);
       const steps = stepTargets(state, CHASE_RUN_FROM).join(' ');
       const crossed = chaseLimitedTargets(state, CHASE_RUN_FROM);
       if (
@@ -205,9 +246,10 @@ export const FANFANQI_CHASE_RUN_STEPS = chaseRunStates.map((state, k) => {
           `Fanfanqi chase run: count ${state.chaseCounts.red}, steps [${steps}], crossed [${crossed.join(' ')}]`,
         );
       }
-      return renderPosition(`chase-run-${k}`, state, CHASE_RUN_FROM, SINGLE_WIDTH, crossed);
+      return runFrame(state, move, `ffq-chase-run-${k}`, crossed);
     },
-    move: move ? `${ffqBanqiSquare(move[0])}-${ffqBanqiSquare(move[1])}` : undefined,
+    move: from && to ? `${from}-${to}` : undefined,
+    motion: from && to ? { from, to } : undefined,
     narrative: CHASE_RUN_NOTES[k],
   };
 });
