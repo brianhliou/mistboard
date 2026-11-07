@@ -327,6 +327,7 @@ export function renderPlayerBody(
   const title = referenceTitle(reference, player);
   const parts = [
     `<h1>${title ? `<abbr title="${escapeHtml(TITLE_WORDS[title])}">${title}</abbr> ` : ''}${nameHtml(player)}</h1>`,
+    `<p><a href="/puzzles?player=${escapeHtml(encodeURIComponent(player.slug))}">Puzzles from this player</a></p>`,
   ];
   const sanction = reference.sanctions[player.name];
   if (sanction) {

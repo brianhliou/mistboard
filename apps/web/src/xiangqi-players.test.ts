@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import {
   currentSeason,
   displayName,
@@ -48,6 +49,37 @@ function player(input: {
 }
 
 describe('player pages', () => {
+  it.each([
+    ['en', 'Puzzles from this player'],
+    ['zh-Hans', '这位棋手的习题'],
+    ['zh-Hant', '這位棋手的習題'],
+  ] as const)('links to player-scoped training in %s', async (locale, label) => {
+    await ensureLocaleCatalog(locale);
+    const previousPath = window.location.pathname;
+    window.history.replaceState(
+      null,
+      '',
+      locale === 'en' ? '/' : `/${locale.toLowerCase()}/players`,
+    );
+    const fixture = player({ name: 'Fixture Player', games: 2 });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ player: fixture, boards: [] }))),
+    );
+    try {
+      const root = document.createElement('div');
+      await mountXiangqiPlayer(root, fixture.slug);
+      const link = root.querySelector<HTMLAnchorElement>(
+        '.xqp-header-actions a[href="/puzzles?player=fixture-player"]',
+      );
+      expect(link?.textContent).toBe(label);
+      expect(link?.classList.contains('xqb-link')).toBe(true);
+    } finally {
+      window.history.replaceState(null, '', previousPath);
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('shows both scripts of a name, once', () => {
     expect(displayName({ name: '尹昇', nameEn: 'Yin Sheng' })).toBe('Yin Sheng 尹昇');
     expect(displayName({ name: '尹昇', nameEn: null })).toBe('尹昇');

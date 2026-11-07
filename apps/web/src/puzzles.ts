@@ -175,11 +175,16 @@ export async function mountPuzzles(
   let selectedId = initialPuzzleId;
   let variantFilter: PuzzleVariantFilter = PUZZLE_VARIANT_FILTERS[0] ?? XIANGQI_SPEC_ID;
   const themeParam = new URLSearchParams(window.location.search);
+  let playerFilter = themeParam.get('player') || null;
+  let loadedPlayer: string | null | undefined = playerFilter;
+  let queueToken = 0;
   let themeFilter = themeParam.has('theme')
     ? parsePuzzleTheme(themeParam.get('theme'))
     : initialPuzzleId
       ? null
-      : loadPuzzleTheme();
+      : playerFilter
+        ? null
+        : loadPuzzleTheme();
   let themes: PuzzleThemeOptions = { motifs: [], tagCounts: {} };
   if (themeParam.has('theme')) savePuzzleTheme(themeFilter);
   let session: PuzzleSession | null = null;
@@ -226,10 +231,23 @@ export async function mountPuzzles(
     );
 
   const renderEmptyQueue = (): void => {
-    renderStatus(detail, t(themeFilter ? 'puzzle.noneForTheme' : 'puzzle.none'));
-    if (themeFilter) {
+    const emptyPlayer = playerFilter && summaries.length === 0;
+    renderStatus(
+      detail,
+      t(emptyPlayer ? 'puzzle.noneForPlayer' : themeFilter ? 'puzzle.noneForTheme' : 'puzzle.none'),
+    );
+    if (emptyPlayer) {
       const all = document.createElement('a');
-      all.href = '/puzzles?theme=';
+      all.href = '/puzzles';
+      all.className = 'puzzle-quiet-link';
+      all.textContent = t('puzzle.allPuzzles');
+      const links = document.createElement('span');
+      links.className = 'puzzle-empty-links';
+      links.append(all);
+      detail.querySelector('.puzzles-status')?.append(links);
+    } else if (themeFilter) {
+      const all = document.createElement('a');
+      all.href = `${puzzleUrl(undefined, null)}${playerFilter ? '&' : '?'}theme=`;
       all.textContent = t('puzzle.allThemes');
       const links = document.createElement('span');
       links.className = 'puzzle-empty-links';
@@ -238,8 +256,16 @@ export async function mountPuzzles(
     }
   };
 
+  const puzzleUrl = (id?: string, theme = themeFilter): string => {
+    const params = new URLSearchParams();
+    if (playerFilter) params.set('player', playerFilter);
+    if (theme) params.set('theme', theme);
+    const query = params.toString();
+    return `/puzzles${id ? `/${encodeURIComponent(id)}` : ''}${query ? `?${query}` : ''}`;
+  };
+
   const pushPuzzleUrl = (id: string): void => {
-    const nextPath = `/puzzles/${encodeURIComponent(id)}${themeFilter ? `?theme=${themeFilter}` : ''}`;
+    const nextPath = puzzleUrl(id);
     if (`${window.location.pathname}${window.location.search}` !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
@@ -270,12 +296,7 @@ export async function mountPuzzles(
       forgetPaintedPuzzle();
       selectedId = null;
       session = null;
-      if (pushUrl)
-        window.history.pushState(
-          null,
-          '',
-          themeFilter ? `/puzzles?theme=${themeFilter}` : '/puzzles',
-        );
+      if (pushUrl) window.history.pushState(null, '', puzzleUrl());
       renderControls();
       renderEmptyQueue();
     }
@@ -424,6 +445,12 @@ export async function mountPuzzles(
     // matching, the pushed URL, and solved-state keys all use the canonical id.
     id = resolveToFullPuzzleId(id, summaries);
     const summary = summaries.find((puzzle) => puzzle.id === id);
+    // A URL or history entry cannot escape the fetched player pool.
+    if (playerFilter && !summary) {
+      await changeQueue(false);
+      window.history.replaceState(null, '', puzzleUrl(session?.puzzle.id));
+      return;
+    }
     if (summary && !queueSummaries().some((puzzle) => puzzle.id === id)) {
       variantFilter = summary.variant;
       themeFilter = null;
@@ -498,7 +525,7 @@ export async function mountPuzzles(
 
   renderStatus(controls, t('puzzle.loading'));
   renderPendingBoard(detail, t('puzzle.loading'));
-  const puzzleList = await fetchPuzzleListWithAttempts();
+  const puzzleList = await fetchPuzzleListWithAttempts(playerFilter);
   summaries = puzzleList.puzzles;
   themes = { motifs: puzzleList.themes, tagCounts: puzzleList.tagCounts };
   // Merge the server's record of finished puzzles into the local seen-set
@@ -536,6 +563,7 @@ export async function mountPuzzles(
   // drives variant selection and queue matching below.
   if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);
   const directSummary = selectedId ? summaries.find((puzzle) => puzzle.id === selectedId) : null;
+  const outOfScopeLink = playerFilter && selectedId && !directSummary;
   // A normal visit defaults to the surfaced variant (Xiangqi); a direct deep
   // link into any puzzle still resolves so shared/bookmarked URLs keep working.
   if (directSummary) variantFilter = directSummary.variant;
@@ -555,27 +583,57 @@ export async function mountPuzzles(
       ? selectedId
       : (queue[0]?.id ?? null);
   if (firstId) {
-    if (reloadedPastFinished) {
+    if (reloadedPastFinished || outOfScopeLink) {
       // Replace, not push: Back should not return to the finished puzzle.
-      window.history.replaceState(
-        null,
-        '',
-        `/puzzles/${encodeURIComponent(firstId)}${window.location.search}`,
-      );
+      window.history.replaceState(null, '', puzzleUrl(firstId));
     }
     await selectPuzzle(firstId, false);
   } else {
     renderEmptyQueue();
   }
 
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', async () => {
     if (!shell.isConnected) return;
+    const token = ++queueToken;
+    clearAutoNextTimer();
+    ++loadToken;
     const params = new URLSearchParams(window.location.search);
     themeFilter = parsePuzzleTheme(params.get('theme'));
     if (params.has('theme')) savePuzzleTheme(themeFilter);
+    const nextPlayer = params.get('player') || null;
+    if (nextPlayer !== loadedPlayer) {
+      playerFilter = nextPlayer;
+      loadedPlayer = undefined;
+      summaries = [];
+      sessionResults.length = 0;
+      if (session && !isPuzzleComplete(session)) {
+        void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
+          () => {},
+        );
+        trackPuzzleAttempted(session, 'abandoned');
+      }
+      session?.analysis?.dispose();
+      session = null;
+      selectedId = null;
+      renderControls();
+      renderPendingBoard(detail, t('puzzle.loading'));
+      try {
+        const list = await fetchPuzzleListWithAttempts(playerFilter);
+        if (token !== queueToken || !shell.isConnected) return;
+        for (const id of list.attemptedIds) {
+          if (!seenPuzzles.has(id)) seenPuzzles.set(id, 0);
+        }
+        summaries = rotatePuzzleOrder(list.puzzles, seenPuzzles, targetRatings, difficulty);
+        themes = { motifs: list.themes, tagCounts: list.tagCounts };
+        loadedPlayer = playerFilter;
+      } catch {
+        if (token === queueToken) renderStatus(detail, t('puzzle.loadFailed'));
+        return;
+      }
+    }
     const id = puzzleIdFromPath(window.location.pathname) ?? queueSummaries()[0]?.id ?? null;
-    if (id) void selectPuzzle(id, false);
-    else void changeQueue(false);
+    if (id) await selectPuzzle(id, false);
+    else await changeQueue(false);
   });
 
   window.addEventListener('pagehide', () => {
