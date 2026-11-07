@@ -1061,7 +1061,7 @@ export const ZH_HANT_REVIEW = {
   'analysis.banqiTablebase.losesIn': '{count} 步後落敗',
   'analysis.banqiTablebase.nextCapture': '{count} 步後再次吃子',
   'analysis.banqiTablebase.pastClock':
-    '依 {limit} 步規則，實戰中這盤棋早在 {count} 步前就已判和。研究棋盤繼續走棋，以便查看後續著法。',
+    '依 {limit} 步規則，實戰中這盤棋早在 {count} 步前就已判和。研習棋盤繼續走棋，以便查看後續著法。',
   'analysis.banqiTablebase.positionClockDraw':
     '雙方走出最佳著法時，下一次吃子還需 {count} 步，而 {limit} 步規則會在 {left} 步後結束對局，所以實戰中應判和。',
   'analysis.banqiTablebase.sideWinsIn': '{side} {count} 步獲勝',

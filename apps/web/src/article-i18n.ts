@@ -9894,7 +9894,7 @@ const ZH_HANT: Record<string, string> = {
   'Pawn moves': '兵的走動',
   Captures: '吃子',
   'Each side sees the squares its own pieces could legally move to (under [regular chess rules](https://en.wikipedia.org/wiki/Rules_of_chess)), plus the squares they stand on. Everything else is fog.':
-    '每一方能看到己方棋子（按[普通西洋棋規則](https://zh.wikipedia.org/zh-hant/%E5%9C%8B際象棋規則)）可以合法走到的格子，以及棋子當前所在的格子。其餘一切都籠罩在迷霧之中。',
+    '每一方能看到己方棋子（按[普通西洋棋規則](https://zh.wikipedia.org/zh-hant/國際象棋規則)）可以合法走到的格子，以及棋子當前所在的格子。其餘一切都籠罩在迷霧之中。',
   "Here's the same rule, piece by piece.": '同一條規則，逐子來看。',
   'Vision moves with pieces. When a piece moves, the squares it used to cover go dark (unless another piece still sees them), and the squares it now reaches light up.':
     '視野隨棋子移動。當一個棋子走動時，它原先覆蓋的格子會重新陷入黑暗（除非另有棋子仍能看到它們），而它新觸及的格子則會亮起。',
@@ -12192,7 +12192,7 @@ const ZH_HANT: Record<string, string> = {
     '不需要安裝任何東西。Mistboard 在手機、平板或電腦的瀏覽器裡直接執行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 對弈嗎？',
   'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
-    '可以，有八個等級，外加一個更強的機器人。第 1 到 8 級執行套用揭棋規則修補程式的皮卡魚（Pikafish），它靠手寫規則判斷局面，高手能贏它。它們之上是 AB-JChess，一個自帶類神經網路的開源引擎，400 盤中贏了第 8 級 248 盤。兩者都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
+    '可以，有八個等級，外加一個更強的機器人。第 1 到 8 級執行針對揭棋規則修改過的皮卡魚（Pikafish）版本，它靠手寫規則判斷局面，高手能贏它。它們之上是 AB-JChess，一個自帶類神經網路的開源引擎，400 盤中贏了第 8 級 248 盤。兩者都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身分行棋。翻開的士可以出九宮，翻開的象可以過河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':

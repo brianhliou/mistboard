@@ -1061,7 +1061,7 @@ export const ZH_HANS_REVIEW = {
   'analysis.banqiTablebase.losesIn': '{count} 步后落败',
   'analysis.banqiTablebase.nextCapture': '{count} 步后再次吃子',
   'analysis.banqiTablebase.pastClock':
-    '依 {limit} 步规则，实战中这盘棋早在 {count} 步前就已判和。研究棋盘继续走棋，以便查看后续着法。',
+    '依 {limit} 步规则，实战中这盘棋早在 {count} 步前就已判和。研习棋盘继续走棋，以便查看后续着法。',
   'analysis.banqiTablebase.positionClockDraw':
     '双方走出最佳着法时，下一次吃子还需 {count} 步，而 {limit} 步规则会在 {left} 步后结束对局，所以实战中应判和。',
   'analysis.banqiTablebase.sideWinsIn': '{side} {count} 步获胜',
