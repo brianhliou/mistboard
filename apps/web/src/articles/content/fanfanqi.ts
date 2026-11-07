@@ -1,6 +1,8 @@
 import {
   FANFANQI_CANNON_SHOT,
   FANFANQI_CAPTURE_CARDS,
+  FANFANQI_CHASE_ALLOWED,
+  FANFANQI_CHASE_BLOCKED,
   FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
   FANFANQI_RANK_LADDER,
   FANFANQI_SETUP,
@@ -70,7 +72,7 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with two exceptions: a general cannot capture a soldier, and a soldier can capture a general.',
+          text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with three exceptions: a general cannot capture a soldier, a soldier can capture a general, and a cannon ignores rank when it captures (see [Cannons only capture](#cannons-only-capture)).',
         },
         { kind: 'raw-svg', svg: FANFANQI_RANK_LADDER },
         {
@@ -158,11 +160,28 @@ export const fanfanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A quiet step is a move with no flip and no capture. It counts as a chase if the moved piece can then capture an adjacent face-up enemy. Threatening several pieces counts as one chase. The target may change between turns. Covered targets do not count. Cannons never make quiet steps, so they never chase.',
+          text: 'A chase is a step, with no flip and no capture, that ends next to a face-up enemy piece the moved piece could capture. A step that ends next to only stronger pieces or covered pieces is not a chase. Ending next to two pieces you could take is still one chase. Cannons never step, so they never chase.',
         },
         {
           kind: 'paragraph',
-          text: 'You may make four consecutive chases. Your fifth is illegal. Your opponent’s quiet turn does not break your streak. A quiet move that does not chase resets your own count. A flip or capture by either player resets both counts. The chase limit still applies when it leaves you with no legal move.',
+          text: 'You may chase four times in a row. A fifth chase in a row is not allowed, so the game does not offer that move and you must pick another. Below, stepping beside the black cannon is a chase for the red horse. Stepping beside the elephant is not, because a horse cannot capture an elephant, and stepping beside the covered piece is not either. After three chases in a row the horse may still make the chase step (left). After four, the game removes it (right).',
+        },
+        {
+          kind: 'svg-row',
+          items: [
+            {
+              svg: FANFANQI_CHASE_ALLOWED,
+              caption: 'After three chases. Dots mark the steps the horse can make.',
+            },
+            {
+              svg: FANFANQI_CHASE_BLOCKED,
+              caption: 'After four chases.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'A step that is not a chase resets your own count. A flip or a capture by either player resets both counts. Your opponent’s steps do not reset yours. If every move you have left would be a fifth chase, you have no legal move and lose.',
         },
       ],
     },

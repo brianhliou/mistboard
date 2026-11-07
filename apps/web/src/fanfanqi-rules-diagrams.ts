@@ -107,6 +107,31 @@ export const FANFANQI_CANNON_SHOT = fanfanqiMoveDiagram({
   maxWidth: SINGLE_WIDTH,
 });
 
+// Chases: the red horse on 9 can step to 5, 8, 10 or 13. Only 10 lands next
+// to a face-up enemy it can take (the cannon on 11). 5 and 8 touch only the
+// elephant, which outranks a horse, and 13 touches only a covered piece.
+const chaseBoard: FFQBanqiState['board'] = Array(32).fill(null);
+chaseBoard[9] = { color: 'red', role: 'horse', faceDown: false };
+chaseBoard[4] = { color: 'black', role: 'elephant', faceDown: false };
+chaseBoard[11] = { color: 'black', role: 'cannon', faceDown: false };
+chaseBoard[14] = { color: 'black', role: 'soldier', faceDown: true };
+const chaseState = (chases: number): FFQBanqiState => ({
+  ...tacticalState(chaseBoard),
+  chaseCounts: { red: chases, black: 0 },
+});
+export const FANFANQI_CHASE_ALLOWED = fanfanqiMoveDiagram({
+  id: 'chase-allowed',
+  state: chaseState(FFQ_BANQI_RULES.consecutiveChaseLimit - 1),
+  from: 9,
+  expect: [5, 8, 10, 13],
+});
+export const FANFANQI_CHASE_BLOCKED = fanfanqiMoveDiagram({
+  id: 'chase-blocked',
+  state: chaseState(FFQ_BANQI_RULES.consecutiveChaseLimit),
+  from: 9,
+  expect: [5, 8, 13],
+});
+
 // Seed 2 deals a red cannon face up beside two face-down screens. Every square
 // is full, so Red's first move is a flip or one of that cannon's shots.
 const setup = createInitialFFQBanqiState('fanfanqi-setup', 2);
