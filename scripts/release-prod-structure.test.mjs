@@ -134,3 +134,28 @@ test('Gomoku browser smoke runs only for a public spec in web/full releases', as
     }
   }
 });
+
+test('release-prod runs the local smoke gate before any push or drain', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const localGate = source.indexOf('await runLocalGate(gate, ciPlan.changedFiles)');
+  const smoke = source.indexOf("runTimed('local production smokes'");
+  const push = source.indexOf("'git push release candidate'");
+  const drain = source.indexOf("runTimed('production drain start'");
+  assert.ok(localGate > 0 && smoke > localGate, 'local smokes must follow the build/test gate');
+  assert.ok(smoke < drain && smoke < push, 'a smoke failure must prevent draining and pushing');
+  assert.match(source.slice(localGate, smoke), /if \(release\.deployRequired\)/);
+});
+
+test('release-prod rebuilds and smokes the merged revision when main moves during the gate', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function catchUpWithMain()');
+  const end = source.indexOf('function mergeRemoteTip(', start);
+  const catchUp = source.slice(start, end);
+  const smoke = catchUp.indexOf("runTimed('local production smokes (after merge)'");
+  assert.ok(smoke > catchUp.indexOf('release.headRevision = git('));
+  assert.match(
+    catchUp.slice(smoke),
+    /'release:local-smoke',[\s\S]*'--revision',\s*release.headRevision/,
+  );
+  assert.ok(!catchUp.slice(smoke).includes('--skip-build'), 'the merge needs a fresh full build');
+});

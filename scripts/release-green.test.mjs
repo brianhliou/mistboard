@@ -22,6 +22,7 @@ async function releaseScenario({
   movedMain = false,
   failStage,
   ciRequired = true,
+  localCi = false,
 } = {}) {
   const events = [];
   const pushes = [];
@@ -32,7 +33,7 @@ async function releaseScenario({
     remote: 'origin',
     targetBranch: 'main',
     changelog: [],
-    localCi: false,
+    localCi,
     ciWait: true,
   };
   const noop = () => {};
@@ -56,6 +57,11 @@ async function releaseScenario({
     runPlan: () => ({ deployRequired: true, reason: 'test' }),
     planHostedCi: () => ({ ciRequired, reason: 'test', changedFiles: ['apps/web/src/main.ts'] }),
     printHostedCiPlan: noop,
+    localGateFor: () => ({ kind: 'full' }),
+    runLocalGate: async () => {
+      events.push('local gate');
+      if (failStage === 'local gate') throw new Error('local gate failed');
+    },
     fetchActiveGameCount: async () => (Array.isArray(liveGames) ? liveGames.shift() : liveGames),
     requireUsableDrainToken: () => events.push('token'),
     catchUpWithMain: noop,
@@ -164,6 +170,25 @@ test('docs-only candidates still require hosted CI', async () => {
   assert.equal(error, undefined);
   assert.ok(events.includes('ci'));
 });
+
+test('local production smokes pass before publishing a candidate or starting its drain', async () => {
+  const { events, error } = await releaseScenario({ localCi: true });
+  assert.equal(error, undefined);
+  const smoke = events.indexOf('local production smokes');
+  assert.ok(smoke > events.indexOf('local gate'));
+  assert.ok(smoke < events.indexOf('git push release candidate'));
+  assert.ok(smoke < events.indexOf('production drain start'));
+});
+
+for (const failStage of ['local gate', 'local production smokes']) {
+  test(`${failStage} failure prevents candidate publication and draining`, async () => {
+    const { events, pushes, error } = await releaseScenario({ localCi: true, failStage });
+    assert.ok(error);
+    assert.deepEqual(pushes, []);
+    assert.ok(!events.includes('production drain start'));
+    assert.ok(!events.includes('ci'));
+  });
+}
 
 for (const failStage of [
   'git push release candidate',

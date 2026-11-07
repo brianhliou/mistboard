@@ -40,6 +40,35 @@ network, run `MISTBOARD_DEV_LAN=1 npm run dev` (or `npm run dev:memory` with
 the same prefix) and open `http://<your-Mac-LAN-address>:3000` on the phone.
 The same opt-in applies to the standalone web and agent dev commands.
 
+Run the production probes locally before deploying:
+
+```bash
+npm run release:local-smoke
+# Or reuse a batch's running, production-shaped HTTP origin:
+npm run smoke:local -- --base http://127.0.0.1:3099
+```
+
+The managed command builds both apps, ensures Postgres, migrates, starts a local
+server serving the built web app on port 3099, runs the probes, and stops its
+server on success or failure. Use `-- --port 3119` for another worktree. The
+existing-origin command requires an explicit loopback URL; inherited production
+URLs cannot redirect a probe. Use the built app served by the server, rather
+than Vite: these probes check production framing headers and prerendered pages.
+
+Both commands run the site, correspondence and builtin-engine checks, the seven
+main variant PvE smokes (Fog Xiangqi, Duck, Xiangqi, Jieqi, Banqi, Jungle and Flip
+Jungle), and every ceval backend. They require the local variant engine binaries,
+the browser engine assets (including the pinned Pikafish net), Postgres, and
+Playwright Chromium. A missing engine or failed search fails the gate; all probes
+run sequentially so an early failure cannot hide a ceval regression. Install
+Chromium with `npx playwright install chromium` when preparing the machine.
+
+`release:prod` runs this gate before draining or pushing a deploy, reusing the
+build only when its preceding gate built both apps. For a batch runner, append
+`npm run smoke:local -- --base <batch-local-origin>` after starting that batch's
+built local pair. `--plan` prints the probes without running them. Choosing an
+automatic gate for the broader `tests/e2e/` suite remains a separate step.
+
 ## Code
 
 ```text

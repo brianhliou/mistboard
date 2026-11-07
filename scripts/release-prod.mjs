@@ -260,6 +260,18 @@ try {
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
     await runLocalGate(gate, ciPlan.changedFiles);
+    if (release.deployRequired) {
+      runTimed('local production smokes', [
+        'npm',
+        'run',
+        'release:local-smoke',
+        '--',
+        // Targeted gates may build only one app; the smoke needs both artifacts.
+        ...(gate.kind === 'full' || gate.kind === 'broad' ? ['--skip-build'] : []),
+        '--revision',
+        release.headRevision,
+      ]);
+    }
   } else {
     console.log('skip: local gate (--skip-local-ci)');
   }
@@ -1220,6 +1232,18 @@ function catchUpWithMain() {
   );
   for (const command of commands) {
     runTimed(`local ${command.slice(2).join(' ')} (after merge)`, command);
+  }
+  if (options.localCi && release.deployRequired) {
+    // The merge changed the code after the first smoke. Rebuild both apps and
+    // prove this revision too; a smoke of the earlier SHA cannot gate the push.
+    runTimed('local production smokes (after merge)', [
+      'npm',
+      'run',
+      'release:local-smoke',
+      '--',
+      '--revision',
+      release.headRevision,
+    ]);
   }
 }
 
