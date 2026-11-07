@@ -826,15 +826,13 @@ test('Gomoku live builder replays events into spectator snapshots and preserves 
       [0, 1, 2, 3],
     );
     assert.ok(payload.history.truth.every(({ view }) => view.legalMoves.length === 0));
-    // Hidden Gomoku is unlisted, so Featured TV never serves its board.
-    assert.equal(
-      await liveWatchPayloadForFeatured({
-        roomId: ROOM_ID,
-        gameSpecId: GOMOKU_SPEC_ID,
-        channelId: 'gomoku',
-      } as Parameters<typeof liveWatchPayloadForFeatured>[0]),
-      null,
-    );
+    // Launched Gomoku is listed, so Featured TV serves the same board.
+    const featured = await liveWatchPayloadForFeatured({
+      roomId: ROOM_ID,
+      gameSpecId: GOMOKU_SPEC_ID,
+      channelId: 'gomoku',
+    } as Parameters<typeof liveWatchPayloadForFeatured>[0]);
+    assert.equal((featured as { game?: { roomId?: string } } | null)?.game?.roomId, ROOM_ID);
     assert.equal(await gomokuLiveWatchPayload('gmk_missing'), null);
     // The awaited write ends the game before the builder takes its snapshot.
     live.projection = projection;
