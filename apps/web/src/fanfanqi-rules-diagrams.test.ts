@@ -60,13 +60,16 @@ describe('Fanfanqi rules diagrams', () => {
       ],
     });
     const cannons = sections.find((s) => s.heading === 'Cannons only capture')!.blocks!;
-    expect(cannons.find((b) => b.kind === 'svg-row')).toMatchObject({
-      items: [
-        { svg: figures.FANFANQI_CANNON_SHOT },
-        { svg: figures.FANFANQI_CANNON_GAMBLE },
-        { svg: figures.FANFANQI_CANNON_NO_SHOT },
-      ],
-    });
+    // Each step's paragraph comes before its own diagram.
+    expect(cannons.map((b) => (b.kind === 'raw-svg' ? b.svg : b.kind))).toEqual([
+      'paragraph',
+      'paragraph',
+      figures.FANFANQI_CANNON_SHOT,
+      'paragraph',
+      figures.FANFANQI_CANNON_GAMBLE,
+      'paragraph',
+      figures.FANFANQI_CANNON_NO_SHOT,
+    ]);
     expect(BANQI_RANK_LADDER()).toContain('<svg');
   });
 

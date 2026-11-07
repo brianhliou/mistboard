@@ -117,6 +117,7 @@ export const FANFANQI_CANNON_SHOT = fanfanqiMoveDiagram({
   state: tacticalState(shotBoard),
   from: 9,
   expect: [21],
+  maxWidth: SINGLE_WIDTH,
 });
 
 const gambleBoard: FFQBanqiState['board'] = Array(32).fill(null);
@@ -128,6 +129,7 @@ export const FANFANQI_CANNON_GAMBLE = fanfanqiMoveDiagram({
   state: tacticalState(gambleBoard),
   from: 9,
   expect: [11],
+  maxWidth: SINGLE_WIDTH,
 });
 
 const stuckBoard: FFQBanqiState['board'] = Array(32).fill(null);
@@ -141,4 +143,5 @@ export const FANFANQI_CANNON_NO_SHOT = fanfanqiMoveDiagram({
   state: tacticalState(stuckBoard),
   from: 9,
   expect: [],
+  maxWidth: SINGLE_WIDTH,
 });
