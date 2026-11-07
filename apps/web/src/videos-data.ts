@@ -1,3 +1,4 @@
+import { personNamesInText } from '@mistboard/game';
 // Curated video library data for /videos. Every YouTube entry was verified
 // against YouTube's oembed endpoint (https://www.youtube.com/oembed?url=...) on
 // the date in `addedAt`; `title` and `author` are the exact oembed values, so
@@ -1562,3 +1563,14 @@ export function isVideoLive(video: VideoEntry, now: number = Date.now()): boolea
 
 export const isShort = (video: VideoEntry): boolean =>
   video.source === 'youtube' && video.short === true;
+
+/** Page-script display copy; the catalog retains the source's exact strings. */
+export function videoDisplayCopy(
+  video: Pick<VideoEntry, 'title' | 'author'>,
+  locale: string,
+): { title: string; author: string } {
+  return {
+    title: personNamesInText(video.title, locale),
+    author: personNamesInText(video.author, locale),
+  };
+}

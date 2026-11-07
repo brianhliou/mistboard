@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { personNameForLocale } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { close, getPool, init, isInitialized } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
@@ -344,4 +345,27 @@ definePersistenceTests('xiangqi players', () => {
     assert.ok(games.every((game) => game.result !== '*' && game.moves.length > 0));
     assert.deepEqual(await playerPersistence.listXiangqiPlayerGames('unknown-player'), []);
   });
+});
+
+test('folded identities and own-script metadata survive page-script display', () => {
+  const players = foldPlayers(
+    [],
+    [
+      { name: '赵奕帆', group: 'men' },
+      { name: '于幼华', group: 'men' },
+      { name: '孙勇征', group: 'men' },
+      { name: '党斐', group: 'men' },
+    ],
+  );
+  assert.deepEqual(
+    players.map((p) => p.name).sort(),
+    ['赵奕帆', '于幼华', '孙勇征', '党斐'].sort(),
+  );
+  for (const p of players) {
+    const before = JSON.stringify(p);
+    personNameForLocale(p, 'zh-Hant');
+    assert.equal(personNameForLocale(p, 'zh-Hans'), p.name);
+    assert.equal(JSON.stringify(p), before);
+    assert.equal(p.slug, playerSlugBase(p.nameEn, p.name));
+  }
 });

@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { gameSpecForId } from '@mistboard/game';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CtaBlock } from './articles/types.js';
 import { renderBlock } from './articles.js';
 import { setResolvedVariantGrants } from './signed-in-state.js';
@@ -9,8 +10,8 @@ import {
 } from './variant-public-surfaces.js';
 
 // A visitor without a playtest grant must not get buttons into a dialog that
-// cannot offer that variant. Gomoku stands in for any playtest here; move this
-// file to the next one when it launches.
+// cannot offer that variant. Gomoku stands in for any playtest: it launched on
+// 2026-11-07, so each test hides it again, as it was while in playtest.
 const PLAYTEST_CTA: CtaBlock = {
   kind: 'cta',
   buttons: [
@@ -32,7 +33,13 @@ function links(row: HTMLElement): string[] {
 }
 
 describe('play CTAs for a playtest variant', () => {
+  const gomoku = gameSpecForId('gomoku');
+  const launchedSurface = gomoku.publicSurface;
+  beforeEach(() => {
+    gomoku.publicSurface = 'hidden';
+  });
   afterEach(() => {
+    gomoku.publicSurface = launchedSurface;
     setResolvedVariantGrants(undefined);
     document.body.replaceChildren();
   });

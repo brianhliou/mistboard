@@ -1,3 +1,4 @@
+import { personNameForLocale } from '@mistboard/game';
 // Player pages over the broadcast archive (docs-private/players/
 // players-surface-spec.md): /players, the index, and /players/<slug>, one
 // player with every board they sat at. Both read the derived index the server
@@ -187,9 +188,12 @@ function renderError(root: HTMLElement, err: unknown): void {
   root.replaceChildren(buildNav(), buildNotice('Players unavailable', message));
 }
 
-/** The Chinese name as the player writes it. */
-export function chineseName(player: Pick<PlayerRecord, 'name' | 'nameOwn'>): string {
-  return player.nameOwn ?? player.name;
+/** Person display follows the page script (2026-11-06). */
+export function chineseName(
+  player: Pick<PlayerRecord, 'name' | 'nameOwn'>,
+  locale: Locale = currentLocale(),
+): string {
+  return personNameForLocale(player, locale);
 }
 
 /** English with the Chinese beside it for an English reader; the Chinese
@@ -198,10 +202,10 @@ export function displayName(
   player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>,
   locale: Locale = currentLocale(),
 ): string {
-  if (locale !== 'en') return chineseName(player);
+  if (locale !== 'en') return chineseName(player, locale);
   return player.nameEn && player.nameEn !== player.name
-    ? `${player.nameEn} ${chineseName(player)}`
-    : chineseName(player);
+    ? `${player.nameEn} ${chineseName(player, locale)}`
+    : chineseName(player, locale);
 }
 
 /** The one name the locale reads: English for `en`, the player's own Chinese otherwise. */
@@ -286,9 +290,15 @@ export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): 
 export function matchesQuery(player: PlayerRecord, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [player.name, player.nameOwn, player.nameEn, player.federation, player.federationEn].some(
-    (s) => s?.toLowerCase().includes(q),
-  );
+  return [
+    player.name,
+    player.nameOwn,
+    personNameForLocale(player, 'zh-Hant'),
+    personNameForLocale(player, 'zh-Hans'),
+    player.nameEn,
+    player.federation,
+    player.federationEn,
+  ].some((s) => s?.toLowerCase().includes(q));
 }
 
 /** Men's or women's: the CXA list the player is on, else the events they
@@ -1296,7 +1306,13 @@ function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): 
     t('broadcast.playerFilterOpponent'),
     [
       ['', t('broadcast.playerFilterAnyOpponent')],
-      ...opponents.map((o) => [o.key, `${localName(o)} (${o.record.games})`] as [string, string]),
+      ...opponents.map(
+        (o) =>
+          [
+            o.key,
+            `${currentLocale() === 'en' ? (o.nameEn ?? o.name) : personNameForLocale(o, currentLocale())} (${o.record.games})`,
+          ] as [string, string],
+      ),
     ],
     filter.opponent ?? '',
     (value) => view.set({ ...filter, opponent: value || undefined }),
@@ -1711,7 +1727,10 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   vs.className = 'xqp-vs';
   vs.textContent = ' vs ';
   const them = document.createElement('span');
-  them.textContent = localName(board.opponent);
+  them.textContent =
+    currentLocale() === 'en'
+      ? (board.opponent.nameEn ?? personNameForLocale(board.opponent, 'en'))
+      : personNameForLocale(board.opponent, currentLocale());
   // Red is listed first on every board on the site; keep that order here.
   if (board.colour === 'red') who.append(me, vs, them);
   else who.append(them, vs, me);

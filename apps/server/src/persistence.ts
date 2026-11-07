@@ -399,6 +399,8 @@ export {
   upsertHistoricalXiangqiSource,
   XIANGQI_GAME_SORTS,
 } from './persistence-historical-xiangqi.js';
+export type { InboxEmailCandidate, InboxEmailQuery } from './persistence-inbox-email.js';
+export { listInboxEmailCandidates, markInboxEmailSent } from './persistence-inbox-email.js';
 export type {
   ActivePlayerEntry,
   BestRatingEntry,

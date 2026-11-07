@@ -124,7 +124,10 @@ test('Gomoku browser smoke runs only for a public spec in web/full releases', as
           baseArgs: () => ['--base', 'https://example.test'],
           npmCommand: (script, args) => [script, ...args],
           runTimed: (label, command) => calls.push({ label, command }),
-          runParallelSmokes: async () => {},
+          runParallelSmokes: async (smokes) => {
+            const gomoku = smokes.filter(({ command }) => command[0] === 'prod:smoke:gomoku');
+            assert.equal(gomoku.length, 1, 'full releases must smoke the Rapfi server family');
+          },
           tsImport: async (file) => {
             assert.equal(file, '/active-release/packages/game/src/game-specs.ts');
             return { isPublicGameSpec: publicSpecPredicate(specs) };
@@ -132,7 +135,7 @@ test('Gomoku browser smoke runs only for a public spec in web/full releases', as
         },
       );
       await runSmoke({ deployRequired: true, headRevision: 'revision' });
-      const gomoku = calls.filter(({ command }) => command[0] === 'prod:smoke:gomoku');
+      const gomoku = calls.filter(({ command }) => command[0] === 'prod:smoke:gomoku-browser');
       const expected = publicSurface !== 'hidden' && ['web', 'full'].includes(tier);
       assert.equal(gomoku.length, expected ? 1 : 0, `${publicSurface} / ${tier}`);
       if (expected) assert.equal(gomoku[0].command[2], 'https://example.test');

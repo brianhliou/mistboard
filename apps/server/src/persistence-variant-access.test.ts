@@ -28,24 +28,21 @@ const player = { id: 'user-1', accountRole: 'player' } as const;
 const other = { id: 'user-2', accountRole: 'player' } as const;
 const admin = { id: 'admin-1', accountRole: 'admin' } as const;
 
-test('HK mahjong and Gomoku are allowlisted; launched variants are not', () => {
+test('HK mahjong is allowlisted; launched Gomoku needs no grant', () => {
   assert.equal(isAllowlistedGameSpec('mahjong'), true);
-  assert.equal(isAllowlistedGameSpec('gomoku'), true);
+  assert.equal(isAllowlistedGameSpec('gomoku'), false);
   assert.equal(isAllowlistedGameSpec('xiangqi-mahjong'), false);
   assert.equal(isAllowlistedGameSpec('crazyhouse-xiangqi'), false);
   assert.equal(isAllowlistedGameSpec('xiangqi'), false);
   assert.equal(isAllowlistedGameSpec('not-a-spec'), false);
-  assert.deepEqual([...ALLOWLISTED_GAME_SPEC_IDS], ['mahjong', 'gomoku']);
+  assert.deepEqual([...ALLOWLISTED_GAME_SPEC_IDS], ['mahjong']);
 });
 
-test('hidden Gomoku requires an account grant or admin role for a fresh seat', async () => {
+test('public Gomoku admits guests and accounts without querying grants', async () => {
   const ungranted = db(0);
-  assert.equal(await mayPlayVariant(null, 'gomoku', ungranted.pool), false);
-  assert.equal(await mayPlayVariant(admin, 'gomoku', ungranted.pool), true);
+  for (const reader of [null, admin, player])
+    assert.equal(await mayPlayVariant(reader, 'gomoku', ungranted.pool), true);
   assert.equal(ungranted.calls.length, 0);
-  assert.equal(await mayPlayVariant(player, 'gomoku', ungranted.pool), false);
-  assert.deepEqual(ungranted.calls[0]?.values, ['user-1', 'gomoku']);
-  assert.equal(await mayPlayVariant(player, 'gomoku', db(1).pool), true);
 });
 
 test('a non-allowlisted variant is allowed without touching the database', async () => {

@@ -3,6 +3,7 @@ import {
   countText,
   localFederation,
   localName,
+  localPersonName,
   localPlace,
   localRoundName,
   localTitle,
@@ -82,4 +83,25 @@ describe('localTitle', () => {
     expect(localTitle('GM', 'en')).toBe('GM');
     expect(localTitle('FM', 'zh-Hans')).toBe('FM');
   });
+});
+
+it('selects only person forms, keeping source identities, teams and events intact', () => {
+  for (const [name, hant, wrong] of [
+    ['党斐', '党斐', '黨斐'],
+    ['于幼华', '于幼華', '於幼華'],
+    ['孙勇征', '孫勇征', '孫勇徵'],
+    ['赵奕帆', '趙奕帆', '趙奕帆'],
+  ]) {
+    const person = { name: name!, nameOwn: wrong! };
+    const source = JSON.stringify(person);
+    expect(localPersonName(person, 'zh-Hans')).toBe(name);
+    expect(localPersonName(person, 'zh-Hant')).toBe(hant);
+    expect(localPersonName(person, 'en')).toBe(wrong);
+    expect(JSON.stringify(person)).toBe(source);
+    expect(localName(person, 'zh-Hant')).toBe(name);
+  }
+  expect(localPersonName({ name: '赵奕帆', federation: '台湾' }, 'en')).toBe('趙奕帆');
+  expect(localPersonName({ name: '赵奕帆', nameEn: 'Chao Yi-fan' }, 'en')).toBe('Chao Yi-fan');
+  expect(localName({ name: '台湾', nameEn: 'Chinese Taipei' }, 'zh-Hans')).toBe('台湾');
+  expect(localName(league, 'zh-Hant')).toBe(league.name);
 });

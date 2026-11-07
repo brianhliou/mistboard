@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { dmEmailUnsubscribe } from './inbox-email-unsubscribe.js';
 
 // Placeholder only; all provider calls are replaced below.
 process.env.RESEND_API_KEY = 're_placeholder_for_tests';
@@ -47,6 +48,27 @@ test('transactional email never propagates an ID from a rejected send', async ()
     }),
     { ok: false, error: 'network_failure' },
   );
+});
+
+test('transactional email passes both RFC 8058 headers to the provider payload', async () => {
+  const { headers } = dmEmailUnsubscribe('user_123', {
+    MISTBOARD_ENGINE_SECRET: 'test-only-provider-signing-key',
+    MISTBOARD_HOST: 'https://mistboard.example',
+  });
+  const result = await sendTransactionalEmail(
+    { ...message, headers },
+    {
+      fetchImpl: async (_url, init) => {
+        const payload = JSON.parse(String(init?.body));
+        assert.deepEqual(payload.headers, headers);
+        assert.equal(payload.reply_to, message.replyTo);
+        // These are provider email headers, not HTTP transport headers.
+        assert.equal(new Headers(init?.headers).has('List-Unsubscribe'), false);
+        return Response.json({ id: 'resend-dm-1' });
+      },
+    },
+  );
+  assert.deepEqual(result, { ok: true, providerEmailId: 'resend-dm-1' });
 });
 
 test('transactional email preserves acceptance without inventing IDs from missing or malformed bodies', async () => {

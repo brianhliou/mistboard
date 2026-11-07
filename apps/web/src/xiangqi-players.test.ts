@@ -369,3 +369,18 @@ describe('rights note', () => {
     expect(teams.querySelector('.xqb-rights-note')).toBeNull();
   });
 });
+
+it('uses the page script while rejecting planted wrong surname forms (#918)', () => {
+  for (const [name, hant, wrong] of [
+    ['党斐', '党斐', '黨斐'],
+    ['于幼华', '于幼華', '於幼華'],
+    ['孙勇征', '孫勇征', '孫勇徵'],
+    ['赵奕帆', '趙奕帆', '趙奕帆'],
+  ]) {
+    const p = { ...player({ name: name!, games: 1 }), nameOwn: wrong! };
+    expect(displayName(p, 'zh-Hant')).toBe(hant);
+    expect(displayName(p, 'zh-Hans')).toBe(name);
+    expect(matchesQuery(p, hant!)).toBe(true);
+    expect(p.name).toBe(name);
+  }
+});
