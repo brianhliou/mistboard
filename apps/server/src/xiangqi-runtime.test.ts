@@ -68,6 +68,7 @@ test('Xiangqi direct runtime creation seeds a replay-backed room', () => {
       at: 123,
       roomId: 'xq-runtime',
       gameSpecId: XIANGQI_SPEC_ID,
+      setup: { progressClockLimit: 120 },
     },
   ]);
   assert.equal(result.room.projection.state.id, 'xq-runtime');

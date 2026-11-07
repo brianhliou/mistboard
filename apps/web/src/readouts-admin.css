@@ -1,104 +1,159 @@
-/* Unlisted admin readout history (/readouts). Dense internal tool on the shared
-   site tokens, laid out like /accounts. */
-
 .readouts-admin-shell {
-  max-width: 860px;
+  max-width: 760px;
 }
-
+.readouts-admin-latest {
+  line-height: 1.6;
+}
 .readouts-admin-sub {
+  color: var(--site-muted);
+  font-size: 14px;
   margin: 0 0 16px;
-  color: var(--site-muted, #8a8f98);
-  font-size: 0.9rem;
 }
-
-.readouts-admin-subheading {
-  margin: 28px 0 8px;
-  font-size: 1.05rem;
-}
-
-.readouts-admin-status {
-  color: var(--site-muted, #8a8f98);
-  padding: 16px 0;
-}
-
 .readouts-admin-meta {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 12px;
-  color: var(--site-muted, #8a8f98);
-  font-size: 0.88rem;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0 8px;
+  color: var(--site-muted);
+  font-size: 13px;
 }
-
 .readouts-admin-verdict {
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--site-radius, 6px);
-  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
 }
-
-/* Verdict colour carries a border and a label, never colour alone: the same
-   badge has to read on a monochrome screen and to a colour-blind reader. */
 .readouts-admin-verdict.is-healthy {
-  border-color: rgba(106, 168, 79, 0.5);
-  color: #6aa84f;
+  color: var(--site-accent-strong);
 }
-
-.readouts-admin-verdict.is-watch {
-  border-color: rgba(214, 167, 61, 0.5);
-  color: #d6a73d;
+.readouts-admin-verdict.is-watch,
+.readouts-admin-verdict.is-action {
+  color: #986c15;
 }
-
-.readouts-admin-verdict.is-action,
-.readouts-admin-verdict.is-blocked {
-  border-color: rgba(200, 86, 74, 0.55);
+.readouts-admin-verdict.is-blocked,
+.readouts-admin-verdict.is-unknown {
   color: #c8564a;
 }
-
-.readouts-admin-markdown {
-  margin: 0;
-  padding: 14px 16px;
-  overflow-x: auto;
-  border: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--site-radius, 6px);
-  background: var(--site-panel-soft);
-  color: var(--site-text);
-  font-size: 0.86rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
+.readouts-admin-toolbar {
+  margin: 16px 0;
 }
-
-.readouts-admin-history {
-  overflow-x: auto;
+.readouts-admin-toolbar label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--site-muted);
 }
-
-.readouts-admin-table {
+.readouts-admin-toolbar select {
+  min-height: 44px;
   width: 100%;
-  min-width: 560px;
-  border-collapse: collapse;
-  font-size: 0.92rem;
-}
-
-.readouts-admin-table th,
-.readouts-admin-table td {
-  text-align: left;
-  vertical-align: middle;
+  max-width: 380px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
+  font-size: 16px;
+  color: var(--site-text);
+  background: var(--site-panel-soft);
+  border: 1px solid var(--site-border);
+  border-radius: 5px;
 }
-
-.readouts-admin-table th {
+.readouts-admin-numbers {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0 12px;
+  font-size: 14px;
+}
+.readouts-admin-numbers th,
+.readouts-admin-numbers td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--site-border);
+  text-align: left;
+  vertical-align: top;
+}
+.readouts-admin-numbers thead th {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.readouts-admin-numbers tbody th {
+  font-weight: 400;
+  width: 38%;
+}
+.readouts-admin-number {
   font-weight: 600;
-  color: var(--site-muted, #8a8f98);
-  white-space: nowrap;
-}
-
-.readouts-admin-table td:nth-child(4),
-.readouts-admin-table td:nth-child(5),
-.readouts-admin-table td:nth-child(6) {
   font-variant-numeric: tabular-nums;
+}
+.readouts-admin-numbers td:last-child {
+  color: var(--site-muted);
+  font-size: 13px;
+}
+.readouts-admin-numbers td.is-up {
+  color: var(--site-accent-strong);
+}
+.readouts-admin-definitions {
+  color: var(--site-muted);
+  font-size: 13px;
+}
+.readouts-admin-subheading {
+  margin: 28px 0 8px;
+  font-size: 18px;
+}
+.readouts-admin-action {
+  padding-left: 14px;
+  border-left: 3px solid #b68b36;
+  margin: 16px 0 24px;
+}
+.readouts-admin-action.is-urgent {
+  border-color: #c8564a;
+}
+.readouts-admin-action.is-resolved {
+  border-color: var(--site-accent-strong);
+}
+.readouts-admin-action-state {
+  font-size: 12px;
+  color: var(--site-muted);
+  margin: 0;
+}
+.readouts-admin-action h3 {
+  font-size: 16px;
+  margin: 4px 0 8px;
+}
+.readouts-admin-action p {
+  margin: 8px 0;
+}
+.readouts-admin-shell a {
+  color: var(--site-accent-strong);
+  text-underline-offset: 3px;
+}
+.readouts-admin-latest a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.readouts-admin-context {
+  padding-left: 20px;
+}
+.readouts-admin-context li {
+  margin: 10px 0;
+}
+.readouts-admin-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 28px;
+  border-top: 1px solid var(--site-border);
+  padding-top: 12px;
+  font-size: 14px;
+}
+.readouts-admin-footer button {
+  border: 0;
+  background: none;
+  padding: 8px 0;
+  min-height: 44px;
+  color: var(--site-muted);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+.readouts-admin-markdown {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }

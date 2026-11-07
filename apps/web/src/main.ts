@@ -15,12 +15,7 @@ import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
-import {
-  applyInternalTag,
-  captureException,
-  setPostHogInstance,
-  trackLocaleResolved,
-} from './analytics.js';
+import { captureException, initializeAnalytics, trackLocaleResolved } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
   chunkLoadFailureContext,
@@ -148,47 +143,7 @@ if (!isEmbedDocument)
       /* banner stays hidden; WS broadcast still covers in-game users */
     });
 
-const phKey = import.meta.env.VITE_POSTHOG_KEY;
-const phHost = import.meta.env.VITE_POSTHOG_HOST;
-if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
-  void import('posthog-js').then(({ default: posthog }) => {
-    posthog.init(phKey, {
-      api_host: phHost,
-      autocapture: false,
-      capture_pageview: false,
-      persistence: 'localStorage',
-      disable_session_recording: true,
-      respect_dnt: true,
-      // Real-user load timing: web vitals (LCP/CLS/FCP/INP) so we can actually
-      // see homepage load performance and catch regressions. network_timing is a
-      // session-replay feature (disabled here), so leave it off — web_vitals is
-      // independent of it.
-      capture_performance: { web_vitals: true, network_timing: false },
-      // Unhandled errors + promise rejections surface as $exception events
-      // (Error Tracking), so a broken page reports itself instead of going dark.
-      capture_exceptions: true,
-      // Drop benign browser noise before ingestion. "ResizeObserver loop
-      // completed with undelivered notifications" is a synthetic warning
-      // Chromium fires at window.onerror when an observer callback defers a
-      // layout to the next frame; nothing breaks and it never reproduces on
-      // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
-      // Errors thrown while a stale-chunk reload is in flight are the reload's
-      // own side effect (lazy imports resolve undefined until it lands), so
-      // they are dropped too; the failed chunk itself is not an app defect.
-      before_send: (event) => {
-        if (event?.event === '$exception' && chunkReloadPending()) return null;
-        const message = event?.properties?.$exception_values?.[0];
-        if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
-          return null;
-        }
-        return event;
-      },
-    });
-    applyInternalTag(posthog);
-    posthog.capture('$pageview', { path: window.location.pathname });
-    setPostHogInstance(posthog);
-  });
-}
+void initializeAnalytics(isEmbedDocument);
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -248,7 +203,10 @@ const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
-const wantsClubWashington = path === '/washington-xiangqi';
+const wantsClubWashington =
+  path === '/washington-xiangqi' ||
+  path === '/zh-hans/washington-xiangqi' ||
+  path === '/zh-hant/washington-xiangqi';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -331,7 +289,10 @@ const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
+const wantsPuzzleReplay = path === '/puzzles/replay';
+const wantsPuzzleHistory = path === '/puzzles/history';
 const puzzleId = puzzleIdFromPath(path);
+const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
 // dashboard share the gate; the route is invisible until the flag is on.
@@ -347,11 +308,10 @@ const wantsRatingStats = path === '/player/rating-stats';
 // Unlisted admin game browser. No nav entry; the page itself is admin-gated by
 // the /api/admin/games/query endpoint (open in local dev). Direct-URL only.
 const wantsDatabase = path === '/database';
-// Public site statistics (/stats) and the admin superset (/metrics), one module.
-// /metrics adds account count/growth + results from /api/stats (admin-gated,
-// open in local dev), so it stays unlisted and direct-URL only like /database.
+// Public statistics are separate from the unified admin Ops area.
 const wantsStats = path === '/stats';
-const wantsMetrics = path === '/metrics';
+// Preserve old bookmarks and email links through the Ops canonicalizer.
+const wantsOps = path === '/ops' || path === '/metrics' || path === '/readouts';
 // Title verification: player-facing request form. Linked from profile copy,
 // no nav entry.
 const wantsVerifyTitle = path === '/verify-title';
@@ -372,9 +332,6 @@ const wantsTitlesAdmin = path === '/titles';
 // Unlisted admin engine tracker. No nav entry; admin-gated by /api/admin/engines
 // (open in local dev). Direct-URL only.
 const wantsEngines = path === '/engines';
-// Unlisted admin readout history (/readouts): the scheduled operating readout,
-// admin-gated by /api/admin/readouts (open in local dev).
-const wantsReadoutsAdmin = path === '/readouts';
 // Unlisted admin player roster (/accounts): every registered account. Admin-
 // gated by /api/admin/accounts (open in local dev); reached from the account
 // menu's admin group.
@@ -616,11 +573,9 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./metrics.js').then(({ mountMetrics }) => mountMetrics(appRoot, { admin: false })),
   );
-} else if (wantsMetrics) {
-  setTitle('Metrics');
-  void mountOrReport(() =>
-    import('./metrics.js').then(({ mountMetrics }) => mountMetrics(appRoot, { admin: true })),
-  );
+} else if (wantsOps) {
+  setTitle('Ops');
+  void mountOrReport(() => import('./ops-admin.js').then(({ mountOps }) => mountOps(appRoot)));
 } else if (wantsVerifyTitle) {
   setTitleKey('verifyTitle.heading');
   void mountOrReport(() =>
@@ -649,11 +604,6 @@ if (replaySample) {
   setTitle('Title verification');
   void mountOrReport(() =>
     import('./titles-admin.js').then(({ mountTitlesAdmin }) => mountTitlesAdmin(appRoot)),
-  );
-} else if (wantsReadoutsAdmin) {
-  setTitle('Readouts');
-  void mountOrReport(() =>
-    import('./readouts-admin.js').then(({ mountReadoutsAdmin }) => mountReadoutsAdmin(appRoot)),
   );
 } else if (wantsAccountsAdmin) {
   setTitle('Accounts');
@@ -837,6 +787,23 @@ if (replaySample) {
         return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
       },
     ),
+  );
+} else if (wantsPuzzleDashboard) {
+  setTitleKey('puzzle.dashboardTitle');
+  void mountOrReport(() =>
+    import('./puzzles/dashboard.js').then(({ mountPuzzleDashboard }) =>
+      mountPuzzleDashboard(appRoot),
+    ),
+  );
+} else if (wantsPuzzleHistory) {
+  setTitleKey('puzzle.historyTitle');
+  void mountOrReport(() =>
+    import('./puzzles/history.js').then(({ mountPuzzleHistory }) => mountPuzzleHistory(appRoot)),
+  );
+} else if (wantsPuzzleReplay) {
+  setTitleKey('nav.puzzles');
+  void mountOrReport(() =>
+    import('./puzzles.js').then(({ mountPuzzles }) => mountPuzzles(appRoot)),
   );
 } else if (wantsPuzzles) {
   setTitleKey('nav.puzzles');
@@ -1079,7 +1046,6 @@ if (replaySample) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
 } else if (wantsClubWashington) {
-  document.title = 'Washington Xiangqi (华州象棋)';
   void mountOrReport(() =>
     import('./club-washington-page.js').then(({ mountClubWashington }) =>
       mountClubWashington(appRoot),
@@ -1203,7 +1169,9 @@ function liveRoomIdFromPath(value: string): string | null {
 
 function puzzleIdFromPath(value: string): string | null {
   const match = value.match(/^\/puzzles\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]!) : null;
+  // Fixed pages under /puzzles/ that are not puzzle ids.
+  if (!match || match[1] === 'replay' || match[1] === 'history') return null;
+  return decodeURIComponent(match[1]!);
 }
 
 function xiangqiBroadcastTourSlugFromPath(value: string): string | null {

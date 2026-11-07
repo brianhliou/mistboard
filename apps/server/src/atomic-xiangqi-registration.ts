@@ -3,10 +3,8 @@
  * generic tenant room factory, hydration, WebSocket runtime and HTTP create
  * route.
  *
- * Scope: PvP, PvE against the patched Fairy-Stockfish ladder, a lobby seek
- * and a TV channel, all unrated; no correspondence. Listed 2026-09-17 with the
- * rules page (rails, tiles, the product profile); the play menu is the one
- * switch still closed, on the web side.
+ * Retained for historical room hydration, replay, exports and share cards.
+ * New play is refused by the retired-spec request gate; no native bot runs.
  */
 
 import type {
@@ -20,7 +18,7 @@ import { atomicXiangqiFen } from '@mistboard/game';
 import {
   ATOMIC_XIANGQI_ANALYSIS_DEPTH,
   ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
-} from './atomic-xiangqi-fsf-engine.js';
+} from './atomic-xiangqi-engine-history.js';
 import {
   atomicXiangqiPgnStyle,
   atomicXiangqiPgnWriter,
@@ -32,7 +30,6 @@ import { boardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleAtomicXiangqiCreate, requestsAtomicXiangqi } from './routes/atomic-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
-import { scheduleAtomicXiangqiEngineMove } from './server-atomic-xiangqi-engine.js';
 import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -77,9 +74,8 @@ export type AtomicXiangqiLiveRoomCreation =
 
 export const atomicXiangqiRooms = new Map<string, AtomicXiangqiRuntimeRoom>();
 
-const atomicXiangqiWs = createTenantWsRuntime(atomicXiangqiTenant, {
-  scheduleEngineMove: (ctx, room) => scheduleAtomicXiangqiEngineMove(ctx, room),
-});
+// Historical rooms still hydrate and replay; no live engine scheduler is attached.
+const atomicXiangqiWs = createTenantWsRuntime(atomicXiangqiTenant);
 
 export async function createAtomicXiangqiRoom(
   timeControl?: RoomTimeControl,

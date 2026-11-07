@@ -8,6 +8,7 @@ import { maybePlayLowTimeSound } from './live-sound.js';
 import { type LiveRefs, liveState } from './live-state.js';
 import { connectionNoticeMode } from './live-status.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
+import { seatDiscEl } from './seat-disc.js';
 import { createClockDisplayTime, isClockReconnecting } from './variant-tenant/clock-projection.js';
 import { formatClock, formatDayClock, isColor } from './web-utils.js';
 
@@ -55,6 +56,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       // Only a real seat name links; the capitalized colour fallback names
       // nobody, so it must not carry the seat's profile href.
       playerLine.append(
+        seatDiscEl(color, 'clock-seat-disc'),
         playerNameEl(
           name,
           liveState.seatDisplayNames[color]
@@ -142,6 +144,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     // 'You' / 'Bot' / the colour word are placeholders for an unnamed seat, so
     // they stay plain text; only a server-supplied name gets its profile link.
     playerLine.append(
+      seatDiscEl(color, 'clock-seat-disc'),
       playerNameEl(
         playerName,
         serverName ? profileTargetFor(liveState.seatProfiles[color]) : null,

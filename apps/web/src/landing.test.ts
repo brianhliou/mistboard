@@ -138,6 +138,7 @@ describe('landing shell', () => {
           '轉播運維',
           'href="/database"',
           'href="/readouts"',
+          'href="/ops"',
           'href="/broadcast/xiangqi/ops"',
         ]) {
           expect(html, `${path}: ${label}`).not.toContain(label);
@@ -260,11 +261,11 @@ describe('landing shell', () => {
     const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
 
     expect(about?.textContent).toBe(
-      'Chinese chess and original strategy games. Free and open source. About Mistboard...',
+      "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
     );
     expect(link?.textContent).toBe('About Mistboard...');
     expect(about?.childNodes[0]?.textContent).toBe(
-      'Chinese chess and original strategy games. Free and open source. ',
+      "Chinese chess and the world's classic strategy games. Free and open source. ",
     );
   });
 });

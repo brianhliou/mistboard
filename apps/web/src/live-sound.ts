@@ -16,6 +16,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { readAccountPreferences } from './account-preferences.js';
+import { afterBoardSettles } from './board-anim.js';
 import {
   liveState,
   type RoomMode,
@@ -94,14 +95,21 @@ export function terminalSoundPlan(
     : [{ kind: 'lose', delayMs: 0 }];
 }
 
+// The result sounds when the board settles (#825): the move that ended the
+// game glides in the render after the snapshot that carries the result, so the
+// sound is chained on that glide's end (board-anim.ts afterBoardSettles). With
+// nothing moving (reduced motion, a resignation, a flag) it plays at once.
 export function playTerminalPlan(result: 'win' | 'lose' | 'draw', reason: string | null): void {
-  for (const step of terminalSoundPlan(result, reason)) {
-    if (step.delayMs > 0) {
-      window.setTimeout(() => sound?.play(step.kind), step.delayMs);
-    } else {
-      sound?.play(step.kind);
+  const plan = terminalSoundPlan(result, reason);
+  afterBoardSettles(() => {
+    for (const step of plan) {
+      if (step.delayMs > 0) {
+        window.setTimeout(() => sound?.play(step.kind), step.delayMs);
+      } else {
+        sound?.play(step.kind);
+      }
     }
-  }
+  });
 }
 
 // Low-time warning: once per game, when the seated player's clock first dips

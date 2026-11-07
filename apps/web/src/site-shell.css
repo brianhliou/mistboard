@@ -1,3 +1,16 @@
+/* Accessible page names for board tools without a visible title row. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .site-nav {
   /* Shared navigation is a brand-token boundary. Route palettes can safely
      redefine generic action colors without recoloring nav dropdowns. */

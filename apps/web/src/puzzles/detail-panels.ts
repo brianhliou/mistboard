@@ -4,13 +4,24 @@
  * and Solution panels with the next-puzzle CTA + thumb vote.
  */
 
+import {
+  getStandardXiangqiLegalMoves,
+  standardXiangqiEngineFen,
+  XIANGQI_SPEC_ID,
+  type XiangqiGameState,
+} from '@mistboard/game';
+import { track } from '../analytics.js';
 import { t } from '../i18n/catalog.js';
 import { deviceIdForBrowser } from '../live-state.js';
+import { practicePositionHref } from '../practice-position-params.js';
+import { buildUiIcon } from '../ui-icon.js';
 import {
   colorLabel,
+  isPuzzleComplete,
   isSessionSolved,
   type PuzzleNavigation,
   type PuzzleSession,
+  type PuzzleState,
 } from './adapter.js';
 import { puzzleBoardAdapter } from './registry.js';
 
@@ -27,10 +38,11 @@ export function feedbackPanel(
   navigation: PuzzleNavigation,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
+  _displayState: PuzzleState,
 ): HTMLElement {
   // Revealed first: a played-out mate line finishes the board, which would
   // otherwise read as solved and show "Success!" for a give-up.
-  if (session.revealed) return revealedPanel(session, navigation);
+  if (session.revealed) return revealedPanel(session, navigation, renderSession, assist);
   if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession, assist);
 
   const panel = document.createElement('div');
@@ -100,7 +112,12 @@ function assistRow(
 // Shown after "View solution": the answer has been played out and the board is a
 // locked replay to scrub. Distinct from the solved panel (no "Success!") — a
 // reveal counts as a give-up, not a win.
-function revealedPanel(session: PuzzleSession, navigation: PuzzleNavigation): HTMLElement {
+function revealedPanel(
+  session: PuzzleSession,
+  navigation: PuzzleNavigation,
+  renderSession: () => void,
+  assist: PuzzleAssistHooks,
+): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel puzzle-revealed-panel';
 
@@ -117,7 +134,9 @@ function revealedPanel(session: PuzzleSession, navigation: PuzzleNavigation): HT
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
-  panel.append(title, cont, puzzleReportControl(session));
+  panel.append(title, cont);
+  panel.append(solvedFeedback(session, renderSession, assist));
+  panel.append(puzzleReportControl(session));
   return panel;
 }
 
@@ -146,6 +165,17 @@ function solvedPanel(
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
+  panel.append(title, cont);
+  panel.append(solvedFeedback(session, renderSession, assist));
+  panel.append(puzzleReportControl(session));
+  return panel;
+}
+
+function solvedFeedback(
+  session: PuzzleSession,
+  renderSession: () => void,
+  assist: PuzzleAssistHooks,
+): HTMLElement {
   const feedbackRow = document.createElement('div');
   feedbackRow.className = 'puzzle-solved-feedback';
   // Standard xiangqi now gets an inline local-engine analysis panel below (see
@@ -160,14 +190,61 @@ function solvedPanel(
     puzzleVoteButton('down', session, renderSession, assist),
   );
   feedbackRow.append(prompt, votes);
+  return feedbackRow;
+}
 
-  panel.append(title, cont, feedbackRow, puzzleReportControl(session));
-  return panel;
+export function puzzlePlayPosition(
+  session: PuzzleSession,
+  displayState: PuzzleState,
+): HTMLAnchorElement | null {
+  if (!isPuzzleComplete(session)) return null;
+  // Use the board's replay-aware state, including steps before a final mate.
+  // This practice route only understands standard xiangqi.
+  if (session.puzzle.variant !== XIANGQI_SPEC_ID || !session.puzzle.sideToMove) return null;
+  const state = displayState as XiangqiGameState;
+  if (state.status.type !== 'playing' || getStandardXiangqiLegalMoves(state).length === 0)
+    return null;
+
+  const link = document.createElement('a');
+  link.className = 'puzzle-play-position';
+  link.dataset.puzzlePlayPosition = 'true';
+  // A quiet text link under Next puzzle, kept out of the vote row so it does
+  // not read as a third rating button.
+  link.title = t('lobby.panelTabComputer');
+  // The words hide in the phone strip; the label keeps the icon named.
+  link.setAttribute('aria-label', link.title);
+  const label = document.createElement('span');
+  label.textContent = link.title;
+  link.append(buildUiIcon('play-engine'), label);
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.href = practicePositionHref(
+    standardXiangqiEngineFen(state),
+    'mate',
+    session.puzzle.sideToMove,
+  );
+  const ply = session.viewPly;
+  link.addEventListener('click', () => {
+    track('puzzle_play_position', {
+      puzzle_id: session.puzzle.id,
+      outcome: session.revealed ? 'revealed' : session.failed ? 'failed' : 'solved',
+      ply,
+    });
+  });
+  return link;
 }
 
 const reportStates = new WeakMap<
   PuzzleSession,
-  { pending: boolean; sent: boolean; reason: string }
+  {
+    pending: boolean;
+    sent: boolean;
+    reason: string;
+    dialog?: HTMLDialogElement;
+    trigger?: HTMLButtonElement;
+    home?: HTMLElement;
+    closeOnNavigation?: () => void;
+  }
 >();
 
 function puzzleReportControl(session: PuzzleSession): HTMLElement {
@@ -177,14 +254,52 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
     reportStates.set(session, state);
   }
   const reportState = state;
-  const details = document.createElement('details');
+  const details = document.createElement('div');
   details.className = 'puzzle-report';
-  const link = document.createElement('summary');
+  const link = document.createElement('button');
+  link.type = 'button';
   link.className = 'puzzle-report-link';
   link.textContent = reportState.sent ? t('puzzle.reportSent') : t('puzzle.reportProblem');
   details.append(link);
-  if (reportState.sent) return details;
+  reportState.trigger = link;
+  reportState.home = details;
+  if (reportState.sent) {
+    link.disabled = true;
+    return details;
+  }
+  const open = (): void => {
+    const dialog = reportState.dialog!;
+    // Solution playback rebuilds the trainer. Keep an open form outside that
+    // subtree so its focus, pending send and error feedback survive each ply.
+    document.body.append(dialog);
+    dialog.showModal();
+    window.addEventListener('popstate', closeOnNavigation);
+  };
+  reportState.closeOnNavigation ??= () => reportState.dialog?.close();
+  const closeOnNavigation = reportState.closeOnNavigation;
+  link.addEventListener('click', open);
+  if (reportState.dialog) {
+    if (!reportState.dialog.open) details.append(reportState.dialog);
+    return details;
+  }
 
+  const dialog = document.createElement('dialog');
+  reportState.dialog = dialog;
+  dialog.className = 'puzzle-report-dialog';
+  dialog.setAttribute('aria-label', t('puzzle.reportProblem'));
+  const heading = document.createElement('h2');
+  heading.textContent = t('puzzle.reportProblem');
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'puzzle-feedback-skip';
+  close.textContent = t('setup.cancel');
+  close.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => {
+    window.removeEventListener('popstate', closeOnNavigation);
+    if (reportState.home?.isConnected) reportState.home.append(dialog);
+    else dialog.remove();
+    reportState.trigger?.focus({ preventScroll: true });
+  });
   const form = document.createElement('form');
   const label = document.createElement('label');
   label.textContent = t('puzzle.reportReasonLabel');
@@ -214,8 +329,9 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
   send.disabled = reportState.pending;
   const status = document.createElement('p');
   status.setAttribute('role', 'status');
-  form.append(label, send, status);
-  details.append(form);
+  form.append(label, send, close, status);
+  dialog.append(heading, form);
+  details.append(dialog);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (reportState.pending || reportState.sent) return;
@@ -239,8 +355,11 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
       });
       if (!response.ok) throw new Error('report failed');
       reportState.sent = true;
-      link.textContent = t('puzzle.reportSent');
+      reportState.trigger!.textContent = t('puzzle.reportSent');
+      reportState.trigger!.setAttribute('role', 'status');
+      reportState.trigger!.disabled = true;
       form.hidden = true;
+      dialog.close();
     } catch {
       status.textContent = t('puzzle.reportFailed');
     } finally {

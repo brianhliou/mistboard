@@ -16,7 +16,8 @@
 import {
   type AbortReason,
   applyStandardXiangqiMove,
-  createInitialXiangqiState,
+  createStandardXiangqiStateFromSetup,
+  DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT,
   getStandardXiangqiPlayerView,
   isStandardXiangqiLegalMove,
   type StandardXiangqiPlayerView,
@@ -110,7 +111,8 @@ export const xiangqiTenant: XiangqiTenant = {
   enabled: xiangqiEnabled,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   rules: {
-    createInitialState: createInitialXiangqiState,
+    createSetup: () => ({ progressClockLimit: DEFAULT_STANDARD_PROGRESS_CLOCK_LIMIT }),
+    createInitialState: createStandardXiangqiStateFromSetup,
     // Apply the move, then enforce the chasing rule: a three-fold repetition
     // reached by one side's perpetual check is a LOSS for that side, not a draw.
     // Real xiangqi (AXF/WXF/CXA) has never scored it as a draw, and without this
@@ -121,7 +123,10 @@ export const xiangqiTenant: XiangqiTenant = {
     applyMove: (state, move) => {
       const next = applyStandardXiangqiMove(state, move);
       if (next.status.type === 'finished' && next.status.reason === 'repetition') {
-        const loser = xiangqiPerpetualCheckLoser(next.moveLog ?? []);
+        const loser = xiangqiPerpetualCheckLoser(
+          next.moveLog ?? [],
+          createStandardXiangqiStateFromSetup(state.id, state),
+        );
         if (loser) {
           return {
             ...next,

@@ -51,15 +51,12 @@ export type LiveGameAdmissionResult =
   | { ok: true; reservation: LiveGameReservation }
   | { ok: false; roomId: string };
 
-function identityKeys(identity: LiveGameIdentity): string[] {
-  return [
-    ...(identity.userId ? [`user:${identity.userId}`] : []),
-    ...(identity.deviceId ? [`device:${identity.deviceId}`] : []),
-  ];
-}
-
-function samePlayer(a: LiveGameIdentity, b: LiveGameIdentity): boolean {
-  return !!((a.userId && a.userId === b.userId) || (a.deviceId && a.deviceId === b.deviceId));
+function samePlayer(requester: LiveGameIdentity, owner: LiveGameIdentity): boolean {
+  // Signed-in requesters use their account exclusively. A guest can still
+  // find a seat from this browser after signing out.
+  return requester.userId
+    ? requester.userId === owner.userId
+    : !!requester.deviceId && requester.deviceId === owner.deviceId;
 }
 
 /**
@@ -70,17 +67,15 @@ function samePlayer(a: LiveGameIdentity, b: LiveGameIdentity): boolean {
  * store, so a restart needs no reservation cache to find a running game.
  */
 export class LiveGameAdmission {
-  private readonly reservations = new Map<string, LiveGameReservation>();
+  private readonly reservations = new Map<LiveGameReservation, LiveGameIdentity>();
   private reservationTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: AdmissionOptions) {}
 
   async find(identity: LiveGameIdentity): Promise<string | null> {
-    const keys = identityKeys(identity);
-    if (keys.length === 0) return null;
-    for (const key of keys) {
-      const pending = this.reservations.get(key);
-      if (pending) return pending.roomId;
+    if (!identity.userId && !identity.deviceId) return null;
+    for (const [pending, owner] of this.reservations) {
+      if (samePlayer(identity, owner)) return pending.roomId;
     }
     const knownRooms = new Set<string>();
     const tenantRooms: Iterable<ReadonlyMap<string, AdmissionRoom>> =
@@ -109,11 +104,10 @@ export class LiveGameAdmission {
   }
 
   async reserve(identity: LiveGameIdentity, roomId: string): Promise<LiveGameAdmissionResult> {
-    const keys = identityKeys(identity);
-    if (keys.length === 0 || !roomId)
+    if ((!identity.userId && !identity.deviceId) || !roomId)
       throw new Error('live game reservation requires identity and room');
     // Serialize check + publication, including the async persistence read.
-    // Both account and device aliases participate in the same critical section.
+    // Account and guest requests participate in the same critical section.
     const prior = this.reservationTail;
     let unlock = () => {};
     this.reservationTail = new Promise<void>((resolve) => {
@@ -126,12 +120,12 @@ export class LiveGameAdmission {
       const reservation: LiveGameReservation = {
         roomId,
         release: () => {
-          for (const key of keys) {
-            if (this.reservations.get(key) === reservation) this.reservations.delete(key);
-          }
+          this.reservations.delete(reservation);
         },
       };
-      for (const key of keys) this.reservations.set(key, reservation);
+      // Keep each owner's browser attribution: several accounts may share a
+      // browser, and releasing one must leave the others visible to guests.
+      this.reservations.set(reservation, { ...identity });
       return { ok: true, reservation };
     } finally {
       unlock();

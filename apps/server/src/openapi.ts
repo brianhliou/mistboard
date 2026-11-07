@@ -11,7 +11,8 @@
 // deliberately absent; documenting them would promise a contract they do not
 // have. Version 0: shapes may change, and the description says so.
 
-import { XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
+import { isPublicGameSpec, XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
 
 type Schema = Record<string, unknown>;
 
@@ -59,6 +60,7 @@ export const WATCH_CHANNEL_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'gomoku',
   'engines',
 ] as const;
 
@@ -69,6 +71,10 @@ const GAME_ID_NOTE =
   'request line, so it takes no query string at all.';
 
 export function buildOpenApiDocument(origin: string): Record<string, unknown> {
+  // Keep hidden playtest channels out of the public API reference.
+  const watchChannelIds = WATCH_CHANNEL_IDS.filter(
+    (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
+  );
   const gameRecord: Schema = {
     type: 'object',
     description: 'A finished game as the site lists it.',
@@ -515,7 +521,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         parameters: [
           query(
             'channel',
-            { type: 'string', enum: [...WATCH_CHANNEL_IDS], default: 'top' },
+            { type: 'string', enum: [...watchChannelIds], default: 'top' },
             'Which channel. The set is what /watch offers and can change as variants launch.',
           ),
           query(
@@ -553,7 +559,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         parameters: [
           query(
             'channel',
-            { type: 'string', enum: [...WATCH_CHANNEL_IDS], default: 'top' },
+            { type: 'string', enum: [...watchChannelIds], default: 'top' },
             'Which channel.',
           ),
           query('room', { type: 'string' }, 'The room you are following.'),

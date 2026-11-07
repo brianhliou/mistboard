@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import {
   createForumTranslationService,
@@ -6,6 +7,7 @@ import {
   type ForumTranslationDeps,
   forumContentHash,
   forumTranslationCacheHash,
+  planForumTranslation,
   TranslationFailedError,
   translationNeeded,
   translationSystemPrompt,
@@ -131,12 +133,12 @@ function makeDeps(
       return text === null ? null : { kind, id, text };
     },
     async getCached(key) {
-      const hit = cache.get(`${key.contentHash}:${key.targetLocale}:${key.model}`);
+      const hit = cache.get(`${key.contentHash}:${key.targetLocale}`);
       return hit ? { translatedText: hit, createdAt: new Date(0) } : null;
     },
     async store(input) {
       stored.push(input);
-      cache.set(`${input.contentHash}:${input.targetLocale}:${input.model}`, input.translatedText);
+      cache.set(`${input.contentHash}:${input.targetLocale}`, input.translatedText);
     },
     ...overrides,
   };
@@ -179,6 +181,79 @@ test('service: identical text under a different post id shares the translation',
   assert.equal(again.status, 'ok');
   assert.equal(again.status === 'ok' && again.cached, true);
   assert.equal(calls.length, 1);
+});
+
+test('service: prompt and model changes preserve stored translations without spending', async () => {
+  const { deps, calls, stored } = makeDeps();
+  deps.promptVersion = 'forum-translation-prompt-v2';
+  const input = { kind: 'post' as const, id: 'p1', target: 'zh-Hans' as const, meter: () => true };
+  const first = await createForumTranslationService(deps).translate(input);
+  assert.equal(first.status, 'ok');
+  assert.equal(stored[0]?.promptVersion, 'forum-translation-prompt-v2');
+
+  for (const change of ['prompt', 'model'] as const) {
+    if (change === 'prompt') deps.promptVersion = 'forum-translation-prompt-v3';
+    else deps.client.model = 'replacement-model';
+    const service = createForumTranslationService(deps);
+    const result = await service.translate({
+      ...input,
+      meter: () => assert.fail('cache hit metered'),
+    });
+    assert.deepEqual(result, {
+      status: 'ok',
+      text: '[zh-Hans] Cannon to the centre',
+      cached: true,
+    });
+    assert.equal(service.stats().missesToday, 0);
+  }
+  assert.equal(calls.length, 1);
+  assert.equal(stored.length, 1);
+});
+
+test('durable cache hash: stable text and plan shape, distinct from legacy v1 and v2', () => {
+  const text = 'Cannon to the centre';
+  assert.equal(
+    forumTranslationCacheHash(`  ${text}\r\n`, 'zh-Hans'),
+    createHash('sha256').update(`forum-translation-text\nwhole-body\n${text}`).digest('hex'),
+  );
+  assert.equal(
+    forumTranslationCacheHash('é cannon', 'zh-Hans'),
+    forumTranslationCacheHash('é cannon', 'zh-Hans'),
+  );
+  assert.notEqual(
+    forumTranslationCacheHash(text, 'zh-Hans'),
+    forumTranslationCacheHash(`${text}!`, 'zh-Hans'),
+  );
+  assert.notEqual(
+    forumTranslationCacheHash(text, 'en'),
+    forumTranslationCacheHash(text, 'zh-Hans'),
+  );
+});
+
+test('service: legacy v2 rows survive, while v1 rows are never served for either plan shape', async () => {
+  for (const text of ['Cannon to the centre', MIXED_OWN_POST]) {
+    const segmented = !planForumTranslation(text, 'zh-Hans').wholeBody;
+    const suffix = `${segmented ? 'forum-translation-segments-v1\n' : ''}${text}`;
+    for (const version of ['v1', 'v2'] as const) {
+      const { deps, cache, calls } = makeDeps({
+        sourceText: text,
+        promptVersion: 'forum-translation-prompt-v3',
+      });
+      const hash = createHash('sha256')
+        .update(version === 'v2' ? `forum-translation-prompt-v2\n${suffix}` : suffix)
+        .digest('hex');
+      cache.set(`${hash}:zh-Hans`, 'stored legacy translation');
+      const result = await createForumTranslationService(deps).translate({
+        kind: 'post',
+        id: 'p1',
+        target: 'zh-Hans',
+        meter: () => true,
+      });
+      assert.equal(result.status, 'ok');
+      assert.equal(result.status === 'ok' && result.cached, version === 'v2');
+      assert.equal(calls.length, version === 'v2' ? 0 : 1);
+    }
+  }
 });
 
 test('service: same-language text is refused before any lookup or model call', async () => {
@@ -507,7 +582,7 @@ test('service: a foreign quote is translated line by line for the reader, header
   assert.equal(calls.length, 0);
 });
 
-test('service: pure Chinese for an English reader translates as before, under the old cache key', async () => {
+test('service: pure Chinese for an English reader translates as before, under the current cache key', async () => {
   const body = '这是什么宝藏网站，居然很少见到有人推荐这个网站';
   const { deps, stored } = makeDeps({ sourceText: body });
   const service = createForumTranslationService(deps);
@@ -518,21 +593,42 @@ test('service: pure Chinese for an English reader translates as before, under th
     meter: () => true,
   });
   assert.deepEqual(result, { status: 'ok', text: `[en] ${body}`, cached: false });
-  assert.equal(stored[0]?.contentHash, forumContentHash(body));
+  assert.equal(stored[0]?.contentHash, forumTranslationCacheHash(body, 'en'));
+  assert.notEqual(stored[0]?.contentHash, forumContentHash(body));
 });
 
-test('forumTranslationCacheHash: whole-body texts keep the old key; segmented ones get a new one', () => {
-  assert.equal(
-    forumTranslationCacheHash('Cannon to the centre', 'zh-Hans'),
-    forumContentHash('Cannon to the centre'),
-  );
-  assert.equal(forumTranslationCacheHash('炮二平五好棋', 'en'), forumContentHash('炮二平五好棋'));
+test('forumTranslationCacheHash: no plan uses a pre-v2 content hash', () => {
+  // Rows from before the game-name glossary are keyed by the bare content
+  // hash (whole body) or the segment version alone; neither may match now.
+  for (const [text, target] of [
+    ['Cannon to the centre', 'zh-Hans'],
+    ['炮二平五好棋', 'en'],
+    [QUOTE_REPLY_POST, 'zh-Hans'],
+    [MIXED_OWN_POST, 'zh-Hans'],
+  ] as const) {
+    assert.notEqual(forumTranslationCacheHash(text, target), forumContentHash(text), text);
+  }
+  // Whole-body and segmented plans still key apart from each other.
   assert.notEqual(
-    forumTranslationCacheHash(QUOTE_REPLY_POST, 'zh-Hans'),
-    forumContentHash(QUOTE_REPLY_POST),
+    forumTranslationCacheHash('炮二平五好棋', 'en'),
+    forumTranslationCacheHash(QUOTE_REPLY_POST, 'en'),
   );
-  assert.notEqual(
-    forumTranslationCacheHash(MIXED_OWN_POST, 'zh-Hans'),
-    forumContentHash(MIXED_OWN_POST),
-  );
+});
+
+test('translationSystemPrompt fixes each game name and never calls a xiangqi piece a king', () => {
+  // 2026-10-31: a reply saying 揭棋 came out in English as "Banqi (blindfold
+  // chess)", and a "Jieqi now has a repetition rule" title came out as 暗棋.
+  for (const target of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+    const prompt = translationSystemPrompt(target);
+    for (const pair of [
+      '揭棋/jieqi',
+      '暗棋 or 翻棋/banqi',
+      '斗兽棋/Jungle',
+      '迷雾象棋/Fog Xiangqi',
+    ]) {
+      assert.ok(prompt.includes(pair), `${target}: ${pair}`);
+    }
+    assert.ok(!prompt.includes('king or general'), target);
+    assert.match(prompt, /never a king, rook, knight or pawn/);
+  }
 });

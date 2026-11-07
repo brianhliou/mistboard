@@ -1,10 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
+import http from 'node:http';
 import {
   applyStandardXiangqiMove,
   attemptStandardXiangqiPuzzleLine,
   createInitialXiangqiState,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
+  puzzleShortCode,
+  standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
   XIANGQI_MOTIFS,
@@ -16,9 +19,13 @@ import {
   xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPostHogInstance } from './analytics.js';
 import { displayPreferenceStorageKey } from './display-preferences.js';
 import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
+import type { PuzzleMove } from './puzzles/adapter.js';
+import type { PuzzleAttempt } from './puzzles/api.js';
+import { mountPuzzleHistory, puzzleHistorySessions, puzzleHistoryTime } from './puzzles/history.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { playerWithoutTeam } from './puzzles/queue-panel.js';
 import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
@@ -31,6 +38,7 @@ import {
   sourceGameLines,
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
 
 vi.mock('./live-sound.js', async (importOriginal) => {
@@ -111,6 +119,441 @@ describe('puzzles route', () => {
     literal: 'cannon behind the horse',
     gloss: 'The horse pens the general in and screens the cannon behind it.',
   }));
+
+  it('replays Dashboard failures oldest first instead of opening puzzle replay', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=30');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/puzzles/failed?days=30') {
+        return json({
+          failures: [
+            { puzzleId: BLACK_MATE.id, failedAt: '2026-10-30T12:00:00Z' },
+            { puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' },
+          ],
+        });
+      }
+      if (url === `/api/puzzles/${RED_MATE.id}`) return json({ puzzle: publicDetail(RED_MATE) });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      return json({ puzzles: [] }, url === '/api/puzzles' ? 200 : 404);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles/failed?days=30', {
+      credentials: 'same-origin',
+    });
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(RED_MATE.id);
+    expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe('Replay: 1 of 2');
+    // The left column: back to the Dashboard, the run's title, none of two finished yet.
+    const side = root.querySelector<HTMLElement>('.puzzle-replay-side')!;
+    expect(side.hidden).toBe(false);
+    expect(side.querySelector('a')?.getAttribute('href')).toBe('/puzzles/dashboard?days=30');
+    expect(side.querySelector('h2')?.textContent).toBe('Replay failed puzzles');
+    expect(side.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('0');
+    expect(side.querySelector('.puzzle-replay-side__count')?.textContent).toBe('0 / 2');
+    expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/puzzles/replay')).toBe(false);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/puzzles')).toBe(false);
+    expect(window.location.pathname + window.location.search).toBe('/puzzles/replay?days=30');
+
+    const main = readFileSync('src/main.ts', 'utf8');
+    const replayBranch = main.indexOf('} else if (wantsPuzzleReplay) {');
+    expect(replayBranch).toBeGreaterThan(0);
+    expect(replayBranch).toBeLessThan(main.indexOf('} else if (wantsPuzzles) {'));
+    expect(main).toContain("const wantsPuzzleReplay = path === '/puzzles/replay'");
+  });
+
+  it('solves replay puzzles unrated, advances after a miss plays its solution, and finishes', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=7');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/puzzles/failed?days=7')
+        return json({
+          failures: [
+            { puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' },
+            { puzzleId: BLACK_MATE.id, failedAt: '2026-10-30T12:00:00Z' },
+          ],
+        });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      const puzzle = url.includes(RED_MATE.id) ? RED_MATE : BLACK_MATE;
+      if (url.endsWith('/attempt'))
+        return json({ attempt: attemptStandardXiangqiPuzzleLine(puzzle, movesOf(init)) });
+      if (url.endsWith('/reveal')) return json({ solution: puzzle.solution });
+      return json({ puzzle: publicDetail(puzzle) });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await solveLine(root, RED_MATE);
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe('Replay: 2 of 2'),
+    );
+    expect(root.querySelector('.puzzle-replay-side__count')?.textContent).toBe('1 / 2');
+    const wrong = getStandardXiangqiLegalMoves(BLACK_MATE.initial).find(
+      (move) => !standardXiangqiPuzzleMoveEquals(move, BLACK_MATE.solution[0]!),
+    )!;
+    await clickSquares(root, wrong);
+    await vi.waitFor(() => expect(root.querySelector('.puzzle-revealed-panel')).not.toBeNull());
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(BLACK_MATE.id);
+    // The wrong visit submits only that miss: autoplay never submits a solve.
+    await vi.waitFor(
+      () => expect(root.querySelector('.puzzle-replay-summary')?.textContent).toContain('All done'),
+      { timeout: 7000 },
+    );
+    expect(root.querySelector('.puzzle-replay-summary a')?.getAttribute('href')).toBe(
+      '/puzzles/dashboard?days=7',
+    );
+    const attempts = fetchSpy.mock.calls.filter(([url]) => String(url).endsWith('/attempt'));
+    expect(attempts).toHaveLength(3);
+    for (const [, init] of attempts) {
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        rated: false,
+        qualitySessionId: expect.any(String),
+      });
+    }
+    const reveals = fetchSpy.mock.calls.filter(([url]) => String(url).endsWith('/reveal'));
+    expect(reveals).toHaveLength(1);
+    expect(JSON.parse(String(reveals[0]![1]?.body))).toMatchObject({
+      rated: false,
+      mode: 'solution',
+    });
+    expect(
+      fetchSpy.mock.calls.filter(
+        ([url, init]) =>
+          String(url).endsWith('/quality') && JSON.parse(String(init?.body)).event === 'view',
+      ),
+    ).toHaveLength(2);
+    expect(window.location.pathname + window.location.search).toBe('/puzzles/replay?days=7');
+  });
+
+  it('keeps the replay puzzle when the player steps back before auto-advance fires', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=7');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/puzzles/failed'))
+        return json({ failures: [{ puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' }] });
+      if (url.endsWith('/attempt'))
+        return json({ attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, movesOf(init)) });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      return json({ puzzle: publicDetail(RED_MATE) });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await solveLine(root, RED_MATE);
+    root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')!.click();
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(RED_MATE.id);
+    expect(root.querySelector('.puzzle-replay-summary')).toBeNull();
+    // Returning to the final ply can schedule a fresh advance.
+    root.querySelector<HTMLButtonElement>('[data-puzzle-replay-last]')!.click();
+    await vi.waitFor(() => expect(root.querySelector('.puzzle-replay-summary')).not.toBeNull());
+  });
+
+  const historyEntry = (puzzle: XiangqiPuzzle, createdAt: string, solved = true) => ({
+    puzzleId: puzzle.id,
+    variant: puzzle.variant,
+    solved,
+    rated: true,
+    ratingBefore: 1500,
+    ratingAfter: 1510,
+    ratingDelta: 10,
+    createdAt,
+    fen: standardXiangqiEngineFen(puzzle.initial),
+    sideToMove: puzzle.initial.status.type === 'playing' ? puzzle.initial.status.turn : null,
+  });
+
+  it('opens Puzzle history before the puzzle-id route and highlights its shared menu', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/history');
+    const fetchSpy = vi.fn(async () => json({ attempts: [], nextCursor: null }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    expect(root.querySelector('h1')?.textContent).toBe('Puzzle history');
+    expect(root.querySelector('.puzzle-menu [aria-current="page"]')?.getAttribute('href')).toBe(
+      '/puzzles/history',
+    );
+    expect(root.querySelector('main a')?.textContent).toBe(
+      'Nothing to show, go play some puzzles first!',
+    );
+    expect(root.querySelector('main a')?.getAttribute('href')).toBe('/puzzles');
+    expect(root.querySelector<HTMLButtonElement>('main button')?.hidden).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles/history?order=newest&limit=50', {
+      credentials: 'same-origin',
+    });
+    const source = readFileSync('src/main.ts', 'utf8');
+    expect(source).toContain("const wantsPuzzleHistory = path === '/puzzles/history'");
+    // puzzleIdFromPath rejects the fixed pages itself, so the route table's
+    // conformance test can still bind it as `puzzleIdFromPath(path)`.
+    expect(source).toContain("match[1] === 'replay' || match[1] === 'history'");
+    const branch = source.indexOf('} else if (wantsPuzzleHistory) {');
+    expect(branch).toBeGreaterThan(0);
+    expect(branch).toBeLessThan(source.indexOf('} else if (wantsPuzzles) {'));
+    expect(source).toContain(
+      "import('./puzzles/history.js').then(({ mountPuzzleHistory }) => mountPuzzleHistory(appRoot))",
+    );
+  });
+
+  it('groups by successive one-hour gaps, including chained sessions lasting over an hour', () => {
+    const at = (time: string) => historyEntry(RED_MATE, `2026-10-31T${time}:00Z`);
+    expect(
+      puzzleHistorySessions([at('17:01'), at('16:00'), at('15:00'), at('14:01')]).map((session) =>
+        session.map((entry) => entry.createdAt.slice(11, 16)),
+      ),
+    ).toEqual([['17:01'], ['14:01', '15:00', '16:00']]);
+  });
+
+  it('joins sessions across cursor pages, orders thumbnails as played, and draws each solver side', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    const recent = historyEntry(BLACK_MATE, '2026-10-31T16:00:00Z', false);
+    const earlier = historyEntry(RED_MATE, '2026-10-31T15:15:00Z');
+    const old = { ...historyEntry(RED_MATE, '2026-10-30T14:00:00Z'), puzzleId: 'older-puzzle' };
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(json({ attempts: [recent], nextCursor: 'page-one' }))
+      .mockResolvedValueOnce(json({ attempts: [earlier, old], nextCursor: null }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-history__session')).toHaveLength(2),
+    );
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      '/api/puzzles/history?order=newest&limit=50&cursor=page-one',
+      { credentials: 'same-origin' },
+    );
+    const sessions = [...root.querySelectorAll('.puzzle-history__session')];
+    expect(
+      [...sessions[0]!.querySelectorAll('a')].map((link) => link.getAttribute('href')),
+    ).toEqual([`/puzzles/${RED_MATE.id}`, `/puzzles/${BLACK_MATE.id}`]);
+    expect(
+      [...sessions[0]!.querySelectorAll('a > span:last-child')].map((label) => label.textContent),
+    ).toEqual(['Solved', 'Incorrect']);
+    expect(sessions[0]!.querySelector('time')?.dateTime).toBe(recent.createdAt);
+    const boards = sessions[0]!.querySelectorAll('.puzzle-history__board');
+    expect(boards[0]!.querySelectorAll('[aria-label$=" general"]')).toHaveLength(2);
+    expect(boards[1]!.querySelectorAll('[aria-label$=" general"]')).toHaveLength(2);
+    // The bottom general's colour changes with the solver; glyphs stay upright.
+    const generalY = (board: Element, color: 'red' | 'black') =>
+      Number(board.querySelector(`[aria-label="${color} general"]`)!.getAttribute('y'));
+    expect(generalY(boards[0]!, 'red')).toBeGreaterThan(generalY(boards[0]!, 'black'));
+    expect(generalY(boards[1]!, 'black')).toBeGreaterThan(generalY(boards[1]!, 'red'));
+    // Lichess's short id, shown at the end of the result line on hover.
+    expect(
+      [...sessions[0]!.querySelectorAll<HTMLElement>('.puzzle-history__result')].map(
+        (label) => label.dataset.puzzleCode,
+      ),
+    ).toEqual([`#${puzzleShortCode(RED_MATE.id)}`, `#${puzzleShortCode(BLACK_MATE.id)}`]);
+    expect(root.querySelector<HTMLButtonElement>('main button')!.hidden).toBe(true);
+  });
+
+  it("draws history thumbnails in the reader's chosen piece set", async () => {
+    const boardFor = async (set: 'traditional' | 'international') => {
+      stubWindowLocalStorage(memoryStorage());
+      writeStoredXiangqiPieceSet(set);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          json({ attempts: [historyEntry(RED_MATE, '2026-10-31T16:00:00Z')], nextCursor: null }),
+        ),
+      );
+      const root = document.createElement('div');
+      await mountPuzzleHistory(root);
+      return root.querySelector('.puzzle-history__board')!;
+    };
+    const traditional = await boardFor('traditional');
+    const international = await boardFor('international');
+    const general = (board: Element) =>
+      board.querySelector('[aria-label="red general"]')!.outerHTML;
+    expect(general(traditional)).not.toBe(general(international));
+    // The international set draws picture art; the traditional set draws characters.
+    expect(
+      international.querySelector('[aria-label="red general"] image')?.getAttribute('href'),
+    ).toContain('/piece-sets/xiangqi/international/red-general');
+    expect(traditional.querySelector('[aria-label="red general"] image')).toBeNull();
+  });
+
+  it.each([
+    ['en', 'Puzzle history', 'Incorrect', '1 minute ago', '17 hours ago', '3 days ago'],
+    ['zh-Hans', '解题记录', '错误', '1分钟前', '17小时前', '3天前'],
+    ['zh-Hant', '解題紀錄', '錯誤', '1 分鐘前', '17 小時前', '3 天前'],
+  ])(
+    'localizes history and relative times in %s',
+    async (locale, title, incorrect, minute, hours, days) => {
+      stubWindowLocalStorage(memoryStorage({ [LOCALE_STORAGE_KEY]: locale }));
+      const now = Date.parse('2026-10-31T19:00:00Z');
+      expect(puzzleHistoryTime(new Date(now - 60_000).toISOString(), now)).toBe(minute);
+      expect(puzzleHistoryTime(new Date(now - 17 * 3_600_000).toISOString(), now)).toBe(hours);
+      expect(puzzleHistoryTime(new Date(now - 3 * 86_400_000).toISOString(), now)).toBe(days);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          json({
+            attempts: [historyEntry(RED_MATE, new Date(now).toISOString(), false)],
+            nextCursor: null,
+          }),
+        ),
+      );
+      const root = document.createElement('div');
+      await mountPuzzleHistory(root);
+      expect(root.querySelector('h1')?.textContent).toBe(title);
+      expect(root.querySelector('.puzzle-history__attempt > span:last-child')?.textContent).toBe(
+        incorrect,
+      );
+    },
+  );
+
+  it('keeps loaded history on paging failures, retries the same cursor, and prompts on session expiry', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/history');
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({
+          attempts: [historyEntry(RED_MATE, '2026-10-31T12:00:00Z')],
+          nextCursor: 'page-one',
+        }),
+      )
+      .mockResolvedValueOnce(json({}, 503))
+      .mockResolvedValue(json({}, 401));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('main button')?.textContent).toBe('Try again'),
+    );
+    expect(root.querySelectorAll('.puzzle-history__attempt')).toHaveLength(1);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-history__attempt')).toHaveLength(0),
+    );
+    const link = root.querySelector<HTMLAnchorElement>('main a')!;
+    expect(link.textContent).toBe('Sign in');
+    expect(new URL(link.href).searchParams.get('referrer')).toBe('/puzzles/history');
+    expect(fetchSpy.mock.calls.slice(1).map((args) => args[0])).toEqual([
+      '/api/puzzles/history?order=newest&limit=50&cursor=page-one',
+      '/api/puzzles/history?order=newest&limit=50&cursor=page-one',
+    ]);
+    await mountPuzzleHistory(root);
+    expect(root.querySelector('main a')?.textContent).toBe('Sign in');
+    expect(root.querySelector('main button')?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('renders each attempt once when a later cursor page repeats already shown attempts', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    const recent = historyEntry(BLACK_MATE, '2026-10-31T16:00:00Z');
+    const earlier = historyEntry(RED_MATE, '2026-10-31T15:15:00Z');
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        // Both fields let the regression reach the old client's append logic.
+        .mockResolvedValueOnce(json({ attempts: [recent], nextCursor: 'page-one', nextOffset: 1 }))
+        .mockResolvedValueOnce(
+          json({ attempts: [recent, earlier, earlier], nextCursor: null, nextOffset: null }),
+        ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLButtonElement>('main button')!.hidden).toBe(true),
+    );
+    expect(
+      [...root.querySelectorAll<HTMLElement>('.puzzle-history__attempt')].map(
+        (link) => link.dataset.puzzleId,
+      ),
+    ).toEqual([RED_MATE.id, BLACK_MATE.id]);
+  });
+
+  it('never renders a future hidden-information variant as a full-information board', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          attempts: [{ ...historyEntry(RED_MATE, '2026-10-31T12:00:00Z'), variant: 'jieqi' }],
+          nextCursor: null,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    expect(root.querySelector('.puzzle-history__board svg')).toBeNull();
+    expect(root.querySelectorAll('.puzzle-history__attempt')).toHaveLength(1);
+  });
+
+  it.each([
+    ['en', 'Replay: 1 of 1', 'All done'],
+    ['zh-Hans', '错题重练：1 / 1', '全部完成'],
+    ['zh-Hant', '錯題重練：1 / 1', '全部完成'],
+  ])(
+    'localizes replay progress and the empty completion screen in %s',
+    async (locale, progress, done) => {
+      stubWindowLocalStorage(memoryStorage({ [LOCALE_STORAGE_KEY]: locale }));
+      window.history.replaceState(null, '', '/puzzles/replay?days=90');
+      let failures = [{ puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' }];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url.startsWith('/api/puzzles/failed')) return json({ failures });
+          if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+          return json({ puzzle: publicDetail(RED_MATE) });
+        }),
+      );
+      const root = document.createElement('div');
+      await mountPuzzles(root);
+      expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe(progress);
+      failures = [];
+      await mountPuzzles(root);
+      expect(root.querySelector('.puzzle-replay-summary')?.textContent).toContain(done);
+      expect(root.querySelector('.puzzle-replay-summary a')?.getAttribute('href')).toBe(
+        '/puzzles/dashboard?days=90',
+      );
+    },
+  );
+
+  it('requires sign-in for replay and retains the days in the login return URL', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=14');
+    const fetchSpy = vi.fn(async () => json({ error: 'not_signed_in' }, 401));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    const link = root.querySelector<HTMLAnchorElement>('.puzzle-replay-summary a')!;
+    expect(new URL(link.href).searchParams.get('referrer')).toBe('/puzzles/replay?days=14');
+    expect(root.querySelector('.puzzle-board')).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults invalid replay windows to 30 days and retries a failed queue request', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=31');
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(json({}, 500))
+      .mockResolvedValue(json({ failures: [] }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    root.querySelector<HTMLButtonElement>('.puzzles-status button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-replay-summary')?.textContent).toContain('All done'),
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenLastCalledWith('/api/puzzles/failed?days=30', {
+      credentials: 'same-origin',
+    });
+  });
 
   it('saves difficulty, preserves an active attempt, and shifts the next puzzle', async () => {
     stubWindowLocalStorage(memoryStorage());
@@ -511,6 +954,8 @@ describe('puzzles route', () => {
       ['/puzzles', 'Puzzles', null],
       ['/puzzles/themes', 'Puzzle Themes', 'page'],
       ['/puzzles?mode=streak', 'Puzzle Streak', null],
+      ['/puzzles?mode=storm', 'Puzzle Storm', null],
+      ['/puzzles/dashboard', 'Puzzle Dashboard', null],
     ]);
   });
 
@@ -772,9 +1217,8 @@ describe('puzzles route', () => {
     expect(rule('.puzzle-side-panel')).toMatch(
       /\bheight: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
     );
-    expect(rule('.puzzle-side-panel--analysis')).toMatch(
-      /max-height: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
-    );
+    expect(css).not.toMatch(/\.puzzle-side-panel--analysis \{[^}]*overflow: auto/);
+    expect(rule('.puzzle-trainer-panel--analysis')).toContain('auto minmax(0, 1fr) auto');
   });
 
   it("puts the board's inset on the detail, where the session row under the board reads it", async () => {
@@ -907,10 +1351,25 @@ describe('puzzles route', () => {
     const slash = root.querySelector<HTMLElement>('.finish-badge--mated');
     expect(slash?.querySelector('.finish-badge__slash')).not.toBeNull();
     expect(root.querySelector('.finish-badges')).not.toBeNull();
+    expect(root.querySelector('[data-puzzle-play-position]')).toBeNull();
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')?.click();
     expect(root.querySelector('.finish-badge--mated')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.move-nav-bar__menu-button')?.click();
+    const playPosition = root.querySelector<HTMLAnchorElement>('[data-puzzle-play-position]');
+    expect(playPosition).not.toBeNull();
+    const shownState = drop.solution
+      .slice(0, -1)
+      .reduce((state, move) => applyStandardXiangqiMove(state, move), drop.initial);
+    expect(new URL(playPosition!.href).searchParams.get('fen')).toBe(
+      standardXiangqiEngineFen(shownState),
+    );
+    expect(playPosition!.closest('.puzzle-vote-actions')).toBeNull();
+    expect(playPosition!.closest('.puzzle-phone-menu')).not.toBeNull();
+    expect(playPosition!.textContent).toBe('Play the computer');
+    expect(playPosition!.target).toBe('_blank');
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.click();
     expect(root.querySelector('.finish-badge--mated')).not.toBeNull();
+    expect(root.querySelector('[data-puzzle-play-position]')).toBeNull();
     root.querySelector<HTMLButtonElement>('[aria-label="Puzzle was helpful"]')?.click();
     await vi.waitFor(() =>
       expect(qualityEvents.some((event) => event.event === 'vote' && event.vote === 'up')).toBe(
@@ -1412,6 +1871,214 @@ describe('standard xiangqi puzzles', () => {
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   }
 
+  describe('Storm solver support', () => {
+    const detailOf = (puzzle: XiangqiPuzzle) =>
+      publicDetail(puzzle) as Parameters<typeof mountPuzzleSolver>[1];
+    const feedback = () => document.createElement('div');
+    const capture = vi.fn<(name: string, props?: Record<string, unknown>) => void>();
+    beforeEach(() => {
+      capture.mockReset();
+      setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+    });
+    afterEach(() => setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset: vi.fn() }));
+
+    it('opens a copied Storm result link as an unrated solver without starting a run', async () => {
+      const puzzle = minedByPlyCount(3);
+      stubWindowLocalStorage(memoryStorage());
+      const fetchSpy = xiangqiFetchMock([puzzle]);
+      vi.stubGlobal('fetch', fetchSpy);
+      window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzle.id}`);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountPuzzles(root);
+      try {
+        await vi.waitFor(() => expect(root.textContent).toContain('Unrated review'));
+        await vi.waitFor(() => expect(root.querySelector('.puzzle-board')).not.toBeNull());
+        await clickMove(root, puzzle.solution[0]!, { held: true });
+        await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+        const attempt = fetchSpy.mock.calls.find(([url]) => String(url).endsWith('/attempt'));
+        expect(JSON.parse(String(attempt?.[1]?.body)).rated).toBe(false);
+        expect(fetchSpy.mock.calls.some(([url]) => url === '/api/puzzles/storm')).toBe(false);
+        expect(root.textContent).toContain('Unrated review');
+      } finally {
+        window.dispatchEvent(new Event('pagehide'));
+      }
+    });
+
+    it('skips the setup and reply pauses for fast timed play', async () => {
+      const puzzle = minedByPlyCount(3);
+      // A reconstructable setup move from the public position, including captures.
+      const last = puzzle.initial.lastMove!;
+      const host = document.createElement('div');
+      document.body.append(host);
+      const onAttempt = vi.fn();
+      const submitAttempt = vi.fn(async (_id: string, moves: readonly PuzzleMove[]) => ({
+        attempt: attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]),
+        rating: null,
+      }));
+      const solver = mountPuzzleSolver(
+        host,
+        { ...detailOf(puzzle), setupMove: { ...last, captured: null } },
+        {
+          mode: 'storm',
+          analysis: false,
+          feedback,
+          submitAttempt,
+          onAttempt,
+        },
+      );
+      try {
+        expect(host.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true');
+        await clickMove(host, puzzle.solution[0]!, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(1));
+        expect(host.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true');
+        expect(host.textContent).toContain(moveLabel(puzzle.solution[1]!));
+        await clickMove(host, puzzle.solution[2]!, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(2));
+        expect(capture.mock.calls.filter(([name]) => name === 'puzzle_attempted')).toEqual([
+          [
+            'puzzle_attempted',
+            expect.objectContaining({
+              mode: 'storm',
+              rated: false,
+              outcome: 'solved',
+              clean: true,
+            }),
+          ],
+        ]);
+      } finally {
+        solver.dispose();
+      }
+    });
+
+    it('restores a partial line without resubmitting or counting its moves again', async () => {
+      const puzzle = minedByPlyCount(3);
+      const progress = attemptStandardXiangqiPuzzleLine(puzzle, [puzzle.solution[0]!]);
+      if (!progress.ok) throw new Error('fixture must have accepted progress');
+      const host = document.createElement('div');
+      document.body.append(host);
+      const onAttempt = vi.fn();
+      const onSolved = vi.fn();
+      const submitAttempt = vi.fn(async (_id: string, moves: readonly PuzzleMove[]) => ({
+        attempt: attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]),
+        rating: null,
+      }));
+      const solver = mountPuzzleSolver(host, detailOf(puzzle), {
+        mode: 'storm',
+        analysis: false,
+        feedback,
+        initialAttempt: progress,
+        submitAttempt,
+        onAttempt,
+        onSolved,
+      });
+      try {
+        expect(host.textContent).toContain(moveLabel(puzzle.solution[1]!));
+        expect(submitAttempt).not.toHaveBeenCalled();
+        expect(onAttempt).not.toHaveBeenCalled();
+        expect(capture).not.toHaveBeenCalled();
+        await clickMove(host, puzzle.solution[2]!, { held: true });
+        await vi.waitFor(() => expect(onSolved).toHaveBeenCalledWith(puzzle.id));
+        expect(submitAttempt.mock.calls[0]?.[1]).toEqual(solverMovesOf(puzzle));
+        expect(onAttempt).toHaveBeenCalledTimes(1);
+      } finally {
+        solver.dispose();
+      }
+    });
+
+    for (const action of ['end', 'dispose'] as const) {
+      it(`ignores a late response after ${action}, with no solve or telemetry`, async () => {
+        const puzzle = minedByPlyCount(1);
+        const host = document.createElement('div');
+        document.body.append(host);
+        let resolve!: (value: { attempt: PuzzleAttempt; rating: null }) => void;
+        const submitAttempt = vi.fn(
+          () =>
+            new Promise<{ attempt: PuzzleAttempt; rating: null }>((done) => {
+              resolve = done;
+            }),
+        );
+        const onAttempt = vi.fn();
+        const onSolved = vi.fn();
+        const solver = mountPuzzleSolver(host, detailOf(puzzle), {
+          mode: 'storm',
+          analysis: false,
+          feedback,
+          submitAttempt,
+          onAttempt,
+          onSolved,
+        });
+        try {
+          await clickMove(host, puzzle.solution[0]!, { held: true });
+          expect(submitAttempt).toHaveBeenCalledTimes(1);
+          solver[action]();
+          const ended = host.innerHTML;
+          resolve({
+            attempt: attemptStandardXiangqiPuzzleLine(puzzle, [puzzle.solution[0]!]),
+            rating: null,
+          });
+          // Flush the promise chain without waiting out any animation timers.
+          for (let i = 0; i < 8; i++) await Promise.resolve();
+          expect(host.innerHTML).toBe(ended);
+          expect(onAttempt).not.toHaveBeenCalled();
+          expect(onSolved).not.toHaveBeenCalled();
+          expect(capture).not.toHaveBeenCalled();
+          await clickMove(host, puzzle.solution[0]!, { held: true });
+          expect(submitAttempt).toHaveBeenCalledTimes(1);
+        } finally {
+          solver.dispose();
+        }
+      });
+    }
+
+    it('counts a Storm miss once and leaves checker errors out of telemetry', async () => {
+      const puzzle = minedByPlyCount(3);
+      const host = document.createElement('div');
+      document.body.append(host);
+      const wrong = getStandardXiangqiLegalMoves(puzzle.initial).find((move) => {
+        const attempt = attemptStandardXiangqiPuzzleLine(puzzle, [move]);
+        return !attempt.ok && attempt.code === 'incorrect-move';
+      })!;
+      const onAttempt = vi.fn();
+      let checkerError = true;
+      const solver = mountPuzzleSolver(host, detailOf(puzzle), {
+        mode: 'storm',
+        analysis: false,
+        feedback,
+        onAttempt,
+        submitAttempt: async (_id, moves) => ({
+          attempt: checkerError
+            ? { ok: false, code: 'illegal-move', state: puzzle.initial, ply: 0, move: moves[0]! }
+            : attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]),
+          rating: null,
+        }),
+      });
+      try {
+        await clickMove(host, wrong, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(1));
+        expect(capture).not.toHaveBeenCalled();
+        checkerError = false;
+        await clickMove(host, wrong, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(2));
+        expect(capture.mock.calls.filter(([name]) => name === 'puzzle_attempted')).toEqual([
+          [
+            'puzzle_attempted',
+            expect.objectContaining({
+              mode: 'storm',
+              rated: false,
+              outcome: 'failed',
+              clean: false,
+            }),
+          ],
+        ]);
+        await clickMove(host, wrong, { held: true });
+        expect(onAttempt).toHaveBeenCalledTimes(2);
+      } finally {
+        solver.dispose();
+      }
+    });
+  });
+
   it('renders a mined puzzle on the canonical 9x10 board', async () => {
     const puzzle = minedByPlyCount(3);
     vi.stubGlobal('fetch', xiangqiFetchMock([puzzle]));
@@ -1601,6 +2268,9 @@ describe('standard xiangqi puzzles', () => {
     );
     expect(shownRow?.getAttribute('aria-label')).toBe('Puzzle themes');
     expect(root.querySelector('.puzzle-info-card .puzzle-tag')).toBeNull();
+    // No "Puzzle #code" line linking the page to itself.
+    expect(root.querySelector(`.puzzle-info-card a[href="/puzzles/${puzzle!.id}"]`)).toBeNull();
+    expect(root.querySelector('.puzzle-info-card')?.textContent).not.toMatch(/Puzzle #/);
     expect(root.querySelector('.puzzle-theme-card')?.lastElementChild).toBe(shownRow);
     const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
     // English names only in en: no hanzi, no pinyin tooltip.
@@ -2231,6 +2901,12 @@ describe('standard xiangqi puzzles', () => {
     // Streak dropped the history the server sent for the same puzzle.
     it('shows the game before the puzzle in Puzzle Streak', () => {
       animationOff();
+      // Streak records a visit on mount, unlike the plain embed solver above.
+      const fetchSpy = vi.fn(async () => new Response(null, { status: 204 }));
+      vi.stubGlobal('fetch', fetchSpy);
+      const request = vi.spyOn(http, 'request').mockImplementation(() => {
+        throw new Error('Puzzle tests must not contact localhost');
+      });
       const host = document.createElement('div');
       document.body.append(host);
       const solver = mountPuzzleSolver(
@@ -2244,6 +2920,14 @@ describe('standard xiangqi puzzles', () => {
       );
       try {
         expect(host.querySelectorAll('.puzzle-move-cell--history')).toHaveLength(HISTORY.length);
+        expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
+          `/api/puzzles/${PUZZLE.id}/quality`,
+          expect.objectContaining({
+            method: 'POST',
+            body: expect.stringContaining('"event":"view"'),
+          }),
+        );
+        expect(request).not.toHaveBeenCalled();
       } finally {
         solver.dispose();
       }
@@ -2364,17 +3048,34 @@ describe('sourceGameLines', () => {
     expect(names[2]?.title).toBe('');
   });
 
-  it('names an online platform game only as an online game and its year', () => {
-    const online = { gameId: 'g', ply: 4, online: true };
-    expect(
-      sourceGameLines({
-        variant: XIANGQI_SPEC_ID,
-        sourceGame: { ...online, playedOn: '2026-03-14' },
-      }).map((l) => l.textContent),
-    ).toEqual(['From a 2026 online game']);
-    expect(
-      sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: online }).map((l) => l.textContent),
-    ).toEqual(['From an online game']);
+  it('names an online platform game only by a short id of our copy', () => {
+    const online = { gameId: 'hxq_0b6935dc88a8de427fc12816', ply: 4, online: true };
+    const [plain] = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { ...online, playedOn: '2026-03-14' },
+    });
+    expect(plain!.textContent).toBe('From game #0b6935dc');
+    // Not hosted: plain text, no link.
+    expect(plain!.querySelector('a')).toBeNull();
+  });
+
+  it("links a hosted online game to its review page at the puzzle's move", () => {
+    const [line] = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'hxq_0b6935dc88a8de427fc12816',
+        ply: 22,
+        playedOn: '2026-03-26',
+        online: true,
+        hosted: true,
+      },
+    });
+    const link = line!.querySelector<HTMLAnchorElement>('a.puzzle-source-link');
+    expect(link?.getAttribute('href')).toBe(
+      '/historical-xiangqi/game/hxq_0b6935dc88a8de427fc12816?ply=22',
+    );
+    expect(link?.textContent).toBe('From game #0b6935dc');
+    expect(line!.textContent).not.toMatch(/ElephantChess|online/i);
   });
 
   it('falls back to "From set <variant>" without attribution', () => {

@@ -40,6 +40,51 @@ async function insertGame(input: {
 }
 
 definePersistenceTests('admin metrics', () => {
+  test('login email delivery exposes only rolling aggregate counts, including empty windows', async () => {
+    const now = new Date('2026-11-03T20:00:00Z');
+    const zero = {
+      requested: 0,
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+      suppressed: 0,
+      complained: 0,
+      completed: 0,
+    };
+    assert.deepEqual((await getAdminMetrics({ now, weeks: 1 })).loginEmailDelivery, {
+      last7d: zero,
+      last30d: zero,
+    });
+    await getPool().query(
+      `INSERT INTO login_email_requests (request_id, email, requested_at, provider_email_id, completed_at)
+      VALUES ('login', 'private@example.com', $1::timestamptz - interval '20 days', 'login-provider', $1::timestamptz - interval '1 day')`,
+      [now],
+    );
+    await getPool().query(
+      `INSERT INTO email_delivery_events (event_id, provider_email_id, event_type, recipients, occurred_at)
+      VALUES ('sent', 'login-provider', 'email.sent', ARRAY['private@example.com'], $1::timestamptz - interval '20 days'),
+      ('delivered', 'login-provider', 'email.delivered', ARRAY['private@example.com'], $1::timestamptz - interval '1 day'),
+      ('retry', 'login-provider', 'email.delivered', ARRAY['private@example.com'], $1::timestamptz - interval '1 day'),
+      ('other', 'change-provider', 'email.delivered', ARRAY['private@example.com'], $1::timestamptz - interval '1 day')`,
+      [now],
+    );
+    const metrics = await getAdminMetrics({ now, weeks: 1 });
+    assert.deepEqual(metrics.loginEmailDelivery, {
+      last7d: { ...zero, delivered: 1, completed: 1 },
+      last30d: { ...zero, requested: 1, sent: 1, delivered: 1, completed: 1 },
+    });
+    const payload = JSON.stringify(metrics);
+    for (const privateValue of [
+      'private@example.com',
+      'login-provider',
+      'change-provider',
+      'requestId',
+      'providerEmailId',
+    ]) {
+      assert.ok(!payload.includes(privateValue));
+    }
+  });
+
   test('first-game cohorts deduplicate players, split first variants and mature whole UTC weeks', async () => {
     const now = new Date('2026-10-19T00:00:00Z');
     for (const id of ['shared', 'established', 'operator']) {

@@ -3,6 +3,7 @@ import type { RoomTimeControl, VariantId } from '@mistboard/game';
 import serveHandler from 'serve-handler';
 import { articleIsRetired } from './article-meta.js';
 import { serveArticleThumbnail } from './article-thumb.js';
+import { ffqBanqiHttpTarget, guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
 import { serveBroadcastBoardOgImage } from './og-broadcast.js';
@@ -90,6 +91,24 @@ type ServerHttpHandlerOptions = {
 };
 
 export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
+  const dispatch = createHttpRequestDispatcher(options);
+  return function handleHttpRequest(request: IncomingMessage, response: ServerResponse): void {
+    const url = new URL(request.url ?? '/', 'http://localhost');
+    // The API dispatcher owns its own boundary, including direct callers.
+    // Pages, OG images and embeds must be checked before static/meta loading.
+    if (url.pathname.startsWith('/api/') || !ffqBanqiHttpTarget(url)) {
+      dispatch(request, response);
+      return;
+    }
+    void guardFFQBanqiHttpRead(options, request, response, url)
+      .then((handled) => {
+        if (!handled) dispatch(request, response);
+      })
+      .catch((err) => answerApiFailure(response, request.url ?? '/', err));
+  };
+}
+
+function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
   return function handleHttpRequest(request: IncomingMessage, response: ServerResponse): void {
     const url = request.url ?? '/';
     const pathname = url.split('?', 1)[0] ?? '/';
@@ -753,6 +772,24 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       }).catch(() => {
         request.url = '/';
         void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
+    // Club copy is baked in each interface locale, like the rules index.
+    const clubWashingtonMatch = pathname.match(/^\/(?:(zh-hans|zh-hant)\/)?washington-xiangqi\/?$/);
+    if (clubWashingtonMatch) {
+      const prefix = clubWashingtonMatch[1] as 'zh-hans' | 'zh-hant' | undefined;
+      const file = prefix
+        ? (`${prefix}/washington-xiangqi.html` as const)
+        : 'washington-xiangqi.html';
+      void servePrerenderedPage({ response, staticDir: options.staticDir, file }).catch(() => {
+        void serveSpaShellWithRoutePreloads({
+          response,
+          staticDir: options.staticDir,
+          pathname: pathname.replace(/\/+$/, ''),
+          publicHost: options.publicHost,
+        });
       });
       return;
     }

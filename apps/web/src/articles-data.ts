@@ -22,6 +22,7 @@ import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
+import { abJchessVsJqeArticle } from './articles/content/ab-jchess-vs-jqe.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { jqeArticle } from './articles/content/jqe.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
@@ -50,6 +51,7 @@ import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
 import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { atomicXiangqiBuildArticle } from './articles/content/atomic-xiangqi-build.js';
 import { crazyhouseXiangqiArticle } from './articles/content/crazyhouse-xiangqi.js';
+import { gomokuArticle } from './articles/content/gomoku.js';
 import { duckXiangqiStrategyArticle } from './articles/content/duck-xiangqi-strategy.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
@@ -100,6 +102,7 @@ export const articles: Article[] = [
   solverAuditArticle,
   pikafishRevealBugArticle,
   katagoJungleArticle,
+  abJchessVsJqeArticle,
   jqeArticle,
   abJchessArticle,
   jieqiBotWinsArticle,
@@ -138,6 +141,7 @@ export const articles: Article[] = [
   atomicXiangqiArticle,
   atomicXiangqiBuildArticle,
   crazyhouseXiangqiArticle,
+  gomokuArticle,
   antiXiangqiArticle,
   benedictXiangqiArticle,
   hordeXiangqiArticle,

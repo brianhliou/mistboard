@@ -36,11 +36,15 @@ export type StudyTreeNode = {
 
 export type StudyChapterPayload = {
   id: string;
+  hasDecisions?: boolean;
   name?: string;
   variant?: string;
   orientation?: 'red' | 'black' | string;
   tags?: Record<string, string | undefined>;
   root?: { root?: StudyTreeNode; rootFen?: string };
+  /** Named win-chance series for the embed's graph (server study-score-series.ts);
+   *  present only on a chapter that has one. Validated where it is drawn. */
+  scoreSeries?: unknown;
 };
 
 /**

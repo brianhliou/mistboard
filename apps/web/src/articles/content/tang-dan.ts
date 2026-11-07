@@ -252,7 +252,7 @@ export const tangDanArticle: Article = {
   summary: "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.",
   showSummaryOnPage: false,
   status: "published",
-  publishedAt: "2026-11-06",
+  publishedAt: "2026-11-05",
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/tang-dan-2026-face.jpg",

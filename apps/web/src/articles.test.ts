@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import http from 'node:http';
+import { setImmediate } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import {
@@ -8,6 +10,7 @@ import {
 } from './articles/diagrams.js';
 import { articleIsLive } from './articles/publish-time.js';
 import {
+  buildArticleFooter,
   buildArticlePage,
   buildArticlesIndex,
   buildHomeArticleCards,
@@ -21,6 +24,11 @@ import { articles } from './articles-data.js';
 import { articleIsNoindex, rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
+
+// happy-dom's selector caches use WeakRefs. Their targets stay alive until
+// the current JS task ends; synchronous tests plus promise-only hooks can
+// otherwise retain gigabytes of detached SVG trees across this whole file.
+afterEach(() => setImmediate());
 
 // These assertions are about which slugs are curated, how they order, and what
 // each card renders. None is about recency, and several name articles from June
@@ -147,8 +155,10 @@ describe('article public listing gates', () => {
       // (DEV shows it early for review).
       '/blog/set-up-your-board',
       // The sixth player page, the ten-time national women's champion Tang Dan,
-      // scheduled for 2026-11-06 (DEV shows it early for review).
+      // scheduled for 2026-11-05 (DEV shows it early for review).
       '/blog/tang-dan',
+      // AB-JChess-20261031 against jqe, scheduled for 2026-11-04.
+      '/blog/ab-jchess-vs-jqe',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -281,7 +291,7 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('keeps only working Community and By Mistboard blog navigation', () => {
+  it('keeps only working Community posts and By Mistboard blog navigation', () => {
     const official = buildArticlesIndex();
     const community = buildArticlesIndex(undefined, 'community');
     const officialLinks = [
@@ -294,11 +304,11 @@ describe('article public listing gates', () => {
 
     expect(officialLinks).toEqual([
       { label: 'By Mistboard', href: '/blog', current: 'page' },
-      { label: 'Community', href: '/blog/community', current: null },
+      { label: 'Community posts', href: '/blog/community', current: null },
     ]);
     expect(
       community.querySelector('.articles-community-rail a[aria-current="page"]')?.textContent,
-    ).toBe('Community');
+    ).toBe('Community posts');
     expect(official.querySelector('.articles-index-controls')).toBeNull();
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
@@ -372,14 +382,40 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('localizes both blog rail destinations', () => {
-    const index = buildArticlesIndex('zh-Hans', 'community');
-    const hrefs = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')].map(
-      (link) => link.getAttribute('href'),
-    );
+  it.each([
+    ['en', '', 'By Mistboard', 'Community posts', 'Blog navigation'],
+    ['zh-Hans', '/zh-hans', 'Mistboard 官方文章', '社区文章', '博客导航'],
+    ['zh-Hant', '/zh-hant', 'Mistboard 官方文章', '社群文章', '網誌導覽'],
+  ] as const)(
+    '%s: localizes blog rail labels and canonical destinations',
+    (locale, prefix, officialLabel, communityLabel, navigationLabel) => {
+      for (const view of ['mistboard', 'community'] as const) {
+        const index = buildArticlesIndex(locale === 'en' ? undefined : locale, view);
+        const rail = index.querySelector('.articles-community-rail');
+        const links = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')];
 
-    expect(hrefs).toEqual(['/zh-hans/blog', '/zh-hans/blog/community']);
-  });
+        expect(rail?.getAttribute('aria-label')).toBe(navigationLabel);
+        expect(
+          links.map((link) => ({
+            label: link.textContent,
+            href: link.getAttribute('href'),
+            current: link.getAttribute('aria-current'),
+          })),
+        ).toEqual([
+          {
+            label: officialLabel,
+            href: `${prefix}/blog`,
+            current: view === 'mistboard' ? 'page' : null,
+          },
+          {
+            label: communityLabel,
+            href: `${prefix}/blog/community`,
+            current: view === 'community' ? 'page' : null,
+          },
+        ]);
+      }
+    },
+  );
 
   it('localizes only publication-ready zh-Hans article cards', () => {
     vi.stubEnv('DEV', false);
@@ -401,7 +437,7 @@ describe('article public listing gates', () => {
     const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
     expect(home?.getAttribute('aria-label')).toBe('網誌');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
-      '上一篇文章',
+      '上一組文章',
     );
     expect(home?.querySelector('.landing-carousel-nav-next')?.getAttribute('aria-label')).toBe(
       '更多文章',
@@ -469,6 +505,7 @@ describe('article public listing gates', () => {
     // posts are on neither.
     expect(hrefs).toEqual([
       '/blog/set-up-your-board',
+      '/blog/ab-jchess-vs-jqe',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
@@ -595,9 +632,13 @@ describe('article public listing gates', () => {
     );
 
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector('.landing-article-card[href="/blog/misty"] img')?.getAttribute('src'),
-    ).toBe('/article-thumbs/misty-engine-belief-20260708.jpg');
+    const homeThumb = home?.querySelector<HTMLElement>(
+      '.landing-article-card[href="/blog/misty"] .articles-index-card-thumb',
+    );
+    expect(homeThumb?.querySelector('img')).toBeNull();
+    expect(homeThumb?.style.backgroundImage).toContain(
+      '/article-thumbs/misty-engine-belief-20260708.jpg',
+    );
   });
 
   it('renders the server-side truth article with the generated truth-core thumbnail', () => {
@@ -984,25 +1025,30 @@ describe('rules variant sidebar', () => {
 
     expect(pageText).not.toContain('[VISUAL:');
     expect(pageText).not.toMatch(/\bsquares?\b/i);
-    expect(pageText).toContain('starting point it occupies');
-    expect(pageText).toContain('120 plies, or 60 moves by each player');
-    expect(pageText).toContain('Repetition follows xiangqi');
-    expect(pageText).toContain('perpetual check cannot save a lost game');
+    expect(pageText).toContain('the piece that normally starts on its point');
+    expect(pageText).toContain('120 plies pass without a capture');
+    expect(pageText).toContain(
+      'The same position with the same side to move occurs for the third time',
+    );
+    expect(pageText).toContain(
+      'A player who checked on every one of their turns in the repeating cycle loses',
+    );
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
     // The shuffled-start board is the section hero (a single enlarged board,
-    // matching the Xiangqi page); the movement diagrams are paired boards.
+    // matching the Xiangqi page); worked reveals use pairs and later moves use singles.
     const jieqiHero = jieqiSvgs.filter((svg) => svg.classList.contains('xq-article-svg--hero'));
     expect(jieqiHero).toHaveLength(1);
     expect(jieqiHero[0]!.getAttribute('data-xq-layout')).toBe('single');
     expect(articleStyles).toContain(
       '.article-figure-xq > .xq-article-svg.xq-article-svg--hero {\n  width: min(480px, 100%);',
     );
-    expect(
-      jieqiSvgs
-        .filter((svg) => !svg.classList.contains('xq-article-svg--hero'))
-        .every((svg) => svg.getAttribute('data-xq-layout') === 'pair'),
-    ).toBe(true);
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'pair')).toHaveLength(
+      3,
+    );
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'single')).toHaveLength(
+      4,
+    );
     const figureText = [...page.querySelectorAll('.article-figure')]
       .map((figure) => figure.textContent)
       .join('');
@@ -1018,8 +1064,11 @@ describe('rules variant sidebar', () => {
     const captions = [...page.querySelectorAll('.article-figure-caption')].map(
       (caption) => caption.textContent,
     );
-    expect(captions).toEqual([]);
+    expect(captions.length).toBeGreaterThanOrEqual(6);
     expect(pageText).toContain('BEFORE: HORSE POINT');
+    expect(pageText).toContain('AFTER: SOLDIER ON b10');
+    expect(pageText).toContain('only its capturer learns its identity');
+    expect(pageText).toContain('see a dark piece leave the board and nothing else');
     expect(pageText).toContain('CAPTURED PIECE KNOWLEDGE');
     expect(pageText).toContain('RED KNOWS');
     expect(pageText).toContain('BLACK KNOWS');
@@ -1091,22 +1140,33 @@ describe('rules variant sidebar', () => {
     expect([...page.querySelectorAll('h2')].map((h) => h.textContent)).not.toContain('Names');
   });
 
-  it('localizes zh-Hans Banqi diagram captions and the engine-game embed', () => {
-    const page = buildArticlePage('banqi', 'zh-Hans');
-    document.body.append(page);
+  it('localizes zh-Hans Banqi diagram captions and the engine-game embed', async () => {
+    // Loading the child page bypasses the usual global fetch mock. Fail if
+    // markup inspection ever opens a real localhost connection again.
+    const request = vi.spyOn(http, 'request').mockImplementation(() => {
+      throw new Error('Article markup tests must not load embed pages');
+    });
+    try {
+      const page = buildArticlePage('banqi', 'zh-Hans');
+      // Keep it detached: connecting an iframe starts happy-dom navigation.
 
-    const text = page.textContent ?? '';
-    expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
-    expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
-    expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
-    expect(text).not.toContain('Before the first flip.');
-    expect(text).not.toContain('One screen, then the target.');
-    // The engine game is a study-chapter embed, the same card every other
-    // variant's rules page uses; its title is localized like any string.
-    const embed = page.querySelector('iframe[src*="/embed/study/"]');
-    expect(embed).not.toBeNull();
-    expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
-    page.remove();
+      const text = page.textContent ?? '';
+      expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
+      expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
+      expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
+      expect(text).not.toContain('Before the first flip.');
+      expect(text).not.toContain('One screen, then the target.');
+      // The engine game is a study-chapter embed, the same card every other
+      // variant's rules page uses; its title is localized like any string.
+      const embed = page.querySelector('iframe[src*="/embed/study/"]');
+      expect(embed).not.toBeNull();
+      expect(embed?.getAttribute('title')).toBe('暗棋：比赛规则下的一盘引擎对局');
+      await setImmediate();
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      request.mockRestore();
+      document.body.replaceChildren();
+    }
   });
 
   it('keeps fogged xiangqi blockers as question-mark pieces', () => {
@@ -1141,10 +1201,14 @@ describe('blog post read-next footer', () => {
       .map((article) => article.slug);
   };
 
-  const footerLinks = (slug: string): string[] =>
-    [...buildArticlePage(slug).querySelectorAll('.article-footer .articles-index-card')].map(
+  // Exercise the real footer without building every post's unrelated boards,
+  // diagrams and embeds again for each corpus-wide navigation assertion.
+  const footerLinks = (slug: string): string[] => {
+    const article = articles.find((article) => article.slug === slug)!;
+    return [...(buildArticleFooter(article)?.querySelectorAll('.articles-index-card') ?? [])].map(
       (card) => card.getAttribute('href') ?? '',
     );
+  };
 
   // The date ring has no topic signal, so a platform page whose neighbours by
   // date are unrelated variant write-ups names its own onward posts. Missing
@@ -1465,11 +1529,12 @@ describe('image thumbnail crop', () => {
 });
 
 describe('player article contact note', () => {
-  it('puts the corrections line under the header photo, about that article', () => {
+  it('puts the corrections line below the article panel, about that article', () => {
     const page = buildArticlePage('zuo-wenjing');
     const notes = page.querySelectorAll('.article-contact-note');
     expect(notes).toHaveLength(1);
-    expect(notes[0]?.closest('figure.article-figure-image')).not.toBeNull();
+    expect(notes[0]?.closest('.article-sheet')).toBeNull();
+    expect(notes[0]?.parentElement?.lastElementChild).toBe(notes[0]);
     expect(notes[0]?.textContent).toBe('Corrections or rights requests: contact us.');
     expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
       '/contact?about=%2Fblog%2Fzuo-wenjing',

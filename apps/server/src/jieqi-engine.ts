@@ -41,28 +41,31 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // honestly (no Black-side flip; root fail-lows re-searched instead of averaged as exact).
 export const JIEQI_ENGINE_VERSION = '0.3.3';
 
-// AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): the
-// top jieqi slot since 2026-10, a Pikafish-derived engine with its own NNUE. The slot is
-// not a numbered level: it holds the strongest engine we know of and names it, so a later
-// swap never redefines a level (docs-private/engine-track/jieqi-strength-ceiling-2026-09-30.md).
-// ab-jchess.ref pins the binary; railpack.json fetches the net from the author's release
-// and checks its sha256 (his terms: never re-hosted). The version names the source
-// release and the net, since either one changes its play.
+// AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): a
+// jieqi engine with its own NNUE, the top jieqi slot again from AB-JChess-20261031 (a new
+// engine built on jqe's MIT code), which beat jqe by +46 Elo over 600 games at 4 s/move
+// (ab-jchess.ref). The slot is not a numbered level: it holds the strongest engine we
+// know of and names it, so a later swap never redefines a level
+// (docs-private/engine-track/jieqi-strength-ceiling-2026-09-30.md). ab-jchess.ref pins
+// the binary; railpack.json fetches the net from the author's release and checks its
+// sha256 (his terms: never re-hosted). The version names the source release and the
+// net, since either one changes its play.
 export const JIEQI_ABJCHESS_ENGINE_ID = 'ab-jchess-jieqi';
-export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2d-net-20261010';
-export const ABJCHESS_NET_FILE = 'abjchess-20261010.nnue';
+export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-20261031-net-20261030';
+export const ABJCHESS_NET_FILE = 'abjchess-20261030.nnue';
 // jqe (github.com/devinokeefe/jieqi, MIT, by Devin O'Keefe): a UCI jieqi engine with
-// its own NNUE, above AB-JChess at the top of the ladder (+67 Elo over 300 games
-// against AB-JChess 0.2d at 4 s/move, jqe.ref). Its net is MIT too, so it ships in
-// our engines release beside the binary (engine-assets.sh). The slot is held behind
-// MISTBOARD_JQE_ENABLED until launch: off, nothing offers, seats or schedules it (jqeAvailable).
+// its own NNUE, one rung under AB-JChess (top from 10-21, when it beat AB-JChess 0.2d by
+// +67 over 300 games; AB-JChess-20261031 took the top back, jqe.ref). Its net is MIT
+// too, so it ships in our engines release beside the binary (engine-assets.sh). The
+// slot is behind MISTBOARD_JQE_ENABLED: off, nothing offers, seats or schedules it
+// (jqeAvailable).
 export const JIEQI_JQE_ENGINE_ID = 'jqe-jieqi';
 export const JQE_JIEQI_ENGINE_VERSION = 'jqe-331a6e61-net-it014';
 export const JQE_NET_FILE = 'it014.jqn';
 // Short form of ab-jchess.ref, the AB-JChess commit the prod image builds. Part of the
 // AB analysis cache keys for the same reason PIKAFISH_JIEQI_ENGINE_REF is part of the
 // PikaJieQi ones (see below); jieqi-engine-ref.test.ts keeps the two in step.
-export const ABJCHESS_ENGINE_REF = 'fe35d87c';
+export const ABJCHESS_ENGINE_REF = 'efc83867';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -151,20 +154,21 @@ const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
     movetimeMs: 4_000,
   },
   {
-    // The top slot: AB-JChess on level 8's budget (4000ms, Hash 256, the same threads).
-    // Full strength, so no depth cap and no skill.
-    id: JIEQI_ABJCHESS_ENGINE_ID,
-    name: 'AB-JChess',
-    movetimeMs: 4_000,
-    engine: 'ab-jchess',
-  },
-  {
-    // jqe above AB-JChess, on the same budget (4000ms, Hash 256, the same threads): the
-    // settings its 100-game match against AB-JChess ran. Full strength.
+    // jqe above level 8, on level 8's budget (4000ms, Hash 256, the same threads): the
+    // settings its matches against AB-JChess ran. Full strength.
     id: JIEQI_JQE_ENGINE_ID,
     name: 'jqe',
     movetimeMs: 4_000,
     engine: 'jqe',
+  },
+  {
+    // The top slot: AB-JChess on the same budget (4000ms, Hash 256, the same threads),
+    // the settings of its 600-game match against jqe. Full strength, so no depth cap
+    // and no skill.
+    id: JIEQI_ABJCHESS_ENGINE_ID,
+    name: 'AB-JChess',
+    movetimeMs: 4_000,
+    engine: 'ab-jchess',
   },
   // Pre-ladder tiers (depth caps only), never offered after the Pikafish consolidation.
   {
@@ -219,7 +223,7 @@ export const JIEQI_RANDOM_ENGINE_ID = 'random-legal-jieqi';
 export const JIEQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
 
 /** Everything offered, weakest first: levels 1-7, level 8 (JIEQI_DEFAULT_ENGINE_ID),
- *  the AB-JChess slot, then jqe on top. jqe is listed whether or not its flag is on
+ *  jqe, then the AB-JChess slot on top. jqe is listed whether or not its flag is on
  *  (the catalog resolves it for history); every surface that offers or schedules a
  *  bot asks jqeAvailable() or jqeEnabled() first. */
 export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS.filter(
@@ -242,10 +246,11 @@ const enginePool = new UciEnginePool({
 // Level 1 move queued behind two 4 s AB searches waits ~4 s against the 5 s queue
 // timeout, and any slower AB move (a longer budget, a stalled process) sheds it (a shed
 // move retries once, then resigns the bot). Two slots keep the parked-process ceiling
-// where the shared pool had it (at most two AB processes, each holding its 133 MB net
-// and its hash). The queue timeout covers a full AB move plus its process deadline, so
-// a third concurrent AB game waits one move rather than being shed; that wait is taken
-// off its own budget (`budgetAfterWait` in jieqiLiveEngineMove).
+// where the shared pool had it (at most two AB processes, each holding its net, 133 MB
+// through v0.2d and 0.6 MB from AB-JChess-20261031, and its hash). The queue timeout
+// covers a full AB move plus its process deadline, so a third concurrent AB game waits
+// one move rather than being shed; that wait is taken off its own budget
+// (`budgetAfterWait` in jieqiLiveEngineMove).
 export const ABJCHESS_LIVE_QUEUE_TIMEOUT_MS = 20_000;
 const abJchessLivePool = new UciEnginePool({
   name: 'abjchess-live',
@@ -289,11 +294,11 @@ const analysisPool = new UciEnginePool({
   queueTimeoutMessage: 'pikafish-jieqi analysis queue timed out',
 });
 
-// AB-JChess analysis gets its own pool, ONE slot by default: each process holds the
-// 133 MB net besides its hash, on the same `web` box as the WS server and the live AB
-// sessions. A sweep or a decisions run holds its one session for the whole run, and
-// the analysis job lane already runs one jieqi job at a time, so one slot costs no
-// throughput. The live-play pool above is separate and unchanged.
+// AB-JChess analysis gets its own pool, ONE slot by default: each process holds its
+// net besides its hash (133 MB through v0.2d; 0.6 MB from AB-JChess-20261031), on the
+// same `web` box as the WS server and the live AB sessions. A sweep or a decisions run
+// holds its one session for the whole run, and the analysis job lane already runs one
+// jieqi job at a time, so one slot costs no throughput. The live-play pool above is separate and unchanged.
 const abJchessAnalysisPool = new UciEnginePool({
   name: 'abjchess-analysis',
   maxProcessesEnvVar: 'MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES',
@@ -338,8 +343,8 @@ export function pikaJieqiPath(): string {
 }
 
 // AB-JChess and its net. No dev fallback under ~/projects/tools: the checkout there is
-// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2d
-// (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
+// 0.1b, which searches the start position on an empty pool field. Locally, build
+// AB-JChess-20261031 (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
 export function abJchessPath(): string {
   const explicit = process.env.MISTBOARD_ABJCHESS_PATH;
   if (explicit) {
@@ -506,8 +511,9 @@ export function jieqiAnalysisEngineAvailable(): boolean {
 // write these rows. scripts/backfill-jieqi-analysis.mjs enforces that at runtime.
 //
 // AB-JChess analysis runs a 64 MB table. Its budgets are tens of thousands of nodes
-// (it searches ~30-70k nps single-threaded, ~50x slower per node than PikaJieQi), so
-// even a 200k-node re-search touches a few percent of 64 MB; the remaining 192 MB would
+// (sized for v0.2d, which searched ~30-70k nps single-threaded; AB-JChess-20261031 is
+// about 65x faster per node, so the same budgets now cost milliseconds), so even a
+// 200k-node re-search touches a few percent of 64 MB; the remaining 192 MB would
 // buy nothing but resident memory on the web box. Same reproducibility argument: fixed.
 export function jieqiAnalysisResourceOptions(
   engine: JieqiAnalysisEngine = 'pikafish-jieqi',
@@ -641,7 +647,7 @@ function jieqiAnalysisSessionSpec(engine: JieqiAnalysisEngine) {
  * jieqiGoCommand the per-spawn path uses, so eval semantics are unchanged. `engine`
  * picks the binary (jieqiAnalysisEngine() by default: AB-JChess when it resolves). The
  * sweep and the decisions pass both run here: decisions used to spawn a process per
- * eval, several hundred per game, which for AB-JChess would mean reloading a 133 MB net
+ * eval, several hundred per game, which for AB-JChess v0.2d meant reloading a 133 MB net
  * each time. Scores are side-to-move POV; the caller owns normalization, and the
  * redacted FEN is sent as-is (the engine never sees a hidden id). Holds one slot of the
  * engine's analysis pool for the duration, so a run never occupies a live bot-move
@@ -887,8 +893,8 @@ export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {
 
 // Parked live-move processes, keyed by binary + handshake, so PikaJieQi and AB-JChess
 // park separately. Each binary's live pool (jieqiLivePool) still caps how many run at
-// once, so at most that many of each are ever parked; an AB-JChess one holds its 133 MB
-// net besides the hash. The idle TTL is long on purpose: a reaped session
+// once, so at most that many of each are ever parked; an AB-JChess one holds its net
+// besides the hash. The idle TTL is long on purpose: a reaped session
 // means the next player pays the spawn + hash allocation on their clock, which is the
 // exact cost this cache exists to keep off the move path (prod, 2026-10-23: a cold
 // first move ran 0.5-5.8 s past its movetime, against ~0.1 s locally).

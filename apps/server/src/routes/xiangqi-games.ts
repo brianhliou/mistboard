@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
+  createStandardXiangqiStateFromSetup,
   getStandardXiangqiPlayerView,
   pikafishUciToXiangqiSquares,
   type StandardXiangqiPlayerView,
@@ -167,14 +168,18 @@ export type XiangqiGameAnalysis = {
  * persistent engine process per sweep at the analysis node budget, #168).
  */
 export async function analyzeXiangqiPostgame(
-  payload: { timeline: ReadonlyArray<{ type: string; move?: XiangqiMove }> },
+  payload: XiangqiAnalysisPayload,
   // `moves` is the same game in native notation, handed alongside the UCI prefix
   // list because the offered-piece pass needs a board (#315). Injected test
   // analyzers may ignore it.
   analyze: (movesUci: string[], moves: readonly XiangqiMove[]) => Promise<PlyEval[]> = (
     movesUci,
     moves,
-  ) => analyzeXiangqiGame(movesUci, { moves }),
+  ) =>
+    analyzeXiangqiGame(movesUci, {
+      moves,
+      initialState: createStandardXiangqiStateFromSetup('analysis', payload.view),
+    }),
 ): Promise<XiangqiGameAnalysis> {
   const moves = payload.timeline
     .filter((entry): entry is { type: 'move-played'; move: XiangqiMove } =>
@@ -225,7 +230,10 @@ function pikafishLineToOurUci(line: readonly string[] | undefined): string[] | u
   return out.length ? out : undefined;
 }
 
-type XiangqiAnalysisPayload = { timeline: ReadonlyArray<{ type: string; move?: XiangqiMove }> };
+type XiangqiAnalysisPayload = {
+  timeline: ReadonlyArray<{ type: string; move?: XiangqiMove }>;
+  view?: StandardXiangqiPlayerView;
+};
 
 // Cache read/write, injectable for tests. Live impl reads/writes the
 // game_analysis table (no-ops when persistence is disabled).
@@ -273,7 +281,11 @@ export async function resolveXiangqiAnalysis(
           payload,
           analyze ??
             ((movesUci, moves) =>
-              analyzeXiangqiGame(movesUci, { moves, progress: progress ?? undefined })),
+              analyzeXiangqiGame(movesUci, {
+                moves,
+                initialState: createStandardXiangqiStateFromSetup('analysis', payload.view),
+                progress: progress ?? undefined,
+              })),
         )
       ).plies,
     validate: (series) => {

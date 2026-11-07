@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildChampions, CHAMPIONS, OPEN_TITLES, TITLE_HISTORY, TITLES } from './champions-page.js';
+import { articleIsLive } from './articles/publish-time.js';
+import {
+  AB_JCHESS_2026_WRITE_UP,
+  buildChampions,
+  CHAMPIONS,
+  OPEN_TITLES,
+  TITLE_HISTORY,
+  TITLES,
+} from './champions-page.js';
 import { mountContribute } from './contribute-page.js';
 import { mountCreators } from './creators-page.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
@@ -116,16 +124,16 @@ describe('/champions', () => {
         (stat) =>
           `${stat.querySelector('dd')?.textContent} ${stat.querySelector('dt')?.textContent}`,
       );
-    // AB-JChess won 248, lost 136, drew 16 (the write-up's 64% score).
-    expect(stats('jieqi')).toEqual(['248 wins', '16 draws', '136 losses']);
+    // AB-JChess-20261031 won 306, lost 227, drew 67 against jqe (a 0.566 score).
+    expect(stats('jieqi')).toEqual(['306 wins', '67 draws', '227 losses']);
     expect(stats('jungle')).toEqual(['82 wins', '118 draws', '0 losses']);
     expect(card('jieqi').querySelector('.champions-bar')?.getAttribute('aria-label')).toBe(
-      '248 wins, 16 draws, 136 losses',
+      '306 wins, 67 draws, 227 losses',
     );
     // A zero count draws no segment.
     expect(card('jungle').querySelectorAll('.champions-bar > span')).toHaveLength(2);
     expect(card('jieqi').querySelector('.champions-took')?.textContent).toBe(
-      'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
+      'Took the title back from jqe on 2026-10-31, over 600 games, scoring 57%.',
     );
     expect(card('jungle').querySelector('.champions-took')?.textContent).toContain(
       'from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move',
@@ -134,9 +142,10 @@ describe('/champions', () => {
       [...card(game).querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
         (a) => `${a.textContent} ${a.getAttribute('href')}`,
       );
+    // The AB-JChess-20261031 match has no study; its write-up shows from its own
+    // date (the dated test below pins both sides of it).
     expect(buttons('jieqi')).toEqual([
-      'Read the match /blog/ab-jchess',
-      'See the games /data',
+      ...(articleIsLive(AB_JCHESS_2026_WRITE_UP) ? ['Read the match /blog/ab-jchess-vs-jqe'] : []),
       'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi',
     ]);
     expect(buttons('jungle')).toEqual([
@@ -178,8 +187,8 @@ describe('/champions', () => {
     ).toEqual(['AB-JChess /bot/ab-jchess', 'KataGo-AnimalChess /bot/katago']);
 
     expect(credits(hero('jieqi'))).toEqual([
-      'Code: AB-JChess https://github.com/lxsgx23/AB-JChess, Pikafish https://github.com/official-pikafish/Pikafish',
-      'Network: AB-JChess NNUE https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch',
+      'Code: AB-JChess https://github.com/lxsgx23/AB-JChess, jqe https://github.com/devinokeefe/jieqi',
+      'Network: abjchess-20261030.nnue https://github.com/lxsgx23/AB-JChess/releases/tag/AB-JChess-20261031',
     ]);
     expect(credits(hero('jungle'))).toEqual([
       'Code: KataGomo https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025, KataGo https://github.com/lightvector/KataGo',
@@ -251,76 +260,99 @@ describe('/champions', () => {
     }
   });
 
-  // jqe reigns only in a build that offers it (VITE_JQE_ENABLED); until its
-  // write-up goes live the card links to the bot and the match games.
-  it('hands the jieqi title to jqe when jqe is on, keeping AB-JChess in the history', async () => {
+  // AB-JChess-20261031 took the title back from jqe (2026-10-31), so the card is
+  // AB-JChess's whether or not this build offers jqe, and jqe is a history line.
+  it('keeps the jieqi title with AB-JChess with jqe on, jqe in the history', async () => {
     vi.stubEnv('VITE_JQE_ENABLED', 'true');
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-10-26T12:00:00Z'));
     vi.resetModules();
     try {
       const { buildChampions: build } = await import('./champions-page.js');
       const page = build('en');
       const jieqi = page.querySelector<HTMLElement>('[data-game="jieqi"]')!;
-      expect(jieqi.querySelector('h3')?.textContent).toBe('jqe');
+      expect(jieqi.querySelector('h3')?.textContent).toBe('AB-JChess');
+      expect(jieqi.querySelector('h3 a')?.getAttribute('href')).toBe('/bot/ab-jchess');
       expect(
         [...jieqi.querySelectorAll('.champions-stats dd')].map((dd) => dd.textContent),
-      ).toEqual(['171', '15', '114']);
-      expect(
-        [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
-          (a) => `${a.textContent} ${a.getAttribute('href')}`,
-        ),
-      ).toEqual([
-        'See the games /study/3RQbr51i',
-        'Play the champion /?play=computer&gameSpecId=jieqi&engineId=jqe-jieqi',
-      ]);
-      // The registry is re-imported with the flag on, where jieqi setup offers jqe.
-      const { webVariantTenantForSpecId: tenantFor } = await import('./variant-tenant/registry.js');
-      expect(tenantFor('jieqi')?.landing?.engineOptions?.map((engine) => engine.id)).toContain(
-        'jqe-jieqi',
-      );
-      expect(hrefs(jieqi)).toContain('https://github.com/devinokeefe/jieqi');
-      expect(jieqi.querySelector('h3 a')?.getAttribute('href')).toBe('/bot/jqe');
-      expect(jieqi.querySelector('.champions-credits')?.textContent).toContain('it014.jqn');
+      ).toEqual(['306', '67', '227']);
       const lines = [...page.querySelectorAll('.champions-list li')].map(
         (li) => li.textContent ?? '',
       );
-      expect(lines[0]).toBe(
-        "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60% (games).",
-      );
-      expect(lines[1]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+      expect(lines[0]).toMatch(/^2026-10-31, Jieqi: AB-JChess-20261031/);
+      expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe/);
     } finally {
-      vi.useRealTimers();
       vi.unstubAllEnvs();
       vi.resetModules();
     }
   });
 
-  it('links the jqe write-up once the article is live, on its own date', async () => {
+  it('links the jqe write-up on its history line once the article is live', async () => {
     const { jqeArticle } = await import('./articles/content/jqe.js');
     const { JQE_WRITE_UP } = await import('./champions-page.js');
     expect(JQE_WRITE_UP.publishedAt).toBe(jqeArticle.publishedAt);
-    vi.stubEnv('VITE_JQE_ENABLED', 'true');
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-10-27T17:00:00Z'));
-    vi.resetModules();
-    try {
-      const { buildChampions: build } = await import('./champions-page.js');
-      const jieqi = build('en').querySelector<HTMLElement>('[data-game="jieqi"]')!;
-      expect(
-        [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
-          (a) => `${a.textContent} ${a.getAttribute('href')}`,
-        ),
-      ).toEqual([
-        'Read the match /blog/jqe',
-        'See the games /study/3RQbr51i',
-        'Play the champion /?play=computer&gameSpecId=jieqi&engineId=jqe-jieqi',
-      ]);
-    } finally {
-      vi.useRealTimers();
-      vi.unstubAllEnvs();
+    const jqeLine = async (now: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
       vi.resetModules();
-    }
+      try {
+        const { buildChampions: build } = await import('./champions-page.js');
+        const li = [...build('en').querySelectorAll('.champions-list li')].find((item) =>
+          item.textContent?.startsWith('2026-10-21, Jieqi: jqe'),
+        );
+        return [...(li?.querySelectorAll('a') ?? [])].map(
+          (a) => `${a.textContent} ${a.getAttribute('href')}`,
+        );
+      } finally {
+        vi.useRealTimers();
+        vi.resetModules();
+      }
+    };
+    expect(await jqeLine('2026-10-26T12:00:00Z')).toEqual(['games /study/3RQbr51i']);
+    expect(await jqeLine('2026-10-27T17:00:00Z')).toEqual([
+      'write-up /blog/jqe',
+      'games /study/3RQbr51i',
+    ]);
+  });
+
+  it('links the AB-JChess-20261031 write-up on its card and history line once live', async () => {
+    const { abJchessVsJqeArticle } = await import('./articles/content/ab-jchess-vs-jqe.js');
+    expect(AB_JCHESS_2026_WRITE_UP.publishedAt).toBe(abJchessVsJqeArticle.publishedAt);
+    // A draft must never be linked: the mirror follows the article's status too.
+    expect(AB_JCHESS_2026_WRITE_UP.status).toBe(abJchessVsJqeArticle.status);
+    const jieqiLinks = async (now: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
+      vi.resetModules();
+      try {
+        const { buildChampions: build } = await import('./champions-page.js');
+        const page = build('en');
+        const text = (as: Iterable<HTMLAnchorElement>) =>
+          [...as].map((a) => `${a.textContent} ${a.getAttribute('href')}`);
+        const li = [...page.querySelectorAll('.champions-list li')].find((item) =>
+          item.textContent?.startsWith('2026-10-31, Jieqi: AB-JChess-20261031'),
+        );
+        return {
+          card: text(
+            page.querySelectorAll<HTMLAnchorElement>('[data-game="jieqi"] .champions-actions a'),
+          ),
+          history: text(li?.querySelectorAll<HTMLAnchorElement>('a') ?? []),
+        };
+      } finally {
+        vi.useRealTimers();
+        vi.resetModules();
+      }
+    };
+    const play = 'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi';
+    const liveAt = `${abJchessVsJqeArticle.publishedAt}T17:00:00Z`;
+    const dayBefore = new Date(Date.parse(liveAt) - 86_400_000).toISOString();
+    expect(await jieqiLinks(dayBefore)).toEqual({ card: [play], history: [] });
+    expect(await jieqiLinks(liveAt)).toEqual(
+      abJchessVsJqeArticle.status === 'published'
+        ? {
+            card: ['Read the match /blog/ab-jchess-vs-jqe', play],
+            history: ['write-up /blog/ab-jchess-vs-jqe'],
+          }
+        : { card: [play], history: [] },
+    );
   });
 
   it('lists the title history newest first, then the challenge rules', () => {
@@ -330,8 +362,14 @@ describe('/champions', () => {
     const history = page.querySelector('.champions-list')!;
     const lines = [...history.querySelectorAll('li')].map((li) => li.textContent ?? '');
     expect(lines).toHaveLength(TITLE_HISTORY.length);
-    expect(lines[0]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
-    expect(lines[1]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
+    // What follows the score depends on the date (the write-up link goes live 2026-11-02 09:00);
+    // the dated test pins it.
+    const first =
+      "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%";
+    expect(lines[0].slice(0, first.length)).toBe(first);
+    expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
+    expect(lines[2]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+    expect(lines[3]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
     const links = hrefs(page);
     for (const href of ['/blog/ab-jchess', '/blog/katago-jungle', '/data', '/study/0t8xpyv6']) {
       expect(links, href).toContain(href);
@@ -400,5 +438,48 @@ describe('/champions', () => {
       expect(root.querySelector('a[href="/challenges"]'), mount.name).toBeNull();
       root.remove();
     }
+  });
+});
+
+describe('Gomoku open title', () => {
+  afterEach(() => {
+    vi.doUnmock('@mistboard/game');
+    vi.resetModules();
+  });
+  it('prepares Rapfi credits with no invented holder or match', async () => {
+    const module = await import('./champions-page.js');
+    expect(module).toHaveProperty(
+      'GOMOKU_OPEN_TITLE',
+      expect.objectContaining({ gameId: 'gomoku', setupEngineId: 'rapfi-level-8' }),
+    );
+    const title = (module as unknown as { GOMOKU_OPEN_TITLE: Record<string, unknown> })
+      .GOMOKU_OPEN_TITLE;
+    for (const field of ['holder', 'holderKey', 'botHref', 'reign'])
+      expect(title).not.toHaveProperty(field);
+    expect(TITLES.some((title) => title.gameId === 'gomoku')).toBe(false);
+  });
+  it('renders the launched Rapfi open title last with supported public credit links', async () => {
+    vi.resetModules();
+    vi.doMock('@mistboard/game', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@mistboard/game')>();
+      return {
+        ...actual,
+        isPublicGameSpec: (id: string) => id === 'gomoku' || actual.isPublicGameSpec(id),
+      };
+    });
+    const launched = await import('./champions-page.js');
+    expect(launched.TITLES.at(-1)?.gameId).toBe('gomoku');
+    expect(launched.CHAMPIONS.some((title) => title.gameId === 'gomoku')).toBe(false);
+    const card = launched.buildChampions('en').querySelector('[data-game="gomoku"]');
+    expect(card).not.toBeNull();
+    expect(card!.querySelector('.champions-open-holder')).toBeNull();
+    expect(card!.querySelector('.champions-open-badge')?.textContent).toBe('Title open');
+    expect(hrefs(card as HTMLElement)).toEqual([
+      'https://github.com/dhbloo/rapfi',
+      'https://github.com/brianhliou/rapfi-wasm',
+      '#challenge',
+    ]);
+    expect(card!.textContent).toContain('Rapfi');
+    expect(card!.querySelector('.champions-stat')).toBeNull();
   });
 });

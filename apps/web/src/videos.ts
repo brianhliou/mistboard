@@ -1,5 +1,5 @@
 // Curated video library at /videos, lichess.org/video style: a filterable grid
-// of verified English-first xiangqi videos. External (YouTube) cards link out in
+// of verified English-first xiangqi videos. External cards link out in
 // a new tab instead of embedding: the dev server is cross-origin isolated
 // site-wide (COEP require-corp in vite.config.ts), which blocks YouTube
 // iframes (the embed document sends no COEP), while thumbnail <img> loads pass
@@ -21,6 +21,7 @@ import { buildNav } from './site-shell.js';
 import {
   FIRST_PARTY_VIDEOS,
   isShort,
+  isVideoAvailableForViewer,
   isVideoLive,
   VIDEO_LANGUAGES,
   VIDEO_LEVELS,
@@ -36,6 +37,7 @@ import {
   videoThumbUrl,
   videoWatchUrl,
 } from './videos-data.js';
+import { isBlockedForViewer, YOUTUBE_BLOCKED_IN } from './viewer-geo.js';
 
 // Re-exported so the page's own callers and tests keep one import site.
 export { videoThumbUrl, videoWatchUrl };
@@ -58,7 +60,14 @@ const LEVEL_LABEL_KEYS: Record<VideoLevel, `videos.level.${VideoLevel}`> = {
 
 const VARIANT_LABEL_KEYS: Record<VideoVariant, `videos.variant.${VideoVariant}`> = {
   xiangqi: 'videos.variant.xiangqi',
+  jieqi: 'videos.variant.jieqi',
   fog: 'videos.variant.fog',
+};
+
+const SOURCE_LABEL_KEYS: Record<VideoSource, `videos.source.${VideoSource}`> = {
+  youtube: 'videos.source.youtube',
+  bilibili: 'videos.source.bilibili',
+  mistboard: 'videos.source.mistboard',
 };
 
 const LANGUAGE_LABEL_KEYS: Record<VideoLanguage, `videos.language.${VideoLanguage}`> = {
@@ -109,6 +118,9 @@ export function mountVideos(root: HTMLElement): void {
 }
 
 export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
+  const available = VIDEOS.filter(
+    (video) => isVideoLive(video) && isVideoAvailableForViewer(video),
+  );
   const section = document.createElement('section');
   section.className = 'site-section videos-page';
 
@@ -118,7 +130,11 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
 
   const intro = document.createElement('p');
   intro.className = 'videos-intro';
-  intro.textContent = t('videos.intro', {}, locale);
+  intro.textContent = t(
+    isBlockedForViewer(YOUTUBE_BLOCKED_IN) ? 'videos.introMainland' : 'videos.intro',
+    {},
+    locale,
+  );
 
   // Ours lead. The library's job changed the day the channel published: it is
   // the site's one surface that can turn a visitor into a subscriber, and a
@@ -134,7 +150,9 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   oursIntro.textContent = t('videos.ourIntro', {}, locale);
   const oursList = document.createElement('ul');
   oursList.className = 'videos-grid videos-ours-grid';
-  const live = FIRST_PARTY_VIDEOS.filter((video) => isVideoLive(video));
+  const live = FIRST_PARTY_VIDEOS.filter(
+    (video) => isVideoLive(video) && isVideoAvailableForViewer(video),
+  );
   for (const video of live.filter((video) => !isShort(video)))
     oursList.append(buildVideoCard(video, locale));
   // Shorts get their own row: a 9:16 card in the 16:9 grid would set every
@@ -150,24 +168,36 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
     for (const video of shorts) shortsList.append(buildVideoCard(video, locale));
     shortsBlock.push(shortsHeading, shortsList);
   }
-  const subscribe = document.createElement('a');
-  subscribe.className = 'videos-subscribe';
-  subscribe.href = 'https://www.youtube.com/@Mistboard?sub_confirmation=1';
-  subscribe.target = '_blank';
-  subscribe.rel = 'noopener noreferrer';
-  subscribe.textContent = t('videos.subscribe', {}, locale);
-  subscribe.addEventListener('click', () => {
-    track('video_clicked', { kind: 'subscribe', source: 'youtube', video_key: null });
-  });
-  ours.append(oursHeading, oursIntro, oursList, ...shortsBlock, subscribe);
+  ours.append(oursHeading, oursIntro, oursList, ...shortsBlock);
+  const youtubeBlocked = isBlockedForViewer(YOUTUBE_BLOCKED_IN);
+  if (!youtubeBlocked) {
+    const subscribe = document.createElement('a');
+    subscribe.className = 'videos-subscribe';
+    subscribe.href = 'https://www.youtube.com/@Mistboard?sub_confirmation=1';
+    subscribe.target = '_blank';
+    subscribe.rel = 'noopener noreferrer';
+    subscribe.textContent = t('videos.subscribe', {}, locale);
+    subscribe.addEventListener('click', () => {
+      track('video_clicked', { kind: 'subscribe', source: 'youtube', video_key: null });
+    });
+    ours.append(subscribe);
+  }
 
-  // Which facet options actually exist in the data. Level always spans its full
-  // ordered set; language, variant, and source facets render only when they
-  // discriminate (more than one language/variant present, any first-party video
-  // present), so the page never shows a dead single-option facet.
-  const presentLanguages = PRESENT_LANGUAGES;
-  const presentVariants = presentVideoVariants();
-  const presentSources = presentVideoSources();
+  // Which facet options actually exist in the data, so a chip never filters to
+  // nothing (the mainland shelf has no advanced videos today); language, variant,
+  // and source facets render only when they discriminate (more than one present),
+  // so the page never shows a dead single-option facet.
+  const presentTags = VIDEO_TAGS.filter((tag) =>
+    available.some((video) => video.tags.includes(tag)),
+  );
+  const presentLevels = VIDEO_LEVELS.filter((level) =>
+    available.some((video) => video.level === level),
+  );
+  const presentLanguages = VIDEO_LANGUAGES.filter((language) =>
+    available.some((video) => video.language === language),
+  );
+  const presentVariants = presentVideoVariants(available);
+  const presentSources = presentVideoSources(available);
 
   const controls = document.createElement('div');
   controls.className = 'videos-controls';
@@ -246,7 +276,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   const topicGroup = buildChipGroup({
     labelText: t('videos.topicLabel', {}, locale),
     allLabel: t('videos.allTag', {}, locale),
-    values: VIDEO_TAGS,
+    values: presentTags,
     optionLabel: (tag) => t(TAG_LABEL_KEYS[tag], {}, locale),
     selected: state.tags,
     onChange: apply,
@@ -257,7 +287,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   const levelGroup = buildChipGroup({
     labelText: t('videos.levelLabel', {}, locale),
     allLabel: t('videos.allTag', {}, locale),
-    values: VIDEO_LEVELS,
+    values: presentLevels,
     optionLabel: (level) => t(LEVEL_LABEL_KEYS[level], {}, locale),
     selected: state.levels,
     onChange: apply,
@@ -278,12 +308,12 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
     groups.push(variantGroup.sync);
   }
 
-  if (presentSources.includes('mistboard')) {
+  if (presentSources.length > 1) {
     const sourceGroup = buildChipGroup({
       labelText: t('videos.sourceLabel', {}, locale),
       allLabel: t('videos.allTag', {}, locale),
-      values: ['mistboard'],
-      optionLabel: () => t('videos.source.mistboard', {}, locale),
+      values: presentSources,
+      optionLabel: (source) => t(SOURCE_LABEL_KEYS[source], {}, locale),
       selected: state.sources,
       onChange: apply,
     });
@@ -300,12 +330,25 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
 
   const empty = document.createElement('p');
   empty.className = 'videos-empty';
-  empty.textContent = t('videos.empty', {}, locale);
+  empty.textContent = t(
+    youtubeBlocked && available.length === 0 ? 'videos.unavailableInCountry' : 'videos.empty',
+    {},
+    locale,
+  );
   empty.hidden = true;
 
   const note = document.createElement('p');
   note.className = 'videos-note';
-  note.textContent = t('videos.opensOnYoutube', {}, locale);
+  note.textContent = t(
+    presentSources.includes('bilibili')
+      ? presentSources.includes('youtube')
+        ? 'videos.opensExternally'
+        : 'videos.opensOnBilibili'
+      : 'videos.opensOnYoutube',
+    {},
+    locale,
+  );
+  note.hidden = !presentSources.some((source) => source === 'youtube' || source === 'bilibili');
 
   search.addEventListener('input', () => {
     state.query = search.value;
@@ -318,7 +361,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
 
   function apply(): void {
     const matches = sortVideos(
-      filterVideos(VIDEOS, {
+      filterVideos(available, {
         tags: state.tags,
         levels: state.levels,
         variants: state.variants,
@@ -340,7 +383,10 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
 
   apply();
 
-  section.append(heading, intro, ours, controls, facets, count, grid, empty, note);
+  section.append(heading, intro);
+  if (live.length > 0 || !youtubeBlocked) section.append(ours);
+  section.append(controls, facets, count, grid, empty);
+  if (!note.hidden) section.append(note);
   return section;
 }
 
@@ -385,17 +431,17 @@ export function sortVideos(videos: readonly VideoEntry[], sort: VideoSort): Vide
   }
 }
 
-function presentVideoVariants(): VideoVariant[] {
+function presentVideoVariants(videos: readonly VideoEntry[]): VideoVariant[] {
   const seen = new Set<VideoVariant>();
-  for (const video of VIDEOS) seen.add(video.variant);
+  for (const video of videos) seen.add(video.variant);
   // Stable, meaningful order rather than insertion order.
-  return (['xiangqi', 'fog'] as const).filter((variant) => seen.has(variant));
+  return (['xiangqi', 'jieqi', 'fog'] as const).filter((variant) => seen.has(variant));
 }
 
-function presentVideoSources(): VideoSource[] {
+function presentVideoSources(videos: readonly VideoEntry[]): VideoSource[] {
   const seen = new Set<VideoSource>();
-  for (const video of VIDEOS) seen.add(video.source);
-  return (['youtube', 'mistboard'] as const).filter((source) => seen.has(source));
+  for (const video of videos) seen.add(video.source);
+  return (['youtube', 'bilibili', 'mistboard'] as const).filter((source) => seen.has(source));
 }
 
 // Unlike the variant/source helpers this is computed once at module load: the
@@ -486,9 +532,14 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
   const link = document.createElement('a');
   link.className = 'videos-card-link';
   link.href = videoWatchUrl(video);
-  if (video.source === 'youtube') {
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
+  switch (video.source) {
+    case 'youtube':
+    case 'bilibili':
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      break;
+    case 'mistboard':
+      break;
   }
   // Outbound clicks are the only signal the library has: a YouTube visit
   // leaves no pageview here, and the referrer is stripped on the way back.
@@ -497,7 +548,7 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
       kind: 'card',
       source: video.source,
       video_key: videoKey(video),
-      first_party: FIRST_PARTY_VIDEOS.includes(video),
+      first_party: video.firstParty === true || video.source === 'mistboard',
       level: video.level,
       language: video.language,
     });
@@ -506,6 +557,16 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
   const thumb = document.createElement('span');
   thumb.className = 'videos-thumb';
   const img = document.createElement('img');
+  img.referrerPolicy = 'no-referrer';
+  // A failed remote request (hotlink protection, COEP or a blocker) falls back
+  // once to local art. A missing fallback cannot trigger an error loop.
+  img.addEventListener(
+    'error',
+    () => {
+      img.src = '/video-thumbs/unavailable.svg';
+    },
+    { once: true },
+  );
   img.src = videoThumbUrl(video);
   img.alt = '';
   img.loading = 'lazy';
@@ -515,6 +576,11 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
     const badge = document.createElement('span');
     badge.className = 'videos-source-badge';
     badge.textContent = t('videos.badge.mistboard', {}, locale);
+    thumb.append(badge);
+  } else if (video.source === 'bilibili') {
+    const badge = document.createElement('span');
+    badge.className = 'videos-source-badge';
+    badge.textContent = t('videos.source.bilibili', {}, locale);
     thumb.append(badge);
   }
 

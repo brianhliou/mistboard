@@ -10,8 +10,11 @@ import {
   PIKAFISH_REPO_URL,
   PIKAFISH_SITE_URL,
   pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_NETWORKS_LICENSE_URL,
+  RAPFI_REPO_URL,
 } from './engine-credits.js';
-import { jqeEnabled } from './feature-flags.js';
+import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
@@ -532,6 +535,9 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   heading.className = 'site-section-heading';
   heading.textContent = t('about.heading', {}, locale);
 
+  const mission = aboutParagraph([t('about.mission', {}, locale)]);
+  mission.className = 'about-mission';
+
   const lede = aboutParagraph([t('about.lede', {}, locale)]);
 
   const whyHeading = aboutSubheading(t('about.whyHeading', {}, locale));
@@ -587,6 +593,7 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(
     heading,
+    mission,
     lede,
     whyHeading,
     whyP,
@@ -654,6 +661,11 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.githubRepository', {}, locale), GITHUB_URL),
     textLine(t('source.licenseAgpl', {}, locale)),
     textLine(t('source.noWarranty', {}, locale)),
+    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+    aboutLink(t('developers.heading', {}, locale), localizedHref('/developers', locale)),
+    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    aboutLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    aboutLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
   ]);
 
   const thirdParty = sourceBlock(t('source.thirdParty', {}, locale), [
@@ -681,6 +693,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
+    ...(gomokuEnabled()
+      ? [
+          linkLine(t('source.rapfi', {}, locale), RAPFI_REPO_URL),
+          linkLine(t('source.rapfiNetworks', {}, locale), RAPFI_NETWORKS_LICENSE_URL),
+          linkLine(t('source.rapfiBuild', {}, locale), RAPFI_BUILD_URL),
+        ]
+      : []),
     // The tablebase in the explorer pane and practice grading read chessdb.cn
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
@@ -1039,7 +1059,7 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
   quick.className = 'not-found-links';
   quick.setAttribute('aria-label', t('notFound.quickLinks', {}, locale));
   for (const [labelKey, href] of [
-    ['nav.play', '/play'],
+    ['nav.play', '/'],
     ['nav.rules', '/rules'],
     ['nav.watch', '/watch'],
     ['nav.puzzles', '/puzzles'],

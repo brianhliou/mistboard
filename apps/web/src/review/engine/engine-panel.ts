@@ -2,7 +2,7 @@
 // slot). Owns a ceval handle, a lichess-style head (on/off switch, headline eval,
 // engine name + status), and up to MultiPV principal-variation lines. Position is
 // pushed in via setPosition() from the postgame's ply navigation; scores are
-// normalised to Red's POV so the eval reads the same regardless of whose turn it is.
+// normalised to the first ink's POV (Red, or Black in Gomoku), regardless of turn.
 // Before a flip game binds ink ownership, the same seat is labelled P1 instead.
 import { t } from '../../i18n/catalog.js';
 import { gearIconSvg } from '../../theme.js';
@@ -24,7 +24,9 @@ import './engine-panel.css';
 import { engineUnsupportedCopy } from './engine-unsupported-copy.js';
 import type { EvalBar } from './eval-bar.js';
 import { formatEval, formatMistyEval } from './eval-format.js';
+import { formatGomokuEval } from './gomoku-eval-format.js';
 import { isMistyCevalVariant } from './misty-ceval.js';
+import { rapfiCevalPosition } from './rapfi-ceval.js';
 
 export interface EnginePanel {
   el: HTMLElement;
@@ -107,6 +109,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   const el = document.createElement('section');
   el.className = 'engine-panel';
   el.dataset.engineSupported = supported ? 'true' : 'false';
+  if (opts.variant === 'gomoku') {
+    el.dataset.seatInkFamily = 'gomoku';
+    if (opts.evalBar) opts.evalBar.el.dataset.seatInkFamily = 'gomoku';
+  }
 
   // Lichess ceval head anatomy: [switch] [big eval] [name / status] … [gear].
   const head = document.createElement('div');
@@ -268,13 +274,19 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       const display = formatScore(opts.variant, cp, mate);
       evalLabel.textContent = firstPlayer ? `P1 ${display}` : display;
       if (firstPlayer) evalLabel.title = t('engine.firstPlayerPerspective');
+      else if (opts.variant === 'gomoku') evalLabel.title = formatGomokuEval(cp, mate);
       else evalLabel.removeAttribute('title');
       opts.evalBar?.setEval(cp, mate);
     }
     const status = update.depth
-      ? `Depth ${update.depth}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
-      : 'thinking…';
-    const activeStatus = effort === 'infinite' ? `${status} · analyzing` : status;
+      ? `${t('engine.depth', { depth: update.depth })}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
+      : t('engine.thinking');
+    const nodes =
+      opts.variant === 'gomoku' && update.nodes
+        ? ` · ${t('engine.nodes', { nodes: update.nodes })}`
+        : '';
+    const activeStatus =
+      effort === 'infinite' ? `${status}${nodes} · ${t('engine.analyzing')}` : status + nodes;
     sub.textContent = topFlipsTied(update.lines)
       ? `${activeStatus} · Top flips tied`
       : activeStatus;
@@ -290,7 +302,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     const moves = currentMoves;
     const side = sideToMove(moves);
     const generation = ++searchGeneration;
-    sub.textContent = 'loading…';
+    sub.textContent = t('engine.loading');
     opts.evalBar?.setLoading();
     void handle!
       .evaluate({
@@ -301,7 +313,9 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
           : {}),
         multiPv,
         effort,
-        onUpdate: (update) => render(update, side),
+        onUpdate: (update) => {
+          if (generation === searchGeneration && on) render(update, side);
+        },
       })
       .then((final) => {
         // A search that finished with no line at all had no legal move to
@@ -315,7 +329,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
         sub.textContent = t('engine.gameOver');
       })
       .catch((err: unknown) => {
-        sub.textContent = `Engine error: ${(err as Error).message ?? 'failed'}`;
+        if (generation === searchGeneration && on)
+          sub.textContent = t('engine.error', {
+            error: (err as Error).message ?? t('engine.failed'),
+          });
       });
   }
 
@@ -325,14 +342,24 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     searchable: boolean = true,
     noProgressLimit?: number,
   ): void {
-    currentMoves = movesUci;
+    currentMoves = [...movesUci];
     currentFen = initialFen;
     currentNoProgressLimit = noProgressLimit;
     currentSearchable = searchable;
-    currentBaseSide = initialFen?.split(' ')[1] === 'b' ? 'black' : 'red';
+    // The shared score axis is the first seat: Black in Gomoku, Red in xiangqi.
+    currentBaseSide =
+      opts.variant === 'gomoku' && searchable
+        ? rapfiCevalPosition({ initialFen, movesUci: [] }).turn === 2
+          ? 'black'
+          : 'red'
+        : initialFen?.split(' ')[1] === 'b'
+          ? 'black'
+          : 'red';
     currentPerspective = isUnboundFlipPosition(opts.variant, initialFen) ? 'first-player' : 'bound';
     opts.evalBar?.setNeutral(currentPerspective === 'first-player');
     if (!on || !supported) return;
+    searchGeneration += 1;
+    handle?.stop();
     // The panel keeps its last PV text until fresh results stream in, but
     // on-board arrows for a position we already left would be misleading —
     // clear them immediately and let the next update redraw.
@@ -362,18 +389,23 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       return;
     }
     opts.evalBar?.setIdle(false);
-    sub.textContent = 'loading…';
+    sub.textContent = t('engine.loading');
+    const generation = ++searchGeneration;
     void handle
       .preload((progress) => {
         // Pikafish's net is 51 MB; the first open of a xiangqi board is a real
         // download, and a bare "loading…" for ten seconds reads as a hang.
-        if (on) sub.textContent = formatLoadProgress(engineName, progress);
+        if (on && generation === searchGeneration)
+          sub.textContent = formatLoadProgress(engineName, progress);
       })
       .then(() => {
-        if (on) evaluateNow();
+        if (on && generation === searchGeneration) evaluateNow();
       })
       .catch((err: unknown) => {
-        sub.textContent = `Engine unavailable: ${(err as Error).message ?? 'failed'}`;
+        if (on && generation === searchGeneration)
+          sub.textContent = t('engine.unavailable', {
+            error: (err as Error).message ?? t('engine.failed'),
+          });
       });
   }
 
@@ -382,6 +414,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     opts.onToggle?.(false);
     syncToggle();
     searchGeneration += 1;
+    clearTimeout(debounceId);
     handle?.stop();
     clearOutput();
     opts.evalBar?.setIdle(true);
@@ -441,6 +474,8 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     },
     supported,
     dispose() {
+      on = false;
+      searchGeneration += 1;
       clearTimeout(debounceId);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       handle?.dispose();
@@ -464,7 +499,7 @@ function effortLabel(effort: CevalEffort): string {
     case 'deep':
       return t('engine.effortDeep');
     case 'max':
-      return 'Max';
+      return t('engine.effortMax');
     case 'infinite':
       return '∞';
   }
@@ -562,6 +597,9 @@ function evalTone(cp: number | null, mate: number | null, variant: CevalVariant)
 }
 
 function formatScore(variant: CevalVariant, cp: number | null, mate: number | null): string {
+  // Gomoku's short form ("W in 7") keeps the headline one width as a lead
+  // turns into a forced win; the words go in the headline's tooltip.
+  if (variant === 'gomoku') return formatGomokuEval(cp, mate, { compact: true });
   return isMistyCevalVariant(variant) ? formatMistyEval(cp, mate) : formatEval(cp, mate);
 }
 

@@ -7,9 +7,10 @@
 // so there is no fog and the move list is unmasked.
 //
 // What is its own: the 9x5 intersection board (three-kingdoms-banqi-diagrams.ts),
-// the score race to 100 (each seat's points and captures in a row under the
-// board, the target once in the game card, and a moves-left line under the tally
-// once the no-progress count nears its limit), and a plain move notation. The
+// the score race to 100 (each seat's points and captures in a block under the
+// board, red and black side by side where the width allows, and a moves-left
+// line under the tally once the no-progress count nears its limit), and a plain
+// move notation. The
 // captures and the face-down tally with reveal odds are banqi's
 // (banqi-material.ts): the same 32 pieces, the same never-moved face-down
 // tiles. Sounds are banqi's, on this
@@ -48,7 +49,7 @@ import {
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
 } from './three-kingdoms-banqi-diagrams.js';
-import { tkMovesLeftLine, tkPoints, tkScoreTarget } from './three-kingdoms-banqi-score.js';
+import { tkMovesLeftLine, tkPoints } from './three-kingdoms-banqi-score.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -115,7 +116,9 @@ function seatLabel(seat: BanqiSeat): TenantSeatKey {
 function reasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'score':
-      return 'result.onPoints';
+      // The score ending is a seat reaching the 100-point target (the engine's
+      // SCORE_TARGET); a no-progress ending is labelled separately.
+      return 'result.reachedPoints';
     case 'no-progress':
       return 'result.noProgress';
     case 'no-legal-move':
@@ -151,8 +154,9 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   seatLabel,
   seatInk: liveSeatInk,
   showPregameTurn: true,
-  // Each seat's points sit under the board with its captures (renderMaterial);
-  // the target is said once, in the card.
+  // Each seat's points sit under the board with its captures (renderMaterial).
+  // The card names the variant alone, with the clock and mode line: the race
+  // target beside the name was one line too many (#823).
 };
 
 const client = createTenantLiveClient<
@@ -166,7 +170,6 @@ const client = createTenantLiveClient<
   boardClass: 'tk-banqi-live-board',
   chrome: {
     roomMode: () => roomMode,
-    variantDetail: () => tkScoreTarget(),
   },
   playAgainRequestBody: (state) => ({
     mode: roomMode,
@@ -373,6 +376,7 @@ function renderMaterial(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | n
     view,
     viewerInk,
     moves,
+    { keepFinishedOdds: true },
   );
   liveRefs.capturesTop.replaceChildren();
   liveRefs.capturesBottom.replaceChildren();
@@ -381,12 +385,10 @@ function renderMaterial(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | n
   host.classList.remove('hidden-pool--odds');
   if (!view || Object.keys(view.board).length === 0) return;
   const playing = view.status.type === 'playing';
-  const odds = pool.classList.contains('hidden-pool--odds');
-  host.classList.toggle('tk-material--odds', odds);
-  // The odds caption says what the percentages are; at the end the line's
-  // own name says it.
-  const caption = pool.querySelector('.hidden-pool__caption');
-  if (playing && odds && caption) host.append(caption);
+  host.classList.toggle('tk-material--odds', pool.classList.contains('hidden-pool--odds'));
+  // Banqi's "N face-down could be:" caption is not carried over: each seat's
+  // Still face-down line already says what the discs and their chances are
+  // (#823).
   const bound = liveSeatInk(topSeat) !== null && liveSeatInk(bottomSeat) !== null;
   // One name for the line in play and after it: at the end it still lists
   // what was face-down when play stopped (Brian, 2026-10-30: "Face-down at the

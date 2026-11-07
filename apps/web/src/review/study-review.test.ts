@@ -1,6 +1,7 @@
 import { importXiangqiGame } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import continuedRecords from '../../../../packages/game/fixtures/xiangqi-notation/adjudicated-records.json';
+import { jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
 import { mountStudyReview } from './study-review.js';
 import type { SerializedTree } from './tree-serialize.js';
 import { importXiangqiPgnChapters } from './xiangqi-pgn-chapter.js';
@@ -46,4 +47,64 @@ describe('xiangqi study record loading', () => {
       }
     });
   }
+});
+
+describe('jieqi study face-down faces', () => {
+  it('draws a hover face on the face-down tiles, like the finished-game review', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const handle = await mountStudyReview('jieqi', root, {
+      title: 'Faces',
+      summary: '',
+      ariaLabel: 'Study board',
+      reviewSurface: 'study',
+      rootFen:
+        'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB',
+      initialTree: { version: 1, root: { children: [{ uci: 'i4i5', children: [] }] } },
+      initialPosition: 'end',
+    });
+    try {
+      await vi.waitFor(() =>
+        expect(root.querySelectorAll('.facedown-face').length).toBeGreaterThan(0),
+      );
+    } finally {
+      handle.destroy();
+      root.remove();
+    }
+  });
+});
+
+describe('jieqi study luck without analysis', () => {
+  it('renders the move badge, calls the board luck marker and opens the reveal card', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const overlay = jieqiDecisionOverlay(
+      summarizeDecisions([{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 62 }]),
+    );
+    const handle = await mountStudyReview('jieqi', root, {
+      title: 'Luck',
+      summary: '',
+      ariaLabel: 'Study board',
+      reviewSurface: 'study',
+      rootFen:
+        'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB',
+      initialTree: { version: 1, root: { children: [{ uci: 'i4i5', children: [] }] } },
+      initialPosition: 'end',
+      storedDecisions: Promise.resolve(overlay),
+    });
+    try {
+      await vi.waitFor(() =>
+        expect(root.querySelector('.review-move-list__luck')?.textContent).toBe('🎲 +12%'),
+      );
+      // This die is produced only by the presentation's moveLuckMarker hook.
+      expect(root.querySelector('.luck-mark[data-luck-square="i5"]')).not.toBeNull();
+      expect(root.querySelector('.review-move-list__suffix')?.textContent).toBe('');
+      const badge = root.querySelector<HTMLElement>('.review-move-list__luck')!;
+      badge.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await vi.waitFor(() => expect(document.querySelector('.luck-card')).not.toBeNull());
+    } finally {
+      handle.destroy();
+      root.remove();
+    }
+  });
 });

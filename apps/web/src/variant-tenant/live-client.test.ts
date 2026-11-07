@@ -7,8 +7,9 @@
 // minimal two-color test variant; no real WebSocket.
 
 import { BANQI_SPEC_ID } from '@mistboard/game';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setPostHogInstance } from '../analytics.js';
+import { afterBoardSettles, resetBoardSettleForTests, trackPieceAnimation } from '../board-anim.js';
 import { resetTrackedGameStartsForTests } from '../game-start-source.js';
 import { resetGameStartSoundForTests } from '../live-game-start-sound.js';
 import { playSoundWhenUnlocked } from '../live-sound.js';
@@ -827,6 +828,100 @@ describe('animateBoard hook (one-shot pending-animation channel)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // #825: the game-over sound played as the final glide began. The core holds
+  // the board from the frame until its render, so a sound asked for in the
+  // snapshot hook waits for the glide that render starts.
+  describe('game-over sound waits for the final move to land', () => {
+    function fakeGlide(): EventTarget & { finish(): void } {
+      const target = new EventTarget();
+      return Object.assign(target, { finish: () => target.dispatchEvent(new Event('finish')) });
+    }
+    const flush = () => new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    function finishingHarness(glides: Array<ReturnType<typeof fakeGlide>>, sounded: string[]) {
+      let h: Harness | null = null;
+      h = createHarness({
+        animateBoard: (_refs, _view, takePendingAnimation) => {
+          const pending = takePendingAnimation();
+          if (!pending) return undefined;
+          const glide = fakeGlide();
+          glides.push(glide);
+          trackPieceAnimation(glide);
+          return 250;
+        },
+        onSnapshotApplied: () => {
+          if (h?.client.state.view?.status.type === 'finished') {
+            afterBoardSettles(() => sounded.push('result'));
+          }
+        },
+      });
+      return h;
+    }
+
+    afterEach(() => resetBoardSettleForTests());
+
+    it('sounds the result when the finishing glide ends, not before', async () => {
+      const glides: Array<ReturnType<typeof fakeGlide>> = [];
+      const sounded: string[] = [];
+      const h = finishingHarness(glides, sounded);
+      h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+      h.feedSnapshot({
+        events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+        state: view({ status: { type: 'finished', winner: 'blue', reason: 'checkmate' } }),
+      });
+      await flush();
+      expect(glides).toHaveLength(1);
+      expect(sounded).toEqual([]);
+      glides[0]?.finish();
+      await flush();
+      expect(sounded).toEqual(['result']);
+    });
+
+    it('sounds a resignation at once: there is nothing to land', async () => {
+      const glides: Array<ReturnType<typeof fakeGlide>> = [];
+      const sounded: string[] = [];
+      const h = finishingHarness(glides, sounded);
+      h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+      h.feedSnapshot({
+        events: [moveEvent('red', 'a1', 'a2', 1)],
+        state: view({ status: { type: 'finished', winner: 'blue', reason: 'resignation' } }),
+      });
+      await flush();
+      expect(glides).toHaveLength(0);
+      expect(sounded).toEqual(['result']);
+    });
+
+    it('a finishing reply held behind the previous glide sounds after its own glide', async () => {
+      vi.useFakeTimers();
+      try {
+        const glides: Array<ReturnType<typeof fakeGlide>> = [];
+        const sounded: string[] = [];
+        const h = finishingHarness(glides, sounded);
+        h.feedHello({});
+        h.feedEvent({ event: moveEvent('red', 'a1', 'a2', 1), state: view({ moveNumber: 2 }) });
+        expect(glides).toHaveLength(1);
+        // The bot's mating reply lands 30ms into the player's own glide.
+        vi.advanceTimersByTime(30);
+        h.feedSnapshot({
+          events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+          state: view({ status: { type: 'finished', winner: 'blue', reason: 'checkmate' } }),
+        });
+        glides[0]?.finish();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sounded).toEqual([]);
+        // The held render draws the reply and starts its glide.
+        await vi.advanceTimersByTimeAsync(250);
+        expect(glides).toHaveLength(2);
+        expect(sounded).toEqual([]);
+        glides[1]?.finish();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sounded).toEqual(['result']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it('does not glide a finished game met on arrival or a snapshot that adds no move', () => {

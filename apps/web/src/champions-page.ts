@@ -17,9 +17,14 @@
 // (jieqi-engine.ts, jungle-katago-engine.ts, jungle-engine.ts). TITLES is in
 // CANONICAL_VARIANT_ORDER (champions-page.test.ts checks it against VARIANTS).
 
+import { isPublicGameSpec } from '@mistboard/game';
 import { articleIsLive } from './articles/publish-time.js';
-import { PIKAFISH_REPO_URL, pikafishWeightsLicenseUrl } from './engine-credits.js';
-import { jqeEnabled } from './feature-flags.js';
+import {
+  PIKAFISH_REPO_URL,
+  pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_REPO_URL,
+} from './engine-credits.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
@@ -45,8 +50,9 @@ export function mountChampions(root: HTMLElement): void {
 
 type Part = string | Node;
 
-// Either link may be missing while it is unpublished (jqe's write-up is the
-// 2026-11-03 article); the card and the history line show only the ones there are.
+// Either link may be missing while it is unpublished, or absent when there is no
+// public page or study for a match (AB-JChess-20261031's); the card and the history
+// line show only the ones there are.
 type TitleMatch = {
   writeUpHref?: string;
   gamesHref?: string;
@@ -82,11 +88,11 @@ type Title = {
   nameKey: I18nKey;
   // The bot's name as the site shows it; `holderKey` where zh uses a
   // published translation (皮卡鱼 for Pikafish).
-  holder: string;
+  holder?: string;
   holderKey?: I18nKey;
   // The holder's bot page (/bot/<id>, keyed by the /api/bots id). The card's
-  // name links there like a profile. Every holder here has one on prod.
-  botHref: string;
+  // name links there like a profile. Open titles may have no holder or bot page.
+  botHref?: string;
   // The holder's id in the variant's computer setup (variant-tenant/registry.ts
   // engineOptions). "Play the champion" opens setup with it picked, through the
   // deep link landing-play.ts maybeOpenPlayDeepLink reads; the test checks setup
@@ -101,8 +107,7 @@ type Title = {
 
 const JIEQI_MATCH: TitleMatch = { writeUpHref: '/blog/ab-jchess', gamesHref: '/data' };
 // jqe took the jieqi title from AB-JChess 0.2d (mistboard-engine lab/jieqi-match,
-// run jqe-vs-abj-0.2d, 2026-10-21). It reigns only once jqe is the bot you play,
-// so the swap rides VITE_JQE_ENABLED with the jieqi picker.
+// run jqe-vs-abj-0.2d, 2026-10-21) and held it until AB-JChess-20261031 took it back.
 // The jqe write-up goes live on its own date (articles/publish-time.ts); before
 // that the card links only the games and the bot. The test pins this date to
 // the article's publishedAt.
@@ -147,57 +152,56 @@ const FAIRY_STOCKFISH_L8 = {
   },
 } as const satisfies Partial<Title>;
 
-const JIEQI_AB_JCHESS: Title = {
+// AB-JChess-20261031 took the jieqi title back from jqe (mistboard-engine
+// lab/jieqi-match/jqe-vs-abj-20261031, commit c01c608, 2026-10-31): 600 games at 4 s
+// and 4 threads, 306-67-227 (a 0.566 score). The write-up (blog/ab-jchess-vs-jqe)
+// goes live on its own date, as the jqe one did; the test pins this date to the
+// article's publishedAt and status. The match's study (SwSUugEY) is linked from the post.
+export const AB_JCHESS_2026_WRITE_UP = { status: 'published', publishedAt: '2026-11-04' } as const;
+const AB_JCHESS_2026_MATCH: TitleMatch = articleIsLive(AB_JCHESS_2026_WRITE_UP)
+  ? { writeUpHref: '/blog/ab-jchess-vs-jqe' }
+  : {};
+const JIEQI_AB_JCHESS_20261031: Title = {
   gameId: 'jieqi',
   nameKey: 'variant.jieqi.name',
   holder: 'AB-JChess',
   botHref: '/bot/ab-jchess',
   setupEngineId: 'ab-jchess-jieqi',
-  // A Pikafish fork. The net (abjchess-20261010.nnue) ships in the authors' v0.2d
-  // release (scripts/fetch-abjchess-net.sh); its training code is the link the
-  // AB-JChess article gives.
+  // Built on jqe's MIT code. The net (abjchess-20261030.nnue) ships in the authors'
+  // AB-JChess-20261031 release (scripts/fetch-abjchess-net.sh), never re-hosted.
   credits: {
-    code: [{ name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' }, PIKAFISH_CODE],
+    code: [
+      { name: 'AB-JChess', href: 'https://github.com/lxsgx23/AB-JChess' },
+      { name: 'jqe', href: 'https://github.com/devinokeefe/jieqi' },
+    ],
     network: [
       {
-        name: 'AB-JChess NNUE',
-        href: 'https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch',
+        name: 'abjchess-20261030.nnue',
+        href: 'https://github.com/lxsgx23/AB-JChess/releases/tag/AB-JChess-20261031',
       },
     ],
   },
   reign: {
-    ...JIEQI_MATCH,
-    // AB-JChess won 248, lost 136, drew 16 (the write-up; a 0.64 score).
-    wins: 248,
-    draws: 16,
-    losses: 136,
-    tookKey: 'champions.tookJieqi',
-    about: (locale) => [t('champions.aboutJieqi', {}, locale)],
+    wins: 306,
+    draws: 67,
+    losses: 227,
+    tookKey: 'champions.tookAbJchess2',
+    about: (locale) => [t('champions.aboutAbJchess2', {}, locale)],
+    ...AB_JCHESS_2026_MATCH,
   },
 };
 
-const JIEQI_JQE: Title = {
-  gameId: 'jieqi',
-  nameKey: 'variant.jieqi.name',
-  holder: 'jqe',
-  botHref: '/bot/jqe',
-  // Offered in setup only in a VITE_JQE_ENABLED build, the same flag that
-  // makes jqe the holder (registry.ts jieqiEngineOptions).
-  setupEngineId: 'jqe-jieqi',
-  // The net (engine/nets/it014.jqn) lives in the engine's own repository
-  // (scripts/engine-assets.sh), so both rows link there.
+// No title match has been played. Rapfi is credited as the available engine,
+// without asserting a holder or publishing the locally bundled network URL.
+export const GOMOKU_OPEN_TITLE: Title = {
+  gameId: 'gomoku',
+  nameKey: 'variant.gomoku.name',
+  setupEngineId: 'rapfi-level-8',
   credits: {
-    code: [{ name: 'jqe', href: 'https://github.com/devinokeefe/jieqi' }],
-    network: [{ name: 'it014.jqn', href: 'https://github.com/devinokeefe/jieqi' }],
-  },
-  reign: {
-    ...JQE_MATCH,
-    // jqe won 171, lost 114, drew 15 over 150 paired deals (a 0.595 score).
-    wins: 171,
-    draws: 15,
-    losses: 114,
-    tookKey: 'champions.tookJqe',
-    about: (locale) => [t('champions.aboutJqe', {}, locale)],
+    code: [
+      { name: 'Rapfi', href: RAPFI_REPO_URL },
+      { name: 'Rapfi WASM', href: RAPFI_BUILD_URL },
+    ],
   },
 };
 
@@ -210,7 +214,7 @@ export const TITLES: readonly Title[] = [
     botHref: '/bot/pikafish',
     credits: { code: [PIKAFISH_CODE], network: [PIKAFISH_NET] },
   },
-  jqeEnabled() ? JIEQI_JQE : JIEQI_AB_JCHESS,
+  JIEQI_AB_JCHESS_20261031,
   { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY, credits: mistyRepo('misty-banqi') },
   { gameId: 'duck-xiangqi', nameKey: 'variant.duckXiangqi.name', ...FAIRY_STOCKFISH_L8 },
   {
@@ -264,6 +268,7 @@ export const TITLES: readonly Title[] = [
     ...MISTY,
     credits: mistyRepo('misty-xiangqi-mahjong'),
   },
+  ...(isPublicGameSpec('gomoku') ? [GOMOKU_OPEN_TITLE] : []),
 ];
 
 export const CHAMPIONS = TITLES.filter((title) => title.reign);
@@ -271,7 +276,8 @@ export const OPEN_TITLES = TITLES.filter((title) => !title.reign);
 
 // One line per title change, newest first.
 export const TITLE_HISTORY: ReadonlyArray<TitleMatch & { textKey: I18nKey }> = [
-  ...(jqeEnabled() ? [{ ...JQE_MATCH, textKey: 'champions.historyJqe' as const }] : []),
+  { ...AB_JCHESS_2026_MATCH, textKey: 'champions.historyAbJchess2' },
+  { ...JQE_MATCH, textKey: 'champions.historyJqe' },
   { ...JIEQI_MATCH, textKey: 'champions.historyJieqi' },
   { ...JUNGLE_MATCH, textKey: 'champions.historyJungle' },
 ];
@@ -302,7 +308,7 @@ function marker(gameId: VariantMiniId, size: number): HTMLElement {
 }
 
 function holderName(title: Title, locale: Locale): string {
-  return title.holderKey ? t(title.holderKey, {}, locale) : title.holder;
+  return title.holderKey ? t(title.holderKey, {}, locale) : (title.holder ?? '');
 }
 
 // "Code  A, B" and "Network  C" rows, each name linked to its source.
@@ -397,7 +403,7 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
   card.dataset.game = title.gameId;
 
   // The name links to the holder's bot page, like a profile.
-  const profileLink = proseLink(holderName(title, locale), title.botHref);
+  const profileLink = proseLink(holderName(title, locale), title.botHref ?? '#challenge');
   profileLink.className = 'champions-hero-name-link';
 
   const crown = el('span', 'champions-crown', [
@@ -437,17 +443,21 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
 function openCard(title: Title, locale: Locale): HTMLElement {
   const card = el('article', 'champions-open');
   card.dataset.game = title.gameId;
-  const holder = proseLink(holderName(title, locale), title.botHref);
+  const holder = proseLink(holderName(title, locale), title.botHref ?? '#challenge');
   holder.className = 'champions-open-holder-link';
   card.append(
     el('div', 'champions-open-head', [
       marker(title.gameId, 26),
       el('h3', 'champions-open-game', [t(title.nameKey, {}, locale)]),
     ]),
-    el('p', 'champions-open-holder', [
-      el('span', 'champions-open-label', [t('champions.heldBy', {}, locale)]),
-      holder,
-    ]),
+    ...(title.holder
+      ? [
+          el('p', 'champions-open-holder', [
+            el('span', 'champions-open-label', [t('champions.heldBy', {}, locale)]),
+            holder,
+          ]),
+        ]
+      : []),
     ...(title.credits ? [creditList(title.credits, locale)] : []),
     el('span', 'champions-open-badge', [t('champions.openBadge', {}, locale)]),
     button(t('champions.challengeCta', {}, locale), '#challenge'),

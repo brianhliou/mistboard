@@ -139,7 +139,8 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   // The regular page's info card sits on top, its rating hidden mid-run.
   const info = () => root.querySelector<HTMLElement>('.puzzle-info-card')!;
   expect(info().nextElementSibling?.classList.contains('puzzle-streak-side')).toBe(true);
-  expect(info().querySelector('a')?.getAttribute('href')).toContain(puzzles[0]!.id);
+  // No "Puzzle #code" line linking the page to itself.
+  expect(info().querySelector(`a[href*="${puzzles[0]!.id}"]`)).toBeNull();
   expect(info().textContent).toContain('Rating: hidden');
   const side = root.querySelector('.puzzle-streak-side')!;
   expect(side.textContent).toContain('No clock, one skip. Your puzzle rating does not change.');
@@ -206,7 +207,6 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   expect(board?.dataset.puzzleId).toBe(puzzles[2]!.id);
   // Game over reveals the failed puzzle's rating.
   expect(info().textContent).toContain('Rating: 1000');
-  expect(info().querySelector('a')?.getAttribute('href')).toContain(puzzles[2]!.id);
   expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy();
   expect(root.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
   expect(root.querySelector('.puzzle-move-variation')).toBeTruthy();
@@ -334,9 +334,18 @@ it('says New best when the run beats the best it started from, and asks a guest 
   best = null;
   click(root, 'New streak');
   await vi.waitFor(() => expect(root.querySelector('.puzzle-streak-over')).toBeNull());
-  const signIn = root.querySelector<HTMLAnchorElement>('.puzzle-streak-side .puzzle-streak-signin');
-  expect(signIn?.textContent).toBe('Sign in to save your best');
-  expect(signIn?.getAttribute('href')).toContain('/account');
+  const signIn = root.querySelector<HTMLElement>('.puzzle-streak-side .puzzle-streak-signin');
+  expect(signIn?.querySelector('.puzzle-signin-cta-lead')?.textContent).toBe(
+    'Sign in to save your best',
+  );
+  // Register and Sign in are buttons, and both bring the guest back here.
+  const register = signIn?.querySelector<HTMLAnchorElement>('.puzzle-signin-cta-register');
+  const login = signIn?.querySelector<HTMLAnchorElement>('.puzzle-signin-cta-login');
+  expect(register?.textContent).toBe('Register');
+  expect(register?.getAttribute('href')).toContain('tab=register');
+  expect(register?.getAttribute('href')).toContain('referrer=');
+  expect(login?.textContent).toBe('Sign in');
+  expect(login?.getAttribute('href')).toContain('tab=login');
   // The phone's prompt row carries a short sign-in beside the count.
   const short = root.querySelector<HTMLAnchorElement>(
     '.puzzle-streak-feedback .puzzle-streak-tally .puzzle-streak-signin',

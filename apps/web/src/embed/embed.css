@@ -525,7 +525,7 @@ body.embed-body {
 /* A score sheet, the study's: number, then the two moves in fixed halves, so
    moves line up down the column instead of drifting with label length. */
 .embed-card-moves .review-move-list__row {
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
   align-items: baseline;
   gap: 2px;
   background: transparent;
@@ -543,18 +543,39 @@ body.embed-body {
 }
 
 .embed-card-moves .review-move-list__move {
-  padding: 3px 5px;
+  padding: 3px;
   font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--site-heading, inherit);
   gap: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
 }
 
 .embed-card-moves .review-move-list__san {
-  white-space: normal;
+  white-space: nowrap;
   overflow: visible;
-  overflow-wrap: anywhere;
+}
+
+/* Advice splits a move pair into separate rows. Give a standalone move the
+   remaining row, keeping its quality and reveal luck beside the notation.
+   A resumed second move retains the ellipsis that identifies its side. */
+.embed-card-moves .review-move-list__row > button:nth-child(2):last-child {
+  grid-column: 2 / -1;
+}
+.embed-card-moves .review-move-list__row:has(> .review-move-list__move--gap) {
+  grid-template-columns: 20px 20px minmax(0, 1fr);
+}
+
+.embed-card-moves .review-move-list__luck {
+  margin-left: 2px;
+  font-size: 10px;
+  letter-spacing: -0.2px;
+  word-spacing: -0.2em;
+}
+.embed-card-moves .review-move-list__luck-die {
+  font-size: 8.5px;
 }
 
 /* Touch floor (#620): 26px rows for a mouse. The sheet scrolls inside the rail,
@@ -650,24 +671,22 @@ body.embed-body {
   outline-offset: 2px;
 }
 
-@media (max-width: 479px) {
-  /* Stacked, the card takes the whole frame again: the sheet is under the
-     board, so whatever height the board does not need is the sheet's. */
-  .embed-card {
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
-  }
-  .embed-card-board {
-    width: 100%;
-  }
-  .embed-card-rail {
-    width: 100%;
-    flex: 1;
-    min-height: 112px;
-    border-left: 0;
-    border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
-  }
+/* Use the card's measured frame decision, shared with board sizing. A viewport
+   just above 480px can still have a frame below it because of outer padding. */
+.embed-card--stacked {
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+.embed-card--stacked .embed-card-board {
+  width: 100%;
+}
+.embed-card--stacked .embed-card-rail {
+  width: 100%;
+  flex: 1;
+  min-height: 112px;
+  border-left: 0;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
 }
 
 /* ── Shared board column (.embed-board: game and TV) ─────────────────────────

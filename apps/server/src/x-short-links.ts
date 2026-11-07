@@ -66,6 +66,70 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
     },
     campaign: 'x-elegant-015-2026-10',
   },
+  // Problem 39, "Bowang Burns the Camp" (X post, chapter 9LikA1Rm).
+  '39': {
+    target: {
+      fen: '2bak1b2/4aR2C/6N1n/9/9/9/5c3/4BC3/3p1r1n1/4K2c1 r - - 0 1',
+      moves: 'i9i10 i8h10 f9f10 e9f10 i10g10 f10e9 g8f10',
+    },
+    campaign: 'x-elegant-039-2026-11',
+  },
+  // Problem 53, "Open the Window and Invite the Moon" (Short 5, chapter iEd47r9g).
+  '53': {
+    target: {
+      fen: '1n1k1a3/R8/b2ab4/2R6/9/6C2/9/4C4/3pArn1c/4K4 r - - 0 1',
+      moves: 'c7c10 a8c10 a9d9 d10d9 g5d5 d8e9 e3d3',
+    },
+    campaign: 'x-elegant-053-2026-11',
+  },
+  // Problem 57, "Released to the Six Directions" (Short 4, chapter Pa30hz6l).
+  '57': {
+    target: {
+      fen: '3ack3/1NR1a1P2/3n2R2/9/2C6/9/9/9/1r2p2r1/3K5 r - - 0 1',
+      moves: 'g8f8 e9f8 c9f9 d8f9 g9g10 e10g10 c6c10 d10e9 b9d10',
+    },
+    campaign: 'x-elegant-057-2026-11',
+  },
+  // Problem 59, "Appearing and Vanishing" (X post, chapter Q5TDETyb).
+  '59': {
+    target: {
+      fen: '2b1ka1r1/3Pa4/5Rc2/5Nr2/9/9/9/7C1/C2p5/4K4 r - - 0 1',
+      moves: 'a2a10 c10a8 d9d10 e10d10 f8d8 e9d8 h3d3 d8e9 f7d8 g7d7 d8c10',
+    },
+    campaign: 'x-elegant-059-2026-11',
+  },
+  // Problem 66, "Meeting Peril, Yielding Life" (X post, chapter IWmygJzY).
+  '66': {
+    target: {
+      fen: '1rbak3r/1N1Ra4/cR2b1N2/9/9/9/9/9/5p3/4K4 r - - 0 1',
+      moves: 'd9d10 e9d10 b8e8 c10e8 b9d8',
+    },
+    campaign: 'x-elegant-066-2026-11',
+  },
+  // Problem 67, "The Duck in the Fishing Net" (X post, chapter eCo9DMp8).
+  '67': {
+    target: {
+      fen: '1n1ck3C/2PPa1R2/5a3/9/8N/9/9/3n5/4p2r1/5K3 r - - 0 1',
+      moves: 'g9g10 e9f10 d9e9 e10e9 g10g9 e9e8 i6g7 e8d8 g9d9 b10d9 i10d10',
+    },
+    campaign: 'x-elegant-067-2026-11',
+  },
+  // Problem 75, "The Bold Commander Submits" (Short 6, chapter yn8f6ImO).
+  '75': {
+    target: {
+      fen: '4rc3/4ak3/9/9/9/9/9/2R6/3pA4/cr1AKC3 r - - 0 1',
+      moves: 'c3f3 e9f8 f3e3 f8e9 e2f3 e9f8 e3e9 e10e9 f3e2',
+    },
+    campaign: 'x-elegant-075-2026-11',
+  },
+  // Problem 84, "Two Dragonflies Skim the Water" (X post, chapter sytCVSq0).
+  '84': {
+    target: {
+      fen: '1C3k3/1N2P4/1nN1b4/9/9/9/9/4p4/3p1p3/4K4 r - - 0 1',
+      moves: 'c8d10 e8c10 e9f9 f10e10 d10c8 c10e8 b9d8',
+    },
+    campaign: 'x-elegant-084-2026-11',
+  },
 };
 
 const UNKNOWN_CAMPAIGN = 'x-unknown';
@@ -73,11 +137,17 @@ const FB_UNKNOWN_CAMPAIGN = 'fb-unknown';
 
 // The YouTube Shorts address, mistboard.com/yt: shown at the end of every
 // Short and used as the channel's profile link (a Short's description and
-// comments cannot hold a clickable link). A Short has just shown its problem
-// solved, so this opens the next problem's position with no solution loaded.
-// Repoint YT_NEXT_SLUG when a new Short goes up.
-const YT_NEXT_SLUG = '2';
-const YT_CAMPAIGN = 'yt-shorts-2026-10';
+// comments cannot hold a clickable link). It opens the xiangqi rules page,
+// which carries the play-the-computer button, the same page the Shorts'
+// descriptions link (Brian, 2026-11-01). The campaign carries the visit's
+// month (UTC), so a standing link never reports under a stale month.
+// Each Short shows its own number, mistboard.com/yt/5 (Brian, 2026-11-02): for
+// now every number opens the same page tagged utm_content short-<n>, so clicks
+// read per video, and a number can later be repointed (say, to its own
+// position) without touching a published video.
+function ytCampaign(now: Date): string {
+  return `yt-shorts-${now.toISOString().slice(0, 7)}`;
+}
 
 function targetPath(target: XShortLinkPosition): string {
   // ply=0 opens the board on the problem, with the solution there to step
@@ -111,16 +181,16 @@ function lookup(encoded: string): XShortLink | null | undefined {
 }
 
 /** The redirect target for a short link (/x, /fb, /yt), or null when the path is not one. */
-export function xShortLinkRedirect(pathname: string): string | null {
-  if (/^\/yt\/?$/.test(pathname)) {
-    const fen = X_SHORT_LINKS[YT_NEXT_SLUG]!.target.fen;
+export function xShortLinkRedirect(pathname: string, now: Date = new Date()): string | null {
+  const yt = /^\/yt(?:\/([1-9]\d{0,3}))?\/?$/i.exec(pathname);
+  if (yt) {
     const utm = new URLSearchParams({
-      fen,
       utm_source: 'youtube',
       utm_medium: 'video',
-      utm_campaign: YT_CAMPAIGN,
+      utm_campaign: ytCampaign(now),
     });
-    return `/analysis/xiangqi?${utm.toString()}`;
+    if (yt[1]) utm.set('utm_content', `short-${yt[1]}`);
+    return `/rules/xiangqi?${utm.toString()}`;
   }
   const fb = /^\/fb\/([^/]+)(\/answer)?\/?$/.exec(pathname);
   if (fb) {

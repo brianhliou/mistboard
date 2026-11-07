@@ -59,7 +59,10 @@ export const notificationSettingsUrl = `${emailPublicHost}/account/settings/noti
 // when a name here drifts from the site. Exhaustive over GameSpecId so a new
 // variant fails the build until it is named; null falls back to publicName.
 const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
+  gomoku: { en: 'Gomoku', 'zh-Hans': '五子棋', 'zh-Hant': '五子棋' },
   banqi: { en: 'Banqi', 'zh-Hans': '暗棋', 'zh-Hant': '暗棋' },
+  // Hidden, unrouted spec; no public catalog name or correspondence support.
+  'ffq-banqi': null,
   mahjong: null,
   'three-kingdoms-banqi': {
     en: 'Three Kingdoms Banqi',
@@ -72,7 +75,7 @@ const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   'fortress-xiangqi': { en: 'Fortress Xiangqi', 'zh-Hans': '堡垒象棋', 'zh-Hant': '堡壘象棋' },
   jieqi: { en: 'Jieqi', 'zh-Hans': '揭棋', 'zh-Hant': '揭棋' },
   jungle: { en: 'Jungle Chess', 'zh-Hans': '斗兽棋', 'zh-Hant': '鬥獸棋' },
-  'jungle-flip': { en: 'Flip Jungle', 'zh-Hans': '翻翻棋', 'zh-Hant': '翻翻棋' },
+  'jungle-flip': { en: 'Flip Jungle', 'zh-Hans': '翻翻兽棋', 'zh-Hant': '翻翻獸棋' },
   xiangqi: { en: 'Xiangqi', 'zh-Hans': '象棋', 'zh-Hant': '象棋' },
   'crazyhouse-xiangqi': {
     en: 'Crazyhouse Xiangqi',

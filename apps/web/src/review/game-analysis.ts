@@ -258,7 +258,9 @@ export function computeGameAnalysis(
     ...[...bestPlayed].map((ply): [number, number | null] => [ply, 100]),
   ]);
   const accuracies = gameAccuracy(
-    redWinPercents,
+    // gameAccuracy owns transitions by move order and expects the FIRST MOVER's
+    // POV, while stored evals and individual move grades stay seat-keyed.
+    firstMover === 'red' ? redWinPercents : redWinPercents.map((win) => 100 - win),
     accuracyOverride.size ? accuracyOverride : undefined,
   );
 
@@ -344,8 +346,8 @@ export function playerPhaseAccuracies(
 
 /** A reveal ply's luck-free decision grade, from the decomposition (see review/jieqi-decisions). */
 export type PlyDecision = {
-  /** Accuracy in [0, 100] of the CHOICE (best-vs-played pool means), luck stripped. */
-  accuracy: number;
+  /** Accuracy of the choice; absent on a luck-only reveal, which stays ungraded. */
+  accuracy?: number;
   /** Judgment of the choice (?!/?/??), already deadband-guarded. null = a fine choice. */
   judgment: MoveJudgment;
 };
@@ -364,7 +366,7 @@ export function mergeDecisionAnalysis(
 ): { red: PlayerAnalysis; black: PlayerAnalysis } {
   const winK = winPercentK(analysis.engineId);
   const redWinPercents = analysis.evals.map((e) => winPercent(e.cp, e.mate, winK));
-  const chance = new Set(analysis.chancePlies);
+  const chance = new Set([...analysis.chancePlies, ...decisionByPly.keys()]);
   const override = new Map<number, number | null>();
   const counts: Record<'red' | 'black', { i: number; m: number; b: number }> = {
     red: { i: 0, m: 0, b: 0 },
@@ -378,7 +380,7 @@ export function mergeDecisionAnalysis(
   for (const move of analysis.moves) {
     if (chance.has(move.ply)) {
       const decision = decisionByPly.get(move.ply);
-      if (!decision) {
+      if (decision?.accuracy === undefined) {
         override.set(move.ply, null); // a reveal we couldn't decompose — leave it ungraded
         continue;
       }
@@ -389,7 +391,11 @@ export function mergeDecisionAnalysis(
       bump(move.mover, move.judgment);
     }
   }
-  const accuracies = gameAccuracy(redWinPercents, override);
+  const firstMover = analysis.moves[0]?.mover ?? 'red';
+  const accuracies = gameAccuracy(
+    firstMover === 'red' ? redWinPercents : redWinPercents.map((win) => 100 - win),
+    override,
+  );
   const build = (side: 'red' | 'black', accuracy: number): PlayerAnalysis => ({
     accuracy,
     inaccuracies: counts[side].i,
@@ -397,7 +403,10 @@ export function mergeDecisionAnalysis(
     blunders: counts[side].b,
     acpl: 0, // not shown for chance variants (see AnalysisSummaryOptions.hideAcpl)
   });
-  return { red: build('red', accuracies.first), black: build('black', accuracies.second) };
+  return {
+    red: build('red', firstMover === 'red' ? accuracies.first : accuracies.second),
+    black: build('black', firstMover === 'black' ? accuracies.first : accuracies.second),
+  };
 }
 
 function mean(values: number[]): number {

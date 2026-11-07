@@ -1,26 +1,104 @@
 # Changelog
 
-What changed on mistboard.com, month by month, newest first. Modeled on
-[lichess.org/changelog](https://lichess.org/changelog): one line per change,
-grouped by the part of the site it touches, each line linking the commit.
-Unlike lichess, removals get their own heading; a change that takes something
-away is still a change.
+What changed on mistboard.com, month by month, newest first.
 
-Conventions:
-
-- Sections are months (`## 2026-09`), newest first. Within a month the
-  headings are **Playing**, **Learning and puzzles**, **Watching and review**,
-  **Community**, **Site**, **Removed**, **Fixed**, **Technical**. Use only the
-  ones a month needs, in that order.
-- One line per change, written for a player where the heading is
-  player-facing and for a contributor under **Technical**. Present tense, no
-  trailing period, the commit hash in parentheses at the end. A change that
-  spans several commits links the first and the last.
-- Every release that changes behaviour adds a line here in the same commit.
-  Refactors, test-only and docs-only commits do not. The homepage News box
-  (`apps/web/src/announcements.ts`) stays the curated, player-facing megaphone;
-  this file is the complete record.
+- Months are sections (`## 2026-10`). Within a month the headings are
+  **Playing**, **Learning and puzzles**, **Watching and review**, **Community**,
+  **Site**, **Removed**, **Fixed** and **Technical**, in that order, as needed.
+- One line per change: present tense, no trailing period, the commit hash in
+  parentheses at the end. A change across several commits links the first and last.
+- Every release that changes behaviour adds a line. Refactors, test-only and
+  docs-only commits do not.
 - The file starts at 2026-09-11. Earlier history is in `git log`.
+
+## 2026-11
+
+### Playing
+
+- Live rooms show each player's colour disc beside their name ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- 10+5 games can now be rated; they share the rapid rating with 5+5 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Duck Xiangqi now offers 1+1 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- On phones the side picker fits the xiangqi generals ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- New xiangqi games are drawn after 120 plies (60 moves each) without a capture, as the rules page now says; games started before keep the old limit ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
+- AB-JChess-20261031, a new release of the open-source AB-JChess, is the top jieqi bot again, with jqe one level below ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
+
+### Learning and puzzles
+
+- Jieqi rules: worked examples and a sample game from the AB-JChess vs jqe match ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The Gomoku rules page is rewritten and now reads in Simplified and Traditional Chinese, with a matching share card ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The AB-JChess vs jqe match is one study of all 600 games, and studies now list up to 1,000 chapters ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Study result chips take the winner's colour, draws show as an outline, and the move controls sit under the move list ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Puzzle Storm is now in the Puzzles menu on desktop and phone ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
+- New article, [AB-JChess takes the jieqi title back from jqe](/blog/ab-jchess-vs-jqe): a 600-game jieqi engine match read move by move by both engines, with the games in a study ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
+- Puzzle controls stay in place while the move list scrolls ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- On your own profile, the Xiangqi puzzle rating opens in the main rating chart instead of a separate card below it ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
+- Puzzle Dashboard with your results, puzzle history, and a replay of the puzzles you missed ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Puzzle Storm: solve as many puzzles as you can in three minutes, then go back through the run ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- Play a finished puzzle's final position against the computer, from a quiet link under Next puzzle ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- Guests see Register and Sign in buttons on the puzzle page ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Watching and review
+
+- Finished xiangqi mahjong matches are now in the /data downloads, walls and all ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Jieqi studies show what a face-down piece turns out to be on hover, and the board resize grip is easier to see ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- On phones the game review board runs edge to edge, the underboard tabs fit on one line, and "Learn from your mistakes" is green and shows only to the game's players ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The Gomoku analysis board fits one phone screen, with the moves under the board and the tools in a bar at the bottom ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Added five Bilibili videos to the video library, on jieqi, the basic rules and the Plum Blossom manual ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Engine match studies chart both engines' win chance in the Computer analysis tab, and hovering the chart names the move ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
+- Study board controls sit under the move list, and the board sits closer to the tabs below it ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
+- Study result badges are colored by the winning side, with draws drawn as an outline ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
+- The opening explorer, move tree menu, captured-piece labels and move advice in game review now read in Simplified and Traditional Chinese ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
+- The broadcasts page lists other events in a strip, gives places in English and hides zero counts ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
+- Clearer annotations in jieqi replays, and fixed embeds for finished games ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Banqi and Flip Jungle game reviews show how lucky each flip was ([fbb4acaf](https://github.com/brianhliou/mistboard/commit/fbb4acaf))
+- Short 4, Released to the Six Directions, on the videos page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
+- On a finished banqi, Flip Jungle or jieqi game's review, hover a face-down piece or turn on Reveal identities to see what it was ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Move glyphs in review fade once the pieces land ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Community
+
+- Player profiles now show the puzzle rating graph to every visitor, a shorter ratings column, and a Founder badge ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+
+### Site
+
+- Corrected Chinese wording across articles and the interface, and Traditional Chinese pages that showed Simplified text ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The video page adds Shorts 5 and 6, and visitors from mainland China see 14 Bilibili picks ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Homepage article cards show their photos, and shared articles get a whole-board preview card ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- The browser tab icon now fills its space ([fde6743a](https://github.com/brianhliou/mistboard/commit/fde6743a))
+- A Washington Xiangqi club page for Greater Seattle, in English, Simplified and Traditional Chinese ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Google results show Mistboard search cards and a tab icon that reads when cropped to a circle ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- Sign-in suggests a fix for a mistyped email domain, and stops sending codes to addresses that bounced, complained or cannot receive mail ([b50d0465](https://github.com/brianhliou/mistboard/commit/b50d0465))
+- `mistboard.com/yt` and `mistboard.com/yt/<n>`, the address on our YouTube Shorts, open the xiangqi rules page ([9144e4d0](https://github.com/brianhliou/mistboard/commit/9144e4d0))
+- Flip Jungle's Chinese name is now 翻翻兽棋 / 翻翻獸棋 ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- About, FAQ, Terms and Privacy rewritten around the mission, with a binding fair-play rule and a new share card ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- A shorter About menu, and the phone menu now matches the desktop one ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Removed
+
+- Hong Kong mahjong is closed to new games ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Retired Atomic Xiangqi games no longer get new computer analysis; finished games and stored analysis stay readable ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
+
+### Fixed
+
+- Corrected a line on the world championship page that overlooked Lại Lý Huynh's 2022 world rapid title ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Traditional Chinese articles now write every player's name in Traditional ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- The board resize handle now stays on the board corner while you drag, no longer flashes under the board when you switch study chapters, and fits rounded corners ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- The staff page for reported messages now opens only conversations someone has reported ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
+- Public game counts no longer include a few old test games from variants we deleted ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Puzzle pages keep the move history right under the board, and archive game dates no longer show a day early ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Corrected a soldier name and a character on the Simplified Chinese Banqi rules page ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- Corrected the repetition rule on the Chinese Xiangqi rules page and fixed terms on other Chinese rules pages ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
+- The coordinates toggle redraws every board on a review page ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- The contact note sits below the article instead of inside it ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Switching chapters in a study keeps the side panel in place ([a5ac9ae1](https://github.com/brianhliou/mistboard/commit/a5ac9ae1))
+- The game-end sound waits for the last move to finish playing on the board ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Post-game buttons centre their labels, and a second click on Rematch opens the room it already made ([9ed61664](https://github.com/brianhliou/mistboard/commit/9ed61664))
+- Forum posts embed game links that use /room/, and game names show in the reader's language ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Technical
+
+- Search engines are told only about pages that changed in a release ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
+- Visitor analytics now flags browsers with real input, so headless crawlers can be filtered out ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ## 2026-10
 

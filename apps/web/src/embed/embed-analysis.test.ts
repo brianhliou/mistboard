@@ -69,6 +69,12 @@ describe('EMBED_ANALYSIS_VARIANTS', () => {
 });
 
 describe('loadEmbedAnalysis', () => {
+  it('makes no API request for unavailable FFQ analysis', async () => {
+    const calls = stubApi({});
+    expect(await loadEmbedAnalysis('ffq-banqi', ROOM, noMoves)).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
   it('reads the cache with GETs only, and is null when the game was never analysed', async () => {
     const calls = stubApi({});
     expect(await loadEmbedAnalysis('jieqi', ROOM, noMoves)).toBeNull();

@@ -18,6 +18,9 @@ type RoomActionDeps = {
 };
 
 let playAgainStatus: 'idle' | 'creating' | 'failed' = 'idle';
+// The rematch room already made (#825): Back from it must not find a stuck
+// "Creating", and a second click goes there instead of making another room.
+let playAgainUrl: { room: string; url: string } | null = null;
 
 export type PlayAgainRoomRequestBody = {
   mode: 'pvp' | 'pve';
@@ -118,6 +121,11 @@ function playAgainButton(refs: RoomActionRefs, deps: RoomActionDeps): HTMLButton
 }
 
 async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): Promise<void> {
+  if (playAgainStatus === 'creating') return;
+  if (playAgainUrl?.room === liveState.room) {
+    window.location.assign(playAgainUrl.url);
+    return;
+  }
   const body = buildPlayAgainRoomRequestBody();
   if (!body) return;
   playAgainStatus = 'creating';
@@ -132,6 +140,9 @@ async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): 
     const data = (await response.json()) as { url?: string };
     if (!data.url) throw new Error('room creation response missing url');
     rememberBotRoomRequest(body);
+    playAgainUrl = { room: liveState.room, url: data.url };
+    playAgainStatus = 'idle';
+    renderRoomActions(refs, deps);
     window.location.assign(data.url);
   } catch (err) {
     console.warn(err);

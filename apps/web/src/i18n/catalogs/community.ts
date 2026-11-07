@@ -137,7 +137,7 @@ export const EN_COMMUNITY = {
   'profile.ratingStats': 'Rating stats',
   'profile.ratingStatsPeriod': 'Weekly',
   'profile.ratingStatsSuffix': 'rating distribution',
-  'profile.ratingStatsVariant': 'Rating variant',
+  'profile.ratingStatsVariant': 'Game',
   'profile.ratingStatsSummary': '{count} rated {variant} players. Average rating is {average}.',
   'profile.ratingStatsChartLabel': '{variant} rating distribution',
   'profile.ratingStatsEmptyPool': 'No rated games at this time control yet.',
@@ -156,7 +156,7 @@ export const EN_COMMUNITY = {
   'profile.playerProfile': 'Player profile',
   'profile.gameSingular': 'Game',
   'profile.gamePlural': 'Games',
-  'profile.topVariant': 'Top variant',
+  'profile.topVariant': 'Most played',
   'profile.bestRating': 'Best rating',
   'profile.memberSince': 'Member since',
   'profile.ratedGames': 'Rated games',
@@ -172,6 +172,7 @@ export const EN_COMMUNITY = {
   'profile.visibilityUnlisted': 'Unlisted',
   'profile.visibilityPrivate': 'Private',
   'profile.admin': 'Admin',
+  'profile.founder': 'Founder',
   'profile.patron': 'Patron',
   'profile.patronTitle': 'A Mistboard Patron. Thank you for supporting the site.',
   'profile.achievements': 'Achievements',
@@ -318,9 +319,10 @@ export const EN_COMMUNITY = {
   'profile.ratedGameMany': '{count} rated games',
   'profile.unrated': 'Unrated',
   'profile.puzzleSolved': '{count} solved',
+  'profile.puzzleAttemptOne': '{count} attempt',
+  'profile.puzzleAttemptMany': '{count} attempts',
   'profile.puzzleFailed': '{count} failed',
   'profile.puzzleProgress': 'Puzzle progress',
-  'profile.puzzleHistoryPrivate': 'Xiangqi puzzle history. Only you can see this.',
   'profile.puzzleHistoryEmpty': 'No puzzle results yet.',
   'profile.puzzleChartEmpty': 'No saved rating points yet.',
   'profile.puzzleHistoryLegacy':
@@ -365,7 +367,7 @@ export const EN_COMMUNITY = {
   'challenge.daysPerMove': 'Days per move',
   'challenge.dayOption': '{days} day/move',
   'challenge.daysOption': '{days} days/move',
-  'challenge.variant': 'Variant',
+  'challenge.variant': 'Game',
   'challenge.color': 'Your color',
   'challenge.colorRandom': 'Random color',
   // {color} is the variant's own color word (White/Black for chess, Red/Black for xiangqi).
@@ -649,9 +651,9 @@ export const EN_COMMUNITY = {
   'bots.pikafishBio':
     'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
   'bots.abJchessBio':
-    'An open-source jieqi engine with its own neural network, by Huorongrong and Laoxu (Kouza). Played here with their permission.',
+    "An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network. Its AB-JChess-20261031 release is built on jqe's code and took the top spot back from jqe, winning 306 games, losing 227 and drawing 67 in our 600-game match. It thinks 4 seconds a move. Played here with their permission.",
   'bots.jqeBio':
-    "An open-source jieqi engine by Devin O'Keefe, with its own neural network trained on self-play. It took the top spot from AB-JChess 0.2d, winning 171 games, losing 114 and drawing 15 in our 300-game match. It thinks 4 seconds a move. Played here with his permission.",
+    "An open-source jieqi engine by Devin O'Keefe, with its own neural network trained on self-play. It held the top spot from October 21, 2026, after beating AB-JChess 0.2d 171 games to 114 with 15 draws, and now plays one level below AB-JChess-20261031, which is built on its code. It thinks 4 seconds a move. Played here with his permission.",
   'bots.katagoBio':
     "The strongest Jungle Chess engine we know of: hzyhhzy's KataGomo, built on lightvector's KataGo, with the neural network from Kouza's Dandelion 4. Played here with permission.",
   'bots.katagoCreditKatagomo': 'KataGomo by hzyhhzy',
@@ -806,6 +808,7 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'profile.visibilityUnlisted',
   'profile.visibilityPrivate',
   'profile.admin',
+  'profile.founder',
   'profile.earlier',
   'profile.activity',
   'profile.activityPlayedOne',

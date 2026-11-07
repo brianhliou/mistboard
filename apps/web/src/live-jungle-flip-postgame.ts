@@ -184,6 +184,9 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
 
   root.replaceChildren(buildNav());
   mountJungleFlipReview(root, postgame.game.roomId, deal, {
+    // A finished game: what the still-face-down pieces were, on hover and
+    // from the menu (#824). The payload already carries the whole deal.
+    showFaceDown: true,
     pageClassName: 'jungle-flip-review',
     ariaLabel: 'Flip Jungle postgame',
     title: 'Flip Jungle',

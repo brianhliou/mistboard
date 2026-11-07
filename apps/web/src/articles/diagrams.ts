@@ -137,6 +137,7 @@ export function playClosing(opts: {
   playLabel: string;
   playHref: string;
   secondary?: CtaButton[];
+  layout?: 'single-row';
 }): ArticleSection {
   return {
     heading: opts.heading,
@@ -148,6 +149,7 @@ export function playClosing(opts: {
           { label: opts.playLabel, href: opts.playHref, emphasis: 'primary' },
           ...(opts.secondary ?? []),
         ],
+        ...(opts.layout ? { layout: opts.layout } : {}),
       },
     ],
   };
@@ -2846,9 +2848,6 @@ export const JIEQI_OPENING_MOVES = (labels?: { moves?: string; gamble?: string }
     ].join(''),
   );
 
-// What a face-down piece on a cannon point is worth before you spend it, and
-// what you are left holding if it turns out to be a soldier. The black cannon
-// on h8 is the screen that makes the capture on h10 legal.
 export const JIEQI_OPTION_BEFORE_BOARD: XiangqiPlayerView['board'] = {
   h3: { piece: { color: 'red', role: 'cannon' }, shrouded: true },
   h8: { piece: { color: 'black', role: 'cannon' }, shrouded: false },

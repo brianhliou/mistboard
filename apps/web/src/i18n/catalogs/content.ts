@@ -4,6 +4,8 @@ export const EN_CONTENT = {
   'videos.heading': 'Video library',
   'videos.intro':
     'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
+  'videos.introMainland':
+    'Curated Chinese-language xiangqi and jieqi videos: rules, openings, tactics, and strategy.',
   'videos.ourHeading': 'From Mistboard',
   'videos.ourIntro': 'Our own episodes. New ones land on the channel first.',
   'videos.shortsHeading': 'Puzzle Shorts',
@@ -15,7 +17,10 @@ export const EN_CONTENT = {
   'videos.count': '{count} videos',
   'videos.countOne': '1 video',
   'videos.empty': 'No videos match your filters.',
+  'videos.unavailableInCountry': 'No videos are available in your country yet.',
   'videos.opensOnYoutube': 'Videos open on YouTube in a new tab.',
+  'videos.opensOnBilibili': 'Videos open on Bilibili in a new tab.',
+  'videos.opensExternally': 'Videos open on their hosting platform in a new tab.',
   'videos.duration': '{count} min',
   'videos.tag.basics': 'Basics',
   'videos.tag.openings': 'Openings',
@@ -28,6 +33,8 @@ export const EN_CONTENT = {
   'videos.levelLabel': 'Level',
   'videos.variantLabel': 'Game',
   'videos.sourceLabel': 'Source',
+  'videos.source.youtube': 'YouTube',
+  'videos.source.bilibili': 'Bilibili',
   'videos.languageLabel': 'Language',
   'videos.allLanguages': 'All languages',
   'videos.language.en': 'English',
@@ -36,6 +43,7 @@ export const EN_CONTENT = {
   'videos.level.intermediate': 'Intermediate',
   'videos.level.advanced': 'Advanced',
   'videos.variant.xiangqi': 'Xiangqi',
+  'videos.variant.jieqi': 'Jieqi',
   'videos.variant.fog': 'Fog of War',
   'videos.source.mistboard': 'Made by Mistboard',
   'videos.badge.mistboard': 'Mistboard',
@@ -47,13 +55,16 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
+  'articles.navigation': 'Blog navigation',
+  'articles.byMistboard': 'By Mistboard',
+  'articles.communityPosts': 'Community posts',
   'articles.latest': 'From the blog',
   'articles.deepDives': 'Xiangqi deep dives',
   'articles.topicAll': 'All',
   'articles.topicEngineering': 'Engineering',
   'articles.topicsLabel': 'Topics',
   'articles.read': 'Read',
-  'articles.intro': 'Essays, rules notes, and engine work for original strategy games.',
+  'articles.intro': 'Essays, rules notes and engine work on Chinese chess and its relatives.',
   'articles.allArticles': 'All articles',
   'articles.previousArticles': 'Previous articles',
   'articles.moreArticles': 'More articles',
@@ -190,26 +201,28 @@ export const EN_CONTENT = {
   'contact.correctionsSuffix': '.',
   'contact.aboutPage': 'About: {path}',
   'about.heading': 'About Mistboard',
+  'about.mission':
+    "Bring people together across cultures through Chinese chess and the world's classic strategy games.",
   'about.lede':
-    "Mistboard is a free, open-source place to play and study Chinese chess, and home to the original strategy games we build. Players who read Chinese and players who don't sit at the same board.",
-  'about.whyHeading': 'A world stage for Chinese chess',
+    'Mistboard is a free, open-source place to play and study Chinese chess, in English, Simplified Chinese and Traditional Chinese.',
+  'about.whyHeading': 'Chinese chess in three languages',
   'about.whyBody':
-    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Mistboard runs in English, Simplified Chinese and Traditional Chinese, so a player in Shanghai and a player in Toronto can sit down at the same table. Pieces can render as icons you recognize before you can read 車 or 砲, and a beginner course starts from the first move. Our mission is to bring people together across cultures through Chinese chess and original strategy games.',
+    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. A player in Shanghai and a player in Toronto sit down at the same board, each reading the site in their own language. Piece sets with icons let you play before you can read the characters, and a beginner course starts from the first move.',
   'about.darkChessHeading': 'New games from familiar boards',
   'about.darkChessBody':
-    'Duck Xiangqi puts a duck on the board that belongs to neither player. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi lets you drop captured pieces back onto the board. Each starts with a familiar game and changes its decisions. We give each game clear rules and server-enforced play. Over time, we want other creators to develop and test their games with players here too.',
+    'Duck Xiangqi puts a duck on the board that belongs to neither player. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi lets you drop captured pieces back onto the board. Each starts with a familiar game and changes its decisions, and each has clear rules the server enforces.',
   'about.playStudyHeading': 'Play, study and teach',
   'about.playStudyBody':
     'Challenge a friend over a link, find an opponent in the lobby or play against a computer. Work through puzzles mined from real games, study a tournament game move by move or review your own game afterward. Lessons, studies and broadcasts give players ways to learn from each other and teach what they know.',
-  'about.trustHeading': 'Built with players, open to inspection',
+  'about.trustHeading': 'Fair play, open rules',
   'about.trustBody':
-    'Our standard is a board that responds promptly and makes the next action clear. We use AI in development to act quickly on bugs and player suggestions. The rules are open to inspection, and fair play is enforced by the server: in Fog games, your browser never receives the pieces you cannot see. Computer opponents play with the information a human in their seat would have.',
+    'Human accounts are for human play, and bots play only from accounts labelled as bots. The server holds every game and sends each player only what their seat may see. The rules and the code are open to inspection, and player reports and suggestions are acted on quickly.',
   'about.enginesHeading': 'Build the next challenger',
   'about.enginesBody':
-    'Engine authors can challenge for titles in public matches on Mistboard. We want to grow that into an arena where anyone can bring an engine and compete under clear rules, with games and results others can examine. Further ahead are competitions on newly invented strategy games, where people and AI agents must develop approaches to games they have never played before.',
-  'about.communityHeading': 'Clubs, tournaments and cultural exchange',
+    'Engine authors challenge for titles in public matches on Mistboard. To run a bot on the site, write to us first; approved bots play from labelled accounts.',
+  'about.communityHeading': 'Clubs, teachers and organizers',
   'about.communityBody':
-    'We want a Washington Xiangqi club and in-person tournaments whose games can be followed and studied on Mistboard. From there, we want to work with clubs, teachers and sporting or cultural institutions in China and elsewhere on exchanges and international events.',
+    'We work with players, teachers, clubs and event organizers on broadcasts, studies and coaching, online and in person.',
   'about.openSourceHeading': 'Free and open source',
   'about.openSourcePrefix': 'Mistboard is published under AGPL-3.0-or-later on ',
   'about.openSourceMiddle':
@@ -217,7 +230,7 @@ export const EN_CONTENT = {
   'about.openSourceSuffix': ' for license and third-party credits.',
   'about.whoHeading': 'Who builds Mistboard',
   'about.whoBody':
-    "Brian H. Liou designs, builds and runs Mistboard with a system of AI agents, from the game servers and Mistboard's own engines to the broadcasts and articles. Before this he spent five years at Amazon and DoorDash on high-scale distributed systems and growth engineering. He started Mistboard to bring people together across cultures through Chinese chess and original strategy games.",
+    "Brian H. Liou designs, builds and runs Mistboard with a system of AI agents, from the game servers and Mistboard's own engines to the broadcasts and articles. Before this he spent five years at Amazon and DoorDash on high-scale distributed systems and growth engineering.",
   'about.whoSitePrefix': 'His site:',
   'about.articlesHeading': 'How articles are made',
   'about.articlesBody':
@@ -269,6 +282,11 @@ export const EN_CONTENT = {
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
+  'source.rapfi':
+    'Rapfi by dhbloo and contributors: the eight Gomoku bot levels, played in your browser, GPL-3.0.',
+  'source.rapfiNetworks': 'Rapfi neural networks by the Rapfi project, CC0 1.0.',
+  'source.rapfiBuild':
+    'rapfi-wasm by Brian H. Liou: the reproducible Rapfi browser build used here, GPL-3.0.',
   'source.dandelion':
     "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.chessdb':
@@ -299,7 +317,7 @@ export const EN_CONTENT = {
   'developers.heading': 'Developers',
   'apiDocs.heading': 'API',
   'contribute.intro':
-    'Help build a future for Chinese chess and original strategy games. Mistboard is free and open source, and players, teachers, game creators and engine authors can all contribute. Start with something you care about improving.',
+    'Mistboard is free and open source, and players, teachers, game creators and engine authors can all contribute. Start with something you care about improving.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
     'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else. New games we design need play-testers too.',
@@ -313,7 +331,7 @@ export const EN_CONTENT = {
     '. Pick up an open issue, or open a pull request. See the source code page for the repository and the libraries Mistboard builds on.',
   'contribute.translateHeading': 'Help with translations',
   'contribute.translateBody':
-    "Mistboard runs in English, Simplified Chinese and Traditional Chinese. The Chinese is machine-translated, and no native reader has checked it yet. If you play and read Chinese, review one page for us, a rules page or a lesson, and mark anything a player wouldn't say: a term, an opening name, a sentence that sounds translated. A page takes under an hour, with no commitment after it.",
+    "Mistboard runs in English, Simplified Chinese and Traditional Chinese, and the Chinese is machine-translated. If you play and read Chinese, review one page for us, a rules page or a lesson, and mark anything a player wouldn't say: a term, an opening name, a sentence that sounds translated. A page takes under an hour, with no commitment after it.",
   'contribute.translateStartPrefix': 'To start, email ',
   'contribute.translateStartMiddle':
     " with one line on how you play and whether you'd like a rules page or a lesson first. If you want credit, we add your name to the ",
@@ -329,7 +347,7 @@ export const EN_CONTENT = {
   'contribute.crossLinkOr': ' or ',
   'creators.heading': 'Work with us',
   'creators.intro':
-    'Help bring Chinese chess to a world stage. Mistboard connects play and study with broadcasts, original games and engine challenges. We want to work with players, teachers, creators and organizers across languages, online and in person. The site is free, open source and ad-free.',
+    'Mistboard connects play and study with broadcasts, original games and engine challenges. We work with players, teachers, creators and organizers across languages, online and in person. The site is free, open source and ad-free.',
   'creators.playersHeading': 'Titled players and coaches',
   'creators.playersPrefix': 'A verified title badge, and a ',
   'creators.playersCoachLink': 'coaching page',
@@ -380,8 +398,6 @@ export const EN_CONTENT = {
   'champions.heading': 'Engine champions',
   'champions.intro':
     'Each game has one reigning champion engine: the strongest bot you can play here, credited by name. Easier bots and levels sit below it. Any engine can challenge for the title in a public match. We also want to host other engines as bots you can play, not only champions; to offer one, use the submission steps below.',
-  'champions.aboutJieqi':
-    'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
   'champions.aboutJungle':
     'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
   'champions.creditCode': 'Code',
@@ -392,12 +408,10 @@ export const EN_CONTENT = {
   'champions.statDraws': 'draws',
   'champions.statLosses': 'losses',
   'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
-  'champions.tookJieqi':
-    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
-  'champions.aboutJqe':
-    "By Devin O'Keefe: an open-source engine with its own neural network, trained on self-play. It plays here at 4 s a move on 4 threads.",
-  'champions.tookJqe':
-    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, scoring 60%.',
+  'champions.tookAbJchess2':
+    'Took the title back from jqe on 2026-10-31, over 600 games, scoring 57%.',
+  'champions.aboutAbJchess2':
+    "By Huorongrong and Laoxu (Kouza), built on jqe's open-source code by Devin O'Keefe, with its own neural network. It plays here at 4 s a move on 4 threads.",
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',
@@ -418,6 +432,8 @@ export const EN_CONTENT = {
   'champions.parenClose': ').',
   'champions.lineEnd': '.',
   'champions.historyHeading': 'Title history',
+  'champions.historyAbJchess2':
+    "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%",
   'champions.historyJieqi':
     '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, scoring 64%',
   'champions.historyJqe':
@@ -447,12 +463,17 @@ export const EN_CONTENT = {
   'thanks.fairyStockfishBody':
     'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
   'thanks.abJchessAuthors': 'Huorongrong and Laoxu',
-  'thanks.abJchessBody': 'The top jieqi bot. Its authors let us use its neural network.',
+  'thanks.abJchessBody':
+    "The top jieqi bot. Its current release is built on jqe's open-source code by Devin O'Keefe. Its authors let us use its neural network.",
   'thanks.katagomoAuthor': 'KataGomo by hzyhhzy',
   'thanks.katagoAuthor': 'KataGo by lightvector',
   'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',
   'thanks.katagoBody':
     "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
+  'thanks.rapfiAuthors': 'dhbloo and the Rapfi contributors',
+  'thanks.rapfiBuildAuthor': 'Browser build by Brian H. Liou',
+  'thanks.rapfiBody':
+    'Plays all eight Gomoku bot levels in your browser, with neural networks from the Rapfi project and the rapfi-wasm build.',
   'thanks.communityBotBy': 'A bot from a community developer.',
   'thanks.statGames': 'games on Mistboard',
   'thanks.statRating': '{variant} rating',
@@ -488,7 +509,7 @@ export const EN_CONTENT = {
   'thanks.playersAskSuffix': '.',
   'thanks.lichessHeading': 'Lichess',
   'thanks.lichessLead':
-    'Mistboard is the design of lichess applied to xiangqi and its variants. When we did not know how something should work, we looked at how lichess does it, and most of the time we built the same thing.',
+    'Mistboard owes much of its design to lichess. When we did not know how something should work, we looked at how lichess does it.',
   'thanks.lichessTook':
     'From lichess we took the lobby and rated play with Glicko-2, the shape of the game room, the broadcast and pro players pages, the rule for mate puzzles, the changelog and this page, and the board code under our chess boards.',
   'thanks.lichessCloseLink': 'Lichess',
@@ -513,13 +534,13 @@ export const EN_CONTENT = {
     'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
   'faq.playOtherQuestion': 'What else can I play?',
   'faq.playOtherAnswer':
-    'Jieqi and banqi, Jungle Chess and Flip Jungle, and the games we design: Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi.',
+    'Jieqi and banqi, Jungle Chess and Flip Jungle, and the games we design: Crazyhouse Xiangqi, Duck Xiangqi, Fog Xiangqi and Xiangqi Mahjong.',
   'faq.playReviewQuestion': 'Can I review a game afterwards?',
   'faq.playReviewAnswer':
     'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
   'faq.darkChessQuestion': 'What games are on Mistboard?',
   'faq.darkChessPrefix':
-    'Chinese chess first: xiangqi and its traditional relatives, jieqi and banqi. Beside them sit the games we design, such as Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi, plus Jungle Chess and Fog Chess. Some are open-information; some hide pieces under fog or face down. The ',
+    'Chinese chess first: xiangqi and its traditional relatives, jieqi and banqi. Beside them sit the games we design, such as Crazyhouse Xiangqi, Duck Xiangqi, Fog Xiangqi and Xiangqi Mahjong, plus Jungle Chess and Fog Chess. The ',
   'faq.rulesReference': 'rules reference',
   'faq.darkChessSuffix': ' lists the current games.',
   'faq.accountQuestion': 'Do I need an account?',
@@ -532,7 +553,7 @@ export const EN_CONTENT = {
   'faq.contactSuffix': ". Include the room link if it's about a specific game.",
   'faq.cheatingQuestion': 'How does Mistboard prevent cheating?',
   'faq.cheatingPrefix':
-    "Getting help from an engine or another person, or abusing accounts, breaks the fair-play rules in every game, rated or casual. In hidden-piece games the server also keeps the full board and sends each player only what they're allowed to see, so there is nothing to dig out of the page. The code is ",
+    'Human accounts are for human play. Help from an engine, another person or any outside tool breaks the fair-play rules in every game, rated or casual, and bots play only from labelled bot accounts. The server holds the full game and sends each player only their own view. The code is ',
   'faq.openSource': 'open source',
   'faq.cheatingSuffix': ', so anyone can check.',
   'faq.enginesQuestion': 'Do Mistboard engines see the full board?',
@@ -548,19 +569,19 @@ export const EN_CONTENT = {
     'The opening explorer also draws on a licensed dataset of anonymous online games, which is why its numbers cover more games than the library lists.',
   'faq.ratedQuestion': 'How does rated play work?',
   'faq.ratedAnswer':
-    'Rated games are between two signed-in players, in the variants that have a ladder. While rated play is in beta, ratings can move more than usual as they settle. Engine games and casual games do not count.',
+    'Rated games are between two signed-in players, in the variants that have a ladder. Engine games and casual games do not count.',
   'terms.heading': 'Terms of Use',
   'terms.intro':
-    'Mistboard is a free, open-source hobby project. These are the basic rules for using the hosted site at mistboard.com. They will change as the project grows; this page is always the current version.',
+    'These are the rules for using the hosted site at mistboard.com. This page is always the current version.',
   'terms.offeredHeading': 'The site is offered as-is',
   'terms.offeredBody':
-    "No warranty. Games, accounts, ratings, and stored data can be lost, reset, or removed without notice during development. Don't put anything on Mistboard you can't afford to lose.",
+    'Mistboard is provided as-is, with no warranty. Games, accounts, ratings and stored data can be changed, reset or removed.',
   'terms.anonymousHeading': 'Anonymous play',
   'terms.anonymousBody':
-    "Play is anonymous and link-based by default. Accounts are optional and add a profile and a handle. Don't use the service for anything that needs an identity you can't lose.",
+    'Play is anonymous and link-based by default. Accounts are optional and add a profile and a handle.',
   'terms.acceptableHeading': 'Acceptable use',
   'terms.acceptableBody':
-    "Don't harass other players, spam, abuse the service, try to break the fog filter, or hammer the site with scrapers. Don't use external engine help in rated games. Handles, rooms, and accounts may be revoked for abuse.",
+    "Don't harass other players, spam, abuse the service, try to see information the game hides, or hammer the site with scrapers. Handles, rooms and accounts may be revoked for abuse.",
   'terms.ratedAccountHeading': 'Rated play needs an account',
   'terms.ratedAccountBody':
     'Casual and link-based games stay anonymous and free. Rated play needs an account, so a rating belongs to a person. One person, one account.',
@@ -569,7 +590,7 @@ export const EN_CONTENT = {
     'We decide how ratings are calculated and what they mean. We may set, adjust, recompute, void, or reset any rating or the ladder itself, and change how the system works, at any time. A rating is a measurement we publish, not something you own.',
   'terms.fairPlayHeading': 'Fair play',
   'terms.fairPlayBody':
-    "Rated play only works if results are honest. We don't tolerate outside assistance, manipulating your own or others' ratings, or any attempt to game the ladder. We decide what crosses the line, and we may remove ratings or accounts when it does.",
+    "Human accounts are for human play. A game played from a human account, rated or casual, gets no help from an engine, another person or any outside tool, and no account may manipulate its own or anyone else's rating. Bots play only from accounts we have approved and labelled as bots; to run one, contact us first. We decide what crosses the line, and we may remove ratings and restrict or close accounts when it does.",
   'terms.integrityHeading': 'Integrity data',
   'terms.integrityPrefix':
     'We collect and analyze game and account data to protect the integrity of rated play. How we investigate, and what we do about it, is our call. See ',
@@ -599,10 +620,10 @@ export const EN_CONTENT = {
   'terms.openSourceSuffix': ' for license and credits.',
   'privacy.heading': 'Privacy',
   'privacy.intro':
-    'Mistboard is a free, open-source hobby project. This page describes what we collect on the hosted site at mistboard.com. It will change as the project grows; this page is always the current version.',
+    'This page describes what we collect on the hosted site at mistboard.com. It is always the current version.',
   'privacy.collectHeading': 'What we collect',
   'privacy.collectBody':
-    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
+    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest. Direct messages are stored on our servers so we can deliver them and keep them in your inbox. We may review them when a conversation is reported, to enforce the site rules, or when the law requires it.',
   'privacy.noDoHeading': "What we don't do",
   'privacy.noDoBody':
     "No ads. We don't sell your data. No recordings of your screen. We respect Do Not Track. Casual play needs no account.",
@@ -613,7 +634,7 @@ export const EN_CONTENT = {
   'privacy.publicGamesSuffix': '.',
   'privacy.promisesHeading': "What we promise, and don't",
   'privacy.promisesBody':
-    "We promise to keep hidden information hidden on the server and to tell you what we collect. We don't promise your data, account, or rating survives development. It can change or disappear without notice. Don't put anything on Mistboard you can't afford to lose.",
+    'We tell you what we collect, and we send each player only what their seat may see. Data, accounts and ratings can change or be removed.',
   'data.colMonth': 'Month',
   'data.colGames': 'Games',
   'data.colDownload': 'Download',
@@ -714,6 +735,9 @@ export type ContentI18nKey = keyof typeof EN_CONTENT;
 
 export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.heading',
+  'articles.navigation',
+  'articles.byMistboard',
+  'articles.communityPosts',
   'articles.deepDives',
   'articles.topicAll',
   'articles.topicEngineering',
@@ -791,6 +815,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'contact.correctionsSuffix',
   'contact.aboutPage',
   'about.heading',
+  'about.mission',
   'about.lede',
   'about.whyHeading',
   'about.whyBody',
@@ -839,6 +864,12 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.jqe',
   'source.katagomo',
   'source.katago',
+  'source.rapfi',
+  'source.rapfiNetworks',
+  'source.rapfiBuild',
+  'thanks.rapfiAuthors',
+  'thanks.rapfiBuildAuthor',
+  'thanks.rapfiBody',
   'source.dandelion',
   'source.chessdb',
   'source.pieceSetLacquer',

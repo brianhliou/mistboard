@@ -1,5 +1,5 @@
 import { createUser } from './persistence.js';
-import { createStudy, getStudyById } from './persistence-studies.js';
+import { cloneStudy, createStudy, getStudyById } from './persistence-studies.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { applyCreate, applyPlan, editableOwners } from './study-edit-cli.js';
 
@@ -60,7 +60,7 @@ definePersistenceTests('study edit', () => {
           },
           { op: 'add', ref: 'three', name: 'Three', tree: tree('c4c5') },
           { op: 'tree', chapter: first, tree: tree('b3e3', 'b10c8') },
-          { op: 'rename', chapter: first, name: 'One, replayed' },
+          { op: 'rename', chapter: first, name: 'One, replayed', orientation: 'black' },
           { op: 'order', chapters: ['ref:three', first, 'ref:two'] },
         ],
       },
@@ -76,11 +76,12 @@ definePersistenceTests('study edit', () => {
     );
     assert.deepEqual(after.chapters[1]!.root, tree('b3e3', 'b10c8'));
     // `gamebook: true` makes a guess-the-move chapter; an add without it stays a plain one.
+    // A rename's `orientation` turns an existing chapter's board.
     assert.deepEqual(
       after.chapters.map((c) => [c.name, c.orientation, c.gamebook]),
       [
         ['Three', 'red', false],
-        ['One, replayed', 'red', false],
+        ['One, replayed', 'black', false],
         ['Two', 'black', true],
       ],
     );
@@ -192,5 +193,67 @@ definePersistenceTests('study edit', () => {
       site,
     );
     assert.equal(await getStudyById(study.id), null);
+  });
+  test('sets, clears and clones a chapter score series, and reads it back whole', async () => {
+    const study = await seed('edit-series');
+    const first = study.chapters[0]!.id;
+    const scoreSeries = {
+      side: 'red' as const,
+      series: [
+        { name: 'AB-JChess', color: 'a' as const, values: [0.5, 0.61, 0.7] },
+        { name: 'jqe', color: 'b' as const, values: [0.5, 0.48, 0.52] },
+      ],
+    };
+    assert.equal(study.chapters[0]!.scoreSeries, null);
+    await applyPlan(
+      study,
+      {
+        study: study.id,
+        ops: [
+          { op: 'tree', chapter: first, tree: tree('b3e3', 'b10c8') },
+          { op: 'series', chapter: first, scoreSeries },
+          {
+            op: 'add',
+            ref: 'two',
+            name: 'Two',
+            tree: tree('h3e3'),
+            scoreSeries: {
+              side: 'black',
+              series: [{ name: 'jqe', color: 'b', values: [0.5, 0.4] }],
+            },
+          },
+        ],
+      },
+      ['edit-series'],
+    );
+    const after = (await getStudyById(study.id))!;
+    assert.deepEqual(after.chapters[0]!.scoreSeries, scoreSeries);
+    assert.deepEqual(after.chapters[1]!.scoreSeries, {
+      side: 'black',
+      series: [{ name: 'jqe', color: 'b', values: [0.5, 0.4] }],
+    });
+
+    // A clone carries the graph with the tree.
+    const reader = await createUser({
+      id: 'user_study_edit_series_reader',
+      email: 'series-reader@example.com',
+      emailVerifiedAt: now,
+      handle: 'series-reader',
+      displayName: 'series-reader',
+      now,
+    });
+    const cloned = await cloneStudy(study.id, reader.id);
+    assert.ok(cloned.ok);
+    assert.deepEqual(cloned.study.chapters[0]!.scoreSeries, scoreSeries);
+
+    // A null series op clears it; the second chapter keeps its own.
+    await applyPlan(
+      after,
+      { study: study.id, ops: [{ op: 'series', chapter: first, scoreSeries: null }] },
+      ['edit-series'],
+    );
+    const cleared = (await getStudyById(study.id))!;
+    assert.equal(cleared.chapters[0]!.scoreSeries, null);
+    assert.ok(cleared.chapters[1]!.scoreSeries);
   });
 });

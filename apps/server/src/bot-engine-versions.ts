@@ -38,9 +38,11 @@ const PIKAFISH_XIANGQI_COMMIT = PIKAFISH_XIANGQI_VERSION.slice(
 // Xiangqi (scripts/fetch-fairy-stockfish-largeboard.sh downloads tag fairy_sf_14).
 export const FAIRY_STOCKFISH_RELEASE_VERSION = '14';
 
-// "abj-0.2d-net-20261010" -> "0.2d": the AB-JChess release, as its author tags it.
+// "abj-20261031-net-20261030" -> "AB-JChess-20261031 (net 20261030)": the release
+// as its author tags it, and the net, since either one changes its play.
 function abJchessVersion(): string | null {
-  return /^abj-(.+?)-net-/.exec(ABJCHESS_JIEQI_ENGINE_VERSION)?.[1] ?? null;
+  const match = /^abj-(.+?)-net-(.+)$/.exec(ABJCHESS_JIEQI_ENGINE_VERSION);
+  return match ? `AB-JChess-${match[1]} (net ${match[2]})` : null;
 }
 
 // "jqe-331a6e61-net-it014" -> "331a6e61 · it014": source commit and net, since

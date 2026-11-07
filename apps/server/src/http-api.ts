@@ -9,6 +9,7 @@
 // index.ts don't need to know things moved.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import * as accountRoute from './routes/account.js';
 import * as achievementsRoute from './routes/achievements.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
@@ -34,6 +35,7 @@ import * as feedbackRoute from './routes/feedback.js';
 import * as fortressXiangqiGamesRoute from './routes/fortress-xiangqi-games.js';
 import * as forumRoute from './routes/forum.js';
 import * as gamesRoute from './routes/games.js';
+import * as gomokuGamesRoute from './routes/gomoku-games.js';
 import * as historicalXiangqiGamesRoute from './routes/historical-xiangqi-games.js';
 import * as inboxRoute from './routes/inbox.js';
 import * as jieqiGamesRoute from './routes/jieqi-games.js';
@@ -51,6 +53,7 @@ import * as practiceRoute from './routes/practice.js';
 import * as puzzlesRoute from './routes/puzzles.js';
 import * as readoutsRoute from './routes/readouts.js';
 import * as relationsRoute from './routes/relations.js';
+import * as resendRoute from './routes/resend.js';
 import * as roomsRoute from './routes/rooms.js';
 import * as studiesRoute from './routes/studies.js';
 import * as threeKingdomsBanqiGamesRoute from './routes/three-kingdoms-banqi-games.js';
@@ -99,6 +102,7 @@ export const routes: RouteModule[] = [
   chatRoute,
   enginesRoute,
   patronRoute,
+  resendRoute,
   feedbackRoute,
   clubSignupRoute,
   forumRoute,
@@ -134,6 +138,7 @@ export const routes: RouteModule[] = [
   banqiGamesRoute,
   threeKingdomsBanqiGamesRoute,
   xiangqiMahjongGamesRoute,
+  gomokuGamesRoute,
   gamesRoute,
   relationsRoute,
   titlesRoute,
@@ -155,6 +160,8 @@ export async function handleApiRequest(
   const url = request.url ?? '/';
   const parsedUrl = new URL(url, 'http://localhost');
   const pathname = parsedUrl.pathname;
+
+  if (await guardFFQBanqiHttpRead(ctx, request, response, parsedUrl)) return;
 
   for (const route of routes) {
     if (await route.tryHandle(ctx, request, response, pathname, parsedUrl)) return;

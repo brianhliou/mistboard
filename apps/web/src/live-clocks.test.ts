@@ -100,6 +100,29 @@ afterEach(() => {
   liveState.connectedSeats = { white: false, black: false };
 });
 
+describe('shared seat discs on chess clock name rows', () => {
+  it.each(['white', 'black', 'spectator'] as const)(
+    'shows White and Black before each name for %s, with and without a clock',
+    (seat) => {
+      liveState.seat = seat;
+      for (const clock of [undefined, createClock(180_000)]) {
+        const refs = makeRefs();
+        renderClocks(refs, { ...playingView(), clock });
+        const rows = [refs.playerTop, refs.playerBottom];
+        const discs = rows.map((row) => row.querySelector('.clock-seat-disc'));
+        expect(discs).toHaveLength(2);
+        expect(discs.every((disc) => disc?.classList.contains('seat-disc'))).toBe(true);
+        expect(discs.map((disc) => disc?.className).join(' ')).toContain('seat-disc--white');
+        expect(discs.map((disc) => disc?.className).join(' ')).toContain('seat-disc--black');
+        for (const disc of discs) {
+          expect(disc?.nextElementSibling?.classList).toContain('clock-name');
+          expect(disc?.getAttribute('aria-hidden')).toBe('true');
+        }
+      }
+    },
+  );
+});
+
 describe('presence dots — PvP', () => {
   it('shows both players green when connected', () => {
     liveState.roomMode = 'pvp';

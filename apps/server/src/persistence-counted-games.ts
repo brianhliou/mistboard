@@ -32,10 +32,11 @@
 // 2026-09-12. Set 2026-09-12.
 
 import {
-  ALLOWLISTED_PLAYTEST_SPEC_IDS,
+  FFQ_BANQI_SPEC_ID,
+  GAME_SPECS,
+  type GameSpecId,
   isPublicGameSpec,
   RETIRED_GAME_SPEC_IDS,
-  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
@@ -133,7 +134,8 @@ export function countedHumanGame(gamesAlias = 'g'): string {
 // RETIRED_GAME_SPEC_IDS (a spec's runtimeStatus), never a hand list. Admin
 // /metrics and the readout keep counting them: those games happened, and the
 // operator's history should not shift when a variant retires. Set 2026-10-11
-// with the Fortress and Atomic retirement.
+// with the Fortress and Atomic retirement. A variant deleted outright has no
+// spec to read: see DELETED_GAME_SPEC_IDS.
 export function notRetiredVariant(
   gamesAlias = 'g',
   retiredIds: readonly string[] = RETIRED_GAME_SPEC_IDS,
@@ -147,34 +149,55 @@ export function notRetiredVariant(
 }
 
 // Variants left out of every public figure: the retired ones, and the
-// playtest variants still hidden behind the per-account allowlist
-// (ALLOWLISTED_PLAYTEST_SPEC_IDS, which the launch switch on each spec's
-// publicSurface derives). A hidden variant's games would otherwise show in
+// hidden ones, derived from each spec's publicSurface rather than its access
+// policy. A hidden variant's games would otherwise show in
 // the /stats totals and its per-variant JSON before anyone may see the game;
 // the day the switch flips, its games count, history included. Set 2026-10-16.
 //
-// Three Kingdoms banqi (#684) is an admin-only playtest with no allowlist
-// rows: an admin's games stay off the public figures while its spec is hidden.
-const ADMIN_PLAYTEST_SPEC_IDS: readonly string[] = [THREE_KINGDOMS_BANQI_SPEC_ID];
-
-export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly string[] {
-  const adminOnly = ADMIN_PLAYTEST_SPEC_IDS.filter(
-    (id) => !isPublicGameSpec(id) && !allowlisted.includes(id),
-  );
-  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted, ...adminOnly];
+// This includes admin-only playtests and specs with no grant rows, so a new
+// hidden spec stays off the public figures without another exclusion list.
+export function offPublicGameSpecIds(
+  isPublic: (id: GameSpecId) => boolean = isPublicGameSpec,
+): readonly string[] {
+  return GAME_SPECS.filter(
+    (spec) =>
+      spec.id === FFQ_BANQI_SPEC_ID || spec.runtimeStatus === 'retired' || !isPublic(spec.id),
+  ).map((spec) => spec.id);
 }
 
-export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(
-  ALLOWLISTED_PLAYTEST_SPEC_IDS,
-);
+// Exclude FFQ before pagination, even if its metadata changes.
+export function notFFQBanqiGame(gamesAlias = 'games'): string {
+  return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
+}
 
-// A game in a variant a visitor can play and see: not retired, not a hidden
-// playtest.
+export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds();
+
+// Variants deleted from the registry on 2026-09-12 (#396). A retired spec is
+// found through its runtimeStatus; a deleted one has no spec left to read, while
+// its old games stay in the table, so they are named here. Deleting a spec with
+// games means adding its id. Admin figures keep counting them, as they do retired
+// variants. A spec that comes back has to leave this list (a test fails otherwise).
+export const DELETED_GAME_SPEC_IDS: readonly string[] = [
+  'crossroads-chess',
+  'dark-crossroads-chess',
+  'dark-crazyhouse',
+  'dark-draft960',
+  'dark-mini-xiangqi',
+  'dark-shogi',
+  'drop-mini-xiangqi',
+  'kriegspiel',
+  'luzhanqi',
+  'mini-xiangqi',
+  'reveal-chess',
+];
+
+// A game in a variant a visitor can play and see: not deleted, not retired, not
+// a hidden variant.
 export function publicVariant(
   gamesAlias = 'g',
   offPublicIds: readonly string[] = OFF_PUBLIC_GAME_SPEC_IDS,
 ): string {
-  return notRetiredVariant(gamesAlias, offPublicIds);
+  return notRetiredVariant(gamesAlias, [...DELETED_GAME_SPEC_IDS, ...offPublicIds]);
 }
 
 // A counted game in a variant that is still live and public: the filter

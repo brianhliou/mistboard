@@ -510,7 +510,7 @@ export function createTenantWsRuntime<
     // `color: seat` with no seat validation, so a spectator resign would
     // otherwise append `color:'spectator'` and corrupt the event log. After this
     // guard client.seat narrows to a real color; `seat` threads it downstream.
-    if (client.seat === 'spectator') return;
+    if (client.displaced || client.seat === 'spectator') return;
     const seat: C = client.seat;
     if (message.type === 'resign') {
       await handleResign(room, client, seat);
@@ -560,7 +560,17 @@ export function createTenantWsRuntime<
     for (const color of tenant.colors) {
       if (!room.projection.seats[color]) return;
     }
-    if (!tenantSeatMayAct(tenant, room.projection.state, seat)) return;
+    // Network clients can only act for their own human seat. Engine seats
+    // are server-owned, including clients using the retired delegation flag.
+    if (
+      message.browserBot === true ||
+      tenant.engine?.isEngineClientId(client.id) ||
+      tenant.engine?.isEngineClientId(room.projection.seats[seat]) ||
+      room.projection.seats[seat] !== client.id
+    )
+      return;
+    const mover = seat;
+    if (!tenantSeatMayAct(tenant, room.projection.state, mover)) return;
     // A move that arrives after the mover's flag fell but before the clock
     // timer fired ends the game by expiry instead of landing the move (the
     // chess-stack rule; closes the timer race for every tenant). The guard is
@@ -580,14 +590,14 @@ export function createTenantWsRuntime<
     // a chess-family tenant re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
-      ? tenant.rules.canonicalMove(room.projection.state, move, seat)
+      ? tenant.rules.canonicalMove(room.projection.state, move, mover)
       : tenant.rules.isLegalMove(room.projection.state, move)
         ? move
         : null;
     if (canonical === null) {
       // A tenant may turn a rejection into a per-mover signal (a drop bounce).
       // Sent only to this client, so it never leaks to others.
-      const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, seat);
+      const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, mover);
       if (rejection) sendPayload(client, rejection);
       return;
     }
@@ -595,7 +605,7 @@ export function createTenantWsRuntime<
       type: 'move-played',
       at: Date.now(),
       roomId: room.id,
-      color: seat,
+      color: mover,
       move: canonical,
     };
     let seq: number;
@@ -606,6 +616,7 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
+    if (seq < 0) return; // A concurrent duplicate was rejected by the serialized writer.
     broadcastEventAppended(room, event, seq);
     // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
     scheduleEngineMove(room);

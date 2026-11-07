@@ -57,6 +57,7 @@ import {
   lastSeat,
   TENANT_SERVER_ONLY_EVENT_TYPES,
   tenantSeatMayAct,
+  tenantTurnOrder,
 } from './tenant.js';
 
 export type TenantRoomCreation<
@@ -656,7 +657,9 @@ export function applyTenantEvent<
       clock:
         event.clock ??
         nextTenantClockForMove(
-          tenant,
+          tenant.firstMover
+            ? { ...tenant, colors: tenantTurnOrder(tenant, projection.state) }
+            : tenant,
           projection.clock,
           event.at,
           event.color,

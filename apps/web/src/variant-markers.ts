@@ -14,6 +14,10 @@ import { type VariantMiniId, variantMiniForId } from './variant-mini-boards.js';
 // 4x canvas (atomic, 96981921) or cut from piece art (duck, 4e38852e), scaled
 // to fill ~93-97% of the box.
 export const FINAL_VARIANT_MARKERS = {
+  // Five stones on a diagonal, with the grid cleared around each stone.
+  gomoku: {
+    path: '/variant-markers/final/gomoku.png',
+  },
   xiangqi: {
     path: '/variant-markers/final/elephant-chess.png',
   },
@@ -33,6 +37,11 @@ export const FINAL_VARIANT_MARKERS = {
   },
   'three-kingdoms-banqi': {
     path: '/variant-markers/final/three-kingdoms-banqi.png',
+  },
+  // Banqi's frame with its top and bottom edges drawn as HP bars, each partly
+  // drained: FFQ plays banqi for HP.
+  'ffq-banqi': {
+    path: '/variant-markers/final/ffq-banqi.png',
   },
   jungle: {
     path: '/variant-markers/final/jungle-chess.png',

@@ -26,6 +26,7 @@ import {
   maybeGameSpecAnalyticsProps,
   roomModeAnalyticsProps,
 } from '../analytics.js';
+import { holdBoardSettle } from '../board-anim.js';
 import { brandedEngineName } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
 import { t } from '../i18n/catalog.js';
@@ -382,6 +383,8 @@ export type TenantRecording<C extends string, V> = {
   frame: TenantLiveFrame<C, V>;
   /** Open at this ply instead of the end. */
   initialPly?: number;
+  /** Gated caller-owned handoff, retaining the recording at the displayed ply. */
+  analysisHref?(ply: number): string;
   /** The recorded clocks after a ply, or null for a match that kept none. */
   clockAt(ply: number): Omit<TenantRecordedClock<C>, 'final'> | null;
 };
@@ -439,6 +442,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // a scrub or a key renders at once and drops the hold.
   let boardBusyUntil = 0;
   let heldRender: ReturnType<typeof setTimeout> | null = null;
+  // An applied frame holds the board unsettled until the render that draws it
+  // (#825): the sound hooks run between the two, and the game-over sound waits
+  // for the glide that render starts (live-sound.ts playTerminalPlan).
+  let releaseFrameSettleHold: (() => void) | null = null;
+  function holdUntilDrawn(): void {
+    releaseFrameSettleHold ??= holdBoardSettle();
+  }
   let lifecycleEffects: LiveLifecycleEffects | null = null;
   let finishBadges: LiveFinishBadges | null = null;
   // The live view before the current one: where a general captured by the
@@ -620,6 +630,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function applyEventFrame(frame: TenantLiveFrame<C, V>): void {
+    holdUntilDrawn();
     const events = state.events;
     applyFrame(frame);
     state.events = events;
@@ -757,6 +768,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         announceLiveRoomSeat(room, tenant.isColor(state.seat));
       },
       applySnapshot: (frame) => {
+        holdUntilDrawn();
         const before = state.view;
         const movesSeen = state.events.filter(moveList.isMoveEvent).length;
         applyFrame(frame as TenantLiveFrame<C, V>);
@@ -833,6 +845,11 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function renderAll(): void {
+    // Released before the draw: the settle check is a microtask, so the glide
+    // this render starts is registered by the time it runs.
+    const releaseSettle = releaseFrameSettleHold;
+    releaseFrameSettleHold = null;
+    releaseSettle?.();
     if (!refs) return;
     if (heldRender) {
       clearTimeout(heldRender);
@@ -856,12 +873,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = displayed;
     if (moveList.listClass) refs.moveList.classList.add(moveList.listClass);
     replay.renderShell(refs, renderAll);
-    // A recording is already the review: no link to the page it is on.
+    // Recordings may offer a standalone analysis handoff owned by their caller.
     setReplayAnalysisHref(
       refs.actionSection,
-      view?.status.type === 'finished' && !recording
-        ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
+      view?.status.type === 'finished'
+        ? recording
+          ? (recording.analysisHref?.(replay.activePly() ?? replay.latestPly()) ?? null)
+          : `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
         : null,
+      recording?.analysisHref ? t('review.analyseFromHere') : undefined,
     );
     chrome.renderBoardStatus();
     chrome.renderActionStatus();

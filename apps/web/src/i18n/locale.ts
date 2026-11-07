@@ -291,6 +291,7 @@ function isContentPath(pathname: string): boolean {
     pathname === '/bots' ||
     // Engine champions, moved from brianhliou.com with its zh pages.
     pathname === '/champions' ||
+    pathname === '/washington-xiangqi' ||
     pathname === '/videos' ||
     // The study list and its permalinks (/zh-hans/study, /zh-hans/study/:id).
     pathname === '/study' ||

@@ -71,6 +71,25 @@ describe('oneScreenBoardWidth', () => {
     vi.stubGlobal('innerHeight', 568);
     expect(oneScreenBoardWidth(phoneReview(), 333, 0.9)).toBe(Number.POSITIVE_INFINITY);
   });
+
+  it('reserves the analysis toolbar and its page padding on a short phone', () => {
+    stubPhone(true);
+    vi.stubGlobal('innerHeight', 568);
+    const stage = phoneReview();
+    const shell = stage.closest<HTMLElement>('.review-shell')!;
+    const root = document.createElement('div');
+    root.className = 'has-analysis-phone-bar';
+    root.style.paddingBottom = '68px';
+    shell.before(root);
+    root.append(shell);
+    const bar = document.createElement('nav');
+    bar.className = 'analysis-phone-bar';
+    bar.getBoundingClientRect = () => box(508, 568);
+    root.append(bar);
+    const width = oneScreenBoardWidth(stage, 333, 1);
+    expect(width).toBe(244);
+    expect(90 + width + 140 + 24 + 68).toBeLessThanOrEqual(568);
+  });
 });
 
 // #619 round 3 (Brian, 2026-10-28: "I don't really love that the board has been
@@ -99,17 +118,36 @@ describe('phone game review board size', () => {
     const at = css.indexOf(`${selectorEnd} {`);
     expect(at, selectorEnd).toBeGreaterThanOrEqual(0);
     const body = css.slice(at + selectorEnd.length + 2, css.indexOf('}', at));
-    const match = new RegExp(`(?:^|;|\\s)${prop}: [^;]*?(-?\\d+(?:\\.\\d+)?)px`).exec(body);
+    // A bare 0 counts too: the edge-to-edge rows write `row-gap: 0`.
+    const match = new RegExp(`(?:^|;|\\s)${prop}: [^;]*?(-?\\d+(?:\\.\\d+)?)(?:px|;|\\s|$)`).exec(
+      body,
+    );
     expect(match, `${selectorEnd} ${prop}`).not.toBeNull();
     return Number(match?.[1]);
+  }
+
+  /** Top and bottom of the phone shell's `padding` shorthand (edge to edge
+   *  since 2026-11-06); the safe-area inset counts as 0 on the test phone. */
+  function shellPadding(css: string): { shellTop: number; shellBottom: number } {
+    const selector = '.has-review-info-sheet main.review-shell';
+    const at = css.indexOf(`${selector} {`);
+    expect(at, selector).toBeGreaterThanOrEqual(0);
+    const body = css.slice(at + selector.length + 2, css.indexOf('}', at));
+    const match = /(?:^|;|\s)padding: ([^;]+)/.exec(body);
+    expect(match, `${selector} padding`).not.toBeNull();
+    const sides = match![1]!
+      .replace(/env\([^)]*\)/g, '0')
+      .trim()
+      .split(' ')
+      .map((v) => Number.parseFloat(v));
+    return { shellTop: sides[0]!, shellBottom: sides[2] ?? sides[0]! };
   }
 
   function chrome() {
     const sheet = phoneOnly(sheetCss);
     const strip = phoneOnly(stripCss);
     return {
-      shellTop: px(sheet, '.has-review-info-sheet .review-shell', 'padding-top'),
-      shellBottom: px(sheet, '.has-review-info-sheet .review-shell', 'padding-bottom'),
+      ...shellPadding(sheet),
       gap: px(sheet, '.review-shell__cluster.review-shell__cluster--col1-stack', 'row-gap'),
       chart:
         px(strip, '.review-phone-analysis .advantage-chart__svg', 'height') +

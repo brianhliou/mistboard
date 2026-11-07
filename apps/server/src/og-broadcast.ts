@@ -110,7 +110,7 @@ export function eventDateRange(startsAt?: string, endsAt?: string): string | nul
 }
 
 /** The site's own card, for an event with no game to show yet. */
-export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=10';
+export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=11';
 
 /** Meta for an event page before any of its games has moves: the event's
  *  name, its dates and place, the site card. Without it a link shared before

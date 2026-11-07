@@ -33,11 +33,11 @@ function editablePost(initial: string) {
       return { kind, id, text };
     },
     async getCached(key) {
-      const hit = cache.get(`${key.contentHash}:${key.targetLocale}:${key.model}`);
+      const hit = cache.get(`${key.contentHash}:${key.targetLocale}`);
       return hit ? { translatedText: hit, createdAt: new Date(0) } : null;
     },
     async store(input) {
-      cache.set(`${input.contentHash}:${input.targetLocale}:${input.model}`, input.translatedText);
+      cache.set(`${input.contentHash}:${input.targetLocale}`, input.translatedText);
     },
   };
   return {

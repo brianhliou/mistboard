@@ -34,16 +34,20 @@ const ANALYSIS: GameAnalysis = {
   black: { accuracy: 100, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 0 },
 };
 
-function stubMedia(phone: boolean): void {
+function stubMedia(phone: boolean): MediaQueryList {
   const media = new EventTarget() as MediaQueryList;
   Object.defineProperty(media, 'matches', { value: phone, writable: true });
   vi.spyOn(window, 'matchMedia').mockReturnValue(media);
+  return media;
 }
 
-function mount(analysis: {
-  fetchCached: () => Promise<GameAnalysis | null>;
-  run: (onProgress?: (done: number, total: number) => void) => Promise<GameAnalysis>;
-}): HTMLElement {
+function mount(
+  analysis: {
+    fetchCached: () => Promise<GameAnalysis | null>;
+    run: (onProgress?: (done: number, total: number) => void) => Promise<GameAnalysis>;
+  },
+  analysisExtra?: HTMLElement,
+): HTMLElement {
   const root = document.createElement('div');
   document.body.append(root);
   const metaCard = document.createElement('section');
@@ -56,6 +60,7 @@ function mount(analysis: {
     metaCard,
     phoneInfoSheet: true,
     analysis: { requestLabel: 'Request computer analysis', ...analysis },
+    analysisExtra,
   });
   return root;
 }
@@ -75,6 +80,77 @@ describe('phone game review analysis strip', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.replaceChildren();
+  });
+
+  it('composes a Computer analysis tab for extra content alone', () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const extra = document.createElement('div');
+    mountXiangqiReview(root, {
+      ariaLabel: 'Review',
+      title: 'Review',
+      summary: '',
+      moves: PLAYED,
+      analysis: null,
+      analysisExtra: extra,
+      initialUnderboardTab: 'share',
+    });
+    expect(root.querySelector('[data-tab="analysis"]')).not.toBeNull();
+    expect(tabBody(root).firstElementChild).toBe(extra);
+    // An explicit initial tab still wins over the extra's presence.
+    expect(root.querySelector('.review-underboard-tab--active')?.getAttribute('data-tab')).toBe(
+      'share',
+    );
+  });
+
+  it.each([false, true])(
+    'preserves extra content above analysis through loading and phone layout changes (phone=%s)',
+    async (phone) => {
+      const media = stubMedia(phone);
+      const extra = document.createElement('div');
+      extra.textContent = 'Two-engine chart';
+      const root = mount({ fetchCached: async () => null, run: async () => ANALYSIS }, extra);
+      await settle();
+      expect(tabBody(root).firstElementChild).toBe(extra);
+      expect(strip(root).contains(extra)).toBe(false);
+      root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!.click();
+      await settle();
+      expect(tabBody(root).firstElementChild).toBe(extra);
+      expect(strip(root).contains(extra)).toBe(false);
+      for (const nextPhone of [!phone, phone]) {
+        Object.defineProperty(media, 'matches', { value: nextPhone });
+        media.dispatchEvent(new Event('change'));
+        expect(tabBody(root).firstElementChild).toBe(extra);
+        expect(strip(root).contains(extra)).toBe(false);
+        expect(strip(root).querySelector('.advantage-chart') !== null).toBe(nextPhone);
+        expect(tabBody(root).querySelector('.advantage-chart') !== null).toBe(!nextPhone);
+        if (!nextPhone) {
+          expect(extra.nextElementSibling?.querySelector('.advantage-chart')).not.toBeNull();
+        }
+      }
+    },
+  );
+
+  it('keeps extra content above cached analysis without the phone strip', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const extra = document.createElement('div');
+    mountXiangqiReview(root, {
+      ariaLabel: 'Study',
+      title: 'Study',
+      summary: '',
+      moves: PLAYED,
+      analysisExtra: extra,
+      analysis: {
+        requestLabel: 'Computer analysis',
+        fetchCached: async () => ANALYSIS,
+        run: async () => ANALYSIS,
+      },
+    });
+    await settle();
+    expect(tabBody(root).firstElementChild).toBe(extra);
+    expect(extra.nextElementSibling?.querySelector('.advantage-chart')).not.toBeNull();
+    expect(root.querySelector('.review-phone-analysis')).toBeNull();
   });
 
   it('holds the request, then its progress, then the chart', async () => {

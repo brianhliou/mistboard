@@ -1,4 +1,4 @@
-// Live multiplayer room client for Flip Jungle (兽棋 / 翻翻棋) — a SYMMETRIC-information
+// Live multiplayer room client for Flip Jungle (翻翻兽棋) — a SYMMETRIC-information
 // tenant on the generic live-client core (variant-tenant/live-client.ts owns
 // bootstrap, frame application, the renderAll skeleton, replay capture, and the
 // two-column move list). Modeled on live-banqi.ts (symmetric hidden identity,

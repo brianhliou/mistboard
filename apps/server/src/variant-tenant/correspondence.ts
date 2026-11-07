@@ -26,6 +26,7 @@ import {
 } from './room-factory.js';
 import { tenantSeatStateView } from './runtime.js';
 import type { TenantGameStateLike, TenantRuntimeRoom, VariantTenant } from './tenant.js';
+import { tenantTurnOrder } from './tenant.js';
 import type { TenantLiveRoom } from './ws.js';
 
 export type TenantCorrespondenceBinding = {
@@ -80,6 +81,7 @@ export function tenantCorrespondenceBinding<
         args,
       );
       if (!created.ok) return created;
+      const colors = tenantTurnOrder(tenant, created.room.projection.state);
       return {
         ok: true,
         room: {
@@ -87,8 +89,8 @@ export function tenantCorrespondenceBinding<
           gameSpecId: created.room.gameSpecId,
           rated: created.room.rated,
         },
-        // colors[0] is the first mover by contract; the seek stores move order.
-        seats: { first: tenant.colors[0] as string, second: tenant.colors[1] as string },
+        // The seek stores move order, including the recorded opening's mover.
+        seats: { first: colors[0] as string, second: colors[1] as string },
       };
     },
     sweepDueDeadline: async (roomId: string) => {

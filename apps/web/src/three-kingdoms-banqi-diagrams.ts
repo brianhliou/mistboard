@@ -32,6 +32,7 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMovePiece,
 } from './board-lastmove.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import './board-lastmove.css';
 import { boardCornerRadius } from './board-metrics.js';
 import './live-banqi-board.css';
@@ -47,6 +48,11 @@ import {
   flipBanqiTile3dReveal,
 } from './live-banqi-render.js';
 import { BANQI_PIECE_3D, piece3dLook, round2 } from './piece-3d.js';
+import {
+  type FaceDownFaces,
+  faceDownFaceSvg,
+  faceDownSlotClass,
+} from './review/face-down-faces.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -246,14 +252,16 @@ export const TK_THUMBNAIL = (): string =>
 
 // ── Points ───────────────────────────────────────────────────────────────────
 
-const POINTS_ORDER: Array<{ role: BanqiPieceRole; label: string }> = [
+// Keyed labels: the site's banqi prose says 兵 and 炮, where the shared xiangqi
+// labels give 卒 and, in Traditional, 砲.
+const POINTS_ORDER: Array<{ role: BanqiPieceRole; label: string; i18nKey?: string }> = [
   { role: 'general', label: 'General' },
   { role: 'chariot', label: 'Chariot' },
   { role: 'horse', label: 'Horse' },
-  { role: 'cannon', label: 'Cannon' },
+  { role: 'cannon', label: 'Cannon', i18nKey: 'banqi cannon' },
   { role: 'elephant', label: 'Elephant' },
   { role: 'advisor', label: 'Advisor' },
-  { role: 'soldier', label: 'Soldier' },
+  { role: 'soldier', label: 'Soldier', i18nKey: 'banqi soldier' },
 ];
 
 /** Red row, black row, name and points under each: banqi's ladder, scored. */
@@ -266,7 +274,7 @@ export const TK_POINTS = (): string => {
   const pointsY = labelY + 17;
   const width = POINTS_ORDER.length * slot;
   const height = pointsY + 8;
-  const cells = POINTS_ORDER.map(({ role, label }, i) => {
+  const cells = POINTS_ORDER.map(({ role, label, i18nKey }, i) => {
     const cx = i * slot + slot / 2;
     const piece = (color: 'red' | 'black', cy: number) =>
       renderXiangqiPieceGlyphed({ color, role }, activeXiangqiPieceSet, {
@@ -277,7 +285,7 @@ export const TK_POINTS = (): string => {
     return [
       piece('red', redCy),
       piece('black', blackCy),
-      `<text x="${cx}" y="${labelY}" font-size="12" fill="currentColor" text-anchor="middle" font-weight="600">${label}</text>`,
+      `<text x="${cx}" y="${labelY}" font-size="12" fill="currentColor" text-anchor="middle" font-weight="600"${i18nKey ? ` data-i18n-key="${i18nKey}"` : ''}>${label}</text>`,
       `<text x="${cx}" y="${pointsY}" font-size="13" fill="currentColor" text-anchor="middle" font-weight="700">${THREE_KINGDOMS_BANQI_POINTS[role]}</text>`,
     ].join('');
   }).join('');
@@ -397,6 +405,7 @@ export function animateThreeKingdomsBanqiBoardMove(
   const from = point(opts.reverse ? move.to : move.from);
   const to = point(settle);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // The gold band rides the piece in, as on xiangqi and jieqi. A reverse step
   // draws the prior move's marks elsewhere: they fade in as the glide lands, so
   // a tile's coloured edge never sits waiting for the piece (Brian, 2026-10-30).
@@ -476,6 +485,8 @@ export function tkMarkerSvg(marker: TkBoardMarker): string {
 /** The live room's board geometry, for drag-ghost sizing. */
 export const TK_LIVE_BOARD_VIEW = { width: WIDTH, height: HEIGHT, cell: CELL, files: 9 } as const;
 
+type TkFaceUp = { color: 'red' | 'black'; role: BanqiPieceRole };
+
 export type TkLiveBoardEntry =
   | { color: 'red' | 'black'; role: BanqiPieceRole; faceDown: false }
   | { faceDown: true };
@@ -498,6 +509,9 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
      *  layers; the live room has none. */
     arrows?: readonly TkBoardArrow[];
     markers?: readonly TkBoardMarker[];
+    /** A finished game's review only: what each face-down tile was, drawn as
+     *  a ghost face over its back (review/face-down-faces.ts, #824). */
+    faceDownFaces?: FaceDownFaces;
   },
 ): string {
   // Pieces sit on points, so the marks are xiangqi's and jieqi's: a pale wash
@@ -541,13 +555,21 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
     const entry = board[square];
     if (!entry || square === opts.draggingFrom) return '';
     const { x, y } = point(square);
+    const faces = opts.faceDownFaces;
+    const slotClass = entry.faceDown ? faceDownSlotClass(faces, square).trim() : '';
+    const slotAttr = slotClass ? ` class="${slotClass}"` : '';
     if (tile3d) {
       const markup = banqiTile3dMarkup(
         { x, y },
         entry.faceDown ? null : entry,
         activeXiangqiPieceSet,
       );
-      return `<g data-piece-square="${square}">${markup}</g>`;
+      const ghost = entry.faceDown
+        ? faceDownFaceSvg(faces, square, (id) =>
+            banqiTile3dMarkup({ x, y }, id as TkFaceUp, activeXiangqiPieceSet),
+          )
+        : '';
+      return `<g${slotAttr} data-piece-square="${square}">${markup}${ghost}</g>`;
     }
     const inner = entry.faceDown
       ? faceDown(x, y)
@@ -560,7 +582,20 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
           size: PIECE_SIZE,
           shape: BANQI_PIECE_SHAPE,
         });
-    return `<g data-piece-square="${square}">${inner}</g>`;
+    const ghost = entry.faceDown
+      ? faceDownFaceSvg(faces, square, (id) =>
+          renderXiangqiPieceGlyphed(id as TkFaceUp, activeXiangqiPieceSet, {
+            ariaLabel: `${id.color} ${id.role}`,
+            className: 'banqi-piece',
+            shrouded: false,
+            x: x - PIECE_SIZE / 2,
+            y: y - PIECE_SIZE / 2,
+            size: PIECE_SIZE,
+            shape: BANQI_PIECE_SHAPE,
+          }),
+        )
+      : '';
+    return `<g${slotAttr} data-piece-square="${square}">${inner}${ghost}</g>`;
   }).join('');
   const selection = opts.selected
     ? (({ x, y }) => `<circle class="banqi-selection" cx="${x}" cy="${y}" r="${SELECTION_R}"/>`)(

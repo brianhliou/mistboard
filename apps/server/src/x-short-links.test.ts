@@ -45,19 +45,44 @@ test('x short link: an unknown slug lands on the homepage tagged x-unknown', () 
   }
 });
 
-test('youtube link: /yt opens the next problem position, no solution, tagged youtube / video', () => {
-  const location = xShortLinkRedirect('/yt');
+test('youtube link: /yt opens the xiangqi rules page, tagged youtube / video with the visit month', () => {
+  const now = new Date('2026-11-01T19:00:00Z');
+  const location = xShortLinkRedirect('/yt', now);
   assert.ok(location);
-  assert.equal(xShortLinkRedirect('/yt/'), location);
+  for (const path of ['/yt/', '/YT', '/Yt/'])
+    assert.equal(xShortLinkRedirect(path, now), location, path);
   const url = parseTarget(location);
-  assert.equal(url.pathname, '/analysis/xiangqi');
-  assert.equal(url.searchParams.get('fen'), X_SHORT_LINKS['2']!.target.fen);
-  assert.equal(url.searchParams.get('moves'), null);
+  assert.equal(url.pathname, '/rules/xiangqi');
+  assert.equal(url.searchParams.get('fen'), null);
   assert.equal(url.searchParams.get('utm_source'), 'youtube');
   assert.equal(url.searchParams.get('utm_medium'), 'video');
-  assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-10');
-  for (const path of ['/yt/1', '/ytx', '/yt/2/extra'])
-    assert.equal(xShortLinkRedirect(path), null, path);
+  assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-11');
+  // A standing link: next month's visit reports under next month.
+  assert.equal(
+    parseTarget(xShortLinkRedirect('/yt', new Date('2026-12-02T00:00:00Z'))!).searchParams.get(
+      'utm_campaign',
+    ),
+    'yt-shorts-2026-12',
+  );
+  assert.equal(url.searchParams.get('utm_content'), null);
+  for (const path of ['/ytx', '/yt/2/extra', '/yt/0', '/yt/05', '/yt/abc', '/yt/12345'])
+    assert.equal(xShortLinkRedirect(path, now), null, path);
+});
+
+test('youtube link: /yt/<n> opens the same rules page, tagged with the Short it came from', () => {
+  const now = new Date('2026-11-04T17:00:00Z');
+  for (const path of ['/yt/5', '/yt/5/', '/YT/5']) {
+    const url = parseTarget(xShortLinkRedirect(path, now)!);
+    assert.equal(url.pathname, '/rules/xiangqi', path);
+    assert.equal(url.searchParams.get('utm_source'), 'youtube');
+    assert.equal(url.searchParams.get('utm_medium'), 'video');
+    assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-11');
+    assert.equal(url.searchParams.get('utm_content'), 'short-5', path);
+  }
+  assert.equal(
+    parseTarget(xShortLinkRedirect('/yt/12', now)!).searchParams.get('utm_content'),
+    'short-12',
+  );
 });
 
 test('facebook short link: the puzzle post opens the bare position, never the solution', () => {
@@ -115,6 +140,16 @@ test('x short link: every campaign is unique and every slug is short', () => {
 // The analysis page parses ?fen= and reads ?moves= as coordinate moves from it,
 // stopping silently at the first illegal one, so a typo in a line would ship a
 // truncated solution. Replay each line here with the rules kernel instead.
+test('x short link: every problem in the 11-05 X queue has its link', () => {
+  // A missing slug is not an error: it lands on the homepage tagged x-unknown,
+  // so a post would go out pointing at the wrong page with nothing failing.
+  for (const slug of ['66', '84', '39', '53', '75', '67', '59']) {
+    const url = parseTarget(xShortLinkRedirect(`/x/${slug}`)!);
+    assert.equal(url.pathname, '/analysis/xiangqi', slug);
+    assert.equal(url.searchParams.get('ply'), '0', slug);
+  }
+});
+
 test('x short link: every seeded line replays legally from its FEN', () => {
   for (const [slug, { target }] of Object.entries(X_SHORT_LINKS)) {
     const parsed = parseStandardXiangqiFen(target.fen);

@@ -13,6 +13,8 @@
 // editor/editor-catalog.ts is the editor's own allowlist, derived from this
 // union with `satisfies`. Membership here therefore asserts a tree-review stack
 // and nothing else.
+// Membership is a capability, not an offering: the Gomoku route and picker
+// additionally require gomokuOffered(), even when it is the current variant.
 
 import { type GameSpecId, gameSpecForId } from '@mistboard/game';
 
@@ -26,6 +28,7 @@ export type AnalysisVariantId =
   | 'jieqi'
   | 'dark-xiangqi'
   | 'dark-chess'
+  | 'gomoku'
   | 'duck-xiangqi'
   | 'atomic-xiangqi'
   | 'crazyhouse-xiangqi';
@@ -54,6 +57,7 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('dark-chess'),
   entry('jungle'),
   entry('jungle-flip'),
+  entry('gomoku'),
   // Retired 2026-10-11, off the canonical order so at the tail: kept so
   // /analysis/<slug> still opens a board for a finished game's position.
   entry('fortress-xiangqi'),

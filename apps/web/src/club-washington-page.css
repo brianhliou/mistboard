@@ -30,32 +30,67 @@
   white-space: nowrap;
 }
 
-.club-qr {
-  width: 200px;
-  height: 200px;
-  margin: 8px 0 18px;
-  box-sizing: border-box;
-}
-
-.club-qr-pending {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  border: 2px dashed var(--site-border-soft);
-  border-radius: var(--site-radius);
+/* Where things stand, read before anything else: a plain chip under the name. */
+.club-status {
+  display: inline-block;
+  margin: 2px 0 14px;
+  padding: 4px 10px;
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  border: 1px solid var(--site-border-soft);
   color: var(--site-muted);
   font-size: 14px;
-  text-align: center;
+  line-height: 1.4;
+}
+
+/* The one way in: the club address, large enough to tap on a phone. */
+.club-contact {
+  margin: 18px 0 8px;
+  padding: 16px 18px;
+  border-left: 4px solid var(--site-accent);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-accent-soft);
+}
+
+.club-contact p {
+  margin: 0;
+}
+
+.club-contact-label {
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.club-section a.club-contact-address {
+  display: inline-block;
+  margin: 6px 0 8px;
+  padding: 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.club-contact-note {
+  color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 @media (max-width: 640px) {
+  .club-page-layout {
+    padding: 12px 12px 48px;
+  }
+
   .club-page-layout .site-section {
     padding: 22px 18px 32px;
   }
+
+  .club-section a.club-contact-address {
+    font-size: 18px;
+  }
 }
 
-/* Email sign-up for announcements (#629), under the WeChat QR. */
+/* Email sign-up for announcements (#629); unmounted until #663 ships. */
 .club-signup {
   margin: 0 0 8px;
 }
@@ -146,4 +181,15 @@
   margin: 0 0 16px;
   font-size: 14px;
   color: var(--site-muted);
+}
+
+.club-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.club-list li + li {
+  margin-top: 0.4rem;
 }

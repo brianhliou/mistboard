@@ -13,6 +13,7 @@ import {
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
   type GameSpecId,
+  isRetiredGameSpec,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
@@ -389,7 +390,7 @@ function buildContentIndex(
 const COMMUNITY_WRITER_HEADING = 'Become a Mistboard contributor';
 
 const COMMUNITY_WRITER_LEDE =
-  'Players read Mistboard all over the world, from the US and China to Vietnam and Brazil. We are looking for a few players to write for it regularly, on the part of the game they know best.';
+  'Players read Mistboard all over the world, from the US and China to Vietnam and Singapore. We are looking for a few players to write for it regularly, on the part of the game they know best.';
 
 const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: string; body: string }> = [
   {
@@ -545,11 +546,19 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
   const rail = document.createElement('aside');
   rail.className = 'community-rail articles-community-rail';
-  rail.setAttribute('aria-label', 'Blog navigation');
+  rail.setAttribute('aria-label', t('articles.navigation', {}, locale));
 
   const links: Array<{ label: string; href: string; view: ArticleIndexView }> = [
-    { label: 'By Mistboard', href: localizedHref('/blog', locale), view: 'mistboard' },
-    { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
+    {
+      label: t('articles.byMistboard', {}, locale),
+      href: localizedHref('/blog', locale),
+      view: 'mistboard',
+    },
+    {
+      label: t('articles.communityPosts', {}, locale),
+      href: localizedHref('/blog/community', locale),
+      view: 'community',
+    },
   ];
 
   // A view with no posts is marked so the phone tab row can drop it (the
@@ -845,7 +854,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
-    thumb.append(renderArticleThumbnail(article.thumbnail, locale));
+    thumb.append(renderArticleThumbnail(article.thumbnail, locale, { imageAsBackground: true }));
   } else {
     thumb.classList.add('is-empty');
   }
@@ -1233,8 +1242,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     const intro = document.createElement('div');
     intro.className = 'article-intro';
     for (const block of article.intro) intro.append(renderBlock(block, articleLang));
-    const photo = intro.querySelector('figure.article-figure-image');
-    if (article.contactNote && photo) photo.append(articleContactNote(article.slug, locale));
     sheet.append(intro);
   }
 
@@ -1251,6 +1258,16 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     h2.id = uniqueId(section.heading, usedIds, headingIndex++);
     body.append(h2);
     for (const node of renderSectionBody(section, articleLang)) {
+      // These closing play rows use the header's labels, locale and links, so
+      // a bot button appears only where the variant really offers a bot.
+      if (
+        (base.slug === 'gomoku' || base.slug === 'three-kingdoms-banqi') &&
+        node.classList.contains('article-cta-row')
+      ) {
+        const playCta = buildRulesPlayCta(base.slug, article.title, locale);
+        if (playCta) body.append(playCta);
+        continue;
+      }
       if (node instanceof HTMLHeadingElement && node.tagName === 'H3') {
         node.id = uniqueId(node.textContent ?? '', usedIds, headingIndex++);
       }
@@ -1268,6 +1285,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   main.append(sheet);
   const sidebar = buildTocSidebar(body, articleLang);
   if (sidebar) main.append(sidebar);
+  if (article.contactNote) main.append(articleContactNote(article.slug, locale));
 
   return main;
 }
@@ -1282,7 +1300,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 // their current shape and only /blog gets this. The one exception is the zh
 // rules pages, which end in a single line inviting a reader to review the
 // machine translation (buildRulesTranslateNote).
-function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
+export function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
   if (article.kind === 'rules') return buildRulesTranslateNote(article, lang);
   if (article.kind !== 'article') return null;
   const related = relatedArticles(article);
@@ -1493,18 +1511,19 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-// A rules page whose variant is outside the canonical order (no game spec yet,
-// or a hidden playtest spec such as three-kingdoms-banqi, #628) sorts right
-// after the spec it varies, instead of falling to the end of the rail.
+// Explicit placement for rules pages outside the canonical public shelf:
+// related playtests follow their base game; Gomoku follows the shelf's end.
 const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
   'three-kingdoms-banqi': 'banqi',
+  // A separate board-game family follows the public shelf in local playtests.
+  gomoku: 'xiangqi-mahjong',
 };
 
 function rulesArticleRailSortIndex(article: Article): number {
   const after = RULES_RAIL_AFTER_SPEC[article.slug];
   if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
+  const gameSpecId = article.gameSpecId ?? gameSpecIdFromRulesSlug(article.slug);
+  if (gameSpecId && isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -2701,11 +2720,19 @@ function playCtaOpenToViewer(href: string): boolean {
   );
 }
 
+/** A retired variant is closed to everyone, grant or not, so its rules page
+ *  shows neither the buttons nor the note about asking to join a playtest. */
+function playCtaIsRetired(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return id !== null && isRetiredGameSpec(id);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
-  const gated = block.buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
+  const buttons = block.buttons.filter((btn) => !playCtaIsRetired(btn.href));
+  const gated = buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
   if (gated.length > 0) {
     // A playtest variant's rules page: redraw once the account's real grants
     // are in, so a player granted since their last visit gets the buttons.
@@ -2717,7 +2744,7 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       { once: true },
     );
   }
-  for (const btn of block.buttons) {
+  for (const btn of buttons) {
     if (pointsAtHiddenArticle(btn.href)) continue;
     if (gated.includes(btn)) continue;
     const a = document.createElement('a');
@@ -3021,6 +3048,7 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
 export function renderArticleThumbnail(
   thumb: ArticleThumbnail,
   locale: Locale = currentLocale(),
+  options: { imageAsBackground?: boolean } = {},
 ): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb';
@@ -3061,6 +3089,20 @@ export function renderArticleThumbnail(
     return wrap;
   }
   if (thumb.kind === 'image') {
+    // Only the homepage opts in: keep article photos out of its indexable
+    // images, in both the prerender and the client render. Other listings keep
+    // lazy img elements. The existing wrapper still reserves the same box.
+    if (options.imageAsBackground) {
+      wrap.style.backgroundImage = `url(${JSON.stringify(thumb.src)})`;
+      wrap.style.backgroundSize = 'cover';
+      wrap.style.backgroundPosition = thumb.position ?? '50% 50%';
+      if (thumb.alt) {
+        wrap.removeAttribute('aria-hidden');
+        wrap.setAttribute('role', 'img');
+        wrap.setAttribute('aria-label', thumb.alt);
+      }
+      return wrap;
+    }
     const img = document.createElement('img');
     img.src = thumb.src;
     img.alt = thumb.alt ?? '';
@@ -3086,6 +3128,7 @@ export function renderArticleThumbnail(
 // reads in one visual language. Chess is study-only, not a variant, and has no
 // marker: off the rail it keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
+  gomoku: 'gomoku',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',

@@ -112,6 +112,9 @@ scripts/.benedict-diagrams.mjs
 # against the pin in net.json (predev/build); upstream rolls it without a tag.
 apps/web/public/engine/pikafish/pikafish.nnue
 
+# Rapfi preloaded CC0 networks, verified by fetch-rapfi-net.mjs before dev.
+apps/web/public/engine/rapfi/rapfi-single-simd128.data
+
 # Playwright e2e suite (playwright.config.ts): per-run artifacts
 test-results/
 playwright-report/

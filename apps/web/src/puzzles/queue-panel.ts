@@ -9,7 +9,6 @@
 import {
   isXiangqiTrainingTagId,
   type JunglePuzzleTheme,
-  puzzleShortCode,
   XIANGQI_MOTIF_BY_ID,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzleTheme,
@@ -249,8 +248,7 @@ export function puzzleDifficultyControls(
   return [field, note];
 }
 
-// The current-puzzle info card (lichess's puzzle__side__metas): the puzzle's
-// code linking to its page, the rating (hidden unless `rating` is given), an
+// The current-puzzle info card (lichess's puzzle__side__metas): the rating (hidden unless `rating` is given), an
 // optional status line, then where it came from and who is to move. The goal
 // (e.g. "Mate in 1") is a spoiler while solving, so it shows only once
 // `goalRevealed`. Puzzle Streak puts the same card over its own. With `themes`
@@ -269,7 +267,6 @@ export function puzzleInfoCard(
   infoCard.className = 'puzzle-left-card puzzle-current-card puzzle-info-card';
   infoCard.append(
     puzzleInfoRow('target', [
-      puzzleCodeLine(puzzle),
       puzzleInfoLine(
         opts.rating === null
           ? t('puzzle.ratingHidden')
@@ -376,10 +373,7 @@ export function sourceGameLines(
 ): HTMLElement[] {
   const source = puzzle.sourceGame;
   if (puzzle.variant === XIANGQI_SPEC_ID && source?.online) {
-    const year = source.playedOn?.slice(0, 4);
-    return [
-      puzzleInfoLine(year ? t('puzzle.fromOnlineGameYear', { year }) : t('puzzle.fromOnlineGame')),
-    ];
+    return [sourceGameHeaderLine(source, onlineGameHeader(source.gameId))];
   }
   const hasAttribution =
     puzzle.variant === XIANGQI_SPEC_ID &&
@@ -420,8 +414,10 @@ export function withSelectedSource(
 // imported: that module brings the game search's styles with it).
 // One line, cut with an ellipsis (lichess's "From game 3+2 • Blitz" fits; an
 // event name often does not), with the whole header as the tooltip.
-function sourceGameHeaderLine(source: NonNullable<PuzzleSummary['sourceGame']>): HTMLElement {
-  const header = sourceGameHeader(source);
+function sourceGameHeaderLine(
+  source: NonNullable<PuzzleSummary['sourceGame']>,
+  header: string = sourceGameHeader(source),
+): HTMLElement {
   if (!source.hosted) {
     const line = puzzleInfoLine(header, 'puzzle-source-event');
     line.title = header;
@@ -471,6 +467,14 @@ export function sourceText(
 // "From game · <event> (<year>)" — event and year are both optional, and the
 // year is left off an event name that already says it ("2026 National Xiangqi
 // Team Championship", not "... (2026)").
+// An online platform game: no event and pseudonymous players, so the card
+// names our copy of the game by a short id ("From game #0b6935dc") and links
+// to it; the platform and the pseudonyms stay in the game page's Game info tab.
+export function onlineGameHeader(gameId: string): string {
+  const id = gameId.replace(/^hxq_/, '').slice(0, 8);
+  return t('puzzle.fromGameId', { id });
+}
+
 function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): string {
   const event = sourceText(source.event, source.eventEn);
   const playedYear = source.playedOn?.slice(0, 4);
@@ -543,22 +547,6 @@ function puzzleInfoDivider(): HTMLHRElement {
   const divider = document.createElement('hr');
   divider.className = 'puzzle-info-divider';
   return divider;
-}
-
-// Stable, lichess-style puzzle identifier: "Puzzle #bMpKA", where the code is a
-// deterministic hash of the puzzle id (unlike the old queue position, which
-// shuffled every visit). The code links to the puzzle's canonical full-id URL;
-// hand-typing /puzzles/<code> also resolves (see resolveToFullPuzzleId).
-export function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
-  const line = document.createElement('span');
-  line.append(t('puzzle.label'));
-  const link = document.createElement('a');
-  link.className = 'puzzle-code-link';
-  link.href = `/puzzles/${encodeURIComponent(puzzle.id)}`;
-  link.dataset.puzzleCode = puzzleShortCode(puzzle.id);
-  link.textContent = `#${puzzleShortCode(puzzle.id)}`;
-  line.append(link);
-  return line;
 }
 
 export function tagsPanel(

@@ -93,6 +93,7 @@
     "worktree:prepare": "node scripts/worktree-prepare.mjs",
     "verify": "node scripts/verify.mjs",
     "ci:quick": "node scripts/ci-checks.mjs quick",
+    "ci:preship": "node scripts/ci-checks.mjs preship",
     "ci:local": "node scripts/ci-checks.mjs local",
     "ci:browser-smoke:plan": "node scripts/ci-browser-smoke-plan.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
@@ -151,6 +152,7 @@
     "prod:smoke:xiangqi": "node scripts/prod-xiangqi-smoke.mjs",
     "prod:smoke:engine-playout": "node scripts/prod-engine-playout.mjs",
     "prod:smoke:ceval": "node scripts/prod-ceval-smoke.mjs",
+    "prod:smoke:gomoku": "node scripts/prod-gomoku-smoke.mjs",
     "prod:smoke:practice": "node scripts/check-practice-catalog.mjs",
     "time:command": "node scripts/time-command.mjs",
     "jieqi:play": "tsx scripts/jieqi-playthrough.ts"

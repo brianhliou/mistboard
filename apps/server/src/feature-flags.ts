@@ -101,6 +101,12 @@ export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
 }
 
+// Hidden FFQ banqi playtest. This opt-in never grants access on its own;
+// ffq-banqi-access.ts also requires an admin account at every entry point.
+export function ffqBanqiEnabled(): boolean {
+  return process.env.MISTBOARD_FFQ_BANQI_ENABLED === 'true';
+}
+
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the in-process α-β bot + rated pool come later).
@@ -108,7 +114,7 @@ export function jungleEnabled(): boolean {
   return process.env.MISTBOARD_JUNGLE_ENABLED === 'true';
 }
 
-// Flip Jungle (兽棋 / 翻翻棋, 4×4 flip animal chess, symmetric hidden-identity) live
+// Flip Jungle (翻翻兽棋, 4×4 flip animal chess, symmetric hidden-identity) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the belief bot comes later).
 export function jungleFlipEnabled(): boolean {
@@ -121,6 +127,12 @@ export function jungleFlipEnabled(): boolean {
 // public surface is a checkpoint decision.
 export function threeKingdomsBanqiEnabled(): boolean {
   return process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED === 'true';
+}
+
+// Gomoku runtime kill-switch, off by default. It admits everyone when enabled;
+// coordinate it with the publicSurface launch release, never before the flip.
+export function gomokuEnabled(): boolean {
+  return process.env.MISTBOARD_GOMOKU_ENABLED === 'true';
 }
 
 // Correspondence (days-per-move) dark chess on the variant-tenant stack.

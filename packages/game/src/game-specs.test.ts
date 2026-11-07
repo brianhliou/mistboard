@@ -10,8 +10,11 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  deriveLaunchLists,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
+  GOMOKU_SPEC_ID,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
   isAdminOnlyStudySpecId,
@@ -26,7 +29,10 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
+  MAHJONG_SPEC_ID,
   maybeGameSpecForId,
+  PLAYTEST_GAME_SPEC_IDS,
+  publicSpecPredicate,
   RATED_POOL_BASES,
   type RatingVariant,
   RETIRED_GAME_SPEC_IDS,
@@ -37,6 +43,7 @@ import {
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 import { hasStartFen } from './start-fen.js';
+import { FFQ_BANQI_RULES } from './variants-ffq-banqi.js';
 
 test('canonical display order contains exactly the current public variant shelf', () => {
   assert.deepEqual(CANONICAL_VARIANT_ORDER, [
@@ -51,6 +58,58 @@ test('canonical display order contains exactly the current public variant shelf'
     JUNGLE_FLIP_SPEC_ID,
     XIANGQI_MAHJONG_SPEC_ID,
   ]);
+});
+
+test('Gomoku is a built-hidden, rated freestyle placement game', () => {
+  const spec = gameSpecForId(GOMOKU_SPEC_ID);
+  assert.equal(spec.publicName, 'Gomoku');
+  assert.equal(spec.family, 'gomoku');
+  assert.equal(spec.board, 'gomoku-15x15');
+  assert.equal(spec.movement, 'gomoku-freestyle');
+  assert.equal(spec.objective, 'five-in-a-row');
+  assert.equal(spec.setup, 'empty');
+  assert.equal(spec.visibility, 'open');
+  assert.equal(spec.reserves, 'none');
+  assert.equal(spec.dropPolicy, 'none');
+  assert.equal(spec.runtimeStatus, 'live');
+  assert.equal(spec.publicSurface, 'hidden');
+  assert.equal(spec.rated, true);
+  assert.equal(spec.legacyLiveRoom, undefined);
+  assert.equal(isPublicGameSpec(spec.id), false);
+  assert.equal(ratingPoolForSpec(spec.id), 'gomoku');
+  assert.equal(isRatedPoolBase('gomoku'), true);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), true);
+  assert.equal(isCorrespondenceRatedSpec(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), false);
+});
+
+test('Gomoku is allowlisted while hidden and takes its shelf place only at launch', () => {
+  assert.ok(PLAYTEST_GAME_SPEC_IDS.includes(GOMOKU_SPEC_ID));
+  const hidden = deriveLaunchLists(isPublicGameSpec);
+  assert.ok(hidden.allowlisted.includes(GOMOKU_SPEC_ID));
+  assert.ok(!hidden.canonicalVariantOrder.includes(GOMOKU_SPEC_ID));
+  assert.ok(hidden.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
+  assert.ok(!hidden.correspondenceEligible.includes(GOMOKU_SPEC_ID));
+
+  const launched = deriveLaunchLists(
+    publicSpecPredicate(
+      GAME_SPECS.map((spec) =>
+        spec.id === GOMOKU_SPEC_ID ? { ...spec, publicSurface: 'casual' as const } : spec,
+      ),
+    ),
+  );
+  assert.ok(!launched.allowlisted.includes(GOMOKU_SPEC_ID));
+  assert.deepEqual(launched.canonicalVariantOrder, [
+    ...hidden.canonicalVariantOrder,
+    GOMOKU_SPEC_ID,
+  ]);
+  assert.deepEqual(launched.correspondenceEligible, [
+    ...hidden.correspondenceEligible,
+    GOMOKU_SPEC_ID,
+  ]);
+  assert.ok(!launched.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
 });
 
 test('current dark chess maps to the flagship chess spec', () => {
@@ -136,6 +195,46 @@ test('composite specs are composed from rule modules', () => {
   assert.notEqual(fortress.dropPolicy, 'none');
 });
 
+test('FFQ banqi has canonical metadata matching its distinct kernel rules', () => {
+  assert.equal(FFQ_BANQI_SPEC_ID, 'ffq-banqi');
+  const spec = maybeGameSpecForId('ffq-banqi');
+  assert.ok(spec, 'FFQ banqi must be a canonical spec');
+  assert.deepEqual(spec, {
+    id: 'ffq-banqi',
+    publicName: 'FFQ Banqi',
+    family: 'xiangqi',
+    board: `banqi-${FFQ_BANQI_RULES.board.width}x${FFQ_BANQI_RULES.board.height}`,
+    movement: 'ffq-banqi',
+    objective: 'hp-depletion',
+    visibility: 'hidden-identity',
+    setup: 'ffq-banqi-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'ffq_banqi',
+    publicSurface: 'hidden',
+    runtimeStatus: 'future',
+  });
+  assert.equal(isGameSpecId(spec.id), true);
+  assert.equal(gameSpecForId(FFQ_BANQI_SPEC_ID), spec);
+  assert.equal(legacyLiveRoomForGameSpec(spec.id), null);
+});
+
+test('FFQ banqi stays out of public play, ratings, correspondence and studies', () => {
+  const spec = maybeGameSpecForId('ffq-banqi');
+  assert.ok(spec);
+  assert.equal(isPublicGameSpec(spec.id), false);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(isRetiredGameSpec(spec.id), false);
+  assert.equal(ratingPoolForSpec(spec.id), null);
+  assert.equal(isRatedPoolBase(spec.ratingPoolBase), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
+  assert.equal(isCorrespondenceRatedSpec(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), false);
+  assert.equal(isAdminOnlyStudySpecId(spec.id), false);
+  assert.equal(hasStartFen(spec.id), false, 'the observer FEN is not an import format');
+});
+
 test('game spec ids are unique and discoverable', () => {
   const ids = GAME_SPECS.map((spec) => spec.id);
   assert.equal(new Set(ids).size, ids.length);
@@ -180,6 +279,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     atomic_xiangqi: true,
     crazyhouse_xiangqi: true,
     xiangqi_mahjong: true,
+    gomoku: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
 });
@@ -224,9 +324,12 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('retired specs: Fortress and Atomic Xiangqi, hidden but still resolvable', () => {
-  // Retired 2026-10-11: closed to new games, kept so finished games replay.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], [FORTRESS_XIANGQI_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID]);
+test('retired specs: Fortress, Atomic Xiangqi and Mahjong, hidden but still resolvable', () => {
+  // Closed to new games, kept so finished games stay readable.
+  assert.deepEqual(
+    [...RETIRED_GAME_SPEC_IDS],
+    [FORTRESS_XIANGQI_SPEC_ID, MAHJONG_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID],
+  );
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
     assert.equal(gameSpecForId(id).runtimeStatus, 'retired', id);

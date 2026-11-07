@@ -1,7 +1,13 @@
+import { ABOUT_NAV_GROUPS } from './about-nav-items.js';
 import type { I18nKey } from './i18n/catalog.js';
 import { STREAMERS } from './streamers-data.js';
+import { YOUTUBE_BLOCKED_IN } from './viewer-geo.js';
 
-export const SHOW_ENGINE_LAB_LINKS = import.meta.env.VITE_SHOW_ENGINE_LAB_NAV === 'true';
+export { YOUTUBE_BLOCKED_IN };
+
+// Flip by hand once the Bilibili catalogue reaches BILIBILI_NAV_MIN_ENTRIES.
+// A sync test enforces this so the catalogue stays outside the eager shell.
+export const VIDEOS_OPEN_IN_CN = true;
 
 export interface NavItem {
   label: string;
@@ -32,18 +38,6 @@ export interface NavItem {
 export const DISCORD_BLOCKED_IN: readonly string[] = ['CN'];
 export const DISCORD_INVITE_URL = 'https://discord.gg/Qp6AZ6qAYm';
 
-// Every entry in the video catalogue is a YouTube video, and the card art is
-// derived from img.youtube.com, so a mainland visitor gets neither the video nor
-// the thumbnail: the shelf renders as broken images, not as a quiet dead end.
-// CN was 23% of visitors over the 30 days to 2026-09-06, second only to the US.
-//
-// COUNTRY, NOT LANGUAGE. Taiwan, Hong Kong, Macau, Singapore and Malaysia all
-// reach YouTube, and together they were ~59 visitors in that same window, so the
-// Chinese-language shelf serves them perfectly well. Gating on the zh locale
-// rather than on CN would break the catalogue for precisely the readers it was
-// built for, which is the wrong inference this constant exists to prevent. #378.
-export const YOUTUBE_BLOCKED_IN: readonly string[] = ['CN'];
-
 // ORDER IS LOAD-BEARING: site-shell destructures this positionally
 // (`const [play, puzzles, watch] = primaryNavItems()`), so inserting an entry
 // silently displaces the ones after it out of the nav. Add standalone links as
@@ -56,21 +50,23 @@ export function primaryNavItems(): NavItem[] {
   ];
 }
 
-// Puzzles dropdown (lichess parity: Puzzle Themes and Puzzle Streak sit in the
+// Puzzles dropdown (lichess parity: themes, streak and storm sit in the
 // Puzzles menu, not on the trainer page). The title navigates to the trainer
 // and the panel repeats it, as Play does, so touch devices can still reach it.
-// The themes page's sidebar lists these same three.
+// The themes page's sidebar lists these same destinations.
 export function puzzleNavItems(): NavItem[] {
   return [
     { label: 'Puzzles', labelKey: 'nav.puzzles', href: '/puzzles' },
     { label: 'Puzzle Themes', labelKey: 'nav.puzzleThemes', href: '/puzzles/themes' },
     { label: 'Puzzle Streak', labelKey: 'nav.puzzleStreak', href: '/puzzles?mode=streak' },
+    { label: 'Puzzle Storm', labelKey: 'puzzle.stormTitle', href: '/puzzles?mode=storm' },
+    { label: 'Puzzle Dashboard', labelKey: 'puzzle.dashboardTitle', href: '/puzzles/dashboard' },
   ];
 }
 
 // Top-nav Community dropdown (lichess-aligned order): Leaderboard, Pro players
 // (the broadcast player pages at /players), Bots (the bot roster), Friends (your
-// following list), Forum, Blog (the articles surface). Teams is deliberately
+// following list), Forum. Blog lives at the end of Learn. Teams is deliberately
 // deferred. Kept distinct from communityRailItems(): the dropdown is the wide
 // social entry, the rail is the leaderboard/bots sub-nav.
 //
@@ -114,23 +110,22 @@ export function communityNavItems(): NavItem[] {
     { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
-    { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
   ];
 }
 
-// Community sub-navigation rail (lichess parity): Leaderboard + Online bots for
+// Community sub-navigation rail (lichess parity): Leaderboard + Bots for
 // now. Forum lives in the top-nav dropdown, not the rail.
 export function communityRailItems(): NavItem[] {
   return [
     { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
     { label: 'Rating stats', labelKey: 'nav.ratingStats', href: '/player/rating-stats' },
-    { label: 'Online bots', labelKey: 'nav.onlineBots', href: '/bots' },
+    { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
   ];
 }
 
 // Learn dropdown (lichess parity): rules are the durable starting point,
 // followed by the interactive xiangqi course, then Studies and the verified-coach
-// directory. The title itself links to /rules.
+// directory and Blog. The title itself links to /rules.
 export function learnNavItems(): NavItem[] {
   return [
     { label: 'Rules', labelKey: 'nav.rules', href: '/rules' },
@@ -140,6 +135,7 @@ export function learnNavItems(): NavItem[] {
     { label: 'Practice', labelKey: 'nav.practice', href: '/practice' },
     { label: 'Study', labelKey: 'nav.studies', href: '/study' },
     { label: 'Coaches', labelKey: 'nav.coaches', href: '/coach' },
+    { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
   ];
 }
 
@@ -158,8 +154,7 @@ export function adminNavItems(): NavItem[] {
     { label: 'Engines', labelKey: 'nav.engines', href: '/engines' },
     { label: 'Accounts', labelKey: 'nav.accounts', href: '/accounts' },
     { label: 'Titles', labelKey: 'nav.titles', href: '/titles' },
-    { label: 'Readouts', labelKey: 'nav.readouts', href: '/readouts' },
-    { label: 'Metrics', labelKey: 'nav.metrics', href: '/metrics' },
+    { label: 'Ops', labelKey: 'nav.ops', href: '/ops' },
     { label: 'Broadcast ops', labelKey: 'nav.broadcastOps', href: '/broadcast/xiangqi/ops' },
   ];
 }
@@ -189,16 +184,10 @@ export function watchNavItems(): NavItem[] {
       label: 'Video library',
       labelKey: 'nav.videoLibrary',
       href: '/videos',
-      // An on-site page, but every card on it links out to YouTube.
-      blockedIn: YOUTUBE_BLOCKED_IN,
+      // Direct visits remain available; promote in CN once Bilibili has depth.
+      blockedIn: VIDEOS_OPEN_IN_CN ? undefined : YOUTUBE_BLOCKED_IN,
     },
   ];
-}
-
-export function utilityNavItems(): NavItem[] {
-  const items: NavItem[] = [];
-  if (SHOW_ENGINE_LAB_LINKS) items.push({ label: 'Lab', labelKey: 'nav.lab', href: '/lab' });
-  return items;
 }
 
 export interface NavSection {
@@ -221,36 +210,25 @@ export function footerNavItems(): NavItem[] {
   ];
 }
 
-// The phone site menu's closing Mistboard section: the info pages a phone
-// reaches from any page (the footer is on the homepage only). Patron is
-// already Community's Support row, so it is not listed twice.
+// The phone site menu's closing Mistboard section uses the About rail's list.
+// Patron lives here; the desktop bar keeps its standalone Support link.
 export function mistboardMenuItems(): NavItem[] {
-  return [
-    { label: 'Statistics', labelKey: 'footer.stats', href: '/stats' },
-    { label: 'Updates', labelKey: 'footer.news', href: '/feed' },
-    { label: 'FAQ', labelKey: 'footer.faq', href: '/faq' },
-    { label: 'Contact', labelKey: 'footer.contact', href: '/contact' },
-    { label: 'Source', labelKey: 'footer.source', href: '/source' },
-    { label: 'Developers', labelKey: 'footer.developers', href: '/developers' },
-    { label: 'Game data', labelKey: 'footer.data', href: '/data' },
-  ];
+  return ABOUT_NAV_GROUPS.flat();
 }
 
 // The phone site menu (site-shell.ts openSiteMenu): every destination the bar
 // carries, grouped into sections and composed from the same lists the bar
 // renders, so a link added to a dropdown reaches the phone menu with no second
-// edit. The Puzzles menu joins Play and Support closes Community; Admin follows for
-// admins only, like the bar's admin menu. The order is the reading order of a
-// two-column flow: Play, Watch, Tools down the first column, Learn and
-// Community down the second. Mistboard always closes the menu
-// (mistboardMenuItems).
+// edit. Puzzles has its own section after Play. Admin follows Tools for admins
+// only, like the bar's admin menu. Mistboard always closes the menu.
 export function siteMenuSections({ admin = false }: { admin?: boolean } = {}): NavSection[] {
   return [
-    { labelKey: 'nav.play', items: [...playNavItems(), ...puzzleNavItems()] },
-    { labelKey: 'nav.watch', items: watchNavItems() },
-    { labelKey: 'nav.tools', items: toolsNavItems() },
+    { labelKey: 'nav.play', items: playNavItems() },
+    { labelKey: 'nav.puzzles', items: puzzleNavItems() },
     { labelKey: 'nav.learn', items: learnNavItems() },
-    { labelKey: 'nav.community', items: [...communityNavItems(), donateNavItem()] },
+    { labelKey: 'nav.watch', items: watchNavItems() },
+    { labelKey: 'nav.community', items: communityNavItems() },
+    { labelKey: 'nav.tools', items: toolsNavItems() },
     ...(admin ? [{ labelKey: 'nav.admin' as const, items: adminNavItems() }] : []),
     { labelKey: 'nav.mistboard', items: mistboardMenuItems() },
   ];
@@ -274,6 +252,5 @@ export function toolsNavItems(): NavItem[] {
     { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
     { label: 'Import game', labelKey: 'nav.import', href: '/import' },
     { label: 'Advanced search', labelKey: 'nav.gamesSearch', href: '/games/search' },
-    ...utilityNavItems(),
   ];
 }

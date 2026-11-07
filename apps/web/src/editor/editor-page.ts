@@ -83,6 +83,10 @@ export function mountEditorPage(
   root.replaceChildren();
   root.classList.add('landing-page', 'editor-route');
   root.append(buildNav(locale));
+  const heading = document.createElement('h1');
+  heading.className = 'visually-hidden';
+  heading.textContent = t('editor.pageTitle', { variant: variantDisplayLabel(variant) });
+  root.append(heading);
 
   const seed = options.fen ?? new URLSearchParams(window.location.search).get('fen');
   const seeded = seed ? spec.fromFen(seed) : null;

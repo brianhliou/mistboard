@@ -1,13 +1,15 @@
 import type { VariantId } from './types.js';
 
-export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'mahjong';
+export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'mahjong' | 'gomoku';
 export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-9x10'
   | 'banqi-8x4'
+  | 'banqi-4x8'
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
   | 'three-kingdoms-banqi-9x5'
+  | 'gomoku-15x15'
   | 'xiangqi-7x8'
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
@@ -16,12 +18,16 @@ export type BoardGeometryId =
   // Xiangqi mahjong: 32 tiles, no board at all.
   | 'xiangqi-mahjong-32';
 export type MovementRulesId =
+  // Freestyle: place a stone on an empty intersection; stones never move.
+  | 'gomoku-freestyle'
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
   | 'xiangqi-mahjong'
   | 'orthodox-chess'
   | 'xiangqi'
   | 'banqi'
+  // FFQ: banqi's rank ladder with capture-only cannons and friendly covered captures.
+  | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
   // Banqi's piece geometry on 9x5 with no rank ladder (any piece takes any
@@ -47,10 +53,14 @@ export type MovementRulesId =
 // general is NOT royal — capturing it does not end the game (the opponent flips
 // or plays on) — so this subsumes "all pieces captured" and stalemate alike.
 export type ObjectiveRulesId =
+  // Five or more consecutive stones in any of the four line directions.
+  | 'five-in-a-row'
   | 'king-capture'
   | 'general-capture'
   | 'checkmate'
   | 'last-mover'
+  // FFQ banqi: deplete the opponent's HP; no legal move also loses.
+  | 'hp-depletion'
   // 'den-or-race': win by moving a piece into the opponent's den OR capturing all
   // their pieces (Jungle / Dou Shou Qi). No royal piece; perfect information.
   | 'den-or-race'
@@ -71,10 +81,13 @@ export type ObjectiveRulesId =
 // claimed sets are public the moment they are made.
 export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed-hands';
 export type SetupRulesId =
+  | 'empty'
   | 'standard'
   | 'double-fischer-random'
   | 'jieqi-deal'
   | 'banqi-deal'
+  // FFQ: fixed Red/Black seats, with squares 6, 15, 16 and 25 face up.
+  | 'ffq-banqi-deal'
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'three-kingdoms-banqi-deal'
@@ -102,7 +115,8 @@ export type DropPolicyId =
 export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 /**
  * `live`: built and served (offered or hidden, per publicSurface). `future`: an
- * id reserved ahead of any code. `retired`: was launched, is closed to new
+ * id reserved ahead of a serving runtime (a rules kernel may exist).
+ * `retired`: was launched, is closed to new
  * games. Every create path refuses it (the request gate's 410
  * `retired_game_spec`, and createTenantRuntimeRoom as the backstop), every
  * listing omits it, and `npm run variants` lists it only under `--all`. Its
@@ -115,6 +129,9 @@ export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
+  // Migration 188 added Gomoku to the user_ratings CHECK.
+  // Allowlisted: rated, off every public rating surface.
+  | 'gomoku'
   | 'fog'
   | 'dark_xiangqi'
   | 'jieqi'
@@ -123,6 +140,8 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   // Never rated: no user_ratings CHECK entry exists or is owed until a launch.
   | 'three_kingdoms_banqi'
+  // Reserved metadata only; excluded from RatingVariant and RATED_POOL_BASES.
+  | 'ffq_banqi'
   | 'fortress_xiangqi'
   | 'mahjong_hk'
   // Migration 168 added it to the user_ratings CHECK.
@@ -136,10 +155,14 @@ export type RatingPoolBaseId =
   | 'crazyhouse_xiangqi';
 
 export type GameSpecId =
+  // Freestyle Gomoku, with runtime admission controlled by the server flag.
+  | 'gomoku'
   | 'dark-chess'
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
+  // FFQ banqi (翻翻棋): kernel and hidden metadata only, no tenant or launch flag.
+  | 'ffq-banqi'
   | 'jungle'
   | 'jungle-flip'
   // Three Kingdoms banqi (三國暗棋, #628): banqi's pieces on a 9x5 board, scored to
@@ -210,6 +233,7 @@ export const DARK_CHESS_SPEC_ID = 'dark-chess' satisfies GameSpecId;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
+export const FFQ_BANQI_SPEC_ID = 'ffq-banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const XIANGQI_MAHJONG_SPEC_ID = 'xiangqi-mahjong' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
@@ -221,6 +245,7 @@ export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
 export const ATOMIC_XIANGQI_SPEC_ID = 'atomic-xiangqi' satisfies GameSpecId;
 export const CRAZYHOUSE_XIANGQI_SPEC_ID = 'crazyhouse-xiangqi' satisfies GameSpecId;
 export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
+export const GOMOKU_SPEC_ID = 'gomoku' satisfies GameSpecId;
 
 // Specs that may be played by correspondence (days-per-move), in display order. The
 // SINGLE source of truth shared by the server's fail-closed allowlist
@@ -252,6 +277,7 @@ const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  GOMOKU_SPEC_ID,
   // Xiangqi Mahjong is held out at launch (Brian, 2026-10-25: "let's not support
   // correspondence for this variant yet"). Its tenant keeps the correspondence
   // binding and its tests, so opening it again is adding XIANGQI_MAHJONG_SPEC_ID here.
@@ -364,6 +390,8 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // Xiangqi Mahjong takes the last place on the shelf the day it launches;
   // until then the launch switch (its publicSurface) keeps it out.
   XIANGQI_MAHJONG_SPEC_ID,
+  // Gomoku follows Xiangqi Mahjong only after its own launch switch flips.
+  GOMOKU_SPEC_ID,
   // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
   // spec sorts last, which is where the study picker should offer it.
 ];
@@ -520,12 +548,29 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Hong Kong Old Style (清章). Four seats, one human against three bots to
-    // begin with. Registered so the fail-closed dispatch can see it; NOT built:
-    // there is no tenant, no route and no client yet, which is what
-    // runtimeStatus 'future' means. The scoring is also unverified - see
-    // docs-private/mahjong/hk-old-style.md section 8 - so this must not become
-    // discoverable before a player has checked the faan table.
+    // Kernel only: 4x8, fixed inks, four initial reveals, 60 HP, capture-only
+    // cannons, 30-ply no-progress draw and four consecutive chases permitted.
+    // No serving tenant yet: every room request is rejected, and this entry
+    // opens no public play, ratings, correspondence, studies or exports.
+    id: FFQ_BANQI_SPEC_ID,
+    publicName: 'FFQ Banqi',
+    family: 'xiangqi',
+    board: 'banqi-4x8',
+    movement: 'ffq-banqi',
+    objective: 'hp-depletion',
+    visibility: 'hidden-identity',
+    setup: 'ffq-banqi-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'ffq_banqi',
+    publicSurface: 'hidden',
+    runtimeStatus: 'future',
+  },
+  {
+    // Hong Kong Old Style (清章). Four seats, one human against three bots.
+    // Parked for good (Brian, 2026-11-06): it never went public, so retiring it
+    // takes nothing from a public player. Its tenant stays so a table in
+    // progress finishes; a finished table never had a page.
     id: MAHJONG_SPEC_ID,
     publicName: 'Mahjong',
     family: 'mahjong',
@@ -538,11 +583,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'mahjong_hk',
     publicSurface: 'hidden',
-    // Built and playable, and deliberately not public: the same pairing Duck
-    // Xiangqi uses. 'future' was right while this was only a registered id, and
-    // it is what greys the variant out in the play menu as "coming soon", which
-    // is now the wrong statement about it.
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,
@@ -694,7 +735,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Flip Jungle (兽棋 / 翻翻棋): the 4x4 flip derivative of Dou Shou Qi. Symmetric
+    // Flip Jungle (翻翻兽棋): the 4x4 flip derivative of Dou Shou Qi. Symmetric
     // hidden-identity (both seats see the same masked board; only the deal is hidden),
     // like banqi. Equal-rank = 同归于尽 mutual destruction. Win by leaving the opponent
     // with no legal move. Rated human PvP (own pool); PvE bot games stay unrated.
@@ -733,6 +774,23 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'three_kingdoms_banqi',
     publicSurface: 'hidden',
     runtimeStatus: 'live',
+  },
+  {
+    // Hidden, rated PvP under explicit flags; the pool stays private while allowlisted.
+    id: GOMOKU_SPEC_ID,
+    publicName: 'Gomoku',
+    family: 'gomoku',
+    board: 'gomoku-15x15',
+    movement: 'gomoku-freestyle',
+    objective: 'five-in-a-row',
+    visibility: 'open',
+    setup: 'empty',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'gomoku',
+    publicSurface: 'hidden',
+    runtimeStatus: 'live',
+    rated: true,
   },
 ] as const;
 
@@ -804,6 +862,7 @@ export function publicSpecPredicate(
 export const PLAYTEST_GAME_SPEC_IDS: readonly GameSpecId[] = [
   MAHJONG_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
+  GOMOKU_SPEC_ID,
 ];
 
 export type LaunchLists = {
@@ -889,6 +948,8 @@ export type RatingVariant = Extract<
   | 'crazyhouse_xiangqi'
   // Migration 168. Allowlisted: rated, but off every public rating surface.
   | 'xiangqi_mahjong'
+  // Migration 188. Private while the spec is allowlisted.
+  | 'gomoku'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE
