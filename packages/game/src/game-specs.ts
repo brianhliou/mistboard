@@ -553,7 +553,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // No serving tenant yet: every room request is rejected, and this entry
     // opens no public play, ratings, correspondence, studies or exports.
     id: FFQ_BANQI_SPEC_ID,
-    publicName: 'FFQ Banqi',
+    publicName: 'Fanfanqi',
     family: 'xiangqi',
     board: 'banqi-4x8',
     movement: 'ffq-banqi',

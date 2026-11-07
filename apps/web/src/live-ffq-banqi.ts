@@ -252,7 +252,7 @@ function canInteract(): boolean {
 
 function renderBoard(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   refs.board.className = 'board banqi-live-board';
-  refs.board.setAttribute('aria-label', 'FFQ Banqi board');
+  refs.board.setAttribute('aria-label', 'Fanfanqi board');
   if (!view) {
     refs.board.replaceChildren();
     return;
