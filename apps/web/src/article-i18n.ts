@@ -3319,7 +3319,7 @@ const ZH_HANS: Record<string, string> = {
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻兽棋规则：玩法详解与免费在线对弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
     '斗兽棋的 4×4 翻面版本，又称翻翻兽棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
-  'Jieqi Rules (Reveal Xiangqi)': '揭棋规则',
+  'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
     '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
@@ -10132,7 +10132,7 @@ const ZH_HANT: Record<string, string> = {
   'The page is reorganized around the questions players ask, with new sections on how to play and chain captures, the capture order set out as one rule with two exceptions, and a table of how the regional rules differ.':
     '本頁依玩家常問的問題重新整理，新增了怎麼玩和連吃兩節，把大小順序整理成一條規則加兩個例外，並用表格列出各地規則的差別。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通西洋棋的規則，也是迷霧西洋棋背後的基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
+    '普通西洋棋的規則，也是迷霧西洋棋背後的規則基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '西洋棋是資訊公開的底層遊戲。為它加上戰爭迷霧，便得到迷霧西洋棋：你視野之外的敵方棋子會消失，而王一旦被吃，該方即告負。',
   'Read Fog Chess': '閱讀迷霧西洋棋',
@@ -10152,7 +10152,7 @@ const ZH_HANT: Record<string, string> = {
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻獸棋規則：玩法詳解與免費線上對弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
     '鬥獸棋的 4×4 翻面版本，又稱翻翻獸棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
-  'Jieqi Rules (Reveal Xiangqi)': '揭棋規則',
+  'Jieqi Rules (Reveal Xiangqi)': '揭棋規則：玩法詳解與免費線上對弈',
   'Ranks and captures': '等級與吃子',
   'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank.':
     '雙方各有相同的八種動物。從強到弱是：象、獅、虎、豹、狼、狗、貓、鼠。棋子可吃相鄰的同級或低級敵子。',
