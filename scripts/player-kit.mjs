@@ -8,12 +8,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+export const MAX_GAMES = 12;
 export const DEFAULT_DATABASE = 'postgres://mistboard:mistboard@localhost:5435/mistboard';
 export const BUDGETS = Object.freeze({
   annotationNodes: 60_000,
-  scanNodes: 4_000,
-  verifyNodes: 20_000,
-  verifyDepth: 12,
+  // The miner's own defaults: at a tenth of them it finds no swings in a
+  // master game, so a kit came back with no puzzles.
+  scanNodes: 60_000,
+  verifyNodes: 600_000,
+  verifyDepth: 20,
   maxPlies: 400,
   concurrency: 1,
 });
@@ -95,8 +98,8 @@ export async function runKit(options, services) {
   } = options;
   const target = assertLocalDatabase(dbUrl);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug ?? '')) throw new KitError('invalid player slug');
-  if (!Number.isInteger(maxGames) || maxGames < 1 || maxGames > 3)
-    throw new KitError('maxGames must be 1 through 3');
+  if (!Number.isInteger(maxGames) || maxGames < 1 || maxGames > MAX_GAMES)
+    throw new KitError(`maxGames must be 1 through ${MAX_GAMES}`);
   if (apply && dryRun) throw new KitError('--apply and --dry-run cannot be combined');
   const directory = join(root, 'docs-private/players/kits', slug);
   if (apply) return applyKit({ directory, slug, target, dbUrl }, services);
@@ -302,7 +305,7 @@ async function main() {
     },
   });
   if (values.help) {
-    console.log('npm run kit -- <slug> [--dry-run | --apply] [--max-games 1..3] [--board <id> …]');
+    console.log('npm run kit -- <slug> [--dry-run | --apply] [--max-games 1..12] [--board <id> …]');
     return;
   }
   if (positionals.length !== 1) throw new KitError('kit requires one player slug');

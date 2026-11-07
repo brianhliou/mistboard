@@ -10,7 +10,7 @@ npm run kit -- fixture-player --dry-run
 npm run kit -- fixture-player --max-games 1 --board <broadcast-board-id>
 ```
 
-Only finished A-level games with complete move records qualify. Rankings put wins before draws before losses, with board ids breaking ties. The manifest states those reasons; they are a shortlist for editorial review. `--board` can name up to three other eligible games for preparation. The preview has at most three games, 400 plies per game, one engine at a time, fixed node budgets and a ten-minute timeout per annotation/mining subprocess. A budget preview is not a final selection or publication recommendation.
+Only finished A-level games with complete move records qualify. Rankings put wins before draws before losses, with board ids breaking ties. The manifest states those reasons; they are a shortlist for editorial review. `--max-games` (default 3, up to 12) sets how many ranked games are prepared, and `--board` names specific eligible games instead. Preparation uses 400 plies per game, one engine at a time, the puzzle miner's own node budgets and a ten-minute timeout per annotation/mining subprocess. A budget preview is not a final selection or publication recommendation.
 
 The command writes only under the ignored local directory `docs-private/players/kits/<slug>/`:
 
