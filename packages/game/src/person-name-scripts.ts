@@ -1,6 +1,10 @@
 // Checked whole-person forms; display only. Decision: 2026-11-06.
 // Never use a character converter: 党 and 于 are surnames; 征 stays 征.
 export const PERSON_NAME_SCRIPTS: Readonly<Record<string, string>> = {
+  杨家成: '楊家成',
+  郭中基: '郭中基',
+  祝尧: '祝堯',
+  卞孝先: '卞孝先',
   徐腾飞: '徐騰飛',
   周开薪: '周開薪',
   储般若: '儲般若',
@@ -528,6 +532,7 @@ export const PERSON_NAME_SCRIPTS: Readonly<Record<string, string>> = {
   郭胜文: '郭勝文',
 };
 
+const traditionalNames = new Map(Object.entries(PERSON_NAME_SCRIPTS));
 const simplifiedNames = new Map<string, string>();
 for (const [hans, hant] of Object.entries(PERSON_NAME_SCRIPTS)) {
   if (!simplifiedNames.has(hant)) simplifiedNames.set(hant, hans);
@@ -540,19 +545,19 @@ export function personNameForLocale(
 ): string {
   const hans = simplifiedNames.get(person.name) ?? person.name;
   if (locale === 'zh-Hans') return hans;
-  if (locale === 'zh-Hant') return PERSON_NAME_SCRIPTS[hans] ?? hans;
+  if (locale === 'zh-Hant') return traditionalNames.get(hans) ?? hans;
   return person.nameOwn ?? person.name;
 }
+
+const personForms = [
+  ...new Set([...Object.keys(PERSON_NAME_SCRIPTS), ...simplifiedNames.keys()]),
+].sort((a, b) => b.length - a.length);
+const personPattern = new RegExp(personForms.join('|'), 'gu');
 
 /** Replace checked person names in curated display copy, preserving other text. */
 export function personNamesInText(text: string, locale: string): string {
   if (locale !== 'zh-Hans' && locale !== 'zh-Hant') return text;
-  const forms = [...new Set([...Object.keys(PERSON_NAME_SCRIPTS), ...simplifiedNames.keys()])].sort(
-    (a, b) => b.length - a.length,
-  );
-  return text.replace(new RegExp(forms.join('|'), 'gu'), (name) =>
-    personNameForLocale({ name }, locale),
-  );
+  return text.replace(personPattern, (name) => personNameForLocale({ name }, locale));
 }
 
 export const FEDERATION_PLAYER_TRADITIONAL_NAMES = new Map<string, string>([

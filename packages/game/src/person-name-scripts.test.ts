@@ -25,7 +25,15 @@ test('checked forms round-trip, unknown and unresolved names stay verbatim', () 
   for (const [hans, hant] of Object.entries(PERSON_NAME_SCRIPTS)) {
     assert.equal(personNameForLocale({ name: hans }, 'zh-Hant'), hant);
   }
-  for (const name of ['谢云', '周世杰', '钟少鸿', 'Unlisted Player']) {
+  for (const name of [
+    '谢云',
+    '周世杰',
+    '钟少鸿',
+    'Unlisted Player',
+    'constructor',
+    '__proto__',
+    'toString',
+  ]) {
     assert.equal(personNameForLocale({ name }, 'zh-Hant'), name);
   }
   assert.equal(

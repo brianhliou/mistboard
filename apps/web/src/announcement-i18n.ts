@@ -13,7 +13,7 @@
 //
 // Variant names follow the play catalog exactly (variant.*.name), so a reader
 // sees the same term in the feed and in the lobby.
-import { hasOwnKey } from '@mistboard/game';
+import { hasOwnKey, personNamesInText } from '@mistboard/game';
 import type { Announcement } from './announcements.js';
 import type { Locale } from './i18n/locale.js';
 
@@ -1092,7 +1092,7 @@ function dictFor(locale: Locale): Record<string, string> | null {
 
 /** Translate one announcement string, falling back to the English source. */
 export function localizeAnnouncementString(text: string, locale: Locale): string {
-  return dictFor(locale)?.[text] ?? text;
+  return personNamesInText(dictFor(locale)?.[text] ?? text, locale);
 }
 
 /**
@@ -1105,9 +1105,9 @@ export function localizeAnnouncement(entry: Announcement, locale: Locale): Annou
   if (!dict) return entry;
   return {
     ...entry,
-    headline: dict[entry.headline] ?? entry.headline,
-    body: entry.body === undefined ? undefined : (dict[entry.body] ?? entry.body),
-    cta: entry.cta === undefined ? undefined : (dict[entry.cta] ?? entry.cta),
+    headline: localizeAnnouncementString(entry.headline, locale),
+    body: entry.body === undefined ? undefined : localizeAnnouncementString(entry.body, locale),
+    cta: entry.cta === undefined ? undefined : localizeAnnouncementString(entry.cta, locale),
   };
 }
 
