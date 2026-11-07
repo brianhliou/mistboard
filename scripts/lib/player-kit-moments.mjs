@@ -21,6 +21,8 @@ export const MOMENT_RULES = Object.freeze({
   maxOverall: 10,
   minExpected: 3,
   mainlinePlies: 2,
+  // Plies of the engine line named in the answer's comment.
+  lineLabelPlies: 8,
 });
 
 const englishName = (names, raw, side) => {
@@ -48,8 +50,12 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   replay([...prefix, ...line]);
   const labels = formatXiangqiMoves([...prefix, ...line], 'wxf').slice(prefix.length);
   const side = row.side === 'red' ? 'Red' : 'Black';
+  // A relayed record may carry no round tag; the board id names it (…-r06-r06t02).
   const round = (
-    board.roundNameEn || (/^[\d.]+$/.test(board.roundName) ? board.roundName : '?')
+    board.roundNameEn ||
+    (/^[\d.]+$/.test(board.roundName) ? board.roundName : '') ||
+    String(board.boardId ?? '').match(/-r0*(\d+)-r\d+t\d+$/)?.[1] ||
+    '?'
   ).replace(/^Round\s+/i, '');
   const game = annotation.game ?? {};
   const red = englishName(names, board.red?.name ?? game.red, 'Red');
@@ -64,7 +70,9 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   tree.rootFen = standardXiangqiEngineFen(state);
   tree.root.annotations.comments = [{ text: `${side} to play. Find the strongest move.` }];
   tree.root.children[0].annotations = {
-    comments: [{ text: `Pikafish continues ${labels.join(' ')}.` }],
+    comments: [
+      { text: `Pikafish continues ${labels.slice(0, MOMENT_RULES.lineLabelPlies).join(' ')}.` },
+    ],
   };
   const sideline = buildTree(row.uci).root.children[0];
   sideline.annotations = {

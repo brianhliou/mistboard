@@ -287,10 +287,10 @@ const scoredLines = (ply, secondCp = 0) => [
   { rank: 2, score: { cp: secondCp, mate: null }, pvUci: [momentMoves[ply - 1]] },
 ];
 
-async function momentSetup(t, rows = [momentRow(10)]) {
+async function momentSetup(t, rows = [momentRow(10)], board = momentBoard()) {
   const ctx = await setup(t);
   const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
-  ctx.services.loadPlayer = async () => ({ ...fixture, boards: [momentBoard()] });
+  ctx.services.loadPlayer = async () => ({ ...fixture, boards: [board] });
   ctx.services.prepareGame = async (board) => ({
     annotation: { game: { key: board.boardId }, rows },
     puzzles: [],
@@ -463,4 +463,18 @@ test('critical moments accept the boundary rules and a one-ply engine line', asy
       /Fixture Rival played/,
     );
   }
+});
+
+test('a moment names its round from the board id when the record has no round tag', async (t) => {
+  const board = {
+    ...momentBoard('fixture-open-r06-r06t02'),
+    roundNameEn: undefined,
+    roundName: '',
+  };
+  const ctx = await momentSetup(t, [momentRow(10)], board);
+  await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
+  const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
+  const chapter = plan.ops.at(-1);
+  assert.equal(chapter.name, 'Moment 1 · Round 6 · Black to play');
+  assert.equal(chapter.tags.round, '6');
 });
