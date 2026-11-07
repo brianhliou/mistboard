@@ -110,7 +110,7 @@ test('persistence: Rapfi migration seeds unmeasured profiles and links historica
         ('other', 'engine-version', 'rapfi-level-8', NULL);
     `);
     const migration = await readFile(
-      new URL('../migrations/190_rapfi_bot_profiles.sql', import.meta.url),
+      new URL('../migrations/191_rapfi_bot_profiles.sql', import.meta.url),
       'utf8',
     );
     await client.query(migration);
