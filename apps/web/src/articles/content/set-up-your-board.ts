@@ -125,7 +125,7 @@ export const setUpYourBoardArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.',
+          text: 'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. The next five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Animal Dobutsu, the last, swaps in cartoon animals. Every set works in xiangqi, jieqi and banqi, flat or in 3D.',
         },
         {
           kind: 'raw-svg',
