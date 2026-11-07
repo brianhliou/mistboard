@@ -11,7 +11,7 @@ export const fanfanqiArticle: Article = {
     'Fanfanqi uses a 4 by 8 board, hidden pieces and a 60 HP race. Learn the rank ladder, capture-only cannons, damage values, chase limit and draw rule.',
   showSummaryOnPage: false,
   status: 'draft',
-  audience: 'Players learning Fanfanqi or comparing its HP rules with Taiwanese banqi.',
+  audience: 'Players learning Fanfanqi or comparing its HP rules with banqi.',
   tldr: [
     'Four pieces start face up. Each turn, flip a covered piece or move one of your face-up pieces.',
     'Captures follow a rank ladder. Cannons only capture and can take covered pieces of either color.',
@@ -20,11 +20,7 @@ export const fanfanqiArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Fanfanqi is the pinyin of 翻翻棋, its name in mainland China. Hidden pieces and a rank ladder make each flip matter. Captures reduce the piece owner’s HP. Bring your opponent to zero to win.',
-    },
-    {
-      kind: 'paragraph',
-      text: '[Banqi](/rules/banqi) is the Taiwanese form of the game. This page describes the rules played on Mistboard.',
+      text: 'Fanfanqi is a faster form of [banqi](/rules/banqi), scored by HP. Hidden pieces and a rank ladder make each flip matter, and every capture costs the captured piece’s owner HP. Bring your opponent to zero to win.',
     },
   ],
   sections: [

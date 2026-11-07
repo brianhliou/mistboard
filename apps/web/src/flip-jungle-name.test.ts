@@ -10,13 +10,6 @@ const NOTATION_CITATION =
 // exempting an article or translation file would hide a later naming regression.
 // FFQ banqi must add its own explicit entries when it reaches this branch.
 const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
-  'apps/web/src/articles/content/fanfanqi.ts': [
-    {
-      sentence:
-        'Fanfanqi is the pinyin of 翻翻棋, its name in mainland China. Hidden pieces and a rank ladder make each flip matter. Captures reduce the piece owner’s HP. Bring your opponent to zero to win.',
-      count: 1,
-    },
-  ],
   'apps/web/src/articles/content/jieqi-openings.ts': [{ sentence: NOTATION_CITATION, count: 1 }],
   'apps/web/src/articles/content/khai-cuoc-co-up.ts': [
     { sentence: NOTATION_CITATION, count: 1 },
