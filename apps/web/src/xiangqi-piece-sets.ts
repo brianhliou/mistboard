@@ -39,7 +39,6 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{
   labelKey: `prefs.xqPieceSet.${XiangqiPieceSet}`;
 }> = [
   { id: 'international', label: 'International', labelKey: 'prefs.xqPieceSet.international' },
-  { id: 'animal-dobutsu', label: 'Animal Dobutsu', labelKey: 'prefs.xqPieceSet.animal-dobutsu' },
   { id: 'traditional', label: 'Traditional', labelKey: 'prefs.xqPieceSet.traditional' },
   { id: 'simplified', label: 'Simplified', labelKey: 'prefs.xqPieceSet.simplified' },
   { id: 'lacquer', label: 'Lacquer', labelKey: 'prefs.xqPieceSet.lacquer' },
@@ -47,6 +46,7 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{
   { id: 'book', label: 'Book', labelKey: 'prefs.xqPieceSet.book' },
   { id: 'brush', label: 'Brush', labelKey: 'prefs.xqPieceSet.brush' },
   { id: 'clerical', label: 'Clerical', labelKey: 'prefs.xqPieceSet.clerical' },
+  { id: 'animal-dobutsu', label: 'Animal Dobutsu', labelKey: 'prefs.xqPieceSet.animal-dobutsu' },
 ];
 
 // Sets that were offered once and removed (2026-10-08: the Latin-initial and
