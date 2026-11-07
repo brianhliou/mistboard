@@ -21,6 +21,7 @@ import {
   rulesSlugForGameSpec,
   rulesSlugPublicSurfaceEnabled,
   variantPublicSurfaceEnabled,
+  variantSupportsPve,
 } from './variant-public-surfaces.js';
 
 afterEach(() => vi.unstubAllEnvs());
@@ -56,7 +57,7 @@ describe('Fanfanqi rules registration', () => {
     }
   });
 
-  it('lists the local playtest with its own marker and offers friend play in both rows', () => {
+  it('lists the local playtest with its own marker and the standard play buttons', () => {
     vi.stubEnv('DEV', true);
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
     expect(variantPublicSurfaceEnabled(FFQ_BANQI_SPEC_ID)).toBe(false);
@@ -73,12 +74,20 @@ describe('Fanfanqi rules registration', () => {
     expect(page.querySelector('h1')?.textContent).toBe('Fanfanqi Rules');
     const rows = [...page.querySelectorAll('.article-cta-row')];
     expect(rows).toHaveLength(2);
-    for (const row of rows) {
-      const buttons = [...row.querySelectorAll('a.article-cta')];
-      expect(buttons.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-        ['Play Fanfanqi', '/?play=friend&gameSpecId=ffq-banqi'],
+    const buttons = (row: Element) =>
+      [...row.querySelectorAll('a.article-cta')].map((a) => [
+        a.textContent,
+        a.getAttribute('href'),
       ]);
-    }
+    // Both rows are the generated play row: friend play alone until the bot
+    // registers, then "Play Fanfanqi" (computer) beside "Play a friend".
+    const expected = variantSupportsPve(FFQ_BANQI_SPEC_ID)
+      ? [
+          ['Play Fanfanqi', '/?play=computer&gameSpecId=ffq-banqi'],
+          ['Play a friend', '/?play=friend&gameSpecId=ffq-banqi'],
+        ]
+      : [['Play Fanfanqi', '/?play=friend&gameSpecId=ffq-banqi']];
+    for (const row of rows) expect(buttons(row)).toEqual(expected);
   });
 });
 
