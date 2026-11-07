@@ -2,6 +2,7 @@
 // parsing and the judgement calls, not the fetching.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import * as miner from './videos-mine.mjs';
@@ -367,3 +368,99 @@ test('Bilibili discovery allows a reprimanded teacher and real empty search resu
   const result = await miner.mineBilibili(h.options);
   assert.equal(result.candidates.length, 1);
 });
+
+// Independent spellings: omissions in the miner must not also omit test cases.
+const BANNED_PLAYER_FIXTURE = `王天一 王天一 Wang Tianyi
+赵鑫鑫 趙鑫鑫 Zhao Xinxin
+郑惟桐 鄭惟桐 Zheng Weitong
+洪智 洪智 Hong Zhi
+谢靖 謝靖 Xie Jing
+徐超 徐超 Xu Chao
+汪洋 汪洋 Wang Yang
+王跃飞 王躍飛 Wang Yuefei
+申鹏 申鵬 Shen Peng
+王廓 王廓 Wang Kuo
+孙逸阳 孫逸陽 Sun Yiyang
+赵金成 趙金成 Zhao Jincheng
+蒋川 蔣川 Jiang Chuan
+张申宏 張申宏 Zhang Shenhong
+孙勇征 孫勇征 Sun Yongzheng
+郝继超 郝繼超 Hao Jichao
+刘俊达 劉俊達 Liu Junda
+俞易肖 俞易肖 Yu Yixiao
+程鸣 程鳴 Cheng Ming
+郑一泓 鄭一泓 Zheng Yihong
+党斐 黨斐 Dang Fei
+李少庚 李少庚 Li Shaogeng
+赵殿宇 趙殿宇 Zhao Dianyu
+聂铁文 聶鐵文 Nie Tiewen
+武俊强 武俊強 Wu Junqiang
+苗利明 苗利明 Miao Liming
+黄竹风 黃竹風 Huang Zhufeng
+孙昕昊 孫昕昊 Sun Xinhao
+杨铭 楊銘 Yang Ming
+徐崇峰 徐崇峰 Xu Chongfeng
+赵玮 趙瑋 Zhao Wei
+陆伟韬 陸偉韜 Lu Weitao
+杨辉 楊輝 Yang Hui
+李小龙 李小龍 Li Xiaolong
+郑宇航 鄭宇航 Zheng Yuhang
+马天越 馬天越 Ma Tianyue
+李艾东 李艾東 Li Aidong
+王宇航 王宇航 Wang Yuhang
+赵旸鹤 趙暘鶴 Zhao Yanghe
+崔革 崔革 Cui Ge
+孟辰 孟辰 Meng Chen
+谢岿 謝巋 Xie Kui
+赵子雨 趙子雨 Zhao Ziyu`
+  .split('\n')
+  .map((line) => {
+    const [simplified, traditional, ...english] = line.split(' ');
+    return { simplified, traditional, romanized: english.join(' ') };
+  });
+
+test('banned-player fixture covers every ban and excludes reprimands', () => {
+  const sanctions = readFileSync(
+    new URL('../apps/web/src/players/sanctions.ts', import.meta.url),
+    'utf8',
+  );
+  const names = [...sanctions.matchAll(/^\s*([\p{Script=Han}]+): \{ penalty: '([^']+)' \}/gmu)]
+    .filter((row) => row[2] !== 'Reprimand')
+    .map((row) => row[1]);
+  assert.equal(names.length, 43);
+  assert.deepEqual(
+    BANNED_PLAYER_FIXTURE.map((player) => player.simplified),
+    names,
+  );
+});
+
+for (const spelling of ['traditional', 'romanized']) {
+  test(`Bilibili rejects every banned player in ${spelling} form`, async (t) => {
+    for (const player of BANNED_PLAYER_FIXTURE) {
+      for (const stage of ['search', 'view']) {
+        for (const field of ['title', 'author']) {
+          await t.test(`${player[spelling]} in ${stage} ${field}`, async () => {
+            const name = player[spelling];
+            const search = searchRow(BVID, stage === 'search' ? { [field]: `揭棋 ${name}` } : {});
+            const view = viewRow(
+              BVID,
+              stage === 'view'
+                ? field === 'title'
+                  ? { title: `揭棋 ${name}` }
+                  : { owner: { name } }
+                : {},
+            );
+            const h = bilibiliHarness([
+              homepage(),
+              apiResponse({ result: [search] }),
+              apiResponse(view),
+            ]);
+            const result = await miner.mineBilibili({ ...h.options, queries: ['揭棋教学'] });
+            assert.deepEqual(result.candidates, [], `${name} must be rejected`);
+            assert.equal(h.events.filter((event) => event.url).length, stage === 'search' ? 2 : 3);
+          });
+        }
+      }
+    }
+  });
+}

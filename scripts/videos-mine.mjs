@@ -184,36 +184,52 @@ export const BILIBILI_QUERIES = [
   '象棋布局教学',
 ];
 
-// Read the site's sanctions rather than maintain a second ban register. The
-// source is a flat literal; fail closed if that contract changes. Reprimands
-// are not bans (the same distinction as isBanned in sanctions.ts).
+// The sanctions register decides who is banned. The article's translated
+// player labels supply complete English and Traditional spellings, including
+// players absent from the broadcast translator's hand-written overrides.
 function bannedPlayerNames() {
   const source = readFileSync(resolve(HERE, '../apps/web/src/players/sanctions.ts'), 'utf8');
   const rows = [...source.matchAll(/^\s*([\p{Script=Han}]+): \{ penalty: '([^']+)' \}/gmu)];
   if (rows.length === 0) throw new Error('cannot read the player sanctions register');
   const names = rows.filter((row) => row[2] !== 'Reprimand').map((row) => row[1]);
-  const aliases = readFileSync(
-    resolve(HERE, '../apps/server/src/xiangqi-broadcast-translate.ts'),
-    'utf8',
-  );
-  const english = [...aliases.matchAll(/\['([^']+)', '([^']+)'\]/g)]
-    .filter((row) => names.includes(row[1]))
-    .map((row) => row[2]);
-  return [...names, ...english];
+  const translations = readFileSync(resolve(HERE, '../apps/web/src/article-i18n.ts'), 'utf8');
+  const labels = [
+    ...translations.matchAll(
+      /'([A-Za-z]+(?:\\u00a0[A-Za-z]+)+) ([\p{Script=Han}]+)': '([\p{Script=Han}]+)'/gu,
+    ),
+  ].filter((row) => names.includes(row[2]));
+  const covered = new Set(labels.map((row) => row[2]));
+  for (const name of names) {
+    if (!covered.has(name)) throw new Error(`missing banned-player aliases: ${name}`);
+  }
+
+  // Derive one lookup from aligned names, including unchanged characters.
+  // This avoids a separately maintained regex and covers new bans only when
+  // their published spellings are present. 党 is a surname written both ways.
+  const traditionalToSimplified = new Map([['黨', '党']]);
+  for (const [, , simplified, traditional] of labels) {
+    const from = [...traditional];
+    const to = [...simplified];
+    if (from.length !== to.length) throw new Error(`unaligned banned-player name: ${simplified}`);
+    from.forEach((char, index) => {
+      if (traditionalToSimplified.has(char) && traditionalToSimplified.get(char) !== to[index]) {
+        throw new Error(`ambiguous banned-player character: ${char}`);
+      }
+      traditionalToSimplified.set(char, to[index]);
+    });
+  }
+  return {
+    names: [...names, ...labels.map((row) => row[1].replaceAll('\\u00a0', ' '))],
+    traditionalToSimplified,
+  };
 }
 
-// Traditional forms occurring in the sanctions register. Whitespace, case and
-// punctuation must not let "Wang Tianyi" or "王 天 一" evade the same filter.
-function normalizePlayerText(text) {
-  const traditional = '趙鄭謝躍鵬孫陽蔣張繼劉達鳴黨聶鐵強黃風楊銘瑋陸韜龍馬巋';
-  const simplified = '赵郑谢跃鹏孙阳蒋张继刘达鸣党聂铁强黄风杨铭玮陆韬龙马岿';
-  return text
-    .toLowerCase()
-    .replace(/[\p{P}\p{Z}\s]/gu, '')
-    .replace(
-      /[趙鄭謝躍鵬孫陽蔣張繼劉達鳴黨聶鐵強黃風楊銘瑋陸韜龍馬巋]/g,
-      (char) => simplified[traditional.indexOf(char)],
-    );
+// Whitespace, case and punctuation must not let "Wang Tianyi" or "王 天 一"
+// evade the same filter. Character conversion comes from the full register.
+function normalizePlayerText(text, traditionalToSimplified) {
+  return [...text.toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, '')]
+    .map((char) => traditionalToSimplified.get(char) ?? char)
+    .join('');
 }
 
 function bilibiliText(text) {
@@ -256,9 +272,11 @@ export async function mineBilibili({
       ? parseEntries(catalogueSource, ['BILIBILI_VIDEOS']).map((entry) => entry.bvid)
       : [],
   );
-  const banned = bannedPlayerNames().map(normalizePlayerText);
+  const { names, traditionalToSimplified } = bannedPlayerNames();
+  const normalize = (text) => normalizePlayerText(text, traditionalToSimplified);
+  const banned = names.map(normalize);
   const eligible = (row) => {
-    const text = normalizePlayerText(`${row.title} ${row.author}`);
+    const text = normalize(`${row.title} ${row.author}`);
     return (
       !banned.some((name) => text.includes(name)) &&
       !isEngineGuide(row) &&

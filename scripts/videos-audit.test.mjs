@@ -53,10 +53,17 @@ test('parseEntries is not fooled by the array type annotation', () => {
 });
 
 test('parseEntries can read the Bilibili shelf without adding it to the YouTube audit', () => {
-  const source = `${SOURCE}\nconst BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
+  const source = `const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
+    { source: 'youtube', id: 'aaaaaaaaaaa', title: 'Xiangqi lesson', author: 'Teacher' },
+  ];
+  const MISTBOARD_CHANNEL_VIDEOS: readonly YoutubeVideo[] = [];
+  const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
     { source: 'bilibili', bvid: 'BV1xx411c7mD', title: '揭棋教学', author: '老师' },
   ];`;
-  assert.ok(parseEntries(source).every((entry) => entry.source === 'youtube'));
+  const youtube = parseEntries(source);
+  assert.equal(youtube.length, 1);
+  assert.equal(youtube[0].source, 'youtube');
+  assert.equal(youtube[0].id, 'aaaaaaaaaaa');
   const entries = parseEntries(source, ['BILIBILI_VIDEOS']);
   assert.equal(entries.length, 1);
   assert.equal(entries[0].bvid, 'BV1xx411c7mD');
