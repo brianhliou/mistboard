@@ -1,11 +1,11 @@
-import { BANQI_RANK_LADDER } from '../../banqi-rules-diagrams.js';
 import {
   FANFANQI_CANNON_GAMBLE,
   FANFANQI_CANNON_NO_SHOT,
   FANFANQI_CANNON_SHOT,
-  FANFANQI_FIRST_FLIP,
+  FANFANQI_CAPTURE_CARDS,
+  FANFANQI_COVERED_CAPTURE,
   FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
-  FANFANQI_REPLY_FLIP,
+  FANFANQI_RANK_LADDER,
   FANFANQI_SETUP,
   FANFANQI_SOLDIER_TAKES_GENERAL,
 } from '../../fanfanqi-rules-diagrams.js';
@@ -44,15 +44,16 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Red moves before Black. The seats have fixed colors from the start. Flipping a piece never changes your color. Both players can see which pieces remain covered, but cannot see which piece is under each back. Below, one deal before the first turn and after each player’s first flip.',
+          text: 'Red moves first. The seats have fixed colors from the start, and flipping a piece never changes your color. Both players can see which pieces remain covered, but not which piece is under each back. Below, one deal before the first turn.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            { svg: FANFANQI_SETUP, caption: 'Before the first turn.' },
-            { svg: FANFANQI_FIRST_FLIP, caption: 'After Red’s first flip. The tint marks that tile.' },
-            { svg: FANFANQI_REPLY_FLIP, caption: 'After Black’s reply flip. The tint marks that tile.' },
-          ],
+          kind: 'raw-svg',
+          svg: FANFANQI_SETUP,
+          caption: 'The red cannon is selected. The dots mark its two shots.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Every square starts full, so no piece can step on the first turn. Red either flips a covered piece or, if a red cannon starts face up, shoots with it. In this deal the red cannon can jump the back beside it and take the covered piece behind, in two directions. Then Black takes a turn, and the players alternate from there.',
         },
       ],
     },
@@ -61,7 +62,7 @@ export const fanfanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'On your turn, flip one covered piece or move one of your face-up pieces. A flip takes the whole turn. You may flip any covered piece, even one that turns out to belong to your opponent. You may move a face-up piece on the opening turn.',
+          text: 'On your turn, flip one covered piece or move one of your face-up pieces. A flip takes the whole turn. You may flip any covered piece, even one that turns out to belong to your opponent.',
         },
       ],
     },
@@ -74,9 +75,13 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. Two exceptions apply: a general cannot capture a soldier, and a soldier can capture a soldier or a general. There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.',
+          text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. A piece captures its own rank or any rank below it, with two exceptions: a general cannot capture a soldier, and a soldier can capture a general.',
         },
-        { kind: 'raw-svg', svg: BANQI_RANK_LADDER },
+        { kind: 'raw-svg', svg: FANFANQI_RANK_LADDER },
+        {
+          kind: 'paragraph',
+          text: 'There is no check. Capturing the general follows the same HP rules as any other capture. Below, the soldier can take the general beside it, and the general cannot take the soldier.',
+        },
         {
           kind: 'svg-row',
           items: [
@@ -106,7 +111,7 @@ export const fanfanqiArticle: Article = {
         { kind: 'raw-svg', svg: FANFANQI_CANNON_SHOT, caption: 'The ring marks the target.' },
         {
           kind: 'paragraph',
-          text: 'The target must be a face-up enemy or a face-down piece of either color. A shot at a face-down piece is a gamble. The piece leaves the board and both players see its color and type. If it is yours, you lose its HP, and a shot that takes you to zero loses the game. Pieces still face down on the board stay hidden, even after the game ends. Below, the cannon’s own soldier is the screen, and the face-down piece behind it could be either color.',
+          text: 'The target must be a face-up enemy or a face-down piece of either color. A shot at a face-down piece is a gamble, because it may be your own. A section further down shows what both players learn from it. Below, the cannon’s own soldier is the screen, and the face-down piece behind it could be either color.',
         },
         { kind: 'raw-svg', svg: FANFANQI_CANNON_GAMBLE, caption: 'The dot marks a face-down target.' },
         {
@@ -139,11 +144,26 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'If your cannon captures a covered piece of your own color, you lose the HP. This can lose you the game. HP stops at zero, and a player at zero loses.',
+          text: 'HP stops at zero, and a player at zero loses. Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.',
         },
+      ],
+    },
+    {
+      heading: 'Captured face-down pieces',
+      blocks: [
         {
           kind: 'paragraph',
-          text: 'Each side’s sixteen pieces add up to 100 HP of damage against a start of 60, so a game ends well before one side is captured out. Losing the general costs half your HP at once.',
+          text: 'Only a cannon can capture a covered piece. The piece is turned face up as it leaves the board, so both players see its color and type, and its owner loses its HP. Below, the red cannon from the opening deal has taken one of its two targets. It was a black cannon.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: FANFANQI_COVERED_CAPTURE,
+          caption: 'The tint marks where the cannon stood and where it landed.',
+        },
+        { kind: 'raw-svg', svg: FANFANQI_CAPTURE_CARDS },
+        {
+          kind: 'paragraph',
+          text: 'Had it been a red piece, Red would have lost the HP instead, and a shot that takes you to zero loses the game. Either way the capture resets the 30-ply draw count. Pieces still face down on the board stay hidden from both players, even after the game ends.',
         },
       ],
     },
