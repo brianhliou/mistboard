@@ -99,7 +99,7 @@ export const fanfanqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The target may be a face-up enemy of any rank or a covered piece of either color. A cannon cannot capture a face-up friendly piece. A covered capture is shown to both players, including its color and piece type. Pieces still covered on the board stay hidden, even after the game ends.',
+          text: 'The target may be a face-up enemy of any rank or a covered piece of either color. A shot at a covered piece is a gamble: if it turns out to be yours, you take the damage. A cannon cannot capture a face-up friendly piece. A covered capture is shown to both players, including its color and piece type. Pieces still covered on the board stay hidden, even after the game ends.',
         },
         {
           kind: 'raw-svg',
