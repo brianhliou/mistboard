@@ -21,14 +21,43 @@ test('page-script forms override planted wrong surname forms without changing id
     assert.equal(personNameForLocale(source, 'en'), wrong);
   }
 });
+test('a form every independent read agreed on is listed, in both directions', () => {
+  for (const [hans, hant] of [
+    ['巨龙飞', '巨龍飛'],
+    ['叶至周', '葉至周'],
+    ['黄大为', '黃大為'],
+    ['尚培峰', '尚培峰'],
+  ]) {
+    assert.equal(personNameForLocale({ name: hans! }, 'zh-Hant'), hant);
+    assert.equal(personNameForLocale({ name: hant! }, 'zh-Hans'), hans);
+  }
+});
+test('a dictionary reading that turns a surname into another word never lands', () => {
+  assert.notEqual(personNameForLocale({ name: '游世杰' }, 'zh-Hant'), '遊世傑');
+  assert.notEqual(personNameForLocale({ name: '林子冲' }, 'zh-Hant'), '林子衝');
+});
 test('checked forms round-trip, unknown and unresolved names stay verbatim', () => {
   for (const [hans, hant] of Object.entries(PERSON_NAME_SCRIPTS)) {
     assert.equal(personNameForLocale({ name: hans }, 'zh-Hant'), hant);
   }
   for (const name of [
-    '谢云',
     '周世杰',
+    '陈富杰',
     '钟少鸿',
+    '阮晋发',
+    '陈有发',
+    '黄勇发',
+    '谢云',
+    '单文杰',
+    '万舟',
+    '刘云峰',
+    '刘盛强',
+    '张轩杰',
+    '曹云鹏',
+    '林子冲',
+    '游世杰',
+    '钟智渊',
+    '颜玉松',
     'Unlisted Player',
     'constructor',
     '__proto__',
