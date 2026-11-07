@@ -16,12 +16,7 @@ import './live-ffq-banqi.css';
 import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
-import {
-  ffqBanqiBoardView,
-  ffqBanqiClickResult,
-  ffqBanqiIndex,
-  ffqBanqiSquare,
-} from './ffq-banqi-board.js';
+import { ffqBanqiClickResult, ffqBanqiIndex, ffqBanqiSquare } from './ffq-banqi-board.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -30,8 +25,8 @@ import {
   BANQI_PIECE_PX,
   banqiPieceGhostSvg,
   installBanqiBoardStyles,
-  renderBanqiBoardSvg,
 } from './live-banqi-render.js';
+import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
 import type { LiveRefs } from './live-state.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
@@ -257,15 +252,11 @@ function renderBoard(refs: LiveRefs, view: FFQBanqiWireView | null): void {
     refs.board.replaceChildren();
     return;
   }
-  const projected = ffqBanqiBoardView(view);
-  refs.board.innerHTML = renderBanqiBoardSvg(projected, projected.perspective, {
+  refs.board.innerHTML = renderFFQBanqiBoardSvg(view, {
     interactive: true,
     selectedSquare,
     draggingFrom,
     coordinates: boardCoordinatesEnabled(),
-    legalMoves: selectedSquare
-      ? projected.legalMoves.filter((m) => m.from === selectedSquare && m.from !== m.to)
-      : [],
   });
 }
 

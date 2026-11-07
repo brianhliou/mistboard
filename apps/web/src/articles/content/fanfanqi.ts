@@ -1,3 +1,12 @@
+import { BANQI_RANK_LADDER } from '../../banqi-rules-diagrams.js';
+import {
+  FANFANQI_CANNON_CAPTURES,
+  FANFANQI_FIRST_FLIP,
+  FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
+  FANFANQI_REPLY_FLIP,
+  FANFANQI_SETUP,
+  FANFANQI_SOLDIER_TAKES_GENERAL,
+} from '../../fanfanqi-rules-diagrams.js';
 import type { Article } from '../types.js';
 
 // Keep this page aligned with FFQ_BANQI_RULES in variants-ffq-banqi.ts.
@@ -29,11 +38,19 @@ export const fanfanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up. The other 28 start face down.',
+          text: 'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up. The other 28 start face down. The four face-up squares are fixed, and the pieces on them are whatever the shuffle put there.',
         },
         {
           kind: 'paragraph',
           text: 'Red moves before Black. The seats have fixed colors from the start. Flipping a piece never changes your color. Both players can see which pieces remain covered, but cannot see which piece is under each back.',
+        },
+        {
+          kind: 'svg-row',
+          items: [
+            { svg: FANFANQI_SETUP, caption: 'Before the first turn.' },
+            { svg: FANFANQI_FIRST_FLIP, caption: 'After Red’s first flip. The tint marks that tile.' },
+            { svg: FANFANQI_REPLY_FLIP, caption: 'After Black’s reply flip. The tint marks that tile.' },
+          ],
         },
       ],
     },
@@ -57,6 +74,20 @@ export const fanfanqiArticle: Article = {
           kind: 'paragraph',
           text: 'The rank ladder, from highest to lowest, is **general > advisor > elephant > chariot > horse > cannon > soldier**. Two exceptions apply: a general cannot capture a soldier, and a soldier can capture a soldier or a general. There is no check. Capturing the general follows the same HP rules as any other capture.',
         },
+        { kind: 'raw-svg', svg: BANQI_RANK_LADDER },
+        {
+          kind: 'svg-row',
+          items: [
+            {
+              svg: FANFANQI_SOLDIER_TAKES_GENERAL,
+              caption: 'The ring marks a capture; dots mark empty destinations.',
+            },
+            {
+              svg: FANFANQI_GENERAL_CANNOT_TAKE_SOLDIER,
+              caption: 'Dots mark empty destinations. The soldier has no capture ring.',
+            },
+          ],
+        },
       ],
     },
     {
@@ -69,6 +100,11 @@ export const fanfanqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'The target may be a face-up enemy of any rank or a covered piece of either color. A cannon cannot capture a face-up friendly piece. A covered capture is shown to both players, including its color and piece type. Pieces still covered on the board stay hidden, even after the game ends.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: FANFANQI_CANNON_CAPTURES,
+          caption: 'The dot on the back and the ring on the face-up piece mark capture targets.',
         },
       ],
     },
