@@ -286,7 +286,7 @@ const COPY: Record<EmailLocale, Copy> = {
         count === 1 ? '有一盤通信對局在等你走棋' : `有 ${count} 盤通信對局在等你走棋`,
       item: (v, opp, left) => `${opp ? `與 ${opp} 的` : ''}${v}對局，剩餘 ${left}`,
       allGames: '查看你的所有對局',
-      reason: '這類郵件每天最多一封，並且只在有對局等你走棋時發送。',
+      reason: '這類電子郵件每天最多一封，並且只在有對局等你走棋時寄送。',
     },
   },
 };
