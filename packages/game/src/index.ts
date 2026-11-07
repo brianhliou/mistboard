@@ -26,6 +26,7 @@ export * from './jungle-fen.js';
 export * from './jungle-flip-fen.js';
 export * from './jungle-katago-gtp.js';
 export * from './notation.js';
+export * from './person-name-scripts.js';
 export * from './practice.js';
 export * from './practice-catalog.js';
 export * from './puzzle-rating-defaults.js';
