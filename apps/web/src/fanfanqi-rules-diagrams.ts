@@ -11,7 +11,16 @@ import { ffqBanqiSquare } from './ffq-banqi-board.js';
 import './live-banqi-board.css';
 import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
 
-function renderPosition(id: string, state: FFQBanqiState, from?: number): string {
+// A lone diagram matches the width of one board in a three-up row.
+const FULL_WIDTH = 568;
+export const SINGLE_WIDTH = 320;
+
+function renderPosition(
+  id: string,
+  state: FFQBanqiState,
+  from?: number,
+  maxWidth = FULL_WIDTH,
+): string {
   const seat = state.ply % 2 === 0 ? 'red' : 'black';
   return renderFFQBanqiBoardSvg(getFFQBanqiPlayerView(state, seat), {
     selectedSquare: from === undefined ? null : ffqBanqiSquare(from),
@@ -20,7 +29,7 @@ function renderPosition(id: string, state: FFQBanqiState, from?: number): string
     .trim()
     .replace(
       '<svg ',
-      `<svg data-fanfanqi-diagram="${id}" width="100%" style="max-width:568px;height:auto;display:block;margin:0 auto" `,
+      `<svg data-fanfanqi-diagram="${id}" width="100%" style="max-width:${maxWidth}px;height:auto;display:block;margin:0 auto" `,
     );
 }
 
@@ -34,6 +43,7 @@ export function fanfanqiMoveDiagram(opts: {
   state: FFQBanqiState;
   from: number;
   expect: readonly number[];
+  maxWidth?: number;
 }): () => string {
   return () => {
     const piece = opts.state.board[opts.from];
@@ -50,7 +60,7 @@ export function fanfanqiMoveDiagram(opts: {
         `Fanfanqi diagram ${opts.id}: kernel allows ${opts.from} -> [${targets.join(' ')}], diagram expects [${expected.join(' ')}]`,
       );
     }
-    return renderPosition(opts.id, opts.state, opts.from);
+    return renderPosition(opts.id, opts.state, opts.from, opts.maxWidth);
   };
 }
 
@@ -107,4 +117,5 @@ export const FANFANQI_CANNON_CAPTURES = fanfanqiMoveDiagram({
   state: tacticalState(cannonBoard),
   from: 9,
   expect: [11, 25],
+  maxWidth: SINGLE_WIDTH,
 });

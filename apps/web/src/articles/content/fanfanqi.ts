@@ -38,7 +38,7 @@ export const fanfanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up. The other 28 start face down. The four face-up squares are fixed, and the pieces on them are whatever the shuffle put there.',
+          text: 'The board has 4 by 8 squares. Each color has one general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. Shuffle all 32 pieces onto the board. Four fixed squares start face up, showing whatever pieces the shuffle put there. The other 28 start face down.',
         },
         {
           kind: 'paragraph',
