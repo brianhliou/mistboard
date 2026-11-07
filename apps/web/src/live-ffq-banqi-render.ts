@@ -5,7 +5,7 @@ import { type BanqiBoardRenderOptions, renderBanqiBoardSvg } from './live-banqi-
 
 export type FFQBanqiBoardRenderOptions = Pick<
   BanqiBoardRenderOptions,
-  'interactive' | 'selectedSquare' | 'draggingFrom' | 'coordinates' | 'pieceSet' | 'forbiddenMoves'
+  'interactive' | 'selectedSquare' | 'draggingFrom' | 'coordinates' | 'pieceSet'
 >;
 
 export function renderFFQBanqiBoardSvg(

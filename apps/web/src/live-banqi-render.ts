@@ -141,7 +141,7 @@ export type BanqiBoardRenderOptions = {
   // clicked directly to flip, so it needs no target dot).
   legalMoves?: readonly BanqiMove[];
   // Moves of the selected piece that the 長捉 rule forbids (view.forbiddenMoves):
-  // each destination gets a red cross where its dot would be.
+  // each destination gets a red cross where its dot would be. Interactive only.
   forbiddenMoves?: readonly BanqiMove[];
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.
@@ -479,16 +479,6 @@ function lastMoveMarkers(view: BanqiPlayerView): string {
   );
 }
 
-// Authored diagrams have no hit layer, so the crosses draw on their own.
-function staticForbiddenCrosses(moves: readonly BanqiMove[]): string {
-  return moves
-    .map((move) => {
-      const { x, y } = cellCenter(move.to);
-      return forbiddenCross(x, y);
-    })
-    .join('');
-}
-
 function hitLayerWithTargets(
   moves: readonly BanqiMove[],
   view?: BanqiPlayerView,
@@ -570,7 +560,7 @@ export function renderBanqiBoardSvg(
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
       ${pieceLayer(view, pieceSet, options.draggingFrom ?? null, options.tile3d ?? banqiTile3dEnabled(), options.faceDownFaces)}
-      ${options.interactive ? '' : moveHints(view, moves) + staticForbiddenCrosses(forbiddenMoves)}
+      ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>
       ${options.interactive ? hitLayerWithTargets(moves, view, forbiddenMoves) : ''}
