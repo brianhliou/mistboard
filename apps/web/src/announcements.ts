@@ -43,7 +43,7 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
-    date: '2026-11-10',
+    date: '2026-11-09',
     kind: 'release',
     headline: 'Gomoku is open to everyone.',
     body: 'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play Rapfi in your browser. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.',

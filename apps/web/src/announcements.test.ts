@@ -55,11 +55,11 @@ describe('announcement scheduling', () => {
   });
 });
 
-it('publishes the actual Gomoku launch once at the November 10 boundary with a play CTA and Chinese translations', () => {
+it('publishes the actual Gomoku launch once at the November 9 boundary with a play CTA and Chinese translations', () => {
   vi.stubEnv('DEV', false);
   try {
     const launches = allAnnouncements().filter(
-      (entry) => entry.date === '2026-11-10' && entry.href?.includes('gameSpecId=gomoku'),
+      (entry) => entry.date === '2026-11-09' && entry.href?.includes('gameSpecId=gomoku'),
     );
     expect(launches).toHaveLength(1);
     const entry = launches[0]!;
@@ -73,7 +73,7 @@ it('publishes the actual Gomoku launch once at the November 10 boundary with a p
       play: 'computer',
       gameSpecId: 'gomoku',
     });
-    const boundary = articleGoesLiveAt('2026-11-10');
+    const boundary = articleGoesLiveAt('2026-11-09');
     expect(announcements(boundary - 1)).not.toContainEqual(entry);
     expect(announcements(boundary)).toContainEqual(entry);
     expect(announcementIsLive(entry, boundary - 1)).toBe(false);
