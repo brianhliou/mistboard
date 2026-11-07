@@ -70,7 +70,7 @@ const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
     'zh-Hant': '三國暗棋',
   },
   'xiangqi-mahjong': { en: 'Xiangqi Mahjong', 'zh-Hans': '象棋麻将', 'zh-Hant': '象棋麻將' },
-  'dark-chess': { en: 'Fog Chess', 'zh-Hans': '迷雾国际象棋', 'zh-Hant': '迷霧國際象棋' },
+  'dark-chess': { en: 'Fog Chess', 'zh-Hans': '迷雾国际象棋', 'zh-Hant': '迷霧西洋棋' },
   'dark-xiangqi': { en: 'Fog Xiangqi', 'zh-Hans': '迷雾象棋', 'zh-Hant': '迷霧象棋' },
   'fortress-xiangqi': { en: 'Fortress Xiangqi', 'zh-Hans': '堡垒象棋', 'zh-Hant': '堡壘象棋' },
   jieqi: { en: 'Jieqi', 'zh-Hans': '揭棋', 'zh-Hant': '揭棋' },
@@ -84,7 +84,7 @@ const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   },
   'duck-xiangqi': { en: 'Duck Xiangqi', 'zh-Hans': '鸭子象棋', 'zh-Hant': '鴨子象棋' },
   'atomic-xiangqi': { en: 'Atomic Xiangqi', 'zh-Hans': '原子象棋', 'zh-Hant': '原子象棋' },
-  chess: { en: 'Chess', 'zh-Hans': '国际象棋', 'zh-Hant': '國際象棋' },
+  chess: { en: 'Chess', 'zh-Hans': '国际象棋', 'zh-Hant': '西洋棋' },
 };
 
 export const EMAIL_VARIANT_NAMES = VARIANT_NAMES;

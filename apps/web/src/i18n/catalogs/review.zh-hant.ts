@@ -414,7 +414,7 @@ export const ZH_HANT_REVIEW = {
   'watch.noOtherCompleted': '目前回放範圍內沒有其他已結束的對局。',
   'watch.importedGame': '匯入的對局',
   'watch.manualGame': '手動擺局',
-  'watch.fogChessGame': '迷霧國際象棋對局',
+  'watch.fogChessGame': '迷霧西洋棋對局',
   'replay.firstPosition': '起始局面',
   'replay.latestPosition': '最新局面',
   'replay.flip': '翻轉',

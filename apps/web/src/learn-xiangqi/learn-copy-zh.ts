@@ -669,7 +669,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.stalemate.title': '困斃取勝',
   'learn.xiangqi.stalemate.subtitle': '在象棋裡，無棋可走就算輸',
   'learn.xiangqi.stalemate.intro':
-    '下國際象棋的朋友要改一改這個習慣：在國際象棋裡，一方無子可動是逼和，算和棋。在象棋裡，這一方是輸，而且不需要被將軍！這種贏法叫困斃。把每一格都封死，但不要將軍。',
+    '下西洋棋的朋友要改一改這個習慣：在西洋棋裡，一方無子可動是逼和，算和棋。在象棋裡，這一方是輸，而且不需要被將軍！這種贏法叫困斃。把每一格都封死，但不要將軍。',
   'learn.xiangqi.stalemate.complete':
     '你掌握困斃了！在象棋裡，只要能讓對方一步都走不了，就不必非要將死。記住那步不將軍的閒著：封住最後一格，棋就贏了。',
   'learn.xiangqi.stalemate.goal.seal': '黑方只剩一個將。別將軍，把他最後幾格路封掉，他就輸了！',
@@ -743,7 +743,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.perpetual.title': '長將與長捉',
   'learn.xiangqi.perpetual.subtitle': '一直重複就要判負',
   'learn.xiangqi.perpetual.intro':
-    '在國際象棋裡，一直將軍是和棋。象棋不認這一套。反覆走同樣的將軍，或者沒完沒了地捉同一個子，都是不允許的：進攻的一方必須變著，否則判負。看著黑方來試，你穩住就行。',
+    '在西洋棋裡，一直將軍是和棋。象棋不認這一套。反覆走同樣的將軍，或者沒完沒了地捉同一個子，都是不允許的：進攻的一方必須變著，否則判負。看著黑方來試，你穩住就行。',
   'learn.xiangqi.perpetual.complete':
     '這一條要記牢：在象棋裡，長將和長捉都判進攻方負。有人一直將你，穩住別慌。規則站在你這邊。',
   'learn.xiangqi.perpetual.goal.1':

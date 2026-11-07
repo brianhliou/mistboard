@@ -754,9 +754,9 @@ const ZH_HANT: Record<string, string> = {
   "Every player on the Chinese Xiangqi Association's lists now has a page: record by colour, head to head, openings named in English, and rating history since 2019. Titles (GM, IM, FM, NM) come from the CXA's grade lists and the WXF's international titles, each with its source. Pro teams rank by their top five players.":
     '中國象棋協會名單上的每一位棋手現在都有頁面：執紅執黑的戰績、交手記錄、以英文命名的開局，以及 2019 年以來的等級分走勢。稱號（特級大師、大師等）來自中國象棋協會的等級稱號名單和世界象棋聯合會的國際稱號，每一項都註明出處。職業隊伍按隊中前五名棋手排名。',
   'Find a player': '查找棋手',
-  'The xiangqi rules, rewritten for chess players.': '象棋規則頁為國際象棋玩家重寫。',
+  'The xiangqi rules, rewritten for chess players.': '象棋規則頁為西洋棋玩家重寫。',
   'The rules page now starts from what a chess player already knows: the six rules that catch you out, the setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations and a first opening. A famous game plays out in the page.':
-    '規則頁現在從國際象棋玩家已經懂的東西講起：最容易讓人出錯的六條規則、開局擺法、本站如何判定重複局面（長將判負）、常見錯誤、三種記譜法，以及第一套開局。頁面裡還能直接看一盤名局。',
+    '規則頁現在從西洋棋玩家已經懂的東西講起：最容易讓人出錯的六條規則、開局擺法、本站如何判定重複局面（長將判負）、常見錯誤、三種記譜法，以及第一套開局。頁面裡還能直接看一盤名局。',
   'Read the rules': '閱讀規則',
   'A Jungle board, and animal pieces without the disc.':
     '新的「叢林」棋盤，以及不帶底盤的動物棋子。',
@@ -843,7 +843,7 @@ const ZH_HANT: Record<string, string> = {
   // ── 2026-09-06 (Misty open source) ── 引擎名 Misty、套件名 misty-chess 保持原文。
   'Misty is open source.': 'Misty 已開源。',
   'The Fog of War chess engine you play here is on GitHub under the GPL, and installs from PyPI as misty-chess. It is a build of the architecture behind Obscuro, the first superhuman Fog of War chess AI, whose own code was never released. The engine article now says how it works, what version 1.6 fixed, and what is still wrong with it.':
-    '你在這裡對弈的迷霧國際象棋引擎已以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。它實作的是 Obscuro 背後的架構；Obscuro 是第一個達到超人水準的迷霧國際象棋 AI，其自身程式碼從未公開。引擎文章現在講清楚了它如何運作、1.6 版修正了什麼，以及它還有哪些問題。',
+    '你在這裡對弈的迷霧西洋棋引擎已以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。它實作的是 Obscuro 背後的架構；Obscuro 是第一個達到超人水準的迷霧西洋棋 AI，其自身程式碼從未公開。引擎文章現在講清楚了它如何運作、1.6 版修正了什麼，以及它還有哪些問題。',
   'How Misty plays': 'Misty 如何思考',
 
   // ── 2026-09-04 (jieqi openings) ── 開局術語與文章一致：仙人指路、炮二進四、揭子。
@@ -935,7 +935,7 @@ const ZH_HANT: Record<string, string> = {
   'A head-to-head record on every finished game.': '每局終局都有對陣記錄。',
   'Board coordinates, on every board that has them.': '棋盤座標，凡是有座標的棋盤都能顯示。',
   'Follow a forum thread without refreshing it.': '關注論壇主題，不用反覆重新整理。',
-  'Chess titles count for verification now.': '國際象棋頭銜現在也可以認證。',
+  'Chess titles count for verification now.': '西洋棋頭銜現在也可以認證。',
   'Studies read and write PGN.': '研習支援匯入和匯出 PGN。',
   'The Riverbank Cannon Problem.': '巡河炮問題。',
   'Puzzles are rated by how hard they play.': '題目難度改按實際難解程度評定。',
@@ -945,7 +945,7 @@ const ZH_HANT: Record<string, string> = {
   'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
     '復盤頁新增對陣表，顯示你在該變體中與這位對手的交手記錄，引擎也算在內；分享與匯出可以把整局匯出為 PGN 或 JSON。',
   'One switch in Display settings reaches the xiangqi family, the chess boards, and jungle. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
-    '顯示設定裡的一個開關，現在管得到象棋系列、國際象棋類棋盤、鬥獸棋和將棋。象棋的縱線從各自的右手邊數起，所以標註會跟隨你的著法記譜設定，並在翻轉棋盤時換邊。',
+    '顯示設定裡的一個開關，現在管得到象棋系列、西洋棋類棋盤、鬥獸棋和將棋。象棋的縱線從各自的右手邊數起，所以標註會跟隨你的著法記譜設定，並在翻轉棋盤時換邊。',
   'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
     '關注一個主題，鈴鐺就會統計它的未讀回覆。引用他人現在也會通知對方，鈴鐺報告的每一類訊息都有各自的開關。',
   'GM, IM, FM and the rest join the xiangqi titles. A verified title puts a badge beside your name wherever people are listed, and opens a coaching page students can find. Verification takes about two minutes.':
@@ -994,19 +994,19 @@ const ZH_HANT: Record<string, string> = {
   'Fog Xiangqi is open for alpha play.': '迷霧象棋已開放內測對局。',
   'Banqi is open for alpha play.': '暗棋已開放內測對局。',
   'Jieqi is open for alpha play.': '揭棋已開放內測對局。',
-  'Fog Chess is open for alpha play.': '迷霧國際象棋已開放內測對局。',
+  'Fog Chess is open for alpha play.': '迷霧西洋棋已開放內測對局。',
   'Mistboard is in alpha.': 'Mistboard 處於內測階段。',
   'Misty 1.0 has launched.': 'Misty 1.0 已上線。',
 
   // ── bodies ──
   'Misty runs version 1.6 in Fog Chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
-    '迷霧國際象棋中的 Misty 已升級到 1.6 版，修正了以往會送后的一類失誤。揭棋中的 Pikafish 現在會搜尋到完整深度；此前它過早停止搜尋，因此比應有的水準更容易被擊敗。',
+    '迷霧西洋棋中的 Misty 已升級到 1.6 版，修正了以往會送后的一類失誤。揭棋中的 Pikafish 現在會搜尋到完整深度；此前它過早停止搜尋，因此比應有的水準更容易被擊敗。',
   'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
     '標準象棋題庫從 394 題增加到 1,605 題，每一題都取自已結束的對局，並在上線前經過引擎校驗。',
   'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
     '著法評註標記現在會顯示在全部六種支援分析的棋類棋盤上，不再只有象棋，漏著還會指出反駁它的具體著法。揭棋的翻子半回合不再給出變化，而是列出引擎評分後的候選著法排名，因為翻子之後的局面無法預知。',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
-    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
+    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬西洋棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」頁面列出了每月的贊助金額、包含的內容（個人資料上的徽章，不影響對局），以及完整的計費與退款條款。結帳尚未開放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
@@ -1058,9 +1058,9 @@ const ZH_HANT: Record<string, string> = {
   'Hidden-identity xiangqi: every non-general piece starts face-down and reveals as it moves. Take on PikaJieQi, our jieqi engine.':
     '隱藏身分的象棋：除將帥外的棋子開局均背面朝上，走動時翻開。可挑戰我們的揭棋引擎 PikaJieQi。',
   'Fog of War chess is live on Mistboard, with private vision, no check warnings, and king capture wins.':
-    '迷霧國際象棋已在 Mistboard 上線：視野不公開，沒有將軍提示，擒王即勝。',
+    '迷霧西洋棋已在 Mistboard 上線：視野不公開，沒有將軍提示，擒王即勝。',
   'Casual dark chess is open. Rated beta is coming.': '休閒迷霧棋已開放，等級分公測即將推出。',
-  'Our Fog of War dark chess engine is now live to play.': '我們的迷霧國際象棋引擎現已開放對弈。',
+  'Our Fog of War dark chess engine is now live to play.': '我們的迷霧西洋棋引擎現已開放對弈。',
 
   // ── CTA labels ──
   'Search the games': '檢索對局',
