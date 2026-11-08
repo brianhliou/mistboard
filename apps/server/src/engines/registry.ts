@@ -46,6 +46,7 @@ import {
   THREE_KINGDOMS_BANQI_ENGINE_ID,
   THREE_KINGDOMS_BANQI_ENGINE_NAME,
   THREE_KINGDOMS_BANQI_ENGINE_VERSION,
+  THREE_KINGDOMS_BANQI_HISTORICAL_ENGINE_VERSION,
   threeKingdomsBanqiEngineDisplayName,
 } from '../three-kingdoms-banqi-engine.js';
 import {
@@ -1221,9 +1222,15 @@ const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntri
 const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map((tier) => {
     const random = tier.evaluation === 'random';
+    const historical = tier.id === THREE_KINGDOMS_BANQI_ENGINE_ID;
+    // The historical catalog pair and the process-free L1 have not changed.
+    const version =
+      historical || random
+        ? THREE_KINGDOMS_BANQI_HISTORICAL_ENGINE_VERSION
+        : THREE_KINGDOMS_BANQI_ENGINE_VERSION;
     const noiseSignature =
       tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`;
-    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}${noiseSignature}`;
+    const signature = `${tier.id}-${version}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}${noiseSignature}`;
     return [
       tier.id,
       {
@@ -1248,8 +1255,11 @@ const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fr
                   ? {}
                   : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
               },
-        notes:
-          'Admin-only TK playtest with calibrated levels. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2-L8 require advertised ChanceMix support; L2-L4 also require Noise, NoiseDepth and Seed. L1 and the historical ID configure none of these options.',
+        notes: historical
+          ? 'Historical MistyThreeKingdomsBanqi 0.2.0 Rust UCI binary: 2M-node classical Star1 search under a 3000 ms cap, without ChanceMix, Noise or EvalFile.'
+          : random
+            ? 'Process-free uniform random legal mover; no native engine binary.'
+            : `MistyThreeKingdomsBanqi ${THREE_KINGDOMS_BANQI_ENGINE_VERSION}. Admin-only TK playtest with calibrated levels. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2-L8 require advertised ChanceMix support; L2-L4 also require Noise, NoiseDepth and Seed.`,
       } satisfies EngineDefinition,
     ];
   }),

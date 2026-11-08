@@ -28,9 +28,8 @@ case "$name" in
     repo=brianhliou/misty-jungle tag=v0.0.6 mode=exec
     sha=0e7a4e18418be3a813a2eac5fe04b055af74e1da922d3fa666d99253fbac4423 ;;
   three-kingdoms-engine)
-    # TODO: pin v0.3.0 when released for L2-L4 Noise, NoiseDepth and Seed support.
-    repo=brianhliou/misty-three-kingdoms-banqi tag=v0.2.0 mode=exec
-    sha=4e89ec546625b7b92494953b95426b56def84ef52c3f20b39d995ed931e4e45a ;;
+    repo=brianhliou/misty-three-kingdoms-banqi tag=v0.3.0 mode=exec
+    sha=cbc675326519ae5d1d426e99ec66e5e1f79b63a23d985f3b1375d39cbeeaaf26 ;;
   *)
     echo "release-asset: unknown asset $name" >&2
     exit 1 ;;

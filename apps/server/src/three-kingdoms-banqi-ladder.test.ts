@@ -134,6 +134,10 @@ test('TK tier selection accepts eight levels, keeps the historical budget and re
     ],
   );
   assert.equal(engine.threeKingdomsBanqiEngineTierFor(L8)?.evaluation, 'nnue');
+  assert.equal(engine.THREE_KINGDOMS_BANQI_ENGINE_VERSION, '0.3.0');
+  for (const tier of engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES) {
+    assert.equal(engine.threeKingdomsBanqiEngineVersion(tier.id), '0.3.0');
+  }
   assert.equal(
     engine.threeKingdomsBanqiEngineTierFor(engine.THREE_KINGDOMS_BANQI_ENGINE_ID)?.nodes,
     2_000_000,
@@ -452,14 +456,15 @@ test('TK calibrated search tiers play legal moves with the local noise-capable b
   );
 });
 
-test('TK config and signatures include noise only for L2-L4; other signatures keep their shape', () => {
+test('TK search signatures name 0.3.0; historical and process-free L1 pairs stay unchanged', () => {
   for (const tier of engine.THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
     const entry = loadEngine(tier.id);
-    const oldSignature = `${tier.id}-0.2.0-${tier.evaluation}-nodes-${tier.nodes}`;
+    const version = tier.level !== undefined && tier.level >= 2 ? '0.3.0' : '0.2.0';
+    const signature = `${tier.id}-${version}-${tier.evaluation}-nodes-${tier.nodes}`;
     const mix = tier.level !== undefined && tier.level >= 2;
     const noise = tier.level !== undefined && tier.level >= 2 && tier.level <= 4;
     const suffix = noise ? `-noise-${tier.noise}-depth-${tier.noiseDepth}` : '';
-    assert.equal(entry.configHash, `${oldSignature}${mix ? '-chance-mix' : ''}${suffix}`);
+    assert.equal(entry.configHash, `${signature}${mix ? '-chance-mix' : ''}${suffix}`);
     assert.equal(entry.playSignature, entry.configHash);
     assert.equal(
       'chance' in entry.config ? entry.config.chance : undefined,
@@ -471,6 +476,14 @@ test('TK config and signatures include noise only for L2-L4; other signatures ke
       tier.noiseDepth,
     );
   }
+  const historical = loadEngine(engine.THREE_KINGDOMS_BANQI_ENGINE_ID);
+  assert.match(historical.notes!, /Historical MistyThreeKingdomsBanqi 0\.2\.0/);
+  assert.deepEqual(historical.config, {
+    kind: 'three-kingdoms-banqi-uci',
+    nodes: 2_000_000,
+    movetime_ms: 3000,
+    evaluation: 'classical',
+  });
 });
 
 test('TK L2-L4/L8 live and EvE requests are byte-identical after swapping covered identities', async () => {
