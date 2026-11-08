@@ -34,6 +34,23 @@ test('redirect contracts check status and Location without following or requirin
   }
 });
 
+test('socketless responses without headers still check body and redirect contracts', async () => {
+  const sample = { ...entry, hreflang: [] };
+  const result = await auditCrawlerRoute(sample, {
+    base: 'https://fixture.test',
+    manifest: [sample],
+    fetchImpl: async () => ({ status: 200, text: async () => fixtures[entry.path] }),
+  });
+  assert.deepEqual(result.failures, []);
+  // Planted: absent headers cannot satisfy a redirect's Location contract.
+  const alias = { ...sample, redirect: { status: 308, location: '/player' } };
+  const redirect = await auditCrawlerRoute(alias, {
+    base: 'https://fixture.test',
+    fetchImpl: async () => ({ status: 308, text: async () => '' }),
+  });
+  assert.deepEqual(redirect.failures, ['Location (missing), expected /player']);
+});
+
 // Blind spots: presence, not fidelity (crawler copy can drift); one fixture
 // per DB-backed template; no JS by design; minChars is only a floor and the
 // catalog phrase is the only protection against boilerplate.

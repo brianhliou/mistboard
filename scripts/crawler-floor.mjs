@@ -64,7 +64,7 @@ export async function auditCrawlerRoute(
           });
           return {
             status: response.status,
-            location: response.headers.get('location'),
+            location: response.headers?.get('location') ?? null,
             html: await response.text(),
           };
         })(),

@@ -120,7 +120,7 @@ function contentText(html: string): string {
 it('static page renderers meet their unchanged manifest floors', async () => {
   for (const [render, , path] of renderers) {
     const entry = CRAWLER_CONTENT_MANIFEST.find((row) => row.path === path)!;
-    if (entry.knownGap) continue;
+    if (entry.source !== 'prerender' || entry.knownGap) continue;
     expect(contentText(await render('en')).length, entry.path).toBeGreaterThanOrEqual(
       entry.minChars,
     );
@@ -216,6 +216,7 @@ it.each(SUPPORTED_LOCALES)('tool copy keeps honest manifest gaps in %s', async (
   ] as const;
   for (const [path, render] of tools) {
     const entry = CRAWLER_CONTENT_MANIFEST.find((row) => row.path === `${prefix}${path}`)!;
+    if (entry.source !== 'prerender') continue;
     const doc = new DOMParser().parseFromString(await render(), 'text/html');
     for (const node of doc.querySelectorAll(
       'script,style,template,svg,header,nav,footer,.site-nav,#site-menu',

@@ -1720,7 +1720,9 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
   const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.flatMap((path) => {
     const record = baked.find((entry) => entry.path === path);
     const contract = sitemapContract(path)!;
+    // Server-body routes use the build for dates and alternates, not body copy.
     if (
+      contract.source === 'prerender' &&
       !contract.knownGap &&
       record?.contentChars !== undefined &&
       record.contentChars <
