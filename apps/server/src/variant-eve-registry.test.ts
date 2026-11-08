@@ -27,6 +27,7 @@ const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
   ],
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
+  ['gomoku', 'PvE is unrated; no Gomoku EvE adapter or ladder run yet'],
   ['jungle-flip', 'one node-budgeted bot, nothing to rank it against'],
   [
     'xiangqi-mahjong',

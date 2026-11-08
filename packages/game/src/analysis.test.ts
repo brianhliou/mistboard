@@ -6,6 +6,7 @@ import {
   accuracyPercent,
   gameAccuracy,
   moveJudgment,
+  RAPFI_WIN_PCT_K,
   WIN_PCT_K,
   winPercent,
   winPercentK,
@@ -135,4 +136,11 @@ test('gameAccuracy substitutes a luck-free accuracy for a reveal ply', () => {
   const realized = gameAccuracy(curve);
   const luckFree = gameAccuracy(curve, new Map([[1, 99]]));
   assert.ok(luckFree.first > realized.first, 'a luck-free decision beats the crater outcome');
+});
+
+test("Rapfi analyses are read on Rapfi's own win curve", () => {
+  const id = 'rapfi-gomoku-analysis@1+1387d11312+net6bc0d1b0+n100000+t5000+h32+threads1+pv1';
+  assert.equal(winPercentK(id), RAPFI_WIN_PCT_K);
+  // Rapfi printed EVAL 414 beside WINRATE 0.887953 for one recorded position.
+  assert.ok(Math.abs(winPercent(414, null, winPercentK(id)) - 88.8) < 0.1);
 });

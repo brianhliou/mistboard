@@ -511,6 +511,15 @@
 .review-move-times__bar--black {
   background: var(--seat-dark-ink, var(--seat-second-ink, #34302e));
 }
+/* Gomoku's stone ink stays near-black in both themes, so Black's bar keeps the
+   stone fill with the same light edge the advantage chart uses, and its time
+   label takes the readable muted tone. */
+[data-seat-ink-family="gomoku"] .review-move-times__bar--black {
+  box-shadow: inset 0 0 0 1px var(--seat-dark-ink-border);
+}
+[data-seat-ink-family="gomoku"] .review-move-times__clock--black {
+  color: var(--site-muted);
+}
 /* Chess: the first seat plays White. This used to be a `.dark-chess-review
    .review-move-times__bar--red` override -- the bar was still CALLED red and a page
    class repainted it. The seat now resolves to a 'white' ink upstream and the bar is

@@ -196,6 +196,29 @@ const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown'
 
 describe('Gomoku finished-game review', () => {
   it.each([
+    ['black', 1],
+    ['white', 1],
+    ['black', 8],
+    ['white', 8],
+  ] as const)(
+    'links Rapfi in the review strip when playing %s at level %i',
+    async (color, level) => {
+      const payload = fixture();
+      const id = `rapfi-level-${level}`;
+      payload.game.mode = 'pve';
+      payload.game.players = [
+        { color, name: `Rapfi Level ${level}`, botId: id },
+        { color: color === 'black' ? 'white' : 'black', name: 'Guest' },
+      ];
+      const { root } = await mount(payload);
+      const links = root.querySelectorAll(`.review-seat__name[href="/bot/${id}"]`);
+      expect(links).toHaveLength(1);
+      expect(links[0]?.textContent).toBe(`Rapfi Level ${level}`);
+      expect(root.querySelectorAll('.review-seat__name[href]')).toHaveLength(1);
+    },
+  );
+
+  it.each([
     ['en', 'Five in a row • White is victorious'],
     ['zh-Hans', '五子连线 • 白方获胜'],
     ['zh-Hant', '五子連線 • 白方獲勝'],

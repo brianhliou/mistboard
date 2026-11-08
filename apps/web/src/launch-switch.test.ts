@@ -73,7 +73,7 @@ describe('launch switch on the web', () => {
       ),
     );
     const lists = deriveLaunchLists(isPublic);
-    expect(lists.canonicalVariantOrder.slice(0, -1)).toEqual(
+    expect(lists.canonicalVariantOrder.filter((id) => id !== XMJ)).toEqual(
       CANONICAL_VARIANT_ORDER.filter((id) => id !== XMJ),
     );
     vi.resetModules();
@@ -151,3 +151,37 @@ it.each(['hidden', 'casual'] as const)(
     expect(flair.flairOfferedInPicker('variant-atomic-xiangqi')).toBe(false);
   },
 );
+
+async function gomokuListedOnWeb() {
+  const surfaces = await import('./variant-public-surfaces.js');
+  const variants = await import('./variants.js');
+  const metrics = await import('./metrics.js');
+  const game = await import('@mistboard/game');
+  return {
+    public: surfaces.variantPublicSurfaceEnabled('gomoku'),
+    rules: surfaces.rulesSlugPublicSurfaceEnabled('gomoku'),
+    leaderboard: variants.leaderboardVariants.some((v) => v.gameSpecId === 'gomoku'),
+    profile: variants.profileRatingVariants.some((v) => v.gameSpecId === 'gomoku'),
+    stats:
+      metrics.publicVariantEntries(
+        { variantTotals: [{ variant: 'gomoku', count: 1 }] } as unknown as PublicStats,
+        'en',
+      ).length === 1,
+    shelf: game.CANONICAL_VARIANT_ORDER.includes('gomoku'),
+  };
+}
+
+it('Gomoku is public and rated with correspondence still disabled', async () => {
+  const game = await import('@mistboard/game');
+  expect(game.gameSpecForId('gomoku')).toMatchObject({ publicSurface: 'casual', rated: true });
+  const listed = await gomokuListedOnWeb();
+  expect(listed).toEqual(everyValue(listed, true));
+  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain('gomoku');
+  expect(game.isCorrespondenceRatedSpec('gomoku')).toBe(false);
+});
+
+it('a hidden Gomoku switch removes every public listing again', async () => {
+  await mockGomokuSurface('hidden');
+  const listed = await gomokuListedOnWeb();
+  expect(listed).toEqual(everyValue(listed, false));
+});

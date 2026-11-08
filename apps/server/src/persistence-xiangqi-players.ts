@@ -16,6 +16,10 @@
 import type { XiangqiBroadcastResult } from '@mistboard/game';
 import { CXA_LISTED_PLAYERS, type CxaListedPlayer } from './cxa-listed-players.js';
 import { getPool } from './persistence-db.js';
+import {
+  getXiangqiBroadcastBoard,
+  type StoredXiangqiBroadcastBoard,
+} from './persistence-xiangqi-broadcasts.js';
 import { xiangqiBroadcastTourLevel } from './xiangqi-broadcast-levels.js';
 import {
   romanizeXiangqiPlayerName,
@@ -330,6 +334,21 @@ export function foldPlayers(
 export async function getXiangqiPlayer(slug: string): Promise<XiangqiPlayerRecord | null> {
   const players = await listXiangqiPlayers();
   return players.find((p) => p.slug === slug) ?? null;
+}
+
+/** Finished A-level game records for a canonical player slug, newest first.
+ *  Results without moves and unknown identities supply no teaching games. */
+export async function listXiangqiPlayerGames(slug: string): Promise<StoredXiangqiBroadcastBoard[]> {
+  const player = await getXiangqiPlayer(slug);
+  if (!player?.events.some((event) => event.level === 'A')) return [];
+  const boards = await listXiangqiPlayerBoards(player, () => null);
+  const games: StoredXiangqiBroadcastBoard[] = [];
+  for (const board of boards) {
+    if (xiangqiBroadcastTourLevel(board.tourSlug) !== 'A' || board.plyCount === 0) continue;
+    const game = await getXiangqiBroadcastBoard(board.boardId);
+    if (game && game.result !== '*' && game.moves.length > 0) games.push(game);
+  }
+  return games;
 }
 
 /** Every finished board this player sat at, newest first. */

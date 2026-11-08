@@ -95,6 +95,42 @@ export function chunkLoadFailureContext(
   };
 }
 
+// A stylesheet preload that failed after the one reload was spent, while the
+// server still serves that exact file, was blocked inside the browser (a
+// scraper aborting stylesheet requests, an extension), not lost in a deploy:
+// nothing on our side to fix. The probe is a plain fetch, which request
+// blocking keyed on resource type lets through. Only same-origin CSS named in
+// Vite's message is probed; anything else, or any doubt, resolves false and
+// the failure reports as before.
+const CSS_PRELOAD_PREFIX = 'Unable to preload CSS for ';
+
+export async function stylesheetServedDespiteFailure(
+  err: unknown,
+  fetchAsset: typeof fetch = (input, init) => fetch(input, init),
+): Promise<boolean> {
+  const message = err instanceof Error ? err.message : String(err);
+  const start = message.indexOf(CSS_PRELOAD_PREFIX);
+  if (start < 0) return false;
+  const raw = message.slice(start + CSS_PRELOAD_PREFIX.length).split(/\s/)[0] ?? '';
+  let url: URL;
+  try {
+    url = new URL(raw, location.href);
+  } catch {
+    return false;
+  }
+  if (url.origin !== location.origin || !url.pathname.endsWith('.css')) return false;
+  try {
+    const response = await fetchAsset(url.href, {
+      method: 'HEAD',
+      cache: 'no-store',
+      credentials: 'omit',
+    });
+    return response.ok && (response.headers.get('content-type') ?? '').includes('text/css');
+  } catch {
+    return false;
+  }
+}
+
 // True from the moment this page commits to a stale-chunk reload until the
 // page unloads. Vite's import() resolves to undefined once the global handler
 // below prevents the preload error, so every caller that destructures the

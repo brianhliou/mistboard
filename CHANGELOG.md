@@ -15,6 +15,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- The Play setup panel shows every choice at once on tablet and desktop ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
+- Variant game clocks pause while a player reconnects after a server restart, with a paused notice on the board ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
+- Gomoku is open to everyone: play the Rapfi bot at eight levels or a rated game with a friend, each starting from a dealt opening ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Live rooms show each player's colour disc beside their name ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - 10+5 games can now be rated; they share the rapid rating with 5+5 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - Duck Xiangqi now offers 1+1 ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
@@ -24,6 +27,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- A pro player's page links to puzzles from their own games, and training stays on that player's puzzles ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Jieqi rules: worked examples and a sample game from the AB-JChess vs jqe match ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - The Gomoku rules page is rewritten and now reads in Simplified and Traditional Chinese, with a matching share card ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - The AB-JChess vs jqe match is one study of all 600 games, and studies now list up to 1,000 chapters ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
@@ -39,6 +43,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Broadcast and professional player pages show event, round, player and federation names in the page's language ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
+- Players from the 2026 North American Xiangqi Championship now have player pages ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Finished xiangqi mahjong matches are now in the /data downloads, walls and all ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Jieqi studies show what a face-down piece turns out to be on hover, and the board resize grip is easier to see ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - On phones the game review board runs edge to edge, the underboard tabs fit on one line, and "Learn from your mistakes" is green and shows only to the game's players ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
@@ -57,10 +63,13 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Community
 
+- A message left unread for 12 hours now sends you an email reminder, at most one a day, with a one-click unsubscribe ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Player profiles now show the puzzle rating graph to every visitor, a shorter ratings column, and a Founder badge ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 
 ### Site
 
+- The piece picker now lists International, Traditional and Simplified first, with Animal Dobutsu last ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
+- Player, broadcast, study and video names now follow the page's Chinese script ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Corrected Chinese wording across articles and the interface, and Traditional Chinese pages that showed Simplified text ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - The video page adds Shorts 5 and 6, and visitors from mainland China see 14 Bilibili picks ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Homepage article cards show their photos, and shared articles get a whole-board preview card ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
@@ -80,6 +89,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- More player names follow the page's script on Traditional Chinese pages ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
+- Corrected Chinese copy across news, emails, lessons and studies, and filled missing translations ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Corrected a line on the world championship page that overlooked Lại Lý Huynh's 2022 world rapid title ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Traditional Chinese articles now write every player's name in Traditional ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - The board resize handle now stays on the board corner while you drag, no longer flashes under the board when you switch study chapters, and fits rounded corners ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))

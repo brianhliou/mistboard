@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   accountPreferencesChangedEvent,
+  accountPreferencesStorageKey,
   defaultAccountPreferences,
   normalizeAccountPreferences,
   readAccountPreferences,
@@ -19,6 +20,34 @@ describe('account preferences', () => {
 
   it('defaults to the behavior users had before preferences were configurable', () => {
     expect(readAccountPreferences()).toEqual(defaultAccountPreferences);
+  });
+
+  it('defaults inbox email on for absent and invalid values, independently of the bell', () => {
+    expect(defaultAccountPreferences).toMatchObject({ inboxEmail: true, inboxBell: true });
+    for (const value of [null, [], {}, { inboxEmail: 'false' }, { inboxEmail: 0 }]) {
+      expect(normalizeAccountPreferences(value)).toMatchObject({ inboxEmail: true });
+    }
+    expect(normalizeAccountPreferences({ inboxEmail: false })).toMatchObject({
+      inboxEmail: false,
+      inboxBell: true,
+    });
+    expect(normalizeAccountPreferences({ inboxBell: false })).toMatchObject({
+      inboxEmail: true,
+      inboxBell: false,
+    });
+  });
+
+  it('round-trips inbox email through local storage and account snapshots', () => {
+    writeAccountPreference('inboxEmail', false);
+    expect(
+      JSON.parse(window.localStorage.getItem(accountPreferencesStorageKey) ?? '{}'),
+    ).toMatchObject({ inboxEmail: false, inboxBell: true });
+    expect(readAccountPreferences()).toMatchObject({ inboxEmail: false, inboxBell: true });
+    expect(replaceAccountPreferences({ inboxEmail: true, inboxBell: false })).toMatchObject({
+      inboxEmail: true,
+      inboxBell: false,
+    });
+    expect(readAccountPreferences()).toMatchObject({ inboxEmail: true, inboxBell: false });
   });
 
   it('normalizes partial or invalid server values without weakening defaults', () => {

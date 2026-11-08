@@ -33,6 +33,7 @@ import {
   type VideoLevel,
   type VideoTag,
   type VideoVariant,
+  videoDisplayCopy,
   videoKey,
 } from './videos-data.js';
 
@@ -112,6 +113,27 @@ const BILIBILI_FIXTURE: BilibiliVideo = {
   language: 'zh',
   addedAt: '2026-11-05',
 };
+
+type DeclinedVideoLedger = {
+  declined: Record<string, string>;
+  bilibiliDeclined?: Record<string, string>;
+};
+
+function declinedCatalogueProblems(
+  videos: readonly VideoEntry[],
+  ledger: DeclinedVideoLedger,
+): string[] {
+  return videos.flatMap((video) => {
+    if (video.source === 'mistboard') return [];
+    const id = video.source === 'youtube' ? video.id : video.bvid;
+    const declined = video.source === 'youtube' ? ledger.declined : (ledger.bilibiliDeclined ?? {});
+    const key =
+      video.source === 'bilibili' && Object.hasOwn(declined, `bb:${id}`) ? `bb:${id}` : id;
+    return Object.hasOwn(declined, key)
+      ? [`${id} (${video.title}) is in the declined ledger: ${declined[key]}`]
+      : [];
+  });
+}
 
 const YOUTUBE_ONLY = VIDEOS.filter((video) => video.source === 'youtube');
 
@@ -384,23 +406,27 @@ describe('videos data', () => {
   // miner, restored it. This closes that loop from the other side: the ledger is
   // the list of ids this catalogue may not contain, whatever the reason for the
   // cut, and it fails here rather than shipping.
+  it.each([BILIBILI_FIXTURE.bvid, `bb:${BILIBILI_FIXTURE.bvid}`])(
+    'refuses a rejected Bilibili video (%s) pasted back into a catalogue fixture',
+    (key) => {
+      const reason = 'rejected during review';
+      const ledger: DeclinedVideoLedger = { declined: {}, bilibiliDeclined: { [key]: reason } };
+      expect(declinedCatalogueProblems(YOUTUBE_ONLY, ledger)).toEqual([]);
+      expect(declinedCatalogueProblems([...YOUTUBE_ONLY, BILIBILI_FIXTURE], ledger)).toEqual([
+        `${BILIBILI_FIXTURE.bvid} (${BILIBILI_FIXTURE.title}) is in the declined ledger: ${reason}`,
+      ]);
+    },
+  );
+
   it('contains nothing the declined ledger has ruled out', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const ledger = JSON.parse(
       readFileSync(resolve(here, '../../../scripts/data/videos-declined.json'), 'utf8'),
-    ) as { declined: Record<string, string> };
+    ) as DeclinedVideoLedger;
 
-    const declined = Object.keys(ledger.declined);
-    expect(declined.length).toBeGreaterThan(0);
-    for (const id of declined) expect(id).toMatch(/^[A-Za-z0-9_-]{11}$/);
-
-    for (const video of VIDEOS) {
-      if (video.source !== 'youtube') continue;
-      expect(
-        declined,
-        `${video.id} (${video.title}) is in the declined ledger: ${ledger.declined[video.id]}`,
-      ).not.toContain(video.id);
-    }
+    expect(Object.keys(ledger.declined).length).toBeGreaterThan(0);
+    for (const id of Object.keys(ledger.declined)) expect(id).toMatch(/^[A-Za-z0-9_-]{11}$/);
+    expect(declinedCatalogueProblems(VIDEOS, ledger)).toEqual([]);
   });
 });
 
@@ -830,4 +856,33 @@ describe('filterVideos', () => {
     expect(chinese.length).toBeGreaterThan(0);
     expect(chinese).toEqual(VIDEOS.filter((v) => v.language === 'zh'));
   });
+});
+
+it('shows page-script names in video cards while preserving the verbatim catalog', () => {
+  const video = VIDEOS.find((v) => v.author === '趙奕帆象棋教學')!;
+  expect(video).toBeDefined();
+  const before = JSON.stringify(VIDEOS);
+  const hans = buildVideoCard(video, 'zh-Hans');
+  const hant = buildVideoCard(video, 'zh-Hant');
+  expect(hans.querySelector('.videos-card-title')?.textContent).toContain('赵奕帆');
+  expect(hans.querySelector('.videos-card-meta')?.textContent).toContain('赵奕帆');
+  expect(hant.querySelector('.videos-card-title')?.textContent).toContain('趙奕帆');
+  expect(hant.querySelector('.videos-card-meta')?.textContent).toContain('趙奕帆');
+  expect(videoDisplayCopy(video, 'en')).toEqual({ title: video.title, author: video.author });
+  const fixture = { title: '党斐对于幼华、孙勇征', author: '杨官璘' };
+  expect(videoDisplayCopy(fixture, 'zh-Hant')).toEqual({
+    title: '党斐对于幼華、孫勇征',
+    author: '楊官璘',
+  });
+  expect(JSON.stringify(VIDEOS)).toBe(before);
+  const filters: VideoFilters = {
+    query: '赵奕帆',
+    tags: new Set(),
+    levels: new Set(),
+    variants: new Set(),
+    sources: new Set(),
+    languages: new Set(),
+  };
+  expect(filterVideos(VIDEOS, filters)).toContain(video);
+  expect(hans.querySelector('a')?.getAttribute('href')).toBe(videoWatchUrl(video));
 });

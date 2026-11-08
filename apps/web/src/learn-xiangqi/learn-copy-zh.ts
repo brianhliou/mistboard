@@ -57,7 +57,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.congrats.8': '你很有天分！',
 
   'learn.xiangqi.next.register': '注册',
-  'learn.xiangqi.next.registerSub': '排位对局、题目等级分和个人主页',
+  'learn.xiangqi.next.registerSub': '等级分对局、题目等级分和个人主页',
   'learn.xiangqi.next.puzzles': '题目',
   'learn.xiangqi.next.puzzlesSub': '磨练你的战术',
   'learn.xiangqi.next.playPeople': '与人对弈',
@@ -134,7 +134,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.advisor.complete':
     '很好！士的一生都在九宫里。把它留在家里：它的全部职责就是护着将帅。',
   'learn.xiangqi.advisor.goal.1': '斜走一格。把星星吃掉！',
-  'learn.xiangqi.advisor.goal.2': '士走的每一条路都要经过九宫的中心点。穿过去，把两颗星都吃掉。',
+  'learn.xiangqi.advisor.goal.2': '士走的每一条路都要经过九宫的中心点 e2。穿过去，把两颗星都吃掉。',
   'learn.xiangqi.advisor.goal.3': '把九宫的四个角都走一遍。每次都要从中心过！',
   'learn.xiangqi.advisor.goal.4': '两个士一起用！单靠远的那个士要走六步，两个配合五步就够了。',
 
@@ -166,7 +166,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.soldier.goal.4': '先横一步再往前顶。先吃近的那颗星！',
   'learn.xiangqi.soldier.goal.5':
     '想好顺序！你可以在同一条横线上来回走，但永远回不到下面那一行。先把自己这一行清干净。',
-  'learn.xiangqi.soldier.goal.6': '每颗星都只有一个兵够得着。派对人去！',
+  'learn.xiangqi.soldier.goal.6': '每颗星都只有一个兵够得着。派合适的兵去！',
   'learn.xiangqi.soldier.goal.7': '兵单个很弱，合在一起就强。三个都要用上！',
   // 8. Capturing
   'learn.xiangqi.capture.title': '吃子',
@@ -190,13 +190,14 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.protection.goal.escape': '你的子被攻击了！把它走到安全的地方。',
   'learn.xiangqi.protection.goal.defend': '给受攻击的兵加保护。对方吃了，你就能吃回来！',
   'learn.xiangqi.protection.goal.removeScreen': '炮离不开炮架。把炮架走开，这个攻击就没有了！',
-  'learn.xiangqi.protection.goal.noUndefended': '你有一个子没人保护。找出来，救回它！',
+  'learn.xiangqi.protection.goal.noUndefended':
+    '你有一个子正被攻击，而且没有保护。找出来，救回它！',
 
   // 10. Combat
   'learn.xiangqi.combat.title': '实战',
   'learn.xiangqi.combat.subtitle': '既要会吃，也要会守',
   'learn.xiangqi.combat.intro':
-    '真刀真枪的一仗。把学过的都用上：黑方的子全部吃掉，自己的子一个也不能没人保护。',
+    '真刀真枪的一仗。把学过的都用上：黑方的子全部吃掉，别让自己的子被白吃。',
   'learn.xiangqi.combat.complete':
     '赢了！你会进攻，会防守，也懂得挑对出手的顺序。接下来：对准对方的将。',
   'learn.xiangqi.combat.goal.main': '把黑方的子全部吃掉。自己的一个都不许丢！',
@@ -241,7 +242,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.outOfCheck.goal.capture':
     '对方的车叫得凶，其实孤零零一个。挡过去只是白送一个子。把将军的车吃掉！',
   'learn.xiangqi.outOfCheck.goal.screen':
-    '炮要打，正好需要一个炮架。在这条线上再放一个子，它就跳不过来了！但对方的马盯着其中两格。只有一个炮架是白给的。',
+    '炮要打，正好需要一个炮架。在这条线上再放一个子，它就跳不过来了！但对方的马盯着其中两格。只有一种垫子走法不会丢子。',
   'learn.xiangqi.outOfCheck.goal.best':
     '一场真正的混战。车吃车看着顺理成章，可对方的马守着它。挡也全都是送子。有时候将得自己救自己：找出那步不起眼的棋！',
 
@@ -259,7 +260,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
     '马跳到九宫的角上，这就是挂角马。逃跑的那一格，你的兵已经看住了。',
   'learn.xiangqi.mate1.goal.soldier': '小兵进了九宫最要命。往前拱一小步就是杀！',
   'learn.xiangqi.mate1.goal.flying':
-    '两将不能在同一条直线上照面。你的将盯着中路，黑将就不敢走过去。从侧面将军：白脸将！',
+    '将帅不能在没有棋子阻隔的同一路上照面。你的将盯着中路，黑将就不敢走过去。从侧面将军：白脸将！',
   'learn.xiangqi.mate1.goal.capstone':
     '一场真正的仗。好几步棋都能将军，但只有一步是杀。把它找出来！',
 
@@ -270,29 +271,30 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
     '每一盘象棋都从同一个阵形开始。把每个子走回自己的原位，绕开已经站好的同伴，把这条阵线记熟。',
   'learn.xiangqi.setup.complete':
     '恭喜！你记住开局阵形了：车镇两角，炮在马前两步，将稳稳坐在九宫中央。',
-  'learn.xiangqi.setup.goal.chariot': '车镇角。它的家在左下角，但马堵住了底线。另找一条路进去。',
+  'learn.xiangqi.setup.goal.chariot':
+    '车镇角。它的家在 a1（左下角），但 b1 的马堵住了底线。另找一条路进去。',
   'learn.xiangqi.setup.goal.cannon':
-    '炮就位在马前面两步的位置，也就是二路和八路。你的两个炮停在象位上，马又挡住了直路。把炮抬起来绕过去。',
+    '炮就位在马前面两步的位置，也就是 b3 和 h3。你的两个炮停在象位上，马又挡住了直路。把炮抬起来绕过去。',
   'learn.xiangqi.setup.goal.elephant':
-    '象守在三路和七路，走田字。两个象都想先去同一个点。选错了，一个象就会把另一个困住。',
+    '象守在 c1 和 g1，走田字。两个象都想先去 g1。选错了，一个象就会把另一个困住。',
   'learn.xiangqi.setup.goal.palace':
-    '将坐在中路底线，两个士在他肩膀两侧。九宫很挤：得有人先让一让，最后一个士才回得了家。',
+    '将帅坐在 e1（中路底线），两个士在他肩膀两侧。九宫很挤：得有人先让一让，最后一个士才回得了 f1。',
   'learn.xiangqi.setup.goal.formation':
     '还有三个子在外面：一车、一炮、一象。让它们穿过自家阵线回家，把阵形补齐！',
 
   // 15. The flying general
   'learn.xiangqi.flyingGeneral.title': '白脸将',
-  'learn.xiangqi.flyingGeneral.subtitle': '两将不能照面',
+  'learn.xiangqi.flyingGeneral.subtitle': '将帅不能照面',
   'learn.xiangqi.flyingGeneral.intro':
-    '两个将永远不能在同一条没有阻挡的直线上照面。你的将沿着自己那一路发出一道看不见的威胁：对方的将绝不能踏进去。高手会把这条规则当成一个额外的攻击子来用。',
+    '将帅永远不能在同一条没有阻挡的直线上照面。你的将沿着自己那一路发出一道看不见的威胁：对方的将绝不能踏进去。高手会把这条规则当成一个额外的攻击子来用。',
   'learn.xiangqi.flyingGeneral.complete':
     '很好！你的将不只是一个要保护的子：在一条通路上，它打起来像一个隐形的车。棋手给这件武器起了名字：白脸将，也叫对面笑。每一盘残局都要留意它。',
   'learn.xiangqi.flyingGeneral.goal.rule':
-    '两将不能在同一条通路上照面，所以黑将不敢走到你的将那一路上。在旁边一路将军，就是一步杀！',
+    '将帅不能在同一条通路上照面，所以黑将不敢走到你的将那一路上。在 f 路将军，就是一步杀！',
   'learn.xiangqi.flyingGeneral.goal.open':
     '你的车是自己将那一路上最后一个子。走开它去将军，这一路就通了：逃跑的格子没有了。一步杀！',
   'learn.xiangqi.flyingGeneral.goal.support':
-    '把车落到紧挨着黑将的地方。他吃不了：一吃两将就照面了。一步杀！',
+    '把车落到紧挨着黑将的地方。他吃不了：一吃将帅就照面了。一步杀！',
   'learn.xiangqi.flyingGeneral.goal.capstone':
     '把两件武器合起来用：炮隔着炮架将军，你的将封住那条通路。一步杀！',
 
@@ -348,7 +350,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.matePatterns.title': '基本杀法',
   'learn.xiangqi.matePatterns.subtitle': '九种经典杀型',
   'learn.xiangqi.matePatterns.intro':
-    '每一次成功的进攻，最后都会落进一个熟悉的形状。这里是九种基本杀法，棋手们连名字一起记，四百多年来一直印在棋谱里操练。每一种都走一遍，把这幅画记住。',
+    '每一次成功的进攻，最后都会落进一个熟悉的形状。这里是九种基本杀法，棋手们连名字一起记，从明代起，四百多年来一直按棋谱操练。每一种都走一遍，把这幅画记住。',
   'learn.xiangqi.matePatterns.complete':
     '很好！九种经典杀法你都叫得出名字了，这些形状棋手们已经研究了几百年。高手能提前好几步看出它们。进攻的时候，就朝着你已经认识的那幅画去下。',
   'learn.xiangqi.matePatterns.goal.1':
@@ -380,9 +382,9 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.perpetual.goal.1':
     '黑方将军，你闪开。黑方再将，你再退回来。沉住气，跟着绿箭头走：在象棋里，一直重复同样的将军是不允许的。黑方要么变着，要么判负。',
   'learn.xiangqi.perpetual.goal.2':
-    '炮也能这样纠缠，借你自己的子当炮架来将你。在两个点之间来回走，让黑方重复那两步将军。结论一样：黑方不打破这个循环就要输。',
+    '炮也能这样纠缠，借你自己的子当炮架来将你。在 e1 和 d1 之间来回走，让黑方重复那两步将军。结论一样：黑方不打破这个循环就要输。',
   'learn.xiangqi.perpetual.goal.3':
-    '这回黑方改捉你那个没保护的马。在两个点之间跳，让车跟着追。一直捉子和一直将军一样是禁止的：捉的一方不停手就算输。',
+    '这回黑方改捉你那个没保护的马。在 g4 和 e3 之间跳，让车跟着追。一直捉子和一直将军一样是禁止的：捉的一方不停手就算输。',
   'learn.xiangqi.perpetual.goal.4':
     '收获的时候到了。你的车早就想吃那个马，只是一直被将军缠住。黑方不能永远重复，所以他必须收手。躲两次，然后把马吃掉！',
 };
@@ -425,7 +427,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.congrats.8': '你很有天分！',
 
   'learn.xiangqi.next.register': '註冊',
-  'learn.xiangqi.next.registerSub': '排位對局、題目等級分和個人主頁',
+  'learn.xiangqi.next.registerSub': '等級分對局、題目等級分和個人主頁',
   'learn.xiangqi.next.puzzles': '題目',
   'learn.xiangqi.next.puzzlesSub': '磨練你的戰術',
   'learn.xiangqi.next.playPeople': '與人對弈',
@@ -502,7 +504,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.advisor.complete':
     '很好！士的一生都在九宮裡。把它留在家裡：它的全部職責就是護著將帥。',
   'learn.xiangqi.advisor.goal.1': '斜走一格。把星星吃掉！',
-  'learn.xiangqi.advisor.goal.2': '士走的每一條路都要經過九宮的中心點。穿過去，把兩顆星都吃掉。',
+  'learn.xiangqi.advisor.goal.2': '士走的每一條路都要經過九宮的中心點 e2。穿過去，把兩顆星都吃掉。',
   'learn.xiangqi.advisor.goal.3': '把九宮的四個角都走一遍。每次都要從中心過！',
   'learn.xiangqi.advisor.goal.4': '兩個士一起用！單靠遠的那個士要走六步，兩個配合五步就夠了。',
 
@@ -534,7 +536,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.soldier.goal.4': '先橫一步再往前頂。先吃近的那顆星！',
   'learn.xiangqi.soldier.goal.5':
     '想好順序！你可以在同一條橫線上來回走，但永遠回不到下面那一行。先把自己這一行清乾淨。',
-  'learn.xiangqi.soldier.goal.6': '每顆星都只有一個兵夠得著。派對人去！',
+  'learn.xiangqi.soldier.goal.6': '每顆星都只有一個兵夠得著。派合適的兵去！',
   'learn.xiangqi.soldier.goal.7': '兵單個很弱，合在一起就強。三個都要用上！',
 
   // 8. Capturing
@@ -559,13 +561,14 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.protection.goal.escape': '你的子被攻擊了！把它走到安全的地方。',
   'learn.xiangqi.protection.goal.defend': '給受攻擊的兵加保護。對方吃了，你就能吃回來！',
   'learn.xiangqi.protection.goal.removeScreen': '砲離不開砲架。把砲架走開，這個攻擊就沒有了！',
-  'learn.xiangqi.protection.goal.noUndefended': '你有一個子沒人保護。找出來，救回它！',
+  'learn.xiangqi.protection.goal.noUndefended':
+    '你有一個子正被攻擊，而且沒有保護。找出來，救回它！',
 
   // 10. Combat
   'learn.xiangqi.combat.title': '實戰',
   'learn.xiangqi.combat.subtitle': '既要會吃，也要會守',
   'learn.xiangqi.combat.intro':
-    '真刀真槍的一仗。把學過的都用上：黑方的子全部吃掉，自己的子一個也不能沒人保護。',
+    '真刀真槍的一仗。把學過的都用上：黑方的子全部吃掉，別讓自己的子被白吃。',
   'learn.xiangqi.combat.complete':
     '贏了！你會進攻，會防守，也懂得挑對出手的順序。接下來：對準對方的將。',
   'learn.xiangqi.combat.goal.main': '把黑方的子全部吃掉。自己的一個都不許丟！',
@@ -610,7 +613,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.outOfCheck.goal.capture':
     '對方的車叫得凶，其實孤零零一個。擋過去只是白送一個子。把將軍的車吃掉！',
   'learn.xiangqi.outOfCheck.goal.screen':
-    '砲要打，正好需要一個砲架。在這條線上再放一個子，它就跳不過來了！但對方的馬盯著其中兩格。只有一個砲架是白給的。',
+    '砲要打，正好需要一個砲架。在這條線上再放一個子，它就跳不過來了！但對方的馬盯著其中兩格。只有一種墊子走法不會丟子。',
   'learn.xiangqi.outOfCheck.goal.best':
     '一場真正的混戰。車吃車看著順理成章，可對方的馬守著它。擋也全都是送子。有時候將得自己救自己：找出那步不起眼的棋！',
 
@@ -628,7 +631,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
     '馬跳到九宮的角上，這就是掛角馬。逃跑的那一格，你的兵已經看住了。',
   'learn.xiangqi.mate1.goal.soldier': '小兵進了九宮最要命。往前拱一小步就是殺！',
   'learn.xiangqi.mate1.goal.flying':
-    '兩將不能在同一條直線上照面。你的將盯著中路，黑將就不敢走過去。從側面將軍：白臉將！',
+    '將帥不能在沒有棋子阻隔的同一路上照面。你的將盯著中路，黑將就不敢走過去。從側面將軍：白臉將！',
   'learn.xiangqi.mate1.goal.capstone':
     '一場真正的仗。好幾步棋都能將軍，但只有一步是殺。把它找出來！',
 
@@ -639,29 +642,30 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
     '每一盤象棋都從同一個陣形開始。把每個子走回自己的原位，繞開已經站好的同伴，把這條陣線記熟。',
   'learn.xiangqi.setup.complete':
     '恭喜！你記住開局陣形了：車鎮兩角，砲在馬前兩步，將穩穩坐在九宮中央。',
-  'learn.xiangqi.setup.goal.chariot': '車鎮角。它的家在左下角，但馬堵住了底線。另找一條路進去。',
+  'learn.xiangqi.setup.goal.chariot':
+    '車鎮角。它的家在 a1（左下角），但 b1 的馬堵住了底線。另找一條路進去。',
   'learn.xiangqi.setup.goal.cannon':
-    '砲就位在馬前面兩步的位置，也就是二路和八路。你的兩個砲停在象位上，馬又擋住了直路。把砲抬起來繞過去。',
+    '砲就位在馬前面兩步的位置，也就是 b3 和 h3。你的兩個砲停在象位上，馬又擋住了直路。把砲抬起來繞過去。',
   'learn.xiangqi.setup.goal.elephant':
-    '象守在三路和七路，走田字。兩個象都想先去同一個點。選錯了，一個象就會把另一個困住。',
+    '象守在 c1 和 g1，走田字。兩個象都想先去 g1。選錯了，一個象就會把另一個困住。',
   'learn.xiangqi.setup.goal.palace':
-    '將坐在中路底線，兩個士在他肩膀兩側。九宮很擠：得有人先讓一讓，最後一個士才回得了家。',
+    '將帥坐在 e1（中路底線），兩個士在他肩膀兩側。九宮很擠：得有人先讓一讓，最後一個士才回得了 f1。',
   'learn.xiangqi.setup.goal.formation':
     '還有三個子在外面：一車、一砲、一象。讓它們穿過自家陣線回家，把陣形補齊！',
 
   // 15. The flying general
   'learn.xiangqi.flyingGeneral.title': '白臉將',
-  'learn.xiangqi.flyingGeneral.subtitle': '兩將不能照面',
+  'learn.xiangqi.flyingGeneral.subtitle': '將帥不能照面',
   'learn.xiangqi.flyingGeneral.intro':
-    '兩個將永遠不能在同一條沒有阻擋的直線上照面。你的將沿著自己那一路發出一道看不見的威脅：對方的將絕不能踏進去。高手會把這條規則當成一個額外的攻擊子來用。',
+    '將帥永遠不能在同一條沒有阻擋的直線上照面。你的將沿著自己那一路發出一道看不見的威脅：對方的將絕不能踏進去。高手會把這條規則當成一個額外的攻擊子來用。',
   'learn.xiangqi.flyingGeneral.complete':
     '很好！你的將不只是一個要保護的子：在一條通路上，它打起來像一個隱形的車。棋手給這件武器起了名字：白臉將，也叫對面笑。每一盤殘局都要留意它。',
   'learn.xiangqi.flyingGeneral.goal.rule':
-    '兩將不能在同一條通路上照面，所以黑將不敢走到你的將那一路上。在旁邊一路將軍，就是一步殺！',
+    '將帥不能在同一條通路上照面，所以黑將不敢走到你的將那一路上。在 f 路將軍，就是一步殺！',
   'learn.xiangqi.flyingGeneral.goal.open':
     '你的車是自己將那一路上最後一個子。走開它去將軍，這一路就通了：逃跑的格子沒有了。一步殺！',
   'learn.xiangqi.flyingGeneral.goal.support':
-    '把車落到緊挨著黑將的地方。他吃不了：一吃兩將就照面了。一步殺！',
+    '把車落到緊挨著黑將的地方。他吃不了：一吃將帥就照面了。一步殺！',
   'learn.xiangqi.flyingGeneral.goal.capstone':
     '把兩件武器合起來用：砲隔著砲架將軍，你的將封住那條通路。一步殺！',
 
@@ -669,7 +673,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.stalemate.title': '困斃取勝',
   'learn.xiangqi.stalemate.subtitle': '在象棋裡，無棋可走就算輸',
   'learn.xiangqi.stalemate.intro':
-    '下國際象棋的朋友要改一改這個習慣：在國際象棋裡，一方無子可動是逼和，算和棋。在象棋裡，這一方是輸，而且不需要被將軍！這種贏法叫困斃。把每一格都封死，但不要將軍。',
+    '下西洋棋的朋友要改一改這個習慣：在西洋棋裡，一方無子可動是逼和，算和棋。在象棋裡，這一方是輸，而且不需要被將軍！這種贏法叫困斃。把每一格都封死，但不要將軍。',
   'learn.xiangqi.stalemate.complete':
     '你掌握困斃了！在象棋裡，只要能讓對方一步都走不了，就不必非要將死。記住那步不將軍的閒著：封住最後一格，棋就贏了。',
   'learn.xiangqi.stalemate.goal.seal': '黑方只剩一個將。別將軍，把他最後幾格路封掉，他就輸了！',
@@ -717,7 +721,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.matePatterns.title': '基本殺法',
   'learn.xiangqi.matePatterns.subtitle': '九種經典殺型',
   'learn.xiangqi.matePatterns.intro':
-    '每一次成功的進攻，最後都會落進一個熟悉的形狀。這裡是九種基本殺法，棋手們連名字一起記，四百多年來一直印在棋譜裡操練。每一種都走一遍，把這幅畫記住。',
+    '每一次成功的進攻，最後都會落進一個熟悉的形狀。這裡是九種基本殺法，棋手們連名字一起記，從明代起，四百多年來一直按棋譜操練。每一種都走一遍，把這幅畫記住。',
   'learn.xiangqi.matePatterns.complete':
     '很好！九種經典殺法你都叫得出名字了，這些形狀棋手們已經研究了幾百年。高手能提前好幾步看出它們。進攻的時候，就朝著你已經認識的那幅畫去下。',
   'learn.xiangqi.matePatterns.goal.1':
@@ -743,15 +747,15 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.perpetual.title': '長將與長捉',
   'learn.xiangqi.perpetual.subtitle': '一直重複就要判負',
   'learn.xiangqi.perpetual.intro':
-    '在國際象棋裡，一直將軍是和棋。象棋不認這一套。反覆走同樣的將軍，或者沒完沒了地捉同一個子，都是不允許的：進攻的一方必須變著，否則判負。看著黑方來試，你穩住就行。',
+    '在西洋棋裡，一直將軍是和棋。象棋不認這一套。反覆走同樣的將軍，或者沒完沒了地捉同一個子，都是不允許的：進攻的一方必須變著，否則判負。看著黑方來試，你穩住就行。',
   'learn.xiangqi.perpetual.complete':
     '這一條要記牢：在象棋裡，長將和長捉都判進攻方負。有人一直將你，穩住別慌。規則站在你這邊。',
   'learn.xiangqi.perpetual.goal.1':
     '黑方將軍，你閃開。黑方再將，你再退回來。沉住氣，跟著綠箭頭走：在象棋裡，一直重複同樣的將軍是不允許的。黑方要麼變著，要麼判負。',
   'learn.xiangqi.perpetual.goal.2':
-    '砲也能這樣糾纏，借你自己的子當砲架來將你。在兩個點之間來回走，讓黑方重複那兩步將軍。結論一樣：黑方不打破這個循環就要輸。',
+    '砲也能這樣糾纏，借你自己的子當砲架來將你。在 e1 和 d1 之間來回走，讓黑方重複那兩步將軍。結論一樣：黑方不打破這個循環就要輸。',
   'learn.xiangqi.perpetual.goal.3':
-    '這回黑方改捉你那個沒保護的馬。在兩個點之間跳，讓車跟著追。一直捉子和一直將軍一樣是禁止的：捉的一方不停手就算輸。',
+    '這回黑方改捉你那個沒保護的馬。在 g4 和 e3 之間跳，讓車跟著追。一直捉子和一直將軍一樣是禁止的：捉的一方不停手就算輸。',
   'learn.xiangqi.perpetual.goal.4':
     '收穫的時候到了。你的車早就想吃那個馬，只是一直被將軍纏住。黑方不能永遠重複，所以他必須收手。躲兩次，然後把馬吃掉！',
 };

@@ -10,6 +10,17 @@
 // version suffix at all.
 
 export const VARIANT_SMOKE_CONFIGS = {
+  gomoku: {
+    name: 'gomoku',
+    label: 'Gomoku',
+    usage: 'npm run prod:smoke:gomoku -- [options]',
+    gameSpecId: 'gomoku',
+    defaultTimeoutMs: 60_000,
+    // Gomoku seats Rapfi as white for a black human; dealt openings may start either side.
+    engineColor: 'white',
+    dealtOpening: true,
+    engineSeat: { prefix: 'rapfi-level-' },
+  },
   atomic: {
     name: 'atomic',
     label: 'Atomic Xiangqi',

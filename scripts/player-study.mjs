@@ -20,9 +20,8 @@
 //
 // Sibling of world-title-study.mjs: same tree shape, same NAGs, same judgment
 // sentence (so the study's comments translate), same version-guarded update.
-// The tree builders are copied rather than imported because that script runs its
-// build on import and exports only ASSESS_NAG; lifting the shared parts into
-// scripts/lib is the refactor to do when a third study builder appears.
+// The SerializedTree builder lives in scripts/lib/player-study-tree.mjs and is
+// shared with the local teaching kit's critical-moment chapters.
 //
 // Differences that matter:
 //   - Input is annotate-game JSON straight from the engine, not an article's
@@ -37,6 +36,7 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { buildTree } from './lib/player-study-tree.mjs';
 
 const { parseJudgmentComment } = await import('../packages/game/src/xiangqi-judgment-comment.ts');
 const { judgmentCommentI18n } = await import('../apps/server/src/xiangqi-judgment-comment-i18n.ts');
@@ -92,9 +92,12 @@ const lastToken = (raw) =>
     .trim()
     .split(/\s+/)
     .at(-1) ?? '';
+const HAN = /\p{Script=Han}/u;
 function zhOf(raw) {
   for (const zh of Object.keys(NAMES)) if (String(raw ?? '').includes(zh)) return zh;
-  return lastToken(raw);
+  // A name with no Chinese is already the English form; its last word would be
+  // only the surname ("Nguyen" for "David Nguyen").
+  return HAN.test(String(raw ?? '')) ? lastToken(raw) : String(raw ?? '').trim();
 }
 function enOf(raw) {
   const zh = zhOf(raw);
@@ -108,12 +111,6 @@ function zhScript(raw, script) {
   if (entry && typeof entry === 'object' && script === 'hant' && entry.hant) return entry.hant;
   return zh;
 }
-
-/** Study trees use ranks 1-10; the analyser emits ICCS 0-9. */
-const toStudyUci = (iccs) => `${iccs[0]}${Number(iccs[1]) + 1}${iccs[2]}${Number(iccs[3]) + 1}`;
-const NAG = { '!': 1, '?': 2, '!!': 3, '??': 4, '!?': 5, '?!': 6 };
-/** Assessment symbols -> PGN NAGs, same table as world-title-study.mjs. */
-const ASSESS_NAG = { '=': 10, '∞': 13, '⩲': 14, '⩱': 15, '±': 16, '∓': 17, '+−': 18, '−+': 19 };
 
 /**
  * Verdict on an engine line, red POV, the article-line-evals.mjs bands. A line
@@ -178,44 +175,6 @@ function comment(note) {
   return judgment ? { text: note, i18n: judgmentCommentI18n(judgment) } : { text: note };
 }
 
-/** Mainline as first children; each engine line a sibling on the node the
- *  refuted move was played from. The shape study-chapter-to-article reads back. */
-function buildTree(iccs, byPly) {
-  const mainline = iccs.trim().split(/\s+/);
-  const root = { annotations: {}, children: [] };
-  const nodes = [root];
-  for (const [index, token] of mainline.entries()) {
-    const node = { uci: toStudyUci(token), children: [] };
-    const annotation = byPly[String(index + 1)];
-    if (annotation) {
-      const glyph = NAG[annotation.glyph];
-      node.annotations = {
-        ...(glyph ? { glyphs: [glyph] } : {}),
-        ...(annotation.note ? { comments: [comment(annotation.note)] } : {}),
-      };
-    }
-    nodes[index].children.push(node);
-    nodes.push(node);
-  }
-  for (const [plyKey, annotation] of Object.entries(byPly)) {
-    if (!annotation.line) continue;
-    const parent = nodes[Number(plyKey) - 1];
-    if (!parent) continue;
-    let cursor = parent;
-    for (const token of annotation.line.trim().split(/\s+/)) {
-      const node = { uci: toStudyUci(token), children: [] };
-      cursor.children.push(node);
-      cursor = node;
-    }
-    // The verdict closes the line: last node, where the tree's assessment slot is.
-    const assess = ASSESS_NAG[annotation.lineEval];
-    if (assess !== undefined && cursor !== parent) {
-      cursor.annotations = { ...cursor.annotations, glyphs: [assess] };
-    }
-  }
-  return { version: 1, root };
-}
-
 function fixDate(raw) {
   const date = String(raw ?? '')
     .slice(0, 10)
@@ -243,6 +202,7 @@ function loadGames() {
       key: game.key ?? file.replace(/\.json$/, ''),
       date: fixDate(game.date),
       event: String(game.event ?? ''),
+      eventZh: String(game.eventZh ?? game.event ?? ''),
       red,
       black,
       side,
@@ -251,12 +211,29 @@ function loadGames() {
       iccs: rows.map((r) => r.uci).join(' '),
       byPly: annotationsOf(rows, game.key ?? file.replace(/\.json$/, '')),
       plies: rows.length,
+      series: winSeriesOf(rows, side),
     });
   }
   // Date, then source key: within a day the key is the only order the source
   // gives, and it is NOT play order (a seven-game match posts in one batch).
   games.sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
   return games;
+}
+
+/**
+ * The engine's win chance from `side`'s view, one value per position (start,
+ * then after each ply), for the study's Computer analysis graph. Rows hold the
+ * mover's win% before and after its move; a row without them means the game was
+ * not fully scored, so the chapter gets no graph rather than a wrong one.
+ */
+export function winSeriesOf(rows, side) {
+  const view = (row, win) => (row.side === side ? win : 100 - win) / 100;
+  if (
+    !rows.length ||
+    rows.some((r) => !Number.isFinite(r.winBefore) || !Number.isFinite(r.winAfter))
+  )
+    return null;
+  return [view(rows[0], rows[0].winBefore), ...rows.map((r) => view(r, r.winAfter))];
 }
 
 const chapterName = (g) => `${g.date} · ${enOf(g.red)} vs ${enOf(g.black)} · ${g.result}`;
@@ -269,14 +246,18 @@ function chapterFor(g) {
   ]) {
     i18n[locale] = {
       name: `${g.date} · ${zhScript(g.red, script)} 对 ${zhScript(g.black, script)} · ${g.result}`,
-      tags: { red: zhScript(g.red, script), black: zhScript(g.black, script), event: g.event },
+      tags: {
+        red: zhScript(g.red, script),
+        black: zhScript(g.black, script),
+        event: g.eventZh,
+      },
     };
   }
   return {
     name: chapterName(g),
     variant: 'xiangqi',
     orientation: g.side,
-    root: buildTree(g.iccs, g.byPly),
+    root: buildTree(g.iccs, g.byPly, comment),
     // Lowercase, only these keys: the server allowlists
     // red/black/result/event/date/round/site and silently drops the rest.
     tags: {
@@ -360,7 +341,7 @@ async function main() {
   let totalComments = 0;
   let totalTranslated = 0;
   for (const g of games) {
-    const tree = buildTree(g.iccs, g.byPly);
+    const tree = buildTree(g.iccs, g.byPly, comment);
     let comments = 0;
     let translated = 0;
     (function count(node) {
@@ -382,14 +363,25 @@ async function main() {
   );
 
   if (PLAN) {
-    const [first, ...rest] = games.map(chapterFor);
-    const chapter = ({ name, variant, orientation, root, tags, i18n }) => ({
+    const [first, ...rest] = games.map((g) => ({
+      ...chapterFor(g),
+      ...(g.series
+        ? {
+            scoreSeries: {
+              side: g.side,
+              series: [{ name: 'Pikafish', color: 'a', values: g.series }],
+            },
+          }
+        : {}),
+    }));
+    const chapter = ({ name, variant, orientation, root, tags, i18n, scoreSeries }) => ({
       name,
       variant,
       orientation,
       tree: root,
       tags,
       i18n,
+      ...(scoreSeries ? { scoreSeries } : {}),
     });
     const plan = {
       create: {

@@ -20,6 +20,7 @@ type TestUser = {
     premoves: boolean;
     confirmGameActions: boolean;
     inboxBell: boolean;
+    inboxEmail: boolean;
     correspondenceBell: boolean;
     correspondenceDeadlineEmail: boolean;
   };
@@ -652,14 +653,15 @@ describe('account page auth flow', () => {
         (heading) => heading.textContent,
       ),
     ).toEqual(['', 'Bell', 'Email']);
-    // Eight rows, one channel each: five bell-only rows and three email-only rows.
-    expect(document.querySelectorAll('.account-notification-unavailable')).toHaveLength(8);
+    // Direct messages offer both channels; four rows are bell-only and three email-only.
+    expect(document.querySelectorAll('.account-notification-unavailable')).toHaveLength(7);
     expect(
       [...document.querySelectorAll<HTMLInputElement>('.account-notification-settings input')].map(
         (input) => input.name,
       ),
     ).toEqual([
       'inboxBell',
+      'inboxEmail',
       'correspondenceBell',
       'challengesBell',
       'forumBell',
@@ -695,6 +697,78 @@ describe('account page auth flow', () => {
       { correspondenceDeadlineEmail: false },
       { correspondenceStartEmail: false },
     ]);
+  });
+
+  it('saves and reloads the direct-message email switch independently of the bell', async () => {
+    window.history.replaceState(null, '', '/account/settings/notifications');
+    const user = testUser('misty');
+    const requests: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/auth/me') return jsonResponse({ user });
+        if (url === '/api/account/preferences') {
+          const body = JSON.parse(String(init?.body)) as Partial<TestUser['accountPreferences']>;
+          requests.push(body);
+          Object.assign(user.accountPreferences, body);
+          return jsonResponse({ user });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    const notifications = await import('./notification-nav.js');
+    const refresh = vi.spyOn(notifications, 'refreshNotifications').mockResolvedValue();
+    const { accountPreferencesStorageKey } = await import('./account-preferences.js');
+    const { mountAccountSettings } = await import('./account.js');
+    const root = document.querySelector<HTMLElement>('#app') as HTMLElement;
+    await mountAccountSettings(root);
+    await flushDom();
+    refresh.mockClear();
+
+    const emailSelector = 'input[name="inboxEmail"]';
+    let email = document.querySelector<HTMLInputElement>(emailSelector);
+    const bell = document.querySelector<HTMLInputElement>('input[name="inboxBell"]');
+    if (!email || !bell) throw new Error('missing direct-message notification switches');
+    expect(email.checked).toBe(true);
+    expect(email.getAttribute('aria-label')).toBe('Direct messages: Email');
+    expect(bell.getAttribute('aria-label')).toBe('Direct messages: Bell');
+    const row = email.closest('tr');
+    expect(row?.querySelector('th')?.textContent).toBe('Direct messages');
+    expect(row?.children[1].contains(bell)).toBe(true);
+    expect(row?.children[2].contains(email)).toBe(true);
+
+    email.checked = false;
+    email.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushDom();
+    expect(requests).toEqual([{ inboxEmail: false }]);
+    expect(bell.checked).toBe(true);
+    expect(refresh).not.toHaveBeenCalled();
+    expect(
+      JSON.parse(window.localStorage.getItem(accountPreferencesStorageKey) ?? '{}'),
+    ).toMatchObject({ inboxEmail: false, inboxBell: true });
+
+    await mountAccountSettings(root);
+    await flushDom();
+    refresh.mockClear();
+    email = document.querySelector<HTMLInputElement>(emailSelector);
+    if (!email) throw new Error('missing reloaded direct-message email switch');
+    expect(email.checked).toBe(false);
+    email.checked = true;
+    email.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushDom();
+    expect(requests).toEqual([{ inboxEmail: false }, { inboxEmail: true }]);
+    expect(refresh).not.toHaveBeenCalled();
+
+    const reloadedBell = document.querySelector<HTMLInputElement>('input[name="inboxBell"]');
+    if (!reloadedBell) throw new Error('missing reloaded direct-message bell switch');
+    reloadedBell.checked = false;
+    reloadedBell.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushDom();
+    expect(requests).toEqual([{ inboxEmail: false }, { inboxEmail: true }, { inboxBell: false }]);
+    expect(email.checked).toBe(true);
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('hydrates piece animation from the signed-in account', async () => {
@@ -1132,6 +1206,7 @@ function testUser(handle: string): TestUser {
       premoves: true,
       confirmGameActions: true,
       inboxBell: true,
+      inboxEmail: true,
       correspondenceBell: true,
       correspondenceDeadlineEmail: true,
     },

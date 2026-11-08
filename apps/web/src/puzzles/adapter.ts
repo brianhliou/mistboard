@@ -59,10 +59,10 @@ export type PuzzleSummary = {
   /** Named kill patterns (杀法) by id, standard-xiangqi mates only. */
   motifs: XiangqiMotifId[];
   /**
-   * Every trainer tag (motifs plus mate-in-N, phase, goal, length), derived by
-   * the server at load. Absent from an older server: filter on `motifs` then.
+   * Derived trainer tags (motifs, mate-in-N, phase, goal, length) and stored
+   * player provenance. Older servers may send only motifs.
    */
-  tags?: XiangqiTrainingTagId[];
+  tags?: (XiangqiTrainingTagId | `player:${string}`)[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;

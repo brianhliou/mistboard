@@ -180,13 +180,13 @@ for (const enabled of [false, true]) {
   }
 }
 
-test('an admitted Gomoku admin stays unlisted and outside public figures', async () => {
+test('Gomoku runtime listings close with the flag while launched games remain counted', async () => {
   process.env[FLAG] = 'false';
   const reg = variantTenantForSpecId('gomoku')!;
   assert.equal(reg.admitsConnection?.(ADMIN), true);
   assert.equal(reg.enabled(), false);
-  assert.equal(gameSpecForId('gomoku').publicSurface, 'hidden');
-  assert.ok(countedPublicGame().includes("'gomoku'"));
+  assert.equal(gameSpecForId('gomoku').publicSurface, 'casual');
+  assert.ok(!countedPublicGame().includes("'gomoku'"));
   // Correspondence exists (s-133b) but its factory refuses while the flag is off.
   assert.deepEqual(await reg.createCorrespondenceGameForSeek!({} as never), {
     ok: false,
@@ -215,9 +215,9 @@ test('an admitted Gomoku admin stays unlisted and outside public figures', async
     collectLiveTvCandidates(ctx).some((candidate) => candidate.gameSpecId === 'gomoku'),
     false,
   );
-  // Positive control: the room is genuinely in play, so its absence above is the
-  // listing gate (flag and publicSurface), not an idle fixture.
+  // Positive control: the active human room would expose this spec once the
+  // flag opens the listing, rather than being absent because the fixture is idle.
   process.env[FLAG] = 'true';
   assert.equal(collectLiveRoomStats(ctx).playing, 1);
-  assert.equal(collectLiveRoomStats(ctx).playingBySpec.gomoku, undefined);
+  assert.equal(collectLiveRoomStats(ctx).playingBySpec.gomoku, 1);
 });

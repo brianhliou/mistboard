@@ -223,7 +223,16 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
  * text like any other user field, and an open-ended object would let a client
  * store whatever it liked on our row.
  */
-const CHAPTER_TAG_KEYS = ['red', 'black', 'result', 'event', 'date', 'round', 'site'] as const;
+const CHAPTER_TAG_KEYS = [
+  'red',
+  'black',
+  'result',
+  'event',
+  'date',
+  'round',
+  'site',
+  'ply',
+] as const;
 const CHAPTER_TAG_MAX = 120;
 
 export function parseChapterTags(value: unknown): persistence.StudyChapterTags {

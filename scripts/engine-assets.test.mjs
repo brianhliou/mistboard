@@ -469,3 +469,16 @@ test('every release asset railpack fetches has a pinned sha256', () => {
   );
   assert.match(largeboard, /^sha=[0-9a-f]{64}$/m, 'the largeboard binary pins a sha256');
 });
+
+test('Three Kingdoms fetch pins the noise-capable 0.3.0 binary and matching served version', () => {
+  const fetch = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
+  const entry = fetch.match(/^ {2}three-kingdoms-engine\)\n([\s\S]*?);;/m);
+  assert.ok(entry);
+  assert.match(entry[1], /repo=brianhliou\/misty-three-kingdoms-banqi tag=v0\.3\.0 mode=exec/);
+  assert.match(entry[1], /sha=cbc675326519ae5d1d426e99ec66e5e1f79b63a23d985f3b1375d39cbeeaaf26\b/);
+  const provider = readFileSync(
+    resolve(repoRoot, 'apps/server/src/three-kingdoms-banqi-engine.ts'),
+    'utf8',
+  );
+  assert.match(provider, /THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0\.3\.0'/);
+});
