@@ -8,7 +8,13 @@ import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboa
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
-import type { RecentEveGameRecord, StudyWithChapters, UserProfile } from './persistence.js';
+import type {
+  ForumCategory,
+  ForumTopicDetail,
+  RecentEveGameRecord,
+  StudyWithChapters,
+  UserProfile,
+} from './persistence.js';
 import { recordPuzzleReport, resetPuzzleStoreForTests } from './puzzle-store.js';
 import { isClientRoute } from './server-policy.js';
 import {
@@ -2570,4 +2576,319 @@ test('profile link previews ignore account restrictions and all non-preview cont
     shells.push(response.body);
   }
   assert.equal(shells[0], shells[1], 'non-preview data must not change the serialized shell');
+});
+
+function forumPreviewFixture(): ForumTopicDetail {
+  const now = new Date('2026-11-01T00:00:00Z');
+  return {
+    id: 'topic_950',
+    slug: 'opening-question',
+    title: 'How to meet "Central Cannon" & <more>?',
+    category: { slug: 'xiangqi', name: 'Xiangqi & variants', i18n: {} },
+    author: null,
+    latestPost: null,
+    postCount: 2,
+    pinnedAt: null,
+    lockedAt: null,
+    createdAt: now,
+    updatedAt: now,
+    lastPostAt: now,
+    viewer: null,
+    posts: [
+      {
+        id: 'post_950',
+        author: null,
+        bodyText:
+          '> Quoted words\n\nMy opening question is about "horses" & <cannons>.\n   What would you study first?',
+        hiddenAt: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
+  };
+}
+
+function assertForumPreview(html: string, title: string, description: string): void {
+  for (const tag of [
+    `<title>${title}</title>`,
+    `<meta property="og:title" content="${title}">`,
+    `<meta name="twitter:title" content="${title}">`,
+    `<meta name="description" content="${description}">`,
+    `<meta property="og:description" content="${description}">`,
+    `<meta name="twitter:description" content="${description}">`,
+    '<meta name="robots" content="max-image-preview:large" />',
+  ]) {
+    assert.ok(html.includes(tag), `missing ${tag}`);
+  }
+  assert.doesNotMatch(html, /noindex/);
+}
+
+test('forum link previews name public threads from one anonymous opening-post read', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-forum-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  for (const pathname of [
+    '/forum/t/topic_950/opening-question',
+    '/forum/t/%74opic_950/old-slug/',
+  ]) {
+    const response = captureResponse();
+    let reads = 0;
+    assert.ok(isClientRoute(pathname));
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        publicHost: 'https://mistboard.com',
+        search: '?page=2&utm_source=share',
+        forumTopic: async (id, options) => {
+          reads++;
+          assert.equal(id, 'topic_950');
+          assert.deepEqual(options, { postLimit: 1, postOffset: 0, viewerAccountId: null });
+          return forumPreviewFixture();
+        },
+      }),
+      true,
+    );
+    assert.equal(reads, 1);
+    assert.equal(response.status, 200);
+    assertForumPreview(
+      response.body,
+      'How to meet &quot;Central Cannon&quot; &amp; &lt;more&gt;? · Xiangqi &amp; variants · Mistboard forum',
+      'My opening question is about &quot;horses&quot; &amp; &lt;cannons&gt;. What would you study first?',
+    );
+    assert.match(
+      response.body,
+      /og:url" content="https:\/\/mistboard.com\/forum\/t\/topic_950\/opening-question"/,
+    );
+    assert.match(
+      response.body,
+      /rel="canonical" href="https:\/\/mistboard.com\/forum\/t\/topic_950\/opening-question"/,
+    );
+    assert.doesNotMatch(response.body, /Quoted words|utm_source|page=2|\/og\/(game|study)/);
+    assert.match(response.body, /<div id="app"><\/div>/);
+  }
+});
+
+test('forum link previews trim opening words and ignore replies and private ancillary data', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-forum-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  const shells: string[] = [];
+  for (const changed of [false, true]) {
+    const topic = forumPreviewFixture();
+    topic.posts[0]!.bodyText = `Opening words ${'about horses '.repeat(30)}TAIL_SENTINEL`;
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: '/forum/t/topic_950/opening-question',
+      publicHost: 'https://mistboard.com',
+      forumTopic: async () =>
+        changed
+          ? ({
+              ...topic,
+              viewer: { watching: true },
+              latestPost: { bodyText: 'PRIVATE_REPLY_SENTINEL' },
+              posts: [
+                ...topic.posts,
+                { ...topic.posts[0]!, bodyText: 'PUZZLE_SOLUTION_SENTINEL', hiddenAt: new Date() },
+              ],
+              hiddenGame: 'HIDDEN_PIECE_SENTINEL',
+            } as unknown as ForumTopicDetail)
+          : topic,
+    });
+    assert.match(response.body, /og:description" content="Opening words [^"]*\.\.\."/);
+    const description = response.body.match(/og:description" content="([^"]*)"/)![1]!;
+    assert.ok(description.length <= 160);
+    assert.doesNotMatch(response.body, /SENTINEL|watching/);
+    shells.push(response.body);
+  }
+  assert.equal(shells[0], shells[1], 'non-preview content must not change the complete shell');
+});
+
+test('forum link previews keep hidden, deleted, moderated and unavailable threads generic with noindex', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-forum-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  const hiddenOpening = forumPreviewFixture();
+  hiddenOpening.posts[0]!.hiddenAt = new Date();
+  hiddenOpening.posts[0]!.bodyText = 'HIDDEN_OPENING_SENTINEL';
+  hiddenOpening.posts.push({
+    ...hiddenOpening.posts[0]!,
+    id: 'reply_950',
+    bodyText: 'VISIBLE_REPLY_SENTINEL',
+    hiddenAt: null,
+  });
+  const missingOpening = { ...forumPreviewFixture(), posts: [] };
+  const shells: string[] = [];
+  // Hidden/deleted topics return null through the anonymous persistence read.
+  for (const forumTopic of [
+    async () => null,
+    async () => hiddenOpening,
+    async () => missingOpening,
+    async () => {
+      throw new Error('PRIVATE_LOOKUP_ERROR_SENTINEL');
+    },
+  ]) {
+    const response = captureResponse();
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: '/forum/t/topic_950/opening-question',
+        publicHost: 'https://mistboard.com',
+        forumTopic,
+      }),
+      true,
+    );
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /og:title" content="old"/);
+    assert.match(response.body, /og:description" content="old"/);
+    assert.match(response.body, /name="robots" content="noindex, follow"/);
+    assert.equal((response.body.match(/name="robots"/g) ?? []).length, 1);
+    assert.doesNotMatch(response.body, /SENTINEL|Central Cannon|rel="canonical"|topic_950/);
+    shells.push(response.body);
+  }
+  assert.equal(new Set(shells).size, 1);
+});
+
+test('forum link previews name categories from the public categories data', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-forum-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  const category: ForumCategory = {
+    id: 'category_950',
+    slug: 'xiangqi',
+    name: 'Xiangqi & variants',
+    description: 'Talk about "xiangqi" & its variants.',
+    i18n: {},
+    sortOrder: 1,
+    topicWritePolicy: 'account',
+    topicCount: 1,
+    postCount: 2,
+    latestPost: null,
+  };
+  for (const pathname of ['/forum/xiangqi', '/forum/%78iangqi/']) {
+    const response = captureResponse();
+    let reads = 0;
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        publicHost: 'https://mistboard.com',
+        forumCategories: async () => {
+          reads++;
+          return [category];
+        },
+        forumTopic: async () => {
+          assert.fail('categories must not read threads');
+        },
+      }),
+      true,
+    );
+    assert.equal(reads, 1);
+    assertForumPreview(
+      response.body,
+      'Xiangqi &amp; variants · Mistboard forum',
+      'Talk about &quot;xiangqi&quot; &amp; its variants.',
+    );
+    assert.match(response.body, /og:url" content="https:\/\/mistboard.com\/forum\/xiangqi"/);
+    assert.match(response.body, /rel="canonical" href="https:\/\/mistboard.com\/forum\/xiangqi"/);
+  }
+  for (const forumCategories of [
+    async () => [],
+    async () => {
+      throw new Error('unavailable');
+    },
+  ]) {
+    const response = captureResponse();
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: '/forum/unknown',
+        publicHost: 'https://mistboard.com',
+        forumCategories,
+      }),
+      true,
+    );
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /og:title" content="old"/);
+    assert.match(response.body, /og:description" content="old"/);
+    assert.match(response.body, /name="robots" content="noindex, follow"/);
+    assert.doesNotMatch(response.body, /rel="canonical"/);
+  }
+});
+
+test('forum link previews give etiquette its static metadata and keep reports generic with noindex', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-forum-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  for (const pathname of ['/forum/etiquette', '/forum/reports', '/forum/reports/']) {
+    const response = captureResponse();
+    let reads = 0;
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        publicHost: 'https://mistboard.com',
+        forumTopic: async () => {
+          reads++;
+          assert.fail('static/admin routes must not read threads');
+        },
+        forumCategories: async () => {
+          reads++;
+          assert.fail('static/admin routes must not read categories');
+        },
+      }),
+      true,
+    );
+    assert.equal(reads, 0);
+    if (pathname === '/forum/etiquette') {
+      assert.ok(SPA_ROUTE_META[pathname]);
+      assertForumPreview(
+        response.body,
+        'Forum etiquette · Mistboard',
+        SPA_ROUTE_META[pathname]!.description,
+      );
+    } else {
+      assert.match(response.body, /<title>Mistboard<\/title>/);
+      assert.match(response.body, /og:title" content="old"/);
+      assert.match(response.body, /og:description" content="old"/);
+      assert.match(response.body, /name="robots" content="noindex, follow"/);
+    }
+  }
+});
+
+test('forum link previews reject malformed routes without reading forum data', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-forum-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  for (const pathname of [
+    '/forum/t/%ZZ/slug',
+    '/forum/t/%2Fsecret/slug',
+    '/forum/t/id/slug/extra',
+    '/forum/%ZZ',
+    '/forum/%2Fsecret',
+  ]) {
+    const response = captureResponse();
+    let reads = 0;
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        publicHost: 'https://mistboard.com',
+        forumTopic: async () => {
+          reads++;
+          assert.fail('invalid route reached thread lookup');
+        },
+        forumCategories: async () => {
+          reads++;
+          assert.fail('invalid route reached category lookup');
+        },
+      }),
+      true,
+    );
+    assert.equal(reads, 0);
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /name="robots" content="noindex, follow"/);
+  }
 });

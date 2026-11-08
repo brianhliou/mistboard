@@ -598,6 +598,7 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/readouts' ||
+    normalized === '/forum/reports' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||

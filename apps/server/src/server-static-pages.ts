@@ -11,6 +11,7 @@ import {
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
+import { forumExcerpt } from './forum-excerpt.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
@@ -157,6 +158,11 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Community Forum | Mistboard',
     description:
       'The Mistboard community forum: talk about xiangqi and the other games, post a game for analysis, give feedback on the site, or chat about anything else.',
+  },
+  '/forum/etiquette': {
+    title: 'Forum etiquette · Mistboard',
+    description:
+      'A clear title, the right category, readable boards, no spam and respect for other players: guidelines for posting on the Mistboard forum.',
   },
   '/coach': {
     title: 'Xiangqi Coaches | Mistboard',
@@ -679,6 +685,56 @@ const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
 
 const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
 
+// Use the public forum reads, never a request's account or pagination. A
+// hidden topic reads as null; a hidden opening post keeps its position in the
+// list with its text blanked. Neither may acquire a preview from a later reply.
+async function forumRoutePage(
+  pathname: string,
+  lookupTopic: typeof persistence.getForumTopic,
+  listCategories: typeof persistence.listForumCategories,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  const normalized = pathname.replace(/\/+$/, '');
+  if (
+    !normalized.startsWith('/forum/') ||
+    normalized === '/forum/etiquette' ||
+    normalized === '/forum/reports'
+  )
+    return null;
+  try {
+    const thread = /^\/forum\/t\/([^/]+)(?:\/[^/]+)?$/.exec(normalized);
+    const category = /^\/forum\/([^/]+)$/.exec(normalized);
+    const encodedId = thread?.[1] ?? category?.[1];
+    if (!encodedId) return { noindex: true };
+    const id = decodeURIComponent(encodedId);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) return { noindex: true };
+    if (thread) {
+      const topic = await lookupTopic(id, { postLimit: 1, postOffset: 0, viewerAccountId: null });
+      const opening = topic?.posts[0];
+      if (!topic || !opening || opening.hiddenAt !== null) return { noindex: true };
+      return {
+        noindex: false,
+        meta: {
+          title: `${topic.title} · ${topic.category.name} · Mistboard forum`,
+          description: forumExcerpt(opening.bodyText),
+          urlPath: `/forum/t/${encodeURIComponent(topic.id)}/${encodeURIComponent(topic.slug)}`,
+        },
+      };
+    }
+    const entry = (await listCategories()).find((entry) => entry.slug === id);
+    if (!entry) return { noindex: true };
+    return {
+      noindex: false,
+      meta: {
+        title: `${entry.name} · Mistboard forum`,
+        description: entry.description,
+        urlPath: `/forum/${encodeURIComponent(entry.slug)}`,
+      },
+    };
+  } catch {
+    return { noindex: true };
+  }
+}
+
 // Like the public profile API, always read as an anonymous visitor. Account
 // play locks and stats exclusions do not hide profiles; profile visibility
 // does. Never serialize games, puzzle content or account-only fields here.
@@ -858,6 +914,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
   puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
   /** Override the profile API's anonymous, visibility-gated read (tests). */
   profile?: typeof persistence.getUserProfileByHandle;
+  /** Override the public forum reads (tests); previews always read anonymously. */
+  forumTopic?: typeof persistence.getForumTopic;
+  forumCategories?: typeof persistence.listForumCategories;
   /** Override the shelf deep-link lookup (tests); the default reads persistence. */
   practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
@@ -902,11 +961,17 @@ export async function serveSpaShellWithRoutePreloads(params: {
     params.pathname,
     params.profile ?? persistence.getUserProfileByHandle,
   );
+  const forum = await forumRoutePage(
+    params.pathname,
+    params.forumTopic ?? persistence.getForumTopic,
+    params.forumCategories ?? persistence.listForumCategories,
+  );
   const positionMeta =
     player?.meta ??
     gameMeta ??
     puzzle?.meta ??
     profile?.meta ??
+    forum?.meta ??
     positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
@@ -916,9 +981,13 @@ export async function serveSpaShellWithRoutePreloads(params: {
     isNoindexRoute(params.pathname) ||
     player?.noindex === true ||
     puzzle?.noindex === true ||
-    profile?.noindex === true;
+    profile?.noindex === true ||
+    forum?.noindex === true;
   const canonicalPath =
-    puzzle?.meta?.urlPath ?? profile?.meta?.urlPath ?? queryFreeCanonicalPath(params.pathname);
+    puzzle?.meta?.urlPath ??
+    profile?.meta?.urlPath ??
+    forum?.meta?.urlPath ??
+    queryFreeCanonicalPath(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static

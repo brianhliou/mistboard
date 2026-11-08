@@ -520,6 +520,7 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/ops',
   '/metrics',
   '/readouts',
+  '/forum/reports',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -599,6 +600,7 @@ test('a site-played game page is noindexed; an archive game and the lists are no
 test('isNoindexRoute ignores a trailing slash', () => {
   assert.equal(isNoindexRoute('/account/'), true);
   assert.equal(isNoindexRoute('/following/'), true);
+  assert.equal(isNoindexRoute('/forum/reports/'), true);
 });
 
 // The sitemap must never advertise a route the server 404s: every static route
