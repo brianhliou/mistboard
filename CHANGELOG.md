@@ -15,6 +15,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Live jieqi on desktop keeps captured pieces in the right column like every other variant, with the face-down odds above and below the board, larger on wide screens ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- The right column of a live game now lines up with the centre of the board on desktop ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Challenge a friend is offered after games against people, not only after bot games ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Fog Chess and Fog Xiangqi legacy badges for beating Misty while signed in ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - The Play setup panel shows every choice at once on tablet and desktop ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Variant game clocks pause while a player reconnects after a server restart, with a paused notice on the board ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Gomoku is open to everyone: play the Rapfi bot at eight levels or a rated game with a friend, each starting from a dealt opening ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
@@ -27,6 +31,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Studies can hold Gomoku boards, and Gomoku studies can be shared publicly ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Guess-the-move studies now play the opponent's last move on the board first, with its last-move mark, and show a move list and the game's players and event beside the board ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Puzzle Storm is the board and one panel with the clock, solved count, combo and your best runs, and the three minutes start at your first move ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Puzzle Streak's skip button shows how many skips are left and greys out once used ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - A pro player's page links to puzzles from their own games, and training stays on that player's puzzles ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Jieqi rules: worked examples and a sample game from the AB-JChess vs jqe match ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 - The Gomoku rules page is rewritten and now reads in Simplified and Traditional Chinese, with a matching share card ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
@@ -68,6 +76,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Shared links to puzzles, profiles, forum threads, live games, unlisted studies and tool pages now preview with their own title ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Search engines now get the text of static, tool, community and translated pages without running scripts, and admin and utility pages stay out of search ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - The piece picker now lists International, Traditional and Simplified first, with Animal Dobutsu last ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Player, broadcast, study and video names now follow the page's Chinese script ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Corrected Chinese wording across articles and the interface, and Traditional Chinese pages that showed Simplified text ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
@@ -89,6 +99,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- A study's chapter list keeps chapters from the same game apart instead of showing the same label twice ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- Gomoku games now start only from the screened two-black, three-white openings, and the rules page diagram shows one of them ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- The server-restart pause shade no longer blurs the board, and its corners match the board's ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
+- The blog's side menu labels stay on one line ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - More player names follow the page's script on Traditional Chinese pages ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Corrected Chinese copy across news, emails, lessons and studies, and filled missing translations ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Corrected a line on the world championship page that overlooked Lại Lý Huynh's 2022 world rapid title ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
