@@ -17,6 +17,7 @@ import {
   printDeploymentPlan,
   readBaseline,
 } from './lib/engine-deploy-plan.mjs';
+import { gitFreeEnv } from './lib/git-free-env.mjs';
 
 const HEAD = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
@@ -209,7 +210,7 @@ function fixture(t) {
   mkdirSync(bin);
   const gitBinary = spawnSync('which', ['git'], { encoding: 'utf8' }).stdout.trim();
   const git = (...args) => {
-    const result = spawnSync(gitBinary, args, { cwd: repo, encoding: 'utf8' });
+    const result = spawnSync(gitBinary, args, { cwd: repo, env: gitFreeEnv(), encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     return result.stdout.trim();
   };
@@ -268,7 +269,7 @@ function fixture(t) {
       cwd: repo,
       encoding: 'utf8',
       env: {
-        ...process.env,
+        ...gitFreeEnv(),
         PATH: `${bin}:${process.env.PATH}`,
         ENGINE_TEST_CI: ci,
         ENGINE_TEST_UPLOAD: upload,

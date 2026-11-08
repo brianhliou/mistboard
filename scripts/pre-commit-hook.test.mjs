@@ -23,6 +23,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { gitFreeEnv } from './lib/git-free-env.mjs';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const hook = join(scriptsDir, '..', '.githooks', 'pre-commit');
@@ -37,7 +38,7 @@ function makeRepo(t) {
   writeFileSync(join(bin, 'npm'), '#!/bin/sh\nexit 0\n');
   chmodSync(join(bin, 'npm'), 0o755);
   const env = {
-    ...process.env,
+    ...gitFreeEnv(),
     PATH: `${bin}:${process.env.PATH}`,
     GIT_CONFIG_GLOBAL: '/dev/null',
     GIT_CONFIG_NOSYSTEM: '1',
