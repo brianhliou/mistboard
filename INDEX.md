@@ -1091,6 +1091,8 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 ## scripts/ — repo-root tooling
 
+`fog-sendoff-stats.mjs`: read-only Fog Chess/Fog Xiangqi send-off JSON through `prod:db`, using canonical counted-game/seat filters, public account recognition and stored-analysis candidate ranking; `fog-sendoff-stats.test.mjs` pins bot-seat SQL, output privacy, ranking and transaction behavior (#969).
+
 | Group | Files |
 |-------|-------|
 | Test database isolation | `test-database-url.mjs` derives a stable `mistboard_test_<path hash>` per checkout; `test-database-url.test.mjs` covers the pure naming logic. `ensure-test-database.mjs`, `run-persistent-tests.mjs`, `persistent-shard.mjs` and `persistence-gate.mjs` share the default; explicit `TEST_DATABASE_URL` overrides remain unchanged. |
