@@ -262,13 +262,18 @@ function railwayLogsTail(startIso, deploymentId) {
     '--json',
   ]);
   if (result.status !== 0) throw new Error('Cannot read the new worker deployment logs.');
-  return result.stdout
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const entry = JSON.parse(line);
-      return `${entry.timestamp} ${entry.message}`;
-    });
+  return result.stdout.split('\n').filter(Boolean).map(formatLogLine);
+}
+
+/**
+ * One log line for marker matching: the timestamp, then the whole JSON entry.
+ * Structured worker logs leave `message` empty and carry the marker in fields
+ * (`kind="engine_warmup_complete"`), so matching `message` alone never sees a
+ * boot finish or a boot failure.
+ */
+export function formatLogLine(line) {
+  const entry = JSON.parse(line);
+  return `${entry.timestamp} ${line}`;
 }
 
 /**
