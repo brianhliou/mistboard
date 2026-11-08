@@ -1,3 +1,4 @@
+import { personNamesInText } from '@mistboard/game';
 // Curated video library data for /videos. Every YouTube entry was verified
 // against YouTube's oembed endpoint (https://www.youtube.com/oembed?url=...) on
 // the date in `addedAt`; `title` and `author` are the exact oembed values, so
@@ -8,7 +9,7 @@
 //
 // The library catalogs on four axes: topic (`tags`), difficulty (`level`), game
 // (`variant`), and spoken `language`. Each entry declares its `source` — an
-// external YouTube video or a first-party Mistboard-hosted one — as a
+// external YouTube/Bilibili video or a first-party Mistboard-hosted one — as a
 // discriminated union, so the render layer derives the watch URL and thumbnail
 // per source rather than assuming YouTube everywhere. Add Mistboard how-tos and
 // deep dives to MISTBOARD_VIDEOS.
@@ -54,6 +55,8 @@
 // skipped by the sweep AND asserted absent from this array by videos.test.ts, so
 // a deliberate cut cannot quietly come back. Add to the ledger, not just here.
 
+import { isBlockedForViewer, YOUTUBE_BLOCKED_IN } from './viewer-geo.js';
+
 export type VideoTag =
   | 'basics'
   | 'openings'
@@ -78,10 +81,8 @@ export type VideoLevel = 'intro' | 'intermediate' | 'advanced';
 
 export const VIDEO_LEVELS: readonly VideoLevel[] = ['intro', 'intermediate', 'advanced'];
 
-// Which game the video is about. Everything is xiangqi today; `fog` is reserved
-// for the Fog of War content lane so those videos have somewhere to land without
-// a schema change. The variant facet only renders when more than one is present.
-export type VideoVariant = 'xiangqi' | 'fog';
+// The variant facet only renders when more than one game is present.
+export type VideoVariant = 'xiangqi' | 'jieqi' | 'fog';
 
 // Spoken language of the video. Deliberately NOT the site `Locale`: speech and
 // script are different axes, so one 'zh' covers Mandarin video for both the
@@ -94,7 +95,7 @@ export type VideoLanguage = 'en' | 'zh';
 // English first, then by catalog depth. The order drives the facet row.
 export const VIDEO_LANGUAGES: readonly VideoLanguage[] = ['en', 'zh'];
 
-export type VideoSource = 'youtube' | 'mistboard';
+export type VideoSource = 'youtube' | 'bilibili' | 'mistboard';
 
 interface VideoBase {
   /** Exact title (YouTube oembed value, or Mistboard's own title). */
@@ -138,6 +139,13 @@ export interface YoutubeVideo extends VideoBase {
   short?: true;
 }
 
+/** A curated Bilibili video. Art is recorded at curation time, not derived. */
+export interface BilibiliVideo extends VideoBase {
+  source: 'bilibili';
+  bvid: string;
+  thumbnailUrl: string;
+}
+
 /** A first-party Mistboard-hosted video. Watch URL + thumbnail are explicit. */
 export interface MistboardVideo extends VideoBase {
   source: 'mistboard';
@@ -149,11 +157,36 @@ export interface MistboardVideo extends VideoBase {
   thumbnailUrl: string;
 }
 
-export type VideoEntry = YoutubeVideo | MistboardVideo;
+export type VideoEntry = YoutubeVideo | BilibiliVideo | MistboardVideo;
+
+/** A mainland nav destination needs a useful catalogue before promotion. */
+export const BILIBILI_NAV_MIN_ENTRIES = 12;
+
+export function bilibiliCatalogueIsDeep(videos: readonly VideoEntry[]): boolean {
+  return videos.filter((video) => video.source === 'bilibili').length >= BILIBILI_NAV_MIN_ENTRIES;
+}
 
 /** Stable, source-namespaced key for dedupe and list rendering. */
 export function videoKey(video: VideoEntry): string {
-  return video.source === 'youtube' ? `yt:${video.id}` : `mb:${video.slug}`;
+  switch (video.source) {
+    case 'youtube':
+      return `yt:${video.id}`;
+    case 'bilibili':
+      return `bb:${video.bvid}`;
+    case 'mistboard':
+      return `mb:${video.slug}`;
+  }
+}
+
+/** Applied before creating cards, so blocked thumbnails never start loading. */
+export function isVideoAvailableForViewer(video: VideoEntry): boolean {
+  switch (video.source) {
+    case 'youtube':
+      return !isBlockedForViewer(YOUTUBE_BLOCKED_IN);
+    case 'bilibili':
+    case 'mistboard':
+      return true;
+  }
 }
 
 // Kept here rather than in videos.ts so a surface that only needs a card's URL
@@ -169,21 +202,24 @@ export function videoWatchUrl(video: VideoEntry): string {
       return video.short
         ? `https://www.youtube.com/shorts/${encodeURIComponent(video.id)}`
         : `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+    case 'bilibili':
+      return `https://www.bilibili.com/video/${encodeURIComponent(video.bvid)}/`;
     case 'mistboard':
       return video.url;
   }
 }
 
 export function videoThumbUrl(video: VideoEntry): string {
-  // An explicit thumbnail always wins: it is how our own episodes avoid a
-  // third-party image request that a blocker can drop.
-  if (video.thumbnailUrl) return video.thumbnailUrl;
   switch (video.source) {
     case 'youtube':
       // no-cors image load: img.youtube.com sends CORP: cross-origin, so it
       // passes dev's site-wide COEP require-corp and a review page's (the SPA
       // keeps that COEP across pushState). hqdefault ships 4:3 letterboxed.
-      return `https://img.youtube.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
+      return (
+        video.thumbnailUrl ??
+        `https://img.youtube.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`
+      );
+    case 'bilibili':
     case 'mistboard':
       return video.thumbnailUrl;
   }
@@ -1163,13 +1199,355 @@ const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [
     addedAt: '2026-10-17',
     publishAt: '2026-10-24T16:00:00Z',
   },
+  {
+    source: 'youtube',
+    id: 'YtXPkQbtgsc',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-03-war-bell-v1.png',
+    title: 'Deftly Shaking the War Bell: Four Pieces Given Up in a Chinese Chess Mate',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-10-28',
+    publishAt: '2026-10-29T02:35:00Z',
+  },
+  {
+    source: 'youtube',
+    id: 'sG3ydJcuQ8w',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-04-six-directions-v1.png',
+    title: 'Released to the Six Directions: A Ming Dynasty Chinese Chess Mate in Five',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-11-01',
+    publishAt: '2026-11-01T17:00:00Z',
+  },
+  {
+    source: 'youtube',
+    id: 'a-GkTjVzHpc',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-05-open-the-window-and-invite-the-moon-v1.png',
+    title: 'Open the Window and Invite the Moon: A Chinese Chess Mate in Four Checks',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-11-05',
+    publishAt: '2026-11-05T17:00:00Z',
+  },
+  {
+    source: 'youtube',
+    id: 'sxS_CqSsNh4',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-06-the-bold-commander-submits-v1.png',
+    title: 'The Bold Commander Submits: A Chinese Chess Mate in Five Checks',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-11-07',
+    publishAt: '2026-11-07T17:00:00Z',
+  },
+];
+
+// First curation pass, 2026-11-05: read by hand from Bilibili's public search
+// and each video's own page. Original uploads only (repost mark checked per
+// video), no sanctioned player in the title or uploader, no engine install
+// guides. Jieqi first, then xiangqi teaching.
+const BILIBILI_VIDEOS: readonly BilibiliVideo[] = [
+  {
+    source: 'bilibili',
+    bvid: 'BV1vQ4y1E7BC',
+    title: '揭棋 保姆级教学（上篇）',
+    author: '次元人柱力',
+    durationMinutes: 20,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/0477323e5469bd90e4cf5a64088873c9bb2f7c45.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1iN4y1q7Rf',
+    title: '揭棋 保姆级教学（中篇）',
+    author: '次元人柱力',
+    durationMinutes: 12,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/04dc9881e3999da9cb0d1d23a1e3a8ed049e5d4a.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1dmYmzhE6k',
+    title: '揭棋玩法讲解',
+    author: '波斯猫ABC',
+    durationMinutes: 5,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/885a85bba103aa6797690b23d18fa2e790534953.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1VE411g7Hc',
+    title: '揭棋开局全规律个人总结（新手入门必学）',
+    author: '无规矩不成方源',
+    durationMinutes: 68,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/f188ace7f508695c6f296cac3612a58b492dbf1f.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1Qs6YB1EfR',
+    title: '[揭棋开局]边兵开局的常见应对技巧',
+    author: '恬澈澄安',
+    durationMinutes: 10,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i0.hdslb.com/bfs/archive/3eb4aa6f91dd62eb2b42d25800ef30a27b828cb7.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1z8w1z7ERj',
+    title: '[揭棋开局]开局抢占河口的重要性',
+    author: '恬澈澄安',
+    durationMinutes: 4,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i0.hdslb.com/bfs/archive/9690d4679e913e97b5cdb583fa015e2557c6807d.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1f3ey6GE6h',
+    title: '【揭棋】一套理论告诉你如何正确使用暗炮打暗马。',
+    author: '金银铜绿水',
+    durationMinutes: 15,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i0.hdslb.com/bfs/archive/fa1a9a4e971baf60c126a83249662209190526d5.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1nH4y1C7vx',
+    title: '[揭棋]不走无意义之棋',
+    author: '叶子Y小叶',
+    durationMinutes: 8,
+    tags: ['strategy'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/1e88a1d68e41618de0f609a400594333d8bbb340.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV14zH8e5ERS',
+    title: '揭棋里第三恶心的招数',
+    author: '卞孝先',
+    durationMinutes: 11,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/5e800f8ebf113b1338df5223235d767ae887a1b8.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1qq7czZECi',
+    title: '【揭棋】出完所有的暗子就立于不败之地',
+    author: '叶子Y小叶',
+    durationMinutes: 5,
+    tags: ['strategy'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/0b08bfc203704f1fe58d94a34870796b39815ffd.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV16P9jYXEcq',
+    title: '揭棋坚持炮打马开局',
+    author: '改个好昵称',
+    durationMinutes: 7,
+    tags: ['openings', 'games'],
+    level: 'intermediate',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/5fb8075003af1240b86e50df2f89e4c71fb34451.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1bNpJeDEXg',
+    title: '【揭棋】有关单相擒王的残局',
+    author: '金银铜绿水',
+    durationMinutes: 10,
+    tags: ['endgames'],
+    level: 'advanced',
+    variant: 'jieqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/cf03c17e845e6dcf41de839355366642166d95aa.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1da411S7Vf',
+    title: '【中国象棋】零基础学棋 | 入门篇（全集）',
+    author: '象棋研究者',
+    durationMinutes: 241,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/934429fb05867c2a361cdc6909018272b7311d63.png@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1PN4zzqErY',
+    title: '象棋入门 如何走子以及记录方法 零基础学象棋第一集',
+    author: '板鸭象棋',
+    durationMinutes: 41,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/918750e6a2c09bded1c3866f883bd18205beb118.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1NM4y137GJ',
+    title: '【中国象棋】入门教程：棋子的基本走法',
+    author: '祝尧讲棋',
+    durationMinutes: 6,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/81f4bdd4949b93cab8eb9ba7fc43c60a25c83d71.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1AV4y147LA',
+    title: '【中国象棋】初级篇 | 基础开局和基本杀法',
+    author: '象棋研究者',
+    durationMinutes: 596,
+    tags: ['openings', 'tactics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i1.hdslb.com/bfs/archive/87c9afbed7c87ab7a83989c91823215d1f166793.png@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1dg411c7cj',
+    title:
+      '【兰天象棋•象棋初级教程】象棋基本杀法～铁门闩，象棋入门必备课程，国家象棋大师带你象棋入门。',
+    author: '象棋大师张兰天',
+    durationMinutes: 6,
+    tags: ['tactics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/5e8cdd2d8fe66d95b6a01761dbd297594b0155a7.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1xp4y1V7sx',
+    title: '面向纯小白 象棋规则新手教程',
+    author: '黄桐树下黄桐过',
+    durationMinutes: 5,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/823ed5975129243dfafe2690ee278b5426fe7838.jpg@672w_378h_1c.jpg',
+  },
+  {
+    source: 'bilibili',
+    bvid: 'BV1QrASzEExP',
+    title: '中国象棋古谱天花板梅花谱全局谱 下象棋必学课程布局精髓教程',
+    author: '不凡棋局',
+    durationMinutes: 8,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-11-05',
+    thumbnailUrl:
+      'https://i2.hdslb.com/bfs/archive/69a42a0f233234c2d7f1b1e7f2517a257ad9305e.jpg@672w_378h_1c.jpg',
+  },
 ];
 
 /** The curated catalogue: other people's videos, filtered and faceted by the
  *  page. Deliberately does NOT include our own episodes — they have their own
  *  shelf above it, and mixing them in would double-render every card and shift
  *  every count and facet the page derives from this list. */
-export const VIDEOS: readonly VideoEntry[] = [...YOUTUBE_VIDEOS, ...MISTBOARD_VIDEOS];
+export const VIDEOS: readonly VideoEntry[] = [
+  ...YOUTUBE_VIDEOS,
+  ...BILIBILI_VIDEOS,
+  ...MISTBOARD_VIDEOS,
+];
 
 /** Ours: the episodes, then the Shorts. Rendered above the catalogue, never
  *  inside it; the shelf splits them by `short`. */
@@ -1185,3 +1563,14 @@ export function isVideoLive(video: VideoEntry, now: number = Date.now()): boolea
 
 export const isShort = (video: VideoEntry): boolean =>
   video.source === 'youtube' && video.short === true;
+
+/** Page-script display copy; the catalog retains the source's exact strings. */
+export function videoDisplayCopy(
+  video: Pick<VideoEntry, 'title' | 'author'>,
+  locale: string,
+): { title: string; author: string } {
+  return {
+    title: personNamesInText(video.title, locale),
+    author: personNamesInText(video.author, locale),
+  };
+}

@@ -6,8 +6,6 @@
 // tints to the surrounding text colour, so no per-theme asset variants.
 import {
   Bell,
-  BookMarked,
-  BookOpen,
   Bot,
   ChessKnight,
   Crown,
@@ -25,14 +23,12 @@ import {
   Newspaper,
   Puzzle,
   RadioTower,
-  ScanSearch,
   Sparkles,
   SquarePen,
   Store,
   Swords,
   TrendingUp,
   Trophy,
-  Tv,
   User,
   Users,
 } from 'lucide';
@@ -41,6 +37,8 @@ import type { AnnouncementKind } from './announcements.js';
 
 export type UiIconName =
   | 'achievement-first-game'
+  | 'achievement-fog-chess'
+  | 'achievement-fog-xiangqi'
   | 'achievement-forum'
   | 'achievement-lock'
   | 'achievement-puzzle'
@@ -59,10 +57,6 @@ export type UiIconName =
   | 'featured-channel'
   | 'find-opponent'
   | 'forum-topic'
-  | 'home-analysis'
-  | 'home-rules'
-  | 'home-study'
-  | 'home-watch'
   | 'language'
   | 'notification'
   | 'play-engine'
@@ -78,6 +72,10 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   // Achievement glyphs, keyed by the definition's icon (@mistboard/game
   // achievements.ts) as `achievement-<icon>`.
   'achievement-first-game': ChessKnight,
+  // No Lucide glyph: the fog legacy badges use their variant markers in
+  // shields, with PNGs painted over currentColor by ui-icon.css.
+  'achievement-fog-chess': [],
+  'achievement-fog-xiangqi': [],
   'achievement-forum': MessageSquare,
   'achievement-lock': Lock,
   'achievement-puzzle': Puzzle,
@@ -96,11 +94,6 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'featured-channel': Crown,
   'find-opponent': Users,
   'forum-topic': MessagesSquare,
-  // The phone home's shortcut tiles (mobile pass #576).
-  'home-analysis': ScanSearch,
-  'home-rules': BookOpen,
-  'home-study': BookMarked,
-  'home-watch': Tv,
   // Globe, not Lucide's Languages: lichess's 文A mark is a glyph in their own
   // icon font (licon.Language, U+E06E), so there is nothing to import, and the
   // nearest Lucide equivalent is six strokes that turn to mush in an 18px row.

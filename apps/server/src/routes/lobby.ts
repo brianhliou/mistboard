@@ -7,6 +7,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import { ratedEnabled } from './../feature-flags.js';
+import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import * as persistence from './../persistence.js';
 import type { LobbyTicket, Room } from './../server-types.js';
@@ -61,6 +62,17 @@ export async function tryHandle(
     }
     if (!requireMethod(request, response, 'POST')) return true;
     const body = await readJsonBody(request);
+    if (isFFQBanqiRequest(body)) {
+      const gate = gateGameSpecRequest(body, await currentAccountUser(request));
+      if (gate.type === 'reject') {
+        writeJson(response, gate.httpStatus, { error: gate.error });
+        return true;
+      }
+      // Admission opens the private room playtest; FFQ has no lobby. Claim
+      // conflicting selectors here before another tenant can match them.
+      writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
+      return true;
+    }
     // Variant tenants join the lobby on their own path; the chess gate would
     // 501 them as not-integrated, so the registry is consulted before it.
     const registration =
@@ -118,6 +130,13 @@ export async function tryHandle(
     }
     if (body.rated === true && !accountUser) {
       writeJson(response, 401, { error: 'rated_requires_account' });
+      return true;
+    }
+    // A stats-excluded account (operator, QA) is not counted, so it never rates:
+    // refused before a ticket exists, so it can neither post nor accept a rated
+    // seek, and the rated room's seat gate refuses it again for a stale client.
+    if (body.rated === true && persistence.isStatsExcluded(accountUser)) {
+      writeJson(response, 403, { error: 'rated_requires_counted_account' });
       return true;
     }
     const lobbyRated = body.rated === true && accountUser !== null;

@@ -111,6 +111,10 @@ const CORRESPONDENCE_STARTED_KEY = 'mistboard.correspondenceStarted';
 const CORRESPONDENCE_STARTED_CAP = 50;
 const LIVE_STARTED_KEY = 'mistboard.liveGameStarted';
 const LIVE_STARTED_CAP = 100;
+// Games whose game_first_move already fired in this browser (2026-10-25). Same
+// reason as the starts above: the tracker is per page, the game is not.
+const FIRST_MOVE_KEY = 'mistboard.gameFirstMove';
+const FIRST_MOVE_CAP = 100;
 
 // Storage blocked: still dedupe within the page (a tracker reset re-renders the
 // same room), though a reload may count the start again.
@@ -154,6 +158,14 @@ export function hasTrackedLiveGameStart(gameId: string): boolean {
 
 export function markLiveGameStartTracked(gameId: string): void {
   markStarted(LIVE_STARTED_KEY, LIVE_STARTED_CAP, gameId);
+}
+
+export function hasTrackedGameFirstMove(gameId: string): boolean {
+  return hasStarted(FIRST_MOVE_KEY, gameId);
+}
+
+export function markGameFirstMoveTracked(gameId: string): void {
+  markStarted(FIRST_MOVE_KEY, FIRST_MOVE_CAP, gameId);
 }
 
 // Tests only: forget the in-memory half so each case starts clean.

@@ -1,8 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as analytics from './analytics.js';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
+import { VIDEOS_OPEN_IN_CN } from './nav-items.js';
+import { isBanned, SANCTIONS, sanctionFor } from './players/sanctions.js';
 import {
   buildVideoCard,
   buildVideosPage,
@@ -15,6 +19,8 @@ import {
   videoWatchUrl,
 } from './videos.js';
 import {
+  type BilibiliVideo,
+  bilibiliCatalogueIsDeep,
   FIRST_PARTY_VIDEOS,
   isShort,
   isVideoLive,
@@ -27,6 +33,7 @@ import {
   type VideoLevel,
   type VideoTag,
   type VideoVariant,
+  videoDisplayCopy,
   videoKey,
 } from './videos-data.js';
 
@@ -93,7 +100,223 @@ const MISTBOARD_FIXTURE: VideoEntry = {
   addedAt: '2026-07-21',
 };
 
+const BILIBILI_FIXTURE: BilibiliVideo = {
+  source: 'bilibili',
+  bvid: 'BV1xx411c7mD',
+  thumbnailUrl: 'https://i0.hdslb.com/bfs/archive/fixture.jpg',
+  title: '揭棋入门',
+  author: '象棋课堂',
+  durationMinutes: 10,
+  tags: ['basics'],
+  level: 'intro',
+  variant: 'jieqi',
+  language: 'zh',
+  addedAt: '2026-11-05',
+};
+
+type DeclinedVideoLedger = {
+  declined: Record<string, string>;
+  bilibiliDeclined?: Record<string, string>;
+};
+
+function declinedCatalogueProblems(
+  videos: readonly VideoEntry[],
+  ledger: DeclinedVideoLedger,
+): string[] {
+  return videos.flatMap((video) => {
+    if (video.source === 'mistboard') return [];
+    const id = video.source === 'youtube' ? video.id : video.bvid;
+    const declined = video.source === 'youtube' ? ledger.declined : (ledger.bilibiliDeclined ?? {});
+    const key =
+      video.source === 'bilibili' && Object.hasOwn(declined, `bb:${id}`) ? `bb:${id}` : id;
+    return Object.hasOwn(declined, key)
+      ? [`${id} (${video.title}) is in the declined ledger: ${declined[key]}`]
+      : [];
+  });
+}
+
+const YOUTUBE_ONLY = VIDEOS.filter((video) => video.source === 'youtube');
+
+/** What #895 keeps out of the Bilibili shelf. Repost status is not in the entry,
+ *  so that one is checked on each video's own page when it is curated. */
+function bilibiliProblems(video: BilibiliVideo | VideoEntry): string[] {
+  if (video.source !== 'bilibili') return [];
+  const text = `${video.title} ${video.author}`;
+  const problems = Object.keys(SANCTIONS)
+    .filter((name) => isBanned(sanctionFor(name)) && text.includes(name))
+    .map((name) => `banned player ${name}: ${video.bvid}`);
+  if (/引擎|安装|下载|软件/.test(video.title)) problems.push(`engine guide: ${video.bvid}`);
+  if (!/^BV[0-9A-Za-z]{10}$/.test(video.bvid)) problems.push(`bad id: ${video.bvid}`);
+  if (!/^https:\/\/i\d\.hdslb\.com\/bfs\/archive\//.test(video.thumbnailUrl)) {
+    problems.push(`thumbnail: ${video.bvid}`);
+  }
+  return problems;
+}
+
+async function pageWithCatalogue(
+  videos: readonly VideoEntry[],
+  locale: 'en' | 'zh-Hans' | 'zh-Hant' = 'en',
+): Promise<HTMLElement> {
+  vi.resetModules();
+  vi.doMock('./videos-data.js', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('./videos-data.js')>()),
+    VIDEOS: videos,
+    FIRST_PARTY_VIDEOS: [...FIRST_PARTY_VIDEOS, MISTBOARD_FIXTURE],
+  }));
+  const { buildVideosPage: build } = await import('./videos.js');
+  await ensureLocaleCatalog(locale);
+  return build(locale);
+}
+
+afterEach(() => {
+  document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+  vi.restoreAllMocks();
+  vi.doUnmock('./videos-data.js');
+  vi.resetModules();
+});
+
+describe('country routing', () => {
+  it.each(SUPPORTED_LOCALES)(
+    'never builds YouTube destinations or thumbnails for CN (%s)',
+    (locale) => {
+      document.cookie = 'mb_cc=CN; Path=/';
+      // Inspect assignments as well as the finished DOM: hiding cards after they
+      // start fetching their art would still flash broken YouTube thumbnails.
+      const imageSource = vi.spyOn(HTMLImageElement.prototype, 'src', 'set');
+      const page = buildVideosPage(locale);
+      const bilibili = VIDEOS.filter((video) => video.source === 'bilibili');
+      expect(page.querySelectorAll('.videos-card')).toHaveLength(bilibili.length);
+      expect(page.querySelector('.videos-ours')).toBeNull();
+      expect(page.querySelector('.videos-subscribe')).toBeNull();
+      expect(page.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+      const requested = imageSource.mock.calls.map(([src]) => src);
+      expect(requested.filter((src) => !src.includes('.hdslb.com/'))).toEqual([]);
+    },
+  );
+
+  it.each([null, 'US', 'HK', 'TW', 'SG', 'MY', 'MO'])(
+    'preserves YouTube in Chinese locales outside CN (%s)',
+    (country) => {
+      if (country) document.cookie = `mb_cc=${country}; Path=/`;
+      const page = buildVideosPage('zh-Hant');
+      expect(page.querySelectorAll('.videos-catalog-grid .videos-card')).toHaveLength(
+        VIDEOS.filter((video) => video.language === 'zh').length,
+      );
+      expect(page.querySelector('.videos-ours-grid .videos-card')).not.toBeNull();
+      expect(page.querySelector('.videos-shorts-grid .videos-card')).not.toBeNull();
+      expect(page.querySelector('.videos-subscribe')).not.toBeNull();
+    },
+  );
+
+  it('derives CN facets and counts from reachable videos and keeps local first-party cards', async () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const page = await pageWithCatalogue([...YOUTUBE_ONLY, BILIBILI_FIXTURE]);
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+    expect(page.querySelector('.videos-count')?.textContent).toBe('1 video');
+    expect(page.querySelectorAll('.videos-ours-grid .videos-card')).toHaveLength(1);
+    expect(page.querySelector('.videos-ours-grid a')?.getAttribute('href')).toBe(
+      MISTBOARD_FIXTURE.url,
+    );
+    expect(page.querySelector('.videos-shorts-grid')).toBeNull();
+    expect(page.querySelector('.videos-subscribe')).toBeNull();
+    const labels = [...page.querySelectorAll('.videos-facet-label')].map((el) => el.textContent);
+    expect(labels).not.toContain('Language');
+    expect(labels).not.toContain('Source');
+    expect(labels).not.toContain('Game');
+    expect(page.querySelector('.videos-note')?.textContent).toContain('Bilibili');
+    expect(page.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+    const search = page.querySelector<HTMLInputElement>('.videos-search')!;
+    search.value = 'no match';
+    search.dispatchEvent(new Event('input'));
+    expect(visibleTitles(page)).toEqual([]);
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+  });
+
+  it('allows a mixed source catalogue to filter Bilibili and Jieqi independently', async () => {
+    const page = await pageWithCatalogue([...YOUTUBE_ONLY, BILIBILI_FIXTURE, MISTBOARD_FIXTURE]);
+    chip(page, 'Language', 'all').click();
+    chip(page, 'Source', 'bilibili').click();
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+    chip(page, 'Source', 'all').click();
+    chip(page, 'Game', 'jieqi').click();
+    expect(visibleTitles(page)).toEqual([BILIBILI_FIXTURE.title]);
+  });
+
+  it('never flashes a blocked card when the CN SPA route mounts', () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const root = mount();
+    expect(root.querySelector('.videos-page')).not.toBeNull();
+    expect(root.querySelectorAll('.videos-card').length).toBeGreaterThanOrEqual(12);
+    expect(root.innerHTML).not.toMatch(/youtube\.com|youtu\.be/i);
+  });
+
+  it('offers a mainland viewer no filter chip that leads to an empty page', () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const root = mount();
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.videos-facet button')];
+    expect(chips.length).toBeGreaterThan(4);
+    for (const chip of chips) {
+      chip.click();
+      expect(root.querySelectorAll('.videos-card').length, chip.textContent ?? '').toBeGreaterThan(
+        0,
+      );
+      chip.click();
+    }
+    expect(root.querySelector('.videos-intro')?.textContent).toBe(
+      'Curated Chinese-language xiangqi and jieqi videos: rules, openings, tactics, and strategy.',
+    );
+  });
+
+  it('keeps the homepage free of video rows and blocked thumbnails', async () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const { renderLandingShellForPrerender } = await import('./landing.js');
+    const html = renderLandingShellForPrerender();
+    expect(html).not.toMatch(/videos-card|videos-grid|videos-ours|youtube\.com|youtu\.be/i);
+    expect(html).toContain('landing-play');
+  });
+
+  it('keeps /videos on an empty SPA shell with only modulepreload hints before JS mounts', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const shell = readFileSync(resolve(here, '../index.html'), 'utf8');
+    const prerender = readFileSync(resolve(here, '../scripts/prerender-articles.mjs'), 'utf8');
+    expect(shell).toContain('<div id="app"></div>');
+    expect(shell).not.toMatch(/videos-card|youtube\.com|youtu\.be/i);
+    expect(prerender).toContain("{ pattern: '^/videos$', module: 'src/videos.ts' }");
+    expect(prerender).not.toMatch(/ssrLoadModule\([^)]*videos\.ts/);
+    expect(prerender).not.toContain('videos.html');
+  });
+});
+
 describe('videos data', () => {
+  it.each([
+    [11, false],
+    [12, true],
+  ] as const)('checks Bilibili catalogue depth at %i entries', (count, expected) => {
+    const videos = Array.from({ length: count }, () => BILIBILI_FIXTURE);
+    expect(bilibiliCatalogueIsDeep(videos)).toBe(expected);
+  });
+
+  it('counts only Bilibili entries toward catalogue depth', () => {
+    const videos = Array.from({ length: 11 }, () => BILIBILI_FIXTURE);
+    const youtube = VIDEOS.find((video) => video.source === 'youtube')!;
+    expect(bilibiliCatalogueIsDeep([...videos, youtube, MISTBOARD_FIXTURE])).toBe(false);
+  });
+
+  it('keeps the manual CN nav gate in sync with the catalogue depth', () => {
+    expect(VIDEOS_OPEN_IN_CN).toBe(bilibiliCatalogueIsDeep(VIDEOS));
+  });
+
+  it.each(['nav-items.ts', 'viewer-geo.ts'])(
+    'keeps the eager shell free of videos-data imports in %s',
+    (file) => {
+      const here = dirname(fileURLToPath(import.meta.url));
+      const source = readFileSync(resolve(here, file), 'utf8');
+      expect(source).not.toMatch(/\bimport\b[^;]*['"][^'"]*videos-data(?:\.[cm]?[jt]s)?['"]/);
+    },
+  );
+
   it('holds verified, well-formed entries', () => {
     expect(VIDEOS.length).toBeGreaterThanOrEqual(12);
     for (const video of VIDEOS) {
@@ -103,9 +326,12 @@ describe('videos data', () => {
       expect(video.tags.length).toBeGreaterThan(0);
       for (const tag of video.tags) expect(VIDEO_TAGS).toContain(tag);
       expect(VIDEO_LEVELS).toContain(video.level);
-      expect(['xiangqi', 'fog']).toContain(video.variant);
+      expect(['xiangqi', 'jieqi', 'fog']).toContain(video.variant);
       if (video.source === 'youtube') expect(video.id).toMatch(/^[A-Za-z0-9_-]{11}$/);
-      else {
+      else if (video.source === 'bilibili') {
+        expect(video.bvid).toMatch(/^BV[A-Za-z0-9]{10}$/);
+        expect(video.thumbnailUrl.trim()).not.toBe('');
+      } else {
         expect(video.slug.trim()).not.toBe('');
         expect(video.url.trim()).not.toBe('');
         expect(video.thumbnailUrl.trim()).not.toBe('');
@@ -113,6 +339,24 @@ describe('videos data', () => {
     }
     // Keys are unique across sources.
     expect(new Set(VIDEOS.map(videoKey)).size).toBe(VIDEOS.length);
+  });
+
+  it('ships Bilibili entries that pass the catalogue filters', () => {
+    const bilibili = VIDEOS.filter((video) => video.source === 'bilibili');
+    expect(bilibili.length).toBeGreaterThanOrEqual(12);
+    expect(bilibili.flatMap(bilibiliProblems)).toEqual([]);
+    expect(new Set(bilibili.map((video) => video.bvid)).size).toBe(bilibili.length);
+  });
+
+  it.each([
+    ['a banned player in the title', { title: '王天一讲棋' }],
+    ['a banned player as uploader', { author: '赵鑫鑫' }],
+    ['an engine install guide', { title: '揭棋引擎安装教程' }],
+    ['a thumbnail off Bilibili', { thumbnailUrl: 'https://example.com/a.jpg' }],
+    ['a malformed id', { bvid: 'av12345' }],
+  ])('rejects %s', (_label, planted) => {
+    expect(bilibiliProblems(BILIBILI_FIXTURE)).toEqual([]);
+    expect(bilibiliProblems({ ...BILIBILI_FIXTURE, ...planted })).not.toEqual([]);
   });
 
   // The length sorts push an unknown duration to the end of the list, so a
@@ -162,23 +406,27 @@ describe('videos data', () => {
   // miner, restored it. This closes that loop from the other side: the ledger is
   // the list of ids this catalogue may not contain, whatever the reason for the
   // cut, and it fails here rather than shipping.
+  it.each([BILIBILI_FIXTURE.bvid, `bb:${BILIBILI_FIXTURE.bvid}`])(
+    'refuses a rejected Bilibili video (%s) pasted back into a catalogue fixture',
+    (key) => {
+      const reason = 'rejected during review';
+      const ledger: DeclinedVideoLedger = { declined: {}, bilibiliDeclined: { [key]: reason } };
+      expect(declinedCatalogueProblems(YOUTUBE_ONLY, ledger)).toEqual([]);
+      expect(declinedCatalogueProblems([...YOUTUBE_ONLY, BILIBILI_FIXTURE], ledger)).toEqual([
+        `${BILIBILI_FIXTURE.bvid} (${BILIBILI_FIXTURE.title}) is in the declined ledger: ${reason}`,
+      ]);
+    },
+  );
+
   it('contains nothing the declined ledger has ruled out', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const ledger = JSON.parse(
       readFileSync(resolve(here, '../../../scripts/data/videos-declined.json'), 'utf8'),
-    ) as { declined: Record<string, string> };
+    ) as DeclinedVideoLedger;
 
-    const declined = Object.keys(ledger.declined);
-    expect(declined.length).toBeGreaterThan(0);
-    for (const id of declined) expect(id).toMatch(/^[A-Za-z0-9_-]{11}$/);
-
-    for (const video of VIDEOS) {
-      if (video.source !== 'youtube') continue;
-      expect(
-        declined,
-        `${video.id} (${video.title}) is in the declined ledger: ${ledger.declined[video.id]}`,
-      ).not.toContain(video.id);
-    }
+    expect(Object.keys(ledger.declined).length).toBeGreaterThan(0);
+    for (const id of Object.keys(ledger.declined)) expect(id).toMatch(/^[A-Za-z0-9_-]{11}$/);
+    expect(declinedCatalogueProblems(VIDEOS, ledger)).toEqual([]);
   });
 });
 
@@ -199,6 +447,14 @@ describe('videoLanguageForLocale', () => {
 });
 
 describe('source-dispatched watch + thumbnail', () => {
+  it('namespaces every source and uses the Bilibili watch destination and curated thumbnail', () => {
+    expect(videoKey(BILIBILI_FIXTURE)).toBe('bb:BV1xx411c7mD');
+    expect(videoWatchUrl(BILIBILI_FIXTURE)).toBe('https://www.bilibili.com/video/BV1xx411c7mD/');
+    expect(videoThumbUrl(BILIBILI_FIXTURE)).toBe(BILIBILI_FIXTURE.thumbnailUrl);
+    expect(videoKey(MISTBOARD_FIXTURE)).toBe('mb:first-fog-game');
+    const yt = VIDEOS.find((video) => video.source === 'youtube')!;
+    expect(videoKey(yt)).toMatch(/^yt:/);
+  });
   it('derives YouTube URLs from the id', () => {
     const yt = VIDEOS.find((v) => v.source === 'youtube' && v.firstParty !== true);
     if (!yt || yt.source !== 'youtube') throw new Error('expected a youtube video');
@@ -249,6 +505,56 @@ describe('scheduled Shorts', () => {
 });
 
 describe('video card', () => {
+  it.each([
+    ['en', 'Bilibili'],
+    ['zh-Hans', '哔哩哔哩'],
+    ['zh-Hant', '嗶哩嗶哩'],
+  ] as const)(
+    'links out to Bilibili with localized copy and analytics (%s)',
+    async (locale, label) => {
+      await ensureLocaleCatalog(locale);
+      const track = vi.spyOn(analytics, 'track').mockImplementation(() => {});
+      const card = buildVideoCard(BILIBILI_FIXTURE, locale);
+      const link = card.querySelector<HTMLAnchorElement>('.videos-card-link')!;
+      expect(link.getAttribute('href')).toBe(videoWatchUrl(BILIBILI_FIXTURE));
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+      expect(card.querySelector('.videos-source-badge')?.textContent).toBe(label);
+      link.addEventListener('click', (event) => event.preventDefault());
+      link.dispatchEvent(new MouseEvent('click', { cancelable: true }));
+      expect(track).toHaveBeenCalledWith('video_clicked', {
+        kind: 'card',
+        source: 'bilibili',
+        video_key: videoKey(BILIBILI_FIXTURE),
+        first_party: false,
+        level: 'intro',
+        language: 'zh',
+      });
+    },
+  );
+
+  it.each([BILIBILI_FIXTURE, VIDEOS[0]!, FIRST_PARTY_VIDEOS[0]!])(
+    'falls back once to local art without a referrer ($source)',
+    (video) => {
+      const card = buildVideoCard(video);
+      const img = card.querySelector('img')!;
+      expect(img.referrerPolicy).toBe('no-referrer');
+      expect(img.getAttribute('src')).toBe(videoThumbUrl(video));
+      img.dispatchEvent(new Event('error'));
+      expect(img.getAttribute('src')).toBe('/video-thumbs/unavailable.svg');
+      const here = dirname(fileURLToPath(import.meta.url));
+      expect(readFileSync(resolve(here, `../public${img.getAttribute('src')}`), 'utf8')).toContain(
+        '<svg',
+      );
+      // A second error must not reassign src and retry forever.
+      const source = vi.spyOn(img, 'src', 'set');
+      img.dispatchEvent(new Event('error'));
+      expect(source).not.toHaveBeenCalled();
+      expect(card.querySelector('.videos-card-link')?.getAttribute('href')).toBe(
+        videoWatchUrl(video),
+      );
+    },
+  );
   it('shelves our own episodes above the catalogue, never inside it', () => {
     // The library's job is to turn a visitor into a subscriber, so ours lead and
     // the curated list stays external. A first-party entry appearing in the
@@ -310,9 +616,8 @@ describe('videos page', () => {
     expect(root.querySelector('.videos-empty')?.hasAttribute('hidden')).toBe(true);
   });
 
-  it('renders a level facet but no dead variant/source facets for homogeneous data', () => {
+  it('renders a level facet and the variant and source facets the catalogue earns', () => {
     const root = mount();
-    // All current videos are xiangqi YouTube videos, so those facets stay hidden.
     expect(() => facetRow(root, 'Level')).not.toThrow();
     const labels = [...root.querySelectorAll('.videos-facet-label')].map((el) => el.textContent);
     expect(labels).toContain('Topic');
@@ -320,8 +625,9 @@ describe('videos page', () => {
     // Language discriminates now that the catalog is mixed, and leads the stack
     // because it is the one facet that starts with a selection.
     expect(labels[0]).toBe('Language');
-    expect(labels).not.toContain('Game');
-    expect(labels).not.toContain('Source');
+    // Bilibili brought jieqi and a second source, so both facets now discriminate.
+    expect(labels).toContain('Game');
+    expect(labels).toContain('Source');
     // Level facet exposes All + the three ordered levels.
     const levelChips = facetRow(root, 'Level').querySelectorAll('.videos-tag-chip');
     expect(levelChips.length).toBe(VIDEO_LEVELS.length + 1);
@@ -550,4 +856,33 @@ describe('filterVideos', () => {
     expect(chinese.length).toBeGreaterThan(0);
     expect(chinese).toEqual(VIDEOS.filter((v) => v.language === 'zh'));
   });
+});
+
+it('shows page-script names in video cards while preserving the verbatim catalog', () => {
+  const video = VIDEOS.find((v) => v.author === '趙奕帆象棋教學')!;
+  expect(video).toBeDefined();
+  const before = JSON.stringify(VIDEOS);
+  const hans = buildVideoCard(video, 'zh-Hans');
+  const hant = buildVideoCard(video, 'zh-Hant');
+  expect(hans.querySelector('.videos-card-title')?.textContent).toContain('赵奕帆');
+  expect(hans.querySelector('.videos-card-meta')?.textContent).toContain('赵奕帆');
+  expect(hant.querySelector('.videos-card-title')?.textContent).toContain('趙奕帆');
+  expect(hant.querySelector('.videos-card-meta')?.textContent).toContain('趙奕帆');
+  expect(videoDisplayCopy(video, 'en')).toEqual({ title: video.title, author: video.author });
+  const fixture = { title: '党斐对于幼华、孙勇征', author: '杨官璘' };
+  expect(videoDisplayCopy(fixture, 'zh-Hant')).toEqual({
+    title: '党斐对于幼華、孫勇征',
+    author: '楊官璘',
+  });
+  expect(JSON.stringify(VIDEOS)).toBe(before);
+  const filters: VideoFilters = {
+    query: '赵奕帆',
+    tags: new Set(),
+    levels: new Set(),
+    variants: new Set(),
+    sources: new Set(),
+    languages: new Set(),
+  };
+  expect(filterVideos(VIDEOS, filters)).toContain(video);
+  expect(hans.querySelector('a')?.getAttribute('href')).toBe(videoWatchUrl(video));
 });

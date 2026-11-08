@@ -16,13 +16,16 @@ export {
   DEFAULT_ACCOUNT_PREFERENCES,
   DM_POLICIES,
   findUserByEmail,
+  findUserByHandle,
   isAccountLocale,
   isClockTenthsPreference,
   isDmPolicy,
   isPieceAnimationPreference,
   isPlayDisabled,
   isProfileVisibility,
+  isStatsExcluded,
   isUserIdPlayDisabled,
+  isUserIdStatsExcluded,
   userExists,
   userIdForHandle,
 } from './persistence-accounts.js';
@@ -189,6 +192,15 @@ export {
   resolveDmReport,
   sendDmMessage,
 } from './persistence-dms.js';
+export type { EmailDeliveryAddress, LoginEmailRequest } from './persistence-email-delivery.js';
+export {
+  completeLoginEmailRequest,
+  correlateLoginEmailRequest,
+  getEmailDeliveryAddress,
+  getLoginEmailRequest,
+  recordEmailDeliveryEvent,
+  recordLoginEmailRequest,
+} from './persistence-email-delivery.js';
 export type { FeedbackSubmissionInput } from './persistence-feedback.js';
 export {
   countAnonFeedbackSubmissionsSince,
@@ -298,6 +310,7 @@ export {
   listGameDebugArtifactSummaries,
   listRoomLifecycleAudit,
   listRoomLifecycleAuditByKinds,
+  listStalePausedTenantRoomIds,
   loadRoom,
   loadRoomEvents,
   loadRoomsEvents,
@@ -386,6 +399,8 @@ export {
   upsertHistoricalXiangqiSource,
   XIANGQI_GAME_SORTS,
 } from './persistence-historical-xiangqi.js';
+export type { InboxEmailCandidate, InboxEmailQuery } from './persistence-inbox-email.js';
+export { listInboxEmailCandidates, markInboxEmailSent } from './persistence-inbox-email.js';
 export type {
   ActivePlayerEntry,
   BestRatingEntry,
@@ -453,6 +468,7 @@ export {
   getUserDmPolicy,
   getUserGamesPage,
   getUserProfileByHandle,
+  getUserPuzzleRatingHistory,
   getUserRatingHistory,
   isProfileGameResultFilter,
   listRecentFinishedCorrespondenceGames,
@@ -498,6 +514,7 @@ export type {
   RoomDeadlineRecord,
 } from './persistence-room-deadlines.js';
 export {
+  countHostCorrespondenceGames,
   deleteRoomDeadline,
   listActiveCorrespondenceRoomIds,
   listActiveRoomDeadlines,
@@ -568,6 +585,7 @@ export {
   getPracticeStudiesBySlug,
   getStudyById,
   getStudyBySlug,
+  getStudyChapterVariants,
   getStudyLikeState,
   isStudyVisibility,
   listFavoriteStudies,
@@ -594,6 +612,12 @@ export {
   getStudyChapterAnalysisForRead,
   saveStudyChapterAnalysis,
 } from './persistence-study-analysis.js';
+export {
+  decidedStudyChapterIds,
+  getStudyChapterDecisions,
+  getStudyChapterDecisionsForRead,
+  saveStudyChapterDecisions,
+} from './persistence-study-decisions.js';
 export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,
@@ -660,6 +684,7 @@ export {
 export {
   getXiangqiPlayer,
   listXiangqiPlayerBoards,
+  listXiangqiPlayerGames,
   listXiangqiPlayers,
   type XiangqiPlayerBoardRecord,
   type XiangqiPlayerEventRecord,

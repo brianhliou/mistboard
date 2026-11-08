@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  ADMIN_ONLY_STUDY_SPEC_IDS,
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
@@ -9,12 +10,18 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  deriveLaunchLists,
+  FFQ_BANQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
+  GOMOKU_SPEC_ID,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  isAdminOnlyStudySpecId,
+  isCorrespondenceAllowlistedSpec,
   isCorrespondenceRatedSpec,
   isGameSpecId,
+  isPublicGameSpec,
   isRatedPoolBase,
   isRetiredGameSpec,
   isStudyEligibleSpecId,
@@ -22,15 +29,21 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
+  MAHJONG_SPEC_ID,
   maybeGameSpecForId,
+  PLAYTEST_GAME_SPEC_IDS,
+  publicSpecPredicate,
   RATED_POOL_BASES,
   type RatingVariant,
   RETIRED_GAME_SPEC_IDS,
   ratingPoolForSpec,
   STUDY_ELIGIBLE_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 import { hasStartFen } from './start-fen.js';
+import { FFQ_BANQI_RULES } from './variants-ffq-banqi.js';
 
 test('canonical display order contains exactly the current public variant shelf', () => {
   assert.deepEqual(CANONICAL_VARIANT_ORDER, [
@@ -43,7 +56,65 @@ test('canonical display order contains exactly the current public variant shelf'
     DARK_CHESS_SPEC_ID,
     JUNGLE_SPEC_ID,
     JUNGLE_FLIP_SPEC_ID,
+    XIANGQI_MAHJONG_SPEC_ID,
+    GOMOKU_SPEC_ID,
   ]);
+});
+
+test('Gomoku is a public casual, rated freestyle placement game', () => {
+  const spec = gameSpecForId(GOMOKU_SPEC_ID);
+  assert.equal(spec.publicName, 'Gomoku');
+  assert.equal(spec.family, 'gomoku');
+  assert.equal(spec.board, 'gomoku-15x15');
+  assert.equal(spec.movement, 'gomoku-freestyle');
+  assert.equal(spec.objective, 'five-in-a-row');
+  assert.equal(spec.setup, 'empty');
+  assert.equal(spec.visibility, 'open');
+  assert.equal(spec.reserves, 'none');
+  assert.equal(spec.dropPolicy, 'none');
+  assert.equal(spec.runtimeStatus, 'live');
+  assert.equal(spec.publicSurface, 'casual');
+  assert.equal(spec.rated, true);
+  assert.equal(spec.legacyLiveRoom, undefined);
+  assert.equal(isPublicGameSpec(spec.id), true);
+  assert.equal(ratingPoolForSpec(spec.id), 'gomoku');
+  assert.equal(isRatedPoolBase('gomoku'), true);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), true);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
+  assert.equal(isCorrespondenceRatedSpec(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), true);
+});
+
+test('Gomoku is allowlisted while hidden and takes its shelf place only at launch', () => {
+  assert.ok(PLAYTEST_GAME_SPEC_IDS.includes(GOMOKU_SPEC_ID));
+  const hidden = deriveLaunchLists(
+    publicSpecPredicate(
+      GAME_SPECS.map((spec) =>
+        spec.id === GOMOKU_SPEC_ID ? { ...spec, publicSurface: 'hidden' as const } : spec,
+      ),
+    ),
+  );
+  assert.ok(hidden.allowlisted.includes(GOMOKU_SPEC_ID));
+  assert.ok(!hidden.canonicalVariantOrder.includes(GOMOKU_SPEC_ID));
+  assert.ok(hidden.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
+  assert.ok(!hidden.correspondenceEligible.includes(GOMOKU_SPEC_ID));
+
+  const launched = deriveLaunchLists(
+    publicSpecPredicate(
+      GAME_SPECS.map((spec) =>
+        spec.id === GOMOKU_SPEC_ID ? { ...spec, publicSurface: 'casual' as const } : spec,
+      ),
+    ),
+  );
+  assert.ok(!launched.allowlisted.includes(GOMOKU_SPEC_ID));
+  assert.deepEqual(launched.canonicalVariantOrder, [
+    ...hidden.canonicalVariantOrder,
+    GOMOKU_SPEC_ID,
+  ]);
+  assert.deepEqual(launched.correspondenceEligible, hidden.correspondenceEligible);
+  assert.ok(!launched.correspondenceEligible.includes(GOMOKU_SPEC_ID));
+  assert.ok(!launched.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
 });
 
 test('current dark chess maps to the flagship chess spec', () => {
@@ -129,6 +200,46 @@ test('composite specs are composed from rule modules', () => {
   assert.notEqual(fortress.dropPolicy, 'none');
 });
 
+test('FFQ banqi has canonical metadata matching its distinct kernel rules', () => {
+  assert.equal(FFQ_BANQI_SPEC_ID, 'ffq-banqi');
+  const spec = maybeGameSpecForId('ffq-banqi');
+  assert.ok(spec, 'FFQ banqi must be a canonical spec');
+  assert.deepEqual(spec, {
+    id: 'ffq-banqi',
+    publicName: 'FFQ Banqi',
+    family: 'xiangqi',
+    board: `banqi-${FFQ_BANQI_RULES.board.width}x${FFQ_BANQI_RULES.board.height}`,
+    movement: 'ffq-banqi',
+    objective: 'hp-depletion',
+    visibility: 'hidden-identity',
+    setup: 'ffq-banqi-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'ffq_banqi',
+    publicSurface: 'hidden',
+    runtimeStatus: 'future',
+  });
+  assert.equal(isGameSpecId(spec.id), true);
+  assert.equal(gameSpecForId(FFQ_BANQI_SPEC_ID), spec);
+  assert.equal(legacyLiveRoomForGameSpec(spec.id), null);
+});
+
+test('FFQ banqi stays out of public play, ratings, correspondence and studies', () => {
+  const spec = maybeGameSpecForId('ffq-banqi');
+  assert.ok(spec);
+  assert.equal(isPublicGameSpec(spec.id), false);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(isRetiredGameSpec(spec.id), false);
+  assert.equal(ratingPoolForSpec(spec.id), null);
+  assert.equal(isRatedPoolBase(spec.ratingPoolBase), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
+  assert.equal(isCorrespondenceRatedSpec(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), false);
+  assert.equal(isAdminOnlyStudySpecId(spec.id), false);
+  assert.equal(hasStartFen(spec.id), false, 'the observer FEN is not an import format');
+});
+
 test('game spec ids are unique and discoverable', () => {
   const ids = GAME_SPECS.map((spec) => spec.id);
   assert.equal(new Set(ids).size, ids.length);
@@ -173,6 +284,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     atomic_xiangqi: true,
     crazyhouse_xiangqi: true,
     xiangqi_mahjong: true,
+    gomoku: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
 });
@@ -217,9 +329,12 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('retired specs: Fortress and Atomic Xiangqi, hidden but still resolvable', () => {
-  // Retired 2026-10-11: closed to new games, kept so finished games replay.
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], [FORTRESS_XIANGQI_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID]);
+test('retired specs: Fortress, Atomic Xiangqi and Mahjong, hidden but still resolvable', () => {
+  // Closed to new games, kept so finished games stay readable.
+  assert.deepEqual(
+    [...RETIRED_GAME_SPEC_IDS],
+    [FORTRESS_XIANGQI_SPEC_ID, MAHJONG_SPEC_ID, ATOMIC_XIANGQI_SPEC_ID],
+  );
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
     assert.equal(gameSpecForId(id).runtimeStatus, 'retired', id);
@@ -252,4 +367,37 @@ test('isCorrespondenceRatedSpec is exactly correspondence-eligible AND an active
   assert.equal(isCorrespondenceRatedSpec('not-a-spec'), false);
   assert.equal(isCorrespondenceRatedSpec(null), false);
   assert.equal(isCorrespondenceRatedSpec(undefined), false);
+});
+
+test('Xiangqi Mahjong is not played by correspondence, publicly or by allowlist', () => {
+  // Brian, 2026-10-25: held out at launch; the tenant's correspondence binding stays.
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(isCorrespondenceRatedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
+});
+
+test('admin-only study variants are study-eligible and not yet launched', () => {
+  assert.deepEqual(ADMIN_ONLY_STUDY_SPEC_IDS, [THREE_KINGDOMS_BANQI_SPEC_ID]);
+  for (const id of ADMIN_ONLY_STUDY_SPEC_IDS) {
+    assert.equal(isStudyEligibleSpecId(id), true, `${id} is admin-only but has no study board`);
+    // A launch flips publicSurface; this fails until the same change lets
+    // everyone at the variant's studies by dropping the id from the list.
+    assert.equal(
+      isPublicGameSpec(id),
+      false,
+      `${id} launched but its studies are still admin-only`,
+    );
+    // The list queries splice the ids into SQL as literals.
+    assert.match(id, /^[a-z0-9-]+$/);
+  }
+  assert.equal(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID), true);
+  assert.equal(isAdminOnlyStudySpecId(BANQI_SPEC_ID), false);
+  assert.equal(isAdminOnlyStudySpecId('three-kingdoms-banqi '), false);
+});
+
+test('Gomoku studies are public and position-rooted', () => {
+  assert.equal(isStudyEligibleSpecId(GOMOKU_SPEC_ID), true);
+  assert.equal(hasStartFen(GOMOKU_SPEC_ID), true);
+  assert.equal(isPublicGameSpec(GOMOKU_SPEC_ID), true);
+  assert.equal(isAdminOnlyStudySpecId(GOMOKU_SPEC_ID), false);
 });

@@ -53,10 +53,12 @@ import {
   jungleBareDenSvg,
   jungleBareTrapSvg,
 } from './jungle-skins.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
   GLYPH_RADIUS_RATIO,
+  type SvgBoardGlyphIcon,
   type SvgBoardMarkerStyle,
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
@@ -158,6 +160,8 @@ export interface JungleBoardMarker extends SvgBoardMarkerStyle {
   kind: 'circle' | 'glyph';
   /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
   text?: string;
+  /** A drawn mark for kind 'glyph' in place of the label (puzzle ✓ / ✗). */
+  icon?: SvgBoardGlyphIcon;
 }
 
 function cellRef(square: JungleSquare): GridCellRef {
@@ -336,6 +340,7 @@ export function animateJungleBoardMove(
   const from = geom.center(origin.file, origin.rank);
   const to = geom.center(settle.file, settle.rank);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) animateMoveGlyphs(host, duration);
   // Fade the destination tint in as the piece lands, the way the banqi and
   // xiangqi boards do. A reverse step renders the PRIOR move's mark on a
   // different cell, so fading it would not track the reverse glide.

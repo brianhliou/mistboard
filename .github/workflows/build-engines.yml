@@ -1,7 +1,7 @@
 name: Build engines
 
-# Compiles the eight server engines (three patched Fairy-Stockfish builds,
-# Stockfish, Pikafish-jieqi, Pikafish, AB-JChess, KataGo-AnimalChess) once per
+# Compiles the ten server engines (three patched Fairy-Stockfish builds,
+# Stockfish, Pikafish-jieqi, Pikafish, AB-JChess, KataGo-AnimalChess, jqe, Rapfi) once per
 # recipe and publishes them as
 # release `engines-<recipe hash>`; railpack.json fetches that release at image
 # build time instead of compiling on every deploy. The recipe and its hash live
@@ -27,6 +27,10 @@ on:
       - ab-jchess.ref
       - katago-jungle.ref
       - jqe.ref
+      - rapfi.ref
+      - scripts/rapfi-assets.mjs
+      - scripts/fetch-pikafish-net.mjs
+      - apps/web/public/engine/pikafish/net.json
       - scripts/engine-assets.sh
       - .github/workflows/build-engines.yml
 
@@ -43,8 +47,13 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
+      MISTBOARD_PRIVATE_ASSETS_TOKEN: ${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
 
       - name: Recipe tag
         id: recipe
@@ -61,7 +70,8 @@ jobs:
           fi
 
       # KataGo-AnimalChess builds with CMake against Eigen and a static zlib; jqe
-      # builds with CMake too.
+      # and Rapfi build with CMake too. Node extracts the pinned native data
+      # from the same Emscripten bundle as the web build.
       - name: Build dependencies
         if: steps.published.outputs.yes != 'true'
         run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends cmake libeigen3-dev zlib1g-dev

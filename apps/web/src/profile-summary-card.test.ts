@@ -37,6 +37,33 @@ function profile(overrides: Partial<UserCardProfile> = {}): UserCardProfile {
 }
 
 describe('profile summary cards', () => {
+  it.each([
+    ['brianhliou-dev', 'admin', true, ['Admin', 'Founder']],
+    ['another-admin', 'admin', false, ['Admin']],
+    ['player', 'player', false, []],
+  ] as const)(
+    'shows the assigned badges on the card for %s',
+    (handle, accountRole, isFounder, labels) => {
+      const card = buildUserCard(
+        profile({
+          user: {
+            handle,
+            displayName: handle,
+            accountRole,
+            isFounder,
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        }),
+      );
+      expect(
+        [...card.querySelectorAll('.profile-summary-card-badge')].map((badge) => badge.textContent),
+      ).toEqual(labels);
+      expect(
+        card.querySelector('.profile-role-founder')?.previousElementSibling?.textContent ?? null,
+      ).toBe(isFounder ? 'Admin' : null);
+    },
+  );
+
   it('renders the name as a profile link', () => {
     const card = buildUserCard(profile());
     const name = card.querySelector('.profile-summary-card-name') as HTMLAnchorElement;
@@ -139,7 +166,10 @@ describe('profile summary cards', () => {
       '/bot/misty',
     );
     expect(card.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,812');
-    expect(card.querySelector('button.profile-summary-card-action')?.textContent).toBe('Fog Chess');
+    // Its one variant is its one action: the primary "Play Fog Chess", not a bare chip.
+    const play = card.querySelector('button.profile-summary-card-action');
+    expect(play?.textContent).toBe('Play Fog Chess');
+    expect(play?.classList.contains('profile-summary-card-action-primary')).toBe(true);
     expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('8-3-1');
   });
 });

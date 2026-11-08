@@ -1,4 +1,5 @@
 import './site-shell.css';
+import './hover-grammar.css';
 import type { AccountPreferences } from './account-preferences.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -18,6 +19,7 @@ import {
   type NavSection,
   playNavItems,
   primaryNavItems,
+  puzzleNavItems,
   siteMenuSections,
   toolsNavItems,
   watchNavItems,
@@ -103,7 +105,8 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   // Play title links to the lobby; the dropdown adds Correspondence (and repeats
   // the lobby, for touch devices where the first tap opens the panel).
   links.append(navMenu('nav.play', playNavItems(), locale, play?.href ?? '/'));
-  if (puzzles) links.append(navLink(puzzles, locale));
+  // Puzzles title links to the trainer; the dropdown adds Puzzle Themes and Streak.
+  links.append(navMenu('nav.puzzles', puzzleNavItems(), locale, puzzles?.href ?? '/puzzles'));
   // Rules are the Learn landing and lead its dropdown; the interactive xiangqi
   // course remains directly reachable as the second item.
   links.append(navMenu('nav.learn', learnNavItems(), locale, '/rules'));
@@ -678,6 +681,30 @@ function closeNavMenu(menu: HTMLElement): void {
 
 function pathMatchesNavItem(path: string, href: string): boolean {
   const normalizedPath = stripLocalePrefix(path);
+  // A mode of a page (/puzzles?mode=streak) is its own destination: it matches
+  // only with its query, and the bare page stops matching while a mode is on.
+  const [hrefPath, hrefQuery] = href.split('?');
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  if (hrefQuery !== undefined)
+    return (
+      normalizedPath === hrefPath &&
+      [...new URLSearchParams(hrefQuery)].every(([key, value]) => params.get(key) === value)
+    );
+  if (
+    href === '/puzzles' &&
+    normalizedPath === '/puzzles' &&
+    (mode === 'streak' || mode === 'storm')
+  )
+    return false;
+  // Listed puzzle subpages own their current marker; puzzle ids stay the trainer's.
+  if (
+    href === '/puzzles' &&
+    puzzleNavItems().some(
+      (item) => item.href.startsWith('/puzzles/') && item.href === normalizedPath,
+    )
+  )
+    return false;
   return (
     normalizedPath === href ||
     (href === '/puzzles' && normalizedPath.startsWith('/puzzles/')) ||
@@ -714,6 +741,15 @@ let menuLocaleSelectHandler: MenuLocaleSelectHandler | null = null;
 // A registration rather than an import, to keep site-shell free of account-nav.
 export function registerMenuLocaleSelectHandler(handler: MenuLocaleSelectHandler | null): void {
   menuLocaleSelectHandler = handler;
+}
+
+// Called with the freshly built panel each time the menu opens; account-nav
+// registers the signed-in decoration (the Friends item's online count).
+type SiteMenuOpenHandler = (panel: HTMLElement, locale: Locale) => void;
+let siteMenuOpenHandler: SiteMenuOpenHandler | null = null;
+
+export function registerSiteMenuOpenHandler(handler: SiteMenuOpenHandler | null): void {
+  siteMenuOpenHandler = handler;
 }
 
 interface OpenSiteMenuState {
@@ -763,6 +799,7 @@ export function openSiteMenu(
   openSiteMenuState = { panel, toggle, onKeydown };
   panel.querySelector<HTMLElement>('.site-menu-close')?.focus();
   if (initialView) showSettings(initialView.view, initialView.includeLanguage);
+  siteMenuOpenHandler?.(panel, locale);
 }
 
 export function closeSiteMenu({ restoreFocus = true }: { restoreFocus?: boolean } = {}): void {
@@ -891,6 +928,8 @@ function siteMenuLink(item: NavItem, locale: Locale, path: string): HTMLAnchorEl
   const link = document.createElement('a');
   link.className = 'site-menu-link';
   link.href = item.external ? item.href : localizedHref(item.href, locale);
+  // The unlocalized destination, so a decoration can find its item.
+  link.dataset.navHref = item.href;
   const label = document.createElement('span');
   label.textContent = t(item.labelKey, {}, locale);
   link.append(label);
@@ -958,6 +997,7 @@ export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   for (const link of footerNavItems()) {
     if (isBlockedForViewer(link.blockedIn)) continue;
     const anchor = document.createElement('a');
+    anchor.className = 'hover-link';
     anchor.href = link.external ? link.href : localizedHref(link.href, locale);
     anchor.textContent = t(link.labelKey, {}, locale);
     if (link.external) {

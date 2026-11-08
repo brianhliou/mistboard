@@ -155,6 +155,22 @@ test('a rename can replace the tags, and refuses tags it would drop', () => {
   }
 });
 
+test('a rename can turn the board, and refuses a side that is not one', () => {
+  const s = study();
+  assert.deepEqual(
+    checkPlan(s, plan([{ op: 'rename', chapter: 'a', name: 'x', orientation: 'black' }])),
+    ['rename a: "Game 1" -> "x", as black'],
+  );
+  assert.throws(
+    () =>
+      checkPlan(
+        s,
+        plan([{ op: 'rename', chapter: 'a', name: 'x', orientation: 'white' as never }]),
+      ),
+    /orientation "white"/,
+  );
+});
+
 test('describes a valid plan in order, tracking chapters it adds and deletes', () => {
   const lines = checkPlan(
     study(),
@@ -299,6 +315,21 @@ test('create checks the name, the variant and the first chapter before writing',
   );
 });
 
+test('create preserves a first gamebook chapter and rejects a non-boolean flag', () => {
+  const spec: StudyCreateSpec = {
+    owner: 'mistboard',
+    name: 'Fixture lesson',
+    chapter: { name: 'Find the move', variant: 'xiangqi', tree: line(2), gamebook: true },
+  };
+  const checked = checkCreate(spec);
+  assert.equal(checked.study.chapters[0].gamebook, true);
+  assert.match(checked.lines[0], /2 plies, gamebook/);
+  assert.throws(
+    () => checkCreate({ ...spec, chapter: { ...spec.chapter, gamebook: 'yes' as never } }),
+    /gamebook must be true or false/,
+  );
+});
+
 test('a create plan is described, and its ops check against the new study', () => {
   const planned = checkCreate(createSpec());
   assert.deepEqual(planned.lines, [
@@ -336,4 +367,91 @@ test('readPlan takes exactly one of study or create, and inlines a create tree p
     /exactly one of "study" \(an id\) or "create"/,
   );
   assert.throws(() => readPlan(write('neither.json', { ops: [] })), /exactly one of/);
+});
+
+test('a series op sets or clears a chapter score series, checked against its mainline', () => {
+  const values = (n: number, v = 0.5) => Array.from({ length: n }, () => v);
+  const scoreSeries = (n: number) => ({
+    side: 'red',
+    series: [
+      { name: 'AB-JChess', color: 'a', values: values(n) },
+      { name: 'jqe', color: 'b', values: values(n, 0.25) },
+    ],
+  });
+  const lines = checkPlan(
+    study(),
+    plan([
+      { op: 'series', chapter: 'c', scoreSeries: scoreSeries(6) },
+      // A tree op moves the length the next series is checked against.
+      { op: 'tree', chapter: 'c', tree: line(7) },
+      { op: 'series', chapter: 'c', scoreSeries: scoreSeries(8) },
+      { op: 'add', ref: 'n', name: 'Game 4', tree: line(3), scoreSeries: scoreSeries(4) },
+      { op: 'series', chapter: 'ref:n', scoreSeries: null },
+    ]),
+  );
+  assert.deepEqual(lines, [
+    `series c "Game 3": 2 series from red's view (AB-JChess a, jqe b), 6 values`,
+    // The series just set no longer fits the new tree: the dry run says so.
+    'replace c "Game 3": 5 -> 7 plies (score series now stale: 6 values for 8 positions)',
+    `series c "Game 3": 2 series from red's view (AB-JChess a, jqe b), 8 values`,
+    `add "Game 4" (duck-xiangqi, 3 plies, 2 series from red's view (AB-JChess a, jqe b), 4 values)`,
+    'series ref:n "Game 4": cleared',
+  ]);
+  assert.throws(
+    () => checkPlan(study(), plan([{ op: 'series', chapter: 'c', scoreSeries: scoreSeries(5) }])),
+    /op 1: series\[0\] "AB-JChess": 5 values for a 5-ply mainline \(needs 6\)/,
+  );
+  assert.throws(
+    () => checkPlan(study(), plan([{ op: 'series', chapter: 'zz', scoreSeries: scoreSeries(6) }])),
+    /chapter zz is not in the study/,
+  );
+  const bad = (patch: Record<string, unknown>, pattern: RegExp) =>
+    assert.throws(
+      () =>
+        checkPlan(
+          study(),
+          plan([{ op: 'series', chapter: 'c', scoreSeries: { ...scoreSeries(6), ...patch } }]),
+        ),
+      pattern,
+    );
+  bad({ side: 'white' }, /side must be "red" or "black"/);
+  bad({ series: [] }, /expected 1 to 4 series/);
+  bad(
+    { series: [{ name: 'x', color: 'url(evil)', values: values(6) }] },
+    /color must be one of a, b, c, d/,
+  );
+  bad({ series: [{ name: 'x', color: 'a', values: [0.5, 0.5, 1.2, 0, 0, 0] }] }, /values\[2\]/);
+  bad(
+    {
+      series: [
+        { name: 'x', color: 'a', values: values(6) },
+        { name: 'x', color: 'b', values: values(6) },
+      ],
+    },
+    /duplicate name "x"/,
+  );
+});
+
+test('a create can carry its first chapter score series', () => {
+  const spec: StudyCreateSpec = {
+    owner: 'mistboard',
+    name: 'AB-JChess vs jqe',
+    chapter: {
+      name: 'Game 1',
+      variant: 'jieqi',
+      tree: line(2),
+      scoreSeries: {
+        side: 'black',
+        series: [{ name: 'jqe', color: 'b', values: [0.5, 0.4, 0.3] }],
+      },
+    },
+  };
+  assert.deepEqual(checkCreate(spec).lines, [
+    `create "AB-JChess vs jqe" for @mistboard (private), first chapter "Game 1" ` +
+      `(jieqi, 2 plies, 1 series from black's view (jqe b), 3 values)`,
+  ]);
+  assert.throws(
+    () => checkCreate({ ...spec, chapter: { ...spec.chapter, tree: line(4) } }),
+    /create: series\[0\] "jqe": 3 values for a 4-ply mainline/,
+  );
 });

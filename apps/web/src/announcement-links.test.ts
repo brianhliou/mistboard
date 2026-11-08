@@ -54,6 +54,32 @@ describe('announcement links', () => {
     expect(doubled, `announcements doubling an article card:\n${doubled.join('\n')}`).toEqual([]);
   });
 
+  // An entry announcing a manual links that manual's study, not the /study
+  // index: the index lists fifty-odd studies, and a reader had to copy the
+  // book's name into the search box to find what the entry was about (Brian,
+  // 2026-10-24, five manual entries on bare /study). The body is plain text on
+  // /feed, the News box and RSS, so an entry naming several books links the
+  // first one it names. The signal is the copy: a manual, a woodblock or a
+  // printing in the headline or body.
+  const MANUAL_COPY = /\bmanuals?\b|\bwoodblocks?\b|\bprintings?\b/i;
+  const manualEntries = () =>
+    allAnnouncements().filter((entry) => MANUAL_COPY.test(`${entry.headline} ${entry.body ?? ''}`));
+
+  it('links a manual announcement to the manual, never the bare studies index', () => {
+    const bare = manualEntries()
+      .filter((entry) => {
+        const href = entry.href ?? '';
+        return href === '' || href === '/study' || href.startsWith('/study?');
+      })
+      .map((entry) => `${entry.date} "${entry.headline}" -> ${entry.href ?? '(no link)'}`);
+    expect(bare, `manual announcements linking the studies index:\n${bare.join('\n')}`).toEqual([]);
+  });
+
+  it('has manual announcements on study pages to check, so the guard is not vacuous', () => {
+    const onStudy = manualEntries().filter((e) => /^\/study\/[A-Za-z0-9_-]+$/.test(e.href ?? ''));
+    expect(onStudy.length).toBeGreaterThanOrEqual(6);
+  });
+
   it('has article links to check, so the guard is not vacuous', () => {
     const checked = allAnnouncements().filter((e) => /^\/(blog|rules)\//.test(e.href ?? ''));
     expect(checked.length).toBeGreaterThan(0);

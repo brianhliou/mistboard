@@ -14,6 +14,10 @@ import { type VariantMiniId, variantMiniForId } from './variant-mini-boards.js';
 // 4x canvas (atomic, 96981921) or cut from piece art (duck, 4e38852e), scaled
 // to fill ~93-97% of the box.
 export const FINAL_VARIANT_MARKERS = {
+  // Five stones on a diagonal, with the grid cleared around each stone.
+  gomoku: {
+    path: '/variant-markers/final/gomoku.png',
+  },
   xiangqi: {
     path: '/variant-markers/final/elephant-chess.png',
   },
@@ -26,8 +30,18 @@ export const FINAL_VARIANT_MARKERS = {
   'jungle-flip': {
     path: '/variant-markers/final/flip-jungle.png',
   },
+  // Four pieces inside the squares of a frame: banqi plays in the squares. Its
+  // twin, Three Kingdoms banqi, puts four pieces on the points of a grid.
   banqi: {
-    path: '/variant-markers/final/half-flip-chess.png',
+    path: '/variant-markers/final/banqi.png',
+  },
+  'three-kingdoms-banqi': {
+    path: '/variant-markers/final/three-kingdoms-banqi.png',
+  },
+  // Banqi's frame with its top and bottom edges drawn as HP bars, each partly
+  // drained: FFQ plays banqi for HP.
+  'ffq-banqi': {
+    path: '/variant-markers/final/ffq-banqi.png',
   },
   jungle: {
     path: '/variant-markers/final/jungle-chess.png',
@@ -80,6 +94,17 @@ export function renderVariantMarker(
     ? ` data-variant-marker-class="${escapeAttr(opts.className)}"`
     : '';
   return `<span class="${escapeAttr(className)}" role="img" aria-label="${escapeAttr(label)}" data-variant-marker-id="${id}" data-variant-marker-size="${size}"${dataClass} style="--variant-marker-mask: url('${escapeAttr(marker.path)}'); --variant-marker-size: ${size}px"></span>`;
+}
+
+// A neutral question-mark marker for a rules page whose variant has no art yet.
+// Same box and mask paint as a final marker, so a rail or tile never falls back
+// to a board picture; replace it by adding the variant to FINAL_VARIANT_MARKERS.
+export function renderPlaceholderVariantMarker(
+  opts: { label?: string; size?: number } = {},
+): string {
+  const size = opts.size ?? 64;
+  const label = opts.label ?? 'Variant marker coming soon';
+  return `<span class="variant-marker" role="img" aria-label="${escapeAttr(label)}" data-variant-marker-placeholder data-variant-marker-size="${size}" style="--variant-marker-mask: url('/variant-markers/placeholder.svg'); --variant-marker-size: ${size}px"></span>`;
 }
 
 function escapeAttr(value: string): string {

@@ -10,8 +10,9 @@
 // pages keep the linear one until the shell spine migrates to paths; the analysis
 // board uses this. Both share the review-move-list CSS vocabulary.
 
+import { t } from '../i18n/catalog.js';
 import type { GameTree, GameTreeNode, TreePath } from './game-tree.js';
-import { createScrollRevealer } from './move-list.js';
+import { createScrollRevealer, fillLuckBadge } from './move-list.js';
 import './move-list.css';
 import './move-tree.css';
 
@@ -198,7 +199,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
     // data-luck-path lets the luck card (luck-mark-card.ts) find the move a badge labels.
     if (ann?.luck) {
-      luckEl.textContent = ann.luck;
+      fillLuckBadge(luckEl, ann.luck);
       luckEl.dataset.luckPath = key;
       if (ann.luckTone) luckEl.classList.add(`review-move-list__luck--${ann.luckTone}`);
     }
@@ -214,7 +215,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     if (ann?.commentMarker) {
       const marker = document.createElement('span');
       marker.className = 'review-move-list__comment-marker';
-      marker.setAttribute('aria-label', 'Has a comment');
+      marker.setAttribute('aria-label', t('review.hasComment'));
       marker.innerHTML =
         '<svg viewBox="0 0 14 14" width="10" height="10" aria-hidden="true" focusable="false">' +
         '<path d="M2 2h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H7l-3 3v-3H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="currentColor"/></svg>';
@@ -227,10 +228,13 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
         const path = pathOf(node);
         const items: MenuItem[] = [];
         if (opts.onPromote) {
-          items.push({ label: 'Promote to mainline', onClick: () => opts.onPromote?.(path) });
+          items.push({
+            label: t('review.promoteToMainline'),
+            onClick: () => opts.onPromote?.(path),
+          });
         }
         if (opts.onDelete) {
-          items.push({ label: 'Delete from here', onClick: () => opts.onDelete?.(path) });
+          items.push({ label: t('review.deleteFromHere'), onClick: () => opts.onDelete?.(path) });
         }
         openMoveMenu(event.clientX, event.clientY, items);
       });
@@ -319,7 +323,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       if (candidate.played) {
         const played = document.createElement('span');
         played.className = 'move-tree__candidate-played';
-        played.textContent = 'played';
+        played.textContent = t('review.played');
         row.append(played);
       }
       li.append(row);

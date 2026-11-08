@@ -14,6 +14,21 @@
   font-display: swap;
   src: url("/fonts/roboto-latin.20b535fa.woff2") format("woff2");
 }
+/* The river inscription 楚河 漢界 in Zen Antique, a revival of Meiji-era metal
+   type (Brian, 2026-10-29, over the brush hand of LXGW WenKai), cut to those
+   four characters and the letters of the "Mistboard" river caption, which uses
+   the same face so both choices read as one set (3.5 KB; xiangqi-river-text.ts).
+   The face is declared at 700, the weight the river text asks for, so the
+   browser never thickens it with a faux bold. unicode-range keeps it off pages
+   that draw none of them. */
+@font-face {
+  font-family: "Mistboard River";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/zen-antique-river.woff2") format("woff2");
+  unicode-range: U+4D, U+61-62, U+64, U+69, U+6F, U+72-74, U+695A, U+6CB3, U+6F22, U+754C;
+}
 /* Vietnamese subsets of the same font versions (Noto Sans 2.015, Roboto 3.009).
    The latin files lack ơ ư đ and the stacked-diacritic vowels, so without these
    the vi articles drew those letters in a system font mid-word. unicode-range
@@ -50,6 +65,15 @@
   /* Lichess-derived shape scale: 7px boxes/cards, 5px controls. Theme-invariant. */
   --site-radius: 7px;
   --site-radius-sm: 5px;
+  /* The "more below" fade on a box that scrolls inside the page (the News
+     body, the broadcast game list): an alpha mask, so it needs no colour and
+     reads the same in both themes. Theme-invariant. */
+  --site-scroll-fade-size: 32px;
+  --site-scroll-fade: linear-gradient(
+    to bottom,
+    #000 calc(100% - var(--site-scroll-fade-size)),
+    transparent
+  );
   /* Board corner radius, shared by every board renderer so all surfaces match.
      A percentage keeps it proportional to board size (the SVG grid + xiangqi
      boards already round themselves at ~2% of board width); ~1.9% lands near the

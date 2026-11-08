@@ -1,6 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { changelogMonths, parseChangelog, parseInline } from './changelog-data.js';
+import {
+  type ChangelogInline,
+  changelogMonths,
+  parseChangelog,
+  parseInline,
+} from './changelog-data.js';
 
 const SAMPLE = `# Changelog
 
@@ -128,6 +133,27 @@ describe('the committed CHANGELOG.md', () => {
     }
   });
 
+  // A release retried after a failed gate wrote its lines a second time,
+  // linking the fix commit (16 doubled lines by 2026-10-25). The release script
+  // now refuses a line the file already has; this catches a hand edit or a
+  // merge of two branches that both carry one.
+  it('has no entry twice, ignoring its commit link', () => {
+    const seen = new Map<string, string>();
+    const doubled: string[] = [];
+    for (const month of changelogMonths()) {
+      for (const section of month.sections) {
+        for (const entry of section.entries) {
+          const text = entryText(entry.parts);
+          const where = `${month.id} / ${section.heading}`;
+          const first = seen.get(text);
+          if (first === undefined) seen.set(text, where);
+          else doubled.push(`${text} (${first} and ${where})`);
+        }
+      }
+    }
+    expect(doubled, 'changelog entries that appear twice').toEqual([]);
+  });
+
   // A dead commit link on a public page is the other slip nobody sees. The
   // check needs history, so it is skipped in a shallow clone (hosted CI's
   // default checkout); locally and in the pre-push ci:quick the tree is full.
@@ -173,6 +199,20 @@ const CHANGELOG_HEADINGS = [
   'Fixed',
   'Technical',
 ];
+
+// An entry's text with its trailing commit link(s) dropped: "line ([a](…))"
+// and "line ([a](…), [b](…))" both read "line".
+function entryText(parts: ChangelogInline[]): string {
+  const source = parts
+    .map((part) => {
+      if (part.kind === 'link') return `[${part.text}](${part.href})`;
+      if (part.kind === 'code') return `\`${part.text}\``;
+      if (part.kind === 'strong') return `**${part.text}**`;
+      return part.text;
+    })
+    .join('');
+  return source.replace(/ \((\[[0-9a-f]{7,40}\]\([^)]*\)(, )?)+\)$/, '').trim();
+}
 
 function git(...args: string[]): string {
   return execFileSync('git', args, { encoding: 'utf-8' }).trim();

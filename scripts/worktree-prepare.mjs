@@ -38,6 +38,9 @@ if (!options.skipBuild) {
   console.log('skip: declaration builds disabled by --skip-build');
 }
 
+run(['node', 'scripts/fetch-pikafish-net.mjs']);
+run(['node', 'apps/web/scripts/fetch-rapfi-net.mjs']);
+
 if (!options.skipDrift) {
   run(['npm', 'run', 'check:drift']);
 } else {
@@ -126,8 +129,8 @@ function printHelp() {
   npm run worktree:prepare -- --install=online
 
 Prepares a fresh task worktree by installing dependencies when missing, building
-the local package declarations that downstream workspaces read from dist/, and
-running npm run check:drift.
+the local package declarations that downstream workspaces read from dist/,
+fetching the SHA-checked Pikafish and Rapfi nets, and running npm run check:drift.
 
 Options:
   --install offline|online  Install mode when node_modules is missing; default offline

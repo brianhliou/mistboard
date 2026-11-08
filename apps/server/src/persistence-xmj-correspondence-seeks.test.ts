@@ -1,30 +1,24 @@
 /**
- * Xiangqi mahjong correspondence seeks and challenges: offered only between
- * accounts holding the per-account grant, and never rated. An account without
- * the grant cannot post one, accept one, be challenged to one, see one on the
- * seek board, or open a challenge link to one.
+ * Xiangqi mahjong is held out of correspondence at launch (Brian, 2026-10-25:
+ * "let's not support correspondence for this variant yet"): with every flag
+ * on, an open seek and a directed challenge are both refused. Reopening it is
+ * one line in CORRESPONDENCE_PLAYABLE_SPEC_IDS; the seek, challenge and accept
+ * tests it had while open are in this file at a32cdd604^.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
-import {
-  type AccountSession,
-  createAccountSession,
-  createUser,
-  getCorrespondenceSeek,
-} from './persistence.js';
+import { type AccountSession, createAccountSession, createUser } from './persistence.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
-import { grantVariantAccess } from './persistence-variant-access.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
 // Side-effect import: every tenant registers, so an accept can seat a game.
 import './variant-tenant/register-tenants.js';
-import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
 
 definePersistenceTests('xiangqi mahjong correspondence seeks', () => {
   const at = new Date('2026-10-15T12:00:00Z');
-  const seedUser = (id: string, granted: boolean) =>
+  const seedUser = (id: string) =>
     createUser({
       id,
       email: `${id}@example.com`,
@@ -32,108 +26,26 @@ definePersistenceTests('xiangqi mahjong correspondence seeks', () => {
       handle: id.replace(/[^a-z0-9]/g, ''),
       displayName: id,
       now: at,
-    }).then(async (user) => {
-      if (granted) await grantVariantAccess(user.id, XIANGQI_MAHJONG_SPEC_ID, 'test');
-      return user;
     });
   const xmjSeek = { gameSpecId: XIANGQI_MAHJONG_SPEC_ID, daysPerMove: 3, preferredColor: 'random' };
 
-  test('an account without the grant can neither post nor accept, and never sees the seek', async () => {
+  test('an XMJ seek and an XMJ challenge are both refused while it is held', async () => {
     await withFlags(async () => {
-      const ann = await seedUser('xmj-ann', true);
-      const bob = await seedUser('xmj-bob', false);
-      const annCookie = await makeSessionCookie(ann.id);
-      const bobCookie = await makeSessionCookie(bob.id);
-
-      const refused = await callSeekRoute('POST', '/api/correspondence/seeks', bobCookie, xmjSeek);
-      assert.equal(refused.status, 403);
-      assert.equal(refused.json.error, 'variant_not_granted');
-
-      const posted = await callSeekRoute('POST', '/api/correspondence/seeks', annCookie, xmjSeek);
-      assert.equal(posted.status, 201, JSON.stringify(posted.json));
-      const seekId = (posted.json.seek as { id: string }).id;
-
-      const listed = (json: Record<string, unknown>) =>
-        (json.seeks as Array<{ id: string }>).map((seek) => seek.id);
-      assert.ok(
-        listed((await callSeekRoute('GET', '/api/correspondence/seeks', annCookie)).json).includes(
-          seekId,
-        ),
-      );
-      assert.ok(
-        !listed((await callSeekRoute('GET', '/api/correspondence/seeks', bobCookie)).json).includes(
-          seekId,
-        ),
-      );
-      assert.ok(
-        !listed((await callSeekRoute('GET', '/api/correspondence/seeks', '')).json).includes(
-          seekId,
-        ),
-      );
-
-      const view = await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, bobCookie);
-      assert.equal(view.status, 404, 'the challenge link does not exist for him');
-
-      const accept = await callSeekRoute(
-        'POST',
-        `/api/correspondence/seeks/${seekId}/accept`,
-        bobCookie,
-      );
-      assert.equal(accept.status, 403);
-      assert.equal(accept.json.error, 'variant_not_granted');
-      assert.notEqual(
-        await getCorrespondenceSeek(seekId),
-        null,
-        'a refused accept consumes nothing',
-      );
-    });
-  });
-
-  test('a challenge to an account without the grant is refused; rated is refused', async () => {
-    await withFlags(async () => {
-      const cal = await seedUser('xmj-cal', true);
-      const dee = await seedUser('xmj-dee', false);
-      const cookie = await makeSessionCookie(cal.id);
-      const directed = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
-        ...xmjSeek,
-        targetUserId: dee.id,
-      });
-      assert.equal(directed.status, 403);
-      assert.equal(directed.json.error, 'target_variant_not_granted');
-
-      const rated = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
-        ...xmjSeek,
-        rated: true,
-      });
-      assert.ok(rated.status !== null && rated.status >= 400, 'never a rated seek');
-    });
-  });
-
-  test('two granted accounts start a casual game from a seek', async () => {
-    await withFlags(async () => {
-      const eve = await seedUser('xmj-eve', true);
-      const fay = await seedUser('xmj-fay', true);
-      const posted = await callSeekRoute(
-        'POST',
-        '/api/correspondence/seeks',
-        await makeSessionCookie(eve.id),
-        xmjSeek,
-      );
-      assert.equal(posted.status, 201);
-      const seekId = (posted.json.seek as { id: string }).id;
-      try {
-        const accept = await callSeekRoute(
-          'POST',
-          `/api/correspondence/seeks/${seekId}/accept`,
-          await makeSessionCookie(fay.id),
-        );
-        assert.equal(accept.status, 201, JSON.stringify(accept.json));
-        assert.equal(accept.json.gameSpecId, XIANGQI_MAHJONG_SPEC_ID);
-        assert.equal(accept.json.rated, false);
-        assert.ok(String(accept.json.roomId).startsWith('xmj_'));
-      } finally {
-        correspondenceTenantForSpecId(XIANGQI_MAHJONG_SPEC_ID)?.clearRooms();
+      const ann = await seedUser('xmj-ann');
+      const bob = await seedUser('xmj-bob');
+      const cookie = await makeSessionCookie(ann.id);
+      for (const body of [xmjSeek, { ...xmjSeek, targetUserId: bob.id }]) {
+        const posted = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, body);
+        assert.equal(posted.status, 501, JSON.stringify(posted.json));
+        assert.equal(posted.json.error, 'correspondence_unsupported_spec');
       }
+      const listed = await callSeekRoute('GET', '/api/correspondence/seeks', '');
+      assert.deepEqual(
+        (listed.json.seeks as Array<{ gameSpecId: string }>).filter(
+          (seek) => seek.gameSpecId === XIANGQI_MAHJONG_SPEC_ID,
+        ),
+        [],
+      );
     });
   });
 });

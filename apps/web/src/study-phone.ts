@@ -12,17 +12,19 @@
 
 import { t } from './i18n/catalog.js';
 import { revealCurrentMove } from './review/analysis-phone-bar.js';
-import { buildChapterGameRow, type GameChapter } from './study-chapter-games.js';
+import {
+  buildChapterGameRow,
+  buildChapterRowLabels,
+  type GameChapter,
+} from './study-chapter-games.js';
 import { localizedStudyName } from './study-i18n.js';
 
-export type StudyPhoneChapter = GameChapter & { name: string };
+export type StudyPhoneChapter = GameChapter & { name: string; gamebook?: boolean };
 
 export interface StudyPhoneOptions {
   studyTitle: string;
   chapters: readonly StudyPhoneChapter[];
   activeId: string;
-  /** The study's focus player, so a game row's result chip reads win/draw/loss. */
-  gameFocus: string | null;
   /** The event heading that opens a group before this chapter, if any. */
   groupHeading: (id: string) => string | null;
   chapterHref: (id: string) => string;
@@ -178,6 +180,7 @@ export function createStudyPhone(options: StudyPhoneOptions): StudyPhoneHandle {
   type Entry = { row: HTMLLIElement; group: HTMLLIElement | null; text: string };
   const entries: Entry[] = [];
   let currentGroup: HTMLLIElement | null = null;
+  const chapterLabels = buildChapterRowLabels(chapters, (chapter) => buildChapterGameRow(chapter));
   chapters.forEach((chapter, position) => {
     const groupText = options.groupHeading(chapter.id);
     if (groupText) {
@@ -203,7 +206,7 @@ export function createStudyPhone(options: StudyPhoneOptions): StudyPhoneHandle {
     num.className = 'study-sheet__num';
     num.textContent = String(position + 1);
     const name = chapterLabel(chapter);
-    const game = buildChapterGameRow(chapter, options.gameFocus);
+    const game = chapterLabels.get(chapter.id);
     if (game) {
       link.setAttribute('aria-label', `${position + 1}. ${name}`);
       link.append(num, game);

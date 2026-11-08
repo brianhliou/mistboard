@@ -378,7 +378,10 @@
 }
 
 /* ── Renderer-swap skeleton (replay-skeleton.ts) ──────────────────────────── */
-.watch-replay-skeleton {
+/* Scoped to the TV board: the homepage bakes the same skeleton into its
+   prerendered shell and styles it in landing.css, so a bare class here would
+   also match there if this sheet ever loaded beside it. */
+.watch-tv-board .watch-replay-skeleton {
   width: 100%;
   min-height: min(72vw, 420px);
   padding: 16px;
@@ -393,11 +396,11 @@
 /* Ratio known (replay-skeleton.ts set an inline aspect-ratio): the container
    hugs the sized placeholder instead of flooring at a square, so the box the
    switch reserves is the box the real board lands in. */
-.watch-replay-skeleton--sized {
+.watch-tv-board .watch-replay-skeleton--sized {
   min-height: 0;
 }
 
-.watch-replay-skeleton-board {
+.watch-tv-board .watch-replay-skeleton-board {
   width: min(100%, 420px);
   max-width: 100%;
   aspect-ratio: 1 / 1;
@@ -407,7 +410,7 @@
   animation: watch-replay-skeleton-pulse 1.25s ease-in-out infinite;
 }
 
-.watch-replay-skeleton-caption {
+.watch-tv-board .watch-replay-skeleton-caption {
   color: var(--site-muted);
   font-size: 12px;
   font-weight: 800;
@@ -427,7 +430,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .watch-replay-skeleton-board {
+  .watch-tv-board .watch-replay-skeleton-board {
     animation: none;
   }
 }

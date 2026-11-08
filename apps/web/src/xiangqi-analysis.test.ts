@@ -1,4 +1,6 @@
+import { importXiangqiGame } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import continuedRecords from '../../../packages/game/fixtures/xiangqi-notation/adjudicated-records.json';
 import { mountXiangqiAnalysis } from './xiangqi-analysis.js';
 import { mountXiangqiAnalysisPage } from './xiangqi-analysis-page.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
@@ -45,6 +47,32 @@ beforeEach(() => {
 afterEach(() => pinXiangqiNotation(null));
 
 describe('mountXiangqiAnalysis', () => {
+  for (const record of continuedRecords.cases) {
+    for (const nav of [true, false]) {
+      it(`keeps all plies past ${record.reason} on the ${nav ? 'page' : 'embed'}`, () => {
+        const imported = importXiangqiGame(record.iccs);
+        expect(imported.error).toBeUndefined();
+        expect(imported.moves).toHaveLength(record.plies);
+        const root = freshRoot();
+        mountXiangqiAnalysis(root, imported.moves, { nav });
+        // The metadata is driven by the replay used for the client analysis sweep.
+        expect(root.querySelector('.game-meta-card')?.textContent).toContain(
+          `${record.plies} plies`,
+        );
+        expect(root.textContent).not.toMatch(/Truncated import/i);
+        const last = imported.moves.at(-1)!;
+        expect(root.querySelector('.review-move-list__move--current')?.textContent).toContain(
+          `${last.from}-${last.to}`,
+        );
+        // Mounting publishes the tree's mainline, independently of the replay.
+        expect(new URLSearchParams(window.location.search).get('moves')?.split(' ')).toHaveLength(
+          record.plies,
+        );
+        root.remove();
+      });
+    }
+  }
+
   it('renders the board, engine panel, move tree, and navigation from a move list', () => {
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);

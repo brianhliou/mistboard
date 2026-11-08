@@ -19,6 +19,7 @@
 //   --poll-ms <ms>        poll interval (default: 30_000 = 30s)
 //   --yes                 skip interactive confirmation
 //   --commit              broadcast "Server restarting now" after reaching zero
+//   --start-only          begin the pending drain, then return while games finish
 //   --cancel              cancel an active drain
 //   --owner <id>          claim the drain for this release run. A cancel that
 //                         names an owner only cancels a drain with the same
@@ -119,7 +120,7 @@ async function safeDeployFlow() {
   if (before.status !== 200) throw withExit(2, `/api/server-status returned ${before.status}`);
   console.log(`active games before drain: ${before.body.activeGames}`);
 
-  if (before.body.restartAt && before.body.restartAt > Date.now()) {
+  if (before.body.restartAt && before.body.restartAt > Date.now() && !options.owner) {
     console.log(
       `drain already active (restartAt=${new Date(before.body.restartAt).toISOString()}). Reusing existing window.`,
     );
@@ -132,6 +133,11 @@ async function safeDeployFlow() {
     await startDrain();
   }
   drainActive = true;
+
+  if (options.startOnly) {
+    console.log('pending drain started; games may finish while hosted CI runs');
+    return;
+  }
 
   // 3. Poll until zero or window elapsed.
   const deadline = Date.now() + windowMs;
@@ -192,6 +198,9 @@ async function startDrain() {
         ? ' The token was readable but prod rejected it: run `npm run drain:token-check` in your own terminal to see which copy differs.'
         : '';
     throw withExit(3, `/admin/drain returned ${res.status}: ${JSON.stringify(res.body)}${hint}`);
+  }
+  if (options.owner && res.body?.owner !== options.owner) {
+    throw withExit(3, 'active drain is not owned by this release; deployment blocked');
   }
   console.log(
     `drain started. restartAt=${new Date(res.body.restartAt ?? Date.now() + windowMs).toISOString()}`,
@@ -300,6 +309,7 @@ function parseArgs(argv) {
     else if (arg === '--poll-ms') out.pollMs = Number(argv[++i]);
     else if (arg === '--yes') out.yes = true;
     else if (arg === '--commit') out.commit = true;
+    else if (arg === '--start-only') out.startOnly = true;
     else if (arg === '--cancel') out.cancel = true;
     else if (arg === '--owner') out.owner = argv[++i];
     else if (arg === '--result-file') out.resultFile = argv[++i];
@@ -308,7 +318,7 @@ function parseArgs(argv) {
       process.exit(1);
     } else if (arg === '--help' || arg === '-h') {
       console.log(
-        'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit] [--cancel] [--owner ID] [--result-file PATH]',
+        'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit | --start-only | --cancel] [--owner ID] [--result-file PATH]',
       );
       console.log(
         `Drain token: MISTBOARD_DRAIN_TOKEN, else keychain item "${DRAIN_TOKEN_KEYCHAIN_SERVICE}" ` +
@@ -319,6 +329,10 @@ function parseArgs(argv) {
       console.error(`unknown arg: ${arg}`);
       process.exit(1);
     }
+  }
+  if (out.startOnly && (out.commit || out.cancel)) {
+    console.error('--start-only cannot be combined with --commit or --cancel');
+    process.exit(1);
   }
   return out;
 }

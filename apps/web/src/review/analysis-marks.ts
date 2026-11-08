@@ -17,7 +17,7 @@
 
 import type { MoveJudgment } from '@mistboard/game';
 import { type GameAnalysis, judgmentGlyph, type PlyEval, praiseGlyph } from './game-analysis.js';
-import { ADVICE_LABEL, PRAISE_COMMENT } from './move-advice-text.js';
+import { adviceJudgment, bestMoveQuote, PRAISE_COMMENT } from './move-advice-text.js';
 
 /** Per-reveal decision-vs-luck info the review overlays onto a chance-move game (jieqi). A
  *  reveal's eval swing splits into a DECISION (graded) and LUCK (shown, ungraded); this carries
@@ -28,7 +28,7 @@ export type DecisionMoveInfo = {
   judgment: MoveJudgment;
   /** Luck-free accuracy of the CHOICE in [0, 100] (best-vs-played pool means). Feeds the headline
    *  accuracy so a reveal ply is graded on skill, not the dice. */
-  accuracy: number;
+  accuracy?: number;
   /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky).
    *  OPTIONAL: a variant whose luck axis is not a scalar omits it rather than sending 0, which
    *  would render as "average luck" instead of "no such number". Fog is the case — its error
@@ -84,7 +84,7 @@ export function decisionBestQuote(info: DecisionMoveInfo): string {
   // only the best move when it says rank 1.
   const top = info.candidates?.[0];
   if (!top || top.played || (top.rank !== undefined && top.rank !== 1)) return '';
-  return ` ${top.label} was best.`;
+  return bestMoveQuote(top.label);
 }
 
 /** How many ranked alternatives a chance ply draws as arrows. */
@@ -136,7 +136,7 @@ export type AnalysisMark = {
 };
 
 export type AnalysisMarksInput = {
-  analysis: GameAnalysis;
+  analysis: Pick<GameAnalysis, 'moves' | 'evals'>;
   decisions?: DecisionOverlay | null;
   /** The variant's policy (TreePresentation.quoteEvalBestMove): false for imperfect-
    *  information variants, whose eval best move is hindsight the mover never had. */
@@ -162,7 +162,7 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
     const best = move.judgment && quoteEvalBestMove ? evalByPly.get(move.ply - 1)?.best : null;
     const bestText = best ? formatBestMove(best) : undefined;
     const comment = move.judgment
-      ? `${ADVICE_LABEL[move.judgment]}.${bestText ? ` ${bestText} was best.` : ''}`
+      ? `${adviceJudgment(move.judgment)}${bestText ? bestMoveQuote(bestText) : ''}`
       : move.praise
         ? PRAISE_COMMENT[move.praise]
         : undefined;
@@ -189,6 +189,8 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
     const luck = info.luck === undefined ? undefined : Math.round(info.luck);
     const next: AnalysisMark = {
       ...prev,
+      comment: undefined,
+      commentClass: undefined,
       suffix: glyph?.suffix,
       suffixClass: glyph?.suffixClass,
       ...(luck === undefined ? {} : { luck }),
@@ -197,7 +199,7 @@ export function analysisMarks(input: AnalysisMarksInput): Map<number, AnalysisMa
       // move the mover could have chosen from what they saw: advice, not hindsight.
       ...(info.judgment
         ? {
-            comment: `${ADVICE_LABEL[info.judgment]}.${decisionBestQuote(info)}`,
+            comment: `${adviceJudgment(info.judgment)}${decisionBestQuote(info)}`,
             commentClass: info.judgment,
           }
         : {}),

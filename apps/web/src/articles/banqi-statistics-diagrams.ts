@@ -18,6 +18,7 @@ import {
   banqiPiecesFromView,
   banqiReplayViewAt,
   xqSvg,
+  banqiThumbnailSvg,
 } from './diagrams.js';
 import { BANQI_STATS_GAME, BANQI_STATS_GAME_DECIDING_PLY } from './content/banqi-statistics-game.js';
 
@@ -209,4 +210,4 @@ export const BANQI_STATS_AFTER = exhibitBoard(
 // from the MistyBanqi card, which is the same board thirty plies in with
 // pieces revealed.
 export const BANQI_STATS_THUMBNAIL = () =>
-  xqSvg(BANQI_BOARD_W, BANQI_BOARD_H, [banqiBoardGrid(0, 0), banqiBackPieces(0, 0)].join(''));
+  banqiThumbnailSvg(BANQI_BOARD_H, [banqiBoardGrid(0, 0), banqiBackPieces(0, 0)].join(''));

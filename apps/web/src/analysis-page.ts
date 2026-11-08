@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // Generic /analysis/<variant> entry: builds the variant dropdown (lichess's
 // top-left variant select) and dispatches to the variant's analysis mount.
 // The catalog (analysis-catalog.ts) is the fail-closed allowlist — main.ts only
@@ -8,6 +10,7 @@ import './analysis-picker.css';
 import { ANALYSIS_VARIANTS, type AnalysisVariantId } from './analysis-catalog.js';
 import { EDITOR_VARIANTS, type EditorVariantId } from './editor/editor-catalog.js';
 import { variantDisplayLabel } from './game-display.js';
+import { gomokuOffered } from './gomoku-access.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -31,6 +34,7 @@ const LOADERS: Record<AnalysisVariantId, () => Promise<AnalysisMount>> = {
   'duck-xiangqi': () => variantMount('duck-xiangqi'),
   'atomic-xiangqi': () => variantMount('atomic-xiangqi'),
   'crazyhouse-xiangqi': () => variantMount('crazyhouse-xiangqi'),
+  gomoku: () => variantMount('gomoku'),
 };
 
 function variantMount(id: Exclude<AnalysisVariantId, 'xiangqi'>): Promise<AnalysisMount> {
@@ -48,6 +52,13 @@ export async function mountAnalysisPage(
   root.classList.add('analysis-route');
   const mount = await LOADERS[variant]();
   await mount(root, buildVariantPicker(variant));
+  // A gated board may already have an unavailable-page heading.
+  if (!root.querySelector('h1')) {
+    const heading = document.createElement('h1');
+    heading.className = 'visually-hidden';
+    heading.textContent = t('analysis.pageTitle', { variant: variantDisplayLabel(variant) });
+    root.prepend(heading);
+  }
 }
 
 // The top-left variant dropdown (lichess analysis anatomy): the ONLY element in
@@ -84,9 +95,14 @@ export function buildVariantPicker(
   // The dropdown is a public surface: listing a variant nobody has been told
   // about, and that has no bot to play it against, advertises it early. The
   // variant the reader is ALREADY on always stays in the list, or the picker
-  // would show a selection it does not contain.
+  // would show a selection it does not contain. Gomoku additionally requires
+  // its admin/build gate: neither catalog membership nor being current may
+  // bypass it, and an admitted admin can find it from any analysis board.
   const offered = (basePath === '/editor' ? EDITOR_VARIANTS : ANALYSIS_VARIANTS).filter(
-    (variant) => variant.id === current || variantPublicSurfaceEnabled(variant.id),
+    (variant) =>
+      variant.id === 'gomoku'
+        ? gomokuOffered()
+        : variant.id === current || variantPublicSurfaceEnabled(variant.id),
   );
   for (const variant of offered) {
     const option = document.createElement('option');
@@ -104,4 +120,18 @@ export function buildVariantPicker(
   });
   wrap.append(icon, select);
   return wrap;
+}
+
+export function renderAnalysisShellForPrerender(
+  locale: Locale,
+  variant: AnalysisVariantId,
+): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const heading = document.createElement('h1');
+    heading.textContent = t('analysis.pageTitle', { variant: variantDisplayLabel(variant) });
+    const edit = document.createElement('a');
+    edit.textContent = t('analysis.editPosition');
+    edit.href = localizedHref(`/editor/${variant}`, locale);
+    root.append(heading, buildVariantPicker(variant), edit);
+  });
 }

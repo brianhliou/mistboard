@@ -1,17 +1,16 @@
 /**
- * Words for the correspondence emails a player receives: the game-started
- * notice, the deadline warning and the daily "your move" digest. Each sender
+ * Words for the inbox and correspondence emails a player receives: unread
+ * message notices, game starts, deadline warnings and daily "your move" digests. Each sender
  * module (correspondence-start-email.ts, correspondence-deadline-warning.ts,
- * correspondence-turn-digest.ts) keeps its own policy (who, when, throttles,
- * opt-outs) and calls a builder here for the subject and the body; every
+ * correspondence-turn-digest.ts, inbox-email.ts) keeps its own policy (who,
+ * when, throttles, opt-outs) and calls a builder here for the subject and body; every
  * body renders through email-layout.ts.
  *
  * Two rules the builders keep:
- * - The subject names the game (variant and opponent). Gmail threads mail by
- *   subject, so identical subjects ("Your game has started") folded different
- *   games into one conversation.
- * - Every email says why it was sent and links to the notification settings
- *   where it can be turned off.
+ * - The subject identifies the game (variant and opponent) or message sender.
+ *   Gmail threads mail by subject, so identical subjects ("Your game has
+ *   started") folded different games into one conversation.
+ * - Every email says why it was sent and links to where it can be turned off.
  *
  * zh copy is machine translation (site policy since 2026-08-29) and reuses the
  * site's published terms: 通信对局, 求战, 轮到你走, 去走棋, 每步 N 天.
@@ -59,15 +58,23 @@ export const notificationSettingsUrl = `${emailPublicHost}/account/settings/noti
 // when a name here drifts from the site. Exhaustive over GameSpecId so a new
 // variant fails the build until it is named; null falls back to publicName.
 const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
+  gomoku: { en: 'Gomoku', 'zh-Hans': '五子棋', 'zh-Hant': '五子棋' },
   banqi: { en: 'Banqi', 'zh-Hans': '暗棋', 'zh-Hant': '暗棋' },
+  // Hidden, unrouted spec; no public catalog name or correspondence support.
+  'ffq-banqi': null,
   mahjong: null,
+  'three-kingdoms-banqi': {
+    en: 'Three Kingdoms Banqi',
+    'zh-Hans': '三国暗棋',
+    'zh-Hant': '三國暗棋',
+  },
   'xiangqi-mahjong': { en: 'Xiangqi Mahjong', 'zh-Hans': '象棋麻将', 'zh-Hant': '象棋麻將' },
-  'dark-chess': { en: 'Fog Chess', 'zh-Hans': '迷雾国际象棋', 'zh-Hant': '迷霧國際象棋' },
+  'dark-chess': { en: 'Fog Chess', 'zh-Hans': '迷雾国际象棋', 'zh-Hant': '迷霧西洋棋' },
   'dark-xiangqi': { en: 'Fog Xiangqi', 'zh-Hans': '迷雾象棋', 'zh-Hant': '迷霧象棋' },
   'fortress-xiangqi': { en: 'Fortress Xiangqi', 'zh-Hans': '堡垒象棋', 'zh-Hant': '堡壘象棋' },
   jieqi: { en: 'Jieqi', 'zh-Hans': '揭棋', 'zh-Hant': '揭棋' },
   jungle: { en: 'Jungle Chess', 'zh-Hans': '斗兽棋', 'zh-Hant': '鬥獸棋' },
-  'jungle-flip': { en: 'Flip Jungle', 'zh-Hans': '翻翻棋', 'zh-Hant': '翻翻棋' },
+  'jungle-flip': { en: 'Flip Jungle', 'zh-Hans': '翻翻兽棋', 'zh-Hant': '翻翻獸棋' },
   xiangqi: { en: 'Xiangqi', 'zh-Hans': '象棋', 'zh-Hant': '象棋' },
   'crazyhouse-xiangqi': {
     en: 'Crazyhouse Xiangqi',
@@ -76,7 +83,7 @@ const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   },
   'duck-xiangqi': { en: 'Duck Xiangqi', 'zh-Hans': '鸭子象棋', 'zh-Hant': '鴨子象棋' },
   'atomic-xiangqi': { en: 'Atomic Xiangqi', 'zh-Hans': '原子象棋', 'zh-Hant': '原子象棋' },
-  chess: { en: 'Chess', 'zh-Hans': '国际象棋', 'zh-Hant': '國際象棋' },
+  chess: { en: 'Chess', 'zh-Hans': '国际象棋', 'zh-Hant': '西洋棋' },
 };
 
 export const EMAIL_VARIANT_NAMES = VARIANT_NAMES;
@@ -278,7 +285,7 @@ const COPY: Record<EmailLocale, Copy> = {
         count === 1 ? '有一盤通信對局在等你走棋' : `有 ${count} 盤通信對局在等你走棋`,
       item: (v, opp, left) => `${opp ? `與 ${opp} 的` : ''}${v}對局，剩餘 ${left}`,
       allGames: '查看你的所有對局',
-      reason: '這類郵件每天最多一封，並且只在有對局等你走棋時發送。',
+      reason: '這類電子郵件每天最多一封，並且只在有對局等你走棋時寄送。',
     },
   },
 };
@@ -288,6 +295,64 @@ function manageLink(copy: Copy) {
 }
 
 // ── Builders ─────────────────────────────────────────────────────────────────
+
+// Metadata only. Message bodies and previews are never renderer inputs.
+export type InboxNoticeEmailInput = {
+  senderHandle: string;
+  senderName: string;
+  unsubscribeUrl: string;
+};
+
+const INBOX_COPY: Record<
+  EmailLocale,
+  {
+    subject: (sender: string) => string;
+    openInbox: string;
+    reason: string;
+    unsubscribe: string;
+  }
+> = {
+  en: {
+    subject: (sender) => `Unread message from ${sender}`,
+    openInbox: 'Open your inbox',
+    reason: 'You received this email because you have an unread message on Mistboard.',
+    unsubscribe: 'Unsubscribe from message emails',
+  },
+  'zh-Hans': {
+    subject: (sender) => `${sender}发来的未读私信`,
+    openInbox: '打开收件箱',
+    reason: '你收到这封邮件，是因为你在 Mistboard 有未读私信。',
+    unsubscribe: '退订私信邮件通知',
+  },
+  'zh-Hant': {
+    subject: (sender) => `${sender}發來的未讀私訊`,
+    openInbox: '打開收件匣',
+    reason: '你收到這封電子郵件，是因為你在 Mistboard 有未讀私訊。',
+    unsubscribe: '取消訂閱私訊郵件通知',
+  },
+};
+
+export function inboxNoticeEmail(input: InboxNoticeEmailInput, locale: EmailLocale): PlayerEmail {
+  const copy = INBOX_COPY[locale];
+  const sender =
+    locale === 'en'
+      ? `${input.senderName} (@${input.senderHandle})`
+      : `${input.senderName}（@${input.senderHandle}）`;
+  const subject = copy.subject(sender);
+  return {
+    subject,
+    ...renderEmail({
+      lang: locale,
+      headline: subject,
+      paragraphs: [],
+      button: { label: copy.openInbox, url: `${emailPublicHost}/inbox` },
+      footer: {
+        reason: copy.reason,
+        manage: { label: copy.unsubscribe, url: input.unsubscribeUrl },
+      },
+    }),
+  };
+}
 
 export type StartEmailInput = {
   roomId: string;

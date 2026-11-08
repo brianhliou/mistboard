@@ -8,10 +8,13 @@ import {
   timeClassForPace,
   type VariantId,
 } from '@mistboard/game';
+import { chunkReloadPending } from './chunk-load-recovery.js';
 import {
   hasTrackedCorrespondenceStart,
+  hasTrackedGameFirstMove,
   hasTrackedLiveGameStart,
   markCorrespondenceStartTracked,
+  markGameFirstMoveTracked,
   markLiveGameStartTracked,
   takeCorrespondenceStartSource,
   takeGameStartSource,
@@ -167,8 +170,8 @@ export function reviewOpenedProps(input: {
   };
 }
 
-export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned';
-export type PuzzleAttemptMode = 'session' | 'embed';
+export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned' | 'failed' | 'skipped';
+export type PuzzleAttemptMode = 'session' | 'embed' | 'streak' | 'storm';
 
 // One event per terminal outcome, mirroring the server-side quality session's
 // first terminal outcome so the two counts reconcile. `clean` is a solve with
@@ -188,7 +191,7 @@ export function puzzleAttemptedProps(input: {
     variant: input.variant,
     ...(maybeGameSpecAnalyticsProps(input.variant) ?? {}),
     themes: [...(input.themes ?? [])],
-    rated: input.rated,
+    rated: input.mode === 'storm' ? false : input.rated,
     mode: input.mode,
     outcome: input.outcome,
     clean: input.clean,
@@ -203,6 +206,88 @@ type PostHogLike = {
   setPersonProperties?: (props: Record<string, unknown>) => void;
   reset: () => void;
 };
+
+// The stale-asset scraper rotates desktop browser versions from late 2023.
+// This is only a suspicion: real players also use these older browsers.
+// Keep the cutoff fixed; mobile browsers and unrecognised UAs stay eligible.
+export function isLikelyAutomatedBrowser(ua: string, webdriver: boolean): boolean {
+  if (webdriver) return true;
+  if (/\b(?:Android|iPhone|iPad|iPod|Mobile)\b/i.test(ua)) return false;
+  // Edge also carries Chrome's compatibility token: prefer its own version.
+  const version = ua.match(/\b(?:Edg|Edge)\/(\d+)/) ?? ua.match(/\b(?:Chrome|Firefox)\/(\d+)/);
+  return version !== null && Number(version[1]) < 125;
+}
+
+let analyticsDeferred = false;
+let analyticsInitialization: Promise<void> | null = null;
+
+export async function initializeAnalytics(isEmbedDocument: boolean): Promise<void> {
+  const phKey = import.meta.env.VITE_POSTHOG_KEY;
+  const phHost = import.meta.env.VITE_POSTHOG_HOST;
+  if (!phKey || !phHost || !import.meta.env.PROD || isEmbedDocument) return;
+  if (analyticsInitialization) return analyticsInitialization;
+  if (analyticsDeferred) return;
+  const deferUntilInput =
+    isLikelyAutomatedBrowser(navigator.userAgent, navigator.webdriver) && !hasHumanInput();
+  initializeHumanInputTracking();
+  if (deferUntilInput) {
+    analyticsDeferred = true;
+    // Programmatic scrolling produces trusted scroll events. Keep the broader
+    // human_input person tag, but require one of these inputs to load the SDK.
+    const events = ['pointerdown', 'keydown', 'touchstart', 'wheel'] as const;
+    const onInput = (event: Event) => {
+      if (!event.isTrusted) return;
+      for (const type of events) window.removeEventListener(type, onInput, true);
+      analyticsDeferred = false;
+      analyticsInitialization = loadAnalytics(phKey, phHost);
+      void analyticsInitialization;
+    };
+    for (const type of events)
+      window.addEventListener(type, onInput, { capture: true, passive: true });
+    return;
+  }
+  analyticsInitialization = loadAnalytics(phKey, phHost);
+  return analyticsInitialization;
+}
+
+async function loadAnalytics(phKey: string, phHost: string): Promise<void> {
+  const { default: posthog } = await import('posthog-js');
+  posthog.init(phKey, {
+    api_host: phHost,
+    autocapture: false,
+    capture_pageview: false,
+    persistence: 'localStorage',
+    disable_session_recording: true,
+    respect_dnt: true,
+    // Real-user load timing: web vitals (LCP/CLS/FCP/INP) so we can actually
+    // see homepage load performance and catch regressions. network_timing is a
+    // session-replay feature (disabled here), so leave it off — web_vitals is
+    // independent of it.
+    capture_performance: { web_vitals: true, network_timing: false },
+    // Unhandled errors + promise rejections surface as $exception events
+    // (Error Tracking), so a broken page reports itself instead of going dark.
+    capture_exceptions: true,
+    // Drop benign browser noise before ingestion. "ResizeObserver loop
+    // completed with undelivered notifications" is a synthetic warning
+    // Chromium fires at window.onerror when an observer callback defers a
+    // layout to the next frame; nothing breaks and it never reproduces on
+    // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
+    // Errors thrown while a stale-chunk reload is in flight are the reload's
+    // own side effect (lazy imports resolve undefined until it lands), so
+    // they are dropped too; the failed chunk itself is not an app defect.
+    before_send: (event) => {
+      if (event?.event === '$exception' && chunkReloadPending()) return null;
+      const message = event?.properties?.$exception_values?.[0];
+      if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
+        return null;
+      }
+      return event;
+    },
+  });
+  applyInternalTag(posthog);
+  posthog.capture('$pageview', { path: window.location.pathname });
+  setPostHogInstance(posthog);
+}
 
 // A browser a stats-excluded account (the owner, test accounts) has signed in
 // from is marked internal in PostHog two ways: the person gets
@@ -236,27 +321,88 @@ function tagInternal(ph: Pick<PostHogLike, 'register' | 'setPersonProperties'>):
   ph.setPersonProperties?.({ $internal_or_test_user: true });
 }
 
-// Called on the live instance before its first event (main.ts) and after every
+// Called on the live instance before its first event and after every
 // reset, so a known internal browser never sends an untagged event.
 export function applyInternalTag(ph: Pick<PostHogLike, 'register' | 'setPersonProperties'>): void {
   if (isInternalBrowser()) tagInternal(ph);
 }
 
+// Like the internal-browser marker, this survives sign-out and PostHog resets.
+// Keep it on the person so a project-level person filter can include the
+// pageview sent before the first input. Event properties cannot do that.
+const HUMAN_INPUT_BROWSER_KEY = 'mistboard-human-input';
+let humanInputSeen = false;
+let stopHumanInputTracking: (() => void) | null = null;
+
+function hasHumanInput(): boolean {
+  if (humanInputSeen) return true;
+  try {
+    return window.localStorage.getItem(HUMAN_INPUT_BROWSER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function applyHumanInputTag(ph: Pick<PostHogLike, 'setPersonProperties'>): void {
+  if (hasHumanInput()) ph.setPersonProperties?.({ human_input: true });
+}
+
+// Start before the async SDK import: a visitor can interact while it loads.
+// The in-memory marker also works when localStorage is blocked. A real reader
+// who never touches, scrolls or types remains unflagged by this heuristic.
+export function initializeHumanInputTracking(): () => void {
+  if (stopHumanInputTracking) return stopHumanInputTracking;
+  if (hasHumanInput()) return () => {};
+  const events = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'] as const;
+  const stop = () => {
+    for (const type of events) window.removeEventListener(type, onInput, true);
+    stopHumanInputTracking = null;
+  };
+  const onInput = (event: Event) => {
+    if (!event.isTrusted) return;
+    stop();
+    humanInputSeen = true;
+    try {
+      window.localStorage.setItem(HUMAN_INPUT_BROWSER_KEY, '1');
+    } catch {
+      // Storage blocked: remember it for this page, including identity resets.
+    }
+    if (posthogInstance) applyHumanInputTag(posthogInstance);
+  };
+  // Capture sees non-bubbling scrolls in nested panels and input whose target
+  // stops propagation. Passive listeners never delay normal input handling.
+  for (const type of events)
+    window.addEventListener(type, onInput, { capture: true, passive: true });
+  stopHumanInputTracking = stop;
+  return stop;
+}
+
 let posthogInstance: PostHogLike | null = null;
-// Actions queued before posthog-js finishes its async import (see main.ts).
+// Actions queued while waiting for human input or the async SDK import.
 // Closures keep capture/identify/reset uniform so ordering is preserved.
 const pending: Array<(ph: PostHogLike) => void> = [];
+const MAX_DEFERRED_ACTIONS = 200;
+
+function waitingForAnalyticsInput(): boolean {
+  // Once deferred, a scroll setting the person tag must not release the gate.
+  return (
+    analyticsDeferred ||
+    (isLikelyAutomatedBrowser(navigator.userAgent, navigator.webdriver) && !hasHumanInput())
+  );
+}
 
 function enqueue(action: (ph: PostHogLike) => void): void {
   if (posthogInstance) {
     action(posthogInstance);
   } else if (import.meta.env.PROD) {
     pending.push(action);
+    if (waitingForAnalyticsInput() && pending.length > MAX_DEFERRED_ACTIONS) pending.shift();
   }
 }
 
 export function setPostHogInstance(instance: PostHogLike): void {
   posthogInstance = instance;
+  applyHumanInputTag(instance);
   while (pending.length > 0) {
     pending.shift()!(instance);
   }
@@ -273,12 +419,14 @@ export function track(name: string, props?: Record<string, unknown>): void {
 // capture_exceptions only sees UNHANDLED errors/promise rejections, so any error
 // we swallow into a friendly UI panel is invisible to monitoring unless we report
 // it here. Groups in Error Tracking the same as an unhandled throw (and rides the
-// same before_send filter). No-op in DEV; queues until posthog loads in PROD.
+// same before_send filter). No-op in DEV; queues until posthog loads in PROD,
+// except while waiting for input: stale-chunk scraper errors must stay dropped.
 export function captureException(error: unknown, props?: Record<string, unknown>): void {
   if (import.meta.env.DEV) {
     console.error('[captureException]', error, props ?? {});
     return;
   }
+  if (!posthogInstance && waitingForAnalyticsInput()) return;
   enqueue((ph) => {
     if (ph.captureException) {
       ph.captureException(error, props);
@@ -305,11 +453,20 @@ export type GameLifecycleTracker = {
   // `finished`. Repeated calls with the same status are no-ops, so it is safe to
   // drive from a render loop. `baseProps` should carry game-spec/time-control
   // identity (see gameSpecAnalyticsProps) so the funnel is sliceable by variant.
+  //
+  // `ownMoveCount` drives `game_first_move`: how many moves this client's seated
+  // player has had accepted, counted from the state the server sent (its event
+  // log), never from a click that may yet be rejected. The event fires when the
+  // count goes from 0 to 1 or more inside one tracker's sight, so a room opened
+  // and left never fires it, and neither does a reload or a finished game that
+  // was first seen with the move already made. Omitted: no first-move event.
   update: (
     input: {
       statusType: GameLifecycleStatusType;
       baseProps: Record<string, unknown>;
       outcome?: GameFinishedOutcome | null;
+      ownMoveCount?: number | null;
+      moveNumber?: number | null;
     } | null,
   ) => void;
   reset: () => void;
@@ -322,6 +479,33 @@ export type GameLifecycleTracker = {
 export function createGameLifecycleTracker(): GameLifecycleTracker {
   let lastStatusType: GameLifecycleStatusType | null = null;
   let playingSinceMs: number | null = null;
+  // Keyed by game id, so reset() keeps them: a reconnect that resets the tracker
+  // between the empty board and the accepted move must still see the move land,
+  // and a rematch is a new id.
+  const sawNoOwnMove = new Set<string>();
+  const startSources = new Map<string, string>();
+  function trackFirstMove(input: Parameters<GameLifecycleTracker['update']>[0]): void {
+    if (!input) return;
+    const { statusType, baseProps, ownMoveCount } = input;
+    const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+    if (!gameId || typeof ownMoveCount !== 'number') return;
+    if (ownMoveCount <= 0) {
+      if (statusType !== 'finished' && statusType !== 'aborted') sawNoOwnMove.add(gameId);
+      return;
+    }
+    if (!sawNoOwnMove.has(gameId)) return;
+    if (statusType !== 'playing' && statusType !== 'finished') return;
+    sawNoOwnMove.delete(gameId);
+    if (hasTrackedGameFirstMove(gameId)) return;
+    markGameFirstMoveTracked(gameId);
+    track('game_first_move', {
+      ...baseProps,
+      // Known only when this page fired the start; null when the start fired on
+      // an earlier load of the same game (join on gameId for it).
+      entry_source: startSources.get(gameId) ?? null,
+      moveNumber: input.moveNumber ?? null,
+    });
+  }
   return {
     reset() {
       lastStatusType = null;
@@ -330,11 +514,15 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     update(input) {
       if (!input) return;
       const { statusType, baseProps } = input;
-      if (statusType === lastStatusType) return;
-      if (statusType === 'playing' && lastStatusType !== 'playing') {
+      if (statusType === 'playing' && statusType !== lastStatusType) {
         playingSinceMs = Date.now();
-        trackGameStarted(baseProps);
+        const source = trackGameStarted(baseProps);
+        if (source !== null && typeof baseProps.gameId === 'string') {
+          startSources.set(baseProps.gameId, source);
+        }
       }
+      trackFirstMove(input);
+      if (statusType === lastStatusType) return;
       if (statusType === 'finished' && input.outcome) {
         track('game_finished', {
           ...baseProps,
@@ -359,20 +547,23 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
 // can also come from the long-lived correspondence slot: the player who posted
 // the seek arrives days later from an email, long after the ten-minute live
 // source has expired.
-function trackGameStarted(baseProps: Record<string, unknown>): void {
+// Returns the entry source it sent, or null when the start was already counted.
+function trackGameStarted(baseProps: Record<string, unknown>): string | null {
   const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
   if (baseProps.time_class !== 'correspondence') {
-    if (gameId && hasTrackedLiveGameStart(gameId)) return;
+    if (gameId && hasTrackedLiveGameStart(gameId)) return null;
     if (gameId) markLiveGameStartTracked(gameId);
-    track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
-    return;
+    const source = takeGameStartSource();
+    track('game_started', { ...baseProps, entry_source: source });
+    return source;
   }
-  if (gameId && hasTrackedCorrespondenceStart(gameId)) return;
+  if (gameId && hasTrackedCorrespondenceStart(gameId)) return null;
   const liveSource = takeGameStartSource();
   const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
   const entrySource = liveSource !== 'none' ? liveSource : takeCorrespondenceStartSource(gameSpec);
   if (gameId) markCorrespondenceStartTracked(gameId);
   track('game_started', { ...baseProps, entry_source: entrySource });
+  return entrySource;
 }
 
 // Tie subsequent events to a known account. Idempotent: safe to call on every
@@ -394,6 +585,7 @@ export function resetIdentity(): void {
   enqueue((ph) => {
     ph.reset();
     applyInternalTag(ph);
+    applyHumanInputTag(ph);
   });
 }
 
@@ -410,10 +602,10 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
     locale: resolution.locale,
     locale_source: resolution.source,
     browser_tag: resolution.browserTag,
-    // The piece set this visitor is defaulted to (locale, language list, then
-    // country), so games started can be sliced by first-impression board
+    // The piece set this visitor is defaulted to (first locale, language list,
+    // then country), so games started can be sliced by first-impression board
     // without a per-browser storage read.
-    piece_set_default: inferredXiangqiPieceSet(resolution.locale),
+    piece_set_default: inferredXiangqiPieceSet(),
   });
 }
 

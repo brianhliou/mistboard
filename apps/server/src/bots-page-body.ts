@@ -73,7 +73,7 @@ const COPY: Record<
     jieqiTitle: '揭棋：按等级挑选',
     jieqiIntro: '刚开始下揭棋？从第 2 级开始。赢几盘之后，再往上挑战一级。',
     otherTitle: '其他棋类',
-    misty: 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
+    misty: 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻兽棋。',
     katago:
       '我们所知最强的斗兽棋引擎：hzyhhzy 的 KataGomo，基于 lightvector 的 KataGo，神经网络来自 Kouza 的 Dandelion 4。',
   },
@@ -90,7 +90,7 @@ const COPY: Record<
     jieqiTitle: '揭棋：按等級挑選',
     jieqiIntro: '剛開始下揭棋？從第 2 級開始。贏幾盤之後，再往上挑戰一級。',
     otherTitle: '其他棋類',
-    misty: 'Mistboard 自研引擎，下迷霧國際象棋、迷霧象棋、暗棋、鬥獸棋和翻翻棋。',
+    misty: 'Mistboard 自研引擎，下迷霧西洋棋、迷霧象棋、暗棋、鬥獸棋和翻翻獸棋。',
     katago:
       '我們所知最強的鬥獸棋引擎：hzyhhzy 的 KataGomo，基於 lightvector 的 KataGo，神經網路來自 Kouza 的 Dandelion 4。',
   },
@@ -101,8 +101,9 @@ const LADDER_PREFIX = 'fairy-stockfish-level-';
 // first-timer is given (web landing-bot-policy JIEQI_FIRST_GAME_LEVEL).
 const JIEQI_LADDER_PREFIX = 'pikafish-level-';
 // The named jieqi slots above Pikafish (level 8), weakest first; first-party-bots.ts.
-// jqe sits above AB-JChess, and is listed only while its engine is enabled.
-const JIEQI_TOP_BOT_ORDER = ['pikafish', 'ab-jchess', 'jqe'];
+// AB-JChess sits above jqe (AB-JChess-20261031 took the top back from it), and jqe is
+// listed only while its engine is enabled.
+const JIEQI_TOP_BOT_ORDER = ['pikafish', 'jqe', 'ab-jchess'];
 // An unknown named slot sorts first, so it never takes "strongest" by accident.
 const jieqiTopRank = (id: string): number => JIEQI_TOP_BOT_ORDER.indexOf(id);
 const JIEQI_FIRST_GAME_LEVEL = 2;

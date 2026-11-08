@@ -224,7 +224,7 @@ describe('cold join to a finished banqi room', () => {
     expect(moveCells()).toHaveLength(PLIES);
     expect(document.querySelectorAll('li.xiangqi-move-row')).toHaveLength(Math.ceil(PLIES / 2));
     expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
-    // The live tip is the server's fully revealed board.
+    // The live tip: this game turned every tile over before it ended.
     expect(Object.values(boardOnScreen())).not.toContain('');
 
     moveCells()[MID - 1]!.click();
@@ -233,6 +233,22 @@ describe('cold join to a finished banqi room', () => {
 
     controlButton('first').click();
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+  });
+
+  // The server serves a finished room every tile face up; the room turns the
+  // ones nobody flipped back over (Brian, 2026-10-30).
+  it('keeps the tiles still face down at the end face down on the board', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: truthView(resigned(STATES[MID]!)),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+      }),
+    );
+    options.render();
+    expect(Object.values(expectedMasked(STATES[MID]!))).toContain('');
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
   });
 
   it('enables the scrubber controls (#264)', async () => {
@@ -306,26 +322,37 @@ describe('cold join to a LIVE banqi room is unchanged (hidden-info regression)',
 describe('a banqi room that finishes live, without a reload', () => {
   it('keeps the captured plies and links review at the last move', async () => {
     const options = await mount();
-    options.applyHello(
-      frame('hello', { seat: 'red', state: seatView(STATES[0]!, 'red'), events: [CREATED] }),
-    );
-    options.render();
-    const events = moveEvents(PLIES);
-    for (let ply = 1; ply <= PLIES; ply += 1) {
-      options.applyEvent(
-        frame('event-appended', { state: seatView(STATES[ply]!, 'red'), event: events[ply - 1] }),
+    // A socket render waits out the flip it lands on (live-client
+    // renderFromSocket), so let a move's worth of time pass between moves.
+    vi.useFakeTimers();
+    try {
+      const settle = (): void => {
+        options.render();
+        vi.advanceTimersByTime(2_000);
+      };
+      options.applyHello(
+        frame('hello', { seat: 'red', state: seatView(STATES[0]!, 'red'), events: [CREATED] }),
       );
-      options.render();
-    }
-    options.applyEvent(
-      frame('event-appended', { state: truthView(resigned(STATES[PLIES]!)), event: FINISHED }),
-    );
-    options.render();
+      settle();
+      const events = moveEvents(PLIES);
+      for (let ply = 1; ply <= PLIES; ply += 1) {
+        options.applyEvent(
+          frame('event-appended', { state: seatView(STATES[ply]!, 'red'), event: events[ply - 1] }),
+        );
+        settle();
+      }
+      options.applyEvent(
+        frame('event-appended', { state: truthView(resigned(STATES[PLIES]!)), event: FINISHED }),
+      );
+      settle();
 
-    expect(moveCells()).toHaveLength(PLIES);
-    expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
-    moveCells()[MID - 1]!.click();
-    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+      expect(moveCells()).toHaveLength(PLIES);
+      expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
+      moveCells()[MID - 1]!.click();
+      expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

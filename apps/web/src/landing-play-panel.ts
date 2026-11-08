@@ -40,14 +40,18 @@ import {
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import './landing-play-panel.css';
 import { fetchLiveStats } from './live-stats-client.js';
-import { rememberedPveEngine } from './pve-memory.js';
+import { type LastBotGame, lastBotGame, rememberedPveEngine } from './pve-memory.js';
 import {
   isCorrespondenceRatedModeEnabled,
   isRatedModeEnabled,
   onRatedModeChange,
 } from './rated-flag.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
-import { isLikelySignedIn } from './signed-in-state.js';
+import {
+  isLikelySignedIn,
+  isLikelyStatsExcluded,
+  statsExcludedResolvedEvent,
+} from './signed-in-state.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
@@ -70,6 +74,8 @@ type StoredPanel = {
   mode?: PersonMode;
   bots?: Record<string, { botId?: string; tc?: TimeControlId }>;
   people?: Record<string, string>;
+  /** Before 2026-10-24 the Play again record, written only by this panel's own
+   *  Play button. Read as a fallback until a bot game writes the shared one. */
   last?: { gameSpecId: string; botId: string; tc: TimeControlId };
 };
 
@@ -93,6 +99,24 @@ function writeStored(patch: (state: StoredPanel) => void): void {
   } catch {
     // Storage blocked: the panel still works, it just forgets the picks.
   }
+}
+
+/** The game the Play again row offers: the last bot game this device started
+ *  anywhere on the site, at a pace the panel has a preset for; else the record
+ *  the panel kept before every start path wrote the shared one. */
+export function playAgainPick(
+  shared: LastBotGame | null,
+  legacy: StoredPanel['last'],
+): { gameSpecId: string; botId: string; tc: TimeControlId } | null {
+  if (!shared) return legacy ?? null;
+  const tc = shared.timeControl;
+  const preset = tc
+    ? LANDING_TIME_PRESETS.find(
+        (p) => p.initialMs === tc.initialMs && p.incrementMs === tc.incrementMs,
+      )
+    : undefined;
+  if (!preset) return null;
+  return { gameSpecId: shared.gameSpecId, botId: shared.botId, tc: preset.id };
 }
 
 function paceKey(pace: PersonPace): string {
@@ -237,8 +261,12 @@ export function buildPlayPanel(
   const stored = readStored();
   const signedIn = isLikelySignedIn();
   let ratedAvailable = isRatedModeEnabled();
+  // An account excluded from stats never plays rated (the server refuses it);
+  // the Rated switch is greyed out with the reason instead of failing on click.
+  let ratedBlocked = isLikelyStatsExcluded();
   let tab: PanelTab = stored.tab ?? 'computer';
-  let mode: PersonMode = stored.mode === 'rated' && signedIn && ratedAvailable ? 'rated' : 'casual';
+  let mode: PersonMode =
+    stored.mode === 'rated' && signedIn && ratedAvailable && !ratedBlocked ? 'rated' : 'casual';
   let openRequests: OpenLobbyRequest[] = [];
   let corrSeeks: LobbyCorrespondenceSeek[] = [];
   let playingBySpec: Record<string, number> = {};
@@ -356,14 +384,6 @@ export function buildPlayPanel(
       preferredColor: 'random',
     };
   };
-  const rememberStart = (req: BotPlayRequest): void => {
-    const state = botState.get(req.gameSpecId);
-    if (!state) return;
-    writeStored((s) => {
-      s.last = { gameSpecId: req.gameSpecId, botId: req.botId, tc: state.tc };
-    });
-  };
-
   const renderBotRows = (): void => {
     botRows.replaceChildren();
     playingEls.clear();
@@ -469,7 +489,6 @@ export function buildPlayPanel(
         pendingLabel: t('lobby.botStarting', {}, locale),
         errorLabel: t('lobby.botStartFailed', {}, locale),
         source: 'panel-bot',
-        onCreated: rememberStart,
       });
       // Only Play starts the game (Brian, 2026-10-02): a whole-row click turned
       // a near miss on a stepper into a game nobody asked for.
@@ -514,13 +533,15 @@ export function buildPlayPanel(
   };
 
   const visibleRequests = (): OpenLobbyRequest[] =>
-    othersRequests().filter((r) => r.rated === false || (signedIn && ratedAvailable));
+    othersRequests().filter(
+      (r) => r.rated === false || (signedIn && ratedAvailable && !ratedBlocked),
+    );
 
   const renderFeatures = (): void => {
     const rows: HTMLElement[] = [];
-    const last = readStored().last;
+    const last = playAgainPick(lastBotGame(), readStored().last);
     const lastLadder = last ? ladderFor(last.gameSpecId) : [];
-    const lastRung = last ? lastLadder.find((r) => r.botId === last.botId) : undefined;
+    const lastRung = last ? lastLadder[landingBotLadderIndex(lastLadder, last.botId)] : undefined;
     const lastPaces = last ? panelBotPaces(last.gameSpecId as LandingGameSpecId).ids : [];
     if (
       last &&
@@ -533,7 +554,7 @@ export function buildPlayPanel(
       bindBotPlayControl(
         again,
         () => ({
-          botId: last.botId,
+          botId: lastRung.botId,
           gameSpecId: last.gameSpecId,
           ...(preset
             ? { timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs } }
@@ -634,6 +655,7 @@ export function buildPlayPanel(
   personScroll.className = 'pp-scroll';
   const offersSlot = document.createElement('div');
   const personRows = document.createElement('div');
+  personRows.className = 'pp-person-rows';
   personScroll.append(offersSlot, personRows);
 
   const searchBar = document.createElement('div');
@@ -663,15 +685,28 @@ export function buildPlayPanel(
   const renderMode = (): void => {
     casualBtn.classList.toggle('is-active', mode === 'casual');
     ratedBtn.classList.toggle('is-active', mode === 'rated');
-    if (!signedIn) ratedBtn.title = t('lobby.panelRatedSignIn', {}, locale);
-    note.textContent =
-      mode === 'rated'
-        ? t(
-            'lobby.panelRatedNote',
-            { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
-            locale,
-          )
-        : '';
+    ratedBtn.disabled = ratedBlocked;
+    // Why Rated is out of reach, in plain words (Brian, 2026-10-27: "what does
+    // that mean, need a counted account?"): a guest is told to sign in; a
+    // stats-excluded account (the owner's and QA's) is told it plays casual only.
+    const ratedBlockedNote = t('lobby.ratedCasualOnlyAccount', {}, locale);
+    const ratedSignInNote = t('lobby.panelRatedSignIn', {}, locale);
+    if (ratedBlocked) ratedBtn.title = ratedBlockedNote;
+    else if (!signedIn) ratedBtn.title = ratedSignInNote;
+    else ratedBtn.removeAttribute('title');
+    note.textContent = !ratedAvailable
+      ? ''
+      : ratedBlocked
+        ? ratedBlockedNote
+        : !signedIn
+          ? ratedSignInNote
+          : mode === 'rated'
+            ? t(
+                'lobby.panelRatedNote',
+                { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
+                locale,
+              )
+            : '';
   };
   casualBtn.addEventListener('click', () => {
     if (mode === 'casual') return;
@@ -682,6 +717,7 @@ export function buildPlayPanel(
     renderPerson();
   });
   ratedBtn.addEventListener('click', () => {
+    if (ratedBlocked) return;
     if (!signedIn) {
       window.location.href = loginHrefForCurrentPage(locale);
       return;
@@ -940,12 +976,28 @@ export function buildPlayPanel(
   const stopRatedSync = onRatedModeChange(() => {
     stopRatedSync();
     ratedAvailable = isRatedModeEnabled();
-    if (readStored().mode === 'rated' && signedIn && ratedAvailable && !searching) mode = 'rated';
+    if (readStored().mode === 'rated' && signedIn && ratedAvailable && !ratedBlocked && !searching)
+      mode = 'rated';
     if (!ratedAvailable) mode = 'casual';
     renderModeSlot();
     renderFeatures();
     renderPerson();
   });
+
+  // The hint can be stale (a flag set since the last load): account-nav's
+  // /api/auth/me answer settles it.
+  window.addEventListener(
+    statsExcludedResolvedEvent,
+    () => {
+      const blocked = isLikelyStatsExcluded();
+      if (blocked === ratedBlocked) return;
+      ratedBlocked = blocked;
+      if (ratedBlocked && mode === 'rated' && !searching) mode = 'casual';
+      renderFeatures();
+      renderPerson();
+    },
+    { once: true },
+  );
 
   if (options.hydrate !== false) {
     const refreshLobby = async (): Promise<void> => {

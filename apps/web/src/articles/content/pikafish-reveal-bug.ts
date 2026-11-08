@@ -117,6 +117,8 @@ export const pikafishRevealBugArticle: Article = {
   status: 'published',
   publishedAt: '2026-10-03',
   updatedAt: '2026-10-16',
+  updateNote:
+    'Retold in order, with the match results in one table; the 7x row now reads as within noise rather than a loss.',
   thumbnail: { kind: 'svg', svg: REVEAL_BUG_THUMBNAIL },
   boardFamily: 'xiangqi',
   audience: 'People who play jieqi against the bot on Mistboard, and people who build jieqi engines.',

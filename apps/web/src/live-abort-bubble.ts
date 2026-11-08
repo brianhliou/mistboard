@@ -73,7 +73,10 @@ export function attachAbortCountdownBubble(
 
   function position(): void {
     if (!el) return;
-    const surface = stage.querySelector('[data-board] svg') ?? stage.querySelector('[data-board]');
+    // The board's own svg, never one nested in it: the mahjong table's tiles
+    // each carry a piece drawing, and the first one sized the bubble to 44px.
+    const surface =
+      stage.querySelector('[data-board] > svg') ?? stage.querySelector('[data-board]');
     if (!surface) return;
     const stageRect = stage.getBoundingClientRect();
     const boardRect = surface.getBoundingClientRect();

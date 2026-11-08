@@ -26,6 +26,7 @@ import {
   maybeGameSpecAnalyticsProps,
   roomModeAnalyticsProps,
 } from '../analytics.js';
+import { holdBoardSettle } from '../board-anim.js';
 import { brandedEngineName } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
 import { t } from '../i18n/catalog.js';
@@ -34,6 +35,7 @@ import {
   type FinishBadge,
   type LiveFinishBadges,
 } from '../live-finish-badges.js';
+import { maybePlayGameStartSound } from '../live-game-start-sound.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
 import {
   createLiveLifecycleEffects,
@@ -42,6 +44,7 @@ import {
 import { initLiveSound, resetLiveSoundState } from '../live-sound.js';
 import { clearSeatTokenForRoom, type LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
+import { announceLiveRoomSeat } from '../review/spectator-chat.js';
 import { roomIdFromPath } from '../room-url.js';
 import { syncMoveListScroll } from './chrome-dom.js';
 import {
@@ -95,6 +98,7 @@ export type TenantLiveFrame<C extends string, V> = {
   seatProfiles?: Partial<Record<C, ProfileIdentity>>;
   state: V;
   clock?: TenantLiveClock<C> | null;
+  paused?: boolean;
   connectedSeats?: Record<C, boolean>;
   abortDeadline?: number | null;
   forfeitDeadline?: number | null;
@@ -112,6 +116,7 @@ export type TenantLiveState<C extends string, V> = {
   seat: C | 'spectator' | null;
   view: V | null;
   clock: TenantLiveClock<C> | null;
+  paused: boolean;
   timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   seats: Partial<Record<C, string>>;
   seatDisplayNames: Partial<Record<C, string>>;
@@ -207,6 +212,14 @@ export type TenantMoveListConfig<C extends string, M, V = unknown> = {
    */
   notateWithView?(move: M, viewAfter: V | null): string;
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
+  /**
+   * OPTIONAL: whether a move in the seat's own colour was the player's choice,
+   * for `game_first_move`. Defaults to every move. A tenant whose log carries
+   * moves made for the seat (mahjong's automatic draw, the runtime's timeout,
+   * an empty hand's automatic pass) excludes them, or a player who opened the
+   * table and left would count as having played.
+   */
+  playedByPlayer?(move: M): boolean;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
   /**
@@ -299,12 +312,15 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
    * every renderAll. `takePendingAnimation()` is one-shot: it returns the move
    * event or single-ply scrub that triggered this render (or null) and drains
    * the channel. Tenants that do not opt in behave byte-identically.
+   * May return how long (ms) the animation it started runs: a socket render
+   * inside that window waits for it, so a reply that lands at once (a bot)
+   * does not redraw the board under the piece mid-turn.
    */
   animateBoard?(
     refs: LiveRefs,
     view: V | null,
     takePendingAnimation: () => TenantPendingAnimation<C, V, M> | null,
-  ): void;
+  ): number | undefined;
   /** Between board and move list: hands, promotion pickers, etc. */
   renderExtras?(refs: LiveRefs, view: V | null): void;
   /**
@@ -367,6 +383,8 @@ export type TenantRecording<C extends string, V> = {
   frame: TenantLiveFrame<C, V>;
   /** Open at this ply instead of the end. */
   initialPly?: number;
+  /** Gated caller-owned handoff, retaining the recording at the displayed ply. */
+  analysisHref?(ply: number): string;
   /** The recorded clocks after a ply, or null for a match that kept none. */
   clockAt(ply: number): Omit<TenantRecordedClock<C>, 'final'> | null;
 };
@@ -391,6 +409,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     seat: null,
     view: null,
     clock: null,
+    paused: false,
     timeControl: null,
     seats: {},
     seatDisplayNames: {},
@@ -416,6 +435,20 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // The view the previous renderAll displayed — a scrub back-step animates the
   // move that view carried (its lastMove), which the new view no longer has.
   let lastDisplayedView: V | null = null;
+  // Until when the board's last animation runs, and the socket render held for
+  // it. The bot replies on a 0ms timer (server-banqi-engine.ts and kin), so its
+  // move redrew the board some 30ms into the player's own 280ms flip, and the
+  // flip never showed (Brian, 2026-10-30). Only socket renders wait; a click,
+  // a scrub or a key renders at once and drops the hold.
+  let boardBusyUntil = 0;
+  let heldRender: ReturnType<typeof setTimeout> | null = null;
+  // An applied frame holds the board unsettled until the render that draws it
+  // (#825): the sound hooks run between the two, and the game-over sound waits
+  // for the glide that render starts (live-sound.ts playTerminalPlan).
+  let releaseFrameSettleHold: (() => void) | null = null;
+  function holdUntilDrawn(): void {
+    releaseFrameSettleHold ??= holdBoardSettle();
+  }
   let lifecycleEffects: LiveLifecycleEffects | null = null;
   let finishBadges: LiveFinishBadges | null = null;
   // The live view before the current one: where a general captured by the
@@ -425,6 +458,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   const replay = createTenantReplayController<V>();
 
   function send(payload: unknown): boolean {
+    if (state.paused && (payload as { type?: unknown } | null)?.type === 'move') return false;
     return socket?.send(payload) ?? false;
   }
 
@@ -459,7 +493,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   function canActNow(): boolean {
     const view = state.view;
     if (!view || !replay.isLive() || !tenant.isColor(state.seat)) return false;
-    if (view.status.type !== 'playing') return false;
+    if (view.status.type !== 'playing' || state.paused || connection() !== 'connected')
+      return false;
     // Tenants that let several seats act at once (mahjong claim windows) answer
     // for themselves; everybody else is strictly alternating.
     if (tenant.seatMayAct) return tenant.seatMayAct(view, state.seat);
@@ -470,6 +505,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // server sends the offer flags on a finished PvP room's snapshot and in
   // rematch:state frames, and socket-client follows the redirect. A bot room
   // shows Play again instead (room-chrome), and a table of four has no swap.
+  // The bot a PvE room is played against, from its snapshot; room-chrome
+  // puts it on a rematch body that names none (withRoomBot).
+  let roomPveEngineId: string | null = null;
+
   const rematch =
     tenant.colors.length === 2
       ? createTenantRematch(tenant.colors as unknown as readonly [C, C], () =>
@@ -484,6 +523,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     connectionState: () => connection(),
     closeReason: () => socket?.closeReason() ?? '',
     clock: () => state.clock,
+    paused: () => state.paused,
     timeControl: () => state.timeControl,
     connectedSeats: () => state.connectedSeats,
     seats: () => state.seats,
@@ -497,6 +537,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     isReplayLive: () => replay.isLive(),
     orientation,
     playAgainRequestBody: () => config.playAgainRequestBody(state),
+    pveEngineId: () => roomPveEngineId,
     rematchControls:
       config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
     lobbyMatch: () => state.lobbyMatch,
@@ -524,6 +565,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.seat = frame.seat;
     state.view = frame.state;
     state.clock = frame.clock ?? null;
+    state.paused = frame.paused === true;
     state.timeControl = frame.timeControl ?? state.timeControl;
     state.seats = frame.seats ?? state.seats;
     // Branded on the way in, not at each render site: the room paints these
@@ -562,6 +604,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     );
     if (frame.events) state.events = frame.events;
     rematch?.applyFrame(frame.rematch);
+    if (typeof frame.pveEngineId === 'string') roomPveEngineId = frame.pveEngineId;
     config.onFrame?.(frame);
   }
 
@@ -587,6 +630,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function applyEventFrame(frame: TenantLiveFrame<C, V>): void {
+    holdUntilDrawn();
     const events = state.events;
     applyFrame(frame);
     state.events = events;
@@ -600,6 +644,24 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       }
     }
     config.onEventApplied?.();
+  }
+
+  // The move that ends a game reaches the room as a snapshot, never an event
+  // (ws.ts broadcastEventAppended sends the finished room whole), so without
+  // this the final move was the one move that never glided: it just appeared
+  // (Brian, 2026-10-30). Armed only on a live playing -> finished step of the
+  // same game whose log grew by exactly one move this client had not seen; a
+  // reconnect or a log this client saw redacted (fog) does not qualify. A
+  // finished room shows everything, so the glide reveals nothing new.
+  function armFinishingMove(before: V | null, movesSeen: number): void {
+    const view = state.view;
+    if (!before || !view || before.id !== view.id) return;
+    if (before.status.type !== 'playing' || view.status.type !== 'finished') return;
+    if (!replay.isLive()) return;
+    const moves = state.events.filter(moveList.isMoveEvent);
+    if (moves.length !== movesSeen + 1) return;
+    const last = moves[moves.length - 1];
+    if (last) pendingLiveAnimation = { move: last.move, color: last.color };
   }
 
   // Drain both animation sources into the one-shot union the hook consumes.
@@ -634,6 +696,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       params.get('room') ??
       config.defaultRoomId;
     state.room = room;
+    state.paused = false;
     state.forfeitDeadline = null;
     state.abortDeadline = null;
     state.lobbyMatch = false;
@@ -653,6 +716,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     replay.reset();
     chrome.resetState();
     rematch?.reset();
+    roomPveEngineId = null;
     initLiveSound();
     resetLiveSoundState();
     config.resetSounds?.();
@@ -701,10 +765,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       applyHello: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
         rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
+        announceLiveRoomSeat(room, tenant.isColor(state.seat));
       },
       applySnapshot: (frame) => {
+        holdUntilDrawn();
+        const before = state.view;
+        const movesSeen = state.events.filter(moveList.isMoveEvent).length;
         applyFrame(frame as TenantLiveFrame<C, V>);
         rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
+        armFinishingMove(before, movesSeen);
         config.onSnapshotApplied?.();
       },
       applyEvent: (frame) => applyEventFrame(frame as TenantLiveFrame<C, V>),
@@ -713,7 +782,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         rematch?.applyState(message);
         config.onRematchState?.(message);
       },
-      render: renderAll,
+      render: renderFromSocket,
     });
     socket.connect();
     socket.startPing();
@@ -755,8 +824,37 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
 
   // ── Rendering ──────────────────────────────────────────────────────────────
 
+  // The longest a socket render waits: a finish reveal runs about a second.
+  const MAX_RENDER_HOLD_MS = 2000;
+
+  function renderFromSocket(): void {
+    const wait = Math.min(boardBusyUntil - Date.now(), MAX_RENDER_HOLD_MS);
+    if (wait <= 0) {
+      renderAll();
+      return;
+    }
+    // Clock and pause feedback must not wait for a board animation to finish.
+    chrome.renderClocks();
+    chrome.renderBoardStatus();
+    if (heldRender) return;
+    heldRender = setTimeout(() => {
+      heldRender = null;
+      boardBusyUntil = 0;
+      renderAll();
+    }, wait);
+  }
+
   function renderAll(): void {
+    // Released before the draw: the settle check is a microtask, so the glide
+    // this render starts is registered by the time it runs.
+    const releaseSettle = releaseFrameSettleHold;
+    releaseFrameSettleHold = null;
+    releaseSettle?.();
     if (!refs) return;
+    if (heldRender) {
+      clearTimeout(heldRender);
+      heldRender = null;
+    }
     chrome.resetHostPanels();
     chrome.renderMeta();
     chrome.renderClocks();
@@ -765,6 +863,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     captureReplayView(view);
     const displayed = replay.currentView(view);
     const lifecycleEffect = updateLifecycleEffects(view);
+    // The game-start sound for every tenant rides the same frame as the start
+    // pulse, so a new variant on this client sounds its start with no wiring.
+    maybePlayGameStartSound(lifecycleEffect, view?.id);
     trackGameLifecycle(view);
     // Drain the animation channel on EVERY render (even disabled/hook-less
     // paths) so nothing stale carries into a later, unrelated render.
@@ -772,12 +873,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = displayed;
     if (moveList.listClass) refs.moveList.classList.add(moveList.listClass);
     replay.renderShell(refs, renderAll);
-    // A recording is already the review: no link to the page it is on.
+    // Recordings may offer a standalone analysis handoff owned by their caller.
     setReplayAnalysisHref(
       refs.actionSection,
-      view?.status.type === 'finished' && !recording
-        ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
+      view?.status.type === 'finished'
+        ? recording
+          ? (recording.analysisHref?.(replay.activePly() ?? replay.latestPly()) ?? null)
+          : `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
         : null,
+      recording?.analysisHref ? t('review.analyseFromHere') : undefined,
     );
     chrome.renderBoardStatus();
     chrome.renderActionStatus();
@@ -796,11 +900,12 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     renderMoveList(refs);
     if (config.animateBoard) {
       let taken: TenantPendingAnimation<C, V, M> | null = pendingAnimation;
-      config.animateBoard(refs, displayed, () => {
+      const busyMs = config.animateBoard(refs, displayed, () => {
         const value = taken;
         taken = null;
         return value;
       });
+      boardBusyUntil = typeof busyMs === 'number' && busyMs > 0 ? Date.now() + busyMs : 0;
     }
     syncFinishBadges(view, lifecycleEffect);
   }
@@ -877,6 +982,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       days_per_move: state.timeControl?.daysPerMove ?? null,
     };
     const status = view.status;
+    // From the event log the server sent this seat, so a click the server
+    // rejected never counts. A seat always receives its own moves, fog included.
+    const seat = state.seat;
+    const ownMoveCount = state.events.filter(
+      (event) =>
+        moveList.isMoveEvent(event) &&
+        event.color === seat &&
+        (moveList.playedByPlayer?.(event.move) ?? true),
+    ).length;
     lifecycleTracker.update({
       statusType: lifecycleStatusType(status.type),
       baseProps,
@@ -884,6 +998,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         status.type === 'finished'
           ? { winner: status.winner, reason: status.reason, moveNumber: view.moveNumber }
           : null,
+      ownMoveCount,
+      moveNumber: view.moveNumber,
     });
   }
 

@@ -8,15 +8,16 @@
 
 import {
   applyStandardXiangqiMove,
-  createInitialXiangqiState,
+  applyXiangqiRecordMove,
+  createInitialStandardXiangqiState,
   fsfUciToXiangqiSquares,
   getStandardXiangqiPlayerView,
   isStandardXiangqiLegalMove,
+  resumeAdjudicatedDraw,
   type StandardXiangqiPlayerView,
   type XiangqiGameState,
   type XiangqiMove,
 } from '@mistboard/game';
-import { resumeAdjudicatedDraw } from './xiangqi-tree-adapter.js';
 
 export interface XiangqiReplay {
   /** Per-ply truth views; index === ply. `views[0]` is the start position, so
@@ -41,7 +42,7 @@ export function buildXiangqiReplayFromMoves(
   startState?: XiangqiGameState,
   options: { record?: boolean } = {},
 ): XiangqiReplay {
-  let state = startState ?? createInitialXiangqiState('analysis');
+  let state = startState ?? createInitialStandardXiangqiState('analysis');
   const views: StandardXiangqiPlayerView[] = [getStandardXiangqiPlayerView(state, 'red')];
   const applied: XiangqiMove[] = [];
   for (let i = 0; i < moves.length; i++) {
@@ -52,7 +53,9 @@ export function buildXiangqiReplayFromMoves(
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) {
       return { views, moves: applied, maxPly: applied.length, illegalAt: { ply: i + 1, move } };
     }
-    state = applyStandardXiangqiMove(state, move);
+    state = options.record
+      ? applyXiangqiRecordMove(state, move)
+      : applyStandardXiangqiMove(state, move);
     applied.push(move);
     views.push(getStandardXiangqiPlayerView(state, 'red'));
   }

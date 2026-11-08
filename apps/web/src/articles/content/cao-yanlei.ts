@@ -289,9 +289,11 @@ const G_M_143937: XiangqiReplaySpec = {
 
 export const caoYanleiArticle: Article = {
   slug: "cao-yanlei",
+  contactNote: true,
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Cao Yanlei 曹岩磊",
   seoTitle: "Cao Yanlei 曹岩磊: games, results, and analysis",
@@ -300,6 +302,8 @@ export const caoYanleiArticle: Article = {
   status: "published",
   publishedAt: "2026-09-25",
   updatedAt: "2026-09-27",
+  updateNote:
+    'The six featured games are now all wins.',
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/cao-yanlei-2024-face.jpg",

@@ -13,13 +13,13 @@ export type JieqiDecision = {
   ply: number;
   mover: 'red' | 'black';
   /** True pool-mean EV (win%) of the best available move — the decision ceiling. */
-  bestWin: number;
+  bestWin?: number;
   /** True pool-mean EV (win%) of the played move — the decision, before the dice. */
   playedWin: number;
   /** Win% the reveal ACTUALLY produced — the truth, including luck. */
   realizedWin: number;
   /** Rank of the played move among candidates by true baseline (1 = it WAS the best). */
-  playedRank: number | null;
+  playedRank?: number | null;
   /** Alternatives the server true-baselined, best first. Absent on decisions cached before
    *  the server kept them; every consumer treats that as "rank only, no list". */
   candidates?: JieqiDecisionCandidate[];
@@ -62,18 +62,25 @@ export type DecisionView = {
   /** Decision-quality glyph from the win% the CHOICE gave up (null = under the inaccuracy bar). */
   judgment: MoveJudgment;
   /** Win% the choice gave up vs the best move (>= 0). */
-  decisionLoss: number;
+  decisionLoss?: number;
   /** Win% the reveal swung vs its OWN pool-average expectation (signed: + lucky, - unlucky).
    *  0 = the reveal came out exactly average — "the average piece still in the bag". */
   luck: number;
   /** Per-decision accuracy in [0, 100] (lila's win%-drop curve, best -> played). */
-  accuracy: number;
-  playedRank: number | null;
+  accuracy?: number;
+  playedRank?: number | null;
   /** Ranked alternatives, best first, carried straight through from the server. */
   candidates?: JieqiDecisionCandidate[];
 };
 
 export function decisionView(d: JieqiDecision): DecisionView {
+  if (d.bestWin === undefined)
+    return {
+      ply: d.ply,
+      mover: d.mover,
+      judgment: null,
+      luck: d.realizedWin - d.playedWin,
+    };
   const decisionLoss = Math.max(0, d.bestWin - d.playedWin);
   const judgment = moveJudgment(d.bestWin, d.playedWin);
   return {
@@ -107,7 +114,10 @@ export function summarizeDecisions(decisions: readonly JieqiDecision[]): JieqiDe
   const views = decisions.map(decisionView);
   const byPly = new Map(views.map((view) => [view.ply, view]));
   const summarize = (mover: 'red' | 'black'): PlayerDecisionSummary => {
-    const mine = views.filter((view) => view.mover === mover);
+    const mine = views.filter(
+      (view): view is DecisionView & { accuracy: number } =>
+        view.mover === mover && view.accuracy !== undefined,
+    );
     return {
       reveals: mine.length,
       decisionAccuracy: mine.length ? mean(mine.map((v) => v.accuracy)) : 100,
@@ -156,9 +166,9 @@ export function jieqiDecisionOverlay(summary: JieqiDecisionSummary): DecisionOve
         ply,
         {
           judgment: view.judgment,
-          accuracy: view.accuracy,
+          ...(view.accuracy === undefined ? {} : { accuracy: view.accuracy }),
           luck: view.luck,
-          playedRank: view.playedRank,
+          playedRank: view.playedRank ?? null,
           // Format at the variant seam: the review layer is variant-agnostic and never
           // shows engine UCI. Same formatter the "… was best." advice line uses. The raw
           // move rides along only for drawing the arrow.

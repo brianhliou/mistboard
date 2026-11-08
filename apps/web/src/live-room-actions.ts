@@ -4,7 +4,8 @@ import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
 import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
-import { postGameActions } from './postgame-panel.js';
+import { clearPostGameSheet, renderPostGameActions } from './postgame-panel.js';
+import { rememberBotRoomRequest } from './pve-memory.js';
 import { rematchControls } from './rematch-controls.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { isColor, oppositeColor } from './web-utils.js';
@@ -17,6 +18,9 @@ type RoomActionDeps = {
 };
 
 let playAgainStatus: 'idle' | 'creating' | 'failed' = 'idle';
+// The rematch room already made (#825): Back from it must not find a stuck
+// "Creating", and a second click goes there instead of making another room.
+let playAgainUrl: { room: string; url: string } | null = null;
 
 export type PlayAgainRoomRequestBody = {
   mode: 'pvp' | 'pve';
@@ -42,17 +46,16 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
         : liveState.roomMode === 'pve'
           ? playAgainButton(refs, deps)
           : null;
-    refs.roomActions.replaceChildren(
-      postGameActions({
-        variant: postGameVariant(),
-        mode: liveState.roomMode,
-        seated,
-        rematch,
-        reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
-      }),
-    );
+    renderPostGameActions(refs.roomActions, {
+      variant: postGameVariant(),
+      mode: liveState.roomMode,
+      seated,
+      rematch,
+      reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
+    });
     return;
   }
+  clearPostGameSheet(refs.roomActions);
   // Rooms are 'playing' from creation, so the invite window is "second seat
   // unclaimed" (the correspondence rule; live friend rooms share the link from
   // the setup dialog instead).
@@ -118,6 +121,11 @@ function playAgainButton(refs: RoomActionRefs, deps: RoomActionDeps): HTMLButton
 }
 
 async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): Promise<void> {
+  if (playAgainStatus === 'creating') return;
+  if (playAgainUrl?.room === liveState.room) {
+    window.location.assign(playAgainUrl.url);
+    return;
+  }
   const body = buildPlayAgainRoomRequestBody();
   if (!body) return;
   playAgainStatus = 'creating';
@@ -131,6 +139,10 @@ async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): 
     if (!response.ok) throw new Error(`room creation failed: ${response.status}`);
     const data = (await response.json()) as { url?: string };
     if (!data.url) throw new Error('room creation response missing url');
+    rememberBotRoomRequest(body);
+    playAgainUrl = { room: liveState.room, url: data.url };
+    playAgainStatus = 'idle';
+    renderRoomActions(refs, deps);
     window.location.assign(data.url);
   } catch (err) {
     console.warn(err);

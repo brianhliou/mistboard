@@ -246,6 +246,8 @@ describe('blog index engineering chip', () => {
       '/blog/chariot-cannon-repetition-key',
       '/blog/en-passant-under-fog',
       '/blog/how-puzzle-mining-works',
+      '/blog/jungle-den-term',
+      '/blog/mistybanqi',
       '/blog/pikafish-reveal-bug',
       '/blog/server-enforced-fog',
       '/blog/unstyled-first-paint',

@@ -39,6 +39,12 @@ export const banqiStatisticsArticle: Article = {
     'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine\u2019s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.',
+    'Every game a fresh deal, with both seats the same engine at the same search.',
+    "Material counted on the engine's own value table.",
+    'The games measure this engine, not banqi between people.',
+  ],
   publishedAt: '2026-09-23',
   audience:
     'Banqi players who want numbers behind the questions every table argues about: how big a lead is safe, when a game is decided, what losing the general costs, and whether flipping first is an advantage.',

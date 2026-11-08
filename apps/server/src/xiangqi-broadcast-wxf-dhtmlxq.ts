@@ -114,6 +114,10 @@ function slugLosesInformation(value: string): boolean {
 // A round label like "第03轮" -> "r03" (stable across imports so same-round
 // games group). Non-numeric labels fall back to a slug or a deterministic hash.
 function roundToken(round: string): string {
+  // A match's game (第08局, see the dpxq adapter) is "g08", the id the hand
+  // backfill of the 2026 春丘大叶杯 ten-game match gave its rounds.
+  const game = round.match(/^第\s*(\d+)\s*局$/)?.[1];
+  if (game) return `g${game.padStart(2, '0')}`;
   const num = round.match(/\d+/)?.[0];
   if (num) return `r${num.padStart(2, '0')}`;
   return slugPart(round) || `r-${hashToken(round)}`;
@@ -279,7 +283,12 @@ function playedAtFromTags(date: string | undefined, event: string | undefined): 
   const eventYear = event?.match(/^\s*(\d{4})\s*年/)?.[1];
   const year = eventYear && eventYear !== parts[1] ? eventYear : parts[1];
   const pad = (value: string | undefined) => (value ?? '0').padStart(2, '0');
-  const iso = `${year}-${pad(parts[2])}-${pad(parts[3])}T${pad(parts[4])}:${pad(parts[5])}:00+08:00`;
+  const day = `${year}-${pad(parts[2])}-${pad(parts[3])}`;
+  // A record dated with no time stays a date: a guessed midnight shows as
+  // "12:00 AM" on the board page, and the site formats a date-only value as
+  // just the day.
+  if (parts[4] === undefined) return Number.isFinite(Date.parse(day)) ? day : undefined;
+  const iso = `${day}T${pad(parts[4])}:${pad(parts[5])}:00+08:00`;
   return Number.isFinite(Date.parse(iso)) ? iso : undefined;
 }
 

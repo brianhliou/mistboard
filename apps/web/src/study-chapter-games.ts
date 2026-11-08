@@ -29,6 +29,30 @@ export type GameChapter = {
   tags?: GameChapterTags;
 };
 
+/**
+ * Rich labels are for distinct games. Lessons keep their chapter names, and
+ * identical rendered labels fall back to names in both chapter lists.
+ */
+export function buildChapterRowLabels<T extends { id: string; gamebook?: boolean }>(
+  chapters: readonly T[],
+  buildLabel: (chapter: T) => HTMLElement | null,
+): Map<string, HTMLElement> {
+  const labels = new Map<string, HTMLElement>();
+  const counts = new Map<string, number>();
+  for (const chapter of chapters) {
+    if (chapter.gamebook) continue;
+    const label = buildLabel(chapter);
+    if (!label) continue;
+    labels.set(chapter.id, label);
+    const text = label.textContent ?? '';
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+  for (const [id, label] of labels) {
+    if (counts.get(label.textContent ?? '')! > 1) labels.delete(id);
+  }
+  return labels;
+}
+
 export type GameOutcome = 'red' | 'black' | 'draw';
 
 /**
@@ -219,22 +243,17 @@ export function chapterEventGroups(
 }
 
 /**
- * The tone of a game row's result chip. With a focus player it is that
- * player's side (win, draw, loss). Without one (a match, an engine gauntlet
- * where both names sit in every game) it is the winning seat, painted in that
- * seat's ink: `red` is the tag's first seat and `black` the second, whatever
- * the family calls them. Null when the result is unknown.
+ * The tone of a game row's result chip: the winning seat, painted in that
+ * seat's ink (`red` is the tag's first seat and `black` the second, whatever
+ * the family calls them), or `draw`. One rule for every study, a player deep
+ * dive included (Brian, 2026-11-04): a focus player's win/loss green and red
+ * read differently from the same chip in a match study. Null when the result
+ * is unknown.
  */
-export type ChapterResultTone = 'win' | 'draw' | 'loss' | 'red' | 'black';
+export type ChapterResultTone = 'draw' | 'red' | 'black';
 
-export function chapterResultTone(
-  chapter: GameChapter,
-  focus: string | null,
-): ChapterResultTone | null {
-  const outcome = gameOutcome(chapter.tags?.result);
-  if (!outcome) return null;
-  if (focus) return focusResult(chapter, focus);
-  return outcome;
+export function chapterResultTone(chapter: GameChapter): ChapterResultTone | null {
+  return gameOutcome(chapter.tags?.result);
 }
 
 /**
@@ -245,7 +264,6 @@ export function chapterResultTone(
  */
 export function buildChapterGameRow(
   chapter: GameChapter,
-  focus: string | null,
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
   if (!isGameChapter(chapter)) return null;
@@ -291,7 +309,7 @@ export function buildChapterGameRow(
   if (outcome) {
     const chip = document.createElement('span');
     chip.className = 'study-game-line__result';
-    chip.dataset.outcome = chapterResultTone(chapter, focus) ?? 'neutral';
+    chip.dataset.outcome = chapterResultTone(chapter) ?? 'neutral';
     chip.textContent = resultLabel(outcome);
     row.append(chip);
   }

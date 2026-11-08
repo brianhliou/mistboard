@@ -20,6 +20,8 @@ export const duckXiangqiStrategyArticle: Article = {
   status: 'published',
   publishedAt: '2026-09-11',
   updatedAt: '2026-10-07',
+  updateNote:
+    'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.',
   audience:
     'Anyone who has just read the Duck Xiangqi rules and is about to play, and xiangqi players wondering whether the duck changes anything real.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },

@@ -33,6 +33,12 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
         const keyed = match[2].match(/\bdata-i18n-key="([^"]*)"/);
         if (keyed) strings.add(decodeSvgText(keyed[1]));
       }
+      // The SVG renderer also translates accessible labels independently of
+      // text nodes, so a chart's aria-label is a live dictionary key too.
+      for (const match of value.matchAll(/<svg\b[^>]*\baria-label="([^"]*)"/gi)) {
+        const label = decodeSvgText(match[1]).trim();
+        if (label) strings.add(label);
+      }
       return;
     }
     if (typeof value === 'function') {
@@ -113,7 +119,7 @@ const BLOCK_PROSE: {
   'static-boards': caption,
   interactive: caption,
   'live-boards': caption,
-  'image-figure': (b) => [...caption(b), b.alt],
+  'image-figure': (b) => [...caption(b), b.alt, ...(b.credit ? [b.credit.text] : [])],
   'raw-svg': caption,
   'animated-svg': caption,
   'svg-row': (b) => [...caption(b), ...b.items.flatMap(caption)],
@@ -171,6 +177,20 @@ const BLOCK_PROSE: {
       item.question,
       item.answer,
     ]),
+  list: (block) => [...((block as { items?: string[] }).items ?? [])],
+  'image-row': (block) => {
+    const b = block as { items?: { alt: string }[]; caption?: string };
+    return [...(b.items ?? []).map((item) => item.alt), ...caption(b)];
+  },
+  // An ISO day is data, not copy; a written date ("Later") is copy.
+  timeline: (block) =>
+    ((block as { items?: { date: string; title: string; text?: string }[] }).items ?? []).flatMap(
+      (item) => [
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(item.date) ? [] : [item.date]),
+        item.title,
+        ...(item.text ? [item.text] : []),
+      ],
+    ),
 };
 
 function blockProse(block: ArticleBlock, path: string): Prose[] {
@@ -190,7 +210,10 @@ function sectionProse(section: ArticleSection, path: string): Prose[] {
 }
 
 // Every natural-language string an article contributes, each with a dotted path
-// for diagnostics. Order is stable: title, summary, tldr, intro, then sections.
+// for diagnostics. Order is stable: title, summary, tldr, method, intro, then
+// sections. `updateNote` stays out: it is a note about the text, not the text,
+// so it does not move the content fingerprint (its translation is checked on
+// its own in article-i18n.coverage.test.ts).
 export function articleProse(article: Article): Prose[] {
   const out: Prose[] = [
     { path: 'title', text: article.title },
@@ -198,6 +221,9 @@ export function articleProse(article: Article): Prose[] {
   ];
   (article.tldr ?? []).forEach((t, i) => {
     out.push({ path: `tldr[${i}]`, text: t });
+  });
+  (article.method ?? []).forEach((m, i) => {
+    out.push({ path: `method[${i}]`, text: m });
   });
   (article.intro ?? []).forEach((b, i) => {
     out.push(...blockProse(b, `intro[${i}]`));

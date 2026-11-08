@@ -11,7 +11,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import { setResolvedSignedIn } from './signed-in-state.js';
+import { setResolvedSignedIn, setResolvedStatsExcluded } from './signed-in-state.js';
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -59,6 +59,7 @@ describe('homepage play panel', () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     setRatedModeEnabled(false);
+    setResolvedStatsExcluded(undefined);
     window.history.replaceState(null, '', '/');
   });
 
@@ -332,12 +333,64 @@ describe('homepage play panel', () => {
     expect(JSON.parse(sessionStorage.getItem('mistboard.gameStartSource') ?? '{}').source).toBe(
       'panel-bot',
     );
-    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1') ?? '{}');
-    expect(stored.last).toEqual({
+    expect(JSON.parse(localStorage.getItem('mistboard:last-bot-game') ?? '{}')).toEqual({
       gameSpecId: 'xiangqi',
       botId: 'fairy-stockfish-level-4',
-      tc: '5m5',
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
     });
+  });
+
+  // Brian, 2026-10-23: the row still named Duck Xiangqi against Fairy-Stockfish
+  // Level 8 after a later game, because only this panel's own Play button wrote
+  // its record. A game started from the setup dialog or a room's play again
+  // writes the shared one, and the row follows it.
+  it('offers Play again for a bot game started outside the panel', async () => {
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({
+        last: { gameSpecId: 'duck-xiangqi', botId: 'fairy-stockfish-level-8', tc: '10m5' },
+      }),
+    );
+    // The setup dialog names the jieqi levels by engine id.
+    localStorage.setItem(
+      'mistboard:last-bot-game',
+      JSON.stringify({
+        gameSpecId: 'jieqi',
+        botId: 'pikafish-jieqi-level-5',
+        timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      }),
+    );
+    const fetchSpy = vi.fn(async () => Response.json({ url: '/jieqi/room-1' }, { status: 201 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    document.body.append(board);
+    const again = board.querySelector('.pp-feature-again');
+    expect(again?.textContent).toContain('Pikafish Level 5');
+    expect(again?.textContent).not.toContain('Duck');
+    expect(again?.textContent).toContain('5+5');
+
+    board.querySelector<HTMLButtonElement>('.pp-feature-again .pp-act')!.click();
+    await flush();
+    const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      mode: 'pve',
+      botId: 'pikafish-level-5',
+      gameSpecId: 'jieqi',
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+    });
+  });
+
+  it('offers no Play again for a last game at a pace the panel has no preset for', () => {
+    localStorage.setItem(
+      'mistboard:last-bot-game',
+      JSON.stringify({
+        gameSpecId: 'xiangqi',
+        botId: 'fairy-stockfish-level-4',
+        timeControl: { initialMs: 420_000, incrementMs: 0 },
+      }),
+    );
+    const board = buildPlayPanel('en', { hydrate: false });
+    expect(board.querySelector('.pp-feature-again')).toBeNull();
   });
 
   it('offers Play again for the last bot game, and keeps the picked level', () => {
@@ -440,6 +493,30 @@ describe('homepage play panel', () => {
     );
     rated?.click();
     expect(window.location.href).toContain('/account?tab=login');
+  });
+
+  it('says in plain words why Rated is out of reach, per account state', async () => {
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    await ensureLocaleCatalog('zh-Hans');
+    await ensureLocaleCatalog('zh-Hant');
+    const note = (board: HTMLElement) => board.querySelector('.pp-note')?.textContent;
+    // Rated off on the server: no switch, no note.
+    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
+    setRatedModeEnabled(true);
+    // A guest is told to sign in.
+    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('Sign in to play rated games.');
+    // A signed-in counted account in Casual sees nothing.
+    setResolvedSignedIn(true);
+    expect(note(buildPlayPanel('en', { hydrate: false }))).toBe('');
+    // A stats-excluded account plays casual only.
+    setResolvedStatsExcluded(true);
+    const excluded = buildPlayPanel('en', { hydrate: false });
+    expect(note(excluded)).toBe('This account plays casual games only.');
+    expect(note(buildPlayPanel('zh-Hans', { hydrate: false }))).toBe('此账号只能下休闲对局。');
+    expect(note(buildPlayPanel('zh-Hant', { hydrate: false }))).toBe('此帳號只能下休閒對局。');
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      expect(note(buildPlayPanel(locale, { hydrate: false }))).not.toMatch(/counted|计入|計入|—/);
+    }
   });
 
   it('shows Casual/Rated once /api/server-status turns rated on after the panel is built', () => {

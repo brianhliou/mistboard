@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // The site's game database (/games/search, lichess: "Advanced search"). The
 // module name predates the variant picker: it was a xiangqi-only database until
 // 2026-09, and the API still lives at /api/historical-xiangqi/games because
@@ -920,5 +922,21 @@ function formatDate(value: string | null): string {
   if (!value) return t('historical.unknownDate');
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+export function renderGamesSearchShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const heading = document.createElement('h1');
+    heading.textContent = t('historical.heading');
+    root.append(
+      heading,
+      buildFilterForm(readFilters(), () => {}),
+    );
+  });
 }

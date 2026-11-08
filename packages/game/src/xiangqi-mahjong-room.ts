@@ -15,6 +15,7 @@
 import {
   isXmjTile,
   XMJ_MATCH_HANDS,
+  XMJ_TAI_TABLE,
   type XmjClaim,
   type XmjClaimKind,
   type XmjHandResult,
@@ -22,14 +23,18 @@ import {
   type XmjMeld,
   type XmjScore,
   type XmjSeatIndex,
+  type XmjTaiTable,
   type XmjTile,
   xmjAdvance,
   xmjCanDiscard,
   xmjCanSelfDraw,
   xmjClaim,
   xmjClaimsOpen,
+  xmjDeclarationDiscards,
+  xmjDeclareReady,
   xmjDiscard,
   xmjHandOver,
+  xmjIsDeclared,
   xmjMatchWinner,
   xmjNewMatch,
   xmjNextDealer,
@@ -75,7 +80,7 @@ export const XMJ_CLAIM_KINDS: readonly XmjClaimKind[] = ['win', 'pung', 'chow'];
 /** What a client asks to do. Carries no identity and no time. */
 export type XmjAction =
   | {
-      readonly action: 'discard';
+      readonly action: 'discard' | 'declare-ready';
       readonly tile: XmjTile;
       /** The drawn tile has a twin in the hand, and the twin was thrown. */
       readonly handCopy?: true;
@@ -102,6 +107,11 @@ export interface XmjRoomSetup {
    * once. Absent on a live room's setup.
    */
   readonly correspondence?: boolean;
+  /**
+   * The 台 table the match scores on (`XmjTaiTable`). Absent on a match created
+   * before 2026-10-26, which replays on table 1.
+   */
+  readonly taiTable?: XmjTaiTable;
 }
 
 /** Mirrors @mistboard/game's AbortReason (the server tenant checks they agree). */
@@ -146,8 +156,11 @@ export function createXmjSetup(
 ): XmjRoomSetup {
   const walls: XmjTile[][] = [];
   for (let i = 0; i < XMJ_MATCH_HANDS; i += 1) walls.push(xmjShuffle(random));
-  if (options.correspondence) return { walls, firstDealer: 'east', correspondence: true };
-  return { walls, firstDealer: random() < 0.5 ? 'east' : 'west' };
+  const taiTable = XMJ_TAI_TABLE;
+  if (options.correspondence) {
+    return { walls, firstDealer: 'east', correspondence: true, taiTable };
+  }
+  return { walls, firstDealer: random() < 0.5 ? 'east' : 'west', taiTable };
 }
 
 const FULL_SET = xmjOrderedTiles().join(',');
@@ -158,6 +171,13 @@ export function isXmjRoomSetup(value: unknown): value is XmjRoomSetup {
   const setup = value as Record<string, unknown>;
   if (!isXmjSeat(setup.firstDealer) || !Array.isArray(setup.walls)) return false;
   if (setup.correspondence !== undefined && typeof setup.correspondence !== 'boolean') return false;
+  if (
+    setup.taiTable !== undefined &&
+    setup.taiTable !== 1 &&
+    setup.taiTable !== 2 &&
+    setup.taiTable !== 3
+  )
+    return false;
   if (setup.walls.length < 1 || setup.walls.length > XMJ_MATCH_HANDS) return false;
   return setup.walls.every(
     (wall) =>
@@ -168,7 +188,7 @@ export function isXmjRoomSetup(value: unknown): value is XmjRoomSetup {
 }
 
 export function createXmjRoomState(setup: XmjRoomSetup, id = ''): XmjRoomState {
-  const match = xmjNewMatch(setup.walls, xmjSeatIndex(setup.firstDealer));
+  const match = xmjNewMatch(setup.walls, xmjSeatIndex(setup.firstDealer), setup.taiTable ?? 1);
   return {
     id,
     status: { type: 'playing', turn: xmjSeatName(match.hand.turn) },
@@ -219,7 +239,9 @@ export function xmjIsLegalMove(state: XmjRoomState, move: XmjMove): boolean {
   const seat = xmjSeatIndex(move.by);
   switch (move.action) {
     case 'discard':
-      return hand.turn === seat && xmjCanDiscard(hand, move.tile);
+      return hand.turn === seat && xmjCanDiscard(hand, move.tile, move.handCopy === true);
+    case 'declare-ready':
+      return hand.turn === seat && xmjDeclarationDiscards(hand).includes(move.tile);
     case 'self-draw':
       return hand.turn === seat && xmjCanSelfDraw(hand);
     case 'pass':
@@ -263,6 +285,9 @@ export function applyXmjMove(state: XmjRoomState, move: XmjMove): XmjRoomState {
   switch (move.action) {
     case 'discard':
       after = xmjDiscard(hand, move.tile, move.handCopy === true);
+      break;
+    case 'declare-ready':
+      after = xmjDeclareReady(hand, move.tile, move.handCopy === true);
       break;
     case 'self-draw':
       after = xmjSelfDraw(hand);
@@ -332,6 +357,20 @@ export function xmjPendingAction(
     };
   }
   const phase = state.match.hand.phase;
+  const hand = state.match.hand;
+  if (
+    phase.type === 'discard' &&
+    phase.drawn !== null &&
+    xmjIsDeclared(hand, hand.turn) &&
+    !xmjCanSelfDraw(hand) &&
+    state.lastMove !== undefined
+  ) {
+    // Derive from the persisted draw-producing move, never a fresh wall-clock
+    // timer. A reconnect reconstructs exactly the same automatic discard.
+    const at = state.lastMove.at + (state.correspondence ? 0 : XMJ_CLAIM_PAUSE_MS);
+    const by = xmjSeatName(hand.turn);
+    return { at, color: by, move: { by, at, action: 'discard', tile: phase.drawn } };
+  }
   const pauseEnd = state.claimPauseEndsAt ?? null;
   if (phase.type === 'claim' && pauseEnd !== null) {
     // A claimant with a claim to weigh has no deadline but its own clock.
@@ -377,15 +416,16 @@ function lastResult(match: XmjMatchState): XmjHandResult {
 
 /**
  * The seat whose clock runs: the seat to discard, or after a discard the
- * claimant, who owns the claim decision. Nobody between hands. So the clock
- * passes to the other seat on every discard whether a claim was there or not,
- * and the claimant's claim or pass, draw and discard are one turn on one clock,
- * live and correspondence alike (in correspondence, one move deadline).
+ * claimant, who owns the claim decision. Nobody between hands or during a
+ * live declared player's automatic discard: that delay is the server's, with
+ * no decision for either player. Otherwise the claimant's claim or pass, draw
+ * and discard are one turn on one clock (in correspondence, one move deadline).
  */
 export function xmjClockOwner(state: XmjRoomState): XmjSeat | null {
   if (state.status.type !== 'playing' || state.match.between) return null;
   const phase = state.match.hand.phase;
   if (phase.type === 'claim') return xmjSeatName(xmjOtherSeat(phase.discarder));
+  if (!state.correspondence && xmjPendingAction(state)?.move.action === 'discard') return null;
   return phase.type === 'discard' ? xmjSeatName(state.match.hand.turn) : null;
 }
 
@@ -396,12 +436,15 @@ export function xmjMoveFromMessage(message: { action?: string; tiles?: string[] 
   if (!Array.isArray(tiles) || !tiles.every(isXmjTile)) return null;
   switch (message.action) {
     case 'discard':
-    case 'discard-hand': {
+    case 'discard-hand':
+    case 'declare-ready':
+    case 'declare-ready-hand': {
       const [tile] = tiles;
       if (tile === undefined || tiles.length !== 1) return null;
-      return message.action === 'discard-hand'
-        ? { ...placeholder, action: 'discard', tile, handCopy: true }
-        : { ...placeholder, action: 'discard', tile };
+      const action = message.action.startsWith('declare-ready') ? 'declare-ready' : 'discard';
+      return message.action.endsWith('-hand')
+        ? { ...placeholder, action, tile, handCopy: true }
+        : { ...placeholder, action, tile };
     }
     case 'self-draw':
       return { ...placeholder, action: 'self-draw' };
@@ -431,6 +474,7 @@ export function isXmjMove(value: unknown): value is XmjMove {
     case 'timeout':
       return true;
     case 'discard':
+    case 'declare-ready':
       return isXmjTile(move.tile) && (move.handCopy === undefined || move.handCopy === true);
     case 'claim':
       return (
@@ -469,6 +513,8 @@ export interface XmjViewResult {
 /** What this seat may do right now, so a client renders buttons and decides nothing. */
 export interface XmjLegalActions {
   readonly discard: readonly XmjTile[];
+  /** Table 3 only, and populated only for the owner on its discard turn. */
+  readonly declareReady?: readonly XmjTile[];
   readonly selfDraw: boolean;
   readonly claims: readonly XmjClaim[];
   readonly pass: boolean;
@@ -508,6 +554,8 @@ export interface XmjPlayerView {
   readonly phase: XmjViewPhase;
   readonly between: boolean;
   readonly ready: readonly XmjSeat[];
+  /** Table 3 only. These public declarations never mean Next hand. */
+  readonly declared?: Readonly<Record<XmjSeat, boolean>>;
   /** End of the pause every discard gets; the claimant's answer waits for it. */
   readonly claimPauseEndsAt: number | null;
   readonly nextHandAt: number | null;
@@ -541,7 +589,7 @@ function legalFor(state: XmjRoomState, seat: XmjSeat): XmjLegalActions {
   if (hand.phase.type !== 'discard' || hand.turn !== index) return NO_ACTIONS;
   return {
     ...NO_ACTIONS,
-    discard: [...new Set(hand.hands[index])],
+    discard: [...new Set(hand.hands[index])].filter((tile) => xmjCanDiscard(hand, tile)),
     selfDraw: xmjCanSelfDraw(hand),
   };
 }
@@ -598,6 +646,7 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
     phase: viewPhase(state, perspective),
     between: match.between,
     ready: state.ready,
+    ...(hand.taiTable === 3 ? { declared: bySeat((i) => xmjIsDeclared(hand, i)) } : {}),
     claimPauseEndsAt: state.claimPauseEndsAt ?? null,
     nextHandAt: state.nextHandAt,
     results: match.results.map((result) => ({
@@ -607,7 +656,19 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
       score: result.score,
       winningTile: result.winningTile ?? null,
     })),
-    legal: perspective === 'spectator' ? NO_ACTIONS : legalFor(state, perspective),
+    legal: {
+      ...(perspective === 'spectator' ? NO_ACTIONS : legalFor(state, perspective)),
+      ...(hand.taiTable === 3
+        ? {
+            declareReady:
+              state.status.type === 'playing' &&
+              !match.between &&
+              perspective === xmjSeatName(hand.turn)
+                ? xmjDeclarationDiscards(hand)
+                : [],
+          }
+        : {}),
+    },
     correspondence: state.correspondence === true,
   };
 }

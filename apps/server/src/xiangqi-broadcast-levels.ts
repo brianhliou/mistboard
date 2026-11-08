@@ -60,9 +60,15 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   '2026-tianchang-cup': 'B',
   '2026-xintai-cup': 'B',
   '2026-baizuishan-cup': 'B',
+  // The continental championship, the strongest event in North America: A, so
+  // its field gets player pages. Graded 2026-11-07.
+  '2026-north-american-championship': 'A',
   // LA-hosted four-club invitational. Former North American champions play,
   // but this mixed club field does not qualify new professional player pages.
   '2026-us-qitian-cup': 'B',
+  // Vietnam against Guangdong, a friendly team exhibition in Đà Nẵng (July
+  // 24-28): B like the Guangdong Tigers city exhibitions. Graded before import.
+  '2026-kim-long-motor-cup': 'B',
   // The M0 fixture pack (packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample),
   // graded so the persistence tests can exercise the gate; it never reaches prod.
   '2025-wxc-sample': 'A',

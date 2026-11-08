@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  ABJCHESS_20261031_WIN_PCT_K,
   ABJCHESS_WIN_PCT_K,
   accuracyPercent,
   gameAccuracy,
   moveJudgment,
+  RAPFI_WIN_PCT_K,
   WIN_PCT_K,
   winPercent,
   winPercentK,
@@ -49,6 +51,21 @@ test('winPercent takes an engine curve constant; the default stays lila', () => 
 test('winPercentK picks the curve from the stored analysis engine id', () => {
   assert.equal(winPercentK('ab-jchess-jieqi-analysis@0.1.0+1ae95ca6'), ABJCHESS_WIN_PCT_K);
   assert.equal(winPercentK('ab-jchess-jieqi-decisions@0.1.0+1ae95ca6'), ABJCHESS_WIN_PCT_K);
+  // An id on the v0.2d net keeps v0.2b's curve; one on AB-JChess-20261031's net
+  // (the jqe-lineage engine) gets its own refit, where +409cp is 75%.
+  assert.equal(
+    winPercentK(
+      'ab-jchess-jieqi-analysis@1+fe35d87c+abjchess-20261010+nodes50000+consistent-win1+public1',
+    ),
+    ABJCHESS_WIN_PCT_K,
+  );
+  for (const id of [
+    'ab-jchess-jieqi-analysis@1+efc83867+abjchess-20261030+nodes50000+consistent-win1+public1',
+    'ab-jchess-jieqi-decisions@2+efc83867+abjchess-20261030+nodes20000+mpv100000+d6-public',
+  ]) {
+    assert.equal(winPercentK(id), ABJCHESS_20261031_WIN_PCT_K, id);
+  }
+  assert.ok(Math.abs(winPercent(409, null, ABJCHESS_20261031_WIN_PCT_K) - 75) < 0.1);
   assert.equal(winPercentK('pikafish-jieqi-analysis@0.4.0+e75cee3a'), WIN_PCT_K);
   assert.equal(winPercentK('pikafish'), WIN_PCT_K);
   assert.equal(winPercentK(undefined), WIN_PCT_K);
@@ -119,4 +136,11 @@ test('gameAccuracy substitutes a luck-free accuracy for a reveal ply', () => {
   const realized = gameAccuracy(curve);
   const luckFree = gameAccuracy(curve, new Map([[1, 99]]));
   assert.ok(luckFree.first > realized.first, 'a luck-free decision beats the crater outcome');
+});
+
+test("Rapfi analyses are read on Rapfi's own win curve", () => {
+  const id = 'rapfi-gomoku-analysis@1+1387d11312+net6bc0d1b0+n100000+t5000+h32+threads1+pv1';
+  assert.equal(winPercentK(id), RAPFI_WIN_PCT_K);
+  // Rapfi printed EVAL 414 beside WINRATE 0.887953 for one recorded position.
+  assert.ok(Math.abs(winPercent(414, null, winPercentK(id)) - 88.8) < 0.1);
 });

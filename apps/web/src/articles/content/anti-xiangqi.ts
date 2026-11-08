@@ -38,8 +38,15 @@ export const antiXiangqiArticle: Article = {
     'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.",
+    'Fairy-Stockfish played a game from each of the 83 distinct endings of the opening chain at 100,000 nodes a move, and again at a million.',
+    'Proof-number search turned the decisive endings into proofs about the rules: 63 of 70 closed, and a separate checker replays each one.',
+  ],
   publishedAt: '2026-09-13',
   updatedAt: '2026-10-07',
+  updateNote:
+    'Added the full analysis: the opening forks, the proof line, the engine games and how it was checked.',
   audience:
     'Chess players who know antichess and wonder what it does on the xiangqi board, and xiangqi players curious why a variant was measured and then not built.',
   thumbnail: { kind: 'svg', svg: ANTI_XIANGQI_THUMBNAIL },

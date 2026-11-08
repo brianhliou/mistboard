@@ -79,6 +79,10 @@ export type ReviewLayoutAdapter = {
    *  Off by default so every review's center column is board-only. */
   showBoardMaterial?: boolean;
   boards: ReviewBoardEntry[];
+  /** Window event after which the board draws differently (the coordinates
+   *  setting): the boards re-render and, with `resolveBoardAspect`, re-fit. */
+  appearanceEvent?: string;
+  resolveBoardAspect?: () => number;
   /** Board width / height, e.g. 552 / 612 for xiangqi. Drives the fill sizing. */
   boardAspect: number;
   /** Board columns (files). Sizes captured-material tiles to ≈ one board cell so
@@ -102,6 +106,8 @@ export type ReviewLayoutAdapter = {
 
 const NAV_AND_PADDING_PX = 122; // site nav + shell top/bottom padding
 const VIEWPORT_CHROME_PX = 108;
+/** The phone breakpoint the one-screen game review switches on (#619). */
+const PHONE_QUERY = '(max-width: 600px)';
 const RAILS_AND_GUTTERS_PX = 640;
 // Where a full-page review's cluster starts (site nav + shell top padding): an
 // embedded review below a taller host header gives the difference back.
@@ -132,6 +138,8 @@ type SizingInput = {
 };
 
 export type ReviewScaffoldConfig = SizingInput & {
+  /** Preserve the mounted study shell and its document rail on chapter changes. */
+  reuseShell?: HTMLElement;
   /** Stops the resize work when the review is destroyed. */
   signal?: AbortSignal;
   /** Board and moves only, inside a host page's column (review-shell.ts). */
@@ -179,6 +187,10 @@ export type ReviewScaffoldConfig = SizingInput & {
    *  fold instead of shrinking the board to keep everything above it. The board
    *  fills the viewport; the page scrolls to the chart. */
   underboardOverflows?: boolean;
+  /** Phone review and analysis: on the one-column stack the board, navigation
+   *  and the move strip share one screen, so the board also shrinks to
+   *  leave room for what sits under it, down to the move list. */
+  phoneOneScreen?: boolean;
   /** Fires after a secondary board is promoted; the caller re-renders (the
    *  scaffold re-fits afterward). */
   onPromote?(): void;
@@ -276,7 +288,7 @@ export function createReviewScaffold(
     favoriteGameId && !config.metaCard
       ? reviewActionsWithFavorite(config.actions, favoriteGameId)
       : config.actions;
-  const left = config.embedded ? [] : infoRail({ ...config, actions });
+  const left = config.embedded || config.reuseShell ? [] : infoRail({ ...config, actions });
   // Right rail, lichess order: material-top · [analyse table: engine panel ·
   // move list · advice · navigation] · summary · material-bottom. The analyse
   // table is ONE visually connected box (lichess's analyse tools) whose bottom
@@ -289,27 +301,15 @@ export function createReviewScaffold(
   // advice + any study annotations). Playback controls live BELOW it (lichess
   // analyse), so the box bottom lines up with the board and the controls sit under
   // both — see config.navigation's position in the rail group below.
-  //
-  // A study is the exception: its rail carries no analysis summary, so the box IS
-  // the bottom of the column, and unfused controls left a dead gap between the box
-  // and the board line. There the controls become the box's last strip, and the box
-  // bottom lands on the board bottom. Fusing requires no rail panel: the opening
-  // explorer opens as the box's bottom section and would split fused controls
-  // from the board line.
-  // Material rows change where the controls belong. With a pocket, the box that
-  // tracks the board is [top pocket · moves · bottom pocket] and the controls sit
-  // BELOW it (lichess crazyhouse), so fusing them into the moves strip would
-  // sandwich them above the bottom pocket instead.
+  // Studies included (Brian, 2026-11-04: the controls sit under the right column
+  // and the column ends with the move list, on the board line, as on lichess).
+  // With a pocket, the box that tracks the board is [top pocket · moves · bottom
+  // pocket] (lichess crazyhouse), and the controls sit below that box.
   const hasPocketBox = Boolean(materialTop || materialBottom);
-  const fuseNavigation = config.reviewSurface === 'study' && !config.railPanel && !hasPocketBox;
   railMain.append(
-    ...[
-      config.enginePanel,
-      config.moves,
-      config.moveComment,
-      config.annotations,
-      fuseNavigation ? config.navigation : null,
-    ].filter((el): el is HTMLElement => el != null),
+    ...[config.enginePanel, config.moves, config.moveComment, config.annotations].filter(
+      (el): el is HTMLElement => el != null,
+    ),
   );
   // The rail panel (opening explorer) is the bottom section of the moves box: a
   // wrapper holds railMain and the panel, keeps the box's board-height footprint
@@ -343,12 +343,9 @@ export function createReviewScaffold(
     boardTrackingBox = pocketBox;
   }
   const right = railGroup(
-    [
-      boardTrackingBox,
-      fuseNavigation ? null : config.navigation,
-      config.analysisSummary,
-      config.railFooter,
-    ].filter((el): el is HTMLElement => el != null),
+    [boardTrackingBox, config.navigation, config.analysisSummary, config.railFooter].filter(
+      (el): el is HTMLElement => el != null,
+    ),
   );
   const center = config.underboard ? centerColumn(stage.el, config.underboard) : stage.el;
   // Phone stack (col1): the center column and the right rail dissolve and each
@@ -356,14 +353,14 @@ export function createReviewScaffold(
   // after the underboard and the whole move list (review-shell.css "col1 stack").
   markCol1Areas({
     board: stage.el,
-    nav: fuseNavigation ? undefined : config.navigation,
+    nav: config.navigation,
     moves: boardTrackingBox,
     extra: config.railFooter,
     under: config.underboard,
     summary: config.analysisSummary,
   });
 
-  const shell = createReviewShell({
+  const nextShell = createReviewShell({
     ariaLabel: config.ariaLabel,
     // `review-shell--pocket` stands in for `.review-shell:has(.review-rail-pocketbox)`:
     // a :has() whose subject is the whole shell re-matched all of its descendants
@@ -381,6 +378,15 @@ export function createReviewScaffold(
     right,
     embedded: config.embedded,
   });
+  const shell = config.reuseShell ?? nextShell;
+  if (config.reuseShell) {
+    const cluster = shell.querySelector('.review-shell__cluster')!;
+    for (const child of [...cluster.children]) {
+      if (!child.classList.contains('review-shell__left')) child.remove();
+    }
+    cluster.append(...nextShell.querySelectorAll('.review-shell__center, .review-shell__right'));
+    shell.className = nextShell.className;
+  }
   shell.querySelector('.review-shell__cluster')?.classList.add(COL1_STACK_CLASS);
   if (config.railBelow) {
     config.railBelow.classList.add('review-rail-below');
@@ -397,7 +403,7 @@ export function createReviewScaffold(
       cluster.append(gaugeCol);
     }
   }
-  root.append(shell);
+  if (!config.reuseShell) root.append(shell);
 
   // Board zoom: restore the persisted scale and glue the drag grip to the primary
   // slot's bottom-right corner (re-anchored after every refit).
@@ -405,20 +411,30 @@ export function createReviewScaffold(
   const grip = attachBoardResizeGrip(stage.el, () =>
     stage.el.querySelector<HTMLElement>('.review-stage__slot--primary'),
   );
-  const GRIP_SIZE_PX = 15;
-  const GRIP_INSET_PX = 3;
-  const positionGrip = (): void => {
-    const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
-    if (!slot) return;
-    const slotRect = slot.getBoundingClientRect();
-    const stageRect = stage.el.getBoundingClientRect();
-    if (slotRect.width === 0 || stageRect.width === 0) return;
-    // Tuck the handle just INSIDE the board's bottom-right corner (lichess), not
-    // hanging off the outside edge.
-    grip.style.right = `${Math.max(0, stageRect.right - slotRect.right) + GRIP_INSET_PX}px`;
-    grip.style.bottom = 'auto';
-    grip.style.top = `${slotRect.bottom - stageRect.top - GRIP_SIZE_PX - GRIP_INSET_PX}px`;
-  };
+  // The grip is hidden until its first placement. Its CSS default is the
+  // stage's corner, and the stage runs past the board into the seat-label
+  // margin, so a fresh stage (every study chapter switch) painted it under the
+  // board until this ran.
+  grip.classList.add('board-resize-grip--unplaced');
+  const positionGrip = (): void => placeReviewGrip(stage.el, grip);
+  // Re-place in the frame the board's box changes: refit places it from the
+  // fit's own animation frame (below), and this observer covers size changes
+  // that don't go through refit. Its callback runs after layout and before
+  // paint. Placement used to wait on a 60ms timer per refit, so during a drag
+  // (every pointermove refits) the grip trailed the board by up to 45px.
+  let observePrimarySlot = (): void => {};
+  if (typeof ResizeObserver !== 'undefined') {
+    const gripObserver = new ResizeObserver(() => positionGrip());
+    gripObserver.observe(stage.el);
+    // Fog review promotes a secondary board into the primary slot, so each
+    // refit observes whichever slot is primary now (observe() is idempotent).
+    observePrimarySlot = () => {
+      const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
+      if (slot) gripObserver.observe(slot);
+    };
+    observePrimarySlot();
+    config.signal?.addEventListener('abort', () => gripObserver.disconnect(), { once: true });
+  }
 
   function refit(): void {
     applyBoardSizing(
@@ -429,7 +445,17 @@ export function createReviewScaffold(
     );
     fitPrimaryToViewport(stage.el, boardAspect, config.boardMaxPx, {
       underboardOverflows: config.underboardOverflows,
+      phoneOneScreen: config.phoneOneScreen,
+      // Place the grip once the fit has written the board's final width, in
+      // the same animation frame, before paint. Not here, synchronously:
+      // applyBoardSizing leaves a provisional (larger) width until the fit
+      // runs, and a grip placed against it stayed there, because the observer
+      // above only fires when the size differs from the last one it saw, and
+      // the fitted size usually equals it.
+      onFitted: positionGrip,
     });
+    observePrimarySlot();
+    // Backstop for a board that settles its size a tick later.
     setTimeout(positionGrip, 60);
   }
 
@@ -544,9 +570,25 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     flip,
   });
 
+  // One listener per page: a re-mount drops the previous page's.
+  appearanceAbort?.abort();
+  appearanceAbort = new AbortController();
+  if (adapter.appearanceEvent) {
+    window.addEventListener(
+      adapter.appearanceEvent,
+      () => {
+        if (adapter.resolveBoardAspect) scaffold.setBoardAspect(adapter.resolveBoardAspect());
+        render();
+      },
+      { signal: appearanceAbort.signal },
+    );
+  }
+
   render();
   scaffold.refit();
 }
+
+let appearanceAbort: AbortController | null = null;
 
 // Global playback keys (arrows anywhere on the page, lichess-style), ignoring
 // typing targets. The one move-nav key map lives with the bar (move-nav-bar.ts,
@@ -561,7 +603,7 @@ function fitPrimaryToViewport(
   stageEl: HTMLElement,
   aspect: number,
   maxPx?: number,
-  opts?: { underboardOverflows?: boolean },
+  opts?: { underboardOverflows?: boolean; phoneOneScreen?: boolean; onFitted?: () => void },
 ): void {
   scheduleAnimationFrame(() => {
     if (typeof window === 'undefined') return;
@@ -579,6 +621,9 @@ function fitPrimaryToViewport(
         ? underboard.getBoundingClientRect().height + STACK_GAP_PX
         : 0;
     const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
+    const seatRowsTopPx = cluster
+      ? Number.parseFloat(getComputedStyle(cluster).paddingTop) || 0
+      : 0;
     // An embedded review starts below its host's header, not under the site
     // nav, so the board fits the height left beneath that header, never less
     // than a readable board.
@@ -597,10 +642,11 @@ function fitPrimaryToViewport(
       const baseChrome = Number(cluster.dataset.uniBaseChrome ?? '0') || 0;
       cluster.style.setProperty(
         '--uni-board-chrome-h',
-        `${baseChrome + Math.round(underboardPx) + hostHeaderPx}px`,
+        `${baseChrome + Math.round(underboardPx) + hostHeaderPx + seatRowsTopPx}px`,
       );
     }
-    const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx - hostHeaderPx;
+    const available =
+      window.innerHeight - VIEWPORT_CHROME_PX - underboardPx - hostHeaderPx - seatRowsTopPx;
     const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (available <= 0 || !slot) return;
     const visibleStageRows = [...stageEl.children].filter(
@@ -630,15 +676,88 @@ function fitPrimaryToViewport(
     const targetBoardWidth = Math.floor(
       (available - nonBoardChrome - 6) * aspect * currentBoardScale(),
     );
+    const oneScreenWidth =
+      opts?.phoneOneScreen && stacked
+        ? oneScreenBoardWidth(stageEl, boardWidth / aspect, aspect)
+        : Number.POSITIVE_INFINITY;
     const targetWidth = Math.max(
       160,
-      Math.min(widthCap, maxPx ?? Number.POSITIVE_INFINITY, targetBoardWidth + flankPx),
+      Math.min(
+        widthCap,
+        maxPx ?? Number.POSITIVE_INFINITY,
+        targetBoardWidth + flankPx,
+        oneScreenWidth + flankPx,
+      ),
     );
     stageEl.style.setProperty('--review-stage-primary-max', `${targetWidth}px`);
     stageEl
       .closest<HTMLElement>('.review-shell__cluster')
       ?.style.setProperty('--uni-board-fit-w', `${targetWidth}px`);
+    opts?.onFitted?.();
   });
+}
+// Matches .board-resize-grip. The box sits flush in the corner; its lines are
+// drawn a little inside it (board-resize.css).
+const GRIP_SIZE_PX = 20;
+
+/**
+ * Put the resize grip in the primary board's bottom-right corner, inside the
+ * board, and show it. A no-op while the stage has no laid-out primary slot.
+ */
+export function placeReviewGrip(stageEl: HTMLElement, grip: HTMLElement): void {
+  const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
+  if (!slot) return;
+  const slotRect = slot.getBoundingClientRect();
+  const stageRect = stageEl.getBoundingClientRect();
+  if (slotRect.width === 0 || stageRect.width === 0) return;
+  grip.style.right = `${Math.max(0, stageRect.right - slotRect.right)}px`;
+  grip.style.bottom = 'auto';
+  // Fog review keeps its "viewing as" row inside the slot, under the board, so
+  // there the corner is the board's own (the slot's in-flow child that isn't
+  // the row), or the grip sits on the row's button.
+  const pov = slot.querySelector<HTMLElement>(':scope > .review-pov');
+  const board = pov
+    ? Array.from(slot.children).find((child) => {
+        const position = getComputedStyle(child).position;
+        return child !== pov && position !== 'absolute' && position !== 'fixed';
+      })
+    : undefined;
+  const bottom = board
+    ? board.getBoundingClientRect().bottom
+    : (pov?.getBoundingClientRect().top ?? slotRect.bottom);
+  grip.style.top = `${bottom - stageRect.top - GRIP_SIZE_PX}px`;
+  grip.classList.remove('board-resize-grip--unplaced');
+}
+
+/** The widest board that keeps the phone stack, from the board down to the
+ *  move list and the shell's bottom padding, inside the viewport (#619). What
+ *  sits between the board and the move list (seat row, arrow bar, gaps) does
+ *  not change with the board's size, so one measurement settles it. A running
+ *  engine's card sits below the move list and is left to scroll unless it lives
+ *  in Tools. Standalone analysis also reserves its fixed toolbar. Phones only:
+ *  the 601-799px stack keeps its full move list and its board size. */
+export function oneScreenBoardWidth(
+  stageEl: HTMLElement,
+  boardHeight: number,
+  aspect: number,
+): number {
+  if (typeof window.matchMedia !== 'function' || !window.matchMedia(PHONE_QUERY).matches) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const shell = stageEl.closest<HTMLElement>('.review-shell');
+  const moves = shell?.querySelector<HTMLElement>('.review-rail-main .review-move-list');
+  if (!shell || !moves || boardHeight <= 0) return Number.POSITIVE_INFINITY;
+  const stageTop = stageEl.getBoundingClientRect().top + window.scrollY;
+  const belowBoard = moves.getBoundingClientRect().bottom - stageEl.getBoundingClientRect().top;
+  const shellBottomPad = Number.parseFloat(getComputedStyle(shell).paddingBottom) || 0;
+  const phonePage = shell.closest<HTMLElement>('.has-analysis-phone-bar');
+  const pageBottomPad = phonePage
+    ? Number.parseFloat(getComputedStyle(phonePage).paddingBottom) || 0
+    : 0;
+  const room =
+    window.innerHeight - stageTop - shellBottomPad - pageBottomPad - (belowBoard - boardHeight);
+  if (room <= 0) return Number.POSITIVE_INFINITY;
+  return Math.floor((room - 2) * aspect * currentBoardScale());
 }
 
 function scheduleAnimationFrame(callback: () => void): void {

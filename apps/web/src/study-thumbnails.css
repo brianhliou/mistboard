@@ -60,6 +60,50 @@
   fill: #1f2937;
 }
 
+/* Chess's white side: an ivory disc with a dark rim, so it reads against both
+   the light wood and the shaded squares. */
+.study-thumbnail__white {
+  fill: #f8f4ea;
+  stroke: #1f2937;
+  stroke-width: 0.9;
+}
+
+/* The back of a tile: a darker wood disc. A face-down piece whose side is
+   public (jieqi) wears that side's colour as a ring; one whose side is hidden
+   (banqi, flip jungle) is plain. */
+.study-thumbnail__down {
+  fill: #8a5a2b;
+  stroke: #5b3a1a;
+  stroke-width: 0.8;
+}
+
+.study-thumbnail__down--red {
+  stroke: #b91c1c;
+  stroke-width: 1.4;
+}
+
+.study-thumbnail__down--black {
+  stroke: #1f2937;
+  stroke-width: 1.4;
+}
+
+.study-thumbnail__duck {
+  fill: #eab308;
+  stroke: #713f12;
+  stroke-width: 0.8;
+}
+
+/* Square boards: chess shades its dark squares, jungle tints its rivers. */
+.study-thumbnail__dark-square {
+  fill: var(--xq-diagram-line, #4b3c2a);
+  opacity: 0.28;
+}
+
+.study-thumbnail__water {
+  fill: #3b82f6;
+  opacity: 0.35;
+}
+
 /* Variant marker: the one-colour silhouette centred in a panel of the board's
    shape, so a study with no derivable board still gets a tile of the same
    weight. */

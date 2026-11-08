@@ -157,6 +157,8 @@ export const katagoJungleArticle: Article = {
   status: 'published',
   publishedAt: '2026-10-03',
   updatedAt: '2026-10-16',
+  updateNote:
+    'The den-race section moved to its own article; this page now links to it.',
   thumbnail: { kind: 'svg', svg: KATAGO_JUNGLE_THUMBNAIL },
   audience: 'People who play Jungle Chess against the bot on Mistboard.',
   readNext: ['jungle-den-term', 'dou-shou-qi-engine'],

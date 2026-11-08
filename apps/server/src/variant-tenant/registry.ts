@@ -20,7 +20,16 @@ import type { TenantGameOrigin } from './tenant.js';
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
+import type {
+  GomokuOpening,
+  GomokuPlayerView,
+  HiddenPieceIdentity,
+  RoomTimeControl,
+  XmjHandResult,
+  XmjMove,
+  XmjRoomSetup,
+  XmjSeat,
+} from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
@@ -114,14 +123,11 @@ export type VariantTenantWatchChannel = {
 };
 
 // One exported ply of a FINISHED tenant game, already type-erased: the mover
-// is the tenant's color word, the move is a coordinate string in the encoding
-// documented in game-export-tenant.ts, and `san` is null unless the tenant has
-// a real human notation for the move (xiangqi WXF).
+// is the tenant's color word. Board moves carry UCI and optionally SAN; mahjong
+// carries its canonical action and a readable tile label instead.
 export type TenantExportPly = {
   ply: number;
   mover: string;
-  uci: string;
-  san: string | null;
   // Remaining clock per color after the move, when the event carried a clock.
   clockMsAfter: Readonly<Record<string, number>> | null;
   // Hidden-piece tenants only (jieqi, banqi, jungle-flip): the identity this ply
@@ -131,6 +137,17 @@ export type TenantExportPly = {
   // know a piece taken face-down (Brian, 2026-10-16).
   revealed?: HiddenPieceIdentity;
   capturedHidden?: HiddenPieceIdentity;
+} & (
+  | { uci: string; san: string | null; move?: never; notation?: never }
+  | { move: XmjMove; notation: string; uci?: never; san?: never }
+);
+
+// Xiangqi mahjong's replay data, released only after the match finishes.
+// Hand results use the rules' seat indices: 0 = east, 1 = west.
+export type XmjExportMatch = {
+  setup: XmjRoomSetup;
+  hands: readonly XmjHandResult[];
+  final_score: Record<XmjSeat, number>;
 };
 
 export type TenantExportPgnResult = '1-0' | '0-1' | '1/2-1/2' | '*';
@@ -139,6 +156,7 @@ export type TenantExportGame = {
   // Move order: [first mover, second mover], the tenant's own color words.
   colors: readonly string[];
   plies: readonly TenantExportPly[];
+  match?: XmjExportMatch;
   // Flip variants only (banqi, jungle-flip): the ink the first-mover seat bound
   // on its opening flip. The result is recorded by seat, so a consumer needs
   // this to know which pieces the winner actually played.
@@ -153,6 +171,9 @@ export type TenantExportGame = {
   // game had a real deal (every site game). Absent for an imported game, whose
   // source drew identities at reveal time: its stored deal is partly invented.
   dealFen?: string;
+  // Gomoku's stored opening, separate from event-counted placements. Legacy
+  // games explicitly export the empty board with Black to move.
+  opening?: GomokuOpening;
   // Present only for tenants with an honest movetext notation. Receives the
   // full tag block the neutral builder assembled (Event, Site, Date, Round, the
   // two color-named player tags, Result, Variant, ...) and the result token;
@@ -179,7 +200,8 @@ export type VariantTenantExport = {
 // game-card-tenant.ts. Same finished-only rule as export: an in-progress or
 // aborted log yields nothing, so a live fog game's position never reaches a
 // scraper. Absent = the tenant's game pages serve the generic site card.
-export type VariantTenantCard = {
+export type VariantTenantBoardCard = {
+  layout?: 'board';
   // Position-card variant slug (og-position.ts POSITION_OG_VARIANTS): the
   // board renderer and FEN parser the card draws with.
   variant: string;
@@ -198,6 +220,31 @@ export type VariantTenantCard = {
   seatInks(events: readonly unknown[], roomId: string): Record<string, 'red' | 'black'> | null;
 };
 
+/** A tile match has public totals rather than a board position. The binding
+ * replays the finished log and returns ONLY those totals, never tile state. */
+export type VariantTenantMatchCard = {
+  layout: 'match';
+  variant: string;
+  label: string;
+  finalScores(events: readonly unknown[], roomId: string): Record<string, number> | null;
+};
+
+/** Gomoku has placements rather than FEN. Only the finished public board and
+ * its marks cross this boundary; no room, setup or engine state is needed. */
+export type GomokuCardPosition = Pick<GomokuPlayerView, 'board' | 'lastMove' | 'winningLine'>;
+
+export type VariantTenantGomokuCard = {
+  layout: 'gomoku';
+  variant: 'gomoku';
+  label: string;
+  finalPosition(events: readonly unknown[], roomId: string): GomokuCardPosition | null;
+};
+
+export type VariantTenantCard =
+  | VariantTenantBoardCard
+  | VariantTenantMatchCard
+  | VariantTenantGomokuCard;
+
 export type VariantTenantRegistration = {
   kind: string;
   gameSpecId: string;
@@ -211,6 +258,11 @@ export type VariantTenantRegistration = {
   // there instead of marking the game unsupported; the web tenant carries the
   // same flag (apps/web/src/variant-registry-sync.test.ts holds the two).
   finishedGameOpensRoom?: true;
+  // Review page base for a tenant that has a postgame page but no export, e.g.
+  // '/three-kingdoms-banqi/game' (the admin playtest, whose games must not be
+  // exportable). crosstableReviewUrl links a finished game there when no
+  // export.gameRouteBase does; mirrors gameRouteBase in apps/web's registry.
+  reviewRouteBase?: string;
   // Share card for finished games, or null/absent (see VariantTenantCard).
   card?: VariantTenantCard | null;
   // Does a stored log still replay under the current rules? Bound with
@@ -247,6 +299,12 @@ export type VariantTenantRegistration = {
   // `${errorPrefix}_not_integrated`.
   errorPrefix: string;
   enabled(): boolean;
+  // A playtest open to some accounts while enabled() is off (Three Kingdoms
+  // banqi: admins, #684). Present, it replaces enabled() at the WebSocket door
+  // and is also applied to LIVE rooms, which otherwise route before any flag
+  // check: a refused account cannot sit, watch or hydrate. Absent, the door is
+  // enabled() for persisted rooms and open for live ones, as before.
+  admitsConnection?(accountUser: UserAccount | null): boolean;
   // The tenant's live room map (adapter-owned). Read by the ws resolver
   // (live rooms route before flag checks) and the shutdown sweeps.
   rooms: ReadonlyMap<string, TenantManagedRoom>;

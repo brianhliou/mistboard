@@ -15,12 +15,7 @@ import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
-import {
-  applyInternalTag,
-  captureException,
-  setPostHogInstance,
-  trackLocaleResolved,
-} from './analytics.js';
+import { captureException, initializeAnalytics, trackLocaleResolved } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
   chunkLoadFailureContext,
@@ -28,13 +23,10 @@ import {
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
   reloadForChunkLoadError,
+  stylesheetServedDespiteFailure,
 } from './chunk-load-recovery.js';
 import { editorVariantFromPath } from './editor/editor-catalog.js';
-import {
-  coordinateTrainerEnabled,
-  correspondenceEnabled,
-  friendsOnlineEnabled,
-} from './feature-flags.js';
+import { coordinateTrainerEnabled, correspondenceEnabled } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
@@ -141,7 +133,7 @@ if (!isEmbedDocument)
               : typeof data.restartAt === 'number'
                 ? 'pending'
                 : null;
-          setRestartBanner(phase);
+          setRestartBanner(phase, data.restartAt);
         }
         if (data) {
           setRatedModeEnabled(data.ratedEnabled === true, data.correspondenceRatedEnabled === true);
@@ -152,47 +144,7 @@ if (!isEmbedDocument)
       /* banner stays hidden; WS broadcast still covers in-game users */
     });
 
-const phKey = import.meta.env.VITE_POSTHOG_KEY;
-const phHost = import.meta.env.VITE_POSTHOG_HOST;
-if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
-  void import('posthog-js').then(({ default: posthog }) => {
-    posthog.init(phKey, {
-      api_host: phHost,
-      autocapture: false,
-      capture_pageview: false,
-      persistence: 'localStorage',
-      disable_session_recording: true,
-      respect_dnt: true,
-      // Real-user load timing: web vitals (LCP/CLS/FCP/INP) so we can actually
-      // see homepage load performance and catch regressions. network_timing is a
-      // session-replay feature (disabled here), so leave it off — web_vitals is
-      // independent of it.
-      capture_performance: { web_vitals: true, network_timing: false },
-      // Unhandled errors + promise rejections surface as $exception events
-      // (Error Tracking), so a broken page reports itself instead of going dark.
-      capture_exceptions: true,
-      // Drop benign browser noise before ingestion. "ResizeObserver loop
-      // completed with undelivered notifications" is a synthetic warning
-      // Chromium fires at window.onerror when an observer callback defers a
-      // layout to the next frame; nothing breaks and it never reproduces on
-      // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
-      // Errors thrown while a stale-chunk reload is in flight are the reload's
-      // own side effect (lazy imports resolve undefined until it lands), so
-      // they are dropped too; the failed chunk itself is not an app defect.
-      before_send: (event) => {
-        if (event?.event === '$exception' && chunkReloadPending()) return null;
-        const message = event?.properties?.$exception_values?.[0];
-        if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
-          return null;
-        }
-        return event;
-      },
-    });
-    applyInternalTag(posthog);
-    posthog.capture('$pageview', { path: window.location.pathname });
-    setPostHogInstance(posthog);
-  });
-}
+void initializeAnalytics(isEmbedDocument);
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -218,15 +170,34 @@ const gameRoomId = gameRoomIdFromPath(path);
 const legacyGameRoute = gameRoomId ? legacyGameRouteForRoomId(gameRoomId) : null;
 const tenantPostgame = tenantPostgameFromPath(path);
 const liveRoomId = liveRoomIdFromPath(path);
-const wantsAbout = path === '/about' || page === 'about';
-const wantsSource = path === '/source' || page === 'source';
+const wantsAbout =
+  path === '/about' || path === '/zh-hans/about' || path === '/zh-hant/about' || page === 'about';
+const wantsSource =
+  path === '/source' ||
+  path === '/zh-hans/source' ||
+  path === '/zh-hant/source' ||
+  page === 'source';
 const wantsContact = path === '/contact' || page === 'contact';
 const wantsPatron = path === '/patron' || page === 'patron';
-const wantsFaq = path === '/faq' || page === 'faq';
-const wantsTerms = path === '/terms' || page === 'terms';
-const wantsPrivacy = path === '/privacy' || page === 'privacy';
-const wantsContribute = path === '/contribute' || page === 'contribute';
-const wantsCreators = path === '/creators' || page === 'creators';
+const wantsFaq =
+  path === '/faq' || path === '/zh-hans/faq' || path === '/zh-hant/faq' || page === 'faq';
+const wantsTerms =
+  path === '/terms' || path === '/zh-hans/terms' || path === '/zh-hant/terms' || page === 'terms';
+const wantsPrivacy =
+  path === '/privacy' ||
+  path === '/zh-hans/privacy' ||
+  path === '/zh-hant/privacy' ||
+  page === 'privacy';
+const wantsContribute =
+  path === '/contribute' ||
+  path === '/zh-hans/contribute' ||
+  path === '/zh-hant/contribute' ||
+  page === 'contribute';
+const wantsCreators =
+  path === '/creators' ||
+  path === '/zh-hans/creators' ||
+  path === '/zh-hant/creators' ||
+  page === 'creators';
 // Engine champions: locale-prefixed like /bots, so the zh copies moved from
 // brianhliou.com/zh-hans/challenges/ have URLs of their own. The page was
 // /challenges until 2026-10-07: the server 301s the old paths
@@ -252,6 +223,10 @@ const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
+const wantsClubWashington =
+  path === '/washington-xiangqi' ||
+  path === '/zh-hans/washington-xiangqi' ||
+  path === '/zh-hant/washington-xiangqi';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -334,7 +309,10 @@ const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
+const wantsPuzzleReplay = path === '/puzzles/replay';
+const wantsPuzzleHistory = path === '/puzzles/history';
 const puzzleId = puzzleIdFromPath(path);
+const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
 // dashboard share the gate; the route is invisible until the flag is on.
@@ -350,11 +328,10 @@ const wantsRatingStats = path === '/player/rating-stats';
 // Unlisted admin game browser. No nav entry; the page itself is admin-gated by
 // the /api/admin/games/query endpoint (open in local dev). Direct-URL only.
 const wantsDatabase = path === '/database';
-// Public site statistics (/stats) and the admin superset (/metrics), one module.
-// /metrics adds account count/growth + results from /api/stats (admin-gated,
-// open in local dev), so it stays unlisted and direct-URL only like /database.
+// Public statistics are separate from the unified admin Ops area.
 const wantsStats = path === '/stats';
-const wantsMetrics = path === '/metrics';
+// Preserve old bookmarks and email links through the Ops canonicalizer.
+const wantsOps = path === '/ops' || path === '/metrics' || path === '/readouts';
 // Title verification: player-facing request form. Linked from profile copy,
 // no nav entry.
 const wantsVerifyTitle = path === '/verify-title';
@@ -375,9 +352,6 @@ const wantsTitlesAdmin = path === '/titles';
 // Unlisted admin engine tracker. No nav entry; admin-gated by /api/admin/engines
 // (open in local dev). Direct-URL only.
 const wantsEngines = path === '/engines';
-// Unlisted admin readout history (/readouts): the scheduled operating readout,
-// admin-gated by /api/admin/readouts (open in local dev).
-const wantsReadoutsAdmin = path === '/readouts';
 // Unlisted admin player roster (/accounts): every registered account. Admin-
 // gated by /api/admin/accounts (open in local dev); reached from the account
 // menu's admin group.
@@ -414,7 +388,8 @@ const wantsXiangqiImport = path === '/import';
 // Monthly downloads of every finished game (lichess's database.lichess.org).
 const wantsDataPage = path === '/data';
 // What the data files hold, the licence, and how hidden pieces appear.
-const wantsDataAbout = path === '/data/about';
+const wantsDataAbout =
+  path === '/data/about' || path === '/zh-hans/data/about' || path === '/zh-hant/data/about';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
 // itself is already picked up from the URL by initializeLocaleFromCurrentUrl;
@@ -453,7 +428,8 @@ const tenantLiveRoom = tenantLiveRoomCandidate
   ? webVariantTenantForRoomId(tenantLiveRoomCandidate)
   : null;
 const wantsTenantLiveRoom =
-  tenantLiveRoom?.loadLiveRoomClient !== undefined && tenantLiveRoom.enabled();
+  tenantLiveRoom?.loadLiveRoomClient !== undefined &&
+  (tenantLiveRoom.enabled() || tenantLiveRoom.liveRoomServerGated === true);
 
 if (replaySample) {
   setTitle('Replay');
@@ -618,11 +594,9 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./metrics.js').then(({ mountMetrics }) => mountMetrics(appRoot, { admin: false })),
   );
-} else if (wantsMetrics) {
-  setTitle('Metrics');
-  void mountOrReport(() =>
-    import('./metrics.js').then(({ mountMetrics }) => mountMetrics(appRoot, { admin: true })),
-  );
+} else if (wantsOps) {
+  setTitle('Ops');
+  void mountOrReport(() => import('./ops-admin.js').then(({ mountOps }) => mountOps(appRoot)));
 } else if (wantsVerifyTitle) {
   setTitleKey('verifyTitle.heading');
   void mountOrReport(() =>
@@ -651,11 +625,6 @@ if (replaySample) {
   setTitle('Title verification');
   void mountOrReport(() =>
     import('./titles-admin.js').then(({ mountTitlesAdmin }) => mountTitlesAdmin(appRoot)),
-  );
-} else if (wantsReadoutsAdmin) {
-  setTitle('Readouts');
-  void mountOrReport(() =>
-    import('./readouts-admin.js').then(({ mountReadoutsAdmin }) => mountReadoutsAdmin(appRoot)),
   );
 } else if (wantsAccountsAdmin) {
   setTitle('Accounts');
@@ -839,6 +808,23 @@ if (replaySample) {
         return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
       },
     ),
+  );
+} else if (wantsPuzzleDashboard) {
+  setTitleKey('puzzle.dashboardTitle');
+  void mountOrReport(() =>
+    import('./puzzles/dashboard.js').then(({ mountPuzzleDashboard }) =>
+      mountPuzzleDashboard(appRoot),
+    ),
+  );
+} else if (wantsPuzzleHistory) {
+  setTitleKey('puzzle.historyTitle');
+  void mountOrReport(() =>
+    import('./puzzles/history.js').then(({ mountPuzzleHistory }) => mountPuzzleHistory(appRoot)),
+  );
+} else if (wantsPuzzleReplay) {
+  setTitleKey('nav.puzzles');
+  void mountOrReport(() =>
+    import('./puzzles.js').then(({ mountPuzzles }) => mountPuzzles(appRoot)),
   );
 } else if (wantsPuzzles) {
   setTitleKey('nav.puzzles');
@@ -1080,6 +1066,12 @@ if (replaySample) {
 } else if (wantsLag) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
+} else if (wantsClubWashington) {
+  void mountOrReport(() =>
+    import('./club-washington-page.js').then(({ mountClubWashington }) =>
+      mountClubWashington(appRoot),
+    ),
+  );
 } else if (path === '/' || path === '/zh-hans' || path === '/zh-hant') {
   // The bare locale prefix is the Chinese home page, the same landing in the
   // reader's language. Compared explicitly, the way /rules does above, rather
@@ -1095,19 +1087,6 @@ if (replaySample) {
   );
 }
 
-// Global friends-online widget (bottom-corner). Route-agnostic and self-gating
-// (it no-ops for anonymous viewers), so it mounts once regardless of the page
-// that rendered above. Lazy-imported so its bundle only loads when the flag is
-// on.
-// Not in an embed: it self-gates by asking /api/auth/me who the viewer is, and
-// that question is the one an embed must not ask from inside a third party's
-// page. It was also the last thing still asking it after the guard above.
-if (friendsOnlineEnabled() && !isEmbedDocument) {
-  void localeReady.then(() =>
-    import('./friends-online.js').then(({ mountFriendsOnline }) => mountFriendsOnline()),
-  );
-}
-
 function setTitle(page: string): void {
   document.title = `${page} · Mistboard`;
 }
@@ -1115,7 +1094,14 @@ function setTitle(page: string): void {
 function setTitleKey(key: I18nKey): void {
   // Localized titles wait for the locale chunk so zh visitors never see an
   // English tab title stick around; for English this resolves immediately.
-  void localeReady.then(() => setTitle(t(key, {}, currentLocale())));
+  // A title the server chose for this route (SPA_ROUTE_META) is put back in
+  // the same tick, not only after the mount, so the short UI title never shows
+  // while the page chunk loads ("Terms · Mistboard" over the served title).
+  void localeReady.then(() => {
+    const locale = currentLocale();
+    setTitle(t(key, {}, locale));
+    serverRender.keepTitle(locale);
+  });
 }
 
 async function mountOrReport(run: () => Promise<void>): Promise<void> {
@@ -1139,10 +1125,16 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
-    captureException(err, {
+    // A stylesheet the server still serves was blocked by this browser, not
+    // lost in a deploy, so it stays out of Error Tracking. The probe runs
+    // beside the error panel rather than before it.
+    const failure = {
       context: 'route_mount',
       path: window.location.pathname,
       ...chunkLoadFailureContext(err),
+    };
+    void stylesheetServedDespiteFailure(err).then((blockedByBrowser) => {
+      if (!blockedByBrowser) captureException(err, failure);
     });
     if (serverRender.present) return;
     appRoot.replaceChildren();
@@ -1204,7 +1196,9 @@ function liveRoomIdFromPath(value: string): string | null {
 
 function puzzleIdFromPath(value: string): string | null {
   const match = value.match(/^\/puzzles\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]!) : null;
+  // Fixed pages under /puzzles/ that are not puzzle ids.
+  if (!match || match[1] === 'replay' || match[1] === 'history') return null;
+  return decodeURIComponent(match[1]!);
 }
 
 function xiangqiBroadcastTourSlugFromPath(value: string): string | null {

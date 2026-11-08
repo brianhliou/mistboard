@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildLiveRoomChat, buildSpectatorChat } from './spectator-chat.js';
+import { announceLiveRoomSeat, buildLiveRoomChat, buildSpectatorChat } from './spectator-chat.js';
 
 describe('live room chat', () => {
   afterEach(() => {
@@ -32,6 +32,7 @@ describe('live room chat', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
 
+    announceLiveRoomSeat('room with spaces', true);
     const panel = buildLiveRoomChat('room with spaces');
     document.body.append(panel);
     await flushPromises();
@@ -91,6 +92,8 @@ describe('live room chat', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
 
+    // Seated by the hello but refused anyway (a signed-out seat, a revoked one).
+    announceLiveRoomSeat('bq_1', true);
     const panel = buildLiveRoomChat('bq_1');
     document.body.append(panel);
     await flushPromises();
@@ -103,6 +106,67 @@ describe('live room chat', () => {
     expect(panel.textContent).toContain('nice game');
     // Quick chat is a player affordance; a demoted spectator does not get it.
     expect(panel.querySelector('.review-spectator-chat__quick-button')).toBeNull();
+  });
+
+  it('waits for the hello before probing the player room, so a new seat is not refused', async () => {
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({ lines: [], canPost: true, canReport: true, viewerHandle: 'misty' }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const panel = buildLiveRoomChat('xmj_new');
+    document.body.append(panel);
+    await flushPromises();
+    // Before the hello, the seat may not be in the database yet: a probe now
+    // is the 403 a brand-new room's own player used to get.
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    announceLiveRoomSeat('some_other_room', true);
+    await flushPromises();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    announceLiveRoomSeat('xmj_new', true);
+    await flushPromises();
+    expect(fetchSpy.mock.calls.map((call) => String(call[0]))).toEqual([
+      '/api/chat/player/xmj_new',
+    ]);
+    expect(panel.textContent).toContain('Chat room');
+  });
+
+  it('sends a viewer the hello names a spectator straight to the spectator room', async () => {
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({ lines: [], canPost: true, canReport: true, viewerHandle: 'watcher' }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const panel = buildLiveRoomChat('xmj_watch');
+    document.body.append(panel);
+    announceLiveRoomSeat('xmj_watch', false);
+    await flushPromises();
+
+    expect(fetchSpy.mock.calls.map((call) => String(call[0]))).toEqual([
+      '/api/chat/game/xmj_watch',
+    ]);
+    expect(panel.textContent).toContain('Spectator room');
+  });
+
+  it('probes the player room anyway when no hello arrives', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSpy = vi.fn(async (_input: RequestInfo | URL) =>
+        jsonResponse({ lines: [], canPost: true, canReport: true, viewerHandle: 'misty' }),
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      document.body.append(buildLiveRoomChat('xmj_silent'));
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchSpy.mock.calls.map((call) => String(call[0]))).toEqual([
+        '/api/chat/player/xmj_silent',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

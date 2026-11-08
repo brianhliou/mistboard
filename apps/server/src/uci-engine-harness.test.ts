@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import test, { after } from 'node:test';
+import test, { after, mock } from 'node:test';
 import {
   aggregateEnginePoolStats,
   boundedEnvInt,
@@ -686,6 +686,135 @@ test('UciWarmSessionCache discards a session whose request failed and spawns afr
     assert.equal(cache.stats().discarded, 2);
   } finally {
     cache.closeAll();
+  }
+});
+
+// The sweeper runs on setInterval and reads Date.now(); the requests themselves
+// talk to a real child process, so setTimeout stays real.
+function warmAsk(cache: UciWarmSessionCache, seen: unknown[], hold?: Promise<void>) {
+  return cache.withSession(
+    { bin: warmResponderBin, initCommands: ['uci', 'isready'] },
+    async (s) => {
+      seen.push(s);
+      await s.ready();
+      if (hold) await hold;
+    },
+  );
+}
+
+test("UciWarmSessionCache closes a burst's extra copy after extraIdleTtlMs while one game plays on", async () => {
+  mock.timers.enable({ apis: ['setInterval', 'Date'], now: 1_000_000 });
+  const cache = new UciWarmSessionCache({
+    name: 'test-warm-extra',
+    idleTtlMs: 60 * 60_000,
+    extraIdleTtlMs: 10 * 60_000,
+  });
+  try {
+    const seen: unknown[] = [];
+    // A burst: two overlapping games, so two processes for one key.
+    let releaseFirst!: () => void;
+    const first = warmAsk(cache, seen, new Promise((r) => (releaseFirst = r)));
+    await warmAsk(cache, seen);
+    releaseFirst();
+    await first;
+    assert.equal(cache.stats().idle, 2);
+    assert.equal(cache.stats().spawned, 2);
+    const warm = seen[0]; // parked last, so the most recent
+    // Then one game alone, a move every 30 s for 12 minutes: it reuses the most
+    // recent copy every time, and the other one ages out at 10 minutes.
+    for (let i = 0; i < 24; i += 1) {
+      mock.timers.tick(30_000);
+      await warmAsk(cache, seen);
+      assert.equal(seen.at(-1), warm, `move ${i} reused the warm copy`);
+    }
+    assert.equal(cache.stats().idle, 1);
+    assert.equal(cache.stats().spawned, 2);
+    assert.equal(cache.stats().discarded, 1);
+  } finally {
+    cache.closeAll();
+    mock.timers.reset();
+  }
+});
+
+test("UciWarmSessionCache keeps a key's most recent session for the full idleTtlMs", async () => {
+  mock.timers.enable({ apis: ['setInterval', 'Date'], now: 1_000_000 });
+  const cache = new UciWarmSessionCache({
+    name: 'test-warm-primary',
+    idleTtlMs: 60 * 60_000,
+    extraIdleTtlMs: 10 * 60_000,
+  });
+  try {
+    const seen: unknown[] = [];
+    await warmAsk(cache, seen);
+    // Past the extra TTL, short of the long one: still parked, and reused warm.
+    mock.timers.tick(59 * 60_000);
+    assert.equal(cache.stats().idle, 1);
+    await warmAsk(cache, seen);
+    assert.equal(seen[1], seen[0]);
+    assert.equal(cache.stats().spawned, 1);
+    // A full idle hour after its last move: closed.
+    mock.timers.tick(61 * 60_000);
+    assert.equal(cache.stats().idle, 0);
+    assert.equal(cache.stats().discarded, 1);
+  } finally {
+    cache.closeAll();
+    mock.timers.reset();
+  }
+});
+
+test('UciWarmSessionCache treats every parked copy as extra while the key has one out', async () => {
+  mock.timers.enable({ apis: ['setInterval', 'Date'], now: 1_000_000 });
+  const cache = new UciWarmSessionCache({
+    name: 'test-warm-lent',
+    idleTtlMs: 60 * 60_000,
+    extraIdleTtlMs: 10 * 60_000,
+  });
+  // Released in `finally` too: a held request keeps its child ref'd, and a failed
+  // assertion that skipped the release would hang the runner instead of failing.
+  let releaseLong: () => void = () => {};
+  try {
+    const seen: unknown[] = [];
+    let releaseFirst!: () => void;
+    const first = warmAsk(cache, seen, new Promise((r) => (releaseFirst = r)));
+    await warmAsk(cache, seen);
+    releaseFirst();
+    await first;
+    // Lend the warm copy out across the sweep: the copy left parked is the extra
+    // even though it is the only one parked, so it closes on the 10-minute rule.
+    const long = warmAsk(cache, seen, new Promise<void>((r) => (releaseLong = r)));
+    await new Promise((r) => setImmediate(r));
+    mock.timers.tick(11 * 60_000);
+    assert.equal(cache.stats().idle, 0);
+    releaseLong();
+    await long;
+    assert.equal(cache.stats().idle, 1);
+  } finally {
+    releaseLong();
+    cache.closeAll();
+    mock.timers.reset();
+  }
+});
+
+test('UciWarmSessionCache without extraIdleTtlMs keeps its oldest-first reuse and one TTL', async () => {
+  mock.timers.enable({ apis: ['setInterval', 'Date'], now: 1_000_000 });
+  const cache = new UciWarmSessionCache({ name: 'test-warm-legacy', idleTtlMs: 60 * 60_000 });
+  try {
+    const seen: unknown[] = [];
+    let releaseFirst!: () => void;
+    const first = warmAsk(cache, seen, new Promise((r) => (releaseFirst = r)));
+    await warmAsk(cache, seen);
+    releaseFirst();
+    await first;
+    for (let i = 0; i < 24; i += 1) {
+      mock.timers.tick(30_000);
+      await warmAsk(cache, seen);
+    }
+    // Round-robin: both copies stay in use and parked.
+    assert.equal(new Set(seen.slice(2)).size, 2);
+    assert.equal(cache.stats().idle, 2);
+  } finally {
+    cache.closeAll();
+    mock.timers.reset();
   }
 });
 

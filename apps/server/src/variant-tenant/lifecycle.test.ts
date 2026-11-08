@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage } from 'node:http';
 import test from 'node:test';
 import {
   type Color,
   correspondenceTimeControl,
   DAY_MS,
   type RoomTimeControl,
+  type XmjTile,
+  xmjOrderedTiles,
 } from '@mistboard/game';
 import { type DarkChessTenantEvent, darkChessTenant } from '../dark-chess-tenant.js';
 import {
@@ -13,6 +16,9 @@ import {
   LOBBY_NO_SHOW_ABORT_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from '../lifecycle-windows.js';
+import { hashSeatToken } from '../server-seat-session.js';
+import { type XmjEvent, xiangqiMahjongTenant as xmjTenant } from '../xiangqi-mahjong-tenant.js';
+import { appendTenantEvent } from './events.js';
 import {
   clearTenantRuntimeTimers,
   scheduleTenantLifecycleTimers,
@@ -20,7 +26,15 @@ import {
   tenantAbortAnchorAt,
   tenantForfeitingSeat,
 } from './lifecycle.js';
-import { appendTenantRuntimeEvent, createTenantRuntimeRoomFromEvents } from './runtime.js';
+import {
+  appendTenantRuntimeEvent,
+  createTenantClock,
+  createTenantRuntimeRoomFromEvents,
+  expireTenantClock,
+  tenantPauseEventFor,
+  tenantResumeEventFor,
+} from './runtime.js';
+import { createTenantWsRuntime } from './ws.js';
 
 // Lifecycle behavior under the days-per-move clock policy, pinned through the
 // dark-chess tenant (the correspondence launch tenant). The live policy's
@@ -339,5 +353,270 @@ test('a lobby room with both seats filled uses the ordinary first-move window', 
     assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
   } finally {
     clearTenantRuntimeTimers(room);
+  }
+});
+
+function declaredWinningDraw() {
+  const roomId = 'xmj_clock_expiry';
+  const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', 'rP'];
+  const rest = xmjOrderedTiles();
+  for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...front, ...rest];
+  const hydrated = createTenantRuntimeRoomFromEvents(xmjTenant, [
+    {
+      type: 'room-created',
+      at: 1_000,
+      roomId,
+      gameSpecId: 'xiangqi-mahjong',
+      setup: { walls: [wall, wall], firstDealer: 'east', taiTable: 3 },
+      timeControl: { initialMs: 10_000, incrementMs: 1_000 },
+    },
+    {
+      type: 'clock-started',
+      at: 1_000,
+      roomId,
+      clock: createTenantClock(xmjTenant, 10_000, 1_000),
+    },
+    { type: 'seat-assigned', at: 2_000, roomId, clientId: 'east-client', seat: 'east' },
+    { type: 'seat-assigned', at: 3_000, roomId, clientId: 'west-client', seat: 'west' },
+    ...[
+      { by: 'east', at: 4_000, action: 'declare-ready', tile: 'bH' },
+      { by: 'west', at: 6_000, action: 'pass' },
+      { by: 'west', at: 7_000, action: 'discard', tile: 'bR' },
+      { by: 'east', at: 9_000, action: 'pass' },
+    ].map((move) => ({ type: 'move-played', at: move.at, roomId, color: move.by, move })),
+  ] as XmjEvent[]);
+  assert.ok(hydrated.ok);
+  assert.equal(
+    xmjTenant.rules.pendingAction?.(hydrated.room.projection.state),
+    null,
+    'winning draw waits for a real clock',
+  );
+  return hydrated.room;
+}
+
+test('a real live clock discards an unanswered declared win once, broadcasts and replays it', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 10_000 });
+  const room = declaredWinningDraw();
+  const broadcasts: XmjEvent[] = [];
+  const ctx = {
+    appendEvent: (r: typeof room, event: XmjEvent) =>
+      appendTenantEvent(xmjTenant, r, event, {
+        scheduleLifecycleTimers: (r) => scheduleTenantLifecycleTimers(xmjTenant, r, ctx),
+      }),
+    broadcastEventAppended: (_r: typeof room, event: XmjEvent) => {
+      broadcasts.push(event);
+    },
+  };
+  try {
+    scheduleTenantLifecycleTimers(xmjTenant, room, ctx);
+    assert.ok(room.clockTimer);
+    assert.equal(room.actionTimer, null);
+    t.mock.timers.tick(8_024);
+    assert.equal(room.events.length, 8);
+    t.mock.timers.tick(1);
+    await room.pendingWrites;
+    await Promise.resolve();
+    assert.equal(room.projection.state.status.type, 'playing');
+    assert.deepEqual(room.events.at(-1), {
+      type: 'move-played',
+      at: 18_025,
+      roomId: room.id,
+      color: 'east',
+      move: { by: 'east', at: 18_025, action: 'discard', tile: 'rP' },
+    });
+    assert.equal(room.projection.clock?.activeColor, 'west');
+    assert.equal(room.projection.clock?.remainingMs.east, 1_000);
+    assert.deepEqual(broadcasts, [room.events.at(-1)]);
+    t.mock.timers.tick(500);
+    await room.pendingWrites;
+    assert.equal(room.events.length, 9, 'no immediate expiry loop');
+    const restored = createTenantRuntimeRoomFromEvents(
+      xmjTenant,
+      JSON.parse(JSON.stringify(room.events)),
+    );
+    assert.ok(restored.ok);
+    assert.deepEqual(restored.room.projection, room.projection);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('a pause queued ahead of expiry wins; restart resumes the remaining time before discarding', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 10_000 });
+  const room = declaredWinningDraw();
+  const pause = tenantPauseEventFor(room.projection, 10_000, 'shutdown');
+  assert.ok(pause);
+  const pausing = appendTenantEvent(xmjTenant, room, pause);
+  const expiring = appendTenantEvent(xmjTenant, room, {
+    type: 'clock-expired',
+    at: 18_025,
+    roomId: room.id,
+    color: 'east',
+    clock: expireTenantClock(room.projection.clock, 18_025, 'east')!,
+  });
+  await pausing;
+  assert.equal(await expiring, -1);
+  const hydrated = createTenantRuntimeRoomFromEvents(
+    xmjTenant,
+    JSON.parse(JSON.stringify(room.events)),
+  );
+  assert.ok(hydrated.ok);
+  const restored = hydrated.room;
+  assert.equal(restored.projection.clock?.remainingMs.east, 8_000);
+  const resume = tenantResumeEventFor(restored.projection, 50_000, 'players-returned');
+  assert.ok(resume);
+  await appendTenantEvent(xmjTenant, restored, resume);
+  t.mock.timers.setTime(50_000);
+  const ctx = {
+    appendEvent: (r: typeof restored, event: XmjEvent) => appendTenantEvent(xmjTenant, r, event),
+    broadcastEventAppended: () => {},
+  };
+  try {
+    scheduleTenantLifecycleTimers(xmjTenant, restored, ctx);
+    t.mock.timers.tick(8_024);
+    assert.equal(restored.events.at(-1)?.type, 'clock-resumed');
+    t.mock.timers.tick(1);
+    await restored.pendingWrites;
+    assert.equal(restored.events.at(-1)?.type, 'move-played');
+    assert.equal(restored.projection.state.status.type, 'playing');
+  } finally {
+    clearTenantRuntimeTimers(restored);
+  }
+});
+
+test('a competing self-draw wins ahead of the live expiry callback', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 10_000 });
+  const room = declaredWinningDraw();
+  const ctx = {
+    appendEvent: (r: typeof room, event: XmjEvent) => appendTenantEvent(xmjTenant, r, event),
+    broadcastEventAppended: () => {},
+  };
+  try {
+    scheduleTenantLifecycleTimers(xmjTenant, room, ctx);
+    const win = ctx.appendEvent(room, {
+      type: 'move-played',
+      at: 18_000,
+      roomId: room.id,
+      color: 'east',
+      move: { by: 'east', at: 18_000, action: 'self-draw' },
+    });
+    t.mock.timers.tick(8_025);
+    await win;
+    await room.pendingWrites;
+    assert.equal(room.events.length, 9);
+    assert.equal(room.projection.state.match.between, true);
+    const last = room.events.at(-1);
+    assert.ok(last?.type === 'move-played' && last.move.action === 'self-draw');
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('table 2, undeclared draws, and claim phases retain real clock forfeits', async () => {
+  for (const phase of ['table-2', 'undeclared', 'claim'] as const) {
+    const declared = declaredWinningDraw();
+    const events = declared.events.map((event): XmjEvent => {
+      if (phase === 'table-2' && event.type === 'room-created') {
+        return { ...event, setup: { ...(event.setup as object), taiTable: 2 } };
+      }
+      if (
+        phase !== 'claim' &&
+        event.type === 'move-played' &&
+        event.move.action === 'declare-ready'
+      ) {
+        return { ...event, move: { ...event.move, action: 'discard' } };
+      }
+      return event;
+    });
+    const hydrated = createTenantRuntimeRoomFromEvents(xmjTenant, events);
+    assert.ok(hydrated.ok);
+    const room = hydrated.room;
+    if (phase === 'claim') {
+      await appendTenantEvent(xmjTenant, room, {
+        type: 'move-played',
+        at: 10_000,
+        roomId: room.id,
+        color: 'east',
+        move: { by: 'east', at: 10_000, action: 'discard', tile: 'rP' },
+      });
+    }
+    const clock = room.projection.clock!;
+    const color = clock.activeColor!;
+    const at = clock.runningSince! + clock.remainingMs[color];
+    const event: XmjEvent = {
+      type: 'clock-expired',
+      at,
+      roomId: room.id,
+      color,
+      clock: expireTenantClock(clock, at, color)!,
+    };
+    const first = appendTenantEvent(xmjTenant, room, event);
+    const duplicate = appendTenantEvent(xmjTenant, room, event);
+    assert.notEqual(await first, -1);
+    assert.equal(await duplicate, -1);
+    assert.equal(room.events.at(-1)?.type, 'clock-expired');
+    assert.equal(room.projection.state.status.type, 'finished', phase);
+  }
+});
+
+test('a move sent after a declared seat flags broadcasts the discard the writer stored', async (t) => {
+  // The move handler ends a flagged turn itself when the move beats the clock
+  // timer. The writer may store a discard in place of the clock-expired it was
+  // asked for, so the frame must carry the stored event, never the request.
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 18_100 });
+  const room = declaredWinningDraw();
+  const ws = createTenantWsRuntime(xmjTenant);
+  const live = room as unknown as Parameters<typeof ws.handleConnection>[3];
+  const issuedAt = new Date(0);
+  room.seatTokens.east = {
+    clientId: 'east-client',
+    seat: 'east',
+    tokenHash: hashSeatToken('east-token'),
+    userId: null,
+    userHandle: null,
+    userDisplayName: null,
+    issuedAt,
+    lastSeenAt: issuedAt,
+    revokedAt: null,
+  };
+  const sent: { type?: string; seq?: number; event?: { type?: string } }[] = [];
+  let onMessage: ((data: unknown) => Promise<void> | void) | undefined;
+  const socket = {
+    send: (data: string) => sent.push(JSON.parse(data)),
+    close: () => {},
+    on(event: string, cb: (data: unknown) => Promise<void> | void) {
+      if (event === 'message') onMessage = cb;
+      return this;
+    },
+  };
+  try {
+    await ws.handleConnection(
+      { wsMessageLimit: 100, wsMessageWindowMs: 1_000 },
+      socket as never,
+      {
+        url: '/?client=east-client',
+        headers: { host: 'localhost', 'sec-websocket-protocol': 'mistboard-seat.east-token' },
+      } as IncomingMessage,
+      live,
+    );
+    const before = room.events.length;
+    sent.length = 0;
+    await onMessage?.(Buffer.from(JSON.stringify({ type: 'move', action: 'self-draw' })));
+    await room.pendingWrites;
+    for (let i = 0; i < 20 && !sent.some((f) => f.type === 'event-appended'); i += 1) {
+      await Promise.resolve();
+    }
+
+    assert.equal(room.events.length, before + 1);
+    const stored = room.events.at(-1);
+    assert.ok(stored?.type === 'move-played' && stored.move.action === 'discard');
+    const frames = sent.filter((frame) => frame.type === 'event-appended');
+    assert.equal(frames.length, 1);
+    assert.equal(frames[0].seq, before);
+    assert.equal(frames[0].event?.type, 'move-played');
+  } finally {
+    clearTenantRuntimeTimers(room);
+    for (const client of live.clients) live.clients.delete(client);
   }
 });

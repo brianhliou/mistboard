@@ -183,11 +183,12 @@ describe('Duck Xiangqi board renderer', () => {
       const host = render();
       return {
         duck: host.querySelector('.dkx-duck > g')?.getAttribute('transform'),
-        piece: host.querySelector('[data-piece-square="e1"]')?.getAttribute('transform'),
+        piece: host.querySelector('[data-piece-square="e1"] > g')?.getAttribute('transform'),
       };
     };
     const off = duckAt(false);
     expect(off.duck).toBeTruthy();
+    expect(off.piece).toBeTruthy();
     expect(duckAt(true)).toEqual(off);
   });
 });
@@ -196,7 +197,9 @@ describe('Duck Xiangqi board aspect', () => {
   const ratio = (css: string, selector: string): number => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const match = css.match(
-      new RegExp(`(?:^|\\n)${escaped}\\s*\\{\\s*--uni-board-aspect:\\s*calc\\((\\d+) / (\\d+)\\);`),
+      new RegExp(
+        `(?:^|\\n)${escaped}\\s*\\{\\s*--uni-board-aspect:\\s*calc\\(([\\d.]+) / ([\\d.]+)\\);`,
+      ),
     );
     if (!match) throw new Error(`no --uni-board-aspect rule for ${selector}`);
     return Number(match[1]) / Number(match[2]);

@@ -47,11 +47,25 @@ export function isPuzzleQualitySessionId(value: unknown): value is string {
   return typeof value === 'string' && UUID_PATTERN.test(value);
 }
 
+// Who opened the puzzle (migration 177): the signed-in account, resolved by
+// the route from the session cookie, and the browser's device id (the same
+// `mistboard.device` id live rooms carry, same shape check). Both optional;
+// a row without either is an open nobody can be counted as. Never returned
+// by any read here: aggregates only.
+export type PuzzleQualityPlayer = { userId: string | null; deviceId: string | null };
+
+const DEVICE_ID_PATTERN = /^[a-zA-Z0-9:_-]{8,80}$/;
+
+export function parsePuzzleDeviceId(value: unknown): string | null {
+  return typeof value === 'string' && DEVICE_ID_PATTERN.test(value) ? value : null;
+}
+
 export async function recordPuzzleQualityEvent(input: {
   puzzleId: string;
   sessionId: string;
   variant: string;
   event: PuzzleQualityEvent;
+  player?: PuzzleQualityPlayer;
 }): Promise<void> {
   if (!isInitialized()) return;
   if (!isPuzzleQualitySessionId(input.sessionId)) {
@@ -124,6 +138,7 @@ export async function recordPuzzleQualityVote(input: {
   sessionId: string;
   variant: string;
   vote: PuzzleQualityVote;
+  player?: PuzzleQualityPlayer;
 }): Promise<void> {
   if (!isInitialized()) return;
   if (!isPuzzleQualitySessionId(input.sessionId)) {
@@ -139,15 +154,29 @@ export async function recordPuzzleQualityVote(input: {
   );
 }
 
+// The first event creates the row. A later one that knows the player fills
+// an identity column still empty (the view and the first move race from the
+// client, and only the view carries the device id) and never overwrites one
+// already set.
 async function ensureSession(
   db: Queryable,
-  input: { puzzleId: string; sessionId: string; variant: string },
+  input: { puzzleId: string; sessionId: string; variant: string; player?: PuzzleQualityPlayer },
 ): Promise<void> {
   await db.query(
-    `INSERT INTO puzzle_quality_sessions (puzzle_id, session_id, variant)
-     VALUES ($1, $2::uuid, $3)
-     ON CONFLICT (puzzle_id, session_id) DO NOTHING`,
-    [input.puzzleId, input.sessionId, input.variant],
+    `INSERT INTO puzzle_quality_sessions AS s (puzzle_id, session_id, variant, user_id, device_id)
+     VALUES ($1, $2::uuid, $3, $4, $5)
+     ON CONFLICT (puzzle_id, session_id) DO UPDATE
+       SET user_id = COALESCE(s.user_id, EXCLUDED.user_id),
+           device_id = COALESCE(s.device_id, EXCLUDED.device_id)
+       WHERE (s.user_id IS NULL AND EXCLUDED.user_id IS NOT NULL)
+          OR (s.device_id IS NULL AND EXCLUDED.device_id IS NOT NULL)`,
+    [
+      input.puzzleId,
+      input.sessionId,
+      input.variant,
+      input.player?.userId ?? null,
+      input.player?.deviceId ?? null,
+    ],
   );
 }
 
@@ -277,4 +306,33 @@ export async function listPuzzleQualityAggregates(
     rating: row.rating,
     ratingDeviation: row.rating_deviation,
   }));
+}
+
+/**
+ * Per-puzzle outcome counts for the serving rating (#712): sessions that made
+ * a move and finished (solved, revealed, or abandoned after moving), and how
+ * many of those were clean solves. Same human-session floor as the quality
+ * aggregates. A light grouped read over one table, cached by the list route;
+ * empty when persistence is off.
+ */
+export async function listPuzzleServingEvidence(): Promise<
+  Map<string, { finished: number; clean: number }>
+> {
+  const evidence = new Map<string, { finished: number; clean: number }>();
+  if (!isInitialized()) return evidence;
+  const { rows } = await getPool().query<{ puzzle_id: string; finished: number; clean: number }>(
+    `SELECT puzzle_id,
+            count(*)::int AS finished,
+            count(*) FILTER (
+              WHERE outcome = 'solved' AND wrong_attempts = 0 AND hint_count = 0
+            )::int AS clean
+       FROM puzzle_quality_sessions
+      WHERE started_at IS NOT NULL
+        AND outcome IN ('solved', 'revealed', 'abandoned')
+        AND completed_at - viewed_at >= make_interval(secs => $1)
+      GROUP BY puzzle_id`,
+    [MIN_HUMAN_SESSION_SECONDS],
+  );
+  for (const row of rows) evidence.set(row.puzzle_id, { finished: row.finished, clean: row.clean });
+  return evidence;
 }

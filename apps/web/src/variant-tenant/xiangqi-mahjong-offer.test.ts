@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Xiangqi mahjong is allowlisted server-side like Hong Kong mahjong, so the
-// build flag alone must never put it in a play menu or accept a deep link.
-describe('xiangqi mahjong is offered only to an account the server would seat', () => {
+// Launched 2026-10-25: the build flag still gates rendering, but a playtest
+// grant is no longer needed for the menu or a deep link.
+describe('xiangqi mahjong is offered to every visitor when enabled', () => {
   beforeEach(() => {
     vi.resetModules();
     Object.defineProperty(window, 'localStorage', {
@@ -25,16 +25,22 @@ describe('xiangqi mahjong is offered only to an account the server would seat', 
     expect(landing?.acceptsDeepLink()).toBe(false);
   });
 
-  it('with the flag on, needs its own grant (a Hong Kong grant is not enough)', async () => {
+  it('with the flag on, is offered regardless of playtest grants', async () => {
     vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
     const { setResolvedVariantGrants } = await import('../signed-in-state.js');
     const { webVariantTenantForSpecId } = await import('./registry.js');
     const landing = webVariantTenantForSpecId('xiangqi-mahjong')?.landing;
 
-    expect(landing?.offerInMenu()).toBe(false);
+    setResolvedVariantGrants([]);
+    expect(landing?.offerInMenu()).toBe(true);
+    expect(landing?.acceptsDeepLink()).toBe(true);
+    const { enabledLandingVariantGameSpecs } = await import('../landing-play.js');
+    expect(enabledLandingVariantGameSpecs('pvp', 'en').map((spec) => spec.gameSpecId)).toContain(
+      'xiangqi-mahjong',
+    );
     setResolvedVariantGrants(['mahjong']);
-    expect(landing?.offerInMenu()).toBe(false);
-    expect(landing?.acceptsDeepLink()).toBe(false);
+    expect(landing?.offerInMenu()).toBe(true);
+    expect(landing?.acceptsDeepLink()).toBe(true);
 
     setResolvedVariantGrants(['xiangqi-mahjong']);
     expect(landing?.offerInMenu()).toBe(true);

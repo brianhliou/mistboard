@@ -14,6 +14,11 @@ import {
   mountXiangqiBroadcastTour,
   serializeBroadcastMovesForAnalysis,
 } from './xiangqi-broadcast.js';
+import {
+  broadcastRoundName,
+  calendarEventRow,
+  mountXiangqiBroadcastCalendar,
+} from './xiangqi-broadcast-pages.js';
 
 // Only `track` is stubbed; the review shell a finished board mounts still
 // needs the module's other exports (reviewOpenedProps and friends).
@@ -175,6 +180,8 @@ function fixtureBoard(input: {
   };
 }
 
+const XQBASE_EVENT = 'https://vietnamchess.vn/databank/xqbase-vietnamchess?view=game&id=1631';
+
 // The ingested shape: Chinese originals with cached English translations on
 // the rounds and player tags (tour name here is already English). `rounds`
 // carries the sibling-round stats the round switcher renders markers from.
@@ -236,6 +243,39 @@ const ROUND = {
 describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('mini-board cards show the last recorded position past repetition', async () => {
+    const parsed = importXiangqiGame('h0g2 h9g7 g2h0 g7h9 h0g2 h9g7 g2h0 g7h9 h2e2 b9c7');
+    expect(parsed.error).toBeUndefined();
+    const moves = parsed.moves;
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [
+        fixtureBoard({
+          n: 1,
+          red: 'Red',
+          black: 'Black',
+          moves,
+          status: 'complete',
+          result: '1-0',
+        }),
+      ],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const expected = document.createElement('div');
+    const { renderXiangqiBoardSvg } = await import('./xiangqi-board.js');
+    const replay = buildXiangqiReplayFromMoves(moves, undefined, { record: true });
+    expected.innerHTML = renderXiangqiBoardSvg(replay.views[replay.maxPly]!, 'red', {
+      coordinates: false,
+    });
+    const squares = (element: Element) =>
+      [...element.querySelectorAll('[data-piece-square]')]
+        .map((piece) => piece.getAttribute('data-piece-square'))
+        .sort();
+    expect(squares(root.querySelector('.xqb-card-board')!)).toEqual(squares(expected));
   });
 
   it('renders one mini-board card per board with a board, names, and live marker', async () => {
@@ -304,7 +344,8 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 'w', 'w-r01');
 
-    expect(root.querySelector('.xqb-tab.xqb-tab-active')?.textContent).toBe('Overview');
+    // The Overview stands alone: Boards and Players wait for the first game.
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
     const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
     expect(pending).toContain('three tables');
     expect(pending).toContain('No games yet');
@@ -435,15 +476,21 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const notes = root.querySelectorAll('.xqb-rights-note');
     expect(notes).toHaveLength(1);
     expect(notes[0]?.textContent).toBe(
-      "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.",
+      'Run this event, hold rights to its games, or spot a mistake? Contact us.',
     );
     const link = notes[0]?.querySelector('a');
-    expect(link?.textContent).toBe('contact us');
+    expect(link?.textContent).toBe('Contact us');
     expect(link?.getAttribute('href')).toBe(
       `/contact?about=${encodeURIComponent('/broadcast/xiangqi/t/round/r')}`,
     );
-    // The last thing on the page, after the event layout.
-    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(notes[0]);
+    // The last thing on the page: the event layout's last grid item, in the
+    // foot area under the content column. Below the layout it ended the pinned
+    // left column's grid area above the page's foot, so at the bottom of the
+    // page the column was pushed up by the note's height.
+    const layout = root.querySelector('.xqb-event-layout-with-rail');
+    expect(layout).not.toBeNull();
+    expect(layout?.lastElementChild).toBe(notes[0]);
+    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(layout);
     window.history.replaceState(null, '', '/');
   });
 
@@ -696,6 +743,46 @@ describe('broadcastRecordsCredit', () => {
     ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
   });
 
+  // The HCMC Chess Federation's permission (2026-10-26) asks for credit to
+  // XQBase and a link back to its databank on vietnamchess.vn.
+  it('names XQBase and links its event page for records from its databank', () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: XQBASE_EVENT }, { sourceUrl: XQBASE_EVENT }], {
+        slug: '2026-kim-long-motor-cup',
+        sourceUrl: XQBASE_EVENT,
+      }),
+    ).toEqual({ host: 'vietnamchess.vn', href: XQBASE_EVENT, name: 'XQBase' });
+  });
+
+  it('names no database for the rest of the same site or a lookalike path', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: XQBASE_EVENT },
+        { sourceUrl: 'https://vietnamchess.vn/news/1' },
+      ]),
+    ).toEqual({ host: 'vietnamchess.vn', href: 'https://vietnamchess.vn' });
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'https://vietnamchess.vn/databank/xqbase-vietnamchess-copy?id=1' },
+      ]),
+    ).toEqual({ host: 'vietnamchess.vn', href: 'https://vietnamchess.vn' });
+  });
+
+  it('shows the database name as the round credit link', async () => {
+    stubFetchJson(() => ({
+      ...ROUND,
+      tour: { ...ROUND.tour, sourceUrl: XQBASE_EVENT },
+      boards: ROUND.boards.map((board) => ({ ...board, sourceUrl: XQBASE_EVENT })),
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const credit = root.querySelector('.xqb-records-credit');
+    expect(credit?.textContent).toBe('Game records from XQBase');
+    expect(credit?.querySelector('a')?.getAttribute('href')).toBe(XQBASE_EVENT);
+    vi.unstubAllGlobals();
+  });
+
   it('ignores non-http schemes so a discovery source never becomes a credit', () => {
     expect(
       broadcastRecordsCredit([{ sourceUrl: 'mistboard-discover://dpxq-live?tourSlug=x' }]),
@@ -870,7 +957,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(featured?.className).toContain('xqb-tour-card-live');
     expect(featured?.querySelector('.xqb-tour-status-live')?.textContent).toBe('Round 3 · Live');
     expect(featured?.querySelector('.xqb-tour-card-name')?.textContent).toBe('Live Cup');
-    expect(featured?.querySelector('.xqb-name-zh')?.textContent).toBe('直播杯');
+    // One language per page: the English reader gets no 直播杯 under it.
+    expect(featured?.textContent).not.toContain('直播杯');
     // Who is playing: ranked by the CXA lists; an unranked name stays off.
     // (no title tag: a life ban hides it, players/sanctions.ts)
     expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('Wang Tianyi');
@@ -886,7 +974,7 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     // board motif), lichess's card image, in place of a board thumbnail.
     const arts = root.querySelectorAll('.xqb-tour-card > .xqb-event-art');
     expect(arts.length).toBe(2);
-    expect(arts[0]?.querySelector('.xqb-event-art-zh')?.textContent).toBeTruthy();
+    expect(arts[0]?.querySelector('.xqb-event-art-title')?.textContent).toBe('Live Cup');
     expect(root.querySelector('.xqb-tour-card .xqb-card-board')).toBeNull();
   });
 
@@ -952,6 +1040,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(zone('Ongoing')).toBeUndefined();
     // The earliest start leads, labelled as the next event.
     expect(names(zone('Next up'))).toEqual(['quiet-league']);
+    // Nothing posted yet: no "0 rounds / 0 games" line on the featured card.
+    expect(zone('Next up')?.textContent).not.toMatch(/\b0 rounds\b|\b0 games\b/);
     // Soonest first.
     expect(names(zone('Upcoming'))).toEqual(['asian-men', 'asian-women', 'singapore', 'changchun']);
     const status = (slug: string) =>
@@ -1314,6 +1404,37 @@ describe('event page (tabs, default round, standings)', () => {
     expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
   });
 
+  // dpxq published the 2026 league's rounds 10 and 11 as result rows with no
+  // moves; the homepage card's tour link opened round 11 on 78 empty boards.
+  it('skips a newer round of results-only boards for the latest round with moves', async () => {
+    const urls: string[] = [];
+    stubFetchJson((url) => {
+      urls.push(url);
+      if (url.includes('/rounds/')) return { ...ROUND, round: ROUND.rounds[1] };
+      return {
+        ...TOUR,
+        rounds: [
+          { ...ROUND.rounds[0], liveBoardCount: 0, completeBoardCount: 2, recordedBoardCount: 2 },
+          { ...ROUND.rounds[1], boardCount: 3, completeBoardCount: 3, recordedBoardCount: 3 },
+          {
+            ...ROUND.rounds[1],
+            id: 'r3',
+            name: '第3轮',
+            nameEn: 'Round 3',
+            boardCount: 4,
+            completeBoardCount: 4,
+            recordedBoardCount: 0,
+          },
+        ],
+      };
+    });
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
+  });
+
   it('switches tabs in place: Overview lists the schedule, Players computes standings from every round', async () => {
     const finished = {
       ...ROUND,
@@ -1333,12 +1454,19 @@ describe('event page (tabs, default round, standings)', () => {
     (root.querySelectorAll('.xqb-tab')[0] as HTMLButtonElement).click();
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Overview');
     expect(window.location.search).toBe('?tab=overview');
-    // lichess's overview: one strip of facts and links, then the share box; no
-    // schedule (the round select is the schedule) and no table of labels.
+    // lichess's overview: one strip of facts and links; no schedule (the round
+    // select is the schedule), no table of labels and no share box (the
+    // header's Copy link button replaced it).
     expect(root.querySelector('.xqb-overview-strip')?.textContent).toContain('2 rounds');
     expect(root.querySelector('.xqb-round-row')).toBeNull();
     expect(root.querySelector('.xqb-facts')).toBeNull();
-    expect(root.querySelectorAll('.xqb-share-url')).toHaveLength(2);
+    expect(root.querySelector('.xqb-share-url')).toBeNull();
+    const copyLink = root.querySelector<HTMLButtonElement>('.xqb-event-header .xqb-copy-link');
+    expect(copyLink?.textContent).toBe('Copy link');
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    copyLink?.click();
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/broadcast/xiangqi/t/round/r`);
 
     (root.querySelectorAll('.xqb-tab')[2] as HTMLButtonElement).click();
     // The other rounds are fetched once the tab opens; then the table paints.
@@ -1395,16 +1523,10 @@ describe('event page (tabs, default round, standings)', () => {
     const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
     expect(pending).toContain('This event is over and the source has not published its games');
     expect(pending).not.toContain('round by round');
-    (
-      [...root.querySelectorAll('.xqb-tab')].find(
-        (tab) => tab.textContent === 'Boards',
-      ) as HTMLButtonElement
-    ).click();
-    const empty = root.querySelector('.xqb-empty');
-    expect(empty?.textContent).toContain("The source has not published this round's games");
-    expect(empty?.textContent).not.toContain('usually after play');
-    // The source link stays: it is where the games would come from.
-    expect(empty?.querySelector('a')).not.toBeNull();
+    // No tabs to an empty Boards grid; the source link stays on the Overview,
+    // where the games would come from.
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-overview-strip a.xqb-overview-link')).not.toBeNull();
     expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe(
       'No games published',
     );
@@ -1499,6 +1621,17 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     ]);
   });
 
+  it('credits XQBase by name in a finished game provenance', async () => {
+    const board = { ...COMPLETE, board: { ...COMPLETE.board, sourceUrl: XQBASE_EVENT } };
+    stubFetchJson((url) => (url.includes('/api/xiangqi/broadcasts/boards/') ? board : ROUND));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+    const link = root.querySelector('.review-provenance a');
+    expect(link?.textContent).toBe('XQBase');
+    expect(link?.getAttribute('href')).toBe(XQBASE_EVENT);
+  });
+
   it("marks a record-less sibling in the board page's game list as nothing to open", async () => {
     const noRecord = fixtureBoard({
       n: 3,
@@ -1532,6 +1665,102 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     expect(sibling?.classList.contains('xqb-rail-row-no-record')).toBe(true);
     expect(sibling?.querySelector('.xqb-rail-no-record')?.textContent).toBe('No record published');
     expect(sibling?.textContent).toContain('Wu Zonghan');
+  });
+});
+
+describe('a withheld record (the source record reads two ways)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const SOURCE = 'https://vietnamchess.vn/databank/xqbase-vietnamchess?view=game&id=1640';
+  const HELD_BOARD = {
+    ...fixtureBoard({
+      n: 2,
+      red: 'Quách Trung Cơ',
+      black: 'Phan Nguyễn Công Minh',
+      moves: [],
+      status: 'complete',
+      result: '1-0',
+    }),
+    red: { name: 'Quách Trung Cơ', federation: '广东', federationEn: 'Guangdong' },
+    black: { name: 'Phan Nguyễn Công Minh', federation: '越南', federationEn: 'Vietnam' },
+    sourceUrl: SOURCE,
+    recordWithheld: 'ambiguous',
+  };
+  const PLAYED = fixtureBoard({
+    n: 1,
+    red: '梁运龙',
+    redEn: 'Liang Yunlong',
+    black: 'Nguyễn Thành Bảo',
+    moves: [{ from: 'b3', to: 'e3' }],
+    status: 'complete',
+    result: '0-1',
+  });
+  const HELD_ROUND = { ...ROUND, boards: [PLAYED, HELD_BOARD] };
+  const HELD_RESPONSE = {
+    board: HELD_BOARD,
+    state: { status: { type: 'playing', turn: 'red' }, moveNumber: 1 },
+    timeline: [],
+    view: buildXiangqiReplayFromMoves([]).views[0]!,
+    views: { truth: buildXiangqiReplayFromMoves([]).views[0]! },
+    history: { truth: [] },
+  };
+
+  it('shows the card with its players and result, and it opens the board page', async () => {
+    stubFetchJson(() => HELD_ROUND);
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const held = root.querySelectorAll<HTMLElement>('.xqb-board-card')[1];
+    expect(held?.tagName).toBe('A');
+    expect(held?.getAttribute('href')).toBe('/broadcast/xiangqi/board/t-r-b2');
+    expect(held?.classList.contains('xqb-board-card-withheld')).toBe(true);
+    expect(held?.querySelector('.xqb-card-no-moves')?.textContent).toBe('Not replayed');
+    expect(held?.getAttribute('title')).toContain('can be read two ways');
+    expect([...(held?.querySelectorAll('.xqb-score') ?? [])].map((n) => n.textContent)).toEqual([
+      '0',
+      '1',
+    ]);
+    const row = root.querySelectorAll<HTMLElement>('.xqb-rail-row')[1];
+    expect(row?.tagName).toBe('A');
+    expect(row?.querySelector('.xqb-rail-no-record')?.textContent).toBe('Not replayed');
+  });
+
+  it('its board page names the players, the result and the reason, with no replay', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/') ? HELD_RESPONSE : HELD_ROUND,
+    );
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b2');
+
+    const held = root.querySelector('.xqb-event-body .xqb-held');
+    expect(held).not.toBeNull();
+    expect(held?.querySelector('.xqb-held-title')?.textContent).toBe(
+      'Quách Trung Cơ vs Phan Nguyễn Công Minh',
+    );
+    expect(held?.textContent).toContain('Red wins');
+    expect([...root.querySelectorAll('.xqb-held-score')].map((n) => n.textContent)).toEqual([
+      '1',
+      '0',
+    ]);
+    const note = root.querySelector('.xqb-held-note');
+    expect(note?.textContent).toBe(
+      "The source record of this game can be read two ways, so it isn't replayed.",
+    );
+    expect(note?.querySelector('a')?.getAttribute('href')).toBe(SOURCE);
+    expect(note?.querySelector('a')?.textContent).toBe('source record');
+    // No review and no board: the start position never stands in for the game.
+    expect(root.querySelector('.review-shell--embedded')).toBeNull();
+    expect(root.querySelector('.xqb-event-body .xiangqi-live-board')).toBeNull();
+    expect(root.querySelector('.xqb-review-no-record-label')).toBeNull();
+    expect(root.querySelector('.engine-panel')).toBeNull();
+    // The open board stays marked in the game list.
+    expect(root.querySelector('.xqb-side-rail .xqb-rail-row-current')?.getAttribute('href')).toBe(
+      '/broadcast/xiangqi/board/t-r-b2',
+    );
   });
 });
 
@@ -1887,6 +2116,25 @@ describe('event header before any round exists', () => {
     expect(header).not.toMatch(/0 rounds/);
   });
 
+  // The placeholder drew Boards and Players tabs that did nothing on click.
+  it('shows the Overview alone, with no tabs, until the first game', async () => {
+    stubFetchJson(() => ({
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 't',
+        name: 'Test Cup',
+        startsAt: '2099-10-02T00:00:00+08:00',
+        endsAt: '2099-10-08T23:59:59+08:00',
+      },
+      rounds: [],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-overview-pending')).not.toBeNull();
+  });
+
   it('keeps the left column, an empty game list over the chat', async () => {
     stubFetchJson(() => ({
       tour: {
@@ -1909,4 +2157,177 @@ describe('event header before any round exists', () => {
     expect(heading?.querySelector('a')).toBeNull();
     expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe('No games yet');
   });
+});
+
+// Mixed-language API fixtures must follow the reader, even when translations
+// are missing. Source names and export payloads stay untouched.
+describe('broadcast locale fixtures', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, '', '/');
+    window.localStorage?.clear();
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'renders index, round, calendar and live board in %s',
+    async (locale) => {
+      const prefix = locale === 'en' ? '' : `/${locale.toLowerCase()}`;
+      window.history.replaceState(null, '', `${prefix}/broadcast/xiangqi`);
+      const english = locale === 'en';
+      expect(broadcastRoundName({ name: 'Final', nameEn: 'Championship final' })).toBe(
+        english ? 'Championship final' : 'Final',
+      );
+      expect(broadcastRoundName({ name: 'Round 3' })).toBe(
+        english ? 'Round 3' : locale === 'zh-Hans' ? '第3轮' : '第3輪',
+      );
+      expect(broadcastRoundName({ name: 'Round 3', nameEn: 'Championship final' })).toBe(
+        english ? 'Championship final' : locale === 'zh-Hans' ? '第3轮' : '第3輪',
+      );
+      const tour = { ...ROUND.tour, name: '测试杯', nameEn: 'Test Cup' };
+      const round = { ...ROUND.round, name: '第1轮', nameEn: 'Round 1' };
+      const data = {
+        ...ROUND,
+        tour,
+        round,
+        boards: ROUND.boards.map((board) => ({
+          ...board,
+          status: 'complete',
+          result: '1-0',
+          red: { ...board.red, federation: '浙江', federationEn: 'Zhejiang' },
+          black: { ...board.black, federation: '江苏', federationEn: 'Jiangsu' },
+          details: {
+            match: '浙江-江苏',
+            matchEn: 'Zhejiang-Jiangsu',
+            table: board.boardNumber,
+            kind: 'standard',
+          },
+        })),
+      };
+      const calendar = {
+        sourceReadable: true,
+        events: [
+          {
+            name: '测试杯',
+            nameEn: 'Test Cup',
+            location: '台北',
+            startsOn: '2099-10-01',
+            endsOn: '2099-10-01',
+            status: 'upcoming' as const,
+            tourSlug: 't',
+            sourceUrl: null,
+          },
+        ],
+      };
+      stubEventSource();
+      stubFetchJson((url) =>
+        url.endsWith('/calendar')
+          ? calendar
+          : url.endsWith('/broadcasts')
+            ? {
+                tours: [
+                  {
+                    tour,
+                    roundCount: 2,
+                    boardCount: 2,
+                    liveBoardCount: 1,
+                    completeBoardCount: 0,
+                    scheduledBoardCount: 1,
+                    totalPlies: 1,
+                    updatedAt: null,
+                    lastSyncLog: null,
+                    latestRound: { ...round, startsAt: null, live: true },
+                    players: [{ name: '孟繁睿', nameEn: 'Meng Fanrui' }],
+                  },
+                ],
+              }
+            : data,
+      );
+      const root = document.createElement('div');
+      await mountXiangqiBroadcastIndex(root);
+      expect(root.querySelector('.xqb-tour-card-name')?.textContent).toBe(
+        english ? 'Test Cup' : '测试杯',
+      );
+      expect(root.querySelector('.xqb-tour-players')?.textContent).toContain(
+        english ? 'Meng Fanrui' : '孟繁睿',
+      );
+      await mountXiangqiBroadcastRound(root, 't', 'r');
+      expect(root.querySelector('.xqb-event-header h1')?.textContent).toBe(
+        english ? 'Test Cup' : '测试杯',
+      );
+      expect(root.querySelector('.xqb-round-meta')?.textContent).toContain(
+        english ? '2 boards' : '2 台',
+      );
+      expect(root.querySelector('.xqb-round-picker-name')?.textContent).toContain(
+        english ? 'Round 1' : locale === 'zh-Hans' ? '第1轮' : '第1輪',
+      );
+      expect(root.querySelector('.xqb-card-seat-red .xqb-card-seat-name')?.textContent).toContain(
+        english ? 'Wang Tianyi' : '王天一',
+      );
+      const teamFilter = root.querySelector<HTMLSelectElement>('.xqb-team-filter')!;
+      expect([...teamFilter.options].map((option) => option.textContent)).toContain(
+        english ? 'Zhejiang' : '浙江',
+      );
+      const teamsTab = root.querySelectorAll<HTMLButtonElement>('.xqb-tab')[2]!;
+      teamsTab.click();
+      await vi.waitFor(() => expect(root.querySelector('.xqb-standings')).not.toBeNull());
+      expect(root.querySelector('.xqb-match-team')?.textContent).toBe(
+        english ? 'Zhejiang' : '浙江',
+      );
+      expect(root.querySelector('.xqb-standings-player strong')?.textContent).toBe(
+        english ? 'Zhejiang' : '浙江',
+      );
+      window.history.replaceState(null, '', `${prefix}/broadcast/xiangqi`);
+      await mountXiangqiBroadcastTour(root, 't');
+      expect(root.querySelector<HTMLAnchorElement>('.xqb-board-card')?.getAttribute('href')).toBe(
+        '/broadcast/xiangqi/board/t-r-b1',
+      );
+      expect(document.title).toContain(english ? 'Test Cup' : '测试杯');
+      const row = calendarEventRow(calendar.events[0]!);
+      expect(row.querySelector('strong')?.textContent).toBe(english ? 'Test Cup' : '测试杯');
+      expect(
+        calendarEventRow({ ...calendar.events[0]!, nameEn: ' ' }).querySelector('strong')
+          ?.textContent,
+      ).toBe('测试杯');
+      await mountXiangqiBroadcastCalendar(root);
+      expect(root.querySelector('.xqb-cal-month h2')?.textContent).toBe(
+        english ? 'October 2099' : '2099年10月',
+      );
+
+      const moves: XiangqiMove[] = [{ from: 'h3', to: 'e3' }];
+      const replay = buildXiangqiReplayFromMoves(moves);
+      const board = {
+        ...data.boards[0]!,
+        status: 'live',
+        result: '*',
+        red: {
+          name: '赵奕帆',
+          nameOwn: '趙奕帆',
+          nameEn: 'Chao Yi-fan',
+          federation: '台灣',
+          federationEn: 'Taiwan',
+        },
+        black: { name: '无名', nameEn: ' ' },
+      };
+      stubFetchJson((url) =>
+        url.includes('/boards/')
+          ? {
+              board,
+              state: { status: { type: 'playing', turn: 'black' }, moveNumber: 1 },
+              timeline: timelineFrom(moves),
+              view: replay.views[1],
+              views: { truth: replay.views[1] },
+              history: { truth: replay.views.map((view, ply) => ({ view, ply })) },
+            }
+          : data,
+      );
+      await mountXiangqiBroadcastBoard(root, board.id);
+      expect(document.title).toContain(
+        english ? 'Chao Yi-fan (Taiwan)' : locale === 'zh-Hans' ? '赵奕帆 (台灣)' : '趙奕帆 (台灣)',
+      );
+      expect(document.title).toContain('无名');
+      expect(root.querySelector('.xqb-player')?.parentElement?.textContent).toContain(
+        english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
+      );
+    },
+  );
 });

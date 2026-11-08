@@ -73,8 +73,16 @@ export function registeredTenantRematchContext<
       }
     },
     buildRoomUrl: (id) => `/room/${encodeURIComponent(id)}`,
-    accountMayPlay: async (userId) =>
-      !persistence.isInitialized() || !(await persistence.isUserIdPlayDisabled(userId)),
+    accountMayPlay: async (userId) => {
+      if (persistence.isInitialized() && (await persistence.isUserIdPlayDisabled(userId))) {
+        return false;
+      }
+      // Pre-issued rematch tokens bypass new-seat admission. Recheck the
+      // variant grant here too, before creating a room for either account.
+      return persistence.mayPlayVariantByUserId(userId, registration.gameSpecId);
+    },
+    accountMayRate: async (userId) =>
+      !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
     issueSeatToken: async (room, seat, identity) => {
       const minted = mintTenantSeatToken(room, seat, identity);
       if (persistence.isInitialized()) {

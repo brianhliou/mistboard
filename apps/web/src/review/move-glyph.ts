@@ -12,6 +12,8 @@
 // deliberately clears it so an authored '?' is not styled as an engine verdict in
 // the list). The symbol fallback below is what lets the badge still colour those.
 
+import { PIECE_GLIDE_EASING } from '../board-anim.js';
+
 /** Badge colour families. The first three mirror MoveJudgment. 'brilliant' (`!!`)
  *  and 'good' (`!`) are shared by the engine's positive verdicts
  *  (game-analysis.praiseGlyph, whose class for `!` is 'great') and by
@@ -58,4 +60,73 @@ export function moveGlyphTone(
   if (suffixClass && TONE_BY_CLASS[suffixClass]) return TONE_BY_CLASS[suffixClass]!;
   if (!suffix) return null;
   return TONE_BY_SYMBOL[suffix] ?? null;
+}
+
+type GlyphFade = {
+  board: Element | null;
+  startedAt: number;
+  durationMs: number;
+  delayMs: number;
+  animations: Animation[];
+};
+const pendingGlyphs = new WeakMap<HTMLElement, GlyphFade>();
+
+/**
+ * Board badges stay hidden until the glide lands, then use the last-move
+ * marker's duration and PIECE_GLIDE_EASING. In-place reveals pass delay 0.
+ * Backwards fill hides them synchronously, including during the delay. No
+ * timers or completion callbacks can write into a later render.
+ */
+export function animateMoveGlyphs(
+  host: HTMLElement,
+  durationMs: number,
+  delayMs = durationMs,
+): void {
+  cancelMoveGlyphs(host);
+  if (durationMs <= 0) return;
+  const fade: GlyphFade = {
+    board: host.querySelector('svg'),
+    startedAt: performance.now(),
+    durationMs,
+    delayMs: Math.max(0, delayMs),
+    animations: [],
+  };
+  pendingGlyphs.set(host, fade);
+  paintGlyphFade(host, fade, 0);
+}
+
+function cancelMoveGlyphs(host: HTMLElement): void {
+  for (const animation of pendingGlyphs.get(host)?.animations ?? []) animation.cancel();
+  pendingGlyphs.delete(host);
+}
+
+function paintGlyphFade(host: HTMLElement, fade: GlyphFade, elapsedMs: number): void {
+  for (const glyph of host.querySelectorAll('.xq-marker--glyph, .luck-mark[data-luck-square]')) {
+    if (typeof glyph.animate !== 'function') continue;
+    for (const animation of glyph.getAnimations?.() ?? []) animation.cancel();
+    const animation = glyph.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: fade.durationMs,
+      delay: fade.delayMs,
+      easing: PIECE_GLIDE_EASING,
+      fill: 'backwards',
+    });
+    if (elapsedMs > 0) animation.currentTime = elapsedMs;
+    fade.animations.push(animation);
+  }
+}
+
+/** Engine/annotation updates patch badges in place while the board glides.
+ * New badges inherit the existing fade's progress. A full board repaint (a
+ * jump, first render or superseding move) cancels that context instead. */
+export function refreshMoveGlyphs(host: HTMLElement): void {
+  const fade = pendingGlyphs.get(host);
+  if (!fade) return;
+  const elapsedMs = performance.now() - fade.startedAt;
+  if (fade.board !== host.querySelector('svg') || elapsedMs >= fade.delayMs + fade.durationMs) {
+    cancelMoveGlyphs(host);
+    return;
+  }
+  for (const animation of fade.animations) animation.cancel();
+  fade.animations = [];
+  paintGlyphFade(host, fade, elapsedMs);
 }

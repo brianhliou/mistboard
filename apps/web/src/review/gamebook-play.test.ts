@@ -85,3 +85,16 @@ describe('gamebook session', () => {
     expect(session.view().hint).toBe('Open the cannon.');
   });
 });
+
+it('settles an opponent-first tree onto the learner with the recorded last move, including reset', () => {
+  const { tree, m1 } = build();
+  const session = createGamebookSession(tree, { ...config(), learner: 'black' });
+  for (let i = 0; i < 2; i++) {
+    expect(session.node()).toBe(tree.root.children[0]);
+    expect(session.view().awaitingMove).toBe(true);
+    const view = xiangqiTreeAdapter.project(session.node().truth)[0]!.view;
+    expect(view.status).toMatchObject({ type: 'playing', turn: 'black' });
+    expect(view.lastMove).toMatchObject(m1);
+    session.reset();
+  }
+});

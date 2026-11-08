@@ -66,3 +66,8 @@ jobs:
           path: ${{ runner.temp }}/broadcast-archive-review
           if-no-files-found: warn
           retention-days: 30
+      - name: Every round with games shows a date
+        # Read-only; fails the run (and its email) on a round whose menu
+        # line would be blank. scripts/broadcast-round-dates.mjs.
+        if: always()
+        run: node scripts/broadcast-round-dates.mjs

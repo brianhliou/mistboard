@@ -9,6 +9,7 @@ export type AccountPreferences = {
   premoves: boolean;
   confirmGameActions: boolean;
   inboxBell: boolean;
+  inboxEmail: boolean;
   correspondenceBell: boolean;
   followersBell: boolean;
   forumBell: boolean;
@@ -25,6 +26,7 @@ export const defaultAccountPreferences: AccountPreferences = {
   premoves: true,
   confirmGameActions: true,
   inboxBell: true,
+  inboxEmail: true,
   correspondenceBell: true,
   followersBell: true,
   forumBell: true,
@@ -89,6 +91,7 @@ export function normalizeAccountPreferences(value: unknown): AccountPreferences 
       defaultAccountPreferences.confirmGameActions,
     ),
     inboxBell: booleanOrDefault(parsed.inboxBell, defaultAccountPreferences.inboxBell),
+    inboxEmail: booleanOrDefault(parsed.inboxEmail, defaultAccountPreferences.inboxEmail),
     correspondenceBell: booleanOrDefault(
       parsed.correspondenceBell,
       defaultAccountPreferences.correspondenceBell,

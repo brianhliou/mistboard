@@ -19,10 +19,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { banqiStateToDealtFen } from './banqi-fen.js';
 import { duckXiangqiFen } from './duck-xiangqi-fen.js';
+import { isStudyEligibleSpecId } from './game-specs.js';
 import { jieqiStateToDealtFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen } from './jungle-flip-fen.js';
 import { hasStartFen, normalizeStartFen, START_FEN_SPEC_IDS } from './start-fen.js';
+import { threeKingdomsBanqiStateToDealtFen } from './three-kingdoms-banqi-fen.js';
 import { darkChessVariant, parseDarkChessFen } from './variants.js';
 import { createInitialBanqiState } from './variants-banqi.js';
 import {
@@ -39,6 +41,7 @@ import {
 import { createInitialJieqiState } from './variants-jieqi.js';
 import { createInitialJungleState } from './variants-jungle.js';
 import { createInitialJungleFlipState } from './variants-jungle-flip.js';
+import { createInitialThreeKingdomsBanqiState } from './variants-three-kingdoms-banqi.js';
 import { createInitialXiangqiState } from './variants-xiangqi.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
 
@@ -55,6 +58,7 @@ test('every start-fen spec round-trips its own standard start', () => {
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     chess: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    gomoku: `${Array(15).fill('15').join('/')} b`,
     // Duck Xiangqi: the standard six fields plus a SEVENTH naming the duck's
     // point, '-' at the start because the duck enters on Red's first turn.
     'duck-xiangqi': duckXiangqiFen(createInitialDuckXiangqiState('t')),
@@ -62,6 +66,9 @@ test('every start-fen spec round-trips its own standard start', () => {
     banqi: banqiStateToDealtFen(createInitialBanqiState('t')),
     jieqi: jieqiStateToDealtFen(createInitialJieqiState('t')),
     'jungle-flip': jungleFlipStateToDealtFen(createInitialJungleFlipState('t')),
+    'three-kingdoms-banqi': threeKingdomsBanqiStateToDealtFen(
+      createInitialThreeKingdomsBanqiState('t', 7),
+    ),
   };
   for (const spec of START_FEN_SPEC_IDS) {
     const fen = starts[spec];
@@ -82,6 +89,21 @@ test('normalizeStartFen is fail-closed off the list', () => {
     const result = normalizeStartFen(spec, 'anything');
     assert.equal(result.ok, false);
   }
+});
+
+test('Gomoku start FEN trims whitespace and preserves its explicit turn', () => {
+  assert.equal(hasStartFen('gomoku'), true);
+  assert.equal(isStudyEligibleSpecId('gomoku'), true);
+  const rows = Array(15).fill('15');
+  for (const turn of ['b', 'w']) {
+    const paste = `${rows.join('/')}\t${turn}`;
+    assert.deepEqual(normalizeStartFen('gomoku', `  ${paste}  `), {
+      ok: true,
+      fen: `${rows.join('/')} ${turn}`,
+    });
+  }
+  assert.equal(normalizeStartFen('gomoku', `${rows.join('/')} r`).ok, false);
+  assert.equal(normalizeStartFen('gomoku', 'anything').ok, false);
 });
 
 test('standard chess keeps the rule fog drops: the side not to move may not be in check', () => {
@@ -113,6 +135,11 @@ test('a public five-field paste for a dealt variant is pinned as a six-field dea
       'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1',
     ],
     ['jungle-flip', 'XXXX/XXXX/XXXX/XXXX - R1C1D1W1P1T1L1E1r1c1d1w1p1t1l1e1 0 0'],
+    // 32 tiles on 45 points: file e and rank 3 start empty.
+    [
+      'three-kingdoms-banqi',
+      'XXXX1XXXX/XXXX1XXXX/9/XXXX1XXXX/XXXX1XXXX - G1A2E2R2H2C2S5g1a2e2r2h2c2s5 0 1',
+    ],
   ];
   for (const [spec, publicFen] of cases) {
     assert.equal(hasStartFen(spec), true);

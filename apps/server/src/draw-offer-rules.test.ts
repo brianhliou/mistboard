@@ -31,12 +31,15 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { mahjongTenant } from './mahjong-tenant.js';
 import { handleXiangqiWebSocketConnection } from './server-ws-xiangqi.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { tenantDurableDeadlineFor } from './variant-tenant/lifecycle.js';
 import './variant-tenant/register-tenants.js';
@@ -63,6 +66,7 @@ type AnyTenant = VariantTenant<string, string, any, any, any, string>;
 // ── Coverage ────────────────────────────────────────────────────────────────
 
 const DRAWING_TENANTS: readonly AnyTenant[] = [
+  gomokuTenant,
   xiangqiTenant,
   darkXiangqiTenant,
   jieqiTenant,
@@ -73,6 +77,8 @@ const DRAWING_TENANTS: readonly AnyTenant[] = [
   crazyhouseXiangqiTenant,
   atomicXiangqiTenant,
   fortressXiangqiTenant,
+  threeKingdomsBanqiTenant,
+  ffqBanqiTenant,
 ] as unknown as AnyTenant[];
 
 // Two-seat tenants with no draw by agreement, each with its reason.

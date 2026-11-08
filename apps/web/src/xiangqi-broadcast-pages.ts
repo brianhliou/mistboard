@@ -6,12 +6,40 @@
 
 import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
-import { localizedHref } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
+import { localName, localPersonName, localPlace, localTitle } from './xiangqi-broadcast-names.js';
 import { formatEventDateRange } from './xiangqi-broadcast-time.js';
+
+type BroadcastName = { name: string; nameEn?: string | null; nameOwn?: string };
+
+/** Keep the source's own spelling, including Taiwanese names, in either Chinese locale. */
+export function broadcastName(entity: BroadcastName, locale: Locale = currentLocale()): string {
+  const own = entity.nameOwn?.trim() || entity.name.trim();
+  const en = entity.nameEn?.trim();
+  return localName({ name: own || en || '', nameEn: en }, locale);
+}
+
+export function broadcastSecondaryName(entity: BroadcastName): string | null {
+  const other = broadcastName(entity, currentLocale() === 'en' ? 'zh-Hans' : 'en');
+  return other && other !== broadcastName(entity) ? other : null;
+}
+
+/** Only generated round numbers are translated; authored stage names stay intact. */
+export function broadcastRoundName(entity: BroadcastName): string {
+  const name = broadcastName(entity);
+  const match = name.match(/^\s*(?:第\s*(\d+)\s*[轮輪]|Round\s+(\d+))\s*$/i);
+  return match ? t('broadcast.roundNumber', { n: Number(match[1] ?? match[2]) }) : name;
+}
+
+export function broadcastCount(n: number, kind: 'ply' | 'player'): string {
+  return kind === 'player'
+    ? t(n === 1 ? 'broadcast.playersCountOne' : 'broadcast.playersCount', { n })
+    : t(n === 1 ? 'broadcast.plyCountOne' : 'broadcast.plyCount', { n });
+}
 
 export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
 
@@ -32,7 +60,7 @@ export function broadcastRail(active: BroadcastRailItem): HTMLElement {
     const link = document.createElement('a');
     link.className = item.id === active ? 'xqb-rail-link xqb-rail-link-active' : 'xqb-rail-link';
     if (item.group) link.classList.add('xqb-rail-link-group');
-    link.href = item.href;
+    link.href = localizedHref(item.href);
     link.textContent = item.label;
     if (item.id === active) link.setAttribute('aria-current', 'page');
     nav.append(link);
@@ -64,17 +92,31 @@ export function broadcastSectionLayout(
  * `?about=`, so the message arrives labelled with the page it is about.
  * One element for all of them, so every page says it the same way.
  */
-export function rightsContactNote(path: string = window.location.pathname): HTMLElement {
+// 'event' is the broadcast wording (organisers, game rights); 'corrections' is
+// the shorter line for player and team pages and player articles.
+export function rightsContactNote(
+  path: string = window.location.pathname,
+  kind: 'event' | 'corrections' = 'event',
+): HTMLElement {
   const note = document.createElement('p');
   note.className = 'xqb-rights-note';
   const link = document.createElement('a');
   link.href = localizedHref(`/contact?about=${encodeURIComponent(path)}`);
-  link.textContent = t('contact.rightsLink');
-  note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  // Each page's ?about= copy of /contact read to a crawler as another URL for
+  // it (Search Console, 2026-10-19); /contact canonicalises to the bare path,
+  // and nofollow stops crawlers minting new copies. The form still prefills.
+  link.rel = 'nofollow';
+  if (kind === 'corrections') {
+    link.textContent = t('contact.correctionsLink');
+    note.append(t('contact.correctionsPrefix'), link, t('contact.correctionsSuffix'));
+  } else {
+    link.textContent = t('contact.rightsLink');
+    note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  }
   return note;
 }
 
-export type BroadcastPlayerRef = { name: string; nameEn?: string; title?: string };
+export type BroadcastPlayerRef = BroadcastName & { title?: string };
 
 /**
  * The strongest few players of an event, for the card's "who is playing" line
@@ -99,11 +141,12 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
         (b.rating ?? 0) - (a.rating ?? 0),
     );
   return ranked.slice(0, count).map(({ player }) => {
-    const name = player.nameEn?.trim() || player.name;
+    const name = localPersonName(player);
     // The same tag the player pages show, so a grade the match-fixing
     // rulings may have revoked is hidden here too (players/sanctions.ts).
-    const shown = player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn });
-    return shown ? `${shown} ${name}` : name;
+    const shown =
+      player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn ?? undefined });
+    return shown ? `${localTitle(shown)} ${name}` : name;
   });
 }
 
@@ -149,11 +192,9 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   const what = document.createElement('span');
   what.className = 'xqb-cal-what';
   const name = document.createElement('strong');
-  name.textContent = event.nameEn ?? event.name;
+  name.textContent = broadcastName(event);
   what.append(name);
-  const sub = [event.nameEn ? event.name : null, event.location || null]
-    .filter(Boolean)
-    .join(' · ');
+  const sub = localPlace(event.location) ?? '';
   if (sub) {
     const line = document.createElement('span');
     line.className = 'xqb-cal-sub';
@@ -174,7 +215,7 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   if (event.tourSlug) {
     const link = document.createElement('a');
     link.className = 'xqb-link';
-    link.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
+    link.href = localizedHref(`/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`);
     link.textContent = t('broadcast.watch');
     row.append(link);
   }
@@ -216,7 +257,7 @@ export async function mountXiangqiBroadcastCalendar(root: HTMLElement): Promise<
     const section = document.createElement('section');
     section.className = 'xqb-cal-month';
     const title = document.createElement('h2');
-    title.textContent = new Date(`${month}-15T12:00:00Z`).toLocaleDateString(undefined, {
+    title.textContent = new Date(`${month}-15T12:00:00Z`).toLocaleDateString(currentLocale(), {
       month: 'long',
       year: 'numeric',
     });

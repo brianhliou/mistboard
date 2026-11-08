@@ -19,6 +19,8 @@
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
 // names; migration 111 remaps persisted attribution to the merged ids.
 
+import { RAPFI_LEVELS } from '@mistboard/game';
+
 export type FirstPartyBotProfile = {
   id: string;
   displayName: string;
@@ -41,6 +43,9 @@ export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const PIKAFISH_JIEQI_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
+// The xiangqi Pikafish ladder (xiangqi-pikafish-engine.ts): level 8 is the bot's
+// current xiangqi engine, 1-7 are retired rungs whose games still attribute here.
+const PIKAFISH_XIANGQI_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
   return {
@@ -120,7 +125,10 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
-    legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi'],
+    // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
+    // rooms created before 2026-10-28 stored as their pveBotId; a resumed one
+    // still finishes as Misty (migration 178 moved the rows already written).
+    legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi', 'misty-xiangqi-mahjong'],
   },
   {
     id: 'pikafish',
@@ -129,7 +137,16 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       xiangqi: 'pikafish-xiangqi-level-8',
       jieqi: 'pikafish-jieqi-strongest',
     },
-    seatNamesByEngineId: { 'pikafish-jieqi-strongest': 'Pikafish Level 8' },
+    // Jieqi Level 8 sits on a ladder of Pikafish Level 1..7 bots, so it names its
+    // rung. Xiangqi offers only full-strength Pikafish, so its seats read plain
+    // "Pikafish"; the explicit entries also correct rows stored as "Pikafish
+    // Level N" between 2026-10-23 and this fix.
+    seatNamesByEngineId: {
+      'pikafish-jieqi-strongest': 'Pikafish Level 8',
+      ...Object.fromEntries(
+        PIKAFISH_XIANGQI_LEVELS.map((level) => [`pikafish-xiangqi-level-${level}`, 'Pikafish']),
+      ),
+    },
     defaultGameSpecId: 'xiangqi',
     attributionEngineIds: [
       'pikafish-xiangqi-level-1',
@@ -161,6 +178,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
   ...PIKAFISH_JIEQI_LEVELS.map(pikafishJieqiLevelProfile),
+  ...RAPFI_LEVELS.map(
+    ({ level }): FirstPartyBotProfile => ({
+      id: `rapfi-level-${level}`,
+      displayName: `Rapfi Level ${level}`,
+      engines: { gomoku: `rapfi-level-${level}` },
+      defaultGameSpecId: 'gomoku',
+    }),
+  ),
   // The top jieqi slot above Pikafish Level 8 (migration 152): named for its engine,
   // not a level number, so a stronger engine can replace it later.
   {
@@ -169,7 +194,8 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: { jieqi: 'ab-jchess-jieqi' },
     defaultGameSpecId: 'jieqi',
   },
-  // jqe above AB-JChess (migration 175), named for its engine like AB-JChess. Its
+  // jqe (migration 175), one rung under AB-JChess since AB-JChess-20261031 (it held
+  // the top from 10-21), named for its engine like AB-JChess. Its
   // engine is held behind MISTBOARD_JQE_ENABLED, so off it is unplayable and the
   // public bot surfaces drop it (routes/bots.ts botPlayOptions).
   {
@@ -237,7 +263,44 @@ export function liveSeatEngineName(
   engineName: () => string,
 ): string {
   const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-  return bot?.seatNamesByEngineId?.[engineClientId] ?? bot?.displayName ?? engineName();
+  return bot ? botSeatName(bot, engineClientId) : engineName();
+}
+
+/**
+ * A first-party bot's seat name when it runs `engineId`: the rung label when the
+ * shared profile name omits it ("Pikafish Level 8"), else the bot's name. The one
+ * rule behind live seats (liveSeatEngineName), the participant rows written at
+ * game end (variant-tenant/events.ts, room-manager.ts) and finished-game reads
+ * (persistedSeatDisplayName), so a seat cannot read one name live and another
+ * once the game is over.
+ */
+export function botSeatName(
+  bot: FirstPartyBotProfile,
+  engineId: string | null | undefined,
+): string {
+  return (engineId ? bot.seatNamesByEngineId?.[engineId] : undefined) ?? bot.displayName;
+}
+
+/**
+ * The display name of a persisted participant, resolved at read time. Bot seats
+ * written before the writers used botSeatName stored the bare profile name
+ * ("Pikafish" for a jieqi Level 8 game); the stored engine id still says which
+ * rung played, so the label is recovered here without a backfill. Anything
+ * without a rung label (humans, engine-version seats, bot seats written before
+ * migration 148 recorded engine_id) keeps its stored name.
+ */
+export function persistedSeatDisplayName(participant: {
+  displayName: string;
+  subjectType: string;
+  subjectId: string | null;
+  engineId?: string | null;
+}): string {
+  const { engineId } = participant;
+  if (participant.subjectType !== 'bot' || !engineId) return participant.displayName;
+  const bot =
+    (participant.subjectId ? firstPartyBotForId(participant.subjectId) : null) ??
+    firstPartyBotForEngine(engineId);
+  return bot?.seatNamesByEngineId?.[engineId] ?? participant.displayName;
 }
 
 // games.variant values that name the same spec as a bot's engine-map key. The

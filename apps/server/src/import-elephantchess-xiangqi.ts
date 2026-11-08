@@ -17,7 +17,7 @@ import { basename, extname, join, resolve } from 'node:path';
 import type { Readable } from 'node:stream';
 import { parseArgs } from 'node:util';
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   isLegalMove,
   isStandardXiangqiLegalMove,
@@ -335,21 +335,7 @@ function normalizeElephantChessMoves(
         error: `move ${index + 1} (${token}) is not legal as uci-0indexed (${detail})`,
       };
     }
-    const mover = state.status.turn;
-    state = applyStandardXiangqiMove(state, move);
-    // Historical sources may use federation-specific repetition/chase rules or
-    // a different no-capture limit. Keep check-aware move validation, but do
-    // not reject an otherwise legal source game because Mistboard would have
-    // automatically adjudicated a draw at this position.
-    if (
-      state.status.type === 'finished' &&
-      (state.status.reason === 'repetition' || state.status.reason === 'progress-clock')
-    ) {
-      state = {
-        ...state,
-        status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' },
-      };
-    }
+    state = applyXiangqiRecordMove(state, move);
     moves.push(move);
   }
   return { moves };

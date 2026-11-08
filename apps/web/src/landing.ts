@@ -1,6 +1,7 @@
 import type { GameEvent } from '@mistboard/game';
 import './landing-play.css';
 import './landing.css';
+import './hover-grammar.css';
 import './game-route.css';
 import {
   buildHomeArticleCards,
@@ -27,7 +28,11 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
-import { buildLandingEventBanners, loadBroadcastBanners } from './landing-event-banners.js';
+import {
+  BROADCAST_SLOT_PENDING_CLASS,
+  buildLandingEventBanners,
+  loadBroadcastBanners,
+} from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
   buildLandingPhoneTiles,
@@ -602,11 +607,12 @@ export function watchHrefForTvGame(mode: LandingTvMode, roomId: string): string 
 }
 
 // `phone` builds the phone home (mobile pass #576): the TV board, Play with its
-// two opponent buttons, the shortcut tiles, the blog strip, live event banners
-// and the chat room, then the footer. The lobby panel, activity box,
-// correspondence card, daily puzzle, forum topics, top studies, deep dives and
-// News are not built at all there, so none of them fetches, polls or opens a
-// socket on a phone. The prerender always bakes the full desktop shell.
+// two opponent buttons and the games-played line under them (back 2026-10-23),
+// the shortcut tiles, the blog strip and the chat room, then the footer. The
+// lobby panel, correspondence card, event banners (until the broadcast pages
+// work on a phone, Brian 2026-10-23), daily puzzle, forum topics, top studies
+// and News are not built at all there, so none of them fetches, polls or opens
+// a socket on a phone. The prerender always bakes the full desktop shell.
 export function buildLandingStage(
   engines: PlayableEngine[],
   opts: { skipLiveWidgets?: boolean; phone?: boolean } = {},
@@ -650,6 +656,10 @@ export function buildLandingStage(
   // Widget styling (compact board + name/clock seats) is keyed on this class,
   // shared with the dev variant sheet's cells.
   replayRoot.classList.add('showcase-widget');
+  // The board's placeholder is part of the shell, prerender included, so first
+  // paint already holds the viewer's room instead of an empty slot that the
+  // skeleton, then the board, grow into.
+  renderWatchReplaySkeleton(replayRoot);
   viewerLink.append(replayRoot);
   boardColumn.append(viewerLink);
   // Honest "recent · 2h ago" caption: kept wired (the cycler's onGameChange still
@@ -689,10 +699,7 @@ export function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  playStack.append(playPanel);
-  if (!phone) {
-    playStack.append(buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
-  }
+  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('h1');
   about.className = 'landing-about';
@@ -739,16 +746,22 @@ export function buildLandingStage(
   const playCenter = document.createElement('div');
   playCenter.className = 'landing-play-center';
   playCenter.append(playIntro, playStack);
-  const eventBanners = buildLandingEventBanners();
-  void loadBroadcastBanners(eventBanners, locale);
   const playColumn = document.createElement('div');
   playColumn.className = 'landing-play-column';
-  playColumn.append(playCenter, eventBanners);
+  playColumn.append(playCenter);
+  if (!phone) {
+    const eventBanners = buildLandingEventBanners();
+    // Pending in the prerendered shell too, so first paint already holds the
+    // cards' room.
+    eventBanners.classList.add(BROADCAST_SLOT_PENDING_CLASS);
+    if (!opts.skipLiveWidgets) void loadBroadcastBanners(eventBanners, locale);
+    playColumn.append(eventBanners);
+  }
 
-  // ── Band 2: forum topics (center) and Top studies (right) beside the daily
-  // puzzle. Studies took this slot back from the chat 2026-09-26 (it held it
-  // until 2026-07-21): the one side slot above a desktop fold goes to something
-  // new to open, not a chat that is often quiet. ──
+  // ── Band 3 center: forum topics, beside the chat (Brian, 2026-10-25: the
+  // articles took its band-2 slot, and the two community boxes read as one
+  // strip). Band 3 left: Top studies, which held the band-2 right rail from
+  // 2026-09-26 until News took it 2026-10-26 (Brian: News matters more). ──
   const forumColumn = document.createElement('div');
   forumColumn.className = 'landing-forum-column';
   const studiesColumn = document.createElement('div');
@@ -758,26 +771,27 @@ export function buildLandingStage(
     studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
   }
 
-  // ── Band 3 (grid-area: blogs): the full-width blog row — compact article
-  // cards, an announcement can take a slot, newest first. Every article with no
-  // homeRow lands here on publish. ──
+  // ── Band 2 center, second row (grid-area: blogs): the blog row between the
+  // daily puzzle and Top studies, "From the blog": compact article cards, newest
+  // first, articles only (announcements stay in the News box, Brian 2026-10-26). Every article with no homeRow lands here on publish. It took
+  // the forum's slot 2026-10-25 (Brian: the articles are the work we are proud
+  // of; the forum gets little use). ──
   const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
   articleCards?.classList.add('landing-articles-row');
 
-  // ── Band 4 (grid-area: dives): the deep-dives row beneath it, the same
-  // carousel filled with articles tagged homeRow: 'deep-dives' (player pages,
-  // game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
+  // ── Band 2 center, top row (grid-area: dives; on top since 2026-10-26): the
+  // deep-dives row above it, the same carousel filled with articles tagged
+  // homeRow: 'deep-dives' (player pages, game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
   // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
   // visitors. Phones build it too (Brian, 2026-10-17): the articles are bundled,
   // so it costs no fetch. ──
   const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
   deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
 
-  // ── Bands 3-4 side rails: the News feed on the left (its full history stays at
-  // /feed) and the lobby chat on the right. Both span the blog AND learn rows,
-  // so each box top-aligns with the blog row and bottom-aligns with the learn
-  // row. The chat box is server-driven (the empty mount paints nothing until
-  // the chat flag is confirmed). ──
+  // ── Band 2 right rail: the News feed (its full history stays at /feed),
+  // beside the article rows. Band 3 right: the lobby chat at the forum's height. The
+  // chat box is server-driven (the empty mount paints nothing until the chat
+  // flag is confirmed). ──
   const newsColumn = document.createElement('div');
   newsColumn.className = 'landing-news-column';
   if (!phone) newsColumn.append(buildLandingAnnouncements(locale));
@@ -822,9 +836,9 @@ export function buildLandingStage(
   };
 
   // Grid placement (see landing.css): band 1 = [banners+viewer · lobby panel ·
-  // play button+activity], band 2 = [puzzle · forum · top studies], bands 3-4 =
-  // [news · blog row then learn row · chat], with the two side rails spanning
-  // both rows. Append order is irrelevant (grid-area governs).
+  // play button+activity], band 2 = [puzzle · deep-dives row then blog row ·
+  // news], with the two side rails spanning both rows, band 3 = [top studies ·
+  // forum · chat]. Append order is irrelevant (grid-area governs).
   section.append(
     ...(phone
       ? [leftColumn, playColumn, chatColumn]
@@ -896,6 +910,7 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   const boundary = useDot ? dotBoundary : fullStopBoundary;
   if (boundary < 0) {
     const fallback = document.createElement('a');
+    fallback.className = 'hover-link';
     fallback.href = href;
     fallback.textContent = tagline;
     target.append(fallback);
@@ -907,6 +922,7 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   const linkedText = tagline.slice(linkStart);
   target.append(document.createTextNode(useDot ? lead : `${lead} `));
   const link = document.createElement('a');
+  link.className = 'hover-link';
   link.href = href;
   link.textContent = linkedText;
   target.append(link);

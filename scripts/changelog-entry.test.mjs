@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   commitLink,
   currentMonth,
+  findExistingEntries,
   insertChangelogEntries,
   parseChangelogArg,
   previewInsertion,
@@ -106,6 +107,43 @@ test('the only insertions are the new lines (nothing removed or rewritten)', () 
   let cursor = 0;
   for (const line of after) if (line === before[cursor]) cursor += 1;
   assert.equal(cursor, before.length);
+});
+
+// The 2026-10 doubling: a release wrote its lines linking merge M, the gate
+// failed, a fix commit F went on top, and the retry with the same --changelog
+// passed every hash check and wrote the lines again linking F.
+test('a line whose text the file already has is refused, whatever its link or month', () => {
+  assert.throws(
+    () => insert([{ heading: 'Playing', text: 'Old playing line' }]),
+    /already has this line:\n {2}- Old playing line \(\[11111111\]/,
+  );
+  assert.throws(
+    () => insert([{ heading: 'Site', text: 'August line' }], '2026-10'),
+    /already has this line/,
+  );
+  assert.throws(
+    () =>
+      insert([
+        { heading: 'Fixed', text: 'New fix' },
+        { heading: 'Fixed', text: 'New fix' },
+      ]),
+    /given twice/,
+  );
+  // A prefix of an existing line is a different line.
+  assert.doesNotThrow(() => insert([{ heading: 'Playing', text: 'Old playing' }]));
+});
+
+test('findExistingEntries matches a wrapped line and a multi-link line', () => {
+  const source = `## 2026-09\n\n### Site\n\n- Wrapped line\n  that continues ([aaaaaaaa](u/commit/aaaaaaaa))\n- Two links ([bbbbbbbb](u/commit/bbbbbbbb), [cccccccc](u/commit/cccccccc))\n`;
+  const found = findExistingEntries(source, [
+    { heading: 'Site', text: 'Wrapped line that continues' },
+    { heading: 'Site', text: 'Two links' },
+    { heading: 'Site', text: 'Not there' },
+  ]);
+  assert.deepEqual(
+    found.map((entry) => entry.text),
+    ['Wrapped line that continues', 'Two links'],
+  );
 });
 
 test('previewInsertion shows the added lines with a little context', () => {

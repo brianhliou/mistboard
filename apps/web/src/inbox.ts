@@ -76,7 +76,7 @@ export async function mountInbox(root: HTMLElement, handle: string | null): Prom
   side.setAttribute('aria-label', t('inbox.title', {}, locale));
   const threadContent = document.createElement('div');
   threadContent.className = 'inbox-side-content';
-  const search = buildThreadSearch((query) => {
+  const search = buildThreadSearch(locale, (query) => {
     state.query = query;
     renderThreadContent(threadContent, handle, locale, state);
   });
@@ -100,7 +100,7 @@ export async function mountInbox(root: HTMLElement, handle: string | null): Prom
   }
 }
 
-function buildThreadSearch(onInput: (query: string) => void): HTMLElement {
+function buildThreadSearch(locale: Locale, onInput: (query: string) => void): HTMLElement {
   const form = document.createElement('form');
   form.className = 'inbox-search';
   form.role = 'search';
@@ -110,7 +110,7 @@ function buildThreadSearch(onInput: (query: string) => void): HTMLElement {
   input.type = 'search';
   input.autocomplete = 'off';
   input.spellcheck = false;
-  input.placeholder = 'Search or start new conversation';
+  input.placeholder = t('inbox.searchPlaceholder', {}, locale);
   input.setAttribute('aria-label', input.placeholder);
 
   input.addEventListener('input', () => onInput(input.value));

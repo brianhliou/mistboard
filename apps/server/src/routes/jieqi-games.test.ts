@@ -555,8 +555,10 @@ test('Jieqi live room: a dark capture is named to its capturer only', () => {
   const red = viewFor('red');
   const black = viewFor('black');
   const spectator = viewFor('spectator');
+  // Marked as taken face-down so the capturer's pool can shade it; the
+  // face-up cannon is not.
   assert.deepEqual(red.captured, [
-    { owner: 'black', role: 'horse' },
+    { owner: 'black', role: 'horse', takenFaceDown: true },
     { owner: 'red', role: 'cannon' },
   ]);
   for (const view of [black, spectator]) {
@@ -564,7 +566,9 @@ test('Jieqi live room: a dark capture is named to its capturer only', () => {
       { owner: 'black', role: null },
       { owner: 'red', role: 'cannon' },
     ]);
-    assert.equal(JSON.stringify(view).includes('horse'), false);
+    const wire = JSON.stringify(view);
+    assert.equal(wire.includes('horse'), false);
+    assert.equal(wire.includes('takenFaceDown'), false);
   }
 });
 

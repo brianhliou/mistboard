@@ -13,13 +13,17 @@
  */
 
 import assert from 'node:assert/strict';
+import { IncomingMessage, ServerResponse } from 'node:http';
+import { Socket } from 'node:net';
 import test from 'node:test';
 import type { GameDebugArtifactPayload, RecentEveGameRecord } from '../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from '../persistence-game-lifecycle.js';
 import {
   type AdminGameArtifactsPersistence,
   adminGameArtifactsForApi,
+  tryHandle,
 } from './admin-game-artifacts.js';
+import type { HttpApiContext } from './lib.js';
 
 const ROOM_ID = 'banqi_artifacts';
 
@@ -131,4 +135,38 @@ test('admin artifacts: no persistence is a 404 rather than a false empty', async
     }),
   );
   assert.equal(payload, null);
+});
+
+test('admin artifacts: anonymous GETs return 401 before type or room-id validation', async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    // The malformed type is the planted pre-auth validation regression.
+    for (const search of ['', '?type=not-a-real-type', '?type=live-engine-decision']) {
+      const request = new IncomingMessage(new Socket());
+      request.method = 'GET';
+      const response = new ServerResponse(request);
+      let body = '';
+      response.end = ((chunk: string) => {
+        body = chunk;
+        return response;
+      }) as typeof response.end;
+      const pathname = '/api/admin/games/%INVALID/artifacts';
+      assert.equal(
+        await tryHandle(
+          {} as HttpApiContext,
+          request,
+          response,
+          pathname,
+          new URL(`https://mistboard.test${pathname}${search}`),
+        ),
+        true,
+      );
+      assert.equal(response.statusCode, 401, search);
+      assert.deepEqual(JSON.parse(body), { error: 'admin_required' });
+    }
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
 });

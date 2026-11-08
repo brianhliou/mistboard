@@ -6,7 +6,7 @@
 // concrete State type.
 
 import type { PositionOgVariant } from './og-position.js';
-import type { VariantTenantCard } from './variant-tenant/registry.js';
+import type { VariantTenantBoardCard } from './variant-tenant/registry.js';
 import { guardTenantReplay } from './variant-tenant/replay-guard.js';
 import {
   applyTenantEvent,
@@ -21,7 +21,7 @@ import type {
 
 export type TenantCardOptions<State, C extends string> = {
   variant: PositionOgVariant;
-  analysis: VariantTenantCard['analysis'];
+  analysis: VariantTenantBoardCard['analysis'];
   /** The tenant's PUBLIC position writer: the same FEN its analysis board and
    *  position links carry, never a form with a hidden deal field. */
   fen: (state: State) => string;
@@ -45,7 +45,7 @@ export function tenantCardBinding<
 >(
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   options: TenantCardOptions<State, C>,
-): VariantTenantCard {
+): VariantTenantBoardCard {
   return {
     variant: options.variant,
     analysis: options.analysis,

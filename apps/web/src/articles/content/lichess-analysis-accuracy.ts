@@ -54,8 +54,16 @@ export const lichessAnalysisAccuracyArticle: Article = {
     'Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    'A random sample: every tenth analysed game in the August 2026 Lichess database with both players between 1600 and 2400, 300 games and 20,227 moves.',
+    'Every position searched again by Stockfish 18 at 20,000,000 nodes on one thread, twenty times the budget Lichess uses.',
+    "Both sets of evaluations labelled by lila's own formula, which reproduces Lichess's stored labels 99.08% of the time on 222,183 moves from titled players' games.",
+    'Moves with a forced mate at either end left out, because lila judges those by separate rules.',
+  ],
   publishedAt: '2026-09-20',
   updatedAt: '2026-10-16',
+  updateNote:
+    'Reframed around what a million nodes a move buys, with three overstated lines corrected.',
   thumbnail: {
     pieces: boardToPieces(ZHIGALKO_QD7),
     orientation: 'black',

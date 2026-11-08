@@ -573,8 +573,24 @@ test('elector: on a variant-filtered channel the flagship bonus cancels and rece
 // A player who walks away leaves the room live until the flag (~10 minutes at
 // 10+5), and the hysteresis above used to hold the board on it the whole time
 // (2026-10-08: four abandoned 2-19 ply games froze the homepage). A game with no
-// move past the stall bar loses the board, sticky pick included.
+// move past the stall bar gives the board to a game that is still moving,
+// sticky pick included. The bar is a preference, never a filter (2026-10-28):
+// with no moving game the stalled one keeps the board until the server ends it
+// (the room finishes, or clockStillRunning reports the flag). Until then it was
+// a filter, and a guest's 100 s think in a 10+5 jungle game against Misty
+// (jgl_08d3d49f, 356 s left) blanked the live board and sent the homepage to an
+// older finished game until the guest moved.
 const TEN_FIVE = { initialMs: 600_000, incrementMs: 5_000 };
+
+function runningClock(lastMoveAt: number, remainingMs: number) {
+  return {
+    activeColor: 'red',
+    incrementMs: 5_000,
+    initialMs: 600_000,
+    remainingMs: { black: 669_539, red: remainingMs },
+    runningSince: lastMoveAt,
+  };
+}
 
 test('elector: a stalled featured game gives the board to a fresh one in the same tier', () => {
   resetLiveTvFeaturedForTest();
@@ -599,17 +615,98 @@ test('elector: a stalled featured game gives the board to a fresh one in the sam
   assert.equal(featured?.roomId, 'fresh');
 });
 
-test('elector: a stalled sole candidate features nothing, on every channel', () => {
+test('a long think on a running clock keeps the hero board (jgl_08d3d49f, 2026-10-28)', () => {
+  const lastMoveAt = NOW - 100_000;
+  openRooms.set(
+    'fko_think',
+    tenantRoom({
+      id: 'fko_think',
+      lastEventAt: lastMoveAt,
+      seats: { black: 'fake-engine-misty', red: 'client-a' },
+      clock: runningClock(lastMoveAt, 356_306),
+      timeControl: TEN_FIVE,
+    }),
+  );
+  const candidates = collectLiveTvCandidates(context(), NOW);
+  assert.deepEqual(
+    candidates.map((entry) => [entry.roomId, entry.composition]),
+    [['fko_think', 'pve']],
+  );
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, candidates, NOW)?.roomId, 'fko_think');
+  assert.equal(electLiveTvFeatured('xiangqi', candidates, NOW)?.roomId, 'fko_think');
+});
+
+test('a featured game in a long think gives the board to a live game that is moving', () => {
+  const lastMoveAt = NOW - 100_000;
+  openRooms.set(
+    'fko_think',
+    tenantRoom({
+      id: 'fko_think',
+      lastEventAt: lastMoveAt,
+      seats: { black: 'fake-engine-misty', red: 'client-a' },
+      clock: runningClock(lastMoveAt, 356_306),
+      timeControl: TEN_FIVE,
+    }),
+  );
+  const alone = collectLiveTvCandidates(context(), NOW);
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, alone, NOW)?.roomId, 'fko_think');
+
+  // Same tier (both PvE xiangqi), so only the stall preference can move the
+  // board off the sticky pick.
+  openRooms.set(
+    'fko_moving',
+    tenantRoom({
+      id: 'fko_moving',
+      lastEventAt: NOW - 2_000,
+      seats: { black: 'fake-engine-misty', red: 'client-c' },
+      clock: runningClock(NOW - 2_000, 500_000),
+      timeControl: TEN_FIVE,
+    }),
+  );
+  const both = collectLiveTvCandidates(context(), NOW);
+  assert.equal(both.length, 2);
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, both, NOW)?.roomId, 'fko_moving');
+  // And it does not flap back while the new pick keeps moving.
+  assert.equal(
+    electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, both, NOW + 30_000)?.roomId,
+    'fko_moving',
+  );
+});
+
+test('elector: with every live game stalled, the featured one keeps the board', () => {
   resetLiveTvFeaturedForTest();
-  const abandoned = candidate({
-    roomId: 'abandoned',
+  const first = candidate({
+    roomId: 'first',
     gameSpecId: 'jungle-flip',
     composition: 'pvp',
-    lastActivityAt: NOW - LIVE_TV_STALL_MS - 1,
+    lastActivityAt: NOW - 1_000,
     timeControl: TEN_FIVE,
   });
-  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [abandoned], NOW), null);
-  assert.equal(electLiveTvFeatured('jungle-flip', [abandoned], NOW), null);
+  assert.equal(electLiveTvFeatured('jungle-flip', [first], NOW)?.roomId, 'first');
+
+  // Both games are past the bar; the other moved more recently, which would win
+  // a cold election, but the board stays where it is.
+  const later = NOW + LIVE_TV_STALL_MS + 30_000;
+  const second = candidate({
+    roomId: 'second',
+    gameSpecId: 'jungle-flip',
+    composition: 'pvp',
+    lastActivityAt: later - LIVE_TV_STALL_MS - 1,
+    timeControl: TEN_FIVE,
+  });
+  assert.equal(electLiveTvFeatured('jungle-flip', [first, second], later)?.roomId, 'first');
+  assert.equal(
+    electLiveTvFeatured('jungle-flip', [first, second], later + 60_000)?.roomId,
+    'first',
+  );
+
+  // From cold, one of the two is still featured: never null with a live game.
+  resetLiveTvFeaturedForTest();
+  assert.equal(electLiveTvFeatured('jungle-flip', [first, second], later)?.roomId, 'second');
+  assert.equal(
+    electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [first, second], later)?.roomId,
+    'second',
+  );
 });
 
 test('elector: a game still moving inside the stall bar stays sticky', () => {
@@ -647,7 +744,36 @@ test('stall bar: a slow pace scales it so a thinking player keeps the board', ()
     lastActivityAt: NOW - 100_000,
     timeControl: thirty,
   });
+  const moving = candidate({
+    roomId: 'moving',
+    gameSpecId: 'xiangqi',
+    composition: 'pvp',
+    lastActivityAt: NOW - 1_000,
+    timeControl: thirty,
+  });
   assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [thinking], NOW)?.roomId, 'thinking');
+  // 100 s is inside the 30+0 bar, so the thinking game is not stalled and
+  // keeps its seat against a game that moved a second ago.
+  assert.equal(
+    electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, [thinking, moving], NOW)?.roomId,
+    'thinking',
+  );
+});
+
+test('a game leaves the board when its clock flags, not before', () => {
+  const lastMoveAt = NOW - LIVE_TV_FRESH_WINDOW_MS - 1;
+  openRooms.set(
+    'fko_flagged',
+    tenantRoom({
+      id: 'fko_flagged',
+      lastEventAt: lastMoveAt,
+      clock: runningClock(lastMoveAt, LIVE_TV_FRESH_WINDOW_MS - 1),
+      timeControl: TEN_FIVE,
+    }),
+  );
+  const candidates = collectLiveTvCandidates(context(), NOW);
+  assert.deepEqual(candidates, []);
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, candidates, NOW), null);
 });
 
 // Seat joins, reconnects and clock pauses append events without moving the
@@ -658,11 +784,15 @@ test('a candidate stalls on its last move, not its last event', () => {
     ...room,
     events: [...(room.events ?? []), { type: 'seat-assigned', at: NOW - 1_000 }],
   });
+  openRooms.set('fko_moving', tenantRoom({ id: 'fko_moving', lastEventAt: NOW - 30_000 }));
   const candidates = collectLiveTvCandidates(context(), NOW);
-  assert.equal(candidates.length, 1);
-  assert.equal(candidates[0]!.lastActivityAt, NOW - 1_000);
-  assert.equal(candidates[0]!.lastMoveAt, NOW - 120_000);
-  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, candidates, NOW), null);
+  assert.equal(candidates.length, 2);
+  const rejoin = candidates.find((entry) => entry.roomId === 'fko_rejoin');
+  assert.equal(rejoin?.lastActivityAt, NOW - 1_000);
+  assert.equal(rejoin?.lastMoveAt, NOW - 120_000);
+  // The rejoined room has the newer event but the older move: it is stalled, so
+  // the game that moved 30 s ago takes the board.
+  assert.equal(electLiveTvFeatured(LIVE_TV_TOP_CHANNEL_ID, candidates, NOW)?.roomId, 'fko_moving');
 });
 
 test('GET /api/watch/live: empty pool answers featured null', async () => {

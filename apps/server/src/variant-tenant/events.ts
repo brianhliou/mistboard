@@ -7,12 +7,21 @@
 
 import { clockPolicyKindFor } from '@mistboard/game';
 import { engineFailureAbort } from '../engine-failure-abort.js';
-import { firstPartyBotForEngine, firstPartyBotForId } from '../first-party-bots.js';
+import {
+  firstPartyBotForEngine,
+  firstPartyBotForId,
+  liveSeatEngineName,
+} from '../first-party-bots.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
 import { tenantDurableDeadlineFor } from './lifecycle.js';
-import { appendTenantRuntimeEvent, applyTenantEvent, tenantEventWasAccepted } from './runtime.js';
+import {
+  appendTenantRuntimeEvent,
+  applyTenantEvent,
+  tenantClockExpiryEventFor,
+  tenantEventWasAccepted,
+} from './runtime.js';
 import type {
   TenantGameStateLike,
   TenantRoomEvent,
@@ -93,11 +102,21 @@ export async function appendTenantEvent<
 >(
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
-  event: TenantRoomEvent<C, M, Spec>,
+  requestedEvent: TenantRoomEvent<C, M, Spec>,
   ctx: TenantEventWriterContext<Kind, C, M, State, Spec> = {},
 ): Promise<number> {
   const writer = contextWithDefaults(tenant, ctx);
+  const expectedClock = room.projection.clock;
   const write = room.pendingWrites.then(async () => {
+    // A move or pause queued ahead of this timer owns the new clock. Never let
+    // the old request act on it, even if the same seat is still on move.
+    if (requestedEvent.type === 'clock-expired' && room.projection.clock !== expectedClock)
+      return -1;
+    const event =
+      requestedEvent.type === 'clock-expired'
+        ? tenantClockExpiryEventFor(tenant, room.projection, requestedEvent)
+        : requestedEvent;
+    if (!event) return -1;
     // Decide acceptance INSIDE the serialized write, before anything is durable.
     // The WebSocket turn guard reads the projection synchronously and then
     // awaits this write, so a double-submit or resend inside that window passes
@@ -472,11 +491,17 @@ export function tenantParticipant<
   const seatedClientId = room.projection.seats[color];
   if (seatedClientId && tenant.engine?.isEngineClientId(seatedClientId)) {
     const engineVersion = tenant.engine.engineVersion?.(seatedClientId) ?? null;
+    // The live seat name, verbatim (tenantSeatDisplayNames): the finished game
+    // keeps the name the room showed, rung label included.
+    const engine = tenant.engine;
+    const seatName = liveSeatEngineName(seatedClientId, room.pveBotId, () =>
+      engine.displayName(seatedClientId),
+    );
     if (room.pveBotId) {
       const bot = firstPartyBotForId(room.pveBotId);
       return {
         color: color as persistence.GameParticipantColor,
-        displayName: bot?.displayName ?? tenant.engine.displayName(seatedClientId),
+        displayName: seatName,
         subjectType: 'bot',
         // Canonicalize: a room created against a pre-consolidation bot id
         // still attributes its game to the merged identity.
@@ -490,7 +515,7 @@ export function tenantParticipant<
     if (bot) {
       return {
         color: color as persistence.GameParticipantColor,
-        displayName: bot.displayName,
+        displayName: seatName,
         subjectType: 'bot',
         subjectId: bot.id,
         engineId: seatedClientId,
@@ -500,7 +525,7 @@ export function tenantParticipant<
     }
     return {
       color: color as persistence.GameParticipantColor,
-      displayName: tenant.engine.displayName(seatedClientId),
+      displayName: seatName,
       subjectType: 'engine-version',
       subjectId: seatedClientId,
       // Records the engine build for version-less subject_ids (variant-tenant UCI engines),

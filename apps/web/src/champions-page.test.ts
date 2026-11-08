@@ -1,10 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildChampions, CHAMPIONS, OPEN_TITLES, TITLE_HISTORY, TITLES } from './champions-page.js';
+import { articleIsLive } from './articles/publish-time.js';
+import {
+  AB_JCHESS_2026_WRITE_UP,
+  buildChampions,
+  CHAMPIONS,
+  OPEN_TITLES,
+  TITLE_HISTORY,
+  TITLES,
+} from './champions-page.js';
 import { mountContribute } from './contribute-page.js';
 import { mountCreators } from './creators-page.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { EN_CONTENT } from './i18n/catalogs/content.js';
 import type { Locale } from './i18n/locale.js';
+import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { VARIANTS } from './variants.js';
 
 const LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant'];
@@ -14,6 +23,30 @@ const CHAMPION_KEYS = Object.keys(EN_CONTENT).filter((key) =>
 
 function hrefs(root: HTMLElement): string[] {
   return [...root.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '');
+}
+
+// A Misty card with no public repo link, each with its reason. The test fails
+// once a listed card gets one, so the list cannot go stale.
+const MISTY_WITHOUT_PUBLIC_REPO: Readonly<Record<string, string>> = {
+  // github.com/brianhliou/misty is the Fog Chess engine only: "The variant
+  // siblings and the research lab stay private" (articles/content/misty.ts).
+  // No public repo carries the Fog Xiangqi engine.
+  'dark-xiangqi': 'Fog Xiangqi engine not public',
+};
+const MISTY_REPO = /^https:\/\/github\.com\/brianhliou\/misty(-[a-z]+)*$/;
+
+// "Play the champion" opens computer setup with the holder already picked: the
+// deep link landing-play.ts maybeOpenPlayDeepLink reads, whose engineId must be
+// one of the bots that variant's setup offers or setup ignores it.
+function expectPlaysTheHolder(href: string | null, gameSpecId: string, engineId: string): void {
+  const url = new URL(href ?? '', 'https://mistboard.com');
+  expect(url.pathname).toBe('/');
+  expect(Object.fromEntries(url.searchParams)).toEqual({ play: 'computer', gameSpecId, engineId });
+  const offered = webVariantTenantForSpecId(gameSpecId)?.landing?.engineOptions ?? [];
+  expect(
+    offered.map((engine) => engine.id),
+    `${gameSpecId} setup offers ${engineId}`,
+  ).toContain(engineId);
 }
 
 describe('/champions', () => {
@@ -50,6 +83,8 @@ describe('/champions', () => {
       'dark-xiangqi',
       'dark-chess',
       'jungle-flip',
+      'xiangqi-mahjong',
+      'gomoku',
     ]);
     const holder = (game: string) =>
       page.querySelector<HTMLAnchorElement>(
@@ -57,7 +92,7 @@ describe('/champions', () => {
       );
     expect(holder('xiangqi')?.textContent).toBe('Pikafish');
     expect(holder('xiangqi')?.getAttribute('href')).toBe('/bot/pikafish');
-    for (const game of ['banqi', 'dark-xiangqi', 'dark-chess', 'jungle-flip']) {
+    for (const game of ['banqi', 'dark-xiangqi', 'dark-chess', 'jungle-flip', 'xiangqi-mahjong']) {
       expect(holder(game)?.textContent, game).toBe('Misty');
       expect(holder(game)?.getAttribute('href'), game).toBe('/bot/misty');
     }
@@ -90,16 +125,16 @@ describe('/champions', () => {
         (stat) =>
           `${stat.querySelector('dd')?.textContent} ${stat.querySelector('dt')?.textContent}`,
       );
-    // AB-JChess won 248, lost 136, drew 16 (the write-up's 64% score).
-    expect(stats('jieqi')).toEqual(['248 wins', '16 draws', '136 losses']);
+    // AB-JChess-20261031 won 306, lost 227, drew 67 against jqe (a 0.566 score).
+    expect(stats('jieqi')).toEqual(['306 wins', '67 draws', '227 losses']);
     expect(stats('jungle')).toEqual(['82 wins', '118 draws', '0 losses']);
     expect(card('jieqi').querySelector('.champions-bar')?.getAttribute('aria-label')).toBe(
-      '248 wins, 16 draws, 136 losses',
+      '306 wins, 67 draws, 227 losses',
     );
     // A zero count draws no segment.
     expect(card('jungle').querySelectorAll('.champions-bar > span')).toHaveLength(2);
     expect(card('jieqi').querySelector('.champions-took')?.textContent).toBe(
-      'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
+      'Took the title back from jqe on 2026-10-31, over 600 games, scoring 57%.',
     );
     expect(card('jungle').querySelector('.champions-took')?.textContent).toContain(
       'from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move',
@@ -108,16 +143,21 @@ describe('/champions', () => {
       [...card(game).querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
         (a) => `${a.textContent} ${a.getAttribute('href')}`,
       );
+    // The AB-JChess-20261031 match has no study; its write-up shows from its own
+    // date (the dated test below pins both sides of it).
     expect(buttons('jieqi')).toEqual([
-      'Read the match /blog/ab-jchess',
-      'See the games /data',
-      'Play the champion /bot/ab-jchess',
+      ...(articleIsLive(AB_JCHESS_2026_WRITE_UP) ? ['Read the match /blog/ab-jchess-vs-jqe'] : []),
+      'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi',
     ]);
     expect(buttons('jungle')).toEqual([
       'Read the match /blog/katago-jungle',
       'See the games /study/0t8xpyv6',
-      'Play the champion /bot/katago',
+      'Play the champion /?play=computer&gameSpecId=jungle&engineId=katago-jungle',
     ]);
+    const play = (game: string) =>
+      card(game).querySelector('.champions-actions a:last-child')?.getAttribute('href') ?? null;
+    expectPlaysTheHolder(play('jieqi'), 'jieqi', 'ab-jchess-jieqi');
+    expectPlaysTheHolder(play('jungle'), 'jungle', 'katago-jungle');
     // Each champion links its engine's source, and no card plugs another bot.
     expect(hrefs(card('jieqi') as HTMLElement)).toContain('https://github.com/lxsgx23/AB-JChess');
     expect(hrefs(card('jungle') as HTMLElement)).toContain(
@@ -126,36 +166,194 @@ describe('/champions', () => {
     expect(card('jungle').querySelector('.champions-about')?.textContent).not.toContain('Misty');
   });
 
-  // jqe reigns only in a build that offers it (VITE_JQE_ENABLED); until its
-  // write-up is published the card links to the bot and the match games.
-  it('hands the jieqi title to jqe when jqe is on, keeping AB-JChess in the history', async () => {
+  // The holder's name is its profile link (its bot page), and each engine
+  // credits its code and, where it runs one, its network, from the sources the
+  // repo already cites (bots.ts botCredits, engine-credits.ts, the fetch scripts).
+  it('links each holder to its bot page and credits the code and the network', async () => {
+    const credits = (card: Element) =>
+      [...card.querySelectorAll('.champions-credit')].map(
+        (row) =>
+          `${row.querySelector('dt')?.textContent}: ${[...row.querySelectorAll('dd a')]
+            .map((a) => `${a.textContent} ${a.getAttribute('href')}`)
+            .join(', ')}`,
+      );
+    const page = buildChampions('en');
+    const hero = (game: string) => page.querySelector(`.champions-hero[data-game="${game}"]`)!;
+    const open = (game: string) => page.querySelector(`.champions-open[data-game="${game}"]`)!;
+
+    expect(
+      [...page.querySelectorAll('.champions-hero h3 a.champions-hero-name-link')].map(
+        (a) => `${a.textContent} ${a.getAttribute('href')}`,
+      ),
+    ).toEqual(['AB-JChess /bot/ab-jchess', 'KataGo-AnimalChess /bot/katago']);
+
+    expect(credits(hero('jieqi'))).toEqual([
+      'Code: AB-JChess https://github.com/lxsgx23/AB-JChess, jqe https://github.com/devinokeefe/jieqi',
+      'Network: abjchess-20261030.nnue https://github.com/lxsgx23/AB-JChess/releases/tag/AB-JChess-20261031',
+    ]);
+    expect(credits(hero('jungle'))).toEqual([
+      'Code: KataGomo https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025, KataGo https://github.com/lightvector/KataGo',
+      'Network: Dandelion 4 https://github.com/lxsgx23/Dandelion-Chess',
+    ]);
+    expect(credits(open('xiangqi'))).toEqual([
+      'Code: Pikafish https://github.com/official-pikafish/Pikafish',
+      'Network: Pikafish NNUE https://www.pikafish.com/en/list.html',
+    ]);
+    // Fairy-Stockfish plays duck and crazyhouse xiangqi with NNUE off: code only.
+    for (const game of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
+      expect(credits(open(game)), game).toEqual([
+        'Code: Fairy-Stockfish https://github.com/fairy-stockfish/Fairy-Stockfish',
+      ]);
+    }
+    // Misty is ours: each card with a public repo credits it as the code, from
+    // the articles that already cite it (banqi-engine, misty,
+    // flip-jungle-skill-ceiling). No network row: Misty loads no separate net.
+    expect(credits(open('banqi'))).toEqual([
+      'Code: misty-banqi https://github.com/brianhliou/misty-banqi',
+    ]);
+    expect(credits(open('dark-chess'))).toEqual([
+      'Code: misty https://github.com/brianhliou/misty',
+    ]);
+    expect(credits(open('jungle-flip'))).toEqual([
+      'Code: misty-flip-jungle https://github.com/brianhliou/misty-flip-jungle',
+    ]);
+    expect(credits(open('xiangqi-mahjong'))).toEqual([
+      'Code: misty-xiangqi-mahjong https://github.com/brianhliou/misty-xiangqi-mahjong',
+    ]);
+    expect(open('dark-xiangqi').querySelector('.champions-credits')).toBeNull();
+    // Every credit opens off-site; the profile links stay on Mistboard.
+    for (const a of page.querySelectorAll<HTMLAnchorElement>('.champions-credits a')) {
+      expect(a.getAttribute('href')).toMatch(/^https:\/\//);
+    }
+
+    for (const locale of ['zh-Hans', 'zh-Hant'] as const) {
+      await ensureLocaleCatalog(locale);
+      const zh = buildChampions(locale);
+      const xiangqi = credits(zh.querySelector('.champions-open[data-game="xiangqi"]')!);
+      expect(xiangqi[1], locale).toBe(
+        locale === 'zh-Hans'
+          ? '神经网络: 皮卡鱼 NNUE https://www.pikafish.com/list.html'
+          : '神經網路: 皮卡魚 NNUE https://www.pikafish.com/zh-hant/list.html',
+      );
+    }
+  });
+
+  it('credits our public repo on every Misty card, except the named ones', () => {
+    const page = buildChampions('en');
+    const mistyGames = TITLES.filter((title) => title.holder === 'Misty').map(
+      (title) => title.gameId as string,
+    );
+    // Every exception is a Misty card that exists.
+    for (const game of Object.keys(MISTY_WITHOUT_PUBLIC_REPO)) {
+      expect(mistyGames, game).toContain(game);
+    }
+    for (const game of mistyGames) {
+      const card = page.querySelector(`[data-game="${game}"]`)!;
+      const codeLinks = [...card.querySelectorAll('.champions-credit')]
+        .filter((row) => row.querySelector('dt')?.textContent === 'Code')
+        .flatMap((row) => [...row.querySelectorAll('dd a')].map((a) => a.getAttribute('href')));
+      const hasRepo = codeLinks.some((href) => MISTY_REPO.test(href ?? ''));
+      if (game in MISTY_WITHOUT_PUBLIC_REPO) {
+        expect(hasRepo, `${game} links a public repo now: drop it from the exceptions`).toBe(false);
+      } else {
+        expect(hasRepo, `${game}: a Misty card with no public repo link`).toBe(true);
+      }
+    }
+  });
+
+  // AB-JChess-20261031 took the title back from jqe (2026-10-31), so the card is
+  // AB-JChess's whether or not this build offers jqe, and jqe is a history line.
+  it('keeps the jieqi title with AB-JChess with jqe on, jqe in the history', async () => {
     vi.stubEnv('VITE_JQE_ENABLED', 'true');
     vi.resetModules();
     try {
       const { buildChampions: build } = await import('./champions-page.js');
       const page = build('en');
       const jieqi = page.querySelector<HTMLElement>('[data-game="jieqi"]')!;
-      expect(jieqi.querySelector('h3')?.textContent).toBe('jqe');
+      expect(jieqi.querySelector('h3')?.textContent).toBe('AB-JChess');
+      expect(jieqi.querySelector('h3 a')?.getAttribute('href')).toBe('/bot/ab-jchess');
       expect(
         [...jieqi.querySelectorAll('.champions-stats dd')].map((dd) => dd.textContent),
-      ).toEqual(['171', '15', '114']);
-      expect(
-        [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
-          (a) => `${a.textContent} ${a.getAttribute('href')}`,
-        ),
-      ).toEqual(['See the games /study/3RQbr51i', 'Play the champion /bot/jqe']);
-      expect(hrefs(jieqi)).toContain('https://github.com/devinokeefe/jieqi');
+      ).toEqual(['306', '67', '227']);
       const lines = [...page.querySelectorAll('.champions-list li')].map(
         (li) => li.textContent ?? '',
       );
-      expect(lines[0]).toBe(
-        "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60% (games).",
-      );
-      expect(lines[1]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+      expect(lines[0]).toMatch(/^2026-10-31, Jieqi: AB-JChess-20261031/);
+      expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe/);
     } finally {
       vi.unstubAllEnvs();
       vi.resetModules();
     }
+  });
+
+  it('links the jqe write-up on its history line once the article is live', async () => {
+    const { jqeArticle } = await import('./articles/content/jqe.js');
+    const { JQE_WRITE_UP } = await import('./champions-page.js');
+    expect(JQE_WRITE_UP.publishedAt).toBe(jqeArticle.publishedAt);
+    const jqeLine = async (now: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
+      vi.resetModules();
+      try {
+        const { buildChampions: build } = await import('./champions-page.js');
+        const li = [...build('en').querySelectorAll('.champions-list li')].find((item) =>
+          item.textContent?.startsWith('2026-10-21, Jieqi: jqe'),
+        );
+        return [...(li?.querySelectorAll('a') ?? [])].map(
+          (a) => `${a.textContent} ${a.getAttribute('href')}`,
+        );
+      } finally {
+        vi.useRealTimers();
+        vi.resetModules();
+      }
+    };
+    expect(await jqeLine('2026-10-26T12:00:00Z')).toEqual(['games /study/3RQbr51i']);
+    expect(await jqeLine('2026-10-27T17:00:00Z')).toEqual([
+      'write-up /blog/jqe',
+      'games /study/3RQbr51i',
+    ]);
+  });
+
+  it('links the AB-JChess-20261031 write-up on its card and history line once live', async () => {
+    const { abJchessVsJqeArticle } = await import('./articles/content/ab-jchess-vs-jqe.js');
+    expect(AB_JCHESS_2026_WRITE_UP.publishedAt).toBe(abJchessVsJqeArticle.publishedAt);
+    // A draft must never be linked: the mirror follows the article's status too.
+    expect(AB_JCHESS_2026_WRITE_UP.status).toBe(abJchessVsJqeArticle.status);
+    const jieqiLinks = async (now: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
+      vi.resetModules();
+      try {
+        const { buildChampions: build } = await import('./champions-page.js');
+        const page = build('en');
+        const text = (as: Iterable<HTMLAnchorElement>) =>
+          [...as].map((a) => `${a.textContent} ${a.getAttribute('href')}`);
+        const li = [...page.querySelectorAll('.champions-list li')].find((item) =>
+          item.textContent?.startsWith('2026-10-31, Jieqi: AB-JChess-20261031'),
+        );
+        return {
+          card: text(
+            page.querySelectorAll<HTMLAnchorElement>('[data-game="jieqi"] .champions-actions a'),
+          ),
+          history: text(li?.querySelectorAll<HTMLAnchorElement>('a') ?? []),
+        };
+      } finally {
+        vi.useRealTimers();
+        vi.resetModules();
+      }
+    };
+    const play = 'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi';
+    const liveAt = `${abJchessVsJqeArticle.publishedAt}T17:00:00Z`;
+    const dayBefore = new Date(Date.parse(liveAt) - 86_400_000).toISOString();
+    expect(await jieqiLinks(dayBefore)).toEqual({ card: [play], history: [] });
+    expect(await jieqiLinks(liveAt)).toEqual(
+      abJchessVsJqeArticle.status === 'published'
+        ? {
+            card: ['Read the match /blog/ab-jchess-vs-jqe', play],
+            history: ['write-up /blog/ab-jchess-vs-jqe'],
+          }
+        : { card: [play], history: [] },
+    );
   });
 
   it('lists the title history newest first, then the challenge rules', () => {
@@ -165,8 +363,14 @@ describe('/champions', () => {
     const history = page.querySelector('.champions-list')!;
     const lines = [...history.querySelectorAll('li')].map((li) => li.textContent ?? '');
     expect(lines).toHaveLength(TITLE_HISTORY.length);
-    expect(lines[0]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
-    expect(lines[1]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
+    // What follows the score depends on the date (the write-up link goes live 2026-11-02 09:00);
+    // the dated test pins it.
+    const first =
+      "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%";
+    expect(lines[0].slice(0, first.length)).toBe(first);
+    expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
+    expect(lines[2]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+    expect(lines[3]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);
     const links = hrefs(page);
     for (const href of ['/blog/ab-jchess', '/blog/katago-jungle', '/data', '/study/0t8xpyv6']) {
       expect(links, href).toContain(href);
@@ -190,6 +394,12 @@ describe('/champions', () => {
       const links = hrefs(page);
       expect(links).toContain(`${prefix}/blog/ab-jchess`);
       expect(links).toContain('/bot/ab-jchess');
+      // Play keeps the reader's language: the home page is a content path.
+      expect(
+        page
+          .querySelector('[data-game="jungle"] .champions-actions a:last-child')
+          ?.getAttribute('href'),
+      ).toBe(`${prefix}/?play=computer&gameSpecId=jungle&engineId=katago-jungle`);
       const zhName = (game: string) =>
         page.querySelector(`[data-game="${game}"] h3`)?.textContent ?? '';
       expect(zhName('xiangqi')).toBe('象棋');
@@ -216,7 +426,7 @@ describe('/champions', () => {
         }
       }
       const body = buildChampions(locale).textContent ?? '';
-      expect(body).not.toMatch(/mahjong|luzhanqi|麻将|麻將|陆战棋|陸戰棋|ten nets/i);
+      expect(body).not.toMatch(/luzhanqi|陆战棋|陸戰棋|ten nets/i);
     }
   });
 
@@ -229,5 +439,48 @@ describe('/champions', () => {
       expect(root.querySelector('a[href="/challenges"]'), mount.name).toBeNull();
       root.remove();
     }
+  });
+});
+
+describe('Gomoku open title', () => {
+  afterEach(() => {
+    vi.doUnmock('@mistboard/game');
+    vi.resetModules();
+  });
+  it('prepares Rapfi credits with no invented holder or match', async () => {
+    const module = await import('./champions-page.js');
+    expect(module).toHaveProperty(
+      'GOMOKU_OPEN_TITLE',
+      expect.objectContaining({ gameId: 'gomoku', setupEngineId: 'rapfi-level-8' }),
+    );
+    const title = (module as unknown as { GOMOKU_OPEN_TITLE: Record<string, unknown> })
+      .GOMOKU_OPEN_TITLE;
+    for (const field of ['holder', 'holderKey', 'botHref', 'reign'])
+      expect(title).not.toHaveProperty(field);
+    expect(TITLES.some((title) => title.gameId === 'gomoku')).toBe(true);
+  });
+  it('renders the launched Rapfi open title last with supported public credit links', async () => {
+    vi.resetModules();
+    vi.doMock('@mistboard/game', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@mistboard/game')>();
+      return {
+        ...actual,
+        isPublicGameSpec: (id: string) => id === 'gomoku' || actual.isPublicGameSpec(id),
+      };
+    });
+    const launched = await import('./champions-page.js');
+    expect(launched.TITLES.at(-1)?.gameId).toBe('gomoku');
+    expect(launched.CHAMPIONS.some((title) => title.gameId === 'gomoku')).toBe(false);
+    const card = launched.buildChampions('en').querySelector('[data-game="gomoku"]');
+    expect(card).not.toBeNull();
+    expect(card!.querySelector('.champions-open-holder')).toBeNull();
+    expect(card!.querySelector('.champions-open-badge')?.textContent).toBe('Title open');
+    expect(hrefs(card as HTMLElement)).toEqual([
+      'https://github.com/dhbloo/rapfi',
+      'https://github.com/brianhliou/rapfi-wasm',
+      '#challenge',
+    ]);
+    expect(card!.textContent).toContain('Rapfi');
+    expect(card!.querySelector('.champions-stat')).toBeNull();
   });
 });

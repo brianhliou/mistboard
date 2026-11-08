@@ -6,6 +6,7 @@
 // raw cp so mates don't spike the axis.
 import { winPercent } from '@mistboard/game';
 import '../seat-disc-ink.css';
+import { t } from '../i18n/catalog.js';
 import './advantage-chart.css';
 import { attachChartScrub, createChartTip, showChartTip } from './chart-scrub.js';
 import { formatEval } from './engine/eval-format.js';
@@ -63,6 +64,8 @@ export function createAdvantageChart(
   opts: {
     onJump: (ply: number) => void;
     seatColors?: ReviewSeatColors;
+    /** The variant's eval text, so the readout matches the move list. */
+    formatScore?: (cp: number | null, mate: number | null) => string;
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
@@ -191,9 +194,9 @@ export function createAdvantageChart(
   // A game with no detected middlegame gets no phase chrome at all.
   if (opts.phases?.middle && opts.phases.middle <= maxPly) {
     const names = opts.phaseLabels ?? {
-      opening: 'Opening',
-      middlegame: 'Middlegame',
-      endgame: 'Endgame',
+      opening: t('summary.opening'),
+      middlegame: t('summary.middlegame'),
+      endgame: t('summary.endgame'),
     };
     const marks: { ply: number; label: string }[] = [{ ply: 0, label: names.opening }];
     marks.push({ ply: opts.phases.middle, label: names.middlegame });
@@ -326,7 +329,7 @@ export function createAdvantageChart(
 
     // Same formatter as the move list's eval column right beside the chart: two
     // readings of one number must not disagree about its scale.
-    const score = formatEval(point.cp, point.mate);
+    const score = (opts.formatScore ?? formatEval)(point.cp, point.mate);
     showChartTip(tip, {
       move: opts.moveLabel?.(ply) ?? null,
       value: score,

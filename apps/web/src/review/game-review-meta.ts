@@ -271,8 +271,12 @@ export function reviewResultLabel(result: string, variant?: string): string {
  *  " wins" off an English label, which returned the whole translated label as
  *  the winner the moment the label stopped being English. `termination` is the
  *  raw kebab reason (e.g. 'king-captured'). */
-export function reviewOutcomeLine(outcome: GameOutcome, termination: string): string {
-  const reason = terminationLabel(termination);
+export function reviewOutcomeLine(
+  outcome: GameOutcome,
+  termination: string,
+  variant?: GameSpecId,
+): string {
+  const reason = terminationLabel(termination, undefined, variant);
   if ('draw' in outcome) return reason ? t('result.drawByReason', { reason }) : t('watch.draw');
   if ('winner' in outcome) {
     return reason

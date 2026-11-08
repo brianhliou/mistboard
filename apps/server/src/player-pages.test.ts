@@ -8,6 +8,7 @@ import type {
   XiangqiPlayerRecord,
 } from './persistence-xiangqi-players.js';
 import {
+  bothScripts,
   type PlayerPageSources,
   parsePlayerRoute,
   playerCardContent,
@@ -15,6 +16,7 @@ import {
   playerDescription,
   playerPageFor,
   playerSitemapEntries,
+  renderPlayerBody,
   teamsOf,
 } from './player-pages.js';
 import {
@@ -22,6 +24,32 @@ import {
   type PlayerReference,
   readPlayerReference,
 } from './player-reference.js';
+
+for (const count of [0, 1])
+  test(`player crawler body links only with discoverable puzzles: ${count}`, () => {
+    const body = renderPlayerBody(
+      {
+        slug: 'fixture-player',
+        name: 'Fixture Player',
+        nameEn: null,
+        federation: null,
+        federationEn: null,
+        games: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        events: [],
+        firstPlayedOn: null,
+        lastPlayedOn: null,
+      },
+      [],
+      EMPTY_PLAYER_REFERENCE,
+      count,
+    );
+    assert.equal(body.includes('href="/puzzles?player=fixture-player"'), count > 0);
+    if (count > 0)
+      assert.match(body, /href="\/puzzles\?player=fixture-player">Puzzles from this player<\/a>/);
+  });
 
 function player(overrides: Partial<XiangqiPlayerRecord>): XiangqiPlayerRecord {
   return {
@@ -166,6 +194,63 @@ test('a player page names the player in both scripts, the standing and the recor
   );
 });
 
+// #605: Taiwan was split by whichever federation name a source printed, and its
+// players' names rendered in the sources' simplified characters.
+test('Taiwan is one team, and a Taiwan player is named in traditional characters', async () => {
+  const chao = player({
+    slug: 'chao-yi-fan',
+    name: '赵奕帆',
+    nameEn: 'Chao Yi-fan',
+    nameOwn: '趙奕帆',
+    federation: '台湾',
+    federationEn: 'Taiwan',
+  });
+  const hong = player({
+    slug: 'hong-xuzeng',
+    name: '洪旭增',
+    nameEn: 'Hong Xuzeng',
+    federation: '中华台北',
+    federationEn: 'Chinese Taipei',
+  });
+  const lin = player({
+    slug: 'lin-youxuan',
+    name: '林友轩',
+    nameEn: 'Lin Youxuan',
+    federation: '中国台北',
+    federationEn: 'Chinese Taipei',
+  });
+  const taiwan: PlayerPageSources = {
+    listPlayers: async () => [MENG, chao, hong, lin],
+    listBoards: async () => [],
+    reference: async () => REFERENCE,
+  };
+  const teams = teamsOf([MENG, chao, hong, lin]);
+  assert.deepEqual(
+    teams.map((t) => [t.key, t.players.length]),
+    [
+      ['zhejiang', 1],
+      ['taiwan', 3],
+    ],
+  );
+  const team = await playerPageFor('/players/teams/taiwan', taiwan);
+  assert.equal(team?.meta?.title, 'Taiwan (台灣) · Xiangqi team · Mistboard');
+  assert.match(team?.body ?? '', /Chao Yi-fan <span lang="zh">趙奕帆<\/span>/);
+  assert.deepEqual(await playerPageFor('/players/teams/chinese-taipei', taiwan), {
+    noindex: true,
+  });
+  const page = await playerPageFor('/players/chao-yi-fan', taiwan);
+  assert.equal(page?.meta?.title, 'Chao Yi-fan (趙奕帆) · Xiangqi player · Mistboard');
+  assert.match(page?.meta?.description ?? '', /^Xiangqi player for Taiwan\./);
+  assert.match(page?.body ?? '', /<h1>Chao Yi-fan <span lang="zh">趙奕帆<\/span><\/h1>/);
+  assert.match(
+    page?.body ?? '',
+    /<a href="\/players\/teams\/taiwan">Taiwan <span lang="zh">台灣<\/span><\/a>/,
+  );
+  assert.doesNotMatch(page?.body ?? '', /赵奕帆/);
+  const hongPage = await playerPageFor('/players/hong-xuzeng', taiwan);
+  assert.match(hongPage?.meta?.description ?? '', /^Xiangqi player for Taiwan\./);
+});
+
 test('a player off the points list falls back to the closed rating; an authored title wins', () => {
   assert.equal(
     playerDescription(YIN, REFERENCE),
@@ -289,4 +374,11 @@ test('a player the match-fixing rulings named carries the ruling in the descript
     / Banned for 6 months by the Chinese Xiangqi Association in the 2024 to 2026 match-fixing case\.$/,
   );
   assert.doesNotMatch(playerDescription(MENG, REFERENCE), /match-fixing/);
+});
+
+test('person names select a page script and keep the non-Chinese own form', () => {
+  const person = { name: '赵奕帆', nameOwn: '趙奕帆', nameEn: 'Chao Yi-fan' };
+  assert.equal(bothScripts(person, 'zh-Hans'), '赵奕帆');
+  assert.equal(bothScripts(person, 'zh-Hant'), '趙奕帆');
+  assert.equal(bothScripts(person), 'Chao Yi-fan (趙奕帆)');
 });

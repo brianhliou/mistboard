@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GAME_SPECS } from '@mistboard/game';
+import { GAME_SPECS, isPublicGameSpec } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { variantDisplayLabel } from './game-display.js';
 import {
@@ -10,7 +10,8 @@ import {
   renderVariantMarker,
 } from './variant-markers.js';
 import { VARIANT_MINIS, type VariantMiniId } from './variant-mini-boards.js';
-import { variantMiniIdForGameSpec } from './variants.js';
+import { VARIANT_MINI_BY_GAME_SPEC, VARIANTS, variantMiniIdForGameSpec } from './variants.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 // Variant markers fail closed: no fallback picture exists, so a variant with no
 // marker art has to fail here (or at the `satisfies Record<VariantMiniId, …>`
@@ -27,6 +28,36 @@ const MARKER_PX = 1254;
 const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
 
 describe('variant markers', () => {
+  it('gives FFQ its own marker without a public variant row', () => {
+    const id = 'ffq-banqi';
+    expect(VARIANT_MINI_BY_GAME_SPEC).toHaveProperty(id, id);
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(isVariantMarkerId(id)).toBe(true);
+    expect(renderVariantMarker(id)).toContain("url('/variant-markers/final/ffq-banqi.png')");
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+  });
+
+  it('shares the Gomoku marker with TV with its public rating definition', () => {
+    const id = 'gomoku';
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
+    expect(renderVariantMarker(id as VariantMiniId)).toContain(
+      "url('/variant-markers/final/gomoku.png')",
+    );
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(id);
+    expect(isPublicGameSpec(id)).toBe(true);
+  });
+
+  it('wires the committed Three Kingdoms art without a public variant row', () => {
+    const id = 'three-kingdoms-banqi';
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(renderVariantMarker(id as VariantMiniId)).toContain(
+      "url('/variant-markers/final/three-kingdoms-banqi.png')",
+    );
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(isPublicGameSpec(id)).toBe(false);
+  });
+
   it('has a marker for every variant id, and nothing else', () => {
     expect(Object.keys(FINAL_VARIANT_MARKERS).sort()).toEqual(
       VARIANT_MINIS.map((def) => def.id).sort(),
@@ -53,7 +84,8 @@ describe('variant markers', () => {
       .filter((spec) => variantMiniIdForGameSpec(spec.id) === null)
       .map((spec) => spec.id)
       .sort();
-    expect(missing).toEqual(SPECS_WITHOUT_MARKER);
+    const liveIds = new Set<string>(live.map((spec) => spec.id));
+    expect(missing).toEqual(SPECS_WITHOUT_MARKER.filter((id) => liveIds.has(id)));
     for (const spec of live) {
       const id = variantMiniIdForGameSpec(spec.id);
       if (id) expect(isVariantMarkerId(id), spec.id).toBe(true);

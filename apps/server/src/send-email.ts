@@ -19,10 +19,11 @@ export type TransactionalEmail = {
   text: string;
   html?: string;
   replyTo?: string;
+  headers?: Record<string, string>;
 };
 
 export type SendTransactionalEmailResult =
-  | { ok: true }
+  | { ok: true; providerEmailId?: string }
   | { ok: false; error?: string; statusCode?: number };
 
 export async function sendTransactionalEmail(
@@ -45,9 +46,17 @@ export async function sendTransactionalEmail(
         text: message.text,
         ...(message.html ? { html: message.html } : {}),
         ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+        ...(message.headers ? { headers: message.headers } : {}),
       }),
     });
-    if (response.ok) return { ok: true };
+    if (response.ok) {
+      // Acceptance is not delivery: only a signed webhook can establish that.
+      // Keep legacy acceptance behavior if the provider omits a usable ID.
+      const body: unknown = await response.json().catch(() => null);
+      const id = body && typeof body === 'object' && 'id' in body ? body.id : null;
+      const providerEmailId = typeof id === 'string' ? id.trim() : '';
+      return { ok: true, ...(providerEmailId ? { providerEmailId } : {}) };
+    }
     return { ok: false, statusCode: response.status };
   } catch (err) {
     return { ok: false, error: (err as Error).message };

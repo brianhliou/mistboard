@@ -358,6 +358,9 @@ export async function resolveDmReport(input: {
 
 // Reported-thread reader for the admin queue: full message history with both
 // participants named. Route-gated to admins; not part of any user surface.
+// A thread nobody has reported reads as missing: the admin role alone is not
+// access to private messages. Any report, open or closed, opens the thread, so
+// a resolved case can be re-read.
 export async function getDmThreadForAdmin(threadId: string): Promise<{
   threadId: string;
   participants: { handle: string; displayName: string }[];
@@ -374,7 +377,8 @@ export async function getDmThreadForAdmin(threadId: string): Promise<{
      FROM dm_threads
      JOIN users lo ON lo.id = dm_threads.user_lo
      JOIN users hi ON hi.id = dm_threads.user_hi
-     WHERE dm_threads.id = $1`,
+     WHERE dm_threads.id = $1
+       AND EXISTS (SELECT 1 FROM dm_reports WHERE dm_reports.thread_id = dm_threads.id)`,
     [threadId],
   );
   const thread = threadRows[0];

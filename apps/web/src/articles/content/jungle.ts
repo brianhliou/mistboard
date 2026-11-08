@@ -29,6 +29,8 @@ export const jungleArticle: Article = {
   status: 'published',
   publishedAt: '2026-06-30',
   updatedAt: '2026-09-17',
+  updateNote:
+    'Added a capture table and an FAQ.',
   playableOnMistboard: true,
   audience:
     'Experienced Jungle Chess players who want a clear reference, plus chess and xiangqi players meeting it for the first time.',

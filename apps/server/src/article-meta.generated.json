@@ -9,6 +9,16 @@
       "zh-hant": "AB-JChess：更強的揭棋電腦"
     }
   },
+  "ab-jchess-vs-jqe": {
+    "title": "AB-JChess takes the jieqi title back from jqe",
+    "kind": "article",
+    "description": "A new release of AB-JChess, built on jqe's open-source code, beat jqe over 600 games and is the top jieqi bot on Mistboard again. Five games read move by move by both engines, the two engines' chase rules, and how their play differs.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "AB-JChess 从 jqe 手中夺回揭棋榜首",
+      "zh-hant": "AB-JChess 從 jqe 手中奪回揭棋榜首"
+    }
+  },
   "anti-xiangqi": {
     "title": "Antichess on the Xiangqi Board Is a Draw",
     "kind": "article",
@@ -46,7 +56,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "暗棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "暗棋規則：玩法詳解與免費線上對弈"
+      "zh-hant": "暗棋規則：怎麼玩、大小順序與連吃"
     }
   },
   "banqi-chariot-endgame": {
@@ -116,14 +126,18 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "国际象棋规则",
-      "zh-hant": "國際象棋規則"
+      "zh-hant": "西洋棋規則"
     }
   },
   "chess960-starting-positions": {
     "title": "Chess960 Starting Positions Ranked By Stockfish",
     "kind": "article",
     "description": "Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Stockfish 对国际象棋960全部开局局面的排名",
+      "zh-hant": "Stockfish 評出的西洋棋960開局局面排名"
+    }
   },
   "choi-co-tuong-voi-may": {
     "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
@@ -151,7 +165,11 @@
     "title": "A Dou Shou Qi (Jungle Chess) Engine: Classical Search Beat the Learned Eval",
     "kind": "article",
     "description": "Building an engine for Jungle, also called Animal Chess: alpha-beta search and a hand-written evaluation went 11-2 with 187 draws against the strongest open-source engine I could run. A learned evaluation and a tablebase didn't help.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "斗兽棋引擎：经典搜索胜过学习型评估",
+      "zh-hant": "鬥獸棋引擎：經典搜尋勝過學習式評估"
+    }
   },
   "duck-xiangqi": {
     "title": "Duck Xiangqi Rules",
@@ -187,7 +205,11 @@
     "title": "An En Passant Bug Under Fog",
     "kind": "article",
     "description": "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "迷雾下的一个吃过路兵缺陷",
+      "zh-hant": "迷霧下的一個吃過路兵錯誤"
+    }
   },
   "flip-jungle-skill-ceiling": {
     "title": "Flip Jungle: 512 times the search still loses 23% of games",
@@ -195,8 +217,8 @@
     "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败",
-      "zh-hant": "翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
+      "zh-hans": "翻翻兽棋：搜索量提升 512 倍，仍有 23% 的对局落败",
+      "zh-hant": "翻翻獸棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
     }
   },
   "fog-chess": {
@@ -206,7 +228,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "迷雾国际象棋规则",
-      "zh-hant": "迷霧國際象棋規則"
+      "zh-hant": "迷霧西洋棋規則"
     }
   },
   "fog-chess-concepts": {
@@ -214,6 +236,16 @@
     "kind": "article",
     "description": "Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.",
     "status": "draft"
+  },
+  "fog-future": {
+    "title": "The Future of Fog Variants on Mistboard",
+    "kind": "article",
+    "description": "The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Mistboard 迷雾变体的未来",
+      "zh-hant": "Mistboard 迷霧變體的未來"
+    }
   },
   "fog-openings": {
     "title": "An Opening System for Fog Chess",
@@ -261,6 +293,16 @@
       "zh-hant": "你能讓 General Blunder 贏嗎？"
     }
   },
+  "gomoku": {
+    "title": "Gomoku Rules",
+    "kind": "rules",
+    "description": "Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "五子棋规则",
+      "zh-hant": "五子棋規則"
+    }
+  },
   "helpmates-in-xiangqi": {
     "title": "Helpmates in Xiangqi",
     "kind": "article",
@@ -284,7 +326,7 @@
   "how-puzzle-mining-works": {
     "title": "Mining puzzles from real games",
     "kind": "article",
-    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
+    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in twenty survives. Here is the algorithm, the code, and what it kept and threw away.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "从真实对局中挖掘象棋题目",
@@ -341,6 +383,16 @@
       "zh-hant": "在揭棋裡找題目"
     }
   },
+  "jqe": {
+    "title": "jqe, the new top jieqi bot",
+    "kind": "article",
+    "description": "jqe, an open-source jieqi engine by Devin O'Keefe, is now the top jieqi bot on Mistboard. It beat AB-JChess 0.2d 171 to 114 over 300 games, with a network about 90 times smaller.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "jqe：新的最强揭棋电脑",
+      "zh-hant": "jqe：新的最強揭棋電腦"
+    }
+  },
   "jungle": {
     "title": "Jungle Chess Rules (Dou Shou Qi, Animal Chess)",
     "kind": "rules",
@@ -355,7 +407,11 @@
     "title": "Teaching our Jungle Chess engine the den race bought nothing",
     "kind": "article",
     "description": "Misty, our Jungle Chess engine, has no idea of a den race. Three ways to teach it one came back null or negative: races decide 4.7% of games at full strength, and a 12 times deeper search sees the loss a median of one ply sooner.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "教斗兽棋引擎冲兽穴竞速，毫无收获",
+      "zh-hant": "教鬥獸棋引擎衝獸穴競速，毫無收穫"
+    }
   },
   "jungle-flip": {
     "title": "Flip Jungle Rules (Flip Dou Shou Qi)",
@@ -363,8 +419,8 @@
     "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "翻翻棋規則：玩法詳解與免費線上對弈"
+      "zh-hans": "翻翻兽棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "翻翻獸棋規則：玩法詳解與免費線上對弈"
     }
   },
   "katago-jungle": {
@@ -403,7 +459,11 @@
     "title": "Lichess Analysis: What a Million Nodes a Move Buys",
     "kind": "article",
     "description": "Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Lichess 分析：每着一百万节点换来了什么",
+      "zh-hant": "Lichess 分析：每著一百萬節點換來了什麼"
+    }
   },
   "longest-forced-mates-xiangqi": {
     "title": "The Longest Forced Mates in Xiangqi",
@@ -451,7 +511,11 @@
     "title": "When the Most Played Move Is an Inaccuracy",
     "kind": "article",
     "description": "In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "当最常走的一手其实是不精确",
+      "zh-hant": "當最多人下的著法其實是不精確"
+    }
   },
   "one-thousand-games": {
     "title": "1,000 games played",
@@ -469,8 +533,8 @@
     "description": "Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈",
-      "zh-hant": "皮卡魚線上：在 Mistboard 上與皮卡魚對弈"
+      "zh-hans": "皮卡鱼象棋：在线对弈与分析",
+      "zh-hant": "皮卡魚象棋：線上對弈與分析"
     }
   },
   "pikafish-reveal-bug": {
@@ -510,7 +574,17 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "用服务器端真实局面实现迷雾国际象棋",
-      "zh-hant": "用伺服器端真實局面實現迷霧國際象棋"
+      "zh-hant": "用伺服器端真實局面實現迷霧西洋棋"
+    }
+  },
+  "set-up-your-board": {
+    "title": "How to Change Your Board and Pieces",
+    "kind": "article",
+    "description": "Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "如何更改棋盘和棋子的样式",
+      "zh-hant": "如何更改棋盤和棋子的樣式"
     }
   },
   "shogi4": {
@@ -552,6 +626,32 @@
       "zh-hans": "求解器在古谱里发现了什么",
       "zh-hant": "求解器在古譜裡發現了什麼"
     }
+  },
+  "tang-dan": {
+    "title": "Tang Dan 唐丹",
+    "kind": "article",
+    "description": "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "唐丹",
+      "zh-hant": "唐丹"
+    }
+  },
+  "ten-thousand-games": {
+    "title": "10,000 games played",
+    "kind": "article",
+    "description": "How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "已下完 10,000 盘棋",
+      "zh-hant": "已下完 10,000 盤棋"
+    }
+  },
+  "three-kingdoms-banqi": {
+    "title": "Three Kingdoms Banqi Rules",
+    "kind": "rules",
+    "description": "Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.",
+    "status": "draft"
   },
   "titled-players": {
     "title": "Bring your title to Mistboard",
@@ -660,7 +760,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "左文静",
-      "zh-hant": "左文静"
+      "zh-hant": "左文靜"
     }
   }
 }

@@ -14,7 +14,7 @@
 //   variation with its judgment.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   formatXiangqiMove,
   judgmentComment,
@@ -39,7 +39,7 @@ import {
 import type { StudyRecipe } from './recipes.js';
 
 /** Bump when the tree a given (game, analysis, recipe) produces would change. */
-export const ANNOTATOR_VERSION = 3;
+export const ANNOTATOR_VERSION = 4;
 
 // The tree grammar the study page reads (apps/web/src/review/tree-serialize.ts).
 // Duplicated here as plain JSON, the way every seeder does it.
@@ -108,7 +108,7 @@ export function moveOf(uci: string): XiangqiMove | null {
 }
 
 function applyMove(state: XiangqiGameState, move: XiangqiMove): XiangqiGameState {
-  return applyStandardXiangqiMove(state, move);
+  return applyXiangqiRecordMove(state, move);
 }
 
 /** Replay a line from `state`, truncating at the first move the board refuses. */

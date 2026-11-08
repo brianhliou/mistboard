@@ -123,11 +123,18 @@ export async function seeksVisibleTo<T extends { gameSpecId: string; creatorUser
   playableSpecs: (user: UserAccount) => Promise<readonly string[]> = (reader) =>
     persistence.playableAllowlistedSpecs(reader),
 ): Promise<T[]> {
-  if (!seeks.some((seek) => CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId))) {
-    return [...seeks];
+  // A formerly granted playtest can launch with correspondence held off.
+  // Such stored seeks must not become public when its grant gate disappears.
+  const supported = seeks.filter(
+    (seek) =>
+      CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) ||
+      CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId),
+  );
+  if (!supported.some((seek) => CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId))) {
+    return supported;
   }
   const playable = new Set(user ? await playableSpecs(user) : []);
-  return seeks.filter(
+  return supported.filter(
     (seek) =>
       !CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId) || playable.has(seek.gameSpecId),
   );
@@ -440,11 +447,20 @@ async function createSeek(
   return true;
 }
 
-async function createSeekResult(
+/** Options for a seek posted on a player's behalf rather than by them. */
+export type CreateSeekOptions = {
+  // The correspondence host route posts a private seek as the host and accepts it
+  // in the same request, so it never stands; the host's own open seeks must not
+  // block it.
+  skipOpenSeekCap?: boolean;
+};
+
+export async function createSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   body: Record<string, unknown>,
   source: SeekAlertNotice['source'],
+  options: CreateSeekOptions = {},
 ): Promise<SeekRouteResult> {
   // Per-account play lock (126). Correspondence never reaches seat assignment
   // through a socket the way a live room does, so posting a seek and accepting
@@ -486,6 +502,10 @@ async function createSeekResult(
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
+    // A stats-excluded account (operator, QA) is not counted, so it never rates.
+    if (persistence.isStatsExcluded(user)) {
+      return { status: 403, body: { error: 'rated_requires_counted_account' } };
+    }
   }
 
   // Challenge dimensions. A target forces a private, directed seek; otherwise
@@ -522,6 +542,10 @@ async function createSeekResult(
     // anyone else could never be accepted, and would show them the variant.
     if (allowlisted && !(await persistence.mayPlayVariantByUserId(targetUserId, gameSpecId))) {
       return { status: 403, body: { error: 'target_variant_not_granted' } };
+    }
+    // A rated challenge to an uncounted account could never become a rated game.
+    if (rated && (await persistence.isUserIdStatsExcluded(targetUserId))) {
+      return { status: 403, body: { error: 'target_rated_requires_counted_account' } };
     }
   }
 
@@ -562,7 +586,7 @@ async function createSeekResult(
   }
   // Cap is best-effort under concurrency (no unique constraint); a racing pair of
   // creates could both pass at exactly the limit. Acceptable for a spam bound.
-  const open = await persistence.countOpenSeeksForUser(user.id);
+  const open = options.skipOpenSeekCap ? 0 : await persistence.countOpenSeeksForUser(user.id);
   if (open >= MAX_OPEN_SEEKS_PER_USER) {
     return { status: 409, body: { error: 'seek_limit_reached', limit: MAX_OPEN_SEEKS_PER_USER } };
   }
@@ -653,7 +677,7 @@ async function acceptSeek(
   return true;
 }
 
-async function acceptSeekResult(
+export async function acceptSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,
@@ -718,6 +742,13 @@ async function acceptSeekResult(
     }
     if (await persistence.isUserIdPlayDisabled(seek.creatorUserId)) {
       return { status: 409, body: { error: 'opponent_play_disabled' } };
+    }
+    // Neither side of a rated game may be a stats-excluded (uncounted) account.
+    if (persistence.isStatsExcluded(user)) {
+      return { status: 403, body: { error: 'rated_requires_counted_account' } };
+    }
+    if (await persistence.isUserIdStatsExcluded(seek.creatorUserId)) {
+      return { status: 409, body: { error: 'opponent_rated_requires_counted_account' } };
     }
   }
   // The DB decides the race: deleteCorrespondenceSeek removes the row once, so

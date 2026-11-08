@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { ENGINE_CREDITS } from './engine-credits.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { enabledEngineCredits } from './engine-credits.js';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { buildThanks, fillEngineStats, type ThanksBot } from './thanks-page.js';
 
 const bot = (over: Partial<ThanksBot> & { id: string }): ThanksBot => ({
@@ -11,14 +12,105 @@ const bot = (over: Partial<ThanksBot> & { id: string }): ThanksBot => ({
 });
 
 describe('thanks page', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([
+    ['en', 'Gomoku', 'networks', 'Browser build by Brian H. Liou', 'eight'],
+    ['zh-Hans', '五子棋', '神经网络', '浏览器构建：Brian H. Liou', '八个'],
+    ['zh-Hant', '五子棋', '神經網路', '瀏覽器建置：Brian H. Liou', '八個'],
+  ] as const)(
+    'credits Rapfi, its networks and browser build in %s when enabled',
+    async (locale, game, networks, build, levels) => {
+      await ensureLocaleCatalog(locale);
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      const page = buildThanks(locale);
+      const row = page.querySelector('[data-engine="rapfi"]');
+      expect(row).not.toBeNull();
+      expect(row?.textContent).toContain('dhbloo');
+      expect(row?.textContent).toContain(game);
+      expect(row?.textContent).toContain(networks);
+      expect(row?.textContent).toContain(build);
+      expect(row?.textContent).toContain(levels);
+      expect(row?.querySelector('.thanks-engine-by a')?.getAttribute('href')).toBe(
+        'https://github.com/dhbloo/rapfi',
+      );
+      expect(
+        row?.querySelector('a[href="https://github.com/brianhliou/rapfi-wasm"]'),
+      ).not.toBeNull();
+      expect(row?.querySelector('.thanks-engine-name a')?.getAttribute('href')).toBe(
+        'https://github.com/dhbloo/rapfi',
+      );
+    },
+  );
+
+  it('aggregates exactly eight Rapfi levels in the credits', () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    expect(enabledEngineCredits().find((credit) => credit.id === 'rapfi')?.botIds).toEqual(
+      Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+    );
+    const page = buildThanks('en');
+    fillEngineStats(
+      page,
+      [
+        ...Array.from({ length: 8 }, (_, i) =>
+          bot({
+            id: `rapfi-level-${i + 1}`,
+            supportedGameSpecIds: ['gomoku'],
+            gamesTotal: i + 1,
+          }),
+        ),
+        bot({ id: 'rapfi-level-0', supportedGameSpecIds: ['gomoku'], gamesTotal: 100 }),
+        bot({ id: 'rapfi-level-9', supportedGameSpecIds: ['gomoku'], gamesTotal: 100 }),
+      ],
+      'en',
+    );
+    const row = page.querySelector('[data-engine="rapfi"]');
+    expect(row?.querySelector('.thanks-engine-stat-games dd')?.textContent).toBe('36');
+    expect(row?.querySelector('.thanks-engine-stat-rating dd')?.textContent).toBe('');
+  });
+
+  it.each([false, true])(
+    'hides Rapfi with the flag off, including bot enrichment (DEV=%s)',
+    (dev) => {
+      vi.stubEnv('DEV', dev);
+      for (const flag of [undefined, 'false']) {
+        vi.stubEnv('VITE_GOMOKU_ENABLED', flag);
+        for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+          const page = buildThanks(locale);
+          fillEngineStats(
+            page,
+            [
+              bot({
+                id: 'rapfi-level-1',
+                displayName: 'Rapfi',
+                supportedGameSpecIds: ['gomoku'],
+                gamesTotal: 15,
+              }),
+              bot({
+                id: 'community-rapfi',
+                displayName: 'Community Rapfi',
+                ownerType: 'user',
+                supportedGameSpecIds: ['gomoku'],
+                gamesTotal: 4,
+              }),
+            ],
+            locale,
+          );
+          expect(page.outerHTML).not.toMatch(/rapfi|gomoku|五子棋/i);
+          expect(page.querySelector('[data-engine="pikafish"]')).not.toBeNull();
+        }
+      }
+    },
+  );
+
   it('gives every engine a row with its bot page, its authors and the variants it plays', () => {
     const page = buildThanks('en');
     const rows = [...page.querySelectorAll<HTMLElement>('.thanks-engine')];
-    expect(rows.map((row) => row.dataset.engine)).toEqual(ENGINE_CREDITS.map((c) => c.id));
+    expect(rows.map((row) => row.dataset.engine)).toEqual(enabledEngineCredits().map((c) => c.id));
     for (const row of rows) {
-      const credit = ENGINE_CREDITS.find((c) => c.id === row.dataset.engine)!;
+      const credit = enabledEngineCredits().find((c) => c.id === row.dataset.engine)!;
       expect(row.querySelector('.thanks-engine-name a')?.getAttribute('href')).toBe(
-        `/bot/${credit.botIds[0]}`,
+        credit.href ?? `/bot/${credit.botIds[0]}`,
       );
       const authors = [...row.querySelectorAll<HTMLAnchorElement>('.thanks-engine-by a')];
       expect(authors.map((a) => a.getAttribute('href'))).toEqual(credit.authors.map((a) => a.href));
@@ -85,7 +177,7 @@ describe('thanks page', () => {
       'en',
     );
     const rows = page.querySelectorAll('.thanks-engine');
-    expect(rows.length).toBe(ENGINE_CREDITS.length + 1);
+    expect(rows.length).toBe(enabledEngineCredits().length + 1);
     const row = page.querySelector('[data-engine="community-river-bot"]')!;
     expect(row.querySelector('.thanks-engine-name a')?.getAttribute('href')).toBe('/bot/river-bot');
     expect(row.textContent).toContain('River Bot');
@@ -96,13 +188,20 @@ describe('thanks page', () => {
     const page = buildThanks('en');
     fillEngineStats(page, [], 'en');
     expect(page.querySelectorAll('.thanks-engine-stat').length).toBe(0);
-    expect(page.querySelectorAll('.thanks-engine').length).toBe(ENGINE_CREDITS.length);
+    expect(page.querySelectorAll('.thanks-engine').length).toBe(enabledEngineCredits().length);
   });
 
   it('points at /source for licenses and at the contact form for engine authors and players', () => {
     const hrefs = [...buildThanks('en').querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/source');
     expect(hrefs.filter((href) => href === '/contact?about=/thanks').length).toBe(2);
+  });
+
+  it('marks its ?about= contact links nofollow, so crawlers do not mint contact URLs', () => {
+    const about = [...buildThanks('en').querySelectorAll('a')].filter(
+      (a) => a.getAttribute('href') === '/contact?about=/thanks',
+    );
+    expect(about.map((a) => a.getAttribute('rel'))).toEqual(['nofollow', 'nofollow']);
   });
 
   it('closes by thanking lichess, after the players and before the licence pointer', () => {

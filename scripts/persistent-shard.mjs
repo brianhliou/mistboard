@@ -24,15 +24,13 @@ import { spawnSync } from 'node:child_process';
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pruneOrphanDist } from './prune-orphan-dist.mjs';
+import {
+  checkServerTestDiscovery,
+  readServerTestScripts,
+  serverTestGlobs,
+} from './server-test-discovery.mjs';
 
 const SERVER_DIR = resolve(import.meta.dirname, '..', 'apps', 'server');
-// Mirrors the globs in @mistboard/server's test:persistent script.
-const TEST_GLOBS = [
-  'dist/*.test.js',
-  'dist/variant-tenant/*.test.js',
-  'dist/routes/*.test.js',
-  'dist/bot-match/*.test.js',
-];
 
 /**
  * Deal sorted files round-robin across shards. Round-robin rather than
@@ -63,10 +61,16 @@ function readEnvInt(name, fallback) {
 function main() {
   const total = readEnvInt('SHARD_TOTAL', 1);
   const index = readEnvInt('SHARD_INDEX', 1);
+  const discovery = checkServerTestDiscovery(SERVER_DIR);
+  if (discovery.issues.length > 0) throw new Error(discovery.issues.join('\n'));
   // Same guard test:persistent gets from its pretest hook: tsc leaves the
   // output of a deleted source behind, and these globs would keep running it.
   pruneOrphanDist(SERVER_DIR);
-  const all = TEST_GLOBS.flatMap((pattern) => globSync(pattern, { cwd: SERVER_DIR }));
+  const patterns = serverTestGlobs(
+    readServerTestScripts(SERVER_DIR)['test:persistent'],
+    'test:persistent',
+  );
+  const all = [...new Set(patterns.flatMap((pattern) => globSync(pattern, { cwd: SERVER_DIR })))];
   if (all.length === 0) {
     throw new Error(`no compiled test files under ${SERVER_DIR}; run tsc first`);
   }

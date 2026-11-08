@@ -23,6 +23,7 @@ import type {
   JungleFlipPieceRole,
   JungleFlipSquare,
 } from './variants-jungle-flip.js';
+import type { ThreeKingdomsBanqiMove } from './variants-three-kingdoms-banqi.js';
 
 type BoardEntry<C, R> = { faceDown: boolean; color?: C; role?: R };
 type Identity<C, R> = { color: C; role: R };
@@ -63,6 +64,16 @@ export function banqiMoveLabelOnBoard(
     | undefined,
 ): string {
   return banqiMoveLabel(move, faceUpAt(boardAfter, move.to));
+}
+
+/** A Three Kingdoms banqi move's label (#628): banqi's pieces and letters on
+ *  the 9x5 point board, so a study reads like a banqi one. */
+export function threeKingdomsBanqiMoveLabel(
+  move: ThreeKingdomsBanqiMove,
+  revealed: Identity<BanqiColor, BanqiPieceRole> | null | undefined,
+): string {
+  if (move.from !== move.to) return `${move.from}-${move.to}`;
+  return flipLabel(move.from, revealed, banqiPieceLetter);
 }
 
 /** A Flip Jungle move's label; `revealed` is what a flip turned up (null: not known). */

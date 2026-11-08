@@ -1,3 +1,5 @@
+import { personNameForLocale } from '@mistboard/game';
+
 // Server-side SEO for the player pages (#458): /players, /players/<slug>,
 // /players/teams and /players/teams/<key> are client routes
 // (apps/web/src/xiangqi-players.ts), so a crawler that does not run the bundle
@@ -12,6 +14,7 @@
 // root on boot, so the body never shows beside the rendered page.
 
 import { createHash } from 'node:crypto';
+import { type BoardLocale, boardCopy } from './board-text-copy.js';
 import * as persistence from './persistence.js';
 import type {
   XiangqiPlayerBoardRecord,
@@ -23,6 +26,7 @@ import {
   referenceTitle,
   TITLE_WORDS,
 } from './player-reference.js';
+import { playerPuzzleCount } from './puzzle-store.js';
 import { escapeHtml } from './study-page-body.js';
 
 // v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
@@ -69,7 +73,7 @@ export const playerHref = (slug: string): string => `/players/${encodeURICompone
 export const teamHref = (key: string): string => `/players/teams/${encodeURIComponent(key)}`;
 
 // ── Teams ─────────────────────────────────────────────────────────────────────
-// Mirrors teamKey/teamsOf in apps/web/src/xiangqi-players.ts (the server cannot
+// Mirrors teamOf/teamsOf in apps/web/src/xiangqi-players.ts (the server cannot
 // import web code): a team is the players' latest federation, keyed by its
 // English name slugged, else the Chinese.
 
@@ -84,27 +88,38 @@ export type PlayerTeam = {
   losses: number;
 };
 
-export function teamKey(
+// Taiwan is one team whatever a source calls its federation (#605): 台湾
+// ("Taiwan"), 中华台北 and 中国台北 ("Chinese Taipei"), 台北. Event rows keep the
+// name the source printed; only the team is merged. The crawler body is
+// English, so its Chinese is the team's own 台灣.
+const TAIWAN_FEDERATION = /台湾|台灣|臺灣|台北|臺北/;
+const TAIWAN_TEAM = { key: 'taiwan', name: '台灣', nameEn: 'Taiwan' } as const;
+
+/** The team a player's latest federation puts them on, or null with none. */
+export function playerTeam(
   player: Pick<XiangqiPlayerRecord, 'federation' | 'federationEn'>,
-): string | null {
+): { key: string; name: string; nameEn: string | null } | null {
+  if (!player.federation) return null;
+  if (TAIWAN_FEDERATION.test(player.federation)) return TAIWAN_TEAM;
   const slug = (player.federationEn ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || player.federation || null;
+  return { key: slug || player.federation, name: player.federation, nameEn: player.federationEn };
 }
 
 export function teamsOf(players: readonly XiangqiPlayerRecord[]): PlayerTeam[] {
   const teams = new Map<string, PlayerTeam>();
   for (const player of players) {
-    const key = teamKey(player);
-    if (!key || !player.federation) continue;
+    const of = playerTeam(player);
+    if (!of) continue;
+    const key = of.key;
     let team = teams.get(key);
     if (!team) {
       team = {
         key,
-        name: player.federation,
-        nameEn: player.federationEn,
+        name: of.name,
+        nameEn: of.nameEn,
         players: [],
         games: 0,
         wins: 0,
@@ -128,16 +143,17 @@ const count = (n: number): string => new Intl.NumberFormat('en-US').format(n);
 const plural = (n: number, one: string, many = `${one}s`): string =>
   `${count(n)} ${n === 1 ? one : many}`;
 
-type Named = { name: string; nameEn: string | null };
+type Named = { name: string; nameEn: string | null; nameOwn?: string };
 
-/** "Meng Fanrui (孟繁睿)", or the one spelling when there is only one. */
-export function bothScripts(entity: Named): string {
-  return entity.nameEn && entity.nameEn !== entity.name
-    ? `${entity.nameEn} (${entity.name})`
-    : entity.name;
+/** "Meng Fanrui (孟繁睿)", or the one spelling when there is only one. The
+ *  Chinese is the player's own characters when they write traditional. */
+export function bothScripts(entity: Named, locale = 'en'): string {
+  const zh = personNameForLocale(entity, locale);
+  if (locale === 'zh-Hans' || locale === 'zh-Hant') return zh;
+  return entity.nameEn && entity.nameEn !== entity.name ? `${entity.nameEn} (${zh})` : zh;
 }
 
-const english = (entity: Named): string => entity.nameEn?.trim() || entity.name;
+const english = (entity: Named): string => entity.nameEn?.trim() || entity.nameOwn || entity.name;
 
 const teamLabel = (team: Pick<PlayerTeam, 'name' | 'nameEn'>): string => team.nameEn ?? team.name;
 
@@ -208,9 +224,8 @@ export type PlayerPage = {
 export function playerDescription(player: XiangqiPlayerRecord, reference: PlayerReference): string {
   const title = referenceTitle(reference, player);
   const who = title ? `Xiangqi ${TITLE_WORDS[title].toLowerCase()}` : 'Xiangqi player';
-  const team = player.federation
-    ? ` for ${english({ name: player.federation, nameEn: player.federationEn })}`
-    : '';
+  const of = playerTeam(player);
+  const team = of ? ` for ${english(of)}` : '';
   const official = pointsLine(reference, player.name) ?? ratingLine(reference, player.name);
   return [
     `${who}${team}.`,
@@ -250,10 +265,11 @@ export function playerCardContent(
   const rating = reference.ratings[player.name];
   // The strongest fact first; a player we have not relayed never leads with
   // "0 games".
+  const team = playerTeam(player);
   const subtitle = points
     ? `CXA #${points.rank} · ${count(points.points)} points`
-    : player.federation
-      ? english({ name: player.federation, nameEn: player.federationEn })
+    : team
+      ? english(team)
       : rating
         ? `CXA rating ${count(rating.rating)}${rating.rank ? ` · #${rating.rank}` : ''} (${rating.listLabel.slice(0, 4)})`
         : player.games > 0
@@ -275,9 +291,10 @@ export function playerCardPath(slug: string, content: PlayerCardContent): string
 
 function nameHtml(entity: Named): string {
   const en = english(entity);
+  const zh = escapeHtml(entity.nameOwn ?? entity.name);
   return entity.nameEn && entity.nameEn !== entity.name
-    ? `${escapeHtml(en)} <span lang="zh">${escapeHtml(entity.name)}</span>`
-    : `<span lang="zh">${escapeHtml(entity.name)}</span>`;
+    ? `${escapeHtml(en)} <span lang="zh">${zh}</span>`
+    : `<span lang="zh">${zh}</span>`;
 }
 
 function playerLink(player: XiangqiPlayerRecord): string {
@@ -304,29 +321,33 @@ function gameLine(board: XiangqiPlayerBoardRecord, player: XiangqiPlayerRecord):
     .map((part) => escapeHtml(String(part)))
     .join(' · ');
   const href = `/broadcast/xiangqi/board/${encodeURIComponent(board.boardId)}`;
-  return `<li><a href="${escapeHtml(href)}">${escapeHtml(board.result)}, ${outcome}</a> ${pairing} · ${meta}</li>`;
+  return `<tr><td>${escapeHtml(board.playedOn ?? '')}</td><td>${pairing}</td><td><a href="${escapeHtml(href)}">${escapeHtml(board.result)}, ${outcome}</a></td><td>${meta}</td></tr>`;
 }
 
 export function renderPlayerBody(
   player: XiangqiPlayerRecord,
   boards: readonly XiangqiPlayerBoardRecord[],
   reference: PlayerReference,
+  puzzleCount = 0,
+  locale: BoardLocale = 'en',
 ): string {
   const title = referenceTitle(reference, player);
   const parts = [
     `<h1>${title ? `<abbr title="${escapeHtml(TITLE_WORDS[title])}">${title}</abbr> ` : ''}${nameHtml(player)}</h1>`,
   ];
+  if (puzzleCount > 0)
+    parts.push(
+      `<p><a href="/puzzles?player=${escapeHtml(encodeURIComponent(player.slug))}">Puzzles from this player</a></p>`,
+    );
   const sanction = reference.sanctions[player.name];
   if (sanction) {
     parts.push(
       `<p>${escapeHtml(sanction)} <a href="/blog/xiangqi-match-fixing">About the case</a></p>`,
     );
   }
-  const key = teamKey(player);
-  if (key && player.federation) {
-    parts.push(
-      `<p>Team: <a href="${escapeHtml(teamHref(key))}">${nameHtml({ name: player.federation, nameEn: player.federationEn })}</a></p>`,
-    );
+  const team = playerTeam(player);
+  if (team) {
+    parts.push(`<p>Team: <a href="${escapeHtml(teamHref(team.key))}">${nameHtml(team)}</a></p>`);
   }
   const points = pointsLine(reference, player.name);
   const rating = ratingLine(reference, player.name);
@@ -353,7 +374,7 @@ export function renderPlayerBody(
         ? `Latest ${shown.length} of ${plural(boards.length, 'game')}`
         : `Games (${boards.length})`;
     parts.push(
-      `<h2>${escapeHtml(heading)}</h2><ul>${shown.map((b) => gameLine(b, player)).join('')}</ul>`,
+      `<h2>${escapeHtml(heading)}</h2><table><thead><tr><th>${boardCopy(locale, 'study.gameDate')}</th><th>${boardCopy(locale, 'profile.filterOpponent')}</th><th>${boardCopy(locale, 'study.gameResult')}</th><th>${boardCopy(locale, 'study.gameEvent')}</th></tr></thead><tbody>${shown.map((b) => gameLine(b, player)).join('')}</tbody></table>`,
     );
   }
   parts.push(SECTION_LINKS);
@@ -362,10 +383,9 @@ export function renderPlayerBody(
 
 function playerRow(player: XiangqiPlayerRecord, reference: PlayerReference, showTeam: boolean) {
   const title = referenceTitle(reference, player);
+  const team = showTeam ? playerTeam(player) : null;
   const bits = [
-    showTeam && player.federation
-      ? english({ name: player.federation, nameEn: player.federationEn })
-      : null,
+    team ? english(team) : null,
     reference.points[player.name]
       ? `CXA points ${count(reference.points[player.name]!.points)}`
       : null,
@@ -450,6 +470,7 @@ export type PlayerPageSources = {
     players: readonly XiangqiPlayerRecord[],
   ): Promise<XiangqiPlayerBoardRecord[]>;
   reference(): Promise<PlayerReference>;
+  puzzleCount?(slug: string): Promise<number>;
 };
 
 // The index folds every stored board; a page view (meta and body are one
@@ -473,6 +494,7 @@ export function cachedPlayers(): Promise<XiangqiPlayerRecord[]> {
 export function livePlayerSources(staticDir: string): PlayerPageSources {
   return {
     listPlayers: cachedPlayers,
+    puzzleCount: playerPuzzleCount,
     listBoards: (player, players) =>
       persistence.listXiangqiPlayerBoards(
         player,
@@ -487,6 +509,7 @@ export function livePlayerSources(staticDir: string): PlayerPageSources {
 export async function playerPageFor(
   pathname: string,
   sources: PlayerPageSources,
+  locale: BoardLocale = 'en',
 ): Promise<PlayerPage | null> {
   const route = parsePlayerRoute(pathname);
   if (!route) return null;
@@ -536,7 +559,13 @@ export async function playerPageFor(
           urlPath: playerHref(player.slug),
           imagePath: playerCardPath(player.slug, playerCardContent(player, boards, reference)),
         },
-        body: renderPlayerBody(player, boards, reference),
+        body: renderPlayerBody(
+          player,
+          boards,
+          reference,
+          (await sources.puzzleCount?.(player.slug)) ?? 0,
+          locale,
+        ),
       };
     }
   }
@@ -546,9 +575,10 @@ export async function playerPageFor(
 export async function livePlayerPage(
   pathname: string,
   staticDir: string,
+  locale: BoardLocale = 'en',
 ): Promise<PlayerPage | null> {
   if (!parsePlayerRoute(pathname) || !persistence.isInitialized()) return null;
-  return playerPageFor(pathname, livePlayerSources(staticDir));
+  return playerPageFor(pathname, livePlayerSources(staticDir), locale);
 }
 
 // ── Sitemap ───────────────────────────────────────────────────────────────────

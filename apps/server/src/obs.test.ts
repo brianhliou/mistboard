@@ -7,7 +7,38 @@ import {
   engineAlertFields,
   infraAlertFields,
   knownFailureSpikeAlert,
+  wsCounters,
 } from './obs.js';
+
+test('daily RTT retains raw samples across metrics ticks and weights regions by sample count', () => {
+  const at = Date.parse('2026-10-23T12:00:00Z');
+  for (let i = 0; i < 19; i += 1) wsCounters.recordLatencySample('asia', 20, at);
+  const firstTick = wsCounters.snapshot();
+  assert.equal(firstTick.latencySamples, 19);
+  assert.equal(firstTick.latencyP95, 20);
+  wsCounters.recordLatencySample('us-west', 1_000, at);
+  const secondTick = wsCounters.snapshot();
+  assert.equal(secondTick.latencySamples, 1);
+  assert.equal(secondTick.latencyP95, 1_000);
+
+  const daily = wsCounters.snapshotDailyLatency(at, [20, 500]);
+  assert.equal(daily.day, '2026-10-23');
+  assert.deepEqual(daily.global, {
+    samples: 20,
+    p50: 20,
+    p95: 20,
+    p99: 1_000,
+    max: 1_000,
+    aboveThreshold: [
+      { thresholdMs: 20, samples: 1, share: 0.05 },
+      { thresholdMs: 500, samples: 1, share: 0.05 },
+    ],
+  });
+  assert.equal(daily.byRegion.asia?.samples, 19);
+  assert.equal(daily.byRegion['us-west']?.p95, 1_000);
+  assert.deepEqual(wsCounters.snapshotDailyLatency(at, [20, 500]), daily);
+  assert.equal(wsCounters.snapshot().latencySamples, 0);
+});
 
 test('auth counters expose aggregate deltas without identity fields', () => {
   const counters = new AuthCounters();

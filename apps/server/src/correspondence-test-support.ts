@@ -17,6 +17,8 @@ import {
   getJungleLegalMoves,
   getStandardXiangqiLegalMoves,
   getLegalMoves as getXiangqiPseudoLegalMoves,
+  xmjClockOwner,
+  xmjViewFor,
 } from '@mistboard/game';
 import { atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { banqiTenant } from './banqi-tenant.js';
@@ -28,6 +30,7 @@ import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import type { TenantGameStateLike, VariantTenant } from './variant-tenant/tenant.js';
+import { xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
 // Loose on purpose: the tests drive every tenant through one loop.
@@ -42,39 +45,58 @@ export type AnyTenant = VariantTenant<
 
 type MoveSource = (state: never) => readonly unknown[];
 
-export const CORRESPONDENCE_TEST_TENANTS: Record<string, { tenant: AnyTenant; moves: MoveSource }> =
-  {
-    xiangqi: { tenant: xiangqiTenant as unknown as AnyTenant, moves: getStandardXiangqiLegalMoves },
-    jieqi: { tenant: jieqiTenant as unknown as AnyTenant, moves: getJieqiLegalMoves },
-    banqi: { tenant: banqiTenant as unknown as AnyTenant, moves: getBanqiLegalMoves },
-    'duck-xiangqi': {
-      tenant: duckXiangqiTenant as unknown as AnyTenant,
-      moves: getDuckXiangqiLegalTurns,
+export const CORRESPONDENCE_TEST_TENANTS: Record<
+  string,
+  { tenant: AnyTenant; moves: MoveSource; firstReplyPlies?: number }
+> = {
+  xiangqi: { tenant: xiangqiTenant as unknown as AnyTenant, moves: getStandardXiangqiLegalMoves },
+  jieqi: { tenant: jieqiTenant as unknown as AnyTenant, moves: getJieqiLegalMoves },
+  banqi: { tenant: banqiTenant as unknown as AnyTenant, moves: getBanqiLegalMoves },
+  'duck-xiangqi': {
+    tenant: duckXiangqiTenant as unknown as AnyTenant,
+    moves: getDuckXiangqiLegalTurns,
+  },
+  'crazyhouse-xiangqi': {
+    tenant: crazyhouseXiangqiTenant as unknown as AnyTenant,
+    moves: getCrazyhouseXiangqiLegalMoves,
+  },
+  'fortress-xiangqi': {
+    tenant: fortressXiangqiTenant as unknown as AnyTenant,
+    moves: getFortressXiangqiLegalMoves,
+  },
+  'atomic-xiangqi': {
+    tenant: atomicXiangqiTenant as unknown as AnyTenant,
+    moves: getAtomicXiangqiLegalMoves,
+  },
+  // Fog Xiangqi plays plain xiangqi moves with no check rule (the tenant's
+  // isLegalMove is the pseudo-legal one).
+  'dark-xiangqi': {
+    tenant: darkXiangqiTenant as unknown as AnyTenant,
+    moves: getXiangqiPseudoLegalMoves,
+  },
+  jungle: { tenant: jungleTenant as unknown as AnyTenant, moves: getJungleLegalMoves },
+  'jungle-flip': {
+    tenant: jungleFlipTenant as unknown as AnyTenant,
+    moves: getJungleFlipLegalMoves,
+  },
+  'xiangqi-mahjong': {
+    tenant: xiangqiMahjongTenant as unknown as AnyTenant,
+    // A reply is a pass then a discard, rather than a single board move.
+    firstReplyPlies: 3,
+    moves: (state) => {
+      const seat = xmjClockOwner(state);
+      if (!seat) return [];
+      const view = xmjViewFor(state, seat);
+      if (view.phase.type === 'claim') return [{ action: 'pass', by: seat, at: Date.now() }];
+      return view.legal.discard.map((tile) => ({
+        action: 'discard',
+        tile,
+        by: seat,
+        at: Date.now(),
+      }));
     },
-    'crazyhouse-xiangqi': {
-      tenant: crazyhouseXiangqiTenant as unknown as AnyTenant,
-      moves: getCrazyhouseXiangqiLegalMoves,
-    },
-    'fortress-xiangqi': {
-      tenant: fortressXiangqiTenant as unknown as AnyTenant,
-      moves: getFortressXiangqiLegalMoves,
-    },
-    'atomic-xiangqi': {
-      tenant: atomicXiangqiTenant as unknown as AnyTenant,
-      moves: getAtomicXiangqiLegalMoves,
-    },
-    // Fog Xiangqi plays plain xiangqi moves with no check rule (the tenant's
-    // isLegalMove is the pseudo-legal one).
-    'dark-xiangqi': {
-      tenant: darkXiangqiTenant as unknown as AnyTenant,
-      moves: getXiangqiPseudoLegalMoves,
-    },
-    jungle: { tenant: jungleTenant as unknown as AnyTenant, moves: getJungleLegalMoves },
-    'jungle-flip': {
-      tenant: jungleFlipTenant as unknown as AnyTenant,
-      moves: getJungleFlipLegalMoves,
-    },
-  };
+  },
+};
 
 // Every server flag a correspondence tenant reads, on, so enabled() admits it.
 export function enableCorrespondenceVariantFlags(): void {
@@ -90,6 +112,7 @@ export function enableCorrespondenceVariantFlags(): void {
     'MISTBOARD_DARK_XIANGQI_ENABLED',
     'MISTBOARD_JUNGLE_ENABLED',
     'MISTBOARD_JUNGLE_FLIP_ENABLED',
+    'MISTBOARD_XIANGQI_MAHJONG_ENABLED',
   ]) {
     process.env[name] = 'true';
   }
@@ -103,7 +126,7 @@ export function legalMoveFor(specId: string, state: TenantGameStateLike<string>)
   if (!entry) throw new Error(`no correspondence test tenant for ${specId}`);
   const { tenant, moves } = entry;
   if (state.status.type !== 'playing') throw new Error(`${specId}: game is not in play`);
-  const turn = (state.status as { turn: string }).turn;
+  const turn = tenant.clockOwner?.(state) ?? (state.status as { turn: string }).turn;
   for (const candidate of moves(state as never)) {
     const move = tenant.rules.canonicalMove?.(state, candidate, turn) ?? candidate;
     if (move !== null && tenant.rules.isLegalMove(state, move)) return move;

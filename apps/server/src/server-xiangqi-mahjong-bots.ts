@@ -27,7 +27,13 @@ import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 
 /** The clientId the bot seat holds. Also what marks the seat as non-human. */
 export const XMJ_BOT_CLIENT_ID = 'misty-xiangqi-mahjong';
-export const XMJ_BOT_ID = 'misty-xiangqi-mahjong';
+/**
+ * The public bot fronting the seat: the room's pveBotId when the create names
+ * none. A bot id, never the engine id: the finished seat is stored under it,
+ * and /bot/misty counts only its own id (migration 178 moved the rows stored
+ * under the engine id before 2026-10-28).
+ */
+export const XMJ_BOT_ID = 'misty';
 /** The id before the misty-<variant> rename; games stored under it still replay. */
 const XMJ_LEGACY_BOT_CLIENT_ID = 'xiangqi-mahjong-bot';
 

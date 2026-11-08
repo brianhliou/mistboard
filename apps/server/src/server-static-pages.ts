@@ -1,18 +1,35 @@
 import { promises as fs } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
-import type { Color } from '@mistboard/game';
+import { type Color, GAME_SPECS } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
 import {
+  type ArticleSchedule,
   articleIsScheduledAhead,
   prerenderedIndexIsStale,
   readArticleSchedule,
 } from './article-schedule.js';
+import {
+  boardLocale,
+  botBoardPage,
+  historicalBoardPage,
+  profileBoardBody,
+  puzzleBoardBody,
+  puzzleHeading,
+} from './board-pages.js';
+import { type BoardLocale, boardCopy, boardTimeClass } from './board-text-copy.js';
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
+import { type DataPageSources, dataRouteBody } from './data-page-body.js';
+import { forumExcerpt } from './forum-excerpt.js';
 import { broadcastPageMeta } from './og-broadcast.js';
-import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
+import {
+  type TenantGameCardStore,
+  type TenantGamePageMeta,
+  tenantGamePageMeta,
+  tenantGameRoutePage,
+} from './og-game-tenant.js';
 import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
 import {
   isPositionOgVariant,
@@ -22,23 +39,43 @@ import {
   publicPositionFen,
 } from './og-position.js';
 import * as persistence from './persistence.js';
+import type { BotProfilePage } from './persistence-bots.js';
+import type { HistoricalXiangqiGameInput } from './persistence-historical-xiangqi.js';
+import { variantName } from './player-email.js';
 import {
   cachedPlayers,
   livePlayerPage,
   type PlayerPage,
   playerSitemapEntries,
 } from './player-pages.js';
-import { puzzleById } from './routes/puzzles.js';
-import { isNoindexRoute } from './server-policy.js';
+import { practiceChapterPath } from './practice-chapter-redirect.js';
+import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
+import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
+import { isNoFollowRoute, isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
+import {
+  localeAlternates,
+  SITEMAP_STATIC_ROUTES,
+  type SitemapEntry,
+  sitemapContract,
+  sitemapPathIsTracked,
+  sitemapXml,
+} from './sitemap-content.js';
+import {
+  archiveSitemapEntries,
+  bodyMeetsSitemapFloor,
+  serverBodyDates,
+} from './sitemap-records.js';
+import { studyHasAdminOnlyChapter } from './study-admin-only.js';
 import {
   chapterPageMeta,
   renderStudyBody,
   renderStudyIndexBody,
   STUDY_INDEX_PAGES,
+  studyPageMeta,
 } from './study-page-body.js';
 
-export { ARTICLE_META, canonicalArticleBase };
+export { ARTICLE_META, canonicalArticleBase, SITEMAP_STATIC_ROUTES };
 
 export type PageMeta = {
   title: string;
@@ -82,6 +119,17 @@ const XIANGQI_EDITOR_EN = {
 };
 
 export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
+  '/play': {
+    title: 'Play Chinese Chess (Xiangqi) and Variants | Mistboard',
+    description:
+      'Play xiangqi (Chinese chess) and its variants online. Challenge a friend, find an opponent, or play against the computer. Free, in your browser.',
+  },
+  // Public practice tool: preview the tool, never the URL's position or hints.
+  '/practice/position': {
+    title: 'Play Out a Xiangqi Position | Mistboard',
+    description:
+      'Practise a xiangqi (Chinese chess) position against the engine. Set up a position in the board editor, then play it out to practise winning or holding a draw.',
+  },
   '/videos': {
     title: 'Xiangqi Video Library | Mistboard',
     description:
@@ -129,12 +177,42 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/bots',
   },
-  '/about': {
-    title: 'About Mistboard | Chinese Chess and the Future of Strategy Games',
+  '/zh-hans/about': {
+    title: '关于 Mistboard | Mistboard',
     description:
-      'Bringing people together across cultures through Chinese chess and original strategy games. Free, open-source play, study, broadcasts and engine challenges.',
+      'Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。通过中国象棋与世界经典策略游戏，让不同文化背景的人走到一起。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/about',
+  },
+  '/zh-hant/about': {
+    title: '關於 Mistboard | Mistboard',
+    description:
+      'Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。透過象棋與世界經典策略遊戲，連結不同文化背景的人。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/about',
+  },
+  '/about': {
+    localeGroup: '/about',
+    title: 'About Mistboard | Chinese Chess for Every Player',
+    description:
+      "Bringing people together across cultures through Chinese chess and the world's classic strategy games. Free, open-source play, study and broadcasts.",
+  },
+  '/zh-hans/faq': {
+    title: '常见问题：对弈、账号与计分 | Mistboard',
+    description:
+      '关于 Mistboard 网页版的常见问题：如何与电脑或朋友下象棋，是否需要下载或注册账号，计分对局与防作弊如何运作，以及棋谱库的对局来自哪里。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/faq',
+  },
+  '/zh-hant/faq': {
+    title: '常見問題：對弈、帳號與計分 | Mistboard',
+    description:
+      '關於 Mistboard 網頁版的常見問題：如何與電腦或朋友下象棋，是否需要下載或註冊帳號，計分對局與防作弊如何運作，以及棋譜庫的對局來自哪裡。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/faq',
   },
   '/faq': {
+    localeGroup: '/faq',
     title: 'Frequently Asked Questions | Mistboard',
     description:
       'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
@@ -153,6 +231,11 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Community Forum | Mistboard',
     description:
       'The Mistboard community forum: talk about xiangqi and the other games, post a game for analysis, give feedback on the site, or chat about anything else.',
+  },
+  '/forum/etiquette': {
+    title: 'Forum etiquette · Mistboard',
+    description:
+      'A clear title, the right category, readable boards, no spam and respect for other players: guidelines for posting on the Mistboard forum.',
   },
   '/coach': {
     title: 'Xiangqi Coaches | Mistboard',
@@ -179,20 +262,88 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.',
   },
+  '/zh-hans/source': {
+    title: '开放源代码与第三方组件 | Mistboard',
+    description:
+      'Mistboard 是一个独立的开源策略游戏项目。源代码以 AGPL-3.0-or-later 发布。托管服务与 lichess、chess.com 或任何其他棋类平台无关联。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/source',
+  },
+  '/zh-hant/source': {
+    title: '開放原始碼與第三方元件 | Mistboard',
+    description:
+      'Mistboard 是一個獨立的開源策略遊戲專案。原始碼以 AGPL-3.0-or-later 發布。託管服務與 lichess、chess.com 或任何其他棋類平台無關。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/source',
+  },
   '/source': {
+    localeGroup: '/source',
     title: 'Open Source Code | Mistboard',
     description:
       'Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license.',
   },
+  '/zh-hans/contribute': {
+    title: '参与贡献：玩家、教师与开发者 | Mistboard',
+    description:
+      'Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始：下棋并反馈问题、审阅中文翻译、制作教学内容，或提交代码与引擎。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/contribute',
+  },
+  '/zh-hant/contribute': {
+    title: '參與貢獻：玩家、教師與開發者 | Mistboard',
+    description:
+      'Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始：下棋並回報問題、審閱中文翻譯、製作教學內容，或提交程式碼與引擎。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/contribute',
+  },
   '/contribute': {
+    localeGroup: '/contribute',
     title: 'How to Contribute | Mistboard',
     description:
-      'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
+      'Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts.',
+  },
+  // In-person xiangqi for Greater Seattle, starting in Bellevue; Mistboard hosts
+  // its page, and washingtonxiangqi.org and .com forward here (2026-10-23).
+  // Nothing is running yet, so the copy says so (private issue 19, 2026-11-03).
+  '/washington-xiangqi': {
+    title: 'Washington Xiangqi: Chinese chess in Greater Seattle',
+    description:
+      'In-person xiangqi, Chinese chess, for Greater Seattle, with meetups forming in Bellevue. Every level is welcome. Write in to play, learn, host or help organize.',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hans/washington-xiangqi': {
+    title: '华州象棋 Washington Xiangqi：大西雅图地区的象棋',
+    description:
+      '面向大西雅图地区的线下象棋，正在贝尔维尤筹备聚会。欢迎各种水平的棋友，无论是多年老手还是刚学走法的新手。想下棋、学棋、提供场地或协助组织，欢迎来信联系华州象棋。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hant/washington-xiangqi': {
+    title: '華州象棋 Washington Xiangqi：大西雅圖地區的象棋',
+    description:
+      '面向大西雅圖地區的實體象棋，正在貝爾維尤籌備聚會。歡迎各種程度的棋友，無論是多年老手還是剛學走法的新手。想下棋、學棋、提供場地或協助組織，歡迎來信聯繫華州象棋。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/washington-xiangqi',
+  },
+  '/zh-hans/creators': {
+    title: '与我们合作：创作者与棋手 | Mistboard',
+    description:
+      'Mistboard 将对弈和研究与赛事直播、原创游戏和引擎挑战赛连接起来。我们跨越语言，在线上和线下与棋手、教师、创作者及主办方合作。网站免费、开源、无广告。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/creators',
+  },
+  '/zh-hant/creators': {
+    title: '與我們合作：創作者與棋手 | Mistboard',
+    description:
+      'Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/creators',
   },
   '/creators': {
+    localeGroup: '/creators',
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
-      'Bring Chinese chess to a world stage with Mistboard. Work with us on teaching, broadcasts, original games and engine challenges across languages.',
+      'Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch.',
   },
   // One reigning champion engine per game, moved from
   // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges
@@ -206,14 +357,14 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/zh-hans/champions': {
     title: '引擎冠军与挑战赛 | Mistboard',
     description:
-      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
+      '揭棋、暗棋、斗兽棋和翻翻兽棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
     htmlLang: 'zh-Hans',
     localeGroup: '/champions',
   },
   '/zh-hant/champions': {
     title: '引擎冠軍與挑戰賽 | Mistboard',
     description:
-      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
+      '揭棋、暗棋、鬥獸棋和翻翻獸棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
     htmlLang: 'zh-Hant',
     localeGroup: '/champions',
   },
@@ -350,7 +501,22 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Download every finished game played on Mistboard, one file per variant per month, as JSON lines and PGN under CC BY 4.0: xiangqi, Fog Chess, Jungle and more, plus engine match collections.',
   },
+  '/zh-hans/data/about': {
+    title: '关于棋谱数据：格式与使用许可 | Mistboard',
+    description:
+      'Mistboard 每月对局数据说明：逐项介绍 JSONL 和 PGN 文件格式、CC BY 4.0 许可与署名方式、包含和排除哪些对局，以及迷雾和暗子信息如何记录。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/data/about',
+  },
+  '/zh-hant/data/about': {
+    title: '關於棋譜資料：格式與使用授權 | Mistboard',
+    description:
+      'Mistboard 每月對局資料說明：逐項介紹 JSONL 和 PGN 檔案格式、CC BY 4.0 授權與署名方式、包含和排除哪些對局，以及迷霧和暗子資訊如何記錄。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/data/about',
+  },
   '/data/about': {
+    localeGroup: '/data/about',
     title: 'About the Game Data | Mistboard',
     description:
       'What the Mistboard monthly game files hold: the JSONL and PGN formats field by field, the CC BY 4.0 license, which games are included, and how fog and face-down pieces appear.',
@@ -364,6 +530,64 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Site Statistics | Mistboard',
     description:
       'Live statistics for Mistboard: total xiangqi and variant games played, activity over time, and a breakdown by variant and game type.',
+  },
+  // Linked from every page's footer or nav, and each served the homepage title
+  // and description until 2026-10-24, so Bing read them as duplicates of '/'.
+  // Terms and privacy share locale groups; utility pages keep their bare canonical.
+  '/zh-hans/terms': {
+    title: '使用条款：对弈、计分与公平竞赛 | Mistboard',
+    description:
+      '使用 mistboard.com 的规则：匿名与计分对弈、账号和评分、公平竞赛要求、已结束对局按 CC BY 4.0 公开的许可，以及赞助扣款、取消和退款规定。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/terms',
+  },
+  '/zh-hant/terms': {
+    title: '使用條款：對弈、計分與公平競賽 | Mistboard',
+    description:
+      '使用 mistboard.com 的規則：匿名與計分對弈、帳號和評分、公平競賽要求、已結束對局按 CC BY 4.0 公開的授權，以及贊助扣款、取消和退款規定。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/terms',
+  },
+  '/terms': {
+    localeGroup: '/terms',
+    title: 'Terms of Use: Play, Ratings and Fair Play | Mistboard',
+    description:
+      'The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds.',
+  },
+  '/zh-hans/privacy': {
+    title: '隐私政策：网站收集的数据与用途 | Mistboard',
+    description:
+      '说明 mistboard.com 收集的分析数据、对局记录，以及注册账号时的用户名和邮箱；介绍这些数据的用途、计分对局的公平性数据与私信的保存。网站无广告，也不出售你的数据。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/privacy',
+  },
+  '/zh-hant/privacy': {
+    title: '隱私政策：網站收集的資料與用途 | Mistboard',
+    description:
+      '說明 mistboard.com 收集的分析資料、對局記錄，以及註冊帳號時的使用者名稱和信箱；介紹這些資料的用途、計分對局的公平性資料與私訊的保存。網站無廣告，也不出售你的資料。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/privacy',
+  },
+  '/privacy': {
+    localeGroup: '/privacy',
+    title: 'Privacy: What Mistboard Collects | Mistboard',
+    description:
+      'What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold.',
+  },
+  '/contact': {
+    title: 'Contact: Bugs, Accounts and Billing | Mistboard',
+    description:
+      'A private line to the person who runs Mistboard: report a bug or a broken game, or raise an account or billing problem. Add an email if you want a reply.',
+  },
+  '/watch': {
+    title: 'Watch Live Xiangqi Games | Mistboard',
+    description:
+      'Watch xiangqi (Chinese chess) and variant games live on Mistboard, move by move: humans against humans, humans against engines, and engine against engine.',
+  },
+  '/thanks': {
+    title: 'Credits: Engines, Sources and Thanks | Mistboard',
+    description:
+      'The engines you play against on Mistboard, the sites whose games and photos we show, and the players who reported what was broken, each thanked by name.',
   },
 };
 
@@ -381,7 +605,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
 // the other variants have one English URL each).
 const POSITION_ROUTE = /^(?:\/(zh-hans|zh-hant))?\/(analysis|editor)(?:\/([a-z0-9-]+))?$/;
 
-type PositionRouteMeta = {
+type RoutePageMeta = {
   title: string;
   description: string;
   /** Path + query of the canonical link (no host). */
@@ -409,7 +633,7 @@ function positionPageCopy(
       };
 }
 
-export function positionRouteMeta(pathname: string, search: string): PositionRouteMeta | null {
+export function positionRouteMeta(pathname: string, search: string): RoutePageMeta | null {
   const match = POSITION_ROUTE.exec(pathname);
   if (!match) return null;
   const localePrefix: '' | '/zh-hans' | '/zh-hant' =
@@ -475,7 +699,7 @@ export const RULES_INDEX_META: Record<
   'zh-hant': {
     title: '象棋與變體規則 | Mistboard',
     description:
-      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、鴨子等各種象棋變體。',
+      'Mistboard 上每一種棋類的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和西洋棋，以及迷霧、鴨子等各種象棋變體。',
     htmlLang: 'zh-Hant',
   },
 };
@@ -497,6 +721,9 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   'reveal-xiangqi': 'jieqi',
   // Retitled from the launch post to a strategy guide on 2026-09-25.
   'duck-xiangqi-build': 'duck-xiangqi-strategy',
+  // The rules slug carries the tile count (32); the plain name is the one
+  // people type.
+  'xiangqi-mahjong': 'xiangqi-mahjong-32',
 };
 
 const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/;
@@ -597,8 +824,24 @@ export async function routePreloadLinksForPath(params: {
 // Routes whose query string picks what the page shows but not which page it is:
 // /watch?channel=…&game=… is the one watch page tuned to a channel or game, and
 // each combination crawled as its own URL (SEO backlog D8). They canonicalise to
-// the bare path.
-const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch', '/games']);
+// the bare path. /contact?about=<page> prefills the form with the page a message
+// is about; every player, team and broadcast page links one, and Search Console
+// filed 43 of them as duplicates without a canonical (validation failed
+// 2026-10-19). /contact has no locale-prefixed form.
+const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
+  '/stats',
+  '/data',
+  '/coach',
+  '/forum',
+  '/player/rating-stats',
+  '/watch',
+  '/games',
+  '/contact',
+  '/terms',
+  '/privacy',
+  '/thanks',
+  '/faq',
+]);
 
 // Client routes whose list is live (it changes by the minute, so nothing in it
 // is worth baking) but whose page still needs a heading and its links for a
@@ -608,57 +851,201 @@ const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
 
-// A puzzle deep link (/puzzles/:idOrShortCode) is its own page, and served
-// with no canonical until 2026-10-17, so each ?utm= or share-tracking copy
-// read to a crawler as another URL for it.
-const QUERY_FREE_CANONICAL_PATTERNS: readonly RegExp[] = [/^\/puzzles\/[^/]+$/];
-
 const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
 
-// /puzzles/:idOrShortCode reaches one puzzle by its full id or by its short
-// code (Puzzle #bMpKA), so the query-free path alone left two self canonicals
-// per puzzle. Both name the full-id URL: the form the client pushes and the
-// short-code link in the info card points at (puzzles.ts, queue-panel.ts).
-// An unknown puzzle, or a lookup that throws, keeps the query-free path.
-async function puzzleCanonicalPath(
-  canonicalPath: string | null,
-  lookupPuzzleId: (idOrShortCode: string) => Promise<string | null>,
-): Promise<string | null> {
-  const match = canonicalPath ? PUZZLE_DEEP_LINK.exec(canonicalPath) : null;
-  if (!match) return canonicalPath;
-  let idOrShortCode: string;
+// Use the public forum reads, never a request's account or pagination. A
+// hidden topic reads as null; a hidden opening post keeps its position in the
+// list with its text blanked. Neither may acquire a preview from a later reply.
+async function forumRoutePage(
+  pathname: string,
+  lookupTopic: typeof persistence.getForumTopic,
+  listCategories: typeof persistence.listForumCategories,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  const normalized = pathname.replace(/\/+$/, '');
+  if (
+    !normalized.startsWith('/forum/') ||
+    normalized === '/forum/etiquette' ||
+    normalized === '/forum/reports'
+  )
+    return null;
   try {
-    idOrShortCode = decodeURIComponent(match[1]!);
+    const thread = /^\/forum\/t\/([^/]+)(?:\/[^/]+)?$/.exec(normalized);
+    const category = /^\/forum\/([^/]+)$/.exec(normalized);
+    const encodedId = thread?.[1] ?? category?.[1];
+    if (!encodedId) return { noindex: true };
+    const id = decodeURIComponent(encodedId);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) return { noindex: true };
+    if (thread) {
+      const topic = await lookupTopic(id, { postLimit: 1, postOffset: 0, viewerAccountId: null });
+      const opening = topic?.posts[0];
+      if (!topic || !opening || opening.hiddenAt !== null) return { noindex: true };
+      return {
+        noindex: false,
+        meta: {
+          title: `${topic.title} · ${topic.category.name} · Mistboard forum`,
+          description: forumExcerpt(opening.bodyText),
+          urlPath: `/forum/t/${encodeURIComponent(topic.id)}/${encodeURIComponent(topic.slug)}`,
+        },
+      };
+    }
+    const entry = (await listCategories()).find((entry) => entry.slug === id);
+    if (!entry) return { noindex: true };
+    return {
+      noindex: false,
+      meta: {
+        title: `${entry.name} · Mistboard forum`,
+        description: entry.description,
+        urlPath: `/forum/${encodeURIComponent(entry.slug)}`,
+      },
+    };
   } catch {
-    return canonicalPath;
+    return { noindex: true };
   }
-  const id = await lookupPuzzleId(idOrShortCode).catch(() => null);
-  return id ? `/puzzles/${encodeURIComponent(id)}` : canonicalPath;
 }
 
-async function livePuzzleId(idOrShortCode: string): Promise<string | null> {
-  return (await puzzleById(idOrShortCode))?.id ?? null;
+// Like the public profile API, always read as an anonymous visitor. Account
+// play locks and stats exclusions do not hide profiles; profile visibility
+// does. The body whitelists public game summaries, never replay state or account-only fields.
+async function profileRoutePage(
+  pathname: string,
+  lookupProfile: typeof persistence.getUserProfileByHandle,
+  locale: BoardLocale,
+): Promise<{ meta?: RoutePageMeta; body?: string; noindex: boolean } | null> {
+  if (!pathname.startsWith('/@/')) return null;
+  const match = /^\/@\/([^/]+)$/.exec(pathname.replace(/\/+$/, ''));
+  if (!match) return { noindex: true };
+  let profile: persistence.UserProfile | null;
+  try {
+    const handle = decodeURIComponent(match[1]!);
+    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(handle)) return { noindex: true };
+    profile = await lookupProfile(handle, null);
+  } catch {
+    return { noindex: true };
+  }
+  if (profile?.user.profileVisibility !== 'public') return { noindex: true };
+  const visibleClasses = visibleRatingTimeClasses();
+  const facts = GAME_SPECS.flatMap((spec) => {
+    if (!spec.rated || spec.publicSurface === 'hidden' || !isPublicRatingPool(spec.ratingPoolBase))
+      return [];
+    const buckets = profile.ratings.filter(
+      (rating) =>
+        rating.variant === spec.ratingPoolBase &&
+        visibleClasses.includes(rating.timeClass) &&
+        (rating.totalGamesPlayed > 0 || rating.ratedGamesPlayed > 0),
+    );
+    if (buckets.length === 0) return [];
+    const ratings = buckets
+      .filter((rating) => rating.eloRating !== null && rating.ratedGamesPlayed > 0)
+      .map(
+        (rating) =>
+          `${locale === 'en' ? `${rating.timeClass} rating` : `${boardTimeClass(rating.timeClass, locale)} ${boardCopy(locale, 'bots.ratings')}`} ${rating.eloRating}${rating.provisional ? '?' : ''}`,
+      );
+    return [
+      `${locale === 'en' ? spec.publicName : variantName(spec.id, locale)}${ratings.length ? ` (${ratings.join(', ')})` : ''}`,
+    ];
+  });
+  return {
+    noindex: false,
+    meta: {
+      title: `${profile.user.displayName} (@${profile.user.handle}) · Mistboard`,
+      description:
+        locale !== 'en'
+          ? facts.join(' · ')
+          : facts.length
+            ? `Plays ${facts.join(', ')} on Mistboard.`
+            : `View ${profile.user.displayName}'s public profile on Mistboard.`,
+      urlPath: `/@/${encodeURIComponent(profile.user.handle)}`,
+    },
+    body: profileBoardBody(profile, facts, locale),
+  };
+}
+
+// Resolve through the public API's serving set: withheld/retired puzzles never
+// get meta or a canonical. One read supplies both the preview and the full-id
+// canonical shared by short-code links. No editorial title, motifs, board,
+// source game or solution moves enter the preview head; the body gates the solution in details.
+async function puzzleRoutePage(
+  pathname: string,
+  lookupPuzzle: (idOrShortCode: string) => Promise<PublicPuzzle | null>,
+  locale: BoardLocale,
+): Promise<{ meta?: RoutePageMeta; body?: string; noindex: boolean } | null> {
+  const match = PUZZLE_DEEP_LINK.exec(pathname.replace(/\/+$/, ''));
+  if (!match) return null;
+  let puzzle: PublicPuzzle | null;
+  try {
+    puzzle = await lookupPuzzle(decodeURIComponent(match[1]!));
+  } catch {
+    return { noindex: true };
+  }
+  if (!puzzle) return { noindex: true };
+  // Explicit allowlist: a future hidden-information variant must not silently
+  // acquire public previews merely by joining the puzzle store.
+  let variant: string;
+  switch (puzzle.variant) {
+    case 'xiangqi':
+      variant = 'Xiangqi';
+      break;
+    case 'jungle':
+      variant = 'Jungle';
+      break;
+    default:
+      return { noindex: true };
+  }
+  if (puzzle.initial.status.type !== 'playing') return { noindex: true };
+  const side = puzzle.initial.status.turn === 'red' ? 'Red' : 'Black';
+  // The solver already shows this count in its goal, before any moves are made.
+  const moves = Math.ceil(puzzle.solution.length / 2);
+  let goal: string;
+  let prompt: string;
+  switch (puzzle.goal.type) {
+    case 'checkmate':
+      goal = `${side} mates in ${moves}`;
+      prompt = `Find mate in ${moves}`;
+      break;
+    case 'win':
+      goal = `${side} wins in ${moves}`;
+      prompt = `Find a win in ${moves}`;
+      break;
+    case 'winning-advantage':
+      goal = `${side} to move for a winning advantage`;
+      prompt = 'Find a winning advantage';
+      break;
+    default:
+      return { noindex: true };
+  }
+  return {
+    noindex: false,
+    meta: {
+      title:
+        locale === 'en'
+          ? `${variant} puzzle: ${goal} | Mistboard`
+          : `${puzzleHeading(puzzle, locale)} | Mistboard`,
+      description:
+        locale === 'en'
+          ? `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`
+          : `${boardCopy(locale, 'puzzle.toMove').replace('{color}', boardCopy(locale, puzzle.initial.status.turn === 'red' ? 'replay.red' : 'replay.black'))}。${boardCopy(locale, 'puzzle.findBestMove')}`,
+      urlPath: `/puzzles/${encodeURIComponent(puzzle.id)}`,
+    },
+    body: await puzzleBoardBody(puzzle, puzzleHeading(puzzle, locale), locale),
+  };
 }
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ||
-    QUERY_FREE_CANONICAL_PATTERNS.some((pattern) => pattern.test(normalized))
-    ? normalized
-    : null;
+  // /play mounts the home lobby and replaces its URL with / on the client.
+  if (normalized === '/play') return '/';
+  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
 }
 
 /** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant',
  *  with the English URL as x-default (the page for a reader whose language is
  *  none of the three), as the prerendered blog and rules pages do. */
 function localeAlternateLinks(publicHost: string, basePath: string): string {
-  const links = (['en', 'zh-hans', 'zh-hant'] as const).map((slug) => {
-    const href = `${publicHost}${slug === 'en' ? '' : `/${slug}`}${basePath}`;
-    const hreflang = slug === 'en' ? 'en' : slug === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
-    return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
-  });
-  links.push(`<link rel="alternate" hreflang="x-default" href="${publicHost}${basePath}">`);
-  return links.join('');
+  return localeAlternates(basePath)
+    .map(
+      ({ lang, path }) => `<link rel="alternate" hreflang="${lang}" href="${publicHost}${path}">`,
+    )
+    .join('');
 }
 
 // Serves the SPA shell with the matched route's preload hints baked into <head>.
@@ -699,47 +1086,121 @@ export async function serveSpaShellWithRoutePreloads(params: {
   listPublicStudies?: () => Promise<persistence.PublicStudySummary[]>;
   /** Override the finished-game meta lookup (tests); the default reads persistence. */
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
+  /** Override tenant game reads (tests); live previews never load a board card. */
+  tenantGameStore?: TenantGameCardStore;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
+  /** Existing public API reads for the data directories (socketless fixtures). */
+  dataPages?: DataPageSources;
   /** Override the player-page lookup (tests); the default reads persistence. */
-  playerPage?: (pathname: string) => Promise<PlayerPage | null>;
+  playerPage?: (pathname: string, locale?: BoardLocale) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
-  broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
-  /** Override the puzzle id-or-short-code lookup (tests); the default is the
-   *  one /api/puzzles/:id uses. */
-  puzzleId?: (idOrShortCode: string) => Promise<string | null>;
+  broadcastPage?: (pathname: string, locale?: BoardLocale) => Promise<BroadcastPage | null>;
+  /** Override the public puzzle lookup (tests); the default is the one
+   *  /api/puzzles/:id uses, excluding unpublished/withheld puzzles. */
+  puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
+  /** Override the profile API's anonymous, visibility-gated read (tests). */
+  profile?: typeof persistence.getUserProfileByHandle;
+  historicalGame?: (id: string) => Promise<HistoricalXiangqiGameInput | null>;
+  bot?: (id: string) => Promise<BotProfilePage | null>;
+  /** Override the public forum reads (tests); previews always read anonymously. */
+  forumTopic?: typeof persistence.getForumTopic;
+  forumCategories?: typeof persistence.listForumCategories;
+  /** Override the shelf deep-link lookup (tests); the default reads persistence. */
+  practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
+  // A shelf deep link (/practice/endgames-horse/horse-vs-advisor) names a
+  // chapter the client would bounce to anyway: answer with the move itself, so
+  // a crawler follows it rather than indexing a shell that reads as '/'. A day
+  // of max-age, not forever: the ids are per database and a reseed of a fresh
+  // one could move them.
+  const practiceTarget = await (params.practiceChapterPath ?? practiceChapterPath)(
+    params.pathname,
+  ).catch(() => null);
+  if (practiceTarget) {
+    params.response.writeHead(301, {
+      location: `${practiceTarget}${params.search ?? ''}`,
+      'cache-control': 'public, max-age=86400',
+    });
+    params.response.end();
+    return true;
+  }
+  const locale = boardLocale(params.search);
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
   // the archive does not know keeps the generic meta and is kept out of the
   // index, the way an unlisted study is.
   const playerPage = await (
-    params.playerPage ?? ((pathname: string) => livePlayerPage(pathname, params.staticDir))
-  )(params.pathname).catch(() => null);
+    params.playerPage ??
+    ((pathname: string, pageLocale?: BoardLocale) =>
+      livePlayerPage(pathname, params.staticDir, pageLocale))
+  )(params.pathname, locale).catch(() => null);
   // A broadcast index, event, round or game (broadcast-pages.ts) rides the same
   // slot: before 2026-10-17 all 195 sitemap-broadcasts URLs served an empty
   // #app with no canonical, and Google folded them as duplicates.
   const player =
     playerPage ??
-    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
-  // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
-  // its own title, description, canonical review URL and card (#368). Needs
-  // persistence; without it (or for a live game) the route keeps its generic
-  // meta exactly as before.
+    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname, locale).catch(() => null));
+  // Tenant review pages distinguish missing ids from live names-only previews
+  // and finished cards. Keep the existing override for callers supplying meta.
+  const tenantGame =
+    params.gameMeta && !params.tenantGameStore
+      ? null
+      : await tenantGameRoutePage(params.pathname, params.tenantGameStore);
+  if (tenantGame?.notFound) {
+    await serveNotFoundShell(params);
+    return true;
+  }
+  const historical = await historicalBoardPage(params.pathname, locale, params.historicalGame);
+  const bot = await botBoardPage(params.pathname, locale, params.bot);
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
-  const gameMeta = player?.meta ? null : await lookupGameMeta(params.pathname).catch(() => null);
+  const gameMeta =
+    player?.meta || bot?.meta
+      ? null
+      : tenantGame
+        ? tenantGame.meta
+        : await lookupGameMeta(params.pathname).catch(() => null);
+  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById, locale);
+  const profile = await profileRoutePage(
+    params.pathname,
+    params.profile ?? persistence.getUserProfileByHandle,
+    locale,
+  );
+  const forum = await forumRoutePage(
+    params.pathname,
+    params.forumTopic ?? persistence.getForumTopic,
+    params.forumCategories ?? persistence.listForumCategories,
+  );
   const positionMeta =
-    player?.meta ?? gameMeta ?? positionRouteMeta(params.pathname, params.search ?? '');
+    player?.meta ??
+    historical?.meta ??
+    bot?.meta ??
+    gameMeta ??
+    puzzle?.meta ??
+    profile?.meta ??
+    forum?.meta ??
+    positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
-  const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
-  const canonicalPath = await puzzleCanonicalPath(
-    queryFreeCanonicalPath(params.pathname),
-    params.puzzleId ?? livePuzzleId,
-  );
+  const noindex =
+    isNoindexRoute(params.pathname) ||
+    tenantGame?.noindex === true ||
+    player?.noindex === true ||
+    historical?.noindex === true ||
+    bot?.noindex === true ||
+    puzzle?.noindex === true ||
+    profile?.noindex === true ||
+    forum?.noindex === true;
+  const canonicalPath =
+    historical?.meta?.urlPath ??
+    bot?.meta?.urlPath ??
+    puzzle?.meta?.urlPath ??
+    profile?.meta?.urlPath ??
+    forum?.meta?.urlPath ??
+    queryFreeCanonicalPath(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static
@@ -758,6 +1219,14 @@ export async function serveSpaShellWithRoutePreloads(params: {
         : undefined,
     });
   }
+  const dataBody = await dataRouteBody(
+    params.pathname,
+    locale,
+    params.search,
+    params.dataPages,
+  ).catch(() => null);
+  if (locale !== 'en' && (historical || puzzle || profile || bot || dataBody))
+    html = html.replace('<html lang="en">', `<html lang="${locale}">`);
   if (spaMeta?.htmlLang) {
     html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
   }
@@ -783,7 +1252,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
       `<link rel="canonical" href="${escapeHtml(`${params.publicHost}${player.meta.urlPath}`)}"></head>`,
     );
   }
-  if (canonicalPath && params.publicHost && !player?.meta) {
+  if (canonicalPath && params.publicHost && !player?.meta && !spaMeta?.localeGroup) {
     html = html.replace(
       '</head>',
       `<link rel="canonical" href="${params.publicHost}${canonicalPath}"></head>`,
@@ -800,8 +1269,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
       crawlerCopyRoot(renderStudyIndexBody(studies, studyIndexPage)),
     );
   }
+  const nofollow = isNoFollowRoute(params.pathname);
   if (noindex) {
-    html = setRobotsMeta(html, 'noindex, follow');
+    html = setRobotsMeta(html, nofollow ? 'noindex, nofollow' : 'noindex, follow');
   }
   if (links) html = html.replace('</head>', `${links}</head>`);
   // A client route that exists to answer a search (/bots) also carries its text
@@ -809,10 +1279,18 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // the root on mount, so the two never show together.
   const body =
     player?.body ??
+    historical?.body ??
+    puzzle?.body ??
+    profile?.body ??
+    bot?.body ??
+    dataBody ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
-  params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  params.response.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    ...(nofollow ? { 'x-robots-tag': 'noindex, nofollow' } : {}),
+  });
   params.response.end(html);
   return true;
 }
@@ -869,22 +1347,6 @@ const STUDY_LOCALE_BY_SLUG = {
   'zh-hant': 'zh-Hant',
 } as const;
 
-/** Pick a study's localized string for a locale, falling back to the base
- *  column. Mirrors study-i18n.ts on the client; kept tiny and local rather than
- *  importing web code into the server. */
-function localizedStudyField(
-  base: string,
-  i18n: unknown,
-  locale: string,
-  field: 'name' | 'description',
-): string {
-  if (!i18n || typeof i18n !== 'object' || Array.isArray(i18n)) return base;
-  const entry = (i18n as Record<string, unknown>)[locale];
-  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return base;
-  const value = (entry as Record<string, unknown>)[field];
-  return typeof value === 'string' && value.trim() ? value : base;
-}
-
 export async function serveStudyPage(params: {
   studyId: string;
   /** Present on a chapter permalink (/study/:id/:chapterId). An unknown id falls
@@ -910,24 +1372,20 @@ export async function serveStudyPage(params: {
   const study = await (params.getStudy ?? persistence.getStudyById)(params.studyId).catch(
     () => null,
   );
-  if (study && study.visibility === 'public') {
+  // An admin-only variant's study (#628) gets the bare shell: its meta and
+  // card would publish it to crawlers, which are never admins.
+  if (study && study.visibility === 'public' && !studyHasAdminOnlyChapter(study)) {
     const chapter = params.chapterId
       ? study.chapters.find((c) => c.id === params.chapterId)
       : undefined;
     const pathSuffix = chapter ? `/${encodeURIComponent(chapter.id)}` : '';
-    const chapterCount = study.chapters.length;
-    const name = localizedStudyField(study.name, study.i18n, locale, 'name');
-    const described = localizedStudyField(study.description, study.i18n, locale, 'description');
-    const studyMeta = {
-      title: `${name} | Mistboard study`,
-      description:
-        described ||
-        `A xiangqi study on Mistboard with ${chapterCount} ${chapterCount === 1 ? 'chapter' : 'chapters'}: annotated moves on an interactive board.`,
-    };
     // A chapter permalink carries the CHAPTER's title and prose. Without this,
     // every chapter of a 66-composition study serves the study's own meta and
-    // the set reads as near-duplicates.
-    const meta = chapter ? chapterPageMeta({ study, chapter, locale }) : studyMeta;
+    // the set reads as near-duplicates. Both builders extend a description
+    // under the SEO floor with facts the page already shows.
+    const meta = chapter
+      ? chapterPageMeta({ study, chapter, locale })
+      : studyPageMeta({ study, locale });
     html = injectPageMeta(html, {
       title: meta.title,
       description: meta.description,
@@ -990,6 +1448,18 @@ export async function serveStudyPage(params: {
     // page still serves, it just stops advertising itself. `follow` because the
     // links on it are ordinary site links.
     html = setRobotsMeta(html, 'noindex, follow');
+    // An unlisted study is shared by link (a teaching kit sent to the player
+    // it is about), so the preview names it: title and description only, the
+    // same words the page shows anyone holding the link. No canonical, crawler
+    // copy or board card (og-image.ts serves none for a non-public study).
+    if (study && study.visibility === 'unlisted' && !studyHasAdminOnlyChapter(study)) {
+      const meta = studyPageMeta({ study, locale });
+      html = injectPageMeta(html, {
+        title: meta.title,
+        description: meta.description,
+        url: `${params.publicHost}${localePath}/study/${encodeURIComponent(params.studyId)}`,
+      });
+    }
   }
 
   const preloadLinks = await routePreloadLinksForPath({
@@ -1069,19 +1539,7 @@ const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set(['feed.html']);
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
-  file:
-    | 'home.html'
-    | 'zh-hans-home.html'
-    | 'zh-hant-home.html'
-    | 'leaderboard.html'
-    | 'player.html'
-    | 'learn-xiangqi.html'
-    | 'feed.html'
-    | `feed-${string}.html`
-    | 'changelog.html'
-    | `changelog-${string}.html`
-    | 'puzzles.html'
-    | 'patron.html';
+  file: string;
 }): Promise<void> {
   if (
     (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&
@@ -1094,71 +1552,7 @@ export async function servePrerenderedPage(params: {
   params.response.end(html);
 }
 
-// Static, always-on public routes advertised in the sitemap. Every entry
-// (except '/', served as the static index itself) must be accepted by the SPA
-// fallback allowlist (server-policy.ts isClientRoute) and must not be a
-// parked/prod-404 route — server-policy.test.ts holds a conformance test over
-// this list so it cannot drift from the routing policy again (it once
-// advertised /learn, which prod 404s).
-export const SITEMAP_STATIC_ROUTES: readonly string[] = [
-  '/',
-  '/zh-hans',
-  '/zh-hant',
-  '/blog',
-  '/zh-hans/blog',
-  '/zh-hant/blog',
-  '/rules',
-  '/zh-hans/rules',
-  '/zh-hant/rules',
-  '/about',
-  '/stats',
-  '/puzzles',
-  '/learn/xiangqi',
-  '/zh-hans/learn/xiangqi',
-  '/zh-hant/learn/xiangqi',
-  '/practice',
-  '/zh-hans/practice',
-  '/zh-hant/practice',
-  '/analysis/xiangqi',
-  '/zh-hans/analysis/xiangqi',
-  '/zh-hant/analysis/xiangqi',
-  '/editor/xiangqi',
-  '/zh-hans/editor/xiangqi',
-  '/zh-hant/editor/xiangqi',
-  '/study',
-  '/zh-hans/study',
-  '/zh-hant/study',
-  '/games',
-  '/games/search',
-  '/data',
-  '/data/about',
-  '/import',
-  '/feed',
-  '/videos',
-  '/zh-hans/videos',
-  '/zh-hant/videos',
-  '/bots',
-  '/zh-hans/bots',
-  '/zh-hant/bots',
-  '/streamer',
-  '/player',
-  '/player/rating-stats',
-  '/coach',
-  '/forum',
-  '/source',
-  '/faq',
-  '/patron',
-  '/contribute',
-  '/creators',
-  '/champions',
-  '/zh-hans/champions',
-  '/zh-hant/champions',
-  '/changelog',
-  '/developers',
-  '/api-docs',
-];
-
-// The sitemap is an index of three sections rather than one list, so Search
+// The sitemap is an index of sections rather than one list, so Search
 // Console and Bing Webmaster report submitted-vs-indexed per section. Measured
 // 2026-09-25 over a week of proxy logs: 94% of Googlebot's page fetches went to
 // study chapters (98% of a single 6,362-URL sitemap), while 8 of 36 rules URLs
@@ -1174,10 +1568,15 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
 // (serveStudyPage) and only the study roots are listed. The per-study chapter
 // selection that section used is in git history if a chapter set earns its way
 // back.
-export const SITEMAP_SECTIONS = ['pages', 'studies', 'players', 'broadcasts'] as const;
+export const SITEMAP_SECTIONS = [
+  'pages',
+  'studies',
+  'players',
+  'broadcasts',
+  'historical',
+  'puzzles',
+] as const;
 export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
-
-type SitemapEntry = { path: string; lastmod?: string };
 
 export function sitemapSectionFromPath(pathname: string): SitemapSection | null {
   const match = /^\/sitemap-([a-z]+)\.xml$/.exec(pathname);
@@ -1192,22 +1591,6 @@ export function serveSitemapIndex(params: { response: ServerResponse; publicHost
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
   params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
   params.response.end(xml);
-}
-
-// A prerendered article's last change, from the JSON-LD the prerender bakes in
-// (dateModified, else datePublished). Never the file's mtime: every deploy
-// rewrites dist, and a lastmod that moves on every deploy teaches a crawler to
-// ignore it. dist is immutable for the life of the process, hence the cache.
-const articleLastmodCache = new Map<string, string | null>();
-
-async function articleLastmod(file: string): Promise<string | undefined> {
-  if (!articleLastmodCache.has(file)) {
-    const html = await fs.readFile(file, 'utf-8').catch(() => '');
-    const modified = /"dateModified":"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
-    const published = /"datePublished":"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
-    articleLastmodCache.set(file, modified ?? published ?? null);
-  }
-  return articleLastmodCache.get(file) ?? undefined;
 }
 
 const isoDate = (date: Date): string => date.toISOString().slice(0, 10);
@@ -1230,15 +1613,23 @@ async function listEveryPublicStudy(): Promise<persistence.PublicStudySummary[]>
 // already renders a localized name, description and body at the prefixed
 // path AND emits hreflang naming all three, so listing only the English URL
 // told a crawler the alternates existed and then never pointed at them.
-const everyLocale = (path: string): string[] => [path, `/zh-hans${path}`, `/zh-hant${path}`];
-
 async function studySitemapEntries(): Promise<SitemapEntry[]> {
   const entries: SitemapEntry[] = [];
   for (const summary of await listEveryPublicStudy()) {
-    const lastmod = isoDate(summary.updatedAt);
-    for (const path of everyLocale(`/study/${encodeURIComponent(summary.id)}`)) {
-      entries.push({ path, lastmod });
+    const study = await persistence.getStudyById(summary.id);
+    if (study?.visibility !== 'public' || studyHasAdminOnlyChapter(study)) continue;
+    const basePath = `/study/${encodeURIComponent(study.id)}`;
+    const alternates = localeAlternates(basePath);
+    const group: SitemapEntry[] = [];
+    for (const [slug, locale] of Object.entries(STUDY_LOCALE_BY_SLUG)) {
+      const localePath = slug === 'en' ? '' : `/${slug}`;
+      const path = `${localePath}${basePath}`;
+      const body = renderStudyBody({ study, locale, localePath });
+      if (bodyMeetsSitemapFloor(path, body))
+        group.push({ path, lastmod: isoDate(study.updatedAt), alternates });
     }
+    // A page's head advertises the complete group; every member must have a body.
+    if (group.length === 3) entries.push(...group);
   }
   return entries;
 }
@@ -1261,63 +1652,84 @@ export async function serveSitemap(params: {
   } else {
     const loaders: Record<Exclude<SitemapSection, 'pages'>, () => Promise<SitemapEntry[]>> = {
       studies: studySitemapEntries,
-      players: playerSectionEntries,
+      players: () => playerSectionEntries(params.staticDir),
       broadcasts: broadcastSectionEntries,
+      historical: () => archiveSitemapEntries('historical', undefined, params.staticDir),
+      puzzles: () => archiveSitemapEntries('puzzles', undefined, params.staticDir),
     };
     entries = await loaders[params.section]().catch(() => [] as SitemapEntry[]);
   }
-  const body = entries
-    .map(({ path, lastmod }) => {
-      const date = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
-      return `  <url><loc>${params.publicHost}${path}</loc>${date}</url>`;
-    })
-    .join('\n');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+  const xml = sitemapXml(
+    entries.filter((entry) => sitemapPathIsTracked(entry.path)),
+    params.publicHost,
+  );
   params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
   params.response.end(xml);
 }
 
 // Absent persistence (in-memory dev) there is no archive and both are empty.
-async function playerSectionEntries(): Promise<SitemapEntry[]> {
+async function playerSectionEntries(staticDir: string): Promise<SitemapEntry[]> {
   if (!persistence.isInitialized()) return [];
-  return playerSitemapEntries(await cachedPlayers());
+  const entries: SitemapEntry[] = [];
+  for (const entry of playerSitemapEntries(await cachedPlayers())) {
+    if (!sitemapPathIsTracked(entry.path)) continue;
+    const page = await livePlayerPage(entry.path, staticDir);
+    if (page?.body && !page.noindex && bodyMeetsSitemapFloor(entry.path, page.body))
+      entries.push(entry);
+  }
+  return entries;
 }
 
 async function broadcastSectionEntries(): Promise<SitemapEntry[]> {
   if (!persistence.isInitialized()) return [];
-  return broadcastSitemapEntries(await listBroadcastRoundDates());
-}
-
-async function pageSitemapEntries(staticDir: string): Promise<SitemapEntry[]> {
-  // Each article is listed once per pre-rendered language variant (dist/blog,
-  // dist/zh-hans/blog, dist/zh-hant/blog), so the published+translated set
-  // stays single-sourced in the prerender output.
-  const readSlugs = (dir: string): Promise<string[]> =>
-    fs
-      .readdir(resolve(staticDir, dir))
-      .then((files) =>
-        files
-          .filter((f) => f.endsWith('.html'))
-          .map((f) => f.slice(0, -'.html'.length))
-          .filter(articleIsIndexable),
-      )
-      .catch(() => [] as string[]);
-  const langDirs: Array<[string, string]> = [
-    ['blog', '/blog'],
-    ['zh-hans/blog', '/zh-hans/blog'],
-    ['zh-hant/blog', '/zh-hant/blog'],
-    ['rules', '/rules'],
-    ['zh-hans/rules', '/zh-hans/rules'],
-    ['zh-hant/rules', '/zh-hant/rules'],
-  ];
-  const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.map((path) => ({ path }));
-  for (const [dir, urlBase] of langDirs) {
-    for (const slug of await readSlugs(dir)) {
-      const lastmod = await articleLastmod(resolve(staticDir, dir, `${slug}.html`));
-      entries.push({ path: `${urlBase}/${encodeURIComponent(slug)}`, lastmod });
-    }
+  const entries: SitemapEntry[] = [];
+  for (const entry of broadcastSitemapEntries(await listBroadcastRoundDates())) {
+    if (!sitemapPathIsTracked(entry.path)) continue;
+    const page = await liveBroadcastPage(entry.path);
+    if (page?.body && !page.noindex && bodyMeetsSitemapFloor(entry.path, page.body))
+      entries.push(entry);
   }
   return entries;
+}
+
+export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntry[]> {
+  const baked = await fs
+    .readFile(resolve(staticDir, 'prerender-sitemap.json'), 'utf8')
+    .then((json) => JSON.parse(json) as Array<SitemapEntry & { contentChars?: number }>)
+    .catch(() => []);
+  const bakedPaths = new Set(baked.map((record) => record.path));
+  const dates = await serverBodyDates().catch(() => new Map<string, string>());
+  const staleIndex = prerenderedIndexIsStale(await readArticleSchedule(staticDir));
+  const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.flatMap((path) => {
+    const record = baked.find((entry) => entry.path === path);
+    const contract = sitemapContract(path)!;
+    if (
+      !contract.knownGap &&
+      record?.contentChars !== undefined &&
+      record.contentChars <
+        Math.max(150, contract.minChars, Math.floor(contract.baselineChars * 0.6))
+    )
+      return [];
+    // A build with no repository history records pages without dates; they stay
+    // listed without <lastmod>. A route with neither a build record nor a server
+    // body date has no evidence of a body and stays out.
+    const lastmod = dates.get(path) ?? record?.lastmod;
+    return record || lastmod ? [{ path, lastmod, alternates: record?.alternates }] : [];
+  });
+  for (const record of baked) {
+    const article = /^\/(?:zh-han[st]\/)?(?:blog|rules)\/([^/]+)$/.exec(record.path);
+    if (article && articleIsIndexable(decodeURIComponent(article[1]!))) entries.push(record);
+  }
+  return entries.filter(
+    (entry) =>
+      !(staleIndex && /^\/(?:zh-han[st]\/)?(?:blog|feed)(?:\/\d{4}-\d{2})?$/.test(entry.path)) &&
+      sitemapPathIsTracked(entry.path) &&
+      (entry.alternates ?? []).every(
+        (alternate) =>
+          sitemapPathIsTracked(alternate.path) &&
+          (bakedPaths.has(alternate.path) || !!sitemapContract(alternate.path)?.knownGap),
+      ),
+  );
 }
 
 export async function serveArticlePage(params: {
@@ -1411,6 +1823,72 @@ export async function serveArticlePage(params: {
   params.response.end(html);
 }
 
+// Preserve the baked index and all its styles when a schedule advances. The
+// supplement is replaced on client mount and never adds a first-paint panel.
+export function articleIndexUpdates(
+  schedule: ArticleSchedule,
+  kind: 'article' | 'rules',
+  locale: 'en' | 'zh-hans' | 'zh-hant',
+  view: 'mistboard' | 'community' = 'mistboard',
+  now: number = Date.now(),
+): string {
+  const items: string[] = [];
+  for (const [slug, liveAt] of [...schedule.scheduled].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  )) {
+    if (liveAt <= schedule.builtAt || liveAt > now) continue;
+    const entry = schedule.indexEntries.get(slug);
+    if (entry === null) continue;
+    const meta = ARTICLE_META[slug];
+    if (
+      entry
+        ? entry.kind !== kind || (kind === 'article' && entry.publisher !== view)
+        : !meta || !articleIsIndexable(slug) || meta.kind !== kind || view === 'community'
+    )
+      continue;
+    // Older schedules have no card data. Their posts are Mistboard-authored;
+    // reuse the generated title, never an English summary on a Chinese page.
+    const copy =
+      entry?.locales[locale] ??
+      (meta
+        ? {
+            title: locale === 'en' ? meta.title : (meta.zhTitles?.[locale] ?? meta.title),
+            summary: locale === 'en' && kind === 'article' ? meta.description : '',
+            href: `${locale !== 'en' && meta.zhTitles ? `/${locale}` : ''}/${kind === 'rules' ? 'rules' : 'blog'}/${slug}`,
+          }
+        : null);
+    if (!copy) continue;
+    items.push(
+      `<li><a href="${escapeHtml(copy.href)}">${escapeHtml(copy.title)}</a>${copy.summary ? `<p>${escapeHtml(copy.summary)}</p>` : ''}</li>`,
+    );
+  }
+  return items.length
+    ? `<div class="crawler-copy" data-article-index-updates><ul>${items.join('')}</ul></div>`
+    : '';
+}
+
+async function supplementArticleIndex(
+  html: string,
+  staticDir: string,
+  kind: 'article' | 'rules',
+  locale: 'en' | 'zh-hans' | 'zh-hant',
+  view: 'mistboard' | 'community' = 'mistboard',
+): Promise<string> {
+  const copy = articleIndexUpdates(await readArticleSchedule(staticDir), kind, locale, view);
+  // A callback keeps literal dollar signs in catalog strings out of replace's
+  // replacement syntax. Existing baked markup and head links stay intact.
+  // These built templates end #app at the body's last div. Hide the whole
+  // stale render together: a hidden list alone would reserve space above a
+  // visible index and shift it when the app removes that list.
+  return copy
+    ? html.replace(
+        /(<div id="app"[^>]*>)([\s\S]*)(<\/div>)/,
+        (_match, root, body, end) =>
+          `${root}<div class="crawler-copy" data-article-index-fallback>${copy}${body}</div>${end}`,
+      )
+    : html;
+}
+
 export async function serveArticlesIndexPage(params: {
   response: ServerResponse;
   publicHost: string;
@@ -1421,22 +1899,23 @@ export async function serveArticlesIndexPage(params: {
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
 
-  // Each locale's post list is prerendered (blog.html, zh-hans/blog.html,
-  // zh-hant/blog.html). The community view is not, and stays on the shell
-  // below. Once a scheduled post has gone live since the build, the baked list
-  // predates it; the shell renders a current list client-side until the next
-  // deploy.
-  if (
-    params.view !== 'community' &&
-    !prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
-  ) {
-    const bakedFile = langKey === 'en' ? 'blog.html' : `${langKey}/blog.html`;
+  {
+    const file = params.view === 'community' ? 'blog/community.html' : 'blog.html';
+    const bakedFile = langKey === 'en' ? file : `${langKey}/${file}`;
     const prerendered = await fs
       .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
       .catch(() => null);
     if (prerendered !== null) {
       params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      params.response.end(prerendered);
+      params.response.end(
+        await supplementArticleIndex(
+          prerendered,
+          params.staticDir,
+          'article',
+          langKey,
+          params.view,
+        ),
+      );
       return;
     }
   }
@@ -1455,7 +1934,9 @@ export async function serveArticlesIndexPage(params: {
     }`,
   });
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  params.response.end(html);
+  params.response.end(
+    await supplementArticleIndex(html, params.staticDir, 'article', langKey, params.view),
+  );
 }
 
 export async function serveRulesIndexPage(params: {
@@ -1470,16 +1951,17 @@ export async function serveRulesIndexPage(params: {
   // Each locale's rules index is prerendered (rules.html, zh-hans/rules.html,
   // zh-hant/rules.html) with its own canonical and the locale group's
   // hreflang; until 2026-10-02 all three answered with the bare shell. The
-  // tile list honours publish times the way the blog index does, so the same
-  // staleness rule hands a page gone live since the build to the shell below.
-  if (!prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))) {
+  // tile list keeps its baked content and gains newly live entries below.
+  {
     const bakedFile = langKey === 'en' ? 'rules.html' : `${langKey}/rules.html`;
     const prerendered = await fs
       .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
       .catch(() => null);
     if (prerendered !== null) {
       params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      params.response.end(prerendered);
+      params.response.end(
+        await supplementArticleIndex(prerendered, params.staticDir, 'rules', langKey),
+      );
       return;
     }
   }
@@ -1503,7 +1985,7 @@ export async function serveRulesIndexPage(params: {
     `<link rel="canonical" href="${url}">${localeAlternateLinks(params.publicHost, '/rules')}</head>`,
   );
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  params.response.end(html);
+  params.response.end(await supplementArticleIndex(html, params.staticDir, 'rules', langKey));
 }
 
 function escapeHtml(str: string): string {

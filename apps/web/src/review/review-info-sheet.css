@@ -1,0 +1,201 @@
+/* Phone game review sheets (review-info-sheet.ts, #655, #619): Game info and
+   Chat. The sheets and their ☰ rows, and the Engine analysis row, exist on
+   every screen; above 600px none shows, so tablet and desktop keep the game
+   card, the chart, the engine card and its switch, and the chat where they
+   were. */
+
+.review-info-sheet {
+  display: none;
+}
+
+@media (min-width: 601px) {
+  .move-nav-menu__item[data-review-info],
+  .move-nav-menu__item[data-review-engine] {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  /* The game card and the chat live in the sheet (lent on open), so the page
+     stops at the move list and the bar. */
+  .has-review-info-sheet .review-rail-group {
+    display: none;
+  }
+  /* One screen, no scroll (#619): the underboard tabs, the analysis summary
+     and the explorer below the rail are in the Game info sheet, the chart is
+     the strip under the board (review-phone-analysis.css) and the engine
+     switch is the ☰ menu's Engine analysis row, so the page is the board, the
+     strip, the bar and the move list. The engine card stays in the DOM, where
+     the bar above the board reads it, but never shows: the bar carries its
+     eval, line and depth, and a card under the move list would scroll the
+     page. */
+  .has-review-info-sheet .review-shell .review-underboard-panel,
+  .has-review-info-sheet .review-shell .review-analysis-summary-slot,
+  .has-review-info-sheet .review-shell [data-col1-area="extra"],
+  .has-review-info-sheet .review-shell .review-rail-main > .engine-panel,
+  .has-review-info-sheet
+    .review-shell
+    [data-col1-area="under"]:not(:has(> :not([hidden], .review-underboard-panel))) {
+    display: none;
+  }
+
+  /* The board takes what the chrome leaves (review-layout.ts
+     oneScreenBoardWidth), so the chrome is packed tight (Brian, 2026-10-28:
+     "squeeze the control bar and the move list in, maybe reduce the margin").
+     Edge to edge since 2026-11-06, like the phone room and the analysis
+     board: the board meets both screen edges with square corners, the rows
+     stack with no gap and no shell padding (the flush board is 22px taller on
+     xiangqi, and this gives it back), the seat rows keep a 10px gutter, and
+     the arrow bar and move strip are bands with no side border. The analysis
+     strip's own height is in review-phone-analysis.css. */
+  .has-review-info-sheet main.review-shell {
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    --review-board-left-radius: 0px;
+  }
+  .has-review-info-sheet
+    main.review-shell
+    .review-shell__cluster.review-shell__cluster--col1-stack {
+    row-gap: 0;
+  }
+  .has-review-info-sheet main.review-shell .review-shell__cluster {
+    --board-corner-radius: 0px;
+  }
+  .has-review-info-sheet main.review-shell .review-seat {
+    box-sizing: border-box;
+    padding-inline: 10px;
+  }
+  .has-review-info-sheet main.review-shell .move-nav-bar--band,
+  .has-review-info-sheet main.review-shell .review-rail-main {
+    border-inline: 0;
+    border-radius: 0;
+  }
+  .has-review-info-sheet main.review-shell .move-nav-bar--band > .move-nav-bar__button {
+    border-radius: 0;
+  }
+  .has-review-info-sheet .review-shell .move-nav-bar.review-controls > .move-nav-bar__button {
+    height: 40px;
+  }
+  /* One class more than the strip rule it shares with the analysis board
+     (analysis-phone-bar.css), so it wins in either bundle order. */
+  .has-review-info-sheet
+    .review-shell
+    .review-shell__cluster.review-shell__cluster--col1-stack
+    .review-rail-main
+    .review-move-list
+    .review-move-list__rows {
+    height: 38px;
+  }
+  /* The engine bar above the board: 32px here (44px on the analysis board,
+     where it is the only chrome above the board), read-only so no tap floor,
+     and with no row gap the same 26px or 28px room above the top
+     player row (engine-bar.css). */
+  .has-review-info-sheet .review-shell .review-shell__cluster .analysis-engine-bar {
+    height: 32px;
+  }
+  .has-review-info-sheet
+    .review-shell
+    .review-shell__cluster:has(.review-board-wrap--seated)
+    .analysis-engine-bar {
+    margin: -26px 0 26px;
+  }
+  .has-review-info-sheet
+    .review-shell
+    .review-shell__cluster:has(.review-board-wrap--captures)
+    .analysis-engine-bar {
+    margin: -28px 0 28px;
+  }
+
+  /* A chat line someone else wrote came in while the Chat sheet was closed
+     (attachChatUnread): a dot on ☰ and on the Chat row, as in the live room
+     (live-review.css). */
+  .move-nav-bar[data-chat-unread] .move-nav-bar__menu-button,
+  .move-nav-bar[data-chat-unread] .move-nav-menu__item[data-review-info="chat"] {
+    position: relative;
+  }
+  .move-nav-bar[data-chat-unread] .move-nav-bar__menu-button::after,
+  .move-nav-bar[data-chat-unread] .move-nav-menu__item[data-review-info="chat"]::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--site-accent, #c0392b);
+  }
+
+  /* The Game info sheet shows Move times and Share & export; the chart is on
+     the page, and the other tabs stay with the wide layout. tree-review.ts
+     moves the active tab onto one of these when the sheet opens. */
+  .review-info-sheet[data-review-info="game"]
+  .review-underboard-tab:not([data-tab="times"], [data-tab="share"]) {
+    display: none;
+  }
+
+  .review-info-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: block;
+  }
+  .review-info-sheet__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.4);
+  }
+  .review-info-sheet__panel {
+    position: absolute;
+    inset: auto 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 85vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    border-radius: 14px 14px 0 0;
+    background: var(--site-panel, var(--site-surface));
+    color: var(--site-text);
+  }
+  .review-info-sheet__close {
+    appearance: none;
+    align-self: flex-end;
+    min-height: 44px;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--site-link, var(--site-accent));
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .review-info-sheet__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .review-info-sheet__body > :empty {
+    display: none;
+  }
+  /* The Chat sheet opens tall (Brian, 2026-10-28: "make it a little bit
+     taller so there's more space inside"): most of the screen, the messages
+     filling it and the input pinned at its foot. Game info keeps its size. */
+  .review-info-sheet[data-review-info="chat"] .review-info-sheet__panel {
+    height: 88dvh;
+    max-height: none;
+    overflow: hidden;
+  }
+  .review-info-sheet[data-review-info="chat"] .review-info-sheet__body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .review-info-sheet[data-review-info="chat"] .review-spectator-chat {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+  body.review-info-open {
+    overflow: hidden;
+  }
+}

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import {
   ATOMIC_XIANGQI_SPEC_ID,
@@ -13,12 +14,17 @@ import { atomicXiangqiRooms } from '../atomic-xiangqi-registration.js';
 import { type AtomicXiangqiEvent, atomicXiangqiTenant } from '../atomic-xiangqi-tenant.js';
 import { collectCurrentGames, currentGameBoardPayload } from '../current-games.js';
 import type { RecentEveGameRecord } from '../persistence.js';
-import { replayTenantEvents } from '../variant-tenant/runtime.js';
+import {
+  createTenantRuntimeRoomFromEvents,
+  replayTenantEvents,
+} from '../variant-tenant/runtime.js';
 import { hasLiveWatchPayloadBuilder } from '../watch-live.js';
 import {
   type AtomicXiangqiPostgamePersistence,
   atomicXiangqiLiveWatchPayloadFor,
   atomicXiangqiPostgameForApi,
+  resolveAtomicXiangqiAnalysis,
+  tryHandle,
 } from './atomic-xiangqi-games.js';
 import type { HttpApiContext } from './lib.js';
 
@@ -90,6 +96,12 @@ function deps(
   };
 }
 
+function historicalRoom(events: AtomicXiangqiEvent[]) {
+  const hydrated = createTenantRuntimeRoomFromEvents(atomicXiangqiTenant, events);
+  assert.ok(hydrated.ok);
+  return hydrated.room;
+}
+
 test('Atomic Xiangqi postgame returns the finished-game envelope with a truth view', async () => {
   const payload = await atomicXiangqiPostgameForApi(
     ROOM_ID,
@@ -114,6 +126,106 @@ test('Atomic Xiangqi postgame returns the finished-game envelope with a truth vi
   const resign = payload.timeline.find((entry) => entry.type === 'seat-resigned');
   assert.ok(resign);
   assert.equal(resign.winner, 'black');
+});
+
+test('retired atomic finished payloads and cached analysis survive without native search', async () => {
+  const engineId = 'fairy-stockfish-atomic-xiangqi-level-4';
+  const events = finishedGameEvents().map((event) =>
+    event.type === 'seat-assigned' && event.seat === 'black'
+      ? { ...event, clientId: engineId }
+      : event,
+  );
+  const payload = await atomicXiangqiPostgameForApi(ROOM_ID, {
+    ...deps(null, null),
+    isPersistenceEnabled: () => false,
+    getLiveRoom: () => historicalRoom(events),
+  });
+  assert.ok(payload);
+  const serialized = JSON.parse(JSON.stringify(payload)) as typeof payload;
+  assert.equal(serialized.game.mode, 'pve');
+  assert.equal(serialized.game.pveEngineId, engineId);
+  assert.equal(serialized.game.blackName, 'Fairy-Stockfish Level 4');
+  assert.equal(serialized.state.status.type, 'finished');
+  assert.equal(serialized.history.truth.length, LINE.length + 1);
+  assert.deepEqual(serialized.view, serialized.views.truth);
+  assert.deepEqual(serialized.history.truth.at(-1)?.view.lastBlast, serialized.view.lastBlast);
+  assert.deepEqual(
+    serialized.timeline.filter((entry) => entry.type === 'move-played').map((entry) => entry.move),
+    LINE,
+  );
+
+  const plies = [{ ply: 0, cp: 42, mate: null, best: 'b3e3', depth: 12 }];
+  const cache = {
+    get: async (roomId: string, cachedEngineId: string, depth: number) => {
+      assert.equal(roomId, ROOM_ID);
+      assert.equal(cachedEngineId, 'fairy-stockfish-atomic-xiangqi-analysis@0.1.0');
+      assert.equal(depth, 12);
+      return plies;
+    },
+    save: async () => assert.fail('retired analysis must never write a new sweep'),
+  };
+  assert.deepEqual(await resolveAtomicXiangqiAnalysis(ROOM_ID, payload, cache), {
+    engineId: 'fairy-stockfish-atomic-xiangqi-analysis@0.1.0',
+    depth: 12,
+    plies,
+  });
+  const previous = process.env.MISTBOARD_FSF_ATOMIC_XIANGQI_PATH;
+  process.env.MISTBOARD_FSF_ATOMIC_XIANGQI_PATH = '/nonexistent/retired-atomic-engine';
+  try {
+    assert.equal(
+      await resolveAtomicXiangqiAnalysis(ROOM_ID, payload, { ...cache, get: async () => null }),
+      null,
+      'a cache miss must not start native analysis for a retired variant',
+    );
+  } finally {
+    if (previous === undefined) delete process.env.MISTBOARD_FSF_ATOMIC_XIANGQI_PATH;
+    else process.env.MISTBOARD_FSF_ATOMIC_XIANGQI_PATH = previous;
+  }
+});
+
+test('retired atomic HTTP history works with the launch flag off and analysis never enqueues', async () => {
+  const previous = process.env.MISTBOARD_ATOMIC_XIANGQI_ENABLED;
+  delete process.env.MISTBOARD_ATOMIC_XIANGQI_ENABLED;
+  atomicXiangqiRooms.set(ROOM_ID, historicalRoom(finishedGameEvents()));
+  const basePath = `/api/atomic-xiangqi/games/${ROOM_ID}`;
+  try {
+    for (const [method, path, expectedStatus] of [
+      ['GET', basePath, 200],
+      ['GET', `${basePath}/analysis`, 204],
+      ['POST', `${basePath}/analysis`, 410],
+      ['DELETE', `${basePath}/analysis`, 405],
+      ['GET', '/api/atomic-xiangqi/games/axq_missing/analysis', 404],
+    ] as const) {
+      let status = 0;
+      let body = '';
+      const response = {
+        writeHead(code: number) {
+          status = code;
+          return this;
+        },
+        end(value = '') {
+          body = value;
+        },
+      } as unknown as ServerResponse;
+      assert.equal(
+        await tryHandle(
+          {} as HttpApiContext,
+          { method } as IncomingMessage,
+          response,
+          path,
+          new URL(path, 'http://localhost'),
+        ),
+        true,
+      );
+      assert.equal(status, expectedStatus, `${method} ${path}`);
+      if (status === 410) assert.deepEqual(JSON.parse(body), { error: 'retired_game_spec' });
+      if (status === 200) assert.equal(JSON.parse(body).state.status.type, 'finished');
+    }
+  } finally {
+    atomicXiangqiRooms.delete(ROOM_ID);
+    if (previous === undefined) delete process.env.MISTBOARD_ATOMIC_XIANGQI_ENABLED;
+    else process.env.MISTBOARD_ATOMIC_XIANGQI_ENABLED = previous;
+  }
 });
 
 test('Atomic Xiangqi postgame history snapshots every ply with its aftermath', async () => {

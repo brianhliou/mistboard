@@ -12,13 +12,37 @@ import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
+  standardXiangqiEngineFen,
   type XiangqiMove,
 } from '@mistboard/game';
-import { expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { pieceAnimationDurationMs } from '../board-anim.js';
+import { LOCALE_STORAGE_KEY, setStoredLocale } from '../i18n/locale.js';
+import * as board from '../xiangqi-board.js';
 import { createGameTree } from './game-tree.js';
 import { serializeTree } from './tree-serialize.js';
 import { mountXiangqiGamebook } from './xiangqi-gamebook.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  const store = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    },
+  });
+  setStoredLocale('en');
+});
+afterEach(() => {
+  window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 /** A three-ply lesson (red, black's reply, red) plus a legal wrong first move. */
 function fixture() {
@@ -47,12 +71,13 @@ function mount() {
  * through the real listener is the point -- calling the session directly would
  * not prove the board is wired to it.
  */
-const play = (host: HTMLElement, move: XiangqiMove): void => {
+const play = (host: HTMLElement, move: XiangqiMove, settle = true): void => {
   for (const square of [move.from, move.to]) {
     const hit = host.querySelector<SVGElement>(`g.xq-live-clicks > [data-square="${square}"]`);
     if (!hit) throw new Error(`no click target for ${square}`);
     hit.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   }
+  if (settle) vi.runAllTimers();
 };
 
 const feedback = (host: HTMLElement): string =>
@@ -60,6 +85,112 @@ const feedback = (host: HTMLElement): string =>
 
 const state = (host: HTMLElement): string | undefined =>
   host.querySelector<HTMLElement>('.gamebook__coach')?.dataset.state;
+
+const LOCALES = [
+  {
+    locale: 'en',
+    red: 'Red to play',
+    black: 'Black to play',
+    task: 'Find the best move.',
+    board: 'Xiangqi lesson board',
+    hint: 'Hint',
+    fallback: 'Look at the circled piece.',
+    wrong: 'Not that one. Try another move.',
+    correct: 'Correct! Keep going.',
+    complete: 'Lesson complete! 🎉',
+    restart: 'Restart lesson',
+  },
+  {
+    locale: 'zh-Hans',
+    red: '红方走棋',
+    black: '黑方走棋',
+    task: '找出最佳着法。',
+    board: '象棋课程棋盘',
+    hint: '提示',
+    fallback: '看看圈出的棋子。',
+    wrong: '不是这一着，试试其他着法。',
+    correct: '正确！继续。',
+    complete: '课程完成！🎉',
+    restart: '重新开始课程',
+  },
+  {
+    locale: 'zh-Hant',
+    red: '紅方走棋',
+    black: '黑方走棋',
+    task: '找出最佳著法。',
+    board: '象棋課程棋盤',
+    hint: '提示',
+    fallback: '看看圈出的棋子。',
+    wrong: '不是這一著，試試其他著法。',
+    correct: '正確！繼續。',
+    complete: '課程完成！🎉',
+    restart: '重新開始課程',
+  },
+] as const;
+
+for (const copy of LOCALES) {
+  test(`${copy.locale}: hint, wrong move, correct move, completion and restart`, () => {
+    setStoredLocale(copy.locale);
+    const { host, m1, m3, wrongFirst } = mount();
+    expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.red);
+    expect(host.querySelector('.gamebook__prompt-task')?.textContent).toBe(copy.task);
+    expect(host.querySelector('.gamebook__board')?.getAttribute('aria-label')).toBe(copy.board);
+    const [hint, restart] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
+    expect(hint?.textContent).toBe(copy.hint);
+    expect(restart?.textContent).toBe(copy.restart);
+    hint?.click();
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe(copy.fallback);
+    expect(host.querySelector('.xq-marker--gamebook-hint')).not.toBeNull();
+    play(host, wrongFirst);
+    expect(feedback(host)).toBe(copy.wrong);
+    play(host, m1);
+    expect(feedback(host)).toBe(copy.correct);
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe('');
+    play(host, m3);
+    expect(feedback(host)).toBe(copy.complete);
+    expect(hint?.hidden).toBe(true);
+    expect(restart?.hidden).toBe(false);
+    restart?.click();
+    expect(state(host)).toBe('play');
+    expect(feedback(host)).toBe('');
+    expect(hint?.hidden).toBe(false);
+    expect(restart?.hidden).toBe(true);
+    play(host, m1);
+    expect(feedback(host)).toBe(copy.correct);
+  });
+
+  test(`${copy.locale}: black prompt and authored lesson text and names survive`, () => {
+    setStoredLocale(copy.locale);
+    const { tree, wrongFirst } = fixture();
+    tree.root.annotations = {
+      comments: [{ text: 'Authored comment', by: 'Coach' }],
+      gamebook: { hint: 'Authored hint', deviation: 'Authored deviation' },
+    };
+    const host = document.createElement('div');
+    const opts = {
+      tree,
+      title: 'Authored title',
+      summary: 'Authored summary',
+      seats: { red: 'Original Red', black: 'Original Black' },
+    };
+    mountXiangqiGamebook(host, { ...opts, orientation: 'black' });
+    expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.black);
+    mountXiangqiGamebook(host, { ...opts, orientation: 'red' });
+    for (const text of [
+      'Authored title',
+      'Authored summary',
+      'Original Red',
+      'Original Black',
+      'Authored comment',
+    ])
+      expect(host.textContent).toContain(text);
+    host.querySelector<HTMLButtonElement>('.gamebook__controls button')?.click();
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe('Authored hint');
+    play(host, wrongFirst);
+    expect(feedback(host)).toBe('Authored deviation');
+    expect(host.querySelector('.gamebook__comment')?.textContent).toBe('Authored comment');
+  });
+}
 
 test('the lesson opens waiting on the learner', () => {
   const { host } = mount();
@@ -102,4 +233,228 @@ test('the hint rings the piece the lesson moves', () => {
   expect(hint?.hidden).toBe(false);
   hint?.click();
   expect(host.querySelector('.xq-marker--gamebook-hint')).not.toBeNull();
+});
+
+const LOCALE_COPY = [
+  {
+    locale: 'en',
+    board: 'Xiangqi lesson board',
+    red: 'Red to play',
+    black: 'Black to play',
+    task: 'Find the best move.',
+    hint: 'Hint',
+    restart: 'Restart lesson',
+    hintPiece: 'Look at the circled piece.',
+    wrong: 'Not that one. Try another move.',
+    correct: 'Correct! Keep going.',
+    complete: 'Lesson complete! 🎉',
+  },
+  {
+    locale: 'zh-Hans',
+    board: '象棋课程棋盘',
+    red: '红方走棋',
+    black: '黑方走棋',
+    task: '找出最佳着法。',
+    hint: '提示',
+    restart: '重新开始课程',
+    hintPiece: '看看圈出的棋子。',
+    wrong: '不是这一着，试试其他着法。',
+    correct: '正确！继续。',
+    complete: '课程完成！🎉',
+  },
+  {
+    locale: 'zh-Hant',
+    board: '象棋課程棋盤',
+    red: '紅方走棋',
+    black: '黑方走棋',
+    task: '找出最佳著法。',
+    hint: '提示',
+    restart: '重新開始課程',
+    hintPiece: '看看圈出的棋子。',
+    wrong: '不是這一著，試試其他著法。',
+    correct: '正確！繼續。',
+    complete: '課程完成！🎉',
+  },
+] as const;
+
+test.each(LOCALE_COPY)(
+  '$locale localizes the lesson through hints, retries and completion',
+  (copy) => {
+    setStoredLocale(copy.locale);
+    const { host, m1, m3, wrongFirst } = mount();
+    expect(host.querySelector('.gamebook__board')?.getAttribute('aria-label')).toBe(copy.board);
+    expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.red);
+    expect(host.querySelector('.gamebook__prompt-task')?.textContent).toBe(copy.task);
+    const [hint, restart] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
+    expect(hint?.textContent).toBe(copy.hint);
+    expect(restart?.textContent).toBe(copy.restart);
+    expect(hint?.hidden).toBe(false);
+    expect(restart?.hidden).toBe(true);
+
+    hint!.click();
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe(copy.hintPiece);
+    expect(host.querySelector('.xq-marker--gamebook-hint')).not.toBeNull();
+    play(host, wrongFirst);
+    expect(state(host)).toBe('bad');
+    expect(feedback(host)).toBe(copy.wrong);
+    play(host, m1);
+    expect(feedback(host)).toBe(copy.correct);
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe('');
+    play(host, m3);
+    expect(state(host)).toBe('end');
+    expect(feedback(host)).toBe(copy.complete);
+    expect(hint?.hidden).toBe(true);
+    expect(restart?.hidden).toBe(false);
+
+    restart!.click();
+    expect(state(host)).toBe('play');
+    expect(feedback(host)).toBe('');
+    expect(hint?.hidden).toBe(false);
+    expect(restart?.hidden).toBe(true);
+    play(host, m1);
+    expect(feedback(host)).toBe(copy.correct);
+  },
+);
+
+test.each(LOCALE_COPY)('$locale prompts the black-side learner in their language', (copy) => {
+  setStoredLocale(copy.locale);
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: fixture().tree, orientation: 'black' });
+  expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.black);
+  expect(state(host)).toBe('play');
+});
+
+test.each(LOCALE_COPY)(
+  '$locale preserves authored lesson text over the default feedback',
+  (copy) => {
+    setStoredLocale(copy.locale);
+    const { tree, wrongFirst } = fixture();
+    tree.root.annotations = {
+      comments: [{ text: 'Coach comment' }],
+      gamebook: { hint: 'Author hint', deviation: 'Author explanation' },
+    };
+    const host = document.createElement('div');
+    mountXiangqiGamebook(host, {
+      tree,
+      orientation: 'red',
+      title: 'Author title',
+      summary: 'Author summary',
+      seats: { red: 'Red player', black: 'Black player' },
+    });
+    expect(host.querySelector('.gamebook__title')?.textContent).toBe('Author title');
+    expect(host.querySelector('.gamebook__summary')?.textContent).toBe('Author summary');
+    expect([...host.querySelectorAll('.review-seat__name')].map((el) => el.textContent)).toEqual([
+      'Black player',
+      'Red player',
+    ]);
+    expect(host.querySelector('.gamebook__comment')?.textContent).toBe('Coach comment');
+    host.querySelector<HTMLButtonElement>('.gamebook__controls button')!.click();
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe('Author hint');
+    play(host, wrongFirst);
+    expect(feedback(host)).toBe('Author explanation');
+    expect(host.querySelector('.gamebook__comment')?.textContent).toBe('Coach comment');
+  },
+);
+
+/** Mid-game root with Black to move; Red is the learner. */
+function opponentFixture() {
+  const initial = createInitialXiangqiState('moment');
+  const root = applyStandardXiangqiMove(initial, getStandardXiangqiLegalMoves(initial)[0]!);
+  root.moveNumber = 20;
+  const moves: XiangqiMove[] = [];
+  let position = root;
+  for (let i = 0; i < 4; i++) {
+    const move = getStandardXiangqiLegalMoves(position)[0]!;
+    moves.push(move);
+    position = applyStandardXiangqiMove(position, move);
+  }
+  const tree = createGameTree(xiangqiTreeAdapter, moves, root);
+  const blob = serializeTree(tree, xiangqiTreeAdapter, { rootFen: standardXiangqiEngineFen(root) });
+  return { blob, tree, moves };
+}
+
+test('first paint and Restart show the pre-move position before sliding the opponent move', () => {
+  const { blob, tree, moves } = opponentFixture();
+  const animate = vi.spyOn(board, 'animateXiangqiBoardMove');
+  const paint = vi.spyOn(board, 'createXiangqiInteractiveBoard');
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: blob, orientation: 'red' });
+  const interactive: ReturnType<typeof board.createXiangqiInteractiveBoard> =
+    paint.mock.results[0]!.value;
+  const render = vi.spyOn(interactive, 'render');
+  const first = moves[0]!;
+  expect(host.querySelector(`[data-piece-square="${first.from}"]`)).not.toBeNull();
+  expect(host.querySelector(`[data-piece-square="${first.to}"]`)).toBeNull();
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('true');
+  vi.advanceTimersByTime(499);
+  expect(animate).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(render.mock.calls.at(-1)?.[0]?.lastMove).toMatchObject(first);
+  expect(
+    host.querySelector('[data-board-lastmove-over]')?.innerHTML ||
+      host.querySelector('.xq-live-lastmove')?.innerHTML,
+  ).toBeTruthy();
+  expect(animate).toHaveBeenCalledWith(expect.any(HTMLElement), first, 'red');
+  // A click during the slide cannot submit the learner's answer.
+  play(host, moves[1]!, false);
+  expect(host.querySelectorAll('.gamebook__moves .review-move-list__san')).toHaveLength(1);
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('true');
+  expect(state(host)).toBe('play');
+  vi.advanceTimersByTime(pieceAnimationDurationMs());
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('false');
+  play(host, moves[1]!);
+  expect(animate).toHaveBeenLastCalledWith(expect.any(HTMLElement), moves[2], 'red');
+  play(host, moves[3]!);
+  expect(state(host)).toBe('end');
+  host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button')[1]!.click();
+  expect(host.querySelector(`[data-piece-square="${first.from}"]`)).not.toBeNull();
+  vi.advanceTimersByTime(500);
+  expect(render.mock.calls.at(-1)?.[0]?.lastMove).toMatchObject(first);
+  expect(tree.root.truth.moveNumber).toBe(20);
+});
+
+test.each([
+  { notation: 'wxf', label: 'P1+1' },
+  { notation: 'algebraic', label: 'Pa6' },
+  { notation: 'chinese', label: '卒1进1' },
+])('history shows only played moves in $notation with real game numbers', ({ notation, label }) => {
+  if (notation === 'chinese') setStoredLocale('zh-Hans');
+  window.localStorage.setItem('mistboard.xiangqiNotation', notation);
+  const { blob, tree, moves } = opponentFixture();
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: blob, orientation: 'red' });
+  vi.runAllTimers();
+  const labels = () =>
+    [...host.querySelectorAll('.gamebook__moves .review-move-list__san')].map(
+      (el) => el.textContent,
+    );
+  const first = tree.root.children[0]!;
+  expect(first.label).toBe(label);
+  expect(labels()).toEqual([first.label]);
+  expect(host.querySelector('.gamebook__moves .review-move-list__number')?.textContent).toBe('20');
+  expect(host.querySelector('.gamebook__moves .review-move-list__move--gap')).not.toBeNull();
+  play(host, moves[1]!);
+  expect(labels()).toEqual([
+    first.label,
+    first.children[0]!.label,
+    first.children[0]!.children[0]!.label,
+  ]);
+  expect(
+    [...host.querySelectorAll('.gamebook__moves .review-move-list__number')].map(
+      (el) => el.textContent,
+    ),
+  ).toEqual(['20', '21']);
+  expect(host.querySelector('.gamebook__coach')?.firstElementChild?.className).toBe(
+    'gamebook__prompt',
+  );
+});
+
+test('a chapter change cancels the pending auto-move paint and sound', () => {
+  const animate = vi.spyOn(board, 'animateXiangqiBoardMove');
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: opponentFixture().blob, orientation: 'red' });
+  mountXiangqiGamebook(host, { tree: fixture().tree, orientation: 'red' });
+  vi.runAllTimers();
+  expect(animate).not.toHaveBeenCalled();
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('false');
 });

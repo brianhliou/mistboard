@@ -14,6 +14,7 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   correspondenceTimeControl,
   DAY_MS,
+  type DaysPerMove,
   GAME_SPECS,
 } from '@mistboard/game';
 import {
@@ -61,7 +62,7 @@ function roomMap(registration: VariantTenantRegistration): Map<string, TenantMan
   return registration.rooms as Map<string, TenantManagedRoom>;
 }
 
-async function acceptSeek(specId: string, daysPerMove: 1 | 3 | 7 = 3) {
+async function acceptSeek(specId: string, daysPerMove: DaysPerMove = 3) {
   const registration = registrationFor(specId);
   const create = registration.createCorrespondenceGameForSeek;
   assert.ok(create);
@@ -91,7 +92,9 @@ function overdueCopy(specId: string, room: AnyRoom, plies: number): AnyRoom {
   const at = 1_000 + events.length * 1_000;
   for (let ply = 0; ply < plies; ply += 1) {
     const state = copy.projection.state as never;
-    const turn = (copy.projection.state as { status: { turn: string } }).status.turn;
+    const turn =
+      tenant.clockOwner?.(state) ??
+      (copy.projection.state as { status: { turn: string } }).status.turn;
     const appended = appendTenantRuntimeEvent(
       tenant,
       copy as never,
@@ -145,10 +148,10 @@ for (const specId of VARIANT_SPEC_IDS) {
   test(`${specId}: the sweeper forfeits the player who let the clock lapse`, async () => {
     const { registration, room } = await acceptSeek(specId, 1);
     try {
-      const overdue = overdueCopy(specId, room, 2);
+      const overdue = overdueCopy(specId, room, entry.firstReplyPlies ?? 2);
       const deadline = tenantDurableDeadlineFor(tenant, overdue as never);
       assert.ok(deadline);
-      assert.equal(deadline.seat, tenant.colors[0], 'back to the first mover after two plies');
+      assert.equal(deadline.seat, tenant.colors[0], 'back to the first mover after the reply');
       roomMap(registration).set(overdue.id, overdue as unknown as TenantManagedRoom);
       await registration.sweepDueDeadline?.(overdue.id);
       const status = overdue.projection.state.status as {

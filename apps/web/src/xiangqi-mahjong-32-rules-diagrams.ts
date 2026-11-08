@@ -218,8 +218,8 @@ export const XMJ32_WINS: readonly XmjWinExample[] = [
     title: 'General, Advisor, Elephant with a pair of Horses',
     groups: [set('rK', 'rA', 'rE'), pair('bH', 'bH')],
     context: ON_DISCARD,
-    expectedLines: ['win'],
-    expectedTotal: 1,
+    expectedLines: ['win', 'red-general'],
+    expectedTotal: 2,
   },
   {
     id: 'chariot',
@@ -260,6 +260,22 @@ export const XMJ32_WINS: readonly XmjWinExample[] = [
     context: ON_DISCARD,
     expectedLines: ['win', 'one-colour', 'five-soldiers'],
     expectedTotal: 7,
+  },
+  {
+    id: 'mixed-soldiers',
+    title: 'Mixed Soldiers: three red Soldiers with a pair of black ones',
+    groups: [set('rP', 'rP', 'rP'), pair('bP', 'bP')],
+    context: ON_DISCARD,
+    expectedLines: ['win', 'mixed-soldiers'],
+    expectedTotal: 3,
+  },
+  {
+    id: 'three-horses',
+    title: 'Three of a piece: a black Horse in the set and a pair of red Horses',
+    groups: [set('bR', 'bH', 'bC'), pair('rH', 'rH')],
+    context: ON_DISCARD,
+    expectedLines: ['win', 'three-horses'],
+    expectedTotal: 3,
   },
 ];
 
@@ -790,16 +806,16 @@ export function xmj32NotWinSvg(id: string): () => string {
 
 /**
  * The dealer draws the black General and wins on its own draw: Chariot, Horse,
- * Cannon in red, and the two Generals as the pair. Win 1, self-draw 2, dealer
- * 1, Generals pair 2.
+ * Cannon in red, and the two Generals as the pair. Win 1, Generals pair 2,
+ * self-draw 2.
  */
 export const XMJ32_WORKED: XmjWinExample = {
   id: 'worked',
   title: 'The dealer draws the black General to win',
   groups: [set('rR', 'rH', 'rC'), pair('rK', 'bK')],
   context: { ...SELF_DRAWN, winnerIsDealer: true },
-  expectedLines: ['win', 'self-draw', 'dealer', 'generals-pair'],
-  expectedTotal: 6,
+  expectedLines: ['win', 'generals-pair', 'self-draw'],
+  expectedTotal: 5,
 };
 
 export const XMJ32_WORKED_SVG = (): string =>
@@ -829,13 +845,13 @@ export const XMJ32_MATCH: readonly XmjMatchHand[] = [
   {
     dealer: 'Ana',
     winner: 'Ana',
-    how: 'Ben’s discard, as dealer',
+    how: 'Ben’s discard, one General',
     win: {
       id: 'match-1',
       title: 'General, Advisor, Elephant with two black Horses',
       groups: [set('rK', 'rA', 'rE'), pair('bH', 'bH')],
       context: ON_DISCARD_AS_DEALER,
-      expectedLines: ['win', 'dealer'],
+      expectedLines: ['win', 'red-general'],
       expectedTotal: 2,
     },
   },
@@ -856,27 +872,27 @@ export const XMJ32_MATCH: readonly XmjMatchHand[] = [
   {
     dealer: 'Ben',
     winner: 'Ben',
-    how: 'Ana’s discard, as dealer, one colour',
+    how: 'Ana’s discard, one colour',
     win: {
       id: 'match-4',
       title: 'Red Chariot, Horse, Cannon with two red Soldiers',
       groups: [set('rR', 'rH', 'rC'), pair('rP', 'rP')],
       context: ON_DISCARD_AS_DEALER,
-      expectedLines: ['win', 'dealer', 'one-colour'],
-      expectedTotal: 3,
+      expectedLines: ['win', 'one-colour'],
+      expectedTotal: 2,
     },
   },
   {
     dealer: 'Ana',
     winner: 'Ana',
-    how: 'Self-draw on the last tile, as dealer',
+    how: 'Self-draw on the last tile',
     win: {
       id: 'match-5',
       title: 'Three black Soldiers with two red Advisors',
       groups: [set('bP', 'bP', 'bP'), pair('rA', 'rA')],
       context: { ...SELF_DRAWN, winnerIsDealer: true, lastTile: true },
-      expectedLines: ['win', 'self-draw', 'dealer', 'last-tile'],
-      expectedTotal: 5,
+      expectedLines: ['win', 'self-draw', 'last-tile'],
+      expectedTotal: 4,
     },
   },
   { dealer: 'Ben', winner: null, how: 'Void: the wall ran out', win: null },

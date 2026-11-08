@@ -11,7 +11,7 @@
  * change. See puzzles/adapter.ts for the contract.
  */
 
-import { resolvePuzzleShortCode, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { PUZZLE_NEW_PLAYER_RATING, resolvePuzzleShortCode, XIANGQI_SPEC_ID } from '@mistboard/game';
 import './puzzles.css';
 import {
   type PuzzleAttemptMode,
@@ -19,15 +19,27 @@ import {
   puzzleAttemptedProps,
   track,
 } from './analytics.js';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
+import { pieceAnimationDurationMs } from './board-anim.js';
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
+import {
+  createLiveFinishBadges,
+  finishBadgesForResult,
+  generalSquareOn,
+  type LiveFinishBadges,
+} from './live-finish-badges.js';
 import { initLiveSound, playSound } from './live-sound.js';
 import { createMoveNavBar, type MoveNavBar } from './move-nav-bar.js';
 import {
   clonePuzzleState,
+  firstPuzzleViewPly,
   isPuzzleComplete,
+  isReplayLive,
   type PuzzleDetail,
   type PuzzleMove,
+  type PuzzleMoveMark,
   type PuzzleNavigation,
   type PuzzleSession,
   type PuzzleState,
@@ -40,6 +52,7 @@ import {
   fetchPuzzleSolution,
   fetchUserPuzzleRating,
   getPuzzleRatedPref,
+  type PuzzleAttempt,
   PuzzlePlayDisabledError,
   reportAttemptRating,
   sendPuzzleQualityEvent,
@@ -48,7 +61,7 @@ import {
   submitPuzzleAttempt,
   type UserPuzzleRating,
 } from './puzzles/api.js';
-import { feedbackPanel } from './puzzles/detail-panels.js';
+import { feedbackPanel, puzzlePlayPosition } from './puzzles/detail-panels.js';
 import { keepActivePuzzleMoveInView, moveListPanel } from './puzzles/move-list.js';
 import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { type QueuePanelProps, renderQueuePanel } from './puzzles/queue-panel.js';
@@ -57,17 +70,30 @@ import {
   type PuzzleVariant,
   puzzleBoardAdapter,
 } from './puzzles/registry.js';
+import { type PuzzleChipResult, puzzleResultChips } from './puzzles/result-chips.js';
 import {
   loadAutoNextEnabled,
+  loadPuzzleDifficulty,
   loadRatedEnabled,
   loadSeenPuzzles,
   loadSolvedPuzzleIds,
+  puzzleDifficultyAvailability,
   rotatePuzzleOrder,
   saveAutoNextEnabled,
+  savePuzzleDifficulty,
   saveRatedEnabled,
   saveSeenPuzzles,
   saveSolvedPuzzleIds,
 } from './puzzles/storage.js';
+import {
+  loadPuzzleTheme,
+  type PuzzleThemeOptions,
+  parsePuzzleTheme,
+  puzzleSummaryTags,
+  puzzleThemesLink,
+  renderPuzzleThemesIndex,
+  savePuzzleTheme,
+} from './puzzles/themes.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 
@@ -82,6 +108,16 @@ const AUTO_NEXT_DELAY_MS = 150;
 // Cadence for auto-playing the revealed solution, one ply at a time (each step
 // reuses the scrub-forward animation).
 const REVEAL_STEP_MS = 650;
+// How long the pre-setup position holds before the opponent's setup move
+// glides in (#664): long enough for the eye to land on the board.
+const SETUP_INTRO_PAUSE_MS = 400;
+// After a correct move the board holds on it under its ✓ before the scripted
+// reply glides in (lichess), so the verdict reads before the position changes.
+const REPLY_PAUSE_MS = 500;
+// How long a wrong try stays on the board under its ✗ before it glides back.
+const WRONG_HOLD_MS = 700;
+// The finish-badge layer's default delay before the mate slash starts drawing.
+const MATE_SLASH_DELAY_MS = 250;
 
 // Variants surfaced in the Settings variant picker (order = display order; the
 // first is the default view). Standard Xiangqi (the mined real-game corpus,
@@ -94,6 +130,13 @@ export async function mountPuzzles(
   root: HTMLElement,
   initialPuzzleId: string | null = null,
 ): Promise<void> {
+  // The existing /puzzles/:id router passes this reserved index slug through.
+  if (initialPuzzleId === 'themes') {
+    root.replaceChildren(buildNav());
+    const list = await fetchPuzzleListWithAttempts();
+    root.append(renderPuzzleThemesIndex({ motifs: list.themes, tagCounts: list.tagCounts }));
+    return;
+  }
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   initLiveSound();
   setBoardFamily('xiangqi');
@@ -107,12 +150,64 @@ export async function mountPuzzles(
   const { shell, detail, controls } = buildPuzzlesFrame();
   root.replaceChildren(buildNav(), shell);
 
+  if (window.location.pathname.replace(/\/$/, '') === '/puzzles/replay') {
+    await mountFailedPuzzleReplay({ shell, detail, controls });
+    return;
+  }
+
+  if (new URLSearchParams(window.location.search).get('mode') === 'storm') {
+    const { mountPuzzleStorm } = await import('./puzzles/storm.js');
+    await mountPuzzleStorm({ shell, detail, controls }, (puzzle, opts) =>
+      mountPuzzleSolver(detail, puzzle, opts),
+    );
+    return;
+  }
+
+  if (new URLSearchParams(window.location.search).get('mode') === 'streak') {
+    const { mountPuzzleStreak } = await import('./puzzles/streak.js');
+    await mountPuzzleStreak({ shell, detail, controls }, (puzzle, opts) =>
+      mountPuzzleSolver(detail, puzzle, { ...opts, mode: 'streak', analysis: false }),
+    );
+    return;
+  }
+
   let summaries: PuzzleSummary[] = [];
   let selectedId = initialPuzzleId;
   let variantFilter: PuzzleVariantFilter = PUZZLE_VARIANT_FILTERS[0] ?? XIANGQI_SPEC_ID;
+  const themeParam = new URLSearchParams(window.location.search);
+  let playerFilter = themeParam.get('player') || null;
+  let loadedPlayer: string | null | undefined = playerFilter;
+  let queueToken = 0;
+  let themeFilter = themeParam.has('theme')
+    ? parsePuzzleTheme(themeParam.get('theme'))
+    : initialPuzzleId
+      ? null
+      : playerFilter
+        ? null
+        : loadPuzzleTheme();
+  let themes: PuzzleThemeOptions = { motifs: [], tagCounts: {} };
+  if (themeParam.has('theme')) savePuzzleTheme(themeFilter);
   let session: PuzzleSession | null = null;
+  // This visit's puzzles, in the order they were finished, for the chip row
+  // under the board. The first outcome sticks: a puzzle reopened from its chip
+  // and solved clean the second time was still missed the first.
+  const sessionResults: PuzzleChipResult[] = [];
+  const recordResult = (played: PuzzleSession, leaving: boolean): void => {
+    if (sessionResults.some((result) => result.id === played.puzzle.id)) return;
+    const complete = isPuzzleComplete(played);
+    if (!complete && !(leaving && played.failed)) return;
+    sessionResults.push({
+      id: played.puzzle.id,
+      outcome: played.failed || played.revealed ? 'failed' : 'solved',
+    });
+  };
+  const pickSessionPuzzle = (id: string): void => {
+    if (id !== selectedId) void selectPuzzle(id, true);
+  };
   const solvedIds = loadSolvedPuzzleIds();
   const seenPuzzles = loadSeenPuzzles();
+  const targetRatings = new Map<string, number>();
+  let difficulty = loadPuzzleDifficulty();
   // Record a puzzle as seen (for the next visit's rotation) without disturbing
   // this visit's already-frozen queue order.
   const markPuzzleSeen = (id: string): void => {
@@ -128,7 +223,84 @@ export async function mountPuzzles(
   let ratingToken = 0;
   setPuzzleRatedPref(ratedEnabled);
 
-  const queueSummaries = (): PuzzleSummary[] => filterPuzzlesByVariant(summaries, variantFilter);
+  // Like the variant picker, theme selection preserves this visit's frozen
+  // adaptive order. No re-shuffle or request can move a solved session's next.
+  const queueSummaries = (): PuzzleSummary[] =>
+    filterPuzzlesByVariant(summaries, variantFilter).filter(
+      (puzzle) => !themeFilter || puzzleSummaryTags(puzzle).includes(themeFilter),
+    );
+
+  const renderEmptyQueue = (): void => {
+    const emptyPlayer = playerFilter && summaries.length === 0;
+    renderStatus(
+      detail,
+      t(emptyPlayer ? 'puzzle.noneForPlayer' : themeFilter ? 'puzzle.noneForTheme' : 'puzzle.none'),
+    );
+    if (emptyPlayer) {
+      const all = document.createElement('a');
+      all.href = '/puzzles';
+      all.className = 'puzzle-quiet-link';
+      all.textContent = t('puzzle.allPuzzles');
+      const links = document.createElement('span');
+      links.className = 'puzzle-empty-links';
+      links.append(all);
+      detail.querySelector('.puzzles-status')?.append(links);
+    } else if (themeFilter) {
+      const all = document.createElement('a');
+      all.href = `${puzzleUrl(undefined, null)}${playerFilter ? '&' : '?'}theme=`;
+      all.textContent = t('puzzle.allThemes');
+      const links = document.createElement('span');
+      links.className = 'puzzle-empty-links';
+      links.append(all, puzzleThemesLink());
+      detail.querySelector('.puzzles-status')?.append(links);
+    }
+  };
+
+  const puzzleUrl = (id?: string, theme = themeFilter): string => {
+    const params = new URLSearchParams();
+    if (playerFilter) params.set('player', playerFilter);
+    if (theme) params.set('theme', theme);
+    const query = params.toString();
+    return `/puzzles${id ? `/${encodeURIComponent(id)}` : ''}${query ? `?${query}` : ''}`;
+  };
+
+  const pushPuzzleUrl = (id: string): void => {
+    const nextPath = puzzleUrl(id);
+    if (`${window.location.pathname}${window.location.search}` !== nextPath) {
+      window.history.pushState(null, '', nextPath);
+    }
+  };
+
+  const changeQueue = async (pushUrl = true): Promise<void> => {
+    const queue = queueSummaries();
+    const nextId =
+      selectedId && queue.some((puzzle) => puzzle.id === selectedId)
+        ? selectedId
+        : (queue[0]?.id ?? null);
+    if (nextId && nextId === selectedId && nextId === session?.puzzle.id) {
+      // Filtering the queue does not start another attempt at the same puzzle.
+      clearAutoNextTimer();
+      if (pushUrl) pushPuzzleUrl(nextId);
+      renderSession();
+    } else if (nextId) await selectPuzzle(nextId, pushUrl);
+    else {
+      clearAutoNextTimer();
+      ++loadToken;
+      if (session && !isPuzzleComplete(session)) {
+        void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
+          () => {},
+        );
+        trackPuzzleAttempted(session, 'abandoned');
+      }
+      session?.analysis?.dispose();
+      forgetPaintedPuzzle();
+      selectedId = null;
+      session = null;
+      if (pushUrl) window.history.pushState(null, '', puzzleUrl());
+      renderControls();
+      renderEmptyQueue();
+    }
+  };
 
   // Refresh the signed-in user's rating for the current variant. Guarded by a
   // token so a slow response for an old variant can't overwrite a newer one.
@@ -158,27 +330,56 @@ export async function mountPuzzles(
       solvedIds,
       variantFilter,
       variantFilters: PUZZLE_VARIANT_FILTERS,
+      theme: {
+        id: themeFilter,
+        options: themes,
+        onChange: async (id) => {
+          themeFilter = id;
+          savePuzzleTheme(id);
+          await changeQueue();
+        },
+      },
+      difficulty: {
+        level: difficulty,
+        ...puzzleDifficultyAvailability(
+          queueSummaries(),
+          seenPuzzles,
+          targetRatings.get(variantFilter) ?? PUZZLE_NEW_PLAYER_RATING,
+          difficulty,
+        ),
+        onChange: (level) => {
+          difficulty = level;
+          savePuzzleDifficulty(level);
+          clearAutoNextTimer();
+          if (userRating) targetRatings.set(variantFilter, userRating.rating);
+          const current = summaries.find((puzzle) => puzzle.id === selectedId);
+          const ordered = rotatePuzzleOrder(summaries, seenPuzzles, targetRatings, difficulty);
+          // Keep the active attempt and its quality session intact; Next starts
+          // the newly ordered queue, including after revisiting a result chip.
+          summaries = current
+            ? [current, ...ordered.filter((puzzle) => puzzle.id !== current.id)]
+            : ordered;
+          if (session) renderSession();
+          else renderControls();
+        },
+      },
+      selectedComplete: session !== null && isPuzzleComplete(session),
       autoNext,
       ratedEnabled,
       userRating,
       ratingDelta,
+      selectedSource: session
+        ? { id: session.puzzle.id, sourceGame: session.puzzle.sourceGame }
+        : null,
       onVariantChange: async (nextFilter) => {
         variantFilter = nextFilter;
         ratingDelta = null;
-        const queue = queueSummaries();
-        const nextId =
-          selectedId && queue.some((puzzle) => puzzle.id === selectedId)
-            ? selectedId
-            : (queue[0]?.id ?? null);
-        renderControls();
-        void refreshUserRating();
-        if (nextId) {
-          await selectPuzzle(nextId, true);
-        } else {
-          selectedId = null;
-          session = null;
-          renderStatus(detail, t('puzzle.none'));
+        if (nextFilter !== XIANGQI_SPEC_ID) {
+          themeFilter = null;
+          savePuzzleTheme(null);
         }
+        await changeQueue();
+        void refreshUserRating();
       },
       onAutoNextChange: (enabled) => {
         autoNext = enabled;
@@ -223,6 +424,16 @@ export async function mountPuzzles(
       renderControls();
       scheduleAutoNext(navigation);
     });
+    recordResult(session, false);
+    const chips = puzzleResultChips(sessionResults, session.puzzle.id, {
+      label: t('puzzle.sessionHistory'),
+      text: 'mark',
+      className: 'puzzle-session-chips',
+      onPick: pickSessionPuzzle,
+    });
+    detail.querySelector('.puzzle-board-panel')?.append(chips);
+    // The row scrolls sideways once it is full; keep the puzzle in play in view.
+    scrollChipIntoRow(chips);
     renderControls();
   };
 
@@ -234,8 +445,16 @@ export async function mountPuzzles(
     // matching, the pushed URL, and solved-state keys all use the canonical id.
     id = resolveToFullPuzzleId(id, summaries);
     const summary = summaries.find((puzzle) => puzzle.id === id);
+    // A URL or history entry cannot escape the fetched player pool.
+    if (playerFilter && !summary) {
+      await changeQueue(false);
+      window.history.replaceState(null, '', puzzleUrl(session?.puzzle.id));
+      return;
+    }
     if (summary && !queueSummaries().some((puzzle) => puzzle.id === id)) {
       variantFilter = summary.variant;
+      themeFilter = null;
+      savePuzzleTheme(null);
     }
     selectedId = id;
     renderControls();
@@ -248,12 +467,10 @@ export async function mountPuzzles(
       renderStatus(detail, t('puzzle.notFound'));
       return;
     }
-    const nextPath = `/puzzles/${encodeURIComponent(id)}`;
-    if (pushUrl && window.location.pathname !== nextPath) {
-      window.history.pushState(null, '', nextPath);
-    }
+    if (pushUrl) pushPuzzleUrl(id);
     // Tear down the outgoing puzzle's engine (worker + arrows) before swapping
     // in the next session, so a stale ceval handle does not outlive its board.
+    if (session) recordResult(session, true);
     if (session && !isPuzzleComplete(session)) {
       void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
         () => {},
@@ -261,11 +478,13 @@ export async function mountPuzzles(
       trackPuzzleAttempted(session, 'abandoned');
     }
     session?.analysis?.dispose();
-    session = createPuzzleSession(puzzle);
-    void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
+    const opened = createPuzzleSession(puzzle, { history: true });
+    session = opened;
+    void sendPuzzleQualityEvent(puzzle.id, opened.qualitySessionId, 'view').catch(() => {});
     markPuzzleSeen(id);
     renderSession();
     renderControls();
+    playSetupIntro(opened, renderSession, () => session === opened);
   };
 
   // Arrow-key replay scrubbing (lichess-style): up/down jump to the first/last
@@ -281,7 +500,10 @@ export async function mountPuzzles(
     const target = event.target as HTMLElement | null;
     if (
       target &&
-      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'SELECT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
     ) {
       return;
     }
@@ -303,8 +525,9 @@ export async function mountPuzzles(
 
   renderStatus(controls, t('puzzle.loading'));
   renderPendingBoard(detail, t('puzzle.loading'));
-  const puzzleList = await fetchPuzzleListWithAttempts();
+  const puzzleList = await fetchPuzzleListWithAttempts(playerFilter);
   summaries = puzzleList.puzzles;
+  themes = { motifs: puzzleList.themes, tagCounts: puzzleList.tagCounts };
   // Merge the server's record of finished puzzles into the local seen-set
   // before rotating. Timestamp 0 sorts them behind anything seen in this
   // browser, so a cross-device visitor sees unseen material first and their
@@ -312,26 +535,44 @@ export async function mountPuzzles(
   for (const id of puzzleList.attemptedIds) {
     if (!seenPuzzles.has(id)) seenPuzzles.set(id, 0);
   }
-  const targetRatings = new Map<string, number>();
+  // Every Next pushes /puzzles/<id>, so a reload lands on the last puzzle
+  // opened. When that puzzle is already finished, opening it again repeated
+  // it: a visitor who solved a few, reloaded and played on got the solved one
+  // back first. A reload past a finished puzzle starts at the head of the
+  // fresh queue instead. A link opened from anywhere else is not a reload and
+  // still opens the puzzle it names, finished or not.
+  let reloadedPastFinished = false;
+  if (selectedId && isFirstMountReload()) {
+    const fullId = resolveToFullPuzzleId(selectedId, summaries);
+    if (solvedIds.has(fullId) || puzzleList.attemptedIds.includes(fullId)) {
+      selectedId = null;
+      reloadedPastFinished = true;
+    }
+  }
   await Promise.all(
     [...new Set(summaries.map((puzzle) => puzzle.variant))].map(async (variant) => {
       const rating = await fetchUserPuzzleRating(variant);
-      targetRatings.set(variant, rating?.rating ?? 1500);
+      targetRatings.set(variant, rating?.rating ?? PUZZLE_NEW_PLAYER_RATING);
     }),
   );
   // Rotate the queue so both the leading puzzle and the sequence vary between
   // visits instead of being identical every time. Computed once per visit so
   // navigation stays stable while solving; filtering by variant preserves it.
-  summaries = rotatePuzzleOrder(summaries, seenPuzzles, targetRatings);
+  summaries = rotatePuzzleOrder(summaries, seenPuzzles, targetRatings, difficulty);
   // The deep-link path may be a short code; resolve it to the full id before it
   // drives variant selection and queue matching below.
   if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);
   const directSummary = selectedId ? summaries.find((puzzle) => puzzle.id === selectedId) : null;
+  const outOfScopeLink = playerFilter && selectedId && !directSummary;
   // A normal visit defaults to the surfaced variant (Xiangqi); a direct deep
   // link into any puzzle still resolves so shared/bookmarked URLs keep working.
   if (directSummary) variantFilter = directSummary.variant;
   else if (!summaries.some((puzzle) => puzzle.variant === variantFilter) && summaries[0]) {
     variantFilter = summaries[0].variant;
+  }
+  if (directSummary && themeFilter && !puzzleSummaryTags(directSummary).includes(themeFilter)) {
+    themeFilter = null;
+    savePuzzleTheme(null);
   }
   renderControls();
   void refreshUserRating();
@@ -342,14 +583,57 @@ export async function mountPuzzles(
       ? selectedId
       : (queue[0]?.id ?? null);
   if (firstId) {
+    if (reloadedPastFinished || outOfScopeLink) {
+      // Replace, not push: Back should not return to the finished puzzle.
+      window.history.replaceState(null, '', puzzleUrl(firstId));
+    }
     await selectPuzzle(firstId, false);
   } else {
-    renderStatus(detail, t('puzzle.none'));
+    renderEmptyQueue();
   }
 
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', async () => {
+    if (!shell.isConnected) return;
+    const token = ++queueToken;
+    clearAutoNextTimer();
+    ++loadToken;
+    const params = new URLSearchParams(window.location.search);
+    themeFilter = parsePuzzleTheme(params.get('theme'));
+    if (params.has('theme')) savePuzzleTheme(themeFilter);
+    const nextPlayer = params.get('player') || null;
+    if (nextPlayer !== loadedPlayer) {
+      playerFilter = nextPlayer;
+      loadedPlayer = undefined;
+      summaries = [];
+      sessionResults.length = 0;
+      if (session && !isPuzzleComplete(session)) {
+        void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
+          () => {},
+        );
+        trackPuzzleAttempted(session, 'abandoned');
+      }
+      session?.analysis?.dispose();
+      session = null;
+      selectedId = null;
+      renderControls();
+      renderPendingBoard(detail, t('puzzle.loading'));
+      try {
+        const list = await fetchPuzzleListWithAttempts(playerFilter);
+        if (token !== queueToken || !shell.isConnected) return;
+        for (const id of list.attemptedIds) {
+          if (!seenPuzzles.has(id)) seenPuzzles.set(id, 0);
+        }
+        summaries = rotatePuzzleOrder(list.puzzles, seenPuzzles, targetRatings, difficulty);
+        themes = { motifs: list.themes, tagCounts: list.tagCounts };
+        loadedPlayer = playerFilter;
+      } catch {
+        if (token === queueToken) renderStatus(detail, t('puzzle.loadFailed'));
+        return;
+      }
+    }
     const id = puzzleIdFromPath(window.location.pathname) ?? queueSummaries()[0]?.id ?? null;
-    if (id) void selectPuzzle(id, false);
+    if (id) await selectPuzzle(id, false);
+    else await changeQueue(false);
   });
 
   window.addEventListener('pagehide', () => {
@@ -369,8 +653,27 @@ export async function mountPuzzles(
   });
 }
 
-function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
+// `history`: show the source game's moves before the puzzle in the move list
+// (the trainer page and Puzzle Streak). Embeds leave it out: a small frame.
+function createPuzzleSession(
+  puzzle: PuzzleDetail,
+  opts: { history?: boolean; fast?: boolean } = {},
+): PuzzleSession {
+  const adapter = puzzleBoardAdapter(puzzle.variant);
+  // Only behind a setup move the server verified: the history ends one move
+  // before it, and the board replays it from the variant's opening.
+  const history =
+    opts.history && puzzle.setupMove && puzzle.history?.length && adapter.historyStart?.(puzzle)
+      ? puzzle.history
+      : null;
+  // Open one move earlier and glide the opponent's setup move in, lichess
+  // style (#664), only when pieces animate at all and the adapter can rebuild
+  // that position exactly; otherwise `initial` shows at once, as before.
+  const setupIntro =
+    !opts.fast && pieceAnimationDurationMs() > 0 ? (adapter.preSetupState?.(puzzle) ?? null) : null;
   return {
+    setupIntro,
+    ...(history ? { history } : {}),
     qualitySessionId: globalThis.crypto.randomUUID(),
     puzzle,
     state: clonePuzzleState(puzzle.initial),
@@ -396,6 +699,7 @@ function renderPuzzleDetail(
   renderSession: () => void,
   navigation: PuzzleNavigation,
   onSolved: (id: string) => void,
+  opts: PuzzleSolverOptions = {},
 ): void {
   const reopenMenu = phoneMenu.open;
   // Focus inside the open sheet survives the rebuild (a revealed solution
@@ -403,6 +707,14 @@ function renderPuzzleDetail(
   // again (the engine panel), else the row with the same key, else the sheet.
   const sheetFocus = reopenMenu ? phoneMenuFocus() : null;
   resetPhoneMenu();
+  // Focus on the next-puzzle button survives the rebuild too: a solution played
+  // out under Game over re-renders once per move and would drop it to <body>.
+  if (
+    document.activeElement?.closest('[data-puzzle-next="true"]') &&
+    host.contains(document.activeElement)
+  ) {
+    session.focusNext = true;
+  }
   host.replaceChildren();
 
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
@@ -415,6 +727,10 @@ function renderPuzzleDetail(
   // Tag the board with the current puzzle so async reveal playback can detect a
   // navigation away (new puzzle = new id) and stop stepping a stale session.
   board.dataset.puzzleId = session.puzzle.id;
+  // Whether a move made now would be taken: false while a pause holds the
+  // board (the setup glide, the ✓ before a reply, a wrong try's ✗) or the
+  // solver is scrubbed back.
+  board.dataset.puzzleLive = String(isReplayLive(session));
   const side = document.createElement('aside');
   side.className = 'puzzle-side-panel';
 
@@ -424,8 +740,10 @@ function renderPuzzleDetail(
     session,
     displayState,
     renderSession,
-    submitMove: (move) => submitMove(session, move, renderSession, onSolved),
+    submitMove: (move) => submitMove(session, move, renderSession, onSolved, opts),
+    moveMarks: puzzleMoveMarks(session),
   });
+  renderedPuzzleSession = session;
 
   // Board zoom, same grip and same persisted --uni-board-scale as the room,
   // review and analysis boards. Attached per render because renderSession
@@ -438,35 +756,58 @@ function renderPuzzleDetail(
   const trainer = document.createElement('div');
   trainer.className = 'puzzle-trainer-panel';
   trainer.append(
-    moveListPanel(session),
-    feedbackPanel(session, navigation, renderSession, {
-      onHint: () => void requestHint(session, renderSession),
-      onReveal: () => void revealSolution(session, renderSession),
-      onVote: (vote) => {
-        void sendPuzzleQualityEvent(
-          session.puzzle.id,
-          session.qualitySessionId,
-          'vote',
-          vote,
-        ).catch(() => {});
-      },
-    }),
+    moveListPanel(session, (viewPly) => jumpPuzzle(session, renderSession, viewPly)),
+    opts.feedback?.(session) ??
+      feedbackPanel(
+        session,
+        navigation,
+        renderSession,
+        {
+          onHint: () => void requestHint(session, renderSession),
+          onReveal: () => void revealSolution(session, renderSession),
+          onVote: (vote) => {
+            void sendPuzzleQualityEvent(
+              session.puzzle.id,
+              session.qualitySessionId,
+              'vote',
+              vote,
+            ).catch(() => {});
+          },
+        },
+        displayState,
+      ),
   );
   const actions = actionPanel(session, renderSession);
+  const playPosition = isPuzzleComplete(session) ? puzzlePlayPosition(session, displayState) : null;
   const phoneBar = puzzlePhoneMoveNav(
     puzzleScrubBounds(session),
     (action) => scrubPuzzle(session, renderSession, action),
     {
-      // Phone only (the bar is hidden elsewhere). The engine row and the
-      // analysis link are lent in while the sheet is open, read at open time
-      // so they show up once the puzzle is complete; the header and the
-      // settings rows are built for the sheet from the sidebar's props.
-      blocks: () => [session.analysis?.engineEl, session.analysis?.openLinkEl],
-      head: () => (phoneMenu.props ? puzzlePhoneMenuHead(phoneMenu.props) : null),
-      rows: () => (phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : []),
+      // The desktop menu holds secondary actions. On a phone it also lends
+      // the engine controls and settings from the sidebar into the sheet.
+      blocks: () => [
+        ...(window.matchMedia('(max-width: 980px)').matches ? [session.analysis?.engineEl] : []),
+        playPosition,
+      ],
+      head: () =>
+        window.matchMedia('(max-width: 980px)').matches && phoneMenu.props
+          ? puzzlePhoneMenuHead(phoneMenu.props)
+          : null,
+      rows: () =>
+        window.matchMedia('(max-width: 980px)').matches && phoneMenu.props
+          ? puzzlePhoneMenuRows(phoneMenu.props)
+          : [],
       signal: phoneMenu.abort?.signal,
     },
   );
+  const syncMenuAvailability = (): void => {
+    if (!phoneBar.menuButton) return;
+    const empty = !window.matchMedia('(max-width: 980px)').matches && !playPosition;
+    if (empty) phoneBar.closeMenu();
+    phoneBar.menuButton.disabled = empty;
+  };
+  syncMenuAvailability();
+  window.addEventListener('resize', syncMenuAvailability, { signal: phoneMenu.abort?.signal });
   side.append(trainer, actions, phoneBar.el);
 
   // Post-completion engine analysis (adapters with a client engine): once the
@@ -474,11 +815,11 @@ function renderPuzzleDetail(
   // panel + board arrows. Gated to non-spoiler states only — a bare wrong move
   // keeps solving open, so the engine stays hidden until the outcome is locked.
   // The controller persists on the session across renders.
-  if (adapter.createAnalysis && isPuzzleComplete(session)) {
+  if (opts.analysis !== false && adapter.createAnalysis && isPuzzleComplete(session)) {
     if (!session.analysis) session.analysis = adapter.createAnalysis();
     // Engine bar fuses onto the top of the move list (analyse-table shape);
-    // the jump-out link sits below the scrub controls, centered. The column
-    // grows past its fixed two-row shape, so let it scroll instead of clipping.
+    // the analysis target joins the footer vote row. Only the move track
+    // yields height and scrolls; the engine and completion controls stay put.
     // A browser that cannot run the engine hides its row (engine-panel.ts), so
     // the trainer keeps its two-row shape rather than an empty engine track.
     side.classList.add('puzzle-side-panel--analysis');
@@ -486,7 +827,13 @@ function renderPuzzleDetail(
       trainer.classList.add('puzzle-trainer-panel--analysis');
       trainer.prepend(session.analysis.engineEl);
     }
-    side.append(session.analysis.openLinkEl);
+    const open = session.analysis.openLinkEl;
+    open.classList.add('puzzle-analysis-button');
+    open.setAttribute('aria-label', t('puzzle.openInAnalysis'));
+    open.title = t('puzzle.openInAnalysis');
+    open.innerHTML =
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
+    trainer.querySelector('.puzzle-solved-feedback')?.prepend(open);
     session.analysis.refresh(session, displayState, board);
     if (!session.analysis.engineEl.hidden) {
       trainer.querySelector('.puzzle-moves')?.prepend(puzzleEvalChip(session.analysis.engineEl));
@@ -495,11 +842,12 @@ function renderPuzzleDetail(
 
   boardPanel.append(board, side);
   host.append(boardPanel);
+  paintMateSlash(board, session, displayState);
   keepActivePuzzleMoveInView(side);
   // A re-render while the menu is open (a step from the bar's own arrows, a
   // vote) keeps it open on the new bar.
   // Focus stays where it is: only a ☰ press moves it into the sheet.
-  if (reopenMenu) {
+  if (reopenMenu && !phoneBar.menuButton?.disabled) {
     phoneMenu.restoring = true;
     phoneBar.openMenu();
     phoneMenu.restoring = false;
@@ -538,19 +886,24 @@ export type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
 // Move the replay cursor. Shared by the arrow buttons and the keyboard handler
 // so both animate identically. No-op while a submission is in flight or when the
 // cursor is already at the requested end.
+// The cursor runs from firstPuzzleViewPly (the source game's opening, when
+// its history is shown; else `initial`) to the solution's last played ply.
+// Held while the opening glide is pending: the board then shows the position
+// before the setup move whatever the cursor says.
 function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: PuzzleScrub): void {
-  if (session.submitting) return;
+  if (session.submitting || session.setupIntro || session.wrongPreview) return;
+  const firstPly = firstPuzzleViewPly(session);
   const lastPly = session.playedMoves.length;
   switch (action) {
     case 'first':
-      if (session.viewPly <= 0) return;
-      session.viewPly = 0;
+      if (session.viewPly <= firstPly) return;
+      session.viewPly = firstPly;
       renderSession();
       return;
     case 'previous': {
-      if (session.viewPly <= 0) return;
+      if (session.viewPly <= firstPly) return;
       // Reverse-glide the move being undone (replay back-step).
-      const undone = session.playedMoves[session.viewPly - 1];
+      const undone = puzzleMoveIntoView(session, session.viewPly);
       session.viewPly -= 1;
       renderSession();
       if (undone) animatePuzzleMove(session, undone, { reverse: true });
@@ -559,8 +912,8 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
     case 'next': {
       if (session.viewPly >= lastPly) return;
       // Glide the move being stepped into (replay forward step).
-      const stepped = session.playedMoves[session.viewPly];
       session.viewPly += 1;
+      const stepped = puzzleMoveIntoView(session, session.viewPly);
       renderSession();
       if (stepped) animatePuzzleMove(session, stepped);
       return;
@@ -573,10 +926,37 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
   }
 }
 
+// A click on a move in the list: show the position after it. One step glides
+// like the arrows; a longer jump repaints, as ⏮ and ⏭ do.
+function jumpPuzzle(session: PuzzleSession, renderSession: () => void, viewPly: number): void {
+  if (session.submitting || session.setupIntro || session.wrongPreview) return;
+  const target = Math.min(
+    session.playedMoves.length,
+    Math.max(firstPuzzleViewPly(session), viewPly),
+  );
+  if (target === session.viewPly) return;
+  if (target === session.viewPly + 1) scrubPuzzle(session, renderSession, 'next');
+  else if (target === session.viewPly - 1) scrubPuzzle(session, renderSession, 'previous');
+  else {
+    session.viewPly = target;
+    renderSession();
+  }
+}
+
+// The move that leads into the position at `viewPly`: a solution ply, the setup
+// move (0), or a move of the source game's history (< 0; none for its opening).
+function puzzleMoveIntoView(session: PuzzleSession, viewPly: number): PuzzleMove | undefined {
+  if (viewPly > 0) return session.playedMoves[viewPly - 1];
+  if (viewPly === 0) return session.puzzle.initial.lastMove;
+  const history = session.history ?? [];
+  return history[history.length + viewPly];
+}
+
 function puzzleScrubBounds(session: PuzzleSession): { atStart: boolean; atEnd: boolean } {
+  const held = session.submitting || session.setupIntro !== null || !!session.wrongPreview;
   return {
-    atStart: session.viewPly <= 0 || session.submitting,
-    atEnd: session.viewPly >= session.playedMoves.length || session.submitting,
+    atStart: session.viewPly <= firstPuzzleViewPly(session) || held,
+    atEnd: session.viewPly >= session.playedMoves.length || held,
   };
 }
 
@@ -839,10 +1219,6 @@ function showPlayLocked(session: PuzzleSession, renderSession: () => void): void
   renderSession();
 }
 
-// Which host mounted the solver: the /puzzles page or a third-party embed
-// frame. The two never share a document, so a module flag is enough.
-let puzzleAnalyticsMode: PuzzleAttemptMode = 'session';
-
 function trackPuzzleAttempted(session: PuzzleSession, outcome: PuzzleAttemptOutcome): void {
   track(
     'puzzle_attempted',
@@ -851,7 +1227,7 @@ function trackPuzzleAttempted(session: PuzzleSession, outcome: PuzzleAttemptOutc
       variant: session.puzzle.variant,
       themes: (session.puzzle as { themes?: readonly string[] }).themes,
       rated: getPuzzleRatedPref(),
-      mode: puzzleAnalyticsMode,
+      mode: session.mode ?? 'session',
       outcome,
       clean: outcome === 'solved' && !session.failed,
     }),
@@ -863,31 +1239,62 @@ async function submitMove(
   move: PuzzleMove,
   renderSession: () => void,
   onSolved?: (id: string) => void,
+  opts: PuzzleSolverOptions = {},
 ): Promise<void> {
   // Once the answer has been shown (or the puzzle is solved), the board is a
   // locked replay: no further moves are submitted.
-  if (session.revealed || session.solved) return;
+  if (
+    session.locked ||
+    session.submitting ||
+    session.revealed ||
+    session.solved ||
+    session.wrongPreview
+  )
+    return;
+  session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.checkingMove') };
   renderSession();
   const beforeCount = puzzlePieceCount(session.state);
   const playedCountBefore = session.playedMoves.length;
+  const stateBefore = session.state;
   const nextSolverMoves = [...session.solverMoves, move];
-  const submitted = await submitPuzzleAttempt(
+  const submitted = await (opts.submitAttempt ?? submitPuzzleAttempt)(
     session.puzzle.id,
     nextSolverMoves,
     session.qualitySessionId,
-  ).catch(playLockRefusal);
+  ).catch((error: unknown) => {
+    if (session.locked) return null;
+    if (error instanceof PuzzlePlayDisabledError) return PLAY_LOCKED;
+    session.submitting = false;
+    session.feedback = { kind: 'bad', text: t('puzzle.checkFailed') };
+    renderSession();
+    return null;
+  });
+  if (!submitted || session.locked) return;
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { attempt, rating } = submitted;
+  // A mode submitter can send the line on a terminal miss (streak or replay).
+  const { solution } = submitted as { solution?: PuzzleMove[] };
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
+  // A checker failure is retryable, not a missed Storm puzzle. The server
+  // leaves its clock and combo alone in this case too.
+  if (session.mode === 'storm' && !attempt.ok && attempt.code !== 'incorrect-move') {
+    session.feedback = { kind: 'bad', text: t('puzzle.checkFailed') };
+    renderSession();
+    opts.onAttempt?.(attempt);
+    return;
+  }
   if (attempt.ok) {
     session.solverMoves = attempt.solverMoves;
     session.playedMoves = attempt.playedMoves;
     session.state = attempt.state;
     session.viewPly = session.playedMoves.length;
+    // With a scripted reply, hold on the solver's move (its ✓) first; the reply
+    // glides in after REPLY_PAUSE_MS. Input stays blocked until then.
+    if (!opts.fast && session.playedMoves.length - playedCountBefore >= 2) session.viewPly -= 1;
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
@@ -913,9 +1320,24 @@ async function submitMove(
           ? 'capture'
           : 'move',
     );
+  } else if (attempt.code === 'incorrect-move' && solution?.length) {
+    // A terminal miss whose submitter sends the line (Puzzle Streak): the board
+    // stays on this puzzle, keeps the wrong try for the move list and plays
+    // the answer out from the ply that went wrong, like a reveal.
+    session.failed = true;
+    session.wrongMove = { ply: session.playedMoves.length, move: attempt.move };
+    if (!opts.fast) session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
+    showSolutionLine(session, solution, session.playedMoves.length);
+    session.feedback = { kind: 'bad', text: t('puzzle.tryAnotherMove') };
+    playSound('learn-failure');
   } else {
     session.state = attempt.state;
     session.viewPly = session.playedMoves.length;
+    if (attempt.code === 'incorrect-move') {
+      const ply = session.playedMoves.length;
+      session.wrongTries = [...(session.wrongTries ?? []), { ply, move: attempt.move }];
+      if (!opts.fast) session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
+    }
     // Persist the failed state so the escape hatches (hint / view solution /
     // next) survive the piece-select feedback reset on the next render.
     session.failed = true;
@@ -927,15 +1349,27 @@ async function submitMove(
     // it, so it stays the same brief cue everywhere.
     playSound('learn-failure');
   }
-  if (rating) reportAttemptRating(rating);
-  renderSession();
-  // A correct move lands the solver's move AND the engine reply in the same
-  // render; glide ONLY the reply (the user just chose their own move, so it
-  // reads fine landing instantly — the reply is what teleported before).
-  if (attempt.ok && attempt.playedMoves.length - playedCountBefore >= 2) {
-    const reply = attempt.playedMoves.at(-1);
-    if (reply) animatePuzzleMove(session, reply);
+  if (session.mode === 'storm' && !attempt.ok && attempt.code === 'incorrect-move') {
+    session.locked = true;
+    trackPuzzleAttempted(session, 'failed');
   }
+  if (rating) reportAttemptRating(rating);
+  // The solver's own move lands instantly (they just chose it); the scripted
+  // reply waits under the ✓, then glides. A wrong try waits under its ✗, then
+  // glides back; Streak's ending miss then plays the answer out.
+  const reply =
+    attempt.ok && session.viewPly < session.playedMoves.length
+      ? attempt.playedMoves.at(-1)
+      : undefined;
+  session.pendingReplyPly = reply ? session.playedMoves.length - 1 : null;
+  renderSession();
+  if (reply) playPuzzleReply(session, renderSession, reply);
+  if (session.wrongPreview) {
+    takeBackWrongTry(session, renderSession, () => {
+      if (session.wrongMove && session.revealed) playbackSolution(session, renderSession);
+    });
+  }
+  opts.onAttempt?.(attempt);
 }
 
 // Highlight the correct piece to move for the current ply (lichess "get a hint").
@@ -944,7 +1378,10 @@ async function submitMove(
 // server-side, so it never double-counts a prior wrong-move fail). The user may
 // then play the highlighted piece, take the full solution, or move on.
 async function requestHint(session: PuzzleSession, renderSession: () => void): Promise<void> {
-  if (session.submitting || session.revealed || session.solved) return;
+  if (session.locked || session.submitting || session.revealed || session.solved) return;
+  // A wrong try still held under its ✗ is dropped, not glided back.
+  session.wrongPreview = null;
+  session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.fetchingHint') };
   renderSession();
@@ -953,6 +1390,7 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
     session.playedMoves.length,
     session.qualitySessionId,
   ).catch(playLockRefusal);
+  if (session.locked) return;
   if (hinted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { move, rating } = hinted;
   session.submitting = false;
@@ -980,13 +1418,17 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
 // solution"). Spoiler-gated: nothing is fetched until this runs. Books a failed
 // rated attempt on the first terminal action (idempotent server-side).
 async function revealSolution(session: PuzzleSession, renderSession: () => void): Promise<void> {
-  if (session.submitting || session.revealed) return;
+  if (session.locked || session.submitting || session.revealed) return;
+  // A wrong try still held under its ✗ is dropped, not glided back.
+  session.wrongPreview = null;
+  session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.loadingSolution') };
   renderSession();
   const revealed = await fetchPuzzleSolution(session.puzzle.id, session.qualitySessionId).catch(
     playLockRefusal,
   );
+  if (session.locked) return;
   if (revealed === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { solution, rating } = revealed;
   session.submitting = false;
@@ -996,14 +1438,28 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
     return;
   }
   session.failed = true;
-  session.revealed = true;
   trackPuzzleAttempted(session, 'revealed');
-  session.selectedSquare = null;
-  session.selectedDrop = null;
   // Play the answer out from wherever the user got to. Their correct moves are a
   // prefix of the solution, so replaying from that ply matches the board.
-  const startPly = Math.min(session.playedMoves.length, solution.length);
-  session.playedMoves = solution;
+  showSolutionLine(session, solution, session.playedMoves.length);
+  session.feedback = { kind: 'neutral', text: t('puzzle.solution') };
+  if (rating) reportAttemptRating(rating);
+  renderSession();
+  playbackSolution(session, renderSession);
+}
+
+// Lock the board on the full solution line with the replay cursor at
+// `fromPly`, ready for playbackSolution to step it forward.
+function showSolutionLine(
+  session: PuzzleSession,
+  solution: readonly PuzzleMove[],
+  fromPly: number,
+): void {
+  session.revealed = true;
+  session.revealedFromPly = Math.min(fromPly, solution.length);
+  session.selectedSquare = null;
+  session.selectedDrop = null;
+  session.playedMoves = [...solution];
   session.solverMoves = solution.filter((_, index) => index % 2 === 0);
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
   let state = clonePuzzleState(session.puzzle.initial);
@@ -1011,21 +1467,17 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
     state = adapter.applyMove(state, move);
   }
   session.state = state;
-  session.viewPly = startPly;
-  session.feedback = { kind: 'neutral', text: t('puzzle.solution') };
-  if (rating) reportAttemptRating(rating);
-  renderSession();
-  playbackSolution(session, renderSession);
+  session.viewPly = Math.min(fromPly, solution.length);
 }
 
 // Step the replay cursor forward one ply at a time, reusing the scrub-forward
-// animation, until the whole solution has been shown. Stops early if the user
-// navigated to another puzzle (the board's puzzle id no longer matches).
+// animation, until the whole solution has been shown. Stops once this session
+// is no longer the painted one: another puzzle, or the same puzzle opened again,
+// whose fresh session a stale step would paint over (10-31: the new session's
+// reply then bailed as unpainted and its board never went live).
 function playbackSolution(session: PuzzleSession, renderSession: () => void): void {
-  const puzzleId = session.puzzle.id;
   const step = (): void => {
-    const board = document.querySelector<HTMLElement>('.puzzle-board');
-    if (!board || board.dataset.puzzleId !== puzzleId) return;
+    if (session.locked || !isPaintedPuzzleSession(session)) return;
     if (session.viewPly >= session.playedMoves.length) return;
     scrubPuzzle(session, renderSession, 'next');
     window.setTimeout(step, REVEAL_STEP_MS);
@@ -1062,11 +1514,129 @@ function fitPuzzleGrip(column: HTMLElement): void {
     const painted = paintedPuzzleBoard(column);
     const paintedRect = painted.getBoundingClientRect();
     const gutter = column.getBoundingClientRect().width - paintedRect.width;
-    column.style.setProperty('--puzzle-board-inset', `${Math.max(0, Math.round(gutter / 2))}px`);
+    const inset = `${Math.max(0, Math.round(gutter / 2))}px`;
+    // On the detail, not the column: the session row under the board is the
+    // column's sibling and lines its first chip up with the board's left edge
+    // from the same inset. Set on the column it never reached the row, which
+    // started in the gutter left of the board.
     const detail = column.closest<HTMLElement>('.puzzle-detail');
-    if (detail && paintedRect.height > 0) {
-      detail.style.setProperty('--puzzle-board-height', `${Math.round(paintedRect.height)}px`);
+    (detail ?? column).style.setProperty('--puzzle-board-inset', inset);
+    if (paintedRect.height > 0) {
+      detail?.style.setProperty('--puzzle-board-height', `${Math.round(paintedRect.height)}px`);
     }
+  });
+}
+
+// The session the page last painted. A pause (the reply, a wrong try's
+// take-back) checks it before acting, so a timer from a puzzle the solver has
+// left never repaints over what replaced it; painting anything else forgets it.
+let renderedPuzzleSession: PuzzleSession | null = null;
+
+function isPaintedPuzzleSession(session: PuzzleSession): boolean {
+  return renderedPuzzleSession === session;
+}
+
+function forgetPaintedPuzzle(): void {
+  renderedPuzzleSession = null;
+  puzzleFinishBadges?.destroy();
+  puzzleFinishBadges = null;
+}
+
+// Verdict badges for the painted position: ✗ on a wrong try held before its
+// take-back, else ✓ on the move just played when it was the solver's own find.
+// Moves of a shown solution (reveal, Streak's miss) get none: they were shown,
+// not found, as in the move list.
+function puzzleMoveMarks(session: PuzzleSession): PuzzleMoveMark[] {
+  if (session.wrongPreview) return [{ square: session.wrongPreview.move.to, verdict: 'wrong' }];
+  if (session.setupIntro || session.viewPly < 1) return [];
+  const index = session.viewPly - 1;
+  const move = session.playedMoves[index];
+  const revealedFrom = session.revealed ? (session.revealedFromPly ?? null) : null;
+  const shown = revealedFrom !== null && index >= revealedFrom;
+  if (!move || index % 2 !== 0 || shown) return [];
+  return [{ square: move.to, verdict: 'right' }];
+}
+
+function wrongPreviewOf(
+  session: PuzzleSession,
+  before: PuzzleState,
+  move: PuzzleMove,
+): PuzzleSession['wrongPreview'] {
+  try {
+    return { state: puzzleBoardAdapter(session.puzzle.variant).applyMove(before, move), move };
+  } catch {
+    // A move the client cannot replay just reads as not taken.
+    return null;
+  }
+}
+
+function playPuzzleReply(
+  session: PuzzleSession,
+  renderSession: () => void,
+  reply: PuzzleMove,
+): void {
+  const held = session.viewPly;
+  window.setTimeout(() => {
+    session.pendingReplyPly = null;
+    if (session.locked || !isPaintedPuzzleSession(session)) return;
+    // A step through the list in the pause leaves the cursor where it was put.
+    if (session.viewPly !== held) {
+      renderSession();
+      return;
+    }
+    session.viewPly = session.playedMoves.length;
+    renderSession();
+    animatePuzzleMove(session, reply);
+  }, REPLY_PAUSE_MS);
+}
+
+function takeBackWrongTry(
+  session: PuzzleSession,
+  renderSession: () => void,
+  then: () => void,
+): void {
+  const preview = session.wrongPreview;
+  if (!preview) return;
+  window.setTimeout(() => {
+    if (session.wrongPreview !== preview) return;
+    session.wrongPreview = null;
+    if (session.locked || !isPaintedPuzzleSession(session)) return;
+    renderSession();
+    animatePuzzleMove(session, preview.move, { reverse: true });
+    then();
+  }, WRONG_HOLD_MS);
+}
+
+// The mated general's slash, the one the game rooms draw (live-finish-badges.ts),
+// on a puzzle that ends in mate. The layer sits over the painted board and is
+// rebuilt on every render, so the slash starts once and keeps its phase from
+// `mateSlashAt`; leaving the mate clears it and stepping back replays it.
+let puzzleFinishBadges: LiveFinishBadges | null = null;
+
+function paintMateSlash(column: HTMLElement, session: PuzzleSession, shown: PuzzleState): void {
+  puzzleFinishBadges?.destroy();
+  puzzleFinishBadges = null;
+  const status = shown.status as { type: string; winner?: string | null; reason?: string };
+  const atEnd = isReplayLive(session) && status.type === 'finished';
+  if (!atEnd || status.reason !== 'checkmate' || !status.winner) {
+    session.mateSlashAt = null;
+    return;
+  }
+  const board = shown.board as Record<string, { color: string; role?: string } | undefined>;
+  const colors = [
+    ...new Set(Object.values(board).flatMap((piece) => (piece ? [piece.color] : []))),
+  ];
+  const badges = finishBadgesForResult({
+    colors,
+    winner: status.winner,
+    reason: 'checkmate',
+    generalSquare: (color) => generalSquareOn(board, color),
+  });
+  if (badges.length === 0) return;
+  session.mateSlashAt ??= Date.now();
+  puzzleFinishBadges = createLiveFinishBadges(column, paintedPuzzleBoard(column));
+  puzzleFinishBadges.play(session.puzzle.id, badges, {
+    delayMs: MATE_SLASH_DELAY_MS - (Date.now() - session.mateSlashAt),
   });
 }
 
@@ -1087,6 +1657,32 @@ function installPuzzleGripFit(): void {
 // final position. Drop moves have no origin square and stay discrete. Moves
 // come from the server attempt payload or the local playedMoves history,
 // never from diffing board states.
+// The opening glide (#664): the first render painted the pre-setup position;
+// after a short pause, hand over to `initial` and glide the opponent's setup
+// move into it, the same glide a scripted reply gets. Input stays blocked until
+// then (isReplayLive). A hint or reveal in the pause clears setupIntro, which
+// cancels this; so does leaving the puzzle (isCurrent).
+function playSetupIntro(
+  session: PuzzleSession,
+  renderSession: () => void,
+  isCurrent: () => boolean,
+): void {
+  const intro = session.setupIntro;
+  const setup = session.puzzle.initial.lastMove;
+  if (!intro || !setup) {
+    session.setupIntro = null;
+    return;
+  }
+  window.setTimeout(() => {
+    if (session.setupIntro !== intro || !isCurrent()) return;
+    session.setupIntro = null;
+    renderSession();
+    animatePuzzleMove(session, setup);
+    // The setup move sounds like any other move: a capture if it took a piece.
+    playSound(puzzlePieceCount(session.state) < puzzlePieceCount(intro) ? 'capture' : 'move');
+  }, SETUP_INTRO_PAUSE_MS);
+}
+
 function animatePuzzleMove(
   session: PuzzleSession,
   move: PuzzleMove,
@@ -1106,6 +1702,7 @@ function puzzlePieceCount(state: PuzzleState): number {
 
 function renderStatus(host: HTMLElement, message: string): void {
   resetPhoneMenu();
+  forgetPaintedPuzzle();
   const status = document.createElement('p');
   status.className = 'puzzles-status';
   status.textContent = message;
@@ -1117,6 +1714,27 @@ function filterPuzzlesByVariant(
   variant: PuzzleVariantFilter,
 ): PuzzleSummary[] {
   return puzzles.filter((puzzle) => puzzle.variant === variant);
+}
+
+// True once per document, for the first mount of a page the visitor reloaded.
+// Later mounts in the same document (none today) are not reloads.
+let firstMountChecked = false;
+function isFirstMountReload(): boolean {
+  if (firstMountChecked) return false;
+  firstMountChecked = true;
+  try {
+    const entry = performance.getEntriesByType?.('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    return entry?.type === 'reload';
+  } catch {
+    return false;
+  }
+}
+
+/** Test hook: let the next mount read the navigation type again. */
+export function resetPuzzleReloadCheckForTest(): void {
+  firstMountChecked = false;
 }
 
 function navigationFor(
@@ -1153,8 +1771,20 @@ function navigationFor(
 // The replay-aware state to display: the live state when the cursor sits at the
 // tip, else the initial state with the first viewPly moves re-applied.
 function puzzleReplayState(session: PuzzleSession): PuzzleState {
+  if (session.wrongPreview) return session.wrongPreview.state;
+  if (session.setupIntro) return session.setupIntro;
   if (session.viewPly >= session.playedMoves.length) return session.state;
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
+  const history = session.history ?? [];
+  const start = session.viewPly < 0 ? adapter.historyStart?.(session.puzzle) : null;
+  if (start) {
+    // The source game: its opening with its first (H + 1 + viewPly) moves.
+    let state = start;
+    for (const move of history.slice(0, Math.max(0, history.length + 1 + session.viewPly))) {
+      state = adapter.applyMove(state, move);
+    }
+    return state;
+  }
   let state: PuzzleState = clonePuzzleState(session.puzzle.initial);
   const visibleMoves = session.playedMoves.slice(0, Math.max(0, session.viewPly));
   for (const move of visibleMoves) {
@@ -1222,6 +1852,7 @@ function buildPuzzlesFrame(): {
 // only surfaced trainer, and a deep link to another variant settles once.
 function renderPendingBoard(host: HTMLElement, message: string | null): void {
   resetPhoneMenu();
+  forgetPaintedPuzzle();
   const panel = document.createElement('div');
   panel.className = 'puzzle-board-panel puzzle-board-panel--pending';
   const board = document.createElement('div');
@@ -1327,31 +1958,92 @@ const ICON_NEXT =
 
 /**
  * One puzzle as a standalone solver: the board and the trainer panel (feedback,
- * hint, reveal, replay arrows) and nothing else. No queue, no nav, no auto-next.
+ * hint, reveal, replay arrows). Callers can supply queue navigation and opt
+ * into visit tracking for training modes.
  * It is what /embed/puzzle mounts inside someone else's page, and it is the
  * same code path the trainer uses, so a fix to solving lands in both.
  *
  * Attempts are always UNRATED here: a frame on a third party's site must never
  * move the viewer's rating, and the embed never asks who the viewer is.
  */
+export type PuzzleSolverOptions = {
+  onSolved?: (id: string) => void;
+  mode?: PuzzleAttemptMode;
+  recordVisit?: boolean;
+  navigation?: PuzzleNavigation;
+  // Storm defaults to immediate setup/replies/take-backs; other solvers keep
+  // their existing pauses unless explicitly opted into fast play.
+  fast?: boolean;
+  // Storm response.progress: an accepted partial line, including scripted
+  // replies. Restoring it sends no request, callbacks, or analytics.
+  initialAttempt?: Extract<PuzzleAttempt, { ok: true }> | null;
+  analysis?: boolean;
+  feedback?: (session: PuzzleSession) => HTMLElement;
+  // A replacement attempt submitter. One that also returns `solution` on a
+  // terminal wrong move gets the line played out on the locked board.
+  submitAttempt?: (
+    id: string,
+    moves: readonly PuzzleMove[],
+    qualitySessionId?: string,
+  ) => Promise<Awaited<ReturnType<typeof submitPuzzleAttempt>> & { solution?: PuzzleMove[] }>;
+  onAttempt?: (attempt: PuzzleAttempt) => void;
+  // Runs after each render of the board panel (streak adds its run chips).
+  afterRender?: (host: HTMLElement, session: PuzzleSession) => void;
+};
+
+export type PuzzleSolverHandle = {
+  dispose(): void;
+  // Lock the board (no more moves) and re-render, e.g. when a run ends
+  // without a move on the board.
+  end(): void;
+};
+
 export function mountPuzzleSolver(
   host: HTMLElement,
   puzzle: PuzzleDetail,
-  opts: { onSolved?: (id: string) => void } = {},
-): { dispose(): void } {
+  opts: PuzzleSolverOptions = {},
+): PuzzleSolverHandle {
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   setBoardFamily('xiangqi');
   setPuzzleRatedPref(false);
-  puzzleAnalyticsMode = 'embed';
+  opts = {
+    ...opts,
+    fast: opts.fast ?? opts.mode === 'storm',
+    analysis: opts.analysis ?? opts.mode !== 'storm',
+  };
+  if (opts.mode === 'streak' || opts.mode === 'storm' || opts.recordVisit) {
+    resetPhoneMenu();
+    phoneMenu.props = null;
+  }
   restoreBoardScale();
   installPuzzleGripFit();
-  const session = createPuzzleSession(puzzle);
-  // An empty queue: the feedback panel then offers no previous/next.
-  const navigation = navigationFor([], null, async () => {});
+  const session = createPuzzleSession(puzzle, {
+    history: opts.mode === 'streak' || opts.recordVisit,
+    fast: opts.fast,
+  });
+  session.mode = opts.mode ?? 'embed';
+  if (opts.initialAttempt) {
+    const progress = opts.initialAttempt;
+    session.setupIntro = null;
+    session.state = clonePuzzleState(progress.state);
+    session.solverMoves = [...progress.solverMoves];
+    session.playedMoves = [...progress.playedMoves];
+    session.viewPly = progress.playedMoves.length;
+    session.solved = progress.complete;
+  }
+  if (opts.mode === 'streak' || opts.recordVisit) {
+    void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
+  }
+  // Without a caller's queue, the feedback panel offers no previous/next.
+  const navigation = opts.navigation ?? navigationFor([], null, async () => {});
+  let disposed = false;
   const renderSession = (): void => {
-    renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id));
+    if (disposed) return;
+    renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id), opts);
+    opts.afterRender?.(host, session);
   };
   renderSession();
+  playSetupIntro(session, renderSession, () => !disposed && host.isConnected);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!host.isConnected) {
@@ -1377,8 +2069,236 @@ export function mountPuzzleSolver(
 
   return {
     dispose: () => {
+      disposed = true;
+      session.locked = true;
+      if (isPaintedPuzzleSession(session)) forgetPaintedPuzzle();
       session.analysis?.dispose();
       window.removeEventListener('keydown', onKeyDown);
     },
+    end: () => {
+      if (disposed) return;
+      session.locked = true;
+      session.submitting = false;
+      session.revealed = true;
+      session.setupIntro = null;
+      session.wrongPreview = null;
+      session.pendingReplyPly = null;
+      session.selectedSquare = null;
+      session.selectedDrop = null;
+      renderSession();
+    },
   };
+}
+
+// This small mode keeps its two new messages together in all supported locales;
+// the rest of its chrome uses the trainer and Dashboard catalogs.
+async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFrame>): Promise<void> {
+  const { shell, detail, controls } = frame;
+  const requested = new URLSearchParams(window.location.search).get('days') ?? '30';
+  const days = ['1', '2', '3', '7', '10', '14', '21', '30', '60', '90'].includes(requested)
+    ? requested
+    : '30';
+  const copy = {
+    en: {
+      progress: (n: number, total: number) => `Replay: ${n} of ${total}`,
+      done: 'All done',
+      title: 'Replay failed puzzles',
+    },
+    'zh-Hans': {
+      progress: (n: number, total: number) => `错题重练：${n} / ${total}`,
+      done: '全部完成',
+      title: '错题重练',
+    },
+    'zh-Hant': {
+      progress: (n: number, total: number) => `錯題重練：${n} / ${total}`,
+      done: '全部完成',
+      title: '錯題重練',
+    },
+  }[currentLocale()];
+  const dashboard = (): HTMLAnchorElement => {
+    const link = document.createElement('a');
+    link.href = `/puzzles/dashboard?days=${days}`;
+    link.textContent = t('puzzle.dashboardTitle');
+    return link;
+  };
+  // The left column, as on Lichess: the way back to the Dashboard, then the
+  // run's title and how far through it the player is.
+  const card = document.createElement('section');
+  card.className = 'puzzle-left-card puzzle-replay-side';
+  const back = dashboard();
+  back.className = 'puzzle-replay-side__back';
+  back.textContent = `‹ ${t('puzzle.dashboardTitle')}`;
+  const heading = document.createElement('h2');
+  heading.className = 'puzzle-replay-side__title';
+  heading.textContent = copy.title;
+  const bar = document.createElement('div');
+  bar.className = 'puzzle-replay-side__bar';
+  const fill = document.createElement('span');
+  bar.append(fill);
+  const count = document.createElement('p');
+  count.className = 'puzzle-replay-side__count';
+  card.append(back, heading, bar, count);
+  card.hidden = true;
+  controls.replaceChildren(card);
+  /** Puzzles finished so far out of the run; the bar fills as each one is left behind. */
+  const showProgress = (done: number, total: number): void => {
+    card.hidden = total === 0;
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(total));
+    bar.setAttribute('aria-valuenow', String(done));
+    bar.setAttribute('aria-label', copy.title);
+    fill.style.width = `${total ? (100 * done) / total : 0}%`;
+    count.textContent = `${done} / ${total}`;
+  };
+  setOnAttemptRating(null);
+  let failures: { puzzleId: string; failedAt: string }[] = [];
+  let index = 0;
+  let solver: PuzzleSolverHandle | null = null;
+  let timer: number | null = null;
+  let busy = false;
+
+  const stopSolver = (): void => {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = null;
+    solver?.dispose();
+    solver = null;
+  };
+  const message = (text: string, link: HTMLAnchorElement): void => {
+    stopSolver();
+    resetPhoneMenu();
+    const panel = document.createElement('section');
+    panel.className = 'puzzle-left-card puzzle-replay-summary';
+    const title = document.createElement('h1');
+    title.textContent = text;
+    panel.append(title, link);
+    shell.replaceChildren(panel);
+  };
+  const signIn = (): void => {
+    const link = document.createElement('a');
+    link.href = loginHrefForCurrentPage();
+    link.textContent = t('nav.signIn');
+    message(t('nav.puzzles'), link);
+  };
+  const retry = (action: () => Promise<void>): void => {
+    renderStatus(detail, t('stats.unavailableBody'));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = t('puzzle.statusTryAgain');
+    button.addEventListener('click', () => void action());
+    detail.querySelector('.puzzles-status')!.append(' ', button);
+  };
+  const advance = (): void => {
+    if (busy) return;
+    index++;
+    void showPuzzle();
+  };
+  const showPuzzle = async (): Promise<void> => {
+    busy = true;
+    stopSolver();
+    renderPendingBoard(detail, t('puzzle.loading'));
+    try {
+      let puzzle: PuzzleDetail | null = null;
+      // A puzzle removed since the queue loaded can no longer be replayed.
+      while (index < failures.length && !puzzle) {
+        puzzle = await fetchPuzzleDetail(failures[index]!.puzzleId);
+        if (!puzzle) index++;
+      }
+      if (!puzzle) {
+        showProgress(failures.length, failures.length);
+        message(copy.done, dashboard());
+        return;
+      }
+      const current = index;
+      showProgress(current, failures.length);
+      const navigation: PuzzleNavigation = {
+        index: current,
+        total: failures.length,
+        hasPrevious: false,
+        hasNext: true,
+        goPrevious: () => {},
+        goNext: advance,
+      };
+      solver = mountPuzzleSolver(detail, puzzle, {
+        mode: 'session',
+        recordVisit: true,
+        analysis: false,
+        navigation,
+        submitAttempt: async (id, moves, sessionId) => {
+          const result = await submitPuzzleAttempt(id, moves, sessionId);
+          if (!result.attempt.ok && result.attempt.code === 'incorrect-move') {
+            const revealed = await fetchPuzzleSolution(id, sessionId);
+            return { ...result, ...(revealed.solution ? { solution: revealed.solution } : {}) };
+          }
+          return result;
+        },
+        afterRender: (host, session) => {
+          const progress = host.querySelector('.puzzle-feedback-title, .puzzle-solved-panel h2');
+          if (progress) {
+            progress.classList.add('puzzle-replay-progress');
+            progress.textContent = copy.progress(current + 1, failures.length);
+            progress.setAttribute('aria-live', 'polite');
+          }
+          // The full answer stays on the board before moving on. No retry of
+          // the failed puzzle can accidentally repair it in this visit.
+          if (
+            (session.solved || session.revealed) &&
+            !session.wrongPreview &&
+            session.viewPly === session.playedMoves.length &&
+            timer === null
+          ) {
+            timer = window.setTimeout(
+              () => {
+                timer = null;
+                if (
+                  index === current &&
+                  shell.isConnected &&
+                  isPaintedPuzzleSession(session) &&
+                  !session.wrongPreview &&
+                  session.viewPly === session.playedMoves.length
+                )
+                  advance();
+              },
+              session.solved ? AUTO_NEXT_DELAY_MS : REVEAL_STEP_MS * 2,
+            );
+          }
+        },
+      });
+    } catch {
+      retry(showPuzzle);
+    } finally {
+      busy = false;
+    }
+  };
+  const load = async (): Promise<void> => {
+    renderPendingBoard(detail, t('puzzle.loading'));
+    try {
+      const response = await fetch(`/api/puzzles/failed?days=${days}`, {
+        credentials: 'same-origin',
+      });
+      if (response.status === 401) {
+        signIn();
+        return;
+      }
+      if (!response.ok) throw new Error('Replay unavailable');
+      const result = (await response.json()) as { failures: typeof failures };
+      failures = result.failures.sort(
+        (a, b) =>
+          Date.parse(a.failedAt) - Date.parse(b.failedAt) || a.puzzleId.localeCompare(b.puzzleId),
+      );
+      await showPuzzle();
+    } catch {
+      retry(load);
+    }
+  };
+  await load();
+}
+
+/** Scroll a one-row chip strip so its current chip is visible, without moving the page. */
+export function scrollChipIntoRow(row: HTMLElement): void {
+  const current = row.querySelector<HTMLElement>('[aria-current]');
+  if (!current) return;
+  const overflow = current.offsetLeft + current.offsetWidth - row.clientWidth;
+  if (overflow > row.scrollLeft) row.scrollLeft = overflow;
+  else if (current.offsetLeft < row.scrollLeft) row.scrollLeft = current.offsetLeft;
 }

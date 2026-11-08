@@ -30,12 +30,21 @@ import {
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
-import { postGameActions, renderGameResult, resultScore } from '../postgame-panel.js';
+import {
+  clearPostGameSheet,
+  renderGameResult,
+  renderPostGameActions,
+  resultScore,
+} from '../postgame-panel.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
+import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
+import { postWithBrowserIdentity } from '../room-create-retry.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
+import { seatInkFamily } from '../variant-seat-label.js';
 import { variantMiniIdForRawVariant } from '../variants.js';
 import { formatClock, formatDayClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
@@ -53,7 +62,16 @@ export type TenantWebView<C extends string> = {
   moveNumber: number;
 };
 
-import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
+import {
+  clockRemainingMs,
+  createClockDisplayTime,
+  isClockReconnecting,
+  type TenantWebClock,
+} from './clock-projection.js';
+
+// Server seat gate (apps/server variant-tenant/seat-session.ts): an account
+// excluded from stats takes no seat in a rated room, and signing in will not help.
+const RATED_COUNTED_REASON = 'rated requires counted account';
 
 export type { TenantWebClock } from './clock-projection.js';
 
@@ -110,6 +128,10 @@ export type WebVariantTenant<C extends string> = {
   reasonPhrase(reason: string): TenantReasonKey;
   // The rejected-room body. Default: 'live.roomNotActive' with the variant name.
   rejectedBody?: I18nKey;
+  // A body per WebSocket close reason, ahead of rejectedBody, for a tenant the
+  // server gates by account: its 'game spec disabled' refusal is "not for this
+  // account", while 'room unavailable' still means no such room.
+  rejectedBodyByReason?: Readonly<Record<string, I18nKey>>;
   // The body for a visitor refused a seat at a live game whose class shows
   // spectators nothing until it ends (close reason LIVE_GAME_NO_SEAT_REASON).
   // Default: 'live.roomLiveGameSeatedOnly', which promises the full game at the
@@ -124,8 +146,8 @@ export type WebVariantTenant<C extends string> = {
   // ink ("Red"/"Black") once flipped, else the move order ("First"/"Second"). The tenant
   // reads its own live view for this; the chrome passes only the seat.
   seatLabel?(seat: C): TenantSeatKey;
-  // Optional companion to seatLabel: the INK a seat renders as, for the meta card's
-  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi)
+  // Optional companion to seatLabel: the INK a seat renders as, for the meta card
+  // and live clock name discs. Omit when the seat name IS the color (chess/xiangqi/jieqi)
   // and the chrome passes the seat straight through. Flip variants MUST implement it:
   // their seats are move-order slots and the ink binds on the opening flip, so a raw
   // seat paints the wrong disc for every game whose first flip turns up the opposite
@@ -154,6 +176,10 @@ export type WebVariantTenant<C extends string> = {
   // pending, so a two-action turn's second half reads in the same spot as the
   // first, with no extra element and nothing shifting.
   turnChipLabel?(seat: C): I18nKey | null;
+  // Optional: short facts about a seat shown after its name on the player row
+  // (already localized). Mahjong puts the dealer and the running points here on
+  // a phone, where its table has no room for them.
+  seatTags?(seat: C): readonly string[];
 };
 
 /** A recorded clock at one ply of a finished match (the review page). */
@@ -188,6 +214,7 @@ export type TenantChromeContext<C extends string> = {
   // sentence; everything else falls back to the tenant's rejectedBody line.
   closeReason(): string;
   clock(): TenantWebClock<C> | null | undefined;
+  paused?(): boolean;
   timeControl():
     | { initialMs: number; incrementMs: number; daysPerMove?: number }
     | null
@@ -211,6 +238,9 @@ export type TenantChromeContext<C extends string> = {
   // The viewer's bottom-of-board color (seat when seated, else perspective).
   orientation(): C;
   playAgainRequestBody(): Record<string, unknown>;
+  // The bot this room was played against (snapshot `pveEngineId`), or null.
+  // Optional so a test ctx may omit it.
+  pveEngineId?(): string | null;
   // Post-game rematch block for a seated player, or null to fall back to
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
@@ -280,9 +310,15 @@ export function createTenantRoomChrome<C extends string>(
   let sendSocket: (payload: unknown) => boolean = () => false;
   let reconnectNow: () => void = () => {};
   let playAgainStatus: 'idle' | 'creating' | 'failed' = 'idle';
+  // The rematch room this page already made (#825). Once it exists the button
+  // is "Rematch" again and goes there: Back from the new game restored this
+  // page from the back/forward cache stuck on a disabled "Creating", and a
+  // second click must not open a second room.
+  let playAgainUrl: string | null = null;
   // Previous active clock color across full clock renders, used to flash the
   // seated player's clock on the turn flip (mirrors the chess clock).
   let lastActiveClockColor: C | null = null;
+  let clockDisplayTime = createClockDisplayTime();
   // The in-place question the player opened on the action row, and the
   // control to focus after the next rebuild of that row.
   let pendingConfirm: ConfirmAction | null = null;
@@ -334,7 +370,9 @@ export function createTenantRoomChrome<C extends string>(
 
   function resetState(): void {
     playAgainStatus = 'idle';
+    playAgainUrl = null;
     lastActiveClockColor = null;
+    clockDisplayTime = createClockDisplayTime();
     pendingConfirm = null;
     focusNext = null;
   }
@@ -374,14 +412,35 @@ export function createTenantRoomChrome<C extends string>(
     return color === ctx.seat() ? 'bottom' : 'top';
   }
 
+  function appendSeatTags(playerLine: HTMLElement, color: C): void {
+    for (const tag of tenant.seatTags?.(color) ?? []) {
+      const el = document.createElement('span');
+      el.className = 'clock-seat-tag';
+      el.textContent = tag;
+      playerLine.append(el);
+    }
+  }
+
+  function appendSeatDisc(playerLine: HTMLElement, color: C): void {
+    if (!variantSeatsHaveInk(ctx.gameSpecId)) return;
+    const family = seatInkFamily(ctx.gameSpecId);
+    if (family) playerLine.dataset.seatInkFamily = family;
+    // A defined hook returning null means unbound, never the raw seat's ink.
+    playerLine.append(
+      seatDiscEl(tenant.seatInk ? tenant.seatInk(color) : color, 'clock-seat-disc'),
+    );
+  }
+
   function renderClocks(): void {
     if (!refs) return;
     refs.clockTop.replaceChildren();
     refs.clockBottom.replaceChildren();
     refs.playerTop.replaceChildren();
     refs.playerBottom.replaceChildren();
-    refs.clockNote.hidden = true;
-    refs.clockNote.textContent = '';
+    const reconnecting = !ctx.recording?.() && isClockReconnecting(ctx.connectionState());
+    const liveAt = clockDisplayTime(ctx.connectionState());
+    refs.clockNote.hidden = !reconnecting;
+    refs.clockNote.textContent = reconnecting ? `${t('live.statusReconnecting')}…` : '';
 
     const timeControl = ctx.timeControl();
     const recording = ctx.recording?.() ?? null;
@@ -437,6 +496,7 @@ export function createTenantRoomChrome<C extends string>(
         // "Black", dot-less, until the clock armed and the same row became "You"
         // with a dot, mid-game.
         playerLine.append(...presence(color));
+        if (!recording) appendSeatDisc(playerLine, color);
         // The seat label is a placeholder for an unnamed seat, so only a
         // server-supplied name carries the seat's profile link.
         playerLine.append(
@@ -446,6 +506,7 @@ export function createTenantRoomChrome<C extends string>(
             'clock-name',
           ),
         );
+        appendSeatTags(playerLine, color);
         if (isTurn) {
           const toMove = document.createElement('span');
           toMove.className = 'clock-to-move';
@@ -470,13 +531,11 @@ export function createTenantRoomChrome<C extends string>(
       // No pregame "clock starts after the opening moves" note (Brian,
       // 2026-10-02): the header already names the time control, and the
       // unarmed clocks say the rest.
-      refs.clockNote.textContent = '';
-      refs.clockNote.hidden = true;
       lastActiveClockColor = null;
       return;
     }
 
-    const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
+    const displayAt = ctx.isReplayLive() ? liveAt : (clock.runningSince ?? liveAt);
     const playing = recording ? !ended : view?.status.type === 'playing';
     const activeColor = playing ? clock.activeColor : null;
     const humanColor = seatColor();
@@ -500,6 +559,7 @@ export function createTenantRoomChrome<C extends string>(
       const playerLine = document.createElement('span');
       playerLine.className = isActive ? 'clock-player-line active' : 'clock-player-line';
       playerLine.append(...presence(color));
+      if (!recording) appendSeatDisc(playerLine, color);
       // playerName falls back to 'You' / the seat label when the server has no
       // name for the seat; those name nobody, so they stay plain text.
       playerLine.append(
@@ -509,6 +569,7 @@ export function createTenantRoomChrome<C extends string>(
           'clock-name',
         ),
       );
+      appendSeatTags(playerLine, color);
       const toMove = document.createElement('span');
       toMove.className = 'clock-to-move';
       const chipLabel = tenant.turnChipLabel?.(color) ?? null;
@@ -549,8 +610,10 @@ export function createTenantRoomChrome<C extends string>(
       renderClocks();
       return;
     }
-    const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
-    const seatedColor = ctx.isReplayLive() ? seatColor() : null;
+    const liveAt = clockDisplayTime(ctx.connectionState());
+    const displayAt = ctx.isReplayLive() ? liveAt : (clock.runningSince ?? liveAt);
+    const seatedColor =
+      ctx.connectionState() === 'connected' && ctx.isReplayLive() ? seatColor() : null;
     const rows = [...Array.from(refs.clockTop.children), ...Array.from(refs.clockBottom.children)];
     for (const row of rows as HTMLDivElement[]) {
       const color = row.dataset.color;
@@ -654,7 +717,9 @@ export function createTenantRoomChrome<C extends string>(
       // itself is what says the room is rated.
       headline: [
         tcLabel,
-        ctx.rated?.() || ctx.closeReason() === 'rated requires account'
+        ctx.rated?.() ||
+        ctx.closeReason() === 'rated requires account' ||
+        ctx.closeReason() === RATED_COUNTED_REASON
           ? t('live.modeRated')
           : t('live.modeCasual'),
       ],
@@ -740,12 +805,15 @@ export function createTenantRoomChrome<C extends string>(
 
   function renderRoomActions(): void {
     if (!refs) return;
-    refs.roomActions.replaceChildren();
     const row = document.createElement('div');
     row.className = 'room-actions-row';
     const view = ctx.view();
     // A recording is the review itself: nothing to rematch, nobody to invite.
-    if (ctx.recording?.()) return;
+    if (ctx.recording?.()) {
+      clearPostGameSheet(refs.roomActions);
+      refs.roomActions.replaceChildren();
+      return;
+    }
 
     if (view?.status.type === 'finished') {
       // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
@@ -763,17 +831,17 @@ export function createTenantRoomChrome<C extends string>(
           : mode === 'pve'
             ? playAgainButton()
             : null;
-      refs.roomActions.append(
-        postGameActions({
-          variant: tenantSpecId(),
-          mode,
-          seated,
-          rematch,
-          reviewHref: tenant.reviewUrl(ctx.room()),
-        }),
-      );
+      renderPostGameActions(refs.roomActions, {
+        variant: tenantSpecId(),
+        mode,
+        seated,
+        rematch,
+        reviewHref: tenant.reviewUrl(ctx.room()),
+      });
       return;
     }
+    clearPostGameSheet(refs.roomActions);
+    refs.roomActions.replaceChildren();
     // Aborted games offer NO play-again: an instant new room after an abort
     // creates a fresh solo room where the mover can play before the opponent
     // joins. No Home button either (lichess parity): the site nav is the way
@@ -845,24 +913,34 @@ export function createTenantRoomChrome<C extends string>(
   // flip variants they are move order, so this alternates who opens. A table
   // of four (mahjong) keeps the tenant's own body.
   function playAgainBody(): Record<string, unknown> {
-    const body = ctx.playAgainRequestBody();
+    const body = withRoomBot(ctx.playAgainRequestBody(), ctx.pveEngineId?.() ?? null);
     const seat = seatColor();
     if (seat === null || tenant.colors.length !== 2) return body;
     return { ...body, preferredColor: tenant.oppositeColor(seat) };
   }
 
   async function createPlayAgainRoom(): Promise<void> {
+    if (playAgainStatus === 'creating') return;
+    if (playAgainUrl) {
+      window.location.assign(playAgainUrl);
+      return;
+    }
     playAgainStatus = 'creating';
     renderRoomActions();
     try {
-      const response = await fetch('/api/rooms', {
+      const body = playAgainBody();
+      const response = await postWithBrowserIdentity('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(playAgainBody()),
+        body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error(`play-again failed: ${response.status}`);
       const data = (await response.json()) as { url?: string };
       if (!data.url) throw new Error('play-again did not return a URL');
+      rememberBotRoomRequest(body);
+      playAgainUrl = data.url;
+      playAgainStatus = 'idle';
+      renderRoomActions();
       window.location.assign(data.url);
     } catch (err) {
       console.warn(err);
@@ -985,7 +1063,8 @@ export function createTenantRoomChrome<C extends string>(
   function actionTitle(view: TenantWebView<C> | null): string {
     if (ctx.connectionState() === 'rejected') {
       const gated = accountGatedRejection();
-      if (gated === 'rated') return t('live.titleRatedGame');
+      if (gated === 'rated' || ctx.closeReason() === RATED_COUNTED_REASON)
+        return t('live.titleRatedGame');
       if (gated === 'correspondence') return t('correspondence.heading');
       if (liveGameRejection()) return t('live.titleGameInProgress');
       return ctx.closeReason() === 'play disabled'
@@ -1012,11 +1091,15 @@ export function createTenantRoomChrome<C extends string>(
       const gated = accountGatedRejection();
       if (gated === 'rated') return t('live.rejectedRatedAccount');
       if (gated === 'correspondence') return t('live.rejectedCorrespondenceAccount');
+      // A stats-excluded account: signing in will not help, so no CTA.
+      if (ctx.closeReason() === RATED_COUNTED_REASON) return t('live.rejectedRatedCountedAccount');
       if (liveGameRejection())
         return t(tenant.liveGameRejectedBody ?? 'live.roomLiveGameSeatedOnly');
-      return ctx.closeReason() === 'play disabled'
-        ? t('live.roomPlayDisabled')
-        : t(tenant.rejectedBody ?? 'live.roomNotActive', { variant: variantName() });
+      if (ctx.closeReason() === 'play disabled') return t('live.roomPlayDisabled');
+      const byReason = tenant.rejectedBodyByReason?.[ctx.closeReason()];
+      return t(byReason ?? tenant.rejectedBody ?? 'live.roomNotActive', {
+        variant: variantName(),
+      });
     }
     if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
     if (!view) return t('live.roomOpeningSocket');
@@ -1342,6 +1425,15 @@ export function createTenantRoomChrome<C extends string>(
   function renderBoardStatus(): void {
     if (!refs) return;
     const view = ctx.view();
+    const paused = ctx.paused?.() === true && view?.status.type === 'playing';
+    refs.board.inert = paused;
+    refs.boardPaused.hidden = !paused;
+    if (paused) {
+      const title = refs.boardPaused.querySelector<HTMLElement>('[data-board-paused-title]');
+      const body = refs.boardPaused.querySelector<HTMLElement>('[data-board-paused-body]');
+      if (title) title.textContent = t('live.pausedTitle');
+      if (body) body.textContent = t('live.pausedBody');
+    }
     refs.boardStatus.hidden = view !== null;
     if (view !== null) return;
     const state = ctx.connectionState();
@@ -1401,4 +1493,18 @@ const SEAT_WORD_KEYS: Readonly<Record<string, I18nKey>> = {
  *  shown as a variant (mahjong): no icon box, never a stand-in glyph. */
 export function roomMarkerId(gameSpecId: string | undefined): VariantMiniId | undefined {
   return (gameSpecId && variantMiniIdForRawVariant(gameSpecId)) || undefined;
+}
+
+/** A bot rematch plays the same bot. Four tenants (Duck Xiangqi, Flip Jungle,
+ *  both mahjongs) sent a body with no bot, so the server picked its default
+ *  and the home panel's Play again record, which needs a bot, kept naming an
+ *  older game. The room's own engine fills the gap; a body that names a bot
+ *  keeps it. */
+export function withRoomBot(
+  body: Record<string, unknown>,
+  pveEngineId: string | null,
+): Record<string, unknown> {
+  if (body.mode !== 'pve' || !pveEngineId) return body;
+  if (typeof body.botId === 'string' || typeof body.engineId === 'string') return body;
+  return { ...body, engineId: pveEngineId };
 }

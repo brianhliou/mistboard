@@ -4,7 +4,7 @@
  * runtime and its own lobby factory, so a new tenant is covered the day it
  * registers, and one that cannot rematch has to say why (tenant.rematch.optOut).
  *
- * For each tenant that rematches: two guests in a finished PvP room both
+ * For each tenant that rematches: two players in a finished PvP room both
  * offer, both are redirected into one new live room with their seats swapped
  * (for banqi and flip jungle, where the first seat opens, that swaps who opens)
  * on the same clock, and take those seats with the redirect tokens. The new
@@ -14,8 +14,8 @@
 
 import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
-import test from 'node:test';
-import { isRetiredGameSpec } from '@mistboard/game';
+import test, { type TestContext } from 'node:test';
+import { isRetiredGameSpec, type XmjPlayerView } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { banqiTenant } from './banqi-tenant.js';
@@ -23,14 +23,20 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { mahjongTenant } from './mahjong-tenant.js';
+import { close, getPool, init } from './persistence-db.js';
+import { isAllowlistedGameSpec } from './persistence-variant-access.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import './variant-tenant/register-tenants.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
 import { tenantRoomOffersRematch, tenantSnapshotPayload } from './variant-tenant/runtime.js';
+import type { XmjRuntimeRoom } from './xiangqi-mahjong-registration.js';
 import { xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -41,6 +47,7 @@ for (const flag of [
   'ATOMIC_XIANGQI',
   'DUCK_XIANGQI',
   'FORTRESS_XIANGQI',
+  'GOMOKU',
   'JIEQI',
   'JUNGLE',
   'JUNGLE_FLIP',
@@ -71,11 +78,14 @@ const TENANTS: Record<string, AnyTenant> = Object.fromEntries(
     darkChessTenant,
     darkXiangqiTenant,
     duckXiangqiTenant,
+    ffqBanqiTenant,
     fortressXiangqiTenant,
+    gomokuTenant,
     jieqiTenant,
     jungleFlipTenant,
     jungleTenant,
     mahjongTenant,
+    threeKingdomsBanqiTenant,
     xiangqiMahjongTenant,
     xiangqiTenant,
   ].map((tenant) => [tenant.kind, tenant as unknown as AnyTenant]),
@@ -105,9 +115,10 @@ class FakeSocket {
   }
 }
 
-function request(clientId: string, seatToken?: string): IncomingMessage {
+function request(clientId: string, seatToken?: string, userId?: string): IncomingMessage {
   const headers: Record<string, string> = { host: 'localhost' };
   if (seatToken) headers['sec-websocket-protocol'] = `mistboard-seat.${seatToken}`;
+  if (userId) headers.cookie = `mistboard_session=${userId}.test-token`;
   return { url: `/?client=${clientId}`, headers } as unknown as IncomingMessage;
 }
 
@@ -123,18 +134,81 @@ type LiveRoom = {
   projection: { state: { status: { type: string } }; timeControl?: unknown };
 };
 
-async function connect(registration: Registration, room: LiveRoom, id: string, token?: string) {
+async function connect(
+  registration: Registration,
+  room: LiveRoom,
+  id: string,
+  token?: string,
+  userId?: string,
+) {
   const socket = new FakeSocket();
   await registration.attachWebSocket(
     WS_CTX,
     socket as unknown as WebSocket,
-    request(id, token),
+    request(id, token, userId),
     room as never,
   );
   await settle();
   const hello = socket.ofType('hello')[0];
   assert.ok(hello, `${id} got a hello`);
-  return { socket, seat: hello.seat as string };
+  return { socket, seat: hello.seat as string, userId };
+}
+
+// Exercise the real session, grant and play-lock queries without a database.
+// Unknown reads fail so a new access check cannot silently pass this fixture.
+function accountDatabase(t: TestContext, registration: Registration) {
+  const granted = new Set(['client-a', 'client-b']);
+  const locked = new Set<string>();
+  const previousRooms = new Set(registration.rooms.keys());
+  init('postgres://mistboard@127.0.0.1:9/never');
+  t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
+    const id = String(values[0]);
+    let rows: unknown[];
+    if (sql.includes('UPDATE account_sessions')) {
+      rows = [{ id, handle: id, display_name: id, account_role: 'player', play_disabled_at: null }];
+    } else if (sql.includes('AS locked')) {
+      rows = [{ locked: locked.has(id) }];
+    } else if (sql.includes('AS allowed')) {
+      assert.equal(values[1], registration.gameSpecId);
+      rows = [{ allowed: granted.has(id) }];
+    } else if (sql.includes('SELECT 1 FROM variant_access_grants')) {
+      assert.equal(values[1], registration.gameSpecId);
+      rows = granted.has(id) ? [{}] : [];
+    } else {
+      assert.match(sql.trim(), /^(INSERT|UPDATE|DELETE)\b/, 'unexpected database read');
+      rows = [];
+    }
+    return { rows, rowCount: rows.length };
+  });
+  t.after(async () => {
+    for (const [id, room] of registration.rooms) {
+      if (!previousRooms.has(id)) registration.clearRuntimeTimers(room);
+    }
+    await close();
+  });
+  return { granted, locked };
+}
+
+function assertXmjWire(socket: FakeSocket, seat: string): void {
+  const wire = JSON.stringify(socket.sent);
+  for (const secret of ['setup', 'walls', 'wall', 'firstDealer', 'handCopy']) {
+    assert.ok(!wire.includes(`"${secret}":`), `${seat} received ${secret}`);
+  }
+  for (const payload of JSON.parse(wire) as Array<{
+    state?: XmjPlayerView;
+    liveHistory?: Array<{ view: XmjPlayerView }>;
+  }>) {
+    for (const view of [payload.state, ...(payload.liveHistory ?? []).map((entry) => entry.view)]) {
+      if (!view) continue;
+      for (const other of ['east', 'west'] as const) {
+        if (other === seat) assert.ok(view.hands[other], 'own hand is visible');
+        else assert.equal(view.hands[other], null, `${seat} received ${other}'s hand`);
+      }
+      if (view.phase.type === 'discard' && view.turn !== seat) {
+        assert.equal(view.phase.drawn, null, `${seat} received the drawn tile`);
+      }
+    }
+  }
 }
 
 // Every object on the wire that hides a piece must hide its identity. Returns
@@ -173,6 +247,7 @@ test('every registered tenant is held to the rematch contract', () => {
   }
   assert.ok(TENANTS.mahjong?.rematch, 'mahjong (four seats) opts out');
   assert.ok(TENANTS['dark-chess']?.rematch, 'dark chess (correspondence only, #531) opts out');
+  assert.ok(TENANTS['ffq-banqi']?.rematch, 'FFQ requires creation through the admin gate');
 });
 
 test('a retired variant offers no rematch: it opens no new rooms', async () => {
@@ -200,17 +275,34 @@ test('a retired variant offers no rematch: it opens no new rooms', async () => {
 
 for (const registration of registeredVariantTenants()) {
   const tenant = TENANTS[registration.kind];
-  if (!tenant || tenant.rematch || !registration.lobby) continue;
+  if (!tenant || !registration.lobby) continue;
+  // XMJ's regression must run even if its old opt-out is reintroduced.
+  if (tenant.rematch && tenant.kind !== 'xiangqi-mahjong') continue;
   if (isRetiredGameSpec(registration.gameSpecId)) continue;
   const lobby = registration.lobby;
   const [first, second] = tenant.colors as [string, string];
 
-  test(`${tenant.kind} rematch: mutual offers open one new room, seats swapped, same clock`, async () => {
+  test(`${tenant.kind} rematch: mutual offers open one new room, seats swapped, same clock`, async (t) => {
+    const accounts = isAllowlistedGameSpec(tenant.gameSpecId);
+    if (accounts) accountDatabase(t, registration);
+    const originalRoomCount = registration.rooms.size;
     const created = await lobby.createRoom(TEN_PLUS_FIVE, false);
     const room = registration.rooms.get(created.id) as unknown as LiveRoom | undefined;
     assert.ok(room, 'the lobby room is live');
-    const a = await connect(registration, room, 'client-a');
-    const b = await connect(registration, room, 'client-b');
+    const a = await connect(
+      registration,
+      room,
+      'client-a',
+      undefined,
+      accounts ? 'client-a' : undefined,
+    );
+    const b = await connect(
+      registration,
+      room,
+      'client-b',
+      undefined,
+      accounts ? 'client-b' : undefined,
+    );
     assert.deepEqual(new Set([a.seat, b.seat]), new Set([first, second]));
     const firstSeat = a.seat === first ? a : b;
     const secondSeat = a.seat === first ? b : a;
@@ -240,11 +332,16 @@ for (const registration of registeredVariantTenants()) {
     firstSeat.socket.receive({ type: 'rematch:offer' });
     await settle();
     secondSeat.socket.receive({ type: 'rematch:offer' });
+    secondSeat.socket.receive({ type: 'rematch:offer' });
+    firstSeat.socket.receive({ type: 'rematch:offer' });
     await settle();
 
     const firstRedirect = firstSeat.socket.ofType('rematch:redirect')[0];
     const secondRedirect = secondSeat.socket.ofType('rematch:redirect')[0];
     assert.ok(firstRedirect && secondRedirect, 'both players are redirected');
+    assert.equal(firstSeat.socket.ofType('rematch:redirect').length, 1);
+    assert.equal(secondSeat.socket.ofType('rematch:redirect').length, 1);
+    assert.equal(registration.rooms.size, originalRoomCount + 2, 'exactly one rematch room');
     assert.equal(firstRedirect.roomId, secondRedirect.roomId, 'into one room');
     assert.equal(firstRedirect.seat, second, `the ${first} player plays ${second} next`);
     assert.equal(secondRedirect.seat, first, `the ${second} player plays ${first} next`);
@@ -256,7 +353,7 @@ for (const registration of registeredVariantTenants()) {
     assert.notEqual(next.id, room.id);
     assert.deepEqual(next.projection.timeControl, TEN_PLUS_FIVE, 'same clock');
     assert.equal(next.rated, false, 'a casual game rematches casual');
-    if (DEALT_KINDS.has(tenant.kind)) {
+    if (DEALT_KINDS.has(tenant.kind) || tenant.kind === 'xiangqi-mahjong') {
       assert.ok(next.events[0]?.setup, 'the new room holds a deal server-side');
       assert.notDeepEqual(next.events[0]?.setup, room.events[0]?.setup, 'fresh deal');
     }
@@ -266,17 +363,27 @@ for (const registration of registeredVariantTenants()) {
       next,
       'client-b-next',
       secondRedirect.seatToken as string,
+      secondSeat.userId,
     );
     const nowSecond = await connect(
       registration,
       next,
       'client-a-next',
       firstRedirect.seatToken as string,
+      firstSeat.userId,
     );
     assert.equal(nowFirst.seat, first);
     assert.equal(nowSecond.seat, second);
     const watcher = await connect(registration, next, 'client-watch');
     assert.equal(watcher.seat, 'spectator', 'no token, no seat');
+
+    if (tenant.kind === 'xiangqi-mahjong') {
+      for (const client of [nowFirst, nowSecond, watcher])
+        assertXmjWire(client.socket, client.seat);
+      const nextXmj = next as XmjRuntimeRoom;
+      assert.equal(nextXmj.seatTokens.east?.userId ?? null, secondSeat.userId ?? null);
+      assert.equal(nextXmj.seatTokens.west?.userId ?? null, firstSeat.userId ?? null);
+    }
 
     if (HIDDEN_INFO_KINDS.has(tenant.kind)) {
       for (const client of [nowFirst, nowSecond, watcher]) {
@@ -293,5 +400,42 @@ for (const registration of registeredVariantTenants()) {
     assert.ok(!('rematch' in (nowFirst.socket.ofType('hello')[0] ?? {})), 'live room: no offers');
     registration.clearRuntimeTimers(room as never);
     registration.clearRuntimeTimers(next as never);
+  });
+}
+
+for (const revokedSeat of ['east', 'west'] as const) {
+  // XMJ is public, so no grant gates it; a play lock is the account check left.
+  test(`xiangqi-mahjong rematch: a locked ${revokedSeat} account refuses a new room`, async (t) => {
+    const registration = registeredVariantTenants().find(
+      (entry) => entry.kind === 'xiangqi-mahjong',
+    );
+    assert.ok(registration?.lobby);
+    const { locked } = accountDatabase(t, registration);
+    const created = await registration.lobby.createRoom(TEN_PLUS_FIVE, false);
+    const room = registration.rooms.get(created.id) as XmjRuntimeRoom;
+    const a = await connect(registration, room, 'client-a', undefined, 'client-a');
+    const b = await connect(registration, room, 'client-b', undefined, 'client-b');
+    room.projection.state = xiangqiMahjongTenant.rules.finish(
+      room.projection.state,
+      'east',
+      'resignation',
+    );
+    a.socket.receive({ type: 'rematch:offer' });
+    await settle();
+    assert.ok(room.rematch.offers[a.seat as 'east' | 'west'], 'the first offer is active');
+    locked.add(room.seatTokens[revokedSeat]!.userId!);
+    const roomCount = registration.rooms.size;
+    b.socket.receive({ type: 'rematch:offer' });
+    await settle();
+    assert.equal(registration.rooms.size, roomCount, 'no room created after the lock');
+    assert.equal(room.rematch.finalizedRoomId, undefined);
+    assert.deepEqual(room.rematch.offers, {}, 'offers are cleared');
+    for (const player of [a, b]) {
+      assert.equal(player.socket.ofType('rematch:redirect').length, 0, 'no redirect issued');
+      assert.deepEqual(player.socket.ofType('rematch:state').at(-1)?.offers, {
+        east: false,
+        west: false,
+      });
+    }
   });
 }

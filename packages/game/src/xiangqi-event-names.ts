@@ -13,6 +13,9 @@
 // Championship, without the edition number dpxq's name carries.
 export const XIANGQI_EVENT_NAME_OVERRIDES: ReadonlyMap<string, string> = new Map([
   ['2026年第十届北美杯象棋锦标赛', '2026 North American Xiangqi Championship'],
+  // Vietnam's name for the Vietnam vs Guangdong match in Đà Nẵng, July 2026,
+  // as XQBase files it ("lần I" is the first edition).
+  ['Cup Kim Long Motor lần I', '1st Kim Long Motor Cup'],
 ]);
 
 // Longest match wins; entries are sorted by key length at module init.

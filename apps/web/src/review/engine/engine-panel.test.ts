@@ -111,6 +111,55 @@ describe('createEnginePanel onLines', () => {
   });
 });
 
+describe('createEnginePanel at a position the caller did not mark terminal', () => {
+  it('says Game over when the finished search found no move, not thinking… for good', async () => {
+    // #619: xiangqi's review presentation has no canEvaluatePosition, so its
+    // checkmate reached the engine as searchable; the engine answered with no
+    // line and the panel (and the phone bar mirroring it) read "thinking…"
+    // forever. A search that ends with no line means no legal move.
+    vi.useFakeTimers();
+    let lines: Array<{ uci: string; cp: number; depth: number }> = [];
+    class FakeWorker extends EventTarget {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: ErrorEvent) => void) | null = null;
+      postMessage(message: { type: string; id?: number }): void {
+        const data =
+          message.type === 'init'
+            ? { type: 'ready' }
+            : { type: 'result', id: message.id, json: JSON.stringify({ lines }) };
+        queueMicrotask(() => {
+          const event = new MessageEvent('message', { data });
+          this.onmessage?.(event);
+          this.dispatchEvent(event);
+        });
+      }
+      terminate(): void {}
+    }
+    vi.stubGlobal('Worker', FakeWorker);
+    try {
+      const panel = createEnginePanel({ variant: 'banqi' });
+      const sub = () => panel.el.querySelector('.engine-panel__sub')?.textContent;
+      panel.setPosition([], 'mated w - - 0 1', true);
+      panel.el.querySelector<HTMLButtonElement>('.engine-panel__switch')?.click();
+      await vi.advanceTimersByTimeAsync(151);
+
+      expect(sub()).toBe('Game over');
+      expect(panel.el.querySelectorAll('.engine-panel__line')).toHaveLength(0);
+
+      // A playable position afterwards searches and shows its line as usual.
+      lines = [{ uci: 'a0a0', cp: 50, depth: 12 }];
+      panel.setPosition([], 'playable w - - 0 1', true);
+      await vi.advanceTimersByTimeAsync(151);
+      expect(sub()).toBe('Depth 12');
+      expect(panel.el.querySelectorAll('.engine-panel__line')).toHaveLength(1);
+      panel.dispose();
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe('createEnginePanel flip-game opening scores', () => {
   it('uses a neutral first-player label, Misty scale, and tied-flip note before binding', async () => {
     vi.useFakeTimers();

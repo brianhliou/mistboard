@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 import './forum.css';
 import {
   type EmbedTarget,
@@ -1714,6 +1715,7 @@ function errorMessageForEditStatus(status: number): string {
   if (status === 401) return t('forum.errSignInToPost');
   if (status === 403) return t('forum.errNotYourPost');
   if (status === 404) return t('forum.errContentNotAvailable');
+  if (status === 429) return t('forum.errEditTooQuick');
   if (status >= 500) return t('forum.errUnavailable');
   return t('forum.errCheckFields');
 }
@@ -3202,4 +3204,8 @@ async function fetchForumReports(options: {
   if (!resp.ok) throw new Error(`forum_reports_failed_${resp.status}`);
   const data = (await resp.json()) as { reports: ForumReport[] };
   return data.reports;
+}
+
+export function renderForumEtiquetteShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountForumEtiquette);
 }

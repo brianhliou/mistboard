@@ -77,27 +77,61 @@ describe('phone room bands', () => {
     ).toContain('--phone-room-extra: var(--phone-room-pool, 96px);');
   });
 
-  // Found by the finished-room sweep (2026-10-17): after a resign, the 52px
-  // Rematch and three stacked links pushed the moves and the bar 137px below
-  // the fold, and the bar, alone on its line once Resign left, rode up beside
-  // the moves strip at 0px wide.
-  it('fits the finished room: a 2x2 actions grid the budget gives up, the bar on its own line', () => {
+  it('puts the invite in the empty moves slot, so the waiting board fills the width', () => {
+    // No band of its own: a reserve for one shrank the board in every friend
+    // room until the opponent joined (Brian's 2026-10-30 phone review).
+    const budget = rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band');
+    expect(budget).not.toContain('--phone-room-actions');
+    // Each waiting-room declaration lives under a selector that only matches
+    // the pre-game invite (never the post-game sheet, an overlay).
+    const selectorOf = (declaration: string): string => {
+      const at = phone.indexOf(declaration);
+      expect(at).toBeGreaterThan(0);
+      const open = phone.lastIndexOf('{', at + declaration.length);
+      return phone.slice(phone.lastIndexOf('}', open) + 1, open);
+    };
+    const waiting = [
+      // The invite gives up no notice band of its own...
+      '--phone-room-notice: 0px;',
+      // ...because it takes the empty moves strip's slot.
+      'height: 0;\n    padding: 0;',
+      // Centred in the room the board leaves; the empty moves line gives back
+      // what the band takes above it, so the bar line ends the screen.
+      '--phone-room-wait-top: calc(var(--phone-room-slack) / 2);',
+      'margin-top: calc(var(--phone-room-slack) - var(--phone-room-wait-top));',
+      'margin: calc(4px + var(--phone-room-wait-top)) 12px 4px 0;',
+    ];
+    for (const declaration of waiting) {
+      const selector = selectorOf(declaration);
+      expect(selector).toContain('.room-actions:not([data-postgame-sheet])');
+      expect(selector).toContain('.room-actions-row');
+    }
+    expect(selectorOf(waiting[1])).toContain('.game-table-moves');
+    expect(selectorOf(waiting[3])).toContain('.game-table-moves');
+    // The band is one moves-strip high.
+    expect(rule(selectorOf(waiting[4]))).toContain('height: calc(var(--phone-room-band) - 8px);');
+  });
+
+  it('gives the phone room a square, unsnapped board edge to edge', () => {
     expect(rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band')).toContain(
-      'var(--phone-room-post, 0px)',
+      '--board-corner-radius: 0px;',
     );
-    expect(rule('.review-shell__cluster.live-review__cluster:has(.postgame-actions)')).toContain(
-      '--phone-room-post: 96px;',
+    expect(rule('.live-review__cluster .board-shell > .board-stage:not(:has(.cg-snap))')).toContain(
+      'width: 100%;',
     );
-    expect(rule('.live-review__cluster .round-table__row:has(.postgame-actions)')).toContain(
-      'height: calc(var(--phone-room-post) - 8px);',
-    );
-    expect(rule('.live-review__cluster .postgame-actions {')).toContain(
-      'grid-template-columns: 1fr 1fr;',
+  });
+
+  it('keeps the full playing budget with post-game actions in an overlay', () => {
+    const budget = rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band');
+    expect(budget).not.toContain('--phone-room-post');
+    expect(phone).not.toMatch(/--phone-room-post: (48|96)px/);
+    expect(rule('.live-review__cluster .postgame-sheet {')).toContain('position: fixed;');
+    expect(rule('.live-review__cluster .room-actions[data-postgame-sheet] {')).toContain(
+      'display: contents;',
     );
     expect(rule('.live-review__cluster .move-nav-bar {\n    order: 47;')).toContain(
       'min-width: 60%;',
     );
-    expect(rule('main.shell:has(.live-review__cluster)')).toContain('align-content: start;');
   });
 
   it('drops the blank jieqi odds lines once the game is over', () => {
@@ -163,7 +197,7 @@ describe('phone room bands', () => {
   it('gives banqi odds one 40px line per side, the viewer first', () => {
     expect(
       rule(
-        '.live-route--banqi .review-shell__cluster.live-review__cluster {\n    --phone-room-pool',
+        '.live-route--banqi .review-shell__cluster.live-review__cluster:has(.hidden-pool--odds) {\n    --phone-room-pool',
       ),
     ).toContain('--phone-room-pool: 80px;');
     expect(rule('.live-review__cluster .hidden-pool--odds .hidden-pool__row {')).toContain(

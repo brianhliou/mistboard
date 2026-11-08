@@ -17,6 +17,9 @@ import { defineConfig } from '@playwright/test';
 // Postgres must be up first: `npm run db:up` locally, the 5435 service in CI.
 // The persistent server is required, not optional: auth, game history and
 // review read from Postgres, and the no-DB pair 503s them.
+// XMJ opts in below for the test pair; its fixture grants a normal player
+// access in that same local database. An E2E_BASE_URL pair needs both XMJ flags
+// enabled too (MISTBOARD_XIANGQI_MAHJONG_ENABLED / VITE_XIANGQI_MAHJONG_ENABLED).
 //
 // An occupied port fails the run; the suite never reuses or shifts to a server
 // it did not start (another checkout's pair serves a stale tree). If a pair is
@@ -88,6 +91,8 @@ export default defineConfig({
         timeout: 180_000,
         env: {
           MISTBOARD_DEV_PORT_BASE: String(portBase),
+          MISTBOARD_XIANGQI_MAHJONG_ENABLED: 'true',
+          VITE_XIANGQI_MAHJONG_ENABLED: 'true',
           BROWSER: 'none',
           FORCE_COLOR: '0',
           NO_COLOR: '1',

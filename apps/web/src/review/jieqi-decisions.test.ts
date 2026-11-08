@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { decisionView, type JieqiDecision, summarizeDecisions } from './jieqi-decisions.js';
+import { computeGameAnalysis, mergeDecisionAnalysis } from './game-analysis.js';
+import {
+  decisionView,
+  type JieqiDecision,
+  jieqiDecisionOverlay,
+  summarizeDecisions,
+} from './jieqi-decisions.js';
 
 // The server now sends win% directly (mover POV): bestWin / playedWin / realizedWin.
 function decision(p: Partial<JieqiDecision>): JieqiDecision {
@@ -71,4 +77,43 @@ describe('summarizeDecisions', () => {
     expect(summary.black.reveals).toBe(0);
     expect(summary.black.decisionAccuracy).toBe(100);
   });
+});
+
+describe('luck-only decisions', () => {
+  it('keeps luck with no glyph, accuracy, rank or alternatives when bestWin is absent', () => {
+    const row = {
+      ply: 1,
+      mover: 'red' as const,
+      playedWin: 50,
+      realizedWin: 62,
+      playedRank: 1,
+      candidates: [{ move: 'a0a1', win: 50 }],
+    };
+    expect(decisionView(row)).toEqual({ ply: 1, mover: 'red', judgment: null, luck: 12 });
+    const summary = summarizeDecisions([row, decision({ ply: 3, bestWin: 70, playedWin: 45 })]);
+    expect(summary.red.reveals).toBe(1);
+    const overlay = jieqiDecisionOverlay(summary);
+    expect(overlay.byPly.get(1)).toEqual({ judgment: null, luck: 12, playedRank: null });
+    expect(overlay.byPly.get(3)?.judgment).toBe('blunder');
+    expect(overlay.byPly.get(3)?.accuracy).toBeTypeOf('number');
+    expect(overlay.red).toEqual(
+      summarizeDecisions([decision({ ply: 3, bestWin: 70, playedWin: 45 })]).red,
+    );
+  });
+});
+
+it('excludes a luck-only reveal from headline accuracy even when stored analysis has no chance flags', () => {
+  const base = {
+    engineId: 'pikafish',
+    depth: 12,
+    plies: [0, 1, 2].map((ply) => ({ ply, cp: ply === 0 ? 500 : -500, mate: null, best: null })),
+  };
+  const raw = computeGameAnalysis(base);
+  const marked = computeGameAnalysis({ ...base, chancePlies: [1] });
+  const overlay = jieqiDecisionOverlay(
+    summarizeDecisions([{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 20 }]),
+  );
+  expect(mergeDecisionAnalysis(raw, overlay.byPly)).toEqual(
+    mergeDecisionAnalysis(marked, new Map()),
+  );
 });

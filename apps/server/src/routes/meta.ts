@@ -5,6 +5,7 @@ import { correspondenceRatedEnabled, darkXiangqiEnabled, ratedEnabled } from '..
 import { collectLiveRoomStats } from '../live-room-stats.js';
 import * as persistence from '../persistence.js';
 import { onlinePresence, refreshPresence } from '../presence.js';
+import { getCachedPublicStats } from '../public-stats-cache.js';
 import { PUBLIC_RATING_TIME_CLASS } from '../rating-buckets.js';
 import { readEventLoopLagMs } from '../server-event-loop-lag.js';
 import { getProxyTrustWarning, pingCorsAllowOrigin } from '../server-policy.js';
@@ -200,7 +201,13 @@ export async function tryHandle(
   if (pathname === '/api/stats/public') {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
-    writeJson(response, 200, await persistence.getPublicSiteStats());
+    // Cached server-side (public-stats-cache.ts): the aggregates take seconds.
+    const stats = await getCachedPublicStats();
+    if (!stats) {
+      writeJson(response, 503, { error: 'stats_unavailable' });
+      return true;
+    }
+    writeJson(response, 200, stats, { 'cache-control': 'public, max-age=300' });
     return true;
   }
 

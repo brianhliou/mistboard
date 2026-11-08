@@ -107,7 +107,7 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     },
   },
   {
-    // jqe above AB-JChess, binary and net from our engines release. Checked only
+    // jqe, one rung under AB-JChess, binary and net from our engines release. Checked only
     // while MISTBOARD_JQE_ENABLED is on, so a held bot never pages anyone.
     variant: 'jieqi',
     binary: 'jqe',

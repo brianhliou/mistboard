@@ -27,6 +27,18 @@ function truncate(text: string): string {
 
 const published = articles.filter((a) => a.status === 'published');
 
+// A reason that says the zh is merely late rather than deliberately absent.
+// Known blind spot: a backlog phrased without these words ("zh comes next
+// week") passes; the planted test below pins what is caught.
+const BACKLOG_REASON =
+  /not (yet )?translated|untranslated|translat\w* (later|pending|next|soon)|(later|pending|awaiting|waits? for( a)?) translation|translate later|to be translated|\btodo\b/i;
+
+function backlogExemptions(exempt: Readonly<Record<string, string>>): string[] {
+  return Object.entries(exempt)
+    .filter(([, reason]) => BACKLOG_REASON.test(reason))
+    .map(([slug, reason]) => `${slug}: ${reason}`);
+}
+
 describe('article translation coverage', () => {
   for (const slug of TRANSLATED_ARTICLE_SLUGS) {
     it(`${slug}: every prose string resolves in all zh scripts`, () => {
@@ -41,6 +53,20 @@ describe('article translation coverage', () => {
       expect(missing, `untranslated strings:\n${missing.join('\n')}`).toEqual([]);
     });
   }
+
+  // articleProse leaves `updateNote` out (it is about the text, not the text),
+  // so without this a translated page showed its "What changed" line in English.
+  it('every locked article translates its update note in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const note = published.find((a) => a.slug === slug)?.updateNote;
+      if (!note) continue;
+      for (const lang of ARTICLE_LANGS) {
+        if (!hasTranslation(lang, note)) missing.push(`[${lang}] ${slug}: ${note}`);
+      }
+    }
+    expect(missing, `untranslated update notes:\n${missing.join('\n')}`).toEqual([]);
+  });
 
   // Diagram labels live inside generated SVG, where articleProse cannot see
   // them, so until 2026-10-01 this file read every rules page as covered while
@@ -119,6 +145,26 @@ describe('article translation coverage', () => {
     ).toEqual([]);
   });
 
+  // The whole-page check above misses a partial loss: on the expanded jieqi rules
+  // page older Traditional overrides kept the page from matching, so 99 lines of
+  // Traditional sat above the spread, were discarded, and the suite stayed green.
+  it('no Traditional string falls through to Simplified', () => {
+    // Characters that exist only in Simplified. 炮 and 后 are left out because
+    // Traditional uses them too.
+    const simplifiedOnly = /[将帅马车过双应这个们时说对开关门问题见长无从为国让选级复盘与条样难]/;
+    const fellThrough = (hans: string, hant: string) => hans === hant && simplifiedOnly.test(hant);
+    // Planted: the check has to catch a lost entry and pass a converted one.
+    expect(fellThrough('将帅明置', '将帅明置')).toBe(true);
+    expect(fellThrough('将帅明置', '將帥明置')).toBe(false);
+
+    const lost = translationKeys('zh-Hans').filter((key) =>
+      fellThrough(translateArticleText('zh-Hans', key), translateArticleText('zh-Hant', key)),
+    );
+    expect(lost, 'These zh-Hant entries are missing or sit above the ...ZH_HANS spread').toEqual(
+      [],
+    );
+  });
+
   // The checks above only see slugs someone remembered to list, so an article
   // published without being added passed them all and shipped English zh pages
   // (fortress-and-atomic-xiangqi-on-hold, 2026-10-13). Every published article
@@ -143,6 +189,29 @@ describe('article translation coverage', () => {
       ...(reason.trim() ? [] : [`${slug}: no reason given`]),
     ]);
     expect(problems, problems.join('\n')).toEqual([]);
+  });
+
+  // An exemption is a decision that a page has no zh, not a to-do list. On
+  // 2026-10-15/16 six posts moved from brianhliou.com dropped their zh pages
+  // and were exempted as "not yet translated", which passed every check above
+  // while their zh URLs served English: the backlog hid inside the exemption.
+  it('no exemption reason describes a translation backlog', () => {
+    const problems = backlogExemptions(UNTRANSLATED_ARTICLE_SLUGS);
+    expect(
+      problems,
+      `exempt as a backlog; translate the article and move it to TRANSLATED_ARTICLE_SLUGS:\n${problems.join('\n')}`,
+    ).toEqual([]);
+  });
+
+  it('the backlog check catches a planted "not yet translated" reason', () => {
+    expect(
+      backlogExemptions({
+        'planted-a': 'Moved from brianhliou.com in English; not yet translated.',
+        'planted-b': 'Translation pending.',
+        'planted-c': 'Will translate later.',
+        'planted-d': 'Vietnamese copy of pikafish, whose zh pages exist.',
+      }),
+    ).toEqual(['planted-a', 'planted-b', 'planted-c'].map((slug) => expect.stringContaining(slug)));
   });
 
   it('locked slugs are real published articles', () => {

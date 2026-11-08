@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { broadcastRecordsCredit } from '@mistboard/game';
+import { broadcastRecordsCredit, xiangqiBroadcastRoundStart } from '@mistboard/game';
 import * as persistence from './../persistence.js';
+import { playerPuzzleCount } from '../puzzle-store.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
 import { handleXiangqiBroadcastAnalysisRoutes } from '../xiangqi-broadcast-analysis.js';
 import { roundNumberFromRoundId } from '../xiangqi-broadcast-discovery.js';
@@ -113,6 +114,10 @@ type XiangqiBroadcastRoundStats = {
   liveBoardCount: number;
   completeBoardCount: number;
   scheduledBoardCount: number;
+  /** Boards with moves to replay; a results-only board (dpxq's 0-ply result rows) is not one. */
+  recordedBoardCount: number;
+  /** When the round started by its games (`xiangqiBroadcastRoundStart`), else its seed; null when neither says. */
+  startedAt: string | null;
 };
 
 type SourceHealthState = 'ok' | 'warning' | 'error' | 'unknown' | 'missing_source';
@@ -187,7 +192,7 @@ type IndexRound = {
   id: string;
   name: string;
   nameEn?: string;
-  /** The seeded start, else the earliest start a game in it states. */
+  /** When it started by its games, else its seed (`xiangqiBroadcastRoundStart`). */
   startsAt: string | null;
   live: boolean;
 };
@@ -211,15 +216,15 @@ function indexRoundStatus(
           (roundNumberFromRoundId(b.round.id) ?? b.index) || a.index - b.index,
     );
   const summary = (entry: (typeof ordered)[number]): IndexRound => {
-    const stated = entry.boards
-      .map((board) => board.details?.playedAt)
-      .filter((at): at is string => typeof at === 'string')
-      .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
     return {
       id: entry.round.id,
       name: entry.round.name,
       ...(entry.round.nameEn ? { nameEn: entry.round.nameEn } : {}),
-      startsAt: stated ?? entry.round.startsAt ?? null,
+      startsAt:
+        xiangqiBroadcastRoundStart(
+          entry.boards.map((board) => board.details?.playedAt),
+          entry.round.startsAt,
+        ) ?? null,
       live: entry.boards.some((board) => board.status === 'live'),
     };
   };
@@ -287,6 +292,7 @@ function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcas
 }
 
 function roundBoardStats(
+  round: persistence.StoredXiangqiBroadcastRound,
   boards: persistence.StoredXiangqiBroadcastBoard[],
 ): XiangqiBroadcastRoundStats {
   return {
@@ -294,6 +300,12 @@ function roundBoardStats(
     liveBoardCount: boards.filter((board) => board.status === 'live').length,
     completeBoardCount: boards.filter((board) => board.status === 'complete').length,
     scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
+    recordedBoardCount: boards.filter((board) => board.plyCount > 0).length,
+    startedAt:
+      xiangqiBroadcastRoundStart(
+        boards.map((board) => board.details?.playedAt),
+        round.startsAt,
+      ) ?? null,
   };
 }
 
@@ -568,7 +580,7 @@ export async function xiangqiBroadcastTourForApi(
     recordsSource: broadcastRecordsCredit(boardsByRound.flat(), tour),
     rounds: rounds.map((round, index) => ({
       ...round,
-      ...roundBoardStats(boardsByRound[index] ?? []),
+      ...roundBoardStats(round, boardsByRound[index] ?? []),
     })),
   };
 }
@@ -611,7 +623,7 @@ export async function xiangqiBroadcastRoundForApi(
     boards,
     rounds: rounds.map((entry, index) => ({
       ...entry,
-      ...roundBoardStats(boardsByRound[index] ?? []),
+      ...roundBoardStats(entry, boardsByRound[index] ?? []),
     })),
   };
 }
@@ -622,6 +634,9 @@ function boardEvaluation(
   liveEval: XiangqiBroadcastLiveEvalLookup,
 ): XiangqiBroadcastBoardEvaluation | null {
   if (board.status === 'complete') {
+    // No moves (results only, or a withheld record): an analysis stored when
+    // the board had a replay scores a game we no longer show.
+    if (board.plyCount === 0) return null;
     const final = finals.get(board.id);
     return final ? { ...final, source: 'analysis' } : null;
   }
@@ -652,6 +667,56 @@ function cachedXiangqiPlayers() {
   }
   return playerIndexCache.players;
 }
+
+/**
+ * A stale-while-revalidate wrapper for a slow, public read. The broadcast index
+ * folds every board of every tour (~850ms warm on prod, 1-2s cold), and the
+ * homepage asks for it on every visit, so its cards arrived a second after the
+ * page. A value younger than `freshMs` is served as is; an older one up to
+ * `staleMs` is served at once while one refresh runs behind it; past that the
+ * caller waits. A failed load never sticks.
+ */
+export function staleWhileRevalidate<T>(
+  load: () => Promise<T>,
+  opts: { freshMs: number; staleMs: number; now?: () => number },
+): () => Promise<T> {
+  const now = opts.now ?? Date.now;
+  let settled: { at: number; value: T } | null = null;
+  let pending: Promise<T> | null = null;
+  const refresh = (): Promise<T> => {
+    if (pending) return pending;
+    const started = now();
+    const run = load().then(
+      (value) => {
+        settled = { at: started, value };
+        pending = null;
+        return value;
+      },
+      (error: unknown) => {
+        pending = null;
+        throw error;
+      },
+    );
+    pending = run;
+    return run;
+  };
+  return () => {
+    const age = settled ? now() - settled.at : Number.POSITIVE_INFINITY;
+    if (settled && age <= opts.freshMs) return Promise.resolve(settled.value);
+    if (settled && age <= opts.staleMs) {
+      refresh().catch(() => {});
+      return Promise.resolve(settled.value);
+    }
+    return refresh();
+  };
+}
+
+// Live counts on a card may trail by up to 15s; a board page and its stream
+// read the boards directly, so nothing a viewer watches is stale.
+const cachedXiangqiBroadcastIndex = staleWhileRevalidate(() => xiangqiBroadcastIndexForApi(), {
+  freshMs: 15_000,
+  staleMs: 10 * 60_000,
+});
 
 export async function xiangqiBroadcastRoundStreamForApi(
   tourSlug: string,
@@ -743,6 +808,7 @@ export async function xiangqiBroadcastBoardExportForApi(
     result: board.result,
     moves: board.moves,
     ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
+    ...(board.recordWithheld ? { recordWithheld: board.recordWithheld } : {}),
   };
 }
 
@@ -1104,7 +1170,10 @@ export async function tryHandle(
     const slugOf = (name: string): string | null =>
       players.find((p) => p.name === name)?.slug ?? null;
     const boards = await persistence.listXiangqiPlayerBoards(player, slugOf);
-    writeJson(response, 200, { player, boards });
+    writeJson(response, 200, {
+      player: { ...player, puzzleCount: await playerPuzzleCount(slug) },
+      boards,
+    });
     return true;
   }
 
@@ -1185,7 +1254,7 @@ export async function tryHandle(
   if (pathname === '/api/xiangqi/broadcasts') {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
-    writeJson(response, 200, await xiangqiBroadcastIndexForApi());
+    writeJson(response, 200, await cachedXiangqiBroadcastIndex());
     return true;
   }
 

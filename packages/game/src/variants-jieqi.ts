@@ -47,6 +47,13 @@ import {
   type XiangqiPieceRole,
   type XiangqiSquare,
 } from './variants-xiangqi.js';
+import {
+  formatXiangqiRelativeMoveFromLegalMoves,
+  type XiangqiNotationStyle,
+  xiangqiAlgebraicMoveBody,
+} from './xiangqi-notation-format.js';
+import type { XiangqiNotationBoard } from './xiangqi-relative-notation.js';
+import { xiangqiMoveToPikafishUci } from './xiangqi-uci.js';
 
 // Jieqi shares xiangqi's coordinate system, colors, and piece vocabulary.
 export type JieqiColor = XiangqiColor; // 'red' | 'black'
@@ -153,11 +160,25 @@ export type JieqiVisibleBoardEntry =
 export type JieqiPlayerBoard = Partial<Record<JieqiSquare, JieqiVisibleBoardEntry>>;
 
 // A captured piece as seen by one player. `role: null` => identity unknown to
-// this viewer (a dark piece they did not capture).
+// this viewer (a dark piece they did not capture). `takenFaceDown` marks a
+// piece this view NAMES although it was still face-down when taken (the
+// capturer's own view, a finished game's truth), so the pool can draw it apart
+// from a piece both players saw. That the capture was of a face-down piece is
+// public (both seats watched it); the flag rides only beside a role the view
+// already holds, so it never adds an entry or a field to a view that lacks the
+// identity: a victim's or spectator's pool is unchanged by it.
 export type JieqiCapturedView = {
   owner: JieqiColor;
   role: JieqiPieceRole | null;
+  takenFaceDown?: true;
 };
+
+/** A captured entry, with the face-down mark when the role it names was hidden at capture. */
+function capturedEntry(capture: JieqiCapture, role: JieqiPieceRole | null): JieqiCapturedView {
+  return role !== null && !capture.revealedAtCapture
+    ? { owner: capture.owner, role, takenFaceDown: true }
+    : { owner: capture.owner, role };
+}
 
 export type JieqiPlayerView = {
   id: string;
@@ -779,12 +800,59 @@ export function jieqiCheckMark(after: {
   return jieqiCheckedGeneral(after.board, after.status) ? '+' : '';
 }
 
-/** A jieqi move label: from-to, then its check mark (jieqiCheckMark). */
+/**
+ * Label a Jieqi move. Existing callers get coordinates with a public check mark.
+ * Optional notation context must be the PRE-move masked view for the mover:
+ * face-down movers keep coordinates even if `after` reveals their identity.
+ * Revealed movers use public roles and Jieqi's legal moves, including its free
+ * advisors/elephants. Captured identities and the secret deal are never read.
+ * ICCS and relative styles follow xiangqi's convention of no check suffix;
+ * coordinate fallbacks retain the public check mark.
+ */
 export function jieqiMoveLabel(
   move: JieqiMove,
   after: { board: JieqiBoard | JieqiPlayerBoard; status: JieqiGameStatus },
+  notation?: {
+    before: Pick<JieqiPlayerView, 'board' | 'status' | 'legalMoves'>;
+    style: XiangqiNotationStyle;
+  },
 ): string {
-  return `${move.from}-${move.to}${jieqiCheckMark(after)}`;
+  const coordinate = () => `${move.from}-${move.to}${jieqiCheckMark(after)}`;
+  if (!notation || notation.style === 'coordinate') return coordinate();
+  const { before, style } = notation;
+  if (style === 'iccs') return xiangqiMoveToPikafishUci(move);
+  const piece = before.board[move.from];
+  if (
+    before.status.type !== 'playing' ||
+    !piece ||
+    piece.faceDown ||
+    piece.color !== before.status.turn ||
+    !before.legalMoves.some((legal) => legal.from === move.from && legal.to === move.to)
+  )
+    return coordinate();
+
+  // Strip even an accidentally supplied role on a face-down entry before the
+  // shared notation code can inspect rivals, selectors, or capture occupancy.
+  const board: XiangqiNotationBoard = {};
+  for (const [square, entry] of Object.entries(before.board)) {
+    if (entry)
+      board[square as JieqiSquare] = entry.faceDown
+        ? { color: entry.color }
+        : { color: entry.color, role: entry.role };
+  }
+  if (style === 'algebraic') {
+    const body = xiangqiAlgebraicMoveBody(board, move, before.legalMoves);
+    return body === null ? coordinate() : `${body}${jieqiCheckMark(after)}`;
+  }
+  return (
+    formatXiangqiRelativeMoveFromLegalMoves(
+      board,
+      before.status.turn,
+      move,
+      style,
+      before.legalMoves,
+    ) ?? coordinate()
+  );
 }
 
 function jieqiSideToMove(state: JieqiGameState): JieqiColor | null {
@@ -827,7 +895,7 @@ export function jieqiTruthBoard(state: JieqiGameState): JieqiPlayerBoard {
 
 /** Every captured role, except one captured before its identity was determined. */
 export function jieqiTruthCaptures(state: JieqiGameState): JieqiCapturedView[] {
-  return state.captures.map((c) => ({ owner: c.owner, role: c.unknown ? null : c.role }));
+  return state.captures.map((c) => capturedEntry(c, c.unknown ? null : c.role));
 }
 
 /** Home squares still face-down whose identity was never determined. */
@@ -863,7 +931,7 @@ export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): Ji
   const captured: JieqiCapturedView[] = state.captures.map((c) => {
     const capturer = oppositeJieqiColor(c.owner);
     const known = c.revealedAtCapture || capturer === color;
-    return { owner: c.owner, role: known ? c.role : null };
+    return capturedEntry(c, known ? c.role : null);
   });
 
   const legalMoves =

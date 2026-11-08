@@ -13,6 +13,7 @@ test('engine HTTP service requires auth and returns protocol response', async ()
   let observedTimeout = 0;
   let observedRequest: EngineTurnRequest | null = null;
   const service = await startEngineHttpService({
+    host: '127.0.0.1',
     port: 0,
     token: 'test-token',
     handler: async (request, watchdogTimeoutMs, computeBudgetMs) => {
@@ -68,6 +69,7 @@ test('engine HTTP service requires auth and returns protocol response', async ()
 
 test('engine HTTP service rejects turns without a matching reservation', async () => {
   const service = await startEngineHttpService({
+    host: '127.0.0.1',
     port: 0,
     token: 'test-token',
     handler: async (request) => ({
@@ -111,6 +113,7 @@ test('engine HTTP service rejects turns without a matching reservation', async (
 test('engine HTTP service accepts full Xiangqi protocol coordinates', async () => {
   let observedRequest: EngineTurnRequest | null = null;
   const service = await startEngineHttpService({
+    host: '127.0.0.1',
     port: 0,
     token: 'test-token',
     handler: async (request) => {
@@ -152,6 +155,7 @@ test('engine HTTP service bounds admitted live engine seats', async () => {
   const service = await startEngineHttpService({
     liveEngineSeats: 1,
     poolSize: 1,
+    host: '127.0.0.1',
     port: 0,
     reservationTtlMs: 60_000,
     token: 'test-token',
@@ -214,6 +218,7 @@ test('engine HTTP service bounds admitted live engine seats', async () => {
 
 test('engine HTTP service exposes unauthenticated health check', async () => {
   const service = await startEngineHttpService({
+    host: '127.0.0.1',
     port: 0,
     token: 'test-token',
     handler: async (request) => ({
@@ -241,6 +246,7 @@ async function failTurn(
   thrown: Error,
 ): Promise<{ status: number; body: unknown; turnsFailed: number; knownFailures: number }> {
   const service = await startEngineHttpService({
+    host: '127.0.0.1',
     port: 0,
     token: 'test-token',
     handler: async () => {

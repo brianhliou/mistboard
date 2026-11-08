@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 import {
   currentSeason,
   displayName,
@@ -48,6 +49,54 @@ function player(input: {
 }
 
 describe('player pages', () => {
+  it.each([
+    ['en', 'Puzzles from this player'],
+    ['zh-Hans', '这位棋手的习题'],
+    ['zh-Hant', '這位棋手的習題'],
+  ] as const)('links to player-scoped training in %s', async (locale, label) => {
+    await ensureLocaleCatalog(locale);
+    const previousPath = window.location.pathname;
+    window.history.replaceState(
+      null,
+      '',
+      locale === 'en' ? '/' : `/${locale.toLowerCase()}/players`,
+    );
+    const fixture = { ...player({ name: 'Fixture Player', games: 2 }), puzzleCount: 1 };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ player: fixture, boards: [] }))),
+    );
+    try {
+      const root = document.createElement('div');
+      await mountXiangqiPlayer(root, fixture.slug);
+      const link = root.querySelector<HTMLAnchorElement>(
+        '.xqp-header-actions a[href="/puzzles?player=fixture-player"]',
+      );
+      expect(link?.textContent).toBe(label);
+      expect(link?.classList.contains('xqb-link')).toBe(true);
+    } finally {
+      window.history.replaceState(null, '', previousPath);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('omits player training when the server reports zero puzzles without fetching puzzles', async () => {
+    const fixture = { ...player({ name: 'Fixture Player', games: 2 }), puzzleCount: 0 };
+    const fetcher = vi.fn(
+      async () => new Response(JSON.stringify({ player: fixture, boards: [] })),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      const root = document.createElement('div');
+      await mountXiangqiPlayer(root, fixture.slug);
+      expect(root.querySelector('a[href="/puzzles?player=fixture-player"]')).toBeNull();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher).toHaveBeenCalledWith('/api/xiangqi/players/fixture-player');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('shows both scripts of a name, once', () => {
     expect(displayName({ name: '尹昇', nameEn: 'Yin Sheng' })).toBe('Yin Sheng 尹昇');
     expect(displayName({ name: '尹昇', nameEn: null })).toBe('尹昇');
@@ -147,6 +196,42 @@ describe('player pages', () => {
     ]);
   });
 
+  // #605: one Taiwan team whatever federation name the source printed, named
+  // by locale, and a Taiwan player's name in the characters they write.
+  it('puts every Taiwan federation name on one team, named by locale', () => {
+    const on = (name: string, federation: string, federationEn: string) => ({
+      ...player({ name, games: 2, wins: 1 }),
+      federation,
+      federationEn,
+    });
+    const players = [
+      on('赵奕帆', '台湾', 'Taiwan'),
+      on('洪旭增', '中华台北', 'Chinese Taipei'),
+      on('林友轩', '中国台北', 'Chinese Taipei'),
+      on('孟繁睿', '河北队', 'Hebei Team'),
+    ];
+    const en = teamsOf(players, 'en');
+    expect(en.map((t) => [t.key, t.players.length])).toEqual([
+      ['taiwan', 3],
+      ['hebei-team', 1],
+    ]);
+    expect(en[0]).toMatchObject({ name: '台灣', nameEn: 'Taiwan', games: 6 });
+    expect(teamsOf(players, 'zh-Hant')[0]?.name).toBe('台灣');
+    expect(teamsOf(players, 'zh-Hans')[0]?.name).toBe('中华台北');
+    expect(teamKey({ federation: '中华台北', federationEn: 'Chinese Taipei' })).toBe('taiwan');
+  });
+
+  it('names a Taiwan player in traditional characters', () => {
+    const chao = {
+      ...player({ name: '赵奕帆', nameEn: 'Chao Yi-fan', games: 1 }),
+      nameOwn: '趙奕帆',
+    };
+    expect(displayName(chao)).toBe('Chao Yi-fan 趙奕帆');
+    expect(displayName({ name: '赵奕帆', nameEn: null, nameOwn: '趙奕帆' })).toBe('趙奕帆');
+    expect(matchesQuery(chao, '趙')).toBe(true);
+    expect(matchesQuery(chao, '赵')).toBe(true);
+  });
+
   it('reads the CXA points under the CXA spelling of a name', () => {
     // The points list prints 粱妍婷; the archive prints 梁妍婷.
     expect(latestPoints('梁妍婷')).toEqual({ points: 1198, rank: 7 });
@@ -220,8 +305,7 @@ describe('rights note', () => {
     vi.unstubAllGlobals();
   });
 
-  const RIGHTS_TEXT =
-    "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.";
+  const RIGHTS_TEXT = 'Corrections or rights requests: contact us.';
 
   const zhejiang = {
     ...player({ name: '尹昇', nameEn: 'Yin Sheng', games: 0 }),
@@ -284,4 +368,130 @@ describe('rights note', () => {
     expect(teams.querySelector('.xqp-board')).not.toBeNull();
     expect(teams.querySelector('.xqb-rights-note')).toBeNull();
   });
+});
+
+describe('professional player locale fixtures', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, '', '/');
+    window.localStorage?.clear();
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'renders players, teams, records and filters in %s',
+    async (locale) => {
+      const english = locale === 'en';
+      window.history.replaceState(null, '', `${english ? '' : `/${locale.toLowerCase()}`}/players`);
+      const chao = {
+        ...player({ name: '赵奕帆', nameEn: 'Chao Yi-fan', games: 1, wins: 1 }),
+        nameOwn: '趙奕帆',
+        federation: '台湾',
+        federationEn: 'Taiwan',
+        events: [
+          {
+            tourSlug: 'test',
+            tourName: '测试杯',
+            tourNameEn: 'Test Cup',
+            level: 'A',
+            games: 1,
+            wins: 1,
+            draws: 0,
+            losses: 0,
+            firstPlayedOn: '2026-10-01',
+            lastPlayedOn: '2026-10-02',
+          },
+        ],
+        firstPlayedOn: '2026-10-01',
+        lastPlayedOn: '2026-10-02',
+      };
+      const missing = { ...player({ name: '无名', nameEn: ' ', games: 0 }), nameOwn: '無名' };
+      const board = {
+        boardId: 'test-b1',
+        tourSlug: 'test',
+        tourName: '测试杯',
+        tourNameEn: 'Test Cup',
+        roundId: 'r1',
+        roundName: '第1轮',
+        roundNameEn: 'Round 1',
+        playedOn: '2026-10-01',
+        colour: 'red',
+        opponent: { name: '无名', nameEn: null, slug: null },
+        result: '1-0',
+        outcome: 'win',
+        plyCount: 2,
+        sourceUrl: null,
+      };
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: unknown) => ({
+          ok: true,
+          status: 200,
+          json: async () =>
+            String(input).endsWith('/players')
+              ? { players: [chao, missing] }
+              : { player: chao, boards: [board] },
+        })),
+      );
+      const root = document.createElement('div');
+      await mountXiangqiPlayersIndex(root);
+      expect(root.querySelector('h1')?.textContent).toBe(english ? 'Xiangqi players' : '象棋棋手');
+      expect(root.querySelector('.xqp-name-link')?.textContent).toContain(
+        english ? 'Chao Yi-fan 趙奕帆' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
+      );
+      // English falls back to the own-script form; a Chinese page keeps the stored name (#918).
+      expect(root.textContent).toContain(english ? '無名' : '无名');
+      const search = root.querySelector<HTMLInputElement>('input[type=search]')!;
+      search.value = '趙';
+      search.dispatchEvent(new Event('input'));
+      expect(root.querySelectorAll('.xqp-row')).toHaveLength(1);
+      expect(root.querySelector('.xqp-filter-count')?.textContent).toBe(
+        english ? '1 player' : '1 位棋手',
+      );
+      await mountXiangqiTeam(root, 'taiwan');
+      expect(root.querySelector('h1')?.textContent).toBe(
+        english ? 'Taiwan' : locale === 'zh-Hans' ? '中华台北' : '台灣',
+      );
+      expect(root.querySelector('.xqp-team-meta')?.textContent).toContain(
+        english ? '1 game' : '1 局',
+      );
+      await mountXiangqiTeamsIndex(root);
+      expect(root.querySelector('h1')?.textContent).toBe(
+        english ? 'Xiangqi teams' : locale === 'zh-Hans' ? '象棋队伍' : '象棋隊伍',
+      );
+      await mountXiangqiPlayer(root, chao.slug);
+      expect(root.querySelector('.xqp-h1')?.textContent).toContain(
+        english ? 'Chao Yi-fan 趙奕帆' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
+      );
+      expect(root.querySelector('.xqp-who')?.textContent).toContain(
+        english ? 'Chao Yi-fan' : locale === 'zh-Hans' ? '赵奕帆' : '趙奕帆',
+      );
+      expect(root.querySelector('.xqp-game-meta')?.textContent).toContain(
+        english ? 'Test Cup' : '测试杯',
+      );
+      expect(root.querySelector('.xqp-colour')?.textContent).toBe(
+        english ? 'red' : locale === 'zh-Hans' ? '红方' : '紅方',
+      );
+      expect(root.querySelector('.xqp-event-record')?.textContent).toContain(
+        english ? '1 game' : '1 局',
+      );
+      expect(root.querySelector('.xqp-filters')?.textContent).toContain(
+        english ? 'Any opponent' : locale === 'zh-Hans' ? '所有对手' : '所有對手',
+      );
+    },
+  );
+});
+
+it('uses the page script while rejecting planted wrong surname forms (#918)', () => {
+  for (const [name, hant, wrong] of [
+    ['党斐', '党斐', '黨斐'],
+    ['于幼华', '于幼華', '於幼華'],
+    ['孙勇征', '孫勇征', '孫勇徵'],
+    ['赵奕帆', '趙奕帆', '趙奕帆'],
+  ]) {
+    const p = { ...player({ name: name!, games: 1 }), nameOwn: wrong! };
+    expect(displayName(p, 'zh-Hant')).toBe(hant);
+    expect(displayName(p, 'zh-Hans')).toBe(name);
+    expect(matchesQuery(p, hant!)).toBe(true);
+    expect(p.name).toBe(name);
+  }
 });

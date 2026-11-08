@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { articles } from './articles-data.js';
+import { clubWashingtonPrerenderHead } from './club-washington-page.js';
 import { articlesIndexPrerenderHead, rulesIndexPrerenderHead } from './pages-static.js';
 import {
   SEO_DESCRIPTION_MIN,
@@ -14,6 +15,20 @@ import {
 import { articleIsNoindex } from './variant-public-surfaces.js';
 
 const appsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+it('describes the searched rules in the zh-Hant banqi search snippet', () => {
+  const banqi = articles.find((article) => article.slug === 'banqi')!;
+  const localized = translateArticle(banqi, 'zh-Hant');
+  // These are the title and description inputs used by the prerenderer.
+  expect({
+    title: `${localized.seoTitle ?? localized.title} | Mistboard`,
+    description: localized.summary,
+  }).toEqual({
+    title: '暗棋規則：怎麼玩、大小順序與連吃 | Mistboard',
+    description:
+      '暗棋怎麼玩？三十二顆象棋棋子蓋著鋪滿半張棋盤，輪到你就翻一顆或走一格。大小順序是將、士、象、車、馬、兵，兵能吃將，炮隔一子吃子不看大小。可以連吃嗎？看圖解答。採用台灣標準暗棋，免註冊直接線上對弈。',
+  });
+});
 
 describe('seoTextLength', () => {
   it('counts a CJK character as two and everything else as one', () => {
@@ -63,12 +78,15 @@ describe('prerendered page meta is long enough to describe the page', () => {
     for (const head of [
       articlesIndexPrerenderHead('https://mistboard.com', lang),
       rulesIndexPrerenderHead('https://mistboard.com', lang),
+      clubWashingtonPrerenderHead('https://mistboard.com', lang ?? 'en'),
     ]) {
       pages.push({ page: head.url.replace('https://mistboard.com', ''), ...head });
     }
   }
-  // Pages whose meta the prerender script spells out as literals (the zh
-  // homepages, /player, /feed, /changelog, /learn/xiangqi, /puzzles, /patron).
+  // Pages whose meta the prerender script spells out as literals: the two zh
+  // homepages. /player, /feed, /changelog, /learn/xiangqi, /puzzles and /patron
+  // now bake from the server's SPA_ROUTE_META, which the server's own
+  // seo-meta-length test checks.
   const prerender = readFileSync(resolve(appsDir, 'web/scripts/prerender-articles.mjs'), 'utf-8');
   const unquote = (s: string) => s.replace(/\\(.)/g, '$1');
   const literal = [
@@ -83,14 +101,14 @@ describe('prerendered page meta is long enough to describe the page', () => {
   }
 
   it('finds the literal meta in the prerender script', () => {
-    expect(literal.length).toBeGreaterThanOrEqual(8);
+    expect(literal.length).toBeGreaterThanOrEqual(2);
   });
 
   // The server's ARTICLES_INDEX_META and RULES_INDEX_META serve the same three
   // indexes when the baked file is missing; a copy edit has to land in both.
   it('the index meta matches the server shell fallback', () => {
     const server = readFileSync(resolve(appsDir, 'server/src/server-static-pages.ts'), 'utf-8');
-    for (const p of pages.filter((p) => /\/(blog|rules)$/.test(p.page))) {
+    for (const p of pages.filter((p) => /\/(blog|rules|washington-xiangqi)$/.test(p.page))) {
       expect(server, `${p.page} title`).toContain(`title: '${p.title}'`);
       expect(server, `${p.page} description`).toContain(`'${p.description}'`);
     }

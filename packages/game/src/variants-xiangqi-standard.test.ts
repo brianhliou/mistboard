@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyStandardXiangqiMove,
+  createInitialStandardXiangqiState,
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
   getStandardXiangqiLegalMovesFrom,
@@ -355,3 +356,50 @@ function playingState(
     positionCounts: {},
   };
 }
+
+// Quiet legal play without threefold, so only the no-capture clock can finish.
+function quietLine(limit: number): XiangqiMove[] {
+  let state = createInitialXiangqiState('quiet-fixture');
+  const moves: XiangqiMove[] = [];
+  let seed = 23;
+  for (let ply = 0; ply < limit; ply++) {
+    const candidates = getStandardXiangqiLegalMoves(state).filter((move) => !state.board[move.to]);
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    let found = false;
+    for (let i = 0; i < candidates.length; i++) {
+      const move = candidates[(seed + i) % candidates.length]!;
+      const next = applyStandardXiangqiMove(state, move, { progressClockLimit: 1000 });
+      if (next.status.type !== 'playing') continue;
+      state = next;
+      moves.push(move);
+      found = true;
+      break;
+    }
+    assert.ok(found, `quiet fixture reaches ply ${ply + 1}`);
+  }
+  return moves;
+}
+
+test('stamped standard xiangqi stays playing through 119 quiet plies and draws at 120', () => {
+  let state = createInitialStandardXiangqiState('new-clock');
+  for (const [i, move] of quietLine(120).entries()) {
+    state = applyStandardXiangqiMove(state, move);
+    assert.equal(state.progressClock, i + 1);
+    assert.deepEqual(
+      state.status,
+      i < 119
+        ? { type: 'playing', turn: i % 2 === 0 ? 'black' : 'red' }
+        : { type: 'finished', winner: null, reason: 'progress-clock' },
+    );
+  }
+});
+
+test('an unstamped standard xiangqi state keeps the legacy 60-ply draw', () => {
+  let state = createInitialXiangqiState('old-clock');
+  for (const [i, move] of quietLine(60).entries()) {
+    state = applyStandardXiangqiMove(state, move);
+    assert.equal(state.progressClock, i + 1);
+    assert.equal(state.status.type, i < 59 ? 'playing' : 'finished');
+  }
+  assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'progress-clock' });
+});

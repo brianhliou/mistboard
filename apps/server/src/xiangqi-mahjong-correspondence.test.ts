@@ -1,6 +1,6 @@
 /**
- * Xiangqi mahjong by correspondence (days per move), casual and for granted
- * accounts only. The turn: after a discard the other seat owes the claim
+ * Xiangqi mahjong by correspondence (days per move), casual by default for
+ * signed-in accounts. The turn: after a discard the other seat owes the claim
  * decision, and on a pass it draws and discards on the same deadline; the next
  * hand deals itself. The deadline the sweeper enforces always names the seat
  * that owes the next move.
@@ -16,11 +16,14 @@ import {
   correspondenceTimeControl,
   createXmjSetup,
   DAY_MS,
+  type DaysPerMove,
   XIANGQI_MAHJONG_SPEC_ID,
   type XmjMove,
   type XmjPlayerView,
   type XmjRoomState,
   type XmjSeat,
+  type XmjTile,
+  xmjOrderedTiles,
   xmjViewFor,
 } from '@mistboard/game';
 import { collectCurrentGames, currentGameBoardPayload } from './current-games.js';
@@ -29,7 +32,8 @@ import type { HttpApiContext } from './routes/lib.js';
 import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
 // Side-effect import: every tenant registers, as the server boots.
 import './variant-tenant/register-tenants.js';
-import { tenantDurableDeadlineFor } from './variant-tenant/lifecycle.js';
+import { appendTenantEvent, type TenantEventWriterPersistence } from './variant-tenant/events.js';
+import { sweepTenantRoomDeadline, tenantDurableDeadlineFor } from './variant-tenant/lifecycle.js';
 import {
   correspondenceTenantForSpecId,
   type TenantManagedRoom,
@@ -58,7 +62,7 @@ function liveRooms(): Map<string, TenantManagedRoom> {
   return registration().rooms as Map<string, TenantManagedRoom>;
 }
 
-async function acceptSeek(daysPerMove: 1 | 3 | 7 = 3): Promise<XmjRuntimeRoom> {
+async function acceptSeek(daysPerMove: DaysPerMove = 3): Promise<XmjRuntimeRoom> {
   const create = registration().createCorrespondenceGameForSeek;
   assert.ok(create);
   const created = await create({
@@ -120,11 +124,68 @@ test('accepting a seek makes a casual correspondence table; east deals and owes 
     assert.equal(room.seatTokens.east?.userId, 'first-xmj');
     assert.equal(room.seatTokens.west?.userId, 'second-xmj');
     assert.equal(state(room).correspondence, true);
+    assert.equal(state(room).match.hand.taiTable, 2, 'production correspondence stays on table 2');
     assert.equal(view(room, 'east').dealer, 'east');
     const deadline = tenantDurableDeadlineFor(tenant, room);
     assert.equal(deadline?.seat, 'east');
     assert.ok(Math.abs((deadline?.dueAt ?? 0) - (Date.now() + 3 * DAY_MS)) < 60_000);
     assert.equal(registration().activeGameCount(), 0, 'a days-per-move table never pins a drain');
+  } finally {
+    registration().clearRooms();
+  }
+});
+
+test('explicit table-3 correspondence persists automatic locked discards across reconnect', async () => {
+  try {
+    const accepted = await acceptSeek(3);
+    const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', 'rA'];
+    const rest = xmjOrderedTiles();
+    for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+    const wall = [...front, ...rest];
+    const events = accepted.events.map((event) =>
+      event.type === 'room-created'
+        ? {
+            ...event,
+            setup: { walls: [wall, wall], firstDealer: 'east', taiTable: 3, correspondence: true },
+          }
+        : event,
+    );
+    const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as XmjEvent[]);
+    assert.ok(hydrated.ok);
+    const room = hydrated.room as XmjRuntimeRoom;
+    const at = Date.now();
+    play(room, { by: 'east', at, action: 'declare-ready', tile: 'bH' });
+    assert.deepEqual(view(room, 'west').declared, { east: true, west: false });
+    assert.deepEqual(state(room).ready, []);
+    assert.equal(deadlineSeat(room), 'west');
+    play(room, { by: 'west', at: at + 1_000, action: 'pass' });
+    play(room, { by: 'west', at: at + 2_000, action: 'discard', tile: 'bR' });
+    play(room, { by: 'east', at: at + 3_000, action: 'pass' });
+    assert.equal(state(room).claimPauseEndsAt, null);
+    assert.equal(view(room, 'east').legal.selfDraw, false);
+    const pending = tenant.rules.pendingAction?.(state(room));
+    assert.deepEqual(pending, {
+      at: at + 3_000,
+      color: 'east',
+      move: { by: 'east', at: at + 3_000, action: 'discard', tile: 'rA' },
+    });
+    assert.ok(pending);
+    for (const seat of tenant.colors) await assertSeatSeesOnlyItsOwn(room, seat, 'declared draw');
+    const reconnected = createTenantRuntimeRoomFromEvents(
+      tenant,
+      JSON.parse(JSON.stringify(room.events)),
+    );
+    assert.ok(reconnected.ok);
+    const restored = reconnected.room as XmjRuntimeRoom;
+    assert.deepEqual(tenant.rules.pendingAction?.(state(restored)), pending);
+    assert.deepEqual(state(restored), state(room));
+    play(restored, pending.move);
+    const last = restored.events.at(-1);
+    assert.ok(last?.type === 'move-played' && last.move.action === 'discard');
+    assert.deepEqual(state(restored).match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+    assert.equal(deadlineSeat(restored), 'west');
+    for (const seat of tenant.colors)
+      await assertSeatSeesOnlyItsOwn(restored, seat, 'automatic discard');
   } finally {
     registration().clearRooms();
   }
@@ -156,6 +217,103 @@ test('a discard hands the deadline to the other seat, which passes, draws and di
     registration().clearRooms();
   }
 });
+
+for (const drawn of ['rA', 'rP'] as const) {
+  test(`real correspondence expiry discards a declared ${drawn === 'rP' ? 'winning' : 'nonwinning'} draw instead of forfeiting`, async () => {
+    try {
+      const accepted = await acceptSeek(1);
+      const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', drawn];
+      const rest = xmjOrderedTiles();
+      for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+      const wall = [...front, ...rest];
+      const events = accepted.events.map((event, index) => ({
+        ...event,
+        at: 1_000 + index * 1_000,
+        ...(event.type === 'room-created'
+          ? {
+              setup: {
+                walls: [wall, wall],
+                firstDealer: 'east',
+                taiTable: 3,
+                correspondence: true,
+              },
+            }
+          : {}),
+      }));
+      const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as XmjEvent[]);
+      assert.ok(hydrated.ok);
+      const room = hydrated.room as XmjRuntimeRoom;
+      play(room, { by: 'east', at: 10_000, action: 'declare-ready', tile: 'bH' });
+      play(room, { by: 'west', at: 11_000, action: 'pass' });
+      play(room, { by: 'west', at: 12_000, action: 'discard', tile: 'bR' });
+      play(room, { by: 'east', at: 13_000, action: 'pass' });
+      assert.equal(view(room, 'east').legal.selfDraw, drawn === 'rP');
+      liveRooms().set(room.id, room as unknown as TenantManagedRoom);
+      await registration().sweepDueDeadline?.(room.id);
+
+      assert.equal(state(room).status.type, 'playing');
+      const last = room.events.at(-1);
+      assert.ok(last?.type === 'move-played');
+      assert.deepEqual(last.move, { by: 'east', at: last.at, action: 'discard', tile: drawn });
+      assert.deepEqual(state(room).match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+      assert.equal(state(room).match.hand.drawnDiscards[0].at(-1), true);
+      assert.equal(deadlineSeat(room), 'west');
+      assert.equal(room.projection.clock?.remainingMs.east, DAY_MS);
+      assert.equal(tenantDurableDeadlineFor(tenant, room)?.dueAt, last.at + DAY_MS);
+      const count = room.events.length;
+      await registration().sweepDueDeadline?.(room.id);
+      assert.equal(room.events.length, count, 'repeated expiry makes no extra move');
+      const restored = createTenantRuntimeRoomFromEvents(
+        tenant,
+        JSON.parse(JSON.stringify(room.events)),
+      );
+      assert.ok(restored.ok);
+      assert.deepEqual(restored.room.projection, room.projection);
+      // Check the same deadline with an initialized writer: both the legal
+      // discard and the next seat's durable deadline must be written.
+      const beforeExpiry = createTenantRuntimeRoomFromEvents(tenant, room.events.slice(0, -1));
+      assert.ok(beforeExpiry.ok);
+      const persisted: XmjEvent[] = [];
+      const rows: Array<{ seat: string; dueAt: Date }> = [];
+      const persistence: TenantEventWriterPersistence<
+        XmjSeat,
+        XmjMove,
+        typeof XIANGQI_MAHJONG_SPEC_ID
+      > = {
+        isInitialized: () => true,
+        appendRoomEvent: async (_id, _seq, event) => {
+          persisted.push(event);
+        },
+        upsertRoomDeadline: async (row) => {
+          rows.push(row);
+        },
+        deleteRoomDeadline: async () => {
+          assert.fail('an automatic discard keeps its deadline row');
+        },
+        abortRunningGame: async () => {
+          assert.fail('an automatic discard cannot abort');
+        },
+        recordGameEnd: async () => {
+          assert.fail('an automatic discard cannot forfeit');
+        },
+        upsertRoomSeatToken: async () => {},
+      };
+      await sweepTenantRoomDeadline(tenant, beforeExpiry.room, {
+        appendEvent: (r, event) => appendTenantEvent(tenant, r, event, { persistence }),
+        broadcastEventAppended: () => {},
+        now: () => last.at,
+      });
+      assert.deepEqual(persisted, [last]);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0]?.seat, 'west');
+      assert.equal(rows[0]?.dueAt.getTime(), last.at + DAY_MS);
+      assert.deepEqual(beforeExpiry.room.projection, room.projection);
+      for (const seat of tenant.colors) await assertSeatSeesOnlyItsOwn(room, seat, 'clock discard');
+    } finally {
+      registration().clearRooms();
+    }
+  });
+}
 
 test('the sweeper flags the seat that let its turn lapse: a loss on time', async () => {
   try {
@@ -371,13 +529,30 @@ for (const seed of [7, 12, 55]) {
         steps += 1;
         for (const seat of tenant.colors)
           await assertSeatSeesOnlyItsOwn(room, seat, `step ${steps}`);
-        // The public current-games card carries no board, so no tile.
+        const s = state(room);
+        // A launched card serves the spectator's public table, never a seat's
+        // concealed hand. Check the whole payload as well as the view.
         const card = collectCurrentGames(ctx, at).find((entry) => entry.roomId === room.id);
         if (card) {
           assert.equal('payload' in card, false);
-          assert.equal(await currentGameBoardPayload(card), null);
+          const payload = await currentGameBoardPayload(card);
+          assert.ok(payload);
+          assert.deepEqual(payload.view, xmjViewFor(s, 'spectator'));
+          const json = JSON.stringify(payload);
+          const keys = keysOf(JSON.parse(json));
+          for (const secret of ['setup', 'walls', 'wall', 'firstDealer']) {
+            assert.equal(keys.has(secret), false, `card carries ${secret}`);
+          }
+          if (s.match.hand.wall.length >= 2) {
+            assert.ok(
+              !json.includes(JSON.stringify(s.match.hand.wall)),
+              'card hides the live wall',
+            );
+          }
+          for (const wall of s.match.walls.slice(s.match.handIndex + 1)) {
+            assert.ok(!json.includes(JSON.stringify(wall)), 'card hides future walls');
+          }
         }
-        const s = state(room);
         at += 1_000;
         if (s.match.between) {
           // No button: the deal is the runtime's, due at once.

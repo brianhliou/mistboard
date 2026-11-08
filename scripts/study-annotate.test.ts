@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { winPercent } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../apps/web/src/assessment-glyphs.ts';
+import { advantageSymbol } from '../apps/web/src/review/engine/eval-format.ts';
+import { computeGameAnalysis, judgmentGlyph } from '../apps/web/src/review/game-analysis.ts';
 import {
   annotateFromEngine,
   assessmentForRedScore,
@@ -13,6 +16,49 @@ import {
 } from './study-annotate.ts';
 
 describe('study-annotate', () => {
+  it('matches review verdicts immediately below, at, and above every assessment boundary', () => {
+    for (const boundary of [60, 180, 450]) {
+      for (const sign of [1, -1]) {
+        for (const offset of [-0.25, 0, 0.25]) {
+          const cp = sign * (boundary + offset);
+          assert.equal(
+            assessmentForRedScore(winPercent(cp, null) / 100).symbol,
+            advantageSymbol(cp, null),
+            `${cp}cp`,
+          );
+        }
+      }
+    }
+  });
+
+  it('matches review move glyphs around every judgment cutoff for either mover', () => {
+    for (const boundary of [5, 10, 15]) {
+      for (const offset of [-0.001, 0, 0.001]) {
+        const drop = boundary + offset;
+        for (const mover of ['red', 'black'] as const) {
+          const redAfter = mover === 'red' ? 0.5 - drop / 100 : 0.5 + drop / 100;
+          const scores = mover === 'red' ? [0.5, redAfter] : [0.5, 0.5, redAfter];
+          const moves = scores.slice(1).map((_, i) => (i % 2 ? 'b9b8' : 'a1a2'));
+          const review = computeGameAnalysis({
+            engineId: 'pikafish',
+            depth: 12,
+            plies: scores.map((score, ply) => ({
+              ply,
+              cp: cpForRedScore(score),
+              mate: null,
+              best: null,
+            })),
+          });
+          assert.equal(
+            judgedMoves({ rootFen: 'root', moves, redScore: scores }).at(-1)?.glyph ?? null,
+            judgmentGlyph(review.moves.at(-1)!.judgment)?.suffix ?? null,
+            `${mover} loses ${drop} points`,
+          );
+        }
+      }
+    }
+  });
+
   it('reads an expected score through the win curve and the review bands', () => {
     // The bands the review's engine lines close on: 60 / 180 / 450 cp.
     const at = (cp: number): number => 1 / (1 + Math.exp(-0.00368208 * cp));
@@ -160,6 +206,41 @@ describe('study-annotate', () => {
     assert.equal(first.children[1]!.uci, 'f10e10');
     assert.deepEqual(first.annotations?.shapes, [
       { kind: 'arrow', brush: 'green', orig: 'f10', dest: 'e10' },
+    ]);
+  });
+  it('grades each side on its own judge, keeps a coloured always-line, and adds arrows', () => {
+    const input = {
+      rootFen: 'root',
+      moves: ['a1a2', 'b10b9', 'c1c2'],
+      // The shared series would fault nothing; each judge sees one fault.
+      redScore: [0.5, 0.5, 0.5, 0.5],
+      scoreByMover: {
+        // Red's moves judged here: c1c2 (ply 3) drops red from 60% to 30%.
+        red: [0.5, 0.5, 0.6, 0.3],
+        // Black's moves judged here: b10b9 (ply 2) costs black nothing.
+        black: [0.5, 0.5, 0.5, 0.5],
+      },
+      sidelines: [
+        { ply: 1, moves: ['f10e10'], redScoreEnd: 0.5, brush: 'orange', always: true },
+        { ply: 0, moves: ['g1g2'], redScoreEnd: 0.5, brush: 'blue' },
+      ],
+      shapes: { 1: [{ kind: 'arrow' as const, brush: 'blue', orig: 'b10', dest: 'b9' }] },
+    };
+    assert.deepEqual(
+      judgedMoves(input).map((m) => [m.ply, m.glyph]),
+      [[3, '??']],
+    );
+    const tree = annotateFromEngine(input);
+    const [first] = tree.root.children;
+    assert.equal(
+      tree.root.children.length,
+      1,
+      'a line off an unfaulted move without always is dropped',
+    );
+    assert.equal(first!.children[1]!.uci, 'f10e10', 'the always-line hangs without a glyph');
+    assert.deepEqual(first!.annotations?.shapes, [
+      { kind: 'arrow', brush: 'blue', orig: 'b10', dest: 'b9' },
+      { kind: 'arrow', brush: 'orange', orig: 'f10', dest: 'e10' },
     ]);
   });
 });

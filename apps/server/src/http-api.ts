@@ -9,6 +9,7 @@
 // index.ts don't need to know things moved.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import * as accountRoute from './routes/account.js';
 import * as achievementsRoute from './routes/achievements.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
@@ -19,8 +20,10 @@ import * as authRoute from './routes/auth.js';
 import * as banqiGamesRoute from './routes/banqi-games.js';
 import * as botsRoute from './routes/bots.js';
 import * as chatRoute from './routes/chat.js';
+import * as clubSignupRoute from './routes/club-signup.js';
 import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
+import * as correspondenceHostRoute from './routes/correspondence-host.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as crazyhouseXiangqiGamesRoute from './routes/crazyhouse-xiangqi-games.js';
 import * as currentGamesRoute from './routes/current-games.js';
@@ -32,8 +35,10 @@ import * as feedbackRoute from './routes/feedback.js';
 import * as fortressXiangqiGamesRoute from './routes/fortress-xiangqi-games.js';
 import * as forumRoute from './routes/forum.js';
 import * as gamesRoute from './routes/games.js';
+import * as gomokuGamesRoute from './routes/gomoku-games.js';
 import * as historicalXiangqiGamesRoute from './routes/historical-xiangqi-games.js';
 import * as inboxRoute from './routes/inbox.js';
+import * as inboxEmailUnsubscribeRoute from './routes/inbox-email-unsubscribe.js';
 import * as jieqiGamesRoute from './routes/jieqi-games.js';
 import * as jungleFlipGamesRoute from './routes/jungle-flip-games.js';
 import * as jungleGamesRoute from './routes/jungle-games.js';
@@ -49,8 +54,10 @@ import * as practiceRoute from './routes/practice.js';
 import * as puzzlesRoute from './routes/puzzles.js';
 import * as readoutsRoute from './routes/readouts.js';
 import * as relationsRoute from './routes/relations.js';
+import * as resendRoute from './routes/resend.js';
 import * as roomsRoute from './routes/rooms.js';
 import * as studiesRoute from './routes/studies.js';
+import * as threeKingdomsBanqiGamesRoute from './routes/three-kingdoms-banqi-games.js';
 import * as titlesRoute from './routes/titles.js';
 import * as usersRoute from './routes/users.js';
 import * as xiangqiBroadcastsRoute from './routes/xiangqi-broadcasts.js';
@@ -96,8 +103,11 @@ export const routes: RouteModule[] = [
   chatRoute,
   enginesRoute,
   patronRoute,
+  resendRoute,
   feedbackRoute,
+  clubSignupRoute,
   forumRoute,
+  inboxEmailUnsubscribeRoute,
   inboxRoute,
   notificationsRoute,
   metaRoute,
@@ -108,6 +118,7 @@ export const routes: RouteModule[] = [
   // and no other module claims that prefix.
   adminGameArtifactsRoute,
   correspondenceGamesRoute,
+  correspondenceHostRoute,
   correspondenceSeeksRoute,
   // Ahead of gamesRoute: /api/games/current must not fall into /api/games/:id.
   currentGamesRoute,
@@ -127,7 +138,9 @@ export const routes: RouteModule[] = [
   jungleGamesRoute,
   jungleFlipGamesRoute,
   banqiGamesRoute,
+  threeKingdomsBanqiGamesRoute,
   xiangqiMahjongGamesRoute,
+  gomokuGamesRoute,
   gamesRoute,
   relationsRoute,
   titlesRoute,
@@ -149,6 +162,8 @@ export async function handleApiRequest(
   const url = request.url ?? '/';
   const parsedUrl = new URL(url, 'http://localhost');
   const pathname = parsedUrl.pathname;
+
+  if (await guardFFQBanqiHttpRead(ctx, request, response, parsedUrl)) return;
 
   for (const route of routes) {
     if (await route.tryHandle(ctx, request, response, pathname, parsedUrl)) return;

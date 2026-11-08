@@ -3,6 +3,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { GOMOKU_DEALT_OPENINGS, getGomokuPlayerView } from '@mistboard/game';
+import { gomokuTenant } from './gomoku-tenant.js';
 
 import {
   DEFAULT_PLY_CAP,
@@ -26,6 +28,29 @@ const REGENERATE = 'npm run generate:variant-fixtures --workspace @mistboard/ser
 const AWAITING_REGENERATION: Record<string, string> = {
   'crazyhouse-xiangqi': 'd06dfd2fe (soldiers drop on any empty point) moved it at ply 61',
 };
+
+test('Gomoku has a deterministic dealt-opening fixture that finishes on a five', () => {
+  const spec = VARIANTS.find((entry) => entry.tenant.gameSpecId === 'gomoku');
+  assert.ok(spec, 'Gomoku must have a fixture generator');
+  const result = playRandomGame(spec, 7, DEFAULT_PLY_CAP);
+  assert.ok(result.finished, result.status);
+  assert.deepEqual(playRandomGame(spec, 7, DEFAULT_PLY_CAP), result);
+  const first = result.events[0] as { setup: { stones: unknown[]; turn: string } };
+  assert.ok(
+    GOMOKU_DEALT_OPENINGS.some(
+      ({ stones, turn }) => JSON.stringify({ stones, turn }) === JSON.stringify(first.setup),
+    ),
+    'use a recorded mined opening from the dealt pool',
+  );
+  assert.ok(first.setup.stones.length > 0);
+  const hydration = createTenantRuntimeRoomFromEvents(gomokuTenant, result.events as never[]);
+  assert.ok(hydration.ok, hydration.ok ? '' : hydration.error);
+  const state = hydration.room.projection.state;
+  assert.ok(state.status.type === 'finished');
+  assert.equal(state.status.reason, 'five');
+  assert.equal(state.ply, first.setup.stones.length + result.plies);
+  assert.ok(getGomokuPlayerView(state, 'black', true).winningLine.length >= 5);
+});
 
 function committedSeed(roomId: string): number {
   const match = /sample_(\d+)$/.exec(roomId);

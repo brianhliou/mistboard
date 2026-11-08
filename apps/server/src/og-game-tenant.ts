@@ -3,16 +3,18 @@
 //
 // The fog chess card (og-image.ts serveGameOgImage) draws both fog views of the
 // final position. A tenant card draws ONE board, the position card's renderer
-// (og-position.ts), framed by the pairing and the result; the position it
+// (og-position.ts), framed by the pairing and the result; a tile match draws
+// its final tai scoreboard instead. The position a board card
 // shows is the game's turning point when the review has been analysed, else
 // the final position (see cardPly).
 //
-// Finished games only, twice over: getGameSummary reads completed rows, and the
-// tenant's fenAtPly (game-card-tenant.ts) yields nothing for a log that does
-// not end finished. A live fog game has no card and no meta.
+// Board cards are finished games only, twice over: getGameSummary reads completed rows, and the
+// tenant's fenAtPly or finalScores yields nothing for a log that does not end
+// finished. A live review page gets only the seat names and variant, never a card.
 
 import type { ServerResponse } from 'node:http';
-import { GAME_IMAGE_VERSION, winPercent } from '@mistboard/game';
+import { GAME_IMAGE_VERSION, maybeGameSpecForId, winPercent } from '@mistboard/game';
+import { liveSeatEngineName } from './first-party-bots.js';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
 import { serveGameOgImage } from './og-image.js';
 import { isPositionOgVariant, positionOgVariantLabel, resolvePositionOg } from './og-position.js';
@@ -23,6 +25,7 @@ import type { StoredPlyEval } from './persistence-game-analysis.js';
 import { isReplayableGame } from './replayable-games.js';
 import { postgamePlayers } from './routes/lib.js';
 import {
+  type TenantManagedRoom,
   type VariantTenantCard,
   type VariantTenantRegistration,
   variantTenantForRoomId,
@@ -46,13 +49,24 @@ export type TenantGameCardStore = {
   summary: (roomId: string) => Promise<persistence.GameRecord | null>;
   events: (roomId: string) => Promise<readonly { type: string; roomId: string }[] | null>;
   analysis: (roomId: string, engineId: string, depth: number) => Promise<StoredPlyEval[] | null>;
+  /** In-memory rooms only: a preview must not hydrate a room or reserve an engine. */
+  room?: (roomId: string) => Promise<TenantManagedRoom | null>;
 };
 
 const liveStore: TenantGameCardStore = {
-  summary: (roomId) => persistence.getGameSummary(roomId),
-  events: (roomId) => persistence.loadRoomEvents(roomId),
+  summary: (roomId) =>
+    persistence.isInitialized() ? persistence.getGameSummary(roomId) : Promise.resolve(null),
+  events: (roomId) =>
+    persistence.isInitialized() ? persistence.loadRoomEvents(roomId) : Promise.resolve(null),
   analysis: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
 };
+
+// A hidden playtest's public artifacts obey its runtime flag too. Launched
+// variants keep their historical cards when room creation is switched off.
+function cardEnabled(registration: VariantTenantRegistration): boolean {
+  const spec = maybeGameSpecForId(registration.gameSpecId);
+  return !!spec && (spec.publicSurface !== 'hidden' || registration.enabled());
+}
 
 async function storedGameReplays(
   registration: VariantTenantRegistration,
@@ -80,6 +94,8 @@ export type TenantGameCard = {
   label: string;
   /** "Pikafish won by resignation" / "Drawn by repetition". */
   outcome: string;
+  /** Public final tai totals for a match card; no tile state crosses here. */
+  scores: Record<string, number> | null;
   /** Review URL path, the canonical share target. */
   reviewPath: string;
 };
@@ -92,14 +108,34 @@ export async function tenantGameCard(
 ): Promise<TenantGameCard | null> {
   const registration = variantTenantForRoomId(roomId);
   const card = registration?.card;
-  const gameRouteBase = registration?.export?.gameRouteBase;
-  if (!registration || !card || !gameRouteBase) return null;
-  if (!isPositionOgVariant(card.variant)) return null;
+  // The card's page: the export's game route, else a review page with no export
+  // (gomoku while hidden), else the finished room.
+  const gameRouteBase = registration?.export?.gameRouteBase ?? registration?.reviewRouteBase;
+  if (!registration || !card || !cardEnabled(registration)) return null;
+  if (!gameRouteBase && !registration.finishedGameOpensRoom) return null;
+  const label =
+    card.layout === 'match' || card.layout === 'gomoku'
+      ? card.label
+      : isPositionOgVariant(card.variant)
+        ? positionOgVariantLabel(card.variant)
+        : null;
+  if (!label) return null;
   const game = await store.summary(roomId);
-  if (!game || game.variant !== registration.gameSpecId) return null;
+  if (!game || game.variant !== registration.gameSpecId || game.visibility !== 'public')
+    return null;
   // A game whose stored log no longer replays has no card and no page meta
   // (replay-guard.ts): the page keeps its generic meta, the image its default.
   if (!(await storedGameReplays(registration, roomId, store))) return null;
+  let scores: Record<string, number> | null = null;
+  if (card.layout === 'match') {
+    const events = await store.events(roomId);
+    scores = events ? card.finalScores(events, roomId) : null;
+    if (!scores) return null;
+  }
+  if (card.layout === 'gomoku') {
+    const events = await store.events(roomId);
+    if (!events || !card.finalPosition(events, roomId)) return null;
+  }
   const outcome = outcomeLine(game);
   if (!outcome) return null;
   // Tenant participants are written in tenant.colors order
@@ -115,9 +151,10 @@ export async function tenantGameCard(
     card,
     game,
     players,
-    label: positionOgVariantLabel(card.variant),
+    label,
     outcome,
-    reviewPath: `${gameRouteBase}/${encodeURIComponent(roomId)}`,
+    scores,
+    reviewPath: `${gameRouteBase ?? '/room'}/${encodeURIComponent(roomId)}`,
   };
 }
 
@@ -200,6 +237,7 @@ async function chosenPly(
   plyCount: number,
   store: TenantGameCardStore,
 ): Promise<number> {
+  if (entry.card.layout === 'match' || entry.card.layout === 'gomoku') return plyCount;
   const { analysis } = entry.card;
   if (!analysis) return plyCount;
   try {
@@ -224,6 +262,94 @@ export type TenantGamePageMeta = {
 const GAME_PAGE_ROUTE = /^(\/[a-z0-9-]+)?\/game\/([^/]+)$/;
 const ROOM_PAGE_ROUTE = /^\/room\/([^/]+)$/;
 
+export type TenantGameRoutePage = {
+  meta?: Omit<TenantGamePageMeta, 'imagePath'> & { imagePath?: string };
+  noindex: true;
+  notFound?: true;
+};
+
+/** Only the tenant review routes. Live previews are a names-only projection;
+ * neither the canonical state nor any move/event is copied into page metadata.
+ * /room and the historical archive retain their separate policies. */
+export async function tenantGameRoutePage(
+  pathname: string,
+  store: TenantGameCardStore = liveStore,
+): Promise<TenantGameRoutePage | null> {
+  const normalized = pathname.replace(/\/+$/, '');
+  const match = GAME_PAGE_ROUTE.exec(normalized);
+  if (!match?.[1] || match[1] === '/historical-xiangqi') return null;
+  const generic = { noindex: true } as const;
+  const missing = { ...generic, notFound: true } as const;
+  let roomId: string;
+  try {
+    roomId = decodeURIComponent(match[2]!);
+  } catch {
+    return missing;
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(roomId)) return missing;
+  const registration = variantTenantForRoomId(roomId);
+  if (
+    !registration ||
+    `${match[1]}/game` !== (registration.export?.gameRouteBase ?? registration.reviewRouteBase)
+  )
+    return missing;
+  const spec = maybeGameSpecForId(registration.gameSpecId);
+  // Even an enabled admin playtest has no anonymous preview.
+  if (!spec || spec.publicSurface === 'hidden' || registration.admitsConnection?.(null) === false)
+    return generic;
+  try {
+    const game = await store.summary(roomId);
+    if (game) {
+      if (game.variant !== registration.gameSpecId) return missing;
+      if (game.visibility !== 'public') return generic;
+      const meta = await tenantGamePageMeta(normalized, { ...store, summary: async () => game });
+      return meta ? { ...generic, meta } : generic;
+    }
+    const room = store.room ? await store.room(roomId) : registration.rooms.get(roomId);
+    if (!room) {
+      // A paused/unloaded persisted room still exists. Do not hydrate it merely
+      // to produce a preview: hydration can write pauses and reserve engines.
+      const events = await store.events(roomId);
+      return events?.some((event) => event.roomId === roomId) ? generic : missing;
+    }
+    if (room.id !== roomId || room.projection?.state.status.type !== 'playing') return generic;
+    const seats = room.projection.seats ?? {};
+    // These are seat names, not revealed piece inks. Require a known pair in
+    // first-mover order rather than depending on seat-assignment insertion order.
+    const colors = [
+      ['red', 'black'],
+      ['east', 'west'],
+      ['black', 'white'],
+    ].find((pair) => pair.every((color) => color in seats));
+    if (!colors || Object.keys(seats).length !== 2) return generic;
+    const players = colors.map((color) => {
+      const clientId = seats[color];
+      if (clientId && registration.isEngineClientId?.(clientId)) {
+        return liveSeatEngineName(
+          clientId,
+          room.pveBotId,
+          () => registration.engineDisplayName?.(clientId) ?? 'Computer',
+        );
+      }
+      const token = room.seatTokens?.[color];
+      return token?.userDisplayName ?? token?.userHandle ?? 'Guest';
+    });
+    const label = spec.publicName;
+    return {
+      ...generic,
+      meta: {
+        title: `${players[0]} vs ${players[1]} · ${label}, live · Mistboard`,
+        description: `${players[0]} vs ${players[1]}. Live ${label} game on Mistboard.`,
+        urlPath: normalized,
+      },
+    };
+  } catch {
+    // An unavailable read must neither advertise state nor claim a real room
+    // does not exist. Serve the ordinary noindex shell and allow a retry.
+    return generic;
+  }
+}
+
 /** Meta for a tenant game page, or null when the path is not one, names no
  *  finished tenant game, or pairs a tenant's room id with ANOTHER tenant's
  *  route base (fail closed: no card is better than a mislabelled one). */
@@ -243,12 +369,19 @@ export async function tenantGamePageMeta(
   }
   const entry = await tenantGameCard(roomId, store);
   if (!entry) return null;
-  if (gameMatch && `${gameMatch[1] ?? ''}/game` !== entry.registration.export?.gameRouteBase) {
+  if (
+    gameMatch &&
+    `${gameMatch[1] ?? ''}/game` !==
+      (entry.registration.export?.gameRouteBase ?? entry.registration.reviewRouteBase)
+  ) {
     return null;
   }
+  const { scores } = entry;
   return {
     title: `${entry.players[0]} vs ${entry.players[1]} · ${entry.label} | Mistboard`,
-    description: `${entry.outcome} after ${plural(moveCount(entry.game.plyCount), 'move')}. Replay this ${entry.label} game move by move on Mistboard.`,
+    description: scores
+      ? `${entry.outcome}. ${entry.game.participants.map((participant, index) => `${entry.players[index]}: ${scores[participant.color]} tai`).join(', ')}. Replay this ${entry.label} match on Mistboard.`
+      : `${entry.outcome} after ${plural(moveCount(entry.game.plyCount), 'move')}. Replay this ${entry.label} game move by move on Mistboard.`,
     urlPath: entry.reviewPath,
     imagePath: `/og/game/${encodeURIComponent(roomId)}.png?v=${TENANT_GAME_OG_IMAGE_VERSION}`,
   };
@@ -281,6 +414,12 @@ export async function serveTenantGameOgImage(
   store: TenantGameCardStore = liveStore,
   staticDir?: string,
 ): Promise<void> {
+  const registration = variantTenantForRoomId(roomId);
+  // Check BEFORE the PNG cache: a warmed card must disappear with the flag.
+  if (!registration || !cardEnabled(registration)) {
+    redirectToDefault(response);
+    return;
+  }
   const key = `tenant-game:v${TENANT_GAME_OG_IMAGE_VERSION}:${roomId}`;
   const cached = cache.get(key);
   if (cached) {
@@ -309,7 +448,23 @@ export async function renderTenantGameCard(
   store: TenantGameCardStore = liveStore,
   art: CardArt = new Map(),
 ): Promise<string> {
+  if (entry.card.layout === 'match') return matchCard(entry);
   const events = await store.events(entry.game.roomId);
+  if (entry.card.layout === 'gomoku') {
+    const position = events ? entry.card.finalPosition(events, entry.game.roomId) : null;
+    if (!position) return pairingOnlyCard(entry);
+    const player = (color: 'black' | 'white') => {
+      const index = entry.game.participants.findIndex((participant) => participant.color === color);
+      return {
+        name: entry.players[index] ?? 'Player',
+        ink: color,
+        score: seatScore(entry.game.result, color),
+      };
+    };
+    return renderBoardCard({ kind: 'gomoku', position }, art, {
+      players: { top: player('black'), bottom: player('white'), variant: entry.label },
+    });
+  }
   const plyCount = entry.game.plyCount;
   if (events) {
     // Seats sit level with their back rank: black ink at the top of the board
@@ -342,6 +497,53 @@ export async function renderTenantGameCard(
     }
   }
   return pairingOnlyCard(entry);
+}
+
+/** A match scoreboard, entirely inside the shared 1200 x 630 card frame.
+ * No board, tile art, filters or oversized layers are needed for public tai. */
+function matchCard(entry: TenantGameCard): string {
+  const text = (
+    x: number,
+    y: number,
+    size: number,
+    fill: string,
+    value: string,
+    anchor = 'start',
+  ) =>
+    `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${fill}" font-family="${OG_FONT}" font-size="${size}" font-weight="700">${escapeXml(value)}</text>`;
+  // Limit wide (including CJK) names and outcome lines before rendering, so
+  // user text cannot extend a layer beyond the card or collide with a score.
+  const fit = (value: string, size: number, width: number) => {
+    let used = 0;
+    let result = '';
+    for (const ch of value) {
+      used += size; // A full em per character also bounds wide Latin names.
+      if (used > width - size) return `${result}…`;
+      result += ch;
+    }
+    return result;
+  };
+  const parts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    text(72, 100, 44, '#c9cfc3', fit(entry.label, 44, OG_WIDTH - 144)),
+    text(72, 160, 24, '#9ca3af', 'Final tai totals'),
+  ];
+  for (const [index, participant] of entry.game.participants.slice(0, 2).entries()) {
+    const y = 270 + index * 110;
+    const winner = seatScore(entry.game.result, participant.color) === '1';
+    const fill = winner ? '#d6dfb8' : '#f3f4f6';
+    parts.push(
+      text(72, y, 40, fill, fit(entry.players[index] ?? 'Player', 40, 760)),
+      text(OG_WIDTH - 72, y, 52, fill, `${entry.scores?.[participant.color] ?? 0} tai`, 'end'),
+    );
+  }
+  parts.push(
+    text(72, 480, 32, '#c9cfc3', fit(entry.outcome, 32, OG_WIDTH - 144)),
+    text(72, 566, 26, '#9ca3af', 'mistboard.com'),
+    '</svg>',
+  );
+  return parts.join('');
 }
 
 /** No renderable position: the pairing carries the card. */

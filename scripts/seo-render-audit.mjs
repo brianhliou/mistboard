@@ -24,12 +24,27 @@
 //   npm run seo:render-audit -- --block-lazy-chunks --base http://localhost:3000
 //   npm run seo:render-audit -- --url /rules/duck-xiangqi --json out.json
 //
+// The server HTML's meta is checked too (serverMetaFindings): a page other
+// than the homepage serving the homepage's title fails, since Bing files it as
+// a duplicate of '/' (/terms, /privacy, /contact, /watch and 35 endgame deep
+// links did until 2026-10-24). The homepage's description elsewhere, a title
+// or description under the length floors, and an <img> with no alt attribute
+// warn: the floors are gated where each title is written (seo-meta-length
+// tests), and this run is the backstop for data-driven pages.
+//
 // Exit 1 when any page fails; warnings (a rendered title that differs from
 // the server's) never fail the run.
+// HTML fetches and failed browser connections retry at most three times. A
+// recovered transport failure stays in the report; content findings and HTTP
+// errors never retry. Exhausted navigation failures are not empty-page findings.
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
+// The server's copy, not a third one: it imports nothing and its types are
+// erasable, so Node (22.18 and later) loads it as it stands.
+import { seoMetaLengthProblems } from '../apps/server/src/seo-meta-length.ts';
+import { crawlerCharCount, crawlerText } from './lib/crawler-text.mjs';
 
 const GOOGLEBOT_UA =
   'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
@@ -37,11 +52,15 @@ const SITEMAPS = ['pages', 'studies', 'players', 'broadcasts'];
 // Titles the client sets as a stand-in while a route loads. Indexed, they
 // replace a page's real title in results.
 const PLACEHOLDER_TITLES = new Set(['Articles', 'News', 'Mistboard', 'Page failed to load']);
+// apps/web/index.html's own title: what every route without route meta serves,
+// and the fallback when the run cannot read the homepage itself.
+const SHELL_TITLE = 'Free Online Chinese Chess (Xiangqi) | Mistboard';
+const HOME_PATHS = new Set(['/', '/zh-hans', '/zh-hant']);
 
 function parseArgs(argv) {
   const args = {
     base: 'https://mistboard.com',
-    sitemaps: ['pages'],
+    sitemaps: [...SITEMAPS],
     limit: 0,
     urls: [],
     concurrency: 4,
@@ -127,7 +146,59 @@ export function serverHtmlFacts(html) {
   // to when a chunk fails, and nothing for a crawler that does not run it.
   const prerendered = html !== '' && !/<div id="app">\s*<\/div>/.test(html);
   const htmlLang = html.match(/<html[^>]*\slang="([^"]*)"/i)?.[1] || null;
-  return { title, noindex, canonical, h1, prerendered, htmlLang };
+  const description = html.match(/<meta[^>]+name="description"[^>]+content="([^"]*)"/i)?.[1];
+  // alt="" is a decorative image and fine; no alt attribute at all is not.
+  const imgsMissingAlt = [...html.matchAll(/<img\b[^>]*>/gi)].filter(
+    (m) => !/\salt\s*=/i.test(m[0]),
+  ).length;
+  return {
+    rawChars: crawlerCharCount(crawlerText(html)),
+    title: title === null ? null : decodeEntities(title),
+    noindex,
+    canonical,
+    h1,
+    prerendered,
+    htmlLang,
+    description: description === undefined ? null : decodeEntities(description),
+    imgsMissingAlt,
+  };
+}
+
+function decodeEntities(text) {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/**
+ * Meta findings for a 200 response's server HTML, against the homepage's own
+ * title and description. A noindexed page is out of search, so none apply.
+ */
+export function serverMetaFindings(pathname, facts, home = { title: SHELL_TITLE }) {
+  const failures = [];
+  const warnings = [];
+  if (facts.noindex) return { failures, warnings };
+  if (!HOME_PATHS.has(pathname.replace(/\/+$/, '') || '/')) {
+    if (facts.title && home.title && facts.title === home.title) {
+      failures.push(`serves the homepage title "${facts.title}"`);
+    }
+    if (facts.description && home.description && facts.description === home.description) {
+      warnings.push('serves the homepage description');
+    }
+  }
+  if (facts.title !== null || facts.description !== null) {
+    for (const problem of seoMetaLengthProblems(pathname, {
+      title: facts.title ?? '',
+      description: facts.description ?? '',
+    })) {
+      warnings.push(problem.slice(pathname.length + 2));
+    }
+  }
+  if (facts.imgsMissingAlt > 0) warnings.push(`${facts.imgsMissingAlt} <img> without alt`);
+  return { failures, warnings };
 }
 
 /** Failures when the client changes the language <html lang> declares. The
@@ -147,16 +218,44 @@ const SERVER_RENDERED_PAGE =
 
 /** Failures for a 200 response's server HTML; empty when it is fine. */
 export function serverHtmlFailures(pathname, facts) {
-  if (facts.noindex || !SERVER_RENDERED_PAGE.test(pathname)) return [];
+  if (facts.noindex) return [];
+  const failures = [];
+  if (facts.rawChars < 150) failures.push(`raw body ${facts.rawChars} < 150 chars`);
+  if (!SERVER_RENDERED_PAGE.test(pathname)) return failures;
   if (!facts.prerendered && !facts.canonical) {
-    return ['empty shell: no server-rendered body and no canonical'];
+    failures.push('empty shell: no server-rendered body and no canonical');
   }
-  return [];
+  return failures;
 }
 
-async function fetchServerHtml(url) {
-  const res = await fetch(url, { headers: { 'user-agent': GOOGLEBOT_UA }, redirect: 'manual' });
-  const html = res.status === 200 ? await res.text() : '';
+class AuditTransportError extends Error {
+  constructor(phase, cause) {
+    const details = [];
+    for (let error = cause; error && details.length < 3; error = error.cause) {
+      const code = typeof error.code === 'string' ? ` (${error.code})` : '';
+      details.push(
+        `${error.name ?? 'Error'}${code}: ${error.message ?? String(error)}`.split('\n')[0],
+      );
+    }
+    super(details.join('; '), { cause });
+    this.phase = phase;
+  }
+}
+
+async function fetchServerHtml(url, { fetchImpl = fetch, timeoutMs = 25_000 } = {}) {
+  let res;
+  let html;
+  try {
+    res = await fetchImpl(url, {
+      headers: { 'user-agent': GOOGLEBOT_UA },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    html = res.status === 200 ? await res.text() : '';
+    if (res.status !== 200) await res.body?.cancel();
+  } catch (error) {
+    throw new AuditTransportError('server HTML', error);
+  }
   const scripts = new Set(
     [...html.matchAll(/<(?:script[^>]+src|link[^>]+href)="([^"]+\.js)"/g)].map(
       (m) => new URL(m[1], url).pathname,
@@ -170,8 +269,37 @@ async function fetchServerHtml(url) {
   };
 }
 
-async function auditUrl(browser, url, args) {
-  const server = await fetchServerHtml(url);
+export async function auditUrl(browser, url, args, { fetchImpl = fetch, wait = delay } = {}) {
+  const transportErrors = [];
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const result = await auditUrlOnce(browser, url, args, { fetchImpl });
+      Object.assign(result, { attempts: attempt, transportErrors });
+      if (transportErrors.length) {
+        result.warnings.push(
+          `transport recovered after ${attempt} attempts: ${transportErrors.join('; ')}`,
+        );
+      }
+      return result;
+    } catch (error) {
+      if (!(error instanceof AuditTransportError)) throw error;
+      transportErrors.push(`${error.phase}: ${error.message}`);
+      if (attempt === 3) {
+        return {
+          url,
+          attempts: attempt,
+          transportErrors,
+          failures: [`${error.phase} failed after ${attempt} attempts: ${error.message}`],
+          warnings: [],
+        };
+      }
+      await wait(attempt * 1000);
+    }
+  }
+}
+
+async function auditUrlOnce(browser, url, args, { fetchImpl }) {
+  const server = await fetchServerHtml(url, { fetchImpl, timeoutMs: args.timeoutMs });
   const result = {
     url,
     status: server.status,
@@ -191,81 +319,128 @@ async function auditUrl(browser, url, args) {
   }
   if (server.noindex) result.warnings.push('server HTML is noindex');
   result.failures.push(...serverHtmlFailures(new URL(url).pathname, server));
+  const meta = serverMetaFindings(new URL(url).pathname, server, args.home);
+  result.failures.push(...meta.failures);
+  result.warnings.push(...meta.warnings);
 
   const context = await browser.newContext({
     userAgent: GOOGLEBOT_UA,
     viewport: { width: 412, height: 915 },
     isMobile: true,
   });
-  const page = await context.newPage();
-  const pageErrors = [];
-  let navigations = 0;
-  page.on('framenavigated', (frame) => {
-    if (frame === page.mainFrame()) navigations += 1;
-  });
-  page.on('pageerror', (err) => pageErrors.push(err.message));
-  if (args.blockLazyChunks) {
-    await page.route('**/*.js', (route) => {
-      const path = new URL(route.request().url()).pathname;
-      if (path.startsWith('/assets/') && !server.scripts.has(path)) return route.abort();
-      return route.continue();
-    });
-  }
   try {
-    await page.goto(url, { waitUntil: 'networkidle', timeout: args.timeoutMs });
-  } catch (err) {
-    result.warnings.push(`load: ${err.message.split('\n')[0]}`);
-  }
-  // A blocked chunk triggers the one-shot stale-chunk reload; let it settle.
-  await page.waitForTimeout(args.blockLazyChunks ? 2500 : 800);
-  const rendered = await page
-    .evaluate(() => ({
-      title: document.title,
-      h1: document.querySelector('h1')?.textContent?.trim() ?? null,
-      lang: document.documentElement.lang,
-      errorPanel: document.querySelector('.app-error-panel') !== null,
-      appText: (document.querySelector('#app')?.textContent ?? '').trim().length,
-    }))
-    .catch((err) => ({ evaluateError: err.message }));
-  await context.close();
+    const page = await context.newPage();
+    const pageErrors = [];
+    let navigations = 0;
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) navigations += 1;
+    });
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+    if (args.blockLazyChunks) {
+      await page.route('**/*.js', (route) => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.startsWith('/assets/') && !server.scripts.has(path)) return route.abort();
+        return route.continue();
+      });
+    }
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: args.timeoutMs });
+    } catch (err) {
+      // A failed connection can leave Chromium's error document with no #app.
+      // Do not label that a content regression. ERR_ABORTED (including the
+      // app's one-shot reload) and networkidle timeouts still inspect the DOM.
+      if (
+        /net::ERR_(?:CONNECTION_|TIMED_OUT|NAME_NOT_RESOLVED|NETWORK_CHANGED|INTERNET_DISCONNECTED|EMPTY_RESPONSE|HTTP2_PROTOCOL_ERROR|QUIC_PROTOCOL_ERROR)/.test(
+          err.message,
+        )
+      ) {
+        throw new AuditTransportError('navigation', err);
+      }
+      result.warnings.push(`load: ${err.message.split('\n')[0]}`);
+    }
+    // A blocked chunk triggers the one-shot stale-chunk reload; let it settle.
+    await page.waitForTimeout(args.blockLazyChunks ? 2500 : 800);
+    const rendered = await page
+      .evaluate(() => ({
+        title: document.title,
+        h1: document.querySelector('h1')?.textContent?.trim() ?? null,
+        lang: document.documentElement.lang,
+        errorPanel: document.querySelector('.app-error-panel') !== null,
+        appText: (document.querySelector('#app')?.textContent ?? '').trim().length,
+        bodyText: (() => {
+          const body = document.body.cloneNode(true);
+          for (const node of body.querySelectorAll('script,style,template,svg')) node.remove();
+          return (body.textContent ?? '').replace(/\s+/gu, ' ').trim();
+        })(),
+        imgsMissingAlt: document.querySelectorAll('img:not([alt])').length,
+      }))
+      .catch((err) => ({ evaluateError: err.message }));
 
-  Object.assign(result, {
-    renderedTitle: rendered.title,
-    h1: rendered.h1,
-    pageErrors,
-    navigations,
-  });
-  if (navigations > 2) result.failures.push(`reload loop: ${navigations} document navigations`);
-  if (rendered.evaluateError) result.failures.push(`evaluate: ${rendered.evaluateError}`);
-  // With chunks blocked, a client-only page has nothing else to show: that is
-  // the known gap (prerender it to close), not a regression.
-  const brokenBody = rendered.errorPanel || rendered.appText === 0;
-  if (brokenBody && args.blockLazyChunks && !server.prerendered) {
-    result.warnings.push('client-only page: a crawler sees the error panel if a chunk fails');
-  } else {
-    if (rendered.errorPanel) result.failures.push('error panel replaced the page');
-    if (rendered.appText === 0) result.failures.push('#app is empty');
+    const renderedChars = crawlerCharCount(rendered.bodyText ?? '');
+    Object.assign(result, {
+      rawChars: server.rawChars,
+      renderedChars,
+      renderedTitle: rendered.title,
+      h1: rendered.h1,
+      pageErrors,
+      navigations,
+    });
+    if (!server.noindex && renderedChars > 0 && server.rawChars / renderedChars < 0.5) {
+      result.failures.push(`raw/rendered ${(server.rawChars / renderedChars).toFixed(3)} < 0.5`);
+    }
+    if (navigations > 2) result.failures.push(`reload loop: ${navigations} document navigations`);
+    if (rendered.evaluateError) result.failures.push(`evaluate: ${rendered.evaluateError}`);
+    // With chunks blocked, a client-only page has nothing else to show: that is
+    // the known gap (prerender it to close), not a regression.
+    const brokenBody = rendered.errorPanel || rendered.appText === 0;
+    if (brokenBody && args.blockLazyChunks && !server.prerendered) {
+      result.warnings.push('client-only page: a crawler sees the error panel if a chunk fails');
+    } else {
+      if (rendered.errorPanel) result.failures.push('error panel replaced the page');
+      if (rendered.appText === 0) result.failures.push('#app is empty');
+    }
+    if (!rendered.h1) result.warnings.push('no h1');
+    // The client draws most images; the server-HTML count above sees only the
+    // prerendered ones.
+    if (rendered.imgsMissingAlt > (server.imgsMissingAlt ?? 0)) {
+      result.warnings.push(`${rendered.imgsMissingAlt} rendered <img> without alt`);
+    }
+    if (!rendered.evaluateError) {
+      result.failures.push(...htmlLangFailures(server.htmlLang, rendered.lang));
+    }
+    const renderedBase = baseTitle(rendered.title);
+    const serverBase = baseTitle(server.title);
+    // A placeholder the client put there is a regression; one the server sends
+    // is a weak title to rewrite, not a render failure.
+    if (PLACEHOLDER_TITLES.has(renderedBase)) {
+      if (renderedBase === serverBase) result.warnings.push(`generic title "${server.title}"`);
+      else result.failures.push(`placeholder title "${rendered.title}"`);
+    } else if (server.title && renderedBase !== serverBase) {
+      result.warnings.push(`title changed: "${server.title}" -> "${rendered.title}"`);
+    }
+    // Chunk errors are the point of --block-lazy-chunks, not a finding.
+    const unexpected = args.blockLazyChunks
+      ? pageErrors.filter((m) => !/dynamically imported module|preload/i.test(m))
+      : pageErrors;
+    if (unexpected.length) result.warnings.push(`uncaught: ${unexpected[0]}`);
+    return result;
+  } finally {
+    await context.close();
   }
-  if (!rendered.h1) result.warnings.push('no h1');
-  if (!rendered.evaluateError) {
-    result.failures.push(...htmlLangFailures(server.htmlLang, rendered.lang));
+}
+
+/** The homepage's served title and description, the duplicate check's reference. */
+async function homeMeta(base, timeoutMs) {
+  try {
+    const res = await fetch(`${base}/`, {
+      headers: { 'user-agent': GOOGLEBOT_UA },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const facts = serverHtmlFacts(res.ok ? await res.text() : '');
+    return { title: facts.title ?? SHELL_TITLE, description: facts.description };
+  } catch {
+    return { title: SHELL_TITLE, description: null };
   }
-  const renderedBase = baseTitle(rendered.title);
-  const serverBase = baseTitle(server.title);
-  // A placeholder the client put there is a regression; one the server sends
-  // is a weak title to rewrite, not a render failure.
-  if (PLACEHOLDER_TITLES.has(renderedBase)) {
-    if (renderedBase === serverBase) result.warnings.push(`generic title "${server.title}"`);
-    else result.failures.push(`placeholder title "${rendered.title}"`);
-  } else if (server.title && renderedBase !== serverBase) {
-    result.warnings.push(`title changed: "${server.title}" -> "${rendered.title}"`);
-  }
-  // Chunk errors are the point of --block-lazy-chunks, not a finding.
-  const unexpected = args.blockLazyChunks
-    ? pageErrors.filter((m) => !/dynamically imported module|preload/i.test(m))
-    : pageErrors;
-  if (unexpected.length) result.warnings.push(`uncaught: ${unexpected[0]}`);
-  return result;
 }
 
 async function main() {
@@ -273,6 +448,7 @@ async function main() {
   const urls = args.urls.length
     ? args.urls.map((u) => rebase(u, args.base))
     : (await Promise.all(args.sitemaps.map((s) => sitemapUrls(args.base, s, args.limit)))).flat();
+  args.home = await homeMeta(args.base, args.timeoutMs);
   const { launchChromium } = await import('./lib/launch-browser.mjs');
   const browser = await launchChromium();
   const results = [];

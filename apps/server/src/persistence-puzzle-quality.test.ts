@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { createUser } from './persistence-accounts.js';
 import { getPool } from './persistence-db.js';
 import {
   listPuzzleQualityAggregates,
@@ -58,6 +59,51 @@ definePersistenceTests('puzzle quality', () => {
     assert.equal(aggregate.cleanSolves, 0);
     assert.equal(aggregate.votesUp, 1);
     assert.equal(aggregate.votesDown, 0);
+  });
+
+  test('a session keeps the first player identity it learns and never overwrites it', async () => {
+    const puzzle = (await getPuzzleStore()).puzzles
+      .filter((candidate) => candidate.variant === XIANGQI_SPEC_ID)
+      .at(-3);
+    assert.ok(puzzle);
+    await createUser({
+      id: 'puzzle-player-1',
+      email: 'puzzle-player-1@example.com',
+      emailVerifiedAt: new Date(),
+      handle: 'puzzleplayer1',
+      displayName: 'Puzzle player',
+      now: new Date(),
+    });
+    const input = { puzzleId: puzzle.id, sessionId: randomUUID(), variant: puzzle.variant };
+    const identity = async () =>
+      (
+        await getPool().query<{ user_id: string | null; device_id: string | null }>(
+          `SELECT user_id, device_id FROM puzzle_quality_sessions
+           WHERE puzzle_id = $1 AND session_id = $2::uuid`,
+          [input.puzzleId, input.sessionId],
+        )
+      ).rows[0];
+
+    // The first move can land before the view: the row starts with no one.
+    await recordPuzzleQualityEvent({ ...input, event: 'start' });
+    assert.deepEqual(await identity(), { user_id: null, device_id: null });
+    // The view fills the browser.
+    await recordPuzzleQualityEvent({
+      ...input,
+      event: 'view',
+      player: { userId: null, deviceId: 'device-first-0001' },
+    });
+    assert.deepEqual(await identity(), { user_id: null, device_id: 'device-first-0001' });
+    // Signing in fills the account; another browser id does not replace the first.
+    await recordPuzzleQualityVote({
+      ...input,
+      vote: 'up',
+      player: { userId: 'puzzle-player-1', deviceId: 'device-other-0002' },
+    });
+    assert.deepEqual(await identity(), {
+      user_id: 'puzzle-player-1',
+      device_id: 'device-first-0001',
+    });
   });
 
   test('a session that reveals within seconds of first sight counts nothing', async () => {

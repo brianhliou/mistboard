@@ -129,6 +129,21 @@ const GAME_DETAIL_TAGS = [
   'open',
 ];
 
+// A match of N games (十番棋, 三番棋 …) is filed with no round: each game is
+// its own sitting, so its number is the round. dpxq states the number in
+// [DhtmlXQ_other] (第1局) on some pages and only in the table tag (第08台) on
+// others (2026 春丘大叶杯 ten-game match, view_m_139842). Outside a match a
+// table is a table, so the fallback stays the event's single round there.
+function matchGameRound(tags: Map<string, string>): string | undefined {
+  const event = tags.get('event') ?? '';
+  if (!/番棋/.test(event)) return undefined;
+  const stated = tags.get('other')?.match(/第\s*(\d+)\s*局/)?.[1];
+  const table = tags.get('table')?.match(/第\s*(\d+)\s*台/)?.[1];
+  const game = Number(stated ?? table);
+  if (!Number.isInteger(game) || game <= 0) return undefined;
+  return `第${String(game).padStart(2, '0')}局`;
+}
+
 function escapeFrameValue(value: string): string {
   // Guard the frame delimiters; a stray "[/DhtmlXQ_x]" inside a name would
   // otherwise truncate a tag when the converter re-parses the synthesized page.
@@ -198,7 +213,7 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
   const result = tags.get('result') || titleParts.result || '';
   // The round (第NN轮) lives in a live-room tag or the archive <title>; carry it
   // through so distinct rounds become distinct rounds/boards downstream.
-  const round = tags.get('round') || titleParts.round || '';
+  const round = tags.get('round') || titleParts.round || matchGameRound(tags) || '';
   const frameTitle = tags.get('title') || `${red} - ${black}`;
   // The event name is the tour identity; every board in one event must resolve
   // to the same tour, so prefer the authoritative [DhtmlXQ_event] tag over the

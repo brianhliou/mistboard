@@ -15,7 +15,15 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Window } from 'happy-dom';
 import { createServer } from 'vite';
+import { crawlerCopyProblems } from './prerender-copy-check.mjs';
 import { prerenderedCssMisses } from './prerender-css-coverage.mjs';
+import {
+  expandPrerenderRoutes,
+  prerenderAlternateLinks,
+  prerenderAlternateProblems,
+  prerenderRouteManifest,
+} from './prerender-routes.mjs';
+import { writePrerenderSitemap } from './prerender-sitemap.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
@@ -279,104 +287,6 @@ async function writeRoutePreloadManifest(manifest, shellHtml) {
 // prod HTML (leaking hidden variants and flashing panels that hydration then
 // removes).
 process.env.NODE_ENV = 'production';
-// --- RSS 2.0 for the announcement archive -----------------------------------
-// Hand-rolled rather than a dependency: the document is a dozen lines and the
-// only hard parts are escaping and the RFC-822 date.
-const xmlEscape = (value) =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
-// Announcements carry a date with no time. Noon UTC keeps every reader's local
-// date equal to the authored one.
-const rssDate = (iso) => {
-  const [year, month, day] = iso.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day, 12)).toUTCString();
-};
-
-const absoluteHref = (href) => {
-  if (!href) return `${host}/feed`;
-  return /^https?:/.test(href) ? href : `${host}${href}`;
-};
-
-function renderNewsRss(entries) {
-  const items = entries
-    .map((entry) => {
-      // Stable id that does not change when an entry's link does, so a reader
-      // that has seen an item never sees it twice.
-      const slug = entry.headline
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
-      // The authored CTA ("Open the editor") is a UI label, not prose. In a
-      // reader, and in a tweet built from this document, the link is the call
-      // to action, so the label would only read as a dangling imperative.
-      const description = entry.body ?? '';
-      return [
-        '    <item>',
-        `      <title>${xmlEscape(entry.headline)}</title>`,
-        `      <link>${xmlEscape(absoluteHref(entry.href))}</link>`,
-        `      <guid isPermaLink="false">mistboard:${entry.date}:${slug}</guid>`,
-        `      <pubDate>${rssDate(entry.date)}</pubDate>`,
-        `      <category>${xmlEscape(entry.kind)}</category>`,
-        description ? `      <description>${xmlEscape(description)}</description>` : null,
-        '    </item>',
-      ]
-        .filter(Boolean)
-        .join('\n');
-    })
-    .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Mistboard updates</title>
-    <link>${host}/feed</link>
-    <atom:link href="${host}/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Releases, articles, and status updates from Mistboard.</description>
-    <language>en</language>
-${items}
-  </channel>
-</rss>
-`;
-}
-
-// The blog's own feed, separate from /feed.xml (which carries announcements:
-// one-line release notes, not posts). A reader who subscribes to a blog wants
-// the posts, and mixing the two means either the announcements drown the posts
-// or subscribing to the posts signs you up for changelog entries.
-function renderArticlesRss(entries) {
-  const items = entries
-    .map((entry) => {
-      const url = `${host}/blog/${encodeURIComponent(entry.slug)}`;
-      return [
-        '    <item>',
-        `      <title>${xmlEscape(entry.title)}</title>`,
-        `      <link>${xmlEscape(url)}</link>`,
-        // Keyed by slug, not URL: a renamed slug 301s (RENAMED_ARTICLE_SLUGS)
-        // and the post is still the same post, so the id has to survive it.
-        `      <guid isPermaLink="false">mistboard:blog:${xmlEscape(entry.slug)}</guid>`,
-        ...(entry.publishedAt ? [`      <pubDate>${rssDate(entry.publishedAt)}</pubDate>`] : []),
-        `      <description>${xmlEscape(entry.summary)}</description>`,
-        '    </item>',
-      ].join('\n');
-    })
-    .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Mistboard blog</title>
-    <link>${host}/blog</link>
-    <atom:link href="${host}/blog/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Xiangqi, fog variants, and engine work from Mistboard.</description>
-    <language>en</language>
-${items}
-  </channel>
-</rss>
-`;
-}
 
 // Advertised in the head of every blog page so a reader's extension finds the
 // feed without being told it exists.
@@ -396,8 +306,20 @@ try {
   const { isArticleTranslationPublished, translateArticle } =
     await server.ssrLoadModule('/src/article-i18n.ts');
   const { articleIsNoindex } = await server.ssrLoadModule('/src/variant-public-surfaces.ts');
+  // The same author the page's byline names (articles/site-author.ts).
+  const { articleJsonLdAuthor } = await server.ssrLoadModule('/src/articles/site-author.ts');
   const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
     '/src/articles/publish-time.ts',
+  );
+  // RSS for /feed.xml and /blog/feed.xml, and the card art behind each post's
+  // feed thumbnail (/thumb/article/<slug>.png, rasterised by the server).
+  const { renderNewsRss, renderArticlesRss, feedThumbnailPath } =
+    await server.ssrLoadModule('/src/feed-rss.ts');
+  const { feedThumbnails } = await server.ssrLoadModule('/src/articles/feed-thumbnail.ts');
+  // The posts /blog lists, the one source for both feeds' post items.
+  const { blogPosts } = await server.ssrLoadModule('/src/articles/blog-listing.ts');
+  const { scheduledArticleIndexEntry } = await server.ssrLoadModule(
+    '/src/article-index-schedule.ts',
   );
   // Card URLs (the ?v= and which slugs have aspect cards) mirror the server's
   // renderer; og-image.test.ts pins the mirror.
@@ -468,8 +390,8 @@ try {
 
   // Scheduled posts (published, dated in the future at build time) are left
   // out of every baked surface and listed in article-schedule.json instead, so
-  // the server can 404 them until their moment and stop serving the stale
-  // blog index once one goes live without a rebuild. publish-time.ts has the
+  // the server can 404 them until their moment and supplement the baked
+  // index once one goes live without a rebuild. publish-time.ts has the
   // full story.
   //
   // Announcements keep the same clock (announcements.ts): the ones still ahead
@@ -481,6 +403,7 @@ try {
     .map((a) => ({
       slug: a.slug,
       liveAt: new Date(articleGoesLiveAt(a.publishedAt)).toISOString(),
+      indexEntry: scheduledArticleIndexEntry(a),
     }));
   const { allAnnouncements, announcementIsLive, announcementSlug } =
     await server.ssrLoadModule('/src/announcements.ts');
@@ -682,7 +605,7 @@ try {
         headline: localized.title,
         description: localized.summary,
         image: structuredImage,
-        author: { '@type': 'Organization', name: 'Mistboard' },
+        author: articleJsonLdAuthor(article),
         publisher: { '@type': 'Organization', name: 'Mistboard' },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
         ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
@@ -876,10 +799,16 @@ try {
     renderRulesIndexShellForPrerender,
     rulesIndexPrerenderHead,
   } = await server.ssrLoadModule('/src/pages-static.ts');
-  for (const v of baseVariants) {
-    const head = articlesIndexPrerenderHead(host, v.lang);
+  for (const { v, view } of baseVariants.flatMap((v) =>
+    ['mistboard', 'community'].map((view) => ({ v, view })),
+  )) {
+    const head = articlesIndexPrerenderHead(host, v.lang, view);
     win.happyDOM.setURL(head.url);
-    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang);
+    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang, view);
+    if (view === 'community') {
+      const problems = crawlerCopyProblems(blogIndexInner);
+      if (problems.length) throw new Error(`${head.url}: ${problems.join('; ')}`);
+    }
     let blogIndexHtml = shell
       .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
       .replace(
@@ -899,12 +828,11 @@ try {
       '</head>',
       `${head.headLinks}${BLOG_RSS_LINK}${articleAssetLinks}${localeLinks}</head>`,
     );
-    const file = v.langDir
-      ? resolve(distDir, v.langDir, 'blog.html')
-      : resolve(distDir, 'blog.html');
+    const routeFile = view === 'community' ? 'blog/community.html' : 'blog.html';
+    const file = resolve(distDir, v.langDir ?? '', routeFile);
     await fs.mkdir(dirname(file), { recursive: true });
     await fs.writeFile(file, blogIndexHtml, 'utf-8');
-    console.log(`prerendered ${v.urlPrefix}/blog (${v.langDir ? `${v.langDir}/` : ''}blog.html)`);
+    console.log(`prerendered ${head.url} (${routeFile})`);
   }
 
   // /rules, /zh-hans/rules, /zh-hant/rules: the rules landing, once per
@@ -942,147 +870,76 @@ try {
   }
   win.happyDOM.setURL(host);
 
+  // Each live post's card art as one self-contained SVG, read by the server's
+  // /thumb/article/<slug>.png route. The feeds link the PNG with a content
+  // hash, since the route serves it immutable.
+  const thumbs = feedThumbnails(published);
+  const thumbDir = resolve(distDir, 'thumb', 'article');
+  await fs.mkdir(thumbDir, { recursive: true });
+  for (const thumb of thumbs.values()) {
+    await fs.writeFile(resolve(thumbDir, `${thumb.slug}.svg`), thumb.svg, 'utf-8');
+  }
+  console.log(`wrote /thumb/article/*.svg (${thumbs.size} posts)`);
+  const listedPosts = blogPosts(articles, builtAt);
+  const feedOptions = {
+    host,
+    blogPosts: listedPosts,
+    postForSlug: (slug) => {
+      const post = publishedBySlug.get(slug);
+      return post?.kind === 'article' ? post : undefined;
+    },
+    thumbnailUrl: (slug) => {
+      const thumb = thumbs.get(slug);
+      return thumb ? `${host}${feedThumbnailPath(slug, thumb.version)}` : undefined;
+    },
+  };
+
   // blog/feed.xml: the posts as RSS, alongside the announcement feed at
-  // /feed.xml. Published blog posts only, newest first; rules docs are
-  // reference pages, not posts, and drafts are not public. An unlisted or
-  // noindex post is served by URL only, so it is not announced here either.
-  const blogFeedEntries = published
-    .filter(
-      (entry) => entry.kind === 'article' && entry.showInIndex !== false && entry.noindex !== true,
-    )
-    .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+  // /feed.xml. Exactly what /blog lists, newest first: rules docs are
+  // reference pages, not posts; drafts and scheduled posts are not public; an
+  // unlisted, noindex or translated-only post is served by URL only.
+  const blogFeedEntries = listedPosts;
   await fs.mkdir(resolve(distDir, 'blog'), { recursive: true });
   await fs.writeFile(
     resolve(distDir, 'blog', 'feed.xml'),
-    renderArticlesRss(blogFeedEntries),
+    renderArticlesRss(blogFeedEntries, feedOptions),
     'utf-8',
   );
   console.log(`wrote /blog/feed.xml (${blogFeedEntries.length} entries)`);
 
-  // Player: bake the players-page frame (rail, twin headings, loading
-  // panels) with its route CSS so first paint gets the full layout instead of
-  // the empty shell. Live data (ladder rows, online list) stays a client
-  // fetch. The `landing-page` class is baked onto #app because it carries the
-  // page background; the client mount re-adds it idempotently.
-  const { renderLeaderboardShellForPrerender } = await server.ssrLoadModule('/src/profile.ts');
-  const leaderboardAssetLinks = routeAssetLinks(manifest, 'src/profile.ts', shell);
-  const leaderboardInner = renderLeaderboardShellForPrerender();
-  let leaderboardHtml = shell.replace(
-    '<div id="app"></div>',
-    `<div id="app" class="landing-page">${leaderboardInner}</div>`,
+  const table = JSON.parse(
+    await fs.readFile(resolve(distDir, '../../../config/prerender-routes.json'), 'utf8'),
   );
-  // Full meta, as for /learn and /puzzles: a title-only replace shipped the
-  // homepage's description here. Same copy as SPA_ROUTE_META['/player'].
-  leaderboardHtml = injectPageMeta(leaderboardHtml, {
-    title: 'Xiangqi Leaderboard | Mistboard',
-    description:
-      'The highest rated players on Mistboard, by game and time control. Rated games are played between signed-in accounts in xiangqi, jieqi, banqi, Jungle and more.',
-    url: `${host}/player`,
+  const { ANALYSIS_VARIANTS } = await server.ssrLoadModule('/src/analysis-catalog.ts');
+  const { EDITOR_VARIANT_IDS } = await server.ssrLoadModule('/src/editor/editor-catalog.ts');
+  const rows = expandPrerenderRoutes(table, {
+    analysis: ANALYSIS_VARIANTS.map(({ id }) => id),
+    editor: EDITOR_VARIANT_IDS,
   });
-  leaderboardHtml = leaderboardHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/player" />${leaderboardAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'player.html'), leaderboardHtml, 'utf-8');
-  await fs.writeFile(resolve(distDir, 'leaderboard.html'), leaderboardHtml, 'utf-8');
-  console.log('prerendered /player (player.html)');
-
-  // /feed: the announcement archive. Static authored copy with no live or
-  // per-account data, so the baked DOM is exactly what a reader sees. It was
-  // serving a bare shell while carrying a noindex; both were fixed 2026-08-27,
-  // and a sitemap entry for a bare shell is worse than no entry at all.
-  const { renderNewsShellForPrerender } = await server.ssrLoadModule('/src/news-page.ts');
-  const newsAssetLinks = routeAssetLinks(manifest, 'src/news-page.ts', shell);
-  const newsInner = renderNewsShellForPrerender();
-  let newsHtml = shell.replace(
-    '<div id="app"></div>',
-    `<div id="app" class="landing-page news-route">${newsInner}</div>`,
-  );
-  // Same copy as the server's SPA_ROUTE_META['/feed'], which covers the fallback
-  // path when this file is missing.
-  newsHtml = injectPageMeta(newsHtml, {
-    title: 'Updates and Announcements | Mistboard',
-    description:
-      'Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.',
-    url: `${host}/feed`,
-  });
-  newsHtml = newsHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/feed" />${newsAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'feed.html'), newsHtml, 'utf-8');
-  console.log('prerendered /feed (feed.html)');
-
-  // /feed/YYYY-MM: every month with an entry, the latest ones included, served
-  // by the server's /feed/:month route.
   const { newsMonthIds } = await server.ssrLoadModule('/src/news-page.ts');
-  const { formatMonth: formatNewsMonth } = await server.ssrLoadModule('/src/month-label.ts');
-  const newsMonths = newsMonthIds();
-  for (const monthId of newsMonths) {
-    const label = formatNewsMonth(monthId, 'en');
-    let monthHtml = shell.replace(
-      '<div id="app"></div>',
-      `<div id="app" class="landing-page news-route">${renderNewsShellForPrerender(monthId)}</div>`,
-    );
-    monthHtml = injectPageMeta(monthHtml, {
-      title: `Updates: ${label} | Mistboard`,
-      description: `Every Mistboard announcement from ${label}: new variants, articles, features and changes to the site.`,
-      url: `${host}/feed/${monthId}`,
-    });
-    monthHtml = monthHtml.replace(
-      '</head>',
-      `<link rel="canonical" href="${host}/feed/${monthId}" />${newsAssetLinks}</head>`,
-    );
-    await fs.writeFile(resolve(distDir, `feed-${monthId}.html`), monthHtml, 'utf-8');
-  }
-  console.log(`prerendered ${newsMonths.length} /feed/YYYY-MM month pages`);
-
-  // /changelog: CHANGELOG.md inlined at build time and rendered through the
-  // same page module the client mounts, so the baked DOM is the page. Same
-  // copy as SPA_ROUTE_META['/changelog'] for the fallback shell.
-  const { renderChangelogShellForPrerender } = await server.ssrLoadModule('/src/changelog-page.ts');
-  const changelogAssetLinks = routeAssetLinks(manifest, 'src/changelog-page.ts', shell);
-  const changelogInner = renderChangelogShellForPrerender();
-  let changelogHtml = shell.replace(
-    '<div id="app"></div>',
-    `<div id="app" class="landing-page changelog-route">${changelogInner}</div>`,
-  );
-  changelogHtml = injectPageMeta(changelogHtml, {
-    title: 'Changelog: Every Change, Month by Month | Mistboard',
-    description:
-      'Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.',
-    url: `${host}/changelog`,
-  });
-  changelogHtml = changelogHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/changelog" />${changelogAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'changelog.html'), changelogHtml, 'utf-8');
-  console.log('prerendered /changelog (changelog.html)');
-
-  // /changelog/YYYY-MM: every month older than the ones /changelog shows in
-  // full gets its own page, served by the server's /changelog/:month route.
   const { changelogArchiveMonthIds, formatMonth } =
     await server.ssrLoadModule('/src/changelog-page.ts');
-  const archiveMonths = changelogArchiveMonthIds();
-  for (const monthId of archiveMonths) {
-    const label = formatMonth(monthId, 'en');
-    let monthHtml = shell.replace(
-      '<div id="app"></div>',
-      `<div id="app" class="landing-page changelog-route">${renderChangelogShellForPrerender(monthId)}</div>`,
-    );
-    monthHtml = injectPageMeta(monthHtml, {
-      title: `Changelog: ${label} | Mistboard`,
-      description: `Every change to mistboard.com in ${label}: playing, learning, watching, community, the site, removals and fixes, each linking its commit.`,
-      url: `${host}/changelog/${monthId}`,
-    });
-    monthHtml = monthHtml.replace(
-      '</head>',
-      `<link rel="canonical" href="${host}/changelog/${monthId}" />${changelogAssetLinks}</head>`,
-    );
-    await fs.writeFile(resolve(distDir, `changelog-${monthId}.html`), monthHtml, 'utf-8');
+  for (const [base, months] of [
+    ['/feed', newsMonthIds()],
+    ['/changelog', changelogArchiveMonthIds()],
+  ]) {
+    const parent = rows.find((row) => row.route === base);
+    for (const month of months) {
+      const label = formatMonth(month, 'en');
+      rows.push({
+        ...parent,
+        route: `${base}/${month}`,
+        file: `${base.slice(1)}-${month}.html`,
+        args: [month],
+        title: `${base === '/feed' ? 'News' : 'Changelog'}: ${label} | Mistboard`,
+        description:
+          base === '/feed'
+            ? `Mistboard news from ${label}: new variants, articles, features and changes to the site.`
+            : `Every change to mistboard.com in ${label}: playing, learning, watching, community, the site, removals and fixes, each linking its commit.`,
+        ...(base === '/changelog' ? { fallback: `/changelog#${month}` } : {}),
+      });
+    }
   }
-  console.log(`prerendered ${archiveMonths.length} /changelog/YYYY-MM month pages`);
 
   // feed.xml: the same archive as RSS 2.0, so the announcements are followable
   // without opening the site. Gated by the same public-surface filter as the
@@ -1094,105 +951,85 @@ try {
   const feedEntries = announcements(builtAt)
     .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
     .sort((a, b) => b.date.localeCompare(a.date));
-  await fs.writeFile(resolve(distDir, 'feed.xml'), renderNewsRss(feedEntries), 'utf-8');
+  await fs.writeFile(
+    resolve(distDir, 'feed.xml'),
+    renderNewsRss(feedEntries, feedOptions),
+    'utf-8',
+  );
   console.log(`wrote /feed.xml (${feedEntries.length} entries)`);
 
-  // Learn: bake the stage map (sidebar + all 20 stage tiles + "what next") with
-  // its route CSS. /learn/xiangqi previously served the bare shell, so a crawler
-  // saw a <title> and nothing else. Progress is localStorage-only, so the baked
-  // map is the empty-progress view, which is exactly what a first visit shows.
-  const { renderLearnXiangqiShellForPrerender } = await server.ssrLoadModule(
-    '/src/learn-xiangqi/learn-xiangqi-page.ts',
+  const { t } = await server.ssrLoadModule('/src/i18n/catalog.ts');
+  const { variantDisplayLabel } = await server.ssrLoadModule('/src/game-display.ts');
+  const { buildOpenApiDocument } = await server.ssrLoadModule(
+    resolve(distDir, '../../server/src/openapi.ts'),
   );
-  const learnAssetLinks = routeAssetLinks(
-    manifest,
-    'src/learn-xiangqi/learn-xiangqi-page.ts',
-    shell,
+  const routeMappings = homeVariants.map(({ path, file }) => ({ route: path, file }));
+  for (const row of rows) {
+    win.happyDOM.setURL(`${host}${row.route}`);
+    const module = await server.ssrLoadModule(`/${row.module}`);
+    const args =
+      row.args ??
+      (row.openapi
+        ? [row.locale, buildOpenApiDocument(host)]
+        : row.variant
+          ? [row.locale, row.variant]
+          : row.existing && row.locales.length === 1 && row.route !== '/patron' && !row.headExport
+            ? []
+            : [row.locale]);
+    const inner = await module[row.export](...args);
+    if (!row.existing || row.route.endsWith('/learn/xiangqi')) {
+      const problems = crawlerCopyProblems(inner);
+      if (problems.length) throw new Error(`${row.route}: ${problems.join('; ')}`);
+    }
+    const params = row.variant ? { variant: variantDisplayLabel(row.variant) } : {};
+    const head = row.headExport
+      ? module[row.headExport](host, row.locale)
+      : {
+          title:
+            row.metaByLocale?.[row.locale]?.title ??
+            row.title ??
+            `${t(row.titleKey, params, row.locale)} | Mistboard`,
+          description:
+            row.metaByLocale?.[row.locale]?.description ??
+            row.description ??
+            t(row.descriptionKey, params, row.locale),
+          url: `${host}${row.route}`,
+        };
+    let html = shell
+      .replace('<html lang="en">', `<html lang="${row.locale}">`)
+      .replace(
+        '<div id="app"></div>',
+        `<div id="app"${row.classes ? ` class="${row.classes}"` : ''}>${inner}</div>`,
+      );
+    html = injectPageMeta(html, head);
+    let assets = '';
+    for (const entry of [row.module, ...(row.assets ?? [])]) {
+      assets += routeAssetLinks(manifest, entry, shell + assets);
+    }
+    const alternates = prerenderAlternateLinks(row, host);
+    html = html.replace(
+      '</head>',
+      `${head.headLinks ?? `<link rel="canonical" href="${head.url}">${alternates}`}${assets}${localePreloadLinks[row.locale] ?? ''}</head>`,
+    );
+    const file = resolve(distDir, row.file);
+    await fs.mkdir(dirname(file), { recursive: true });
+    await fs.writeFile(file, html, 'utf8');
+    for (const alias of row.aliasFiles ?? [])
+      await fs.writeFile(resolve(distDir, alias), html, 'utf8');
+  }
+  // The server consumes exactly the concrete routes written above.
+  await fs.writeFile(
+    resolve(distDir, 'prerender-routes.json'),
+    `${JSON.stringify(prerenderRouteManifest(rows, routeMappings), null, 2)}\n`,
   );
-  const learnInner = renderLearnXiangqiShellForPrerender();
-  let learnHtml = shell.replace('<div id="app"></div>', `<div id="app">${learnInner}</div>`);
-  // Full meta, not a title-only replace: this baked file is served as-is by
-  // servePrerenderedPage, so until now /learn/xiangqi shipped the homepage's
-  // description. Same copy as the server's SPA_ROUTE_META['/learn/xiangqi'].
-  learnHtml = injectPageMeta(learnHtml, {
-    title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
-    description:
-      'A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.',
-    url: `${host}/learn/xiangqi`,
-  });
-  // The zh-Hans/zh-Hant course URLs are served from the SPA shell with the
-  // same alternates (server-static-pages localeGroup), so the three read as
-  // one page in three languages.
-  const learnAlternates = [
-    ['en', `${host}/learn/xiangqi`],
-    ['zh-Hans', `${host}/zh-hans/learn/xiangqi`],
-    ['zh-Hant', `${host}/zh-hant/learn/xiangqi`],
-  ]
-    .map(([lang, href]) => `<link rel="alternate" hreflang="${lang}" href="${href}">`)
-    .join('');
-  learnHtml = learnHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/learn/xiangqi" />${learnAlternates}${learnAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'learn-xiangqi.html'), learnHtml, 'utf-8');
-  console.log('prerendered /learn/xiangqi (learn-xiangqi.html)');
+  win.happyDOM.setURL(host);
 
-  // Puzzles: bake the heading and the static explainer. /puzzles has been in
-  // the sitemap all along while serving 27 characters of body, because the
-  // trainer needs the API before it can render anything. The puzzles
-  // themselves still arrive client-side; what bakes is the copy explaining
-  // what the trainer is.
-  const { renderPuzzlesShellForPrerender } = await server.ssrLoadModule('/src/puzzles.ts');
-  const puzzlesAssetLinks = routeAssetLinks(manifest, 'src/puzzles.ts', shell);
-  const puzzlesInner = renderPuzzlesShellForPrerender();
-  let puzzlesHtml = shell.replace('<div id="app"></div>', `<div id="app">${puzzlesInner}</div>`);
-  // Same copy as the server's SPA_ROUTE_META['/puzzles'], which covers the
-  // fallback path when this file is missing. Injecting the FULL meta matters:
-  // servePrerenderedPage returns the baked file as-is and never runs the
-  // server's meta injection, so a title-only replace would have shipped the
-  // homepage's description on this page.
-  puzzlesHtml = injectPageMeta(puzzlesHtml, {
-    title: 'Xiangqi Puzzles | Mistboard',
-    description:
-      'Free xiangqi (Chinese chess) puzzles drawn from real games, with puzzles for Mistboard variants alongside.',
-    url: `${host}/puzzles`,
-  });
-  puzzlesHtml = puzzlesHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/puzzles" />${puzzlesAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'puzzles.html'), puzzlesHtml, 'utf-8');
-  console.log('prerendered /puzzles (puzzles.html)');
-
-  // Patron: bake the page that says what this site sells. It was serving a bare
-  // shell, so a fetch without JavaScript got the meta description and nothing
-  // else, on the one route whose whole job is to name the product and its price.
-  // The copy and the four monthly amounts are static; the live card (checkout
-  // state, "you are a Patron") stays a client fetch and replaces the baked one
-  // on boot. Asset links come from pages-static.ts because that module owns
-  // pages-static.css, where the patron styles live.
-  const { renderPatronShellForPrerender } = await server.ssrLoadModule('/src/patron-page.ts');
-  const patronAssetLinks = routeAssetLinks(manifest, 'src/pages-static.ts', shell);
-  const patronInner = renderPatronShellForPrerender();
-  let patronHtml = shell.replace(
-    '<div id="app"></div>',
-    `<div id="app" class="landing-page patron-route">${patronInner}</div>`,
-  );
-  // Same copy as the server's SPA_ROUTE_META['/patron'], which covers the
-  // fallback path when this file is missing. Full meta, not a title-only
-  // replace: servePrerenderedPage returns this file as-is.
-  patronHtml = injectPageMeta(patronHtml, {
-    title: 'Become a Patron | Mistboard',
-    description:
-      'Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.',
-    url: `${host}/patron`,
-  });
-  patronHtml = patronHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/patron" />${patronAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'patron.html'), patronHtml, 'utf-8');
-  console.log('prerendered /patron (patron.html)');
+  const alternateProblems = await prerenderAlternateProblems(distDir, host);
+  if (alternateProblems.length) {
+    throw new Error(
+      `prerendered pages advertise missing files:\n  ${alternateProblems.join('\n  ')}`,
+    );
+  }
 
   // Every baked page must link the stylesheets that style its markup, or it
   // paints unstyled until a lazy chunk brings them (the /rules flash, 10-16).
@@ -1205,6 +1042,18 @@ try {
     );
   }
   console.log(`css check: ${cssCheck.pages} baked pages link every stylesheet that styles them`);
+  const { SITEMAP_STATIC_ROUTES, sitemapContract, localeAlternates } = await server.ssrLoadModule(
+    resolve(__dirname, '../../server/src/sitemap-content.ts'),
+  );
+  const trackedGaps = SITEMAP_STATIC_ROUTES.filter((path) => sitemapContract(path)?.knownGap).map(
+    (path) => ({
+      path,
+      alternates: sitemapContract(path).hreflang.length
+        ? localeAlternates(path.replace(/^\/zh-han[st](?=\/|$)/, '') || '/')
+        : [],
+    }),
+  );
+  await writePrerenderSitemap(distDir, host, resolve(__dirname, '../../..'), trackedGaps);
 } catch (err) {
   console.error('prerender failed:', err);
   process.exitCode = 1;

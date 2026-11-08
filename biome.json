@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "maxSize": 2097152,
+    "maxSize": 3145728,
     "includes": [
       "**",
       "!**/dist",

@@ -135,6 +135,24 @@ export function isStaleLiveGame(
   return now - lastMoveTime > LIVE_STALE_AFTER_MS[timeClass ?? 'classical'];
 }
 
+// The same check from a room's raw fields. The homepage "N games in play"
+// (live-room-stats.ts) calls it too, so the count drops exactly the rooms this
+// page drops and the number matches the list it links to.
+export function isStaleLiveRoom(
+  timeControl:
+    | { initialMs?: number; incrementMs?: number; daysPerMove?: number }
+    | null
+    | undefined,
+  events: readonly { type: string; at?: number }[],
+  now: number,
+): boolean {
+  return isStaleLiveGame(
+    timeClassFor(normalizeTimeControl(timeControl ?? null)),
+    lastMoveAt(events),
+    now,
+  );
+}
+
 type EngineSeatPredicate = (clientId: string | undefined) => boolean;
 
 type DeadlineByRoom = ReadonlyMap<string, { seat: string; dueAt: Date }>;
@@ -334,7 +352,7 @@ function finishGame(args: {
   const observe = liveObservePolicy(spec.visibility, spec.id);
   const timeControl = normalizeTimeControl(args.timeControl);
   const timeClass = timeClassFor(timeControl);
-  if (isStaleLiveGame(timeClass, lastMoveAt(args.events), args.now)) return null;
+  if (isStaleLiveRoom(args.timeControl, args.events, args.now)) return null;
   const deadline = args.deadlines.get(args.roomId) ?? null;
   return {
     channelId: args.channelId,

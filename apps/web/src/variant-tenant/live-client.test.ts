@@ -7,9 +7,12 @@
 // minimal two-color test variant; no real WebSocket.
 
 import { BANQI_SPEC_ID } from '@mistboard/game';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setPostHogInstance } from '../analytics.js';
+import { afterBoardSettles, resetBoardSettleForTests, trackPieceAnimation } from '../board-anim.js';
 import { resetTrackedGameStartsForTests } from '../game-start-source.js';
+import { resetGameStartSoundForTests } from '../live-game-start-sound.js';
+import { playSoundWhenUnlocked } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import {
   createTenantLiveClient,
@@ -25,7 +28,14 @@ import {
 import { adoptLiveHistory } from './live-history.js';
 import { createTenantReplayController } from './replay-controller.js';
 import type { TenantWebView, WebVariantTenant } from './room-chrome.js';
-import type { TenantSocketClientOptions } from './socket-client.js';
+import { createTenantSocketClient, type TenantSocketClientOptions } from './socket-client.js';
+
+// The real controller needs an AudioContext; the wiring test only needs to see
+// which sound the client asked for.
+vi.mock('../live-sound.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../live-sound.js')>()),
+  playSoundWhenUnlocked: vi.fn(),
+}));
 
 type TColor = 'red' | 'blue';
 type TMove = { from: string; to: string };
@@ -173,9 +183,82 @@ function moveEvent(color: TColor, from: string, to: string, ply: number): Tenant
 
 beforeEach(() => {
   enabledFlag = true;
+  window.sessionStorage.clear();
+  resetGameStartSoundForTests();
+  vi.mocked(playSoundWhenUnlocked).mockClear();
 });
 
 describe('tenant live-client core', () => {
+  it('keeps a reopened transport reconnecting until a fresh room frame arrives', () => {
+    class Socket extends EventTarget {
+      static instances: Socket[] = [];
+      constructor() {
+        super();
+        Socket.instances.push(this);
+      }
+      close() {}
+    }
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', Socket);
+    const client = createTenantSocketClient({
+      room: 'restart-test',
+      socketUrl: 'ws://localhost/restart-test',
+      applyHello: () => {},
+      applySnapshot: () => {},
+      applyEvent: () => {},
+      render: () => {},
+    });
+    const hello = () =>
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'hello', clientId: 'restart-client' }),
+      });
+    try {
+      client.connect();
+      const first = Socket.instances[0]!;
+      first.dispatchEvent(new Event('open'));
+      first.dispatchEvent(hello());
+      expect(client.connection()).toBe('connected');
+      first.dispatchEvent(new CloseEvent('close', { code: 1012 }));
+      vi.advanceTimersByTime(750);
+      const reopened = Socket.instances[1]!;
+      reopened.dispatchEvent(new Event('open'));
+      expect(client.connection()).toBe('reconnecting');
+      vi.advanceTimersByTime(5_000);
+      expect(client.connection()).toBe('reconnecting');
+      reopened.dispatchEvent(hello());
+      expect(client.connection()).toBe('connected');
+      expect(client.noticeTier()).toBe('none');
+    } finally {
+      client.close();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('applies pause frames to the overlay and blocks board actions until resume', () => {
+    let ctx: TenantLiveClientContext<TColor, TView> | null = null;
+    const h = createHarness({
+      setup: (value) => {
+        ctx = value;
+      },
+    });
+    h.feedHello({ paused: true });
+    expect(h.refs().boardPaused.hidden).toBe(false);
+    expect(h.refs().boardPaused.textContent).toContain('Game paused');
+    expect(ctx!.canActNow()).toBe(false);
+    expect(h.client.send({ type: 'move', from: 'a1', to: 'a2' })).toBe(false);
+    expect(h.sent).toEqual([]);
+    expect(h.refs().board.inert).toBe(true);
+    h.feedSnapshot({});
+    expect(h.refs().boardPaused.hidden).toBe(true);
+    expect(ctx!.canActNow()).toBe(true);
+    expect(h.refs().board.inert).toBe(false);
+    expect(h.client.send({ type: 'move', from: 'a1', to: 'a2' })).toBe(true);
+    h.feedEvent({ paused: true, event: { type: 'clock-paused' } });
+    expect(h.refs().boardPaused.hidden).toBe(false);
+    expect(ctx!.canActNow()).toBe(false);
+  });
+
   it('applies hello frames into shared state', () => {
     const h = createHarness();
     h.feedHello({
@@ -347,6 +430,67 @@ describe('tenant live-client core', () => {
       }),
     });
     expect(stage?.dataset.liveLifecycleEffect).toBe('finish-win');
+  });
+
+  describe('game-start sound (shared helper, every tenant)', () => {
+    function gameStartPlays(): number {
+      return vi.mocked(playSoundWhenUnlocked).mock.calls.filter(([kind]) => kind === 'game-start')
+        .length;
+    }
+
+    it('sounds a PvE game on its first frame at the start, once', () => {
+      const h = createHarness({ chrome: { roomMode: () => 'pve' } });
+      h.feedHello({ seat: 'red', connectedSeats: { red: true, blue: true }, state: view() });
+      h.feedSnapshot({ seat: 'red', connectedSeats: { red: true, blue: true }, state: view() });
+      expect(gameStartPlays()).toBe(1);
+    });
+
+    it('sounds a PvP game when the opponent arrives, not while waiting', () => {
+      const h = createHarness();
+      h.feedHello({ seat: 'red', connectedSeats: { red: true, blue: false }, state: view() });
+      expect(gameStartPlays()).toBe(0);
+      h.feedSnapshot({ seat: 'red', connectedSeats: { red: true, blue: true }, state: view() });
+      expect(gameStartPlays()).toBe(1);
+    });
+
+    it('does not sound again when the room reloads at the start', () => {
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view(),
+      });
+      resetGameStartSoundForTests(); // a page reload keeps only sessionStorage
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view(),
+      });
+      expect(gameStartPlays()).toBe(1);
+    });
+
+    it('stays silent mid-game, for a spectator, on a finished game, and in correspondence', () => {
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'mid', moveNumber: 6 }),
+      });
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'spectator',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'watch' }),
+      });
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'done', status: { type: 'finished', winner: 'red', reason: 'x' } }),
+      });
+      createHarness({ chrome: { roomMode: () => 'correspondence' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'corr' }),
+      });
+      expect(gameStartPlays()).toBe(0);
+    });
   });
 
   it('renders the unmasked two-column move list with a fallback for missing plies', () => {
@@ -632,6 +776,167 @@ describe('animateBoard hook (one-shot pending-animation channel)', () => {
     // Drained again on the following render.
     h.client.renderAll();
     expect(h.pendings.at(-1)).toBeNull();
+  });
+
+  // The server sends the game-ending move as a finished snapshot, never as an
+  // event, so the last move used to land with no glide on every variant
+  // (Brian, 2026-10-30).
+  it('glides the move a finished snapshot adds to a live game', () => {
+    const h = animatedHarness();
+    h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+    h.feedSnapshot({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ status: { type: 'finished', winner: 'blue', reason: 'checkmate' } }),
+    });
+    expect(h.pendings.at(-1)).toEqual({
+      kind: 'live',
+      move: { from: 'b1', to: 'b2' },
+      color: 'blue',
+    });
+  });
+
+  // The bot replies on a 0ms timer, so its move redrew the board inside the
+  // player's own flip and the flip never showed (Brian, 2026-10-30).
+  it('holds a socket render while the last animation runs, then plays the reply', () => {
+    vi.useFakeTimers();
+    try {
+      const pendings: Pending[] = [];
+      const h = createHarness({
+        animateBoard: (_refs, _view, takePendingAnimation) => {
+          const pending = takePendingAnimation();
+          pendings.push(pending);
+          return pending ? 280 : undefined;
+        },
+      });
+      h.feedHello({});
+      h.feedEvent({ event: moveEvent('red', 'a1', 'a1', 1), state: view({ moveNumber: 2 }) });
+      const afterOwn = pendings.length;
+      expect(pendings.at(-1)).toMatchObject({ kind: 'live', color: 'red' });
+      vi.advanceTimersByTime(30);
+      h.feedEvent({ event: moveEvent('blue', 'b1', 'b2', 2), state: view({ moveNumber: 3 }) });
+      expect(pendings).toHaveLength(afterOwn);
+      vi.advanceTimersByTime(250);
+      expect(pendings).toHaveLength(afterOwn + 1);
+      expect(pendings.at(-1)).toEqual({
+        kind: 'live',
+        move: { from: 'b1', to: 'b2' },
+        color: 'blue',
+      });
+      // A click or scrub renders at once and is never held.
+      h.client.renderAll();
+      expect(pendings).toHaveLength(afterOwn + 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // #825: the game-over sound played as the final glide began. The core holds
+  // the board from the frame until its render, so a sound asked for in the
+  // snapshot hook waits for the glide that render starts.
+  describe('game-over sound waits for the final move to land', () => {
+    function fakeGlide(): EventTarget & { finish(): void } {
+      const target = new EventTarget();
+      return Object.assign(target, { finish: () => target.dispatchEvent(new Event('finish')) });
+    }
+    const flush = () => new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    function finishingHarness(glides: Array<ReturnType<typeof fakeGlide>>, sounded: string[]) {
+      let h: Harness | null = null;
+      h = createHarness({
+        animateBoard: (_refs, _view, takePendingAnimation) => {
+          const pending = takePendingAnimation();
+          if (!pending) return undefined;
+          const glide = fakeGlide();
+          glides.push(glide);
+          trackPieceAnimation(glide);
+          return 250;
+        },
+        onSnapshotApplied: () => {
+          if (h?.client.state.view?.status.type === 'finished') {
+            afterBoardSettles(() => sounded.push('result'));
+          }
+        },
+      });
+      return h;
+    }
+
+    afterEach(() => resetBoardSettleForTests());
+
+    it('sounds the result when the finishing glide ends, not before', async () => {
+      const glides: Array<ReturnType<typeof fakeGlide>> = [];
+      const sounded: string[] = [];
+      const h = finishingHarness(glides, sounded);
+      h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+      h.feedSnapshot({
+        events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+        state: view({ status: { type: 'finished', winner: 'blue', reason: 'checkmate' } }),
+      });
+      await flush();
+      expect(glides).toHaveLength(1);
+      expect(sounded).toEqual([]);
+      glides[0]?.finish();
+      await flush();
+      expect(sounded).toEqual(['result']);
+    });
+
+    it('sounds a resignation at once: there is nothing to land', async () => {
+      const glides: Array<ReturnType<typeof fakeGlide>> = [];
+      const sounded: string[] = [];
+      const h = finishingHarness(glides, sounded);
+      h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+      h.feedSnapshot({
+        events: [moveEvent('red', 'a1', 'a2', 1)],
+        state: view({ status: { type: 'finished', winner: 'blue', reason: 'resignation' } }),
+      });
+      await flush();
+      expect(glides).toHaveLength(0);
+      expect(sounded).toEqual(['result']);
+    });
+
+    it('a finishing reply held behind the previous glide sounds after its own glide', async () => {
+      vi.useFakeTimers();
+      try {
+        const glides: Array<ReturnType<typeof fakeGlide>> = [];
+        const sounded: string[] = [];
+        const h = finishingHarness(glides, sounded);
+        h.feedHello({});
+        h.feedEvent({ event: moveEvent('red', 'a1', 'a2', 1), state: view({ moveNumber: 2 }) });
+        expect(glides).toHaveLength(1);
+        // The bot's mating reply lands 30ms into the player's own glide.
+        vi.advanceTimersByTime(30);
+        h.feedSnapshot({
+          events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+          state: view({ status: { type: 'finished', winner: 'blue', reason: 'checkmate' } }),
+        });
+        glides[0]?.finish();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sounded).toEqual([]);
+        // The held render draws the reply and starts its glide.
+        await vi.advanceTimersByTimeAsync(250);
+        expect(glides).toHaveLength(2);
+        expect(sounded).toEqual([]);
+        glides[1]?.finish();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sounded).toEqual(['result']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  it('does not glide a finished game met on arrival or a snapshot that adds no move', () => {
+    const h = animatedHarness();
+    const finished = view({ status: { type: 'finished', winner: 'blue', reason: 'resignation' } });
+    h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+    // A resignation finishes the game without a move.
+    h.feedSnapshot({ events: [moveEvent('red', 'a1', 'a2', 1)], state: finished });
+    expect(h.pendings.at(-1)).toBeNull();
+
+    // A reconnect to a game that is already over replays nothing.
+    const late = animatedHarness();
+    late.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: finished });
+    late.feedSnapshot({ events: [moveEvent('red', 'a1', 'a2', 1)], state: finished });
+    expect(late.pendings.at(-1)).toBeNull();
   });
 });
 
@@ -997,6 +1302,88 @@ describe('tenant game lifecycle analytics', () => {
     });
     expect(named('game_started')).toHaveLength(0);
     expect(named('game_finished')).toHaveLength(0);
+  });
+
+  // game_started fires when the room opens, before anyone moves; this is the
+  // count of games the seated player actually played (2026-10-25).
+  it('emits game_first_move once, when the seat move comes back from the server', () => {
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID, chrome: { roomMode: () => 'pve' } });
+    h.feedHello({ state: view({ moveNumber: 0 }), events: [] });
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_first_move')).toHaveLength(0);
+
+    // The bot (blue) moving is not the player playing.
+    h.feedEvent({ state: view({ moveNumber: 1 }), event: moveEvent('blue', 'a1', 'a2', 1) });
+    expect(named('game_first_move')).toHaveLength(0);
+
+    h.feedEvent({ state: view({ moveNumber: 2 }), event: moveEvent('red', 'b1', 'b2', 2) });
+    h.feedEvent({ state: view({ moveNumber: 3 }), event: moveEvent('blue', 'a2', 'a3', 3) });
+    h.feedEvent({ state: view({ moveNumber: 4 }), event: moveEvent('red', 'b2', 'b3', 4) });
+    expect(named('game_first_move')).toHaveLength(1);
+    expect(named('game_first_move')[0][1]).toMatchObject({
+      gameId: 'room1',
+      variant: BANQI_SPEC_ID,
+      game_spec: BANQI_SPEC_ID,
+      roomMode: 'pve',
+      moveNumber: 2,
+      entry_source: 'none',
+    });
+
+    // Reconnect: a fresh hello carrying the whole log is not another first move.
+    h.feedHello({
+      state: view({ moveNumber: 4 }),
+      events: [
+        moveEvent('blue', 'a1', 'a2', 1),
+        moveEvent('red', 'b1', 'b2', 2),
+        moveEvent('blue', 'a2', 'a3', 3),
+        moveEvent('red', 'b2', 'b3', 4),
+      ],
+    });
+    expect(named('game_first_move')).toHaveLength(1);
+  });
+
+  it('emits no game_first_move for a spectator, or for a finished game opened later', () => {
+    const watching = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    watching.feedHello({ seat: 'spectator', state: view({ moveNumber: 0 }), events: [] });
+    watching.feedEvent({
+      seat: 'spectator',
+      state: view({ moveNumber: 1 }),
+      event: moveEvent('red', 'b1', 'b2', 1),
+    });
+    expect(named('game_first_move')).toHaveLength(0);
+
+    globalThis.localStorage?.clear();
+    resetTrackedGameStartsForTests();
+    const finished = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    finished.feedHello({
+      state: view({
+        status: { type: 'finished', winner: 'red', reason: 'no-moves' },
+        moveNumber: 2,
+      }),
+      events: [moveEvent('red', 'b1', 'b2', 1), moveEvent('blue', 'a1', 'a2', 2)],
+    });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
+  it('counts only moves the tenant says the player chose', () => {
+    // Mahjong's draw is sent for the seat automatically; a table opened and
+    // left after one auto-draw has not been played.
+    const h = createHarness({
+      gameSpecId: BANQI_SPEC_ID,
+      moveList: {
+        rowClass: 'move-row test-move-row',
+        cellPrefix: 'test-move-row',
+        masked: false,
+        notate: (move) => `${move.from}-${move.to}`,
+        isMoveEvent: isTestMoveEvent,
+        playedByPlayer: (move) => move.from !== 'auto',
+      },
+    });
+    h.feedHello({ state: view({ moveNumber: 0 }), events: [] });
+    h.feedEvent({ state: view({ moveNumber: 1 }), event: moveEvent('red', 'auto', 'a1', 1) });
+    expect(named('game_first_move')).toHaveLength(0);
+    h.feedEvent({ state: view({ moveNumber: 2 }), event: moveEvent('red', 'b1', 'b2', 2) });
+    expect(named('game_first_move')).toHaveLength(1);
   });
 
   it('survives a gameSpecId the registry does not know', () => {

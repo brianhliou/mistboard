@@ -3,6 +3,8 @@ import {
   ANNOUNCEMENT_LANGS,
   announcementTranslationKeys,
   hasAnnouncementTranslation,
+  localizeAnnouncement,
+  localizeAnnouncementString,
 } from './announcement-i18n.js';
 import { allAnnouncements } from './announcements.js';
 
@@ -31,6 +33,13 @@ function liveStrings(): Set<string> {
 }
 
 describe('announcement translation coverage', () => {
+  it.each([
+    ['zh-Hans', '翻翻兽棋已上线。'],
+    ['zh-Hant', '翻翻獸棋已上線。'],
+  ] as const)('uses the localized Flip Jungle launch name in %s', (locale, headline) => {
+    expect(localizeAnnouncementString('Flip Jungle has launched.', locale)).toBe(headline);
+  });
+
   it('every announcement string resolves in all zh scripts', () => {
     const missing: string[] = [];
     for (const text of liveStrings()) {
@@ -50,4 +59,21 @@ describe('announcement translation coverage', () => {
     );
     expect(orphans, `orphaned announcement translation keys:\n${orphans.join('\n')}`).toEqual([]);
   });
+});
+
+it('localizes person occurrences in copy without changing announcement identity', () => {
+  const entry = {
+    date: '2026-11-06',
+    kind: 'update' as const,
+    headline: '杨官璘对于幼华、孙勇征、党斐、赵奕帆',
+    body: '趙奕帆',
+    href: '/players/source-identity',
+  };
+  const source = JSON.stringify(entry);
+  const hant = localizeAnnouncement(entry, 'zh-Hant');
+  expect(hant.headline).toBe('楊官璘对于幼華、孫勇征、党斐、趙奕帆');
+  expect(localizeAnnouncement(entry, 'zh-Hans').body).toBe('赵奕帆');
+  expect(hant.href).toBe(entry.href);
+  expect(localizeAnnouncement(entry, 'en')).toBe(entry);
+  expect(JSON.stringify(entry)).toBe(source);
 });

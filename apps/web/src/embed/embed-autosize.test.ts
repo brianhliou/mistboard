@@ -37,6 +37,18 @@ describe('autosizeEmbedFrame', () => {
     expect(el.style.aspectRatio).toBe('auto');
   });
 
+  it('settles on the taller of two heights a card flips between, and still shrinks for real', () => {
+    const el = frame();
+    post(el.contentWindow, 662);
+    post(el.contentWindow, 663);
+    post(el.contentWindow, 662);
+    post(el.contentWindow, 663);
+    post(el.contentWindow, 662);
+    expect(el.style.height).toBe('663px');
+    post(el.contentWindow, 640);
+    expect(el.style.height).toBe('640px');
+  });
+
   it("hands the height back to the host's CSS when the embed reports none", () => {
     const el = frame();
     post(el.contentWindow, 661);

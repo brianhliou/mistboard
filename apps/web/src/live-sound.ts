@@ -16,6 +16,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { readAccountPreferences } from './account-preferences.js';
+import { afterBoardSettles } from './board-anim.js';
 import {
   liveState,
   type RoomMode,
@@ -70,6 +71,10 @@ export function playSound(kind: SoundKind): void {
   sound?.play(kind);
 }
 
+export function playSoundWhenUnlocked(kind: SoundKind): void {
+  sound?.playWhenUnlocked(kind);
+}
+
 // Terminal sequencing, shared across game families. A king capture is its own
 // fanfare for the winner (the submit-time arpeggio already played), so the win
 // jingle is suppressed; for the loser it becomes a king-fall sting, then the
@@ -90,14 +95,21 @@ export function terminalSoundPlan(
     : [{ kind: 'lose', delayMs: 0 }];
 }
 
+// The result sounds when the board settles (#825): the move that ended the
+// game glides in the render after the snapshot that carries the result, so the
+// sound is chained on that glide's end (board-anim.ts afterBoardSettles). With
+// nothing moving (reduced motion, a resignation, a flag) it plays at once.
 export function playTerminalPlan(result: 'win' | 'lose' | 'draw', reason: string | null): void {
-  for (const step of terminalSoundPlan(result, reason)) {
-    if (step.delayMs > 0) {
-      window.setTimeout(() => sound?.play(step.kind), step.delayMs);
-    } else {
-      sound?.play(step.kind);
+  const plan = terminalSoundPlan(result, reason);
+  afterBoardSettles(() => {
+    for (const step of plan) {
+      if (step.delayMs > 0) {
+        window.setTimeout(() => sound?.play(step.kind), step.delayMs);
+      } else {
+        sound?.play(step.kind);
+      }
     }
-  }
+  });
 }
 
 // Low-time warning: once per game, when the seated player's clock first dips
@@ -119,9 +131,13 @@ export function maybePlayLowTimeSound(
   sound?.play('low-time');
 }
 
-// Game start: the moment the room flips from "waiting for opponent" (no clock
-// yet) to a running game while you hold a seat. The joiner triggered the flip
-// themselves; this is for the creator who has been waiting.
+// The snapshot where a waiting room flips to a running game (no clock yet ->
+// clock) while you hold a seat. The game-start sound itself is no longer
+// played here: it rides the lifecycle frame in live-render.ts through
+// live-game-start-sound.ts, the one path every live stack shares (PvE
+// included, which starts with its clock running and never made this flip).
+// The transition still claims the snapshot so the join is not read as an
+// opponent move.
 function isGameStartTransition(previous: PlayerView | null, next: PlayerView | null): boolean {
   if (!previous || !next) return false;
   if (!isColor(liveState.seat)) return false;
@@ -153,7 +169,7 @@ export function maybePlaySnapshotSound(nextEvents: GameEvent[], nextView: Player
   }
 
   if (isGameStartTransition(lastSoundView, nextView)) {
-    sound?.play('game-start');
+    // Sounded by the lifecycle frame (live-game-start-sound.ts).
   } else if (shouldUseRevealedEventSounds(nextView)) {
     playRevealedEventSound(nextEvents);
   } else {
@@ -271,7 +287,12 @@ function createSoundController(): SoundController {
     }
   };
 
-  let pendingKind: SoundKind | null = null;
+  // Sounds asked for before the first gesture, played in order once it lands.
+  // More than one can wait: a PvE game whose engine opens queues the
+  // game-start notify and the engine's move together. One of each kind, the
+  // latest few only, so a long locked wait never replays a backlog.
+  const pendingKinds: SoundKind[] = [];
+  const MAX_PENDING = 3;
 
   const unlock = () => {
     const audio = ensureContext();
@@ -280,11 +301,7 @@ function createSoundController(): SoundController {
     void audio.resume();
     window.removeEventListener('pointerdown', unlock);
     window.removeEventListener('keydown', unlock);
-    if (pendingKind) {
-      const kind = pendingKind;
-      pendingKind = null;
-      controller.play(kind);
-    }
+    for (const kind of pendingKinds.splice(0)) controller.play(kind);
   };
 
   window.addEventListener('pointerdown', unlock, { once: true });
@@ -378,7 +395,10 @@ function createSoundController(): SoundController {
         controller.play(kind);
         return;
       }
-      pendingKind = kind;
+      const existing = pendingKinds.indexOf(kind);
+      if (existing >= 0) pendingKinds.splice(existing, 1);
+      pendingKinds.push(kind);
+      if (pendingKinds.length > MAX_PENDING) pendingKinds.shift();
     },
   };
 

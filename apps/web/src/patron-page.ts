@@ -15,7 +15,14 @@ import { buildNav } from './site-shell.js';
 
 type PatronTierMode = 'subscription' | 'payment';
 type PatronTierConfig = { key: string; mode: PatronTierMode };
-type PatronConfigResponse = { configured: boolean; tiers: PatronTierConfig[] };
+// `custom` is present when the program is configured: the server's range for a
+// whole-dollar "Other" amount. The server validates the amount again on its own.
+type PatronCustomRange = { minUsd: number; maxUsd: number };
+type PatronConfigResponse = {
+  configured: boolean;
+  tiers: PatronTierConfig[];
+  custom?: PatronCustomRange | null;
+};
 // What a signed-in patron's badge rests on (/api/patron/status): a subscription
 // (the portal has something to manage) and/or a one-time payment (an end date).
 type PatronStatusResponse = { active: boolean; subscription: boolean; until: string | null };
@@ -32,7 +39,8 @@ const FREQUENCY_FOR_MODE: Record<PatronTierMode, Frequency> = {
 };
 
 // USD display amounts for each tier key. The server maps the key to a Stripe
-// price; the client only ever sends the key, never an amount.
+// price; for a preset the client only ever sends the key. The "Other" amount
+// sends a custom tier key plus whole dollars (CUSTOM_TIER_FOR).
 const TIER_AMOUNT: Record<string, string> = {
   monthly_5: '$5',
   monthly_10: '$10',
@@ -45,6 +53,20 @@ const TIER_AMOUNT: Record<string, string> = {
 };
 
 const DEFAULT_AMOUNT = '10';
+
+const CUSTOM_TIER_FOR: Record<Frequency, string> = {
+  monthly: 'monthly_custom',
+  once: 'once_custom',
+};
+
+// A typed "Other" amount: digits only (no sign, decimal point or exponent), in
+// the server's range. Anything else keeps the button disabled.
+export function parseCustomAmountInput(raw: string, range: PatronCustomRange): number | null {
+  const trimmed = raw.trim();
+  if (!/^\d{1,7}$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  return value >= range.minUsd && value <= range.maxUsd ? value : null;
+}
 
 // The one locale-aware line. A zh-Hans reader is most likely on the mainland,
 // where the wallet in hand is Alipay or WeChat Pay and a card subscription is
@@ -113,12 +135,19 @@ function buildBody(locale: Locale, options: PatronPageOptions): HTMLElement {
   const body = document.createElement('div');
   body.className = 'patron-body';
 
+  // Two prose blocks around the card: beside it on desktop, and on a phone the
+  // card sits after the perk instead of below every FAQ.
   const intro = document.createElement('div');
-  intro.className = 'patron-intro-col';
+  intro.className = 'patron-intro-col patron-lead';
   intro.append(
     para(t('patron.intro', {}, locale)),
     subheading(t('patron.perkTitle', {}, locale)),
     para(t('patron.perk', {}, locale)),
+  );
+
+  const rest = document.createElement('div');
+  rest.className = 'patron-intro-col patron-rest';
+  rest.append(
     subheading(t('patron.transparencyTitle', {}, locale)),
     para(t('patron.transparency', {}, locale)),
     subheading(t('patron.faqTitle', {}, locale)),
@@ -145,7 +174,7 @@ function buildBody(locale: Locale, options: PatronPageOptions): HTMLElement {
   supportLine.textContent = t('patron.supportLine', {}, locale);
   donate.append(card, supportLine);
 
-  body.append(intro, donate);
+  body.append(intro, donate, rest);
   if (!options.prerender) void hydrateCard(card, locale);
   return body;
 }
@@ -177,7 +206,7 @@ async function hydrateCard(card: HTMLElement, locale: Locale): Promise<void> {
     }
     card.replaceChildren(head);
     if (config?.configured && config.tiers.length > 0) {
-      card.append(buildDonateForm(config.tiers, user, locale));
+      card.append(buildDonateForm(config.tiers, user, locale, config.custom ?? null));
     }
     return;
   }
@@ -187,7 +216,7 @@ async function hydrateCard(card: HTMLElement, locale: Locale): Promise<void> {
     return;
   }
 
-  card.replaceChildren(buildDonateForm(config.tiers, user, locale));
+  card.replaceChildren(buildDonateForm(config.tiers, user, locale, config.custom ?? null));
 }
 
 function formatDate(iso: string, locale: Locale): string {
@@ -230,11 +259,13 @@ function buildTierPreview(
 
 // The donation form mirrors lichess: a frequency segment (Monthly / One-time),
 // an amount segment for the chosen frequency, and one prominent button whose
-// label follows the frequency.
+// label follows the frequency. When the server offers a custom range, the amount
+// segment ends in "Other", which opens a whole-dollar input under it.
 function buildDonateForm(
   tiers: PatronTierConfig[],
   user: AuthUser | null,
   locale: Locale,
+  custom: PatronCustomRange | null = null,
 ): HTMLElement {
   const byFrequency: Record<Frequency, PatronTierConfig[]> = { monthly: [], once: [] };
   for (const tier of tiers) byFrequency[FREQUENCY_FOR_MODE[tier.mode]].push(tier);
@@ -249,6 +280,7 @@ function buildDonateForm(
   let frequency: Frequency =
     preferred && offered.includes(preferred) ? preferred : (offered[0] ?? 'monthly');
   let selectedKey = '';
+  let otherSelected = false;
 
   const freqSegment = document.createElement('div');
   freqSegment.className = 'patron-segment patron-frequency';
@@ -258,21 +290,82 @@ function buildDonateForm(
   donateBtn.type = 'button';
   donateBtn.className = 'patron-donate-btn';
 
+  // The "Other" row: a dollar sign, a whole-number input, and a message that
+  // shows only once something invalid is typed. Hidden until Other is chosen.
+  const customRow = document.createElement('div');
+  customRow.className = 'patron-custom';
+  customRow.hidden = true;
+  const customInput = document.createElement('input');
+  const customMessage = document.createElement('p');
+  if (custom) {
+    const field = document.createElement('label');
+    field.className = 'patron-custom-field';
+    const currency = document.createElement('span');
+    currency.className = 'patron-custom-currency';
+    currency.setAttribute('aria-hidden', 'true');
+    currency.textContent = '$';
+    customInput.type = 'text';
+    customInput.inputMode = 'numeric';
+    customInput.autocomplete = 'off';
+    customInput.className = 'patron-custom-input';
+    customInput.placeholder = `${custom.minUsd}-${custom.maxUsd}`;
+    customInput.setAttribute('aria-label', t('patron.customAmountLabel', {}, locale));
+    field.append(currency, customInput);
+    customMessage.className = 'patron-custom-message';
+    customMessage.id = 'patron-custom-message';
+    customMessage.textContent = t('patron.customAmountInvalid', {}, locale);
+    customMessage.hidden = true;
+    customInput.setAttribute('aria-describedby', customMessage.id);
+    customRow.append(field, customMessage);
+  }
+  const customAmount = (): number | null =>
+    custom ? parseCustomAmountInput(customInput.value, custom) : null;
+  const syncButton = (): void => {
+    if (!otherSelected) {
+      donateBtn.disabled = selectedKey === '';
+      return;
+    }
+    const valid = customAmount() !== null;
+    donateBtn.disabled = !valid;
+    const showMessage = !valid && customInput.value.trim() !== '';
+    customMessage.hidden = !showMessage;
+    customInput.setAttribute('aria-invalid', showMessage ? 'true' : 'false');
+  };
+  customInput.addEventListener('input', syncButton);
+
   const amountOf = (key: string): string => key.slice(key.indexOf('_') + 1);
   const renderFrequency = (): void => {
     const options = byFrequency[frequency];
     selectedKey =
       options.find((tier) => amountOf(tier.key) === DEFAULT_AMOUNT)?.key ?? options[0]?.key ?? '';
+    otherSelected = false;
+    customRow.hidden = true;
     amountSegment.replaceChildren();
     for (const tier of options) {
       const btn = segmentButton(TIER_AMOUNT[tier.key] ?? tier.key, tier.key === selectedKey);
       btn.classList.add('patron-amount-btn');
       btn.addEventListener('click', () => {
         selectedKey = tier.key;
+        otherSelected = false;
+        customRow.hidden = true;
         selectOne(amountSegment, btn);
+        syncButton();
       });
       amountSegment.append(btn);
     }
+    if (custom) {
+      const other = segmentButton(t('patron.amountOther', {}, locale), false);
+      other.classList.add('patron-amount-other');
+      other.addEventListener('click', () => {
+        otherSelected = true;
+        customRow.hidden = false;
+        selectOne(amountSegment, other);
+        syncButton();
+        customInput.focus();
+      });
+      amountSegment.append(other);
+    }
+    syncButton();
     donateBtn.textContent = t(
       frequency === 'monthly' ? 'patron.donate' : 'patron.donateOnce',
       {},
@@ -301,9 +394,18 @@ function buildDonateForm(
 
   renderFrequency();
   donateBtn.addEventListener('click', () => {
-    if (selectedKey) void startCheckout(selectedKey, donateBtn, locale);
+    if (otherSelected) {
+      const amountUsd = customAmount();
+      if (amountUsd !== null) {
+        void startCheckout({ tier: CUSTOM_TIER_FOR[frequency], amountUsd }, donateBtn, locale);
+      }
+      return;
+    }
+    if (selectedKey) void startCheckout({ tier: selectedKey }, donateBtn, locale);
   });
-  form.append(amountSegment, donateBtn);
+  form.append(amountSegment);
+  if (custom) form.append(customRow);
+  form.append(donateBtn);
   form.append(note(t('patron.currencyNote', {}, locale)));
 
   if (!user) form.append(note(t('patron.signInFirst', {}, locale)));
@@ -311,8 +413,10 @@ function buildDonateForm(
 }
 
 // ── actions ──────────────────────────────────────────────────────────────────
+type CheckoutRequest = { tier: string; amountUsd?: number };
+
 async function startCheckout(
-  tier: string,
+  request: CheckoutRequest,
   button: HTMLButtonElement,
   locale: Locale,
 ): Promise<void> {
@@ -322,7 +426,7 @@ async function startCheckout(
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ tier }),
+      body: JSON.stringify(request),
     });
     if (resp.status === 401) {
       window.location.assign('/account');

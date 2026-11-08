@@ -567,12 +567,11 @@ test('lobby liveness: polling does not extend the 5-minute cap', async () => {
   assert.equal((await openRequests(ctx)).length, 0);
 });
 
-// ── Allowlisted variants (139) ──────────────────────────────────────────────
+// ── Xiangqi Mahjong launch ─────────────────────────────────────────────────
 //
-// Xiangqi mahjong is behind the flag AND the per-account grant. The seat check
-// refuses a stranger, but the lobby is a public list and a matcher: a seek must
-// not come from an account without the grant, and its existence must not reach
-// a reader without one. No persistence here, so every request is a guest.
+// Launched 2026-10-25: the flag still gates room creation, but the lobby no
+// longer requires a playtest grant. No persistence here, so every request is
+// a guest.
 
 const xmjCalls: TenantLobbyCall[] = [];
 registerFakeLobbyTenant({
@@ -603,22 +602,22 @@ async function withXmjFlag(run: () => Promise<void>): Promise<void> {
 
 const xmjPace = { initialMs: 300_000, incrementMs: 5_000 };
 
-test('lobby: a guest cannot seek an allowlisted variant (xiangqi mahjong)', async () => {
+test('lobby: a guest can seek launched xiangqi mahjong without a grant', async () => {
   await withXmjFlag(async () => {
     xmjCalls.length = 0;
     const { ctx } = testContext();
     const res = await post(ctx, { gameSpecId: XIANGQI_MAHJONG_SPEC_ID, timeControl: xmjPace });
-    assert.equal(res.status, 403);
-    assert.equal(responseJson(res).error, 'variant_not_granted');
-    assert.equal(ctx.lobbyQueue.length, 0, 'no ticket is queued');
+    assert.equal(res.status, 202);
+    assert.ok(responseJson(res).ticketId);
+    assert.equal(ctx.lobbyQueue.length, 1, 'the public seek is queued');
     assert.equal(xmjCalls.length, 0);
   });
 });
 
-test('lobby: the open list hides an allowlisted seek from a reader without the grant', async () => {
+test('lobby: the open list shows launched xiangqi mahjong to a reader without a grant', async () => {
   await withXmjFlag(async () => {
     const { ctx } = testContext({ now: () => 1_000_000 });
-    // A granted player's seek, queued the way POST queues one.
+    // An existing player's seek, queued the way POST queues one.
     const ticket: LobbyTicket = {
       id: 'xmj-ticket',
       createdAt: 1_000_000,
@@ -636,7 +635,7 @@ test('lobby: the open list hides an allowlisted seek from a reader without the g
     await post(ctx, { timeControl: tc });
     assert.equal(ctx.lobbyQueue.length, 2);
     const listed = (await openRequests(ctx)) as Array<{ gameSpecId: string }>;
-    assert.equal(listed.length, 1, 'only the public seek is listed');
-    assert.notEqual(listed[0]?.gameSpecId, XIANGQI_MAHJONG_SPEC_ID);
+    assert.equal(listed.length, 2, 'both public seeks are listed');
+    assert.ok(listed.some((seek) => seek.gameSpecId === XIANGQI_MAHJONG_SPEC_ID));
   });
 });

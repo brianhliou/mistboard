@@ -8,14 +8,29 @@ import {
   type XmjMove,
   type XmjPlayerView,
   type XmjRoomState,
+  type XmjTile,
   xmjBotAction,
+  xmjOrderedTiles,
   xmjPendingAction,
   xmjViewFor,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fitXmjRackBadges } from './xiangqi-mahjong-table.js';
+
+vi.mock('./xiangqi-mahjong-table.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./xiangqi-mahjong-table.js')>();
+  return { ...actual, fitXmjRackBadges: vi.fn(actual.fitXmjRackBadges) };
+});
+
 import { embedRendererKindForVariant, showcaseRendererKindForSpec } from './showcase-dispatch.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
-import { mountXiangqiMahjongWatchReplay, xmjWatchFrames } from './watch-xiangqi-mahjong-replay.js';
+import {
+  mountXiangqiMahjongWatchReplay,
+  xmjClockAtPly,
+  xmjCompactFit,
+  xmjTagOverflow,
+  xmjWatchFrames,
+} from './watch-xiangqi-mahjong-replay.js';
 
 function seeded(seed: number): () => number {
   let x = seed;
@@ -62,6 +77,53 @@ const faceUpInRacks = (root: HTMLElement): number =>
   root.querySelectorAll('.xmj-rack .xmj-tile:not(.xmj-tile--back)').length;
 
 describe('xiangqi mahjong TV mount', () => {
+  it('rewinds public declaration badges and rows on the table-3 spectator track', async () => {
+    const tiles: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR'];
+    const rest = xmjOrderedTiles();
+    for (const tile of tiles) rest.splice(rest.indexOf(tile), 1);
+    let state = createXmjRoomState({
+      walls: [[...tiles, ...rest]],
+      firstDealer: 'east',
+      taiTable: 3,
+    });
+    const move: XmjMove = { by: 'east', at: 1000, action: 'declare-ready', tile: 'bH' };
+    const before = xmjViewFor(state, 'spectator');
+    state = applyXmjMove(state, move);
+    const after = xmjViewFor(state, 'spectator');
+    const root = document.createElement('div');
+    const handle = await mountXiangqiMahjongWatchReplay(root, 'xmj_declared', {
+      autoplay: false,
+      live: true,
+      metadataByRoomId: {},
+      loadPostgameOverride: async () => ({
+        ok: true,
+        postgame: {
+          history: {
+            spectator: [
+              { ply: 0, view: before },
+              { ply: 1, view: after },
+            ],
+          },
+          timeline: [{ type: 'move-played', move }],
+        },
+      }),
+    });
+    expect(root.querySelectorAll('.xmj-badge--declared')).toHaveLength(1);
+    const log = handle.moveLog?.()?.el;
+    expect(log?.textContent).toContain('declares ready, discards');
+    handle.jumpToPly?.(0);
+    expect(root.querySelector('.xmj-badge--declared')).toBeNull();
+    log?.querySelector<HTMLButtonElement>('[data-xmj-ply="1"]')?.click();
+    expect(root.querySelectorAll('.xmj-badge--declared')).toHaveLength(1);
+    expect(faceUpInRacks(root)).toBe(0);
+    expect(root.querySelector('[data-xmj-declare], [data-xmj-tile], .xmj-action')).toBeNull();
+    // The entire spectator track contains only the one public discarded tile.
+    const serialized = JSON.stringify([before, after]);
+    for (const tile of tiles.filter((tile) => tile !== 'bH'))
+      expect(serialized).not.toContain(`"${tile}"`);
+    handle.destroy();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -83,6 +145,8 @@ describe('xiangqi mahjong TV mount', () => {
     expect(plies.at(-1)).toEqual([6, 6]);
     expect(handle.gameResult?.()).toBe('in-progress');
     expect(root.querySelector('.xiangqi-mahjong-live-board .xmj-table')).not.toBeNull();
+    // The homepage viewer asks for the compact table; it is the same view, smaller.
+    expect(root.querySelector('.xmj-watch-board--compact')).not.toBeNull();
     expect(root.textContent).toContain('Ada');
     expect(root.textContent).toContain('Bo');
     // A spectator during a hand: both racks are backs, and no seat can act.
@@ -99,6 +163,39 @@ describe('xiangqi mahjong TV mount', () => {
     handle.destroy();
   });
 
+  it('fits the racks of a full-size table so a claimed set keeps its badge on the felt', async () => {
+    const fit = vi.mocked(fitXmjRackBadges);
+    fit.mockClear();
+    const root = document.createElement('div');
+    document.body.append(root);
+    const frame = liveFrame(8);
+    const handle = await mountXiangqiMahjongWatchReplay(root, 'xmj_tv', {
+      autoplay: false,
+      live: true,
+      metadataByRoomId: {},
+      loadPostgameOverride: async () => ({ ok: true, postgame: frame }),
+    });
+    const board = root.querySelector('.xmj-watch-board');
+    expect(fit).toHaveBeenCalledWith(board);
+    handle.destroy();
+    root.remove();
+
+    // A compact table zooms to its host instead and leaves the racks alone.
+    fit.mockClear();
+    const compact = document.createElement('div');
+    document.body.append(compact);
+    const small = await mountXiangqiMahjongWatchReplay(compact, 'xmj_tv', {
+      autoplay: false,
+      live: true,
+      compact: true,
+      metadataByRoomId: {},
+      loadPostgameOverride: async () => ({ ok: true, postgame: frame }),
+    });
+    expect(fit).not.toHaveBeenCalled();
+    small.destroy();
+    compact.remove();
+  });
+
   it('gives the rail the hand log and the points table, and scrubs', async () => {
     const frame = liveFrame(8);
     const root = document.createElement('div');
@@ -110,6 +207,9 @@ describe('xiangqi mahjong TV mount', () => {
       onPlyChange: (ply) => plies.push(ply),
       loadPostgameOverride: async () => ({ ok: true, postgame: frame }),
     });
+    // The full TV page keeps the full-size table.
+    expect(root.querySelector('.xmj-watch-board')).not.toBeNull();
+    expect(root.querySelector('.xmj-watch-board--compact')).toBeNull();
     const log = handle.moveLog?.();
     expect(log?.el.classList.contains('xmj-log')).toBe(true);
     log?.update(8, (ply) => handle.jumpToPly?.(ply));
@@ -128,7 +228,8 @@ describe('xiangqi mahjong TV mount', () => {
       pool: document.createElement('div'),
     };
     handle.fillMaterial?.(slots);
-    expect(slots.pool.querySelector('table.xmj-hands')).not.toBeNull();
+    // The room's under-board card, not a bare table floating in the rail.
+    expect(slots.pool.querySelector('section.xmj-hands-under > table.xmj-hands')).not.toBeNull();
     expect(slots.pool.textContent).toContain('Ada');
     expect(slots.top.childElementCount + slots.bottom.childElementCount).toBe(0);
 
@@ -195,5 +296,98 @@ describe('xiangqi mahjong TV mount', () => {
     expect(webVariantTenantForSpecId('xiangqi-mahjong')?.watch?.family).toBe('mahjong');
     expect(showcaseRendererKindForSpec('xiangqi-mahjong')).toBe('xiangqi-mahjong');
     expect(embedRendererKindForVariant('xiangqi-mahjong')).toBeNull();
+  });
+});
+
+describe('xiangqi mahjong compact fit', () => {
+  // A table shaped like the one measured in a 230px feed card: 338px tall
+  // below 280px wide, and the To discard badge reaching past the edge until
+  // the table is 300px wide.
+  const table = (width: number) => ({
+    height: width < 280 ? 338 : 300,
+    overflow: Math.max(0, (300 - width) / 2),
+  });
+
+  it('scales a table too big for a square card until the rack and the badges fit', () => {
+    const { zoom, width } = xmjCompactFit(230, 230, table);
+    expect(zoom).toBeLessThan(1);
+    expect(width * zoom).toBeCloseTo(230);
+    expect(table(width).height * zoom).toBeLessThanOrEqual(230);
+    expect(table(width).overflow).toBe(0);
+  });
+
+  it('leaves a table that fits its host at full size', () => {
+    expect(xmjCompactFit(320, 400, table)).toEqual({ zoom: 1, width: 320 });
+  });
+
+  // Regression: a Dealer badge 48px wide in a 38px column spilled into the
+  // felt's padding, inside the table's edge, so the fit measured no overflow
+  // and the rounded corner clipped the badge's first letters on /watch.
+  it('counts a badge wider than its column though it stays inside the felt', () => {
+    const column = { left: 10, right: 48 };
+    expect(xmjTagOverflow([{ column, badge: { left: 0, right: 48 } }])).toBe(10);
+    expect(xmjTagOverflow([{ column, badge: { left: 20, right: 48 } }])).toBe(0);
+    expect(
+      xmjTagOverflow([
+        { column, badge: { left: 14, right: 48 } },
+        { column: { left: 200, right: 238 }, badge: { left: 200, right: 244 } },
+      ]),
+    ).toBe(6);
+  });
+});
+
+describe('xiangqi mahjong rail clock', () => {
+  // Regression: the TV rail had no clockAtPly for this variant, so /watch drew
+  // no clocks beside the players while every other variant's rail did.
+  const view = liveFrame(0).view as XmjPlayerView;
+  const frame = (
+    ply: number,
+    clock?: { east: number; west: number; active: 'east' | 'west' | null },
+  ) => ({
+    ply,
+    view,
+    ...(clock
+      ? { clock: { remainingMs: { east: clock.east, west: clock.west }, active: clock.active } }
+      : {}),
+  });
+
+  it('reads a finished match from the latest snapshot at or before the ply', () => {
+    const match = {
+      frames: [frame(0), frame(1, { east: 179_000, west: 180_000, active: 'west' }), frame(2)],
+      liveClock: null,
+      initialMs: 180_000,
+      result: 'west-wins',
+    };
+    expect(xmjClockAtPly(match, 0, 0)).toBeNull();
+    expect(xmjClockAtPly(match, 1, 0)).toEqual({
+      first: 179_000,
+      second: 180_000,
+      toMove: 'second',
+      initialMs: 180_000,
+    });
+    // The last ply of a finished match has nobody to move.
+    expect(xmjClockAtPly(match, 2, 0)?.toMove).toBeNull();
+    expect(xmjClockAtPly(match, 2, 0)?.first).toBe(179_000);
+  });
+
+  it('runs the live side down from the server clock at the latest ply only', () => {
+    const match = {
+      frames: [frame(0), frame(1, { east: 170_000, west: 175_000, active: 'east' })],
+      liveClock: {
+        remainingMs: { east: 170_000, west: 175_000 },
+        activeColor: 'east' as const,
+        runningSince: 10_000,
+      },
+      initialMs: 180_000,
+      result: 'in-progress',
+    };
+    expect(xmjClockAtPly(match, 1, 14_000)).toEqual({
+      first: 166_000,
+      second: 175_000,
+      toMove: 'first',
+      initialMs: 180_000,
+    });
+    // Scrubbed back, the board shows the snapshot, not the running clock.
+    expect(xmjClockAtPly(match, 0, 14_000)).toBeNull();
   });
 });

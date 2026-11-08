@@ -5,7 +5,6 @@ import {
   type XiangqiGameState,
 } from '@mistboard/game';
 import './live-xiangqi.css';
-import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
@@ -96,7 +95,7 @@ export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
 function renderHomePuzzleWidgetContent(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement[] {
   const title = document.createElement('span');
   title.className = 'home-puzzle-widget-title';
-  title.textContent = t('homePuzzle.title', { variant: variantDisplayLabel(puzzle.variant) });
+  title.textContent = t('homePuzzle.title');
 
   const turn = document.createElement('span');
   turn.className = 'home-puzzle-widget-turn';

@@ -2,7 +2,8 @@
    in the play column (PlayStrategy-style). The slot collapses entirely when no
    event is on. */
 /* A grid of equal rows, so a title that wraps to two lines does not leave its
-   neighbour a shorter card. */
+   neighbour a shorter card. The announcement lines under the cards are not a
+   card, so with them the rows size to their content. */
 .landing-event-banners {
   display: grid;
   grid-auto-rows: 1fr;
@@ -11,32 +12,42 @@
   min-width: 0;
 }
 
+.landing-event-banners:has(> .landing-event-upcoming) {
+  grid-auto-rows: auto;
+}
+
 .landing-event-banners:empty {
   display: none;
+}
+
+/* While the index loads (landing-event-banners.ts BROADCAST_SLOT_PENDING_CLASS)
+   the slot holds two cards' room, so their arrival does not grow the band.
+   Phones never show the slot (landing.css hides it at 600px and below). */
+@media (min-width: 601px) {
+  .landing-event-banners.landing-event-banners--pending {
+    display: block;
+    min-height: calc(2 * 52px + 8px);
+  }
 }
 
 .landing-event-banner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  /* One-line cards (the year sits on the meta line, cardLines): 53px where the
+     two-line card was 84px, which keeps the play column no taller than the
+     panel with Play again and eleven variant rows (2026-10-26). */
+  gap: 12px;
+  padding: 8px 12px;
   border: 1px solid var(--site-border-soft);
   border-radius: var(--site-radius);
   background: var(--site-panel);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
 }
 
-.landing-event-banner:hover,
-.landing-event-banner:focus-visible {
-  border-color: var(--site-accent);
-  background: var(--site-panel-soft);
-  outline: none;
-}
+/* Hover and focus: the card grammar (hover-grammar.css .hover-card), border to
+   the accent and the title to the link green; focus keeps the global ring. */
 
 .landing-event-banner-icon {
   display: flex;
@@ -52,39 +63,99 @@
   height: 28px;
 }
 
+/* The broadcast card carries art instead of a glyph (landing-event-banners.ts
+   broadcastArt). The art, not the text, sets the card's height: 50px of
+   content box plus the border is 52px whatever the art size, so a bigger
+   picture takes padding, never height. The text column (two 13px lines, 34px)
+   stays shorter than the art. The inline padding and gap are trimmed so the
+   title keeps the room the 34px glyph slot left it (272px at 1440 and 1920,
+   where the longest tour name is 262px). */
+.landing-event-banner-broadcast {
+  --event-art-size: 44px;
+  gap: 10px;
+  padding: calc((50px - var(--event-art-size)) / 2) 10px;
+  padding-inline-start: 6px;
+}
+
+.landing-event-banner-icon-art {
+  width: var(--event-art-size);
+  height: var(--event-art-size);
+}
+
+.landing-event-banner-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The theme's render shows; the other one hides (the article figures' twins
+   do the same). */
+.landing-event-banner-art-dark,
+:root[data-effective-theme="dark"] .landing-event-banner-art-light {
+  display: none;
+}
+
+:root[data-effective-theme="dark"] .landing-event-banner-art-dark {
+  display: block;
+}
+
 .landing-event-banner-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 /* Clips its overflow, so the line box must hold the glyph's descenders (#543). */
 .landing-event-banner-title {
-  /* Tour names run long ("2026 National Xiangqi Men Division A League"): two
-     lines, then an ellipsis, instead of one line that cut every name. */
+  /* Tour names run long ("National Xiangqi Men's Division A League" is 262px
+     at 13px against a 270px line in the 1440 and 1920 layouts): one line when
+     it fits, two when it does not, then an ellipsis; never one line that cuts
+     the name. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
   font-weight: 600;
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.35;
   color: var(--site-heading);
-}
-
-.landing-event-banner:hover .landing-event-banner-title,
-.landing-event-banner:focus-visible .landing-event-banner-title {
-  color: var(--site-link);
 }
 
 .landing-event-banner-subtitle {
   overflow: hidden;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 12.5px;
+  line-height: 1.35;
   color: var(--site-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* An event still to start (no games yet): a plain line under the cards, not a
+   card and not a link, since its page would be an empty intro (Brian,
+   2026-10-27). No pointer, no hover. */
+.landing-event-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-inline: 4px;
+}
+
+.landing-event-upcoming-line {
+  overflow: hidden;
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12.5px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.landing-event-upcoming-title {
+  color: var(--site-text);
+  font-weight: 600;
 }
 
 /* Past the two-row cap: the rest are on the broadcast list. */
@@ -94,9 +165,4 @@
   color: var(--site-muted);
   font-size: 13px;
   text-decoration: none;
-}
-
-.landing-event-banners-more:hover {
-  color: var(--site-text);
-  text-decoration: underline;
 }

@@ -82,7 +82,7 @@ definePersistenceTests('correspondence variants e2e', () => {
     const started: Array<{ specId: string; roomId: string; first: string; second: string }> = [];
 
     for (const specId of specs) {
-      const { tenant } = CORRESPONDENCE_TEST_TENANTS[specId]!;
+      const { tenant, firstReplyPlies = 2 } = CORRESPONDENCE_TEST_TENANTS[specId]!;
       const registration = correspondenceTenantForSpecId(specId);
       assert.ok(registration?.createCorrespondenceGameForSeek, `${specId} registration`);
       const first = await makeUser(`${specId}-a`);
@@ -103,8 +103,10 @@ definePersistenceTests('correspondence variants e2e', () => {
       assert.equal(seated.game_spec_id, specId);
 
       const room = registration.rooms.get(roomId) as unknown as AnyRoom;
-      for (let ply = 0; ply < 2; ply += 1) {
-        const turn = (room.projection.state as { status: { turn: string } }).status.turn;
+      for (let ply = 0; ply < firstReplyPlies; ply += 1) {
+        const turn =
+          tenant.clockOwner?.(room.projection.state) ??
+          (room.projection.state as { status: { turn: string } }).status.turn;
         const seq = await appendTenantEvent(
           tenant,
           room as never,

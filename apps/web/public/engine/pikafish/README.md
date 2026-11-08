@@ -11,14 +11,12 @@ Worker with pthreads, so the document must be cross-origin isolated.
 - Net: `pikafish.nnue`, the upstream `master-net` release as updated
   2026-09-06, arch `(62083, 1024, 32, 32, 1)`; sha256 and source in `net.json`
 - License: GPL-3.0-or-later (`COPYING.txt`); the net under `NNUE-License.md`
-  (legal use only, no commercial use without the Pikafish team's permission)
-- Public mirror of this build, with the same files and the net as release
-  assets: <https://github.com/brianhliou/pikafish-wasm>
+- Browser build source: <https://github.com/brianhliou/pikafish-wasm>
 
 | file | |
 |---|---|
 | `pikafish.js`, `pikafish.wasm` | the Emscripten module (tracked) |
-| `pikafish.nnue` | 51 MB, **not tracked**; `scripts/fetch-pikafish-net.mjs` downloads it from `net.json`'s URL and checks the sha256 (`predev` and `build` run it) |
+| `pikafish.nnue` | 51 MB, **not tracked**; `scripts/fetch-pikafish-net.mjs` at the repo root downloads the private API asset pinned in `net.json` and checks its size and sha256 (`predev` and `build` run it) |
 | `worker.js` | fetches the net with byte progress, writes it to the module FS as `/pikafish.nnue`, builds the engine, forwards UCI |
 | `source.patch` | the WASM entry points against the upstream commit |
 | `build.sh` | the `em++` invocation |
@@ -66,3 +64,10 @@ docker run --rm -v "$PWD:/src" -w /src emscripten/emsdk:3.1.74 bash wasm/build.s
 Bump `PIKAFISH_ASSET_VERSION` in `pikafish-ceval.ts` on any change here (the
 CDN keys these un-hashed files on the query string), and re-pin `net.json` if
 the net moved.
+
+The shared fetch helper uses `MISTBOARD_PRIVATE_ASSETS_TOKEN` for the private
+GitHub API asset. CI and production builds require this variable, even with a
+cached net. Local runs without it use `gh release download` with the developer's
+GitHub login. The net is fetched separately beside the native server binaries
+at image build time; `engines-*` archives contain no Pikafish net. Browser
+builds continue to serve `/engine/pikafish/pikafish.nnue`.

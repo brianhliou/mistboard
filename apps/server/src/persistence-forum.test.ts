@@ -1,5 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
+  forumContentHash,
+  forumTranslationCacheHash,
+  legacyForumTranslationCacheHash,
+} from './forum-translation.js';
+import {
   addForumPost,
   countRecentForumPostsByUser,
   countRecentForumTopicsByUser,
@@ -24,7 +29,7 @@ import {
   updateForumTopic,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
-import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
+import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleForumRoute } from './routes/forum.js';
 
 type ResponseCapture = {
@@ -587,7 +592,10 @@ definePersistenceTests('forum', () => {
     );
   });
 
-  test('forum reads carry cached translations for ?locale= and never ask the model', async () => {
+  test('forum overlays and translate endpoint retain durable and legacy v2 rows across prompt/model changes', async (t) => {
+    const modelCall = t.mock.method(globalThis, 'fetch', async () =>
+      assert.fail('cached read called the model'),
+    );
     const now = new Date('2026-09-12T10:00:00Z');
     await createUser({
       id: 'forum_overlay_user',
@@ -618,7 +626,8 @@ definePersistenceTests('forum', () => {
     });
     assert.equal(reply.ok, true);
     // Two rows a Translate click would have written: the title and the
-    // opening post, both into zh-Hans, from an older model than today's.
+    // opening post, both into zh-Hans, from an older prompt and model. The
+    // title uses the durable key; the body is an unmodified legacy v2 row.
     for (const [text, translatedText, kind, id] of [
       [
         'Paste a game link and it shows as a board',
@@ -634,24 +643,58 @@ definePersistenceTests('forum', () => {
       ],
     ] as const) {
       await putForumTranslation({
-        contentHash: sha256(text),
+        contentHash:
+          kind === 'topic'
+            ? forumTranslationCacheHash(text, 'zh-Hans')
+            : legacyForumTranslationCacheHash(text, 'zh-Hans'),
         targetLocale: 'zh-Hans',
         model: 'an-older-model',
+        promptVersion: 'older-prompt',
         translatedText,
         source: { kind, id },
         inputTokens: 1,
         outputTokens: 1,
       });
     }
+    await getPool().query(
+      `UPDATE forum_translations SET prompt_version = NULL WHERE source_kind = 'post'`,
+    );
+    // A legacy v1 row must never supply the otherwise untranslated reply.
+    await putForumTranslation({
+      contentHash: forumContentHash('Nobody has translated this reply.'),
+      targetLocale: 'zh-Hans',
+      model: 'v1-model',
+      promptVersion: 'forum-translation-prompt-v1',
+      translatedText: 'incorrect v1 output',
+      source: { kind: 'post', id: 'post_overlay_2' },
+      inputTokens: 1,
+      outputTokens: 1,
+    });
+    // Durable output must win even when a legacy v2 alternative exists.
+    await putForumTranslation({
+      contentHash: legacyForumTranslationCacheHash(
+        'Paste a game link and it shows as a board',
+        'zh-Hans',
+      ),
+      targetLocale: 'zh-Hans',
+      model: 'legacy-model',
+      promptVersion: 'older-prompt',
+      translatedText: 'must not replace durable output',
+      source: { kind: 'topic', id: 'topic_overlay' },
+      inputTokens: 1,
+      outputTokens: 1,
+    });
 
     // The overlay is behind the same flag as the Translate route. The key's
     // presence is all the flag reads; this value is not a credential.
     const env = {
       flag: process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED,
       key: process.env.ANTHROPIC_API_KEY,
+      model: process.env.MISTBOARD_FORUM_TRANSLATION_MODEL,
     };
     process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED = 'true';
     process.env.ANTHROPIC_API_KEY = 'present-for-the-flag-check';
+    process.env.MISTBOARD_FORUM_TRANSLATION_MODEL = 'replacement-model';
     try {
       const get = async (path: string) => {
         const response = captureResponse();
@@ -712,6 +755,23 @@ definePersistenceTests('forum', () => {
         '粘贴对局链接即可显示为棋盘',
       );
 
+      for (const [kind, id, text] of [
+        ['topic', 'topic_overlay', '粘贴对局链接即可显示为棋盘'],
+        ['post', 'post_overlay_1', '现在可以在论坛帖子中显示对局。把链接单独放在一行。'],
+      ]) {
+        const response = captureResponse();
+        await tryHandleForumRoute(
+          {},
+          requestWithJson({ kind, id, locale: 'zh-Hans' }),
+          response,
+          '/api/forum/translate',
+          new URL('http://localhost/api/forum/translate'),
+        );
+        assert.equal(response.status, 200);
+        assert.deepEqual(JSON.parse(response.body), { text, cached: true, locale: 'zh-Hans' });
+      }
+      assert.equal(modelCall.mock.callCount(), 0);
+
       // Flag off: reads answer exactly as before the overlay existed.
       process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED = 'false';
       const off = (await get('/api/forum/topics/topic_overlay?locale=zh-Hans')) as {
@@ -724,6 +784,8 @@ definePersistenceTests('forum', () => {
       else process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED = env.flag;
       if (env.key === undefined) delete process.env.ANTHROPIC_API_KEY;
       else process.env.ANTHROPIC_API_KEY = env.key;
+      if (env.model === undefined) delete process.env.MISTBOARD_FORUM_TRANSLATION_MODEL;
+      else process.env.MISTBOARD_FORUM_TRANSLATION_MODEL = env.model;
     }
   });
 

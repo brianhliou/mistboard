@@ -249,6 +249,10 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
     masked: false,
     notate,
     isMoveEvent: isMahjongMoveEvent,
+    // game_first_move: only a tile choice counts. The draw (sent automatically
+    // on the seat's turn), a pass and the runtime's timeout are left out.
+    playedByPlayer: (move) =>
+      move.action === 'discard' || move.action === 'claim' || move.action === 'self-draw',
   },
   replayCapture: {
     positionKey: replayPositionKey,

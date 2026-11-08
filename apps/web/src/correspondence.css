@@ -107,6 +107,13 @@
   color: var(--site-accent);
 }
 
+/* One line of text: as wide as it reads, not the whole column (Brian, 2026-10-23). */
+.correspondence-quiet-panel,
+.correspondence-empty {
+  width: fit-content;
+  max-width: 100%;
+}
+
 .correspondence-quiet-panel,
 .correspondence-empty p {
   margin: 0;
@@ -308,6 +315,164 @@
   white-space: nowrap;
 }
 
+/* Play the host: the Start a game bar's shape, with its one line of terms
+   under the heading and, signed out, a sign-in button sized to its text. */
+.correspondence-host > .correspondence-hint {
+  margin: 0;
+}
+
+.correspondence-host-intro {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.correspondence-host-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.correspondence-host-text h2 {
+  margin: 0;
+}
+
+.correspondence-host-text .correspondence-hint {
+  margin: 0;
+}
+
+.correspondence-host-photo {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ---- Start tiles ------------------------------------------------------------------- */
+
+/* Two small tiles side by side, each opening its form in a dialog; a phone
+   stacks them. They stay on top on every width: at about 80px each they cost
+   less than scrolling past your games to find them. */
+.correspondence-launchers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 440px));
+  gap: 16px;
+}
+
+.correspondence-launcher {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.correspondence-launcher > .correspondence-host-photo {
+  width: 48px;
+  height: 48px;
+}
+
+.correspondence-launcher-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.correspondence-launcher-text h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-launcher-text .correspondence-hint {
+  margin: 0;
+}
+
+.correspondence-launcher > .correspondence-btn {
+  flex: none;
+  align-self: center;
+  min-height: 40px;
+}
+
+.correspondence-dialog {
+  padding: 0;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-text);
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  box-shadow: 0 18px 48px rgba(15, 30, 24, 0.22);
+  font: inherit;
+}
+
+.correspondence-dialog::backdrop {
+  background: rgba(15, 30, 24, 0.42);
+}
+
+.correspondence-dialog > .correspondence-panel {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 20px 20px 18px;
+}
+
+.correspondence-dialog > .correspondence-panel > h2,
+.correspondence-dialog .correspondence-host-text h2 {
+  padding-right: 32px;
+}
+
+.correspondence-dialog-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.correspondence-dialog-close:hover {
+  color: var(--site-heading);
+}
+
+/* In a dialog the form stacks at every width, the phone layout. */
+.correspondence-dialog .correspondence-start-form {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.correspondence-dialog .correspondence-start-form > .correspondence-field,
+.correspondence-dialog .correspondence-start-form > .correspondence-field:first-child {
+  flex: none;
+}
+
+.correspondence-dialog .correspondence-start-form > .correspondence-hint,
+.correspondence-dialog .correspondence-start-form > .correspondence-form-status {
+  order: 0;
+  flex: none;
+}
+
+.correspondence-dialog .correspondence-start-form > .correspondence-btn {
+  align-self: stretch;
+}
+
+.correspondence-host-signin {
+  align-self: flex-start;
+}
+
 @media (max-width: 640px) {
   .correspondence-start-form {
     flex-direction: column;
@@ -329,12 +494,6 @@
 
   .correspondence-start-form > .correspondence-btn {
     align-self: flex-start;
-  }
-
-  /* On a phone your games come first once you have any; the form follows,
-     as it did when it was a side column. With no games it stays on top. */
-  .correspondence-shell.has-games > .correspondence-top {
-    order: 1;
   }
 }
 
@@ -363,9 +522,11 @@
   overflow: hidden;
 }
 
+/* Equal widths while they fit; never narrower than the label, which spilled
+   out of the box on a narrow window ("Random", 2026-10-23). */
 .correspondence-seg button {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: max-content;
   min-height: 38px;
   padding: 0 6px;
   border: 0;

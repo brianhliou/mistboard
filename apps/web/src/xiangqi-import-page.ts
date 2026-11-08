@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // /import — paste a xiangqi game and land on the analysis board with it.
 //
 // The analysis board has carried an import box for a long time, but only as an
@@ -9,6 +11,7 @@
 // divergence from lichess (which creates a public game) and the right default
 // while we have no story for moderating or rate-limiting anonymous writes.
 import './xiangqi-import-page.css';
+import { t } from './i18n/catalog.js';
 import { importXiangqiPaste } from './review/xiangqi-import.js';
 import { buildNav } from './site-shell.js';
 
@@ -22,12 +25,12 @@ const ANALYSIS_PATH = '/analysis/xiangqi';
  *  the URL is the whole product of this page, so it is what to assert on. */
 export function xiangqiImportTargetUrl(input: string): { url: string } | { error: string } {
   const trimmed = input.trim();
-  if (!trimmed) return { error: 'Paste a game first.' };
-  if (trimmed.length > MAX_INPUT_BYTES) return { error: 'That file is too large to import.' };
+  if (!trimmed) return { error: t('review.import.empty') };
+  if (trimmed.length > MAX_INPUT_BYTES) return { error: t('review.import.tooLarge') };
 
   const result = importXiangqiPaste(trimmed);
   if (result.error || result.moves.length === 0) {
-    return { error: result.error ?? 'No moves recognized.' };
+    return { error: result.error ?? t('review.import.noMovesRecognized') };
   }
 
   const params = new URLSearchParams();
@@ -47,25 +50,23 @@ export function mountXiangqiImport(root: HTMLElement): void {
 
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
-  heading.textContent = 'Import a game';
+  heading.textContent = t('review.import.heading');
 
   const lede = document.createElement('p');
   lede.className = 'xiangqi-import-lede';
-  lede.textContent =
-    'Paste a xiangqi game to get a browsable board with engine analysis. Nothing is published: the game travels in the link, so you can share it or keep it to yourself.';
+  lede.textContent = t('review.import.lede');
 
   const form = document.createElement('form');
   form.className = 'xiangqi-import-form';
 
   const label = document.createElement('label');
   label.className = 'xiangqi-import-label';
-  label.textContent = 'Game';
+  label.textContent = t('review.import.game');
   const textarea = document.createElement('textarea');
   textarea.className = 'xiangqi-import-textarea';
   textarea.id = 'xiangqi-import-input';
   textarea.spellcheck = false;
-  textarea.placeholder =
-    '[Event "..."]\n[Red "..."]\n\n1. C2.5 H8+7 2. H2+3 R9.8\n\nor just: 炮二平五 马8进7';
+  textarea.placeholder = t('review.import.placeholder');
   label.htmlFor = textarea.id;
 
   const error = document.createElement('p');
@@ -77,26 +78,26 @@ export function mountXiangqiImport(root: HTMLElement): void {
   const submit = document.createElement('button');
   submit.type = 'submit';
   submit.className = 'site-button site-button-primary';
-  submit.textContent = 'Import';
+  submit.textContent = t('review.import.submit');
   const file = document.createElement('input');
   file.type = 'file';
   file.accept = '.pgn,.txt';
-  file.setAttribute('aria-label', 'Import from a file');
+  file.setAttribute('aria-label', t('review.import.file'));
   actions.append(submit, file);
 
   form.append(label, textarea, actions, error);
 
   const formats = document.createElement('p');
   formats.className = 'xiangqi-import-formats';
-  formats.append(
-    document.createTextNode('Reads PGN (tags, comments and variations), WXF ('),
-    code('C2.5'),
-    document.createTextNode('), Chinese notation ('),
-    code('炮二平五'),
-    document.createTextNode('), ICCS and coordinate moves ('),
-    code('h3e3'),
-    document.createTextNode('), and dpxq records. You do not have to say which.'),
-  );
+  // Keep notation examples as code while allowing each locale to order the sentence.
+  const examples: Record<string, string> = {
+    '{wxf}': 'C2.5',
+    '{chinese}': '炮二平五',
+    '{coordinate}': 'h3e3',
+  };
+  for (const part of t('review.import.formats').split(/(\{wxf\}|\{chinese\}|\{coordinate\})/)) {
+    formats.append(examples[part] ? code(examples[part]) : document.createTextNode(part));
+  }
 
   shell.append(heading, lede, form, formats);
   root.append(shell);
@@ -120,7 +121,7 @@ export function mountXiangqiImport(root: HTMLElement): void {
     const picked = file.files?.[0];
     if (!picked) return;
     if (picked.size > MAX_INPUT_BYTES) {
-      error.textContent = 'That file is too large to import.';
+      error.textContent = t('review.import.tooLarge');
       return;
     }
     picked
@@ -132,7 +133,7 @@ export function mountXiangqiImport(root: HTMLElement): void {
         go(text);
       })
       .catch(() => {
-        error.textContent = 'Could not read that file.';
+        error.textContent = t('review.import.readFailed');
       });
   });
 }
@@ -141,4 +142,8 @@ function code(text: string): HTMLElement {
   const el = document.createElement('code');
   el.textContent = text;
   return el;
+}
+
+export function renderImportShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountXiangqiImport);
 }

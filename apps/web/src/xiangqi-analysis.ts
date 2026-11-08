@@ -19,7 +19,7 @@ import {
 import {
   type GameOutcome,
   outcomeLabel,
-  terminationLabel,
+  terminationReason,
   variantDisplayLabel,
 } from './game-display.js';
 import { seatColorWord } from './variant-seat-label.js';
@@ -59,7 +59,7 @@ function finishedStatusLine(status: Extract<XiangqiGameStatus, { type: 'finished
     : { draw: true };
   return t('watch.resultByReason', {
     result: outcomeLabel(outcome),
-    reason: terminationLabel(status.reason),
+    reason: terminationReason(status.reason),
   });
 }
 
@@ -88,7 +88,7 @@ export function mountXiangqiAnalysis(
   moves: XiangqiMove[],
   opts: XiangqiAnalysisOptions = {},
 ): void {
-  const replay = buildXiangqiReplayFromMoves(moves, opts.startState);
+  const replay = buildXiangqiReplayFromMoves(moves, opts.startState, { record: true });
 
   const finalStatus = xiangqiReplayViewAtPly(replay, replay.maxPly).status;
   // With a variant picker (the /analysis route), the dropdown is the ENTIRE
@@ -110,6 +110,7 @@ export function mountXiangqiAnalysis(
 
   root.replaceChildren(...(opts.nav === false ? [] : [buildNav()]));
   mountXiangqiReview(root, {
+    record: true,
     reviewSurface: 'analysis',
     // The embed (nav: false) keeps the plain stack: it lives in someone
     // else's page, which owns the screen's foot.

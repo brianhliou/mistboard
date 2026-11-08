@@ -21,6 +21,7 @@ import {
   banqiCellCenter,
   banqiPiecesFromView,
   xqSvg,
+  banqiThumbnailSvg,
 } from './diagrams.js';
 import { BANQI_PIECE_REACH } from '../live-banqi-render.js';
 
@@ -135,8 +136,7 @@ export const BANQI_ENDGAME_ROOT = () => figure(endgameState(ENDGAME_ROOT_FEN), '
 // Card art: the position, full board, with no arrow. The first move drawn on a
 // small card read as clutter, and giving away the move spoils the study (2026-10-21).
 export const BANQI_ENDGAME_THUMBNAIL = () =>
-  xqSvg(
-    BANQI_BOARD_W,
+  banqiThumbnailSvg(
     BANQI_ENGINE_THUMB_H,
     [
       banqiBoardGrid(0, BANQI_ENGINE_THUMB_Y),

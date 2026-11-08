@@ -82,7 +82,10 @@ describe('home forum box when the page stacks', () => {
     );
   });
 
-  it('keeps the band height on the wide layouts', () => {
-    expect(css.slice(0, at)).toContain('height: var(--landing-lower-widget-height, 20em);');
+  it('keeps the band-3 height on the wide layouts', () => {
+    // Five compact topics, flatter than band 2 (Brian, 2026-10-27).
+    expect(css.slice(0, at)).toContain(
+      'height: var(--landing-forum-height, var(--landing-lower-widget-height, 20em));',
+    );
   });
 });

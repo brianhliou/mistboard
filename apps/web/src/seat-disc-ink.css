@@ -27,7 +27,7 @@
 
    2. FAMILY SLOTS (`--seat-first-*` / `--seat-second-*`): which ink each seat of a
       family wears. "First" is the family's first-mover ink and "second" the other:
-      xiangqi red/black, jungle red/blue, chess white/black. For flip variants
+      xiangqi red/black, jungle red/blue, chess white/black, gomoku black/white. For flip variants
       (Banqi, Flip Jungle) that is the ink, not the move-order seat: the TS binds a
       seat to an ink after the opening reveal (`seatColors`, `seatInkBindsOnFlip`)
       and ink-named classes (`advantage-chart__area--black`) resolve through that.
@@ -186,4 +186,27 @@
   --seat-second-on-chip: var(--ink-on-black);
   --seat-first-gauge: var(--ink-white-chip);
   --seat-second-gauge: var(--ink-black-vs-white);
+}
+
+/* Gomoku starts with Black, so its positive-score share uses the dark ink. */
+[data-seat-ink-family="gomoku"] {
+  /* A black stone stays near-black on either theme; the ring lifts small dots. */
+  --seat-dark-ink-border: #aaa298;
+  --seat-dark-ink: #141210;
+  --seat-first-ink: #141210;
+  --seat-second-ink: var(--ink-white);
+  --seat-first-chip: var(--ink-black-chip);
+  --seat-second-chip: var(--ink-white-chip);
+  --seat-first-on-chip: var(--ink-on-black);
+  --seat-second-on-chip: var(--ink-on-white);
+  /* The gauge uses the lifted chess Black, so it stays visible on a dark page. */
+  --seat-first-gauge: var(--ink-black-vs-white);
+  --seat-second-gauge: var(--ink-white-chip);
+}
+
+/* A fine edge keeps the near-black area distinct on dark panels. */
+[data-seat-ink-family="gomoku"] .advantage-chart__area--black {
+  stroke: var(--seat-dark-ink-border);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
 }

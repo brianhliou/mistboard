@@ -31,29 +31,82 @@
 // the count uses the same line: 25 of 324 counted games sat under it on
 // 2026-09-12. Set 2026-09-12.
 
-import { ALLOWLISTED_PLAYTEST_SPEC_IDS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import {
+  FFQ_BANQI_SPEC_ID,
+  GAME_SPECS,
+  type GameSpecId,
+  isPublicGameSpec,
+  RETIRED_GAME_SPEC_IDS,
+} from '@mistboard/game';
+import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
 
 // An excluded seat is a signed-in seat of a stats-excluded account, or a
 // guest seat whose device id belongs to a browser such an account has used
-// (stats_excluded_devices, migration 137). Games alias must be the table
+// (stats_excluded_devices, migration 137). Participants alias must be the
+// game_participants alias in the caller's query.
+export function excludedSeat(participantsAlias: string): string {
+  const p = participantsAlias;
+  return `(
+    (${p}.subject_type = 'user' AND EXISTS (
+      SELECT 1 FROM users xu
+      WHERE xu.id = ${p}.subject_id AND xu.stats_excluded_at IS NOT NULL
+    ))
+    OR (${p}.subject_type = 'guest' AND ${p}.subject_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM stats_excluded_devices xd WHERE xd.device_id = ${p}.subject_id
+    ))
+  )`;
+}
+
+// Some seat in the game is an excluded seat. Games alias must be the table
 // alias in the caller's FROM clause.
 export function excludedSeatExists(gamesAlias: string): string {
   return `EXISTS (
     SELECT 1 FROM game_participants xp
-    WHERE xp.game_id = ${gamesAlias}.room_id
-      AND (
-        (xp.subject_type = 'user' AND EXISTS (
-          SELECT 1 FROM users xu
-          WHERE xu.id = xp.subject_id AND xu.stats_excluded_at IS NOT NULL
-        ))
-        OR (xp.subject_type = 'guest' AND xp.subject_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM stats_excluded_devices xd WHERE xd.device_id = xp.subject_id
-        ))
-      )
+    WHERE xp.game_id = ${gamesAlias}.room_id AND ${excludedSeat('xp')}
   )`;
+}
+
+// The operator playing a real account: a pvp room where every seat is either
+// an excluded seat or a signed-in account that is not excluded, and at least
+// one seat is the latter. Any bot, engine, imported or guest seat that is not
+// the operator's own browser fails it. Games alias as above.
+export function excludedVersusAccountOnly(gamesAlias: string): string {
+  return `(${gamesAlias}.mode = 'pvp'
+    AND EXISTS (
+      SELECT 1 FROM game_participants ap
+      WHERE ap.game_id = ${gamesAlias}.room_id AND ${countedAccountSeat('ap')}
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM game_participants op
+      WHERE op.game_id = ${gamesAlias}.room_id
+        AND NOT ${excludedSeat('op')}
+        AND NOT (${countedAccountSeat('op')})
+    ))`;
+}
+
+// The game is left out of the aggregates for its seats. An excluded seat drops
+// the game unless it was people against people and every other seat is a
+// signed-in account that is not excluded: the operator playing a real account
+// is that player's game, and it happened (set 2026-10-23, when the owner
+// became the guaranteed correspondence opponent). The operator against a bot,
+// a guest, another excluded account or his own browser stays out: a guest
+// carries no identity, so it could be the operator testing against himself
+// (Brian, 2026-10-23: "no me vs guest"). Every count below uses this one
+// clause, so the counted and not-counted rows still partition completed human
+// games.
+//
+// A CASE, not an AND: Postgres does not promise to evaluate AND operands in
+// order, and adding excludedVersusAccountOnly took /api/stats/public on prod
+// from 1.4 s to 5 s (2026-10-23), consistent with its two nested seat scans
+// running for every game. CASE evaluates its WHEN first, so those scans run
+// only for the few games that have an excluded seat.
+export function excludedFromStats(gamesAlias: string): string {
+  return `(CASE WHEN ${excludedSeatExists(gamesAlias)}
+    THEN NOT ${excludedVersusAccountOnly(gamesAlias)}
+    ELSE FALSE END)`;
 }
 
 // Finished on or after the launch date.
@@ -66,12 +119,13 @@ export function bothSidesMoved(gamesAlias: string): string {
   return `${gamesAlias}.ply_count >= ${MIN_COUNTED_PLIES}`;
 }
 
-// Completed pvp/pve game since launch, both sides moved, no excluded seat.
+// Completed pvp/pve game since launch, both sides moved, not excluded for its
+// seats (excludedFromStats).
 export function countedHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
     AND ${bothSidesMoved(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
 // The public figures (/stats, the homepage counts, the play panel's variant
@@ -80,7 +134,8 @@ export function countedHumanGame(gamesAlias = 'g'): string {
 // RETIRED_GAME_SPEC_IDS (a spec's runtimeStatus), never a hand list. Admin
 // /metrics and the readout keep counting them: those games happened, and the
 // operator's history should not shift when a variant retires. Set 2026-10-11
-// with the Fortress and Atomic retirement.
+// with the Fortress and Atomic retirement. A variant deleted outright has no
+// spec to read: see DELETED_GAME_SPEC_IDS.
 export function notRetiredVariant(
   gamesAlias = 'g',
   retiredIds: readonly string[] = RETIRED_GAME_SPEC_IDS,
@@ -94,26 +149,55 @@ export function notRetiredVariant(
 }
 
 // Variants left out of every public figure: the retired ones, and the
-// playtest variants still hidden behind the per-account allowlist
-// (ALLOWLISTED_PLAYTEST_SPEC_IDS, which the launch switch on each spec's
-// publicSurface derives). A hidden variant's games would otherwise show in
+// hidden ones, derived from each spec's publicSurface rather than its access
+// policy. A hidden variant's games would otherwise show in
 // the /stats totals and its per-variant JSON before anyone may see the game;
 // the day the switch flips, its games count, history included. Set 2026-10-16.
-export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly string[] {
-  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted];
+//
+// This includes admin-only playtests and specs with no grant rows, so a new
+// hidden spec stays off the public figures without another exclusion list.
+export function offPublicGameSpecIds(
+  isPublic: (id: GameSpecId) => boolean = isPublicGameSpec,
+): readonly string[] {
+  return GAME_SPECS.filter(
+    (spec) =>
+      spec.id === FFQ_BANQI_SPEC_ID || spec.runtimeStatus === 'retired' || !isPublic(spec.id),
+  ).map((spec) => spec.id);
 }
 
-export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(
-  ALLOWLISTED_PLAYTEST_SPEC_IDS,
-);
+// Exclude FFQ before pagination, even if its metadata changes.
+export function notFFQBanqiGame(gamesAlias = 'games'): string {
+  return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
+}
 
-// A game in a variant a visitor can play and see: not retired, not a hidden
-// playtest.
+export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds();
+
+// Variants deleted from the registry on 2026-09-12 (#396). A retired spec is
+// found through its runtimeStatus; a deleted one has no spec left to read, while
+// its old games stay in the table, so they are named here. Deleting a spec with
+// games means adding its id. Admin figures keep counting them, as they do retired
+// variants. A spec that comes back has to leave this list (a test fails otherwise).
+export const DELETED_GAME_SPEC_IDS: readonly string[] = [
+  'crossroads-chess',
+  'dark-crossroads-chess',
+  'dark-crazyhouse',
+  'dark-draft960',
+  'dark-mini-xiangqi',
+  'dark-shogi',
+  'drop-mini-xiangqi',
+  'kriegspiel',
+  'luzhanqi',
+  'mini-xiangqi',
+  'reveal-chess',
+];
+
+// A game in a variant a visitor can play and see: not deleted, not retired, not
+// a hidden variant.
 export function publicVariant(
   gamesAlias = 'g',
   offPublicIds: readonly string[] = OFF_PUBLIC_GAME_SPEC_IDS,
 ): string {
-  return notRetiredVariant(gamesAlias, offPublicIds);
+  return notRetiredVariant(gamesAlias, [...DELETED_GAME_SPEC_IDS, ...offPublicIds]);
 }
 
 // A counted game in a variant that is still live and public: the filter
@@ -143,15 +227,15 @@ export function countedAbortedGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'aborted' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
     AND ${humanSeatExists(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
-// Completed pvp/pve game that an excluded account sat in, any date: what the
+// Completed pvp/pve game left out for an excluded seat, any date: what the
 // counts above leave out, reported on /metrics beside bot-vs-bot so the
 // exclusion is visible rather than silent.
 export function internalHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
-    AND ${excludedSeatExists(gamesAlias)}`;
+    AND ${excludedFromStats(gamesAlias)}`;
 }
 
 // Completed pvp/pve game before the launch date with no excluded seat: the
@@ -159,7 +243,7 @@ export function internalHumanGame(gamesAlias = 'g'): string {
 export function preLaunchHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND NOT ${sinceLaunch(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
 // Completed pvp/pve game since launch with no excluded seat that ended before
@@ -169,7 +253,7 @@ export function shortHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
     AND NOT ${bothSidesMoved(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
 // A seat with a countable person behind it: a signed-in account that is not
@@ -202,6 +286,37 @@ export function countedAccountSeat(participantsAlias = 'p'): string {
     )`;
 }
 
+// A puzzle_quality_sessions row with a countable person behind it (migration
+// 177): a signed-in account that is not excluded, or, signed out, a browser
+// device id that is not excluded. The same two halves as countedPlayerSeat,
+// read from the row's own columns. Rows from before migration 177 carry
+// neither and are not people, as guest seats before 137 are not. A row's
+// person is puzzlePlayerKind/puzzlePlayerId: the account when there is one,
+// else the browser, so a person who solves both signed in and out on one
+// browser is two players, the same known floor as games.
+export function countedPuzzlePlayerRow(sessionsAlias = 'q'): string {
+  const q = sessionsAlias;
+  return `(
+    (${q}.user_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM users pu
+      WHERE pu.id = ${q}.user_id AND pu.stats_excluded_at IS NULL
+    ))
+    OR (${q}.user_id IS NULL AND ${q}.device_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM stats_excluded_devices pd WHERE pd.device_id = ${q}.device_id
+    ))
+  )`;
+}
+
+// 'user' or 'guest', the subject_type a game seat would carry for this row.
+export function puzzlePlayerKind(sessionsAlias = 'q'): string {
+  return `(CASE WHEN ${sessionsAlias}.user_id IS NOT NULL THEN 'user' ELSE 'guest' END)`;
+}
+
+// The account id, else the browser device id.
+export function puzzlePlayerId(sessionsAlias = 'q'): string {
+  return `COALESCE(${sessionsAlias}.user_id, ${sessionsAlias}.device_id)`;
+}
+
 // Row filter for counts over the users table itself.
 export const COUNTED_USER = `stats_excluded_at IS NULL`;
 
@@ -228,19 +343,32 @@ export function playedHumanGame(gamesAlias = 'g'): string {
     AND ${notRetiredVariant(gamesAlias)}`;
 }
 
-// The seat won the game: a red seat on red-wins, a black seat on black-wins,
-// any other seat on white-wins. The profile's Wins filter and row tone
-// (persistence-profiles.ts, apps/web/src/profile-ui.ts) and the wins
-// achievement family read this one definition, so "Wins" on the profile and
-// the count on the card agree.
+// The result each seat wins on: every seat wins on its own colour's result.
+// A Record over GameParticipantColor, so a seat added to the type (and to
+// game_participants_color_check) fails the typecheck here until it has a
+// winning result, instead of silently counting every win as a loss.
+export const SEAT_WIN_RESULT = {
+  white: 'white-wins',
+  black: 'black-wins',
+  red: 'red-wins',
+  east: 'east-wins',
+  south: 'south-wins',
+  west: 'west-wins',
+  north: 'north-wins',
+} as const satisfies Record<GameParticipantColor, GameResult>;
+
+// The seat won the game: the seat's colour matches the result (SEAT_WIN_RESULT).
+// The profile's Wins filter and row tone (persistence-profiles.ts,
+// apps/web/src/profile-ui.ts), the wins achievement family and the bot records
+// (persistence-bots.ts) read this one definition, so "Wins" on every surface
+// agrees.
 export function seatWonGame(participantsAlias = 'p', gamesAlias = 'g'): string {
   const p = participantsAlias;
   const g = gamesAlias;
+  const clauses = Object.entries(SEAT_WIN_RESULT).map(
+    ([color, result]) => `(${p}.color = '${color}' AND ${g}.result = '${result}')`,
+  );
   return `(
-  (${p}.color = 'red' AND ${g}.result = 'red-wins')
-  OR (${p}.color = 'black' AND ${g}.result = 'black-wins')
-  OR (${p}.color = 'east' AND ${g}.result = 'east-wins')
-  OR (${p}.color = 'west' AND ${g}.result = 'west-wins')
-  OR (${p}.color NOT IN ('red', 'black', 'east', 'west') AND ${g}.result = 'white-wins')
+  ${clauses.join('\n  OR ')}
 )`;
 }

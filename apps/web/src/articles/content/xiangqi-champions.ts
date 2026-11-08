@@ -1025,6 +1025,7 @@ export const xiangqiChampionsArticle: Article = {
   slug: 'xiangqi-champions',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   title: 'Every Xiangqi Champion',
   seoTitle: 'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games',
   summary:

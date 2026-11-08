@@ -4,6 +4,7 @@ import {
   validateStandardXiangqiPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
+  xiangqiPuzzleAttributionIssue,
 } from '@mistboard/game';
 import type pg from 'pg';
 import { withTransaction } from './persistence-db.js';
@@ -44,6 +45,33 @@ export type XiangqiPuzzlePublicationResult = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// Describes the old fastest-mate gate, not a reason to withhold a puzzle.
+// Immediate mates are accepted by the grader and do not belong to this set.
+// Keep absent/legacy evidence unknown rather than claiming it was unambiguous.
+function mateSpeedOnly(puzzle: XiangqiPuzzle, evidence: Record<string, unknown>): boolean | null {
+  if (puzzle.goal.type !== 'checkmate') return null;
+  const plies = evidence.plies;
+  if (!Array.isArray(plies) || plies.length === 0) return null;
+  if (
+    plies.some(
+      (ply) =>
+        isRecord(ply) &&
+        typeof ply.bestMate === 'number' &&
+        ply.bestMate > 1 &&
+        typeof ply.secondMate === 'number' &&
+        ply.secondMate > 0,
+    )
+  ) {
+    return true;
+  }
+  const hasMateScore = (value: unknown) => value === null || typeof value === 'number';
+  return plies.every(
+    (ply) => isRecord(ply) && hasMateScore(ply.bestMate) && hasMateScore(ply.secondMate),
+  )
+    ? false
+    : null;
 }
 
 function validatedPuzzle(entry: XiangqiPuzzleEditorialCandidate): XiangqiPuzzle {
@@ -102,8 +130,12 @@ export async function planXiangqiPuzzlePublication(
   runId: string,
 ): Promise<XiangqiPuzzlePublicationPlan> {
   if (!runId.trim()) throw new Error('runId is required');
-  const runResult = await db.query<{ status: string; license_status: string }>(
-    `SELECT run.status, source.license_status
+  const runResult = await db.query<{
+    status: string;
+    license_status: string;
+    source_slug?: string | null;
+  }>(
+    `SELECT run.status, source.license_status, source.slug AS source_slug
      FROM xiangqi_puzzle_mining_runs run
      JOIN historical_xiangqi_sources source ON source.id = run.source_id
      WHERE run.id = $1`,
@@ -140,6 +172,12 @@ export async function planXiangqiPuzzlePublication(
       throw new Error(`candidate ${entry.candidate.id} lacks a publishable approval review`);
     }
     const puzzle = validatedPuzzle(entry);
+    // A source that lets us mine on condition of credit (DPXQ, #712) cannot
+    // go live without it: the credit is part of the license, not decoration.
+    const attributionIssue = xiangqiPuzzleAttributionIssue(puzzle, run.source_slug);
+    if (attributionIssue) {
+      throw new Error(`candidate ${entry.candidate.id}: ${attributionIssue}`);
+    }
     if (seenPuzzleIds.has(puzzle.id)) {
       throw new Error(`publication set contains duplicate puzzle id ${puzzle.id}`);
     }
@@ -285,8 +323,8 @@ export async function publishXiangqiPuzzlePublication(input: {
       await client.query(
         `INSERT INTO puzzles
            (id, variant, title, seq, goal_type, themes, solution_plies, data,
-            source_kind, mined_at, mining_candidate_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::json, 'mined', now(), $9)`,
+            source_kind, mined_at, mining_candidate_id, mate_speed_only)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::json, 'mined', now(), $9, $10)`,
         [
           puzzle.id,
           puzzle.variant,
@@ -297,6 +335,7 @@ export async function publishXiangqiPuzzlePublication(input: {
           puzzle.solution.length,
           JSON.stringify(puzzle),
           entry.candidate.id,
+          mateSpeedOnly(puzzle, entry.auditJudgment?.evidence ?? {}),
         ],
       );
       const updated = await client.query<{ id: string }>(

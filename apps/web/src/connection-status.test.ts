@@ -37,14 +37,31 @@ describe('connection status footer', () => {
 
   beforeEach(() => {
     calls.length = 0;
+    window.history.replaceState(null, '', '/');
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_MISTBOARD_WS_URL', 'wss://socket.mistboard.com');
     window.sessionStorage.clear();
   });
 
   afterEach(() => {
+    window.history.replaceState(null, '', '/');
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ['/', 'Connection status', 'Is Mistboard lagging?'],
+    ['/zh-hans', '连接状态', 'Mistboard 卡顿了吗？'],
+    ['/zh-hant', '連線狀態', 'Mistboard 卡頓了嗎？'],
+  ])('links the connection status to lag help from %s', (path, label, help) => {
+    window.history.replaceState(null, '', path);
+    const status = createConnectionStatus();
+
+    expect(status.element.matches('a[href="/lag"]')).toBe(true);
+    expect(status.element.getAttribute('aria-label')).toBe(label);
+    expect(status.element.title).toBe(help);
+    expect(status.element.querySelectorAll('.account-nav-status-value')).toHaveLength(2);
+    expect(calls).toHaveLength(0);
   });
 
   function stubFetch(handler: (url: string) => Promise<Response>): void {

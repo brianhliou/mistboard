@@ -57,6 +57,9 @@ export function readDisplayPreferences(storage: Storage = window.localStorage): 
   );
 }
 
+/** Fired on every display preference write; boards that draw a preference re-render on it. */
+export const DISPLAY_PREFERENCES_CHANGE_EVENT = 'mistboard:display-preferences-change';
+
 export function writeDisplayPreference<Id extends DisplayPreferenceId>(
   id: Id,
   value: DisplayPreferenceValue<Id>,
@@ -65,9 +68,7 @@ export function writeDisplayPreference<Id extends DisplayPreferenceId>(
   const preferences = readDisplayPreferences(storage);
   (preferences[id] as DisplayPreferenceValue<Id>) = value;
   storage.setItem(displayPreferenceStorageKey, JSON.stringify(preferences));
-  window.dispatchEvent(
-    new CustomEvent('mistboard:display-preferences-change', { detail: preferences }),
-  );
+  window.dispatchEvent(new CustomEvent(DISPLAY_PREFERENCES_CHANGE_EVENT, { detail: preferences }));
   return preferences;
 }
 

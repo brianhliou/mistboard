@@ -13,16 +13,21 @@ import {
   standardXiangqiPositionKey,
   type XiangqiMove,
 } from '@mistboard/game';
-import { canonicalPosition } from './xiangqi-opening-mirror.js';
-import { allOpeningNames, openingNameForCanonicalKey } from './xiangqi-opening-names.js';
+import { canonicalPosition, mirrorMove } from './xiangqi-opening-mirror.js';
+import * as openingNames from './xiangqi-opening-names.js';
 
-function nameAfter(...pairs: Array<[string, string]>): { en: string; zh: string } | null {
+const { allOpeningNames, openingNameForCanonicalKey } = openingNames;
+
+function canonicalKeyAfter(...pairs: Array<[string, string]>): string {
   let state = createInitialXiangqiState('t');
   for (const [from, to] of pairs) {
     state = applyStandardXiangqiMove(state, { from, to } as XiangqiMove);
   }
-  const key = canonicalPosition(standardXiangqiPositionKey(state)).key;
-  return openingNameForCanonicalKey(key);
+  return canonicalPosition(standardXiangqiPositionKey(state)).key;
+}
+
+function nameAfter(...pairs: Array<[string, string]>): { en: string; zh: string } | null {
+  return openingNameForCanonicalKey(canonicalKeyAfter(...pairs));
 }
 
 test('names the Central Cannon from the position a game actually reaches', () => {
@@ -69,5 +74,53 @@ test('every stored key is already mirror-canonical', () => {
       name.key,
       `${name.en} is keyed by a non-canonical position and would never resolve`,
     );
+  }
+});
+
+test('established openings and their mirrors resolve to stable slugs', () => {
+  const cases: Array<{ move: XiangqiMove; slug: string }> = [
+    { move: { from: 'b3', to: 'e3' }, slug: 'central-cannon' },
+    { move: { from: 'c1', to: 'e3' }, slug: 'elephant-opening' },
+    { move: { from: 'b1', to: 'c3' }, slug: 'horse-opening' },
+    { move: { from: 'c4', to: 'c5' }, slug: 'pawn-opening' },
+  ];
+  for (const { move, slug } of cases) {
+    for (const played of [move, mirrorMove(move)]) {
+      const key = canonicalKeyAfter([played.from, played.to]);
+      assert.equal(openingNames.openingSlugForCanonicalKey(key), slug);
+    }
+  }
+});
+
+test('pending openings never resolve to a slug', () => {
+  const pending = allOpeningNames().filter((name) => name.status === 'pending');
+  assert.ok(pending.length > 0);
+  for (const name of pending) {
+    assert.equal(openingNames.openingSlugForCanonicalKey(name.key), null, name.en);
+  }
+});
+
+test('unnamed positions and unknown keys have no opening slug', () => {
+  const keys = [
+    canonicalKeyAfter(),
+    canonicalKeyAfter(['b1', 'c3'], ['b10', 'c8'], ['h1', 'g3'], ['h10', 'g8']),
+    '',
+    'unknown',
+    '__proto__',
+    'constructor',
+  ];
+  for (const key of keys) {
+    assert.equal(openingNames.openingSlugForCanonicalKey(key), null, key);
+  }
+  // The side to move participates in the identity; a similar placement is not a match.
+  const cannon = canonicalKeyAfter(['b3', 'e3']);
+  assert.equal(openingNames.openingSlugForCanonicalKey(cannon.replace(/ b$/, ' r')), null);
+});
+
+test('opening slugs are explicit unique URL segments in the naming registry', () => {
+  const slugs = allOpeningNames().map((name) => name.slug);
+  assert.equal(new Set(slugs).size, slugs.length);
+  for (const slug of slugs) {
+    assert.match(slug, /^[a-z]+(?:-[a-z]+)*$/);
   }
 });

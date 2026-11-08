@@ -8,11 +8,12 @@
 // per position, and several-fold faster than the old spawn-per-ply depth sweep.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   classifyXiangqiMove,
-  createInitialXiangqiState,
+  createStandardXiangqiStateFromSetup,
   pikafishUciToXiangqiSquares,
   winPercent,
+  type XiangqiGameState,
   type XiangqiMove,
   xiangqiMoveToPikafishUci,
 } from '@mistboard/game';
@@ -111,6 +112,7 @@ export type AnalyzeXiangqiGameOptions = {
    * minus the declined-sacrifice half of `!!`.
    */
   moves?: readonly XiangqiMove[];
+  initialState?: XiangqiGameState;
 };
 
 /**
@@ -137,7 +139,13 @@ export async function analyzeXiangqiGame(
     // sweep's own output, and keeping it behind the real-engine branch would leave
     // it untestable — which is how a code path ships having never run.
     if (opts.moves?.length) {
-      await attachOfferLines(evals, movesUci, opts.moves, (moves) => injected(moves, { depth }));
+      await attachOfferLines(
+        evals,
+        movesUci,
+        opts.moves,
+        (moves) => injected(moves, { depth }),
+        opts.initialState,
+      );
     }
     return evals;
   }
@@ -147,7 +155,7 @@ export async function analyzeXiangqiGame(
     async (evaluate) => {
       const evals = await sweepPlyEvals(movesUci, (moves) => evaluate(moves), 0, opts.progress);
       if (opts.moves?.length) {
-        await attachOfferLines(evals, movesUci, opts.moves, evaluate);
+        await attachOfferLines(evals, movesUci, opts.moves, evaluate, opts.initialState);
       }
       return evals;
     },
@@ -175,16 +183,15 @@ async function attachOfferLines(
   movesUci: readonly string[],
   moves: readonly XiangqiMove[],
   evaluate: (moves: string[]) => Promise<XiangqiPositionEval>,
+  initialState?: XiangqiGameState,
 ): Promise<void> {
   const byPly = new Map(evals.map((entry) => [entry.ply, entry]));
-  let state = createInitialXiangqiState('analysis');
+  let state = initialState ?? createStandardXiangqiStateFromSetup('analysis');
   for (let ply = 1; ply <= moves.length; ply += 1) {
     const move = moves[ply - 1];
     const before = state;
     if (!move || before.status.type !== 'playing') return;
-    const next = applyStandardXiangqiMove(before, move);
-    // The kernel may adjudicate an end (repetition, no-progress) before the record
-    // does; nothing past that point is a position worth classifying.
+    const next = applyXiangqiRecordMove(before, move);
     if (next === before) return;
     state = next;
 

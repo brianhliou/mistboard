@@ -4,10 +4,20 @@ import './pages-static.css';
 
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
+import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
-import { jqeEnabled } from './feature-flags.js';
+import {
+  PIKAFISH_REPO_URL,
+  PIKAFISH_SITE_URL,
+  pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_NETWORKS_LICENSE_URL,
+  RAPFI_REPO_URL,
+} from './engine-credits.js';
+import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { prerenderCopy, prerenderMount } from './prerender-copy.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -16,6 +26,9 @@ export function mountAbout(root: HTMLElement): void {
   root.replaceChildren();
   root.classList.add('landing-page', 'about-route');
   root.append(buildNav(locale), buildStaticPageLayout('about', buildAbout(locale), locale));
+  // The page mounts after a lazy import, so the browser's own jump to /about#who
+  // found no target; make it again now the section exists.
+  scrollToLocationHash();
 }
 
 export function mountSource(root: HTMLElement): void {
@@ -119,18 +132,17 @@ export async function mountArticlesIndex(
   mountArticleThumbnails(index);
 }
 
-/* /blog, /zh-hans/blog and /zh-hant/blog, baked at build time. The index is
- * authored data with no live or per-account content, so the prerendered DOM is
- * exactly the page a reader gets. The "By Mistboard" view only: the (currently
- * empty) community view stays on the client-rendered shell. The two Chinese
- * indexes served a 4.7KB shell with no canonical or hreflang until 2026-10-02
- * while sitting in the sitemap. */
+/* Both blog views use the client renderer in every locale. The community
+ * copy replaces an empty shell without adding a first-paint UI (#964). */
 export async function renderArticlesIndexShellForPrerender(
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: 'mistboard' | 'community' = 'mistboard',
 ): Promise<string> {
   const { buildArticlesIndex } = await import('./articles.js');
   const locale: Locale = lang ?? 'en';
-  return `${buildNav(locale).outerHTML}${buildArticlesIndex(lang ?? undefined, 'mistboard').outerHTML}`;
+  const nav = buildNav(locale);
+  const index = buildArticlesIndex(lang ?? undefined, view);
+  return view === 'community' ? prerenderCopy(nav, index) : `${nav.outerHTML}${index.outerHTML}`;
 }
 
 // Meta and head links for each baked index (blog, rules). The three indexes of
@@ -179,7 +191,7 @@ const RULES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
   'zh-Hant': {
     title: '象棋與變體規則 | Mistboard',
     description:
-      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、鴨子等各種象棋變體。',
+      'Mistboard 上每一種棋類的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和西洋棋，以及迷霧、鴨子等各種象棋變體。',
   },
 };
 
@@ -193,7 +205,7 @@ type IndexPrerenderHead = {
 
 function indexPrerenderHead(
   host: string,
-  section: 'blog' | 'rules',
+  section: 'blog' | 'blog/community' | 'rules',
   table: IndexPrerenderMeta,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): IndexPrerenderHead {
@@ -216,8 +228,14 @@ function indexPrerenderHead(
 export function articlesIndexPrerenderHead(
   host: string,
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: 'mistboard' | 'community' = 'mistboard',
 ): IndexPrerenderHead {
-  return indexPrerenderHead(host, 'blog', ARTICLES_INDEX_PRERENDER_META, lang);
+  return indexPrerenderHead(
+    host,
+    view === 'community' ? 'blog/community' : 'blog',
+    ARTICLES_INDEX_PRERENDER_META,
+    lang,
+  );
 }
 
 export function rulesIndexPrerenderHead(
@@ -523,6 +541,9 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   heading.className = 'site-section-heading';
   heading.textContent = t('about.heading', {}, locale);
 
+  const mission = aboutParagraph([t('about.mission', {}, locale)]);
+  mission.className = 'about-mission';
+
   const lede = aboutParagraph([t('about.lede', {}, locale)]);
 
   const whyHeading = aboutSubheading(t('about.whyHeading', {}, locale));
@@ -560,8 +581,25 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     t('about.openSourceSuffix', {}, locale),
   ]);
 
+  const whoHeading = aboutSubheading(t('about.whoHeading', {}, locale));
+  whoHeading.id = 'who';
+  const whoP = aboutParagraph([t('about.whoBody', {}, locale)]);
+  // Chinese runs on without spaces after 。 and ：.
+  const gap = locale === 'en' ? ' ' : '';
+  whoP.append(
+    gap,
+    t('about.whoSitePrefix', {}, locale),
+    gap,
+    aboutExternalLink('brianhliou.com', SITE_AUTHOR.sameAs),
+  );
+
+  const articlesHeading = aboutSubheading(t('about.articlesHeading', {}, locale));
+  articlesHeading.id = 'articles';
+  const articlesP = aboutParagraph([t('about.articlesBody', {}, locale)]);
+
   section.append(
     heading,
+    mission,
     lede,
     whyHeading,
     whyP,
@@ -577,6 +615,10 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     communityP,
     oss1Heading,
     oss1P,
+    whoHeading,
+    whoP,
+    articlesHeading,
+    articlesP,
   );
   return section;
 }
@@ -625,6 +667,11 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.githubRepository', {}, locale), GITHUB_URL),
     textLine(t('source.licenseAgpl', {}, locale)),
     textLine(t('source.noWarranty', {}, locale)),
+    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+    aboutLink(t('developers.heading', {}, locale), localizedHref('/developers', locale)),
+    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    aboutLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    aboutLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
   ]);
 
   const thirdParty = sourceBlock(t('source.thirdParty', {}, locale), [
@@ -652,6 +699,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
+    ...(gomokuEnabled()
+      ? [
+          linkLine(t('source.rapfi', {}, locale), RAPFI_REPO_URL),
+          linkLine(t('source.rapfiNetworks', {}, locale), RAPFI_NETWORKS_LICENSE_URL),
+          linkLine(t('source.rapfiBuild', {}, locale), RAPFI_BUILD_URL),
+        ]
+      : []),
     // The tablebase in the explorer pane and practice grading read chessdb.cn
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
@@ -940,18 +995,6 @@ function textLine(value: string): HTMLSpanElement {
   return span;
 }
 
-export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
-export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
-const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
-  en: 'https://www.pikafish.com/en/list.html',
-  'zh-Hans': 'https://www.pikafish.com/list.html',
-  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
-};
-
-export function pikafishWeightsLicenseUrl(locale: Locale): string {
-  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
-}
-
 function pikafishCreditLine(locale: Locale): HTMLSpanElement {
   const line = document.createElement('span');
   line.className = 'source-credit-pikafish';
@@ -1022,7 +1065,7 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
   quick.className = 'not-found-links';
   quick.setAttribute('aria-label', t('notFound.quickLinks', {}, locale));
   for (const [labelKey, href] of [
-    ['nav.play', '/play'],
+    ['nav.play', '/'],
     ['nav.rules', '/rules'],
     ['nav.watch', '/watch'],
     ['nav.puzzles', '/puzzles'],
@@ -1040,4 +1083,40 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(code, heading, lede, home, quick, contact);
   return section;
+}
+
+export function renderAboutShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountAbout);
+}
+
+export function renderSourceShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountSource);
+}
+
+export function renderFaqShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountFaq);
+}
+
+export function renderTermsShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountTerms);
+}
+
+export function renderPrivacyShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountPrivacy);
+}
+
+export function renderContactShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const contact = buildContact(null, false, locale).el;
+    // Inert crawler copy includes the hints a visitor sees in empty fields.
+    // Attribute-only placeholders contribute no text to a no-JS reader.
+    for (const field of contact.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input[placeholder],textarea[placeholder]',
+    ))
+      field.replaceWith(document.createTextNode(field.placeholder));
+    // The anti-spam field is deliberately absent from the visible page.
+    contact.querySelector('label[aria-hidden="true"]')?.remove();
+    root.classList.add('landing-page', 'contact-route');
+    root.append(buildNav(locale), buildStaticPageLayout('contact', contact, locale));
+  });
 }

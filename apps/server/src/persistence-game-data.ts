@@ -3,8 +3,9 @@
 // files live in (migration 153).
 //
 // A monthly file holds the games the site's own counts call games
-// (countedHumanGame: completed pvp/pve, since launch, both sides moved, no seat
-// of a stats-excluded account or browser) that are also public. The count shown
+// (countedHumanGame: completed pvp/pve, since launch, both sides moved, and no
+// seat of a stats-excluded account or browser unless every other seat is a real
+// signed-in account) that are also public. The count shown
 // on the page and the rooms a build reads come from the same WHERE clause, so
 // the two cannot disagree about what "the games of September" means.
 

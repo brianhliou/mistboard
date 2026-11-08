@@ -19,6 +19,8 @@ import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
   'dark-xiangqi':
     'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
+  'three-kingdoms-banqi':
+    'admin-only until the public launch (#628): an embed is a public surface, and the study API 404s it to everyone else',
 };
 
 const CHAPTER = {
@@ -294,38 +296,57 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
-  it('draws a duck chapter with the DUCK board, not the xiangqi one', async () => {
-    // The xiangqi board cannot render the duck: it lives in the seventh FEN
-    // field and has no piece to stand for it. Before the dispatch, a duck
-    // chapter came out as a xiangqi position with the duck simply absent.
-    const duckChapter = {
-      id: 'Duck1234',
-      name: 'Game 6',
-      orientation: 'red',
-      variant: 'duck-xiangqi',
-      tags: { red: 'Fairy-Stockfish', black: 'Fairy-Stockfish', event: 'self-play', result: '1-0' },
-      root: { root: { children: [{ uci: 'b3b5@d9', children: [{ uci: 'b8b6@a8' }] }] } },
+  for (const result of ['1-0', undefined]) {
+    it(`draws a duck chapter with the DUCK board with result ${result ?? 'untagged'}`, async () => {
+      // The xiangqi board cannot render the duck: it lives in the seventh FEN
+      // field and has no piece to stand for it. Before the dispatch, a duck
+      // chapter came out as a xiangqi position with the duck simply absent.
+      const duckChapter = {
+        id: 'Duck1234',
+        name: 'Game 6',
+        orientation: 'red',
+        variant: 'duck-xiangqi',
+        tags: { red: 'Fairy-Stockfish', black: 'Fairy-Stockfish', event: 'self-play', result },
+        root: { root: { children: [{ uci: 'b3b5@d9', children: [{ uci: 'b8b6@a8' }] }] } },
+      };
+      stubFetch(200, { study: { id: 's' }, chapters: [duckChapter] });
+      const root = document.createElement('div');
+      document.body.append(root);
+
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Duck1234' });
+
+      // Asserted on a marker the DUCK renderer emits and the xiangqi board never
+      // does. Not on the duck piece itself: the card opens at ply 0, and the duck
+      // is not on the board until the second half of Red's first turn, so a duck
+      // token would be a false negative here.
+      expect(root.innerHTML).toContain('dkx-');
+
+      // And writes the turn in the grammar every other duck surface uses. The
+      // replay module had its own spelling, `b3-b5, duck d9`, which is wider than
+      // a cell in the sheet beside the board: every duck turn in an embedded
+      // study rendered as `b3-b5, d…`.
+      const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+        el.textContent?.trim(),
+      );
+      expect(moves).toEqual(['b3-b5@d9', 'b8-b6@a8']);
+      root.remove();
+    });
+  }
+
+  it('renders an untagged atomic chapter without inferring its result with standard rules', async () => {
+    const chapter = {
+      id: 'Atomic12',
+      name: 'Atomic opening',
+      variant: 'atomic-xiangqi',
+      root: { root: chainTree(['g1e3', 'b10c8', 'h3h5', 'c7c6', 'b3b7']) },
     };
-    stubFetch(200, { study: { id: 's' }, chapters: [duckChapter] });
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
     const root = document.createElement('div');
     document.body.append(root);
-
-    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Duck1234' });
-
-    // Asserted on a marker the DUCK renderer emits and the xiangqi board never
-    // does. Not on the duck piece itself: the card opens at ply 0, and the duck
-    // is not on the board until the second half of Red's first turn, so a duck
-    // token would be a false negative here.
-    expect(root.innerHTML).toContain('dkx-');
-
-    // And writes the turn in the grammar every other duck surface uses. The
-    // replay module had its own spelling, `b3-b5, duck d9`, which is wider than
-    // a cell in the sheet beside the board: every duck turn in an embedded
-    // study rendered as `b3-b5, d…`.
-    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
-      el.textContent?.trim(),
-    );
-    expect(moves).toEqual(['b3-b5@d9', 'b8-b6@a8']);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Atomic12' });
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(5);
+    expect(root.querySelector('.embed-card-result')?.textContent ?? '').toBe('');
     root.remove();
   });
 
@@ -655,6 +676,126 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it("draws a jieqi chapter's score series under the board, its cursor on the board's ply", async () => {
+    // 40 plies, so 41 positions: index 0 the deal, index n after ply n.
+    const ab = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.01);
+    const jqe = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.005);
+    const jieqiChapter = {
+      id: 'AMY9DrPj',
+      name: 'Game 18',
+      orientation: 'red',
+      variant: 'jieqi',
+      tags: { red: 'AB-JChess', black: 'jqe' },
+      root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18) },
+      scoreSeries: {
+        side: 'red',
+        series: [
+          { name: 'AB-JChess', color: 'a', values: ab },
+          { name: 'jqe', color: 'b', values: jqe },
+        ],
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jieqiChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'AMY9DrPj' });
+
+    const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+    expect(chart).not.toBeNull();
+    // In the board column, under the bottom seat row, above the step controls.
+    expect(chart?.parentElement?.classList.contains('embed-card-board')).toBe(true);
+    expect(chart?.previousElementSibling?.classList.contains('embed-card-seat')).toBe(true);
+    expect(chart?.nextElementSibling?.classList.contains('embed-card-controls')).toBe(true);
+    const lines = [...(chart?.querySelectorAll('polyline.embed-score-chart__line') ?? [])];
+    expect(lines.map((l) => l.getAttribute('data-series'))).toEqual(['AB-JChess', 'jqe']);
+    expect(lines[0]?.getAttribute('stroke')).toBe('var(--eval-compare-a, #1f7a8c)');
+    expect(lines[1]?.getAttribute('stroke')).toBe('var(--eval-compare-b, #d9822b)');
+    expect(lines[0]?.getAttribute('points')?.split(' ')).toHaveLength(41);
+    expect(chart?.querySelector('.embed-score-chart__legend')?.textContent).toBe(
+      'AB-JChessjqeWin chance for Red',
+    );
+    const ply = () => chart?.dataset.ply;
+    const cursorX = () => chart?.querySelector('.embed-score-chart__cursor')?.getAttribute('x1');
+    expect(ply()).toBe('0');
+    const startX = cursorX();
+
+    // The step button, the arrow keys and the move list all move the cursor.
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    expect(ply()).toBe('1');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(ply()).toBe('2');
+    expect(cursorX()).not.toBe(startX);
+    root.querySelectorAll<HTMLButtonElement>('button.review-move-list__move')[11]?.click();
+    expect(ply()).toBe('12');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    expect(ply()).toBe('40');
+
+    // A click on the graph jumps the board to the ply under it.
+    const plot = chart!.querySelector<HTMLElement>('.embed-score-chart__plot')!;
+    plot.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 400, height: 60, right: 400, bottom: 60 }) as DOMRect;
+    plot.dispatchEvent(new MouseEvent('click', { clientX: 100, bubbles: true }));
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('10 / 40');
+    expect(ply()).toBe('10');
+    // Hovering reads both series at that ply; leaving puts the cursor back.
+    plot.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, bubbles: true }));
+    // The readout names what the numbers are, then one row per engine, each
+    // name in its line's ink.
+    const tip = chart?.querySelector('.embed-score-chart__tip');
+    // The heading names the move as well as its number: the 20th, Black's 10th.
+    const twentieth = root
+      .querySelectorAll('button.review-move-list__move')[19]
+      ?.querySelector('.review-move-list__san')?.textContent;
+    expect(twentieth).toBeTruthy();
+    expect(tip?.querySelector('.review-chart-tip__move')?.textContent).toBe(`10... ${twentieth}`);
+    expect(tip?.querySelector('.review-chart-tip__value')?.textContent).toBe('Win chance for Red');
+    const rows = [...(tip?.querySelectorAll('.embed-score-chart__tip-row') ?? [])];
+    expect(rows.map((r) => r.textContent)).toEqual(['AB-JChess30%', 'jqe40%']);
+    expect(
+      rows.map((r) => r.querySelector('.embed-score-chart__tip-name')?.getAttribute('style')),
+    ).toEqual(['color: var(--eval-compare-a, #1f7a8c)', 'color: var(--eval-compare-b, #d9822b)']);
+    expect(chart?.querySelector('.embed-score-chart__mid-label')?.textContent).toBe('50%');
+    expect(ply()).toBe('20');
+    plot.dispatchEvent(new MouseEvent('pointerleave'));
+    expect(ply()).toBe('10');
+    root.remove();
+  });
+
+  it('draws no score graph for a chapter without series, or with series that do not fit its line', async () => {
+    const chapter = (scoreSeries?: unknown) => ({
+      id: 'AMY9DrPj',
+      name: 'Game 18',
+      orientation: 'red',
+      variant: 'jieqi',
+      tags: {},
+      root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18) },
+      ...(scoreSeries === undefined ? {} : { scoreSeries }),
+    });
+    const stale = {
+      side: 'red',
+      // 40 values for 41 positions: a tree edit after the series was set.
+      series: [{ name: 'AB-JChess', color: 'a', values: Array(40).fill(0.5) }],
+    };
+    const badColor = {
+      side: 'red',
+      series: [{ name: 'x', color: 'url(evil)', values: Array(41).fill(0.5) }],
+    };
+    for (const value of [undefined, stale, badColor]) {
+      stubFetch(200, { study: { id: 's' }, chapters: [chapter(value)] });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'AMY9DrPj' });
+      expect(root.querySelector('.embed-board svg.jieqi-board')).not.toBeNull();
+      expect(root.querySelector('.embed-score-chart')).toBeNull();
+      // The frame is exactly today's: header, card, credit.
+      expect(
+        [...(root.querySelector('.embed-frame')?.children ?? [])].map((el) => el.className),
+      ).toEqual(['embed-card-header', 'embed-card', 'embed-credit']);
+      root.remove();
+    }
+  });
+
   it("shows a jieqi chapter's glyphs, comments, verdicts, sidelines and shapes, not the mainline alone", async () => {
     // The opening of prod game 18 (wd6c7qvG / AMY9DrPj) annotated the way the
     // study page shows a chapter: a ?! with a verdict and comment, a ?, a
@@ -808,6 +949,42 @@ describe('mountEmbedStudy', () => {
     await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqNoDeal' });
     expect(root.textContent).toBe('This chapter has no dealt position to show.');
     expect(root.querySelector('svg')).toBeNull();
+  });
+
+  it('draws a jieqi chapter whose deal marks unrevealed pieces unknown', async () => {
+    // Prod study 3RQbr51i chapter OCePocLG: an engine match import names every
+    // piece that turned over and writes ? for the rest (a10 is one). Refusing
+    // the ? left every chapter of that study blank.
+    const partialRoot =
+      'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w ' +
+      'R2A2C2P5N2B2r2a2c2p5n2b2 0 1 ?pnbcar?c???npaCP??PRR?ABNCPPP';
+    const moves = 'b1c3 i7i6 a4a5 b10a8 a5e5 g10e8'.split(' ');
+    const chapter = (id: string, tokens: string[]) => ({
+      id,
+      name: id,
+      variant: 'jieqi',
+      root: { rootFen: partialRoot, root: chainTree(tokens) },
+    });
+    // The second chapter moves a10, a piece the deal never names: the line
+    // ends before it rather than turning over a sampled identity.
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [chapter('JqPartl1', moves), chapter('JqPartl2', ['b1c3', 'a10a9'])],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqPartl1' });
+    expect(root.textContent).not.toContain('no dealt position');
+    const a10 = root.querySelector('[data-piece-square="a10"]');
+    // Face down, and nothing on the board names what it is.
+    expect(a10?.innerHTML).toContain('black hidden piece');
+    expect(root.querySelector('.embed-card-status')?.textContent).toContain('6');
+    root.remove();
+
+    const stopped = document.createElement('div');
+    await mountEmbedStudy(stopped, { studyId: 's', chapterId: 'JqPartl2' });
+    expect(stopped.querySelector('.embed-card-status')?.textContent).toContain('1');
+    expect(stopped.querySelector('.embed-card-status')?.textContent).not.toContain('2');
+    stopped.remove();
   });
 
   it('draws a flip jungle chapter face down until each tile is flipped', async () => {
@@ -1193,13 +1370,14 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('svg')).toBeNull();
   });
 
-  it('dispatches only study variants, fog chess among them', () => {
-    // Fail-closed: every variant the card draws is one a study can hold, and
-    // nothing else reaches a board.
+  it('dispatches only study variants, including public Gomoku', () => {
+    // Every renderer belongs to the study catalog; unknown variants get no board.
     const studyIds = new Set<string>(STUDY_VARIANTS.map((v) => v.id));
     for (const variant of CHAPTER_EMBED_VARIANTS) {
       expect(studyIds.has(variant), variant).toBe(true);
     }
+    expect(studyIds.has('gomoku')).toBe(true);
+    expect(CHAPTER_EMBED_VARIANTS.has('gomoku')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('dark-chess')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('made-up-chess')).toBe(false);
   });
@@ -1278,5 +1456,135 @@ describe('mountEmbedStudy', () => {
     const root = document.createElement('div');
     await expect(mountEmbedStudy(root, { studyId: 's', chapterId: 'c' })).resolves.toBeUndefined();
     expect(root.textContent).toContain('could not be loaded');
+  });
+});
+
+describe('Gomoku study embeds', () => {
+  const empty = `${Array(15).fill('15').join('/')} b`;
+  const dealt = `${['B13W', ...Array(6).fill('15'), '7W7', ...Array(6).fill('15'), 'W13B'].join('/')} w`;
+  const chapter = (rootFen: string | undefined, moves: string[] = ['a2', 'o14']) => ({
+    id: 'Gomoku01',
+    name: 'Gomoku position',
+    variant: 'gomoku',
+    orientation: 'black',
+    root: { ...(rootFen === undefined ? {} : { rootFen }), root: chainTree(moves) },
+  });
+  for (const [name, rootFen, count, firstInk] of [
+    ['absent empty', undefined, 0, 'black'],
+    ['explicit empty', empty, 0, 'black'],
+    ['dealt White-to-move', dealt, 5, 'white'],
+  ] as const) {
+    it(`steps from the ${name} root, preserving colours and root-relative plies`, async () => {
+      const payload = { study: { id: 's' }, chapters: [chapter(rootFen)] };
+      const original = JSON.stringify(payload);
+      stubFetch(200, payload);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' });
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count);
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 2');
+      expect(root.querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      expect(root.querySelector('.gomoku-ghost')).toBeNull();
+      expect(
+        [...root.querySelectorAll('.embed-card-seat-name')].map((el) => el.textContent),
+      ).toEqual(['White', 'Black']);
+      if (count) {
+        expect(root.querySelector('[data-square="a15"] .gomoku-stone--black')).not.toBeNull();
+        expect(root.querySelector('[data-square="a1"] .gomoku-stone--white')).not.toBeNull();
+      }
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('1 / 2');
+      expect(root.querySelector(`[data-square="a2"] .gomoku-stone--${firstInk}`)).not.toBeNull();
+      expect(root.querySelector('[data-square="a2"] .gomoku-move-number')?.textContent).toBe('1');
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count + 2);
+      expect(root.querySelector('[data-square="o14"] .gomoku-move-number')?.textContent).toBe('2');
+      const previous = root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!;
+      previous.click();
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count + 1);
+      previous.click();
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count);
+      expect(root.querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      expect(JSON.stringify(payload)).toBe(original);
+      root.remove();
+    });
+  }
+
+  it('opens a dealt root without moves and clamps a deep link to the legal prefix', async () => {
+    for (const [moves, total] of [
+      [[], 0],
+      [['a2', 'a2', 'o14'], 1],
+    ] as const) {
+      stubFetch(200, { chapters: [chapter(dealt, [...moves])] });
+      const root = document.createElement('div');
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' }, { startPly: 99 });
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe(
+        total ? `${total} / ${total}` : '',
+      );
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(5 + total);
+    }
+  });
+
+  it('refuses invalid roots and unknown variants without drawing any board', async () => {
+    for (const value of [
+      chapter('not a fen'),
+      chapter(''),
+      { ...chapter(empty), variant: 'future-gomoku' },
+    ]) {
+      stubFetch(200, { chapters: [value] });
+      const root = document.createElement('div');
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' });
+      expect(root.querySelector('svg')).toBeNull();
+      expect(root.textContent).toMatch(/position.*invalid|cannot be framed/);
+    }
+  });
+});
+
+describe('jieqi study luck', () => {
+  it('fetches offline luck and shows a badge and board die without analysis', async () => {
+    const fetcher = vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () =>
+        url.endsWith('/decisions')
+          ? {
+              engineId: 'offline',
+              source: 'match',
+              decisions: [{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 62 }],
+            }
+          : {
+              study: { id: 'study' },
+              chapters: [
+                {
+                  id: 'chapter',
+                  name: 'Luck',
+                  variant: 'jieqi',
+                  hasDecisions: true,
+                  root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18.slice(0, 2)) },
+                },
+              ],
+            },
+    }));
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 'study', chapterId: 'chapter' }, { startPly: 1 });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      '/api/studies/study',
+      '/api/studies/study/chapters/chapter/decisions',
+    ]);
+    expect(root.querySelector('.review-move-list__luck')?.textContent).toBe('🎲 +12%');
+    expect(root.querySelector('.luck-mark[data-luck-square="i5"]')).not.toBeNull();
+    expect(root.querySelector('.review-move-list__suffix')).toBeNull();
+    root
+      .querySelector<HTMLElement>('.review-move-list__luck')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await vi.waitFor(() => expect(document.querySelector('.luck-card')).not.toBeNull());
+    // Ply 0 and the unscored second move carry no die.
+    root.querySelector<HTMLButtonElement>('.embed-card-controls button')?.click();
+    expect(root.querySelector('.luck-mark')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.review-move-list__move[data-ply="2"]')!.click();
+    expect(root.querySelector('.luck-mark')).toBeNull();
+    root.remove();
   });
 });

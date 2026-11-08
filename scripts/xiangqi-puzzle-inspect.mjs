@@ -25,6 +25,7 @@ import { deriveXiangqiPuzzleDifficulty } from '../packages/game/dist/puzzles-xia
 import { createInitialXiangqiState } from '../packages/game/dist/variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   getStandardXiangqiLegalMoves,
 } from '../packages/game/dist/variants-xiangqi-standard.js';
 import { standardXiangqiFen } from '../packages/game/dist/xiangqi-position.js';
@@ -125,7 +126,7 @@ async function reject(candidateId) {
   const moves = typeof row.moves === 'string' ? JSON.parse(row.moves) : row.moves;
   let state = createInitialXiangqiState('replay');
   for (let i = 0; i < row.post_blunder_ply; i += 1) {
-    state = applyStandardXiangqiMove(state, { from: moves[i].from, to: moves[i].to });
+    state = applyXiangqiRecordMove(state, { from: moves[i].from, to: moves[i].to });
   }
   const legal = getStandardXiangqiLegalMoves(state);
   const mating = legal.filter((m) => {

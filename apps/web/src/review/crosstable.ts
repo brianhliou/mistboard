@@ -3,7 +3,7 @@
 // the game being reviewed outlined. Data comes from
 // `GET /api/games/:roomId/crosstable`; the server resolves the pair from the
 // room's own seats and refuses to build a record for guest or private seats, so
-// this module never handles identities, only names and outcomes.
+// this module never resolves identities or outcomes itself.
 
 import { t } from '../i18n/catalog.js';
 import { playerNameEl, profileTargetFor } from '../profile-link.js';
@@ -80,6 +80,7 @@ type Standing = 'lead' | 'trail' | 'level';
 function playerRow(
   side: Side,
   player: CrosstablePlayer,
+  opponent: CrosstablePlayer,
   games: readonly CrosstableGame[],
   total: string,
   standing: Standing,
@@ -117,7 +118,21 @@ function playerRow(
   head.append(playerNameEl(name, profileTargetFor(player), 'review-crosstable__name-text'));
   const score = document.createElement('td');
   score.className = `review-crosstable__score review-crosstable__score--${standing}`;
-  score.textContent = total;
+  // The profile's ?vs= filter matches account handles, not bots or display names.
+  if (
+    player.kind === 'account' &&
+    opponent.kind === 'account' &&
+    player.handle &&
+    opponent.handle
+  ) {
+    const link = document.createElement('a');
+    link.className = 'player-name-link';
+    link.href = `/@/${encodeURIComponent(player.handle)}?vs=${encodeURIComponent(opponent.handle)}`;
+    link.textContent = total;
+    score.append(link);
+  } else {
+    score.textContent = total;
+  }
   row.append(head, score);
   return row;
 }
@@ -153,6 +168,7 @@ export function renderCrosstable(
     playerRow(
       'a',
       a,
+      b,
       games,
       formatPoints(data.score.a, data.score.draws),
       standingA,
@@ -161,6 +177,7 @@ export function renderCrosstable(
     playerRow(
       'b',
       b,
+      a,
       games,
       formatPoints(data.score.b, data.score.draws),
       standingB,

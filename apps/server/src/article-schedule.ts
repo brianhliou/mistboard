@@ -5,8 +5,8 @@
 // feed, and the client hides them until the moment passes. This module gives
 // the server the same clock so it can 404 the URL before the moment (the SPA
 // shell would 404 it on takeover anyway; a crawler should see the same) and,
-// once a scheduled post has gone live without a rebuild, stop serving the
-// stale prerendered blog index so the client can render a current one.
+// once a scheduled post has gone live without a rebuild, supplement the baked
+// blog/rules index with the same localized title and summary its card shows.
 //
 // Announcements (web/src/announcements.ts) are scheduled on the same clock and
 // listed in the same file; once one goes live the prerendered home page and
@@ -24,28 +24,49 @@ export type ArticleSchedule = {
   scheduled: Map<string, number>;
   /** Live moments of announcements still ahead at build time. */
   announcements: number[];
+  /** null means deliberately unlisted; absent means an older build. */
+  indexEntries: Map<string, ScheduledArticleIndexEntry | null>;
 };
 
-const EMPTY: ArticleSchedule = { builtAt: 0, scheduled: new Map(), announcements: [] };
+export type ScheduledArticleIndexEntry = {
+  kind: 'article' | 'rules';
+  publisher: 'mistboard' | 'community';
+  locales: Record<string, { title: string; summary: string; href: string }>;
+};
+
+const EMPTY: ArticleSchedule = {
+  builtAt: 0,
+  scheduled: new Map(),
+  announcements: [],
+  indexEntries: new Map(),
+};
 const CACHE_MS = 60_000;
 const cache = new Map<string, { readAt: number; schedule: ArticleSchedule }>();
 
 export function parseArticleSchedule(json: string): ArticleSchedule {
   const raw = JSON.parse(json) as {
     builtAt?: string;
-    scheduled?: Array<{ slug: string; liveAt: string }>;
+    scheduled?: Array<{
+      slug: string;
+      liveAt: string;
+      indexEntry?: ScheduledArticleIndexEntry | null;
+    }>;
     announcements?: Array<{ slug: string; liveAt: string }>;
   };
   const builtAt = Date.parse(raw.builtAt ?? '');
   const scheduled = new Map<string, number>();
+  const indexEntries = new Map<string, ScheduledArticleIndexEntry | null>();
   for (const entry of raw.scheduled ?? []) {
     const liveAt = Date.parse(entry.liveAt);
-    if (entry.slug && !Number.isNaN(liveAt)) scheduled.set(entry.slug, liveAt);
+    if (entry.slug && !Number.isNaN(liveAt)) {
+      scheduled.set(entry.slug, liveAt);
+      if (entry.indexEntry !== undefined) indexEntries.set(entry.slug, entry.indexEntry);
+    }
   }
   const announcements = (raw.announcements ?? [])
     .map((entry) => Date.parse(entry.liveAt))
     .filter((liveAt) => !Number.isNaN(liveAt));
-  return { builtAt: Number.isNaN(builtAt) ? 0 : builtAt, scheduled, announcements };
+  return { builtAt: Number.isNaN(builtAt) ? 0 : builtAt, scheduled, announcements, indexEntries };
 }
 
 export async function readArticleSchedule(

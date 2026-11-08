@@ -104,7 +104,7 @@ describe('board appearance settings reach every xiangqi board with a river', () 
     it(`${board.name}: draws both river captions inside the river group`, () => {
       const svg = board.svg();
       expect(svg).toMatch(/<g class="xq-live-river"[^>]*>[\s\S]*class="xq-live-river-label"/);
-      expect(svg).toContain('楚 河   漢 界');
+      for (const char of '楚河漢界') expect(svg).toContain(`>${char}</text>`);
       expect(svg).toContain('class="xq-live-river-brand"');
       // The surface CSS is scoped to .xq-surface; a board without it would
       // show the captions unstyled.

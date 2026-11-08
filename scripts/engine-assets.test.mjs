@@ -7,7 +7,8 @@
 // 2.5 minutes back.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -73,6 +74,13 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   const verify = railpack.indexOf(
     'sh /app/scripts/engine-assets.sh verify /app/bin /app/apps/server/src',
   );
+  const privateNet = railpack.indexOf(
+    'node /app/scripts/fetch-pikafish-net.mjs /app/bin/pikafish.nnue --require-token',
+  );
+  assert.ok(
+    privateNet > fetch && privateNet < verify,
+    'private Pikafish net is staged between fetch and verify',
+  );
   const net = railpack.indexOf('sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin');
   assert.ok(fetch > 0, 'railpack.json must fetch the engine assets');
   assert.ok(verify > fetch, 'verify runs after fetch');
@@ -87,7 +95,7 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   );
 });
 
-test('the recipe builds and verifies the same nine binaries the image expects', () => {
+test('the recipe builds and verifies the same ten binaries the image expects', () => {
   const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
   assert.deepEqual(binaries, [
     'fairy-stockfish-xiangqi',
@@ -99,6 +107,7 @@ test('the recipe builds and verifies the same nine binaries the image expects', 
     'ab-jchess',
     'katago-jungle',
     'jqe',
+    'rapfi',
   ]);
   // Every binary is built with the ISA the container was measured for; AB-JChess
   // alone targets avx2 (its NNUE is its strength; ab-jchess.ref).
@@ -107,6 +116,203 @@ test('the recipe builds and verifies the same nine binaries the image expects', 
   // KataGo-AnimalChess: the Eigen CPU backend with AVX2, linked static (katago-jungle.ref).
   assert.match(recipe, /^KATA_CMAKE_FLAGS=".*-DUSE_BACKEND=EIGEN .*-DUSE_AVX2=1 .*-static"$/m);
   assert.match(recipe, /echo "kata-cmake=\$KATA_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
+});
+
+test('Rapfi pins its native recipe, data extractor and full source SHA', async () => {
+  assert.ok(recipeInputs().includes('rapfi.ref'));
+  assert.ok(recipeInputs().includes('scripts/rapfi-assets.mjs'));
+  assert.match(
+    readFileSync(resolve(repoRoot, 'rapfi.ref'), 'utf8'),
+    /^1387d11312190ec66665d361ff07a7c70221b78a\n/,
+  );
+  assert.match(
+    recipe,
+    /^RAPFI_CMAKE_FLAGS=".*-DUSE_SSE=ON .*-DUSE_AVX2=ON .*-DUSE_BMI2=ON .*-DNO_COMMAND_MODULES=OFF .*-march=haswell .*-static"$/m,
+  );
+  assert.match(recipe, /echo "rapfi-cmake=\$RAPFI_CMAKE_FLAGS"/);
+  assert.match(recipe, /verify-rapfi\)/);
+  assert.match(recipe, /rapfi_search_ok "\$bin"/);
+  const { BUNDLE } = await import('./rapfi-assets.mjs');
+  const webPin = JSON.parse(
+    readFileSync(resolve(repoRoot, 'apps/web/public/engine/rapfi/net.json')),
+  );
+  assert.equal(BUNDLE.sha256, webPin.sha256);
+  assert.equal(BUNDLE.bytes, webPin.bytes);
+  assert.equal(BUNDLE.url, webPin.url);
+});
+
+async function withRapfiAssets(t, callback) {
+  const bundle = resolve(repoRoot, 'apps/web/public/engine/rapfi/rapfi-single-simd128.data');
+  if (!existsSync(bundle)) return t.skip('stage net.json data to exercise native extraction');
+  const bin = mkdtempSync(resolve(tmpdir(), 'rapfi-assets-test-'));
+  try {
+    const assets = await import('./rapfi-assets.mjs');
+    await assets.stage(bin, bundle);
+    await callback(bin, assets, bundle);
+  } finally {
+    rmSync(bin, { recursive: true, force: true });
+  }
+}
+
+test('Rapfi extracts individually pinned native files from the checked web bundle', async (t) => {
+  await withRapfiAssets(t, async (bin, assets, bundle) => {
+    await assets.check(bin);
+    const config = readFileSync(resolve(bin, 'config.toml'), 'utf8');
+    for (const [, file] of config.matchAll(
+      /(?:binary_file|weight_file(?:_black|_white)?) = "([^"]+)"/g,
+    )) {
+      assert.ok(
+        assets.FILES.some((entry) => entry.name === file),
+        `${file} must be pinned`,
+      );
+    }
+    writeFileSync(resolve(bin, 'bad.data'), 'truncated bundle');
+    await assert.rejects(
+      assets.stage(bin, resolve(bin, 'bad.data')),
+      /bundle.*SHA256|bundle.*size/i,
+    );
+    writeFileSync(resolve(bin, 'mix9svqfreestyle_bsmix.bin.lz4'), 'replaced net');
+    await assert.rejects(assets.check(bin), /mix9svqfreestyle.*SHA256/);
+    await assets.stage(bin, bundle);
+    await assets.check(bin);
+  });
+});
+
+function fakeRapfi(bin, mode) {
+  const native = `#!/usr/bin/env node
+const fs = require('node:fs');
+const rl = require('node:readline').createInterface({input: process.stdin});
+console.log('MESSAGE Evaluator set to mix9svq.');
+rl.on('line', line => {
+  fs.appendFileSync('commands.log', line + '\\n');
+  if (line === 'YXNBEST 1') {
+    if (${JSON.stringify(mode)} === 'hang') return;
+    if (${JSON.stringify(mode)} === 'loaded') {
+      console.log('MESSAGE mix9svq nnue: load weight from mix9svqfreestyle_bsmix.bin.lz4');
+      console.log('MESSAGE mix9svq nnue: weight loaded in 20ms');
+    }
+    if (${JSON.stringify(mode)} === 'error') console.log('ERROR failed to load nnue weight');
+    console.log('INFO PV 0');
+    console.log('INFO DEPTH 3');
+    console.log('INFO NODES 1024');
+    console.log('INFO EVAL 20');
+    console.log('INFO BESTLINE 6,6');
+    console.log('INFO PV DONE');
+    console.log('6,6');
+  }
+  if (line === 'END') process.exit(0);
+});
+`;
+  writeFileSync(resolve(bin, 'rapfi'), native, { mode: 0o755 });
+}
+
+test('Rapfi startup gate requires loaded neural weights and a completed search, and bounds hangs', async (t) => {
+  await withRapfiAssets(t, async (bin, assets) => {
+    fakeRapfi(bin, 'loaded');
+    await assets.search(bin);
+    const commands = readFileSync(resolve(bin, 'commands.log'), 'utf8');
+    assert.match(commands, /INFO max_memory 33554432/);
+    assert.match(commands, /INFO thread_num 1/);
+    assert.match(commands, /YXBOARD\n7,7,1\n8,7,2\n8,8,1\nDONE\nYXNBEST 1/);
+    for (const mode of ['classical', 'error', 'hang']) {
+      fakeRapfi(bin, mode);
+      await assert.rejects(
+        assets.search(bin, { timeoutMs: 300 }),
+        /weight|search.*timed out|ERROR/i,
+      );
+    }
+    fakeRapfi(bin, 'loaded');
+    writeFileSync(resolve(bin, 'model210901.bin'), 'bad model');
+    await assert.rejects(assets.search(bin), /model210901.*SHA256/);
+  });
+});
+
+test('Rapfi native data and licences enter the tarball and checksum manifest', async (t) => {
+  await withRapfiAssets(t, async (bin, assets) => {
+    for (const name of recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/)) {
+      writeFileSync(resolve(bin, name), 'fixture binary', { mode: 0o755 });
+    }
+    writeFileSync(resolve(bin, 'pikafish.nnue'), 'fixture net');
+    writeFileSync(resolve(bin, 'it014.jqn'), 'fixture net');
+    const out = resolve(bin, 'dist');
+    run('package', bin, out);
+    const tar = execFileSync('tar', ['-tzf', resolve(out, 'engines-x86-64-sse41-popcnt.tar.gz')], {
+      encoding: 'utf8',
+    })
+      .trim()
+      .split('\n');
+    const manifest = readFileSync(resolve(out, 'MANIFEST'), 'utf8');
+    for (const entry of [...assets.FILES, ...assets.LICENSES]) {
+      assert.ok(tar.includes(entry.name), `${entry.name} is packaged`);
+      assert.ok(manifest.includes(`${entry.name}=sha256:${entry.sha256}`));
+    }
+    assert.ok(tar.includes('rapfi'));
+    assert.ok(!tar.includes('pikafish.nnue'), 'Pikafish net never enters a public archive');
+    assert.ok(
+      !tar.some((name) => name.endsWith('.data')),
+      'the Emscripten container is not a native net',
+    );
+  });
+});
+
+test('Rapfi offline source path uses the pinned clean tree and the production CMake recipe', async (t) => {
+  await withRapfiAssets(t, async (bin, assets, bundle) => {
+    const source = resolve(bin, 'local source');
+    const tools = resolve(bin, 'tools');
+    mkdirSync(resolve(source, 'Rapfi'), { recursive: true });
+    mkdirSync(tools);
+    writeFileSync(resolve(source, 'Rapfi/CMakeLists.txt'), 'fixture pinned source');
+    const log = resolve(bin, 'recipe.log');
+    const executable = (name, code) =>
+      writeFileSync(resolve(tools, name), `#!${process.execPath}\n${code}`, { mode: 0o755 });
+    executable(
+      'git',
+      `
+const {execFileSync}=require('node:child_process');
+const args=process.argv.slice(2);
+if(args[0]==='rev-parse') console.log(process.env.RAPFI_TEST_WRONG_PIN ? '0'.repeat(40) : '1387d11312190ec66665d361ff07a7c70221b78a');
+else if(args[0]==='archive') execFileSync('tar',['-cf',args[1].slice('--output='.length),'Rapfi']);
+else process.exit(1);
+`,
+    );
+    executable(
+      'cmake',
+      `
+const fs=require('node:fs');const path=require('node:path');const args=process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(log)},JSON.stringify(args)+'\\n');
+if(args[0]==='--build') {
+  // Rapfi/CMakeLists.txt sets OUTPUT_NAME "pbrain-rapfi" on the rapfi target.
+  fs.writeFileSync(path.join(args[1],'pbrain-rapfi'),'fixture native binary');
+} else {
+  if(fs.readFileSync(path.join(args[args.indexOf('-S')+1],'CMakeLists.txt'),'utf8')!=='fixture pinned source') process.exit(1);
+  fs.mkdirSync(args[args.indexOf('-B')+1],{recursive:true});
+}
+`,
+    );
+    executable('strip', `require('node:fs').copyFileSync(process.argv[4],process.argv[3]);`);
+    executable('curl', `throw new Error('offline source path must never download');`);
+    const env = { ...process.env, PATH: `${tools}:${process.env.PATH}` };
+    execFileSync('sh', [script, 'build-rapfi', bin, source, bundle], { env });
+    const [configure, build] = readFileSync(log, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    const expected = recipe.match(/^RAPFI_CMAKE_FLAGS="([^"]+)"$/m)[1].split(' ');
+    assert.deepEqual(configure.slice(4), expected);
+    assert.ok(configure[1].endsWith('/source/Rapfi'));
+    assert.ok(!configure[3].startsWith(source), 'build output stays outside shared source');
+    assert.deepEqual(build.slice(-2), ['--target', 'rapfi']);
+    assert.equal(readFileSync(resolve(bin, 'rapfi'), 'utf8'), 'fixture native binary');
+    await assets.check(bin);
+    assert.throws(
+      () =>
+        execFileSync('sh', [script, 'build-rapfi', bin, source, bundle], {
+          env: { ...env, RAPFI_TEST_WRONG_PIN: '1' },
+          stdio: 'pipe',
+        }),
+      /not pinned/,
+    );
+  });
 });
 
 // jqe's net is MIT like its code (jqe.ref), so unlike AB-JChess's and KataGo's it
@@ -122,7 +328,7 @@ test('the jqe net is pinned by hash, packaged with the binary, and loaded by ver
   assert.match(recipe, /^JQE_CMAKE_FLAGS=".*-DJQE_NATIVE=OFF .*-march=haswell .*-static"$/m);
   assert.match(recipe, /echo "jqe-cmake=\$JQE_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
   assert.match(recipe, /echo "jqe-net=\$JQE_NET_SHA256"/, 'the net sha is in the hash');
-  assert.match(recipe, /-czf "\$out\/\$ASSET" \$BINARIES pikafish\.nnue "\$JQE_NET"/);
+  assert.match(recipe, /-czf "\$out\/\$ASSET" \$BINARIES "\$JQE_NET"/);
   assert.match(recipe, /jqe_search_ok "\$bin\/jqe" "\$bin\/\$JQE_NET"/);
   assert.match(
     recipe,
@@ -176,7 +382,12 @@ test('the AB-JChess net is fetched from the author, checksummed, and never packa
   assert.match(fetchNet, /^url=https:\/\/github\.com\/lxsgx23\/AB-JChess\/releases\/download\//m);
   assert.match(fetchNet, /^zip_sha=[0-9a-f]{64}$/m, 'the zip is checked');
   assert.match(fetchNet, /^net_sha=[0-9a-f]{64}$/m, 'the extracted net is checked');
-  assert.match(fetchNet, /ABJNNUE model loaded/, 'the fetched binary loads the net');
+  assert.match(fetchNet, /EvalFile loaded/, 'the fetched binary loads the net');
+  assert.match(
+    fetchNet,
+    /^bench_nodes=43125$/m,
+    'the fetched binary matches the author bench signature',
+  );
   const step = railpack.indexOf('sh /app/scripts/fetch-abjchess-net.sh /app/bin');
   assert.ok(step > 0, 'railpack.json runs the net script');
   assert.ok(
@@ -265,4 +476,110 @@ test('every release asset railpack fetches has a pinned sha256', () => {
     'utf8',
   );
   assert.match(largeboard, /^sha=[0-9a-f]{64}$/m, 'the largeboard binary pins a sha256');
+});
+
+// Build the forbidden path from pieces so this regression test does not match itself.
+const publicNetPath = ['releases', 'download', 'pikafish-net-7d13d735'].join('/');
+const oldWebNetPath = ['github.com/brianhliou/pikafish-wasm', 'releases', 'download'].join('/');
+function publicNetReferences(root, files) {
+  return files.filter((file) => {
+    if (file === 'CHANGELOG.md' || /(?:^|\/)docs\/.*\d{4}-\d{2}-\d{2}.*\.md$/.test(file))
+      return false;
+    const path = resolve(root, file);
+    if (!existsSync(path)) return false;
+    const bytes = readFileSync(path);
+    return bytes.includes(publicNetPath) || bytes.includes(oldWebNetPath);
+  });
+}
+
+test('no repository file points at a public Pikafish net release', () => {
+  const files = execFileSync(
+    'git',
+    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    },
+  )
+    .split('\0')
+    .filter(Boolean);
+  assert.deepEqual(publicNetReferences(repoRoot, files), []);
+});
+
+test('the public net reference guard catches planted source, workflow and doc references', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'public-net-reference-'));
+  try {
+    const files = [
+      'scripts/fixture.mjs',
+      '.github/workflows/fixture.yml',
+      'docs/fetch.md',
+      'docs/archive/2026-11-07-fetch.md',
+      'CHANGELOG.md',
+    ];
+    for (const file of files) {
+      mkdirSync(dirname(resolve(root, file)), { recursive: true });
+      writeFileSync(
+        resolve(root, file),
+        `https://github.com/brianhliou/mistboard/${publicNetPath}/pikafish.nnue`,
+      );
+    }
+    assert.deepEqual(publicNetReferences(root, files), files.slice(0, 3));
+    writeFileSync(resolve(root, files[0]), publicNetPath);
+    assert.deepEqual(publicNetReferences(root, [files[0]]), [files[0]]);
+    writeFileSync(resolve(root, files[0]), `https://${oldWebNetPath}/v0.1.0/pikafish.nnue`);
+    assert.deepEqual(publicNetReferences(root, [files[0]]), [files[0]]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('the actual archive file list excludes Pikafish even when the net is staged', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'pikafish-archive-'));
+  try {
+    const bin = resolve(root, 'bin');
+    const tools = resolve(root, 'tools');
+    mkdirSync(bin);
+    mkdirSync(tools);
+    const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
+    for (const file of [...binaries, 'it014.jqn', 'pikafish.nnue', 'fixture-rapfi.bin']) {
+      writeFileSync(resolve(bin, file), 'fixture');
+    }
+    // Only stub Rapfi's unrelated checksum gate and file inventory. The real
+    // shell package function, tar, manifest and recipe hash still run.
+    writeFileSync(
+      resolve(tools, 'node'),
+      `#!${process.execPath}
+if (!process.argv[2].endsWith('/scripts/rapfi-assets.mjs')) process.exit(1);
+if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
+`,
+      { mode: 0o755 },
+    );
+    const out = resolve(root, 'dist');
+    execFileSync('sh', [script, 'package', bin, out], {
+      cwd: repoRoot,
+      env: { ...process.env, PATH: `${tools}:${process.env.PATH}` },
+    });
+    const files = execFileSync(
+      'tar',
+      ['-tzf', resolve(out, 'engines-x86-64-sse41-popcnt.tar.gz')],
+      { encoding: 'utf8' },
+    )
+      .trim()
+      .split('\n');
+    assert.deepEqual(files, [...binaries, 'it014.jqn', 'fixture-rapfi.bin']);
+    assert.ok(!files.includes('pikafish.nnue'));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('CI supplies the private token to native, browser build and web test consumers', () => {
+  const ci = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const secret = `MISTBOARD_PRIVATE_ASSETS_TOKEN: \${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}`;
+  assert.ok(workflow.includes(secret));
+  for (const job of ['build', 'unit-web']) {
+    const block = ci.split(/(?=^ {2}[\w-]+:\n)/m).find((part) => part.startsWith(`  ${job}:\n`));
+    assert.ok(block.includes(secret), `${job} must pass the repo secret to the fetch consumer`);
+    assert.match(block, /key: engine-nets-.*hashFiles.*net\.json/);
+  }
 });

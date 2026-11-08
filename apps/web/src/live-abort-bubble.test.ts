@@ -87,6 +87,26 @@ describe('abort countdown bubble', () => {
 describe('placeBoardCenterBubble', () => {
   const board = { left: 0, top: 10, width: 300, height: 330 };
 
+  it('sizes to the board, not to a drawing inside one of its tiles', () => {
+    // The mahjong table is a board of tiles, each with its own piece svg. Read
+    // as "the board", the first tile's 44px drawing squeezed the bubble to one
+    // word a line on a phone.
+    const { controls, stage } = room();
+    const board = stage.querySelector<HTMLElement>('[data-board]')!;
+    const tile = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const slot = document.createElement('span');
+    slot.append(tile);
+    board.append(slot);
+    const rect = (left: number, width: number) => () =>
+      ({ left, top: 0, width, height: width, right: left + width, bottom: width }) as DOMRect;
+    stage.getBoundingClientRect = rect(0, 390);
+    board.getBoundingClientRect = rect(3, 384);
+    tile.getBoundingClientRect = rect(60, 44);
+    attachAbortCountdownBubble(controls, stage, { isPhone: () => true });
+    const bubble = stage.querySelector<HTMLElement>('[data-abort-bubble]');
+    expect(bubble?.style.getPropertyValue('--abort-bubble-board-max')).toBe('372px');
+  });
+
   it('centres the bubble on the board', () => {
     expect(placeBoardCenterBubble(board, { width: 200, height: 30 })).toEqual({
       left: 50,

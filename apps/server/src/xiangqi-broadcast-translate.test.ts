@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { XiangqiBroadcastPlayerTag } from '@mistboard/game';
 import {
+  FEDERATION_PLAYER_NAMES,
+  FEDERATION_PLAYER_TRADITIONAL_NAMES,
   romanizeXiangqiPlayerName,
+  TRADITIONAL_SCRIPT_REGIONS,
+  translatedXiangqiBroadcastBoard,
   translatedXiangqiBroadcastPlayerTag,
   translatedXiangqiBroadcastRound,
   translatedXiangqiBroadcastTour,
@@ -11,6 +15,7 @@ import {
   translateXiangqiMatchName,
   translateXiangqiRoundLabel,
   translateXiangqiTeamName,
+  xiangqiPlayerOwnScriptName,
 } from './xiangqi-broadcast-translate.js';
 
 // Every player name ingested with the 2026 national team championship tour.
@@ -53,6 +58,14 @@ test('translateXiangqiEventName translates the real 2026 team championship name'
     translateXiangqiEventName('2026全国象棋团体赛'),
     '2026 National Xiangqi Team Championship',
   );
+});
+
+// A Vietnamese event name is Latin script with diacritics: the pinyin pass
+// used to drop each accented letter ("Cup Kim Long Motor l n I").
+test('translateXiangqiEventName leaves Latin-script names whole and uses an override', () => {
+  assert.equal(translateXiangqiEventName('Cup Kim Long Motor lần I'), '1st Kim Long Motor Cup');
+  assert.equal(translateXiangqiEventName('Giải Cờ tướng Đà Nẵng'), undefined);
+  assert.equal(translateXiangqiRoundLabel('Vòng 1'), undefined);
 });
 
 test('translateXiangqiEventName handles ordinals, cups, groups, and year markers', () => {
@@ -290,7 +303,7 @@ test('translateXiangqiTeamName glosses the national team championship sports bod
 test('federations at the Asian and world events read as countries, not pinyin', () => {
   assert.equal(translateXiangqiTeamName('越南'), 'Vietnam');
   assert.equal(translateXiangqiTeamName('台北'), 'Taipei');
-  assert.equal(translateXiangqiTeamName('中华台北'), 'Chinese Taipei');
+  assert.equal(translateXiangqiTeamName('中华台北'), 'Taiwan');
   assert.equal(translateXiangqiTeamName('马来西亚'), 'Malaysia');
   assert.equal(translateXiangqiTeamName('武汉大学棋类协会'), 'Wuhan University Chess Association');
 });
@@ -333,7 +346,7 @@ test('Asian championship federations read as their English names', () => {
     ['中国', 'China'],
     ['中国香港', 'Hong Kong'],
     ['中国澳门', 'Macau'],
-    ['中华台北', 'Chinese Taipei'],
+    ['中华台北', 'Taiwan'],
     ['西马', 'West Malaysia'],
     ['东马', 'East Malaysia'],
     ['黎巴嫩', 'Lebanon'],
@@ -433,4 +446,66 @@ test('the 2026 North American Championship reads as its host names it', () => {
     }).nameEn,
     '2026 North American Xiangqi Championship',
   );
+});
+
+// #605: a Taiwan or Hong Kong player's name is shown in the characters that
+// player writes, not the mainland simplified every source prints.
+test('a Taiwan, Hong Kong, Macau or Vietnamese name reads in traditional characters', () => {
+  assert.equal(xiangqiPlayerOwnScriptName('赵奕帆', '中华台北'), '趙奕帆');
+  assert.equal(xiangqiPlayerOwnScriptName('赵奕帆', '台湾'), '趙奕帆');
+  assert.equal(xiangqiPlayerOwnScriptName('冯家俊', '中国香港'), '馮家俊');
+  assert.equal(xiangqiPlayerOwnScriptName('伍子骏', '中国澳门'), '伍子駿');
+  assert.equal(xiangqiPlayerOwnScriptName('武国达', '越南'), '武國達');
+  assert.equal(xiangqiPlayerOwnScriptName('赖理兄'), '賴理兄');
+  // The same characters on a mainland team are a different person.
+  assert.equal(xiangqiPlayerOwnScriptName('赵奕帆', '浙江'), undefined);
+  // No simplified-only character: nothing to show apart from the source's.
+  assert.equal(xiangqiPlayerOwnScriptName('葛振衣', '中华台北'), undefined);
+  // Malaysia and Singapore write simplified.
+  assert.equal(xiangqiPlayerOwnScriptName('沈毅豪', '马来西亚'), undefined);
+});
+
+test('Lin Youxuan receives his traditional name for Taiwan player and team pages', () => {
+  for (const federation of ['台湾', '中华台北', '中国台北']) {
+    assert.equal(xiangqiPlayerOwnScriptName('林友轩', federation), '林友軒');
+  }
+  assert.equal(xiangqiPlayerOwnScriptName('林友轩', '浙江'), undefined);
+});
+
+test('every Taiwan, Hong Kong, Macau and Vietnamese spelling has its traditional name', () => {
+  const missing = [...FEDERATION_PLAYER_NAMES.keys()].filter(
+    (key) =>
+      TRADITIONAL_SCRIPT_REGIONS.has(key.slice(0, key.indexOf(':'))) &&
+      !FEDERATION_PLAYER_TRADITIONAL_NAMES.has(key),
+  );
+  assert.deepEqual(missing, [], 'add each to FEDERATION_PLAYER_TRADITIONAL_NAMES');
+  // A character the map converts anywhere is simplified-only, so no
+  // traditional name may still carry one.
+  const simplifiedOnly = new Set<string>();
+  for (const [key, own] of FEDERATION_PLAYER_TRADITIONAL_NAMES) {
+    const source = Array.from(key.slice(key.indexOf(':') + 1));
+    Array.from(own).forEach((char, i) => {
+      if (source[i] !== char) simplifiedOnly.add(source[i]!);
+    });
+  }
+  assert.ok(simplifiedOnly.size > 10, 'the guard found no simplified characters');
+  const still = [...FEDERATION_PLAYER_TRADITIONAL_NAMES.values()].filter((own) =>
+    Array.from(own).some((char) => simplifiedOnly.has(char)),
+  );
+  assert.deepEqual(still, []);
+});
+
+test('page-script names do not rewrite broadcast payload source fields', () => {
+  const board = {
+    red: { name: '于幼华', federation: '台湾' },
+    black: { name: '孙勇征', federation: '上海' },
+    details: { match: '台湾-上海' },
+  };
+  const before = JSON.stringify(board);
+  const translated = translatedXiangqiBroadcastBoard(board);
+  assert.equal(JSON.stringify(board), before);
+  assert.equal(translated.red.name, '于幼华');
+  assert.equal(translated.black.name, '孙勇征');
+  assert.equal(translated.red.federation, '台湾');
+  assert.equal(translated.details.match, '台湾-上海');
 });

@@ -17,6 +17,9 @@
  *     The window opens after EVERY discard: a claimant with nothing to claim
  *     passes when the short pause ends, one with a claim keeps the full window,
  *     and the discarder sees the same phase and deadlines either way.
+ *     Explicit table-3 setups also persist automatic discards after nonwinning
+ *     declared draws; their deadlines derive from the last persisted move.
+ *     New production setups remain table 2.
  *   - Correspondence (days per move) has neither deadline. The claimant's turn
  *     opens with the claim decision on every discard (claim, or pass and then
  *     draw and discard, all on one move deadline), and the next hand deals at
@@ -47,6 +50,7 @@ import {
   type XmjSeat,
   xmjAnswerAt,
   xmjClockOwner,
+  xmjIsDeclared,
   xmjIsLegalMove,
   xmjMoveFromMessage,
   xmjPendingAction,
@@ -108,7 +112,10 @@ export function xmjClientEventFor(
   // says the discarder still holds a twin of the thrown tile, and no client
   // needs it (it only feeds the server's drawnDiscards).
   if (event.type === 'move-played') {
-    if (event.move.action === 'discard' && event.move.handCopy !== undefined) {
+    if (
+      (event.move.action === 'discard' || event.move.action === 'declare-ready') &&
+      event.move.handCopy !== undefined
+    ) {
       const { handCopy: _concealed, ...move } = event.move;
       return { ...event, move, ply };
     }
@@ -146,13 +153,6 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
   roomIdPrefix: XIANGQI_MAHJONG_ROOM_ID_PREFIX,
   colors: XMJ_SEATS,
-  // Rematch rides the lobby factory, which this table now has, but the
-  // conformance test (variant-tenant-rematch.test.ts) seats two guests and the
-  // per-account grant refuses guests. Opted out until that test can seat
-  // granted accounts; a PvP seat gets New opponent meanwhile. A finished match
-  // reopens at its own room, whose Review button opens the review page
-  // (routes/xiangqi-mahjong-games.ts, finished matches only).
-  rematch: { optOut: 'allowlisted playtest: the rematch conformance test seats guests' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,
   // Each seat sees its deal before its first move: no free redeal.
@@ -180,6 +180,22 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     isLegalMove: xmjIsLegalMove,
     seatMayAct: xmjSeatMayAct,
     pendingAction: xmjPendingAction,
+    clockExpiryMove: (state, color, at) => {
+      const hand = state.match.hand;
+      const phase = hand.phase;
+      if (
+        state.status.type !== 'playing' ||
+        state.match.between ||
+        XMJ_SEATS[hand.turn] !== color ||
+        phase.type !== 'discard' ||
+        phase.drawn === null ||
+        !xmjIsDeclared(hand, hand.turn)
+      )
+        return null;
+      // This includes a winning draw its owner left unanswered. The actual
+      // drawn copy is discarded, never an identical tile from the locked hand.
+      return { by: color, at, action: 'discard', tile: phase.drawn };
+    },
     finish: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },

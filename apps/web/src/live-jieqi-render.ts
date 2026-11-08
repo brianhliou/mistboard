@@ -5,19 +5,58 @@ import {
   type JieqiSquare,
   jieqiCheckedGeneral,
 } from '@mistboard/game';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import {
+  flipSvgPiece,
+  glideSvgPiece,
+  type PieceFlipStyle,
+  pieceAnimationDurationMs,
+  pieceFlipDurationMs,
+  pieceFlipStyle,
+} from './board-anim.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
   boardLastMoveCellMarksSvg,
+  boardLastMoveEdgeOn,
   boardLastMoveMarkersSvg,
   boardLastMoveStyleAttr,
+  type RaisedPieceOutline,
+  raisedCellPieceOutline,
+  raisedPieceOutline,
 } from './board-lastmove.js';
 import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
-import { boardCornerRadius, tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import {
+  boardCornerRadius,
+  tokenPieceSize,
+  xiangqiPieceCellBox,
+  xiangqiPieceDrawSize,
+} from './board-metrics.js';
+import {
+  SELECT_3D_GROUP_ATTRS,
+  select3dCaptureFaceSvg,
+  select3dHoverEdgeSvg,
+  select3dSelectedSvg,
+} from './board-select-3d.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import {
+  piece3dEnabled,
+  xiangqiPiece3dApplies,
+  xiangqiPiece3dCellMark,
+  xiangqiPiece3dDiscCenter,
+  xiangqiPiece3dEdge,
+  xiangqiPiece3dLayers,
+  xiangqiPiece3dMarkPiece,
+  xiangqiPiece3dMarkup,
+  xiangqiPiece3dTurnLook,
+} from './piece-3d.js';
+import {
+  type FaceDownFaces,
+  faceDownFaceSvg,
+  faceDownSlotClass,
+} from './review/face-down-faces.js';
+import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -26,6 +65,7 @@ import {
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
+import { flipTileOverlay } from './tile-flip-3d.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -53,7 +93,6 @@ import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
   xiangqiPieceOuterRadius,
-  xiangqiPieceSetShape,
   xiangqiPieceShapeForLayout,
 } from './xiangqi-piece-sets.js';
 
@@ -137,6 +176,13 @@ export type JieqiBoardRenderOptions = {
    *  move when it is in check. Check is public in jieqi (a face-down piece
    *  attacks as its home-square role), so every view of the board may show it. */
   check?: boolean;
+  /** Draw each piece, face up or face down, as a 3D disc with a rim
+   *  (piece-3d.ts) where the set and layout draw discs. Off unless asked: no
+   *  surface turns it on yet. */
+  tile3d?: boolean;
+  /** A finished game's review only: what each face-down piece was, drawn as a
+   *  ghost face over its back (review/face-down-faces.ts, #824). */
+  faceDownFaces?: FaceDownFaces;
 };
 
 export interface JieqiBoardArrow extends SvgBoardArrowStyle {
@@ -176,6 +222,7 @@ export function renderJieqiBoardSvg(
   options: JieqiBoardRenderOptions = {},
 ): string {
   const pieceSet = options.pieceSet ?? readStoredXiangqiPieceSet();
+  const tile3d = options.tile3d ?? piece3dEnabled();
   const legalMoves = options.legalMoves ?? [];
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
@@ -211,6 +258,16 @@ export function renderJieqiBoardSvg(
   const palaceBands = bandsInner
     ? `<g class="jieqi-palace-bands xq-live-palace-bands">${bandsInner}</g>`
     : '';
+  // A 3D piece is marked on the piece itself (board-select-3d.ts): no rings.
+  // Face up or face down it is one disc, so one outline serves both.
+  const outline3d: RaisedPieceOutline | null = !tile3d
+    ? null
+    : layout === 'cell'
+      ? raisedCellPieceOutline(xiangqiPiece3dCellMark(pieceSet, CELL))
+      : xiangqiPiece3dApplies(pieceSet, xiangqiPieceShapeForLayout(layout))
+        ? raisedPieceOutline(xiangqiPiece3dMarkPiece(pieceSet, CELL))
+        : null;
+  const selectedSquare = options.selectedSquare ?? null;
   return `
     <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(MARK_PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
@@ -218,24 +275,31 @@ export function renderJieqiBoardSvg(
       ${river}
       ${palaceBands}
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
-      ${lastMoveMarkers(view, perspective, 'under', pieceSet)}
-      ${options.check === false ? '' : checkGlow(view, perspective)}
-      ${selectionRing(options.selectedSquare ?? null, perspective)}
-      ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
-      ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null)}
-      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet)}</g>
+      ${lastMoveMarkers(view, perspective, 'under', pieceSet, tile3d)}
+      ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
+      ${outline3d ? '' : selectionRing(selectedSquare, perspective)}
+      ${options.interactive ? '' : moveHints(view, legalMoves, perspective, outline3d !== null)}
+      ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d, options.faceDownFaces)}
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, legalMoves, selectedSquare, perspective, outline3d)}</g>` : ''}
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="jieqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jieqiArrowLayer(options.arrows ?? [], perspective)}</g>
-      ${options.interactive ? hitLayer(perspective, view, legalMoves) : ''}
+      ${options.interactive ? hitLayer(perspective, view, legalMoves, outline3d) : ''}
     </svg>
   `;
 }
 
-function checkGlow(view: JieqiPlayerView, perspective: JieqiColor): string {
+function checkGlow(
+  view: JieqiPlayerView,
+  perspective: JieqiColor,
+  pieceSet: XiangqiPieceSet,
+): string {
   const square = jieqiCheckedGeneral(view.board, view.status);
   if (!square) return '';
   const { file, rank } = jieqiCoordOf(square);
-  return boardCheckGlowSvg(intersection(file, rank, perspective), MARK_PIECE_SIZE);
+  const center = intersection(file, rank, perspective);
+  return activeLayout === 'cell'
+    ? boardCheckCellSvg(center, CELL, pieceSet, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): string {
@@ -339,7 +403,11 @@ function pieceLayer(
   perspective: JieqiColor,
   pieceSet: XiangqiPieceSet,
   draggingFrom: JieqiSquare | null,
+  tile3d = false,
+  faces?: FaceDownFaces,
 ): string {
+  const draw3d =
+    tile3d && xiangqiPiece3dApplies(pieceSet, xiangqiPieceShapeForLayout(activeLayout));
   return Object.entries(view.board)
     .map(([square, entry]) => {
       if (!entry) return '';
@@ -347,6 +415,69 @@ function pieceLayer(
       const { file, rank } = jieqiCoordOf(square as JieqiSquare);
       const { x, y } = intersection(file, rank, perspective);
       const unknown = entry.faceDown && entry.unknown === true;
+      const slotClass = `jieqi-piece-slot${entry.faceDown ? faceDownSlotClass(faces, square) : ''}`;
+      type Face = Parameters<typeof renderXiangqiPieceGlyphed>[0];
+      if (draw3d) {
+        const rimClass = dragSource
+          ? 'jieqi-piece-rim jieqi-piece--drag-source'
+          : 'jieqi-piece-rim';
+        const disc = xiangqiPiece3dDiscCenter(
+          { x, y },
+          CELL,
+          xiangqiPieceShapeForLayout(activeLayout),
+        );
+        const pieceSvg = entry.faceDown
+          ? xiangqiPiece3dMarkup(
+              { x, y },
+              CELL,
+              { color: entry.color, role: 'soldier' },
+              pieceSet,
+              {
+                ariaLabel: unknown
+                  ? `${entry.color} piece, never revealed`
+                  : `${entry.color} hidden piece`,
+                className: [
+                  'jieqi-piece',
+                  dragSource ? 'jieqi-piece--drag-source' : '',
+                  unknown ? 'jieqi-piece--unknown' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' '),
+                shrouded: true,
+                shroudedStyle: 'back',
+              },
+              rimClass,
+              xiangqiPieceShapeForLayout(activeLayout),
+            ) + (unknown ? unknownMark(disc.x, disc.y) : '')
+          : xiangqiPiece3dMarkup(
+              { x, y },
+              CELL,
+              { color: entry.color, role: entry.role },
+              pieceSet,
+              {
+                ariaLabel: `${entry.color} ${entry.role}`,
+                className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
+                shrouded: false,
+                crossed: drawsCrossedSoldier(entry, rank),
+              },
+              rimClass,
+              xiangqiPieceShapeForLayout(activeLayout),
+            );
+        const ghost = entry.faceDown
+          ? faceDownFaceSvg(faces, square, (id) =>
+              xiangqiPiece3dMarkup(
+                { x, y },
+                CELL,
+                id as Face,
+                pieceSet,
+                { ariaLabel: `${id.color} ${id.role}`, className: 'jieqi-piece', shrouded: false },
+                'jieqi-piece-rim',
+                xiangqiPieceShapeForLayout(activeLayout),
+              ),
+            )
+          : '';
+        return `<g class="${slotClass}" data-piece-square="${square}">${pieceSvg}${ghost}</g>`;
+      }
       const pieceSvg = entry.faceDown
         ? renderXiangqiPieceGlyphed({ color: entry.color, role: 'soldier' }, pieceSet, {
             ariaLabel: unknown
@@ -378,7 +509,21 @@ function pieceLayer(
             crossed: drawsCrossedSoldier(entry, rank),
             shape: xiangqiPieceShapeForLayout(activeLayout),
           });
-      return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
+      const ghost = entry.faceDown
+        ? faceDownFaceSvg(faces, square, (id) =>
+            renderXiangqiPieceGlyphed(id as Face, pieceSet, {
+              ariaLabel: `${id.color} ${id.role}`,
+              className: 'jieqi-piece',
+              shrouded: false,
+              x: x - PIECE_SIZE / 2,
+              y: y - PIECE_SIZE / 2,
+              size: PIECE_SIZE,
+              crossed: drawsCrossedSoldier(id as Face, rank),
+              shape: xiangqiPieceShapeForLayout(activeLayout),
+            }),
+          )
+        : '';
+      return `<g class="${slotClass}" data-piece-square="${square}">${pieceSvg}${ghost}</g>`;
     })
     .join('');
 }
@@ -407,6 +552,12 @@ export function animateJieqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  if (from.x !== to.x || from.y !== to.y) {
+    // Reveal and move badges settle with the piece, without a second fade
+    // after it lands. Refreshes keep this same animation timeline.
+    const fade = Math.min(100, duration);
+    animateMoveGlyphs(host, fade, duration - fade);
+  }
   // The gold band rides on the piece for the whole glide (the square grid's
   // marks fade in as it lands). A reverse step renders the PRIOR move's marks
   // at a different square, so neither would track the reverse glide.
@@ -424,12 +575,15 @@ function moveHints(
   view: JieqiPlayerView,
   moves: readonly JieqiMove[],
   perspective: JieqiColor,
+  raised = false,
 ): string {
   return moves
     .map((move) => {
       const { file, rank } = jieqiCoordOf(move.to);
       const { x, y } = intersection(file, rank, perspective);
       const capture = view.board[move.to] !== undefined;
+      // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
+      if (capture && raised) return '';
       return capture
         ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
         : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`;
@@ -447,6 +601,7 @@ function lastMoveMarkers(
   perspective: JieqiColor,
   layer: BoardLastMoveLayer,
   pieceSet: XiangqiPieceSet,
+  tile3d: boolean,
 ): string {
   if (!view.lastMove) return '';
   const center = (square: JieqiSquare): { x: number; y: number } => {
@@ -455,14 +610,27 @@ function lastMoveMarkers(
   };
   const ends = { from: center(view.lastMove.from), to: center(view.lastMove.to) };
   if (activeLayout === 'cell') {
-    return boardLastMoveCellMarksSvg(ends, CELL, layer, {
-      size: PIECE_SIZE,
-      shape: xiangqiPieceSetShape(pieceSet, 'square'),
-    });
+    return boardLastMoveCellMarksSvg(
+      ends,
+      CELL,
+      layer,
+      tile3d
+        ? xiangqiPiece3dCellMark(pieceSet, CELL)
+        : { size: xiangqiPieceCellBox(PIECE_SIZE), set: pieceSet },
+    );
   }
   // The band hugs the piece actually standing on the destination: a move
   // reveals the piece, so it is face up, but a face-down back has a wider rim
   // (xiangqiPieceOuterRadius) and the band must clear that too.
+  if (tile3d && xiangqiPiece3dApplies(pieceSet, xiangqiPieceShapeForLayout(activeLayout))) {
+    // A 3D piece is one disc face up or down: the band rings its face, raised.
+    return boardLastMoveMarkersSvg(
+      ends,
+      MARK_PIECE_SIZE,
+      layer,
+      xiangqiPiece3dMarkPiece(pieceSet, CELL),
+    );
+  }
   const landed = view.board[view.lastMove.to];
   const outer = xiangqiPieceOuterRadius(
     pieceSet,
@@ -471,10 +639,38 @@ function lastMoveMarkers(
   return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer, { box: PIECE_SIZE, outer });
 }
 
+/**
+ * The selection on a board of 3D pieces (board-select-3d.ts): the selected
+ * piece's side in green and every capture target's face tinted, face
+ * up or face down alike, over the pieces and the last move's gold edge. The
+ * targets are the selected piece's legal moves, which the flat board rings.
+ */
+function select3dLayer(
+  view: JieqiPlayerView,
+  moves: readonly JieqiMove[],
+  selectedSquare: JieqiSquare | null,
+  perspective: JieqiColor,
+  outline: RaisedPieceOutline,
+): string {
+  if (!selectedSquare || !view.board[selectedSquare]) return '';
+  const at = (square: JieqiSquare) => {
+    const { file, rank } = jieqiCoordOf(square);
+    return intersection(file, rank, perspective);
+  };
+  const parts = [select3dSelectedSvg(at(selectedSquare), outline)];
+  for (const move of moves) {
+    if (move.from === selectedSquare && view.board[move.to] !== undefined) {
+      parts.push(select3dCaptureFaceSvg(at(move.to), outline));
+    }
+  }
+  return parts.join('');
+}
+
 function hitLayer(
   perspective: JieqiColor,
   view: JieqiPlayerView,
   moves: readonly JieqiMove[],
+  outline3d: RaisedPieceOutline | null = null,
 ): string {
   const targets = new Map<JieqiSquare, { capture: boolean }>();
   for (const move of moves) targets.set(move.to, { capture: view.board[move.to] !== undefined });
@@ -484,13 +680,20 @@ function hitLayer(
       const sq = jieqiSquareOf(f, r);
       const { x, y } = intersection(f, r, perspective);
       const target = targets.get(sq);
+      // A 3D capture target carries its marks on the piece: its face tint over
+      // the pieces (select3dLayer) and, under the pointer, its side in green.
+      const raised = target?.capture && outline3d;
       const marker = target
-        ? target.capture
-          ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
-          : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
+        ? raised
+          ? ''
+          : target.capture
+            ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
+            : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
         : '';
       const hover = target
-        ? `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
+        ? raised
+          ? select3dHoverEdgeSvg({ x, y }, outline3d)
+          : `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
         : '';
       parts.push(
         `<g data-square="${sq}" class="jieqi-hit${target ? ' jieqi-hit--target' : ''}">${hover}${marker}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`,
@@ -528,7 +731,7 @@ export function installJieqiBoardStyles(): void {
       stroke-width: 1.2;
     }
     .jieqi-selection { fill: rgba(31, 111, 91, 0.32); stroke: none; pointer-events: none; }
-    .jieqi-hint { fill: rgba(31, 111, 91, 0.72); opacity: 0.78; pointer-events: none; }
+    .jieqi-hint { fill: var(--board-move-hint, rgba(31, 111, 91, 0.72)); opacity: 0.78; pointer-events: none; }
     .jieqi-hint-capture {
       fill: none; stroke: rgba(31, 111, 91, 0.48); stroke-width: 3; pointer-events: none;
     }
@@ -550,4 +753,158 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit rect { fill: transparent; cursor: pointer; }
   `;
   document.head.append(style);
+}
+
+// ── Turn-over on a live reveal (#709, prototype) ─────────────────────────────
+
+type JieqiFaceBoard = Partial<Record<JieqiSquare, { faceDown: boolean }>>;
+
+/**
+ * The square a live jieqi move turned face up, or null. Jieqi reveals a hidden
+ * piece the first time it moves, so the trigger is the wire move plus whether
+ * its origin held a face-down piece on the board shown before it (public: both
+ * seats see which pieces are face down) and its destination now shows a face.
+ * The caller passes the previous LIVE board only, never a scrubbed one.
+ */
+export function jieqiRevealSquare(
+  move: JieqiMove,
+  before: JieqiFaceBoard | null | undefined,
+  after: JieqiFaceBoard,
+): JieqiSquare | null {
+  if (!before?.[move.from]?.faceDown) return null;
+  const landed = after[move.to];
+  return landed && !landed.faceDown ? move.to : null;
+}
+
+/**
+ * Turn the piece on `square` over from this side's jieqi back (the same back
+ * the board drew for it while hidden). `alongGlide` turns it while the glide
+ * that carries it runs (call after animateJieqiBoardMove); `delayMs` holds the
+ * turn instead. Call after the render that drew the face.
+ */
+/** Along a glide the turn takes this share of the glide, so the face is up
+ *  well before the piece lands (Brian, 2026-10-28: "get it flipped earlier"). */
+const ALONG_GLIDE_FLIP_SHARE = 0.75;
+
+function revealFlipDurationMs(alongGlide: boolean | undefined): number {
+  const flip = pieceFlipDurationMs();
+  if (!alongGlide || flip <= 0) return flip;
+  return Math.round(pieceAnimationDurationMs() * ALONG_GLIDE_FLIP_SHARE);
+}
+
+export function animateJieqiReveal(
+  host: HTMLElement,
+  square: JieqiSquare,
+  color: JieqiColor,
+  perspective: JieqiColor,
+  opts: {
+    delayMs?: number;
+    alongGlide?: boolean;
+    tile3d?: boolean;
+    pieceSet?: XiangqiPieceSet;
+    style?: PieceFlipStyle;
+  } = {},
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  if (!slot) return false;
+  if (!opts.alongGlide) animateMoveGlyphs(host, pieceAnimationDurationMs(), opts.delayMs ?? 0);
+  const { file, rank } = jieqiCoordOf(square);
+  const center = intersection(file, rank, perspective);
+  const pieceSet = opts.pieceSet ?? readStoredXiangqiPieceSet();
+  if (
+    (opts.tile3d ?? piece3dEnabled()) &&
+    xiangqiPiece3dApplies(pieceSet, xiangqiPieceShapeForLayout(activeLayout))
+  ) {
+    // The face and its rim turn as one piece; edge-on the turn shows the
+    // piece's thickness, and the back it turns from carries the same rim.
+    const back3d = xiangqiPiece3dLayers(
+      center,
+      CELL,
+      { color, role: 'soldier' },
+      pieceSet,
+      {
+        ariaLabel: `${color} hidden piece`,
+        className: 'jieqi-piece',
+        shrouded: true,
+        shroudedStyle: 'back',
+      },
+      'jieqi-piece-rim',
+      xiangqiPieceShapeForLayout(activeLayout),
+    );
+    const disc = xiangqiPiece3dDiscCenter(center, CELL, xiangqiPieceShapeForLayout(activeLayout));
+    const durationMs = revealFlipDurationMs(opts.alongGlide);
+    const goldEdge = boardLastMoveEdgeOn(host, center);
+    // A thick piece turned in the SVG flashes to a thin line edge-on; it
+    // turns as a true 3D body, riding the glide that carries it (Brian,
+    // 2026-10-29: "squashed into a thin line… in the middle of the flip").
+    const rim = slot.querySelector(':scope > .jieqi-piece-rim');
+    const style = opts.style ?? pieceFlipStyle();
+    if (style !== 'flat' && opts.delayMs === undefined && rim && durationMs > 0) {
+      const look = xiangqiPiece3dTurnLook(pieceSet, CELL, xiangqiPieceShapeForLayout(activeLayout));
+      const turned = flipTileOverlay({
+        slot,
+        center: disc,
+        radius: look.radius,
+        ...(look.corner === undefined ? {} : { corner: look.corner }),
+        depth: look.depth,
+        reach: look.radius + look.depth + look.shadow + 2,
+        front: {
+          band: rim.outerHTML,
+          face: Array.from(slot.children)
+            .filter((child) => child !== rim)
+            .map((child) => child.outerHTML)
+            .join(''),
+        },
+        back: back3d,
+        wall: { front: look.body[0], back: look.body[0] },
+        durationMs,
+        style,
+        // The gold edge rings the face turned up: it lands with it.
+        faceMark: goldEdge,
+        followGlide: opts.alongGlide === true,
+      });
+      if (turned) return true;
+    }
+    return flipSvgPiece(slot, disc, back3d.band + back3d.face, durationMs, {
+      ...(opts.delayMs === undefined ? {} : { delayMs: opts.delayMs }),
+      ...(opts.alongGlide ? { alongGlide: true } : {}),
+      style,
+      edge: xiangqiPiece3dEdge(pieceSet, CELL, xiangqiPieceShapeForLayout(activeLayout)),
+      follower: goldEdge,
+    });
+  }
+  const back = renderXiangqiPieceGlyphed({ color, role: 'soldier' }, readStoredXiangqiPieceSet(), {
+    ariaLabel: `${color} hidden piece`,
+    className: 'jieqi-piece',
+    shrouded: true,
+    shroudedStyle: 'back',
+    x: center.x - PIECE_SIZE / 2,
+    y: center.y - PIECE_SIZE / 2,
+    size: PIECE_SIZE,
+    shape: xiangqiPieceShapeForLayout(activeLayout),
+  });
+  return flipSvgPiece(slot, center, back, revealFlipDurationMs(opts.alongGlide), {
+    ...(opts.delayMs === undefined ? {} : { delayMs: opts.delayMs }),
+    ...(opts.alongGlide ? { alongGlide: true } : {}),
+  });
+}
+
+/** A step forward through a jieqi record (watch, study, review, the room's
+ *  stepper): when the move turned its piece face up, turn it over along the
+ *  glide, as it did live (Brian, 2026-10-29). Call after animateJieqiBoardMove.
+ *  `before` and `after` are the boards either side of the move; only their
+ *  face-down flags and the mover's colour are read. */
+export function animateJieqiStepReveal(
+  host: HTMLElement,
+  move: JieqiMove,
+  before: JieqiFaceBoard | null | undefined,
+  after: Partial<Record<JieqiSquare, { faceDown: boolean; color: JieqiColor }>>,
+  perspective: JieqiColor,
+): boolean {
+  const square = jieqiRevealSquare(move, before, after);
+  const piece = square ? after[square] : undefined;
+  if (!square || !piece) return false;
+  return animateJieqiReveal(host, square, piece.color, perspective, {
+    alongGlide: move.from !== move.to,
+  });
 }

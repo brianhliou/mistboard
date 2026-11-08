@@ -13,12 +13,11 @@
 // stacked file of the same role, both soldier-only situations) fall back to
 // coordinate notation rather than emit a wrong or unparseable token.
 //
-// Standard xiangqi only: fog and reveal variants must keep coordinate labels
-// (a role-bearing token like 炮二平五 would leak hidden piece identity), and
-// drop variants have no relative-notation drop form.
+// Standard xiangqi entry points use its own rules. Hidden-info variants can
+// share the bodies below with a public-role board and their own legal moves;
+// masked movers must keep coordinate labels. Drop moves have no relative form.
 
 import {
-  ARBITER_ADJUDICATED_DRAWS,
   coordOf,
   createInitialXiangqiState,
   type XiangqiColor,
@@ -29,17 +28,20 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   getStandardXiangqiLegalMoves,
   isStandardXiangqiGeneralInCheck,
   isStandardXiangqiLegalMove,
+  resumeAdjudicatedDraw,
 } from './variants-xiangqi-standard.js';
 import {
   FILE_ARG_ROLES,
   type RelativeMoveSpec,
   type RelativeSelector,
-  resolveRelativeMove,
+  resolveRelativeMoveFromLegalMoves,
   WXF_ORDINAL_MIN_STACK,
   wxfFileNumber,
+  type XiangqiNotationBoard,
 } from './xiangqi-relative-notation.js';
 import { xiangqiMoveToPikafishUci } from './xiangqi-uci.js';
 
@@ -72,9 +74,24 @@ export function describeXiangqiRelativeMove(
   grammar: XiangqiRelativeGrammar = 'chinese',
 ): RelativeMoveSpec | null {
   if (state.status.type !== 'playing') return null;
-  const color = state.status.turn;
-  const piece = state.board[move.from];
-  if (!piece || piece.color !== color) return null;
+  return describeRelativeMove(
+    state.board,
+    state.status.turn,
+    move,
+    getStandardXiangqiLegalMoves(state),
+    grammar,
+  );
+}
+
+function describeRelativeMove(
+  board: XiangqiNotationBoard,
+  color: XiangqiColor,
+  move: XiangqiMove,
+  legalMoves: readonly XiangqiMove[],
+  grammar: XiangqiRelativeGrammar,
+): RelativeMoveSpec | null {
+  const piece = board[move.from];
+  if (!piece?.role || piece.color !== color) return null;
 
   const a = coordOf(move.from);
   const b = coordOf(move.to);
@@ -92,27 +109,27 @@ export function describeXiangqiRelativeMove(
       ? wxfFileNumber(b.file, color)
       : Math.abs(b.rank - a.rank);
 
-  const selector = selectorFor(state, move.from, piece.role, color, forwardUp, grammar);
+  const selector = selectorFor(board, move.from, piece.role, color, forwardUp, grammar);
   if (!selector) return null;
 
   const spec: RelativeMoveSpec = { role: piece.role, selector, op, arg };
 
   // Round-trip guarantee: only emit specs the importer resolves back to this
   // exact move. Catches every residual ambiguity in one place.
-  const resolved = resolveRelativeMove(state, spec);
+  const resolved = resolveRelativeMoveFromLegalMoves(board, color, spec, legalMoves);
   if (!resolved || resolved.from !== move.from || resolved.to !== move.to) return null;
   return spec;
 }
 
 function selectorFor(
-  state: XiangqiGameState,
+  board: XiangqiNotationBoard,
   from: XiangqiSquare,
   role: XiangqiPieceRole,
   color: XiangqiColor,
   forwardUp: boolean,
   grammar: XiangqiRelativeGrammar,
 ): RelativeSelector | null {
-  const sources = Object.entries(state.board)
+  const sources = Object.entries(board)
     .filter(([, piece]) => piece && piece.color === color && piece.role === role)
     .map(([square]) => square as XiangqiSquare);
 
@@ -278,12 +295,12 @@ export const XIANGQI_ALGEBRAIC_MATE = '#';
  * there). A variant with its own check rule (atomic) adds its own suffix.
  */
 export function xiangqiAlgebraicMoveBody(
-  board: XiangqiGameState['board'],
+  board: XiangqiNotationBoard,
   move: XiangqiMove,
   legalMoves: readonly XiangqiMove[],
 ): string | null {
   const piece = board[move.from];
-  if (!piece) return null;
+  if (!piece?.role) return null;
   const letter = WXF_ROLE_TO_LETTER[piece.role];
   const capture = board[move.to] ? 'x' : '';
 
@@ -376,10 +393,33 @@ export function formatXiangqiRelativeMove(
   move: XiangqiMove,
   style: XiangqiRelativeStyle,
 ): string | null {
-  const spec = describeXiangqiRelativeMove(state, move, style === 'wxf' ? 'wxf' : 'chinese');
+  if (state.status.type !== 'playing') return null;
+  return formatXiangqiRelativeMoveFromLegalMoves(
+    state.board,
+    state.status.turn,
+    move,
+    style,
+    getStandardXiangqiLegalMoves(state),
+  );
+}
+
+/** Relative notation over public roles and the variant's own legal move set. */
+export function formatXiangqiRelativeMoveFromLegalMoves(
+  board: XiangqiNotationBoard,
+  color: XiangqiColor,
+  move: XiangqiMove,
+  style: XiangqiRelativeStyle,
+  legalMoves: readonly XiangqiMove[],
+): string | null {
+  const spec = describeRelativeMove(
+    board,
+    color,
+    move,
+    legalMoves,
+    style === 'wxf' ? 'wxf' : 'chinese',
+  );
   if (!spec) return null;
   if (style === 'wxf') return serializeWxf(spec);
-  const color = state.status.type === 'playing' ? state.status.turn : 'red';
   return serializeChinese(
     spec,
     color,
@@ -430,21 +470,13 @@ export function formatXiangqiMoves(
   startState?: XiangqiGameState,
 ): string[] {
   const initial = startState ?? createInitialXiangqiState('notation-format');
-  // Whoever is to move in the start position, not always Red: a chapter FEN can
-  // hand the line to Black on ply 1, and the resume below alternates from here.
-  const firstMover: XiangqiColor = initial.status.type === 'playing' ? initial.status.turn : 'red';
   let state: XiangqiGameState | null = initial;
   const labels: string[] = [];
-  for (const [index, move] of moves.entries()) {
-    // Resume through an auto-draw the record clearly played past.
-    if (state?.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-      const turn: XiangqiColor =
-        index % 2 === 0 ? firstMover : firstMover === 'red' ? 'black' : 'red';
-      state = { ...state, status: { type: 'playing', turn } };
-    }
+  for (const move of moves) {
+    if (state) state = resumeAdjudicatedDraw(state);
     if (state?.status.type === 'playing' && isStandardXiangqiLegalMove(state, move)) {
       labels.push(formatXiangqiMove(state, move, style));
-      state = applyStandardXiangqiMove(state, move);
+      state = applyXiangqiRecordMove(state, move);
     } else {
       state = null;
       labels.push(style === 'iccs' ? xiangqiMoveToPikafishUci(move) : coordinateXiangqiLabel(move));
