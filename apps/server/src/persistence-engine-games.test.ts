@@ -12,6 +12,7 @@ import {
   replayHiddenPieceRecord,
 } from '@mistboard/game';
 import './variant-tenant/register-tenants.js';
+import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import {
   type BotVsBotVariantPlan,
   botVsBotConfigFromEnv,
@@ -419,11 +420,15 @@ definePersistenceTests('scheduled engine games as public data', () => {
             ['jungle', 'public', false],
           ],
         );
-        // Banqi is MistyBanqi against itself.
-        assert.deepEqual([rows[0]!.white_name, rows[0]!.black_name], ['MistyBanqi', 'MistyBanqi']);
-        // No job of either carries a rating_policy: nothing reaches the Elo report.
+        // Banqi seats two rungs of its eight-level ladder, under their player-facing names.
+        const banqiNames = new Set(BANQI_PLAYABLE_ENGINES.map((tier) => tier.name));
+        for (const name of [rows[0]!.white_name, rows[0]!.black_name]) {
+          assert.ok(banqiNames.has(name), `banqi seat ${name}`);
+        }
+        // Jungle has no anchor, so no jungle job carries a rating_policy.
         const { rows: jobs } = await getPool().query<{ n: number }>(
-          `SELECT count(*)::int AS n FROM eve_jobs WHERE config ? 'rating_policy'`,
+          `SELECT count(*)::int AS n FROM eve_jobs
+           WHERE config ? 'rating_policy' AND config->>'variant' = 'jungle'`,
         );
         assert.equal(jobs[0]?.n, 0);
       }),

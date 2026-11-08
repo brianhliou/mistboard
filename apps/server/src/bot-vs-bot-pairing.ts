@@ -37,7 +37,7 @@ export function xiangqiBotLadder(): string[] {
 // (bot-vs-bot-pairing.test.ts pins every rung to a first-party bot of that
 // variant). A variant missing here has no ladder, and the scheduler skips it;
 // nothing falls back to the xiangqi ladder. Banqi's ladder keeps its historical
-// full-strength id at L8. Jungle's ladder is the two bots a player can pick, Misty and KataGo on
+// id misty-banqi at L7. Jungle's ladder is the two bots a player can pick, Misty and KataGo on
 // top (2026-10): its retired Misty levels stay seatable for old rooms but never
 // play scheduled games, so every published game shows a bot as prod serves it.
 const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
