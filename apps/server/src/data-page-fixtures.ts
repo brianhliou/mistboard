@@ -171,6 +171,13 @@ export function crawlerDataPageSources(): DataPageSources {
     data: async () => DATA_DOWNLOAD_FIXTURE,
     coaches: async () => [DATA_COACH_FIXTURE],
     categories: async () => DATA_FORUM_FIXTURE,
-    leaderboard: async () => [],
+    leaderboard: async () =>
+      Array.from({ length: 16 }, (_, i) => ({
+        ...DATA_RANKING_FIXTURE[0]!,
+        rank: i + 1,
+        handle: `rated-player-${i}`,
+        displayName: `Rated player ${i}`,
+        eloRating: 2400 - i * 100,
+      })),
   };
 }

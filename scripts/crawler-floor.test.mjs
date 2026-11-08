@@ -13,6 +13,27 @@ import {
 import { crawlerShells } from './fixtures/crawler-shell.mjs';
 import { crawlerCharCount, crawlerContentText, crawlerText } from './lib/crawler-text.mjs';
 
+test('redirect contracts check status and Location without following or requiring page copy', async () => {
+  const alias = { ...entry, path: '/leaderboard', redirect: { status: 308, location: '/player' } };
+  for (const [status, location, expected] of [
+    [308, '/player', []],
+    [200, '/player', ['HTTP 200, expected redirect 308']],
+    [301, '/player', ['HTTP 301, expected redirect 308']],
+    [308, '/wrong', ['Location /wrong, expected /player']],
+    [308, null, ['Location (missing), expected /player']],
+  ]) {
+    const result = await auditCrawlerRoute(alias, {
+      base: 'https://fixture.test',
+      fetchImpl: async (url, init) => {
+        assert.equal(new URL(url).pathname, '/leaderboard');
+        assert.equal(init.redirect, 'manual');
+        return new Response('', { status, headers: location ? { location } : {} });
+      },
+    });
+    assert.deepEqual(result.failures, expected);
+  }
+});
+
 // Blind spots: presence, not fidelity (crawler copy can drift); one fixture
 // per DB-backed template; no JS by design; minChars is only a floor and the
 // catalog phrase is the only protection against boilerplate.
