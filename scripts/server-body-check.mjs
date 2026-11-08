@@ -13,7 +13,13 @@ export function serverBodyProblems(html, css) {
   const copy = app.cloneNode(true);
   for (const node of copy.querySelectorAll('.crawler-copy,script,style,template')) node.remove();
   if (copy.textContent.trim()) problems.push('server body text outside .crawler-copy');
-  if (!/\.crawler-copy\s*\{[^}]*animation\s*:\s*crawler-copy-reveal\s+0s\s+4s\s+both/s.test(css))
+  // Vite's CSS minifier moves the animation name after the timing and fill mode.
+  // Require the same protection in either serialization, including its value boundary.
+  if (
+    !/\.crawler-copy\s*\{[^}]*animation\s*:\s*(?:crawler-copy-reveal\s+0s\s+4s\s+both|0s\s+4s\s+both\s+crawler-copy-reveal)\s*(?:;|})/s.test(
+      css,
+    )
+  )
     problems.push('crawler-copy first-paint stylesheet is not linked');
   return problems;
 }
