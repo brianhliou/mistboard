@@ -33,6 +33,12 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
         const keyed = match[2].match(/\bdata-i18n-key="([^"]*)"/);
         if (keyed) strings.add(decodeSvgText(keyed[1]));
       }
+      // The SVG renderer also translates accessible labels independently of
+      // text nodes, so a chart's aria-label is a live dictionary key too.
+      for (const match of value.matchAll(/<svg\b[^>]*\baria-label="([^"]*)"/gi)) {
+        const label = decodeSvgText(match[1]).trim();
+        if (label) strings.add(label);
+      }
       return;
     }
     if (typeof value === 'function') {
