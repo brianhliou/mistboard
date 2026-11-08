@@ -384,18 +384,61 @@ test('Gomoku smoke requires a Rapfi reply beyond the dealt opening, on the white
   );
 });
 
-test('Gomoku human-first deals require confirmed abort and retry, never smoke success', () => {
+test('Gomoku human-first deals open with a stone on an empty corner, never abort', () => {
   const effects = evaluateSmokeMessage(VARIANT_SMOKE_CONFIGS.gomoku, CONTEXT(), {
     type: 'hello',
     seat: 'black',
     seatToken: 'tok',
     seats: { black: 'human', white: 'rapfi-level-1' },
-    state: playingState({ opening: { stones: [{}, {}, {}, {}], turn: 'black' }, ply: 4 }),
+    state: playingState({
+      opening: { stones: [{ square: 'a1' }, { square: 'h8' }], turn: 'black' },
+      ply: 2,
+      lastMove: null,
+    }),
   });
   assert.deepEqual(effects, [
     { kind: 'seat-token', seatToken: 'tok' },
-    { kind: 'abort', retry: true },
+    { kind: 'move', to: 'o15' },
   ]);
+});
+
+test('Gomoku smoke resigns after the engine replies to its stone, then succeeds on resignation', () => {
+  const config = VARIANT_SMOKE_CONFIGS.gomoku;
+  const opening = { stones: [{ square: 'h8' }, { square: 'h9' }], turn: 'black' };
+  const seats = { black: 'human', white: 'rapfi-level-1' };
+  const context = { ...CONTEXT(), sentMove: true };
+  // Our own stone echoed back (engine still to move) changes nothing.
+  assert.deepEqual(
+    evaluateSmokeMessage(config, context, {
+      seats,
+      state: playingState({
+        opening,
+        ply: 3,
+        status: { type: 'playing', turn: 'white' },
+        lastMove: { to: 'a1' },
+      }),
+    }),
+    [],
+  );
+  const reply = playingState({ opening, ply: 4, moveNumber: 2, lastMove: { to: 'g7' } });
+  assert.deepEqual(evaluateSmokeMessage(config, context, { seats, state: reply }), [
+    {
+      kind: 'resign',
+      engineReplyState: { moveNumber: 2, turn: 'black', lastMove: { to: 'g7' } },
+    },
+  ]);
+  const finalStatus = { type: 'finished', winner: 'white', reason: 'resignation' };
+  assert.deepEqual(
+    evaluateSmokeMessage(
+      config,
+      { ...context, sentResign: true },
+      {
+        seats,
+        state: { ...reply, status: finalStatus },
+      },
+    ),
+    [{ kind: 'success', finalStatus }],
+  );
 });
 
 test('evaluateSmokeMessage: after abort was sent, aborted status finishes ok', () => {
