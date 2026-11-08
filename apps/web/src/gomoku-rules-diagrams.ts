@@ -1,7 +1,7 @@
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
-  GOMOKU_OPENINGS,
+  GOMOKU_DEALT_OPENINGS,
   type GomokuRoomState,
   type GomokuSquare,
   getGomokuPlayerView,
@@ -52,7 +52,7 @@ export const GOMOKU_RULES_EXAMPLES = [
 ] satisfies { before: GomokuRoomState; to: GomokuSquare }[];
 
 export const GOMOKU_OPENING = () =>
-  gomokuRulesBoard(createGomokuRoomState('gomoku-rules', GOMOKU_OPENINGS[0]));
+  gomokuRulesBoard(createGomokuRoomState('gomoku-rules', GOMOKU_DEALT_OPENINGS[0]));
 export const GOMOKU_PLACEMENT = () =>
   gomokuRulesBoard(applyGomokuRoomMove(createGomokuRoomState('gomoku-rules'), { to: 'h8' }));
 export const GOMOKU_WINNING_BOARD = () =>
