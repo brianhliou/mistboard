@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { localizeAnnouncement } from './announcement-i18n.js';
 import {
   type Announcement,
   allAnnouncements,
@@ -52,4 +53,42 @@ describe('announcement scheduling', () => {
     vi.stubEnv('DEV', true);
     expect(announcements(0)).toHaveLength(allAnnouncements().length);
   });
+});
+
+it('publishes the actual Gomoku launch once at the November 7 boundary with a play CTA and Chinese translations', () => {
+  vi.stubEnv('DEV', false);
+  try {
+    const launches = allAnnouncements().filter(
+      (entry) => entry.date === '2026-11-07' && entry.href?.includes('gameSpecId=gomoku'),
+    );
+    expect(launches).toHaveLength(1);
+    const entry = launches[0]!;
+    expect(entry.kind).toBe('release');
+    expect(entry.headline).toBe('Gomoku is open to everyone.');
+    for (const phrase of ['15x15', 'freestyle', 'dealt openings', 'Rapfi', 'eight levels', 'rated'])
+      expect(entry.body).toContain(phrase);
+    const url = new URL(entry.href!, 'https://mistboard.com');
+    expect(url.pathname).toBe('/');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      play: 'computer',
+      gameSpecId: 'gomoku',
+    });
+    const boundary = articleGoesLiveAt('2026-11-07');
+    expect(announcements(boundary - 1)).not.toContainEqual(entry);
+    expect(announcements(boundary)).toContainEqual(entry);
+    expect(announcementIsLive(entry, boundary - 1)).toBe(false);
+    expect(announcementIsLive(entry, boundary)).toBe(true);
+    for (const locale of ['zh-Hans', 'zh-Hant'] as const) {
+      const translated = localizeAnnouncement(entry, locale);
+      for (const key of ['headline', 'body', 'cta'] as const) {
+        expect(translated[key]).toBeTruthy();
+        expect(translated[key]).not.toBe(entry[key]);
+        expect(translated[key]).not.toContain('—');
+      }
+      expect(translated.href).toBe(entry.href);
+    }
+    expect(`${entry.headline} ${entry.body} ${entry.cta}`).not.toContain('—');
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });

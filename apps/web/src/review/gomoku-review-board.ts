@@ -1,22 +1,19 @@
-import {
-  type GomokuColor,
-  type GomokuMove,
-  type GomokuPlayerView,
-  parseGomokuMove,
-} from '@mistboard/game';
-import { type GomokuBoardMarker, gomokuBoardSvg } from '../gomoku-board.js';
+import { type GomokuColor, type GomokuMove, parseGomokuMove } from '@mistboard/game';
+import { type GomokuBoardMarker, gomokuBoardSvg, numberGomokuStones } from '../gomoku-board.js';
 import type { NodeShape } from './game-tree.js';
+import type { GomokuReviewView } from './gomoku-tree-adapter.js';
 import type { TreeBoardFactoryOptions, TreeBoardHandle } from './tree-review.js';
 
 /** Placement input uses the displayed projection; orientation never determines
  * who may play. SVG overlays are pointer-transparent and never alter that view. */
 export function createGomokuReviewBoard(
-  opts: TreeBoardFactoryOptions<GomokuMove, GomokuPlayerView, GomokuColor>,
-): TreeBoardHandle<GomokuPlayerView, GomokuColor, NodeShape, GomokuBoardMarker> {
-  let view: GomokuPlayerView | null = null;
+  opts: TreeBoardFactoryOptions<GomokuMove, GomokuReviewView, GomokuColor>,
+): TreeBoardHandle<GomokuReviewView, GomokuColor, NodeShape, GomokuBoardMarker> {
+  let view: GomokuReviewView | null = null;
   let markers: readonly GomokuBoardMarker[] = [];
   const paint = () => {
     opts.board.innerHTML = view ? gomokuBoardSvg(view, opts.enabled(), markers) : '';
+    numberGomokuStones(opts.board, view?.placements ?? []);
   };
   const place = (event: Event) => {
     const current = opts.getInteractionView();

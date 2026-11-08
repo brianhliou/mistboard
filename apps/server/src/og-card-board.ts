@@ -443,7 +443,15 @@ function renderIntersection(
   height: number,
   pieceSet: CardPieceSet,
 ): string {
-  const g = intersectionLayout(board.files, board.ranks, height);
+  const normal = intersectionLayout(board.files, board.ranks, height);
+  const g =
+    board.orientation === 'black'
+      ? {
+          ...normal,
+          px: (file: number) => normal.px(board.files - 1 - file),
+          py: (rank: number) => normal.py(board.ranks + 1 - rank),
+        }
+      : normal;
   const { cell, width } = g;
   const parts: string[] = [
     `<rect x="0" y="0" width="${width}" height="${height}" rx="${boardCornerRadius(width)}" fill="${BOARD_BG}"/>`,
@@ -757,6 +765,9 @@ export type CardCaption = {
   /** The headline for a card without players (the variant, a rules title, a
    *  study name), one entry per line. Ignored when `players` is set. */
   title?: string[];
+  /** Article headlines wrap across the column at a readable size. Opt-in keeps
+   *  the established rules/study title layout unchanged. */
+  wrapTitle?: boolean;
   /** Muted line under the title (the side to move), or under the variant on
    *  a game card. */
   subtitle?: string;
@@ -801,6 +812,54 @@ function breakLine(text: string, size: number, maxWidth: number): string[] {
     if (!best || score < best.score) best = { lines, score };
   }
   return best?.lines ?? [text];
+}
+
+/** Article titles can be full sentences. Wrap whole words (CJK at character
+ *  boundaries), with a conservative width budget for Noto Sans Bold. Combining
+ *  accents occupy no advance, so Vietnamese stays with its base character. */
+function articleTitleLines(text: string, size: number, maxWidth: number): string[] {
+  const width = (line: string) => {
+    let em = 0;
+    for (const ch of line.normalize('NFC')) {
+      if (/\p{Mark}/u.test(ch)) continue;
+      em += /[　-鿿＀-￯]/.test(ch) ? 1.05 : /[MW@]/.test(ch) ? 1 : 0.65;
+    }
+    return em * size;
+  };
+  const tokens =
+    text.match(
+      /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]|[^\s\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+|\s+/gu,
+    ) ?? [];
+  // Closing punctuation never opens a line: it wraps with the character before it.
+  const units: string[] = [];
+  for (const token of tokens) {
+    if (units.length && /^[，。、：；！？）」』】]/u.test(token)) units[units.length - 1] += token;
+    else units.push(token);
+  }
+  const lines: string[] = [];
+  let line = '';
+  let separator = '';
+  for (const token of units) {
+    if (/^\s+$/.test(token)) {
+      separator = ' ';
+      continue;
+    }
+    if (line && width(line + separator + token) > maxWidth) {
+      lines.push(line);
+      line = '';
+    }
+    // An unusually long unbroken word still stays inside the column.
+    for (const ch of (line ? separator : '') + token) {
+      if (line && width(line + ch) > maxWidth) {
+        lines.push(line);
+        line = '';
+      }
+      line += ch;
+    }
+    separator = '';
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 function brandLine(x: number, y: number): string {
@@ -937,6 +996,7 @@ function renderBoardInner(
   width: number,
   height: number,
   pieceSet: CardPieceSet,
+  edgeToEdge = false,
 ): string {
   switch (board.kind) {
     case 'gomoku':
@@ -957,6 +1017,7 @@ function renderBoardInner(
         boardSize: height,
         palette: BROWN_PALETTE,
         fogStyle: 'solid',
+        ...(edgeToEdge ? { cornerRadius: 0 } : {}),
         boards: [
           {
             pieces: board.pieces,
@@ -1018,8 +1079,14 @@ export function renderBoardCard(
 
   // No players: the title from the column's top, the brand at its foot.
   const titleBase = 52;
-  const titleLines = (caption.title ?? []).flatMap((line) => breakLine(line, titleBase, columnW));
-  const titleSize = Math.min(...titleLines.map((line) => fit(line, titleBase, 30, columnW)));
+  const titleLines = (caption.title ?? []).flatMap((line) =>
+    caption.wrapTitle
+      ? articleTitleLines(line, titleBase, columnW)
+      : breakLine(line, titleBase, columnW),
+  );
+  const titleSize = caption.wrapTitle
+    ? titleBase
+    : Math.min(...titleLines.map((line) => fit(line, titleBase, 30, columnW)));
   let y = boardY + 24 + titleSize;
   for (const line of titleLines) {
     parts.push(
@@ -1065,7 +1132,9 @@ export function isCardAspect(value: string): value is CardAspect {
  * board owns the frame, and centring it means any further centre crop (a
  * square cut of the 16:9 card) still reads as a board. A caption is left off on
  * purpose: these images sit beside the page title in search, which already says
- * what the wide card's caption says, and text is what a crop cuts.
+ * what the wide card's caption says, and text is what a crop cuts. The square
+ * runs the board to the frame's edge on its own wood, so the frame leaves no
+ * dark border at the tiny size search shows it.
  */
 export function renderBoardAspectCard(
   board: CardBoard,
@@ -1074,18 +1143,39 @@ export function renderBoardAspectCard(
   pieceSet: CardPieceSet = 'international',
 ): string {
   const frame = CARD_ASPECT_FRAMES[aspect];
+  const pad = aspect === '1x1' ? 0 : CARD_PAD;
   const { width, height } = boardSize(
     board,
-    frame.height - 2 * CARD_PAD,
-    Math.min(CARD_BOARD_MAX_WIDTH, frame.width - 2 * CARD_PAD),
+    frame.height - 2 * pad,
+    Math.min(CARD_BOARD_MAX_WIDTH, frame.width - 2 * pad),
   );
   const boardX = (frame.width - width) / 2;
   const boardY = (frame.height - height) / 2;
-  const inner = renderBoardInner(board, art, width, height, pieceSet);
+  const edgeToEdge = aspect === '1x1';
+  const inner = renderBoardInner(board, art, width, height, pieceSet, edgeToEdge);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.width}" height="${frame.height}" viewBox="0 0 ${frame.width} ${frame.height}">`,
-    `<rect width="${frame.width}" height="${frame.height}" fill="${CARD_BG}"/>`,
+    `<rect width="${frame.width}" height="${frame.height}" fill="${edgeToEdge ? boardWood(board) : CARD_BG}"/>`,
     `<svg x="${boardX}" y="${boardY}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${inner}</svg>`,
+    edgeToEdge ? jungleSideLines(board, boardX, width, frame.height) : '',
     `</svg>`,
   ].join('');
+}
+
+/** A narrow Jungle board's outer edges, for a frame painted the board's own
+ *  colour: the board has no outline, so its cells would run on into the frame. */
+function jungleSideLines(board: CardBoard, x: number, width: number, height: number): string {
+  if (x <= 0 || boardWood(board) !== JUNGLE.land) return '';
+  return [x, x + width]
+    .map(
+      (lineX) =>
+        `<line x1="${lineX}" y1="0" x2="${lineX}" y2="${height}" stroke="${JUNGLE.grid}" stroke-width="1"/>`,
+    )
+    .join('');
+}
+
+/** The colour a board is painted on, for a frame that should read as more board. */
+function boardWood(board: CardBoard): string {
+  if (board.kind === 'jungle' || (board.kind === 'grid' && isJungleGrid(board))) return JUNGLE.land;
+  return BOARD_BG;
 }

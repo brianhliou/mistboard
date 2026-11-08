@@ -8,6 +8,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   parseRapfiOutput,
   RAPFI_LEVELS,
+  RAPFI_MOVE_GRACE_MS,
   Rapfi,
   type RapfiPosition,
   type RapfiTransport,
@@ -15,12 +16,14 @@ import {
   rapfiPlySeed,
   selectRapfiMove,
 } from './rapfi.js';
+import { requireTestEngineNet } from './test-net.js';
 
 const engineDir = resolve(__dirname, '../../public/engine/rapfi');
 const clients: Rapfi[] = [];
 const threads: Worker[] = [];
 
 beforeAll(() => {
+  requireTestEngineNet('rapfi');
   // Fresh worktrees do not track the 40 MB data file. Exercise the same verified
   // setup as predev (staged locally, release URL when one has been configured).
   execFileSync(process.execPath, [resolve(__dirname, '../../scripts/fetch-rapfi-net.mjs')]);
@@ -490,12 +493,12 @@ describe('eight Rapfi levels', () => {
     ).toEqual([]);
   });
 
-  it('uses five seeded choice tiers then three increasing best-move budgets within five seconds', async () => {
+  it('uses five seeded choice tiers then three increasing best-move budgets within six seconds', async () => {
     expect(RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     const candidates = parseRapfiOutput(tierOutput);
     for (const [index, tier] of RAPFI_LEVELS.entries()) {
       expect(tier.nodes).toBeGreaterThan(index ? RAPFI_LEVELS[index - 1].nodes : 0);
-      expect(tier.timeMs + 250).toBeLessThanOrEqual(5000);
+      expect(tier.timeMs + RAPFI_MOVE_GRACE_MS).toBeLessThanOrEqual(6000);
       const transport = controlled();
       const pos: RapfiPosition = { turn: 2, stones: [{ x: 7, y: 7, player: 1 }] };
       const seed = rapfiPlySeed(rapfiGameSeed('test-room'), 1);
@@ -558,6 +561,34 @@ describe('Rapfi request lifecycle', () => {
     transport.receive({ type: 'done', elapsedMs: 10 });
     await expect(pending).resolves.toEqual({ move: { x: 7, y: 7 }, elapsedMs: 10 });
     expect(transport.terminate).not.toHaveBeenCalled();
+  });
+
+  it('accepts a slow device finishing past the budget but inside the grace (iPhone, 2026-11-05)', async () => {
+    const transport = controlled();
+    const tier = RAPFI_LEVELS.find((entry) => entry.level === 6)!;
+    const pending = transport.engine.chooseMove(
+      { turn: 2, stones: [{ x: 7, y: 7, player: 1 }] },
+      6,
+    );
+    transport.receive({ type: 'ready' });
+    transport.receive({ type: 'line', line: '8,8' });
+    const elapsedMs = tier.timeMs + 900;
+    transport.receive({ type: 'done', elapsedMs });
+    await expect(pending).resolves.toEqual({ move: { x: 8, y: 8 }, elapsedMs });
+    expect(RAPFI_MOVE_GRACE_MS).toBeGreaterThan(900);
+  });
+
+  it('still rejects a search that reports more than its budget plus the grace', async () => {
+    const transport = controlled();
+    const tier = RAPFI_LEVELS.find((entry) => entry.level === 6)!;
+    const pending = transport.engine.chooseMove(
+      { turn: 2, stones: [{ x: 7, y: 7, player: 1 }] },
+      6,
+    );
+    transport.receive({ type: 'ready' });
+    transport.receive({ type: 'line', line: '8,8' });
+    transport.receive({ type: 'done', elapsedMs: tier.timeMs + RAPFI_MOVE_GRACE_MS + 1 });
+    await expect(pending).rejects.toThrow('move timed out');
   });
 
   it('rejects malformed positions, levels and seeds without allocating a worker', async () => {
@@ -638,7 +669,9 @@ describe('Rapfi request lifecycle', () => {
       'move timed out',
     );
     transport.receive({ type: 'ready' });
-    await vi.advanceTimersByTimeAsync(RAPFI_LEVELS[4].timeMs + 250);
+    await vi.advanceTimersByTimeAsync(RAPFI_LEVELS[4].timeMs + RAPFI_MOVE_GRACE_MS - 1);
+    expect(transport.terminate).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
     await move;
     expect(transport.terminate).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);

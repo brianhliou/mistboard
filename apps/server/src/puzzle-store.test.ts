@@ -6,9 +6,10 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { loadAllSeedPuzzles } from '@mistboard/game/puzzle-seed';
-import { isInitialized } from './persistence-db.js';
-import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
+import { xiangqiPuzzleTrainingTags } from '@mistboard/game';
+import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
+import { close, getPool, init, isInitialized } from './persistence-db.js';
+import { getPuzzleStore, playerPuzzleCount, resetPuzzleStoreForTests } from './puzzle-store.js';
 
 test('persistence-off store serves the seed corpus byte-identically, in order', async () => {
   assert.equal(isInitialized(), false, 'this test expects a persistence-off runtime');
@@ -38,4 +39,58 @@ test('persistence-off store snapshot is cached across calls', async () => {
   const first = await getPuzzleStore();
   const second = await getPuzzleStore();
   assert.equal(first, second);
+});
+
+test('player provenance survives JSON storage and reload alongside derived training tags', async (t) => {
+  resetPuzzleStoreForTests();
+  init('postgres://unused@127.0.0.1:9/never');
+  t.after(async () => {
+    await close();
+    resetPuzzleStoreForTests();
+  });
+  const seed = loadAllSeedPuzzles().find((puzzle) => puzzle.variant === 'xiangqi')!;
+  assert.equal(seed.variant, 'xiangqi');
+  const puzzle = {
+    ...seed,
+    tags: ['player:fixture-player', 'player:fixture-opponent', 'player:fixture-player'],
+    themes: ['matein4'],
+  };
+  const stored = JSON.stringify(puzzle);
+  let reads = 0;
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
+    assert.match(sql, /SELECT data FROM puzzles WHERE hidden_reason IS NULL/);
+    reads += 1;
+    return { rows: [{ data: JSON.parse(stored) }] };
+  });
+  for (let reload = 0; reload < 2; reload += 1) {
+    const store = await getPuzzleStore();
+    assert.deepEqual(store.byId.get(puzzle.id), JSON.parse(stored));
+    assert.deepEqual(store.tagsById.get(puzzle.id), [
+      ...(store.motifsById.get(puzzle.id) ?? []),
+      ...xiangqiPuzzleTrainingTags(seed),
+      'player:fixture-player',
+      'player:fixture-opponent',
+    ]);
+    resetPuzzleStoreForTests();
+  }
+  assert.equal(reads, 2);
+});
+
+test('player puzzle count matches exact tags in the discoverable snapshot only', async () => {
+  resetPuzzleStoreForTests();
+  const seed = await getPuzzleStore();
+  const puzzle = seed.puzzles.find((puzzle) => puzzle.variant === 'xiangqi')!;
+  const parked = seed.puzzles.find((puzzle) => puzzle.variant === 'jungle')!;
+  const store = {
+    ...seed,
+    puzzles: [puzzle, parked],
+    tagsById: new Map([
+      [puzzle.id, ['player:fixture-player'] as const],
+      [parked.id, ['player:fixture-parked'] as const],
+    ]),
+  };
+  assert.equal(await playerPuzzleCount('fixture-player', store), 1);
+  assert.equal(await playerPuzzleCount('fixture', store), 0);
+  assert.equal(await playerPuzzleCount('fixture-parked', store), 0);
 });

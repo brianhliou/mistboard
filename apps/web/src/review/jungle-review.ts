@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 // Jungle (Dou Shou Qi) review surface: the jungle presentation bundle over the
 // generic tree-review controller (mountTreeReview). Jungle is perfect-information,
 // so it drives the in-browser MistyJungle wasm client engine with the FULL-board FEN
@@ -12,6 +13,7 @@ import {
   type JunglePlayerView,
   jungleStateToEngineFen,
 } from '@mistboard/game';
+
 import { rectangularGridAspect } from '../board-metrics.js';
 import { createJungleInteractiveBoard } from '../jungle-board.js';
 import {
@@ -74,6 +76,8 @@ const junglePresentation: TreePresentation<
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Jungle board',
   boardAspect: rectangularGridAspect(JUNGLE_BOARD_VIEW),
+  // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+  appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
   boardCols: 7,
   // Jungle pieces pick up their look from the render call (not a CSS piece set),
   // and a full re-render happens on every navigation, so no appearance event.

@@ -27,6 +27,7 @@ const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
   ],
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
+  ['gomoku', 'PvE is unrated; no Gomoku EvE adapter or ladder run yet'],
   ['jungle-flip', 'one node-budgeted bot, nothing to rank it against'],
   [
     'xiangqi-mahjong',
@@ -62,22 +63,37 @@ test('data-only adapters have no random floor, so nothing can rate them', () => 
 test('binary-backed adapters ask workers for their engine, and the worker probes it', () => {
   assert.equal(eveAdapterFor('banqi')?.requiredCapability, 'banqi_engine');
   assert.equal(eveAdapterFor('jungle')?.requiredCapability, 'jungle_engine');
+  assert.equal(
+    eveAdapterFor('three-kingdoms-banqi')?.requiredCapability,
+    'three_kingdoms_banqi_engine',
+  );
   const capabilities = eveWorkerCapabilities();
-  assert.deepEqual(Object.keys(capabilities).sort(), ['banqi_engine', 'jungle_engine']);
+  assert.deepEqual(Object.keys(capabilities).sort(), [
+    'banqi_engine',
+    'jungle_engine',
+    'three_kingdoms_banqi_engine',
+  ]);
   for (const value of Object.values(capabilities)) assert.equal(typeof value, 'boolean');
   // A missing binary is false, never an error: point both resolvers at nothing.
   const saved = {
     banqi: process.env.MISTBOARD_BANQI_ENGINE_PATH,
     jungle: process.env.MISTBOARD_JUNGLE_ENGINE_PATH,
+    tk: process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH,
   };
   process.env.MISTBOARD_BANQI_ENGINE_PATH = '/nonexistent/banqi-engine';
   process.env.MISTBOARD_JUNGLE_ENGINE_PATH = '/nonexistent/jungle-engine';
+  process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = '/nonexistent/three-kingdoms-engine';
   try {
-    assert.deepEqual(eveWorkerCapabilities(), { banqi_engine: false, jungle_engine: false });
+    assert.deepEqual(eveWorkerCapabilities(), {
+      banqi_engine: false,
+      jungle_engine: false,
+      three_kingdoms_banqi_engine: false,
+    });
   } finally {
     for (const [key, value] of [
       ['MISTBOARD_BANQI_ENGINE_PATH', saved.banqi],
       ['MISTBOARD_JUNGLE_ENGINE_PATH', saved.jungle],
+      ['MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH', saved.tk],
     ] as const) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
@@ -155,6 +171,7 @@ test('EvE room ids sit under the tenant prefix', () => {
   assert.equal(eveRoomId(eveAdapterFor('xiangqi')!, 'task1'), 'xq_eve_task1');
   assert.equal(eveRoomId(eveAdapterFor('fortress-xiangqi')!, 'task1'), 'fxq_eve_task1');
   assert.equal(eveRoomId(eveAdapterFor('duck-xiangqi')!, 'task1'), 'dkx_eve_task1');
+  assert.equal(eveRoomId(eveAdapterFor('three-kingdoms-banqi')!, 'task1'), 'tkb_eve_task1');
   assert.equal(eveAdapterFor('crossroads-chess'), null);
 });
 

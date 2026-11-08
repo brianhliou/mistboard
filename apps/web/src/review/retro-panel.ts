@@ -12,8 +12,8 @@ export interface RetroPanelOptions<Node> {
   /** "21… h8-e8" for the fault / solution move. */
   labelFor(node: Node): string;
   onClose(): void;
-  /** Review the OTHER side's mistakes: the host rebuilds the controller. */
-  onFlip(): void;
+  /** Review the other side's mistakes. Only available on the analysis board. */
+  onFlip?: () => void;
   /**
    * The ink this side's disc paints. `ctrl.side` is a move-order SLOT named
    * 'red'/'black', so using it directly gave a chess player a red disc; the host
@@ -139,9 +139,11 @@ export function createRetroPanel<Node>(
       : sideKey(t('review.retroDoneRed'), t('review.retroDoneBlack'));
     const links: HTMLElement[] = [];
     if (!nothing) links.push(link(t('review.retroDoItAgain'), () => ctrl.reset()));
-    links.push(
-      link(sideKey(t('review.retroReviewBlack'), t('review.retroReviewRed')), () => opts.onFlip()),
-    );
+    if (opts.onFlip) {
+      links.push(
+        link(sideKey(t('review.retroReviewBlack'), t('review.retroReviewRed')), opts.onFlip),
+      );
+    }
     return [card(sideDisc(), em(message), choices(...links))];
   }
 

@@ -2612,11 +2612,19 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 
 /* Same small print as .xqb-rights-note on the player pages. */
 .article-contact-note {
-  margin: 0;
+  margin: 16px 0 0;
+  padding: 0 clamp(20px, 4vw, 48px);
   color: var(--site-muted);
   font-size: 12px;
   line-height: 1.5;
-  text-align: center;
+}
+
+/* Below the sheet, in its column of the three-column layout. */
+@media (min-width: 1280px) {
+  .article-contact-note {
+    grid-column: sheet;
+    grid-row: 2;
+  }
 }
 
 .article-contact-note a {

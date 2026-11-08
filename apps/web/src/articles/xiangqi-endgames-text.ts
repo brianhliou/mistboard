@@ -59,8 +59,8 @@ export const ENDGAME_PAGE_TEXT = {
   ),
   introPractice: tri(
     'All 35 positions in the table below are on the Practice page against the computer, in the set for their piece. In the wins you play Red and give mate; in the draws you play Black and hold for 15 moves.',
-    '下表全部35个局面都在练习页，按子力分在各自的练习集里，和电脑对下。胜局你执红将死对方；和局你执黑守住15回合。',
-    '下表全部35個局面都在練習頁，按子力分在各自的練習集裡，和電腦對下。勝局你執紅將死對方；和局你執黑守住15回合。',
+    '下表全部35个局面都在练习页，按子力分在各自的练习集里，和电脑对弈。胜局你执红将死对方；和局你执黑守住15回合。',
+    '下表全部35個局面都在練習頁，按子力分在各自的練習集裡，和電腦對弈。勝局你執紅將死對方；和局你執黑守住15回合。',
   ),
   practiceButton: tri('Practice these endgames', '练习这些残局', '練習這些殘局'),
   tableHeading: tri(
@@ -97,7 +97,7 @@ export const ENDGAME_PAGE_TEXT = {
   groupMixed: tri('Horse and soldier, chariot and cannon', '马兵与车炮残局', '馬兵與車砲殘局'),
   introSource: tri(
     'The results follow the Chinese Wikipedia list of standard results (象棋勝和定式), which cites 金启昌 and 杨典, 象棋残局胜和定式 (2008). Rows it does not grade follow English Wikipedia. The positions are ours, and every result was checked against the exact results of [chessdb.cn](https://www.chessdb.cn/), the Chinese chess cloud database, for that exact position.',
-    '结果依据中文维基百科的“象棋勝和定式”条目，该条目引用金启昌、杨典《象棋残局胜和定式》（2008）。该条目没有给出等级的几行依据英文维基百科。局面由我们摆出，每一个结果都经[象棋云库 chessdb.cn](https://www.chessdb.cn/)对该局面的确切结果核对。',
+    '结果依据中文维基百科的“象棋胜和定式”条目，该条目引用金启昌、杨典《象棋残局胜和定式》（2008）。该条目没有给出等级的几行依据英文维基百科。局面由我们摆出，每一个结果都经[象棋云库 chessdb.cn](https://www.chessdb.cn/)对该局面的确切结果核对。',
     '結果依據中文維基百科的「象棋勝和定式」條目，該條目引用金啟昌、楊典《象棋殘局勝和定式》（2008）。該條目沒有給出等級的幾行依據英文維基百科。局面由我們擺出，每一個結果都經[象棋雲庫 chessdb.cn](https://www.chessdb.cn/)對該局面的確切結果核對。',
   ),
   exerciseHeading: tri(
@@ -107,8 +107,8 @@ export const ENDGAME_PAGE_TEXT = {
   ),
   exerciseText: tri(
     'A horse against a lone elephant is a draw as a rule: the elephant switches flanks faster than the horse can cut it off. In this position the elephant is stuck on one side and Red moves first, and that is enough. The tablebase gives Red mate in five moves. The first move decides it: find the point that keeps the elephant from getting back across.',
-    '单马对单象通常是和棋：象换翼的速度比马切断它的速度更快。这个局面里象被困在一侧，又轮到红方先走，这就够了。残局库给出红方五步杀。关键在第一步：找到那个让象回不到另一侧的位置。',
-    '單馬對單象通常是和棋：象換翼的速度比馬切斷它的速度更快。這個局面裡象被困在一側，又輪到紅方先走，這就夠了。殘局庫給出紅方五步殺。關鍵在第一步：找到那個讓象回不到另一側的位置。',
+    '单马对单象通常是和棋：象换翼的速度比马切断其退路的速度更快。这个局面里象被困在一侧，又轮到红方先走，这就够了。残局库给出红方五步杀。关键在第一步：找到那个让象回不到另一侧的位置。',
+    '單馬對單象通常是和棋：象換翼的速度比馬切斷其退路的速度更快。這個局面裡象被困在一側，又輪到紅方先走，這就夠了。殘局庫給出紅方五步殺。關鍵在第一步：找到那個讓象回不到另一側的位置。',
   ),
   exerciseCaption: tri('Red to move and mate in five.', '红先，五步杀。', '紅先，五步殺。'),
   exerciseButton: tri('Play it out', '和电脑下', '和電腦下'),

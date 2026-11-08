@@ -17,7 +17,6 @@ import { colorLabel } from './adapter.js';
 import {
   goalLabel,
   parseVariantFilter,
-  puzzleCodeLine,
   puzzleDifficultyControls,
   type QueuePanelProps,
   sourceGameLines,
@@ -47,8 +46,9 @@ export function puzzlePhoneMenuHead(props: QueuePanelProps): HTMLElement | null 
 
   const top = document.createElement('div');
   top.className = 'puzzle-pm-head__top';
-  const title = puzzleCodeLine(current);
+  const title = document.createElement('span');
   title.className = 'puzzle-pm-head__title';
+  title.textContent = t('puzzle.label').trim();
   const status = document.createElement('span');
   status.className = `puzzle-pm-head__status${solved ? ' puzzle-pm-head__status--solved' : ''}`;
   status.textContent = solved ? t('puzzle.statusSolved') : t('puzzle.playedLocally');

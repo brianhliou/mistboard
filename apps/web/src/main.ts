@@ -15,13 +15,7 @@ import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
-import {
-  applyInternalTag,
-  captureException,
-  initializeHumanInputTracking,
-  setPostHogInstance,
-  trackLocaleResolved,
-} from './analytics.js';
+import { captureException, initializeAnalytics, trackLocaleResolved } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
   chunkLoadFailureContext,
@@ -29,6 +23,7 @@ import {
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
   reloadForChunkLoadError,
+  stylesheetServedDespiteFailure,
 } from './chunk-load-recovery.js';
 import { editorVariantFromPath } from './editor/editor-catalog.js';
 import { coordinateTrainerEnabled, correspondenceEnabled } from './feature-flags.js';
@@ -149,48 +144,7 @@ if (!isEmbedDocument)
       /* banner stays hidden; WS broadcast still covers in-game users */
     });
 
-const phKey = import.meta.env.VITE_POSTHOG_KEY;
-const phHost = import.meta.env.VITE_POSTHOG_HOST;
-if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
-  initializeHumanInputTracking();
-  void import('posthog-js').then(({ default: posthog }) => {
-    posthog.init(phKey, {
-      api_host: phHost,
-      autocapture: false,
-      capture_pageview: false,
-      persistence: 'localStorage',
-      disable_session_recording: true,
-      respect_dnt: true,
-      // Real-user load timing: web vitals (LCP/CLS/FCP/INP) so we can actually
-      // see homepage load performance and catch regressions. network_timing is a
-      // session-replay feature (disabled here), so leave it off — web_vitals is
-      // independent of it.
-      capture_performance: { web_vitals: true, network_timing: false },
-      // Unhandled errors + promise rejections surface as $exception events
-      // (Error Tracking), so a broken page reports itself instead of going dark.
-      capture_exceptions: true,
-      // Drop benign browser noise before ingestion. "ResizeObserver loop
-      // completed with undelivered notifications" is a synthetic warning
-      // Chromium fires at window.onerror when an observer callback defers a
-      // layout to the next frame; nothing breaks and it never reproduces on
-      // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
-      // Errors thrown while a stale-chunk reload is in flight are the reload's
-      // own side effect (lazy imports resolve undefined until it lands), so
-      // they are dropped too; the failed chunk itself is not an app defect.
-      before_send: (event) => {
-        if (event?.event === '$exception' && chunkReloadPending()) return null;
-        const message = event?.properties?.$exception_values?.[0];
-        if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
-          return null;
-        }
-        return event;
-      },
-    });
-    applyInternalTag(posthog);
-    posthog.capture('$pageview', { path: window.location.pathname });
-    setPostHogInstance(posthog);
-  });
-}
+void initializeAnalytics(isEmbedDocument);
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
@@ -1151,10 +1105,16 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
-    captureException(err, {
+    // A stylesheet the server still serves was blocked by this browser, not
+    // lost in a deploy, so it stays out of Error Tracking. The probe runs
+    // beside the error panel rather than before it.
+    const failure = {
       context: 'route_mount',
       path: window.location.pathname,
       ...chunkLoadFailureContext(err),
+    };
+    void stylesheetServedDespiteFailure(err).then((blockedByBrowser) => {
+      if (!blockedByBrowser) captureException(err, failure);
     });
     if (serverRender.present) return;
     appRoot.replaceChildren();

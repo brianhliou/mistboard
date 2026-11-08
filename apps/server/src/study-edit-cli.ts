@@ -162,6 +162,7 @@ export type StudyCreateSpec = {
     tags?: Record<string, string>;
     i18n?: Record<string, unknown>;
     scoreSeries?: unknown;
+    gamebook?: boolean;
   };
 };
 
@@ -491,6 +492,8 @@ export function checkCreate(
   }
   if (!isSerializedTree(chapter.tree))
     throw new Error('create: first chapter is not a SerializedTree');
+  if (chapter.gamebook !== undefined && typeof chapter.gamebook !== 'boolean')
+    throw new Error('create: gamebook must be true or false');
   const visibility = spec.visibility ?? 'private';
   const plies = mainlinePlies(chapter.tree);
   const series =
@@ -504,13 +507,19 @@ export function checkCreate(
     name: spec.name.trim(),
     visibility,
     chapters: [
-      { id: 'first', name: chapter.name.trim(), variant: chapter.variant, root: chapter.tree },
+      {
+        id: 'first',
+        name: chapter.name.trim(),
+        variant: chapter.variant,
+        root: chapter.tree,
+        gamebook: chapter.gamebook ?? false,
+      },
     ],
   } as unknown as StudyWithChapters;
   return {
     lines: [
       `create "${study.name}" for @${spec.owner} (${visibility}), first chapter ` +
-        `"${chapter.name.trim()}" (${chapter.variant}, ${plies} plies${series})`,
+        `"${chapter.name.trim()}" (${chapter.variant}, ${plies} plies${series}${chapter.gamebook ? ', gamebook' : ''})`,
     ],
     study,
   };
@@ -541,11 +550,15 @@ export async function applyCreate(
   });
   if (!created) throw new Error('create: persistence is not initialized');
   const first = created.chapters[0];
+  if (first && chapter.gamebook) {
+    must('create gamebook', await setChapterGamebook(first.id, ownerId, true));
+  }
   if (first && chapter.scoreSeries !== undefined && chapter.scoreSeries !== null) {
     const scoreSeries = parseChapterScoreSeries(chapter.scoreSeries, mainlinePlies(first.root));
     must('create series', await setChapterScoreSeries(first.id, ownerId, scoreSeries));
-    return (await getStudyById(created.id)) ?? created;
   }
+  if (chapter.gamebook || (chapter.scoreSeries !== undefined && chapter.scoreSeries !== null))
+    return (await getStudyById(created.id)) ?? created;
   return created;
 }
 

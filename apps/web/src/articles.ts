@@ -13,6 +13,7 @@ import {
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
   type GameSpecId,
+  isRetiredGameSpec,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
@@ -853,7 +854,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
-    thumb.append(renderArticleThumbnail(article.thumbnail, locale));
+    thumb.append(renderArticleThumbnail(article.thumbnail, locale, { imageAsBackground: true }));
   } else {
     thumb.classList.add('is-empty');
   }
@@ -1241,8 +1242,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     const intro = document.createElement('div');
     intro.className = 'article-intro';
     for (const block of article.intro) intro.append(renderBlock(block, articleLang));
-    const photo = intro.querySelector('figure.article-figure-image');
-    if (article.contactNote && photo) photo.append(articleContactNote(article.slug, locale));
     sheet.append(intro);
   }
 
@@ -1259,6 +1258,16 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     h2.id = uniqueId(section.heading, usedIds, headingIndex++);
     body.append(h2);
     for (const node of renderSectionBody(section, articleLang)) {
+      // These closing play rows use the header's labels, locale and links, so
+      // a bot button appears only where the variant really offers a bot.
+      if (
+        (base.slug === 'gomoku' || base.slug === 'three-kingdoms-banqi') &&
+        node.classList.contains('article-cta-row')
+      ) {
+        const playCta = buildRulesPlayCta(base.slug, article.title, locale);
+        if (playCta) body.append(playCta);
+        continue;
+      }
       if (node instanceof HTMLHeadingElement && node.tagName === 'H3') {
         node.id = uniqueId(node.textContent ?? '', usedIds, headingIndex++);
       }
@@ -1276,6 +1285,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   main.append(sheet);
   const sidebar = buildTocSidebar(body, articleLang);
   if (sidebar) main.append(sidebar);
+  if (article.contactNote) main.append(articleContactNote(article.slug, locale));
 
   return main;
 }
@@ -2710,11 +2720,19 @@ function playCtaOpenToViewer(href: string): boolean {
   );
 }
 
+/** A retired variant is closed to everyone, grant or not, so its rules page
+ *  shows neither the buttons nor the note about asking to join a playtest. */
+function playCtaIsRetired(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return id !== null && isRetiredGameSpec(id);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
-  const gated = block.buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
+  const buttons = block.buttons.filter((btn) => !playCtaIsRetired(btn.href));
+  const gated = buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
   if (gated.length > 0) {
     // A playtest variant's rules page: redraw once the account's real grants
     // are in, so a player granted since their last visit gets the buttons.
@@ -2726,7 +2744,7 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       { once: true },
     );
   }
-  for (const btn of block.buttons) {
+  for (const btn of buttons) {
     if (pointsAtHiddenArticle(btn.href)) continue;
     if (gated.includes(btn)) continue;
     const a = document.createElement('a');
@@ -3030,6 +3048,7 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
 export function renderArticleThumbnail(
   thumb: ArticleThumbnail,
   locale: Locale = currentLocale(),
+  options: { imageAsBackground?: boolean } = {},
 ): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb';
@@ -3070,6 +3089,20 @@ export function renderArticleThumbnail(
     return wrap;
   }
   if (thumb.kind === 'image') {
+    // Only the homepage opts in: keep article photos out of its indexable
+    // images, in both the prerender and the client render. Other listings keep
+    // lazy img elements. The existing wrapper still reserves the same box.
+    if (options.imageAsBackground) {
+      wrap.style.backgroundImage = `url(${JSON.stringify(thumb.src)})`;
+      wrap.style.backgroundSize = 'cover';
+      wrap.style.backgroundPosition = thumb.position ?? '50% 50%';
+      if (thumb.alt) {
+        wrap.removeAttribute('aria-hidden');
+        wrap.setAttribute('role', 'img');
+        wrap.setAttribute('aria-label', thumb.alt);
+      }
+      return wrap;
+    }
     const img = document.createElement('img');
     img.src = thumb.src;
     img.alt = thumb.alt ?? '';

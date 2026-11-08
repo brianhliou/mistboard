@@ -235,11 +235,10 @@ export async function mountVariantAnalysisPage(
       // ?ply= changes on navigation; a side line never replaces the mainline.
       const codec = makeGomokuTreeAdapter();
       const title = t('analysis.pageTitle', { variant: variantDisplayLabel(id) });
+      const importPanel = createGomokuImportPanel();
       mountGomokuReview(root, {
         ...base,
-        // Keep the preceding board's fixed-orientation controls. The generic
-        // phone bar assumes red/black seats and always offers a flip.
-        phoneAnalysisBar: undefined,
+        phoneAnalysisBar: { variantName: label, importPanel, engineInTools: true },
         title,
         ariaLabel: title,
         boardAriaLabel: t('live.gomokuBoard'),
@@ -248,7 +247,7 @@ export async function mountVariantAnalysisPage(
         moves: game?.moves ?? movesFromParam(movesParam, codec, codec.initialTruth()),
         urlPly: true,
         onLineChange: game || movesParam ? undefined : syncLineToUrl(codec),
-        underboardNote: createGomokuImportPanel(),
+        underboardNote: importPanel,
       });
       return;
     }

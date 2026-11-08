@@ -12,9 +12,10 @@ import {
   type XiangqiPuzzle,
   xiangqiPuzzleTrainingTags,
 } from '@mistboard/game';
-import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
+import { loadSeedPuzzleRegistry, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
+import { close, getPool, init } from './persistence-db.js';
 import { puzzleServingRating } from './puzzle-rating.js';
-import { getPuzzleStore } from './puzzle-store.js';
+import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
 import { loadPuzzleStorm, startPuzzleStorm } from './puzzle-storm.js';
 import { loadPuzzleStreak, savePuzzleStreak, startPuzzleStreak } from './puzzle-streak.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -653,6 +654,78 @@ test('puzzle list filters by variant, and a retired variant filters to nothing',
   // A retired variant is not a variant the route knows: 400, not an empty list.
   const retired = await route('/api/puzzles?variant=mini-xiangqi');
   assert.equal(retired.status, 400);
+});
+
+test('player puzzle listing matches exact provenance, intersects filters and withholds hidden rows', async (t) => {
+  const seedStore = await getPuzzleStore();
+  const seed = XIANGQI_PUZZLES.find((puzzle) => seedStore.motifsById.has(puzzle.id))!;
+  const motif = seedStore.motifsById.get(seed.id)![0]!;
+  const theme = xiangqiPuzzleTrainingTags(seed)[0]!;
+  const makePuzzle = (id: string, tags: string[]) => ({ ...seed, id, sourceGame: undefined, tags });
+  const matching = makePuzzle('player-match', ['player:fixture-player', 'player:fixture-opponent']);
+  const other = makePuzzle('other-player', ['player:fixture-player-two']);
+  const untagged = makePuzzle('untagged', []);
+  const hidden = makePuzzle('withheld-player', ['player:fixture-player']);
+  const rows = [matching, other, untagged, hidden].map((data) => ({
+    data,
+    hidden: data.id === hidden.id,
+  }));
+  resetPuzzleStoreForTests();
+  init('postgres://unused@127.0.0.1:9/never');
+  t.after(async () => {
+    await close();
+    resetPuzzleStoreForTests();
+  });
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
+    if (sql.includes('SELECT data FROM puzzles')) {
+      assert.match(sql, /WHERE hidden_reason IS NULL/);
+      return { rows: rows.filter((row) => !row.hidden) };
+    }
+    assert.match(sql, /FROM puzzle_ratings|FROM puzzle_quality_sessions/);
+    return { rows: [] };
+  });
+  const all = JSON.parse((await route('/api/puzzles')).body);
+  const filtered = await route('/api/puzzles?player=fixture-player');
+  assert.equal(filtered.status, 200);
+  const body = JSON.parse(filtered.body);
+  assert.deepEqual(
+    body.puzzles.map((p: { id: string }) => p.id),
+    [matching.id],
+  );
+  assert.deepEqual(
+    body.puzzles,
+    all.puzzles.filter((p: { id: string }) => p.id === matching.id),
+  );
+  assert.deepEqual(body.tagCounts, all.tagCounts);
+  assert.deepEqual(body.themes, all.themes);
+  assert.ok(body.puzzles[0].tags.includes('player:fixture-player'));
+  assert.ok(body.puzzles[0].tags.includes(theme));
+  assert.doesNotMatch(filtered.body, /"(?:initial|solution|sourceGame)":/);
+  const detail = JSON.parse((await route(`/api/puzzles/${matching.id}`)).body);
+  assert.deepEqual(detail.puzzle.tags, body.puzzles[0].tags);
+  const withheld = await route(`/api/puzzles/${hidden.id}`);
+  assert.equal(withheld.status, 404);
+  for (const query of [
+    'player=fixture-opponent',
+    `player=fixture-player&variant=xiangqi&motif=${motif}&theme=${theme}`,
+  ]) {
+    assert.deepEqual(JSON.parse((await route(`/api/puzzles?${query}`)).body).puzzles, body.puzzles);
+  }
+  for (const query of [
+    'player=unknown-player',
+    'player=fixture',
+    'player=FIXTURE-PLAYER',
+    'player=fixture-player&variant=jungle',
+    'player=fixture-player&theme=winning',
+    `player=fixture-player&motif=${XIANGQI_MOTIFS.find((m) => !seedStore.motifsById.get(seed.id)!.includes(m.id))!.id}`,
+  ]) {
+    const response = await route(`/api/puzzles?${query}`);
+    assert.equal(response.status, 200, query);
+    assert.deepEqual(JSON.parse(response.body).puzzles, [], query);
+  }
+  assert.deepEqual(JSON.parse((await route('/api/puzzles?player=')).body), all);
+  assert.equal((await route('/api/puzzles?player=fixture-player&theme=unknown')).status, 400);
 });
 
 test('puzzle list filters by every registered motif without changing summary order or fields', async () => {

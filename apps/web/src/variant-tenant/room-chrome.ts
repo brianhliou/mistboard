@@ -40,9 +40,11 @@ import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile
 import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import { postWithBrowserIdentity } from '../room-create-retry.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
+import { seatInkFamily } from '../variant-seat-label.js';
 import { variantMiniIdForRawVariant } from '../variants.js';
 import { formatClock, formatDayClock } from '../web-utils.js';
 import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
@@ -60,7 +62,12 @@ export type TenantWebView<C extends string> = {
   moveNumber: number;
 };
 
-import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
+import {
+  clockRemainingMs,
+  createClockDisplayTime,
+  isClockReconnecting,
+  type TenantWebClock,
+} from './clock-projection.js';
 
 // Server seat gate (apps/server variant-tenant/seat-session.ts): an account
 // excluded from stats takes no seat in a rated room, and signing in will not help.
@@ -139,8 +146,8 @@ export type WebVariantTenant<C extends string> = {
   // ink ("Red"/"Black") once flipped, else the move order ("First"/"Second"). The tenant
   // reads its own live view for this; the chrome passes only the seat.
   seatLabel?(seat: C): TenantSeatKey;
-  // Optional companion to seatLabel: the INK a seat renders as, for the meta card's
-  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi)
+  // Optional companion to seatLabel: the INK a seat renders as, for the meta card
+  // and live clock name discs. Omit when the seat name IS the color (chess/xiangqi/jieqi)
   // and the chrome passes the seat straight through. Flip variants MUST implement it:
   // their seats are move-order slots and the ink binds on the opening flip, so a raw
   // seat paints the wrong disc for every game whose first flip turns up the opposite
@@ -207,6 +214,7 @@ export type TenantChromeContext<C extends string> = {
   // sentence; everything else falls back to the tenant's rejectedBody line.
   closeReason(): string;
   clock(): TenantWebClock<C> | null | undefined;
+  paused?(): boolean;
   timeControl():
     | { initialMs: number; incrementMs: number; daysPerMove?: number }
     | null
@@ -310,6 +318,7 @@ export function createTenantRoomChrome<C extends string>(
   // Previous active clock color across full clock renders, used to flash the
   // seated player's clock on the turn flip (mirrors the chess clock).
   let lastActiveClockColor: C | null = null;
+  let clockDisplayTime = createClockDisplayTime();
   // The in-place question the player opened on the action row, and the
   // control to focus after the next rebuild of that row.
   let pendingConfirm: ConfirmAction | null = null;
@@ -363,6 +372,7 @@ export function createTenantRoomChrome<C extends string>(
     playAgainStatus = 'idle';
     playAgainUrl = null;
     lastActiveClockColor = null;
+    clockDisplayTime = createClockDisplayTime();
     pendingConfirm = null;
     focusNext = null;
   }
@@ -411,14 +421,26 @@ export function createTenantRoomChrome<C extends string>(
     }
   }
 
+  function appendSeatDisc(playerLine: HTMLElement, color: C): void {
+    if (!variantSeatsHaveInk(ctx.gameSpecId)) return;
+    const family = seatInkFamily(ctx.gameSpecId);
+    if (family) playerLine.dataset.seatInkFamily = family;
+    // A defined hook returning null means unbound, never the raw seat's ink.
+    playerLine.append(
+      seatDiscEl(tenant.seatInk ? tenant.seatInk(color) : color, 'clock-seat-disc'),
+    );
+  }
+
   function renderClocks(): void {
     if (!refs) return;
     refs.clockTop.replaceChildren();
     refs.clockBottom.replaceChildren();
     refs.playerTop.replaceChildren();
     refs.playerBottom.replaceChildren();
-    refs.clockNote.hidden = true;
-    refs.clockNote.textContent = '';
+    const reconnecting = !ctx.recording?.() && isClockReconnecting(ctx.connectionState());
+    const liveAt = clockDisplayTime(ctx.connectionState());
+    refs.clockNote.hidden = !reconnecting;
+    refs.clockNote.textContent = reconnecting ? `${t('live.statusReconnecting')}…` : '';
 
     const timeControl = ctx.timeControl();
     const recording = ctx.recording?.() ?? null;
@@ -474,6 +496,7 @@ export function createTenantRoomChrome<C extends string>(
         // "Black", dot-less, until the clock armed and the same row became "You"
         // with a dot, mid-game.
         playerLine.append(...presence(color));
+        if (!recording) appendSeatDisc(playerLine, color);
         // The seat label is a placeholder for an unnamed seat, so only a
         // server-supplied name carries the seat's profile link.
         playerLine.append(
@@ -508,13 +531,11 @@ export function createTenantRoomChrome<C extends string>(
       // No pregame "clock starts after the opening moves" note (Brian,
       // 2026-10-02): the header already names the time control, and the
       // unarmed clocks say the rest.
-      refs.clockNote.textContent = '';
-      refs.clockNote.hidden = true;
       lastActiveClockColor = null;
       return;
     }
 
-    const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
+    const displayAt = ctx.isReplayLive() ? liveAt : (clock.runningSince ?? liveAt);
     const playing = recording ? !ended : view?.status.type === 'playing';
     const activeColor = playing ? clock.activeColor : null;
     const humanColor = seatColor();
@@ -538,6 +559,7 @@ export function createTenantRoomChrome<C extends string>(
       const playerLine = document.createElement('span');
       playerLine.className = isActive ? 'clock-player-line active' : 'clock-player-line';
       playerLine.append(...presence(color));
+      if (!recording) appendSeatDisc(playerLine, color);
       // playerName falls back to 'You' / the seat label when the server has no
       // name for the seat; those name nobody, so they stay plain text.
       playerLine.append(
@@ -588,8 +610,10 @@ export function createTenantRoomChrome<C extends string>(
       renderClocks();
       return;
     }
-    const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
-    const seatedColor = ctx.isReplayLive() ? seatColor() : null;
+    const liveAt = clockDisplayTime(ctx.connectionState());
+    const displayAt = ctx.isReplayLive() ? liveAt : (clock.runningSince ?? liveAt);
+    const seatedColor =
+      ctx.connectionState() === 'connected' && ctx.isReplayLive() ? seatColor() : null;
     const rows = [...Array.from(refs.clockTop.children), ...Array.from(refs.clockBottom.children)];
     for (const row of rows as HTMLDivElement[]) {
       const color = row.dataset.color;
@@ -1401,6 +1425,15 @@ export function createTenantRoomChrome<C extends string>(
   function renderBoardStatus(): void {
     if (!refs) return;
     const view = ctx.view();
+    const paused = ctx.paused?.() === true && view?.status.type === 'playing';
+    refs.board.inert = paused;
+    refs.boardPaused.hidden = !paused;
+    if (paused) {
+      const title = refs.boardPaused.querySelector<HTMLElement>('[data-board-paused-title]');
+      const body = refs.boardPaused.querySelector<HTMLElement>('[data-board-paused-body]');
+      if (title) title.textContent = t('live.pausedTitle');
+      if (body) body.textContent = t('live.pausedBody');
+    }
     refs.boardStatus.hidden = view !== null;
     if (view !== null) return;
     const state = ctx.connectionState();

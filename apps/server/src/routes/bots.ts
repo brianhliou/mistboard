@@ -47,6 +47,7 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
   const firstParty = firstPartyBotForId(bot.id);
   const options: BotPlayOption[] = [];
   for (const gameSpecId of specIds) {
+    if (isHiddenSpec(gameSpecId)) continue;
     const engineId =
       firstParty?.engines[gameSpecId] ??
       (gameSpecId === bot.defaultGameSpecId ? bot.activeEngineId : null);

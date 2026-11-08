@@ -83,7 +83,9 @@ type PendingReply = {
   timer: ReturnType<typeof setTimeout>;
 };
 
-class RapfiAnalysisSession {
+// Shared native protocol lifecycle: live PvE owns a fresh session per move,
+// while postgame analysis keeps one session for its sequential sweep.
+export class RapfiSession {
   private readonly child: ChildProcessWithoutNullStreams;
   private readonly reader;
   private readonly errors;
@@ -94,12 +96,16 @@ class RapfiAnalysisSession {
   private pending: PendingReply | null = null;
   private stderrBytes = 0;
 
-  constructor(private readonly options: GomokuAnalysisOptions) {
+  constructor(
+    private readonly options: GomokuAnalysisOptions,
+    trackProcess?: (child: ChildProcessWithoutNullStreams) => void,
+  ) {
     const bin = resolve(options.binaryPath ?? rapfiAnalysisBinaryPath());
     this.child = (options.spawnProcess ?? ((path, cwd) => spawn(path, [], { cwd })))(
       bin,
       options.cwd ?? dirname(bin),
     );
+    trackProcess?.(this.child);
     this.closed = new Promise((done) => {
       this.child.on('close', (code, signal) => {
         this.didClose = true;
@@ -155,15 +161,16 @@ class RapfiAnalysisSession {
     }
   }
 
-  private exchange(lines: string[], complete: PendingReply['complete']): Promise<string[]> {
+  exchange(
+    lines: string[],
+    complete: PendingReply['complete'],
+    timeoutMs = this.options.timeoutMs ?? 20_000,
+  ): Promise<string[]> {
     if (this.failure) return Promise.reject(this.failure);
     if (this.pending || this.didClose)
       return Promise.reject(new Error('Rapfi session unavailable'));
     return new Promise((accept, reject) => {
-      const timer = setTimeout(
-        () => this.fail(new Error('Rapfi analysis timed out')),
-        this.options.timeoutMs ?? 20_000,
-      );
+      const timer = setTimeout(() => this.fail(new Error('Rapfi analysis timed out')), timeoutMs);
       this.pending = { lines: [], bytes: 0, complete, resolve: accept, reject, timer };
       try {
         this.child.stdin.write(`${lines.join('\n')}\n`);
@@ -262,9 +269,9 @@ export async function analyzeGomokuPostgame(
     states.push(state);
   }
   const release = await analysisPool.acquire();
-  let session: RapfiAnalysisSession | undefined;
+  let session: RapfiSession | undefined;
   try {
-    session = new RapfiAnalysisSession(options);
+    session = new RapfiSession(options);
     await session.ready();
     const engine = session;
     const plies = await sweepPlyEvals(

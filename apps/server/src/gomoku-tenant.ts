@@ -1,4 +1,4 @@
-// Hidden freestyle Gomoku referee. The kernel owns legality and five/full-board
+// Freestyle Gomoku referee. The kernel owns legality and five/full-board
 // endings; the generic runtime owns seats, clocks, reconnects and event replay.
 import { randomInt } from 'node:crypto';
 import {
@@ -119,13 +119,13 @@ export const gomokuTenant: VariantTenant<
       return `Rapfi Level ${id.at(-1)}`;
     },
     engineVersion: () => '1387d11312',
-    reservationReleaseTag: 'gomoku-browser',
+    reservationReleaseTag: 'gomoku-rapfi',
   },
   wire: {
     snapshotExtras: (room, client) => ({
       roomMode: tenantPveEngineId(gomokuTenant, room) ? 'pve' : 'pvp',
       pveEngineId: tenantPveEngineId(gomokuTenant, room),
-      browserBotPaused: Boolean(room.projection.paused),
+      rated: room.rated,
       forfeitDeadline: tenantForfeitDeadlineForClient(gomokuTenant, room, client),
     }),
   },

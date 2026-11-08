@@ -863,6 +863,7 @@ export type TenantSnapshotPayload<C extends string, M, View, Spec extends string
   solo: boolean;
   abortDeadline: number | null;
   clock: TenantClockState<C> | undefined;
+  paused?: true;
   connectedSeats: Record<C, boolean>;
   events: TenantClientEvent<C, M, Spec>[];
   seats: Partial<Record<C, string>>;
@@ -995,6 +996,7 @@ export function tenantSnapshotPayload<
     seatProfiles: tenantSeatProfiles(tenant, room),
     state,
     timeControl: room.projection.timeControl,
+    ...(room.projection.paused ? { paused: true } : {}),
     // Only on lobby rooms, so every invite room's wire (and golden fixture) is
     // unchanged. Tells the client there is no invite link to share.
     ...(tenantRoomIsLobbyMatch(room) ? { lobbyMatch: true } : {}),

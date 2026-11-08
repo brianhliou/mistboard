@@ -49,10 +49,10 @@ export function playtestRulesSlugs(isPublic: (id: GameSpecId) => boolean): strin
 
 // Reachable by URL, deliberately unlisted and unindexed: /rules/shogi4 is
 // linked from outside the site and stays up, but is not a Mistboard variant.
-// /rules/mahjong is the page for a table that is admin-only and allowlisted
-// (a hidden playtest spec: playtestRulesSlugs above); it leaves
-// this set the day the variant goes public, and articles-meta-sync.test.ts
-// fails if the two disagree. A public variant's rules page held back for
+// A hidden playtest spec's page stays here through playtestRulesSlugs above
+// until the variant goes public, and articles-meta-sync.test.ts fails if the
+// two disagree. /rules/mahjong stays through the same list since the variant
+// retired on 2026-11-06. A public variant's rules page held back for
 // polish goes here and in HIDDEN_RULES_SLUGS on the web side, and leaves both
 // sets together (/rules/crazyhouse-xiangqi did, 2026-10-02). /rules/atomic-
 // xiangqi (unlisted 2026-10-06) and /rules/fortress-xiangqi are here because

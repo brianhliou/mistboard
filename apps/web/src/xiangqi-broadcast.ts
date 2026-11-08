@@ -22,7 +22,7 @@ import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale } from './i18n/locale.js';
+import { currentLocale, localizedHref } from './i18n/locale.js';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import { playerTitleFor } from './players/player-title.js';
 import type { CevalLine } from './review/engine/ceval-types.js';
@@ -52,6 +52,7 @@ import {
   countText,
   localFederation,
   localName,
+  localPersonName,
   localPlace,
   localTitle,
   otherName,
@@ -59,11 +60,13 @@ import {
 import {
   type BroadcastCalendarResponse,
   type BroadcastPlayerRef,
+  broadcastRoundName,
   broadcastSectionLayout,
   calendarEventRow,
   fetchBroadcastCalendar,
   mountXiangqiBroadcastAbout,
   mountXiangqiBroadcastCalendar,
+  broadcastName as primaryName,
   rightsContactNote,
   topBroadcastPlayers,
 } from './xiangqi-broadcast-pages.js';
@@ -965,7 +968,7 @@ function tourHasEnded(tour: { endsAt?: string | null }, now = Date.now()): boole
 function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boolean } | null {
   const latest = entry.latestRound ?? null;
   if (entry.liveBoardCount > 0) {
-    const round = latest ? primaryName(latest) : null;
+    const round = latest ? broadcastRoundName(latest) : null;
     return {
       text: round ? t('broadcast.roundLive', { round }) : t('broadcast.statusLive'),
       live: true,
@@ -975,15 +978,17 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
   if (next?.startsAt) {
     return {
       text: t('broadcast.roundOn', {
-        round: primaryName(next),
-        date: formatEventDay(next.startsAt) ?? '',
+        round: broadcastRoundName(next),
+        date: formatEventDay(next.startsAt, currentLocale()) ?? '',
       }),
       live: false,
     };
   }
   if (isAfter(entry.tour.startsAt, Date.now())) {
     return {
-      text: t('broadcast.startsOn', { date: formatEventDay(entry.tour.startsAt) ?? '' }),
+      text: t('broadcast.startsOn', {
+        date: formatEventDay(entry.tour.startsAt, currentLocale()) ?? '',
+      }),
       live: false,
     };
   }
@@ -1002,11 +1007,11 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
     return { text: t('broadcast.noGamesPublished'), live: false };
   }
   if (latest) {
-    const date = formatEventDay(latest.startsAt ?? undefined);
+    const date = formatEventDay(latest.startsAt ?? undefined, currentLocale());
     return {
       text: date
-        ? t('broadcast.roundOn', { round: primaryName(latest), date })
-        : primaryName(latest),
+        ? t('broadcast.roundOn', { round: broadcastRoundName(latest), date })
+        : broadcastRoundName(latest),
       live: false,
     };
   }
@@ -1070,7 +1075,7 @@ function otherEventsSection(
   title.textContent = t('broadcast.otherEvents');
   const all = document.createElement('a');
   all.className = 'xqb-link';
-  all.href = '/broadcast/xiangqi/calendar';
+  all.href = localizedHref('/broadcast/xiangqi/calendar');
   all.textContent = t('broadcast.fullCalendar');
   head.append(title, all);
   const list = document.createElement('ul');
@@ -1126,7 +1131,7 @@ function renderEvent(
 ): HTMLElement {
   const hasRound = data.round.id !== '';
   document.title = hasRound
-    ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
+    ? `${broadcastRoundName(data.round)} · ${primaryName(data.tour)} · Mistboard`
     : `${primaryName(data.tour)} · Mistboard`;
   let body: HTMLElement;
   // Before the first game the Overview is the whole page (no tabs are shown).
@@ -1150,7 +1155,7 @@ function roundKey(data: { tour: { slug: string }; round: { id: string } }): stri
 
 function roundHref(tourSlug: string, roundId: string, tab: EventTab = 'boards'): string {
   const base = `/broadcast/xiangqi/${encodeURIComponent(tourSlug)}/round/${encodeURIComponent(roundId)}`;
-  return tab === 'boards' ? base : `${base}?tab=${tab}`;
+  return localizedHref(tab === 'boards' ? base : `${base}?tab=${tab}`);
 }
 
 /**
@@ -2052,7 +2057,7 @@ function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): 
     const name = document.createElement(slug ? 'a' : 'strong');
     name.className = 'xqb-standings-name';
     if (slug && name instanceof HTMLAnchorElement)
-      name.href = `/players/${encodeURIComponent(slug)}`;
+      name.href = localizedHref(`/players/${encodeURIComponent(slug)}`);
     const title =
       row.player.title ?? playerTitleFor({ name: row.player.name, nameEn: row.player.nameEn });
     if (title) {
@@ -2061,7 +2066,7 @@ function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): 
       tag.textContent = localTitle(title);
       name.append(tag, ' ');
     }
-    name.append(primaryName(row.player));
+    name.append(localPersonName(row.player));
     player.append(name);
     const sub = primaryFederation(row.player);
     if (sub) {
@@ -2118,10 +2123,13 @@ function roundSwitcher(
   button.className = 'xqb-round-picker-button';
   button.setAttribute('aria-haspopup', 'listbox');
   button.setAttribute('aria-expanded', 'false');
-  button.setAttribute('aria-label', `${t('broadcast.switchRound')}: ${primaryName(current)}`);
+  button.setAttribute(
+    'aria-label',
+    `${t('broadcast.switchRound')}: ${broadcastRoundName(current)}`,
+  );
   const name = document.createElement('span');
   name.className = 'xqb-round-picker-name';
-  name.textContent = primaryName(current);
+  name.textContent = broadcastRoundName(current);
   const caret = document.createElement('span');
   caret.className = 'xqb-round-picker-caret';
   caret.setAttribute('aria-hidden', 'true');
@@ -2141,7 +2149,7 @@ function roundSwitcher(
     option.setAttribute('aria-selected', round.id === current.id ? 'true' : 'false');
     const label = document.createElement('span');
     label.className = 'xqb-round-option-name';
-    label.textContent = primaryName(round);
+    label.textContent = broadcastRoundName(round);
     const when = document.createElement('span');
     when.className = 'xqb-round-option-when';
     // The tour payload's game-dated start: the seed alone left every round
@@ -2234,8 +2242,7 @@ function relativeFromNow(at: number): string {
 }
 
 function currentLocaleTag(): string {
-  const lang = document.documentElement.lang;
-  return lang || 'en';
+  return currentLocale();
 }
 
 const CARET_DOWN =
@@ -2416,7 +2423,7 @@ function renderBoardReplay(
     exportLink(data.board.id),
     embedCodeButton(
       data.board.id,
-      `${primaryName(data.board.red)} vs ${primaryName(data.board.black)} · Mistboard`,
+      `${localPersonName(data.board.red)}${t('broadcast.vs')}${localPersonName(data.board.black)} · Mistboard`,
     ),
   );
   movesPanel.append(moveHeading, moveList, actions);
@@ -2628,7 +2635,7 @@ function heroSection(input: {
   if (input.backHref && input.backLabel) {
     const back = document.createElement('a');
     back.className = 'xqb-link';
-    back.href = input.backHref;
+    back.href = localizedHref(input.backHref);
     back.textContent = input.backLabel;
     actions.append(back);
   }
@@ -2657,7 +2664,7 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
   ]
     .filter(Boolean)
     .join(' ');
-  card.href = `/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`;
+  card.href = localizedHref(`/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`);
 
   // The event's art, lichess's card image; a drawn placeholder until events
   // have art of their own (eventArt).
@@ -2730,7 +2737,7 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   const card = document.createElement(resultsOnly && !withheld ? 'div' : 'a');
   card.className = `xqb-board-card xqb-board-card-${board.status}`;
   if (card instanceof HTMLAnchorElement) {
-    card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+    card.href = localizedHref(`/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`);
   }
 
   const table = board.details?.table;
@@ -2846,7 +2853,7 @@ function cardSeat(
     tag.textContent = localTitle(title);
     name.append(tag, ' ');
   }
-  name.append(primaryName(player));
+  name.append(localPersonName(player));
   name.title = [otherName(player), primaryFederation(player)].filter(Boolean).join(' · ');
   const points = document.createElement('span');
   points.className = 'xqb-score';
@@ -2951,9 +2958,11 @@ function sideRail(
     heading.append(t('broadcast.boards'));
   } else {
     const back = document.createElement('a');
-    back.href = `/broadcast/xiangqi/${encodeURIComponent(
-      context.tour.slug,
-    )}/round/${encodeURIComponent(context.round.id)}`;
+    back.href = localizedHref(
+      `/broadcast/xiangqi/${encodeURIComponent(
+        context.tour.slug,
+      )}/round/${encodeURIComponent(context.round.id)}`,
+    );
     // With a board open, the heading is the way back to the round's boards
     // (lichess's arrow beside the round name).
     if (currentBoardId) {
@@ -2965,7 +2974,7 @@ function sideRail(
       arrow.textContent = '‹';
       back.append(arrow);
     }
-    back.append(primaryName(context.round));
+    back.append(broadcastRoundName(context.round));
     heading.append(back);
   }
   const list = document.createElement('div');
@@ -2990,7 +2999,7 @@ function sideRail(
     const row = document.createElement(resultsOnly && !current && !withheld ? 'div' : 'a');
     row.className = current ? 'xqb-rail-row xqb-rail-row-current' : 'xqb-rail-row';
     if (row instanceof HTMLAnchorElement) {
-      row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+      row.href = localizedHref(`/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`);
     }
     if (resultsOnly && !withheld) row.classList.add('xqb-rail-row-no-moves');
     if (current) row.setAttribute('aria-current', 'page');
@@ -3154,7 +3163,7 @@ function analysisDeeplink(timeline: BroadcastMoveTimelineEntry[]): string | null
 function analyseLink(href: string): HTMLElement {
   const link = document.createElement('a');
   link.className = 'xqb-export-link xqb-link-primary';
-  link.href = href;
+  link.href = localizedHref(href);
   link.target = '_blank';
   link.rel = 'noopener';
   link.textContent = t('broadcast.analyseWithEngine');
@@ -3226,15 +3235,14 @@ function exportLink(boardId: string): HTMLElement {
   return link;
 }
 
-// Names follow the locale, one language per page (xiangqi-broadcast-names.ts).
-const primaryName = localName;
+// Names follow the locale, one language per page.
 const primaryFederation = localFederation;
 
 function playerName(player: XiangqiBroadcastPlayerTag): string {
   const prefix = player.title ? `${localTitle(player.title)} ` : '';
   const federation = primaryFederation(player);
   const suffix = federation ? ` (${federation})` : '';
-  return `${prefix}${primaryName(player)}${suffix}`;
+  return `${prefix}${localPersonName(player)}${suffix}`;
 }
 
 function resultLabel(board: Pick<BroadcastBoardSummary, 'result' | 'status'>): string {

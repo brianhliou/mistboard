@@ -38,6 +38,7 @@ export type UserCardProfile = {
     handle: string;
     displayName: string;
     accountRole: 'player' | 'admin';
+    isFounder?: boolean;
     // Verified title key ('xgm', 'gm', ...); absent/null = untitled. Unknown
     // values render no badge (fail-closed in player-titles.ts).
     title?: string | null;
@@ -305,6 +306,13 @@ function buildHeader(
     const badge = document.createElement('span');
     badge.className = 'profile-summary-card-badge';
     badge.textContent = t('profile.admin', {}, locale);
+    header.append(badge);
+  }
+
+  if (profile.user.isFounder) {
+    const badge = document.createElement('span');
+    badge.className = 'profile-summary-card-badge profile-role-founder';
+    badge.textContent = t('profile.founder', {}, locale);
     header.append(badge);
   }
 

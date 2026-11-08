@@ -438,7 +438,7 @@ describe('article public listing gates', () => {
     const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
     expect(home?.getAttribute('aria-label')).toBe('網誌');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
-      '上一篇文章',
+      '上一組文章',
     );
     expect(home?.querySelector('.landing-carousel-nav-next')?.getAttribute('aria-label')).toBe(
       '更多文章',
@@ -634,9 +634,13 @@ describe('article public listing gates', () => {
     );
 
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector('.landing-article-card[href="/blog/misty"] img')?.getAttribute('src'),
-    ).toBe('/article-thumbs/misty-engine-belief-20260708.jpg');
+    const homeThumb = home?.querySelector<HTMLElement>(
+      '.landing-article-card[href="/blog/misty"] .articles-index-card-thumb',
+    );
+    expect(homeThumb?.querySelector('img')).toBeNull();
+    expect(homeThumb?.style.backgroundImage).toContain(
+      '/article-thumbs/misty-engine-belief-20260708.jpg',
+    );
   });
 
   it('renders the server-side truth article with the generated truth-core thumbnail', () => {
@@ -1023,25 +1027,30 @@ describe('rules variant sidebar', () => {
 
     expect(pageText).not.toContain('[VISUAL:');
     expect(pageText).not.toMatch(/\bsquares?\b/i);
-    expect(pageText).toContain('starting point it occupies');
-    expect(pageText).toContain('120 plies, or 60 moves by each player');
-    expect(pageText).toContain('Repetition follows xiangqi');
-    expect(pageText).toContain('perpetual check cannot save a lost game');
+    expect(pageText).toContain('the piece that normally starts on its point');
+    expect(pageText).toContain('120 plies pass without a capture');
+    expect(pageText).toContain(
+      'The same position with the same side to move occurs for the third time',
+    );
+    expect(pageText).toContain(
+      'A player who checked on every one of their turns in the repeating cycle loses',
+    );
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
     // The shuffled-start board is the section hero (a single enlarged board,
-    // matching the Xiangqi page); the movement diagrams are paired boards.
+    // matching the Xiangqi page); worked reveals use pairs and later moves use singles.
     const jieqiHero = jieqiSvgs.filter((svg) => svg.classList.contains('xq-article-svg--hero'));
     expect(jieqiHero).toHaveLength(1);
     expect(jieqiHero[0]!.getAttribute('data-xq-layout')).toBe('single');
     expect(articleStyles).toContain(
       '.article-figure-xq > .xq-article-svg.xq-article-svg--hero {\n  width: min(480px, 100%);',
     );
-    expect(
-      jieqiSvgs
-        .filter((svg) => !svg.classList.contains('xq-article-svg--hero'))
-        .every((svg) => svg.getAttribute('data-xq-layout') === 'pair'),
-    ).toBe(true);
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'pair')).toHaveLength(
+      3,
+    );
+    expect(jieqiSvgs.filter((svg) => svg.getAttribute('data-xq-layout') === 'single')).toHaveLength(
+      4,
+    );
     const figureText = [...page.querySelectorAll('.article-figure')]
       .map((figure) => figure.textContent)
       .join('');
@@ -1057,8 +1066,11 @@ describe('rules variant sidebar', () => {
     const captions = [...page.querySelectorAll('.article-figure-caption')].map(
       (caption) => caption.textContent,
     );
-    expect(captions).toEqual([]);
+    expect(captions.length).toBeGreaterThanOrEqual(6);
     expect(pageText).toContain('BEFORE: HORSE POINT');
+    expect(pageText).toContain('AFTER: SOLDIER ON b10');
+    expect(pageText).toContain('only its capturer learns its identity');
+    expect(pageText).toContain('see a dark piece leave the board and nothing else');
     expect(pageText).toContain('CAPTURED PIECE KNOWLEDGE');
     expect(pageText).toContain('RED KNOWS');
     expect(pageText).toContain('BLACK KNOWS');
@@ -1519,11 +1531,12 @@ describe('image thumbnail crop', () => {
 });
 
 describe('player article contact note', () => {
-  it('puts the corrections line under the header photo, about that article', () => {
+  it('puts the corrections line below the article panel, about that article', () => {
     const page = buildArticlePage('zuo-wenjing');
     const notes = page.querySelectorAll('.article-contact-note');
     expect(notes).toHaveLength(1);
-    expect(notes[0]?.closest('figure.article-figure-image')).not.toBeNull();
+    expect(notes[0]?.closest('.article-sheet')).toBeNull();
+    expect(notes[0]?.parentElement?.lastElementChild).toBe(notes[0]);
     expect(notes[0]?.textContent).toBe('Corrections or rights requests: contact us.');
     expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
       '/contact?about=%2Fblog%2Fzuo-wenjing',

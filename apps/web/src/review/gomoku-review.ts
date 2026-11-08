@@ -1,18 +1,19 @@
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 import '../gomoku-board.css';
 import {
   type GomokuColor,
   type GomokuMove,
   type GomokuOpening,
-  type GomokuPlayerView,
   type GomokuRoomState,
   parseGomokuMove,
 } from '@mistboard/game';
 import type { RapfiPosition } from '../engine/rapfi.js';
 import type { GomokuBoardMarker } from '../gomoku-board.js';
 import { t } from '../i18n/catalog.js';
+import { formatGomokuEvalCompact } from './engine/gomoku-eval-format.js';
 import type { NodeShape } from './game-tree.js';
 import { createGomokuReviewBoard } from './gomoku-review-board.js';
-import { makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
+import { type GomokuReviewView, makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
 import {
   mountTreeReview,
   type TreePresentation,
@@ -65,12 +66,13 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
   const presentation: TreePresentation<
     GomokuMove,
     GomokuRoomState,
-    GomokuPlayerView,
+    GomokuReviewView,
     GomokuColor,
     NodeShape,
     GomokuBoardMarker
   > = {
     adapter: makeGomokuTreeAdapter(config.opening),
+    hideAcpl: true,
     engine: {
       panelVariant: 'gomoku',
       positionMode: 'fen',
@@ -95,6 +97,15 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
         best && parseGomokuMove(best) ? [{ kind: 'best', square: best }] : [],
       showStoredBestWhenOff: false,
     },
+    // Terminal scores encode the known result, not a distance to a future five.
+    moveEvalVisible: (truth) => truth.status.type === 'playing',
+    formatEval: formatGomokuEvalCompact,
+    moveGlyphMarker: (move, glyph) => ({
+      kind: 'glyph',
+      square: move.to,
+      text: glyph.text,
+      tone: glyph.tone,
+    }),
     formatBestMove: (uci) => uci,
     boardHostClassName: 'gomoku-live-board',
     boardWrapClassName: 'review-board-host',
@@ -102,7 +113,7 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
     boardAspect: 1,
     boardCols: 15,
     fixedOrientation: true,
-    appearanceEvent: 'mistboard:display-preferences-change',
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     perspective: (flipped) => (flipped ? 'white' : 'black'),
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
     createBoard: createGomokuReviewBoard,

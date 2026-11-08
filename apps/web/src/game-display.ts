@@ -285,9 +285,10 @@ export function secondMoverColorName(gameSpecId: string): string {
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
 // 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
-export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
+export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
   gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
+  'ffq-banqi': null,
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
   'xiangqi-mahjong': 'variant.xiangqiMahjong.name',
@@ -312,8 +313,8 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
 // their own partial copy, and the bots one silently missed xiangqi, jungle,
 // jungle-flip, and dark-xiangqi.
 export function variantNameKeyForSpecId(gameSpecId: string): I18nKey | null {
-  const spec = maybeGameSpecForId(gameSpecId);
-  return spec ? (VARIANT_NAME_KEYS[spec.id] ?? null) : null;
+  const id = maybeGameSpecForId(gameSpecId)?.id;
+  return id ? VARIANT_NAME_KEYS[id] : null;
 }
 
 // Human label for a persisted games.variant value. Legacy/alias strings resolve
@@ -400,8 +401,25 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   'pieces-captured': 'replay.endPiecesCaptured',
 };
 
-export function terminationLabel(termination: string, locale?: Locale): string {
+// The persisted goal-win code is shared by two different rules. A scoped
+// lookup must name the variant explicitly, never borrow another game's goal.
+const RACE_TERMINATION_KEYS = new Map<GameSpecId, I18nKey>([
+  ['gomoku', 'replay.endFive'],
+  ['jungle', 'replay.endRace'],
+  ['jungle-flip', 'replay.endRace'],
+]);
+
+export function terminationLabel(
+  termination: string,
+  locale?: Locale,
+  variant?: GameSpecId,
+): string {
   if (!termination) return '';
+  if (termination === 'race' && variant !== undefined) {
+    const key = RACE_TERMINATION_KEYS.get(variant);
+    if (!key) throw new Error(`Unsupported race termination for ${variant}`);
+    return t(key, {}, locale);
+  }
   const key = TERMINATION_KEYS[termination];
   if (key) return t(key, {}, locale);
   return humanizeToken(termination);

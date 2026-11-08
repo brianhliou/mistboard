@@ -121,6 +121,22 @@ function stones(root: HTMLElement) {
 function toggle(root: HTMLElement) {
   root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
 }
+
+it('keeps the first real tool when a fixed-orientation board uses phone chrome', () => {
+  const { root } = mount({
+    reviewSurface: 'analysis',
+    phoneAnalysisBar: { variantName: 'Gomoku' },
+    allowClearMoves: true,
+  });
+  root.querySelector<HTMLButtonElement>('[data-analysis-bar="tools"]')!.click();
+  const clear = [...root.querySelectorAll<HTMLButtonElement>('.analysis-tools-sheet__item')].find(
+    (item) => item.textContent === 'Clear moves',
+  );
+  expect(clear).toBeDefined();
+  clear!.click();
+  expect(stones(root)).toHaveLength(opening.stones.length);
+});
+
 async function ready() {
   latest().emit({ type: 'ready' });
   await vi.advanceTimersByTimeAsync(0);
@@ -188,7 +204,7 @@ describe('Gomoku tree review', () => {
     expect(pv[0]?.getAttribute('data-square')).toBe('h10');
     expect(pv[0]?.querySelector('circle')?.classList.contains('gomoku-stone--black')).toBe(true);
     expect(pv[1]?.querySelector('circle')?.classList.contains('gomoku-stone--white')).toBe(true);
-    expect(pv[0]?.getAttribute('opacity')).toBe('0.65');
+    expect(pv[0]?.getAttribute('opacity')).toBe('0.43');
     expect(stones(root)).toHaveLength(opening.stones.length + moves.length);
   });
 
@@ -274,6 +290,26 @@ describe('Gomoku tree review', () => {
     expect(reloaded.handle.serialize()).toEqual(saved);
   });
 
+  it('numbers the selected branch without numbering the dealt opening stones', () => {
+    const { root, handle } = mount();
+    expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(moves.length);
+    press('Home');
+    expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+    press('ArrowRight');
+    board(root)
+      .querySelector('[data-square="o15"] .gomoku-hit')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(board(root).querySelector('[data-square="o15"] .gomoku-move-number')?.textContent).toBe(
+      '2',
+    );
+    expect(board(root).querySelector('.gomoku-last')).not.toBeNull();
+    const saved = handle.serialize();
+    press('End');
+    expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(moves.length);
+    const restored = mount({ initialTree: saved });
+    expect(board(restored.root).querySelectorAll('.gomoku-move-number')).toHaveLength(moves.length);
+  });
+
   it('remembers both on and off across mounts and tolerates storage refusal', async () => {
     let mounted = mount();
     toggle(mounted.root);
@@ -345,6 +381,75 @@ describe('Gomoku tree review', () => {
     });
     await vi.advanceTimersByTimeAsync(0);
     expect(board(root).querySelector('.gomoku-engine-overlay')).toBeNull();
+  });
+
+  it('omits the terminal result score and names the side of each forced win', async () => {
+    const winningMoves = ['a1', 'a15', 'b1', 'b15', 'c1', 'c15', 'd1', 'd15', 'e1'].map(
+      (to) => parseGomokuMove(to)!,
+    );
+    const analysis = computeGameAnalysis({
+      engineId: 'test',
+      depth: 9,
+      plies: Array.from({ length: 10 }, (_, ply) => ({
+        ply,
+        cp: ply === 9 ? -30000 : null,
+        mate: ply === 9 ? null : ply % 2 ? -2 : 3,
+        best: null,
+      })),
+    });
+    const { root } = mount({
+      opening: { stones: [], turn: 'black' },
+      moves: winningMoves,
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => analysis,
+        run: async () => analysis,
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    const scores = [...root.querySelectorAll('.review-move-list__eval')].map(
+      (el) => el.textContent,
+    );
+    expect(scores.at(-1)).toBe('');
+    // Gomoku names the side rather than signing a mate (2026-11-05).
+    expect(scores.some((score) => score?.includes('#'))).toBe(false);
+    expect(scores).toContain('B in 3');
+    expect(scores).toContain('W in 2');
+  });
+
+  it('badges only the current blunder and clears it when navigating away', async () => {
+    const analysis = computeGameAnalysis({
+      engineId: 'test',
+      depth: 9,
+      plies: [
+        { ply: 0, cp: 600, mate: null, best: null },
+        { ply: 1, cp: -600, mate: null, best: null },
+        { ply: 2, cp: -600, mate: null, best: null },
+      ],
+    });
+    const { root } = mount({
+      moves: moves.slice(0, 2),
+      initialPosition: 'start',
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => analysis,
+        run: async () => analysis,
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    press('ArrowRight');
+    const badge = board(root).querySelector('.gomoku-glyph')!;
+    expect(badge.getAttribute('data-square')).toBe('a1');
+    expect(badge.querySelector('.xq-marker__label')?.textContent).toBe('??');
+    expect(board(root).querySelectorAll('.xq-marker--glyph')).toHaveLength(1);
+    const disc = badge.querySelector('circle')!;
+    const radius = Number(disc.getAttribute('r'));
+    expect(Number(disc.getAttribute('cx')) + radius).toBeLessThan(512);
+    expect(Number(disc.getAttribute('cy')) - radius).toBeGreaterThan(0);
+    press('ArrowRight');
+    expect(board(root).querySelector('.gomoku-glyph')).toBeNull();
+    press('Home');
+    expect(board(root).querySelector('.gomoku-glyph')).toBeNull();
   });
 
   it('opens a full-board draw and suppresses analysis until stepping back', async () => {

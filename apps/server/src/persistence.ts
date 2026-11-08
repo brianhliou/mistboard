@@ -399,6 +399,8 @@ export {
   upsertHistoricalXiangqiSource,
   XIANGQI_GAME_SORTS,
 } from './persistence-historical-xiangqi.js';
+export type { InboxEmailCandidate, InboxEmailQuery } from './persistence-inbox-email.js';
+export { listInboxEmailCandidates, markInboxEmailSent } from './persistence-inbox-email.js';
 export type {
   ActivePlayerEntry,
   BestRatingEntry,
@@ -466,6 +468,7 @@ export {
   getUserDmPolicy,
   getUserGamesPage,
   getUserProfileByHandle,
+  getUserPuzzleRatingHistory,
   getUserRatingHistory,
   isProfileGameResultFilter,
   listRecentFinishedCorrespondenceGames,
@@ -681,6 +684,7 @@ export {
 export {
   getXiangqiPlayer,
   listXiangqiPlayerBoards,
+  listXiangqiPlayerGames,
   listXiangqiPlayers,
   type XiangqiPlayerBoardRecord,
   type XiangqiPlayerEventRecord,

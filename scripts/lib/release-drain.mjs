@@ -9,6 +9,7 @@ export const HELD_WARN_MS = 5 * 60 * 1000;
 /**
  * What to do with this release's drain once the release has failed.
  *
+ * A pending drain during candidate CI also needs cancellation when CI fails.
  * A drain that committed ("Server restarting now") stays up until the server
  * restarts, the drain is cancelled, or its window lapses. Before the push no
  * restart is coming, so it must be cancelled. After the push the restart comes
@@ -18,12 +19,12 @@ export const HELD_WARN_MS = 5 * 60 * 1000;
  * already serves the revision we pushed, in which case the restart happened
  * and the new server holds no drain.
  *
- * @param {{ drainCommitted: boolean, pushCompleted: boolean,
+ * @param {{ drainCommitted: boolean, drainStarted?: boolean, pushCompleted: boolean,
  *   productionRevision?: string | null, expectedRevision?: string | null }} state
  * @returns {'none' | 'cancel-before-push' | 'none-deployed' | 'cancel-after-push'}
  */
 export function postFailureDrainAction(state) {
-  if (!state.drainCommitted) return 'none';
+  if (!state.drainCommitted && !state.drainStarted) return 'none';
   if (!state.pushCompleted) return 'cancel-before-push';
   if (
     state.productionRevision &&

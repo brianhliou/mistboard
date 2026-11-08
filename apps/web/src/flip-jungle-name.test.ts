@@ -38,7 +38,7 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
     },
     {
       sentence:
-        '翻翻棋（暗棋）和揭棋是象棋自己的翻子游戲，翻開一枚棋子是爲了揭示它是什麼，與它歸誰無關。',
+        '翻翻棋（暗棋）和揭棋是象棋自己的翻子游戲，翻開一枚棋子是為了揭示它是什麼，與它歸誰無關。',
       count: 1,
     },
   ],

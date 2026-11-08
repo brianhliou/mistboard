@@ -695,9 +695,18 @@ function renderStudy(
       gamebookable &&
       (!study.isOwner || previewMode) &&
       (chapter.gamebook || (chapter.practice && parsePracticeGoal(chapter.practiceGoal)));
+    // Reuse the chrome only while its rail still lists exactly these chapters:
+    // adding a chapter also switches to it, and a stale rail would never show it.
+    const shell =
+      chapterSwitch && !playingLesson ? root.querySelector<HTMLElement>('.study-review') : null;
+    const railIds = new Set(
+      [...(shell?.querySelectorAll<HTMLElement>('.study-chapters__row') ?? [])].map(
+        (row) => row.dataset.chapterId,
+      ),
+    );
     const reuseShell =
-      chapterSwitch && !playingLesson
-        ? (root.querySelector<HTMLElement>('.study-review') ?? undefined)
+      shell && railIds.size === chapters.length && chapters.every((entry) => railIds.has(entry.id))
+        ? shell
         : undefined;
     if (reuseShell) {
       for (const row of reuseShell.querySelectorAll<HTMLElement>('.study-chapters__row')) {

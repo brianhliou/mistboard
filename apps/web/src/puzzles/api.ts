@@ -73,13 +73,15 @@ export async function fetchPuzzleList(): Promise<PuzzleSummary[]> {
 // The localStorage seen-set does not survive a cleared browser, a second
 // device, or a reinstall, so without this a signed-in visitor restarts the
 // rotation from the top of the pool. Empty for anonymous visitors.
-export async function fetchPuzzleListWithAttempts(): Promise<{
+export async function fetchPuzzleListWithAttempts(player: string | null = null): Promise<{
   puzzles: PuzzleSummary[];
   attemptedIds: string[];
   themes: PuzzleThemeCount[];
   tagCounts: PuzzleThemeOptions['tagCounts'];
 }> {
-  const response = await fetch('/api/puzzles');
+  const response = await fetch(
+    `/api/puzzles${player ? `?player=${encodeURIComponent(player)}` : ''}`,
+  );
   if (!response.ok) throw new Error(`Puzzle list failed: ${response.status}`);
   const body = (await response.json()) as {
     puzzles?: PuzzleSummary[];
@@ -88,7 +90,9 @@ export async function fetchPuzzleListWithAttempts(): Promise<{
     tagCounts?: unknown;
   };
   return {
-    puzzles: Array.isArray(body.puzzles) ? body.puzzles : [],
+    puzzles: Array.isArray(body.puzzles)
+      ? body.puzzles.filter((puzzle) => !player || puzzle.tags?.includes(`player:${player}`))
+      : [],
     themes: Array.isArray(body.themes) ? body.themes : [],
     // Absent from a server older than the tag filter; the themes then fall
     // back to the motif counts alone.

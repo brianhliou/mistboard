@@ -251,6 +251,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    * decision layer name the better move.
    */
   quoteEvalBestMove?: boolean;
+  /** Omit centipawn loss for variants whose scores do not represent material. */
+  hideAcpl?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -262,6 +264,11 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  "Set position" a one-way door. Supply this and the box fills whether or not
    *  there is an engine. Falls back to `engine.fen` when omitted. */
   fen?: (truth: Truth) => string;
+  /** Whether a stored move-list score is meaningful for this resulting position. */
+  moveEvalVisible?(truth: Truth): boolean;
+  /** How this variant writes a whole-game eval (move list, chart readout, phone
+   *  readout). Omitted = the signed shared format, "+1.2" / "#5". */
+  formatEval?(cp: number | null, mate: number | null): string;
   /** Format a whole-game-analysis best move (server `evals[].best`, in the ANALYSIS
    *  engine's UCI dialect) for the "… was best" advice line. Omit to use the default
    *  xiangqi/FSF formatter (correct for xiangqi/fortress/jungle, whose display coords
@@ -406,6 +413,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Shared scaffold role. Postgame is the default; standalone analysis and
    *  studies opt into their distinct roles at their route-level mount. */
   reviewSurface?: ReviewSurface;
+  /** The viewer's played seat in analysis slots (red = first seat, black = second).
+   *  Null/omitted hides retro on game reviews; analysis always uses the bottom side. */
+  retroSide?: RetroSide | null;
   /** Keep a study's existing shell and left rail while replacing its review. */
   reuseShell?: HTMLElement;
   /** Synchronize an external chapter chart with the board cursor. */
@@ -413,7 +423,12 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** The standalone analysis page's phone chrome (analysis-phone-bar.ts): an
    *  engine bar over the board, an info row and a labelled bottom bar below
    *  600px. Off for embeds and every other surface. */
-  phoneAnalysisBar?: { variantName: string };
+  phoneAnalysisBar?: {
+    variantName: string;
+    /** Variant-specific import form, lent to Tools while it is open. */
+    importPanel?: HTMLElement;
+    engineInTools?: boolean;
+  };
   /** A played game's phone review (review-info-sheet.ts): below 600px the meta
    *  card and `details` (the chat) leave the rail for a sheet opened from the
    *  bar's ☰, with the advantage chart, the analysis summary and the engine
@@ -505,8 +520,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Per-ply elapsed milliseconds (index 0 = ply 1). When present, a "Move times"
    *  underboard tab renders a per-move bar chart. Only real games supply it. */
   moveTimes?: number[];
+  /** Analysis slot playing recorded ply 1; dealt roots can start with the second side. */
+  firstMover?: 'red' | 'black';
   /** Remaining clocks per ply for the Move times clock overlay (series[0] = the
-   *  start, series[p] = after ply p; `first` = the first mover). Absent = untimed,
+   *  start, series[p] = after ply p; `first` = the first analysis slot). Absent = untimed,
    *  and the bars draw alone. Build it with `reviewMoveClocks`. */
   moveClocks?: ShowcaseClockPair[];
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
@@ -666,6 +683,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   presentation: TreePresentation<Move, Truth, View, Color, Arrow, Marker>,
   config: TreeReviewConfig<Move, Truth, Arrow>,
 ): TreeReviewHandle {
+  const evalText = presentation.formatEval ?? formatEval;
   type Node = GameTreeNode<Move, Truth>;
   type Tree = GameTree<Move, Truth, View>;
   const { adapter } = presentation;
@@ -1242,7 +1260,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             // The engine bar above the board and the engine card under the
             // move list come and go with it; give the board what is left. Phone
             // only: wider screens keep the board as it was.
-            if (reviewEngine && window.matchMedia?.('(max-width: 600px)').matches) {
+            if ((reviewEngine || phoneBar) && window.matchMedia?.('(max-width: 600px)').matches) {
               scaffold.refit();
             }
           },
@@ -1704,7 +1722,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (view) summaryView = view;
     if (!summaryView) return;
     const summary = createAnalysisSummary(summaryView.analysis, config.players, {
-      hideAcpl: summaryView.hideAcpl,
+      hideAcpl: presentation.hideAcpl || summaryView.hideAcpl,
       seatColors: config.seatColors,
       phases: gamePhases,
       onJudgment: { hover: markJudgment, jump: jumpToJudgment },
@@ -1741,9 +1759,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
 
   // ── Learn from your mistakes (retro mode) ──
   // The variant opts in with a move→squares mapping, and the flow needs a local
-  // engine to grade a free try; a study reads a document, it does not retry it.
+  // engine to grade a free try. Only a game's player retries their own seat;
+  // an analysis line belongs to its reader, and a study does not offer retro.
+  const analysisSurface = config.reviewSurface === 'analysis';
   const retroSupported = Boolean(
-    presentation.retro && presentation.engine && config.reviewSurface !== 'study',
+    presentation.retro &&
+      presentation.engine &&
+      config.reviewSurface !== 'study' &&
+      (analysisSurface || config.retroSide != null),
   );
   /** "12. h3-e3" / "12… h8-e8": the move-tree's own numbering, reused by the
    *  chart readout and the retro prompts so one move reads the same everywhere. */
@@ -1752,14 +1775,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const number = ply % 2 === 1 ? `${(ply + 1) / 2}.` : `${ply / 2}…`;
     return `${number} ${node.label}`;
   }
-  /** Which side sits at the bottom of the board: the side the reader is
-   *  looking from, and so the side whose mistakes they came to fix (lichess
-   *  bottomColor). */
+  /** On the analysis board the reader practises whichever side they face. */
   function bottomSide(): RetroSide {
     return orientation() === presentation.perspective(false) ? 'red' : 'black';
   }
   function openRetro(side: RetroSide): void {
-    if (!gameAnalysis) return;
+    if (!retroSupported || !gameAnalysis || (!analysisSurface && side !== config.retroSide)) return;
     const analysis = gameAnalysis;
     retro = null;
     retroPanel?.el.remove();
@@ -1794,11 +1815,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       labelFor: plyMoveLabel,
       discInk: reviewColorForSeat(side, config.seatColors),
       onClose: closeRetro,
-      onFlip: () => {
-        // Look at the game from the other side, then start on its mistakes.
-        flipBoard();
-        openRetro(side === 'red' ? 'black' : 'red');
-      },
+      onFlip: analysisSurface
+        ? () => {
+            // Look at the game from the other side, then start on its mistakes.
+            flipBoard();
+            openRetro(side === 'red' ? 'black' : 'red');
+          }
+        : undefined,
     });
     // The box rises over the bottom of the move list, on the board's bottom
     // line (lichess puts its retro box at the foot of the tools column).
@@ -1817,7 +1840,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   function toggleRetro(): void {
     if (retro) closeRetro();
-    else openRetro(bottomSide());
+    else {
+      const side = analysisSurface ? bottomSide() : config.retroSide;
+      if (side != null) openRetro(side);
+    }
   }
   /** The panel, the engine readout and the move-list hiding all read retro
    *  state; refresh them together after any retro transition. */
@@ -1883,6 +1909,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const moveTimesChart =
     config.moveTimes && config.moveTimes.length > 0
       ? createMoveTimesChart(config.moveTimes, {
+          firstMover: config.firstMover,
           seatColors: config.seatColors,
           ...(config.moveClocks ? { clocks: config.moveClocks } : {}),
           moveLabel: (ply) => {
@@ -1981,7 +2008,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       config.underboardNote,
     ),
     underboardOverflows: true,
-    phoneOneScreen: phoneReview,
+    phoneOneScreen: phoneReview || Boolean(config.phoneAnalysisBar),
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
@@ -2022,12 +2049,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // it, labelled bottom bar. CSS shows it below 600px only; the arrow strip and
   // the engine card it stands in for stay in the DOM for wider screens.
   if (config.phoneAnalysisBar && !config.embedded) {
-    const flipItem = menuItems[0];
+    const flipItem = presentation.fixedOrientation ? undefined : menuItems[0];
     phoneBar = createAnalysisPhoneBar({
       signal: mountAbort.signal,
       engine: enginePanel,
       variantName: config.phoneAnalysisBar.variantName,
-      onFlip: () => flipBoard(),
+      onFlip: presentation.fixedOrientation ? undefined : () => flipBoard(),
+      engineInTools: config.phoneAnalysisBar.engineInTools,
       onBack: () => go(tree.stepBack(currentPath)),
       onNext: () => {
         if (retro?.preventGoingToNextMove()) return;
@@ -2035,7 +2063,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       },
       // Flip has its own button on the bar; the sheet carries the rest.
       toolsItems: () => controls.menuItems.filter((item) => item !== flipItem),
-      importPanel: importPanel?.el ?? null,
+      importPanel: config.phoneAnalysisBar.importPanel ?? importPanel?.el ?? null,
       metaCard: config.metaCard ?? null,
     });
     const stageEl = scaffold.stage.el;
@@ -2043,11 +2071,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     stageEl.after(phoneBar.info);
     root.append(phoneBar.bar, phoneBar.sheet);
     root.classList.add('has-analysis-phone-bar');
+    root.classList.toggle(
+      'has-analysis-engine-tools',
+      Boolean(config.phoneAnalysisBar.engineInTools),
+    );
     const { bar, sheet } = phoneBar;
     mountAbort.signal.addEventListener(
       'abort',
       () => {
-        root.classList.remove('has-analysis-phone-bar');
+        root.classList.remove('has-analysis-phone-bar', 'has-analysis-engine-tools');
         bar.remove();
         sheet.remove();
       },
@@ -2272,6 +2304,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
     if (phoneBar) {
       const seat = view ? presentation.seatFor(view) : null;
+      // Flip variants return move-order seats; other boards return actual ink.
       phoneBar.sync({
         sideToMove:
           seat == null
@@ -2279,7 +2312,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             : inkWord(
                 seatStripDisplayInk(
                   String(seat),
-                  config.seatColors,
+                  config.seatInkBindsOnFlip ? config.seatColors : undefined,
                   config.seatInkBindsOnFlip ?? false,
                 ),
               ),
@@ -2323,7 +2356,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         gameAnalysis && mainlineNodes()[node.ply] === node
           ? gameAnalysis.evals.find((entry) => entry.ply === node.ply)
           : undefined;
-      phoneAnalysis.setEval(gameAnalysis ? (point ? formatEval(point.cp, point.mate) : '–') : null);
+      phoneAnalysis.setEval(gameAnalysis ? (point ? evalText(point.cp, point.mate) : '–') : null);
     }
     moveTimesChart?.setPly(node.ply);
     config.onPlyChange?.(node.ply);
@@ -2425,8 +2458,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : undefined;
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
+      formatScore: evalText,
       winK: winPercentK(analysis.engineId),
       phases: gamePhases,
+      phaseLabels: {
+        opening: t('summary.opening'),
+        middlegame: t('summary.middlegame'),
+        endgame: t('summary.endgame'),
+      },
       // Names the ply under the pointer in the chart's hover readout, in the same
       // "5. b1-c3" / "5… c7-c6" form the move tree numbers its rows with, so the
       // two readings of one move agree.
@@ -2559,7 +2598,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
-          eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
+          eval:
+            entry && presentation.moveEvalVisible?.(node.truth) !== false
+              ? evalText(entry.cp, entry.mate)
+              : undefined,
           comment: hidden ? undefined : mark.comment,
           commentClass: mark.commentClass,
           ...(luck === undefined
@@ -2655,23 +2697,23 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     } else if (control instanceof HTMLButtonElement) {
       control.addEventListener('click', () => {
         control.disabled = true;
-        label.textContent = 'Analysing the whole game…';
+        label.textContent = t('replay.analysingWholeGame');
         source
           .run((done, total) => {
-            label.textContent = `Analysing… ${done}/${total}`;
+            label.textContent = t('replay.analysingProgress', { done, total });
           }, mountAbort.signal)
           .then((analysis) => {
             applyAnalysis(analysis);
             // The decomposition (jieqi) is the heavier follow-on pass; kick it off once the basic
             // sweep is in (it depends on it). Failure leaves the eval graph standing on its own.
             if (decisionSource) {
-              label.textContent = 'Analysing reveals…';
+              label.textContent = t('replay.analysingReveals');
               return runDecisions();
             }
           })
           .catch(() => {
             control.disabled = false;
-            label.textContent = 'Analysis failed — retry';
+            label.textContent = t('replay.analysisFailed');
           });
       });
     }

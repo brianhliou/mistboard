@@ -339,7 +339,7 @@ describe('static pages', () => {
     expect(root.textContent).toContain('Mistboard 上可以玩什麼？');
     expect(root.textContent).toContain('規則參考列出了目前遊戲。');
     expect(root.textContent).toContain('我需要帳號嗎？');
-    expect(root.textContent).toContain('如何回報 bug 或聯絡？');
+    expect(root.textContent).toContain('如何回報錯誤或聯絡我們？');
     expect(root.textContent).toContain('Mistboard 引擎會看到完整棋盤嗎？');
     expect(root.textContent).toContain('計分對局如何運作？');
   });

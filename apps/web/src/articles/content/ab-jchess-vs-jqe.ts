@@ -265,6 +265,10 @@ function game(key: string): MatchGame {
 
 const NAME = (engine: string): string => (engine === 'jqe' ? 'jqe' : 'AB-JChess');
 
+/** All 600 games of the match, the two games of each deal side by side
+ *  (scripts/variant-lab/ab-jchess-vs-jqe-full-study.ts). Prod study, created 2026-11-05. */
+export const AB_JQE_FULL_STUDY_ID = 'fb5Wqzbs';
+
 /** The six games as one study (scripts/variant-lab/ab-jchess-vs-jqe-study.ts): a
  *  chapter per game in AB_JQE_GAMES order, then the chase chapter. */
 export const AB_JQE_STUDY = {
@@ -403,6 +407,8 @@ export const abJchessVsJqeArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-04',
+  updatedAt: '2026-11-06',
+  updateNote: 'Added a link to a study of all 600 games.',
   thumbnail: {
     kind: 'svg',
     svg: (locale: Locale): string =>
@@ -443,7 +449,7 @@ export const abJchessVsJqeArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: `The ${T.games} games were ${T.pairs} deals, each played twice with colours swapped, at ${M.movetimeMs / 1000} seconds a move on ${M.threads} threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out.`,
+          text: `The ${T.games} games were ${T.pairs} deals, each played twice with colours swapped, at ${M.movetimeMs / 1000} seconds a move on ${M.threads} threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All ${T.games} games](/study/${AB_JQE_FULL_STUDY_ID}) are in a study, the two games of each deal side by side.`,
         },
         {
           kind: 'table',

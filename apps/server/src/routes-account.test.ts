@@ -121,6 +121,7 @@ definePersistenceTests('account routes', () => {
     for (const body of [
       { clockTenths: 'always' },
       { premoves: false },
+      { inboxEmail: false },
       { correspondenceDeadlineEmail: false },
       { correspondenceStartEmail: false },
     ]) {
@@ -142,6 +143,7 @@ definePersistenceTests('account routes', () => {
       premoves: false,
       confirmGameActions: true,
       inboxBell: true,
+      inboxEmail: false,
       correspondenceBell: true,
       challengesBell: true,
       forumBell: true,
@@ -180,6 +182,10 @@ definePersistenceTests('account routes', () => {
     for (const body of [
       { clockTenths: 'sometimes' },
       { premoves: 'no' },
+      { inboxEmail: 'false' },
+      { inboxEmail: null },
+      { inboxEmail: 0 },
+      { inboxEmail: false, inboxBell: false },
       { premoves: false, inboxBell: false },
     ]) {
       const response = captureResponse();
@@ -192,6 +198,54 @@ definePersistenceTests('account routes', () => {
       assert.equal(handled, true);
       assert.equal(response.status, 400);
       assert.deepEqual(JSON.parse(response.body), { error: 'invalid_account_preferences' });
+    }
+  });
+
+  test('account preferences route round-trips inbox email without changing the bell', async () => {
+    const now = new Date();
+    const user = await createUser({
+      id: 'user_inbox_email_route',
+      email: 'inbox-email-route@example.com',
+      emailVerifiedAt: now,
+      handle: 'inbox-email-route',
+      displayName: 'Inbox Email Route',
+      now,
+    });
+    assert.equal(user.accountPreferences.inboxEmail, true);
+    const sessionToken = 'inbox-email-route-token';
+    const expiresAt = new Date(Date.now() + 86_400_000);
+    await createAccountSession({
+      id: 'inbox-email-route-session',
+      userId: user.id,
+      tokenHash: hashSecret(sessionToken),
+      expiresAt,
+    });
+    const cookie = accountSessionCookie('inbox-email-route-session', sessionToken, expiresAt).split(
+      ';',
+    )[0];
+
+    for (const enabled of [false, true]) {
+      const response = captureResponse();
+      assert.equal(
+        await tryHandle(
+          {},
+          jsonRequest({ inboxEmail: enabled }, cookie),
+          response,
+          '/api/account/preferences',
+        ),
+        true,
+      );
+      assert.equal(response.status, 200);
+      const returned = JSON.parse(response.body).user.accountPreferences;
+      assert.equal(returned.inboxEmail, enabled);
+      assert.equal(returned.inboxBell, true);
+      assert.equal(
+        (await currentAccountUser(jsonRequest({}, cookie, 'GET')))?.accountPreferences.inboxEmail,
+        enabled,
+      );
+      const stored = await findUserByEmail(user.email);
+      assert.equal(stored?.accountPreferences.inboxEmail, enabled);
+      assert.equal(stored?.accountPreferences.inboxBell, true);
     }
   });
 

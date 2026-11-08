@@ -91,6 +91,8 @@ export const luatCoUpArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-03',
+  updatedAt: '2026-11-05',
+  updateNote: 'Đã sửa luật lặp lại thế cờ.',
   audience: 'Người mới chơi cờ úp, và người chơi cờ tướng muốn biết cờ úp khác ở chỗ nào.',
   intro: [
     {
@@ -188,7 +190,7 @@ export const luatCoUpArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Trên Mistboard, ván cờ tự động hòa sau 120 lượt đi, tức 60 nước mỗi bên, mà không có nước ăn quân nào. Lặp lại thế cờ không tạo ra một luật hòa tự động riêng.',
+          text: 'Trên Mistboard, ván cờ tự động hòa sau 120 lượt đi, tức 60 nước mỗi bên, mà không có nước ăn quân nào. Khi cùng một thế cờ với cùng bên đi xuất hiện lần thứ ba, ván cờ kết thúc: bên chiếu ở mọi lượt của mình trong vòng lặp sẽ thua; nếu không bên nào như vậy, hoặc cả hai đều như vậy, ván cờ hòa. Mistboard không xét đuổi bắt, nên đuổi bắt lặp lại mà không chiếu là hòa.',
         },
       ],
     },

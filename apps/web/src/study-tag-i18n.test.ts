@@ -1,3 +1,4 @@
+import { personNameForLocale } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { localizedChapterTags, parseStudyI18n } from './study-i18n.js';
 
@@ -61,4 +62,30 @@ describe('localized chapter tags', () => {
     expect(out.black).toBeUndefined();
     expect(out.red).toBe('徐超');
   });
+});
+
+it('renders both page scripts from checked person tag overlays', () => {
+  const source = { red: 'Yu Youhua', black: 'Sun Yongzheng', result: '1-0' };
+  const overlays = Object.fromEntries(
+    ['zh-Hans', 'zh-Hant'].map((locale) => [
+      locale,
+      {
+        tags: {
+          red: personNameForLocale({ name: '于幼华', nameOwn: '於幼華' }, locale),
+          black: personNameForLocale({ name: '孙勇征', nameOwn: '孫勇徵' }, locale),
+        },
+      },
+    ]),
+  );
+  expect(localizedChapterTags(source, overlays, 'zh-Hans')).toEqual({
+    ...source,
+    red: '于幼华',
+    black: '孙勇征',
+  });
+  expect(localizedChapterTags(source, overlays, 'zh-Hant')).toEqual({
+    ...source,
+    red: '于幼華',
+    black: '孫勇征',
+  });
+  expect(localizedChapterTags(source, overlays, 'en')).toEqual(source);
 });

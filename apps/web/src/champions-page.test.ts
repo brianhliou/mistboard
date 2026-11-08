@@ -84,6 +84,7 @@ describe('/champions', () => {
       'dark-chess',
       'jungle-flip',
       'xiangqi-mahjong',
+      'gomoku',
     ]);
     const holder = (game: string) =>
       page.querySelector<HTMLAnchorElement>(
@@ -438,5 +439,48 @@ describe('/champions', () => {
       expect(root.querySelector('a[href="/challenges"]'), mount.name).toBeNull();
       root.remove();
     }
+  });
+});
+
+describe('Gomoku open title', () => {
+  afterEach(() => {
+    vi.doUnmock('@mistboard/game');
+    vi.resetModules();
+  });
+  it('prepares Rapfi credits with no invented holder or match', async () => {
+    const module = await import('./champions-page.js');
+    expect(module).toHaveProperty(
+      'GOMOKU_OPEN_TITLE',
+      expect.objectContaining({ gameId: 'gomoku', setupEngineId: 'rapfi-level-8' }),
+    );
+    const title = (module as unknown as { GOMOKU_OPEN_TITLE: Record<string, unknown> })
+      .GOMOKU_OPEN_TITLE;
+    for (const field of ['holder', 'holderKey', 'botHref', 'reign'])
+      expect(title).not.toHaveProperty(field);
+    expect(TITLES.some((title) => title.gameId === 'gomoku')).toBe(true);
+  });
+  it('renders the launched Rapfi open title last with supported public credit links', async () => {
+    vi.resetModules();
+    vi.doMock('@mistboard/game', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@mistboard/game')>();
+      return {
+        ...actual,
+        isPublicGameSpec: (id: string) => id === 'gomoku' || actual.isPublicGameSpec(id),
+      };
+    });
+    const launched = await import('./champions-page.js');
+    expect(launched.TITLES.at(-1)?.gameId).toBe('gomoku');
+    expect(launched.CHAMPIONS.some((title) => title.gameId === 'gomoku')).toBe(false);
+    const card = launched.buildChampions('en').querySelector('[data-game="gomoku"]');
+    expect(card).not.toBeNull();
+    expect(card!.querySelector('.champions-open-holder')).toBeNull();
+    expect(card!.querySelector('.champions-open-badge')?.textContent).toBe('Title open');
+    expect(hrefs(card as HTMLElement)).toEqual([
+      'https://github.com/dhbloo/rapfi',
+      'https://github.com/brianhliou/rapfi-wasm',
+      '#challenge',
+    ]);
+    expect(card!.textContent).toContain('Rapfi');
+    expect(card!.querySelector('.champions-stat')).toBeNull();
   });
 });

@@ -10,8 +10,10 @@
 
 import { isStaleLiveRoom } from './current-games.js';
 import { isGameInPlay } from './deploy-gate.js';
+import { isFFQBanqiGame } from './ffq-banqi-access.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
+import { listedOnSurface } from './watch-channels.js';
 
 export interface LiveRoomStats {
   // Games genuinely in play, per the shared isGameInPlay predicate — NOT the
@@ -22,7 +24,8 @@ export interface LiveRoomStats {
   // players online and nothing featurable on TV.
   // A live room also drops out once its last move is older than its time
   // class's window (isStaleLiveRoom, the rule /games lists by), so the count
-  // matches the page it links to. Before that, abandoned rapid games stayed in
+  // matches the page it links to. FFQ playtests never enter this public count.
+  // Before that, abandoned rapid games stayed in
   // the count for up to 10 minutes after /games had dropped them at 5.
   playing: number;
   // Per game spec id: rooms counted in `playing` above that also hold at least
@@ -42,8 +45,8 @@ export interface LiveRoomStats {
   // Seated human -> the room a spectator can open to watch them (the friends
   // menu's Watch link). A user seated in several playing rooms gets one that
   // is genuinely in play over one that is paused or idle. A tenant room is
-  // linked only while its tenant is enabled, so the link never lands on a
-  // closed surface. The id only: what a spectator then sees is the room's own
+  // linked only while its tenant is enabled and publicly listable, so the
+  // link never lands on a closed surface. The id only: what a spectator then sees is the room's own
   // public view (roomViewPolicy), so no game state rides on this map.
   playingRoomByUserId: Map<string, string>;
   anonymousOnline: number;
@@ -77,6 +80,7 @@ export function collectLiveRoomStats(
     playingBySpec[specId] = (playingBySpec[specId] ?? 0) + 1;
   };
   for (const [roomId, room] of ctx.rooms.entries()) {
+    const discoverable = !isFFQBanqiGame({ roomId, gameSpecId: room.gameSpecId });
     const roomPlaying = room.projection.state.status.type === 'playing';
     // EvE (engine-vs-engine) counts as a game in play: this is an activity
     // count, not a "humans playing now" count. playingUserIds below still
@@ -86,7 +90,7 @@ export function collectLiveRoomStats(
       playingRoomIds.add(roomId);
       inPlay =
         isGameInPlay(room, nowMs) && !isStaleLiveRoom(room.timeControl, room.events ?? [], nowMs);
-      if (inPlay) playing += 1;
+      if (inPlay && discoverable) playing += 1;
     }
     let seatedHuman = false;
     for (const client of room.clients) {
@@ -94,14 +98,15 @@ export function collectLiveRoomStats(
       if (client.seat !== 'spectator') seatedHuman = true;
       if (roomPlaying && client.userId && client.seat !== 'spectator') {
         playingUserIds.add(client.userId);
-        linkRoom(client.userId, roomId, inPlay);
+        if (discoverable) linkRoom(client.userId, roomId, inPlay);
       }
     }
-    if (inPlay && seatedHuman) countSpec(room.projection.variant);
+    if (inPlay && seatedHuman && discoverable) countSpec(room.projection.variant);
   }
   for (const tenant of registeredVariantTenants()) {
-    const linkable = tenant.enabled();
+    const linkable = tenant.enabled() && listedOnSurface(tenant.gameSpecId);
     for (const [roomId, room] of tenant.rooms.entries()) {
+      const discoverable = !isFFQBanqiGame({ roomId, gameSpecId: tenant.gameSpecId });
       const roomPlaying = room.projection?.state.status.type === 'playing';
       let inPlay = false;
       if (roomPlaying) {
@@ -109,7 +114,7 @@ export function collectLiveRoomStats(
         inPlay =
           isGameInPlay(room as Parameters<typeof isGameInPlay>[0], nowMs) &&
           !isStaleLiveRoom(room.projection?.timeControl, room.events ?? [], nowMs);
-        if (inPlay) playing += 1;
+        if (inPlay && discoverable) playing += 1;
       }
       let seatedHuman = false;
       for (const client of room.clients) {
@@ -118,7 +123,7 @@ export function collectLiveRoomStats(
           onlineIdentities.add(`u:${client.userId}`);
           if (roomPlaying && client.seat && client.seat !== 'spectator') {
             playingUserIds.add(client.userId);
-            if (linkable) linkRoom(client.userId, roomId, inPlay);
+            if (linkable && discoverable) linkRoom(client.userId, roomId, inPlay);
           }
         } else if (client.id) {
           onlineIdentities.add(`c:${client.id}`);
@@ -128,7 +133,7 @@ export function collectLiveRoomStats(
       // playing"), so an unlisted tenant's room stays out of it: a hidden
       // playtest an admin plays on prod (Three Kingdoms banqi, #684) must not
       // name itself there.
-      if (inPlay && seatedHuman && linkable) countSpec(tenant.gameSpecId);
+      if (inPlay && seatedHuman && linkable && discoverable) countSpec(tenant.gameSpecId);
     }
   }
   let anonymousOnline = 0;

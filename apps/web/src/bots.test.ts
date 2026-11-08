@@ -127,6 +127,97 @@ async function flushPromises(): Promise<void> {
 }
 
 describe('bot pages', () => {
+  it('lists all Rapfi levels and renders their unmeasured profiles with engine credits', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    try {
+      const { mountBots, mountBotProfile } = await import('./bots.js');
+      const { buildProfileGameRow } = await import('./profile-ui.js');
+      const bots = Array.from({ length: 8 }, (_, index) => {
+        const level = index + 1;
+        const id = `rapfi-level-${level}`;
+        return misty({
+          id,
+          displayName: `Rapfi Level ${level}`,
+          bio: `Rapfi plays freestyle Gomoku at level ${level} of 8.`,
+          activeEngineId: id,
+          defaultGameSpecId: 'gomoku',
+          supportedGameSpecIds: ['gomoku'],
+          play: {
+            mode: 'pve',
+            gameSpecId: 'gomoku',
+            engineId: id,
+            timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+            preferredColor: 'random',
+          },
+          playOptions: [{ gameSpecId: 'gomoku', engineId: id, playable: true }],
+          rating: null,
+          ratings: [],
+          gamesTotal: 0,
+          record: { games: 0, wins: 0, losses: 0, draws: 0 },
+        });
+      });
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bots }));
+      const root = document.createElement('div');
+      await mountBots(root);
+      expect(
+        Array.from(root.querySelectorAll('.profile-summary-card-name'), (link) =>
+          link.getAttribute('href'),
+        ),
+      ).toEqual(bots.map((bot) => `/bot/${bot.id}`));
+      for (const bot of bots) {
+        const row = buildProfileGameRow({
+          roomId: `gmk_${bot.id}`,
+          variant: 'gomoku',
+          mode: 'pve',
+          rated: false,
+          result: 'white-wins',
+          termination: 'race',
+          plyCount: 30,
+          whiteName: null,
+          blackName: null,
+          corpusId: null,
+          playerColor: 'black',
+          endedAt: '2026-11-06T00:00:00Z',
+          participants: [
+            {
+              color: 'black',
+              displayName: 'Guest',
+              subjectType: 'guest',
+              subjectId: null,
+              visibility: 'public',
+            },
+            {
+              color: 'white',
+              displayName: String(bot.displayName),
+              subjectType: 'bot',
+              subjectId: String(bot.id),
+              visibility: 'public',
+            },
+          ],
+        });
+        expect(row.querySelector('.profile-game-opponent-name')?.getAttribute('href')).toBe(
+          `/bot/${bot.id}`,
+        );
+        fetchMock.mockResolvedValue(jsonResponse({ bot }));
+        await mountBotProfile(root, String(bot.id));
+        expect(root.querySelector('h1')?.textContent).toBe(bot.displayName);
+        expect(root.querySelector('.profile-chart-detail')?.textContent).toBe(
+          'No published rating yet',
+        );
+        expect(root.querySelector('.profile-chart-value-empty')).not.toBeNull();
+        expect(root.querySelector('.profile-rating-q')).toBeNull();
+        expect(root.querySelector('.bot-profile-actions button')?.textContent).toBe('Play Gomoku');
+        expect(
+          Array.from(root.querySelectorAll('.bot-profile-credits a'), (link) =>
+            link.getAttribute('href'),
+          ),
+        ).toEqual(['https://github.com/dhbloo/rapfi', 'https://github.com/brianhliou/rapfi-wasm']);
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('links the reigning champion badge to the title record, scoped to the selected variant', async () => {
     const { mountBotProfile } = await import('./bots.js');
     const profile = misty({
@@ -233,7 +324,7 @@ describe('bot pages', () => {
       recent: '最近對局',
       sample: 'Elo 來自 48 局引擎對局',
       railSample: '48 局引擎對局',
-      play: '下迷霧國際象棋',
+      play: '下迷霧西洋棋',
       random: '隨機執方',
       pending: '正在開始...',
       retry: '重試',

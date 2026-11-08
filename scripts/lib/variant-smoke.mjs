@@ -2,7 +2,9 @@
 //
 // The flow is identical for every variant: create a PvE room as the black
 // human (which puts the engine on red), connect over WebSocket, wait for the
-// engine's opening move, then clean up with a pregame abort. Before this
+// engine's opening move, then clean up with a pregame abort. Gomoku's engine
+// is white; human-first dealt openings are aborted and retried under one deadline.
+// Before this
 // runner the three smokes were ~90% identical clones and drifted (the DXQ
 // engine-id fix in bfb02b95 touched one clone only); a variant is now one
 // config entry in variant-smoke-configs.mjs.
@@ -24,12 +26,26 @@ export async function runVariantSmoke(config, argv = process.argv.slice(2)) {
   const baseUrl = resolveBaseUrl(options.baseUrl);
   const timeoutMs = options.timeoutMs ?? config.defaultTimeoutMs;
 
-  const created = await createRoom(config, baseUrl, timeoutMs);
-  if (created.skipped) {
-    reportResult({ ok: true, skipped: true, reason: created.reason, baseUrl: baseUrl.href });
+  const deadline = Date.now() + timeoutMs;
+  do {
+    const remainingMs = config.dealtOpening ? deadline - Date.now() : timeoutMs;
+    if (remainingMs <= 0) throw new Error(`timed out waiting for ${config.label} bot-first deal`);
+    const created = await createRoom(config, baseUrl, remainingMs);
+    if (created.skipped) {
+      reportResult({ ok: true, skipped: true, reason: created.reason, baseUrl: baseUrl.href });
+      return;
+    }
+    const result = await smokeRoom(
+      config,
+      baseUrl,
+      created,
+      config.dealtOpening ? Math.max(1, deadline - Date.now()) : timeoutMs,
+    );
+    if (result.retry) continue;
+    reportResult(result);
     return;
-  }
-  reportResult(await smokeRoom(config, baseUrl, created, timeoutMs));
+  } while (Date.now() < deadline);
+  throw new Error(`timed out waiting for ${config.label} bot-first deal`);
 }
 
 function argSpec(config) {
@@ -102,6 +118,7 @@ export function roomCreationFailure(config, status, body) {
 //   { kind: 'failure', message }            fail the smoke
 //   { kind: 'seat-token', seatToken }       remember the hello seat token
 //   { kind: 'abort', engineReplyState }     engine moved: record + send abort
+//   { kind: 'abort', retry: true }          human-first deal: abort, then retry
 //   { kind: 'success', finalStatus }        abort confirmed: finish ok
 export function evaluateSmokeMessage(config, context, message) {
   const effects = [];
@@ -123,9 +140,27 @@ export function evaluateSmokeMessage(config, context, message) {
   if (
     !context.sentAbort &&
     state.status?.type === 'playing' &&
+    config.dealtOpening &&
+    message.type === 'hello' &&
+    state.ply === state.opening?.stones.length &&
+    state.status.turn === 'black' &&
+    matchesEngineSeat(config.engineSeat, message.seats?.[config.engineColor])
+  ) {
+    // No human move: abort this deal and retry until the engine moves first.
+    effects.push({ kind: 'abort', retry: true });
+    return effects;
+  }
+
+  if (
+    !context.sentAbort &&
+    state.status?.type === 'playing' &&
     state.status.turn === 'black' &&
     state.moveNumber === 1 &&
-    matchesEngineSeat(config.engineSeat, message.seats?.red)
+    (!config.dealtOpening ||
+      (state.opening?.turn === config.engineColor &&
+        state.ply === state.opening.stones.length + 1 &&
+        state.lastMove != null)) &&
+    matchesEngineSeat(config.engineSeat, message.seats?.[config.engineColor ?? 'red'])
   ) {
     effects.push({
       kind: 'abort',
@@ -209,11 +244,13 @@ async function smokeRoom(config, baseUrl, created, timeoutMs) {
           capturedSeatToken = effect.seatToken;
         } else if (effect.kind === 'abort') {
           engineReplyState = effect.engineReplyState;
+          context.retry = effect.retry ?? false;
           context.sentAbort = true;
           socket.send(JSON.stringify({ type: 'abort' }));
         } else if (effect.kind === 'success') {
           finish({
             ok: true,
+            ...(context.retry ? { retry: true } : {}),
             baseUrl: baseUrl.href,
             roomId: created.roomId,
             mode: created.mode,

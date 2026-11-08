@@ -143,12 +143,14 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // classified here, and an unclassified spec falls through to 'masked'.
 // Three Kingdoms banqi (#628, hidden playtest) serves a spectator the red seat's
 // masked board, the same for both seats (three-kingdoms-banqi-hidden-info.test.ts).
+// FFQ uses an observer projection that masks capturer-only covered roles,
+// including in finished room histories (ffq-banqi-hidden-info.test.ts).
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = [
   'banqi',
   'jungle-flip',
   'three-kingdoms-banqi',
 ] as const;
-const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi'] as const;
+const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi', 'ffq-banqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
   ...Object.fromEntries(SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'open' as const])),
@@ -609,8 +611,6 @@ export function isNoindexRoute(pathname: string): boolean {
     // title until 2026-10-24, and Bing filed them as duplicates of it.
     normalized === '/lag' ||
     normalized === '/verify-title' ||
-    // Built-hidden analysis capability, never an indexed public offering.
-    normalized === '/analysis/gomoku' ||
     isSitePlayedGamePage(normalized)
   );
 }

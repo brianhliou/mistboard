@@ -8,6 +8,7 @@ import type {
   XiangqiPlayerRecord,
 } from './persistence-xiangqi-players.js';
 import {
+  bothScripts,
   type PlayerPageSources,
   parsePlayerRoute,
   playerCardContent,
@@ -15,6 +16,7 @@ import {
   playerDescription,
   playerPageFor,
   playerSitemapEntries,
+  renderPlayerBody,
   teamsOf,
 } from './player-pages.js';
 import {
@@ -22,6 +24,32 @@ import {
   type PlayerReference,
   readPlayerReference,
 } from './player-reference.js';
+
+for (const count of [0, 1])
+  test(`player crawler body links only with discoverable puzzles: ${count}`, () => {
+    const body = renderPlayerBody(
+      {
+        slug: 'fixture-player',
+        name: 'Fixture Player',
+        nameEn: null,
+        federation: null,
+        federationEn: null,
+        games: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        events: [],
+        firstPlayedOn: null,
+        lastPlayedOn: null,
+      },
+      [],
+      EMPTY_PLAYER_REFERENCE,
+      count,
+    );
+    assert.equal(body.includes('href="/puzzles?player=fixture-player"'), count > 0);
+    if (count > 0)
+      assert.match(body, /href="\/puzzles\?player=fixture-player">Puzzles from this player<\/a>/);
+  });
 
 function player(overrides: Partial<XiangqiPlayerRecord>): XiangqiPlayerRecord {
   return {
@@ -346,4 +374,11 @@ test('a player the match-fixing rulings named carries the ruling in the descript
     / Banned for 6 months by the Chinese Xiangqi Association in the 2024 to 2026 match-fixing case\.$/,
   );
   assert.doesNotMatch(playerDescription(MENG, REFERENCE), /match-fixing/);
+});
+
+test('person names select a page script and keep the non-Chinese own form', () => {
+  const person = { name: '赵奕帆', nameOwn: '趙奕帆', nameEn: 'Chao Yi-fan' };
+  assert.equal(bothScripts(person, 'zh-Hans'), '赵奕帆');
+  assert.equal(bothScripts(person, 'zh-Hant'), '趙奕帆');
+  assert.equal(bothScripts(person), 'Chao Yi-fan (趙奕帆)');
 });

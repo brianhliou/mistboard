@@ -9,6 +9,7 @@
 // index.ts don't need to know things moved.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import * as accountRoute from './routes/account.js';
 import * as achievementsRoute from './routes/achievements.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
@@ -37,6 +38,7 @@ import * as gamesRoute from './routes/games.js';
 import * as gomokuGamesRoute from './routes/gomoku-games.js';
 import * as historicalXiangqiGamesRoute from './routes/historical-xiangqi-games.js';
 import * as inboxRoute from './routes/inbox.js';
+import * as inboxEmailUnsubscribeRoute from './routes/inbox-email-unsubscribe.js';
 import * as jieqiGamesRoute from './routes/jieqi-games.js';
 import * as jungleFlipGamesRoute from './routes/jungle-flip-games.js';
 import * as jungleGamesRoute from './routes/jungle-games.js';
@@ -105,6 +107,7 @@ export const routes: RouteModule[] = [
   feedbackRoute,
   clubSignupRoute,
   forumRoute,
+  inboxEmailUnsubscribeRoute,
   inboxRoute,
   notificationsRoute,
   metaRoute,
@@ -159,6 +162,8 @@ export async function handleApiRequest(
   const url = request.url ?? '/';
   const parsedUrl = new URL(url, 'http://localhost');
   const pathname = parsedUrl.pathname;
+
+  if (await guardFFQBanqiHttpRead(ctx, request, response, parsedUrl)) return;
 
   for (const route of routes) {
     if (await route.tryHandle(ctx, request, response, pathname, parsedUrl)) return;

@@ -441,7 +441,11 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
   profile.className = 'landing-setup-back';
   profile.href = `/@/${encodeURIComponent(user.handle)}`;
   profile.textContent = t('account.viewProfile', {}, locale);
-  actions.append(save, profile);
+  const verifyTitle = document.createElement('a');
+  verifyTitle.className = 'landing-setup-back';
+  verifyTitle.href = localizedHref('/verify-title', locale);
+  verifyTitle.textContent = t('verifyTitle.heading', {}, locale);
+  actions.append(save, profile, verifyTitle);
 
   form.append(bio.wrap, location.wrap, links.wrap, flair.wrap, actions, status);
   form.addEventListener('submit', async (event) => {
@@ -822,7 +826,7 @@ function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocal
       user,
       t('account.notificationDirectMessages', {}, locale),
       'inboxBell',
-      null,
+      'inboxEmail',
       locale,
     ),
     buildNotificationPreferenceRow(
@@ -894,6 +898,7 @@ type BellPreferenceId =
   | 'forumBell'
   | 'followersBell';
 type EmailPreferenceId =
+  | 'inboxEmail'
   | 'correspondenceDeadlineEmail'
   | 'correspondenceStartEmail'
   | 'correspondenceTurnDigest';

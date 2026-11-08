@@ -6,6 +6,7 @@ import {
   installGlobalChunkLoadRecovery,
   isChunkLoadError,
   shouldReloadForChunkLoadError,
+  stylesheetServedDespiteFailure,
 } from './chunk-load-recovery.js';
 
 describe('chunk load recovery', () => {
@@ -184,5 +185,72 @@ describe('installGlobalChunkLoadRecovery', () => {
     window.dispatchEvent(new Event('vite:preloadError', { cancelable: true }));
     // No reload is coming, so the error that follows is real and must report.
     expect(chunkReloadPending()).toBe(false);
+  });
+});
+
+// 2026-10-31..11-05: 105 one-visit desktop browsers with rotated 2023 user
+// agents reported "Unable to preload CSS" for a stylesheet prod still served
+// (200, text/css). They blocked stylesheet requests themselves, so the failure
+// is not ours; a stale deploy's missing file (404) must still report.
+describe('stylesheetServedDespiteFailure', () => {
+  const cssError = (url: string) => new Error(`Unable to preload CSS for ${url}`);
+  const respond = (status: number, type: string) =>
+    vi.fn(async () => new Response(null, { status, headers: { 'content-type': type } }));
+
+  it('is true when the server still serves the stylesheet', async () => {
+    const fetchAsset = respond(200, 'text/css; charset=utf-8');
+    const url = `${location.origin}/assets/seat-disc-Dt-l-2Ml.css`;
+    await expect(stylesheetServedDespiteFailure(cssError(url), fetchAsset)).resolves.toBe(true);
+    expect(fetchAsset).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ method: 'HEAD', cache: 'no-store' }),
+    );
+  });
+
+  it('accepts the relative path form of the message', async () => {
+    const fetchAsset = respond(200, 'text/css');
+    await expect(
+      stylesheetServedDespiteFailure(cssError('/assets/seat-disc-Dt-l-2Ml.css'), fetchAsset),
+    ).resolves.toBe(true);
+  });
+
+  it('is false when the stylesheet is gone (stale deploy)', async () => {
+    const fetchAsset = respond(404, 'text/html; charset=utf-8');
+    await expect(
+      stylesheetServedDespiteFailure(cssError('/assets/seat-disc-old.css'), fetchAsset),
+    ).resolves.toBe(false);
+  });
+
+  it('is false when a 200 is not a stylesheet (an HTML fallback)', async () => {
+    const fetchAsset = respond(200, 'text/html');
+    await expect(
+      stylesheetServedDespiteFailure(cssError('/assets/seat-disc-old.css'), fetchAsset),
+    ).resolves.toBe(false);
+  });
+
+  it('is false when the probe itself fails (offline)', async () => {
+    const fetchAsset = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(
+      stylesheetServedDespiteFailure(cssError('/assets/seat-disc.css'), fetchAsset),
+    ).resolves.toBe(false);
+  });
+
+  it('never probes other origins or other chunk failures', async () => {
+    const fetchAsset = respond(200, 'text/css');
+    await expect(
+      stylesheetServedDespiteFailure(cssError('https://evil.example/x.css'), fetchAsset),
+    ).resolves.toBe(false);
+    await expect(
+      stylesheetServedDespiteFailure(
+        new TypeError('Failed to fetch dynamically imported module: /assets/old.js'),
+        fetchAsset,
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      stylesheetServedDespiteFailure(new Error('malformed replay'), fetchAsset),
+    ).resolves.toBe(false);
+    expect(fetchAsset).not.toHaveBeenCalled();
   });
 });

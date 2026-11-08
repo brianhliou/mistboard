@@ -179,8 +179,6 @@ export function createTenantWsRuntime<
 >(
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   options: {
-    // Only the hidden Gomoku referee opts in. Other engines remain server-owned.
-    allowBrowserEngineMoves?: true;
     // PvE: invoked after connection joins and after every human move, with the
     // bundle's lifecycle ctx, so the engine's move flows through the same
     // append+broadcast path as a human move. No-op when omitted.
@@ -553,31 +551,25 @@ export function createTenantWsRuntime<
     const status = room.projection.state.status;
     if (status.type !== 'playing') return;
     // Paused by a server stop: the clock is frozen until the players are back.
-    if (room.projection.paused) return;
+    if (room.projection.paused) {
+      sendPayload(client, { type: 'error', reason: 'game_paused' });
+      return;
+    }
     // No moves until both seats are filled (a fresh room starts in `playing`, so
     // a seated player could otherwise move before the opponent/engine joined).
     for (const color of tenant.colors) {
       if (!room.projection.seats[color]) return;
     }
-    let mover = seat;
-    if (message.browserBot === true) {
-      // Delegation grants one move to the BOT seat, never another human seat.
-      // A stale worker reply must name the current room and exact position.
-      if (
-        !options.allowBrowserEngineMoves ||
-        room.rated ||
-        room.projection.rated ||
-        message.roomId !== room.id ||
-        message.expectedPly !== tenantPlyAtEventIndex(room.events, room.events.length) ||
-        room.projection.seats[seat] !== client.id ||
-        tenant.engine?.isEngineClientId(client.id) ||
-        !status.turn ||
-        status.turn === seat ||
-        !tenant.engine?.isEngineClientId(room.projection.seats[status.turn])
-      )
-        return;
-      mover = status.turn;
-    }
+    // Network clients can only act for their own human seat. Engine seats
+    // are server-owned, including clients using the retired delegation flag.
+    if (
+      message.browserBot === true ||
+      tenant.engine?.isEngineClientId(client.id) ||
+      tenant.engine?.isEngineClientId(room.projection.seats[seat]) ||
+      room.projection.seats[seat] !== client.id
+    )
+      return;
+    const mover = seat;
     if (!tenantSeatMayAct(tenant, room.projection.state, mover)) return;
     // A move that arrives after the mover's flag fell but before the clock
     // timer fired ends the game by expiry instead of landing the move (the

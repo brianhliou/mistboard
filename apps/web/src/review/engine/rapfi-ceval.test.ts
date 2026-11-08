@@ -177,7 +177,7 @@ describe('Rapfi shared ceval', () => {
     const w = latest();
     w.emit({ type: 'ready' });
     await vi.advanceTimersByTimeAsync(0);
-    expect(w.url).toContain('/engine/rapfi/worker.js?v=1387d11312');
+    expect(w.url).toContain('/engine/rapfi/worker.js?v=1387d11312.2');
     expect(w.commands).toContain('YXNBEST 3');
     expect(w.commands).toContain('INFO show_detail 2');
     expect(w.commands).toContain('YXBOARD\n7,7,1\n7,8,2\n8,8,1\n8,7,2\n6,8,1\n6,7,2\nDONE');
@@ -352,7 +352,7 @@ describe('Gomoku shared engine panel', () => {
     latest().done();
     await vi.advanceTimersByTimeAsync(0);
     expect(p.el.querySelectorAll('.engine-panel__line')).toHaveLength(3);
-    expect(headline(p)).toBe('+8.7');
+    expect(headline(p)).toBe('B+8.7');
     expect(p.el.dataset.seatInkFamily).toBe('gomoku');
     expect(bar.el.dataset.seatInkFamily).toBe('gomoku');
     expect(p.el.textContent).toContain('h10 i10 f7');
@@ -373,21 +373,23 @@ describe('Gomoku shared engine panel', () => {
       latest().output();
       latest().done();
       await vi.advanceTimersByTimeAsync(0);
-      expect(headline(p)).toBe('-8.7');
+      expect(headline(p)).toBe('W+8.7');
       expect(bar.el.querySelector<HTMLElement>('.review-eval-bar__fill')?.style.height).toBe(
         '6.2%',
       );
     },
   );
 
+  // The panel shows the short form so the headline keeps one width; the
+  // headline's tooltip carries the words.
   it.each([
-    ['en', 29990, 'Black wins in 5'],
-    ['en', -29990, 'White wins in 5'],
-    ['zh-Hans', 29990, '黑方 5 步内获胜'],
-    ['zh-Hans', -29990, '白方 5 步内获胜'],
-    ['zh-Hant', 29990, '黑方 5 步內獲勝'],
-    ['zh-Hant', -29990, '白方 5 步內獲勝'],
-  ])('uses translated forced-five wording in %s for %s', async (locale, score, expected) => {
+    ['en', 29990, 'B in 5', 'Black wins in 5'],
+    ['en', -29990, 'W in 5', 'White wins in 5'],
+    ['zh-Hans', 29990, '黑 5 步胜', '黑方 5 步内获胜'],
+    ['zh-Hans', -29990, '白 5 步胜', '白方 5 步内获胜'],
+    ['zh-Hant', 29990, '黑 5 步勝', '黑方 5 步內獲勝'],
+    ['zh-Hant', -29990, '白 5 步勝', '白方 5 步內獲勝'],
+  ])('uses translated forced-five wording in %s for %s', async (locale, score, expected, words) => {
     document.documentElement.lang = String(locale);
     setStoredLocale(locale as Locale);
     const { p } = panel();
@@ -396,18 +398,19 @@ describe('Gomoku shared engine panel', () => {
     latest().done();
     await vi.advanceTimersByTimeAsync(0);
     expect(headline(p)).toBe(expected);
+    expect(p.el.querySelector('.engine-panel__eval')?.getAttribute('title')).toBe(words);
     expect(p.el.querySelector('.engine-panel__line-eval')?.textContent).toBe(expected);
     expect(p.el.textContent).not.toContain('29990');
     expect(p.el.textContent).not.toContain('#5');
   });
 
   it.each([
-    [29989, [], 'Black wins in 6'],
-    [-29989, [], 'White wins in 6'],
-    [29990, ['a1'], 'White wins in 5'],
-    [-29990, ['a1'], 'Black wins in 5'],
-    [30000, [], 'Black wins in 0'],
-    [-30000, [], 'White wins in 0'],
+    [29989, [], 'B in 6'],
+    [-29989, [], 'W in 6'],
+    [29990, ['a1'], 'W in 5'],
+    [-29990, ['a1'], 'B in 5'],
+    [30000, [], 'B wins'],
+    [-30000, [], 'W wins'],
   ])('keeps win distance and winning color for %s at %s', async (score, moves, expected) => {
     const { p } = panel();
     await startPanel(p, moves);
@@ -432,7 +435,7 @@ describe('Gomoku shared engine panel', () => {
     latest().emit({ type: 'ready' });
     await vi.advanceTimersByTimeAsync(0);
     latest().output();
-    expect(headline(p)).toBe('-8.7');
+    expect(headline(p)).toBe('W+8.7');
     p.setOn(false);
     expect(onLines).toHaveBeenLastCalledWith(null);
     expect(headline(p)).toBe('–');

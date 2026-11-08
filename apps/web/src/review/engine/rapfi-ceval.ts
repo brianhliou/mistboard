@@ -102,7 +102,7 @@ export class RapfiCeval implements CevalHandle {
 
   async preload(): Promise<void> {
     if (this.loading) return this.loading;
-    const worker = new Worker('/engine/rapfi/worker.js?v=1387d11312');
+    const worker = new Worker('/engine/rapfi/worker.js?v=1387d11312.2');
     this.worker = worker;
     this.loading = new Promise<void>((resolve, reject) => {
       this.cancelLoad = reject;

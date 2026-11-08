@@ -1,16 +1,18 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import test from 'node:test';
+import { promisify } from 'node:util';
 import { tsImport } from 'tsx/esm/api';
+import { WebSocketServer } from 'ws';
 
 const { applyGomokuRoomMove, createGomokuRoomState, getGomokuPlayerView, GOMOKU_OPENINGS } =
   await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
 
 function fixture({
   move = 'a1',
-  network = true,
-  worker = true,
   reply = true,
   status = 201,
   openings = [GOMOKU_OPENINGS.find((o) => o.turn === 'black')],
@@ -47,25 +49,7 @@ function fixture({
       seats: { white: 'smoke-player', black: 'rapfi-level-1' },
       state: view(initial),
     });
-    if (worker)
-      page.emit('worker', { url: () => 'https://example.test/engine/rapfi/worker.js?v=pin' });
-    if (network)
-      page.emit('response', {
-        url: () => 'https://example.test/engine/rapfi/rapfi-single-simd128.data?v=pin',
-        ok: () => true,
-        status: () => 200,
-        finished: async () => null,
-      });
     if (reply && initial.status.turn === 'black') {
-      socket.emit('framesent', {
-        payload: JSON.stringify({
-          type: 'move',
-          to: move,
-          browserBot: true,
-          roomId: initial.id,
-          expectedPly: 0,
-        }),
-      });
       frame({ type: 'event-appended', state: view(next) });
     }
     return { ok: () => true, status: () => 200 };
@@ -111,7 +95,7 @@ function fixture({
 }
 
 async function run(f, options = {}) {
-  const { checkGomokuRoom } = await import('./prod-gomoku-smoke.mjs');
+  const { checkGomokuRoom } = await import('./prod-gomoku-browser-smoke.mjs');
   return checkGomokuRoom(f.browser, {
     baseUrl: 'https://example.test',
     timeoutMs: 100,
@@ -122,12 +106,88 @@ async function run(f, options = {}) {
 test('prod:smoke:gomoku is a runnable package entry', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(pkg.scripts['prod:smoke:gomoku'], 'node scripts/prod-gomoku-smoke.mjs');
+  assert.equal(
+    pkg.scripts['prod:smoke:gomoku-browser'],
+    'node scripts/prod-gomoku-browser-smoke.mjs',
+  );
 });
 
-test('worker/download evidence plus a kernel-legal server reply pass, then abort', async () => {
+test('shared Gomoku entry retries an aborted human-first deal and requires a Rapfi move', async () => {
+  let attempts = 0;
+  const aborted = [];
+  const states = new Map();
+  const server = createServer(async (request, response) => {
+    let body = '';
+    for await (const chunk of request) body += chunk;
+    const created = JSON.parse(body);
+    assert.equal(created.gameSpecId, 'gomoku');
+    assert.equal(created.preferredColor, 'black');
+    const turn = ++attempts === 1 ? 'black' : 'white';
+    const roomId = `gmk_smoke_${attempts}`;
+    states.set(
+      roomId,
+      createGomokuRoomState(
+        roomId,
+        GOMOKU_OPENINGS.find((o) => o.turn === turn),
+      ),
+    );
+    response.writeHead(201, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ roomId, mode: 'pve', gameSpecId: 'gomoku' }));
+  });
+  const sockets = new WebSocketServer({ server });
+  sockets.on('connection', (socket, request) => {
+    const roomId = new URL(request.url, 'http://localhost').searchParams.get('room');
+    let state = states.get(roomId);
+    const send = (type) =>
+      socket.send(
+        JSON.stringify({
+          type,
+          seat: 'black',
+          seatToken: 'token',
+          seats: { black: 'human', white: 'rapfi-level-8' },
+          state: getGomokuPlayerView(state, 'black'),
+        }),
+      );
+    send('hello');
+    if (state.status.turn === 'white') {
+      state = applyGomokuRoomMove(state, { to: 'a1' });
+      send('event-appended');
+    }
+    socket.on('message', (raw) => {
+      assert.deepEqual(JSON.parse(raw.toString()), { type: 'abort' });
+      aborted.push(roomId);
+      state = { ...state, status: { type: 'aborted', reason: 'manual' } };
+      send('event-appended');
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const { stdout } = await promisify(execFile)(process.execPath, [
+      new URL('./prod-gomoku-smoke.mjs', import.meta.url).pathname,
+      '--base',
+      `http://127.0.0.1:${server.address().port}`,
+      '--timeout-ms',
+      '3000',
+    ]);
+    const result = JSON.parse(stdout);
+    assert.equal(result.ok, true);
+    assert.equal(result.retry, undefined);
+    assert.equal(result.roomId, 'gmk_smoke_2');
+    assert.deepEqual(result.engineReplyState.lastMove, { to: 'a1' });
+    assert.equal(result.finalStatus.type, 'aborted');
+    assert.deepEqual(aborted, ['gmk_smoke_1', 'gmk_smoke_2']);
+  } finally {
+    for (const socket of sockets.clients) socket.terminate();
+    await new Promise((resolve) => sockets.close(resolve));
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('a kernel-legal server socket reply passes without browser bot frames, workers or network downloads', async () => {
   const f = fixture();
   const result = await run(f);
   assert.equal(result.ok, true);
+  assert.equal(result.check, 'gomoku-server-bot');
   assert.equal(result.move, 'a1');
   assert.equal(result.finalStatus.type, 'aborted');
   assert.equal(f.posted.data.gameSpecId, 'gomoku');
@@ -159,20 +219,9 @@ test('a legal bot reply without a confirmed abort cannot pass', async () => {
   assert.equal(f.closed, true);
 });
 
-for (const missing of ['network', 'worker', 'reply']) {
-  test(`a move without ${missing} evidence cannot pass`, async () => {
-    const f = fixture({ [missing]: false });
-    await assert.rejects(run(f, { timeoutMs: 30 }), /timed out/i);
-    assert.equal(f.closed, true);
-  });
-}
-
-test('a download is complete only after its response body finishes', async () => {
-  const f = fixture();
-  f.page.prependListener('response', (response) => {
-    response.finished = async () => new Error('truncated');
-  });
-  await assert.rejects(run(f), /truncated/);
+test('a room without a server reply cannot pass', async () => {
+  const f = fixture({ reply: false });
+  await assert.rejects(run(f, { timeoutMs: 30 }), /timed out.*server bot reply/i);
   assert.equal(f.closed, true);
 });
 
@@ -180,14 +229,6 @@ test('a disabled route fails a manually invoked smoke rather than reporting succ
   const f = fixture({ status: 404 });
   await assert.rejects(run(f), /room creation failed: 404/);
   assert.equal(f.closed, true);
-});
-
-test('a board change must be the browser bot submission accepted by the server', async () => {
-  const f = fixture();
-  f.socket.prependListener('framesent', (frame) => {
-    frame.payload = JSON.stringify({ type: 'move', to: 'h8' });
-  });
-  await assert.rejects(run(f), /browser bot submission/);
 });
 
 test('a rated hello is refused even when the create response said unrated', async () => {
@@ -212,25 +253,19 @@ test('illegal or corrupted server replies fail kernel validation', async () => {
 });
 
 test('HTTP failure, browser error and rejected bot moves fail promptly', async () => {
-  for (const event of ['pageerror', 'error-frame', 'network-http']) {
+  for (const event of ['pageerror', 'error-frame', 'page-http']) {
     const f = fixture();
     const goto = f.page.goto;
     f.page.goto = async (...args) => {
       const response = await goto(...args);
-      if (event === 'pageerror') f.page.emit('pageerror', new Error('WASM failed'));
+      if (event === 'pageerror') f.page.emit('pageerror', new Error('page failed'));
       if (event === 'error-frame')
         f.socket.emit('framereceived', {
           payload: JSON.stringify({ type: 'error', error: 'illegal_move' }),
         });
-      if (event === 'network-http')
-        f.page.emit('response', {
-          url: () => 'https://example.test/engine/rapfi/rapfi-single-simd128.data',
-          ok: () => false,
-          status: () => 404,
-        });
-      return response;
+      return event === 'page-http' ? { ok: () => false, status: () => 503 } : response;
     };
-    await assert.rejects(run(f), /WASM failed|illegal_move|HTTP 404/);
+    await assert.rejects(run(f), /page failed|illegal_move|HTTP 503/);
     assert.equal(f.closed, true);
   }
 });
