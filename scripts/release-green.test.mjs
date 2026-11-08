@@ -23,6 +23,7 @@ async function releaseScenario({
   failStage,
   ciRequired = true,
   localCi = false,
+  branchError = false,
 } = {}) {
   const events = [];
   const pushes = [];
@@ -49,6 +50,15 @@ async function releaseScenario({
       },
     },
     ensureCleanWorktree: noop,
+    enforceAgentBranchAccounting: () => {
+      events.push('branch accounting');
+      if (
+        branchError === true ||
+        branchError === events.filter((event) => event === 'branch accounting').length
+      ) {
+        throw new Error('unmarked agent/forgotten');
+      }
+    },
     enforceShipWindow: noop,
     takeReleaseLock: noop,
     catchUpBeforeGate: noop,
@@ -120,6 +130,28 @@ test('release publishes an exact candidate, overlaps the pending drain with CI, 
   assert.equal(events[ci + 1].exact, true);
   assert.equal(release.pushCompleted, true);
 });
+
+test('unmarked branch accounting refuses push before a lock, CI, drain or push', async () => {
+  const { events, pushes, error } = await releaseScenario({ branchError: true });
+  assert.ok(error);
+  assert.deepEqual(events, ['branch accounting']);
+  assert.deepEqual(pushes, []);
+});
+
+for (const branchError of [2, 3, 4]) {
+  test(`new unmarked work at accounting check ${branchError} prevents promotion`, async () => {
+    const { events, pushes, release, error } = await releaseScenario({ branchError });
+    assert.ok(error);
+    assert.equal(release.pushCompleted, undefined);
+    assert.ok(!events.includes('git push release head'));
+    if (branchError < 4) assert.deepEqual(pushes, []);
+    else {
+      assert.deepEqual(pushes, [`${HEAD}:refs/heads/release/${HEAD}`]);
+      assert.ok(events.includes('cancel drain'));
+      assert.ok(!events.includes('production drain'));
+    }
+  });
+}
 
 for (const ciError of ['red CI', 'cancelled CI', 'timed out waiting for CI']) {
   test(`${ciError} cancels the pending drain and leaves main untouched`, async () => {

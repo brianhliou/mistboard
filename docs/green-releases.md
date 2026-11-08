@@ -4,6 +4,24 @@
 Railway continues to deploy from `main`; publishing the candidate cannot deploy
 it. Hosted `ci.yml` runs on every candidate, including docs-only commits.
 
+Before a dry run or push can proceed, every local `agent/*` branch with commits
+outside both the release HEAD and local `origin/main` must be merged into the
+batch or explicitly parked. `agent/ship-*` branches are exempt. Update the local
+remote-tracking ref when assembling the batch. An unmarked branch stops either
+mode with exit 1 and its exact park command, before taking a lock or writing a
+changelog commit.
+
+```sh
+npm run branch:park -- agent/example "Waiting for review"
+npm run branch:parked
+npm run branch:unpark -- agent/example
+```
+
+Parking stores `<YYYY-MM-DD> <reason>` in local git config at
+`branch.<name>.mistboardParked`, shared across worktrees and never tracked.
+The gate rechecks after catching up with main, before publishing the candidate,
+and before promotion, so work committed during a release also needs accounting.
+
 After publishing the candidate, the release starts a pending drain if live
 games need one. Games finish while hosted CI runs. The restart-now notification
 waits until CI is complete and successful for that exact SHA on that exact
@@ -32,7 +50,7 @@ final drain step. An empty game pool remains token-free.
 Offline regression checks:
 
 ```sh
-node --test scripts/release-green.test.mjs scripts/release-prod-structure.test.mjs scripts/release-drain.test.mjs scripts/release-lock.test.mjs
+node --test scripts/release-agent-branches.test.mjs scripts/release-green.test.mjs scripts/release-prod-structure.test.mjs scripts/release-drain.test.mjs scripts/release-lock.test.mjs
 ```
 
 These execute the release orchestration with external effects replaced, test
