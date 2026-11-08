@@ -1260,6 +1260,26 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   color: var(--site-heading);
 }
 
+/* Keep one secondary line even in the two-column grid at 375px. The full
+   text stays in the DOM for assistive tech and the prerender's crawler copy. */
+.rules-landing-tile-tagline {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--site-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* This prerender already holds the styled client DOM. Keep its first paint
+   immediate and its nav/main layout identical through the ownership wrapper. */
+.rules-route > .crawler-copy {
+  display: contents;
+  animation: none;
+}
+
 .rules-landing-tile:hover .rules-landing-tile-label {
   text-decoration: underline;
 }

@@ -9,6 +9,7 @@ export const jieqiArticle: Article = {
   kind: 'rules',
   playableOnMistboard: true,
   title: 'Jieqi Rules (Reveal Xiangqi)',
+  tagline: 'Xiangqi with every piece but the general face-down.',
   summary:
     'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.',
   showSummaryOnPage: false,

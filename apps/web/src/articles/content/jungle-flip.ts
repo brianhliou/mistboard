@@ -15,6 +15,7 @@ export const jungleFlipArticle: Article = {
   slug: 'jungle-flip',
   kind: 'rules',
   title: 'Flip Jungle Rules (Flip Dou Shou Qi)',
+  tagline: '4×4 animal chess with every animal face-down.',
   summary:
     'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.',
   showSummaryOnPage: false,

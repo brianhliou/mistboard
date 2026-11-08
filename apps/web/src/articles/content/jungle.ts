@@ -23,6 +23,7 @@ export const jungleArticle: Article = {
   slug: 'jungle',
   kind: 'rules',
   title: 'Jungle Chess Rules (Dou Shou Qi, Animal Chess)',
+  tagline: 'Ranked animals race to enter the enemy den.',
   summary:
     "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.",
   showSummaryOnPage: false,

@@ -646,6 +646,13 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
     label.className = 'rules-landing-tile-label';
     label.textContent = variantNavLabel(localized.title);
     tile.append(label);
+    if (localized.kind === 'rules' && localized.tagline) {
+      const tagline = document.createElement('span');
+      tagline.className = 'rules-landing-tile-tagline';
+      tagline.textContent = localized.tagline;
+      tagline.title = localized.tagline;
+      tile.append(tagline);
+    }
     li.append(tile);
     grid.append(li);
   }

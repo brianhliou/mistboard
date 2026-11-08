@@ -717,7 +717,7 @@ describe('article public listing gates', () => {
     }
   });
 
-  // A rules tile is a marker and a label, nothing else. The landing used to
+  // A rules tile uses a marker, name and tagline. The landing used to
   // hang a "Playable here" badge off every tile, which carried no information:
   // playableOnMistboard is true for every rules article that exists, so the
   // badge appeared on all of them and distinguished nothing. If a genuinely
@@ -753,7 +753,7 @@ describe('article public listing gates', () => {
     expect(slugs[banqi + 1]).toBe('three-kingdoms-banqi');
   });
 
-  it('renders rules tiles as marker plus label, with no per-tile badge', () => {
+  it('renders rules tiles as marker, label and tagline, with no per-tile badge', () => {
     const index = buildRulesIndex();
     const tiles = [...index.querySelectorAll('.rules-landing-tile')];
 
@@ -762,7 +762,8 @@ describe('article public listing gates', () => {
     for (const tile of tiles) {
       const href = tile.getAttribute('href') ?? '';
       expect(tile.querySelectorAll('.rules-landing-tile-label'), href).toHaveLength(1);
-      expect(tile.children, href).toHaveLength(2);
+      expect(tile.querySelectorAll('.rules-landing-tile-tagline'), href).toHaveLength(1);
+      expect(tile.children, href).toHaveLength(3);
     }
   });
 });

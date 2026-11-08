@@ -51,6 +51,7 @@ export const darkChessArticle: Article = {
     // The page ranked 8th for the first and 26th for the second, so the document
     // title carries theirs while the h1 keeps ours.
     seoTitle: 'Fog of War Chess Rules',
+    tagline: 'Chess where you see only the squares your pieces can reach.',
     summary:
       "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
     status: 'published',

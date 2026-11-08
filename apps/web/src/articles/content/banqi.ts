@@ -46,6 +46,7 @@ export const banqiArticle: Article = {
   kind: 'rules',
   playableOnMistboard: true,
   title: 'Banqi Rules (Chinese Dark Chess)',
+  tagline: 'Face-down xiangqi on half the board; capture by rank.',
   summary:
     'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.',
   showSummaryOnPage: false,

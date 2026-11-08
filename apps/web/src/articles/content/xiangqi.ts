@@ -24,6 +24,7 @@ export const xiangqiArticle: Article = {
     // actually type: "Chinese chess" appeared only once in body prose, never in
     // the title or the description, on the page sitting at position 37.
     seoTitle: 'Xiangqi Rules: How to Play Chinese Chess',
+    tagline: 'A river, a palace, and cannons that jump to capture.',
     summary:
       'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.',
     showSummaryOnPage: false,

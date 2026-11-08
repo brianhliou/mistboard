@@ -42,6 +42,7 @@ export const xiangqiMahjong32Article: Article = {
   slug: 'xiangqi-mahjong-32',
   kind: 'rules',
   title: 'Xiangqi Mahjong Rules (32 tiles)',
+  tagline: 'A xiangqi set becomes mahjong tiles in five-tile hands.',
   summary:
     'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.',
   showSummaryOnPage: false,
