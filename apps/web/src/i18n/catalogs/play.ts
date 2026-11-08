@@ -3,16 +3,10 @@
 export const EN_PLAY = {
   'live.jieqiRepwarn.labelCheck': 'Loses: perpetual check',
   'live.jieqiRepwarn.labelChase': 'Loses: perpetual chase',
-  'live.jieqiRepwarn.tapAgain': 'Tap again to lose',
-  'live.jieqiRepwarn.clickAgain': 'Click again to lose',
-  'live.jieqiRepwarn.redCheck': 'One more repeat and Red loses by perpetual check.',
-  'live.jieqiRepwarn.blackCheck': 'One more repeat and Black loses by perpetual check.',
-  'live.jieqiRepwarn.redChase': 'One more repeat and Red loses by perpetual chase.',
-  'live.jieqiRepwarn.blackChase': 'One more repeat and Black loses by perpetual chase.',
-  'live.jieqiRepwarn.confirmCheck':
-    'This repeats the position a third time. Perpetual check loses. Tap this point again to play.',
-  'live.jieqiRepwarn.confirmChase':
-    'This repeats the position a third time. Perpetual chase loses. Tap this point again to play.',
+  'live.jieqiRepwarn.checkTitle': 'Lose by perpetual check?',
+  'live.jieqiRepwarn.chaseTitle': 'Lose by perpetual chase?',
+  'live.jieqiRepwarn.body': 'This move repeats the position a third time, and you lose the game.',
+  'live.jieqiRepwarn.playMove': 'Play move',
   'live.gomokuBotThinking': 'Rapfi is thinking…',
   'live.gomokuBotFailed': 'Rapfi could not load or find a move. Retry to continue.',
   'live.gomokuBotPaused': 'Rapfi paused.',

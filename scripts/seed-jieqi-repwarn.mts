@@ -1,13 +1,8 @@
 #!/usr/bin/env node
-// Dev-only, local Postgres fixture for ?repwarn. No server flag or secret needed.
-//   node --import tsx scripts/seed-jieqi-repwarn.mts --web http://localhost:3180
-// Run the persistent local pair on that port first. Sign in on /account as
-// repwarn-red@example.com and repwarn-black@example.com in separate browsers.
-// Dev auth fills the code. Re-run for fresh rooms after playing a losing move.
-// All modes open one move before Red loses: select the horse on e5, play c4.
-// Heads-up: both seats get a notice. Mark: Red gets a red ring and moves at once.
-// Confirm: first tap/drop on c4 warns, second tap there plays. Premoves bypass
-// confirmation (the current Jieqi client does not offer premoves).
+// Dev-only local Postgres fixture for the Jieqi repetition-loss dialog.
+//   node --import tsx scripts/seed-jieqi-repwarn.mts --web http://127.0.0.1:3180
+// Sign in on /account as repwarn-red@example.com (dev auth fills the code).
+// Select the Red horse on e5, then play c4. Re-run for a fresh room.
 // This script only connects to the fixed local QA DB; it never reads env files.
 import { createHash, randomUUID } from 'node:crypto';
 import { parseArgs } from 'node:util';
@@ -123,8 +118,8 @@ try {
     );
     users[seat] = rows[0].id;
   }
-  for (const mode of ['heads-up', 'mark', 'confirm', 'label', 'label-confirm']) {
-    const roomId = `jq_repwarn_${mode}_${randomUUID()}`;
+  {
+    const roomId = `jq_repwarn_${randomUUID()}`;
     const now = Date.now();
     const events: TenantRoomEvent<JieqiColor, JieqiMove, 'jieqi'>[] = [
       {
@@ -184,9 +179,9 @@ try {
           users[seat],
         ],
       );
-    const url = `${web.origin}/room/${roomId}?repwarn=${mode}`;
-    console.log(`${mode}: Red (repwarn-red@example.com) ${url}`);
-    console.log(`${mode}: Black (repwarn-black@example.com) ${url}`);
+    const url = `${web.origin}/room/${roomId}`;
+    console.log(`Red (repwarn-red@example.com) ${url}`);
+    console.log(`Black (repwarn-black@example.com) ${url}`);
   }
   await db.query('COMMIT');
   console.log('Select Red horse e5, then c4. Use separate signed-in browsers for the two seats.');

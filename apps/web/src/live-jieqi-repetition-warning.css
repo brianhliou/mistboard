@@ -19,11 +19,6 @@
   fill: rgba(207, 36, 56, 0.3);
 }
 
-.jieqi-repetition-ring--armed .jieqi-repetition-ring {
-  fill: rgba(207, 36, 56, 0.35);
-  stroke-width: 8;
-}
-
 /* Separate stage overlay: board points and their hit targets never move. */
 .jieqi-repetition-label {
   position: absolute;

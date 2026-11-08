@@ -1,70 +1,33 @@
-// UI and confirmation lifetime for the removable ?repwarn prototype.
+// Public repetition-loss labels and the lifetime of a pending move dialog.
 import type { JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
+import { readAccountPreferences } from './account-preferences.js';
+import { openConfirmDialog } from './confirm-dialog.js';
 import { t } from './i18n/catalog.js';
 import {
   placeRepetitionLabel,
-  type RepetitionConfirmation,
   type RepetitionLoss,
   type RepetitionWarning,
-  type RepetitionWarningMode,
-  repetitionConfirmation,
   repetitionConfirmationPosition,
 } from './jieqi-repetition-warning.js';
-import { noticeReadMs, placeChaseBubble } from './live-banqi-chase-bubble.js';
 import './live-jieqi-repetition-warning.css';
 
-export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: RepetitionWarningMode) {
+export function createJieqiRepetitionWarningUi(board: HTMLElement, repaint: () => void) {
   let position = '';
-  let analysis: RepetitionWarning = { headsUp: null, losingMoves: [] };
-  let pending: JieqiMove | null = null;
-  let armed: RepetitionConfirmation = null;
-  let touch = false;
-  const labelMode = mode === 'label' || mode === 'label-confirm';
-  let expires = 0;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let bubble: HTMLDivElement | null = null;
-  let anchor: JieqiSquare | null = null;
-  let origin: JieqiSquare | null = null;
+  let analysis: RepetitionWarning = { losingMoves: [] };
+  let pending: { move: JieqiMove; position: string; dialog?: HTMLDialogElement } | null = null;
   let active = false;
   let labels: Array<{ point: JieqiSquare; loss: RepetitionLoss; element: HTMLDivElement }> = [];
   let labelFrom: JieqiSquare | null = null;
   let legalPoints: JieqiSquare[] = [];
   const stage = board.closest<HTMLElement>('.board-stage') ?? board;
-  const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
+  const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(syncLabels);
   resize?.observe(board);
 
-  function clear() {
-    clearTimeout(timer);
+  function cancel() {
+    const previous = pending;
     pending = null;
-    armed = null;
-    expires = 0;
-    bubble?.remove();
-    bubble = null;
-    clearLabels();
-    syncArmed();
-  }
-
-  function syncArmed() {
-    for (const ring of board.querySelectorAll('[data-repetition-loss]'))
-      ring.classList.toggle(
-        'jieqi-repetition-ring--armed',
-        ring.getAttribute('data-repetition-loss') === armed?.move.to,
-      );
-    for (const { point, loss, element } of labels)
-      element.textContent = t(
-        armed?.move.to === point
-          ? touch
-            ? 'live.jieqiRepwarn.tapAgain'
-            : 'live.jieqiRepwarn.clickAgain'
-          : loss.reason === 'perpetual-check'
-            ? 'live.jieqiRepwarn.labelCheck'
-            : 'live.jieqiRepwarn.labelChase',
-      );
-  }
-
-  function disarm() {
-    armed = repetitionConfirmation(armed, { type: 'cancel' }).state;
-    sync();
+    previous?.dialog?.close('cancel');
+    previous?.dialog?.remove();
   }
 
   function clearLabels() {
@@ -120,200 +83,89 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
     }
   }
 
-  function sync() {
-    syncArmed();
-    syncLabels();
-    syncBubble();
-  }
-
-  function syncBubble() {
-    if (!bubble || !anchor) return;
-    const cell = board.querySelector(`[data-square="${anchor}"] rect`);
-    const surface = board.querySelector('svg');
-    if (!cell || !surface) return;
-    const host = stage.getBoundingClientRect();
-    const rel = (rect: DOMRect) => ({
-      left: rect.left - host.left,
-      top: rect.top - host.top,
-      width: rect.width,
-      height: rect.height,
-    });
-    const bounds = rel(surface.getBoundingClientRect());
-    if (!bounds.width) return;
-    bubble.style.setProperty('--banqi-chase-board-max', `${Math.max(0, bounds.width - 12)}px`);
-    const from = origin ? board.querySelector(`[data-square="${origin}"] rect`) : null;
-    const placed = placeChaseBubble(
-      rel(cell.getBoundingClientRect()),
-      bounds,
-      { width: bubble.offsetWidth, height: bubble.offsetHeight },
-      from ? rel(from.getBoundingClientRect()) : null,
-    );
-    bubble.style.left = `${placed.left}px`;
-    // Unlike the banqi notice, this can anchor to any edge point. Clamp both axes.
-    bubble.style.top = `${Math.max(bounds.top + 6, Math.min(placed.top, bounds.top + bounds.height - bubble.offsetHeight - 6))}px`;
-    bubble.style.setProperty('--banqi-chase-caret-x', `${placed.caretX}px`);
-    bubble.classList.toggle('banqi-chase-bubble--below', placed.below);
-    if (!bubble.isConnected) stage.append(bubble);
-  }
-
-  function show(point: JieqiSquare, from: JieqiSquare | null, text: string) {
-    clear();
-    anchor = point;
-    origin = from;
-    bubble = document.createElement('div');
-    bubble.className = 'banqi-chase-bubble jieqi-repetition-bubble';
-    bubble.setAttribute('role', 'status');
-    bubble.setAttribute('aria-live', 'polite');
-    bubble.textContent = text;
-    stage.append(bubble);
-    expires = Date.now() + noticeReadMs(text);
-    timer = setTimeout(clear, noticeReadMs(text));
-    sync();
-  }
-
-  // Label confirmation also retains the origin press for a possible second
-  // drag; a tap there is handled as deselection by the live board. The legacy
-  // bubble confirmation retains only the destination press.
-  const cancelOther = (event: Event) => {
-    if (event.type === 'pointerdown') touch = (event as PointerEvent).pointerType === 'touch';
-    if (mode === 'label-confirm') {
-      const point = (event.target as Element | null)?.closest?.('[data-square]');
-      armed = repetitionConfirmation(
-        armed,
-        event.type === 'pointerdown'
-          ? {
-              type: 'interaction',
-              point: board.contains(point ?? null)
-                ? (point?.getAttribute('data-square') ?? null)
-                : null,
-              primary: (event as PointerEvent).button === 0,
-            }
-          : { type: 'cancel' },
-      ).state;
-      sync();
-      return;
-    }
-    if (!pending) return;
-    const point = (event.target as Element | null)?.closest?.('[data-square]');
-    if (
-      event.type === 'pointerdown' &&
-      (event as PointerEvent).button === 0 &&
-      board.contains(point ?? null) &&
-      point?.getAttribute('data-square') === pending.to
-    )
-      return;
-    clear();
-  };
-  document.addEventListener('pointerdown', cancelOther, true);
-  document.addEventListener('keydown', cancelOther, true);
-  document.addEventListener('wheel', cancelOther, true);
-  document.addEventListener('scroll', cancelOther, true);
-
-  function headsUpText(loss: RepetitionLoss): string {
-    if (loss.reason === 'perpetual-check')
-      return t(
-        loss.loser === 'red' ? 'live.jieqiRepwarn.redCheck' : 'live.jieqiRepwarn.blackCheck',
-      );
-    return t(loss.loser === 'red' ? 'live.jieqiRepwarn.redChase' : 'live.jieqiRepwarn.blackChase');
-  }
-
   return {
     update(view: JieqiPlayerView | null, next: RepetitionWarning, enabled: boolean) {
       analysis = next;
       active = enabled && view?.status.type === 'playing';
-      if (!active || !view) {
-        position = '';
-        clear();
-        return;
-      }
-      const key = repetitionConfirmationPosition(view);
-      armed = repetitionConfirmation(armed, { type: 'position', position: key }).state;
-      if (position !== key) {
+      const key = active && view ? repetitionConfirmationPosition(view) : '';
+      if (position !== key || !active) {
         position = key;
-        clear();
-        if (mode === 'heads-up' && next.headsUp && view.lastMove)
-          show(view.lastMove.to, null, headsUpText(next.headsUp));
+        cancel();
+        clearLabels();
       }
-      sync();
+    },
+    /** A rendering-only projection. Canonical state and replay remain untouched. */
+    preview(view: JieqiPlayerView): JieqiPlayerView {
+      if (!pending) return view;
+      const board = { ...view.board, [pending.move.to]: view.board[pending.move.from] };
+      delete board[pending.move.from];
+      return { ...view, board };
     },
     /** Called after the SVG render for both tap selection and drag start. */
     select(from: JieqiSquare | null, legalMoves: readonly JieqiMove[]) {
-      armed = repetitionConfirmation(armed, { type: 'select', from }).state;
       clearLabels();
-      if (!labelMode || !active || !from) {
-        syncArmed();
-        return;
-      }
+      if (!active || !from || pending) return;
       labelFrom = from;
       legalPoints = legalMoves.filter((move) => move.from === from).map((move) => move.to);
       for (const loss of analysis.losingMoves.filter(({ move }) => move.from === from)) {
         const element = document.createElement('div');
         element.className = 'jieqi-repetition-label';
         element.dataset.repetitionLabel = loss.move.to;
+        element.textContent = t(
+          loss.reason === 'perpetual-check'
+            ? 'live.jieqiRepwarn.labelCheck'
+            : 'live.jieqiRepwarn.labelChase',
+        );
         stage.append(element);
         labels.push({ point: loss.move.to, loss, element });
       }
-      sync();
-    },
-    dragStart(from: JieqiSquare) {
-      if (mode === 'label-confirm') {
-        armed = repetitionConfirmation(armed, { type: 'select', from }).state;
-        sync();
-      } else clear();
+      syncLabels();
     },
     losingDestinations(from: JieqiSquare | null): ReadonlySet<JieqiSquare> {
       return new Set(
-        active && mode !== 'heads-up'
+        active
           ? analysis.losingMoves.filter(({ move }) => move.from === from).map(({ move }) => move.to)
           : [],
       );
     },
-    /** Called only for an immediate own move. A future premove must bypass it. */
-    allowMove(move: JieqiMove): boolean {
+    /** Called only for an immediate own move, never a future premove. */
+    allowMove(move: JieqiMove, play: () => void): boolean {
+      if (pending) return false;
       const loss = analysis.losingMoves.find(
         (item) => item.move.from === move.from && item.move.to === move.to,
       );
-      if (mode === 'label-confirm' && active) {
-        const result = repetitionConfirmation(armed, {
-          type: 'attempt',
-          position,
-          move,
-          losing: !!loss,
-        });
-        armed = result.state;
-        if (result.play) clear();
-        else sync();
-        return result.play;
-      }
-      if (!active || mode !== 'confirm' || !loss) {
-        clear();
-        return true;
-      }
-      if (pending?.from === move.from && pending.to === move.to && Date.now() < expires) {
-        clear();
-        return true;
-      }
-      show(
-        move.to,
-        move.from,
-        t(
+      if (!active || !loss || !readAccountPreferences().confirmGameActions) return true;
+      const attempt = { move: { ...move }, position };
+      pending = attempt;
+      clearLabels();
+      const finish = (confirmed: boolean) => {
+        if (pending !== attempt) return;
+        pending = null;
+        if (confirmed && active && position === attempt.position) play();
+        repaint();
+      };
+      const dialog = openConfirmDialog({
+        title: t(
           loss.reason === 'perpetual-check'
-            ? 'live.jieqiRepwarn.confirmCheck'
-            : 'live.jieqiRepwarn.confirmChase',
+            ? 'live.jieqiRepwarn.checkTitle'
+            : 'live.jieqiRepwarn.chaseTitle',
         ),
-      );
-      pending = move;
+        body: t('live.jieqiRepwarn.body'),
+        confirmLabel: t('live.jieqiRepwarn.playMove'),
+        cancelLabel: t('setup.cancel'),
+        confirmTone: 'danger',
+        onConfirm: () => finish(true),
+        onCancel: () => finish(false),
+      });
+      pending.dialog = dialog;
       return false;
     },
-    cancel: () => (mode === 'label-confirm' ? disarm() : clear()),
-    sync,
+    cancel,
+    sync: syncLabels,
     destroy() {
-      clear();
+      cancel();
+      clearLabels();
       resize?.disconnect();
-      document.removeEventListener('pointerdown', cancelOther, true);
-      document.removeEventListener('keydown', cancelOther, true);
-      document.removeEventListener('wheel', cancelOther, true);
-      document.removeEventListener('scroll', cancelOther, true);
     },
   };
 }

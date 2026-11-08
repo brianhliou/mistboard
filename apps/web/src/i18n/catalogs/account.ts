@@ -63,8 +63,9 @@ export const EN_ACCOUNT = {
   'account.settingsGameBehavior': 'Game behavior',
   'account.premoves': 'Premoves',
   'account.premovesHelp': 'Play a prepared move when your turn begins, if it is still legal.',
-  'account.confirmGameActions': 'Confirm resignation and abort',
-  'account.confirmGameActionsHelp': 'Ask before ending a game from the action controls.',
+  'account.confirmGameActions': 'Confirm game-ending actions',
+  'account.confirmGameActionsHelp':
+    'Ask before resigning, aborting, or playing a move that loses by repetition.',
   'account.forumAutoTranslate': 'Show forum posts translated',
   'account.forumAutoTranslateHelp':
     'Forum topics and posts written in another language open translated when a translation already exists. You can switch back to the original on any post.',

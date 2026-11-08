@@ -167,7 +167,7 @@ export type JieqiBoardRenderOptions = {
   interactive?: boolean;
   selectedSquare?: JieqiSquare | null;
   legalMoves?: readonly JieqiMove[];
-  /** ?repwarn prototype, live own losing destinations only. */
+  /** Live own destinations that lose by repetition under jqe-v1. */
   repetitionLossPoints?: ReadonlySet<JieqiSquare>;
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.

@@ -29,7 +29,6 @@ import {
   jieqiRepetitionWarning,
   type PublicRepetitionPosition,
   type RepetitionWarning,
-  repetitionWarningMode,
 } from './jieqi-repetition-warning.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
@@ -246,8 +245,9 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   },
   setup: (ctx) => {
     core = ctx;
-    const mode = repetitionWarningMode(window.location.search);
-    repetitionUi = mode ? createJieqiRepetitionWarningUi(ctx.refs.board, mode) : null;
+    repetitionUi = createJieqiRepetitionWarningUi(ctx.refs.board, () => {
+      if (core) renderBoard(core.refs, core.displayedView());
+    });
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
     revealOdds = mountRevealOdds(ctx.refs, () => {
@@ -349,7 +349,7 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   liveRefs.board.className = 'board jieqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Jieqi board');
   if (!view) {
-    repetitionUi?.update(null, { headsUp: null, losingMoves: [] }, false);
+    repetitionUi?.update(null, { losingMoves: [] }, false);
     liveRefs.board.replaceChildren();
     return;
   }
@@ -392,16 +392,19 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
     );
   }
   const drawn = drawnBoardOverlays<JieqiSquare>(annotations?.shapes() ?? []);
-  liveRefs.board.innerHTML = renderJieqiBoardSvg(view, perspective, {
+  const preview = repetitionUi?.preview(view) ?? view;
+  const pending = preview !== view;
+  liveRefs.board.innerHTML = renderJieqiBoardSvg(preview, perspective, {
     arrows: drawn.arrows,
     markers: drawn.markers,
     interactive: true,
-    selectedSquare,
+    selectedSquare: pending ? null : selectedSquare,
     draggingFrom,
     repetitionLossPoints: repetitionUi?.losingDestinations(selectedSquare),
-    legalMoves: selectedSquare
-      ? view.legalMoves.filter((move) => move.from === selectedSquare)
-      : [],
+    legalMoves:
+      !pending && selectedSquare
+        ? view.legalMoves.filter((move) => move.from === selectedSquare)
+        : [],
   });
   repetitionUi?.select(selectedSquare, view.legalMoves);
   repetitionUi?.sync();
@@ -422,11 +425,18 @@ function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
     selectedSquare = null;
     return;
   }
-  if (repetitionUi && !repetitionUi.allowMove(result.move)) return;
-  selectedSquare = null;
-  if (core.send({ type: 'move', from: result.move.from, to: result.move.to })) {
-    playSound(soundForOwnJieqiMove(view, result.move));
-  }
+  requestJieqiMove(view, result.move);
+}
+
+function requestJieqiMove(view: JieqiWireView, move: JieqiMove): void {
+  const play = () => {
+    if (!core?.canActNow()) return;
+    selectedSquare = null;
+    if (core.send({ type: 'move', from: move.from, to: move.to })) {
+      playSound(soundForOwnJieqiMove(view, move));
+    }
+  };
+  if (!repetitionUi || repetitionUi.allowMove(move, play)) play();
 }
 
 // Click + drag, delegated to the persistent board container once at mount so they
@@ -457,7 +467,6 @@ function installJieqiBoardInteraction(liveRefs: LiveRefs): void {
       return jieqiPieceGhostSvg(entry, undefined, square as JieqiSquare);
     },
     onDragStart: (from) => {
-      repetitionUi?.dragStart(from as JieqiSquare);
       selectedSquare = from as JieqiSquare;
       draggingFrom = from as JieqiSquare;
       if (core?.state.view) renderBoard(liveRefs, core.state.view);
@@ -486,15 +495,7 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
   const view = core?.state.view;
   const move = to && view ? view.legalMoves.find((m) => m.from === from && m.to === to) : undefined;
   if (move && view && core?.canActNow()) {
-    if (repetitionUi && !repetitionUi.allowMove(move)) {
-      selectedSquare = from;
-      renderBoard(liveRefs, view);
-      return;
-    }
-    selectedSquare = null;
-    if (core.send({ type: 'move', from: move.from, to: move.to })) {
-      playSound(soundForOwnJieqiMove(view, move));
-    }
+    requestJieqiMove(view, move);
   } else {
     repetitionUi?.cancel();
     selectedSquare = null;

@@ -14,9 +14,7 @@ import { describe, expect, it } from 'vitest';
 import {
   jieqiRepetitionWarning,
   placeRepetitionLabel,
-  repetitionConfirmation,
   repetitionConfirmationPosition,
-  repetitionWarningMode,
 } from './jieqi-repetition-warning.js';
 
 const parse = (line: string): JieqiMove[] =>
@@ -72,23 +70,11 @@ function play(board: JieqiBoard, cycle: string, plies: number, turn: JieqiColor 
 }
 
 describe('public Jieqi repetition warning', () => {
-  it('accepts only the five exact query modes', () => {
-    for (const value of ['heads-up', 'mark', 'confirm', 'label', 'label-confirm'])
-      expect(repetitionWarningMode(`?repwarn=${value}`)).toBe(value);
-    for (const query of ['', '?repwarn=1', '?repwarn=', '?other=confirm'])
-      expect(repetitionWarningMode(query)).toBeNull();
-  });
   for (const [board, cycle, reason] of [
     [chaseBoard, chaseCycle, 'perpetual-chase'],
     [checkBoard, checkCycle, 'perpetual-check'],
   ] as const) {
-    it(`warns both seats at twofold and matches the kernel's ${reason} loss`, () => {
-      const twice = play(board, cycle, 4);
-      for (const seat of ['red', 'black'])
-        expect(jieqiRepetitionWarning('jqe-v1', twice.history, twice.view, seat).headsUp).toEqual({
-          loser: 'red',
-          reason,
-        });
+    it(`matches the kernel's ${reason} loss`, () => {
       const { state, history, view } = play(board, cycle, 7);
       const before = JSON.stringify({ state, history, view });
       const warning = jieqiRepetitionWarning('jqe-v1', history, view, 'red');
@@ -123,20 +109,17 @@ describe('public Jieqi repetition warning', () => {
   it('does not warn about the first occurrence, legacy games, incomplete history or a finished game', () => {
     const { history, view } = play(chaseBoard, chaseCycle, 3);
     expect(jieqiRepetitionWarning('jqe-v1', history, view, 'red')).toEqual({
-      headsUp: null,
       losingMoves: [],
     });
     const twice = play(chaseBoard, chaseCycle, 7);
     for (const rule of [undefined, 'future-rule'])
       expect(jieqiRepetitionWarning(rule, twice.history, twice.view, 'red')).toEqual({
-        headsUp: null,
         losingMoves: [],
       });
-    expect(jieqiRepetitionWarning('jqe-v1', [], twice.view, 'red').headsUp).toBeNull();
-    expect(jieqiRepetitionWarning('jqe-v1', history, twice.view, 'red').headsUp).toBeNull();
+    expect(jieqiRepetitionWarning('jqe-v1', [], twice.view, 'red').losingMoves).toEqual([]);
+    expect(jieqiRepetitionWarning('jqe-v1', history, twice.view, 'red').losingMoves).toEqual([]);
     const ended = play(chaseBoard, chaseCycle, 8);
     expect(jieqiRepetitionWarning('jqe-v1', ended.history, ended.view, 'red')).toEqual({
-      headsUp: null,
       losingMoves: [],
     });
   });
@@ -147,7 +130,6 @@ describe('public Jieqi repetition warning', () => {
       7,
     );
     expect(jieqiRepetitionWarning('jqe-v1', history, view, 'red')).toEqual({
-      headsUp: null,
       losingMoves: [],
     });
   });
@@ -157,7 +139,6 @@ describe('public Jieqi repetition warning', () => {
     const line = 'e10-f10 e8-e7 f10-f9 e7-e8 f9-f10 e8-f8 f10-e10 f8-e8';
     const { history, view } = play(checkBoard, line, 8);
     expect(jieqiRepetitionWarning('jqe-v1', history, view, 'black')).toEqual({
-      headsUp: null,
       losingMoves: [],
     });
   });
@@ -178,7 +159,6 @@ describe('public Jieqi repetition warning', () => {
       expect(next).not.toBe(state);
       const after = getJieqiPlayerView(next, 'black');
       expect(jieqiRepetitionWarning('jqe-v1', [...history, after], after, 'black')).toEqual({
-        headsUp: null,
         losingMoves: [],
       });
     }
@@ -215,66 +195,6 @@ describe('public Jieqi repetition warning', () => {
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
     expect(repetitionConfirmationPosition({ ...view, board: withHidden.at(-1)!.board })).toBe(
       repetitionConfirmationPosition({ ...view, board: swapped.at(-1)!.board }),
-    );
-  });
-});
-
-describe('losing move confirmation state machine', () => {
-  const move: JieqiMove = { from: 'a2', to: 'b2' };
-  const attempt = { type: 'attempt', position: 'public-ply-7', move, losing: true } as const;
-
-  it('first tap arms, same tap plays and clears', () => {
-    const first = repetitionConfirmation(null, attempt);
-    expect(first).toEqual({ state: { position: attempt.position, move }, play: false });
-    expect(repetitionConfirmation(first.state, attempt)).toEqual({ state: null, play: true });
-  });
-
-  it('another point, piece, deselect, outside interaction or annotation disarms', () => {
-    const armed = repetitionConfirmation(null, attempt).state;
-    for (const event of [
-      { type: 'interaction', point: 'c2', primary: true },
-      { type: 'interaction', point: null, primary: true },
-      { type: 'interaction', point: 'b2', primary: false },
-      { type: 'select', from: 'b4' },
-      { type: 'select', from: null },
-      { type: 'cancel' },
-    ] as const) {
-      const result = repetitionConfirmation(armed, event);
-      expect(result.state).toBeNull();
-      expect(repetitionConfirmation(result.state, attempt).play).toBe(false);
-    }
-    expect(repetitionConfirmation(armed, { ...attempt, losing: false })).toEqual({
-      state: null,
-      play: true,
-    });
-  });
-
-  it('opponent move or changed position disarms, unchanged render retains', () => {
-    const { state, view } = play(chaseBoard, chaseCycle, 6);
-    const position = repetitionConfirmationPosition(view);
-    const armed = repetitionConfirmation(null, { ...attempt, position }).state;
-    expect(repetitionConfirmation(armed, { type: 'position', position }).state).toBe(armed);
-    const next = applyJieqiMove(state, parse(chaseCycle)[2]!);
-    expect(next.status).toEqual({ type: 'playing', turn: 'red' });
-    const after = repetitionConfirmationPosition(getJieqiPlayerView(next, 'red'));
-    expect(repetitionConfirmation(armed, { type: 'position', position: after }).state).toBeNull();
-    expect(repetitionConfirmation(armed, { ...attempt, position: after }).play).toBe(false);
-    expect(
-      repetitionConfirmationPosition({ ...view, board: { ...view.board, h8: undefined } }),
-    ).not.toBe(position);
-  });
-
-  it('a second drag can start at the origin and confirm the same drop', () => {
-    const armed = repetitionConfirmation(null, attempt).state;
-    const start = repetitionConfirmation(armed, {
-      type: 'interaction',
-      point: move.from,
-      primary: true,
-    });
-    const drag = repetitionConfirmation(start.state, { type: 'select', from: move.from });
-    expect(repetitionConfirmation(drag.state, attempt)).toEqual({ state: null, play: true });
-    expect(repetitionConfirmation(armed, { ...attempt, move: { from: 'a2', to: 'c2' } }).play).toBe(
-      false,
     );
   });
 });
