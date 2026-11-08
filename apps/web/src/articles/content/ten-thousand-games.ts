@@ -278,7 +278,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
         blocks: [
           {
             kind: 'paragraph',
-            text: 'Thank you to everyone who played a game, reported a bug or became a [patron](/patron). You are why Mistboard is here, and we are grateful for every game.',
+            text: 'Thank you to everyone who played a game, reported a bug or told a friend or an audience about Mistboard. You are why Mistboard is here, and we are grateful for every game.',
           },
           {
             kind: 'paragraph',
