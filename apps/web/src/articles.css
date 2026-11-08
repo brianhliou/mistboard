@@ -22,7 +22,9 @@
 }
 
 .articles-community-layout {
-  grid-template-columns: 135px minmax(0, 1fr);
+  /* The rail is as wide as its longest label, so "Community posts" (and its
+     translations) stays on one line. */
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -38,6 +40,7 @@
   font-size: 16px;
   line-height: 1.25;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .articles-community-rail a.community-rail-active {
@@ -591,6 +594,15 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
    scoped under the shell so it outranks the generic .community-layout /
    .community-rail rules in community-rail.css and the blog rules above,
    whatever order the bundle loads them in. */
+/* Above the phone layout the blog rail stays a vertical column; the shared
+   .community-rail rule at 900px would make it a row, and a max-content column
+   holding a row takes the width of every tab together. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .articles-community-shell .articles-community-rail {
+    display: grid;
+  }
+}
+
 @media (max-width: 600px) {
   /* The sheet runs edge to edge: a page-coloured gutter around it is width a
      phone cannot spare. */
