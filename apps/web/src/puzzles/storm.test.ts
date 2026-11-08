@@ -44,13 +44,20 @@ function json(body: unknown, status = 200) {
 // The HTTP double grades real corpus moves. The UI cannot infer a verdict,
 // bonus, deadline or next puzzle from the move it just sent.
 function server(
-  options: { combo?: number; remaining?: number; partial?: boolean; guest?: boolean } = {},
+  options: {
+    combo?: number;
+    remaining?: number;
+    partial?: boolean;
+    guest?: boolean;
+    unstarted?: boolean;
+  } = {},
 ) {
   let index = 0;
   let score = 0;
   let combo = options.combo ?? 0;
   let version = 4;
   let moves: XiangqiMove[] = options.partial ? [puzzles[0]!.solution[0]!] : [];
+  let startedAt: number | null = options.unstarted ? null : Date.now() - 1000;
   let deadline = Date.now() + (options.remaining ?? 180_000);
   let loseMoveResponse = false;
   let failStart = false;
@@ -64,11 +71,11 @@ function server(
     combo,
     best: options.guest ? null : 8,
     dailyBest: options.guest ? null : 3,
-    remainingMs: Math.max(0, deadline - Date.now()),
-    deadlineAt: deadline,
-    startedAt: Date.now() - 1000,
+    remainingMs: startedAt === null ? 180_000 : Math.max(0, deadline - Date.now()),
+    deadlineAt: startedAt === null ? null : deadline,
+    startedAt,
     day: '2026-10-31',
-    finished: Date.now() >= deadline || index >= puzzles.length,
+    finished: (startedAt !== null && Date.now() >= deadline) || index >= puzzles.length,
     results,
     puzzle: index < puzzles.length ? detail(puzzles[index]!) : null,
     upcoming: puzzles.slice(index + 1, index + 3).map(detail),
@@ -98,6 +105,10 @@ function server(
     }
     let attempt: ReturnType<typeof attemptStandardXiangqiPuzzleLine> | undefined;
     if (body.action === 'move') {
+      if (startedAt === null) {
+        startedAt = Date.now();
+        deadline = startedAt + 180_000;
+      }
       expect(body).toMatchObject({ runId: 'run', version, puzzleId: puzzles[index]!.id });
       expect(Date.now()).toBeLessThan(deadline);
       moves.push(body.move);
@@ -801,4 +812,40 @@ it('ignores a delayed start response after leaving the page', async () => {
   await vi.advanceTimersByTimeAsync(1100);
   expect(boardId(root)).toBeUndefined();
   expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+});
+
+it('holds an unstarted clock at 3:00 through idle and reload, then counts down after a move', async () => {
+  const { fetchSpy } = server({ unstarted: true });
+  let root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toBe('Move to start');
+  expect(root.querySelector('.puzzle-left-card')).toBeNull();
+  await vi.advanceTimersByTimeAsync(240_000);
+  expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('3:00');
+  expect(fetchSpy.mock.calls.filter(([url]) => url === '/api/puzzles/storm')).toHaveLength(1);
+  window.dispatchEvent(new Event('pagehide'));
+  root.remove();
+  root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toBe('Move to start');
+  expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('3:00');
+  await move(root, puzzles[0]!.solution[0]!);
+  expect(root.querySelector('.puzzle-storm-status')?.textContent).toContain('to move');
+  expect(root.querySelector('[data-storm-change]')?.textContent).toBe('');
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('2:58');
+});
+
+it.each([false, true])('shows best tiles only for signed-in runs (guest: %s)', async (guest) => {
+  server({ guest, unstarted: true });
+  const root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  const bests = root.querySelector('.puzzle-storm-bests');
+  if (guest) {
+    expect(bests).toBeNull();
+    expect(root.querySelectorAll('.puzzle-storm-feedback .puzzle-signin-cta')).toHaveLength(1);
+  } else {
+    expect(bests?.textContent).toBe('Best runs8All-time3Today');
+    expect(root.querySelector('.puzzle-signin-cta')).toBeNull();
+  }
 });
