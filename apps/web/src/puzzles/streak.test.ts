@@ -144,6 +144,8 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   expect(info().textContent).toContain('Rating: hidden');
   const side = root.querySelector('.puzzle-streak-side')!;
   expect(side.textContent).toContain('No clock, one skip. Your puzzle rating does not change.');
+  expect(side.querySelector('a[href="/puzzles"]')).toBeNull();
+  expect(side.textContent).not.toContain('Puzzle practice');
   // A signed-in player is not asked to sign in.
   expect(side.querySelector('.puzzle-streak-signin')).toBeNull();
   expect(root.querySelector('[data-puzzle-hint]')).toBeNull();
@@ -190,11 +192,13 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
     ].map((c) => c.className),
   ).toEqual([expect.stringContaining('--solved'), expect.stringContaining('--current')]);
   const skip = root.querySelector<HTMLButtonElement>('[data-streak-skip]');
-  expect(skip?.className).toBe('puzzle-feedback-skip');
+  expect(skip?.className).toBe('puzzle-streak-skip');
+  expect(skip?.textContent).toBe('Skip · 1 left');
+  expect(skip?.disabled).toBe(false);
   click(root, 'Skip · 1 left');
-  await vi.waitFor(() => expect(root.textContent).toContain('Skip used'));
+  await vi.waitFor(() => expect(root.textContent).toContain('Skip · 0 left'));
   expect(
-    [...root.querySelectorAll('button')].find((b) => b.textContent === 'Skip used')?.disabled,
+    [...root.querySelectorAll('button')].find((b) => b.textContent === 'Skip · 0 left')?.disabled,
   ).toBe(true);
   const wrong = getStandardXiangqiLegalMoves(puzzles[2]!.initial).find(
     (m) => !attemptStandardXiangqiPuzzleLine(puzzles[2]!, [m]).ok,
@@ -238,9 +242,8 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   );
   expect(document.activeElement?.textContent).toBe('New streak');
   expect(document.activeElement).not.toBe(newStreak);
-  expect(
-    root.querySelector('.puzzle-streak-over .puzzle-streak-practice')?.getAttribute('href'),
-  ).toBe('/puzzles');
+  expect(root.querySelector('.puzzle-streak-practice')).toBeNull();
+  expect(root.textContent).not.toContain('Puzzle practice');
   expect(track).toHaveBeenCalledWith(
     'puzzle_mode_started',
     expect.objectContaining({ mode: 'streak' }),
