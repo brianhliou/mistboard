@@ -112,25 +112,21 @@ test('prod:smoke:gomoku is a runnable package entry', () => {
   );
 });
 
-test('shared Gomoku entry retries an aborted human-first deal and requires a Rapfi move', async () => {
+test('shared Gomoku entry opens a human-first deal with a stone, requires a Rapfi reply and resigns', async () => {
   let attempts = 0;
-  const aborted = [];
+  const received = [];
   const states = new Map();
+  const opening = GOMOKU_OPENINGS.find((o) => o.turn === 'black');
+  const taken = new Set(opening.stones.map((stone) => stone.square));
+  const botReply = ['h1', 'a8', 'o8', 'h15'].find((square) => !taken.has(square));
   const server = createServer(async (request, response) => {
     let body = '';
     for await (const chunk of request) body += chunk;
     const created = JSON.parse(body);
     assert.equal(created.gameSpecId, 'gomoku');
     assert.equal(created.preferredColor, 'black');
-    const turn = ++attempts === 1 ? 'black' : 'white';
-    const roomId = `gmk_smoke_${attempts}`;
-    states.set(
-      roomId,
-      createGomokuRoomState(
-        roomId,
-        GOMOKU_OPENINGS.find((o) => o.turn === turn),
-      ),
-    );
+    const roomId = `gmk_smoke_${++attempts}`;
+    states.set(roomId, createGomokuRoomState(roomId, opening));
     response.writeHead(201, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ roomId, mode: 'pve', gameSpecId: 'gomoku' }));
   });
@@ -149,15 +145,23 @@ test('shared Gomoku entry retries an aborted human-first deal and requires a Rap
         }),
       );
     send('hello');
-    if (state.status.turn === 'white') {
-      state = applyGomokuRoomMove(state, { to: 'a1' });
-      send('event-appended');
-    }
     socket.on('message', (raw) => {
-      assert.deepEqual(JSON.parse(raw.toString()), { type: 'abort' });
-      aborted.push(roomId);
-      state = { ...state, status: { type: 'aborted', reason: 'manual' } };
-      send('event-appended');
+      const message = JSON.parse(raw.toString());
+      received.push(message);
+      if (message.type === 'move') {
+        state = applyGomokuRoomMove(state, { to: message.to });
+        send('event-appended');
+        state = applyGomokuRoomMove(state, { to: botReply });
+        send('event-appended');
+      } else if (message.type === 'resign') {
+        state = {
+          ...state,
+          status: { type: 'finished', reason: 'resignation', winner: 'white' },
+        };
+        send('event-appended');
+      } else {
+        assert.fail(`unexpected client message ${raw}`);
+      }
     });
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -171,11 +175,12 @@ test('shared Gomoku entry retries an aborted human-first deal and requires a Rap
     ]);
     const result = JSON.parse(stdout);
     assert.equal(result.ok, true);
-    assert.equal(result.retry, undefined);
-    assert.equal(result.roomId, 'gmk_smoke_2');
-    assert.deepEqual(result.engineReplyState.lastMove, { to: 'a1' });
-    assert.equal(result.finalStatus.type, 'aborted');
-    assert.deepEqual(aborted, ['gmk_smoke_1', 'gmk_smoke_2']);
+    assert.equal(result.roomId, 'gmk_smoke_1');
+    assert.deepEqual(result.engineReplyState.lastMove, { to: botReply });
+    assert.equal(result.finalStatus.reason, 'resignation');
+    assert.equal(received[0].type, 'move');
+    assert.equal(taken.has(received[0].to), false);
+    assert.deepEqual(received.slice(1), [{ type: 'resign' }]);
   } finally {
     for (const socket of sockets.clients) socket.terminate();
     await new Promise((resolve) => sockets.close(resolve));
