@@ -97,3 +97,27 @@ test.describe('Storm phone stack', () => {
     await stormLayout(page, true);
   });
 });
+
+// A phone fits the board and the Storm panel on one screen, guest or not.
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 390, height: 664 },
+  { width: 430, height: 739 },
+]) {
+  test.describe(`Storm phone ${viewport.width}x${viewport.height}`, () => {
+    test.use({ viewport, hasTouch: true, isMobile: true });
+    test('fits without vertical scroll before and after a puzzle change', async ({ page }) => {
+      const overflow = () =>
+        page.evaluate(() => {
+          const shell = document.querySelector('main.puzzles-shell');
+          const doc = document.documentElement;
+          return Math.max(
+            shell ? shell.scrollHeight - shell.clientHeight : 0,
+            doc.scrollHeight - doc.clientHeight,
+          );
+        });
+      await stormLayout(page, true);
+      expect(await overflow()).toBe(0);
+    });
+  });
+}
