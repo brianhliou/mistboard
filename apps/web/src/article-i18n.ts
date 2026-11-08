@@ -376,6 +376,12 @@ const ZH_HANS: Record<string, string> = {
     '一枚刻着「萬」字的圆形象棋棋子，旁边是数字 10,000，最后一个零处有一朵灰色小云。',
   'Finished games per week, rising from a handful in June to a peak of 2,647':
     '每周完成的对局数，从 6 月的寥寥几盘上升到最高 2,647 盘',
+  'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
+    '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
+  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
+    '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。圆点标出它还能走的格子，棋局继续。',
+  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
+    '新增一盘 Mistboard 实战的捉子例子，一步一步展示捉子规则禁止的那一步。',
   // Expanded jieqi rules (2026-11-05).
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向双方翻明。',
@@ -3399,8 +3405,6 @@ const ZH_HANS: Record<string, string> = {
     '可以。炮不看大小：只要两者在同一直线上、中间正好隔一颗子，炮就能吃将，或吃任何已翻开的敌子。',
   'Play the computer or send a friend a link. No account needed.':
     '和电脑下一盘，或把链接传给朋友。不用注册。',
-  'The page is reorganized around the questions players ask, with new sections on how to play and chain captures, the capture order set out as one rule with two exceptions, and a table of how the regional rules differ.':
-    '本页按玩家常问的问题重新整理，新增了怎么玩和连吃两节，把大小顺序整理成一条规则加两个例外，并用表格列出各地规则的差别。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
     '普通国际象棋的规则，也是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、各种和棋规则，以及一盘可以逐步回放的著名对局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
@@ -7066,6 +7070,12 @@ const ZH_HANT: Record<string, string> = {
     '一枚刻著「萬」字的圓形象棋棋子，旁邊是數字 10,000，最後一個零處有一朵灰色小雲。',
   'Finished games per week, rising from a handful in June to a peak of 2,647':
     '每週完成的對局數，從 6 月的寥寥幾盤上升到最高 2,647 盤',
+  'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
+    '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
+  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
+    '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。圓點標出它還能走的格子，棋局繼續。',
+  'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.':
+    '新增一盤 Mistboard 實戰的捉子例子，一步一步展示捉子規則禁止的那一步。',
   // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向雙方翻明。',
@@ -10430,8 +10440,6 @@ const ZH_HANT: Record<string, string> = {
     '可以。炮不看大小：只要兩者在同一直線上、中間正好隔一顆子，炮就能吃將，或吃任何已翻開的敵子。',
   'Play the computer or send a friend a link. No account needed.':
     '和電腦下一盤，或把連結傳給朋友。不用註冊。',
-  'The page is reorganized around the questions players ask, with new sections on how to play and chain captures, the capture order set out as one rule with two exceptions, and a table of how the regional rules differ.':
-    '本頁依玩家常問的問題重新整理，新增了怎麼玩和連吃兩節，把大小順序整理成一條規則加兩個例外，並用表格列出各地規則的差別。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
     '普通西洋棋的規則，也是迷霧西洋棋背後的規則基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':

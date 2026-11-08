@@ -11,6 +11,8 @@ import {
   type BanqiPlayerView,
   type BanqiSquare,
   createInitialBanqiState,
+  getBanqiForbiddenChaseMoves,
+  getBanqiLegalMovesFrom,
   getBanqiPlayerView,
 } from '@mistboard/game';
 import { BANQI_CHASE_DRAW_GAME, BANQI_CHASE_HERD_GAME } from './content/banqi-chase-games.js';
@@ -22,7 +24,9 @@ import {
   banqiArrow,
   banqiBoardGrid,
   banqiCellCenter,
+  banqiLastMoveTint,
   banqiPiecesFromView,
+  banqiStepDot,
   banqiReplayViewAt,
   xqSvg,
   banqiThumbnailSvg,
@@ -232,3 +236,67 @@ export const BANQI_CHASE_THUMBNAIL = () =>
       arrow('g2', 'f2', BANQI_ENGINE_THUMB_Y, 'bq-chase-thumb-a'),
     ].join(''),
   );
+
+// ── Rules page: the same shuttle under Mistboard's rule ─────────────────────
+// Replayed with today's rules, stopping where the advisor would make its fourth
+// chase. That move would bring the position round a third time, so the rule
+// removes it and the last frame crosses it out, as the live board does.
+function chaseRuleStateAt(ply: number): BanqiGameState {
+  let state = createInitialBanqiState('banqi-chase-rule', BANQI_CHASE_DRAW_GAME.deal);
+  for (let p = 0; p < ply; p++) {
+    const next = applyBanqiMove(state, drawGameMove(p));
+    if (next === state) throw new Error(`banqi chase rule example: ply ${p + 1} is illegal today`);
+    state = next;
+  }
+  return state;
+}
+
+// The live board's forbidden-chase cross, in the article diagram's units.
+function forbiddenCross(square: BanqiSquare): string {
+  const { col, row } = cell(square);
+  const { x, y } = banqiCellCenter(col, row, 0, 0);
+  const h = 9;
+  return `<path d="M${x - h} ${y - h}L${x + h} ${y + h}M${x + h} ${y - h}L${x - h} ${y + h}" fill="none" stroke="rgba(178, 34, 28, 0.85)" stroke-width="4" stroke-linecap="round"/>`;
+}
+
+export const CHASE_RULE_LAST_PLY = CHASE_DRAW_LAST_PLY - 1;
+
+export function banqiChaseRuleForbidden(): BanqiMove[] {
+  return getBanqiForbiddenChaseMoves(chaseRuleStateAt(CHASE_RULE_LAST_PLY));
+}
+
+const CHASE_RULE_NARRATIVES = [
+  ...CHASE_DRAW_NARRATIVES.slice(0, CHASE_RULE_LAST_PLY - CHASE_DRAW_VIEW_PLY),
+  'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.',
+];
+
+export const BANQI_CHASE_RULE_STEPS = CHASE_RULE_NARRATIVES.map((narrative, k) => {
+  const ply = CHASE_DRAW_VIEW_PLY + k;
+  const move = k === 0 ? null : drawGameMove(ply - 1);
+  return {
+    svg: () => {
+      const state = chaseRuleStateAt(ply);
+      const last = ply === CHASE_RULE_LAST_PLY;
+      const forbidden = last ? getBanqiForbiddenChaseMoves(state) : [];
+      // The last frame marks what the advisor can still do with its own steps.
+      const steps = last
+        ? forbidden.flatMap((f) => getBanqiLegalMovesFrom(state, f.from)).filter((m) => m.from !== m.to)
+        : [];
+      const mover = move ? state.board[move.to]?.color : undefined;
+      return xqSvg(
+        BANQI_BOARD_W,
+        BANQI_BOARD_H,
+        [
+          banqiBoardGrid(0, 0),
+          move && mover ? banqiLastMoveTint(cell(move.from), cell(move.to), mover, 0, 0) : '',
+          banqiPiecesFromView(getBanqiPlayerView(state, 'red'), 0, 0),
+          steps.map((m) => banqiStepDot(cell(m.to), 0, 0)).join(''),
+          forbidden.map((m) => forbiddenCross(m.to)).join(''),
+        ].join(''),
+      );
+    },
+    move: move ? `${move.from}-${move.to}` : undefined,
+    motion: move ? { from: move.from, to: move.to } : undefined,
+    narrative,
+  };
+});

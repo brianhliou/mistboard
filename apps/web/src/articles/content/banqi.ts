@@ -12,6 +12,7 @@ import {
   BANQI_SOLDIER_TAKES_GENERAL,
   BANQI_STEP,
 } from '../../banqi-rules-diagrams.js';
+import { BANQI_CHASE_RULE_STEPS } from '../banqi-chase-diagrams.js';
 import { BANQI_RULES_THUMBNAIL } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
@@ -51,9 +52,9 @@ export const banqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-10-29',
+  updatedAt: '2026-11-07',
   updateNote:
-    'The page is reorganized around the questions players ask, with new sections on how to play and chain captures, the capture order set out as one rule with two exceptions, and a table of how the regional rules differ.',
+    'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -223,6 +224,16 @@ export const banqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'A **chase** is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not repeat a position for the third time with a chase unless it has no other legal move, so a chase never ends in a repetition draw; a chase that drives the piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.',
+        },
+        {
+          kind: 'raw-svg-stepper',
+          gameSpecId: 'banqi',
+          steps: BANQI_CHASE_RULE_STEPS,
+          caption: 'Back and forth on two squares, from a game on Mistboard, 16 September 2026.',
         },
         {
           kind: 'note',
