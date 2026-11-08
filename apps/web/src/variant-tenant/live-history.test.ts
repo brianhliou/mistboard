@@ -24,6 +24,24 @@ describe('adoptLiveHistory', () => {
     expect(adopted?.map((s) => s.view.status.type)).toEqual(['playing', 'finished']);
   });
 
+  it("adopts a finished seat's history when the revealed view is drawn from the other side", () => {
+    const black = (status: string): View => ({
+      status: { type: status },
+      board: {},
+      perspective: 'black',
+    });
+    const truth: View = { status: { type: 'finished' }, board: {}, perspective: 'red' };
+    const views = [black('playing'), black('playing'), black('finished')];
+    expect(
+      adoptLiveHistory(history(views), truth, 2, { finished: true })?.map((s) => s.ply),
+    ).toEqual([0, 1, 2]);
+    const mixed = [black('playing'), { ...black('finished'), perspective: 'red' }];
+    expect(adoptLiveHistory(history(mixed), truth, 1, { finished: true })).toBeNull();
+    expect(
+      adoptLiveHistory(history(views), { ...truth, status: { type: 'playing' } }, 2),
+    ).toBeNull();
+  });
+
   it('drops a list with a gap, another perspective, or a stale last ply', () => {
     const options = { finished: true, boardless: true } as const;
     const gap = [

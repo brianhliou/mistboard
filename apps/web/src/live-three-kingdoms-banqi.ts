@@ -34,7 +34,6 @@ import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import { banqiPieceGhostSvg, banqiRevealFlipSquare } from './live-banqi-render.js';
-import { finishBadgesForResult } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import {
@@ -92,8 +91,6 @@ let core: TenantLiveClientContext<BanqiSeat, ThreeKingdomsBanqiWireView> | null 
 let selectedSquare: Square | null = null;
 let draggingFrom: Square | null = null;
 let roomMode: 'pve' | 'pvp' = 'pvp';
-// How long the final move takes to land before the badges come up.
-let finishHoldMs = 0;
 
 function isSeat(value: unknown): value is BanqiSeat {
   return value === 'red' || value === 'black';
@@ -191,33 +188,15 @@ const client = createTenantLiveClient<
     selectedSquare = null;
     draggingFrom = null;
     roomMode = 'pvp';
-    finishHoldMs = 0;
   },
-  // The generals, in the ink each seat bound; a general taken earlier or still
-  // face down when play ended has no badge. TK's own end reasons borrow the labels that say the same thing.
-  finishBadges: (view) =>
-    view.status.type === 'finished'
-      ? finishBadgesForResult({
-          colors: tkWebTenant.colors,
-          winner: view.status.winner,
-          reason: TK_BADGE_REASON[view.status.reason] ?? view.status.reason,
-          generalSquare: (seat) => {
-            const ink = seatInk(seat, view);
-            return ink ? tkGeneralSquare(boardAsPlayed(view), ink) : null;
-          },
-        })
-      : [],
-  // Read when the badges start, after animateBoard set it for this render.
-  get finishBadgeDelayMs() {
-    return finishHoldMs;
-  },
+  // No finish badges: TK ends on points, not on a general, so marking the
+  // general read as noise (removed 2026-11-07).
   renderBoard,
   // Banqi's glides (pieceAnimation pref), live and on scrubs. Unlike banqi,
   // the room's own moves glide too: nothing draws a move before the server
   // echoes it (a dropped piece snaps back to its origin until then), so the
   // echo is the first time the piece moves and gliding it is not a replay.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
-    finishHoldMs = 0;
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
@@ -225,11 +204,8 @@ const client = createTenantLiveClient<
       const flipped = banqiRevealFlipSquare(pending, view.board);
       if (flipped) animateThreeKingdomsBanqiReveal(liveRefs.board, flipped);
       else animateThreeKingdomsBanqiBoardMove(liveRefs.board, pending.move);
-      // Held for the core: the bot's instant reply waits for the move to land,
-      // and the finish badges wait for the final one.
-      const landMs = Math.max(0, flipped ? pieceFlipDurationMs() : pieceAnimationDurationMs());
-      if (view.status.type === 'finished') finishHoldMs = landMs;
-      return landMs;
+      // Held for the core: the bot's instant reply waits for the move to land.
+      return Math.max(0, flipped ? pieceFlipDurationMs() : pieceAnimationDurationMs());
     }
     if (pending.direction === 'forward') {
       const stepped = view.lastMove;
@@ -298,25 +274,6 @@ export function bootstrapThreeKingdomsBanqiLiveRoom(): void {
   client.bootstrap();
 }
 
-const TK_BADGE_REASON: Partial<Record<string, string>> = {
-  score: 'points',
-  'no-legal-move': 'no-legal-moves',
-  agreement: 'draw',
-};
-
-/** The general's square on the board as drawn; a face-down general has none. */
-function tkGeneralSquare(
-  board: ThreeKingdomsBanqiWireView['board'],
-  ink: BanqiColor,
-): Square | null {
-  for (const [square, entry] of Object.entries(board)) {
-    if (entry && !entry.faceDown && entry.color === ink && entry.role === 'general') {
-      return square as Square;
-    }
-  }
-  return null;
-}
-
 // ── Notation ──────────────────────────────────────────────────────────────────
 
 // Banqi's letters, so the move list reads like a banqi study (G general, S soldier).
@@ -330,7 +287,7 @@ const ROLE_LETTER: Record<BanqiPieceRole, string> = {
   soldier: 'S',
 };
 
-// "c2-c4", a capture "c2xc4", and a flip names what it turned up: "c2(H)".
+// "c2-c4" (a capture reads the same), and a flip names what it turned up: "c2(H)".
 function notate(
   move: ThreeKingdomsBanqiMove,
   boardAfter: Partial<Record<Square, TkLiveBoardEntry>> | undefined,
@@ -407,7 +364,8 @@ function renderMaterial(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | n
   } else {
     // Before the first flip binds the inks no seat owns a colour and nothing
     // can have been captured: the panel is each ink's face-down pieces, in
-    // the seat layout without points.
+    // the full seat layout at 0 points and nothing captured, so the first
+    // flip does not grow the panel and push the page down.
     for (const row of pool.querySelectorAll<HTMLElement>('.hidden-pool__row')) {
       host.append(inkBlock(row, faceDownKey));
     }
@@ -454,7 +412,8 @@ function seatBlock(
   return block;
 }
 
-// One ink's face-down pieces before the opening flip, named by the ink.
+// One ink's face-down pieces before the opening flip, named by the ink, with
+// the same rows a seat block has after it.
 function inkBlock(poolRow: HTMLElement, faceDownKey: string): HTMLElement {
   const block = document.createElement('div');
   block.className = 'tk-seat';
@@ -464,8 +423,15 @@ function inkBlock(poolRow: HTMLElement, faceDownKey: string): HTMLElement {
   const label = document.createElement('span');
   label.className = 'tk-seat__name';
   label.textContent = poolRow.querySelector('.hidden-pool__label')?.textContent ?? '';
-  head.append(label);
+  const value = document.createElement('span');
+  value.className = 'tk-seat__points';
+  value.textContent = tkPoints(0);
+  head.append(label, value);
   block.append(head);
+  const captures = document.createElement('div');
+  captures.className = 'captures-row review-captures-row tk-seat__pieces';
+  captures.replaceChildren(noneMark());
+  block.append(seatLine('captured', t('live.tk.captured'), captures));
   block.append(faceDownLine(poolRow, faceDownKey));
   return block;
 }

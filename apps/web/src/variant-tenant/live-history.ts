@@ -38,6 +38,11 @@ export function adoptLiveHistory<V extends ViewLike>(
   const finishedToo = options.finished === true && view.status.type === 'finished';
   if (view.status.type !== 'playing' && !finishedToo) return null;
   if (!Array.isArray(liveHistory) || liveHistory.length === 0) return null;
+  // A finished room's view is the revealed truth view, drawn from one fixed
+  // side whatever the seat (TK and banqi draw it as red), so a black seat's
+  // history would never match it. There the entries must agree with each other.
+  const first = liveHistory[0] as { view?: { perspective?: unknown } } | null;
+  const perspective = finishedToo ? first?.view?.perspective : view.perspective;
   const snapshots: TenantReplaySnapshot<V>[] = [];
   for (const [index, entry] of liveHistory.entries()) {
     if (!entry || typeof entry !== 'object') return null;
@@ -45,7 +50,7 @@ export function adoptLiveHistory<V extends ViewLike>(
     if (ply !== index) return null;
     if (!plyView || typeof plyView !== 'object') return null;
     const candidate = plyView as V;
-    if (candidate.perspective !== view.perspective) return null;
+    if (candidate.perspective !== perspective) return null;
     if (options.boardless !== true && (!candidate.board || typeof candidate.board !== 'object')) {
       return null;
     }
