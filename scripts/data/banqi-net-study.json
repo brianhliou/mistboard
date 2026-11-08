@@ -5,8 +5,8 @@
   "netVersion": "0.3.0",
   "nodesPerMove": 200000,
   "studyId": null,
-  "selectedGameId": 11,
-  "embedPly": 21,
+  "selectedGameId": 7,
+  "embedPly": 49,
   "games": [
     {
       "gameId": 5,
@@ -252,7 +252,11 @@
       "plies": 130,
       "captures": 27,
       "flips": 32,
-      "notes": {},
+      "notes": {
+        "32": "The net cannon on e2 jumps one piece to take the red advisor on g2.",
+        "50": "A net soldier takes the red general on e3. The lowest rank is the one piece that can capture a general.",
+        "81": "The classical cannon takes the black general on f4. The net keeps its lead and takes the last red piece at ply 130."
+      },
       "intro": "MistyBanqi 0.3.0 net against classical, both at 200,000 nodes a move. The first flip bound red to the first seat. 130 plies, 32 flips, 27 captures. The net won: the opponent had no legal move."
     },
     {
@@ -1717,10 +1721,7 @@
       "plies": 218,
       "captures": 29,
       "flips": 32,
-      "notes": {
-        "22": "The net cannon takes the black general on h2, jumping the tile on h3.",
-        "33": "The classical soldier takes the red general on g4. The net still wins at ply 218."
-      },
+      "notes": {},
       "intro": "MistyBanqi 0.3.0 net against classical, both at 200,000 nodes a move. The first flip bound black to the first seat. 218 plies, 32 flips, 29 captures. The net won: the opponent had no legal move."
     },
     {

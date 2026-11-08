@@ -47,16 +47,18 @@ for (const [article, raw, wins, draws, losses] of [[banqiArticle, banqi, 18, 1, 
   });
 }
 
-it('banqi chapter 9: the net cannon jumps h3 and takes the general on h2 at ply 22', () => {
+it('banqi chapter 2: a net soldier takes the red general on e3 at ply 50', () => {
   const data = banqi as NetStudyData;
   const game = data.games.find((g) => g.gameId === data.selectedGameId)!;
-  expect(data.games.indexOf(game)).toBe(8);
+  expect(data.games.indexOf(game)).toBe(1);
   const states = replayNetGame('banqi', game);
-  expect(game.plies).toBe(218);
-  expect(game.moves[21]).toBe('h4h2');
-  expect(states[21]!.board.h3).toBeDefined();
-  expect(states[21]!.board.h4).toMatchObject({ color: 'red', role: 'cannon' });
-  expect(states[22]!.captures.at(-1)).toMatchObject({ owner: 'black', role: 'general' });
+  expect(game.plies).toBe(130);
+  expect(game.result).toBe('0-1');
+  expect(game.moves[49]).toBe('d3e3');
+  expect(states[49]!.board.d3).toMatchObject({ color: 'black', role: 'soldier' });
+  expect(states[49]!.board.e3).toMatchObject({ color: 'red', role: 'general' });
+  expect(states[50]!.captures.at(-1)).toMatchObject({ owner: 'red', role: 'general' });
+  expect(data.embedPly).toBe(49);
 });
 
 it('Three Kingdoms chapter 12: the horse recapture reaches 95, then the soldier reaches 100', () => {

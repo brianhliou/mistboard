@@ -271,11 +271,11 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. The net cannon takes the black general on h2 at ply 22, jumping the tile on h3. It wins in 218 plies. Step through with the arrows.',
+          text: '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. At ply 50 a net soldier takes the red general, and the net wins in 130 plies when red has nothing left to move. Step through with the arrows.',
         },
         {
           kind: 'embed',
-          path: `/embed/study/${NET_STUDY_ID}/${NET_CHAPTER_ID}?ply=21`,
+          path: `/embed/study/${NET_STUDY_ID}/${NET_CHAPTER_ID}?ply=49`,
           title: 'Banqi: an engine game under the competition rules',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.

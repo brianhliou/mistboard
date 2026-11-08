@@ -79,8 +79,8 @@ const config = (variant: NetVariant) =>
         article: 'banqi',
         title: 'Banqi',
         version: '0.3.0',
-        selected: 11,
-        ply: 21,
+        selected: 7,
+        ply: 49,
       }
     : {
         slug: 'three-kingdoms-net',
@@ -229,8 +229,9 @@ export function compileNetStudy(variant: NetVariant, records: DuelGame[]): NetSt
   selected.notes =
     variant === 'banqi'
       ? {
-          '22': 'The net cannon takes the black general on h2, jumping the tile on h3.',
-          '33': 'The classical soldier takes the red general on g4. The net still wins at ply 218.',
+          '32': 'The net cannon on e2 jumps one piece to take the red advisor on g2.',
+          '50': 'A net soldier takes the red general on e3. The lowest rank is the one piece that can capture a general.',
+          '81': 'The classical cannon takes the black general on f4. The net keeps its lead and takes the last red piece at ply 130.',
         }
       : {
           '104': 'The classical general takes the red general on d2, reaching 90 points.',
