@@ -14,11 +14,11 @@
       },
       "zh-Hans": {
         "title": "关于 Mistboard | Mistboard",
-        "description": "Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。"
+        "description": "Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。通过中国象棋与世界经典策略游戏，让不同文化背景的人走到一起。"
       },
       "zh-Hant": {
         "title": "關於 Mistboard | Mistboard",
-        "description": "Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。"
+        "description": "Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。透過象棋與世界經典策略遊戲，連結不同文化背景的人。"
       }
     }
   },
@@ -36,11 +36,11 @@
         "description": "Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license."
       },
       "zh-Hans": {
-        "title": "源代码 | Mistboard",
+        "title": "开放源代码与第三方组件 | Mistboard",
         "description": "Mistboard 是一个独立的开源策略游戏项目。源代码以 AGPL-3.0-or-later 发布。托管服务与 lichess、chess.com 或任何其他棋类平台无关联。"
       },
       "zh-Hant": {
-        "title": "原始碼 | Mistboard",
+        "title": "開放原始碼與第三方元件 | Mistboard",
         "description": "Mistboard 是一個獨立的開源策略遊戲專案。原始碼以 AGPL-3.0-or-later 發布。託管服務與 lichess、chess.com 或任何其他棋類平台無關。"
       }
     }
@@ -59,12 +59,12 @@
         "description": "Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from."
       },
       "zh-Hans": {
-        "title": "常见问题 | Mistboard",
-        "description": "有网页版吗？需要下载吗？"
+        "title": "常见问题：对弈、账号与计分 | Mistboard",
+        "description": "关于 Mistboard 网页版的常见问题：如何与电脑或朋友下象棋，是否需要下载或注册账号，计分对局与防作弊如何运作，以及棋谱库的对局来自哪里。"
       },
       "zh-Hant": {
-        "title": "常見問題 | Mistboard",
-        "description": "有網頁版嗎？需要下載嗎？"
+        "title": "常見問題：對弈、帳號與計分 | Mistboard",
+        "description": "關於 Mistboard 網頁版的常見問題：如何與電腦或朋友下象棋，是否需要下載或註冊帳號，計分對局與防作弊如何運作，以及棋譜庫的對局來自哪裡。"
       }
     }
   },
@@ -82,12 +82,12 @@
         "description": "The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds."
       },
       "zh-Hans": {
-        "title": "使用条款 | Mistboard",
-        "description": "这些是使用 mistboard.com 托管网站的规则。本页始终是当前版本。"
+        "title": "使用条款：对弈、计分与公平竞赛 | Mistboard",
+        "description": "使用 mistboard.com 的规则：匿名与计分对弈、账号和评分、公平竞赛要求、已结束对局按 CC BY 4.0 公开的许可，以及赞助扣款、取消和退款规定。"
       },
       "zh-Hant": {
-        "title": "使用條款 | Mistboard",
-        "description": "這些是使用 mistboard.com 託管網站的規則。本頁始終是目前版本。"
+        "title": "使用條款：對弈、計分與公平競賽 | Mistboard",
+        "description": "使用 mistboard.com 的規則：匿名與計分對弈、帳號和評分、公平競賽要求、已結束對局按 CC BY 4.0 公開的授權，以及贊助扣款、取消和退款規定。"
       }
     }
   },
@@ -105,12 +105,12 @@
         "description": "What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold."
       },
       "zh-Hans": {
-        "title": "隐私 | Mistboard",
-        "description": "本页说明我们在 mistboard.com 托管网站上收集什么。本页始终是当前版本。"
+        "title": "隐私政策：网站收集的数据与用途 | Mistboard",
+        "description": "说明 mistboard.com 收集的分析数据、对局记录，以及注册账号时的用户名和邮箱；介绍这些数据的用途、计分对局的公平性数据与私信的保存。网站无广告，也不出售你的数据。"
       },
       "zh-Hant": {
-        "title": "隱私 | Mistboard",
-        "description": "本頁說明我們在 mistboard.com 託管網站上收集什麼。本頁始終是目前版本。"
+        "title": "隱私政策：網站收集的資料與用途 | Mistboard",
+        "description": "說明 mistboard.com 收集的分析資料、對局記錄，以及註冊帳號時的使用者名稱和信箱；介紹這些資料的用途、計分對局的公平性資料與私訊的保存。網站無廣告，也不出售你的資料。"
       }
     }
   },
@@ -143,12 +143,12 @@
         "description": "Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts."
       },
       "zh-Hans": {
-        "title": "参与贡献 | Mistboard",
-        "description": "Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始。"
+        "title": "参与贡献：玩家、教师与开发者 | Mistboard",
+        "description": "Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始：下棋并反馈问题、审阅中文翻译、制作教学内容，或提交代码与引擎。"
       },
       "zh-Hant": {
-        "title": "參與貢獻 | Mistboard",
-        "description": "Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始。"
+        "title": "參與貢獻：玩家、教師與開發者 | Mistboard",
+        "description": "Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始：下棋並回報問題、審閱中文翻譯、製作教學內容，或提交程式碼與引擎。"
       }
     }
   },
@@ -166,11 +166,11 @@
         "description": "Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch."
       },
       "zh-Hans": {
-        "title": "与我们合作 | Mistboard",
+        "title": "与我们合作：创作者与棋手 | Mistboard",
         "description": "Mistboard 将对弈和研究与赛事直播、原创游戏和引擎挑战赛连接起来。我们跨越语言，在线上和线下与棋手、教师、创作者及主办方合作。网站免费、开源、无广告。"
       },
       "zh-Hant": {
-        "title": "與我們合作 | Mistboard",
+        "title": "與我們合作：創作者與棋手 | Mistboard",
         "description": "Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。"
       }
     }
@@ -235,12 +235,12 @@
         "description": "What the Mistboard monthly game files hold: the JSONL and PGN formats field by field, the CC BY 4.0 license, which games are included, and how fog and face-down pieces appear."
       },
       "zh-Hans": {
-        "title": "关于数据 | Mistboard",
-        "description": "月度文件包含什么、如何署名，以及哪些不包含在内。"
+        "title": "关于棋谱数据：格式与使用许可 | Mistboard",
+        "description": "Mistboard 每月对局数据说明：逐项介绍 JSONL 和 PGN 文件格式、CC BY 4.0 许可与署名方式、包含和排除哪些对局，以及迷雾和暗子信息如何记录。"
       },
       "zh-Hant": {
-        "title": "關於資料 | Mistboard",
-        "description": "每月檔案包含什麼、如何署名，以及哪些不包含在內。"
+        "title": "關於棋譜資料：格式與使用授權 | Mistboard",
+        "description": "Mistboard 每月對局資料說明：逐項介紹 JSONL 和 PGN 檔案格式、CC BY 4.0 授權與署名方式、包含和排除哪些對局，以及迷霧和暗子資訊如何記錄。"
       }
     }
   },
