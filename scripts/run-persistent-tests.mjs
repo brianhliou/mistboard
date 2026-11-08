@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { DEFAULT_TEST_DATABASE_URL, ensureTestDatabase } from './ensure-test-database.mjs';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
-const usingDefaultLocalTestDatabase = !process.env.TEST_DATABASE_URL;
+const usingDefaultLocalTestDatabase = process.env.TEST_DATABASE_URL === undefined;
 
 if (usingDefaultLocalTestDatabase) {
   await ensureTestDatabase({ databaseUrl: testDatabaseUrl });
