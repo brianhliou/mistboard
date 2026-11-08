@@ -15,10 +15,11 @@
 //                  labels its post-AI-game button the same way)
 //   Review game    everyone
 //   Challenge a friend
-//                  after a BOT game only, a row like the two above it: it is
-//                  the one post-game action that brings a new human onto the
-//                  site (postgame-invite.ts), and the only one a PvP game does
-//                  not need
+//                  seated players after a bot or PvP game, a row like the two
+//                  above it: it is the one post-game action that brings a new
+//                  human onto the site (postgame-invite.ts). Added after PvP
+//                  games 2026-11-07: a player who just beat a stranger is as
+//                  likely to want a friend next as one who beat the bot
 //
 // Every action reports a `postgame_action` event, so which of these earns its
 // place is a PostHog read rather than a guess.
@@ -262,7 +263,7 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
     box.append(actionLink(t('live.reviewGame'), input.reviewHref, report('review')));
   }
 
-  if (input.seated && input.mode === 'pve') {
+  if (input.seated && (input.mode === 'pve' || input.mode === 'pvp')) {
     const invite = postGameInviteButton(input.variant);
     if (invite) {
       invite.classList.add('postgame-actions__invite');
