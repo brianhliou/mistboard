@@ -82,7 +82,7 @@ export function abJqeNotes(key: string): Record<number, string> {
         100: 'AB-JChess, with Red, moves the chariot from c9 to c3 here, attacking Black’s horse on a3. jqe would move it to f9 and take the advisor on f7 next, while Black’s chariot runs down to d1.',
         101: 'From here Red’s chariot attacks the horse after every move it makes. jqe’s rule calls a side that chases on every move lost, so it scores Black far ahead; AB-JChess’s rule sees the horse chasing back and scores a draw.',
         [t.ply]: `Searched on its own with each chase rule on and off, jqe gives Red ${score(t.jqe.on)} with its rule and ${score(t.jqe.off)} without; AB-JChess gives ${abj}.`,
-        [end]: `${finish(key)} Mistboard draws it too: a side loses a repetition only if it gave check on every move of it.`,
+        [end]: `${finish(key)} Mistboard drew it too under its rule at the time, which judged only perpetual check. Under its rule from November 2026, Red’s chase loses.`,
       };
     }
     default:

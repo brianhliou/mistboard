@@ -38,6 +38,10 @@ const ZH_HANS: Record<string, string> = {
   '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盘棋。',
   'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
     '最初的 10,000 盘棋是怎样积累起来的，大家下了什么棋，又是哪些人在下。感谢大家来下棋。',
+  // ── 2026-11-08 (jieqi perpetual chase) ── 长将 / 长捉 / 半回合 follow the 2026-10-07 entry.
+  'Jieqi now judges a perpetual chase.': '揭棋新增长捉判负。',
+  'Perpetual check still loses, and now so does a perpetual chase: when a position repeats a third time with no check in the cycle, a player who attacked the same piece on every move loses. This follows the rule of the jqe engine. A game with no capture is now a draw after 40 moves each instead of 60. Games started before the change keep the old rules.':
+    '长将仍然判负，现在长捉也判负：同一局面第三次出现且循环中没有将军时，每一步都攻击同一个棋子的一方判负。这条规则与 jqe 引擎的规则相同。双方各走 40 步没有吃子即判和，此前为 60 步。规则更新前开始的对局仍按旧规则进行。',
   'Gomoku is open to everyone.': '五子棋向所有人开放。',
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盘上玩休闲自由五子棋，从预设开局开始。可以邀请朋友下一盘计分对局，也可以与八个等级的 Rapfi 机器人对弈。计分对局采用 1+1、3+2 或 5+5 时限，双方均须登录。',
@@ -576,6 +580,10 @@ const ZH_HANT: Record<string, string> = {
   '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盤棋。',
   'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
     '最初的 10,000 盤棋是怎樣累積起來的，大家下了什麼棋，又是哪些人在下。感謝大家來下棋。',
+  // ── 2026-11-08 (jieqi perpetual chase) ── 長將 / 長捉 / 半回合 follow the 2026-10-07 entry.
+  'Jieqi now judges a perpetual chase.': '揭棋新增長捉判負。',
+  'Perpetual check still loses, and now so does a perpetual chase: when a position repeats a third time with no check in the cycle, a player who attacked the same piece on every move loses. This follows the rule of the jqe engine. A game with no capture is now a draw after 40 moves each instead of 60. Games started before the change keep the old rules.':
+    '長將仍然判負，現在長捉也判負：同一局面第三次出現且循環中沒有將軍時，每一步都攻擊同一個棋子的一方判負。這條規則與 jqe 引擎的規則相同。雙方各走 40 步沒有吃子即判和，此前為 60 步。規則更新前開始的對局仍按舊規則進行。',
   'Gomoku is open to everyone.': '五子棋向所有人開放。',
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盤上玩休閒自由五子棋，從預設開局開始。可以邀請朋友下一盤計分對局，也可以與八個等級的 Rapfi 機器人對弈。計分對局採用 1+1、3+2 或 5+5 時限，雙方均須登入。',

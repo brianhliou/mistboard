@@ -407,8 +407,8 @@ export const abJchessVsJqeArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-11-04',
-  updatedAt: '2026-11-06',
-  updateNote: 'Added a link to a study of all 600 games.',
+  updatedAt: '2026-11-07',
+  updateNote: 'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.',
   thumbnail: {
     kind: 'svg',
     svg: (locale: Locale): string =>
@@ -582,7 +582,12 @@ export const abJchessVsJqeArticle: Article = {
         { kind: 'sub-heading', text: "Most draws were not draws by Mistboard's rules" },
         {
           kind: 'paragraph',
-          text: `Our referee drew every threefold repetition. Mistboard does not: a side that gives check on every move of the repetition loses. In ${RULES.perpetualCheck} of the ${T.draws} draws one side did that, and in ${RULES.checkerAgreedLost} of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won ${RULES.wins}, drew ${RULES.draws} and lost ${RULES.losses}, about ${signed(RULES.pentaElo)} Elo with a 95% range of ${signed(RULES.pentaLow)} to ${signed(RULES.pentaHigh)}. The ${signed(T.pentaElo)} above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.`,
+          text: `Our referee drew every threefold repetition. Mistboard's rule when the match was played did not: a side that gives check on every move of the repetition loses. In ${RULES.perpetualCheck} of the ${T.draws} draws one side did that, and in ${RULES.checkerAgreedLost} of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won ${RULES.wins}, drew ${RULES.draws} and lost ${RULES.losses}, about ${signed(RULES.pentaElo)} Elo with a 95% range of ${signed(RULES.pentaLow)} to ${signed(RULES.pentaHigh)}. The ${signed(T.pentaElo)} above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.`,
+        },
+        {
+          kind: 'note',
+          label: 'Scored under the old rule',
+          text: "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.",
         },
         {
           kind: 'paragraph',
@@ -590,7 +595,7 @@ export const abJchessVsJqeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: `The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matches Mistboard's. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.`,
+          text: `The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matched Mistboard's at the time. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.`,
         },
         replay(
           GC.key,
@@ -598,7 +603,7 @@ export const abJchessVsJqeArticle: Article = {
         ),
         {
           kind: 'paragraph',
-          text: `Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black ${range(GC, 'jqe', MC.ply + 1, GC.plies)[0]}% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard draws a chase, so jqe was counting on a rule the game is not played under. Step through the board for both engines' rules searched on and off.`,
+          text: `Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black ${range(GC, 'jqe', MC.ply + 1, GC.plies)[0]}% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard drew a chase then, so jqe was counting on a rule the game was not yet played under. Step through the board for both engines' rules searched on and off.`,
         },
       ],
     },

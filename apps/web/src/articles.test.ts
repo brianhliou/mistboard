@@ -1031,12 +1031,15 @@ describe('rules variant sidebar', () => {
     expect(pageText).not.toContain('[VISUAL:');
     expect(pageText).not.toMatch(/\bsquares?\b/i);
     expect(pageText).toContain('the piece that normally starts on its point');
-    expect(pageText).toContain('120 plies pass without a capture');
+    expect(pageText).toContain('80 plies pass without a capture');
     expect(pageText).toContain(
       'The same position with the same side to move occurs for the third time',
     );
     expect(pageText).toContain(
       'A player who checked on every one of their turns in the repeating cycle loses',
+    );
+    expect(pageText).toContain(
+      'only one player chased on every one of their turns, that player loses',
     );
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
