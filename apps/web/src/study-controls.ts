@@ -1,5 +1,6 @@
 import { t } from './i18n/catalog.js';
 import type { SerializedNode, SerializedTree } from './review/tree-serialize.js';
+import { buildChapterRowLabels } from './study-chapter-games.js';
 import { localizedStudyName } from './study-i18n.js';
 
 export type StudyVisibility = 'private' | 'unlisted' | 'public';
@@ -46,9 +47,9 @@ export type StudyRailActions = {
    *  said it belonged. (The favourite moved for the same reason, to the info
    *  card's title row.) */
   errata?: HTMLElement | null;
-  /** A richer label for a row, in place of the plain name (the gamebook rail
-   *  lays a game position out as players + where in the game). Null keeps the
-   *  name. The name stays the row's title either way. */
+  /** A richer label for a normal game row, in place of the plain name.
+   *  Null, gamebook chapters and duplicate labels keep the chapter name.
+   *  The name stays the row's title either way. */
   chapterLabel?: (chapter: ChapterControlModel) => HTMLElement | null;
   /** A small header to insert above a row, opening a run of chapters (a game
    *  study's event). Null for no header. */
@@ -181,6 +182,10 @@ export function buildStudyRail(
         setRailStatus(status, 'error', t('study.reorderFailed'));
       });
   };
+  const chapterLabels = buildChapterRowLabels(
+    chapters,
+    (chapter) => actions.chapterLabel?.(chapter) ?? null,
+  );
   chapters.forEach((chapter, index) => {
     const heading = actions.groupHeading?.(chapter) ?? null;
     if (heading) {
@@ -251,7 +256,7 @@ export function buildStudyRail(
     } else {
       num.textContent = String(index + 1);
     }
-    const custom = actions.chapterLabel?.(chapter) ?? null;
+    const custom = chapterLabels.get(chapter.id) ?? null;
     const name = custom ?? document.createElement('span');
     if (!custom) {
       name.className = 'study-chapters__name';
