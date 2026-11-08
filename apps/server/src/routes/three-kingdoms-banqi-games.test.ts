@@ -494,7 +494,7 @@ test('analysis and decisions reject live, aborted, missing and wrong-variant gam
   }
 });
 
-test('decisions GET is public and cache-only; POST needs an account and follows base analysis', async () => {
+test('decisions answer only to the playtest; GET is cache-only; POST needs an account and follows base analysis', async () => {
   await resetAnalysisJobsForTests();
   let cachedAnalysis: typeof analysis.plies | null = null;
   let cachedDecisions: ThreeKingdomsBanqiDecision[] | null = null;
@@ -543,12 +543,16 @@ test('decisions GET is public and cache-only; POST needs an account and follows 
     },
   );
   try {
+    // Outside the playtest, a decisions read is the unknown-game 404.
+    const outsider = fakeResponse();
+    await handler(GET, outsider.response, `${PATH}/decisions`);
+    assert.equal(outsider.captured.status, 404);
+    admitted = true;
     const miss = fakeResponse();
     await handler(GET, miss.response, `${PATH}/decisions`);
     assert.equal(miss.captured.status, 204);
     assert.equal(runs, 0);
     // Once admitted to the playtest, a guest still cannot enqueue work.
-    admitted = true;
     const refused = fakeResponse();
     await handler(
       { method: 'POST', headers: {} } as IncomingMessage,
@@ -571,7 +575,7 @@ test('decisions GET is public and cache-only; POST needs an account and follows 
     }
     assert.equal(getAnalysisJob(jobId)?.status, 'done');
     assert.deepEqual(order, ['analysis', 'decisions']);
-    admitted = signedIn = engineAvailable = false;
+    signedIn = engineAvailable = false;
     for (let i = 0; i < 2; i += 1) {
       const get = fakeResponse();
       await handler(GET, get.response, `${PATH}/decisions`);
@@ -582,6 +586,10 @@ test('decisions GET is public and cache-only; POST needs an account and follows 
     await handler(GET, poll.response, `${PATH}/decisions/jobs/${jobId}`);
     assert.equal(poll.captured.status, 200);
     assert.equal(runs, 1);
+    admitted = false;
+    const closed = fakeResponse();
+    await handler(GET, closed.response, `${PATH}/decisions`);
+    assert.equal(closed.captured.status, 404);
   } finally {
     await resetAnalysisJobsForTests();
   }
