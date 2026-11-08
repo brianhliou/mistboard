@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 // /contribute: how to help Mistboard, lichess's /help/contribute equivalent.
 // Play + feedback, bug reports, code, zh page reviews, and support. Renders inside
 // the shared /about rail + panel shell.
@@ -101,4 +102,8 @@ function translateHeading(locale: Locale): HTMLElement {
   const heading = proseSubheading(t('contribute.translateHeading', {}, locale));
   heading.id = CONTRIBUTE_TRANSLATE_ANCHOR;
   return heading;
+}
+
+export function renderContributeShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountContribute);
 }

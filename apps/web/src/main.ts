@@ -170,15 +170,34 @@ const gameRoomId = gameRoomIdFromPath(path);
 const legacyGameRoute = gameRoomId ? legacyGameRouteForRoomId(gameRoomId) : null;
 const tenantPostgame = tenantPostgameFromPath(path);
 const liveRoomId = liveRoomIdFromPath(path);
-const wantsAbout = path === '/about' || page === 'about';
-const wantsSource = path === '/source' || page === 'source';
+const wantsAbout =
+  path === '/about' || path === '/zh-hans/about' || path === '/zh-hant/about' || page === 'about';
+const wantsSource =
+  path === '/source' ||
+  path === '/zh-hans/source' ||
+  path === '/zh-hant/source' ||
+  page === 'source';
 const wantsContact = path === '/contact' || page === 'contact';
 const wantsPatron = path === '/patron' || page === 'patron';
-const wantsFaq = path === '/faq' || page === 'faq';
-const wantsTerms = path === '/terms' || page === 'terms';
-const wantsPrivacy = path === '/privacy' || page === 'privacy';
-const wantsContribute = path === '/contribute' || page === 'contribute';
-const wantsCreators = path === '/creators' || page === 'creators';
+const wantsFaq =
+  path === '/faq' || path === '/zh-hans/faq' || path === '/zh-hant/faq' || page === 'faq';
+const wantsTerms =
+  path === '/terms' || path === '/zh-hans/terms' || path === '/zh-hant/terms' || page === 'terms';
+const wantsPrivacy =
+  path === '/privacy' ||
+  path === '/zh-hans/privacy' ||
+  path === '/zh-hant/privacy' ||
+  page === 'privacy';
+const wantsContribute =
+  path === '/contribute' ||
+  path === '/zh-hans/contribute' ||
+  path === '/zh-hant/contribute' ||
+  page === 'contribute';
+const wantsCreators =
+  path === '/creators' ||
+  path === '/zh-hans/creators' ||
+  path === '/zh-hant/creators' ||
+  page === 'creators';
 // Engine champions: locale-prefixed like /bots, so the zh copies moved from
 // brianhliou.com/zh-hans/challenges/ have URLs of their own. The page was
 // /challenges until 2026-10-07: the server 301s the old paths
@@ -369,7 +388,8 @@ const wantsXiangqiImport = path === '/import';
 // Monthly downloads of every finished game (lichess's database.lichess.org).
 const wantsDataPage = path === '/data';
 // What the data files hold, the licence, and how hidden pieces appear.
-const wantsDataAbout = path === '/data/about';
+const wantsDataAbout =
+  path === '/data/about' || path === '/zh-hans/data/about' || path === '/zh-hant/data/about';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
 // itself is already picked up from the URL by initializeLocaleFromCurrentUrl;

@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 // /champions (+ /zh-hans/champions, /zh-hant/champions): one title per game
 // with a bot. The holder is the bot you play on the site, credited by name; any
 // engine can challenge for the title in a public match. Moved here from
@@ -505,4 +506,8 @@ export function buildChampions(locale: Locale = currentLocale()): HTMLElement {
     ]),
   );
   return section;
+}
+
+export function renderChampionsShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountChampions);
 }

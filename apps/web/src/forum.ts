@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 import './forum.css';
 import {
   type EmbedTarget,
@@ -3203,4 +3204,8 @@ async function fetchForumReports(options: {
   if (!resp.ok) throw new Error(`forum_reports_failed_${resp.status}`);
   const data = (await resp.json()) as { reports: ForumReport[] };
   return data.reports;
+}
+
+export function renderForumEtiquetteShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountForumEtiquette);
 }

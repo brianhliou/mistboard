@@ -72,3 +72,25 @@ test('the schedule file is read from dist and cached', async () => {
   const fresh = await readArticleSchedule(dir, T0 + 120_000);
   assert.equal(fresh.scheduled.size, 0, 're-read after the window');
 });
+
+test('schedule parsing retains localized index entries and explicit unlisted decisions', () => {
+  const indexEntry = {
+    kind: 'article',
+    publisher: 'community',
+    locales: {
+      'zh-hans': { title: '棋友文章', summary: '对局心得', href: '/zh-hans/blog/new-post' },
+    },
+  };
+  const schedule = parseArticleSchedule(
+    JSON.stringify({
+      scheduled: [
+        { slug: 'new-post', liveAt: new Date(LIVE).toISOString(), indexEntry },
+        { slug: 'unlisted', liveAt: new Date(LIVE).toISOString(), indexEntry: null },
+        { slug: 'legacy', liveAt: new Date(LIVE).toISOString() },
+      ],
+    }),
+  );
+  assert.deepEqual(schedule.indexEntries.get('new-post'), indexEntry);
+  assert.equal(schedule.indexEntries.get('unlisted'), null);
+  assert.equal(schedule.indexEntries.has('legacy'), false);
+});

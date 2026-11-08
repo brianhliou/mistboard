@@ -1,3 +1,5 @@
+import type { Locale } from '../i18n/locale.js';
+import { prerenderMount } from '../prerender-copy.js';
 // /editor/<variant>: the lichess-style board editor. Set up any position by
 // hand, watch the FEN and the variant parser's verdict update live, and hand
 // the result to the analysis board.
@@ -939,4 +941,29 @@ function pointerIcon(): string {
 
 function deleteIcon(): string {
   return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 7h12l-1 13H7z M9 4h6l1 2H8z" fill="currentColor"/></svg>';
+}
+
+export function renderEditorShellForPrerender(
+  locale: Locale,
+  variant: EditorVariantId,
+): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const heading = document.createElement('h1');
+    heading.textContent = t('editor.pageTitle', { variant: variantDisplayLabel(variant) });
+    root.append(heading, buildVariantPicker(variant, '/editor'));
+    for (const key of [
+      'editor.sideToMove',
+      'editor.startPosition',
+      'editor.clearBoard',
+      'editor.flipBoard',
+      'editor.fenLabel',
+      'editor.setFen',
+      'editor.copyFen',
+      'editor.analysisBoard',
+    ] as const) {
+      const label = document.createElement('p');
+      label.textContent = t(key);
+      root.append(label);
+    }
+  });
 }

@@ -1,4 +1,5 @@
 import { personNameForLocale } from '@mistboard/game';
+
 // Server-side SEO for the player pages (#458): /players, /players/<slug>,
 // /players/teams and /players/teams/<key> are client routes
 // (apps/web/src/xiangqi-players.ts), so a crawler that does not run the bundle
@@ -13,6 +14,7 @@ import { personNameForLocale } from '@mistboard/game';
 // root on boot, so the body never shows beside the rendered page.
 
 import { createHash } from 'node:crypto';
+import { type BoardLocale, boardCopy } from './board-text-copy.js';
 import * as persistence from './persistence.js';
 import type {
   XiangqiPlayerBoardRecord,
@@ -319,7 +321,7 @@ function gameLine(board: XiangqiPlayerBoardRecord, player: XiangqiPlayerRecord):
     .map((part) => escapeHtml(String(part)))
     .join(' · ');
   const href = `/broadcast/xiangqi/board/${encodeURIComponent(board.boardId)}`;
-  return `<li><a href="${escapeHtml(href)}">${escapeHtml(board.result)}, ${outcome}</a> ${pairing} · ${meta}</li>`;
+  return `<tr><td>${escapeHtml(board.playedOn ?? '')}</td><td>${pairing}</td><td><a href="${escapeHtml(href)}">${escapeHtml(board.result)}, ${outcome}</a></td><td>${meta}</td></tr>`;
 }
 
 export function renderPlayerBody(
@@ -327,6 +329,7 @@ export function renderPlayerBody(
   boards: readonly XiangqiPlayerBoardRecord[],
   reference: PlayerReference,
   puzzleCount = 0,
+  locale: BoardLocale = 'en',
 ): string {
   const title = referenceTitle(reference, player);
   const parts = [
@@ -371,7 +374,7 @@ export function renderPlayerBody(
         ? `Latest ${shown.length} of ${plural(boards.length, 'game')}`
         : `Games (${boards.length})`;
     parts.push(
-      `<h2>${escapeHtml(heading)}</h2><ul>${shown.map((b) => gameLine(b, player)).join('')}</ul>`,
+      `<h2>${escapeHtml(heading)}</h2><table><thead><tr><th>${boardCopy(locale, 'study.gameDate')}</th><th>${boardCopy(locale, 'profile.filterOpponent')}</th><th>${boardCopy(locale, 'study.gameResult')}</th><th>${boardCopy(locale, 'study.gameEvent')}</th></tr></thead><tbody>${shown.map((b) => gameLine(b, player)).join('')}</tbody></table>`,
     );
   }
   parts.push(SECTION_LINKS);
@@ -506,6 +509,7 @@ export function livePlayerSources(staticDir: string): PlayerPageSources {
 export async function playerPageFor(
   pathname: string,
   sources: PlayerPageSources,
+  locale: BoardLocale = 'en',
 ): Promise<PlayerPage | null> {
   const route = parsePlayerRoute(pathname);
   if (!route) return null;
@@ -560,6 +564,7 @@ export async function playerPageFor(
           boards,
           reference,
           (await sources.puzzleCount?.(player.slug)) ?? 0,
+          locale,
         ),
       };
     }
@@ -570,9 +575,10 @@ export async function playerPageFor(
 export async function livePlayerPage(
   pathname: string,
   staticDir: string,
+  locale: BoardLocale = 'en',
 ): Promise<PlayerPage | null> {
   if (!parsePlayerRoute(pathname) || !persistence.isInitialized()) return null;
-  return playerPageFor(pathname, livePlayerSources(staticDir));
+  return playerPageFor(pathname, livePlayerSources(staticDir), locale);
 }
 
 // ── Sitemap ───────────────────────────────────────────────────────────────────

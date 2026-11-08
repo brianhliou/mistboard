@@ -17,6 +17,7 @@ import {
 import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { prerenderCopy, prerenderMount } from './prerender-copy.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -131,18 +132,17 @@ export async function mountArticlesIndex(
   mountArticleThumbnails(index);
 }
 
-/* /blog, /zh-hans/blog and /zh-hant/blog, baked at build time. The index is
- * authored data with no live or per-account content, so the prerendered DOM is
- * exactly the page a reader gets. The "By Mistboard" view only: the (currently
- * empty) community view stays on the client-rendered shell. The two Chinese
- * indexes served a 4.7KB shell with no canonical or hreflang until 2026-10-02
- * while sitting in the sitemap. */
+/* Both blog views use the client renderer in every locale. The community
+ * copy replaces an empty shell without adding a first-paint UI (#964). */
 export async function renderArticlesIndexShellForPrerender(
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: 'mistboard' | 'community' = 'mistboard',
 ): Promise<string> {
   const { buildArticlesIndex } = await import('./articles.js');
   const locale: Locale = lang ?? 'en';
-  return `${buildNav(locale).outerHTML}${buildArticlesIndex(lang ?? undefined, 'mistboard').outerHTML}`;
+  const nav = buildNav(locale);
+  const index = buildArticlesIndex(lang ?? undefined, view);
+  return view === 'community' ? prerenderCopy(nav, index) : `${nav.outerHTML}${index.outerHTML}`;
 }
 
 // Meta and head links for each baked index (blog, rules). The three indexes of
@@ -205,7 +205,7 @@ type IndexPrerenderHead = {
 
 function indexPrerenderHead(
   host: string,
-  section: 'blog' | 'rules',
+  section: 'blog' | 'blog/community' | 'rules',
   table: IndexPrerenderMeta,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): IndexPrerenderHead {
@@ -228,8 +228,14 @@ function indexPrerenderHead(
 export function articlesIndexPrerenderHead(
   host: string,
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: 'mistboard' | 'community' = 'mistboard',
 ): IndexPrerenderHead {
-  return indexPrerenderHead(host, 'blog', ARTICLES_INDEX_PRERENDER_META, lang);
+  return indexPrerenderHead(
+    host,
+    view === 'community' ? 'blog/community' : 'blog',
+    ARTICLES_INDEX_PRERENDER_META,
+    lang,
+  );
 }
 
 export function rulesIndexPrerenderHead(
@@ -1077,4 +1083,40 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(code, heading, lede, home, quick, contact);
   return section;
+}
+
+export function renderAboutShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountAbout);
+}
+
+export function renderSourceShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountSource);
+}
+
+export function renderFaqShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountFaq);
+}
+
+export function renderTermsShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountTerms);
+}
+
+export function renderPrivacyShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountPrivacy);
+}
+
+export function renderContactShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const contact = buildContact(null, false, locale).el;
+    // Inert crawler copy includes the hints a visitor sees in empty fields.
+    // Attribute-only placeholders contribute no text to a no-JS reader.
+    for (const field of contact.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input[placeholder],textarea[placeholder]',
+    ))
+      field.replaceWith(document.createTextNode(field.placeholder));
+    // The anti-spam field is deliberately absent from the visible page.
+    contact.querySelector('label[aria-hidden="true"]')?.remove();
+    root.classList.add('landing-page', 'contact-route');
+    root.append(buildNav(locale), buildStaticPageLayout('contact', contact, locale));
+  });
 }

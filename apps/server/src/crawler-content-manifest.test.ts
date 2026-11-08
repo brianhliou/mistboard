@@ -50,10 +50,19 @@ test('every sitemap URL and every admitted route pattern has a crawler contract'
 });
 
 test('every client-only contract is noindex, including dynamic-route samples', () => {
-  for (const entry of CLIENT_ONLY_NOINDEX) assert.ok(isNoindexRoute(entry.path), entry.path);
+  const problems = (policy: (path: string) => boolean) =>
+    CLIENT_ONLY_NOINDEX.filter((entry) => !policy(entry.path)).map((entry) => entry.path);
+  assert.deepEqual(problems(isNoindexRoute), []);
+  // Planted regression: dropping one admin branch must fail this contract.
+  assert.deepEqual(
+    problems((path) => path !== '/database' && isNoindexRoute(path)),
+    ['/database'],
+  );
 });
 
 test('floors are nontrivial and phrases match page copy in the URL locale', async () => {
+  const floor = resolve(import.meta.dirname, '../../../scripts/crawler-floor.mjs');
+  const { crawlerMinimumChars } = await import(pathToFileURL(floor).href);
   const catalogs: Record<string, Record<string, string>> = {};
   for (const locale of ['en', 'zh-hans', 'zh-hant']) {
     const values: Record<string, string> = {};
@@ -71,8 +80,13 @@ test('floors are nontrivial and phrases match page copy in the URL locale', asyn
     catalogs[locale] = values;
   }
   for (const entry of CRAWLER_CONTENT_MANIFEST) {
-    assert.ok(entry.minChars >= 150, entry.path);
-    assert.equal(entry.minChars, Math.max(150, Math.floor(entry.baselineChars * 0.6)), entry.path);
+    const minimum = 150;
+    assert.ok(entry.minChars >= minimum, entry.path);
+    assert.equal(
+      crawlerMinimumChars(entry),
+      Math.max(entry.minChars, minimum, Math.floor(entry.baselineChars * 0.6)),
+      entry.path,
+    );
     if (entry.phraseKey.startsWith('apps/')) {
       // Several page-local copy tables and seeded record titles are not in
       // the shared catalogs. Keep a source/body-key pointer, not a nav fallback.
@@ -88,8 +102,16 @@ test('floors are nontrivial and phrases match page copy in the URL locale', asyn
       assert.equal(entry.locale, entry.path.split('/')[1], entry.path);
       assert.match(entry.phrase, /\p{Script=Han}/u, entry.path);
     }
-    if (entry.knownGap) assert.match(entry.knownGap, /^#\d+$/);
+    if (entry.knownGap) assert.match(entry.knownGap, /^#\d+(?:: \S.*)?$/);
   }
+});
+
+test('gap reasons retain an issue reference and reject untracked or empty explanations', () => {
+  const format = /^#\d+(?:: \S.*)?$/;
+  for (const value of ['#956', '#960: empty directory has too little text'])
+    assert.match(value, format);
+  for (const planted of ['empty directory', '#960:', '#960: ', '#: reason'])
+    assert.doesNotMatch(planted, format);
 });
 
 test('no manifest phrase is supplied by the real shell menu in any locale', async () => {

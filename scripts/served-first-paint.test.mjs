@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { paintsBareCopy, routeShape } from './served-first-paint.mjs';
+import {
+  boardPageSamples,
+  INDEX_PATHS,
+  paintsBareCopy,
+  routeShape,
+} from './served-first-paint.mjs';
 
 const page = (app) =>
   `<html><head></head><body>${app}<script type="module" src="/assets/index.js"></script></body></html>`;
@@ -45,4 +50,37 @@ test('groups paths by route shape, keeping the locale prefix', () => {
   assert.equal(routeShape('/zh-hans/study/abc'), '/zh-hans/study/*');
   assert.equal(routeShape('/players'), '/players');
   assert.equal(routeShape('/'), '/');
+});
+
+test('every locale index and community view is sampled as its own page kind', () => {
+  for (const prefix of ['', '/zh-hans', '/zh-hant']) {
+    for (const path of ['/blog', '/blog/community', '/rules']) {
+      assert.ok(INDEX_PATHS.includes(`${prefix}${path}`));
+      assert.equal(routeShape(`${prefix}${path}`), `${prefix}${path}`);
+    }
+    // Planted collision: article sampling must not displace the community view.
+    assert.notEqual(
+      routeShape(`${prefix}/blog/community`),
+      routeShape(`${prefix}/blog/skill-vs-luck`),
+    );
+  }
+});
+
+test('first-paint samples cover the unsitemapped board templates and reject a missing public sample', () => {
+  const samples = {
+    games: [{ kind: 'historical', id: 'hxq_public' }],
+    puzzles: [{ id: 'puzzle' }],
+    players: [{ handle: 'public-player' }],
+  };
+  assert.deepEqual(boardPageSamples(samples), [
+    '/historical-xiangqi/game/hxq_public',
+    '/puzzles/puzzle',
+    '/@/public-player',
+  ]);
+  for (const key of ['games', 'puzzles', 'players'])
+    assert.throws(() => boardPageSamples({ ...samples, [key]: [] }), /needs a public/);
+  assert.throws(
+    () => boardPageSamples({ ...samples, games: [{ kind: 'mistboard', id: 'live' }] }),
+    /needs a public/,
+  );
 });

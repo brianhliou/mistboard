@@ -1,3 +1,4 @@
+import { prerenderCopy } from './prerender-copy.js';
 // /developers: how to put a Mistboard board in someone else's page.
 //
 // Five things are frameable, and the page documents each with a snippet a
@@ -358,7 +359,7 @@ function sizingTable(): HTMLElement {
   return table;
 }
 
-function buildDevelopers(locale: Locale = currentLocale()): HTMLElement {
+function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLElement {
   // Playtest access does not advertise an unlaunched TV channel.
   const tvChannels = TV_CHANNELS.filter(
     (id) => id !== 'gomoku' || (gomokuEnabled() && isPublicGameSpec(id)),
@@ -371,7 +372,7 @@ function buildDevelopers(locale: Locale = currentLocale()): HTMLElement {
     'A finished game on Mistboard',
   );
   const gameBlock = codeBlock(gameSnippet(origin));
-  void pointGameExampleAtLocalGame(origin, gameExample.figure, gameBlock);
+  if (live) void pointGameExampleAtLocalGame(origin, gameExample.figure, gameBlock);
   const studyExample = liveFrame(
     embedStudyPath(EXAMPLE_STUDY, EXAMPLE_CHAPTER),
     { width: EMBED_DEFAULT_WIDTH, height: EMBED_DEFAULT_HEIGHT },
@@ -383,7 +384,7 @@ function buildDevelopers(locale: Locale = currentLocale()): HTMLElement {
     notation: codeBlock(`${exampleEmbedUrl(origin)}?theme=light&notation=wxf`),
     oembed: codeBlock(oembedRequestUrl(origin)),
   };
-  void pointStudyExampleAtLocalStudy(origin, studyExample.figure, studyBlocks);
+  if (live) void pointStudyExampleAtLocalStudy(origin, studyExample.figure, studyBlocks);
 
   section.append(
     proseHeading(t('developers.heading', {}, locale)),
@@ -610,4 +611,14 @@ export function mountDevelopers(root: HTMLElement): void {
     buildNav(locale),
     buildStaticPageLayout('developers', buildDevelopers(locale), locale),
   );
+}
+
+export function renderDevelopersShellForPrerender(locale: Locale): string {
+  const content = buildDevelopers(locale, false);
+  // Demo documents and their network activity belong to the interactive page.
+  for (const frame of content.querySelectorAll('iframe')) frame.remove();
+  const root = document.createElement('div');
+  root.className = 'landing-page developers-route';
+  root.append(buildNav(locale), buildStaticPageLayout('developers', content, locale));
+  return prerenderCopy(root);
 }

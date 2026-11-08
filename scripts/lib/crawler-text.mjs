@@ -13,6 +13,15 @@ export function crawlerDocument(html) {
   return new window.DOMParser().parseFromString(html, 'text/html');
 }
 
+// Decided 2026-11-07 (#961): the English-calibrated floor counts each CJK
+// ideograph or kana twice. Iterate code points so other characters count once.
+export function crawlerCharCount(text) {
+  let chars = 0;
+  for (const char of text)
+    chars += /[\p{Unified_Ideograph}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(char) ? 2 : 1;
+  return chars;
+}
+
 export function crawlerText(html) {
   const document = crawlerDocument(html);
   for (const node of document.querySelectorAll('script,style,template,svg')) node.remove();
@@ -38,6 +47,8 @@ export function crawlerFacts(html, { contentOnly = false } = {}) {
   const document = crawlerDocument(html);
   const facts = {
     h1: document.querySelector('h1')?.textContent?.trim() ?? '',
+    description:
+      document.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() ?? '',
     canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? '',
     alternates: [...document.querySelectorAll('link[rel="alternate"][hreflang]')].map((link) => ({
       lang: link.getAttribute('hreflang'),
