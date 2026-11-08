@@ -35,6 +35,9 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盘棋。',
+  'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
+    '最初的 10,000 盘棋是怎样积累起来的，大家下了什么棋，又是哪些人在下。感谢大家来下棋。',
   'Gomoku is open to everyone.': '五子棋向所有人开放。',
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盘上玩休闲自由五子棋，从预设开局开始。可以邀请朋友下一盘计分对局，也可以与八个等级的 Rapfi 机器人对弈。计分对局采用 1+1、3+2 或 5+5 时限，双方均须登录。',
@@ -570,6 +573,9 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盤棋。',
+  'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
+    '最初的 10,000 盤棋是怎樣累積起來的，大家下了什麼棋，又是哪些人在下。感謝大家來下棋。',
   'Gomoku is open to everyone.': '五子棋向所有人開放。',
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盤上玩休閒自由五子棋，從預設開局開始。可以邀請朋友下一盤計分對局，也可以與八個等級的 Rapfi 機器人對弈。計分對局採用 1+1、3+2 或 5+5 時限，雙方均須登入。',
