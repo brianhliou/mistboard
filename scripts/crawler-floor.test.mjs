@@ -4,9 +4,14 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { auditCrawlerRoute, pageFailures, ratchetFailures } from './crawler-floor.mjs';
+import {
+  auditCrawlerRoute,
+  crawlerMinimumChars,
+  pageFailures,
+  ratchetFailures,
+} from './crawler-floor.mjs';
 import { crawlerShells } from './fixtures/crawler-shell.mjs';
-import { crawlerContentText, crawlerText } from './lib/crawler-text.mjs';
+import { crawlerCharCount, crawlerContentText, crawlerText } from './lib/crawler-text.mjs';
 
 // Blind spots: presence, not fidelity (crawler copy can drift); one fixture
 // per DB-backed template; no JS by design; minChars is only a floor and the
@@ -48,6 +53,87 @@ const fixtureEntries = Object.keys(fixtures).map((path) => ({
   path,
   ...(path.includes('wrong-locale') ? { phrase: '象棋' } : {}),
 }));
+
+test('weighted character count covers English, Chinese, kana and mixed code points', () => {
+  assert.equal(crawlerCharCount(''), 0);
+  assert.equal(crawlerCharCount('Chinese chess!'), 14);
+  assert.equal(crawlerCharCount('象棋规则'), 8);
+  assert.equal(crawlerCharCount('象棋規則'), 8);
+  assert.equal(crawlerCharCount('ひらがなカタカナｶﾅ'), 20);
+  assert.equal(crawlerCharCount('Play 象棋 & カナ!'), 17);
+  assert.equal(crawlerCharCount('𠀀🙂。한'), 5);
+});
+
+test('Chinese heading plus full navigation and 74 ideographs still fail the 150 minimum', () => {
+  const chinese = { ...entry, phrase: '象', hreflang: [] };
+  for (const shell of crawlerShells().filter((shell) => shell.locale !== 'en')) {
+    assert.ok(crawlerCharCount(crawlerText(shell.html)) > 150);
+    assert.deepEqual(
+      pageFailures(chinese, { status: 200, html: page(`${shell.html}<main><h1>象棋</h1></main>`) })
+        .failures,
+      ['body 4 < 150 chars'],
+    );
+  }
+  for (const [ideographs, expected] of [
+    [74, ['body 148 < 150 chars']],
+    [75, []],
+  ]) {
+    assert.deepEqual(
+      pageFailures(chinese, { status: 200, html: page(`<h1>${'象'.repeat(ideographs)}</h1>`) })
+        .failures,
+      expected,
+    );
+  }
+});
+
+test('weighted baseline enforces 60 percent without changing recorded minChars', () => {
+  for (const locale of ['en', 'zh-hans', 'zh-hant']) {
+    const sample = { ...entry, locale, phrase: '象', hreflang: [], baselineChars: 400 };
+    assert.equal(crawlerMinimumChars(sample), 240);
+    // Planted failure: 200 weighted characters clear 150 but miss 60% of 400.
+    assert.deepEqual(
+      pageFailures(sample, { status: 200, html: page(`<h1>${'象'.repeat(100)}</h1>`) }).failures,
+      ['body 200 < 240 chars'],
+    );
+    assert.deepEqual(
+      pageFailures(sample, { status: 200, html: page(`<h1>${'象'.repeat(120)}</h1>`) }).failures,
+      [],
+    );
+    assert.equal(sample.minChars, 150);
+  }
+  assert.equal(crawlerMinimumChars({ minChars: 300, baselineChars: 400 }), 300);
+  assert.equal(crawlerMinimumChars({ minChars: 1, baselineChars: 0 }), 150);
+});
+
+test('socketless audit reports weighted characters and checks Chinese alternates with them', async () => {
+  const en = { ...entry, path: '/rules', hreflang: ['zh-Hans'], baselineChars: 300 };
+  const zh = { ...entry, path: '/zh-hans/rules', phrase: '象', hreflang: [], baselineChars: 200 };
+  for (const [ideographs, expected] of [
+    [74, ['alternate /zh-hans/rules: body 148 < 150 chars']],
+    [100, []],
+  ]) {
+    const bodies = {
+      [en.path]: page(`<h1>Chinese chess</h1><p>${prose}</p>`, zh.path).replace(
+        'hreflang="en"',
+        'hreflang="zh-Hans"',
+      ),
+      [zh.path]: `<html><head><link rel="canonical" href="https://mistboard.test${zh.path}"></head><body><h1>${'象'.repeat(ideographs)}</h1></body></html>`,
+    };
+    const options = {
+      base: 'https://fixture.test',
+      manifest: [en, zh],
+      fetchImpl: async (url) => new Response(bodies[new URL(url).pathname]),
+    };
+    const english = await auditCrawlerRoute(en, options);
+    const chinese = await auditCrawlerRoute(zh, options);
+    assert.deepEqual(english.failures, expected);
+    assert.equal(chinese.chars, ideographs * 2);
+    assert.deepEqual(
+      ratchetFailures({ ...en, knownGap: '#961' }, english.failures),
+      ideographs === 100 ? ['remove knownGap #961: route now passes'] : [],
+    );
+  }
+});
 
 test('shared text extractor excludes non-body and non-content nodes and decodes entities', () => {
   assert.equal(

@@ -13,6 +13,15 @@ export function crawlerDocument(html) {
   return new window.DOMParser().parseFromString(html, 'text/html');
 }
 
+// Decided 2026-11-07 (#961): the English-calibrated floor counts each CJK
+// ideograph or kana twice. Iterate code points so other characters count once.
+export function crawlerCharCount(text) {
+  let chars = 0;
+  for (const char of text)
+    chars += /[\p{Unified_Ideograph}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(char) ? 2 : 1;
+  return chars;
+}
+
 export function crawlerText(html) {
   const document = crawlerDocument(html);
   for (const node of document.querySelectorAll('script,style,template,svg')) node.remove();

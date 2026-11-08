@@ -1,5 +1,7 @@
 // Crawler contracts are independent of the admission table and sitemap.
-// Baseline: 2026-11-07. Floors are 60% of crawlerContentText, minimum 150.
+// Baseline: 2026-11-07. crawlerCharCount weights CJK ideographs/kana as two,
+// everything else as one, in every locale. The audit enforces the greater of
+// minChars, 60% of weighted baselineChars, and 150; recorded minChars stay fixed.
 // Phrases come from page headings/body copy, never shell menu labels.
 // phraseKey names a catalog key, or file#body-key for page-local copy/fixtures
 // that do not live in the shared catalog (checked against that source in tests).
@@ -139,7 +141,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 976,
+    baselineChars: 1716,
   },
   {
     routeId: '/zh-hans/source',
@@ -153,7 +155,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1693,
+    baselineChars: 2251,
   },
   {
     routeId: '/zh-hans/faq',
@@ -166,7 +168,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1044,
+    baselineChars: 1938,
   },
   {
     routeId: '/zh-hans/terms',
@@ -179,7 +181,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1001,
+    baselineChars: 1826,
   },
   {
     routeId: '/zh-hans/privacy',
@@ -192,7 +194,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 474,
+    baselineChars: 857,
   },
   {
     routeId: '/zh-hans/contribute',
@@ -206,7 +208,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 647,
+    baselineChars: 1097,
   },
   {
     routeId: '/zh-hans/creators',
@@ -220,7 +222,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 622,
+    baselineChars: 1169,
   },
   {
     routeId: '/zh-hans/data/about',
@@ -233,7 +235,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 2592,
+    baselineChars: 4163,
   },
   {
     routeId: '/zh-hant/about',
@@ -246,7 +248,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 970,
+    baselineChars: 1704,
   },
   {
     routeId: '/zh-hant/source',
@@ -260,7 +262,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1691,
+    baselineChars: 2247,
   },
   {
     routeId: '/zh-hant/faq',
@@ -273,7 +275,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1044,
+    baselineChars: 1938,
   },
   {
     routeId: '/zh-hant/terms',
@@ -286,7 +288,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1013,
+    baselineChars: 1850,
   },
   {
     routeId: '/zh-hant/privacy',
@@ -299,7 +301,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 477,
+    baselineChars: 863,
   },
   {
     routeId: '/zh-hant/contribute',
@@ -313,7 +315,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 651,
+    baselineChars: 1105,
   },
   {
     routeId: '/zh-hant/creators',
@@ -327,7 +329,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 625,
+    baselineChars: 1175,
   },
   {
     routeId: '/zh-hant/data/about',
@@ -340,7 +342,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 2592,
+    baselineChars: 4163,
   },
   {
     routeId: '/zh-hans',
@@ -353,7 +355,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 2158,
+    baselineChars: 3521,
   },
   {
     routeId: '/zh-hant',
@@ -366,7 +368,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 2157,
+    baselineChars: 3517,
   },
   {
     routeId: '/about',
@@ -393,7 +395,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1228,
+    baselineChars: 1236,
   },
   {
     routeId: '/zh-hans/learn/xiangqi',
@@ -432,8 +434,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    // Both advertised Chinese alternates are below the content floor.
-    knownGap: '#961: Chinese rules tiles are below the floor; new visible prose is excluded',
     baselineChars: 295,
   },
   {
@@ -447,8 +447,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#961: Chinese rules tiles are below the floor; new visible prose is excluded',
-    baselineChars: 107,
+    baselineChars: 194,
   },
   {
     routeId: '/zh-hant/rules',
@@ -461,8 +460,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#961: Chinese rules tiles are below the floor; new visible prose is excluded',
-    baselineChars: 106,
+    baselineChars: 192,
   },
   {
     routeId: '/play',
@@ -504,7 +502,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 7224,
+    baselineChars: 7226,
   },
   {
     routeId: '/zh-hans/videos',
@@ -767,7 +765,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    baselineChars: 72103,
+    baselineChars: 72167,
   },
   {
     routeId: '/developers',
@@ -820,7 +818,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1316,
+    baselineChars: 1320,
   },
   {
     routeId: '/zh-hans/washington-xiangqi',
@@ -833,7 +831,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 526,
+    baselineChars: 901,
   },
   {
     routeId: '/zh-hant/washington-xiangqi',
@@ -846,7 +844,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 526,
+    baselineChars: 901,
   },
   {
     routeId: '/player',
@@ -1167,7 +1165,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 14092,
+    baselineChars: 14116,
   },
   {
     routeId: '/zh-hans/blog',
@@ -1180,7 +1178,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 5685,
+    baselineChars: 9756,
   },
   {
     routeId: '/zh-hant/blog',
@@ -1193,7 +1191,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 5690,
+    baselineChars: 9756,
   },
   {
     routeId: '/blog/*',
@@ -1206,7 +1204,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 1564,
+    baselineChars: 1566,
   },
   {
     routeId: '/zh-hans/blog/*',
@@ -1219,7 +1217,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 540,
+    baselineChars: 992,
   },
   {
     routeId: '/zh-hant/blog/*',
@@ -1232,7 +1230,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 540,
+    baselineChars: 992,
   },
   {
     routeId: '/players',
@@ -1245,7 +1243,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    baselineChars: 303,
+    baselineChars: 306,
   },
   {
     routeId: '/broadcast/xiangqi',
@@ -1258,7 +1256,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    baselineChars: 302,
+    baselineChars: 307,
   },
   {
     routeId: '/broadcast/xiangqi/ops',
@@ -1359,7 +1357,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
     knownGap: '#956',
-    baselineChars: 81,
+    baselineChars: 141,
   },
   {
     routeId: '/zh-hant/study',
@@ -1373,7 +1371,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
     knownGap: '#956',
-    baselineChars: 81,
+    baselineChars: 141,
   },
   {
     routeId: '/coach/*',
@@ -1427,7 +1425,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 3411,
+    baselineChars: 6147,
   },
   {
     routeId: '/zh-hant/blog/*',
@@ -1440,7 +1438,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 3409,
+    baselineChars: 6143,
   },
   {
     routeId: '/rules/*',
@@ -1453,7 +1451,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 11743,
+    baselineChars: 11782,
   },
   {
     routeId: '/forum/t/*',
@@ -1494,7 +1492,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 3692,
+    baselineChars: 6747,
   },
   {
     routeId: '/zh-hant/rules/*',
@@ -1507,7 +1505,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 3690,
+    baselineChars: 6739,
   },
   {
     routeId: '/historical-xiangqi/game/*',
@@ -1577,7 +1575,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    baselineChars: 56143,
+    baselineChars: 56212,
   },
   {
     routeId: 'feed-month',
@@ -1617,7 +1615,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    baselineChars: 248,
+    baselineChars: 253,
   },
   {
     routeId: 'player-team',
@@ -1631,7 +1629,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: [],
     source: 'db-fixture',
     knownGap: '#956',
-    baselineChars: 133,
+    baselineChars: 138,
   },
   {
     routeId: 'broadcast-tour',
@@ -1644,7 +1642,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    baselineChars: 226,
+    baselineChars: 234,
   },
   {
     routeId: 'broadcast-round',
@@ -1657,7 +1655,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    baselineChars: 257,
+    baselineChars: 265,
   },
   {
     routeId: 'broadcast-board',
@@ -1710,7 +1708,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'db-fixture',
-    baselineChars: 447,
+    baselineChars: 623,
   },
   {
     routeId: 'analysis',
@@ -1783,7 +1781,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 5046,
+    baselineChars: 5062,
   },
   {
     routeId: 'localized-board',
@@ -1841,7 +1839,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'db-fixture',
-    baselineChars: 447,
+    baselineChars: 623,
   },
   {
     routeId: 'study-detail',
@@ -1979,7 +1977,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    baselineChars: 243,
+    baselineChars: 245,
   },
   {
     routeId: 'broadcast-tour',

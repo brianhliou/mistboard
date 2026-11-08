@@ -16,6 +16,17 @@ test('raw floor covers ordinary sitemap pages, excluding script and template tex
   assert.ok(serverHtmlFailures('/faq', facts).some((failure) => failure.includes('150')));
 });
 
+test('raw floor weights Chinese content but still rejects 74 ideographs', () => {
+  for (const [ideographs, failures] of [
+    [74, ['raw body 148 < 150 chars']],
+    [75, []],
+  ]) {
+    const facts = serverHtmlFacts(`<body><h1>${'象'.repeat(ideographs)}</h1></body>`);
+    assert.equal(facts.rawChars, ideographs * 2);
+    assert.deepEqual(serverHtmlFailures('/zh-hans/rules', facts), failures);
+  }
+});
+
 const SITEMAP =
   '<urlset><url><loc>https://mistboard.com/faq</loc></url><url><loc>https://mistboard.com/source</loc></url></urlset>';
 
@@ -456,11 +467,23 @@ test('an <img> with no alt attribute warns; alt="" is decorative and passes', ()
 });
 
 test('raw/rendered ratio below one half fails even with more than 150 raw characters', async () => {
-  const { browser } = auditBrowser({ rendered: { bodyText: 2000 } });
+  const { browser } = auditBrowser({ rendered: { bodyText: 'x'.repeat(2000) } });
   const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
     fetchImpl: async () => new Response(AUDIT_HTML),
     wait: async () => {},
   });
   assert.ok(result.rawChars >= 150);
   assert.ok(result.failures.some((failure) => failure.includes('raw/rendered')));
+});
+
+test('raw and rendered counts use the same weighting for Chinese ratio checks', async () => {
+  const { browser } = auditBrowser({ rendered: { bodyText: '象'.repeat(200) } });
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => new Response(`<body><h1>${'象'.repeat(75)}</h1></body>`),
+    wait: async () => {},
+  });
+  assert.equal(result.rawChars, 150);
+  assert.equal(result.renderedChars, 400);
+  // Planted failure: unweighted rendered length would incorrectly pass 150/200.
+  assert.ok(result.failures.includes('raw/rendered 0.375 < 0.5'));
 });

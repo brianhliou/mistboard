@@ -44,7 +44,7 @@ import { pathToFileURL } from 'node:url';
 // The server's copy, not a third one: it imports nothing and its types are
 // erasable, so Node (22.18 and later) loads it as it stands.
 import { seoMetaLengthProblems } from '../apps/server/src/seo-meta-length.ts';
-import { crawlerText } from './lib/crawler-text.mjs';
+import { crawlerCharCount, crawlerText } from './lib/crawler-text.mjs';
 
 const GOOGLEBOT_UA =
   'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
@@ -152,7 +152,7 @@ export function serverHtmlFacts(html) {
     (m) => !/\salt\s*=/i.test(m[0]),
   ).length;
   return {
-    rawChars: crawlerText(html).length,
+    rawChars: crawlerCharCount(crawlerText(html)),
     title: title === null ? null : decodeEntities(title),
     noindex,
     canonical,
@@ -370,24 +370,23 @@ async function auditUrlOnce(browser, url, args, { fetchImpl }) {
         bodyText: (() => {
           const body = document.body.cloneNode(true);
           for (const node of body.querySelectorAll('script,style,template,svg')) node.remove();
-          return (body.textContent ?? '').replace(/\s+/gu, ' ').trim().length;
+          return (body.textContent ?? '').replace(/\s+/gu, ' ').trim();
         })(),
         imgsMissingAlt: document.querySelectorAll('img:not([alt])').length,
       }))
       .catch((err) => ({ evaluateError: err.message }));
 
+    const renderedChars = crawlerCharCount(rendered.bodyText ?? '');
     Object.assign(result, {
       rawChars: server.rawChars,
-      renderedChars: rendered.bodyText,
+      renderedChars,
       renderedTitle: rendered.title,
       h1: rendered.h1,
       pageErrors,
       navigations,
     });
-    if (!server.noindex && rendered.bodyText > 0 && server.rawChars / rendered.bodyText < 0.5) {
-      result.failures.push(
-        `raw/rendered ${(server.rawChars / rendered.bodyText).toFixed(3)} < 0.5`,
-      );
+    if (!server.noindex && renderedChars > 0 && server.rawChars / renderedChars < 0.5) {
+      result.failures.push(`raw/rendered ${(server.rawChars / renderedChars).toFixed(3)} < 0.5`);
     }
     if (navigations > 2) result.failures.push(`reload loop: ${navigations} document navigations`);
     if (rendered.evaluateError) result.failures.push(`evaluate: ${rendered.evaluateError}`);

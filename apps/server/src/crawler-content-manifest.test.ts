@@ -54,6 +54,8 @@ test('every client-only contract is noindex, including dynamic-route samples', (
 });
 
 test('floors are nontrivial and phrases match page copy in the URL locale', async () => {
+  const floor = resolve(import.meta.dirname, '../../../scripts/crawler-floor.mjs');
+  const { crawlerMinimumChars } = await import(pathToFileURL(floor).href);
   const catalogs: Record<string, Record<string, string>> = {};
   for (const locale of ['en', 'zh-hans', 'zh-hant']) {
     const values: Record<string, string> = {};
@@ -74,8 +76,8 @@ test('floors are nontrivial and phrases match page copy in the URL locale', asyn
     const minimum = 150;
     assert.ok(entry.minChars >= minimum, entry.path);
     assert.equal(
-      entry.minChars,
-      Math.max(minimum, Math.floor(entry.baselineChars * 0.6)),
+      crawlerMinimumChars(entry),
+      Math.max(entry.minChars, minimum, Math.floor(entry.baselineChars * 0.6)),
       entry.path,
     );
     if (entry.phraseKey.startsWith('apps/')) {

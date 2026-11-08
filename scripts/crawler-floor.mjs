@@ -1,16 +1,23 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { crawlerFacts } from './lib/crawler-text.mjs';
+import { crawlerCharCount, crawlerFacts } from './lib/crawler-text.mjs';
 
 export const CRAWLER_UA = 'OAI-SearchBot/1.0; Mistboard crawler content floor';
 
+export function crawlerMinimumChars(entry) {
+  // Keep recorded minChars intact while comparing weighted content against
+  // the weighted baseline and the English-calibrated absolute minimum.
+  return Math.max(150, entry.minChars, Math.floor((entry.baselineChars ?? 0) * 0.6));
+}
+
 export function pageFailures(entry, { status, html }) {
   const facts = crawlerFacts(html, { contentOnly: true });
+  const chars = crawlerCharCount(facts.text);
+  const minimum = crawlerMinimumChars(entry);
   const failures = [];
   if (status !== 200) failures.push(`HTTP ${status}`);
-  if (facts.text.length < entry.minChars)
-    failures.push(`body ${facts.text.length} < ${entry.minChars} chars`);
+  if (chars < minimum) failures.push(`body ${chars} < ${minimum} chars`);
   if (
     !facts.text
       .replace(/\s+/gu, '')
@@ -77,7 +84,7 @@ export async function auditCrawlerRoute(
       const result = pageFailures(target, await read(path));
       failures.push(...result.failures.map((failure) => `alternate ${path}: ${failure}`));
     }
-    return { path: entry.path, chars: facts.text.length, failures };
+    return { path: entry.path, chars: crawlerCharCount(facts.text), failures };
   } catch (error) {
     return { path: entry.path, chars: 0, failures: [`fetch: ${error.message}`] };
   }
