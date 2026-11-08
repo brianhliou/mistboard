@@ -1261,7 +1261,9 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 }
 
 /* Wrap rather than truncate: at 375px a tile column is ~150px, and a
-   one-line ellipsis cut every tagline to three or four words. */
+   one-line ellipsis cut every tagline to three or four words. keep-all
+   breaks Chinese lines at punctuation, not inside a word; overflow-wrap
+   still breaks a clause too long for the column (Fog Chess in zh). */
 .rules-landing-tile-tagline {
   display: block;
   margin-top: 4px;
@@ -1269,6 +1271,8 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   line-height: 1.35;
   color: var(--site-muted);
   text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* This prerender already holds the styled client DOM. Keep its first paint
