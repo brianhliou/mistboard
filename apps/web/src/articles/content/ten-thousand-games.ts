@@ -265,6 +265,12 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
             kind: 'paragraph',
             text: 'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.',
           },
+          {
+            kind: 'image-figure',
+            src: '/article-thumbs/ten-thousand-games-new.webp',
+            alt: 'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.',
+            className: 'article-figure-full',
+          },
         ],
       },
       {
