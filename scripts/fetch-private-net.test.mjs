@@ -89,7 +89,7 @@ function runScript(box, { script = scriptPath, name = NAME, ...env } = {}) {
     encoding: 'utf8',
     env: {
       PATH: `${box.stubs}:${process.env.PATH}`,
-      MISTBOARD_NETS_TOKEN: TOKEN,
+      MISTBOARD_PRIVATE_ASSETS_TOKEN: TOKEN,
       FAKE_CURL_LOG: box.log,
       FAKE_RELEASE: box.release,
       FAKE_NET: box.net,
@@ -147,7 +147,11 @@ test('verified bytes install under the server filename with the success marker',
 
 test('a missing token soft-fails before calling curl', (t) => {
   const box = sandbox(t);
-  assertSkipped(runScript(box, { MISTBOARD_NETS_TOKEN: '' }), box, /missing MISTBOARD_NETS_TOKEN/);
+  assertSkipped(
+    runScript(box, { MISTBOARD_PRIVATE_ASSETS_TOKEN: '' }),
+    box,
+    /missing MISTBOARD_PRIVATE_ASSETS_TOKEN/,
+  );
   assert.deepEqual(requests(box), []);
 });
 
@@ -192,7 +196,7 @@ for (const release of [
 test('the planted logger detects a token inherited by curl', (t) => {
   const box = sandbox(t);
   // Negative control: the leak assertion must reject a fetcher missing the unset.
-  writeFileSync(box.pinned, scriptText.replace('unset MISTBOARD_NETS_TOKEN', ':'));
+  writeFileSync(box.pinned, scriptText.replace('unset MISTBOARD_PRIVATE_ASSETS_TOKEN', ':'));
   const result = runScript(box, { script: box.pinned });
   assert.equal(result.status, 0);
   assert.ok(requests(box).length > 0);

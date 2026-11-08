@@ -6,7 +6,8 @@
 #
 # Missing credentials, upstream failures and checksum mismatches warn and exit 0
 # so a net outage never blocks the web deploy. Only verified, non-empty bytes
-# move into <bindir>. MISTBOARD_NETS_TOKEN needs read-only access to the one repo.
+# move into <bindir>. MISTBOARD_PRIVATE_ASSETS_TOKEN (the token that also fetches the
+# private Pikafish net) needs read access to brianhliou/mistboard-nets.
 # The token goes through a mode-600 header file, never curl argv or child env;
 # the temporary directory and header are removed on exit. Never enable tracing.
 #
@@ -16,8 +17,8 @@ set -eu
 
 bin=${1:?bindir}
 name=${2:?asset name}
-nets_token=${MISTBOARD_NETS_TOKEN:-}
-unset MISTBOARD_NETS_TOKEN
+nets_token=${MISTBOARD_PRIVATE_ASSETS_TOKEN:-}
+unset MISTBOARD_PRIVATE_ASSETS_TOKEN
 
 # name -> repo, tag, release asset, sha256, installed filename
 case "$name" in
@@ -41,7 +42,7 @@ sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -c1-64; else shasum -a 256 "$1" | cut -c1-64; fi
 }
 
-[ -n "$nets_token" ] || skip "missing MISTBOARD_NETS_TOKEN"
+[ -n "$nets_token" ] || skip "missing MISTBOARD_PRIVATE_ASSETS_TOKEN"
 umask 077
 mkdir -p "$bin" || skip "cannot create bindir"
 tmp=$(mktemp -d "$bin/.private-net.XXXXXX") || skip "cannot create temporary directory"
