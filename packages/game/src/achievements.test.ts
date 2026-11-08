@@ -43,23 +43,41 @@ test('the first set holds no bot-ladder badge (skipped 2026-09-15)', () => {
   }
 });
 
-test('fog legacy is the only badge, the approved exception for the retired fog bots', () => {
+test('fog legacy badges are the approved exceptions for the retired fog bots', () => {
   assert.deepEqual(
     ACHIEVEMENTS.filter((definition) => definition.tier !== 'standard').map((d) => d.id),
-    ['fog-legacy'],
+    ['fog-chess-legacy', 'fog-xiangqi-legacy'],
   );
 });
 
-test('fog legacy awards the first Misty win through game end and the backfill', () => {
-  const facts: AchievementFacts = {
-    firstFogMistyWin: { at: AT, sourceKind: 'game', sourceId: 'fog-win' },
+test('fog legacy badges award independently through game end and the backfill', () => {
+  const chess: AchievementFacts = {
+    firstFogChessMistyWin: { at: AT, sourceKind: 'game', sourceId: 'fog-chess-win' },
   };
-  const expected = [
-    { achievementId: 'fog-legacy', awardedAt: AT, sourceKind: 'game', sourceId: 'fog-win' },
-  ];
-  assert.deepEqual(qualifyAchievements(facts, achievementsForTrigger('game_end')), expected);
-  assert.deepEqual(qualifyAchievements(facts), expected);
-  assert.deepEqual(qualifyAchievements(facts, achievementsForTrigger('puzzle_attempt')), []);
+  const xiangqi: AchievementFacts = {
+    firstFogXiangqiMistyWin: { at: AT, sourceKind: 'game', sourceId: 'fog-xiangqi-win' },
+  };
+  const chessAward = {
+    achievementId: 'fog-chess-legacy',
+    awardedAt: AT,
+    sourceKind: 'game',
+    sourceId: 'fog-chess-win',
+  };
+  const xiangqiAward = {
+    achievementId: 'fog-xiangqi-legacy',
+    awardedAt: AT,
+    sourceKind: 'game',
+    sourceId: 'fog-xiangqi-win',
+  };
+  for (const [facts, expected] of [
+    [chess, [chessAward]],
+    [xiangqi, [xiangqiAward]],
+    [{ ...chess, ...xiangqi }, [chessAward, xiangqiAward]],
+  ] as const) {
+    assert.deepEqual(qualifyAchievements(facts, achievementsForTrigger('game_end')), expected);
+    assert.deepEqual(qualifyAchievements(facts), expected);
+    assert.deepEqual(qualifyAchievements(facts, achievementsForTrigger('puzzle_attempt')), []);
+  }
 });
 
 test('no facts, no awards', () => {
@@ -102,7 +120,8 @@ test('a trigger re-evaluates only its own definitions and derives only their fac
     'firstGame',
     'firstPvpGame',
     'firstRatedGame',
-    'firstFogMistyWin',
+    'firstFogChessMistyWin',
+    'firstFogXiangqiMistyWin',
   ]);
   // The backfill: every definition, every fact once.
   assert.equal(achievementsForTrigger().length, ACHIEVEMENTS.length);

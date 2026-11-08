@@ -11,8 +11,8 @@
 // backfill and a backfill can never award something the live path would not.
 //
 // Bot-ladder badges (per-level checkmarks, "beat the top bot") stay out:
-// skipped by Brian on 2026-09-15 (memory streaks_and_digest_settled), and the
-// design doc holds them for his word. Fog legacy is the exception approved
+// deferred since 2026-09-15 (memory streaks_and_digest_settled).
+// The fog legacy badges are the exception approved
 // 2026-11-07 (#967): beating Misty while the fog bots were live earns a badge,
 // even after those variants retire. Other facts leave retired variants' games
 // and puzzles out. Awards are never revoked.
@@ -23,7 +23,7 @@ export type AchievementCategory = 'play' | 'puzzles' | 'community';
 
 // 'standard' achievements live on the achievements page only. 'badge' is kept
 // for the rarer, more important ones, which the profile also shows (at most
-// three). Fog legacy is the first badge.
+// three). The fog legacy achievements are badges.
 export type AchievementTier = 'standard' | 'badge';
 
 // What the ledger row points back to. 'study' and 'tournament' are reserved for
@@ -35,7 +35,8 @@ export type AchievementFactKey =
   | 'firstGame'
   | 'firstPvpGame'
   | 'firstRatedGame'
-  | 'firstFogMistyWin'
+  | 'firstFogChessMistyWin'
+  | 'firstFogXiangqiMistyWin'
   | 'firstSolvedPuzzle'
   | 'firstForumPost';
 
@@ -54,7 +55,15 @@ export type AchievementAward = {
 };
 
 // Semantic glyph names; the web maps each to a Lucide icon (ui-icon.ts).
-export type AchievementIcon = 'first-game' | 'versus' | 'rated' | 'puzzle' | 'forum' | 'wins';
+export type AchievementIcon =
+  | 'first-game'
+  | 'versus'
+  | 'rated'
+  | 'puzzle'
+  | 'forum'
+  | 'wins'
+  | 'fog-chess'
+  | 'fog-xiangqi';
 
 export type AchievementDefinition = {
   id: string;
@@ -120,16 +129,28 @@ export const ACHIEVEMENTS = [
     qualify: firstOf('firstRatedGame'),
   },
   {
-    id: 'fog-legacy',
+    id: 'fog-chess-legacy',
     category: 'play',
-    icon: 'wins',
+    icon: 'fog-chess',
     tier: 'badge',
-    titleKey: 'profile.achievementFogLegacy',
-    descriptionKey: 'profile.achievementFogLegacyDesc',
-    hintKey: 'profile.achievementFogLegacyHint',
+    titleKey: 'profile.achievementFogChessLegacy',
+    descriptionKey: 'profile.achievementFogChessLegacyDesc',
+    hintKey: 'profile.achievementFogChessLegacyHint',
     triggers: ['game_end'],
-    facts: ['firstFogMistyWin'],
-    qualify: firstOf('firstFogMistyWin'),
+    facts: ['firstFogChessMistyWin'],
+    qualify: firstOf('firstFogChessMistyWin'),
+  },
+  {
+    id: 'fog-xiangqi-legacy',
+    category: 'play',
+    icon: 'fog-xiangqi',
+    tier: 'badge',
+    titleKey: 'profile.achievementFogXiangqiLegacy',
+    descriptionKey: 'profile.achievementFogXiangqiLegacyDesc',
+    hintKey: 'profile.achievementFogXiangqiLegacyHint',
+    triggers: ['game_end'],
+    facts: ['firstFogXiangqiMistyWin'],
+    qualify: firstOf('firstFogXiangqiMistyWin'),
   },
   {
     id: 'first-puzzle',

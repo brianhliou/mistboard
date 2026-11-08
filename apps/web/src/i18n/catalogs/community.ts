@@ -192,11 +192,16 @@ export const EN_COMMUNITY = {
   'profile.achievementFirstRatedHint': 'Finish a rated game against a signed-in opponent.',
   'profile.achievementFirstPuzzleHint': 'Solve a puzzle on your first try.',
   'profile.achievementFirstForumPostHint': 'Write a post in the forum.',
-  'profile.achievementFogLegacy': 'Fog legacy',
-  'profile.achievementFogLegacyDesc':
-    'Beat Misty at Fog Chess or Fog Xiangqi before the fog bots retired in December 2026.',
-  'profile.achievementFogLegacyHint':
-    'Beat Misty at Fog Chess or Fog Xiangqi before the bots retire on December 15, 2026.',
+  'profile.achievementFogChessLegacy': 'Fog Chess legacy',
+  'profile.achievementFogChessLegacyDesc':
+    'Beat Misty at Fog Chess before the fog bots retired in December 2026.',
+  'profile.achievementFogChessLegacyHint':
+    'Beat Misty at Fog Chess before the bots retire on December 8, 2026.',
+  'profile.achievementFogXiangqiLegacy': 'Fog Xiangqi legacy',
+  'profile.achievementFogXiangqiLegacyDesc':
+    'Beat Misty at Fog Xiangqi before the fog bots retired in December 2026.',
+  'profile.achievementFogXiangqiLegacyHint':
+    'Beat Misty at Fog Xiangqi before the bots retire on December 8, 2026.',
   'profile.achievementsCountOne': '{count} achievement',
   'profile.achievementsCountMany': '{count} achievements',
   'profile.achievementsEarnedOf': '{earned} of {total} earned',

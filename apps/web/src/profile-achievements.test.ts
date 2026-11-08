@@ -111,22 +111,42 @@ describe('achievements on the profile', () => {
     expect(line?.querySelector('.profile-achievements-link')?.textContent).toBe('5 achievements');
   });
 
-  it('shows Fog legacy in the profile badge row with localized name and description', () => {
-    for (const [locale, name] of [
-      ['en', 'Fog legacy'],
-      ['zh-Hans', '迷雾留名'],
-      ['zh-Hant', '迷霧留名'],
+  it('shows each fog legacy badge independently or together with localized copy and icons', () => {
+    for (const [locale, chessName, xiangqiName] of [
+      ['en', 'Fog Chess legacy', 'Fog Xiangqi legacy'],
+      ['zh-Hans', '迷雾国际象棋留名', '迷雾象棋留名'],
+      ['zh-Hant', '迷霧西洋棋留名', '迷霧象棋留名'],
     ] as const) {
-      const identity = buildProfileIdentity(
-        profile({ achievements: [{ id: 'fog-legacy', awardedAt: AUG(2) }] }),
-        locale,
-      );
-      const badge = identity.querySelector<HTMLElement>(
-        '.profile-achievement-badges [data-achievement-id="fog-legacy"]',
-      );
-      expect(badge?.textContent).toBe(name);
-      expect(badge?.title).toContain(t('profile.achievementFogLegacyDesc', {}, locale));
-      expect(identity.querySelector('.profile-achievements-link')).not.toBe(null);
+      const badges = [
+        {
+          id: 'fog-chess-legacy',
+          icon: 'fog-chess',
+          name: chessName,
+          key: 'profile.achievementFogChessLegacyDesc',
+        },
+        {
+          id: 'fog-xiangqi-legacy',
+          icon: 'fog-xiangqi',
+          name: xiangqiName,
+          key: 'profile.achievementFogXiangqiLegacyDesc',
+        },
+      ] as const;
+      for (const held of [[badges[0]], [badges[1]], badges]) {
+        const identity = buildProfileIdentity(
+          profile({ achievements: held.map(({ id }) => ({ id, awardedAt: AUG(2) })) }),
+          locale,
+        );
+        expect(identity.querySelectorAll('.profile-achievement-badge')).toHaveLength(held.length);
+        for (const { id, icon, name, key } of held) {
+          const badge = identity.querySelector<HTMLElement>(
+            `.profile-achievement-badges [data-achievement-id="${id}"]`,
+          );
+          expect(badge?.textContent).toBe(name);
+          expect(badge?.title).toContain(t(key, {}, locale));
+          expect(badge?.querySelector(`.ui-icon-achievement-${icon}`)).not.toBe(null);
+        }
+        expect(identity.querySelector('.profile-achievements-link')).not.toBe(null);
+      }
     }
   });
 
@@ -267,7 +287,8 @@ describe('the achievements page', () => {
       'first-rated',
       'first-game',
       'first-pvp',
-      'fog-legacy',
+      'fog-chess-legacy',
+      'fog-xiangqi-legacy',
       'wins',
     ]);
   });
