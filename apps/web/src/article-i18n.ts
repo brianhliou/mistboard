@@ -320,12 +320,12 @@ const ZH_HANS: Record<string, string> = {
   'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
     '有 15 位玩家下了至少 100 盘，他们参与了全部对局的 40%。下得最多的一位已经下了 632 盘。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
-    '9,913 盘是和电脑下的。两个人对下的有 98 盘，最初的 1,000 盘中则只有 4 盘。',
+    '9,913 盘是和电脑下的。真人之间的对局有 98 盘，最初的 1,000 盘中则只有 4 盘。',
   'How often people beat the bots': '玩家赢过电脑的比例',
   "People won 2,055 of their 9,913 games against bots. The table lists every bot, most played first, with all of a bot's levels counted together.":
     '玩家在与电脑的 9,913 盘对局中赢了 2,055 盘。下表列出所有电脑对手，按对局数从多到少排列，同一电脑的各个级别合并统计。',
   Bot: '电脑',
-  Beaten: '被击败比例',
+  Beaten: '玩家胜率',
   'Pikafish (levels 1-⁠8)': '皮卡鱼（第 1 至 8 级）',
   Misty: 'Misty',
   'Banqi and more': '暗棋等',
@@ -6981,7 +6981,7 @@ const ZH_HANT: Record<string, string> = {
   'The 15 players with at least 100 games were in 40% of them.':
     '有 15 位玩家下了至少 100 盤，他們參與了其中 40% 的對局。',
   'Engine matches, our test accounts and variants we have retired are left out; counting started on June 1.':
-    '引擎之間的對局、我們的測試帳號和已下線的變體不計在內；計數從 6 月 1 日開始。',
+    '引擎之間的對局、我們的測試帳號和已停止提供的變體不計在內；計數從 6 月 1 日開始。',
   'A player is an account, or a browser playing as a guest.':
     '一個帳號，或一個以訪客身分下棋的瀏覽器，算一位玩家。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
@@ -6993,7 +6993,7 @@ const ZH_HANT: Record<string, string> = {
     '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,647 盤，其中一位玩家下了 557 盤。[統計頁面](/stats)會持續更新計數。',
   'What people played': '大家下了什麼棋',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
-    '[揭棋](/rules/jieqi)，也就是棋子背面朝上開局的象棋，佔全部對局的 66%。在最初的 1,000 盤中，這個比例是 61%。上一篇文章之後，瘋狂屋象棋、象棋麻將和五子棋陸續上線。',
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝上開局的象棋，佔全部對局的 66%。在最初的 1,000 盤中，這個比例是 61%。上一篇文章之後，瘋狂屋象棋、象棋麻將和五子棋陸續推出。',
   Variant: '棋種',
   Jieqi: '揭棋',
   'Fog Xiangqi': '迷霧象棋',
@@ -7010,12 +7010,12 @@ const ZH_HANT: Record<string, string> = {
   'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
     '有 15 位玩家下了至少 100 盤，他們參與了全部對局的 40%。下得最多的一位已經下了 632 盤。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
-    '9,913 盤是和電腦下的。兩個人對下的有 98 盤，最初的 1,000 盤中則只有 4 盤。',
+    '9,913 盤是和電腦下的。真人之間的對局有 98 盤，最初的 1,000 盤中則只有 4 盤。',
   'How often people beat the bots': '玩家贏過電腦的比例',
   "People won 2,055 of their 9,913 games against bots. The table lists every bot, most played first, with all of a bot's levels counted together.":
-    '玩家在與電腦的 9,913 盤對局中贏了 2,055 盤。下表列出所有電腦對手，按對局數從多到少排列，同一電腦的各個級別合併統計。',
+    '玩家在與電腦的 9,913 盤對局中贏了 2,055 盤。下表列出所有電腦對手，依對局數由多到少排列，同一電腦的各個等級合併統計。',
   Bot: '電腦',
-  Beaten: '被擊敗比例',
+  Beaten: '玩家勝率',
   'Pikafish (levels 1-⁠8)': '皮卡魚（第 1 至 8 級）',
   Misty: 'Misty',
   'Banqi and more': '暗棋等',
@@ -7024,10 +7024,10 @@ const ZH_HANT: Record<string, string> = {
   'General Blunder': 'General Blunder',
   'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 級）',
   'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
-    '級別的影響很大：在揭棋中，玩家對皮卡魚第 1 級的勝率是 67%，對第 8 級則是 5%。每個電腦遇到的玩家不同，所以上表不能用來評定棋力。專門求敗的 General Blunder 下了 34 盤，也只輸了 23 盤。',
+    '等級的影響很大：在揭棋中，玩家對皮卡魚第 1 級的勝率是 67%，對第 8 級則是 5%。每個電腦遇到的玩家不同，所以上表不能用來評定棋力。專門求敗的 General Blunder 下了 34 盤，也只輸了 23 盤。',
   'New since the first 1,000': '從最初的 1,000 盤以來的新變化',
   'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.':
-    '網站針對手機重新設計，計分對局也開放給了更多變體。解題新增了[限時解題](/puzzles?mode=storm)、[連續解題](/puzzles?mode=streak)、按主題練習和[解題面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了專門求敗的電腦 [General Blunder](/bot/general-blunder)。五子棋上線，並配有八個級別的 Rapfi 電腦對手。棋子現在可以立體呈現，暗棋棋子也有了翻面動畫。[更新頁面](/feed)列出了全部變化。',
+    '網站針對手機重新設計，計分對局也開放給了更多變體。解題新增了[限時解題](/puzzles?mode=storm)、[連續解題](/puzzles?mode=streak)、依主題練習和[解題面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了專門求敗的電腦 [General Blunder](/bot/general-blunder)。五子棋推出了，並配有八個等級的 Rapfi 電腦對手。棋子現在可以立體呈現，暗棋棋子也有了翻面動畫。[更新頁面](/feed)列出了全部變化。',
   'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.':
     '三個手機畫面：一局等待第一步的限時解題、一盤 Rapfi 連成五子獲勝的五子棋，以及一盤立體棋子與背面朝上的棋子並列的暗棋。',
   'Thank you to everyone who played a game, reported a bug or told a friend or an audience about Mistboard. You are why Mistboard is here, and we are grateful for every game.':
