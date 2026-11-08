@@ -325,6 +325,16 @@ export const ZH_HANS_COMMUNITY = {
   'profile.achievementFirstRatedHint': '和已登录的对手下完一盘计分对局。',
   'profile.achievementFirstPuzzleHint': '第一次尝试就解出一道题目。',
   'profile.achievementFirstForumPostHint': '在论坛发一篇帖子。',
+  'profile.achievementFogChessLegacy': '迷雾国际象棋留名',
+  'profile.achievementFogChessLegacyDesc':
+    '在迷雾机器人于 2026 年 12 月退役前，在迷雾国际象棋中战胜过 Misty。',
+  'profile.achievementFogChessLegacyHint':
+    '在机器人于 2026 年 12 月 8 日退役前，在迷雾国际象棋中战胜 Misty。',
+  'profile.achievementFogXiangqiLegacy': '迷雾象棋留名',
+  'profile.achievementFogXiangqiLegacyDesc':
+    '在迷雾机器人于 2026 年 12 月退役前，在迷雾象棋中战胜过 Misty。',
+  'profile.achievementFogXiangqiLegacyHint':
+    '在机器人于 2026 年 12 月 8 日退役前，在迷雾象棋中战胜 Misty。',
   'profile.achievementsCountOne': '{count} 项成就',
   'profile.achievementsCountMany': '{count} 项成就',
   'profile.achievementsEarnedOf': '已获得 {earned} / {total}',

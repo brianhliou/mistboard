@@ -26,6 +26,7 @@ import {
   type NewAchievementAward,
   recordGameEnd,
 } from './persistence.js';
+import { deriveAchievementFacts } from './persistence-achievements.js';
 import { recordPuzzleAttempt } from './persistence-puzzle-ratings.js';
 import {
   assert,
@@ -94,7 +95,11 @@ async function seedUsers(): Promise<void> {
   await sql(`UPDATE users SET stats_excluded_at = now() WHERE id = 'u_dev'`);
 }
 
-type Seat = { color: string; subjectType: 'user' | 'guest' | 'bot'; subjectId: string };
+type Seat = {
+  color: string;
+  subjectType: 'user' | 'guest' | 'bot' | 'engine-version';
+  subjectId: string;
+};
 
 async function seedGame(
   roomId: string,
@@ -104,6 +109,7 @@ async function seedGame(
     status?: 'completed' | 'aborted';
     ply?: number;
     rated?: boolean;
+    result?: string;
     endedAt: string;
     seats: Array<Seat & { eloAfter?: number }>;
   },
@@ -111,7 +117,7 @@ async function seedGame(
   await sql(
     `INSERT INTO games (room_id, variant, result, termination, ply_count, started_at, ended_at,
        mode, status, visibility, rated)
-     VALUES ($1, $2, CASE WHEN $6 = 'aborted' THEN NULL ELSE 'red-wins' END, 'resignation', $3, $4::timestamptz - interval '10 minutes', $4,
+     VALUES ($1, $2, CASE WHEN $6 = 'aborted' THEN NULL ELSE $8 END, 'resignation', $3, $4::timestamptz - interval '10 minutes', $4,
        $5, $6, 'public', $7)`,
     [
       roomId,
@@ -121,6 +127,7 @@ async function seedGame(
       opts.mode ?? 'pvp',
       opts.status ?? 'completed',
       opts.rated ?? false,
+      opts.result ?? 'red-wins',
     ],
   );
   for (const seat of opts.seats) {
@@ -308,6 +315,240 @@ async function runBackfill(...args: string[]): Promise<string> {
 }
 
 definePersistenceTests('achievements', () => {
+  const fogFactKeys = ['firstFogChessMistyWin', 'firstFogXiangqiMistyWin'] as const;
+  for (const [variant, factKey, achievementId] of [
+    ['dark-chess', 'firstFogChessMistyWin', 'fog-chess-legacy'],
+    ['dark-xiangqi', 'firstFogXiangqiMistyWin', 'fog-xiangqi-legacy'],
+  ] as const) {
+    test(`${variant} legacy: only counted account wins against Misty qualify`, async () => {
+      await seedUsers();
+      const color = variant === 'dark-chess' ? 'white' : 'red';
+      const misty: Seat = { color: 'black', subjectType: 'bot', subjectId: 'misty' };
+      const base = {
+        variant,
+        mode: 'pve' as const,
+        result: `${color}-wins`,
+        endedAt: '2026-11-07T10:00:00Z',
+        seats: [user('u_alice', color), misty],
+      };
+      const negatives = [
+        { id: 'loss', result: 'black-wins' },
+        { id: 'draw', result: 'draw' },
+        {
+          id: 'pvp',
+          mode: 'pvp' as const,
+          seats: [user('u_alice', color), user('u_bob', 'black')],
+        },
+        // Even a guest subject_id matching an account cannot earn for it.
+        {
+          id: 'guest',
+          seats: [{ color, subjectType: 'guest' as const, subjectId: 'u_alice' }, misty],
+        },
+        { id: 'other_variant', variant: 'xiangqi' },
+        { id: 'other_bot', seats: [user('u_alice', color), bot('black')] },
+        {
+          id: 'other_engine',
+          seats: [
+            user('u_alice', color),
+            { ...misty, subjectType: 'engine-version' as const, subjectId: 'pikafish' },
+          ],
+        },
+        { id: 'short', ply: 1 },
+        { id: 'aborted', status: 'aborted' as const },
+        { id: 'prelaunch', endedAt: '2026-05-31T10:00:00Z' },
+        { id: 'excluded', seats: [user('u_dev', color), misty] },
+      ];
+      for (const entry of negatives) {
+        await seedGame(`fog_${entry.id}`, { ...base, ...entry });
+        assert.equal((await deriveAchievementFacts(fogFactKeys, null)).size, 0, entry.id);
+      }
+
+      // Both bot identities and the pre-profile engine rows.
+      let hour = 10;
+      for (const [subjectType, subjectId] of [
+        ['bot', 'misty'],
+        ['bot', 'misty-dark-chess'],
+        ['engine-version', 'python-v2-legacy'],
+      ] as const) {
+        const roomId = `fog_${variant}_${subjectId}`;
+        const endedAt = new Date(Date.UTC(2026, 10, 7, hour--)).toISOString();
+        await seedGame(roomId, {
+          ...base,
+          endedAt,
+          seats: [user('u_alice', color), { color: 'black', subjectType, subjectId }],
+        });
+        assert.deepEqual((await deriveAchievementFacts(fogFactKeys, ['u_alice'])).get('u_alice'), {
+          [factKey]: { at: new Date(endedAt), sourceKind: 'game', sourceId: roomId },
+        });
+      }
+      // Winning as black is eligible too; the earlier game wins over a later one.
+      await seedGame('fog_black_win', {
+        ...base,
+        result: 'black-wins',
+        endedAt: '2026-11-06T10:00:00Z',
+        seats: [user('u_alice', 'black'), { ...misty, color }],
+      });
+      assert.equal(
+        (await deriveAchievementFacts(fogFactKeys, null)).get('u_alice')?.[factKey]?.sourceId,
+        'fog_black_win',
+      );
+      assert.equal((await deriveAchievementFacts(fogFactKeys, ['u_bob'])).size, 0);
+      const wrote = await evaluateAchievements({ userIds: null });
+      assert.deepEqual(
+        wrote.newAwards.filter((award) => award.achievementId.startsWith('fog-')),
+        [
+          {
+            userId: 'u_alice',
+            achievementId,
+            awardedAt: new Date('2026-11-06T10:00:00Z'),
+            sourceKind: 'game',
+            sourceId: 'fog_black_win',
+          },
+        ],
+      );
+    });
+  }
+
+  test('fog legacy: backfill still awards and profiles show historical wins after retirement', async () => {
+    await seedUsers();
+    for (const [variant, userId] of [
+      ['dark-chess', 'u_alice'],
+      ['dark-xiangqi', 'u_bob'],
+      ['dark-chess', 'u_carol'],
+      ['dark-xiangqi', 'u_carol'],
+    ] as const) {
+      await seedGame(`retired_${variant}_${userId}`, {
+        variant,
+        mode: 'pve',
+        endedAt: '2026-11-07T10:00:00Z',
+        result: variant === 'dark-chess' ? 'white-wins' : 'red-wins',
+        seats: [
+          user(userId, variant === 'dark-chess' ? 'white' : 'red'),
+          { color: 'black', subjectType: 'bot', subjectId: 'misty' },
+        ],
+      });
+    }
+    // A separate process marks the real registry retired BEFORE loading the
+    // fact SQL. This catches accidental reuse of playedHumanGame, including
+    // SQL assembled at module initialization, without changing the live catalog.
+    const retiredBackfill = async (...args: string[]) => {
+      const { stdout } = await promisify(execFile)(
+        process.execPath,
+        [
+          '--input-type=module',
+          '--eval',
+          `
+          import { gameSpecForId, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+          import { pathToFileURL } from 'node:url';
+          for (const id of ['dark-chess', 'dark-xiangqi']) {
+            gameSpecForId(id).runtimeStatus = 'retired';
+            if (!RETIRED_GAME_SPEC_IDS.includes(id)) RETIRED_GAME_SPEC_IDS.push(id);
+          }
+          // Under --eval, parseArgs reads process.argv.slice(1), so no script slot.
+          process.argv = [process.execPath, ...${JSON.stringify(args)}];
+          await import(pathToFileURL(${JSON.stringify(BACKFILL)}).href);
+        `,
+        ],
+        { env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL } },
+      );
+      return stdout;
+    };
+    const dry = await retiredBackfill();
+    for (const id of ['fog-chess-legacy', 'fog-xiangqi-legacy']) {
+      assert.match(dry, new RegExp(`${id}\\s+qualified\\s+2\\s+would award\\s+2`));
+    }
+    assert.deepEqual(await ledger(), []);
+    const written = await retiredBackfill('--write');
+    for (const id of ['fog-chess-legacy', 'fog-xiangqi-legacy']) {
+      assert.match(written, new RegExp(`${id}\\s+qualified\\s+2\\s+awarded\\s+2`));
+    }
+    assert.deepEqual(
+      (await ledger()).map((row) => [row.user, row.id, row.source]),
+      [
+        ['u_alice', 'fog-chess-legacy', 'retired_dark-chess_u_alice'],
+        ['u_bob', 'fog-xiangqi-legacy', 'retired_dark-xiangqi_u_bob'],
+        ['u_carol', 'fog-chess-legacy', 'retired_dark-chess_u_carol'],
+        ['u_carol', 'fog-xiangqi-legacy', 'retired_dark-xiangqi_u_carol'],
+      ],
+    );
+    assert.match(await retiredBackfill('--write'), /total new: 0/);
+    assert.deepEqual((await getUserProfileByHandle('alice', null))?.achievements, [
+      { id: 'fog-chess-legacy', awardedAt: new Date('2026-11-07T10:00:00Z') },
+    ]);
+    assert.deepEqual((await getUserProfileByHandle('bob', null))?.achievements, [
+      { id: 'fog-xiangqi-legacy', awardedAt: new Date('2026-11-07T10:00:00Z') },
+    ]);
+    assert.deepEqual((await getUserAchievements('u_carol')).map((award) => award.id).sort(), [
+      'fog-chess-legacy',
+      'fog-xiangqi-legacy',
+    ]);
+  });
+
+  for (const [variant, color, achievementId] of [
+    ['dark-chess', 'white', 'fog-chess-legacy'],
+    ['dark-xiangqi', 'red', 'fog-xiangqi-legacy'],
+  ] as const) {
+    test(`${variant} legacy: the game-end hook awards a counted win once`, async () => {
+      await seedUsers();
+      const heard: NewAchievementAward[] = [];
+      installAchievementEvaluator((input) => evaluateAchievements(input));
+      onAchievementsAwarded((awards) => heard.push(...awards));
+      try {
+        await recordGameEnd('live_fog_win', {
+          variant,
+          mode: 'pve',
+          result: `${color}-wins`,
+          termination: 'resignation',
+          plyCount: 40,
+          startedAt: new Date('2026-11-07T10:00:00Z'),
+          endedAt: new Date('2026-11-07T10:10:00Z'),
+          whiteClient: 'web',
+          blackClient: 'engine',
+          whiteName: 'alice',
+          blackName: 'Misty',
+          corpusId: null,
+          rated: false,
+          visibility: 'public',
+          initialMs: 300_000,
+          incrementMs: 5_000,
+          participants: [
+            {
+              color,
+              displayName: 'alice',
+              subjectType: 'user',
+              subjectId: 'u_alice',
+              visibility: 'public',
+            },
+            {
+              color: 'black',
+              displayName: 'Misty',
+              subjectType: 'bot',
+              subjectId: 'misty-dark-chess',
+              visibility: 'public',
+            },
+          ],
+        });
+        await drainAchievementTriggers();
+      } finally {
+        installAchievementEvaluator(null);
+        onAchievementsAwarded(null);
+      }
+      assert.deepEqual(
+        heard.filter((award) => award.achievementId.startsWith('fog-')),
+        [
+          {
+            userId: 'u_alice',
+            achievementId,
+            awardedAt: new Date('2026-11-07T10:10:00Z'),
+            sourceKind: 'game',
+            sourceId: 'live_fog_win',
+          },
+        ],
+      );
+      assert.deepEqual((await evaluateAchievements({ userIds: null })).newAwards, []);
+    });
+  }
+
   test('evaluation derives first events from existing rows and a rerun awards nothing', async () => {
     await seedHistory();
     const dry = await evaluateAchievements({ userIds: null, dryRun: true });
@@ -452,6 +693,8 @@ definePersistenceTests('achievements', () => {
       'first-rated': 2,
       'first-puzzle': 1,
       'first-forum-post': 0,
+      'fog-chess-legacy': 0,
+      'fog-xiangqi-legacy': 0,
     });
     assert.equal(catalog.accounts, 3);
     assert.equal((await getUserAchievements('u_dev')).length, 3, 'dev earned three');
@@ -467,7 +710,7 @@ definePersistenceTests('achievements', () => {
       achievements: unknown[];
       families: Array<{ id: string; levels: Array<{ id: string; holders: number }> }>;
     };
-    assert.equal(body.achievements.length, 5);
+    assert.equal(body.achievements.length, 7);
     assert.deepEqual(
       body.families.map((family) => [family.id, family.levels.map((level) => level.id)]),
       [['wins', ['wins:10', 'wins:50', 'wins:100', 'wins:500']]],

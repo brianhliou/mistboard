@@ -37,6 +37,8 @@ import type { AnnouncementKind } from './announcements.js';
 
 export type UiIconName =
   | 'achievement-first-game'
+  | 'achievement-fog-chess'
+  | 'achievement-fog-xiangqi'
   | 'achievement-forum'
   | 'achievement-lock'
   | 'achievement-puzzle'
@@ -70,6 +72,10 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   // Achievement glyphs, keyed by the definition's icon (@mistboard/game
   // achievements.ts) as `achievement-<icon>`.
   'achievement-first-game': ChessKnight,
+  // No Lucide glyph: the fog legacy badges use their variant markers in
+  // shields, with PNGs painted over currentColor by ui-icon.css.
+  'achievement-fog-chess': [],
+  'achievement-fog-xiangqi': [],
   'achievement-forum': MessageSquare,
   'achievement-lock': Lock,
   'achievement-puzzle': Puzzle,

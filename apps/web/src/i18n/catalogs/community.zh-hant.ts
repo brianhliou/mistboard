@@ -325,6 +325,16 @@ export const ZH_HANT_COMMUNITY = {
   'profile.achievementFirstRatedHint': '和已登入的對手下完一盤計分對局。',
   'profile.achievementFirstPuzzleHint': '第一次嘗試就解出一道題目。',
   'profile.achievementFirstForumPostHint': '在論壇發一篇貼文。',
+  'profile.achievementFogChessLegacy': '迷霧西洋棋留名',
+  'profile.achievementFogChessLegacyDesc':
+    '在迷霧機器人於 2026 年 12 月退役前，在迷霧西洋棋中戰勝過 Misty。',
+  'profile.achievementFogChessLegacyHint':
+    '在機器人於 2026 年 12 月 8 日退役前，在迷霧西洋棋中戰勝 Misty。',
+  'profile.achievementFogXiangqiLegacy': '迷霧象棋留名',
+  'profile.achievementFogXiangqiLegacyDesc':
+    '在迷霧機器人於 2026 年 12 月退役前，在迷霧象棋中戰勝過 Misty。',
+  'profile.achievementFogXiangqiLegacyHint':
+    '在機器人於 2026 年 12 月 8 日退役前，在迷霧象棋中戰勝 Misty。',
   'profile.achievementsCountOne': '{count} 項成就',
   'profile.achievementsCountMany': '{count} 項成就',
   'profile.achievementsEarnedOf': '已獲得 {earned} / {total}',
