@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { captureGateStamp, readGateStamp, writeGateStamp } from './lib/gate-stamp.mjs';
+import { gitFreeEnv } from './lib/git-free-env.mjs';
 
 function repository(t) {
   const directory = mkdtempSync(path.join(tmpdir(), 'mistboard-real-gate-'));
@@ -18,7 +19,7 @@ function repository(t) {
     rmSync(directory, { recursive: true, force: true });
   });
   const git = (...args) => {
-    const result = spawnSync('git', args, { cwd: directory, encoding: 'utf8' });
+    const result = spawnSync('git', args, { cwd: directory, env: gitFreeEnv(), encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     return result.stdout.trim();
   };
