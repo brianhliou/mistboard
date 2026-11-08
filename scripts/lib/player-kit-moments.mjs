@@ -46,8 +46,6 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   if (state.status.type !== 'playing' || state.status.turn !== board.colour)
     throw new Error('moment turn does not match the record');
   const line = pv.map(pikafishUciToXiangqiSquares);
-  // Validate the whole named continuation, not just the two displayed plies.
-  replay([...prefix, ...line]);
   const labels = formatXiangqiMoves([...prefix, ...line], 'wxf').slice(prefix.length);
   const side = board.colour === 'red' ? 'Red' : 'Black';
   // A relayed record may carry no round tag; the board id names it (…-r06-r06t02).
@@ -66,12 +64,16 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   if (xiangqiMoveToPikafishUci(played) !== row.uci)
     throw new Error('moment move does not match the record');
   const playedLabel = formatXiangqiMoves(prefix, 'wxf').at(-1);
-  const tree = buildTree(pv.slice(0, MOMENT_RULES.mainlinePlies).join(' '));
-  tree.rootFen = standardXiangqiEngineFen(state);
-  tree.root.annotations.comments = [
-    { text: `Round ${round}: ${opponent} just played ${playedLabel}.` },
-  ];
-  tree.root.children[0].annotations = {
+  const before = prefix.slice(0, -1);
+  // Replay from the new root through the recorded mistake and the entire named line.
+  replay([...before, played, ...line]);
+  const tree = buildTree([row.uci, ...pv.slice(0, MOMENT_RULES.mainlinePlies)].join(' '));
+  tree.rootFen = standardXiangqiEngineFen(replay(before));
+  const mistake = tree.root.children[0];
+  mistake.annotations = {
+    comments: [{ text: `Round ${round}: ${opponent} just played ${playedLabel}.` }],
+  };
+  mistake.children[0].annotations = {
     comments: [
       {
         text: `After ${opponent} played ${playedLabel}, ${who} found ${labels[0]}. Pikafish continues ${labels.slice(0, MOMENT_RULES.lineLabelPlies).join(' ')}.`,

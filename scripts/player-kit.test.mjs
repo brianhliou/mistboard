@@ -347,12 +347,15 @@ test('critical moments require a meaningful loss, a unique answer, and an undeci
   assert.equal(chapter.name, 'Moment 1 · Round 4 · Red to play');
   assert.equal(chapter.tags.ply, '11');
   assert.equal(chapter.tags.black, 'Fixture Opponent');
-  assert.match(chapter.tree.rootFen, / w - - \d+ 6$/);
+  assert.match(chapter.tree.rootFen, / b - - \d+ 5$/);
   const root = chapter.tree.root;
-  assert.equal(root.annotations.comments[0].text, 'Round 4: Fixture Opponent just played P9+1.');
-  assert.doesNotMatch(root.annotations.comments[0].text, /to play|find|H8\+7/i);
+  assert.equal(root.annotations?.comments, undefined);
   assert.equal(root.children.length, 1);
-  const [best] = root.children;
+  const [mistake] = root.children;
+  assert.equal(mistake.uci, 'i7i6');
+  assert.equal(mistake.annotations.comments[0].text, 'Round 4: Fixture Opponent just played P9+1.');
+  assert.doesNotMatch(mistake.annotations.comments[0].text, /to play|find|H8\+7/i);
+  const [best] = mistake.children;
   assert.equal(best.uci, 'b1c3');
   assert.equal(best.children[0].uci, 'b10c8');
   assert.deepEqual(best.children[0].children, []);
@@ -389,7 +392,10 @@ test('critical moments rank by loss, board id and ply, capped per game and overa
       (m) => moments.filter((n) => n.boardId === m.boardId).length <= MOMENT_RULES.maxPerGame,
     ),
   );
-  assert.match(moments[0].chapter.tree.root.annotations.comments[0].text, /Black just played/);
+  assert.match(
+    moments[0].chapter.tree.root.children[0].annotations.comments[0].text,
+    /Black just played/,
+  );
   annotations[0].annotation.rows[0].lost = 30;
   assert.equal((await findCriticalMoments(args))[0].boardId, 'f');
 });
@@ -465,9 +471,9 @@ test('critical moments accept the boundary rules and a one-ply engine line', asy
       },
     });
     assert.equal(moments.length, 1);
-    assert.deepEqual(moments[0].chapter.tree.root.children[0].children, []);
+    assert.deepEqual(moments[0].chapter.tree.root.children[0].children[0].children, []);
     assert.match(
-      moments[0].chapter.tree.root.annotations.comments[0].text,
+      moments[0].chapter.tree.root.children[0].annotations.comments[0].text,
       /Fixture Rival just played/,
     );
   }
@@ -523,13 +529,13 @@ test('moments keep only the kit player’s verified punishing replies', async (t
           assert.equal(moment.played, momentMoves[mistakePly]);
           assert.equal(moment.best, moment.played);
           assert.equal(moment.chapter.orientation, colour);
-          assert.match(moment.chapter.tree.rootFen, colour === 'red' ? / w / : / b /);
+          assert.match(moment.chapter.tree.rootFen, colour === 'red' ? / b / : / w /);
           assert.match(
-            moment.chapter.tree.root.annotations.comments[0].text,
+            moment.chapter.tree.root.children[0].annotations.comments[0].text,
             /Fixture Opponent just played/,
           );
           assert.match(
-            moment.chapter.tree.root.children[0].annotations.comments[0].text,
+            moment.chapter.tree.root.children[0].children[0].annotations.comments[0].text,
             /Fixture Player found/,
           );
         }
@@ -551,5 +557,55 @@ test('moments skip an absent player seat or an opponent mistake with no recorded
       analyzeMoves: async () => assert.fail('unusable positions must not reach the engine'),
     });
     assert.deepEqual(moments, []);
+  }
+});
+
+test('the new moment root legally replays the mistake and the complete displayed continuation', async (t) => {
+  const ctx = await momentSetup(t);
+  await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
+  const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
+  const { tree } = plan.ops.at(-1);
+  const {
+    parseStandardXiangqiFen,
+    applyStandardXiangqiMove,
+    isStandardXiangqiLegalMove,
+    fsfUciToXiangqiSquares,
+  } = await import('../packages/game/dist/index.js');
+  const parsed = parseStandardXiangqiFen(tree.rootFen);
+  assert.equal(parsed.ok, true);
+  let state = parsed.state;
+  let node = tree.root;
+  const replayed = [];
+  while (node.children[0]) {
+    node = node.children[0];
+    const move = fsfUciToXiangqiSquares(node.uci);
+    assert.ok(isStandardXiangqiLegalMove(state, move));
+    state = applyStandardXiangqiMove(state, move);
+    replayed.push(node.uci);
+  }
+  assert.deepEqual(replayed, ['i7i6', 'b1c3', 'b10c8']);
+});
+
+test('moments still reject a mismatched recorded mistake and an illegal tail beyond the displayed line', async () => {
+  const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
+  for (const problem of ['record', 'continuation']) {
+    await assert.rejects(
+      findCriticalMoments({
+        annotations: [
+          {
+            board: momentBoard(),
+            annotation: { rows: [momentRow(10, problem === 'record' ? { uci: 'a6a5' } : {})] },
+          },
+        ],
+        names: fixture.names,
+        budgets: { verifyNodes: 123, verifyDepth: 20 },
+        analyzeMoves: async () => {
+          const lines = scoredLines(11);
+          if (problem === 'continuation') lines[0].pvUci = ['b0c2', 'b9c7', 'b0c2'];
+          return lines;
+        },
+      }),
+      problem === 'record' ? /move does not match the record/ : /illegal moment continuation/,
+    );
   }
 });

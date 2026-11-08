@@ -280,3 +280,23 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+it('puts game details and side colours below the chapter list, outside the coach', async () => {
+  const root = await mountPhoneStudy('c1', [
+    {
+      ...CHAPTERS[0]!,
+      gamebook: true,
+      tags: { ...CHAPTERS[0]!.tags, round: '6' },
+    },
+  ]);
+  const card = root.querySelector('.gamebook__aside .gamebook__game');
+  expect(card?.previousElementSibling?.classList.contains('study-gamebook-rail')).toBe(true);
+  expect(card?.querySelector('.gamebook__game-player--red')?.textContent).toBe('Zuo Wenjing');
+  expect(card?.querySelector('.gamebook__game-player--black')?.textContent).toBe('Tang Dan');
+  expect(card?.querySelectorAll('.review-seat__disc')).toHaveLength(2);
+  expect(card?.textContent).toContain('World Championship');
+  expect(card?.textContent).toContain('Round 6');
+  expect(card?.textContent).toContain('2022.11.01');
+  expect(card?.textContent).toContain('1-0');
+  expect(root.querySelector('.gamebook__coach .gamebook__game')).toBeNull();
+});
