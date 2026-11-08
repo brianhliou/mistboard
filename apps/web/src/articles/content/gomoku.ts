@@ -25,7 +25,7 @@ export function createGomokuArticle(
     status: 'published',
     publishedAt: '2026-10-31',
     updatedAt: '2026-11-07',
-    updateNote: 'Updated the opening diagram to match the dealt pool: two black stones, three white stones and Black to move.',
+    updateNote: 'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.',
     audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
     thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
     tldr: [
