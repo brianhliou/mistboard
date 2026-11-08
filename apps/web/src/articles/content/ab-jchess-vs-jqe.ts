@@ -51,8 +51,7 @@ import matchJson from './ab-jchess-vs-jqe-match.json' with { type: 'json' };
 //   2.5 s on 4 threads, its chase rule set per row; run2:96's numbers ride along under
 //   `chase.also` (AB-JChess had Red there; that game is no longer embedded). Mistboard's
 //   own rule: packages/game jieqiPerpetualCheckLoser (a side that checked on every move
-//   of the repetition loses; a chase is not penalised) when the match was played;
-//   `mistboardRulesJqe` rescores it under the jqe-v1 rule adopted 2026-11-07.
+//   of the repetition loses; a chase is not penalised).
 // - Engine facts: lab/jieqi-match/README.md § AB-JChess-20261031 (rebuilt on jqe's
 //   MIT code, net 580,156 bytes against 144 MB for v0.2d, smoke 5.79M nps against
 //   jqe's 5.27M and v0.2d's 89.6k, "about 65x faster per node"). jqe's net size
@@ -226,15 +225,6 @@ export const AB_JQE_MATCH = matchJson as unknown as {
     stillDrawnAgreedWon: number;
     stillDrawnAgreedWonAbj: number;
   };
-  /** The match rescored by Mistboard's rule from November 2026 (jqe-v1): a sole perpetual checker or,
-   *  with no check in the cycle, a sole perpetual chaser loses; 80 capture-free plies draw. */
-  mistboardRulesJqe: RunStats & {
-    pairPoints: Record<string, number>;
-    perpetualCheck: number;
-    perpetualChase: number;
-    chaseByAbj: number;
-    noCaptureDraws: number;
-  };
   seenLate: Record<
     'abWon' | 'jqeWon',
     { games: number; jqeLater: number; same: number; abjLater: number; withinOne: number }
@@ -391,7 +381,6 @@ const LATE = M.seenLate;
 const TWICE = M.doubleTime;
 const SIDES = M.dealSides;
 const RULES = M.mistboardRules;
-const RULES_NOW = M.mistboardRulesJqe;
 const millions = (n: number): number => Math.round(n / 1e6);
 /** Face-down captures a game, to one decimal, in the games that ended this way for the capturer. */
 export function darkPerGame(engine: Engine, result: DarkResult): string {
@@ -419,7 +408,7 @@ export const abJchessVsJqeArticle: Article = {
   status: 'published',
   publishedAt: '2026-11-04',
   updatedAt: '2026-11-07',
-  updateNote: "Added the score under Mistboard's new repetition rule, and noted that the earlier Mistboard-rules scores use the rule in force when the match was played.",
+  updateNote: 'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.',
   thumbnail: {
     kind: 'svg',
     svg: (locale: Locale): string =>
@@ -441,7 +430,7 @@ export const abJchessVsJqeArticle: Article = {
     `AB-JChess is the top jieqi bot on Mistboard again. Its new release, AB-JChess-20261031, beat jqe over ${T.games} games: it won ${T.wins}, drew ${T.draws} and lost ${T.losses}, about ${T.pentaElo} Elo. Most of the edge came with Red.`,
     `The new release is built on jqe's open-source code, with a network of ${mb(M.engine.netBytes)} MB where the last one's was ${M.engine.oldNetMb} MB. It searches about ${M.engine.speedup} times as many positions a second as before.`,
     `In a level endgame with every piece face up, AB-JChess saw a soldier push lose ${word(M1.lagMoves!)} moves before jqe did, and it still saw it with its chase rule switched off and ${CHECK.nodes.at(-1)! / CHECK.nodes[0]!} times the search.`,
-    `The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and so does a side that alone chases on every move: ${RULES_NOW.perpetualCheck + RULES_NOW.perpetualChase} of the ${T.draws} draws end that way. Scored by Mistboard's rules, AB-JChess's edge is about ${RULES_NOW.pentaElo} Elo.`,
+    `The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and ${RULES.perpetualCheck} of the ${T.draws} draws ended that way; scored by Mistboard's rules, AB-JChess's edge is about ${RULES.pentaElo} Elo.`,
   ],
   intro: [
     {
@@ -476,7 +465,7 @@ export const abJchessVsJqeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: `Almost all of AB-JChess's edge came with Red. Over the match it comes to about ${signed(T.pentaElo)} Elo, with a 95% range of ${signed(T.pentaLow)} to ${signed(T.pentaHigh)}. Scored by Mistboard's own repetition rule it would be about ${signed(RULES_NOW.pentaElo)}, as explained below.`,
+          text: `Almost all of AB-JChess's edge came with Red. Over the match it comes to about ${signed(T.pentaElo)} Elo, with a 95% range of ${signed(T.pentaLow)} to ${signed(T.pentaHigh)}. Scored by Mistboard's own repetition rule it would be about ${signed(RULES.pentaElo)}, as explained below.`,
         },
       ],
     },
@@ -596,13 +585,13 @@ export const abJchessVsJqeArticle: Article = {
           text: `Our referee drew every threefold repetition. Mistboard's rule when the match was played did not: a side that gives check on every move of the repetition loses. In ${RULES.perpetualCheck} of the ${T.draws} draws one side did that, and in ${RULES.checkerAgreedLost} of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won ${RULES.wins}, drew ${RULES.draws} and lost ${RULES.losses}, about ${signed(RULES.pentaElo)} Elo with a 95% range of ${signed(RULES.pentaLow)} to ${signed(RULES.pentaHigh)}. The ${signed(T.pentaElo)} above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.`,
         },
         {
-          kind: 'paragraph',
-          text: `Of the ${RULES.stillDrawn} games that stay drawn, ${RULES.stillDrawnAgreedWon} were won for one side by both engines' scores and repeated anyway, ${RULES.stillDrawnAgreedWonAbj} of them for AB-JChess. That is the blindness game 5 showed: in the match each engine saw only the current position, so it could not see a repetition coming. On Mistboard the bots are sent the moves since the last capture or reveal, so they do see it.`,
+          kind: 'note',
+          label: 'Scored under the old rule',
+          text: "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.",
         },
         {
-          kind: 'note',
-          label: 'The November rule change',
-          text: `The Mistboard-rules numbers above use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses. Rescored under it, AB-JChess won ${RULES_NOW.wins}, drew ${RULES_NOW.draws} and lost ${RULES_NOW.losses}, about ${signed(RULES_NOW.pentaElo)} Elo with a 95% range of ${signed(RULES_NOW.pentaLow)} to ${signed(RULES_NOW.pentaHigh)}. AB-JChess was the chaser in all ${word(RULES_NOW.chaseByAbj)} draws that become losses, and ${word(RULES_NOW.noCaptureDraws)} decisive games would have been drawn earlier by the shorter no-capture limit.`,
+          kind: 'paragraph',
+          text: `Of the ${RULES.stillDrawn} games that stay drawn, ${RULES.stillDrawnAgreedWon} were won for one side by both engines' scores and repeated anyway, ${RULES.stillDrawnAgreedWonAbj} of them for AB-JChess. That is the blindness game 5 showed: in the match each engine saw only the current position, so it could not see a repetition coming. On Mistboard the bots are sent the moves since the last capture or reveal, so they do see it.`,
         },
         {
           kind: 'paragraph',
