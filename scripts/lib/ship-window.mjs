@@ -28,14 +28,18 @@ function sameRevision(left, right) {
 
 /**
  * When this record's push reached the remote, or null if it never pushed.
- * In order: `pushedAt` (written at the moment the push succeeds, since
- * 2026-10-16); the end of a successful "git push release head" stage; for a
- * record with no stage list at all, startedAt when it pushed a head production
- * was not already serving. A record whose stages show no successful push
- * (refused, failed in the gate) never counts, whatever its `push` flag says.
+ * Failed or incomplete pushes override timestamps, including stale records
+ * from releases that continued after a failed push. Otherwise use pushedAt,
+ * then the successful push stage's end. Legacy stage-less records need a
+ * completed push or successful release, never just the intent to push.
  */
 export function pushTimeOf(record) {
   if (!record || typeof record !== 'object') return null;
+  if (record.pushCompleted === false) return null;
+  const pushStages = Array.isArray(record.stages)
+    ? record.stages.filter((entry) => entry?.label === PUSH_STAGE_LABEL)
+    : null;
+  if (pushStages && pushStages.at(-1)?.ok !== true) return null;
   const pushedAt = parseTime(record.pushedAt);
   if (pushedAt !== null) return pushedAt;
   if (Array.isArray(record.stages)) {
@@ -49,6 +53,7 @@ export function pushTimeOf(record) {
   }
   if (
     record.push === true &&
+    (record.pushCompleted === true || record.outcome === 'ok') &&
     record.head &&
     !sameRevision(record.head, record.productionRevisionBefore ?? '')
   ) {
@@ -114,10 +119,19 @@ export function tipAccounted(records, tipRevision) {
 
 /**
  * The most recent production push, from the log and (optionally) an unlogged
- * remote tip: { at, source, cwd, head } or null.
+ * remote tip: { at, source, cwd, head } or null. When the caller can check
+ * ancestry, discard logged heads absent from main: old timer false-success
+ * records can claim both a successful stage and a pushedAt timestamp.
  */
-export function lastProdPush({ records, tip = null }) {
-  const pushes = prodPushes(records);
+export function lastProdPush({ records, tip = null, containsRevision = null }) {
+  const pushes = prodPushes(records).filter(
+    (push) =>
+      !tip ||
+      !containsRevision ||
+      !push.head ||
+      sameRevision(push.head, tip.revision) ||
+      containsRevision(push.head, tip.revision) !== false,
+  );
   let last = pushes.length > 0 ? pushes[pushes.length - 1] : null;
   if (
     tip &&

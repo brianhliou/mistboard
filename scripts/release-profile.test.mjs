@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -10,6 +11,7 @@ import {
   holdRows,
   importTranscripts,
   isRefusal,
+  parseArgs,
   parseDuration,
   parseTranscriptRelease,
   parseWindow,
@@ -17,6 +19,7 @@ import {
   readRecords,
   renderChart,
   summarize,
+  summarizeShips,
 } from './release-profile.mjs';
 
 // The console text of a release, as release-prod.mjs and time-command.mjs
@@ -48,6 +51,74 @@ prod lite smoke: ok in 827ms
 == prod DXQ smoke: ok in 9.8s
 release: ok in 6m 12s
 `;
+
+test('ships group retries within three hours of a failure and ignore queue refusals', () => {
+  const attempt = (hour, outcome, extra = {}) => ({
+    startedAt: new Date(Date.UTC(2026, 10, 1, hour)).toISOString(),
+    outcome,
+    elapsedMs: 0,
+    ...extra,
+  });
+  const records = [
+    attempt(0, 'ok'),
+    attempt(1, 'failed'),
+    attempt(3, 'failed'),
+    attempt(6, 'ok'),
+    attempt(7, 'failed'),
+    attempt(9, 'failed', { error: 'ship queue is in use (1 entries); use --train' }),
+    attempt(11, 'ok'),
+    attempt(12, 'failed'),
+  ];
+  const summary = summarizeShips([...records].reverse());
+  assert.equal(summary.ships, 5);
+  assert.equal(summary.firstTryOk, 2);
+  assert.equal(summary.firstTryPercent, 40);
+  assert.equal(summary.notShipped, 2);
+  // Group before filtering: a retry after the cutoff is not a new first try.
+  assert.equal(summarizeShips(records, { since: Date.UTC(2026, 10, 1, 2) }).ships, 3);
+  assert.deepEqual(summarizeShips([]), {
+    ships: 0,
+    firstTryOk: 0,
+    firstTryPercent: 0,
+    notShipped: 0,
+  });
+});
+
+test('profile prints ship reliability for --since dates and defaults to fourteen days', (t) => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'release-profile-ships-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const log = path.join(dir, 'releases.jsonl');
+  writeFileSync(
+    log,
+    [
+      { startedAt: '2026-10-30T16:00:00Z', outcome: 'failed' },
+      { startedAt: '2026-11-01T16:00:00Z', outcome: 'failed' },
+      { startedAt: '2026-11-01T16:10:00Z', outcome: 'ok' },
+      { startedAt: '2026-11-02T16:00:00Z', outcome: 'ok' },
+      { startedAt: '2026-11-03T16:00:00Z', outcome: 'failed' },
+    ]
+      .map((r) => JSON.stringify({ elapsedMs: 10, stages: [], ...r }))
+      .join('\n'),
+  );
+  const result = spawnSync(
+    process.execPath,
+    [
+      new URL('./release-profile.mjs', import.meta.url).pathname,
+      '--log',
+      log,
+      '--since',
+      '2026-11-01',
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    result.stdout,
+    /ships: 3; first-try ok: 1 \(33%\); ships not shipped in their slot: 1/,
+  );
+  assert.equal(parseArgs([]).sinceMs, 14 * 86_400_000);
+  assert.throws(() => parseArgs(['--since', '2026-02-30']), /--since/);
+});
 
 test('parseDuration reads the time-command formats', () => {
   assert.equal(parseDuration('827ms'), 827);

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 import {
   describeShipWindow,
   evaluateShipWindow,
@@ -82,6 +83,73 @@ test('a release that failed after its push still counts as a push', () => {
   );
 });
 
+test('failed pushes override stale completion timestamps and legacy intent is not success', () => {
+  const stale = { pushedAt: new Date(NOW - 300_000).toISOString(), pushCompleted: true };
+  const entries = [
+    record({ pushed: false, outcome: 'failed', extra: stale }),
+    record({ extra: { ...stale, pushCompleted: false } }),
+    record({ pushed: null, outcome: 'failed', extra: { ...stale, pushCompleted: false } }),
+    {
+      startedAt: stale.pushedAt,
+      push: true,
+      head: 'new',
+      productionRevisionBefore: 'old',
+      outcome: 'failed',
+    },
+  ];
+  for (const entry of entries) assert.equal(pushTimeOf(entry), null);
+  assert.equal(
+    evaluateShipWindow({ now: NOW, last: lastProdPush({ records: entries }) }).decision,
+    'allow',
+  );
+});
+
+test('a legacy false-success push absent from main does not close the ship window', () => {
+  const landed = record({ pushAt: new Date(NOW - 6 * HOUR).toISOString() });
+  const neverLanded = record({
+    head: 'failed-push-head',
+    outcome: 'failed',
+    extra: { pushedAt: new Date(NOW - 300_000).toISOString() },
+  });
+  const tip = { revision: landed.head, committedAt: NOW - 7 * HOUR };
+  const last = lastProdPush({
+    records: [landed, neverLanded],
+    tip,
+    containsRevision: (head) => head === landed.head,
+  });
+  assert.equal(last.head, landed.head);
+  assert.equal(evaluateShipWindow({ now: NOW, last }).decision, 'allow');
+  // The real reader wires the ancestry check to git after fetching main.
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function readShipWindow(');
+  const end = source.indexOf('\n}\n', start) + 2;
+  const readShipWindow = vm.runInNewContext(`(${source.slice(start, end)})`, {
+    readFileSync: () => [landed, neverLanded].map((r) => JSON.stringify(r)).join('\n'),
+    releaseLogPath: () => '/fixture/releases.jsonl',
+    readRemoteTip: () => tip,
+    parseReleaseLog,
+    evaluateShipWindow,
+    lastProdPush,
+    workdir: '/fixture',
+    options: { shipWindowHours: 4 },
+    Date: class extends Date {
+      static now() {
+        return NOW;
+      }
+    },
+    spawnSync: (command, args) => {
+      assert.equal(command, 'git');
+      assert.equal(args.join(' '), `merge-base --is-ancestor ${neverLanded.head} ${tip.revision}`);
+      return { status: 1 };
+    },
+  });
+  assert.equal(readShipWindow().decision, 'allow');
+  assert.equal(
+    lastProdPush({ records: [neverLanded], tip, containsRevision: () => null }).head,
+    neverLanded.head,
+  );
+});
+
 test('a release that never pushed, or pushed nothing deployable, does not count', () => {
   const failedPush = record({ pushed: false, outcome: 'failed' });
   const gateFailure = record({ pushed: null, outcome: 'failed' });
@@ -100,6 +168,7 @@ test('pushedAt wins over the stage, and legacy stage-less lines fall back to sta
   );
   const legacy = {
     startedAt: '2026-10-16T20:00:00.000Z',
+    outcome: 'ok',
     push: true,
     head: 'aaa',
     productionRevisionBefore: 'bbb',

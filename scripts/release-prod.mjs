@@ -19,6 +19,7 @@ import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-
 import {
   assertEntriesAreNew,
   currentMonth,
+  findExistingEntries,
   insertChangelogEntries,
   parseChangelogArg,
   previewInsertion,
@@ -667,8 +668,11 @@ function runPlanModeAndExit() {
     const planned = planChangelog(release.headRevision);
     console.log('');
     console.log(`# changelog (dry run: CHANGELOG.md is not written, nothing is committed)`);
-    console.log(previewInsertion(planned.before, planned.after));
-    console.log(`commit: ${planned.message}`);
+    if (planned.reused) console.log('changelog: reuse committed lines');
+    else {
+      console.log(previewInsertion(planned.before, planned.after));
+      console.log(`commit: ${planned.message}`);
+    }
   }
 
   const changedOverride = planChangedFiles();
@@ -1310,15 +1314,15 @@ function catchUpBeforeGate() {
   mergeRemoteTip(remote, release.lockWaited ? 'while this release queued' : 'before the release');
 }
 
-// --changelog refuses up front, before any lock wait, on the four states that
-// would put a wrong line on the page: an edited CHANGELOG.md, a HEAD that is
-// itself a changelog commit (a retry after a failed release: the line is
-// already committed), a HEAD the file already links, and a line whose text the
-// file already has (the same retry with a fix commit on top).
+// A retry reuses a complete set of lines already committed on HEAD. Edited
+// changelogs, partial overlap, or a changelog HEAD needing new lines still
+// refuse before the lock or any writes.
 function checkChangelogPreconditions() {
   if (git(['status', '--porcelain', '--', 'CHANGELOG.md']) !== '') {
     throw new Error('--changelog: CHANGELOG.md has uncommitted edits; commit or drop them first');
   }
+  const source = git(['show', 'HEAD:CHANGELOG.md']);
+  if (changelogAlreadyPresent(source)) return;
   const subject = git(['log', '-1', '--format=%s', 'HEAD']);
   const touched = git(['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', 'HEAD'])
     .split('\n')
@@ -1332,20 +1336,27 @@ function checkChangelogPreconditions() {
     );
   }
   const shortHash = git(['rev-parse', '--short=8', 'HEAD']);
-  const source = readFileSync(path.join(releaseRoot, 'CHANGELOG.md'), 'utf8');
   if (source.includes(`/commit/${shortHash})`)) {
     throw new Error(`--changelog: CHANGELOG.md already links ${shortHash}`);
   }
-  // A retry with a fix commit on top of the first changelog commit passes the
-  // two checks above; the line itself is what is already there.
-  assertEntriesAreNew(source, options.changelog);
   release.featureRevision = git(['rev-parse', '--verify', 'HEAD']);
+}
+
+function changelogAlreadyPresent(source) {
+  // Duplicate arguments are invalid even when every line is already present.
+  assertEntriesAreNew('', options.changelog);
+  if (findExistingEntries(source, options.changelog).length === options.changelog.length) {
+    return true;
+  }
+  assertEntriesAreNew(source, options.changelog);
+  return false;
 }
 
 // The insertion and commit message for --changelog, computed without writing.
 function planChangelog(featureRevision) {
-  const shortHash = git(['rev-parse', '--short=8', featureRevision]);
   const before = readFileSync(path.join(releaseRoot, 'CHANGELOG.md'), 'utf8');
+  if (changelogAlreadyPresent(before)) return { before, after: before, reused: true };
+  const shortHash = git(['rev-parse', '--short=8', featureRevision]);
   const after = insertChangelogEntries(before, {
     month: currentMonth(),
     entries: options.changelog,
@@ -1369,6 +1380,10 @@ function planChangelog(featureRevision) {
 function commitChangelog() {
   const file = path.join(releaseRoot, 'CHANGELOG.md');
   const planned = planChangelog(release.featureRevision);
+  if (planned.reused) {
+    console.log('changelog: reuse committed lines');
+    return;
+  }
   // Re-checked here: the catch-up merge may have brought in a line for it.
   if (planned.before.includes(`/commit/${planned.shortHash})`)) {
     throw new Error(`--changelog: CHANGELOG.md on main already links ${planned.shortHash}`);
@@ -1747,11 +1762,20 @@ function npmCommand(script, args = []) {
 function runTimed(label, command) {
   const startedAt = new Date().toISOString();
   const begun = performance.now();
+  console.log(`# ${label}`);
+  console.log(`started_at: ${startedAt}`);
+  // Check the command itself: time-command forwards a child's signal to
+  // itself, but Node ignores SIGPIPE and can exit zero after printing failed.
+  // Completion flags must follow the command's actual exit-status check.
   try {
-    run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
-    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: true });
+    run(command);
+    const ms = Math.round(performance.now() - begun);
+    recordStage({ label, startedAt, ms, ok: true });
+    console.log(`${label}: ok in ${formatDuration(ms)}`);
   } catch (error) {
-    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: false });
+    const ms = Math.round(performance.now() - begun);
+    recordStage({ label, startedAt, ms, ok: false });
+    console.log(`${label}: failed in ${formatDuration(ms)}`);
     throw error;
   }
 }
@@ -1803,6 +1827,7 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     gate: release.gate,
     smokeTier: release.smokeTier,
     push: options.push,
+    pushCompleted: release.pushCompleted,
     pushedAt: release.pushedAt,
     ...(options.extraShip ? { extraShip: options.extraShip } : {}),
     shipWindow: release.shipWindow,
@@ -1926,7 +1951,19 @@ function readShipWindow() {
   } catch {}
   return evaluateShipWindow({
     now: Date.now(),
-    last: lastProdPush({ records: parseReleaseLog(text), tip: readRemoteTip() }),
+    last: lastProdPush({
+      records: parseReleaseLog(text),
+      tip: readRemoteTip(),
+      containsRevision: (head, tip) => {
+        // readRemoteTip already fetched main. A definite non-ancestor proves
+        // an old false-success record never landed; unknown keeps the guard.
+        const result = spawnSync('git', ['merge-base', '--is-ancestor', head, tip], {
+          cwd: workdir,
+          stdio: 'ignore',
+        });
+        return result.status === 0 ? true : result.status === 1 ? false : null;
+      },
+    }),
     windowHours: options.shipWindowHours,
     extraShip: options.extraShip,
   });

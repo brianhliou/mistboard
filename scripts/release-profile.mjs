@@ -12,6 +12,7 @@
 //
 //   npm run release:profile                    medians per stage, last 14 days
 //   npm run release:profile -- --since 30d     wider window
+//   npm run release:profile -- --since 2026-11-01   from a UTC date
 //   npm run release:profile -- --html          write the chart page and print its path
 //   npm run release:profile -- --html --open   ...and open it
 //   npm run release:profile -- --import-transcripts   backfill from ~/.claude transcripts
@@ -51,9 +52,9 @@ function main(args) {
     console.log(`imported ${added} release record(s) from transcripts into ${logPath}`);
   }
   const records = readRecords(logPath);
-  const since = Date.now() - options.sinceMs;
+  const since = options.sinceAt ?? Date.now() - options.sinceMs;
   const window = records.filter((record) => Date.parse(record.startedAt) >= since);
-  printSummary(window, options);
+  printSummary(window, options, summarizeShips(records, { since }));
   if (options.html || options.svgPath) {
     const html = renderChart(records);
     if (options.html) {
@@ -75,6 +76,7 @@ export function parseArgs(args) {
   const options = {
     log: process.env.MISTBOARD_RELEASE_LOG || DEFAULT_LOG,
     sinceMs: 14 * 86_400_000,
+    sinceAt: null,
     html: false,
     htmlPath: null,
     svgPath: null,
@@ -84,8 +86,20 @@ export function parseArgs(args) {
   };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
-    if (arg === '--since') options.sinceMs = parseWindow(args[++i]);
-    else if (arg === '--html') {
+    if (arg === '--since') {
+      const value = args[++i];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) {
+        const at = Date.parse(`${value}T00:00:00Z`);
+        if (!Number.isFinite(at) || new Date(at).toISOString().slice(0, 10) !== value) {
+          throw new Error(`--since wants a valid UTC date, got ${value}`);
+        }
+        options.sinceAt = at;
+        options.sinceMs = Date.now() - at;
+      } else {
+        options.sinceAt = null;
+        options.sinceMs = parseWindow(value);
+      }
+    } else if (arg === '--html') {
       options.html = true;
       if (args[i + 1] && !args[i + 1].startsWith('--')) options.htmlPath = args[++i];
     } else if (arg === '--open') options.open = true;
@@ -127,6 +141,36 @@ export function readRecords(logPath) {
 }
 
 // --- summary -----------------------------------------------------------------
+
+// A slot is one ship's chain of attempts: each retry must start within three
+// hours after the preceding failure ends. Queue refusals do not start or
+// extend a ship. A ship with no ok attempt did not ship in that slot.
+export function summarizeShips(records, { since = -Infinity } = {}) {
+  const ships = [];
+  for (const record of [...records].sort(
+    (a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt),
+  )) {
+    if (/ship queue is in use/.test(record.error ?? '')) continue;
+    const started = Date.parse(record.startedAt);
+    if (!Number.isFinite(started)) continue;
+    const ship = ships.at(-1);
+    const previous = ship?.at(-1);
+    const recordedEnd = Date.parse(previous?.endedAt);
+    const ended = Number.isFinite(recordedEnd)
+      ? recordedEnd
+      : Date.parse(previous?.startedAt) + (previous?.elapsedMs ?? 0);
+    if (previous?.outcome === 'failed' && started - ended <= 3 * 3_600_000) ship.push(record);
+    else ships.push([record]);
+  }
+  const window = ships.filter((ship) => Date.parse(ship[0].startedAt) >= since);
+  const firstTryOk = window.filter((ship) => ship[0].outcome === 'ok').length;
+  return {
+    ships: window.length,
+    firstTryOk,
+    firstTryPercent: window.length ? Math.round((100 * firstTryOk) / window.length) : 0,
+    notShipped: window.filter((ship) => !ship.some((record) => record.outcome === 'ok')).length,
+  };
+}
 
 export function summarize(records) {
   const ok = records.filter((r) => r.outcome === 'ok');
@@ -250,10 +294,14 @@ function countBy(values) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-function printSummary(records, options) {
+function printSummary(records, options, ships) {
   const s = summarize(records);
   const days = Math.round(options.sinceMs / 86_400_000);
   console.log(`# releases, last ${days} day(s): ${s.count} (${s.ok} ok, ${s.failed} failed)`);
+  console.log(
+    `ships: ${ships.ships}; first-try ok: ${ships.firstTryOk} (${ships.firstTryPercent}%); ` +
+      `ships not shipped in their slot: ${ships.notShipped}`,
+  );
   if (s.count === 0) {
     console.log('no records in the window; run a release, or --import-transcripts for history');
     return;
