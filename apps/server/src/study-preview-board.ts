@@ -33,6 +33,7 @@ import {
   BANQI_SPEC_ID,
   CHESS_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
+  createGomokuRoomState,
   createInitialBanqiState,
   createInitialCrazyhouseXiangqiState,
   createInitialDuckXiangqiState,
@@ -47,6 +48,8 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   fsfUciToXiangqiSquares,
+  GOMOKU_BOARD_SIZE,
+  GOMOKU_SPEC_ID,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -55,6 +58,7 @@ import {
   parseDarkChessFen,
   parseDuckXiangqiFen,
   parseFortressXiangqiFen,
+  parseGomokuFen,
   parseJieqiFen,
   parseJungleFen,
   parseJungleFlipFen,
@@ -77,11 +81,12 @@ export type StudyPreviewShape =
   | 'jungle' // 7x9 squares with the two rivers
   | 'banqi' // 8x4 squares
   | 'jungle-flip' // 4x4 squares
-  | 'three-kingdoms-banqi'; // 9x5 points
+  | 'three-kingdoms-banqi' // 9x5 points
+  | 'gomoku'; // 15x15 points; r means White, b means Black
 
 /**
  * One character per cell, rows from the top rank down, files left to right:
- * '.' empty, 'r' red (white in chess), 'b' black, 'R' / 'B' a face-down piece
+ * '.' empty, 'r' red (white in chess/Gomoku), 'b' black, 'R' / 'B' a face-down piece
  * whose side is public (jieqi), '?' a face-down tile of hidden colour (banqi,
  * flip jungle, three kingdoms banqi), 'd' the duck.
  */
@@ -130,6 +135,26 @@ export function studyPreviewBoard(source: unknown): StudyPreviewBoard | null {
   if (!parsed) return null;
   const { variant, rootFen, mainline } = parsed;
   switch (variant) {
+    case GOMOKU_SPEC_ID: {
+      const state =
+        rootFen === null
+          ? createGomokuRoomState(PREVIEW_ID)
+          : parseOk(parseGomokuFen(rootFen, PREVIEW_ID));
+      if (!state) return withGrid(variant, null);
+      let cells = '';
+      for (let rank = GOMOKU_BOARD_SIZE - 1; rank >= 0; rank -= 1) {
+        for (let file = 0; file < GOMOKU_BOARD_SIZE; file += 1) {
+          const color = state.board[rank * GOMOKU_BOARD_SIZE + file];
+          cells += color === 'black' ? 'b' : color === 'white' ? 'r' : '.';
+        }
+      }
+      return withGrid(variant, {
+        shape: 'gomoku',
+        files: GOMOKU_BOARD_SIZE,
+        ranks: GOMOKU_BOARD_SIZE,
+        cells,
+      });
+    }
     case XIANGQI_SPEC_ID: {
       const state = xiangqiPreviewState(rootFen, mainline, false);
       return {
