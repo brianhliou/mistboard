@@ -120,17 +120,14 @@ test('L8 preserves the shipped registry identity and byte-identical UCI stream',
   }
 });
 
-test('each level sends exactly its provisional weakening options and search budget', async () => {
+test('each level sends exactly its calibrated weakening options and search budget', async () => {
   const weakening = [
     [1, 1],
-    [0.3, 2],
     [0.1, 2],
+    [0.05, 2],
     [0.02, 2],
-    [0.01, 4],
   ];
-  const budgets = [
-    3_500_000, 3_500_000, 3_500_000, 3_500_000, 3_500_000, 2_000, 100_000, 3_500_000,
-  ];
+  const budgets = [3_500_000, 3_500_000, 3_500_000, 3_500_000, 2_000, 32_000, 200_000, 3_500_000];
   for (let level = 1; level <= 8; level++) {
     const engine = fakeEngine(['NoProgressLimit', 'Noise', 'NoiseDepth', 'Seed']);
     await withEngine(engine.bin, async () => {
@@ -146,7 +143,7 @@ test('each level sends exactly its provisional weakening options and search budg
     const commands = engine.commands();
     assert.deepEqual(
       commands.filter((command) => command.startsWith('setoption ')),
-      level <= 5
+      level <= 4
         ? [
             'setoption name NoProgressLimit value 60',
             `setoption name Noise value ${weakening[level - 1]![0]}`,
@@ -163,7 +160,7 @@ test('weak levels refuse binaries missing either weakening option or Seed', asyn
   for (const options of [[], ['Noise', 'Seed'], ['NoiseDepth', 'Seed'], ['Noise', 'NoiseDepth']]) {
     const engine = fakeEngine(['NoProgressLimit', ...options]);
     await withEngine(engine.bin, async () => {
-      for (let level = 1; level <= 5; level++) {
+      for (let level = 1; level <= 4; level++) {
         await assert.rejects(
           banqiLiveEngineMove(`misty-banqi-level-${level}`, fen, { seed: '12345' }),
           /UCI engine does not advertise configured option\(s\)/,

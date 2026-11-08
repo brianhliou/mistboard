@@ -7,8 +7,8 @@
 // we hand it a redacted CURRENT-position FEN built by banqi-fen.ts. One process per
 // request (stateless, robust); promote to a persistent pool only under real load.
 //
-// Classical engine (no net). L1-5 use root noise at a fixed scoring depth;
-// L6-8 use node budgets so strength is independent of CPU speed.
+// Classical engine (no net). L1-4 use root noise at a fixed scoring depth;
+// L5-8 use node budgets so strength is independent of CPU speed.
 // A movetime cap bounds latency, with the historical full-strength bot kept as L8.
 
 import { randomInt } from 'node:crypto';
@@ -104,26 +104,30 @@ export type BanqiEngineTier = {
 // the median at the ceiling and the p99 far past it, which is exactly how the sibling
 // jungle-flip tier ended up crossing its cap on a busy host.
 //
-// NOT a claimed Elo gain: no self-play was run for this change. The strength evidence on
-// record is the v0.2.0 eval work (cover_mat + king_ctx + value-aware mobility + adaptive
-// domination + corrected value table, +16.6% vs hw3) and the v0.2.1 gen_danger arm — none of
-// which measured 3.5M vs 1.5M nodes. If a strength check is run and 3.5M does not beat 1.5M,
-// lower this number rather than raising the cap.
+// Strength at this budget was measured 2026-11-07 (duplicate-pair self-play, 60 pairs):
+// 3.5M nodes beat 500K by +73 Elo [36, 113] and 200K by +211 [161, 270], so the extra
+// nodes buy strength and the budget stays.
 //
 // `banqiEngineMove` logs a truncation warning when a move still hits the cap, so if this
 // budget turns out not to fit on a genuinely degraded host it shows up in the logs rather
 // than silently playing a weaker move.
-// Provisional weakening values pending a Banqi calibration run. The engine shares
+// Calibrated 2026-11-07 on MistyBanqi 0.2.8 by duplicate-pair self-play (60 pairs, 120
+// games, per step; no caps, no crashes). Each level against the one below, Elo [95% CI]:
+//   L2/L1 +285 [233, 350]   L3/L2 +140 [99, 186]   L4/L3 +86 [43, 132]
+//   L5/L4 +111 [72, 152]    L6/L5 +95 [64, 128]    L7/L6 +124 [78, 173]
+//   L8/L7 +211 [161, 270]
+// Noise levels keep the 3.5M-node ceiling so their fixed-depth root passes complete; a
+// smaller budget cuts the depth-2 pass short and changes their strength. The engine shares
 // Flip Jungle's [-1, 1] score scale. L8 preserves today's bot and its stored id.
 export const BANQI_PLAYABLE_ENGINES: readonly BanqiEngineTier[] = (
   [
     { level: 1, nodes: 3_500_000, noise: 1, noiseDepth: 1 },
-    { level: 2, nodes: 3_500_000, noise: 0.3, noiseDepth: 2 },
-    { level: 3, nodes: 3_500_000, noise: 0.1, noiseDepth: 2 },
+    { level: 2, nodes: 3_500_000, noise: 0.1, noiseDepth: 2 },
+    { level: 3, nodes: 3_500_000, noise: 0.05, noiseDepth: 2 },
     { level: 4, nodes: 3_500_000, noise: 0.02, noiseDepth: 2 },
-    { level: 5, nodes: 3_500_000, noise: 0.01, noiseDepth: 4 },
-    { level: 6, nodes: 2_000 },
-    { level: 7, nodes: 100_000 },
+    { level: 5, nodes: 2_000 },
+    { level: 6, nodes: 32_000 },
+    { level: 7, nodes: 200_000 },
     { level: 8, nodes: 3_500_000 },
   ] as const
 ).map(

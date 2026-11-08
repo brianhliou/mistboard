@@ -1115,7 +1115,7 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
             movetime_ms: tier.movetimeCapMs,
             ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
           },
-          notes: `MistyBanqi level ${tier.level}. Provisional pending calibration. L1-5 require v0.2.8 with advertised Noise, NoiseDepth and Seed.`,
+          notes: `MistyBanqi level ${tier.level}. Calibrated 2026-11-07 by adjacent-level self-play. L1-4 require v0.2.8 with advertised Noise, NoiseDepth and Seed.`,
         } satisfies EngineDefinition,
       ];
     }),
