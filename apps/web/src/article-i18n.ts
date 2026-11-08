@@ -331,15 +331,15 @@ const ZH_HANS: Record<string, string> = {
   'The player to move has no legal move, even without check.':
     '轮到行棋的一方无合法着法，即使没有被将军。',
   'Stalemate. That player loses.': '困毙，该方判负。',
-  '120 plies pass without a capture.': '连续 120 个半回合没有吃子。',
-  'Draw. A ply is one move by one player, so this is 60 moves by each side. Revealing a piece alone does not reset the count.':
-    '和棋。半回合指一方走一步，所以相当于双方各走 60 步。单纯翻子不会重置计数。',
+  '80 plies pass without a capture.': '连续 80 个半回合没有吃子。',
+  'Draw. A ply is one move by one player, so this is 40 moves by each side. Revealing a piece alone does not reset the count.':
+    '和棋。半回合指一方走一步，所以相当于双方各走 40 步。单纯翻子不会重置计数。',
   'The same position with the same side to move occurs for the third time.':
     '同一局面第三次出现，且轮到同一方行棋。',
-  'A player who checked on every one of their turns in the repeating cycle loses. If neither player did, or both did, it is a draw.':
-    '重复循环中，每一步都将军的一方判负。若双方都没有全程将军，或双方都全程将军，则判和。',
-  'Mistboard does not judge chases, so a repeated chase without check is a draw.':
-    'Mistboard 不判长捉，所以不带将军的反复捉子按和棋处理。',
+  'A player who checked on every one of their turns in the repeating cycle loses. If no single player did, a player who chased on every one of their turns loses. Anything else is a draw.':
+    '重复循环中，每一步都将军的一方判负。若没有哪一方单独全程将军，则每一步都捉子的一方判负。其余情况判和。',
+  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
+    '捉子是指新攻击对方的一个棋子，而且每次攻击的都是同一个。将帅和兵卒不算捉子，将帅以及未过河的兵卒也不算被捉。攻击有保护的棋子不算捉子。在这次更新之前开始的对局仍按旧规则：只有长将判负，无吃子判和要到双方各走 60 步。',
   'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
     'AB-JChess 执红对 jqe，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，过河后于第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到红帅身旁的 d3。红方的翻子却不顺利：c5 的车在第 20 回合刚翻出就被吃掉，a1 角位藏的则是兵。黑方在第 30 回合将死红方。',
   'Jieqi: AB-JChess against jqe, Black mates on move 30':
@@ -360,7 +360,8 @@ const ZH_HANS: Record<string, string> = {
   'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
     '八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
   'Play a bot': '与电脑对弈',
-  'Added worked examples.': '新增走法实例。',
+  'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.':
+    '重复局面现在也判长捉，无吃子判和从双方各走 60 步改为 40 步。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想学揭棋的玩家，无论是否下过象棋。',
   'START: RED AT THE BOTTOM': '开局：红方在下',
@@ -6666,7 +6667,11 @@ const ZH_HANS: Record<string, string> = {
   'The result': '比赛结果',
   "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
     '这 600 盘棋来自 300 组暗子布局，每组红黑互换各下一次，用 4 个线程，每步 4 秒。和 jqe 对上一版 AB-JChess 的比赛一样，我们的裁判程序把任何三次重复局面，以及双方各连续 60 步无吃子，都判为和棋。暗子被吃时，裁判程序会向两个引擎公开它是什么；在 Mistboard 上，只有吃子方才会知道。[全部 600 盘棋](/study/fb5Wqzbs)都收在一个研究中，每组布局的两盘棋并排放在一起。',
-  'Added a link to a study of all 600 games.': '新增了收录全部 600 盘棋的研究链接。',
+  'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.':
+    '注明按 Mistboard 规则计算的成绩采用的是比赛进行时的重复局面规则。',
+  'Scored under the old rule': '按旧规则计分',
+  "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.":
+    '按 Mistboard 规则计算的数字采用比赛进行时的规则，当时重复局面只有长将判负。2026 年 11 月，Mistboard 改用 jqe 的规则，只有一方长捉时，长捉方也判负。',
   'AB-JChess': 'AB-JChess',
   'Won-drawn-lost': '胜-和-负',
   'All 600 games': '全部 600 盘',
@@ -6737,17 +6742,17 @@ const ZH_HANS: Record<string, string> = {
   "jqe was the later of the two to see the result in AB-JChess's wins, while in jqe's wins neither engine was. In game 1 jqe still called a lost endgame a dead draw with 16 times the search, and when it scored itself a small edge it went on to score less than AB-JChess did from the same score. Both point the same way: jqe's mistakes are in how it values quiet positions and trades, not in how far it looks. Neither engine searches past a reveal, so turning a piece over stays a guess for both, as in game 4.":
     '在 AB-JChess 的胜局中，jqe 判断出结果较晚；而在 jqe 的胜局中，两个引擎没有谁明显更晚。第 1 盘里，把搜索量增至 16 倍后，jqe 仍把必输残局判断为必和；它认为自己略占优势时，最终得分也低于 AB-JChess 给出相同评分时的得分。两者都说明：jqe 的问题在于如何评估平静局面和兑子，而非搜索得不够远。两个引擎都不会搜索翻子之后的着法，所以对双方而言，翻子都仍需猜测，第 4 盘就是如此。',
   "Most draws were not draws by Mistboard's rules": '按 Mistboard 的规则，大部分和棋都不该判和',
-  "Our referee drew every threefold repetition. Mistboard does not: a side that gives check on every move of the repetition loses. In 42 of the 67 draws one side did that, and in 40 of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won 323, drew 25 and lost 252, about +41 Elo with a 95% range of +17 to +66. The +46 above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.":
-    '我们的裁判程序把所有三次重复局面都判为和棋。Mistboard 则将重复过程中每一步都将军的一方判负。67 盘和棋中，有 42 盘是一方长将，其中 40 盘两个引擎都已认为另一方是胜势，持续将军成了劣势方避免输棋的办法。按 Mistboard 的规则计分，AB-JChess 赢 323 盘，和 25 盘，输 252 盘，约合 +41 Elo，95% 区间为 +17 至 +66。上面的 +46 保留了裁判程序的规则，和 jqe 对上一版 AB-JChess 的比赛相同，便于比较两场比赛。',
+  "Our referee drew every threefold repetition. Mistboard's rule when the match was played did not: a side that gives check on every move of the repetition loses. In 42 of the 67 draws one side did that, and in 40 of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won 323, drew 25 and lost 252, about +41 Elo with a 95% range of +17 to +66. The +46 above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.":
+    '我们的裁判程序把所有三次重复局面都判为和棋。比赛进行时 Mistboard 的规则则不然：重复过程中每一步都将军的一方判负。67 盘和棋中，有 42 盘是一方长将，其中 40 盘两个引擎都已认为另一方是胜势，持续将军成了劣势方避免输棋的办法。按 Mistboard 的规则计分，AB-JChess 赢 323 盘，和 25 盘，输 252 盘，约合 +41 Elo，95% 区间为 +17 至 +66。上面的 +46 保留了裁判程序的规则，和 jqe 对上一版 AB-JChess 的比赛相同，便于比较两场比赛。',
   "Of the 25 games that stay drawn, 9 were won for one side by both engines' scores and repeated anyway, 8 of them for AB-JChess. That is the blindness game 5 showed: in the match each engine saw only the current position, so it could not see a repetition coming. On Mistboard the bots are sent the moves since the last capture or reveal, so they do see it.":
     '仍判和棋的 25 盘中，有 9 盘两个引擎都认为一方已是胜势，却仍走成了重复局面，其中 8 盘是 AB-JChess 占胜势。这正是第 5 盘暴露的问题：比赛中每个引擎只能看到当前局面，无法预见重复。Mistboard 会向电脑发送自上次吃子或翻子以来的着法，所以它们能够发现重复局面。',
-  "The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matches Mistboard's. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.":
-    '两个引擎还各自带有长捉规则，也就是一方持续攻击同一棋子所形成的重复局面的规则，两者都与 Mistboard 不同。jqe 将重复过程中每一步都捉同一棋子的一方判负。AB-JChess 则只要一方有任何一步捉子，而另一方从未捉子，就将前者判负。',
+  "The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matched Mistboard's at the time. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.":
+    '两个引擎还各自带有长捉规则，也就是一方持续攻击同一棋子所形成的重复局面的规则，两者都与当时 Mistboard 的规则不同。jqe 将重复过程中每一步都捉同一棋子的一方判负。AB-JChess 则只要一方有任何一步捉子，而另一方从未捉子，就将前者判负。',
   "Move 51. AB-JChess (Red) moves its chariot from c9 to c3, attacking Black's horse on a3. jqe would move it to f9.":
     '第 51 回合。AB-JChess（红方）把车从 c9 走到 c3，攻击 a3 的黑马。jqe 会把车走到 f9。',
   'AB-JChess vs jqe, move 51': 'AB-JChess 对 jqe，第 51 回合',
-  "Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black 72% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard draws a chase, so jqe was counting on a rule the game is not played under. Step through the board for both engines' rules searched on and off.":
-    '此后红车每走一步都攻击黑马。按 jqe 的规则红方判负，所以 jqe 直到终局都给黑方至少 72% 的胜率；按 AB-JChess 的规则，黑马也在反捉，因此它判断为和棋。Mistboard 对长捉判和，所以 jqe 依赖的是本站对局并不采用的规则。逐步查看棋盘，可以比较两个引擎开启和关闭各自规则时的搜索结果。',
+  "Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black 72% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard drew a chase then, so jqe was counting on a rule the game was not yet played under. Step through the board for both engines' rules searched on and off.":
+    '此后红车每走一步都攻击黑马。按 jqe 的规则红方判负，所以 jqe 直到终局都给黑方至少 72% 的胜率；按 AB-JChess 的规则，黑马也在反捉，因此它判断为和棋。Mistboard 当时对长捉判和，所以 jqe 依赖的是本站对局当时还没有采用的规则。逐步查看棋盘，可以比较两个引擎开启和关闭各自规则时的搜索结果。',
   'A smaller network, a faster search': '神经网络更小，搜索更快',
   "The new release is rebuilt on [jqe's code](https://github.com/devinokeefe/jieqi), which Devin O'Keefe published under the MIT licence, with a network of its own. That network is 0.6 MB, where the last release's was 144 MB and jqe's is 1.5 MB. A small network is quick to run, so the new release looks at about 65 times as many positions a second as the last one, a little more than jqe.":
     "新版本基于 Devin O'Keefe 以 MIT 许可证发布的 [jqe 代码](https://github.com/devinokeefe/jieqi)重建，使用自己的神经网络。这个网络是 0.6 MB，上一版是 144 MB，jqe 的是 1.5 MB。小网络运行得快，所以新版本每秒查看的局面数约为上一版的 65 倍，也比 jqe 略多。",
@@ -6823,15 +6828,15 @@ const ZH_HANT: Record<string, string> = {
   'The player to move has no legal move, even without check.':
     '輪到行棋的一方無合法著法，即使沒有被將軍。',
   'Stalemate. That player loses.': '困斃，該方判負。',
-  '120 plies pass without a capture.': '連續 120 個半回合沒有吃子。',
-  'Draw. A ply is one move by one player, so this is 60 moves by each side. Revealing a piece alone does not reset the count.':
-    '和棋。半回合指一方走一步，所以相當於雙方各走 60 步。單純翻子不會重設計數。',
+  '80 plies pass without a capture.': '連續 80 個半回合沒有吃子。',
+  'Draw. A ply is one move by one player, so this is 40 moves by each side. Revealing a piece alone does not reset the count.':
+    '和棋。半回合指一方走一步，所以相當於雙方各走 40 步。單純翻子不會重設計數。',
   'The same position with the same side to move occurs for the third time.':
     '同一局面第三次出現，且輪到同一方行棋。',
-  'A player who checked on every one of their turns in the repeating cycle loses. If neither player did, or both did, it is a draw.':
-    '重複循環中，每一步都將軍的一方判負。若雙方都沒有全程將軍，或雙方都全程將軍，則判和。',
-  'Mistboard does not judge chases, so a repeated chase without check is a draw.':
-    'Mistboard 不判長捉，所以不帶將軍的反覆捉子按和棋處理。',
+  'A player who checked on every one of their turns in the repeating cycle loses. If no single player did, a player who chased on every one of their turns loses. Anything else is a draw.':
+    '重複循環中，每一步都將軍的一方判負。若沒有哪一方單獨全程將軍，則每一步都捉子的一方判負。其餘情況判和。',
+  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
+    '捉子是指新攻擊對方的一個棋子，而且每次攻擊的都是同一個。將帥和兵卒不算捉子，將帥以及未過河的兵卒也不算被捉。攻擊有保護的棋子不算捉子。在這次更新之前開始的對局仍按舊規則：只有長將判負，無吃子判和要到雙方各走 60 步。',
   'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
     'AB-JChess 執紅對 jqe，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，過河後於第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到紅帥身旁的 d3。紅方的翻子卻不順利：c5 的車在第 20 回合剛翻出就被吃掉，a1 角位藏的則是兵。黑方在第 30 回合將死紅方。',
   'Jieqi: AB-JChess against jqe, Black mates on move 30':
@@ -6852,7 +6857,8 @@ const ZH_HANT: Record<string, string> = {
   'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
     '八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
   'Play a bot': '與電腦對弈',
-  'Added worked examples.': '新增走法實例。',
+  'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.':
+    '重複局面現在也判長捉，無吃子判和從雙方各走 60 步改為 40 步。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想學揭棋的玩家，無論是否下過象棋。',
   'START: RED AT THE BOTTOM': '開局：紅方在下',
@@ -12974,7 +12980,11 @@ const ZH_HANT: Record<string, string> = {
   'The result': '比賽結果',
   "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
     '這 600 盤棋來自 300 組暗子佈局，每組紅黑互換各下一次，用 4 個執行緒，每步 4 秒。和 jqe 對上一版 AB-JChess 的比賽一樣，我們的裁判程式把任何三次重複局面，以及雙方各連續 60 步無吃子，都判為和棋。暗子被吃時，裁判程式會向兩個引擎公開它是什麼；在 Mistboard 上，只有吃子方才會知道。[全部 600 盤棋](/study/fb5Wqzbs)都收在一個研究中，每組佈局的兩盤棋並排放在一起。',
-  'Added a link to a study of all 600 games.': '新增了收錄全部 600 盤棋的研究連結。',
+  'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.':
+    '註明按 Mistboard 規則計算的成績採用的是比賽進行時的重複局面規則。',
+  'Scored under the old rule': '按舊規則計分',
+  "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.":
+    '按 Mistboard 規則計算的數字採用比賽進行時的規則，當時重複局面只有長將判負。2026 年 11 月，Mistboard 改用 jqe 的規則，只有一方長捉時，長捉方也判負。',
   'AB-JChess': 'AB-JChess',
   'Won-drawn-lost': '勝-和-負',
   'All 600 games': '全部 600 盤',
@@ -13045,17 +13055,17 @@ const ZH_HANT: Record<string, string> = {
   "jqe was the later of the two to see the result in AB-JChess's wins, while in jqe's wins neither engine was. In game 1 jqe still called a lost endgame a dead draw with 16 times the search, and when it scored itself a small edge it went on to score less than AB-JChess did from the same score. Both point the same way: jqe's mistakes are in how it values quiet positions and trades, not in how far it looks. Neither engine searches past a reveal, so turning a piece over stays a guess for both, as in game 4.":
     '在 AB-JChess 的勝局中，jqe 判斷出結果較晚；而在 jqe 的勝局中，兩個引擎沒有誰明顯更晚。第 1 盤裡，把搜尋量增至 16 倍後，jqe 仍把必輸殘局判斷為必和；它認為自己略佔優勢時，最終得分也低於 AB-JChess 給出相同評分時的得分。兩者都說明：jqe 的問題在於如何評估平靜局面和兌子，而非搜尋得不夠遠。兩個引擎都不會搜尋翻子之後的著法，所以對雙方而言，翻子都仍需猜測，第 4 盤就是如此。',
   "Most draws were not draws by Mistboard's rules": '按 Mistboard 的規則，大部分和棋都不該判和',
-  "Our referee drew every threefold repetition. Mistboard does not: a side that gives check on every move of the repetition loses. In 42 of the 67 draws one side did that, and in 40 of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won 323, drew 25 and lost 252, about +41 Elo with a 95% range of +17 to +66. The +46 above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.":
-    '我們的裁判程式把所有三次重複局面都判為和棋。Mistboard 則將重複過程中每一步都將軍的一方判負。67 盤和棋中，有 42 盤是一方長將，其中 40 盤兩個引擎都已認為另一方是勝勢，持續將軍成了劣勢方避免輸棋的辦法。按 Mistboard 的規則計分，AB-JChess 贏 323 盤，和 25 盤，輸 252 盤，約合 +41 Elo，95% 區間為 +17 至 +66。上面的 +46 保留了裁判程式的規則，和 jqe 對上一版 AB-JChess 的比賽相同，便於比較兩場比賽。',
+  "Our referee drew every threefold repetition. Mistboard's rule when the match was played did not: a side that gives check on every move of the repetition loses. In 42 of the 67 draws one side did that, and in 40 of them both engines already scored the other side as winning, so checking forever was the losing side's way out. Scored by Mistboard's rules, AB-JChess won 323, drew 25 and lost 252, about +41 Elo with a 95% range of +17 to +66. The +46 above keeps the referee's rules, the same ones as jqe's match against the last AB-JChess, so the two matches can be compared.":
+    '我們的裁判程式把所有三次重複局面都判為和棋。比賽進行時 Mistboard 的規則則不然：重複過程中每一步都將軍的一方判負。67 盤和棋中，有 42 盤是一方長將，其中 40 盤兩個引擎都已認為另一方是勝勢，持續將軍成了劣勢方避免輸棋的辦法。按 Mistboard 的規則計分，AB-JChess 贏 323 盤，和 25 盤，輸 252 盤，約合 +41 Elo，95% 區間為 +17 至 +66。上面的 +46 保留了裁判程式的規則，和 jqe 對上一版 AB-JChess 的比賽相同，便於比較兩場比賽。',
   "Of the 25 games that stay drawn, 9 were won for one side by both engines' scores and repeated anyway, 8 of them for AB-JChess. That is the blindness game 5 showed: in the match each engine saw only the current position, so it could not see a repetition coming. On Mistboard the bots are sent the moves since the last capture or reveal, so they do see it.":
     '仍判和棋的 25 盤中，有 9 盤兩個引擎都認為一方已是勝勢，卻仍走成了重複局面，其中 8 盤是 AB-JChess 佔勝勢。這正是第 5 盤暴露的問題：比賽中每個引擎只能看到當前局面，無法預見重複。Mistboard 會向電腦發送自上次吃子或翻子以來的著法，所以它們能夠發現重複局面。',
-  "The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matches Mistboard's. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.":
-    '兩個引擎還各自帶有長捉規則，也就是一方持續攻擊同一棋子所形成的重複局面的規則，兩者都與 Mistboard 不同。jqe 將重複過程中每一步都捉同一棋子的一方判負。AB-JChess 則只要一方有任何一步捉子，而另一方從未捉子，就將前者判負。',
+  "The engines also bring their own rule for a chase, a repetition in which one side keeps attacking the same piece, and neither matched Mistboard's at the time. jqe calls a side lost when every one of its moves in the repetition chases the same piece. AB-JChess calls a side lost when it chased on any move and the other side never did.":
+    '兩個引擎還各自帶有長捉規則，也就是一方持續攻擊同一棋子所形成的重複局面的規則，兩者都與當時 Mistboard 的規則不同。jqe 將重複過程中每一步都捉同一棋子的一方判負。AB-JChess 則只要一方有任何一步捉子，而另一方從未捉子，就將前者判負。',
   "Move 51. AB-JChess (Red) moves its chariot from c9 to c3, attacking Black's horse on a3. jqe would move it to f9.":
     '第 51 回合。AB-JChess（紅方）把車從 c9 走到 c3，攻擊 a3 的黑馬。jqe 會把車走到 f9。',
   'AB-JChess vs jqe, move 51': 'AB-JChess 對 jqe，第 51 回合',
-  "Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black 72% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard draws a chase, so jqe was counting on a rule the game is not played under. Step through the board for both engines' rules searched on and off.":
-    '此後紅車每走一步都攻擊黑馬。按 jqe 的規則紅方判負，所以 jqe 直到終局都給黑方至少 72% 的勝率；按 AB-JChess 的規則，黑馬也在反捉，因此它判斷為和棋。Mistboard 對長捉判和，所以 jqe 依賴的是本站對局並不採用的規則。逐步查看棋盤，可以比較兩個引擎開啟和關閉各自規則時的搜尋結果。',
+  "Red's chariot then attacks the horse after every move it makes. By jqe's rule Red loses, and jqe gave Black 72% or more to the end; by AB-JChess's rule the horse chases back, so it scored a draw. Mistboard drew a chase then, so jqe was counting on a rule the game was not yet played under. Step through the board for both engines' rules searched on and off.":
+    '此後紅車每走一步都攻擊黑馬。按 jqe 的規則紅方判負，所以 jqe 直到終局都給黑方至少 72% 的勝率；按 AB-JChess 的規則，黑馬也在反捉，因此它判斷為和棋。Mistboard 當時對長捉判和，所以 jqe 依賴的是本站對局當時還沒有採用的規則。逐步查看棋盤，可以比較兩個引擎開啟和關閉各自規則時的搜尋結果。',
   'A smaller network, a faster search': '神經網路更小，搜尋更快',
   "The new release is rebuilt on [jqe's code](https://github.com/devinokeefe/jieqi), which Devin O'Keefe published under the MIT licence, with a network of its own. That network is 0.6 MB, where the last release's was 144 MB and jqe's is 1.5 MB. A small network is quick to run, so the new release looks at about 65 times as many positions a second as the last one, a little more than jqe.":
     "新版本基於 Devin O'Keefe 以 MIT 授權發布的 [jqe 程式碼](https://github.com/devinokeefe/jieqi)重建，使用自己的神經網路。這個網路是 0.6 MB，上一版是 144 MB，jqe 的是 1.5 MB。小網路執行得快，所以新版本每秒查看的局面數約為上一版的 65 倍，也比 jqe 略多。",

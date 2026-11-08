@@ -91,8 +91,8 @@ export const luatCoUpArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-03',
-  updatedAt: '2026-11-05',
-  updateNote: 'Đã sửa luật lặp lại thế cờ.',
+  updatedAt: '2026-11-07',
+  updateNote: 'Lặp lại thế cờ nay xét cả đuổi bắt mãi, và ván hòa vì không ăn quân đến sau 40 nước mỗi bên thay vì 60.',
   audience: 'Người mới chơi cờ úp, và người chơi cờ tướng muốn biết cờ úp khác ở chỗ nào.',
   intro: [
     {
@@ -190,7 +190,7 @@ export const luatCoUpArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Trên Mistboard, ván cờ tự động hòa sau 120 lượt đi, tức 60 nước mỗi bên, mà không có nước ăn quân nào. Khi cùng một thế cờ với cùng bên đi xuất hiện lần thứ ba, ván cờ kết thúc: bên chiếu ở mọi lượt của mình trong vòng lặp sẽ thua; nếu không bên nào như vậy, hoặc cả hai đều như vậy, ván cờ hòa. Mistboard không xét đuổi bắt, nên đuổi bắt lặp lại mà không chiếu là hòa.',
+          text: 'Trên Mistboard, ván cờ tự động hòa sau 80 lượt đi, tức 40 nước mỗi bên, mà không có nước ăn quân nào. Khi cùng một thế cờ với cùng bên đi xuất hiện lần thứ ba, ván cờ kết thúc: bên chiếu ở mọi lượt của mình trong vòng lặp sẽ thua; nếu không có đúng một bên như vậy, bên đuổi bắt ở mọi lượt của mình sẽ thua; còn lại là hòa. Đuổi bắt là nước đi tấn công mới một quân của đối phương, và lần nào cũng là cùng một quân. Tướng và tốt không bao giờ tính là đuổi bắt; tướng và tốt chưa qua sông cũng không bị tính là bị đuổi bắt. Tấn công một quân có quân bảo vệ thì không tính. Các ván bắt đầu trước lần cập nhật này vẫn theo luật cũ: chỉ chiếu mãi bị xử thua, và ván hòa vì không ăn quân đến sau 60 nước mỗi bên.',
         },
       ],
     },

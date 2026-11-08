@@ -14,8 +14,8 @@ export const jieqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-11-05',
-  updateNote: 'Added worked examples.',
+  updatedAt: '2026-11-07',
+  updateNote: 'Repetition now judges a perpetual chase too, and the no-capture draw comes after 40 moves each instead of 60.',
   audience: 'Players learning jieqi, with or without experience of xiangqi.',
   thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
   tldr: [
@@ -150,13 +150,13 @@ export const jieqiArticle: Article = {
           rows: [
             ['The player to move is in check and has no legal move.', 'Checkmate. That player loses.'],
             ['The player to move has no legal move, even without check.', 'Stalemate. That player loses.'],
-            ['120 plies pass without a capture.', 'Draw. A ply is one move by one player, so this is 60 moves by each side. Revealing a piece alone does not reset the count.'],
-            ['The same position with the same side to move occurs for the third time.', 'A player who checked on every one of their turns in the repeating cycle loses. If neither player did, or both did, it is a draw.'],
+            ['80 plies pass without a capture.', 'Draw. A ply is one move by one player, so this is 40 moves by each side. Revealing a piece alone does not reset the count.'],
+            ['The same position with the same side to move occurs for the third time.', 'A player who checked on every one of their turns in the repeating cycle loses. If no single player did, a player who chased on every one of their turns loses. Anything else is a draw.'],
           ],
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard does not judge chases, so a repeated chase without check is a draw.',
+          text: 'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.',
         },
       ],
     },
