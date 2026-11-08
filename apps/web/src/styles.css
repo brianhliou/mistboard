@@ -621,10 +621,11 @@
   z-index: 4;
   display: grid;
   place-items: center;
-  background: rgba(20, 29, 25, 0.32);
-  backdrop-filter: blur(1px);
-  -webkit-backdrop-filter: blur(1px);
-  border-radius: inherit;
+  /* A plain shade, no blur: a blurred board read as broken rather than paused.
+     The overlay's parent is square, so it takes the board's own corner radius
+     instead of inheriting none. */
+  background: rgba(20, 29, 25, 0.4);
+  border-radius: var(--board-corner-radius);
   pointer-events: none;
 }
 

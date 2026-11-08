@@ -69,7 +69,7 @@ describe('postGameActions', () => {
     expect(newOpponent.getAttribute('href')).toContain('play=computer');
   });
 
-  it('sends a PvP player to Find opponent and offers no friend invite', () => {
+  it('sends a PvP player to Find opponent, then offers the friend invite', () => {
     const box = postGameActions({
       variant: 'xiangqi',
       mode: 'pvp',
@@ -77,7 +77,7 @@ describe('postGameActions', () => {
       rematch: null,
       reviewHref: '/game/x',
     });
-    expect(labels(box)).toEqual(['New opponent', 'Review game']);
+    expect(labels(box)).toEqual(['New opponent', 'Review game', 'Challenge a friend']);
     expect((box.children[0] as HTMLAnchorElement).getAttribute('href')).toContain('play=lobby');
   });
 
