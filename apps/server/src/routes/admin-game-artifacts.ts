@@ -20,9 +20,11 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { currentAccountUser } from '../account-session.js';
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
-import { type HttpApiContext, isHttpAdminSession, requireMethod, writeJson } from './lib.js';
+import { isProductionLikeRuntime } from '../server-policy.js';
+import { type HttpApiContext, requireMethod, writeJson } from './lib.js';
 
 /** Artifact types this route will serve. Fail-closed: an unlisted type is a 400,
  *  never a silent empty list, so a typo cannot read as "nothing recorded". */
@@ -55,19 +57,20 @@ export async function tryHandle(
   if (!match) return false;
   if (!requireMethod(request, response, 'GET')) return true;
 
+  // Authenticate before validation so anonymous requests consistently get 401.
+  if (isProductionLikeRuntime()) {
+    const user = await currentAccountUser(request);
+    if (user?.accountRole !== 'admin') {
+      writeJson(response, user ? 403 : 401, { error: 'admin_required' });
+      return true;
+    }
+  }
+
   const artifactType = parsedUrl.searchParams.get('type');
   if (artifactType === null || !READABLE_ARTIFACT_TYPES.includes(artifactType)) {
     writeJson(response, 400, { error: 'invalid_artifact_type' });
     return true;
   }
-  // Admin gate AFTER the type check on purpose: a malformed request is a 400 for
-  // everyone, and the gate is what decides whether a room's existence is even
-  // observable (below).
-  if (!(await isHttpAdminSession(request))) {
-    writeJson(response, 403, { error: 'forbidden' });
-    return true;
-  }
-
   const payload = await adminGameArtifactsForApi(decodeURIComponent(match[1]!), artifactType);
   if (!payload) {
     writeJson(response, 404, { error: 'not_found' });

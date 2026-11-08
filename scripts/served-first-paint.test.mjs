@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { INDEX_PATHS, paintsBareCopy, routeShape } from './served-first-paint.mjs';
+import {
+  boardPageSamples,
+  INDEX_PATHS,
+  paintsBareCopy,
+  routeShape,
+} from './served-first-paint.mjs';
 
 const page = (app) =>
   `<html><head></head><body>${app}<script type="module" src="/assets/index.js"></script></body></html>`;
@@ -59,4 +64,23 @@ test('every locale index and community view is sampled as its own page kind', ()
       routeShape(`${prefix}/blog/skill-vs-luck`),
     );
   }
+});
+
+test('first-paint samples cover the unsitemapped board templates and reject a missing public sample', () => {
+  const samples = {
+    games: [{ kind: 'historical', id: 'hxq_public' }],
+    puzzles: [{ id: 'puzzle' }],
+    players: [{ handle: 'public-player' }],
+  };
+  assert.deepEqual(boardPageSamples(samples), [
+    '/historical-xiangqi/game/hxq_public',
+    '/puzzles/puzzle',
+    '/@/public-player',
+  ]);
+  for (const key of ['games', 'puzzles', 'players'])
+    assert.throws(() => boardPageSamples({ ...samples, [key]: [] }), /needs a public/);
+  assert.throws(
+    () => boardPageSamples({ ...samples, games: [{ kind: 'mistboard', id: 'live' }] }),
+    /needs a public/,
+  );
 });

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import type { ServerResponse } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   applyXmjMove,
   createClock,
@@ -15,6 +16,8 @@ import {
   type XmjSeat,
   xmjPendingAction,
 } from '@mistboard/game';
+import { crawlerFixtureSources } from './crawler-content-fixtures.js';
+import { CRAWLER_CONTENT_MANIFEST } from './crawler-content-manifest.js';
 import {
   adminDebugTokenFromProtocolHeader,
   airsOnDelay,
@@ -38,8 +41,13 @@ import {
   seatTokenFromProtocolHeader,
   withDelayedAir,
 } from './server-policy.js';
-import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
+import { SITEMAP_STATIC_ROUTES, serveSpaShellWithRoutePreloads } from './server-static-pages.js';
 import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import {
+  sitemapConformanceFailures,
+  sitemapContract,
+  sitemapPathIsTracked,
+} from './sitemap-content.js';
 import type { XmjEvent } from './xiangqi-mahjong-tenant.js';
 
 test('live persisted events are not public replay data', () => {
@@ -526,6 +534,9 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/metrics',
   '/readouts',
   '/forum/reports',
+  '/broadcast/xiangqi/ops',
+  '/practice/position',
+  '/play',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -609,12 +620,22 @@ test('isNoindexRoute ignores a trailing slash', () => {
 });
 
 test('admin preview noindex policy matches only admin shells and preserves public routes and assets', () => {
-  for (const route of ['/titles', '/engines', '/engine/pikafish', '/accounts', '/database']) {
+  for (const route of [
+    '/titles',
+    '/engines',
+    '/engine/pikafish',
+    '/accounts',
+    '/database',
+    '/broadcast/xiangqi/ops',
+    '/forum/reports',
+    '/practice/position',
+    '/play',
+  ]) {
     assert.equal(isClientRoute(route), true, route);
     assert.equal(isNoindexRoute(route), true, route);
     assert.equal(isNoindexRoute(`${route}/`), true, route);
   }
-  for (const route of ['/play', '/practice/position', '/verify-title', '/bots', '/games/search']) {
+  for (const route of ['/verify-title', '/bots', '/games/search']) {
     // /verify-title is an existing noindex utility, not the private /titles queue.
     assert.equal(isNoindexRoute(route), route === '/verify-title', route);
   }
@@ -625,6 +646,11 @@ test('admin preview noindex policy matches only admin shells and preserves publi
     '/accounts-extra',
     '/database-extra',
     '/titles-extra',
+    '/broadcast/xiangqi',
+    '/broadcast/xiangqi/ops-extra',
+    '/forum/reports-extra',
+    '/practice/position-extra',
+    '/play-extra',
   ]) {
     assert.equal(isNoindexRoute(route), false, route);
   }
@@ -638,6 +664,7 @@ test('admin preview noindex policy matches only admin shells and preserves publi
 test('sitemap static routes are live client routes, never parked ones', () => {
   assert.ok(SITEMAP_STATIC_ROUTES.length > 0, 'expected sitemap static routes');
   for (const route of SITEMAP_STATIC_ROUTES) {
+    assert.ok(sitemapPathIsTracked(route), `sitemap advertises a missing body: ${route}`);
     if (route === '/') continue;
     assert.equal(
       PARKED_CLIENT_ROUTES.has(route),
@@ -649,6 +676,67 @@ test('sitemap static routes are live client routes, never parked ones', () => {
       true,
       `sitemap advertises ${route}, but isClientRoute() rejects it so prod serves a 404 shell`,
     );
+  }
+  for (const path of ['/about', '/zh-hans/study']) {
+    assert.ok(sitemapPathIsTracked(path), path);
+    assert.deepEqual(sitemapConformanceFailures(path, ['body below floor']), []);
+  }
+  // Planted sitemap route: even a passing body needs an independent contract.
+  assert.deepEqual(sitemapConformanceFailures('/planted-unclassified', []), [
+    'sitemap route has no crawler manifest entry: /planted-unclassified',
+  ]);
+  assert.deepEqual(sitemapConformanceFailures('/', ['body below floor']), ['body below floor']);
+});
+
+test('every static sitemap URL passes its crawler floor or has a tracked gap without sockets', async (t) => {
+  const staticDir = resolve(import.meta.dirname, '../../web/dist');
+  const metadataFile = resolve(staticDir, 'prerender-sitemap.json');
+  if (!existsSync(metadataFile)) {
+    t.skip('host build supplies prerender-sitemap.json');
+    return;
+  }
+  const baked = JSON.parse(readFileSync(metadataFile, 'utf8')) as Array<{
+    path: string;
+    file?: string;
+  }>;
+  const { auditCrawlerRoute } = await import(
+    pathToFileURL(resolve(import.meta.dirname, '../../../scripts/crawler-floor.mjs')).href
+  );
+  const sources = crawlerFixtureSources();
+  const fetchImpl = async (url: URL) => {
+    const record = baked.find((entry) => entry.path === url.pathname && entry.file);
+    if (record?.file)
+      return {
+        status: 200,
+        text: async () => readFileSync(resolve(staticDir, record.file!), 'utf8'),
+      };
+    let html = '';
+    let status = 200;
+    const response = {
+      writeHead(code: number) {
+        status = code;
+      },
+      end(body: string) {
+        html = body;
+      },
+    } as unknown as ServerResponse;
+    await serveSpaShellWithRoutePreloads({
+      ...sources,
+      staticDir,
+      response,
+      pathname: url.pathname,
+      publicHost: url.origin,
+    });
+    return { status, text: async () => html };
+  };
+  for (const path of SITEMAP_STATIC_ROUTES) {
+    const entry = sitemapContract(path)!;
+    const result = await auditCrawlerRoute(entry, {
+      base: 'https://mistboard.test',
+      manifest: CRAWLER_CONTENT_MANIFEST,
+      fetchImpl,
+    });
+    assert.deepEqual(sitemapConformanceFailures(path, result.failures), [], path);
   }
 });
 

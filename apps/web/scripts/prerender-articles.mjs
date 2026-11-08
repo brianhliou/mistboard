@@ -23,6 +23,7 @@ import {
   prerenderAlternateProblems,
   prerenderRouteManifest,
 } from './prerender-routes.mjs';
+import { writePrerenderSitemap } from './prerender-sitemap.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
@@ -1041,6 +1042,18 @@ try {
     );
   }
   console.log(`css check: ${cssCheck.pages} baked pages link every stylesheet that styles them`);
+  const { SITEMAP_STATIC_ROUTES, sitemapContract, localeAlternates } = await server.ssrLoadModule(
+    resolve(__dirname, '../../server/src/sitemap-content.ts'),
+  );
+  const trackedGaps = SITEMAP_STATIC_ROUTES.filter((path) => sitemapContract(path)?.knownGap).map(
+    (path) => ({
+      path,
+      alternates: sitemapContract(path).hreflang.length
+        ? localeAlternates(path.replace(/^\/zh-han[st](?=\/|$)/, '') || '/')
+        : [],
+    }),
+  );
+  await writePrerenderSitemap(distDir, host, resolve(__dirname, '../../..'), trackedGaps);
 } catch (err) {
   console.error('prerender failed:', err);
   process.exitCode = 1;

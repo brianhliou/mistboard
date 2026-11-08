@@ -54,7 +54,15 @@ export type PersistenceHealthEntry = {
 
 export type CrawlerPageSources = Pick<
   Parameters<typeof serveSpaShellWithRoutePreloads>[0],
-  'playerPage' | 'broadcastPage' | 'gameMeta' | 'puzzle' | 'listPublicStudies'
+  | 'playerPage'
+  | 'broadcastPage'
+  | 'gameMeta'
+  | 'puzzle'
+  | 'listPublicStudies'
+  | 'profile'
+  | 'historicalGame'
+  | 'bot'
+  | 'dataPages'
 > & {
   getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
 };
@@ -822,9 +830,6 @@ export function robotsTxt(publicHost: string): string {
   return [
     'User-agent: *',
     'Allow: /',
-    'Disallow: /database',
-    'Disallow: /engines',
-    'Disallow: /accounts',
     'Disallow: /api/data/',
     `Sitemap: ${publicHost}/sitemap.xml`,
     '',

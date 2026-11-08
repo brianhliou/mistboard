@@ -652,12 +652,7 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/readouts' ||
-    normalized === '/titles' ||
-    normalized === '/engines' ||
-    /^\/engine\/[^/]+$/.test(normalized) ||
-    normalized === '/accounts' ||
-    normalized === '/database' ||
-    normalized === '/forum/reports' ||
+    isNoFollowRoute(normalized) ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
@@ -672,6 +667,23 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized === '/lag' ||
     normalized === '/verify-title' ||
     isSitePlayedGamePage(normalized)
+  );
+}
+
+// Decided 2026-11-07 (#963): admin and utility shells stay fetchable so
+// crawlers can see noindex; their links do not need search discovery.
+export function isNoFollowRoute(pathname: string): boolean {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  return (
+    normalized === '/titles' ||
+    normalized === '/engines' ||
+    /^\/engine\/[^/]+$/.test(normalized) ||
+    normalized === '/accounts' ||
+    normalized === '/database' ||
+    normalized === '/forum/reports' ||
+    normalized === '/broadcast/xiangqi/ops' ||
+    normalized === '/practice/position' ||
+    normalized === '/play'
   );
 }
 

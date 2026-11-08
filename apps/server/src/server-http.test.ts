@@ -96,15 +96,19 @@ test('isolated engine assets: the /engine/:id admin document stays non-isolated'
 // The /data downloads are built in the live web process on first request; a
 // crawler walking /data's links would trigger every build. The rest of /api
 // stays open because client-rendered pages load their content from it.
-test('robots.txt keeps crawlers off the data downloads and nothing else under /api', () => {
+test('robots.txt permits noindex admin recrawls and blocks only bulk data downloads', () => {
   const lines = robotsTxt('https://mistboard.com').split('\n');
   assert.ok(lines.includes('Disallow: /api/data/'));
   assert.ok(
     !lines.includes('Disallow: /api/'),
     '/api/data (the listing) and page data stay crawlable',
   );
-  for (const kept of ['Disallow: /database', 'Disallow: /engines', 'Disallow: /accounts']) {
-    assert.ok(lines.includes(kept), kept);
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('Disallow:')),
+    ['Disallow: /api/data/'],
+  );
+  for (const adminPath of ['/database', '/engines', '/accounts']) {
+    assert.ok(!robotsTxt('https://mistboard.com').includes(adminPath), adminPath);
   }
   assert.ok(lines.includes('Sitemap: https://mistboard.com/sitemap.xml'));
 });

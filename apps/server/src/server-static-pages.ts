@@ -9,9 +9,19 @@ import {
   prerenderedIndexIsStale,
   readArticleSchedule,
 } from './article-schedule.js';
+import {
+  boardLocale,
+  botBoardPage,
+  historicalBoardPage,
+  profileBoardBody,
+  puzzleBoardBody,
+  puzzleHeading,
+} from './board-pages.js';
+import { type BoardLocale, boardCopy, boardTimeClass } from './board-text-copy.js';
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
+import { type DataPageSources, dataRouteBody } from './data-page-body.js';
 import { forumExcerpt } from './forum-excerpt.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import {
@@ -29,6 +39,9 @@ import {
   publicPositionFen,
 } from './og-position.js';
 import * as persistence from './persistence.js';
+import type { BotProfilePage } from './persistence-bots.js';
+import type { HistoricalXiangqiGameInput } from './persistence-historical-xiangqi.js';
+import { variantName } from './player-email.js';
 import {
   cachedPlayers,
   livePlayerPage,
@@ -38,8 +51,21 @@ import {
 import { practiceChapterPath } from './practice-chapter-redirect.js';
 import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
 import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
-import { isNoindexRoute } from './server-policy.js';
+import { isNoFollowRoute, isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
+import {
+  localeAlternates,
+  SITEMAP_STATIC_ROUTES,
+  type SitemapEntry,
+  sitemapContract,
+  sitemapPathIsTracked,
+  sitemapXml,
+} from './sitemap-content.js';
+import {
+  archiveSitemapEntries,
+  bodyMeetsSitemapFloor,
+  serverBodyDates,
+} from './sitemap-records.js';
 import { studyHasAdminOnlyChapter } from './study-admin-only.js';
 import {
   chapterPageMeta,
@@ -49,7 +75,7 @@ import {
   studyPageMeta,
 } from './study-page-body.js';
 
-export { ARTICLE_META, canonicalArticleBase };
+export { ARTICLE_META, canonicalArticleBase, SITEMAP_STATIC_ROUTES };
 
 export type PageMeta = {
   title: string;
@@ -803,6 +829,11 @@ export async function routePreloadLinksForPath(params: {
 // filed 43 of them as duplicates without a canonical (validation failed
 // 2026-10-19). /contact has no locale-prefixed form.
 const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
+  '/stats',
+  '/data',
+  '/coach',
+  '/forum',
+  '/player/rating-stats',
   '/watch',
   '/games',
   '/contact',
@@ -874,11 +905,12 @@ async function forumRoutePage(
 
 // Like the public profile API, always read as an anonymous visitor. Account
 // play locks and stats exclusions do not hide profiles; profile visibility
-// does. Never serialize games, puzzle content or account-only fields here.
+// does. The body whitelists public game summaries, never replay state or account-only fields.
 async function profileRoutePage(
   pathname: string,
   lookupProfile: typeof persistence.getUserProfileByHandle,
-): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  locale: BoardLocale,
+): Promise<{ meta?: RoutePageMeta; body?: string; noindex: boolean } | null> {
   if (!pathname.startsWith('/@/')) return null;
   const match = /^\/@\/([^/]+)$/.exec(pathname.replace(/\/+$/, ''));
   if (!match) return { noindex: true };
@@ -906,30 +938,37 @@ async function profileRoutePage(
       .filter((rating) => rating.eloRating !== null && rating.ratedGamesPlayed > 0)
       .map(
         (rating) =>
-          `${rating.timeClass} rating ${rating.eloRating}${rating.provisional ? '?' : ''}`,
+          `${locale === 'en' ? `${rating.timeClass} rating` : `${boardTimeClass(rating.timeClass, locale)} ${boardCopy(locale, 'bots.ratings')}`} ${rating.eloRating}${rating.provisional ? '?' : ''}`,
       );
-    return [`${spec.publicName}${ratings.length ? ` (${ratings.join(', ')})` : ''}`];
+    return [
+      `${locale === 'en' ? spec.publicName : variantName(spec.id, locale)}${ratings.length ? ` (${ratings.join(', ')})` : ''}`,
+    ];
   });
   return {
     noindex: false,
     meta: {
       title: `${profile.user.displayName} (@${profile.user.handle}) · Mistboard`,
-      description: facts.length
-        ? `Plays ${facts.join(', ')} on Mistboard.`
-        : `View ${profile.user.displayName}'s public profile on Mistboard.`,
+      description:
+        locale !== 'en'
+          ? facts.join(' · ')
+          : facts.length
+            ? `Plays ${facts.join(', ')} on Mistboard.`
+            : `View ${profile.user.displayName}'s public profile on Mistboard.`,
       urlPath: `/@/${encodeURIComponent(profile.user.handle)}`,
     },
+    body: profileBoardBody(profile, facts, locale),
   };
 }
 
 // Resolve through the public API's serving set: withheld/retired puzzles never
 // get meta or a canonical. One read supplies both the preview and the full-id
 // canonical shared by short-code links. No editorial title, motifs, board,
-// source game or solution moves enter the shell; those can give away an answer.
+// source game or solution moves enter the preview head; the body gates the solution in details.
 async function puzzleRoutePage(
   pathname: string,
   lookupPuzzle: (idOrShortCode: string) => Promise<PublicPuzzle | null>,
-): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  locale: BoardLocale,
+): Promise<{ meta?: RoutePageMeta; body?: string; noindex: boolean } | null> {
   const match = PUZZLE_DEEP_LINK.exec(pathname.replace(/\/+$/, ''));
   if (!match) return null;
   let puzzle: PublicPuzzle | null;
@@ -977,15 +1016,24 @@ async function puzzleRoutePage(
   return {
     noindex: false,
     meta: {
-      title: `${variant} puzzle: ${goal} | Mistboard`,
-      description: `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`,
+      title:
+        locale === 'en'
+          ? `${variant} puzzle: ${goal} | Mistboard`
+          : `${puzzleHeading(puzzle, locale)} | Mistboard`,
+      description:
+        locale === 'en'
+          ? `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`
+          : `${boardCopy(locale, 'puzzle.toMove').replace('{color}', boardCopy(locale, puzzle.initial.status.turn === 'red' ? 'replay.red' : 'replay.black'))}。${boardCopy(locale, 'puzzle.findBestMove')}`,
       urlPath: `/puzzles/${encodeURIComponent(puzzle.id)}`,
     },
+    body: await puzzleBoardBody(puzzle, puzzleHeading(puzzle, locale), locale),
   };
 }
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
+  // /play mounts the home lobby and replaces its URL with / on the client.
+  if (normalized === '/play') return '/';
   return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
 }
 
@@ -993,13 +1041,11 @@ function queryFreeCanonicalPath(pathname: string): string | null {
  *  with the English URL as x-default (the page for a reader whose language is
  *  none of the three), as the prerendered blog and rules pages do. */
 function localeAlternateLinks(publicHost: string, basePath: string): string {
-  const links = (['en', 'zh-hans', 'zh-hant'] as const).map((slug) => {
-    const href = `${publicHost}${slug === 'en' ? '' : `/${slug}`}${basePath}`;
-    const hreflang = slug === 'en' ? 'en' : slug === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
-    return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
-  });
-  links.push(`<link rel="alternate" hreflang="x-default" href="${publicHost}${basePath}">`);
-  return links.join('');
+  return localeAlternates(basePath)
+    .map(
+      ({ lang, path }) => `<link rel="alternate" hreflang="${lang}" href="${publicHost}${path}">`,
+    )
+    .join('');
 }
 
 // Serves the SPA shell with the matched route's preload hints baked into <head>.
@@ -1044,15 +1090,19 @@ export async function serveSpaShellWithRoutePreloads(params: {
   tenantGameStore?: TenantGameCardStore;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
+  /** Existing public API reads for the data directories (socketless fixtures). */
+  dataPages?: DataPageSources;
   /** Override the player-page lookup (tests); the default reads persistence. */
-  playerPage?: (pathname: string) => Promise<PlayerPage | null>;
+  playerPage?: (pathname: string, locale?: BoardLocale) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
-  broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
+  broadcastPage?: (pathname: string, locale?: BoardLocale) => Promise<BroadcastPage | null>;
   /** Override the public puzzle lookup (tests); the default is the one
    *  /api/puzzles/:id uses, excluding unpublished/withheld puzzles. */
   puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
   /** Override the profile API's anonymous, visibility-gated read (tests). */
   profile?: typeof persistence.getUserProfileByHandle;
+  historicalGame?: (id: string) => Promise<HistoricalXiangqiGameInput | null>;
+  bot?: (id: string) => Promise<BotProfilePage | null>;
   /** Override the public forum reads (tests); previews always read anonymously. */
   forumTopic?: typeof persistence.getForumTopic;
   forumCategories?: typeof persistence.listForumCategories;
@@ -1075,20 +1125,23 @@ export async function serveSpaShellWithRoutePreloads(params: {
     params.response.end();
     return true;
   }
+  const locale = boardLocale(params.search);
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
   // the archive does not know keeps the generic meta and is kept out of the
   // index, the way an unlisted study is.
   const playerPage = await (
-    params.playerPage ?? ((pathname: string) => livePlayerPage(pathname, params.staticDir))
-  )(params.pathname).catch(() => null);
+    params.playerPage ??
+    ((pathname: string, pageLocale?: BoardLocale) =>
+      livePlayerPage(pathname, params.staticDir, pageLocale))
+  )(params.pathname, locale).catch(() => null);
   // A broadcast index, event, round or game (broadcast-pages.ts) rides the same
   // slot: before 2026-10-17 all 195 sitemap-broadcasts URLs served an empty
   // #app with no canonical, and Google folded them as duplicates.
   const player =
     playerPage ??
-    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
+    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname, locale).catch(() => null));
   // Tenant review pages distinguish missing ids from live names-only previews
   // and finished cards. Keep the existing override for callers supplying meta.
   const tenantGame =
@@ -1099,16 +1152,20 @@ export async function serveSpaShellWithRoutePreloads(params: {
     await serveNotFoundShell(params);
     return true;
   }
+  const historical = await historicalBoardPage(params.pathname, locale, params.historicalGame);
+  const bot = await botBoardPage(params.pathname, locale, params.bot);
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
-  const gameMeta = player?.meta
-    ? null
-    : tenantGame
-      ? tenantGame.meta
-      : await lookupGameMeta(params.pathname).catch(() => null);
-  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById);
+  const gameMeta =
+    player?.meta || bot?.meta
+      ? null
+      : tenantGame
+        ? tenantGame.meta
+        : await lookupGameMeta(params.pathname).catch(() => null);
+  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById, locale);
   const profile = await profileRoutePage(
     params.pathname,
     params.profile ?? persistence.getUserProfileByHandle,
+    locale,
   );
   const forum = await forumRoutePage(
     params.pathname,
@@ -1117,6 +1174,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   );
   const positionMeta =
     player?.meta ??
+    historical?.meta ??
+    bot?.meta ??
     gameMeta ??
     puzzle?.meta ??
     profile?.meta ??
@@ -1130,10 +1189,14 @@ export async function serveSpaShellWithRoutePreloads(params: {
     isNoindexRoute(params.pathname) ||
     tenantGame?.noindex === true ||
     player?.noindex === true ||
+    historical?.noindex === true ||
+    bot?.noindex === true ||
     puzzle?.noindex === true ||
     profile?.noindex === true ||
     forum?.noindex === true;
   const canonicalPath =
+    historical?.meta?.urlPath ??
+    bot?.meta?.urlPath ??
     puzzle?.meta?.urlPath ??
     profile?.meta?.urlPath ??
     forum?.meta?.urlPath ??
@@ -1156,6 +1219,14 @@ export async function serveSpaShellWithRoutePreloads(params: {
         : undefined,
     });
   }
+  const dataBody = await dataRouteBody(
+    params.pathname,
+    locale,
+    params.search,
+    params.dataPages,
+  ).catch(() => null);
+  if (locale !== 'en' && (historical || puzzle || profile || bot || dataBody))
+    html = html.replace('<html lang="en">', `<html lang="${locale}">`);
   if (spaMeta?.htmlLang) {
     html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
   }
@@ -1198,8 +1269,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
       crawlerCopyRoot(renderStudyIndexBody(studies, studyIndexPage)),
     );
   }
+  const nofollow = isNoFollowRoute(params.pathname);
   if (noindex) {
-    html = setRobotsMeta(html, 'noindex, follow');
+    html = setRobotsMeta(html, nofollow ? 'noindex, nofollow' : 'noindex, follow');
   }
   if (links) html = html.replace('</head>', `${links}</head>`);
   // A client route that exists to answer a search (/bots) also carries its text
@@ -1207,10 +1279,18 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // the root on mount, so the two never show together.
   const body =
     player?.body ??
+    historical?.body ??
+    puzzle?.body ??
+    profile?.body ??
+    bot?.body ??
+    dataBody ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
-  params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  params.response.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    ...(nofollow ? { 'x-robots-tag': 'noindex, nofollow' } : {}),
+  });
   params.response.end(html);
   return true;
 }
@@ -1472,92 +1552,7 @@ export async function servePrerenderedPage(params: {
   params.response.end(html);
 }
 
-// Static, always-on public routes advertised in the sitemap. Every entry
-// (except '/', served as the static index itself) must be accepted by the SPA
-// fallback allowlist (server-policy.ts isClientRoute) and must not be a
-// parked/prod-404 route — server-policy.test.ts holds a conformance test over
-// this list so it cannot drift from the routing policy again (it once
-// advertised /learn, which prod 404s).
-export const SITEMAP_STATIC_ROUTES: readonly string[] = [
-  '/',
-  '/zh-hans',
-  '/zh-hant',
-  '/blog',
-  '/zh-hans/blog',
-  '/zh-hant/blog',
-  '/rules',
-  '/zh-hans/rules',
-  '/zh-hant/rules',
-  '/about',
-  '/zh-hans/about',
-  '/zh-hant/about',
-  '/stats',
-  '/puzzles',
-  '/learn/xiangqi',
-  '/zh-hans/learn/xiangqi',
-  '/zh-hant/learn/xiangqi',
-  '/practice',
-  '/zh-hans/practice',
-  '/zh-hant/practice',
-  '/analysis/xiangqi',
-  '/zh-hans/analysis/xiangqi',
-  '/zh-hant/analysis/xiangqi',
-  '/editor/xiangqi',
-  '/zh-hans/editor/xiangqi',
-  '/zh-hant/editor/xiangqi',
-  '/study',
-  '/zh-hans/study',
-  '/zh-hant/study',
-  '/games',
-  '/games/search',
-  '/data',
-  '/data/about',
-  '/zh-hans/data/about',
-  '/zh-hant/data/about',
-  '/import',
-  '/feed',
-  '/videos',
-  '/zh-hans/videos',
-  '/zh-hant/videos',
-  '/bots',
-  '/zh-hans/bots',
-  '/zh-hant/bots',
-  '/streamer',
-  '/player',
-  '/player/rating-stats',
-  '/coach',
-  '/forum',
-  '/source',
-  '/zh-hans/source',
-  '/zh-hant/source',
-  '/faq',
-  '/terms',
-  '/zh-hans/terms',
-  '/zh-hant/terms',
-  '/privacy',
-  '/zh-hans/privacy',
-  '/zh-hant/privacy',
-  '/zh-hans/faq',
-  '/zh-hant/faq',
-  '/patron',
-  '/contribute',
-  '/zh-hans/contribute',
-  '/zh-hant/contribute',
-  '/creators',
-  '/zh-hans/creators',
-  '/zh-hant/creators',
-  '/washington-xiangqi',
-  '/zh-hans/washington-xiangqi',
-  '/zh-hant/washington-xiangqi',
-  '/champions',
-  '/zh-hans/champions',
-  '/zh-hant/champions',
-  '/changelog',
-  '/developers',
-  '/api-docs',
-];
-
-// The sitemap is an index of three sections rather than one list, so Search
+// The sitemap is an index of sections rather than one list, so Search
 // Console and Bing Webmaster report submitted-vs-indexed per section. Measured
 // 2026-09-25 over a week of proxy logs: 94% of Googlebot's page fetches went to
 // study chapters (98% of a single 6,362-URL sitemap), while 8 of 36 rules URLs
@@ -1573,10 +1568,15 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
 // (serveStudyPage) and only the study roots are listed. The per-study chapter
 // selection that section used is in git history if a chapter set earns its way
 // back.
-export const SITEMAP_SECTIONS = ['pages', 'studies', 'players', 'broadcasts'] as const;
+export const SITEMAP_SECTIONS = [
+  'pages',
+  'studies',
+  'players',
+  'broadcasts',
+  'historical',
+  'puzzles',
+] as const;
 export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
-
-type SitemapEntry = { path: string; lastmod?: string };
 
 export function sitemapSectionFromPath(pathname: string): SitemapSection | null {
   const match = /^\/sitemap-([a-z]+)\.xml$/.exec(pathname);
@@ -1591,22 +1591,6 @@ export function serveSitemapIndex(params: { response: ServerResponse; publicHost
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
   params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
   params.response.end(xml);
-}
-
-// A prerendered article's last change, from the JSON-LD the prerender bakes in
-// (dateModified, else datePublished). Never the file's mtime: every deploy
-// rewrites dist, and a lastmod that moves on every deploy teaches a crawler to
-// ignore it. dist is immutable for the life of the process, hence the cache.
-const articleLastmodCache = new Map<string, string | null>();
-
-async function articleLastmod(file: string): Promise<string | undefined> {
-  if (!articleLastmodCache.has(file)) {
-    const html = await fs.readFile(file, 'utf-8').catch(() => '');
-    const modified = /"dateModified":"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
-    const published = /"datePublished":"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
-    articleLastmodCache.set(file, modified ?? published ?? null);
-  }
-  return articleLastmodCache.get(file) ?? undefined;
 }
 
 const isoDate = (date: Date): string => date.toISOString().slice(0, 10);
@@ -1629,15 +1613,23 @@ async function listEveryPublicStudy(): Promise<persistence.PublicStudySummary[]>
 // already renders a localized name, description and body at the prefixed
 // path AND emits hreflang naming all three, so listing only the English URL
 // told a crawler the alternates existed and then never pointed at them.
-const everyLocale = (path: string): string[] => [path, `/zh-hans${path}`, `/zh-hant${path}`];
-
 async function studySitemapEntries(): Promise<SitemapEntry[]> {
   const entries: SitemapEntry[] = [];
   for (const summary of await listEveryPublicStudy()) {
-    const lastmod = isoDate(summary.updatedAt);
-    for (const path of everyLocale(`/study/${encodeURIComponent(summary.id)}`)) {
-      entries.push({ path, lastmod });
+    const study = await persistence.getStudyById(summary.id);
+    if (study?.visibility !== 'public' || studyHasAdminOnlyChapter(study)) continue;
+    const basePath = `/study/${encodeURIComponent(study.id)}`;
+    const alternates = localeAlternates(basePath);
+    const group: SitemapEntry[] = [];
+    for (const [slug, locale] of Object.entries(STUDY_LOCALE_BY_SLUG)) {
+      const localePath = slug === 'en' ? '' : `/${slug}`;
+      const path = `${localePath}${basePath}`;
+      const body = renderStudyBody({ study, locale, localePath });
+      if (bodyMeetsSitemapFloor(path, body))
+        group.push({ path, lastmod: isoDate(study.updatedAt), alternates });
     }
+    // A page's head advertises the complete group; every member must have a body.
+    if (group.length === 3) entries.push(...group);
   }
   return entries;
 }
@@ -1660,63 +1652,82 @@ export async function serveSitemap(params: {
   } else {
     const loaders: Record<Exclude<SitemapSection, 'pages'>, () => Promise<SitemapEntry[]>> = {
       studies: studySitemapEntries,
-      players: playerSectionEntries,
+      players: () => playerSectionEntries(params.staticDir),
       broadcasts: broadcastSectionEntries,
+      historical: () => archiveSitemapEntries('historical', undefined, params.staticDir),
+      puzzles: () => archiveSitemapEntries('puzzles', undefined, params.staticDir),
     };
     entries = await loaders[params.section]().catch(() => [] as SitemapEntry[]);
   }
-  const body = entries
-    .map(({ path, lastmod }) => {
-      const date = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
-      return `  <url><loc>${params.publicHost}${path}</loc>${date}</url>`;
-    })
-    .join('\n');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+  const xml = sitemapXml(
+    entries.filter((entry) => sitemapPathIsTracked(entry.path)),
+    params.publicHost,
+  );
   params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
   params.response.end(xml);
 }
 
 // Absent persistence (in-memory dev) there is no archive and both are empty.
-async function playerSectionEntries(): Promise<SitemapEntry[]> {
+async function playerSectionEntries(staticDir: string): Promise<SitemapEntry[]> {
   if (!persistence.isInitialized()) return [];
-  return playerSitemapEntries(await cachedPlayers());
+  const entries: SitemapEntry[] = [];
+  for (const entry of playerSitemapEntries(await cachedPlayers())) {
+    if (!sitemapPathIsTracked(entry.path)) continue;
+    const page = await livePlayerPage(entry.path, staticDir);
+    if (page?.body && !page.noindex && bodyMeetsSitemapFloor(entry.path, page.body))
+      entries.push(entry);
+  }
+  return entries;
 }
 
 async function broadcastSectionEntries(): Promise<SitemapEntry[]> {
   if (!persistence.isInitialized()) return [];
-  return broadcastSitemapEntries(await listBroadcastRoundDates());
-}
-
-async function pageSitemapEntries(staticDir: string): Promise<SitemapEntry[]> {
-  // Each article is listed once per pre-rendered language variant (dist/blog,
-  // dist/zh-hans/blog, dist/zh-hant/blog), so the published+translated set
-  // stays single-sourced in the prerender output.
-  const readSlugs = (dir: string): Promise<string[]> =>
-    fs
-      .readdir(resolve(staticDir, dir))
-      .then((files) =>
-        files
-          .filter((f) => f.endsWith('.html'))
-          .map((f) => f.slice(0, -'.html'.length))
-          .filter(articleIsIndexable),
-      )
-      .catch(() => [] as string[]);
-  const langDirs: Array<[string, string]> = [
-    ['blog', '/blog'],
-    ['zh-hans/blog', '/zh-hans/blog'],
-    ['zh-hant/blog', '/zh-hant/blog'],
-    ['rules', '/rules'],
-    ['zh-hans/rules', '/zh-hans/rules'],
-    ['zh-hant/rules', '/zh-hant/rules'],
-  ];
-  const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.map((path) => ({ path }));
-  for (const [dir, urlBase] of langDirs) {
-    for (const slug of await readSlugs(dir)) {
-      const lastmod = await articleLastmod(resolve(staticDir, dir, `${slug}.html`));
-      entries.push({ path: `${urlBase}/${encodeURIComponent(slug)}`, lastmod });
-    }
+  const entries: SitemapEntry[] = [];
+  for (const entry of broadcastSitemapEntries(await listBroadcastRoundDates())) {
+    if (!sitemapPathIsTracked(entry.path)) continue;
+    const page = await liveBroadcastPage(entry.path);
+    if (page?.body && !page.noindex && bodyMeetsSitemapFloor(entry.path, page.body))
+      entries.push(entry);
   }
   return entries;
+}
+
+export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntry[]> {
+  const baked = await fs
+    .readFile(resolve(staticDir, 'prerender-sitemap.json'), 'utf8')
+    .then((json) => JSON.parse(json) as Array<SitemapEntry & { contentChars?: number }>)
+    .catch(() => []);
+  const bakedPaths = new Set(baked.map((record) => record.path));
+  const dates = await serverBodyDates().catch(() => new Map<string, string>());
+  const staleIndex = prerenderedIndexIsStale(await readArticleSchedule(staticDir));
+  const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.flatMap((path) => {
+    const record = baked.find((entry) => entry.path === path);
+    const contract = sitemapContract(path)!;
+    if (
+      !contract.knownGap &&
+      record?.contentChars !== undefined &&
+      record.contentChars <
+        Math.max(150, contract.minChars, Math.floor(contract.baselineChars * 0.6))
+    )
+      return [];
+    const lastmod = dates.get(path) ?? record?.lastmod;
+    return lastmod ? [{ path, lastmod, alternates: record?.alternates }] : [];
+  });
+  for (const record of baked) {
+    const article = /^\/(?:zh-han[st]\/)?(?:blog|rules)\/([^/]+)$/.exec(record.path);
+    if (article && articleIsIndexable(decodeURIComponent(article[1]!))) entries.push(record);
+  }
+  return entries.filter(
+    (entry) =>
+      !!entry.lastmod &&
+      !(staleIndex && /^\/(?:zh-han[st]\/)?(?:blog|feed)(?:\/\d{4}-\d{2})?$/.test(entry.path)) &&
+      sitemapPathIsTracked(entry.path) &&
+      (entry.alternates ?? []).every(
+        (alternate) =>
+          sitemapPathIsTracked(alternate.path) &&
+          (bakedPaths.has(alternate.path) || !!sitemapContract(alternate.path)?.knownGap),
+      ),
+  );
 }
 
 export async function serveArticlePage(params: {
