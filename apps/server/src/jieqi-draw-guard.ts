@@ -3,13 +3,14 @@
  * walking into a draw (or a loss) that only the rules impose.
  *
  * The engines search under Pikafish's xiangqi repetition rules, which the
- * repetition window (server-jieqi-engine.ts) switches on: there a perpetual
- * CHASE loses, so a bot facing a repeating chase scores the repetition as a win
- * for itself and steps back into it. Our rules (variants-jieqi.ts,
- * jieqiPerpetualCheckLoser through the tenant) adjudicate only perpetual CHECK;
- * any other threefold is a draw, as is the 120-ply no-capture clock. On
- * 2026-10-06 and 10-07 AB-JChess drew four games it scored as mate in 1 or
- * +300 this way, each one completed by the human's reply.
+ * repetition window (server-jieqi-engine.ts) switches on. Games stamped
+ * jqe-v1 (variants-jieqi.ts) also lose a sole perpetual chase and draw at 80
+ * capture-free plies, close to the engines' view. Unstamped games adjudicate
+ * only perpetual CHECK, so there a bot facing a repeating chase scores the
+ * repetition as a win and steps back into a draw; any other threefold is a
+ * draw, as is the 120-ply no-capture clock. On 2026-10-06 and 10-07 AB-JChess
+ * drew four games it scored as mate in 1 or +300 this way, each one completed
+ * by the human's reply.
  *
  * So before a bot's move is played, the guard asks the server's own rules
  * (jieqiTenant.rules.applyMove) whether the move, or any reply to it, ends the
@@ -17,8 +18,7 @@
  * rule LOSS, or a DRAW while the bot's own score says it is winning, the engine
  * searches again with `searchmoves` limited to the moves that do neither, and
  * the guard plays its answer unless that answer is clearly worse than the draw.
- * The alternative to all this is a chase rule in the game rules, a rules change
- * this guard deliberately does not make.
+ * The guard reads the stamp, so each game is guarded under its own rule.
  *
  * Hidden information: the guard runs on the true state, but reads only what the
  * bot could know. A face-down piece never leaves its home square without
