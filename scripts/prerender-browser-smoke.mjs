@@ -18,8 +18,27 @@ try {
   const targets = [['after', base]];
   if (process.argv.includes('--before')) targets.unshift(['before', arg('--before')]);
   for (const [label, origin] of targets) {
-    for (const path of ['/about', '/practice']) {
+    for (const path of [
+      '/about',
+      '/practice',
+      '/zh-hans/about',
+      '/zh-hant/faq',
+      '/zh-hans/learn/xiangqi',
+      '/zh-hant/learn/xiangqi',
+    ]) {
       const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+      const locale = path.startsWith('/zh-hans/')
+        ? 'zh-Hans'
+        : path.startsWith('/zh-hant/')
+          ? 'zh-Hant'
+          : 'en';
+      // Locale static URLs are new. Compare their old screen at the bare path
+      // with a stored Chinese preference; the new URL must override English.
+      const beforePath = path.replace(/^\/zh-han[st](?=\/)/, '');
+      await context.addInitScript(
+        (stored) => localStorage.setItem('mistboard.locale', stored),
+        label === 'before' ? locale : 'en',
+      );
       const page = await context.newPage();
       const cdp = await context.newCDPSession(page);
       await cdp.send('Network.enable');
@@ -30,17 +49,21 @@ try {
         uploadThroughput: 750e3 / 8,
       });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-      const response = await page.goto(new URL(path, origin).href, {
-        waitUntil: 'domcontentloaded',
-      });
+      const response = await page.goto(
+        new URL(label === 'before' ? beforePath : path, origin).href,
+        {
+          waitUntil: 'domcontentloaded',
+        },
+      );
       assert.equal(response.status(), 200);
       if (label === 'after') assert.match(await response.text(), /class="crawler-copy"/);
       await page.waitForFunction(
         () => document.querySelector('#app h1') && !document.querySelector('#app .crawler-copy'),
       );
       assert.ok(await page.locator('#app h1').textContent());
+      assert.equal(await page.locator('html').getAttribute('lang'), locale);
       await page.screenshot({
-        path: join(output, `${label}-${path.slice(1)}.png`),
+        path: join(output, `${label}-${path.slice(1).replaceAll('/', '-')}.png`),
         fullPage: true,
       });
       // The same served HTML remains protected while all scripts are blocked.

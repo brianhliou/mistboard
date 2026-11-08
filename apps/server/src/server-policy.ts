@@ -408,6 +408,8 @@ export const CLIENT_ROUTE_PATTERNS: readonly ClientRoutePattern[] = [
   exact('/zh-hans'),
   exact('/zh-hant'),
   exact('/about'),
+  exact('/zh-hans/about'),
+  exact('/zh-hant/about'),
   // The legacy /learn hub is intentionally NOT here: it is gated off in the
   // web build (learnEnabled), so a prod direct hit falls through to the
   // branded 404 shell instead of booting a dead route. /learn/xiangqi (the
@@ -431,13 +433,25 @@ export const CLIENT_ROUTE_PATTERNS: readonly ClientRoutePattern[] = [
   exact('/streamer'),
   exact('/puzzles'),
   exact('/source'),
+  exact('/zh-hans/source'),
+  exact('/zh-hant/source'),
   exact('/contact'),
   exact('/patron'),
   exact('/faq'),
+  exact('/zh-hans/faq'),
+  exact('/zh-hant/faq'),
   exact('/terms'),
+  exact('/zh-hans/terms'),
+  exact('/zh-hant/terms'),
   exact('/privacy'),
+  exact('/zh-hans/privacy'),
+  exact('/zh-hant/privacy'),
   exact('/contribute'),
+  exact('/zh-hans/contribute'),
+  exact('/zh-hant/contribute'),
   exact('/creators'),
+  exact('/zh-hans/creators'),
+  exact('/zh-hant/creators'),
   exact('/champions'),
   exact('/zh-hans/champions'),
   exact('/zh-hant/champions'),
@@ -491,6 +505,8 @@ export const CLIENT_ROUTE_PATTERNS: readonly ClientRoutePattern[] = [
   // Monthly game downloads (apps/web/src/data-page.ts; the files are /api/data).
   exact('/data'),
   exact('/data/about'),
+  exact('/zh-hans/data/about'),
+  exact('/zh-hant/data/about'),
   // Import: paste a game, land on the analysis board. Mints nothing, so it
   // needs no server route of its own beyond being served the SPA shell.
   exact('/import'),

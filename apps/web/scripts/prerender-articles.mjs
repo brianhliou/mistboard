@@ -17,7 +17,12 @@ import { Window } from 'happy-dom';
 import { createServer } from 'vite';
 import { crawlerCopyProblems } from './prerender-copy-check.mjs';
 import { prerenderedCssMisses } from './prerender-css-coverage.mjs';
-import { expandPrerenderRoutes, prerenderRouteManifest } from './prerender-routes.mjs';
+import {
+  expandPrerenderRoutes,
+  prerenderAlternateLinks,
+  prerenderAlternateProblems,
+  prerenderRouteManifest,
+} from './prerender-routes.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
@@ -958,11 +963,11 @@ try {
         ? [row.locale, buildOpenApiDocument(host)]
         : row.variant
           ? [row.locale, row.variant]
-          : row.existing && row.route !== '/patron' && !row.headExport
+          : row.existing && row.locales.length === 1 && row.route !== '/patron' && !row.headExport
             ? []
             : [row.locale]);
     const inner = await module[row.export](...args);
-    if (!row.existing) {
+    if (!row.existing || row.route.endsWith('/learn/xiangqi')) {
       const problems = crawlerCopyProblems(inner);
       if (problems.length) throw new Error(`${row.route}: ${problems.join('; ')}`);
     }
@@ -991,23 +996,7 @@ try {
     for (const entry of [row.module, ...(row.assets ?? [])]) {
       assets += routeAssetLinks(manifest, entry, shell + assets);
     }
-    // Preserve existing course alternates; the locale child owns their shells.
-    const alternates =
-      row.route === '/learn/xiangqi'
-        ? ['en', 'zh-Hans', 'zh-Hant']
-            .map(
-              (locale) =>
-                `<link rel="alternate" hreflang="${locale}" href="${host}${locale === 'en' ? '' : `/${locale.toLowerCase()}`}/learn/xiangqi">`,
-            )
-            .join('')
-        : row.locales.length > 1
-          ? row.locales
-              .map(
-                (locale) =>
-                  `<link rel="alternate" hreflang="${locale}" href="${host}${locale === 'en' ? '' : `/${locale.toLowerCase()}`}${row.route.replace(/^\/zh-han[st]/, '')}">`,
-              )
-              .join('')
-          : '';
+    const alternates = prerenderAlternateLinks(row, host);
     html = html.replace(
       '</head>',
       `${head.headLinks ?? `<link rel="canonical" href="${head.url}">${alternates}`}${assets}${localePreloadLinks[row.locale] ?? ''}</head>`,
@@ -1024,6 +1013,13 @@ try {
     `${JSON.stringify(prerenderRouteManifest(rows, routeMappings), null, 2)}\n`,
   );
   win.happyDOM.setURL(host);
+
+  const alternateProblems = await prerenderAlternateProblems(distDir, host);
+  if (alternateProblems.length) {
+    throw new Error(
+      `prerendered pages advertise missing files:\n  ${alternateProblems.join('\n  ')}`,
+    );
+  }
 
   // Every baked page must link the stylesheets that style its markup, or it
   // paints unstyled until a lazy chunk brings them (the /rules flash, 10-16).

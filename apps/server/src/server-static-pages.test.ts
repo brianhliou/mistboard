@@ -40,6 +40,44 @@ import {
 } from './server-static-pages.js';
 import type { TenantManagedRoom } from './variant-tenant/registry.js';
 
+test('locale static routes are admitted, advertised and have locale shell metadata', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-locales-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf8');
+  for (const path of [
+    '/about',
+    '/faq',
+    '/terms',
+    '/privacy',
+    '/source',
+    '/contribute',
+    '/creators',
+    '/data/about',
+  ]) {
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant']) {
+      const prefix = locale === 'en' ? '' : `/${locale.toLowerCase()}`;
+      const pathname = `${prefix}${path}`;
+      assert.ok(isClientRoute(pathname), pathname);
+      assert.ok(SITEMAP_STATIC_ROUTES.includes(pathname), pathname);
+      assert.equal(SPA_ROUTE_META[pathname]?.localeGroup, path);
+      const response = captureResponse();
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        publicHost: 'https://mistboard.test',
+      });
+      assert.match(response.body, new RegExp(`<html lang="${locale}">`));
+      for (const lang of ['en', 'zh-Hans', 'zh-Hant', 'x-default'])
+        assert.ok(response.body.includes(`hreflang="${lang}"`));
+      assert.ok(
+        response.body.includes(`<link rel="canonical" href="https://mistboard.test${pathname}">`),
+      );
+    }
+  }
+  assert.equal(isClientRoute('/zh-hans/about/unrelated'), false);
+  assert.equal(isClientRoute('/vi/about'), false);
+});
+
 type ResponseCapture = {
   body: string;
   headers: Record<string, string>;

@@ -14,6 +14,7 @@ import { renderForumEtiquetteShellForPrerender } from './forum.js';
 import { renderGamesSearchShellForPrerender } from './historical-xiangqi-search.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from './i18n/locale.js';
+import { renderLearnXiangqiShellForPrerender } from './learn-xiangqi/learn-xiangqi-page.js';
 import {
   mountAbout,
   renderAboutShellForPrerender,
@@ -51,6 +52,7 @@ afterEach(() => {
 });
 
 const renderers = [
+  [renderDevelopersShellForPrerender, 'developers.heading', '/developers'],
   [renderAboutShellForPrerender, 'about.lede', '/about'],
   [renderSourceShellForPrerender, 'source.intro', '/source'],
   [renderFaqShellForPrerender, 'faq.playWebQuestion', '/faq'],
@@ -225,3 +227,57 @@ it.each(SUPPORTED_LOCALES)('tool copy keeps honest manifest gaps in %s', async (
       .toBe(!entry.knownGap || entry.knownGap.includes('alternates'));
   }
 });
+
+const localizedStaticPaths = [
+  '/about',
+  '/faq',
+  '/terms',
+  '/privacy',
+  '/source',
+  '/contribute',
+  '/creators',
+  '/data/about',
+];
+
+it.each(SUPPORTED_LOCALES)(
+  'locale static pages and course preserve their existing copy in %s',
+  async (locale) => {
+    await ensureLocaleCatalog(locale);
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'en');
+    const prefix = locale === 'en' ? '' : `/${locale.toLowerCase()}`;
+    for (const [render, , path] of renderers) {
+      if (!localizedStaticPaths.includes(path)) continue;
+      const html = await render(locale);
+      const text = contentText(html);
+      const entry = CRAWLER_CONTENT_MANIFEST.find((row) => row.path === `${prefix}${path}`);
+      expect(entry, `${prefix}${path}`).toBeDefined();
+      if (entry) {
+        expect(text, entry.path).toContain(entry.phrase);
+        expect(text.length, entry.path).toBeGreaterThanOrEqual(entry.minChars);
+      }
+      expect(crawlerCopyProblems(html)).toEqual([]);
+    }
+    const html = await renderLearnXiangqiShellForPrerender(locale);
+    const entry = CRAWLER_CONTENT_MANIFEST.find((row) => row.path === `${prefix}/learn/xiangqi`)!;
+    expect(contentText(html)).toContain(entry.phrase);
+    expect(contentText(html).length).toBeGreaterThanOrEqual(entry.minChars);
+    expect(crawlerCopyProblems(html)).toEqual([]);
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en');
+  },
+);
+
+it.each(['zh-Hans', 'zh-Hant'] as const)(
+  'about follows the %s URL over stored English and replaces its crawler copy',
+  async (locale) => {
+    await ensureLocaleCatalog(locale);
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'en');
+    window.history.replaceState(null, '', `/${locale.toLowerCase()}/about`);
+    const root = document.createElement('div');
+    root.innerHTML = await renderAboutShellForPrerender(locale);
+    const text = contentText(root.outerHTML);
+    mountAbout(root);
+    expect(root.querySelector('.crawler-copy')).toBeNull();
+    expect(contentText(root.outerHTML)).toBe(text);
+    expect(root.textContent).toContain(t('about.lede', {}, locale));
+  },
+);

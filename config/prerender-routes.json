@@ -4,13 +4,21 @@
     "module": "src/pages-static.ts",
     "export": "renderAboutShellForPrerender",
     "file": "about.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "about.heading",
     "descriptionKey": "about.lede",
     "metaByLocale": {
       "en": {
         "title": "About Mistboard | Chinese Chess for Every Player",
         "description": "Bringing people together across cultures through Chinese chess and the world's classic strategy games. Free, open-source play, study and broadcasts."
+      },
+      "zh-Hans": {
+        "title": "关于 Mistboard | Mistboard",
+        "description": "Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。"
+      },
+      "zh-Hant": {
+        "title": "關於 Mistboard | Mistboard",
+        "description": "Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。"
       }
     }
   },
@@ -19,13 +27,21 @@
     "module": "src/pages-static.ts",
     "export": "renderSourceShellForPrerender",
     "file": "source.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "source.heading",
     "descriptionKey": "source.intro",
     "metaByLocale": {
       "en": {
         "title": "Open Source Code | Mistboard",
         "description": "Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license."
+      },
+      "zh-Hans": {
+        "title": "源代码 | Mistboard",
+        "description": "Mistboard 是一个独立的开源策略游戏项目。源代码以 AGPL-3.0-or-later 发布。托管服务与 lichess、chess.com 或任何其他棋类平台无关联。"
+      },
+      "zh-Hant": {
+        "title": "原始碼 | Mistboard",
+        "description": "Mistboard 是一個獨立的開源策略遊戲專案。原始碼以 AGPL-3.0-or-later 發布。託管服務與 lichess、chess.com 或任何其他棋類平台無關。"
       }
     }
   },
@@ -34,13 +50,21 @@
     "module": "src/pages-static.ts",
     "export": "renderFaqShellForPrerender",
     "file": "faq.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "faq.heading",
     "descriptionKey": "faq.playWebQuestion",
     "metaByLocale": {
       "en": {
         "title": "Frequently Asked Questions | Mistboard",
         "description": "Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from."
+      },
+      "zh-Hans": {
+        "title": "常见问题 | Mistboard",
+        "description": "有网页版吗？需要下载吗？"
+      },
+      "zh-Hant": {
+        "title": "常見問題 | Mistboard",
+        "description": "有網頁版嗎？需要下載嗎？"
       }
     }
   },
@@ -49,13 +73,21 @@
     "module": "src/pages-static.ts",
     "export": "renderTermsShellForPrerender",
     "file": "terms.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "terms.heading",
     "descriptionKey": "terms.intro",
     "metaByLocale": {
       "en": {
         "title": "Terms of Use: Play, Ratings and Fair Play | Mistboard",
         "description": "The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds."
+      },
+      "zh-Hans": {
+        "title": "使用条款 | Mistboard",
+        "description": "这些是使用 mistboard.com 托管网站的规则。本页始终是当前版本。"
+      },
+      "zh-Hant": {
+        "title": "使用條款 | Mistboard",
+        "description": "這些是使用 mistboard.com 託管網站的規則。本頁始終是目前版本。"
       }
     }
   },
@@ -64,13 +96,21 @@
     "module": "src/pages-static.ts",
     "export": "renderPrivacyShellForPrerender",
     "file": "privacy.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "privacy.heading",
     "descriptionKey": "privacy.intro",
     "metaByLocale": {
       "en": {
         "title": "Privacy: What Mistboard Collects | Mistboard",
         "description": "What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold."
+      },
+      "zh-Hans": {
+        "title": "隐私 | Mistboard",
+        "description": "本页说明我们在 mistboard.com 托管网站上收集什么。本页始终是当前版本。"
+      },
+      "zh-Hant": {
+        "title": "隱私 | Mistboard",
+        "description": "本頁說明我們在 mistboard.com 託管網站上收集什麼。本頁始終是目前版本。"
       }
     }
   },
@@ -94,13 +134,21 @@
     "module": "src/contribute-page.ts",
     "export": "renderContributeShellForPrerender",
     "file": "contribute.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "contribute.heading",
     "descriptionKey": "contribute.intro",
     "metaByLocale": {
       "en": {
         "title": "How to Contribute | Mistboard",
         "description": "Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts."
+      },
+      "zh-Hans": {
+        "title": "参与贡献 | Mistboard",
+        "description": "Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始。"
+      },
+      "zh-Hant": {
+        "title": "參與貢獻 | Mistboard",
+        "description": "Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始。"
       }
     }
   },
@@ -109,13 +157,21 @@
     "module": "src/creators-page.ts",
     "export": "renderCreatorsShellForPrerender",
     "file": "creators.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "creators.heading",
     "descriptionKey": "creators.intro",
     "metaByLocale": {
       "en": {
         "title": "Work With Us: Creators and Players | Mistboard",
         "description": "Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch."
+      },
+      "zh-Hans": {
+        "title": "与我们合作 | Mistboard",
+        "description": "Mistboard 将对弈和研究与赛事直播、原创游戏和引擎挑战赛连接起来。我们跨越语言，在线上和线下与棋手、教师、创作者及主办方合作。网站免费、开源、无广告。"
+      },
+      "zh-Hant": {
+        "title": "與我們合作 | Mistboard",
+        "description": "Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。"
       }
     }
   },
@@ -170,13 +226,21 @@
     "module": "src/data-page.ts",
     "export": "renderDataAboutShellForPrerender",
     "file": "data-about.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "titleKey": "data.aboutHeading",
     "descriptionKey": "data.aboutSubtitle",
     "metaByLocale": {
       "en": {
         "title": "About the Game Data | Mistboard",
         "description": "What the Mistboard monthly game files hold: the JSONL and PGN formats field by field, the CC BY 4.0 license, which games are included, and how fog and face-down pieces appear."
+      },
+      "zh-Hans": {
+        "title": "关于数据 | Mistboard",
+        "description": "月度文件包含什么、如何署名，以及哪些不包含在内。"
+      },
+      "zh-Hant": {
+        "title": "關於資料 | Mistboard",
+        "description": "每月檔案包含什麼、如何署名，以及哪些不包含在內。"
       }
     }
   },
@@ -371,11 +435,21 @@
     "module": "src/learn-xiangqi/learn-xiangqi-page.ts",
     "export": "renderLearnXiangqiShellForPrerender",
     "file": "learn-xiangqi.html",
-    "locales": ["en"],
+    "locales": ["en", "zh-Hans", "zh-Hant"],
     "classes": "",
     "title": "Learn Chinese Chess (Xiangqi) | Mistboard",
     "description": "A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.",
-    "existing": true
+    "existing": true,
+    "metaByLocale": {
+      "zh-Hans": {
+        "title": "学下象棋：免费互动入门课程 | Mistboard",
+        "description": "免费的互动象棋入门课程，边玩边学：从七种棋子的走法和摆棋开始，再学吃子、保护、将军、应将、将死、困毙和长将等规则与基本战术。"
+      },
+      "zh-Hant": {
+        "title": "學下象棋：免費互動入門課程 | Mistboard",
+        "description": "免費的互動象棋入門課程，邊玩邊學：從七種棋子的走法和擺棋開始，再學吃子、保護、將軍、應將、將死、困斃和長將等規則與基本戰術。"
+      }
+    }
   },
   {
     "route": "/puzzles",

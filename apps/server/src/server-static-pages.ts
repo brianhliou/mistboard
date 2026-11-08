@@ -150,12 +150,38 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/bots',
   },
+  '/zh-hans/about': {
+    title: '关于 Mistboard | Mistboard',
+    description: 'Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/about',
+  },
+  '/zh-hant/about': {
+    title: '關於 Mistboard | Mistboard',
+    description: 'Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/about',
+  },
   '/about': {
+    localeGroup: '/about',
     title: 'About Mistboard | Chinese Chess for Every Player',
     description:
       "Bringing people together across cultures through Chinese chess and the world's classic strategy games. Free, open-source play, study and broadcasts.",
   },
+  '/zh-hans/faq': {
+    title: '常见问题 | Mistboard',
+    description: '有网页版吗？需要下载吗？',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/faq',
+  },
+  '/zh-hant/faq': {
+    title: '常見問題 | Mistboard',
+    description: '有網頁版嗎？需要下載嗎？',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/faq',
+  },
   '/faq': {
+    localeGroup: '/faq',
     title: 'Frequently Asked Questions | Mistboard',
     description:
       'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
@@ -205,12 +231,42 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.',
   },
+  '/zh-hans/source': {
+    title: '源代码 | Mistboard',
+    description:
+      'Mistboard 是一个独立的开源策略游戏项目。源代码以 AGPL-3.0-or-later 发布。托管服务与 lichess、chess.com 或任何其他棋类平台无关联。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/source',
+  },
+  '/zh-hant/source': {
+    title: '原始碼 | Mistboard',
+    description:
+      'Mistboard 是一個獨立的開源策略遊戲專案。原始碼以 AGPL-3.0-or-later 發布。託管服務與 lichess、chess.com 或任何其他棋類平台無關。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/source',
+  },
   '/source': {
+    localeGroup: '/source',
     title: 'Open Source Code | Mistboard',
     description:
       'Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license.',
   },
+  '/zh-hans/contribute': {
+    title: '参与贡献 | Mistboard',
+    description:
+      'Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/contribute',
+  },
+  '/zh-hant/contribute': {
+    title: '參與貢獻 | Mistboard',
+    description:
+      'Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/contribute',
+  },
   '/contribute': {
+    localeGroup: '/contribute',
     title: 'How to Contribute | Mistboard',
     description:
       'Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts.',
@@ -238,7 +294,22 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/washington-xiangqi',
   },
+  '/zh-hans/creators': {
+    title: '与我们合作 | Mistboard',
+    description:
+      'Mistboard 将对弈和研究与赛事直播、原创游戏和引擎挑战赛连接起来。我们跨越语言，在线上和线下与棋手、教师、创作者及主办方合作。网站免费、开源、无广告。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/creators',
+  },
+  '/zh-hant/creators': {
+    title: '與我們合作 | Mistboard',
+    description:
+      'Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/creators',
+  },
   '/creators': {
+    localeGroup: '/creators',
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
       'Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch.',
@@ -399,7 +470,20 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Download every finished game played on Mistboard, one file per variant per month, as JSON lines and PGN under CC BY 4.0: xiangqi, Fog Chess, Jungle and more, plus engine match collections.',
   },
+  '/zh-hans/data/about': {
+    title: '关于数据 | Mistboard',
+    description: '月度文件包含什么、如何署名，以及哪些不包含在内。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/data/about',
+  },
+  '/zh-hant/data/about': {
+    title: '關於資料 | Mistboard',
+    description: '每月檔案包含什麼、如何署名，以及哪些不包含在內。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/data/about',
+  },
   '/data/about': {
+    localeGroup: '/data/about',
     title: 'About the Game Data | Mistboard',
     description:
       'What the Mistboard monthly game files hold: the JSONL and PGN formats field by field, the CC BY 4.0 license, which games are included, and how fog and face-down pieces appear.',
@@ -416,13 +500,39 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   },
   // Linked from every page's footer or nav, and each served the homepage title
   // and description until 2026-10-24, so Bing read them as duplicates of '/'.
-  // English only: the client routes have no locale-prefixed URL.
+  // Terms and privacy share locale groups; utility pages keep their bare canonical.
+  '/zh-hans/terms': {
+    title: '使用条款 | Mistboard',
+    description: '这些是使用 mistboard.com 托管网站的规则。本页始终是当前版本。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/terms',
+  },
+  '/zh-hant/terms': {
+    title: '使用條款 | Mistboard',
+    description: '這些是使用 mistboard.com 託管網站的規則。本頁始終是目前版本。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/terms',
+  },
   '/terms': {
+    localeGroup: '/terms',
     title: 'Terms of Use: Play, Ratings and Fair Play | Mistboard',
     description:
       'The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds.',
   },
+  '/zh-hans/privacy': {
+    title: '隐私 | Mistboard',
+    description: '本页说明我们在 mistboard.com 托管网站上收集什么。本页始终是当前版本。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/privacy',
+  },
+  '/zh-hant/privacy': {
+    title: '隱私 | Mistboard',
+    description: '本頁說明我們在 mistboard.com 託管網站上收集什麼。本頁始終是目前版本。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/privacy',
+  },
   '/privacy': {
+    localeGroup: '/privacy',
     title: 'Privacy: What Mistboard Collects | Mistboard',
     description:
       'What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold.',
@@ -1060,7 +1170,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
       `<link rel="canonical" href="${escapeHtml(`${params.publicHost}${player.meta.urlPath}`)}"></head>`,
     );
   }
-  if (canonicalPath && params.publicHost && !player?.meta) {
+  if (canonicalPath && params.publicHost && !player?.meta && !spaMeta?.localeGroup) {
     html = html.replace(
       '</head>',
       `<link rel="canonical" href="${params.publicHost}${canonicalPath}"></head>`,
@@ -1368,6 +1478,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/zh-hans/rules',
   '/zh-hant/rules',
   '/about',
+  '/zh-hans/about',
+  '/zh-hant/about',
   '/stats',
   '/puzzles',
   '/learn/xiangqi',
@@ -1389,6 +1501,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/games/search',
   '/data',
   '/data/about',
+  '/zh-hans/data/about',
+  '/zh-hant/data/about',
   '/import',
   '/feed',
   '/videos',
@@ -1403,10 +1517,24 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/coach',
   '/forum',
   '/source',
+  '/zh-hans/source',
+  '/zh-hant/source',
   '/faq',
+  '/terms',
+  '/zh-hans/terms',
+  '/zh-hant/terms',
+  '/privacy',
+  '/zh-hans/privacy',
+  '/zh-hant/privacy',
+  '/zh-hans/faq',
+  '/zh-hant/faq',
   '/patron',
   '/contribute',
+  '/zh-hans/contribute',
+  '/zh-hant/contribute',
   '/creators',
+  '/zh-hans/creators',
+  '/zh-hant/creators',
   '/washington-xiangqi',
   '/zh-hans/washington-xiangqi',
   '/zh-hant/washington-xiangqi',
