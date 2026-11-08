@@ -1,0 +1,39 @@
+/* White edging separates the red ring from dark wood and pale board themes.
+   Its 18-unit radius stays recognisable when a phone scales a point to 35px. */
+.jieqi-repetition-ring {
+  fill: none;
+  stroke: #cf2438;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 1px #fff);
+  pointer-events: none;
+}
+
+.jieqi-repetition-ring-edge {
+  fill: none;
+  stroke: #fff7ed;
+  stroke-width: 9;
+  pointer-events: none;
+}
+
+.jieqi-target-hover.jieqi-target-hover--loss {
+  fill: rgba(207, 36, 56, 0.3);
+}
+
+/* Separate stage overlay: board points and their hit targets never move. */
+.jieqi-repetition-label {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: var(--jieqi-repetition-label-max, calc(100% - 8px));
+  padding: 2px 6px;
+  border: 1px solid #ffb4bb;
+  border-radius: 999px;
+  background: #9f1628;
+  color: #fff;
+  box-shadow: 0 0 0 1px #fff7ed;
+  font-size: clamp(10px, 2.8vw, 12px);
+  font-weight: 500;
+  line-height: 1.25;
+  pointer-events: none;
+}

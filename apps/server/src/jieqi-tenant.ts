@@ -379,6 +379,10 @@ export const jieqiTenant: JieqiTenant = {
       const marks = jieqiLiveCheckMarks(room);
       return {
         ...(pveEngineId === null ? { roomMode: 'pvp' } : { roomMode: 'pve', pveEngineId }),
+        // Public rules metadata only. No deal, pool or repetition history.
+        ...(room.projection.state.adjudicationRule
+          ? { adjudicationRule: room.projection.state.adjudicationRule }
+          : {}),
         // Only when a move gave check, so a check-free room's wire is unchanged.
         ...(marks.some((mark) => mark !== '') ? { checkMarks: marks } : {}),
       };

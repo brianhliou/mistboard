@@ -167,6 +167,8 @@ export type JieqiBoardRenderOptions = {
   interactive?: boolean;
   selectedSquare?: JieqiSquare | null;
   legalMoves?: readonly JieqiMove[];
+  /** Live own destinations that lose by repetition under jqe-v1. */
+  repetitionLossPoints?: ReadonlySet<JieqiSquare>;
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.
   draggingFrom?: JieqiSquare | null;
@@ -283,7 +285,7 @@ export function renderJieqiBoardSvg(
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, legalMoves, selectedSquare, perspective, outline3d)}</g>` : ''}
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="jieqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jieqiArrowLayer(options.arrows ?? [], perspective)}</g>
-      ${options.interactive ? hitLayer(perspective, view, legalMoves, outline3d) : ''}
+      ${options.interactive ? hitLayer(perspective, view, legalMoves, outline3d, options.repetitionLossPoints) : ''}
     </svg>
   `;
 }
@@ -671,6 +673,7 @@ function hitLayer(
   view: JieqiPlayerView,
   moves: readonly JieqiMove[],
   outline3d: RaisedPieceOutline | null = null,
+  repetitionLossPoints?: ReadonlySet<JieqiSquare>,
 ): string {
   const targets = new Map<JieqiSquare, { capture: boolean }>();
   for (const move of moves) targets.set(move.to, { capture: view.board[move.to] !== undefined });
@@ -683,17 +686,22 @@ function hitLayer(
       // A 3D capture target carries its marks on the piece: its face tint over
       // the pieces (select3dLayer) and, under the pointer, its side in green.
       const raised = target?.capture && outline3d;
+      const loses = !!target && repetitionLossPoints?.has(sq);
       const marker = target
-        ? raised
-          ? ''
-          : target.capture
-            ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
-            : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
+        ? loses
+          ? `<g data-repetition-loss="${sq}" aria-hidden="true"><circle class="jieqi-repetition-ring-edge" cx="${x}" cy="${y}" r="18"/><circle class="jieqi-repetition-ring" cx="${x}" cy="${y}" r="18"/></g>`
+          : raised
+            ? ''
+            : target.capture
+              ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
+              : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
         : '';
       const hover = target
-        ? raised
-          ? select3dHoverEdgeSvg({ x, y }, outline3d)
-          : `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
+        ? loses
+          ? `<circle class="jieqi-target-hover jieqi-target-hover--loss" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
+          : raised
+            ? select3dHoverEdgeSvg({ x, y }, outline3d)
+            : `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
         : '';
       parts.push(
         `<g data-square="${sq}" class="jieqi-hit${target ? ' jieqi-hit--target' : ''}">${hover}${marker}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`,

@@ -25,6 +25,11 @@ import type {
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
 import { renderJieqiMaterial } from './jieqi-material.js';
+import {
+  jieqiRepetitionWarning,
+  type PublicRepetitionPosition,
+  type RepetitionWarning,
+} from './jieqi-repetition-warning.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { mountJieqiCaptureStrips } from './live-jieqi-capture-strips.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
@@ -38,6 +43,7 @@ import {
   jieqiRevealSquare,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
+import { createJieqiRepetitionWarningUi } from './live-jieqi-repetition-warning.js';
 import { rebuildLiveJieqiHistory } from './live-jieqi-replay-history.js';
 import { mountRevealOdds, type RevealOddsMount } from './live-jieqi-reveal-odds.js';
 import {
@@ -110,6 +116,15 @@ let pveEngineId: string | null = null;
 // The server's + / # per ply (jieqi-tenant jieqiLiveCheckMarks). Rides every
 // frame; absent means no move has given check yet.
 let checkMarks: readonly string[] = [];
+let adjudicationRule: unknown;
+let repetitionUi: ReturnType<typeof createJieqiRepetitionWarningUi> | null = null;
+let repetitionCache: {
+  view: JieqiWireView;
+  ply: number;
+  seat: unknown;
+  rule: unknown;
+  warning: RepetitionWarning;
+} | null = null;
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   displayName: 'variant.jieqi.name',
@@ -143,6 +158,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
     checkMarks = jieqiFrameCheckMarks(frame.checkMarks);
+    adjudicationRule = frame.adjudicationRule;
   },
   onSnapshotApplied: () => {
     if (core) maybePlayJieqiSnapshotSound(core.state.view, core.state.seat);
@@ -158,6 +174,10 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     pveEngineId = null;
     checkMarks = [];
     lastLiveBoard = null;
+    adjudicationRule = undefined;
+    repetitionCache = null;
+    repetitionUi?.destroy();
+    repetitionUi = null;
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
@@ -226,6 +246,9 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   },
   setup: (ctx) => {
     core = ctx;
+    repetitionUi = createJieqiRepetitionWarningUi(ctx.refs.board, () => {
+      if (core) renderBoard(core.refs, core.displayedView());
+    });
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
     revealOdds = mountRevealOdds(ctx.refs, () => {
@@ -241,6 +264,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,
       clearSelection: () => {
+        repetitionUi?.cancel();
         selectedSquare = null;
         draggingFrom = null;
         if (core) renderBoard(core.refs, core.displayedView());
@@ -327,22 +351,65 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   liveRefs.board.className = 'board jieqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Jieqi board');
   if (!view) {
+    repetitionUi?.update(null, { losingMoves: [] }, false);
     liveRefs.board.replaceChildren();
     return;
   }
 
   const perspective = orientationFor(view);
+  if (repetitionUi && core) {
+    const ply = core.replay.latestPly();
+    if (
+      repetitionCache?.view !== view ||
+      repetitionCache.ply !== ply ||
+      repetitionCache.seat !== core.state.seat ||
+      repetitionCache.rule !== adjudicationRule
+    ) {
+      const history: PublicRepetitionPosition[] = [];
+      // Only consecutive snapshots, ending at this live view. A partial cold
+      // history cannot justify a warning, so fail closed until rebuilt.
+      for (let at = 0; at <= ply; at++) {
+        const snapshot = core.replay.viewAtPly(at);
+        if (!snapshot) {
+          history.length = 0;
+          break;
+        }
+        history.push(snapshot);
+      }
+      repetitionCache = {
+        view,
+        ply,
+        seat: core.state.seat,
+        rule: adjudicationRule,
+        warning: jieqiRepetitionWarning(adjudicationRule, history, view, core.state.seat),
+      };
+    }
+    repetitionUi.update(
+      view,
+      repetitionCache.warning,
+      core.replay.isLive() &&
+        core.connection() === 'connected' &&
+        !core.state.paused &&
+        adjudicationRule === 'jqe-v1',
+    );
+  }
   const drawn = drawnBoardOverlays<JieqiSquare>(annotations?.shapes() ?? []);
-  liveRefs.board.innerHTML = renderJieqiBoardSvg(view, perspective, {
+  const preview = repetitionUi?.preview(view) ?? view;
+  const pending = preview !== view;
+  liveRefs.board.innerHTML = renderJieqiBoardSvg(preview, perspective, {
     arrows: drawn.arrows,
     markers: drawn.markers,
     interactive: true,
-    selectedSquare,
+    selectedSquare: pending ? null : selectedSquare,
     draggingFrom,
-    legalMoves: selectedSquare
-      ? view.legalMoves.filter((move) => move.from === selectedSquare)
-      : [],
+    repetitionLossPoints: repetitionUi?.losingDestinations(selectedSquare),
+    legalMoves:
+      !pending && selectedSquare
+        ? view.legalMoves.filter((move) => move.from === selectedSquare)
+        : [],
   });
+  repetitionUi?.select(selectedSquare, view.legalMoves);
+  repetitionUi?.sync();
   // Click + drag are delegated to the persistent board container once at mount
   // (installJieqiBoardInteraction), so they survive these innerHTML re-renders.
 }
@@ -350,6 +417,7 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
 function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
   if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const result = jieqiClickResult(view, core.state.seat, selectedSquare, square);
+  if (result.kind !== 'move') repetitionUi?.cancel();
   if (result.kind === 'noop') return;
   if (result.kind === 'select') {
     selectedSquare = result.square;
@@ -359,10 +427,18 @@ function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
     selectedSquare = null;
     return;
   }
-  selectedSquare = null;
-  if (core.send({ type: 'move', from: result.move.from, to: result.move.to })) {
-    playSound(soundForOwnJieqiMove(view, result.move));
-  }
+  requestJieqiMove(view, result.move);
+}
+
+function requestJieqiMove(view: JieqiWireView, move: JieqiMove): void {
+  const play = () => {
+    if (!core?.canActNow()) return;
+    selectedSquare = null;
+    if (core.send({ type: 'move', from: move.from, to: move.to })) {
+      playSound(soundForOwnJieqiMove(view, move));
+    }
+  };
+  if (!repetitionUi || repetitionUi.allowMove(move, play)) play();
 }
 
 // Click + drag, delegated to the persistent board container once at mount so they
@@ -420,12 +496,10 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
   draggingFrom = null;
   const view = core?.state.view;
   const move = to && view ? view.legalMoves.find((m) => m.from === from && m.to === to) : undefined;
-  if (move && view && core) {
-    selectedSquare = null;
-    if (core.send({ type: 'move', from: move.from, to: move.to })) {
-      playSound(soundForOwnJieqiMove(view, move));
-    }
+  if (move && view && core?.canActNow()) {
+    requestJieqiMove(view, move);
   } else {
+    repetitionUi?.cancel();
     selectedSquare = null;
   }
   if (core?.state.view) renderBoard(liveRefs, core.state.view);

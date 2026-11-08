@@ -1,6 +1,12 @@
 // Play translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_PLAY = {
+  'live.jieqiRepwarn.labelCheck': 'Loses: perpetual check',
+  'live.jieqiRepwarn.labelChase': 'Loses: perpetual chase',
+  'live.jieqiRepwarn.checkTitle': 'Lose by perpetual check?',
+  'live.jieqiRepwarn.chaseTitle': 'Lose by perpetual chase?',
+  'live.jieqiRepwarn.body': 'This move repeats the position a third time, and you lose the game.',
+  'live.jieqiRepwarn.playMove': 'Play move',
   'live.gomokuBotThinking': 'Rapfi is thinking…',
   'live.gomokuBotFailed': 'Rapfi could not load or find a move. Retry to continue.',
   'live.gomokuBotPaused': 'Rapfi paused.',
