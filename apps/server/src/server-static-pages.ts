@@ -1710,8 +1710,11 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
         Math.max(150, contract.minChars, Math.floor(contract.baselineChars * 0.6))
     )
       return [];
+    // A build with no repository history records pages without dates; they stay
+    // listed without <lastmod>. A route with neither a build record nor a server
+    // body date has no evidence of a body and stays out.
     const lastmod = dates.get(path) ?? record?.lastmod;
-    return lastmod ? [{ path, lastmod, alternates: record?.alternates }] : [];
+    return record || lastmod ? [{ path, lastmod, alternates: record?.alternates }] : [];
   });
   for (const record of baked) {
     const article = /^\/(?:zh-han[st]\/)?(?:blog|rules)\/([^/]+)$/.exec(record.path);
@@ -1719,7 +1722,6 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
   }
   return entries.filter(
     (entry) =>
-      !!entry.lastmod &&
       !(staleIndex && /^\/(?:zh-han[st]\/)?(?:blog|feed)(?:\/\d{4}-\d{2})?$/.test(entry.path)) &&
       sitemapPathIsTracked(entry.path) &&
       (entry.alternates ?? []).every(

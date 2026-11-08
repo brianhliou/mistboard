@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   contentSources,
   gitContentDate,
+  gitHistoryAvailable,
   prerenderSitemapRecord,
   writePrerenderSitemap,
 } from '../apps/web/scripts/prerender-sitemap.mjs';
@@ -34,9 +35,11 @@ test('prerender records the exact head hreflang group, including non-UI translat
     links.map(([lang, path]) => ({ lang, path })),
   );
   assert.equal(record.lastmod, '2026-11-01');
-  // Planted regressions: inventing dates or accepting a foreign alternate.
+  // No repository history: listed without a date, never with an invented one.
+  assert.equal(prerenderSitemapRecord(html, 'a.html', host, () => undefined).lastmod, undefined);
+  // Planted regressions: a non-date source date or a foreign alternate.
   assert.throws(
-    () => prerenderSitemapRecord(html, 'a.html', host, () => undefined),
+    () => prerenderSitemapRecord(html, 'a.html', host, () => 'deploy-now'),
     /missing source-content date/,
   );
   assert.throws(
@@ -127,6 +130,38 @@ test('article lastmod uses its content date rather than a build date', () => {
     prerenderSitemapRecord(published, 'a.html', host, () => '2026-11-07').lastmod,
     '2026-10-07',
   );
+});
+
+test('a source snapshot with no git history builds a sitemap with no dates (Railway)', async () => {
+  // Railway builds from a snapshot without .git; #962's dates failed every build there.
+  const snapshot = await mkdtemp(join(tmpdir(), 'sitemap-no-git-'));
+  assert.equal(gitHistoryAvailable(snapshot), false);
+  const dist = await mkdtemp(join(tmpdir(), 'sitemap-no-git-dist-'));
+  await writeFile(join(dist, 'index.html'), head('/'));
+  await writePrerenderSitemap(dist, host, snapshot, [{ path: '/study', alternates: [] }]);
+  const records = JSON.parse(await readFile(join(dist, 'prerender-sitemap.json'), 'utf8'));
+  for (const path of ['/', '/games', '/study']) {
+    const record = records.find((entry) => entry.path === path);
+    assert.ok(record, path);
+    assert.equal(record.lastmod, undefined, path);
+  }
+  const seed = JSON.parse(await readFile(join(dist, 'puzzle-content-date.json'), 'utf8'));
+  assert.equal(seed.lastmod, undefined);
+});
+
+test('a repository with history still fails the build when a source has no date', async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'sitemap-history-no-date-'));
+  const git = (...args) =>
+    execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  git('init');
+  await writeFile(join(repo, 'unrelated.ts'), 'x');
+  git('add', 'unrelated.ts');
+  git('-c', 'user.name=Sitemap test', '-c', 'user.email=sitemap@example.test', 'commit', '-m', 'x');
+  assert.equal(gitHistoryAvailable(repo), true);
+  const dist = await mkdtemp(join(tmpdir(), 'sitemap-history-no-date-dist-'));
+  await writeFile(join(dist, 'index.html'), head('/'));
+  // Planted failure: git works and names no commit for the page's sources.
+  await assert.rejects(writePrerenderSitemap(dist, host, repo), /no git content date/);
 });
 
 test('git source dates survive unrelated commits and change with the catalog', async () => {

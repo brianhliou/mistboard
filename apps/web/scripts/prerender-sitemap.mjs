@@ -31,8 +31,11 @@ export function prerenderSitemapRecord(html, file, publicHost, sourceDate, known
   const ldDate =
     /"dateModified"\s*:\s*"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1] ??
     /"datePublished"\s*:\s*"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
+  // undefined means the build has no repository history (Railway builds from a
+  // snapshot with no .git): the page is listed without <lastmod>, never with an
+  // invented date. Anything else that is not a date is a broken source.
   const lastmod = ldDate ?? sourceDate(url.pathname);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastmod ?? ''))
+  if (lastmod !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(lastmod))
     throw new Error(`missing source-content date: ${url.pathname}`);
   const alternates = [...doc.querySelectorAll('link[rel="alternate"][hreflang]')].map((link) => {
     const target = new URL(link.getAttribute('href'), publicHost);
@@ -64,6 +67,22 @@ export function contentSources(path) {
   return sources[base] ?? [catalog];
 }
 
+/** True when repoRoot is inside a git work tree. A source snapshot with no
+ *  .git (the Railway build) has no history, so it has no content dates. */
+export function gitHistoryAvailable(repoRoot) {
+  try {
+    return (
+      execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim() === 'true'
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function gitContentDate(repoRoot, sources) {
   // A missing history must fail explicitly instead of inventing a deploy date.
   const date = execFileSync('git', ['log', '-1', '--format=%cs', '--', ...sources], {
@@ -80,10 +99,14 @@ export async function writePrerenderSitemap(distDir, publicHost, repoRoot, track
   const records = [];
   const knownGaps = new Set(trackedGaps.map((entry) => entry.path));
   const dates = new Map();
+  // With history, a source with no date still fails the build; with none, every
+  // date is left out rather than taken from mtimes or the deploy clock.
+  const history = gitHistoryAvailable(repoRoot);
+  const datedBy = (sources) => (history ? gitContentDate(repoRoot, sources) : undefined);
   const sourceDate = (path) => {
     const sources = contentSources(path);
     const key = sources.join('\n');
-    if (!dates.has(key)) dates.set(key, gitContentDate(repoRoot, sources));
+    if (!dates.has(key)) dates.set(key, datedBy(sources));
     return dates.get(key);
   };
   async function visit(dir) {
@@ -105,12 +128,12 @@ export async function writePrerenderSitemap(distDir, publicHost, repoRoot, track
   await visit(distDir);
   await fs.writeFile(
     resolve(distDir, 'puzzle-content-date.json'),
-    JSON.stringify({ lastmod: gitContentDate(repoRoot, ['packages/game/seed']) }),
+    JSON.stringify({ lastmod: datedBy(['packages/game/seed']) }),
   );
   // leaderboard.html is an alias whose canonical is /player.
   records.push({
     path: '/games',
-    lastmod: gitContentDate(repoRoot, ['apps/server/src/server-static-pages.ts']),
+    lastmod: datedBy(['apps/server/src/server-static-pages.ts']),
     alternates: [],
   });
   const unique = new Map(records.map((record) => [record.path, record]));

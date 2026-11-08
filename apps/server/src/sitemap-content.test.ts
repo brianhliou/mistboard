@@ -43,7 +43,7 @@ test('canonical aliases and broadcast operations stay outside the public static 
     assert.equal(SITEMAP_STATIC_ROUTES.includes(path), false, path);
 });
 
-test('every dated static entry comes from the build, including tracked gaps', async () => {
+test('every static entry comes from the build, including tracked gaps', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'sitemap-content-'));
   const group = [
     { lang: 'en', path: '/' },
@@ -63,7 +63,7 @@ test('every dated static entry comes from the build, including tracked gaps', as
       { path: '/about', lastmod: '2026-10-02', contentChars: 0 }, // Repaired page must meet its floor.
       { path: '/practice', lastmod: '2026-10-02', contentChars: 0 }, // Tracked gap stays listed.
       { path: '/new-unclassified', lastmod: '2026-10-02', contentChars: 10000 }, // No contract.
-      { path: '/patron' }, // Planted undated static page.
+      { path: '/patron' }, // Built with no repository history: listed, never dated.
       {
         path: '/changelog',
         lastmod: '2026-10-01',
@@ -86,10 +86,12 @@ test('every dated static entry comes from the build, including tracked gaps', as
       lastmod: '2026-10-01',
       alternates: [{ lang: 'zh-Hans', path: '/zh-hans/practice' }],
     },
+    { path: '/patron', lastmod: undefined, alternates: undefined },
     { path: '/practice', lastmod: '2026-10-02', alternates: undefined },
     records[0],
     { path: '/blog/skill-vs-luck', lastmod: '2026-10-03', alternates: [] },
   ]);
+  // Planted: with no build record and no server body date, nothing is listed.
   const empty = await mkdtemp(join(tmpdir(), 'sitemap-no-dates-'));
   assert.deepEqual(await pageSitemapEntries(empty), []);
 });
