@@ -27,6 +27,8 @@
       "/rapfi.ref",
       "/scripts/rapfi-assets.mjs",
       "/scripts/engine-assets.sh",
+      "/scripts/fetch-pikafish-net.mjs",
+      "/apps/web/public/engine/pikafish/net.json",
       "/scripts/checkout-private-engine.sh",
       "/scripts/check_engine_serveable.py",
       "/scripts/fetch-fairy-stockfish-largeboard.sh",

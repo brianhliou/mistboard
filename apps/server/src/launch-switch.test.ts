@@ -112,6 +112,15 @@ test('the generated sitemap lists XMJ rules and the shared play pages in every l
       await writeFile(join(rulesDir, `${slug}.html`), '<html>Rules</html>');
     }
   }
+  await writeFile(
+    join(staticDir, 'prerender-sitemap.json'),
+    JSON.stringify(
+      prefixes.flatMap((prefix) => [
+        { path: `${prefix}/rules/${XMJ_RULES_SLUG}`, lastmod: '2026-11-01' },
+        { path: prefix || '/', lastmod: '2026-11-01' },
+      ]),
+    ),
+  );
   let xml = '';
   const response = {
     writeHead() {},

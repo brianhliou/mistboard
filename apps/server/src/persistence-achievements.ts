@@ -39,6 +39,7 @@ import {
 } from '@mistboard/game';
 import {
   COUNTED_USER,
+  countedHumanGame,
   notRetiredVariant,
   playedHumanGame,
   seatWonGame,
@@ -104,6 +105,42 @@ const FACT_QUERIES: Record<AchievementFactKey, { sourceKind: AchievementSourceKi
       sql: firstGameSql(
         `AND g.mode = 'pvp' AND COALESCE(g.rated, false) AND p.elo_after IS NOT NULL`,
       ),
+    },
+    // A permanent record of beating the fog bots. Deliberately independent
+    // of GAME_SEAT / playedHumanGame: retirement must not erase eligibility.
+    firstFogChessMistyWin: {
+      sourceKind: 'game',
+      sql: `SELECT DISTINCT ON (p.subject_id)
+           p.subject_id AS user_id, g.room_id AS source_id, g.ended_at AS at
+         FROM game_participants p
+         JOIN users u ON u.id = p.subject_id
+         JOIN games g ON g.room_id = p.game_id
+         JOIN game_participants b ON b.game_id = g.room_id AND b.color <> p.color
+         WHERE p.subject_type = 'user'
+           AND ($1::text[] IS NULL OR p.subject_id = ANY($1::text[]))
+           AND ${countedHumanGame('g')}
+           AND g.mode = 'pve' AND g.variant = 'dark-chess'
+           AND ${seatWonGame('p', 'g')}
+           AND ((b.subject_type = 'bot' AND b.subject_id IN ('misty', 'misty-dark-chess'))
+             OR (b.subject_type = 'engine-version' AND b.subject_id LIKE 'python-v2%'))
+         ORDER BY p.subject_id, g.ended_at, g.room_id`,
+    },
+    firstFogXiangqiMistyWin: {
+      sourceKind: 'game',
+      sql: `SELECT DISTINCT ON (p.subject_id)
+           p.subject_id AS user_id, g.room_id AS source_id, g.ended_at AS at
+         FROM game_participants p
+         JOIN users u ON u.id = p.subject_id
+         JOIN games g ON g.room_id = p.game_id
+         JOIN game_participants b ON b.game_id = g.room_id AND b.color <> p.color
+         WHERE p.subject_type = 'user'
+           AND ($1::text[] IS NULL OR p.subject_id = ANY($1::text[]))
+           AND ${countedHumanGame('g')}
+           AND g.mode = 'pve' AND g.variant = 'dark-xiangqi'
+           AND ${seatWonGame('p', 'g')}
+           AND ((b.subject_type = 'bot' AND b.subject_id IN ('misty', 'misty-dark-chess'))
+             OR (b.subject_type = 'engine-version' AND b.subject_id LIKE 'python-v2%'))
+         ORDER BY p.subject_id, g.ended_at, g.room_id`,
     },
     // One puzzle_attempts row per (account, puzzle): the first outcome (073).
     firstSolvedPuzzle: {

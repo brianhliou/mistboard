@@ -5,6 +5,44 @@ import { STUDY_PREVIEW_PLIES, studyPreviewBoard } from './study-preview-board.js
 
 const START_FEN = standardXiangqiFen(createInitialXiangqiState('t'));
 
+test('Gomoku previews draw the empty root and preserve a dealt root without replaying', () => {
+  const empty = studyPreviewBoard({ variant: 'gomoku', rootFen: null, mainline: ['h8'] });
+  assert.deepEqual(empty, {
+    variant: 'gomoku',
+    fen: null,
+    grid: { shape: 'gomoku', files: 15, ranks: 15, cells: '.'.repeat(225) },
+  });
+  const rootRows = ['B13W', ...Array(6).fill('15'), '7W7', ...Array(6).fill('15'), 'W13B'];
+  const dealt = studyPreviewBoard({
+    variant: 'gomoku',
+    rootFen: `${rootRows.join('/')} w`,
+    mainline: ['a2'],
+  });
+  assert.deepEqual(rows(dealt), [
+    'b.............r',
+    ...Array(6).fill('...............'),
+    '.......r.......',
+    ...Array(6).fill('...............'),
+    'r.............b',
+  ]);
+  assert.equal(dealt?.grid?.shape, 'gomoku');
+  assert.equal(dealt?.fen, null);
+});
+
+test('Gomoku invalid roots and unknown variants fail closed', () => {
+  for (const [variant, rootFen] of [
+    ['gomoku', 'not a fen'],
+    ['gomoku', `${Array(15).fill('15').join('/')} x`],
+    ['future-gomoku', `${Array(15).fill('15').join('/')} b`],
+  ]) {
+    assert.deepEqual(studyPreviewBoard({ variant, rootFen, mainline: ['h8'] }), {
+      variant,
+      fen: null,
+      grid: null,
+    });
+  }
+});
+
 /** The grid's rows, top rank first, for readable assertions. */
 function rows(board: ReturnType<typeof studyPreviewBoard>): string[] {
   const grid = board?.grid;

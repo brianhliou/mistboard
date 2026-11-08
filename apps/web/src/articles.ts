@@ -54,10 +54,12 @@ import {
   findArticle,
   type HordeXiangqiReplayBlock,
   type ImageFigureBlock,
+  type ImageRowBlock,
   type InteractiveBlock,
   type JieqiReplayBlock,
   type JungleFlipReplayBlock,
   type JungleReplayBlock,
+  type ListBlock,
   type LiveBoardsBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
@@ -68,6 +70,7 @@ import {
   type SvgRowBlock,
   type TableBlock,
   type TableRowDiagram,
+  type TimelineBlock,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
@@ -374,7 +377,7 @@ function buildContentIndex(
   } else if (kind === 'article') {
     // An empty list read as a broken page, so with no posts this view asks for
     // writers instead; the first community post replaces it.
-    heading.textContent = COMMUNITY_WRITER_HEADING;
+    heading.textContent = t(COMMUNITY_WRITER_HEADING, {}, locale);
     sheet.append(buildCommunityWriterPitch(locale));
   }
   if (kind === 'article') {
@@ -386,64 +389,62 @@ function buildContentIndex(
   return main;
 }
 
-// English only until Brian signs the copy off; zh follows the sign-off.
-const COMMUNITY_WRITER_HEADING = 'Become a Mistboard contributor';
+const COMMUNITY_WRITER_HEADING = 'articles.writer.heading';
 
-const COMMUNITY_WRITER_LEDE =
-  'Players read Mistboard all over the world, from the US and China to Vietnam and Singapore. We are looking for a few players to write for it regularly, on the part of the game they know best.';
+const COMMUNITY_WRITER_LEDE = 'articles.writer.lede';
 
-const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: string; body: string }> = [
+const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: I18nKey; body: I18nKey }> = [
   {
-    title: 'Read in three languages',
-    body: 'Every post is published in English, Simplified Chinese and Traditional Chinese, so it reaches players an English blog never would.',
+    title: 'articles.writer.languagesTitle',
+    body: 'articles.writer.languagesBody',
   },
   {
-    title: 'Boards readers can play through',
-    body: 'Your lines become interactive boards, checked with an engine before they go out.',
+    title: 'articles.writer.boardsTitle',
+    body: 'articles.writer.boardsBody',
   },
   {
-    title: 'A place on the homepage',
-    body: "New posts appear on the homepage and in the site's RSS feed.",
+    title: 'articles.writer.homepageTitle',
+    body: 'articles.writer.homepageBody',
   },
   {
-    title: 'Your name and your links',
-    body: 'Your byline links to your channel, club or stream, and you are free to post the piece elsewhere too.',
+    title: 'articles.writer.bylineTitle',
+    body: 'articles.writer.bylineBody',
   },
 ];
 
 // Each column idea points at one of our own posts of that shape, shown with
 // that post's own card thumbnail, so the page shows what a finished post looks
 // like instead of an empty list.
-const COMMUNITY_WRITER_IDEAS: ReadonlyArray<{ title: string; body: string; example: string }> = [
+const COMMUNITY_WRITER_IDEAS: ReadonlyArray<{ title: I18nKey; body: I18nKey; example: string }> = [
   {
-    title: 'A game you learned from',
-    body: 'Walk through one game: where it turned, and what you would play now.',
+    title: 'articles.writer.gameTitle',
+    body: 'articles.writer.gameBody',
     example: 'jieqi-bot-wins',
   },
   {
-    title: 'Opening notes',
-    body: 'A line you have worked out, with the games that taught it to you.',
+    title: 'articles.writer.openingTitle',
+    body: 'articles.writer.openingBody',
     example: 'jieqi-openings',
   },
   {
-    title: 'A player or a tournament',
-    body: 'Who plays, how they play, and what happened at the board.',
+    title: 'articles.writer.playerTitle',
+    body: 'articles.writer.playerBody',
     example: 'yin-sheng',
   },
   {
-    title: 'The case for a variant',
-    body: 'Why a variant deserves more players, and how to win your first game.',
+    title: 'articles.writer.variantTitle',
+    body: 'articles.writer.variantBody',
     example: 'duck-xiangqi-strategy',
   },
 ];
 
-const COMMUNITY_WRITER_STEPS: ReadonlyArray<{ title: string; body: string }> = [
+const COMMUNITY_WRITER_STEPS: ReadonlyArray<{ title: I18nKey; body: I18nKey }> = [
   {
-    title: 'Send a sample',
-    body: 'A link to something you have written, recorded or streamed, and the column you would like to run.',
+    title: 'articles.writer.sampleTitle',
+    body: 'articles.writer.sampleBody',
   },
-  { title: 'Write the first post with us', body: 'We edit together and build the boards.' },
-  { title: 'Keep going', body: 'About once a month, or on whatever schedule suits you.' },
+  { title: 'articles.writer.firstPostTitle', body: 'articles.writer.firstPostBody' },
+  { title: 'articles.writer.continueTitle', body: 'articles.writer.continueBody' },
 ];
 
 function communityPitchSection(title: string, list: HTMLElement): HTMLElement {
@@ -457,12 +458,13 @@ function communityPitchSection(title: string, list: HTMLElement): HTMLElement {
 
 function communityPitchTextCard(
   item: HTMLElement,
-  entry: { title: string; body: string },
+  entry: { title: I18nKey; body: I18nKey },
+  locale: Locale,
 ): HTMLElement {
   const title = document.createElement('h3');
-  title.textContent = entry.title;
+  title.textContent = t(entry.title, {}, locale);
   const body = document.createElement('p');
-  body.textContent = entry.body;
+  body.textContent = t(entry.body, {}, locale);
   item.append(title, body);
   return item;
 }
@@ -473,12 +475,12 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
 
   const lede = document.createElement('p');
   lede.className = 'articles-community-pitch-lede';
-  lede.textContent = COMMUNITY_WRITER_LEDE;
+  lede.textContent = t(COMMUNITY_WRITER_LEDE, {}, locale);
 
   const benefits = document.createElement('ul');
   benefits.className = 'articles-community-pitch-benefits';
   for (const benefit of COMMUNITY_WRITER_BENEFITS) {
-    benefits.append(communityPitchTextCard(document.createElement('li'), benefit));
+    benefits.append(communityPitchTextCard(document.createElement('li'), benefit, locale));
   }
 
   const ideas = document.createElement('ul');
@@ -501,12 +503,14 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
         card.append(media);
       }
     }
-    const body = communityPitchTextCard(document.createElement('div'), idea);
+    const body = communityPitchTextCard(document.createElement('div'), idea, locale);
     body.className = 'articles-community-pitch-idea-body';
     if (example) {
       const exampleLine = document.createElement('span');
       exampleLine.className = 'articles-community-pitch-example';
-      exampleLine.textContent = `Example: ${example.title}`;
+      const exampleLang = publishedArticleLang(example.slug, locale === 'en' ? undefined : locale);
+      const localized = exampleLang ? translateArticle(example, exampleLang) : example;
+      exampleLine.textContent = t('articles.writer.example', { title: localized.title }, locale);
       body.append(exampleLine);
     }
     card.append(body);
@@ -517,14 +521,18 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
   const steps = document.createElement('ol');
   steps.className = 'articles-community-pitch-steps';
   for (const step of COMMUNITY_WRITER_STEPS) {
-    steps.append(communityPitchTextCard(document.createElement('li'), step));
+    steps.append(communityPitchTextCard(document.createElement('li'), step, locale));
   }
 
   const row = document.createElement('div');
   row.className = 'article-cta-row articles-community-pitch-cta';
   const buttons = [
-    { label: 'Apply to contribute', href: '/contact?about=/blog/community', emphasis: 'primary' },
-    { label: 'Read the Mistboard blog', href: '/blog', emphasis: 'secondary' },
+    {
+      label: t('articles.writer.apply', {}, locale),
+      href: '/contact?about=/blog/community',
+      emphasis: 'primary',
+    },
+    { label: t('articles.writer.readBlog', {}, locale), href: '/blog', emphasis: 'secondary' },
   ];
   for (const button of buttons) {
     const link = document.createElement('a');
@@ -535,9 +543,9 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
   }
   pitch.append(
     lede,
-    communityPitchSection('What you get', benefits),
-    communityPitchSection('What a column could cover', ideas),
-    communityPitchSection('How to start', steps),
+    communityPitchSection(t('articles.writer.benefits', {}, locale), benefits),
+    communityPitchSection(t('articles.writer.ideas', {}, locale), ideas),
+    communityPitchSection(t('articles.writer.steps', {}, locale), steps),
     row,
   );
   return pitch;
@@ -1780,6 +1788,9 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'embed') return renderEmbedBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
   if (block.kind === 'faq') return renderFaqBlock(block);
+  if (block.kind === 'timeline') return renderTimelineBlock(block, lang);
+  if (block.kind === 'list') return renderListBlock(block);
+  if (block.kind === 'image-row') return renderImageRowBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
@@ -2496,6 +2507,96 @@ function renderFaqBlock(block: FaqBlock): HTMLElement {
   return list;
 }
 
+const TIMELINE_ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A dated sequence: entries whose day has passed get a filled marker. */
+function renderTimelineBlock(block: TimelineBlock, lang?: ArticleLang): HTMLElement {
+  const list = document.createElement('ol');
+  list.className = 'article-timeline';
+  const today = new Date().toISOString().slice(0, 10);
+  const locale = lang === 'zh-Hans' ? 'zh-CN' : lang === 'zh-Hant' ? 'zh-TW' : 'en-US';
+  for (const item of block.items) {
+    const li = document.createElement('li');
+    li.className = 'article-timeline-item';
+    const date = document.createElement('p');
+    date.className = 'article-timeline-date';
+    if (TIMELINE_ISO_DAY.test(item.date)) {
+      const time = document.createElement('time');
+      time.dateTime = item.date;
+      time.textContent = new Date(`${item.date}T12:00:00Z`).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+      });
+      date.append(time);
+      if (item.date <= today) li.classList.add('is-past');
+    } else {
+      date.textContent = item.date;
+      li.classList.add('is-open');
+    }
+    const title = document.createElement('p');
+    title.className = 'article-timeline-title';
+    appendRichText(title, item.title);
+    li.append(date, title);
+    if (item.text) {
+      const text = document.createElement('p');
+      text.className = 'article-timeline-text';
+      appendRichText(text, item.text);
+      li.append(text);
+    }
+    list.append(li);
+  }
+  return list;
+}
+
+function renderListBlock(block: ListBlock): HTMLElement {
+  const list = document.createElement(block.ordered ? 'ol' : 'ul');
+  list.className = 'article-list';
+  for (const item of block.items) {
+    const li = document.createElement('li');
+    appendRichText(li, item);
+    list.append(li);
+  }
+  return list;
+}
+
+/** Standalone images side by side; each shows its dark twin under the dark theme. */
+function renderImageRowBlock(block: ImageRowBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-image-row';
+  const row = document.createElement('div');
+  row.className = 'article-image-row-items';
+  for (const item of block.items) {
+    const cell = document.createElement('div');
+    cell.className = 'article-image-row-item';
+    if (item.width) cell.style.maxWidth = `${item.width}px`;
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.alt;
+    img.loading = 'lazy';
+    cell.append(img);
+    if (item.darkSrc) {
+      img.classList.add('article-figure-light');
+      const dark = document.createElement('img');
+      dark.src = item.darkSrc;
+      dark.alt = item.alt;
+      dark.loading = 'lazy';
+      dark.className = 'article-figure-dark';
+      cell.append(dark);
+    }
+    row.append(cell);
+  }
+  figure.append(row);
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    appendRichText(cap, block.caption);
+    figure.append(cap);
+  }
+  return figure;
+}
+
 function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-embed';
@@ -2821,10 +2922,12 @@ function noteNode(text: string, label?: string): HTMLElement {
 }
 
 // Lightweight inline parser. Recognizes Markdown-style `code`, [text](href) for
-// links, and **text** for bold. External link hrefs (http/https) open in a new
+// links, **text** for bold and *text* for italics (a lone asterisk, as in
+// "5 * 3", stays literal). External link hrefs (http/https) open in a new
 // tab; internal hrefs (/foo, #foo) do not. Anything that isn't a recognized
 // token is appended as a plain text node.
-const INLINE_REGEX = /`([^`\n]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
+const INLINE_REGEX =
+  /`([^`\n]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)|(?<![*\w])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?![*\w])/g;
 function appendRichText(el: HTMLElement, text: string): void {
   let lastIndex = 0;
   for (const match of text.matchAll(INLINE_REGEX)) {
@@ -2838,6 +2941,10 @@ function appendRichText(el: HTMLElement, text: string): void {
       const strong = document.createElement('strong');
       strong.textContent = match[2];
       el.append(strong);
+    } else if (match[5] !== undefined) {
+      const em = document.createElement('em');
+      em.textContent = match[5];
+      el.append(em);
     } else {
       const linkText = match[3]!;
       const href = match[4]!;

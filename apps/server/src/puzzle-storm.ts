@@ -16,8 +16,8 @@ export function stormComboBonusMs(combo: number): number {
 
 export type StormState = {
   ids: string[];
-  startedAt: number;
-  deadlineAt: number;
+  startedAt: number | null;
+  deadlineAt: number | null;
   score: number;
   combo: number;
   finished: boolean;
@@ -34,11 +34,12 @@ export type StormRun = {
 };
 
 export function stormRemainingMs(state: StormState, now: number): number {
-  return state.finished ? 0 : Math.max(0, state.deadlineAt - now);
+  if (state.finished) return 0;
+  return state.deadlineAt === null ? STORM_DURATION_MS : Math.max(0, state.deadlineAt - now);
 }
 
 export function expirePuzzleStorm(state: StormState, now: number): boolean {
-  if (state.finished || now < state.deadlineAt) return false;
+  if (state.finished || state.deadlineAt === null || now < state.deadlineAt) return false;
   state.finished = true;
   return true;
 }
@@ -53,6 +54,10 @@ export function advancePuzzleStorm(
 ): boolean {
   expirePuzzleStorm(state, now);
   if (state.finished) return false;
+  if (state.deadlineAt === null) {
+    state.startedAt = now;
+    state.deadlineAt = now + STORM_DURATION_MS;
+  }
   const id = state.ids[state.results.length]!;
   if (outcome === 'failed') {
     state.deadlineAt -= STORM_PENALTY_MS;
@@ -87,8 +92,8 @@ export async function startPuzzleStorm(
     version: 0,
     state: {
       ids: [...ids],
-      startedAt: now,
-      deadlineAt: now + STORM_DURATION_MS,
+      startedAt: null,
+      deadlineAt: null,
       score: 0,
       combo: 0,
       finished: ids.length === 0,

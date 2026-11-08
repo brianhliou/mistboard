@@ -46,6 +46,7 @@ describe('study catalog', () => {
     expect(isStudyVariantId('jungle-flip')).toBe(true);
     // Study-only chess (2026-09-20) is a catalog member; mahjong never was.
     expect(isStudyVariantId('chess')).toBe(true);
+    expect(isStudyVariantId('gomoku')).toBe(true);
     expect(isStudyVariantId('mahjong')).toBe(false);
     expect(isStudyVariantId('')).toBe(false);
   });
@@ -115,6 +116,7 @@ describe('study board dispatch', () => {
       'crazyhouse-xiangqi': './crazyhouse-xiangqi-review.js',
       'three-kingdoms-banqi': './three-kingdoms-banqi-review.js',
       chess: './chess-review.js',
+      gomoku: './gomoku-review.js',
     };
     for (const variant of STUDY_VARIANTS) {
       const module = expected[variant.id];
@@ -134,6 +136,7 @@ describe('create-study variant picker', () => {
     const select = buildStudyVariantSelect('variant', DEFAULT_STUDY_VARIANT);
     const offered = [...select.options].map((option) => option.value);
     expect(offered).toContain('xiangqi');
+    expect(offered).toContain('gomoku');
     expect(offered).toContain('duck-xiangqi');
     expect(STUDY_ELIGIBLE_SPEC_IDS).toContain('duck-xiangqi');
   });

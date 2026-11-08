@@ -78,7 +78,7 @@ describe('phone post-game sheet', () => {
     expect(sheet()?.textContent).toContain('New opponent');
     render();
     expect(sheet()?.querySelectorAll('.room-rematch')).toHaveLength(1);
-    expect(sheet()?.textContent).not.toContain('Challenge a friend');
+    expect(sheet()?.textContent).toContain('Challenge a friend');
   });
 
   it('uses the original review handler and analytics name after reopening', () => {

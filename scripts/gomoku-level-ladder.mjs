@@ -17,7 +17,7 @@ const {
   rapfiPlySeed,
 } = await tsImport('../apps/web/src/engine/rapfi.ts', import.meta.url);
 const {
-  GOMOKU_OPENINGS,
+  GOMOKU_DEALT_OPENINGS,
   createInitialGomokuState,
   applyGomokuMove,
   getGomokuLegalMoves,
@@ -428,7 +428,12 @@ async function main() {
     args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
   const games = Number(option('--games', '20'));
   const seed = Number(option('--seed', '20261101'));
-  if (!Number.isInteger(games) || games < 2 || games % 2 || games / 2 > GOMOKU_OPENINGS.length)
+  if (
+    !Number.isInteger(games) ||
+    games < 2 ||
+    games % 2 ||
+    games / 2 > GOMOKU_DEALT_OPENINGS.length
+  )
     throw new Error('--games must be even, between 2 and twice the pool size');
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
     throw new Error('--seed must be an unsigned 32-bit integer');
@@ -453,7 +458,7 @@ async function main() {
   const started = performance.now();
   const random = seededRandom(seed);
   // Same uniform screened pool as the live tenant, sampled without replacement.
-  const pool = [...GOMOKU_OPENINGS];
+  const pool = [...GOMOKU_DEALT_OPENINGS];
   const openings = Array.from(
     { length: games / 2 },
     () => pool.splice(Math.floor(random() * pool.length), 1)[0],

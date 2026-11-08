@@ -384,6 +384,28 @@ export type FaqBlock = {
   items: { question: string; answer: string }[];
 };
 
+// A dated sequence drawn as a vertical line with one marker per entry. `date`
+// is an ISO day (YYYY-MM-DD) for a fixed date, which the renderer formats and
+// compares with today so a passed entry reads as done; any other string
+// ("Later") is shown as written and stays open. `text` is rich text.
+export type TimelineBlock = {
+  kind: 'timeline';
+  items: { date: string; title: string; text?: string }[];
+};
+
+// A bulleted (or, with `ordered`, numbered) list. Each item is one line of
+// rich text, the same inline markdown as a paragraph.
+export type ListBlock = { kind: 'list'; ordered?: boolean; items: string[] };
+
+// Standalone images shown side by side (stacked on a phone), each with an
+// optional dark-theme twin. For a few small pictures read together, such as
+// two badge cards, where one combined screenshot would carry a background.
+export type ImageRowBlock = {
+  kind: 'image-row';
+  items: { src: string; darkSrc?: string; alt: string; width?: number }[];
+  caption?: string;
+};
+
 export type TableBlock = {
   kind: 'table';
   headers: string[];
@@ -445,6 +467,9 @@ export type ArticleBlock =
   | NoteBlock
   | TableBlock
   | FaqBlock
+  | TimelineBlock
+  | ListBlock
+  | ImageRowBlock
   | ImageFigureBlock
   | SubHeadingBlock
   | StaticBoardsBlock

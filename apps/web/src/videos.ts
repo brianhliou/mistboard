@@ -1,3 +1,4 @@
+import { prerenderMount } from './prerender-copy.js';
 // Curated video library at /videos, lichess.org/video style: a filterable grid
 // of verified English-first xiangqi videos. External cards link out in
 // a new tab instead of embedding: the dev server is cross-origin isolated
@@ -627,4 +628,8 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
   link.append(thumb, title, meta, tags);
   item.append(link);
   return item;
+}
+
+export function renderVideosShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountVideos);
 }

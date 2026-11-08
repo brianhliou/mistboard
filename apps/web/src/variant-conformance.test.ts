@@ -526,7 +526,7 @@ describe('Gomoku launch capabilities and deliberate exclusions', () => {
     }
   });
 
-  it('offers public play, ratings and analysis while excluding study and editor', () => {
+  it('offers public play, ratings, analysis and studies while excluding editor', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(true);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
@@ -538,7 +538,13 @@ describe('Gomoku launch capabilities and deliberate exclusions', () => {
     expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(GOMOKU_SPEC_ID);
     expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);
     expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);
-    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);
+    expect(isAdminOnlyStudySpecId(GOMOKU_SPEC_ID)).toBe(false);
+    expect(
+      [...buildStudyVariantSelect('variant', 'xiangqi', () => false).options].map(
+        (option) => option.value,
+      ),
+    ).toContain(GOMOKU_SPEC_ID);
     expect(EMBED_ANALYSIS_VARIANTS[GOMOKU_SPEC_ID]).toBeNull();
     expect(embedRendererKindForVariant(GOMOKU_SPEC_ID)).toBe('gomoku');
     expect(variantMiniIdForGameSpec(GOMOKU_SPEC_ID)).toBe('gomoku');

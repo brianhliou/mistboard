@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -96,15 +96,19 @@ test('isolated engine assets: the /engine/:id admin document stays non-isolated'
 // The /data downloads are built in the live web process on first request; a
 // crawler walking /data's links would trigger every build. The rest of /api
 // stays open because client-rendered pages load their content from it.
-test('robots.txt keeps crawlers off the data downloads and nothing else under /api', () => {
+test('robots.txt permits noindex admin recrawls and blocks only bulk data downloads', () => {
   const lines = robotsTxt('https://mistboard.com').split('\n');
   assert.ok(lines.includes('Disallow: /api/data/'));
   assert.ok(
     !lines.includes('Disallow: /api/'),
     '/api/data (the listing) and page data stay crawlable',
   );
-  for (const kept of ['Disallow: /database', 'Disallow: /engines', 'Disallow: /accounts']) {
-    assert.ok(lines.includes(kept), kept);
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('Disallow:')),
+    ['Disallow: /api/data/'],
+  );
+  for (const adminPath of ['/database', '/engines', '/accounts']) {
+    assert.ok(!robotsTxt('https://mistboard.com').includes(adminPath), adminPath);
   }
   assert.ok(lines.includes('Sitemap: https://mistboard.com/sitemap.xml'));
 });
@@ -189,6 +193,52 @@ test('hashed build assets: only Vite-named files under /assets qualify', () => {
   assert.equal(isHashedBuildAssetPath('/assets/nested/index-CkdYnPwB.js'), false);
   assert.equal(isHashedBuildAssetPath('/index-CkdYnPwB.js'), false);
   assert.equal(isHashedBuildAssetPath('/feed.xml'), false);
+});
+
+test('homepage prerender survives a missing build manifest (socketless)', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-home-'));
+  const home = '<!doctype html><title>home</title><h1>Mistboard</h1>';
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>shell</title>');
+  await writeFile(join(staticDir, 'home.html'), home);
+  for (const withManifest of [false, true]) {
+    const expected = withManifest ? home.replace('Mistboard', 'Current home') : home;
+    if (withManifest) {
+      await writeFile(join(staticDir, 'current-home.html'), expected);
+      await writeFile(
+        join(staticDir, 'prerender-routes.json'),
+        JSON.stringify({ version: 1, routes: [{ route: '/', file: 'current-home.html' }] }),
+      );
+    }
+    const handler = createHttpRequestHandler({
+      staticDir,
+      publicHost: 'https://mistboard.com',
+      drainController: { isDraining: () => false },
+    } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+    for (const path of ['/', '/unknown-page']) {
+      const headers = new Map<string, string>();
+      let status = 200;
+      const result = await new Promise<{ status: number; body: string }>((done) => {
+        const response = {
+          setHeader(name: string, value: string) {
+            headers.set(name.toLowerCase(), value);
+          },
+          writeHead(code: number) {
+            status = code;
+          },
+          end(body: string) {
+            done({ status, body });
+          },
+        } as unknown as ServerResponse;
+        handler(
+          { url: path, method: 'GET', headers: { accept: HTML_ACCEPT } } as IncomingMessage,
+          response,
+        );
+      });
+      assert.equal(result.status, path === '/' ? 200 : 404, `${withManifest}: ${path}`);
+      if (path === '/') assert.equal(result.body, expected);
+      assert.equal(headers.has('cache-control'), false);
+    }
+  }
 });
 
 // Drives the real handler over a temp build: a hashed chunk is pinned for a
@@ -360,6 +410,16 @@ test('Washington Xiangqi serves each locale prerender and localized fallback met
       `<h1>club ${prefix || 'en'}</h1>`,
     );
   }
+  await writeFile(
+    join(staticDir, 'prerender-routes.json'),
+    JSON.stringify({
+      version: 1,
+      routes: routes.map((prefix) => ({
+        route: `${prefix}/washington-xiangqi`,
+        file: `${prefix ? `${prefix.slice(1)}/` : ''}washington-xiangqi.html`,
+      })),
+    }),
+  );
   const handler = createHttpRequestHandler({
     staticDir,
     publicHost: 'https://mistboard.com',

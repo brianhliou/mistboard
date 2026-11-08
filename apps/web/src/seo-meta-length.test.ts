@@ -83,8 +83,10 @@ describe('prerendered page meta is long enough to describe the page', () => {
       pages.push({ page: head.url.replace('https://mistboard.com', ''), ...head });
     }
   }
-  // Pages whose meta the prerender script spells out as literals (the zh
-  // homepages, /player, /feed, /changelog, /learn/xiangqi, /puzzles, /patron).
+  // Pages whose meta the prerender script spells out as literals: the two zh
+  // homepages. /player, /feed, /changelog, /learn/xiangqi, /puzzles and /patron
+  // now bake from the server's SPA_ROUTE_META, which the server's own
+  // seo-meta-length test checks.
   const prerender = readFileSync(resolve(appsDir, 'web/scripts/prerender-articles.mjs'), 'utf-8');
   const unquote = (s: string) => s.replace(/\\(.)/g, '$1');
   const literal = [
@@ -99,7 +101,7 @@ describe('prerendered page meta is long enough to describe the page', () => {
   }
 
   it('finds the literal meta in the prerender script', () => {
-    expect(literal.length).toBeGreaterThanOrEqual(8);
+    expect(literal.length).toBeGreaterThanOrEqual(2);
   });
 
   // The server's ARTICLES_INDEX_META and RULES_INDEX_META serve the same three

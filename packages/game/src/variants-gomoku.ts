@@ -50,6 +50,11 @@ export const GOMOKU_OPENINGS = openingPool.openings as readonly (GomokuOpening &
     readonly forcedWin: boolean;
   };
 })[];
+// New games use only mined 2B+3W positions. Keep the full pool above and
+// opening validation unchanged so recorded classic openings still replay.
+export const GOMOKU_DEALT_OPENINGS: typeof GOMOKU_OPENINGS = GOMOKU_OPENINGS.filter(
+  (opening) => opening.source === 'mined-2B3W-7x7',
+);
 export type GomokuStatus =
   | { readonly type: 'playing'; readonly turn: GomokuColor }
   | { readonly type: 'finished'; readonly winner: GomokuColor; readonly reason: 'five' }
@@ -182,6 +187,87 @@ function moveAt(index: number): GomokuMove {
 
 function opposite(color: GomokuColor): GomokuColor {
   return color === 'black' ? 'white' : 'black';
+}
+
+/** Canonical study position: ranks 15..1, B/W stones, decimal empty runs,
+ * then b/w to move. No move history or opening-screen metadata is encoded.
+ * A finished state has no side to move and cannot be a study start. */
+export function gomokuFen(state: Pick<GomokuRoomState, 'board' | 'status'>): string {
+  if (state.status.type !== 'playing') throw new Error('Gomoku position has no side to move');
+  const rows: string[] = [];
+  for (let row = GOMOKU_BOARD_SIZE - 1; row >= 0; row -= 1) {
+    let rank = '';
+    let empty = 0;
+    for (let file = 0; file < GOMOKU_BOARD_SIZE; file += 1) {
+      const color = state.board[row * GOMOKU_BOARD_SIZE + file];
+      if (!color) {
+        empty += 1;
+        continue;
+      }
+      if (empty) rank += String(empty);
+      empty = 0;
+      rank += color === 'black' ? 'B' : 'W';
+    }
+    if (empty) rank += String(empty);
+    rows.push(rank);
+  }
+  return `${rows.join('/')} ${state.status.turn === 'black' ? 'b' : 'w'}`;
+}
+
+export type ParseGomokuFenResult =
+  | { ok: true; state: GomokuRoomState }
+  | { ok: false; error: string };
+
+/** Study roots accept either turn independently of stone counts: a dealt
+ * opening (and its continuations) need not follow empty-board parity. The
+ * board must be 15x15 and undecided so replay can continue from it. */
+export function parseGomokuFen(fen: string, id = 'fen-import'): ParseGomokuFenResult {
+  const fields = fen.trim().split(/\s+/);
+  if (fields.length !== 2) return { ok: false, error: 'Expected a board and side-to-move.' };
+  const turn = fields[1] === 'b' ? 'black' : fields[1] === 'w' ? 'white' : null;
+  if (!turn) return { ok: false, error: 'Expected side-to-move b or w.' };
+  const rows = fields[0]!.split('/');
+  if (rows.length !== GOMOKU_BOARD_SIZE) return { ok: false, error: 'Expected 15 ranks.' };
+  const board: (GomokuColor | null)[] = Array(POINT_COUNT).fill(null);
+  const stones: GomokuStone[] = [];
+  for (let row = 0; row < GOMOKU_BOARD_SIZE; row += 1) {
+    let file = 0;
+    for (const token of rows[row]!.match(/\d+|./g) ?? []) {
+      if (/^[1-9]\d*$/.test(token)) {
+        file += Number(token);
+      } else if (token === 'B' || token === 'W') {
+        if (file >= GOMOKU_BOARD_SIZE) return { ok: false, error: 'Rank exceeds 15 files.' };
+        const index = (GOMOKU_BOARD_SIZE - 1 - row) * GOMOKU_BOARD_SIZE + file;
+        const color = token === 'B' ? 'black' : 'white';
+        board[index] = color;
+        stones.push({ square: moveAt(index).to, color });
+        file += 1;
+      } else {
+        return { ok: false, error: `Invalid Gomoku placement token "${token}".` };
+      }
+      if (file > GOMOKU_BOARD_SIZE) return { ok: false, error: 'Rank exceeds 15 files.' };
+    }
+    if (file !== GOMOKU_BOARD_SIZE) return { ok: false, error: 'Expected 15 files per rank.' };
+  }
+  if (stones.length === POINT_COUNT) return { ok: false, error: 'Gomoku board is already full.' };
+  for (let index = 0; index < POINT_COUNT; index += 1) {
+    const color = board[index];
+    if (color && makesFive(board, index, color)) {
+      return { ok: false, error: 'Gomoku position already contains five in a row.' };
+    }
+  }
+  return {
+    ok: true,
+    state: {
+      id,
+      rule: 'freestyle',
+      board,
+      ply: stones.length,
+      moveNumber: 1,
+      status: { type: 'playing', turn },
+      opening: { stones, turn },
+    },
+  };
 }
 
 // The origin is treated as `color` even when it is empty. This lets the threat

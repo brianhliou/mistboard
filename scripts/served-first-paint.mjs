@@ -20,6 +20,13 @@
 // would otherwise arrive late.
 //
 //   node scripts/served-first-paint.mjs [--base https://mistboard.com] [--per-shape 2] [--json]
+//   node scripts/served-first-paint.mjs --base http://127.0.0.1:PORT --manifest-samples
+//
+// --manifest-samples is for a local server with no database (the crawler-floor
+// fixture server): board, puzzle and player samples come from the crawler
+// manifest's paths, which that server serves from fixtures, instead of the
+// public APIs, which answer 503 without a database. Production keeps the API
+// samples.
 //
 // Exit 1 with one line per page and problem.
 import {
@@ -35,10 +42,17 @@ const arg = (name, fallback) => {
 const base = arg('--base', 'https://mistboard.com').replace(/\/+$/, '');
 const perShape = Number(arg('--per-shape', '2'));
 const asJson = args.includes('--json');
+const manifestSamples = args.includes('--manifest-samples');
 
 // Served with body markup but absent from the sitemap (noindex, or not a page
 // a crawler should land on), so they are named here.
-const EXTRA_PATHS = [
+export const INDEX_PATHS = ['', '/zh-hans', '/zh-hant'].flatMap((prefix) =>
+  ['/blog', '/blog/community', '/rules'].map((path) => `${prefix}${path}`),
+);
+
+export const EXTRA_PATHS = [
+  ...INDEX_PATHS,
+  '/bot/pikafish',
   '/',
   '/players',
   '/players/teams',
@@ -51,6 +65,20 @@ const EXTRA_PATHS = [
   '/watch',
   '/feed',
   '/changelog',
+  '/terms',
+  '/privacy',
+  '/contact',
+  '/forum/etiquette',
+  '/practice',
+  '/analysis/xiangqi',
+  '/editor/xiangqi',
+  '/import',
+  '/games/search',
+  '/stats',
+  '/data',
+  '/coach',
+  '/forum',
+  '/player/rating-stats',
 ];
 
 const LOCALES = new Set(['zh-hans', 'zh-hant']);
@@ -62,6 +90,8 @@ export function routeShape(pathname) {
   const segments = pathname.split('/').filter(Boolean);
   const head = [];
   if (LOCALES.has(segments[0])) head.push(segments.shift());
+  if (segments[0] === 'blog' && segments[1] === 'community' && segments.length === 2)
+    return `/${[...head, ...segments].join('/')}`;
   if (segments.length) head.push(segments.shift());
   return `/${[...head, ...segments.map(() => '*')].join('/')}`;
 }
@@ -84,6 +114,21 @@ export function paintsBareCopy(html) {
   return text.length > 0;
 }
 
+export function boardPageSamples({ games = [], puzzles = [], players = [] }) {
+  const historical = games.find((game) => game.kind === 'historical');
+  const puzzle = puzzles[0];
+  const player = players[0];
+  if (!historical?.id || !puzzle?.id || !player?.handle)
+    throw new Error(
+      'First-paint board coverage needs a public historical game, puzzle and profile',
+    );
+  return [
+    `/historical-xiangqi/game/${encodeURIComponent(historical.id)}`,
+    `/puzzles/${encodeURIComponent(puzzle.id)}`,
+    `/@/${encodeURIComponent(player.handle)}`,
+  ];
+}
+
 async function fetchText(url) {
   const res = await fetch(url, { headers: { 'user-agent': 'mistboard-css-coverage' } });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
@@ -95,9 +140,34 @@ async function sitemapPaths() {
   const locs = (xml) => [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
   const out = [];
   for (const loc of locs(index)) {
-    const child = loc.endsWith('.xml') ? locs(await fetchText(loc)) : [loc];
+    // Child sitemaps carry the production origin; read them from --base so a
+    // local or preview check sees its own sitemap, not production's.
+    const child = loc.endsWith('.xml')
+      ? locs(await fetchText(new URL(new URL(loc).pathname, base).href))
+      : [loc];
     for (const url of child) out.push(new URL(url).pathname);
   }
+  if (manifestSamples) {
+    const { CRAWLER_CONTENT_MANIFEST } = await import(
+      '../apps/server/dist/crawler-content-manifest.js'
+    );
+    out.push(...CRAWLER_CONTENT_MANIFEST.map((entry) => entry.path));
+    return out;
+  }
+  // These shapes have no sitemap section yet (#959). Take public samples from
+  // the same APIs the client uses; never probe private/live room state.
+  const games = JSON.parse(
+    await fetchText(`${base}/api/historical-xiangqi/games?source=archive&limit=1`),
+  );
+  const puzzles = JSON.parse(await fetchText(`${base}/api/puzzles?variant=xiangqi`));
+  const players = JSON.parse(await fetchText(`${base}/api/leaderboard?variant=xiangqi&limit=1`));
+  out.push(
+    ...boardPageSamples({
+      games: games.games,
+      puzzles: puzzles.puzzles,
+      players: players.leaderboard,
+    }),
+  );
   return out;
 }
 

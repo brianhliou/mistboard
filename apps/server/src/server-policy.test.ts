@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import type { ServerResponse } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   applyXmjMove,
   createClock,
@@ -15,6 +16,8 @@ import {
   type XmjSeat,
   xmjPendingAction,
 } from '@mistboard/game';
+import { crawlerFixtureSources } from './crawler-content-fixtures.js';
+import { CRAWLER_CONTENT_MANIFEST } from './crawler-content-manifest.js';
 import {
   adminDebugTokenFromProtocolHeader,
   airsOnDelay,
@@ -38,8 +41,13 @@ import {
   seatTokenFromProtocolHeader,
   withDelayedAir,
 } from './server-policy.js';
-import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
+import { SITEMAP_STATIC_ROUTES, serveSpaShellWithRoutePreloads } from './server-static-pages.js';
 import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import {
+  sitemapConformanceFailures,
+  sitemapContract,
+  sitemapPathIsTracked,
+} from './sitemap-content.js';
 import type { XmjEvent } from './xiangqi-mahjong-tenant.js';
 
 test('live persisted events are not public replay data', () => {
@@ -518,8 +526,17 @@ test('isClientRoute covers every parametric route matcher declared in main.ts', 
 // prefixes, so the parity check below actually exercises each one.
 const NOINDEX_ROUTE_SAMPLES = [
   '/ops',
+  '/titles',
+  '/engines',
+  '/engine/pikafish',
+  '/accounts',
+  '/database',
   '/metrics',
   '/readouts',
+  '/forum/reports',
+  '/broadcast/xiangqi/ops',
+  '/practice/position',
+  '/play',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -599,6 +616,44 @@ test('a site-played game page is noindexed; an archive game and the lists are no
 test('isNoindexRoute ignores a trailing slash', () => {
   assert.equal(isNoindexRoute('/account/'), true);
   assert.equal(isNoindexRoute('/following/'), true);
+  assert.equal(isNoindexRoute('/forum/reports/'), true);
+});
+
+test('admin preview noindex policy matches only admin shells and preserves public routes and assets', () => {
+  for (const route of [
+    '/titles',
+    '/engines',
+    '/engine/pikafish',
+    '/accounts',
+    '/database',
+    '/broadcast/xiangqi/ops',
+    '/forum/reports',
+    '/practice/position',
+    '/play',
+  ]) {
+    assert.equal(isClientRoute(route), true, route);
+    assert.equal(isNoindexRoute(route), true, route);
+    assert.equal(isNoindexRoute(`${route}/`), true, route);
+  }
+  for (const route of ['/verify-title', '/bots', '/games/search']) {
+    // /verify-title is an existing noindex utility, not the private /titles queue.
+    assert.equal(isNoindexRoute(route), route === '/verify-title', route);
+  }
+  for (const route of [
+    '/engine',
+    '/engine/fairy-stockfish/stockfish.js',
+    '/engines-extra',
+    '/accounts-extra',
+    '/database-extra',
+    '/titles-extra',
+    '/broadcast/xiangqi',
+    '/broadcast/xiangqi/ops-extra',
+    '/forum/reports-extra',
+    '/practice/position-extra',
+    '/play-extra',
+  ]) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
 });
 
 // The sitemap must never advertise a route the server 404s: every static route
@@ -609,6 +664,7 @@ test('isNoindexRoute ignores a trailing slash', () => {
 test('sitemap static routes are live client routes, never parked ones', () => {
   assert.ok(SITEMAP_STATIC_ROUTES.length > 0, 'expected sitemap static routes');
   for (const route of SITEMAP_STATIC_ROUTES) {
+    assert.ok(sitemapPathIsTracked(route), `sitemap advertises a missing body: ${route}`);
     if (route === '/') continue;
     assert.equal(
       PARKED_CLIENT_ROUTES.has(route),
@@ -620,6 +676,78 @@ test('sitemap static routes are live client routes, never parked ones', () => {
       true,
       `sitemap advertises ${route}, but isClientRoute() rejects it so prod serves a 404 shell`,
     );
+  }
+});
+
+test('sitemap conformance exempts only current tracked gaps from planted body failures', () => {
+  // A page can lose its knownGap as another #956 child lands. Check the current
+  // contracts rather than assuming a particular route will always be a gap.
+  const bodyFailures = ['body below floor'];
+  for (const path of SITEMAP_STATIC_ROUTES) {
+    const contract = CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === path);
+    assert.ok(contract, path);
+    assert.deepEqual(sitemapConformanceFailures(path, []), [], path);
+    assert.deepEqual(
+      sitemapConformanceFailures(path, bodyFailures),
+      contract.knownGap ? [] : bodyFailures,
+      path,
+    );
+  }
+  // Planted sitemap route: even a passing body needs an independent contract.
+  assert.deepEqual(sitemapConformanceFailures('/planted-unclassified', []), [
+    'sitemap route has no crawler manifest entry: /planted-unclassified',
+  ]);
+});
+
+test('every static sitemap URL passes its crawler floor or has a tracked gap without sockets', async (t) => {
+  const staticDir = resolve(import.meta.dirname, '../../web/dist');
+  const metadataFile = resolve(staticDir, 'prerender-sitemap.json');
+  if (!existsSync(metadataFile)) {
+    t.skip('host build supplies prerender-sitemap.json');
+    return;
+  }
+  const baked = JSON.parse(readFileSync(metadataFile, 'utf8')) as Array<{
+    path: string;
+    file?: string;
+  }>;
+  const { auditCrawlerRoute } = await import(
+    pathToFileURL(resolve(import.meta.dirname, '../../../scripts/crawler-floor.mjs')).href
+  );
+  const sources = crawlerFixtureSources();
+  const fetchImpl = async (url: URL) => {
+    const record = baked.find((entry) => entry.path === url.pathname && entry.file);
+    if (record?.file)
+      return {
+        status: 200,
+        text: async () => readFileSync(resolve(staticDir, record.file!), 'utf8'),
+      };
+    let html = '';
+    let status = 200;
+    const response = {
+      writeHead(code: number) {
+        status = code;
+      },
+      end(body: string) {
+        html = body;
+      },
+    } as unknown as ServerResponse;
+    await serveSpaShellWithRoutePreloads({
+      ...sources,
+      staticDir,
+      response,
+      pathname: url.pathname,
+      publicHost: url.origin,
+    });
+    return { status, text: async () => html };
+  };
+  for (const path of SITEMAP_STATIC_ROUTES) {
+    const entry = sitemapContract(path)!;
+    const result = await auditCrawlerRoute(entry, {
+      base: 'https://mistboard.test',
+      manifest: CRAWLER_CONTENT_MANIFEST,
+      fetchImpl,
+    });
+    assert.deepEqual(sitemapConformanceFailures(path, result.failures), [], path);
   }
 });
 

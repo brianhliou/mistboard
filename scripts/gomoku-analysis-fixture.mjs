@@ -9,7 +9,7 @@ const { RAPFI_LEVELS, rapfiCommands } = await tsImport(
   '../apps/web/src/engine/rapfi.ts',
   import.meta.url,
 );
-const { GOMOKU_OPENINGS, createInitialGomokuState, applyGomokuMove } = await tsImport(
+const { GOMOKU_DEALT_OPENINGS, createInitialGomokuState, applyGomokuMove } = await tsImport(
   '../packages/game/src/variants-gomoku.ts',
   import.meta.url,
 );
@@ -42,7 +42,7 @@ async function main() {
       // pair is the fallback for long, contested games, never a no-five filter.
       const levels = index < 40 ? [5, 6] : [3, 4];
       if (index % 2) levels.reverse();
-      const opening = GOMOKU_OPENINGS[Math.floor(random() * GOMOKU_OPENINGS.length)];
+      const opening = GOMOKU_DEALT_OPENINGS[Math.floor(random() * GOMOKU_DEALT_OPENINGS.length)];
       const gameSeed = Math.floor(random() * 0x1_0000_0000);
       await blackEngine.reset();
       await whiteEngine.reset();

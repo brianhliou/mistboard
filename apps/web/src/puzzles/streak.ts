@@ -114,7 +114,7 @@ export async function mountPuzzleStreak(
     const meta = bestLine(run!, newBest);
     const cta = button(t('puzzle.streakNewRun'), start);
     cta.dataset.puzzleNext = 'true';
-    panel.append(title, score, meta, chips(run!.results, null), cta, practiceLink());
+    panel.append(title, score, meta, chips(run!.results, null), cta);
     return panel;
   };
 
@@ -130,8 +130,8 @@ export async function mountPuzzleStreak(
 
   // The left card, in the regular page's card type (Brian, 2026-10-29: "align
   // it with the regular mode left column"): what the mode is in two short
-  // lines, a sign-in line for a guest (known once the run answers), and
-  // practice. The run so far sits under the board, where the trainer keeps
+  // lines and a sign-in line for a guest (known once the run answers).
+  // The run so far sits under the board, where the trainer keeps
   // this visit's chips. Desktop only: the phone stack hides this column, and
   // the prompt row and Game over carry the count and sign-in there.
   const sideCard = (): { card: HTMLElement; signIn: HTMLElement | null } => {
@@ -147,7 +147,6 @@ export async function mountPuzzleStreak(
     card.append(title, rules, facts);
     const signIn = run && run.best === null ? bestLine(run, false) : null;
     if (signIn) card.append(signIn);
-    card.append(practiceLink());
     return { card, signIn };
   };
 
@@ -256,6 +255,7 @@ export async function mountPuzzleStreak(
               }
             },
           );
+          skip.className = 'puzzle-streak-skip';
           skip.dataset.streakSkip = 'true';
           skip.disabled = session.submitting || run!.skipUsed;
           actions.append(skip);
@@ -530,11 +530,4 @@ function quietButton(label: string, action: () => void | Promise<void>): HTMLBut
   const el = button(label, action);
   el.className = 'puzzle-feedback-skip';
   return el;
-}
-function practiceLink(): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.className = 'puzzle-streak-practice';
-  link.href = '/puzzles';
-  link.textContent = t('puzzle.streakPractice');
-  return link;
 }

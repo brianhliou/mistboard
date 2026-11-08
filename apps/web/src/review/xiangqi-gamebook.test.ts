@@ -12,16 +12,20 @@ import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
+  standardXiangqiEngineFen,
   type XiangqiMove,
 } from '@mistboard/game';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { pieceAnimationDurationMs } from '../board-anim.js';
 import { LOCALE_STORAGE_KEY, setStoredLocale } from '../i18n/locale.js';
+import * as board from '../xiangqi-board.js';
 import { createGameTree } from './game-tree.js';
 import { serializeTree } from './tree-serialize.js';
 import { mountXiangqiGamebook } from './xiangqi-gamebook.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
 beforeEach(() => {
+  vi.useFakeTimers();
   const store = new Map<string, string>();
   Object.defineProperty(window, 'localStorage', {
     configurable: true,
@@ -33,7 +37,12 @@ beforeEach(() => {
   });
   setStoredLocale('en');
 });
-afterEach(() => window.localStorage.removeItem(LOCALE_STORAGE_KEY));
+afterEach(() => {
+  window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 /** A three-ply lesson (red, black's reply, red) plus a legal wrong first move. */
 function fixture() {
@@ -62,12 +71,13 @@ function mount() {
  * through the real listener is the point -- calling the session directly would
  * not prove the board is wired to it.
  */
-const play = (host: HTMLElement, move: XiangqiMove): void => {
+const play = (host: HTMLElement, move: XiangqiMove, settle = true): void => {
   for (const square of [move.from, move.to]) {
     const hit = host.querySelector<SVGElement>(`g.xq-live-clicks > [data-square="${square}"]`);
     if (!hit) throw new Error(`no click target for ${square}`);
     hit.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   }
+  if (settle) vi.runAllTimers();
 };
 
 const feedback = (host: HTMLElement): string =>
@@ -161,7 +171,6 @@ for (const copy of LOCALES) {
       tree,
       title: 'Authored title',
       summary: 'Authored summary',
-      game: { detail: 'Recorded event' },
       seats: { red: 'Original Red', black: 'Original Black' },
     };
     mountXiangqiGamebook(host, { ...opts, orientation: 'black' });
@@ -170,7 +179,6 @@ for (const copy of LOCALES) {
     for (const text of [
       'Authored title',
       'Authored summary',
-      'Recorded event',
       'Original Red',
       'Original Black',
       'Authored comment',
@@ -331,12 +339,10 @@ test.each(LOCALE_COPY)(
       orientation: 'red',
       title: 'Author title',
       summary: 'Author summary',
-      game: { detail: 'Author game detail' },
       seats: { red: 'Red player', black: 'Black player' },
     });
     expect(host.querySelector('.gamebook__title')?.textContent).toBe('Author title');
     expect(host.querySelector('.gamebook__summary')?.textContent).toBe('Author summary');
-    expect(host.querySelector('.gamebook__game')?.textContent).toBe('Author game detail');
     expect([...host.querySelectorAll('.review-seat__name')].map((el) => el.textContent)).toEqual([
       'Black player',
       'Red player',
@@ -349,3 +355,106 @@ test.each(LOCALE_COPY)(
     expect(host.querySelector('.gamebook__comment')?.textContent).toBe('Coach comment');
   },
 );
+
+/** Mid-game root with Black to move; Red is the learner. */
+function opponentFixture() {
+  const initial = createInitialXiangqiState('moment');
+  const root = applyStandardXiangqiMove(initial, getStandardXiangqiLegalMoves(initial)[0]!);
+  root.moveNumber = 20;
+  const moves: XiangqiMove[] = [];
+  let position = root;
+  for (let i = 0; i < 4; i++) {
+    const move = getStandardXiangqiLegalMoves(position)[0]!;
+    moves.push(move);
+    position = applyStandardXiangqiMove(position, move);
+  }
+  const tree = createGameTree(xiangqiTreeAdapter, moves, root);
+  const blob = serializeTree(tree, xiangqiTreeAdapter, { rootFen: standardXiangqiEngineFen(root) });
+  return { blob, tree, moves };
+}
+
+test('first paint and Restart show the pre-move position before sliding the opponent move', () => {
+  const { blob, tree, moves } = opponentFixture();
+  const animate = vi.spyOn(board, 'animateXiangqiBoardMove');
+  const paint = vi.spyOn(board, 'createXiangqiInteractiveBoard');
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: blob, orientation: 'red' });
+  const interactive: ReturnType<typeof board.createXiangqiInteractiveBoard> =
+    paint.mock.results[0]!.value;
+  const render = vi.spyOn(interactive, 'render');
+  const first = moves[0]!;
+  expect(host.querySelector(`[data-piece-square="${first.from}"]`)).not.toBeNull();
+  expect(host.querySelector(`[data-piece-square="${first.to}"]`)).toBeNull();
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('true');
+  vi.advanceTimersByTime(499);
+  expect(animate).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(render.mock.calls.at(-1)?.[0]?.lastMove).toMatchObject(first);
+  expect(
+    host.querySelector('[data-board-lastmove-over]')?.innerHTML ||
+      host.querySelector('.xq-live-lastmove')?.innerHTML,
+  ).toBeTruthy();
+  expect(animate).toHaveBeenCalledWith(expect.any(HTMLElement), first, 'red');
+  // A click during the slide cannot submit the learner's answer.
+  play(host, moves[1]!, false);
+  expect(host.querySelectorAll('.gamebook__moves .review-move-list__san')).toHaveLength(1);
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('true');
+  expect(state(host)).toBe('play');
+  vi.advanceTimersByTime(pieceAnimationDurationMs());
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('false');
+  play(host, moves[1]!);
+  expect(animate).toHaveBeenLastCalledWith(expect.any(HTMLElement), moves[2], 'red');
+  play(host, moves[3]!);
+  expect(state(host)).toBe('end');
+  host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button')[1]!.click();
+  expect(host.querySelector(`[data-piece-square="${first.from}"]`)).not.toBeNull();
+  vi.advanceTimersByTime(500);
+  expect(render.mock.calls.at(-1)?.[0]?.lastMove).toMatchObject(first);
+  expect(tree.root.truth.moveNumber).toBe(20);
+});
+
+test.each([
+  { notation: 'wxf', label: 'P1+1' },
+  { notation: 'algebraic', label: 'Pa6' },
+  { notation: 'chinese', label: '卒1进1' },
+])('history shows only played moves in $notation with real game numbers', ({ notation, label }) => {
+  if (notation === 'chinese') setStoredLocale('zh-Hans');
+  window.localStorage.setItem('mistboard.xiangqiNotation', notation);
+  const { blob, tree, moves } = opponentFixture();
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: blob, orientation: 'red' });
+  vi.runAllTimers();
+  const labels = () =>
+    [...host.querySelectorAll('.gamebook__moves .review-move-list__san')].map(
+      (el) => el.textContent,
+    );
+  const first = tree.root.children[0]!;
+  expect(first.label).toBe(label);
+  expect(labels()).toEqual([first.label]);
+  expect(host.querySelector('.gamebook__moves .review-move-list__number')?.textContent).toBe('20');
+  expect(host.querySelector('.gamebook__moves .review-move-list__move--gap')).not.toBeNull();
+  play(host, moves[1]!);
+  expect(labels()).toEqual([
+    first.label,
+    first.children[0]!.label,
+    first.children[0]!.children[0]!.label,
+  ]);
+  expect(
+    [...host.querySelectorAll('.gamebook__moves .review-move-list__number')].map(
+      (el) => el.textContent,
+    ),
+  ).toEqual(['20', '21']);
+  expect(host.querySelector('.gamebook__coach')?.firstElementChild?.className).toBe(
+    'gamebook__prompt',
+  );
+});
+
+test('a chapter change cancels the pending auto-move paint and sound', () => {
+  const animate = vi.spyOn(board, 'animateXiangqiBoardMove');
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree: opponentFixture().blob, orientation: 'red' });
+  mountXiangqiGamebook(host, { tree: fixture().tree, orientation: 'red' });
+  vi.runAllTimers();
+  expect(animate).not.toHaveBeenCalled();
+  expect(host.querySelector('.gamebook__board')?.getAttribute('aria-busy')).toBe('false');
+});

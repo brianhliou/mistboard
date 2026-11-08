@@ -92,6 +92,8 @@ describe('prerender CSS coverage', () => {
       dist = await mkdtemp(join(tmpdir(), 'css-coverage-'));
       await mkdir(join(dist, 'assets'));
       await mkdir(join(dist, 'rules'));
+      await mkdir(join(dist, 'blog'));
+      await mkdir(join(dist, 'zh-hans'));
       await writeFile(join(dist, 'assets', 'index-a.css'), '.landing-page{color:red}');
       await writeFile(join(dist, 'assets', 'articles-b.css'), '.article-page{display:grid}');
       await writeFile(
@@ -106,9 +108,23 @@ describe('prerender CSS coverage', () => {
         join(dist, 'rules.html'),
         page(['assets/index-a.css', 'assets/articles-b.css'], ARTICLE_MARKUP),
       );
+      // Planted locale regression: a protected copy still needs its route CSS.
+      await writeFile(
+        join(dist, 'zh-hans', 'about.html'),
+        page(['assets/index-a.css'], `<div class="crawler-copy">${ARTICLE_MARKUP}</div>`),
+      );
+      // Planted #964 regression: nested community files remain in the CSS scan.
+      await writeFile(
+        join(dist, 'blog', 'community.html'),
+        page(['assets/index-a.css'], `<div class="crawler-copy">${ARTICLE_MARKUP}</div>`),
+      );
       expect(await prerenderedCssMisses(dist)).toEqual({
-        pages: 2,
-        lines: ['rules/banqi.html: /assets/articles-b.css (.article-page)'],
+        pages: 4,
+        lines: [
+          'blog/community.html: /assets/articles-b.css (.article-page)',
+          'rules/banqi.html: /assets/articles-b.css (.article-page)',
+          'zh-hans/about.html: /assets/articles-b.css (.article-page)',
+        ],
       });
     });
   });

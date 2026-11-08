@@ -23,12 +23,14 @@ import {
   type TenantGameCardStore,
   tenantGameCard,
   tenantGamePageMeta,
+  tenantGameRoutePage,
 } from './og-game-tenant.js';
 import { isPositionOgVariant, publicPositionFen } from './og-position.js';
 import { OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import { OG_CARD_ZOOM, pngSize, svgToPng } from './og-raster.js';
 import type { GameParticipant, GameRecord } from './persistence.js';
 import type { StoredPlyEval } from './persistence-game-analysis.js';
+import { type TenantManagedRoom, variantTenantForRoomId } from './variant-tenant/registry.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
 // ── fixtures (the shapes game-export-tenant.test.ts uses) ────────────────────
@@ -283,6 +285,110 @@ test('tenant game page meta fails closed', async () => {
     await tenantGamePageMeta('/xiangqi/game/xq_card', store({ summary: wrongVariant })),
     null,
   );
+});
+
+test('live tenant previews use engine names and guest fallbacks without reading moves', async () => {
+  await loadRegistry();
+  const meta = await tenantGameRoutePage('/jieqi/game/jq_live', {
+    ...store({}),
+    room: async () => ({
+      id: 'jq_live',
+      clients: [],
+      pendingWrites: Promise.resolve(),
+      projection: {
+        state: { status: { type: 'playing' } },
+        seats: { black: 'pikafish-jieqi-level-4', red: 'guest-private-id' },
+      },
+      pveBotId: 'pikafish-level-4',
+      get events(): never {
+        return assert.fail('A live preview must not read moves or setup');
+      },
+    }),
+  });
+  assert.deepEqual(meta, {
+    noindex: true,
+    meta: {
+      title: 'Guest vs Pikafish Level 4 · Jieqi, live · Mistboard',
+      description: 'Guest vs Pikafish Level 4. Live Jieqi game on Mistboard.',
+      urlPath: '/jieqi/game/jq_live',
+    },
+  });
+});
+
+test('live preview default lookup reads the registered room map without Postgres', async () => {
+  await loadRegistry();
+  const rooms = variantTenantForRoomId('jq_preview_memory')!.rooms as Map<
+    string,
+    TenantManagedRoom
+  >;
+  rooms.set('jq_preview_memory', {
+    id: 'jq_preview_memory',
+    clients: [],
+    pendingWrites: Promise.resolve(),
+    projection: {
+      state: { status: { type: 'playing' } },
+      seats: { red: 'r', black: 'b' },
+    },
+  });
+  try {
+    const page = await tenantGameRoutePage('/jieqi/game/jq_preview_memory');
+    assert.equal(page?.meta?.title, 'Guest vs Guest · Jieqi, live · Mistboard');
+    assert.equal(page?.meta?.imagePath, undefined);
+  } finally {
+    rooms.delete('jq_preview_memory');
+  }
+});
+
+test('tenant preview lookup preserves finished cards and refuses nonpublic records', async () => {
+  await loadRegistry();
+  const publicStore = store({ summary: async () => gameRecord({}) });
+  const finished = await tenantGameRoutePage('/xiangqi/game/xq_card', publicStore);
+  assert.deepEqual(finished, {
+    noindex: true,
+    meta: await tenantGamePageMeta('/xiangqi/game/xq_card', publicStore),
+  });
+  for (const visibility of ['private', 'unlisted', 'link'] as const) {
+    const hiddenStore = store({ summary: async () => gameRecord({ visibility }) });
+    assert.deepEqual(await tenantGameRoutePage('/xiangqi/game/xq_card', hiddenStore), {
+      noindex: true,
+    });
+    assert.equal(await tenantGamePageMeta('/xiangqi/game/xq_card', hiddenStore), null);
+    assert.equal(await tenantGameCard(XQ_ROOM, hiddenStore), null);
+  }
+});
+
+test('tenant preview lookup fails closed for playtests, read failures and unloaded rooms', async () => {
+  await loadRegistry();
+  const noReads = store({
+    summary: async () => assert.fail('A hidden playtest must not be read'),
+    events: async () => assert.fail('A hidden playtest must not be read'),
+  });
+  assert.deepEqual(await tenantGameRoutePage('/three-kingdoms-banqi/game/tkb_preview', noReads), {
+    noindex: true,
+  });
+  assert.deepEqual(
+    await tenantGameRoutePage(
+      '/xiangqi/game/xq_error',
+      store({
+        summary: async () => {
+          throw new Error('unavailable');
+        },
+      }),
+    ),
+    { noindex: true },
+  );
+  assert.deepEqual(
+    await tenantGameRoutePage(
+      '/xiangqi/game/xq_unloaded',
+      store({
+        events: async () => [{ type: 'room-created', roomId: 'xq_unloaded' }],
+      }),
+    ),
+    { noindex: true },
+  );
+  // The archive and live room URLs keep their existing route policies.
+  assert.equal(await tenantGameRoutePage('/historical-xiangqi/game/123', noReads), null);
+  assert.equal(await tenantGameRoutePage('/room/jq_live', noReads), null);
 });
 
 // ── the card ────────────────────────────────────────────────────────────────

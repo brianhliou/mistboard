@@ -13,6 +13,7 @@ import { isArticleOgLang, serveArticleOgImage, serveStudyOgImage } from './og-im
 import { servePlayerOgImage } from './og-player.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
+import { type PrerenderRoute, readPrerenderRoutes } from './prerender-routes.js';
 import { RequestBodyTooLargeError } from './routes/lib.js';
 import type { DrainController } from './server-drain.js';
 import {
@@ -51,7 +52,24 @@ export type PersistenceHealthEntry = {
   eventType: string;
 };
 
+export type CrawlerPageSources = Pick<
+  Parameters<typeof serveSpaShellWithRoutePreloads>[0],
+  | 'playerPage'
+  | 'broadcastPage'
+  | 'gameMeta'
+  | 'puzzle'
+  | 'listPublicStudies'
+  | 'profile'
+  | 'historicalGame'
+  | 'bot'
+  | 'dataPages'
+> & {
+  getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
+};
+
 type ServerHttpHandlerOptions = {
+  /** In-process fixture injection; never set from HTTP or environment input. */
+  crawlerSources?: CrawlerPageSources;
   rooms: Map<string, Room>;
   lobbyTickets: Map<string, LobbyTicket>;
   lobbyQueue: LobbyTicket[];
@@ -109,6 +127,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
 }
 
 function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
+  const prerenderRoutes = readPrerenderRoutes(options.staticDir);
   return function handleHttpRequest(request: IncomingMessage, response: ServerResponse): void {
     const url = request.url ?? '/';
     const pathname = url.split('?', 1)[0] ?? '/';
@@ -503,11 +522,12 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
     const studyRouteMatch = pathname.match(
       /^(?:\/(zh-hans|zh-hant))?\/study\/([^/]+)(?:\/([^/]+))?$/,
     );
-    if (studyRouteMatch && persistence.isInitialized()) {
+    if (studyRouteMatch && (persistence.isInitialized() || options.crawlerSources?.getStudy)) {
       const studyId = decodeURIComponent(studyRouteMatch[2]!);
       const localeSlug = studyRouteMatch[1] ?? 'en';
       const chapterId = studyRouteMatch[3] ? decodeURIComponent(studyRouteMatch[3]) : undefined;
       void serveStudyPage({
+        getStudy: options.crawlerSources?.getStudy,
         studyId,
         chapterId,
         localeSlug: localeSlug as 'en' | 'zh-hans' | 'zh-hant',
@@ -662,165 +682,43 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       return;
     }
 
-    if (pathname === '/') {
+    // Older/incomplete builds have no route manifest. Keep their homepage
+    // reachable: '/' is intentionally outside the client-route allowlist.
+    const prerender: PrerenderRoute | undefined =
+      prerenderRoutes.get(pathname.replace(/\/+$/, '') || '/') ??
+      (pathname === '/' ? { route: '/', file: 'home.html' } : undefined);
+    // Position/filter queries retain the existing request-specific share meta.
+    if (prerender && !(prerender.kind === 'tool' && url.includes('?'))) {
       void servePrerenderedPage({
         response,
         staticDir: options.staticDir,
-        file: 'home.html',
+        file: prerender.file,
       }).catch(() => {
-        // No prerendered home.html (e.g. an older build): fall back to the shell.
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // The Chinese home pages, the same landing baked in each script. This must
-    // stay ahead of the static handler: dist/zh-hans is a real directory (the
-    // localized article files live there), so without a route of its own the
-    // handler answered /zh-hans/ with a browsable listing of the build, 200 and
-    // indexable.
-    const localeHomeMatch = pathname.match(/^\/(zh-hans|zh-hant)\/?$/);
-    if (localeHomeMatch) {
-      const file = `${localeHomeMatch[1]}-home.html` as 'zh-hans-home.html' | 'zh-hant-home.html';
-      void servePrerenderedPage({ response, staticDir: options.staticDir, file }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // Default-locale player page gets its prerendered frame; localized paths
-    // stay on the client-rendered shell below.
-    if (pathname === '/player') {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: 'player.html',
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // The announcement archive, prerendered: static authored copy, so the baked
-    // page is what a reader sees. /news redirects here (legacyPageRedirect).
-    if (pathname === '/feed') {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: 'feed.html',
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // One month of the announcement archive, prerendered like /feed. A month
-    // with no page (a typo, or one gone stale) gets the client shell, which
-    // renders the month from the bundle or falls back to /feed.
-    const newsMonth = /^\/feed\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
-    if (newsMonth) {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: `feed-${newsMonth}.html` as const,
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // The changelog, prerendered: the committed CHANGELOG.md is the whole page.
-    if (pathname === '/changelog') {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: 'changelog.html',
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // A month the changelog no longer shows in full, prerendered as its own
-    // page. A month without one is on /changelog itself (the latest two) or not
-    // in the log at all; either way the anchor there is the answer.
-    const changelogMonth = /^\/changelog\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
-    if (changelogMonth) {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: `changelog-${changelogMonth}.html` as const,
-      }).catch(() => {
-        response.writeHead(302, { location: `/changelog#${changelogMonth}` });
-        response.end();
-      });
-      return;
-    }
-
-    // Default-locale learn page gets its prerendered stage map; localized
-    // paths stay on the client-rendered shell below.
-    if (pathname === '/learn/xiangqi') {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: 'learn-xiangqi.html',
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // Club copy is baked in each interface locale, like the rules index.
-    const clubWashingtonMatch = pathname.match(/^\/(?:(zh-hans|zh-hant)\/)?washington-xiangqi\/?$/);
-    if (clubWashingtonMatch) {
-      const prefix = clubWashingtonMatch[1] as 'zh-hans' | 'zh-hant' | undefined;
-      const file = prefix
-        ? (`${prefix}/washington-xiangqi.html` as const)
-        : 'washington-xiangqi.html';
-      void servePrerenderedPage({ response, staticDir: options.staticDir, file }).catch(() => {
+        if (prerender.fallback) {
+          response.writeHead(302, { location: prerender.fallback });
+          response.end();
+          return;
+        }
         void serveSpaShellWithRoutePreloads({
+          ...options.crawlerSources,
           response,
           staticDir: options.staticDir,
-          pathname: pathname.replace(/\/+$/, ''),
+          pathname: pathname.replace(/\/+$/, '') || '/',
           publicHost: options.publicHost,
-        });
+        })
+          .catch(() => false)
+          .then((served) => {
+            if (served) return;
+            request.url = '/';
+            void serveHandler(request, response, { public: options.staticDir });
+          });
       });
       return;
     }
-
-    // The patron page, prerendered: it is the route that states what the site
-    // sells and at what price, so it has to be readable without running the
-    // SPA. Localized paths stay on the client-rendered shell below.
-    if (pathname === '/patron') {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: 'patron.html',
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
-      return;
-    }
-
-    // The puzzles landing page gets its prerendered explainer. Deep links
-    // (/puzzles/:idOrShortCode) stay on the client-rendered shell: they open a
-    // specific puzzle, so a baked landing frame would be wrong for them.
-    if (pathname === '/puzzles') {
-      void servePrerenderedPage({
-        response,
-        staticDir: options.staticDir,
-        file: 'puzzles.html',
-      }).catch(() => {
-        request.url = '/';
-        void serveHandler(request, response, { public: options.staticDir });
-      });
+    const changelogMonth = /^\/changelog\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
+    if (changelogMonth) {
+      response.writeHead(302, { location: `/changelog#${changelogMonth}` });
+      response.end();
       return;
     }
 
@@ -838,6 +736,7 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       // manifest entry nor route meta fall back to the plain static shell
       // exactly as before.
       void serveSpaShellWithRoutePreloads({
+        ...options.crawlerSources,
         response,
         staticDir: options.staticDir,
         pathname,
@@ -931,9 +830,6 @@ export function robotsTxt(publicHost: string): string {
   return [
     'User-agent: *',
     'Allow: /',
-    'Disallow: /database',
-    'Disallow: /engines',
-    'Disallow: /accounts',
     'Disallow: /api/data/',
     `Sitemap: ${publicHost}/sitemap.xml`,
     '',

@@ -35,6 +35,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -52,6 +53,7 @@ import { darkChessFen, parseDarkChessFen, parseStandardChessFen } from './varian
 import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
 import { crazyhouseXiangqiFen, parseCrazyhouseXiangqiFen } from './variants-crazyhouse-xiangqi.js';
 import { fortressXiangqiEngineFen, parseFortressXiangqiFen } from './variants-fortress-xiangqi.js';
+import { gomokuFen, parseGomokuFen } from './variants-gomoku.js';
 import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
 import { createInitialJungleFlipState, createJungleFlipDeal } from './variants-jungle-flip.js';
 import { createInitialThreeKingdomsBanqiState } from './variants-three-kingdoms-banqi.js';
@@ -72,6 +74,7 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   ATOMIC_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   CHESS_SPEC_ID,
+  GOMOKU_SPEC_ID,
 ];
 
 export function hasStartFen(spec: string): boolean {
@@ -125,6 +128,10 @@ export type NormalizeStartFenResult = { ok: true; fen: string } | { ok: false; e
  *  Unknown or FEN-less specs are refused rather than defaulted. */
 export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenResult {
   switch (spec) {
+    case GOMOKU_SPEC_ID: {
+      const parsed = parseGomokuFen(fen);
+      return parsed.ok ? { ok: true, fen: gomokuFen(parsed.state) } : parsed;
+    }
     case XIANGQI_SPEC_ID: {
       const parsed = parseStandardXiangqiFen(fen);
       return parsed.ok ? { ok: true, fen: standardXiangqiFen(parsed.state) } : parsed;

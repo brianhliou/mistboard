@@ -122,10 +122,11 @@ const policyPath = ['../../apps/server/src/server-policy.ts', 'apps/server/src/s
 
 describe('the client and server embed lists agree', () => {
   const source = readFileSync(policyPath as string, 'utf8');
-  const start = source.indexOf('export function isEmbedRoute');
-  const body = source.slice(start, source.indexOf('\n}', start));
+  // The list is the EMBED_ROUTE_PATTERNS table that isEmbedRoute runs.
+  const start = source.indexOf('export const EMBED_ROUTE_PATTERNS');
+  const body = source.slice(start, source.indexOf('export function isEmbedRoute', start));
   const regexes = [...body.matchAll(/\/\^(.+?)\$\/\.test/g)].map((m) => new RegExp(`^${m[1]}$`));
-  const literals = [...body.matchAll(/normalized === '([^']+)'/g)].map((m) => m[1] as string);
+  const literals = [...body.matchAll(/path === '([^']+)'/g)].map((m) => m[1] as string);
   const serverAccepts = (path: string): boolean =>
     literals.includes(path) || regexes.some((re) => re.test(path));
 

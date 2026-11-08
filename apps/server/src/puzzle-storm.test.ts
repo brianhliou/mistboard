@@ -36,9 +36,9 @@ test('storm counts solver moves for combo bonuses and solved puzzles for score',
       true,
     );
     assert.equal(state.combo, combo);
-    assert.equal(state.deadlineAt, start + 180_000 + earned);
+    assert.equal(state.deadlineAt, start + 181_000 + earned);
     assert.equal(state.score, combo === 50 ? 1 : 0);
-    assert.equal(stormRemainingMs(state, start + combo * 1_000), 180_000 + earned - combo * 1_000);
+    assert.equal(stormRemainingMs(state, start + combo * 1_000), 181_000 + earned - combo * 1_000);
   }
   assert.deepEqual(state.results, [{ id: 'one', outcome: 'solved' }]);
   assert.deepEqual(state.moves, []);
@@ -108,4 +108,25 @@ test('stale saves cannot change scores or bests; UTC daily bests survive lower r
   assert.deepEqual([...(await recentStormPuzzleIds(run.userId))].sort(), ['four', 'one', 'two']);
   assert.deepEqual([...(await recentStormPuzzleIds(null))], []);
   assert.equal(await loadPuzzleStorm('missing'), null);
+});
+
+test('an unstarted clock survives idle time and starts on its first graded move', async () => {
+  const run = await startPuzzleStorm(['one', 'two'], null, start);
+  assert.equal(run.state.startedAt, null);
+  assert.equal(run.state.deadlineAt, null);
+  assert.equal(expirePuzzleStorm(run.state, start + 900_000), false);
+  assert.equal(stormRemainingMs(run.state, start + 900_000), 180_000);
+  const resumed = (await loadPuzzleStorm(run.id))!;
+  assert.equal(resumed.state.startedAt, null);
+  assert.equal(resumed.state.deadlineAt, null);
+  assert.equal(stormRemainingMs(resumed.state, start + 900_000), 180_000);
+  assert.equal(advancePuzzleStorm(resumed.state, move, 'failed', start + 900_000), true);
+  assert.equal(resumed.state.startedAt, start + 900_000);
+  assert.equal(resumed.state.deadlineAt, start + 1_070_000);
+  assert.equal(stormRemainingMs(resumed.state, start + 900_000), 170_000);
+  assert.equal(await savePuzzleStorm(resumed), true);
+  const started = (await loadPuzzleStorm(run.id))!;
+  assert.equal(started.state.deadlineAt, resumed.state.deadlineAt);
+  assert.equal(expirePuzzleStorm(started.state, start + 1_070_000), true);
+  assert.equal(advancePuzzleStorm(started.state, move, 'solved', start + 1_070_000), false);
 });

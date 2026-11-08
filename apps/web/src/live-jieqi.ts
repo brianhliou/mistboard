@@ -26,6 +26,7 @@ import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
 import { renderJieqiMaterial } from './jieqi-material.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
+import { mountJieqiCaptureStrips } from './live-jieqi-capture-strips.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
@@ -232,6 +233,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       return ({ color, role }) =>
         renderXiangqiPieceGlyphed({ color, role }, pieceSet, { ariaLabel: '' });
     });
+    mountJieqiCaptureStrips(ctx.refs);
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
