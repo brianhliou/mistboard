@@ -37,6 +37,7 @@ const STUDY_VARIANT_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'gomoku',
   // Unlaunched (#628): admin-only on the server until the public launch.
   'three-kingdoms-banqi',
   // Retired 2026-10-11, off the canonical order so at the tail: existing

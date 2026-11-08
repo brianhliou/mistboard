@@ -83,7 +83,7 @@ test('Gomoku is a public casual, rated freestyle placement game', () => {
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
   assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
   assert.equal(isCorrespondenceRatedSpec(spec.id), false);
-  assert.equal(isStudyEligibleSpecId(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), true);
 });
 
 test('Gomoku is allowlisted while hidden and takes its shelf place only at launch', () => {
@@ -393,4 +393,11 @@ test('admin-only study variants are study-eligible and not yet launched', () => 
   assert.equal(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID), true);
   assert.equal(isAdminOnlyStudySpecId(BANQI_SPEC_ID), false);
   assert.equal(isAdminOnlyStudySpecId('three-kingdoms-banqi '), false);
+});
+
+test('Gomoku studies are public and position-rooted', () => {
+  assert.equal(isStudyEligibleSpecId(GOMOKU_SPEC_ID), true);
+  assert.equal(hasStartFen(GOMOKU_SPEC_ID), true);
+  assert.equal(isPublicGameSpec(GOMOKU_SPEC_ID), true);
+  assert.equal(isAdminOnlyStudySpecId(GOMOKU_SPEC_ID), false);
 });

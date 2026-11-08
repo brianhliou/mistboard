@@ -1,4 +1,4 @@
-import { importXiangqiGame } from '@mistboard/game';
+import { createGomokuRoomState, gomokuFen, importXiangqiGame } from '@mistboard/game';
 import { describe, expect, it, vi } from 'vitest';
 import continuedRecords from '../../../../packages/game/fixtures/xiangqi-notation/adjudicated-records.json';
 import { jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
@@ -106,5 +106,79 @@ describe('jieqi study luck without analysis', () => {
       handle.destroy();
       root.remove();
     }
+  });
+});
+
+describe('Gomoku study chapters', () => {
+  const opening = {
+    stones: [{ square: 'h8' as const, color: 'black' as const }],
+    turn: 'white' as const,
+  };
+  const dealtFen = gomokuFen(createGomokuRoomState('study-test', opening));
+
+  for (const rootFen of [undefined, gomokuFen(createGomokuRoomState('empty')), dealtFen]) {
+    it(`opens and saves a chapter from ${rootFen === dealtFen ? 'a White-to-move dealt root' : rootFen ? 'an explicit empty root' : 'an implicit empty root'}`, async () => {
+      const root = document.createElement('div');
+      document.body.append(root);
+      const tree: SerializedTree = {
+        version: 1,
+        ...(rootFen ? { rootFen } : {}),
+        root: {
+          children: [
+            {
+              uci: 'a1',
+              annotations: { comments: [{ text: 'First placement' }] },
+              children: [{ uci: 'o15', children: [] }],
+            },
+          ],
+        },
+      };
+      const config = {
+        title: 'Gomoku chapter',
+        summary: '',
+        ariaLabel: 'Study board',
+        reviewSurface: 'study' as const,
+        rootFen,
+        initialTree: tree,
+        initialPosition: 'end' as const,
+      };
+      let handle = await mountStudyReview('gomoku', root, config);
+      try {
+        const stones = () => [...root.querySelectorAll('[data-piece-square]')];
+        expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
+        expect(stones()).toHaveLength(rootFen === dealtFen ? 3 : 2);
+        expect(
+          root.querySelector(
+            `[data-piece-square="a1"].gomoku-stone--${rootFen === dealtFen ? 'white' : 'black'}`,
+          ),
+        ).not.toBeNull();
+        expect(handle.serialize()).toEqual(tree);
+        root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+        expect(stones()).toHaveLength(rootFen === dealtFen ? 1 : 0);
+        root
+          .querySelector('[data-square="b2"] .gomoku-hit')!
+          .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const saved = handle.serialize();
+        expect(saved.root.children.map((node) => node.uci)).toEqual(['a1', 'b2']);
+        handle.destroy();
+        handle = await mountStudyReview('gomoku', root, { ...config, initialTree: saved });
+        expect(handle.serialize()).toEqual(saved);
+      } finally {
+        handle.destroy();
+        root.remove();
+      }
+    });
+  }
+
+  it('refuses an unknown variant without mounting another board', async () => {
+    const root = document.createElement('div');
+    await expect(
+      mountStudyReview('unknown' as Parameters<typeof mountStudyReview>[0], root, {
+        title: '',
+        summary: '',
+        ariaLabel: 'Study board',
+      }),
+    ).rejects.toThrow('unsupported study variant: unknown');
+    expect(root.children).toHaveLength(0);
   });
 });

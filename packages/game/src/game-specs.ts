@@ -324,6 +324,9 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Gomoku: the tree review accepts a canonical position, including a dealt
+  // opening and either side to move. Public since launch; no admin-only gate.
+  GOMOKU_SPEC_ID,
   // Three Kingdoms banqi (#628): a tree-review stack (review/three-kingdoms-banqi-
   // review.ts) and a dealt FEN (three-kingdoms-banqi-fen.ts) pinning the deal in
   // the chapter root. Unlaunched, so ADMIN_ONLY_STUDY_SPEC_IDS below holds its

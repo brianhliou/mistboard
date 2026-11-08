@@ -1370,14 +1370,13 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('svg')).toBeNull();
   });
 
-  it('dispatches study variants and the prepared Gomoku renderer without enabling studies', () => {
-    // Rendering is prepared ahead of Gomoku study eligibility (#938).
-    // Keep that one explicit exception; unknown variants still get no board.
+  it('dispatches only study variants, including public Gomoku', () => {
+    // Every renderer belongs to the study catalog; unknown variants get no board.
     const studyIds = new Set<string>(STUDY_VARIANTS.map((v) => v.id));
     for (const variant of CHAPTER_EMBED_VARIANTS) {
-      expect(studyIds.has(variant) || variant === 'gomoku', variant).toBe(true);
+      expect(studyIds.has(variant), variant).toBe(true);
     }
-    expect(studyIds.has('gomoku')).toBe(false);
+    expect(studyIds.has('gomoku')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('gomoku')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('dark-chess')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('made-up-chess')).toBe(false);

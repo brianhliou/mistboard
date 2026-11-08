@@ -93,7 +93,7 @@ test('normalizeStartFen is fail-closed off the list', () => {
 
 test('Gomoku start FEN trims whitespace and preserves its explicit turn', () => {
   assert.equal(hasStartFen('gomoku'), true);
-  assert.equal(isStudyEligibleSpecId('gomoku'), false);
+  assert.equal(isStudyEligibleSpecId('gomoku'), true);
   const rows = Array(15).fill('15');
   for (const turn of ['b', 'w']) {
     const paste = `${rows.join('/')}\t${turn}`;
