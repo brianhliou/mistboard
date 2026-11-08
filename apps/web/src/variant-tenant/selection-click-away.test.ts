@@ -34,4 +34,32 @@ describe('installSelectionClickAway', () => {
     uninstall();
     root.remove();
   });
+
+  it('keeps the selection while the pointer is inside an open dialog', () => {
+    const board = document.createElement('div');
+    const dialog = document.createElement('dialog');
+    const confirm = document.createElement('button');
+    dialog.append(confirm);
+    document.body.append(board, dialog);
+    dialog.setAttribute('open', '');
+    let clears = 0;
+    const uninstall = installSelectionClickAway({
+      roots: () => [board],
+      hasSelection: () => true,
+      clearSelection: () => {
+        clears += 1;
+      },
+    });
+
+    confirm.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(clears).toBe(0);
+
+    dialog.removeAttribute('open');
+    confirm.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(clears).toBe(1);
+
+    uninstall();
+    board.remove();
+    dialog.remove();
+  });
 });
