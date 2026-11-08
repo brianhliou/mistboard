@@ -448,6 +448,7 @@ export const ZH_HANT_REVIEW = {
   'replay.endRace': '進入獸穴',
   'replay.endFive': '五子連線',
   'replay.endChasing': '長將',
+  'replay.endPerpetualChase': '長捉',
   'replay.endDenEntered': '入獸穴',
   'replay.endPiecesCaptured': '吃光全部棋子',
   'replay.endDeadPosition': '死局',

@@ -395,6 +395,7 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   truncated: 'replay.endTruncated',
   race: 'replay.endRace',
   chasing: 'replay.endChasing',
+  'perpetual-chase': 'replay.endPerpetualChase',
   'dead-position': 'replay.endDeadPosition',
   points: 'replay.endPoints',
   'den-entered': 'replay.endDenEntered',

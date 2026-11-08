@@ -27,6 +27,7 @@ export type GameTermination =
   | 'truncated'
   | 'race'
   | 'chasing'
+  | 'perpetual-chase'
   | 'dead-position'
   // Xiangqi Mahjong: the match ran its hands and one seat had more points.
   | 'points';

@@ -29,13 +29,13 @@
  */
 
 import {
-  DEFAULT_NO_CAPTURE_PLY_LIMIT,
   getJieqiLegalMoves,
   isJieqiLegalMove,
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
-  jieqiPositionKey,
+  jieqiNoCapturePlyLimit,
+  jieqiRepetitionPositionKey,
   oppositeJieqiColor,
   PRACTICE_DRAW_CP,
 } from '@mistboard/game';
@@ -44,7 +44,12 @@ import { jieqiTenant } from './jieqi-tenant.js';
 import type { UciEval } from './uci-engine-harness.js';
 
 /** Endings the rules impose. Checkmate and stalemate are the engine's own business. */
-const RULE_ENDINGS: ReadonlySet<string> = new Set(['repetition', 'chasing', 'no-capture-clock']);
+const RULE_ENDINGS: ReadonlySet<string> = new Set([
+  'repetition',
+  'chasing',
+  'perpetual-chase',
+  'no-capture-clock',
+]);
 
 /**
  * The drawing band: a score inside ±150 cp reads as level (PRACTICE_DRAW_CP, the
@@ -56,7 +61,7 @@ export const JIEQI_DRAW_GUARD_BAND_CP = PRACTICE_DRAW_CP;
 export type JieqiRuleEnding = {
   /** From the side that played the move being judged. */
   outcome: 'draw' | 'loss';
-  reason: 'repetition' | 'chasing' | 'no-capture-clock';
+  reason: 'repetition' | 'chasing' | 'perpetual-chase' | 'no-capture-clock';
   /** The move itself ends the game, or the opponent can end it with a reply. */
   via: 'move' | 'reply';
 };
@@ -78,7 +83,7 @@ function ruleStep(
     // The identity is hidden from the bot; the clock is not. A reveal opens a new
     // repetition window, so the clock is the only rule ending it can cause.
     const ending: Ending =
-      after.noCaptureClock >= DEFAULT_NO_CAPTURE_PLY_LIMIT
+      after.noCaptureClock >= jieqiNoCapturePlyLimit(state)
         ? { winner: null, reason: 'no-capture-clock' }
         : null;
     return { ending, next: null, clock: after.noCaptureClock };
@@ -108,12 +113,20 @@ function ruleStep(
 function replyMayEndByRule(state: JieqiGameState, move: JieqiMove): boolean {
   const piece = state.board[move.from];
   if (!piece || state.board[move.to] !== undefined) return false;
-  if (state.noCaptureClock + 1 >= DEFAULT_NO_CAPTURE_PLY_LIMIT) return true;
+  if (state.noCaptureClock + 1 >= jieqiNoCapturePlyLimit(state)) return true;
   const counts = state.positionCounts;
   if (!counts || piece.faceDown || state.status.type !== 'playing') return false;
   const board = { ...state.board, [move.to]: piece };
   delete board[move.from];
-  return (counts[jieqiPositionKey(board, oppositeJieqiColor(state.status.turn))] ?? 0) >= 2;
+  return (
+    (counts[
+      jieqiRepetitionPositionKey(
+        board,
+        oppositeJieqiColor(state.status.turn),
+        state.adjudicationRule,
+      )
+    ] ?? 0) >= 2
+  );
 }
 
 /**
@@ -135,7 +148,7 @@ export function jieqiRuleEndingRisk(
   if (own.next === null) {
     // After the bot's own reveal the replies are not public, but the clock is: any
     // quiet reply that takes it to the limit draws.
-    return isReveal(state, move) && own.clock + 1 >= DEFAULT_NO_CAPTURE_PLY_LIMIT
+    return isReveal(state, move) && own.clock + 1 >= jieqiNoCapturePlyLimit(state)
       ? { outcome: 'draw', reason: 'no-capture-clock', via: 'reply' }
       : null;
   }

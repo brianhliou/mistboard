@@ -19,6 +19,7 @@ export * from './game-specs.js';
 export * from './games-search.js';
 export * from './hidden-piece-record.js';
 export * from './hidden-pool.js';
+export * from './jieqi-chase.js';
 export * from './jieqi-fen.js';
 export * from './jieqi-public-deal.js';
 export * from './js-compat.js';

@@ -19,21 +19,21 @@
 //   - Capturer-only reveal: if a dark piece is captured, only the capturer
 //     learns its identity. The owner never knew it, so they learn nothing.
 //
-// Repetition (since 2026-10): a game created with `repetition: true` counts
-// positions, and the third occurrence of one ends it as 'repetition'. The
-// server's jieqi tenant then applies the xiangqi chasing rule on top: the side
-// that gave check on every one of its moves in the closing cycle loses
-// (jieqiPerpetualCheckLoser). Perpetual chase is not adjudicated, as in xiangqi
-// on this site. States made without the flag (replays, analysis, games created
-// before the rule) never end on repetition, so an old game replays to the end
-// it had. Automatic draws otherwise come from the Guangdong/Tencent no-capture
-// clock (60 full moves = 120 plies without a capture).
+// Persisted setups select adjudication. Unstamped games keep check-only
+// repetition and the 120-ply capture clock. `adjudicationRule: 'jqe-v1'` uses
+// jqe's public-role perpetual chase rule and 80-ply capture clock. Analysis
+// without repetition enabled retains its historical defaults.
 //
 // This module owns canonical state (it knows every true identity). Hidden-info
 // masking lives entirely in getJieqiPlayerView; the server renders that view and
 // never ships the canonical board to a client.
 
 import { checkSubjectColor } from './check-subject.js';
+import {
+  createJieqiChasePosition,
+  type JieqiChasePosition,
+  jieqiChaseResponsibility,
+} from './jieqi-chase.js';
 import type { AbortReason } from './types.js';
 import {
   coordOf,
@@ -103,9 +103,11 @@ export type JieqiGameEndReason =
   // Third occurrence of a position (games created with `repetition: true`), or
   // an imported lab game whose own referee declared a threefold draw.
   | 'repetition'
-  // Never produced by this kernel: the server tenant's perpetual-check loss, a
-  // 'repetition' the checking side manufactured (jieqiPerpetualCheckLoser).
-  | 'chasing';
+  // Perpetual check: legacy spelling retained for old and stamped games. The
+  // tenant upgrades legacy repetitions; the stamped kernel adjudicates directly.
+  | 'chasing'
+  // Stamped jqe-rule perpetual-chase loss. Legacy 'chasing' still means check.
+  | 'perpetual-chase';
 
 export type JieqiGameStatus =
   | { type: 'playing'; turn: JieqiColor }
@@ -134,9 +136,10 @@ export type JieqiGameState = {
   lastMove?: JieqiMove;
   // Threefold-repetition bookkeeping, present only when the game enforces the
   // rule. Both cover the positions since the last capture or reveal: neither can
-  // be undone, so no earlier position can recur. Keys spell every TRUE identity,
-  // face-down pieces included, so this is server-only state: no view builder
-  // reads it, and it must never reach a client.
+  // be undone, so no earlier position can recur. Legacy keys spell true roles;
+  // stamped keys and chase snapshots use only public roles. This bookkeeping
+  // is internal: no view builder reads it or sends it to a client.
+  adjudicationRule?: JieqiAdjudicationRule;
   positionCounts?: Record<string, number>;
   repetitionLog?: JieqiRepetitionEntry[];
 };
@@ -147,6 +150,8 @@ export type JieqiRepetitionEntry = {
   key: string;
   mover?: JieqiColor;
   gaveCheck?: boolean;
+  // Masked board and stable physical IDs, only for jqe-stamped games.
+  chase?: JieqiChasePosition;
 };
 
 // ── Player view (hidden-info boundary) ──────────────────────────────────────
@@ -230,6 +235,22 @@ const HORSE_STEPS: ReadonlyArray<readonly [number, number, number, number]> = [
 ];
 
 export const DEFAULT_NO_CAPTURE_PLY_LIMIT = 120;
+export const JIEQI_JQE_NO_CAPTURE_PLY_LIMIT = 80;
+export const JIEQI_ADJUDICATION_RULE = 'jqe-v1' as const;
+export type JieqiAdjudicationRule = typeof JIEQI_ADJUDICATION_RULE;
+
+/** Absent is legacy; every unknown persisted stamp fails closed. */
+export function parseJieqiAdjudicationRule(value: unknown): JieqiAdjudicationRule | undefined {
+  if (value === undefined) return undefined;
+  if (value === JIEQI_ADJUDICATION_RULE) return value;
+  throw new Error(`unknown jieqi adjudication rule: ${String(value)}`);
+}
+
+export function jieqiNoCapturePlyLimit(state: Pick<JieqiGameState, 'adjudicationRule'>): number {
+  return parseJieqiAdjudicationRule(state.adjudicationRule)
+    ? JIEQI_JQE_NO_CAPTURE_PLY_LIMIT
+    : DEFAULT_NO_CAPTURE_PLY_LIMIT;
+}
 
 // ── Starting layout + deal ──────────────────────────────────────────────────
 
@@ -342,6 +363,7 @@ export type JieqiInitialStateOptions = {
   // Enforce threefold repetition (the live rule for games created since
   // 2026-10). Off by default so replays and analysis walk any move list.
   repetition?: boolean;
+  adjudicationRule?: JieqiAdjudicationRule;
 };
 
 export function createInitialJieqiState(
@@ -349,6 +371,8 @@ export function createInitialJieqiState(
   deal: JieqiDeal = STANDARD_JIEQI_DEAL,
   opts: JieqiInitialStateOptions = {},
 ): JieqiGameState {
+  const rule = parseJieqiAdjudicationRule(opts.adjudicationRule);
+  if (rule && !opts.repetition) throw new Error('jieqi adjudication rule requires repetition');
   assertValidJieqiDeal(deal);
   const board: JieqiBoard = {};
   board[generalSquare('red')] = { color: 'red', role: 'general', faceDown: false };
@@ -373,10 +397,11 @@ export function createInitialJieqiState(
     noCaptureClock: 0,
     captures: [],
   };
+  if (rule) state.adjudicationRule = rule;
   if (opts.repetition) {
-    const key = jieqiPositionKey(board, 'red');
+    const key = jieqiRepetitionPositionKey(board, 'red', rule);
     state.positionCounts = { [key]: 1 };
-    state.repetitionLog = [{ key }];
+    state.repetitionLog = [{ key, ...(rule ? { chase: createJieqiChasePosition(board) } : {}) }];
   }
   return state;
 }
@@ -394,6 +419,20 @@ export function jieqiPositionKey(board: JieqiBoard, turn: JieqiColor): string {
     .map(([sq, p]) => `${sq}:${p!.color}.${p!.role}${p!.faceDown ? '.d' : ''}`)
     .join(',');
   return `${turn}|${pieces}`;
+}
+
+/** Stamped keys use only the board both seats can see. Legacy keys stay byte-identical. */
+export function jieqiRepetitionPositionKey(
+  board: JieqiBoard,
+  turn: JieqiColor,
+  rule?: JieqiAdjudicationRule,
+): string {
+  if (!parseJieqiAdjudicationRule(rule)) return jieqiPositionKey(board, turn);
+  const masked = createJieqiChasePosition(board).board;
+  return `${turn}|${Object.entries(masked)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([sq, p]) => `${sq}:${p!.color}.${p!.faceDown ? 'dark' : p!.role}`)
+    .join(',')}`;
 }
 
 // ── Move generation ─────────────────────────────────────────────────────────
@@ -640,6 +679,7 @@ export function applyJieqiMove(
   move: JieqiMove,
   opts: JieqiApplyMoveOptions = {},
 ): JieqiGameState {
+  const rule = parseJieqiAdjudicationRule(state.adjudicationRule);
   if (state.status.type !== 'playing') return state;
   if (!isJieqiLegalMove(state, move)) return state;
 
@@ -661,7 +701,9 @@ export function applyJieqiMove(
     : state.captures;
   const next = oppositeJieqiColor(turn);
   const moveNumber = turn === 'black' ? state.moveNumber + 1 : state.moveNumber;
-  const limit = opts.noCaptureClockLimit ?? DEFAULT_NO_CAPTURE_PLY_LIMIT;
+  const limit = opts.noCaptureClockLimit ?? jieqiNoCapturePlyLimit(state);
+  if (limit !== Number.POSITIVE_INFINITY && (!Number.isInteger(limit) || limit <= 0))
+    throw new Error('jieqi no-capture limit must be positive');
 
   // Repetition window: a capture or a reveal starts a new one (neither can be
   // undone, so no earlier position can come back).
@@ -669,10 +711,17 @@ export function applyJieqiMove(
   let repetitionLog: JieqiRepetitionEntry[] | undefined;
   let repeatedThrice = false;
   if (state.positionCounts) {
-    const key = jieqiPositionKey(board, next);
+    const key = jieqiRepetitionPositionKey(board, next, rule);
     const nextGeneral = findJieqiGeneral(board, next);
     const gaveCheck = nextGeneral ? isAttacked(board, turn, nextGeneral) : false;
-    const entry: JieqiRepetitionEntry = { key, mover: turn, gaveCheck };
+    const prior = state.repetitionLog?.at(-1)?.chase;
+    if (rule && !prior) throw new Error('missing stamped jieqi chase history');
+    const entry: JieqiRepetitionEntry = {
+      key,
+      mover: turn,
+      gaveCheck,
+      ...(rule ? { chase: createJieqiChasePosition(board, prior, move) } : {}),
+    };
     const irreversible = wasCapture || state.board[move.from]?.faceDown === true;
     if (irreversible) {
       positionCounts = { [key]: 1 };
@@ -699,7 +748,7 @@ export function applyJieqiMove(
     status = { type: 'finished', winner: null, reason: 'no-capture-clock' };
   }
 
-  return {
+  const result: JieqiGameState = {
     ...state,
     board,
     status,
@@ -709,9 +758,38 @@ export function applyJieqiMove(
     lastMove: move,
     ...(positionCounts ? { positionCounts, repetitionLog } : {}),
   };
+  if (rule && status.type === 'finished' && status.reason === 'repetition') {
+    const checker = jieqiPerpetualCheckLoser(result);
+    if (checker)
+      result.status = { type: 'finished', winner: oppositeJieqiColor(checker), reason: 'chasing' };
+    else {
+      const interval = jieqiRepeatedInterval(result);
+      // jqe's pinned mixed-check convention: any intermittent check draws.
+      const chaser = interval.slice(1).some((entry) => entry.gaveCheck)
+        ? null
+        : jieqiChaseResponsibility(interval);
+      if (chaser)
+        result.status = {
+          type: 'finished',
+          winner: oppositeJieqiColor(chaser),
+          reason: 'perpetual-chase',
+        };
+    }
+  }
+  return result;
 }
 
 // ── Perpetual-check adjudication ────────────────────────────────────────────
+
+/** The complete interval, including the first of the three matching positions. */
+export function jieqiRepeatedInterval(state: JieqiGameState): JieqiRepetitionEntry[] {
+  const log = state.repetitionLog;
+  if (!log || log.length === 0) return [];
+  const repeatedKey = log[log.length - 1]!.key;
+  const occurrences = log.flatMap((entry, i) => (entry.key === repeatedKey ? [i] : []));
+  if (occurrences.length < 3) return [];
+  return log.slice(occurrences.at(-3)!, occurrences.at(-1)! + 1);
+}
 
 /**
  * Jieqi wins and losses follow xiangqi, so a perpetual check loses. When a game
@@ -722,14 +800,7 @@ export function applyJieqiMove(
  * xiangqiPerpetualCheckLoser; perpetual chase is not covered, as there.
  */
 export function jieqiPerpetualCheckLoser(state: JieqiGameState): JieqiColor | null {
-  const log = state.repetitionLog;
-  if (!log || log.length === 0) return null;
-  const repeatedKey = log[log.length - 1]!.key;
-  const occurrences = log.flatMap((entry, i) => (entry.key === repeatedKey ? [i] : []));
-  if (occurrences.length < 3) return null;
-  // Every move from the first of the three occurrences through the last, as in
-  // xiangqiPerpetualCheckLoser.
-  const cycle = log.slice(occurrences.at(-3)! + 1, occurrences.at(-1)! + 1);
+  const cycle = jieqiRepeatedInterval(state).slice(1);
   const perpetualBy = (color: JieqiColor): boolean => {
     const own = cycle.filter((entry) => entry.mover === color);
     return own.length > 0 && own.every((entry) => entry.gaveCheck === true);
