@@ -314,8 +314,8 @@ const ZH_HANS: Record<string, string> = {
   Gomoku: '五子棋',
   'Jungle Chess': '斗兽棋',
   'Who played them': '是谁在下棋',
-  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. They came from at least 43 countries and regions. The most came from China, then the United States, Taiwan and Vietnam.':
-    'Mistboard 已有 1,095 位玩家，每个访客浏览器算一位，所以同一个人用两台设备就会被算两次。其中 485 位只下过一盘，150 位下了至少十盘。他们来自至少 43 个国家和地区，最多来自中国，其次是美国、台湾和越南。',
+  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. The largest groups came from China, the United States, Taiwan and Vietnam, in that order.':
+    'Mistboard 已有 1,095 位玩家，每个访客浏览器算一位，所以同一个人用两台设备就会被算两次。其中 485 位只下过一盘，150 位下了至少十盘。玩家最多来自中国，其次是美国、台湾和越南。',
   'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
     '有 15 位玩家下了至少 100 盘，他们参与了全部对局的 40%。下得最多的一位已经下了 632 盘。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
@@ -6906,8 +6906,8 @@ const ZH_HANT: Record<string, string> = {
   Gomoku: '五子棋',
   'Jungle Chess': '鬥獸棋',
   'Who played them': '是誰在下棋',
-  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. They came from at least 43 countries and regions. The most came from China, then the United States, Taiwan and Vietnam.':
-    'Mistboard 已有 1,095 位玩家，每個訪客瀏覽器算一位，所以同一個人用兩台裝置就會被算兩次。其中 485 位只下過一盤，150 位下了至少十盤。他們來自至少 43 個國家和地區，最多來自中國，其次是美國、台灣和越南。',
+  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. The largest groups came from China, the United States, Taiwan and Vietnam, in that order.':
+    'Mistboard 已有 1,095 位玩家，每個訪客瀏覽器算一位，所以同一個人用兩台裝置就會被算兩次。其中 485 位只下過一盤，150 位下了至少十盤。玩家最多來自中國，其次是美國、台灣和越南。',
   'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
     '有 15 位玩家下了至少 100 盤，他們參與了全部對局的 40%。下得最多的一位已經下了 632 盤。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
