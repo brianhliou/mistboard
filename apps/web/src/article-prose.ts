@@ -171,6 +171,20 @@ const BLOCK_PROSE: {
       item.question,
       item.answer,
     ]),
+  list: (block) => [...((block as { items?: string[] }).items ?? [])],
+  'image-row': (block) => {
+    const b = block as { items?: { alt: string }[]; caption?: string };
+    return [...(b.items ?? []).map((item) => item.alt), ...caption(b)];
+  },
+  // An ISO day is data, not copy; a written date ("Later") is copy.
+  timeline: (block) =>
+    ((block as { items?: { date: string; title: string; text?: string }[] }).items ?? []).flatMap(
+      (item) => [
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(item.date) ? [] : [item.date]),
+        item.title,
+        ...(item.text ? [item.text] : []),
+      ],
+    ),
 };
 
 function blockProse(block: ArticleBlock, path: string): Prose[] {

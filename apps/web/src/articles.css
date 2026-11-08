@@ -1352,6 +1352,12 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   max-width: min(100%, 320px);
 }
 
+/* A screenshot of one small site component (an achievement card about 195px
+   wide, captured at 2x): shown at its own size, not blown up to the column. */
+.article-figure-card img {
+  max-width: min(100%, 400px);
+}
+
 /* A figure with a dark-theme twin shows the one matching the site theme.
    Scoped under the zoom button so these outrank `.article-figure-zoom img`. */
 .article-figure-zoom img.article-figure-dark,
@@ -3877,4 +3883,162 @@ a.article-meta-author:hover .article-meta-author-name {
    site nav (58px), not under it. */
 .article-page :is(h2, h3, h4)[id] {
   scroll-margin-top: 72px;
+}
+
+/* A dated sequence (block kind 'timeline'): a rail down the leading edge with
+   one marker per entry. Date and title share the first line, so an entry is
+   two lines, not three. A passed date fills its marker; an undated entry
+   ("Later") gets a dashed ring and a dashed rail leading into it. */
+.article-timeline {
+  --timeline-marker: 14px;
+  --timeline-rail: 2px;
+  margin: 4px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.article-timeline-item {
+  position: relative;
+  padding: 0 0 12px 30px;
+}
+
+.article-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.article-timeline-item::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--timeline-marker);
+  height: var(--timeline-marker);
+  border: 2px solid var(--site-accent);
+  border-radius: 50%;
+  background: var(--site-bg);
+}
+
+.article-timeline-item::after {
+  content: "";
+  position: absolute;
+  top: calc(6px + var(--timeline-marker) + 3px);
+  bottom: 2px;
+  left: calc((var(--timeline-marker) - var(--timeline-rail)) / 2);
+  width: var(--timeline-rail);
+  border-radius: 1px;
+  background: var(--site-border);
+}
+
+.article-timeline-item:last-child::after {
+  display: none;
+}
+
+.article-timeline-item.is-past::before {
+  background: var(--site-accent);
+}
+
+.article-timeline-item.is-past::after {
+  background: var(--site-accent);
+}
+
+.article-timeline-item.is-open::before {
+  border-style: dashed;
+  border-color: var(--site-muted);
+}
+
+.article-timeline-item:has(+ .is-open)::after {
+  width: 0;
+  border-inline-start: var(--timeline-rail) dashed var(--site-border);
+  background: none;
+}
+
+.article-timeline-date {
+  display: inline;
+  margin: 0 10px 0 0;
+  color: var(--site-accent-strong);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.article-timeline-item.is-open .article-timeline-date {
+  color: var(--site-muted);
+}
+
+.article-timeline-title {
+  display: inline;
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.article-timeline-text {
+  margin: 2px 0 0;
+  color: var(--site-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* A list (block kind 'list'): body type, the same rhythm as a paragraph. */
+.article-list {
+  margin: 0 0 16px;
+  padding-left: 1.4em;
+  color: var(--site-heading);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+.article-list li + li {
+  margin-top: 6px;
+}
+
+.article-list li::marker {
+  color: var(--site-muted);
+}
+
+.article-list a {
+  color: var(--site-link);
+  text-decoration: none;
+}
+
+.article-list a:hover {
+  text-decoration: underline;
+}
+
+/* Standalone images side by side (block kind 'image-row'), stacked when the
+   column is too narrow for two. Each image carries its own transparent edge,
+   so the row has no backdrop of its own. */
+/* Full width set explicitly: a centred figure shrink-wraps its child, and a
+   shrink-wrapped row gives percentage-width images nothing to resolve against. */
+.article-image-row-items {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.article-image-row-item {
+  flex: 1 1 140px;
+  max-width: 240px;
+}
+
+.article-image-row-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.article-image-row-item img.article-figure-dark,
+:root[data-effective-theme="dark"] .article-image-row-item img.article-figure-light {
+  display: none;
+}
+
+:root[data-effective-theme="dark"] .article-image-row-item img.article-figure-dark {
+  display: block;
 }

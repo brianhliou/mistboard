@@ -151,6 +151,7 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      '/blog/fog-future',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/set-up-your-board',
@@ -504,6 +505,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
+      '/blog/fog-future',
       '/blog/set-up-your-board',
       '/blog/ab-jchess-vs-jqe',
       '/blog/shortest-stalemate-xiangqi',
