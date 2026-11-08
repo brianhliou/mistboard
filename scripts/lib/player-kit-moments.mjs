@@ -41,15 +41,15 @@ function replay(moves) {
 }
 
 function chapterFor({ board, annotation, row, pv, names, number }) {
-  const prefix = board.moves.slice(0, row.ply - 1);
+  const prefix = board.moves.slice(0, row.ply);
   const state = replay(prefix);
-  if (state.status.type !== 'playing' || state.status.turn !== row.side)
+  if (state.status.type !== 'playing' || state.status.turn !== board.colour)
     throw new Error('moment turn does not match the record');
   const line = pv.map(pikafishUciToXiangqiSquares);
   // Validate the whole named continuation, not just the two displayed plies.
   replay([...prefix, ...line]);
   const labels = formatXiangqiMoves([...prefix, ...line], 'wxf').slice(prefix.length);
-  const side = row.side === 'red' ? 'Red' : 'Black';
+  const side = board.colour === 'red' ? 'Red' : 'Black';
   // A relayed record may carry no round tag; the board id names it (…-r06-r06t02).
   const round = (
     board.roundNameEn ||
@@ -60,32 +60,27 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   const game = annotation.game ?? {};
   const red = englishName(names, board.red?.name ?? game.red, 'Red');
   const black = englishName(names, board.black?.name ?? game.black, 'Black');
-  const who = row.side === 'red' ? red : black;
+  const who = board.colour === 'red' ? red : black;
+  const opponent = board.colour === 'red' ? black : red;
   const played = board.moves[row.ply - 1];
   if (xiangqiMoveToPikafishUci(played) !== row.uci)
     throw new Error('moment move does not match the record');
-  replay([...prefix, played]);
-  const playedLabel = formatXiangqiMoves([...prefix, played], 'wxf').at(-1);
+  const playedLabel = formatXiangqiMoves(prefix, 'wxf').at(-1);
   const tree = buildTree(pv.slice(0, MOMENT_RULES.mainlinePlies).join(' '));
   tree.rootFen = standardXiangqiEngineFen(state);
-  tree.root.annotations.comments = [{ text: `${side} to play. Find the strongest move.` }];
+  tree.root.annotations.comments = [
+    { text: `Round ${round}: ${opponent} just played ${playedLabel}.` },
+  ];
   tree.root.children[0].annotations = {
     comments: [
-      { text: `Pikafish continues ${labels.slice(0, MOMENT_RULES.lineLabelPlies).join(' ')}.` },
-    ],
-  };
-  const sideline = buildTree(row.uci).root.children[0];
-  sideline.annotations = {
-    comments: [
       {
-        text: `In the game, ${who} played ${playedLabel} in Round ${round} and gave up about ${Math.round(row.lost)}% of their winning chances.`,
+        text: `After ${opponent} played ${playedLabel}, ${who} found ${labels[0]}. Pikafish continues ${labels.slice(0, MOMENT_RULES.lineLabelPlies).join(' ')}.`,
       },
     ],
   };
-  tree.root.children.push(sideline);
   return {
     name: `Moment ${number} · Round ${round} · ${side} to play`,
-    orientation: row.side,
+    orientation: board.colour,
     gamebook: true,
     tree,
     tags: {
@@ -102,7 +97,7 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
         : {}),
       ...(game.sourceUrl || board.sourceUrl ? { site: game.sourceUrl || board.sourceUrl } : {}),
       round,
-      ply: String(row.ply),
+      ply: String(row.ply + 1),
     },
   };
 }
@@ -115,7 +110,7 @@ export async function findCriticalMoments({ annotations, names, budgets, analyze
           (row) =>
             Number.isInteger(row.ply) &&
             row.ply >= MOMENT_RULES.minPly &&
-            row.ply <= board.moves.length &&
+            row.ply < board.moves.length &&
             Number.isFinite(row.lost) &&
             row.lost >= MOMENT_RULES.minLost &&
             Number.isFinite(row.winBefore) &&
@@ -123,7 +118,9 @@ export async function findCriticalMoments({ annotations, names, budgets, analyze
             row.winBefore <= MOMENT_RULES.maxWinBefore &&
             row.best &&
             row.best !== row.uci &&
-            ['red', 'black'].includes(row.side),
+            ['red', 'black'].includes(row.side) &&
+            ['red', 'black'].includes(board.colour) &&
+            row.side !== board.colour,
         )
         .map((row) => ({ board, annotation, row })),
     )
@@ -139,8 +136,13 @@ export async function findCriticalMoments({ annotations, names, budgets, analyze
     if (moments.length >= MOMENT_RULES.maxOverall) break;
     const { board, row } = candidate;
     if ((perGame.get(board.boardId) ?? 0) >= MOMENT_RULES.maxPerGame) continue;
-    const prefix = board.moves.slice(0, row.ply - 1).map(xiangqiMoveToPikafishUci);
-    const lines = await analyzeMoves(prefix, { nodes: budgets.verifyNodes }, 2);
+    const prefix = board.moves.slice(0, row.ply).map(xiangqiMoveToPikafishUci);
+    const played = xiangqiMoveToPikafishUci(board.moves[row.ply]);
+    const lines = await analyzeMoves(
+      prefix,
+      { nodes: budgets.verifyNodes, depth: budgets.verifyDepth },
+      2,
+    );
     const [best, second] = lines;
     if (
       best?.rank !== 1 ||
@@ -148,7 +150,7 @@ export async function findCriticalMoments({ annotations, names, budgets, analyze
       !best.pvUci?.length ||
       !second.pvUci?.length ||
       best.pvUci[0] === second.pvUci[0] ||
-      best.pvUci[0] === row.uci
+      best.pvUci[0] !== played
     )
       continue;
     const scoreWin = ({ score }) => {
@@ -163,13 +165,13 @@ export async function findCriticalMoments({ annotations, names, budgets, analyze
     if (gap < MOMENT_RULES.minGap) continue;
     const chapter = chapterFor({ ...candidate, pv: best.pvUci, names, number: moments.length + 1 });
     moments.push({
-      id: `${board.boardId}:${row.ply}`,
+      id: `${board.boardId}:${row.ply + 1}`,
       boardId: board.boardId,
-      ply: row.ply,
-      side: row.side,
+      ply: row.ply + 1,
+      side: board.colour,
       lost: row.lost,
       best: best.pvUci[0],
-      played: row.uci,
+      played,
       gap,
       chapter,
     });
