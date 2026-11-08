@@ -138,8 +138,8 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
       findCriticalMoments({
         ...args,
         analyzeMoves: async () => [
-          { rank: 1, score: { cp: 150, mate: null }, pvUci: ['b9c7', 'b0c2'] },
-          { rank: 2, score: { cp: 0, mate: null }, pvUci: ['i6i5'] },
+          { rank: 1, score: { cp: 150, mate: null }, pvUci: ['b0c2', 'b9c7'] },
+          { rank: 2, score: { cp: 0, mate: null }, pvUci: ['h0g2'] },
         ],
       }),
   };
@@ -216,9 +216,9 @@ test('persistence teaching kit: seeded player discovery, dry-run isolation, tagg
   );
   assert.equal(momentChapters.rows.length, 1);
   assert.equal(momentChapters.rows[0].gamebook, true);
-  assert.equal(momentChapters.rows[0].orientation, 'black');
-  assert.equal(momentChapters.rows[0].tags.ply, '10');
-  assert.equal(momentChapters.rows[0].root.root.children[0].uci, 'b10c8');
+  assert.equal(momentChapters.rows[0].orientation, 'red');
+  assert.equal(momentChapters.rows[0].tags.ply, '11');
+  assert.equal(momentChapters.rows[0].root.root.children[0].uci, 'b1c3');
 
   if (process.env.MISTBOARD_KIT_ENGINE_SMOKE === '1') {
     const real = await runKit({ ...options, root: join(root, 'real-engine') }, localKitServices);

@@ -29,6 +29,30 @@ export type GameChapter = {
   tags?: GameChapterTags;
 };
 
+/**
+ * Rich labels are for distinct games. Lessons keep their chapter names, and
+ * identical rendered labels fall back to names in both chapter lists.
+ */
+export function buildChapterRowLabels<T extends { id: string; gamebook?: boolean }>(
+  chapters: readonly T[],
+  buildLabel: (chapter: T) => HTMLElement | null,
+): Map<string, HTMLElement> {
+  const labels = new Map<string, HTMLElement>();
+  const counts = new Map<string, number>();
+  for (const chapter of chapters) {
+    if (chapter.gamebook) continue;
+    const label = buildLabel(chapter);
+    if (!label) continue;
+    labels.set(chapter.id, label);
+    const text = label.textContent ?? '';
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+  for (const [id, label] of labels) {
+    if (counts.get(label.textContent ?? '')! > 1) labels.delete(id);
+  }
+  return labels;
+}
+
 export type GameOutcome = 'red' | 'black' | 'draw';
 
 /**

@@ -229,8 +229,7 @@
   color: #fff;
 }
 
-/* Guess-the-move coach: one panel, read top to bottom -- the prompt, the game
-   card, the lesson text, then feedback. The bubble keeps its text and loses its
+/* Guess-the-move coach: prompt, played moves, lesson text, then feedback. The bubble keeps its text and loses its
    box (a panel holding a panel); the state colour moves to the feedback line.
    The panel is as tall as what it says. Practice styles its own coach
    (practice.css) and is left alone. */
@@ -268,12 +267,50 @@
   font-size: 0.9rem;
 }
 .gamebook__game {
-  margin: 0;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid var(--site-border-soft, var(--site-border));
-  color: var(--site-muted);
+  flex: 0 0 auto;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 12px);
+  background: var(--site-panel);
   font-size: 0.8rem;
   line-height: 1.45;
+}
+.gamebook__game-player {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.25rem;
+  overflow-wrap: anywhere;
+}
+.gamebook__game-player--red {
+  color: var(--ink-red, #c0563f);
+}
+.gamebook__game-player--black {
+  color: var(--site-text);
+}
+.gamebook__game-detail {
+  margin: 0.5rem 0 0;
+  color: var(--site-muted);
+}
+.gamebook__moves:empty {
+  display: none;
+}
+.gamebook__moves .review-move-list {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.gamebook__moves .review-move-list__rows {
+  max-height: 7rem;
+}
+.gamebook__moves .review-move-list__move {
+  cursor: default;
+  opacity: 1;
+}
+.gamebook__board[aria-busy="true"] {
+  pointer-events: none;
 }
 .gamebook:not(.practice) .gamebook__bubble {
   padding: 0;
@@ -332,6 +369,13 @@
      learner acts on, and after the rail it sat under every chapter row. */
   .gamebook__aside {
     order: 1;
+  }
+  .gamebook__game {
+    display: none;
+  }
+  /* One compact scrolling row replaces the old game-detail line on phones. */
+  .gamebook__moves .review-move-list__rows {
+    max-height: 1.8rem;
   }
   .gamebook__aside,
   .gamebook__coach {

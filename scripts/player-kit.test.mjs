@@ -252,10 +252,13 @@ const momentMoves = [
   'b9c7',
   'h0g2',
   'h9g7',
+  'a0a1',
+  'a9a8',
 ];
 const momentBoard = (boardId = 'moment-game') => ({
   ...fixture.boards[0],
   boardId,
+  colour: 'red',
   roundNameEn: 'Round 4',
   red: { name: 'Fixture Player' },
   black: { name: 'Fixture Opponent' },
@@ -279,12 +282,17 @@ const scoredLines = (ply, secondCp = 0) => [
     rank: 1,
     score: { cp: 150, mate: null },
     pvUci: {
-      10: ['b9c7', 'b0c2', 'h9g7'],
-      11: ['h0g2', 'b9c7'],
-      12: ['h9g7', 'h0g2'],
+      11: ['b0c2', 'b9c7', 'h0g2'],
+      12: ['b9c7', 'h0g2'],
+      13: ['h0g2', 'h9g7'],
+      15: ['a0a1', 'a9a8'],
     }[ply],
   },
-  { rank: 2, score: { cp: secondCp, mate: null }, pvUci: [momentMoves[ply - 1]] },
+  {
+    rank: 2,
+    score: { cp: secondCp, mate: null },
+    pvUci: [{ 11: 'h0g2', 12: 'h9g7', 13: 'a0a1', 15: 'i0i1' }[ply]],
+  },
 ];
 
 async function momentSetup(t, rows = [momentRow(10)], board = momentBoard()) {
@@ -299,10 +307,13 @@ async function momentSetup(t, rows = [momentRow(10)], board = momentBoard()) {
     findCriticalMoments({
       ...args,
       analyzeMoves: async (moves, limits, multipv) => {
-        assert.equal(limits.nodes, args.budgets.verifyNodes);
+        assert.deepEqual(limits, {
+          nodes: args.budgets.verifyNodes,
+          depth: args.budgets.verifyDepth,
+        });
         assert.equal(multipv, 2);
         assert.deepEqual(moves, momentMoves.slice(0, moves.length));
-        return scoredLines(moves.length + 1, moves.length === 10 ? 145 : 0);
+        return scoredLines(moves.length + 1);
       },
     });
   return ctx;
@@ -313,41 +324,44 @@ test('critical moments require a meaningful loss, a unique answer, and an undeci
     momentRow(10),
     momentRow(11),
     momentRow(12, { lost: 9.9 }),
-    momentRow(13, { winBefore: 86 }),
-    momentRow(14, { winBefore: 14 }),
-    momentRow(9),
+    momentRow(14, { winBefore: 86 }),
+    momentRow(12, { winBefore: 14 }),
+    momentRow(8),
     momentRow(12, { best: momentMoves[11] }),
   ]);
   const manifest = await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
   assert.equal(manifest.moments.length, 1);
   const moment = manifest.moments[0];
   assert.equal(moment.boardId, 'moment-game');
-  assert.equal(moment.ply, 10);
-  assert.equal(moment.side, 'black');
-  assert.equal(moment.best, 'b9c7');
-  assert.equal(moment.played, 'i6i5');
+  assert.equal(moment.ply, 11);
+  assert.equal(moment.side, 'red');
+  assert.equal(moment.best, 'b0c2');
+  assert.equal(moment.played, 'b0c2');
   assert.ok(moment.gap >= 8);
   assert.ok(manifest.missing.some((m) => m.kind === 'moments'));
   assert.deepEqual(manifest.selection.momentIds, []);
   const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
   const chapter = plan.ops.at(-1);
   assert.equal(chapter.gamebook, true);
-  assert.equal(chapter.orientation, 'black');
-  assert.equal(chapter.name, 'Moment 1 · Round 4 · Black to play');
-  assert.equal(chapter.tags.ply, '10');
+  assert.equal(chapter.orientation, 'red');
+  assert.equal(chapter.name, 'Moment 1 · Round 4');
+  assert.equal(chapter.tags.ply, '11');
   assert.equal(chapter.tags.black, 'Fixture Opponent');
   assert.match(chapter.tree.rootFen, / b - - \d+ 5$/);
   const root = chapter.tree.root;
-  assert.equal(root.annotations.comments[0].text, 'Black to play. Find the strongest move.');
-  const [best, played] = root.children;
-  assert.equal(best.uci, 'b10c8');
-  assert.equal(best.children[0].uci, 'b1c3');
+  assert.equal(root.annotations?.comments, undefined);
+  assert.equal(root.children.length, 1);
+  const [mistake] = root.children;
+  assert.equal(mistake.uci, 'i7i6');
+  assert.equal(mistake.annotations.comments[0].text, 'Round 4: Fixture Opponent just played Pi6.');
+  assert.doesNotMatch(mistake.annotations.comments[0].text, /to play|find|Hc3/i);
+  const [best] = mistake.children;
+  assert.equal(best.uci, 'b1c3');
+  assert.equal(best.children[0].uci, 'b10c8');
   assert.deepEqual(best.children[0].children, []);
-  assert.match(best.annotations.comments[0].text, /^Pikafish continues H2\+3 H8\+7 H8\+7\.$/);
-  assert.equal(played.uci, 'i7i6');
-  assert.match(
-    played.annotations.comments[0].text,
-    /In the game, Fixture Opponent played .* in Round 4 and gave up about 18% of their winning chances\./,
+  assert.equal(
+    best.annotations.comments[0].text,
+    'After Fixture Opponent played Pi6, Fixture Player found Hc3. Pikafish continues Hc3 Hc8 Hg3.',
   );
   assert.doesNotMatch(JSON.stringify(chapter), /—|square|knight|bishop|pawn/i);
 });
@@ -356,12 +370,12 @@ test('critical moments rank by loss, board id and ply, capped per game and overa
   const { findCriticalMoments, MOMENT_RULES } = await import('./lib/player-kit-moments.mjs');
   const annotations = ['f', 'e', 'd', 'c', 'b', 'a'].map((id) => ({
     board: momentBoard(id),
-    annotation: { rows: [momentRow(12), momentRow(11), momentRow(10)] },
+    annotation: { rows: [momentRow(14), momentRow(12), momentRow(10)] },
   }));
   const args = {
     annotations,
     names: {},
-    budgets: { verifyNodes: 123 },
+    budgets: { verifyNodes: 123, verifyDepth: 20 },
     analyzeMoves: async (moves) => scoredLines(moves.length + 1),
   };
   const moments = await findCriticalMoments(args);
@@ -369,8 +383,8 @@ test('critical moments rank by loss, board id and ply, capped per game and overa
   assert.deepEqual(
     moments.map((m) => [m.boardId, m.ply]),
     ['a', 'b', 'c', 'd', 'e'].flatMap((id) => [
-      [id, 10],
       [id, 11],
+      [id, 13],
     ]),
   );
   assert.ok(
@@ -379,8 +393,8 @@ test('critical moments rank by loss, board id and ply, capped per game and overa
     ),
   );
   assert.match(
-    moments[0].chapter.tree.root.children[1].annotations.comments[0].text,
-    /Black played/,
+    moments[0].chapter.tree.root.children[0].annotations.comments[0].text,
+    /Black just played/,
   );
   annotations[0].annotation.rows[0].lost = 30;
   assert.equal((await findCriticalMoments(args))[0].boardId, 'f');
@@ -449,18 +463,18 @@ test('critical moments accept the boundary rules and a one-ply engine line', asy
         { board: momentBoard(), annotation: { rows: [momentRow(10, { lost: 10, winBefore })] } },
       ],
       names: { 'Fixture Opponent': { en: 'Fixture Rival' } },
-      budgets: { verifyNodes: 123 },
+      budgets: { verifyNodes: 123, verifyDepth: 20 },
       analyzeMoves: async () => {
-        const lines = scoredLines(10);
-        lines[0].pvUci = ['b9c7'];
+        const lines = scoredLines(11);
+        lines[0].pvUci = ['b0c2'];
         return lines;
       },
     });
     assert.equal(moments.length, 1);
-    assert.deepEqual(moments[0].chapter.tree.root.children[0].children, []);
+    assert.deepEqual(moments[0].chapter.tree.root.children[0].children[0].children, []);
     assert.match(
-      moments[0].chapter.tree.root.children[1].annotations.comments[0].text,
-      /Fixture Rival played/,
+      moments[0].chapter.tree.root.children[0].annotations.comments[0].text,
+      /Fixture Rival just played/,
     );
   }
 });
@@ -475,6 +489,123 @@ test('a moment names its round from the board id when the record has no round ta
   await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
   const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
   const chapter = plan.ops.at(-1);
-  assert.equal(chapter.name, 'Moment 1 · Round 6 · Black to play');
+  assert.equal(chapter.name, 'Moment 1 · Round 6');
   assert.equal(chapter.tags.round, '6');
+});
+
+test('moments keep only the kit player’s verified punishing replies', async (t) => {
+  const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
+  for (const colour of ['red', 'black']) {
+    const mistakePly = colour === 'red' ? 10 : 11;
+    const board = { ...momentBoard(), colour };
+    if (colour === 'black') [board.red, board.black] = [board.black, board.red];
+    for (const outcome of ['punished', 'lesser reply', 'close gap', 'own mistake']) {
+      await t.test(`${colour}: ${outcome}`, async () => {
+        const row = momentRow(outcome === 'own mistake' ? mistakePly + 1 : mistakePly);
+        let calls = 0;
+        const moments = await findCriticalMoments({
+          annotations: [{ board, annotation: { rows: [row] } }],
+          names: fixture.names,
+          budgets: { verifyNodes: 123, verifyDepth: 20 },
+          analyzeMoves: async (moves, limits, multipv) => {
+            calls += 1;
+            assert.notEqual(outcome, 'own mistake', 'do not verify the player’s own mistakes');
+            assert.deepEqual(moves, momentMoves.slice(0, mistakePly));
+            assert.deepEqual(limits, { nodes: 123, depth: 20 });
+            assert.equal(multipv, 2);
+            const lines = scoredLines(mistakePly + 1, outcome === 'close gap' ? 145 : 0);
+            if (outcome === 'lesser reply') {
+              [lines[0].pvUci, lines[1].pvUci] = [lines[1].pvUci, lines[0].pvUci];
+            }
+            return lines;
+          },
+        });
+        assert.equal(calls, outcome === 'own mistake' ? 0 : 1);
+        assert.equal(moments.length, outcome === 'punished' ? 1 : 0);
+        if (moments.length) {
+          const [moment] = moments;
+          assert.equal(moment.ply, mistakePly + 1);
+          assert.equal(moment.side, colour);
+          assert.equal(moment.played, momentMoves[mistakePly]);
+          assert.equal(moment.best, moment.played);
+          assert.equal(moment.chapter.orientation, colour);
+          assert.match(moment.chapter.tree.rootFen, colour === 'red' ? / b / : / w /);
+          assert.match(
+            moment.chapter.tree.root.children[0].annotations.comments[0].text,
+            /Fixture Opponent just played/,
+          );
+          assert.match(
+            moment.chapter.tree.root.children[0].children[0].annotations.comments[0].text,
+            /Fixture Player found/,
+          );
+        }
+      });
+    }
+  }
+});
+
+test('moments skip an absent player seat or an opponent mistake with no recorded reply', async () => {
+  const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
+  for (const [board, row] of [
+    [{ ...momentBoard(), colour: undefined }, momentRow(10)],
+    [momentBoard(), momentRow(momentMoves.length)],
+  ]) {
+    const moments = await findCriticalMoments({
+      annotations: [{ board, annotation: { rows: [row] } }],
+      names: {},
+      budgets: { verifyNodes: 123, verifyDepth: 20 },
+      analyzeMoves: async () => assert.fail('unusable positions must not reach the engine'),
+    });
+    assert.deepEqual(moments, []);
+  }
+});
+
+test('the new moment root legally replays the mistake and the complete displayed continuation', async (t) => {
+  const ctx = await momentSetup(t);
+  await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
+  const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
+  const { tree } = plan.ops.at(-1);
+  const {
+    parseStandardXiangqiFen,
+    applyStandardXiangqiMove,
+    isStandardXiangqiLegalMove,
+    fsfUciToXiangqiSquares,
+  } = await import('../packages/game/dist/index.js');
+  const parsed = parseStandardXiangqiFen(tree.rootFen);
+  assert.equal(parsed.ok, true);
+  let state = parsed.state;
+  let node = tree.root;
+  const replayed = [];
+  while (node.children[0]) {
+    node = node.children[0];
+    const move = fsfUciToXiangqiSquares(node.uci);
+    assert.ok(isStandardXiangqiLegalMove(state, move));
+    state = applyStandardXiangqiMove(state, move);
+    replayed.push(node.uci);
+  }
+  assert.deepEqual(replayed, ['i7i6', 'b1c3', 'b10c8']);
+});
+
+test('moments still reject a mismatched recorded mistake and an illegal tail beyond the displayed line', async () => {
+  const { findCriticalMoments } = await import('./lib/player-kit-moments.mjs');
+  for (const problem of ['record', 'continuation']) {
+    await assert.rejects(
+      findCriticalMoments({
+        annotations: [
+          {
+            board: momentBoard(),
+            annotation: { rows: [momentRow(10, problem === 'record' ? { uci: 'a6a5' } : {})] },
+          },
+        ],
+        names: fixture.names,
+        budgets: { verifyNodes: 123, verifyDepth: 20 },
+        analyzeMoves: async () => {
+          const lines = scoredLines(11);
+          if (problem === 'continuation') lines[0].pvUci = ['b0c2', 'b9c7', 'b0c2'];
+          return lines;
+        },
+      }),
+      problem === 'record' ? /move does not match the record/ : /illegal moment continuation/,
+    );
+  }
 });
