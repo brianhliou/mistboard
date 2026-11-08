@@ -1260,17 +1260,15 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   color: var(--site-heading);
 }
 
-/* Keep one secondary line even in the two-column grid at 375px. The full
-   text stays in the DOM for assistive tech and the prerender's crawler copy. */
+/* Wrap rather than truncate: at 375px a tile column is ~150px, and a
+   one-line ellipsis cut every tagline to three or four words. */
 .rules-landing-tile-tagline {
   display: block;
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.35;
   color: var(--site-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-wrap: balance;
 }
 
 /* This prerender already holds the styled client DOM. Keep its first paint

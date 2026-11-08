@@ -650,7 +650,6 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
       const tagline = document.createElement('span');
       tagline.className = 'rules-landing-tile-tagline';
       tagline.textContent = localized.tagline;
-      tagline.title = localized.tagline;
       tile.append(tagline);
     }
     li.append(tile);
