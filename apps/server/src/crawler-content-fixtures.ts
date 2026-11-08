@@ -186,7 +186,7 @@ export function crawlerFixtureSources(): CrawlerPageSources {
         }),
       }),
     broadcastPage: (path) => broadcastPageFor(path, broadcasts),
-    puzzleId: async (id) => (id === 'crawler-puzzle' || id === puzzle.id ? puzzle.id : null),
+    puzzle: async (id) => (id === 'crawler-puzzle' || id === puzzle.id ? puzzle : null),
     // Historical games currently have no raw-body renderer. Keep that gap in
     // the manifest; seeding its record must not invent a passing crawler body.
   };

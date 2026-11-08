@@ -53,7 +53,7 @@ export type PersistenceHealthEntry = {
 
 export type CrawlerPageSources = Pick<
   Parameters<typeof serveSpaShellWithRoutePreloads>[0],
-  'playerPage' | 'broadcastPage' | 'gameMeta' | 'puzzleId' | 'listPublicStudies'
+  'playerPage' | 'broadcastPage' | 'gameMeta' | 'puzzle' | 'listPublicStudies'
 > & {
   getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
 };
