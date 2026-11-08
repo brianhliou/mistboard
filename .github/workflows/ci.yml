@@ -74,6 +74,8 @@ jobs:
           key: engine-nets-${{ hashFiles('apps/web/public/engine/*/net.json') }}
       - name: Build
         run: npm run build
+      - name: Crawler content floor
+        run: node scripts/crawler-floor.mjs
 
   typecheck:
     name: Typecheck

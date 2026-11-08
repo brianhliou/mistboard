@@ -44,6 +44,7 @@ import { pathToFileURL } from 'node:url';
 // The server's copy, not a third one: it imports nothing and its types are
 // erasable, so Node (22.18 and later) loads it as it stands.
 import { seoMetaLengthProblems } from '../apps/server/src/seo-meta-length.ts';
+import { crawlerText } from './lib/crawler-text.mjs';
 
 const GOOGLEBOT_UA =
   'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
@@ -59,7 +60,7 @@ const HOME_PATHS = new Set(['/', '/zh-hans', '/zh-hant']);
 function parseArgs(argv) {
   const args = {
     base: 'https://mistboard.com',
-    sitemaps: ['pages'],
+    sitemaps: [...SITEMAPS],
     limit: 0,
     urls: [],
     concurrency: 4,
@@ -151,6 +152,7 @@ export function serverHtmlFacts(html) {
     (m) => !/\salt\s*=/i.test(m[0]),
   ).length;
   return {
+    rawChars: crawlerText(html).length,
     title: title === null ? null : decodeEntities(title),
     noindex,
     canonical,
@@ -216,11 +218,14 @@ const SERVER_RENDERED_PAGE =
 
 /** Failures for a 200 response's server HTML; empty when it is fine. */
 export function serverHtmlFailures(pathname, facts) {
-  if (facts.noindex || !SERVER_RENDERED_PAGE.test(pathname)) return [];
+  if (facts.noindex) return [];
+  const failures = [];
+  if (facts.rawChars < 150) failures.push(`raw body ${facts.rawChars} < 150 chars`);
+  if (!SERVER_RENDERED_PAGE.test(pathname)) return failures;
   if (!facts.prerendered && !facts.canonical) {
-    return ['empty shell: no server-rendered body and no canonical'];
+    failures.push('empty shell: no server-rendered body and no canonical');
   }
-  return [];
+  return failures;
 }
 
 class AuditTransportError extends Error {
@@ -362,16 +367,28 @@ async function auditUrlOnce(browser, url, args, { fetchImpl }) {
         lang: document.documentElement.lang,
         errorPanel: document.querySelector('.app-error-panel') !== null,
         appText: (document.querySelector('#app')?.textContent ?? '').trim().length,
+        bodyText: (() => {
+          const body = document.body.cloneNode(true);
+          for (const node of body.querySelectorAll('script,style,template,svg')) node.remove();
+          return (body.textContent ?? '').replace(/\s+/gu, ' ').trim().length;
+        })(),
         imgsMissingAlt: document.querySelectorAll('img:not([alt])').length,
       }))
       .catch((err) => ({ evaluateError: err.message }));
 
     Object.assign(result, {
+      rawChars: server.rawChars,
+      renderedChars: rendered.bodyText,
       renderedTitle: rendered.title,
       h1: rendered.h1,
       pageErrors,
       navigations,
     });
+    if (!server.noindex && rendered.bodyText > 0 && server.rawChars / rendered.bodyText < 0.5) {
+      result.failures.push(
+        `raw/rendered ${(server.rawChars / rendered.bodyText).toFixed(3)} < 0.5`,
+      );
+    }
     if (navigations > 2) result.failures.push(`reload loop: ${navigations} document navigations`);
     if (rendered.evaluateError) result.failures.push(`evaluate: ${rendered.evaluateError}`);
     // With chunks blocked, a client-only page has nothing else to show: that is

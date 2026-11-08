@@ -51,7 +51,16 @@ export type PersistenceHealthEntry = {
   eventType: string;
 };
 
+export type CrawlerPageSources = Pick<
+  Parameters<typeof serveSpaShellWithRoutePreloads>[0],
+  'playerPage' | 'broadcastPage' | 'gameMeta' | 'puzzleId' | 'listPublicStudies'
+> & {
+  getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
+};
+
 type ServerHttpHandlerOptions = {
+  /** In-process fixture injection; never set from HTTP or environment input. */
+  crawlerSources?: CrawlerPageSources;
   rooms: Map<string, Room>;
   lobbyTickets: Map<string, LobbyTicket>;
   lobbyQueue: LobbyTicket[];
@@ -503,11 +512,12 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
     const studyRouteMatch = pathname.match(
       /^(?:\/(zh-hans|zh-hant))?\/study\/([^/]+)(?:\/([^/]+))?$/,
     );
-    if (studyRouteMatch && persistence.isInitialized()) {
+    if (studyRouteMatch && (persistence.isInitialized() || options.crawlerSources?.getStudy)) {
       const studyId = decodeURIComponent(studyRouteMatch[2]!);
       const localeSlug = studyRouteMatch[1] ?? 'en';
       const chapterId = studyRouteMatch[3] ? decodeURIComponent(studyRouteMatch[3]) : undefined;
       void serveStudyPage({
+        getStudy: options.crawlerSources?.getStudy,
         studyId,
         chapterId,
         localeSlug: localeSlug as 'en' | 'zh-hans' | 'zh-hant',
@@ -785,6 +795,7 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
         : 'washington-xiangqi.html';
       void servePrerenderedPage({ response, staticDir: options.staticDir, file }).catch(() => {
         void serveSpaShellWithRoutePreloads({
+          ...options.crawlerSources,
           response,
           staticDir: options.staticDir,
           pathname: pathname.replace(/\/+$/, ''),
@@ -838,6 +849,7 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       // manifest entry nor route meta fall back to the plain static shell
       // exactly as before.
       void serveSpaShellWithRoutePreloads({
+        ...options.crawlerSources,
         response,
         staticDir: options.staticDir,
         pathname,
