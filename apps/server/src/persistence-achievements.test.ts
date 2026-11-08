@@ -440,7 +440,8 @@ definePersistenceTests('achievements', () => {
             gameSpecForId(id).runtimeStatus = 'retired';
             if (!RETIRED_GAME_SPEC_IDS.includes(id)) RETIRED_GAME_SPEC_IDS.push(id);
           }
-          process.argv = [process.execPath, ${JSON.stringify(BACKFILL)}, ...${JSON.stringify(args)}];
+          // Under --eval, parseArgs reads process.argv.slice(1), so no script slot.
+          process.argv = [process.execPath, ...${JSON.stringify(args)}];
           await import(pathToFileURL(${JSON.stringify(BACKFILL)}).href);
         `,
         ],
