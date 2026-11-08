@@ -29,6 +29,8 @@ on:
       - jqe.ref
       - rapfi.ref
       - scripts/rapfi-assets.mjs
+      - scripts/fetch-pikafish-net.mjs
+      - apps/web/public/engine/pikafish/net.json
       - scripts/engine-assets.sh
       - .github/workflows/build-engines.yml
 
@@ -45,6 +47,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
+      MISTBOARD_PRIVATE_ASSETS_TOKEN: ${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}
     steps:
       - uses: actions/checkout@v7
 

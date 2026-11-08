@@ -83,6 +83,8 @@ Options:
   --account <acct>    Keychain account (default: $USER)
   --dry-run           Resolve every value and check the project link; write
                       nothing
+  --skip-deploys      Stage the change without restarting the service; it
+                      takes effect at the next deploy (use before a release)
   --fingerprint       Print a short one-way hash of each value
 
 To store a secret in the Keychain first (do this in your OWN terminal — it
@@ -100,7 +102,7 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const opts = { vars: [], sets: [], dryRun: false, fingerprint: false };
+  const opts = { vars: [], sets: [], dryRun: false, fingerprint: false, skipDeploys: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = () => {
@@ -119,6 +121,7 @@ function parseArgs(argv) {
     } else if (arg === '--account') opts.account = next();
     else if (arg === '--dry-run') opts.dryRun = true;
     else if (arg === '--fingerprint') opts.fingerprint = true;
+    else if (arg === '--skip-deploys') opts.skipDeploys = true;
     else if (arg === '--help' || arg === '-h') {
       console.log(USAGE.trim());
       process.exit(0);
@@ -225,9 +228,10 @@ function assertLinkedToProdProject() {
   process.exit(1);
 }
 
-function setVariables({ service, entries }) {
+function setVariables({ service, entries, skipDeploys = false }) {
   const args = ['variables', '--service', service];
   for (const { name, value } of entries) args.push('--set', `${name}=${value}`);
+  if (skipDeploys) args.push('--skip-deploys');
 
   // spawnSync with an argv array and no shell: values are never parsed by a
   // shell, so they cannot land in shell history or be mangled by quoting.
@@ -303,10 +307,14 @@ function main() {
     return;
   }
 
-  setVariables({ service: opts.service, entries });
+  setVariables({ service: opts.service, entries, skipDeploys: opts.skipDeploys });
   console.log(`ok: set ${entries.length} variable(s) on service "${opts.service}"`);
   verifyDrainToken(entries);
-  console.log('     Railway restarts the service once for this change.');
+  console.log(
+    opts.skipDeploys
+      ? '     No restart now; the value takes effect at the next deploy.'
+      : '     Railway restarts the service once for this change.',
+  );
   console.log('     Verify behaviourally — never by reading the values back.');
 }
 

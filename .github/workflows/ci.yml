@@ -73,6 +73,8 @@ jobs:
             apps/web/public/engine/rapfi/*.data
           key: engine-nets-${{ hashFiles('apps/web/public/engine/*/net.json') }}
       - name: Build
+        env:
+          MISTBOARD_PRIVATE_ASSETS_TOKEN: ${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}
         run: npm run build
 
   typecheck:
@@ -136,6 +138,8 @@ jobs:
       - name: Fetch the pinned Rapfi net
         run: node apps/web/scripts/fetch-rapfi-net.mjs
       - name: Unit tests (web, shard ${{ matrix.shard }} of 2)
+        env:
+          MISTBOARD_PRIVATE_ASSETS_TOKEN: ${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}
         run: npm run test:unit --workspace @mistboard/web -- --shard ${{ matrix.shard }}/2
 
   # Two shards, like the web job: 100-105 s as one job on 2026-09-23, with the
