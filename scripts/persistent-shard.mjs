@@ -23,6 +23,7 @@
 import { spawnSync } from 'node:child_process';
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { DEFAULT_TEST_DATABASE_URL, ensureTestDatabase } from './ensure-test-database.mjs';
 import { pruneOrphanDist } from './prune-orphan-dist.mjs';
 import {
   checkServerTestDiscovery,
@@ -58,7 +59,7 @@ function readEnvInt(name, fallback) {
   return value;
 }
 
-function main() {
+async function main() {
   const total = readEnvInt('SHARD_TOTAL', 1);
   const index = readEnvInt('SHARD_INDEX', 1);
   const discovery = checkServerTestDiscovery(SERVER_DIR);
@@ -78,8 +79,14 @@ function main() {
   console.log(`persistent shard ${index}/${total}: ${files.length} of ${all.length} file(s)`);
   if (files.length === 0) return 0;
 
+  const testDatabaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
+  if (process.env.TEST_DATABASE_URL === undefined) {
+    await ensureTestDatabase({ databaseUrl: testDatabaseUrl });
+  }
+
   const result = spawnSync(process.execPath, ['--test', '--test-concurrency=1', ...files], {
     cwd: SERVER_DIR,
+    env: { ...process.env, TEST_DATABASE_URL: testDatabaseUrl },
     stdio: 'inherit',
   });
   if (result.error) throw result.error;
@@ -89,7 +96,7 @@ function main() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
-    process.exit(main());
+    process.exit(await main());
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

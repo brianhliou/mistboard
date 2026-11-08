@@ -139,6 +139,14 @@ npm run db:seed:qa         # product fixtures: profiles + live variant games + w
 npm run test:persistent
 ```
 
+Persistent tests default to `mistboard_test_<12-character hash of the worktree root>`
+on the shared local Postgres. The runner prints the name and creates the database
+if needed, so separate worktrees can test concurrently. Runs within the same
+worktree still share a database and must stay serial. An explicit `TEST_DATABASE_URL`
+is used unchanged, without automatic database creation (including CI shards).
+`npm run db:test:ensure` and direct `scripts/persistent-shard.mjs` runs use the
+same worktree default, as do the pre-push and release persistence gates.
+
 `npm run dev` runs `db:up`, then `db:migrate`, then the persistent pair. `db:up`
 starts the shared `mistboard-postgres` container (creating it via `docker
 compose` only when it does not already exist), so it works from a git worktree
