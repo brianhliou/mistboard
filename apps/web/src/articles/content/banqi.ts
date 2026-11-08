@@ -271,7 +271,7 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. At ply 50 a net soldier takes the red general, and the net wins in 130 plies when red has nothing left to move. Step through with the arrows.',
+          text: '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. At ply 49 red turns up a black soldier beside its own general, and the soldier takes the general. The net wins in 130 plies, when red has nothing left to move. Step through with the arrows.',
         },
         {
           kind: 'embed',
