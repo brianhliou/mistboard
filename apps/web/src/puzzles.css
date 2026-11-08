@@ -1692,6 +1692,20 @@ a.puzzle-tag--link:hover {
     grid-row: 1 / span 2;
   }
 
+  /* Both placed outright on the trainer page. A definite row puts the side
+     panel ahead of the board in auto-placement, so without the session chips
+     holding column 2 (Storm has none) the panel took the middle column and
+     the board fell to the right. The embed has its own grid and no
+     .puzzles-layout. */
+  .puzzles-layout .puzzle-board {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .puzzles-layout .puzzle-side-panel {
+    grid-column: 3;
+  }
+
   /* One row that scrolls sideways, as on the phone: the desktop page does not
      scroll, so a second wrapped row would run under the viewport's edge. */
   .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
@@ -3056,8 +3070,10 @@ a.puzzle-tag--link:hover {
 }
 
 /* A Storm run is played forward against the clock: the move arrows would sit
-   disabled the whole run, so they show only when reviewing a finished puzzle. */
-.puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-move-nav {
+   disabled the whole run, so they show only when reviewing a finished puzzle.
+   The doubled class outweighs the desktop `.puzzles-shell .puzzle-side-panel >
+   .puzzle-move-nav { display: grid }` further down, which had put them back. */
+.puzzle-storm-shell.puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-move-nav {
   display: none;
 }
 
