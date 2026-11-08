@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from './deploy-engine-worker.mjs';
+import { formatLogLine, parseArgs } from './deploy-engine-worker.mjs';
 import {
   appendDeployment,
   baselineMatchesDeployment,
@@ -378,4 +378,20 @@ test('a successful simulated deployment records both exact SHAs and verifies onl
   assert.ok(logArgs.includes('--since'));
   assert.ok(logArgs.includes('--lines'));
   assert.equal(existsSync(`${file}.lock`), false);
+});
+
+test('formatLogLine keeps structured markers that Railway leaves out of message', () => {
+  const complete = formatLogLine(
+    '{"message":"","level":"info","timestamp":"2026-11-08T21:35:34.754206975Z","kind":"engine_warmup_complete","engineIds":["python-v2-v1.6"]}',
+  );
+  assert.ok(complete > '2026-11-08T21:32:00.000Z');
+  assert.match(complete, /engine_warmup_complete/);
+  const failed = formatLogLine(
+    '{"message":"","level":"error","timestamp":"2026-11-08T21:35:34.754206975Z","kind":"boot_warmup_failed"}',
+  );
+  assert.ok(failed.includes('boot_warmup_failed'));
+  const plain = formatLogLine(
+    '{"timestamp":"2026-11-08T21:35:28.086974538Z","level":"info","message":"Starting Container"}',
+  );
+  assert.match(plain, /^2026-11-08T21:35:28\.086974538Z .*Starting Container/);
 });
