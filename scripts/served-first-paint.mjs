@@ -38,7 +38,12 @@ const asJson = args.includes('--json');
 
 // Served with body markup but absent from the sitemap (noindex, or not a page
 // a crawler should land on), so they are named here.
+export const INDEX_PATHS = ['', '/zh-hans', '/zh-hant'].flatMap((prefix) =>
+  ['/blog', '/blog/community', '/rules'].map((path) => `${prefix}${path}`),
+);
+
 const EXTRA_PATHS = [
+  ...INDEX_PATHS,
   '/',
   '/players',
   '/players/teams',
@@ -71,6 +76,8 @@ export function routeShape(pathname) {
   const segments = pathname.split('/').filter(Boolean);
   const head = [];
   if (LOCALES.has(segments[0])) head.push(segments.shift());
+  if (segments[0] === 'blog' && segments[1] === 'community' && segments.length === 2)
+    return `/${[...head, ...segments].join('/')}`;
   if (segments.length) head.push(segments.shift());
   return `/${[...head, ...segments.map(() => '*')].join('/')}`;
 }

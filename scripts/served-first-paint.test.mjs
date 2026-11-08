@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { paintsBareCopy, routeShape } from './served-first-paint.mjs';
+import { INDEX_PATHS, paintsBareCopy, routeShape } from './served-first-paint.mjs';
 
 const page = (app) =>
   `<html><head></head><body>${app}<script type="module" src="/assets/index.js"></script></body></html>`;
@@ -45,4 +45,18 @@ test('groups paths by route shape, keeping the locale prefix', () => {
   assert.equal(routeShape('/zh-hans/study/abc'), '/zh-hans/study/*');
   assert.equal(routeShape('/players'), '/players');
   assert.equal(routeShape('/'), '/');
+});
+
+test('every locale index and community view is sampled as its own page kind', () => {
+  for (const prefix of ['', '/zh-hans', '/zh-hant']) {
+    for (const path of ['/blog', '/blog/community', '/rules']) {
+      assert.ok(INDEX_PATHS.includes(`${prefix}${path}`));
+      assert.equal(routeShape(`${prefix}${path}`), `${prefix}${path}`);
+    }
+    // Planted collision: article sampling must not displace the community view.
+    assert.notEqual(
+      routeShape(`${prefix}/blog/community`),
+      routeShape(`${prefix}/blog/skill-vs-luck`),
+    );
+  }
 });

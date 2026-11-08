@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { type Color, GAME_SPECS } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
 import {
+  type ArticleSchedule,
   articleIsScheduledAhead,
   prerenderedIndexIsStale,
   readArticleSchedule,
@@ -1809,6 +1810,72 @@ export async function serveArticlePage(params: {
   params.response.end(html);
 }
 
+// Preserve the baked index and all its styles when a schedule advances. The
+// supplement is replaced on client mount and never adds a first-paint panel.
+export function articleIndexUpdates(
+  schedule: ArticleSchedule,
+  kind: 'article' | 'rules',
+  locale: 'en' | 'zh-hans' | 'zh-hant',
+  view: 'mistboard' | 'community' = 'mistboard',
+  now: number = Date.now(),
+): string {
+  const items: string[] = [];
+  for (const [slug, liveAt] of [...schedule.scheduled].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  )) {
+    if (liveAt <= schedule.builtAt || liveAt > now) continue;
+    const entry = schedule.indexEntries.get(slug);
+    if (entry === null) continue;
+    const meta = ARTICLE_META[slug];
+    if (
+      entry
+        ? entry.kind !== kind || (kind === 'article' && entry.publisher !== view)
+        : !meta || !articleIsIndexable(slug) || meta.kind !== kind || view === 'community'
+    )
+      continue;
+    // Older schedules have no card data. Their posts are Mistboard-authored;
+    // reuse the generated title, never an English summary on a Chinese page.
+    const copy =
+      entry?.locales[locale] ??
+      (meta
+        ? {
+            title: locale === 'en' ? meta.title : (meta.zhTitles?.[locale] ?? meta.title),
+            summary: locale === 'en' && kind === 'article' ? meta.description : '',
+            href: `${locale !== 'en' && meta.zhTitles ? `/${locale}` : ''}/${kind === 'rules' ? 'rules' : 'blog'}/${slug}`,
+          }
+        : null);
+    if (!copy) continue;
+    items.push(
+      `<li><a href="${escapeHtml(copy.href)}">${escapeHtml(copy.title)}</a>${copy.summary ? `<p>${escapeHtml(copy.summary)}</p>` : ''}</li>`,
+    );
+  }
+  return items.length
+    ? `<div class="crawler-copy" data-article-index-updates><ul>${items.join('')}</ul></div>`
+    : '';
+}
+
+async function supplementArticleIndex(
+  html: string,
+  staticDir: string,
+  kind: 'article' | 'rules',
+  locale: 'en' | 'zh-hans' | 'zh-hant',
+  view: 'mistboard' | 'community' = 'mistboard',
+): Promise<string> {
+  const copy = articleIndexUpdates(await readArticleSchedule(staticDir), kind, locale, view);
+  // A callback keeps literal dollar signs in catalog strings out of replace's
+  // replacement syntax. Existing baked markup and head links stay intact.
+  // These built templates end #app at the body's last div. Hide the whole
+  // stale render together: a hidden list alone would reserve space above a
+  // visible index and shift it when the app removes that list.
+  return copy
+    ? html.replace(
+        /(<div id="app"[^>]*>)([\s\S]*)(<\/div>)/,
+        (_match, root, body, end) =>
+          `${root}<div class="crawler-copy" data-article-index-fallback>${copy}${body}</div>${end}`,
+      )
+    : html;
+}
+
 export async function serveArticlesIndexPage(params: {
   response: ServerResponse;
   publicHost: string;
@@ -1819,22 +1886,23 @@ export async function serveArticlesIndexPage(params: {
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
 
-  // Each locale's post list is prerendered (blog.html, zh-hans/blog.html,
-  // zh-hant/blog.html). The community view is not, and stays on the shell
-  // below. Once a scheduled post has gone live since the build, the baked list
-  // predates it; the shell renders a current list client-side until the next
-  // deploy.
-  if (
-    params.view !== 'community' &&
-    !prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
-  ) {
-    const bakedFile = langKey === 'en' ? 'blog.html' : `${langKey}/blog.html`;
+  {
+    const file = params.view === 'community' ? 'blog/community.html' : 'blog.html';
+    const bakedFile = langKey === 'en' ? file : `${langKey}/${file}`;
     const prerendered = await fs
       .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
       .catch(() => null);
     if (prerendered !== null) {
       params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      params.response.end(prerendered);
+      params.response.end(
+        await supplementArticleIndex(
+          prerendered,
+          params.staticDir,
+          'article',
+          langKey,
+          params.view,
+        ),
+      );
       return;
     }
   }
@@ -1853,7 +1921,9 @@ export async function serveArticlesIndexPage(params: {
     }`,
   });
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  params.response.end(html);
+  params.response.end(
+    await supplementArticleIndex(html, params.staticDir, 'article', langKey, params.view),
+  );
 }
 
 export async function serveRulesIndexPage(params: {
@@ -1868,16 +1938,17 @@ export async function serveRulesIndexPage(params: {
   // Each locale's rules index is prerendered (rules.html, zh-hans/rules.html,
   // zh-hant/rules.html) with its own canonical and the locale group's
   // hreflang; until 2026-10-02 all three answered with the bare shell. The
-  // tile list honours publish times the way the blog index does, so the same
-  // staleness rule hands a page gone live since the build to the shell below.
-  if (!prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))) {
+  // tile list keeps its baked content and gains newly live entries below.
+  {
     const bakedFile = langKey === 'en' ? 'rules.html' : `${langKey}/rules.html`;
     const prerendered = await fs
       .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
       .catch(() => null);
     if (prerendered !== null) {
       params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      params.response.end(prerendered);
+      params.response.end(
+        await supplementArticleIndex(prerendered, params.staticDir, 'rules', langKey),
+      );
       return;
     }
   }
@@ -1901,7 +1972,7 @@ export async function serveRulesIndexPage(params: {
     `<link rel="canonical" href="${url}">${localeAlternateLinks(params.publicHost, '/rules')}</head>`,
   );
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  params.response.end(html);
+  params.response.end(await supplementArticleIndex(html, params.staticDir, 'rules', langKey));
 }
 
 function escapeHtml(str: string): string {

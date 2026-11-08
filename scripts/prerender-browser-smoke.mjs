@@ -25,6 +25,9 @@ try {
       '/zh-hant/faq',
       '/zh-hans/learn/xiangqi',
       '/zh-hant/learn/xiangqi',
+      '/blog/community',
+      '/zh-hans/blog/community',
+      '/zh-hant/blog/community',
     ]) {
       const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
       const locale = path.startsWith('/zh-hans/')

@@ -317,6 +317,9 @@ try {
   const { feedThumbnails } = await server.ssrLoadModule('/src/articles/feed-thumbnail.ts');
   // The posts /blog lists, the one source for both feeds' post items.
   const { blogPosts } = await server.ssrLoadModule('/src/articles/blog-listing.ts');
+  const { scheduledArticleIndexEntry } = await server.ssrLoadModule(
+    '/src/article-index-schedule.ts',
+  );
   // Card URLs (the ?v= and which slugs have aspect cards) mirror the server's
   // renderer; og-image.test.ts pins the mirror.
   const { articleOgImageUrl, articleStructuredDataImage } = await server.ssrLoadModule(
@@ -386,8 +389,8 @@ try {
 
   // Scheduled posts (published, dated in the future at build time) are left
   // out of every baked surface and listed in article-schedule.json instead, so
-  // the server can 404 them until their moment and stop serving the stale
-  // blog index once one goes live without a rebuild. publish-time.ts has the
+  // the server can 404 them until their moment and supplement the baked
+  // index once one goes live without a rebuild. publish-time.ts has the
   // full story.
   //
   // Announcements keep the same clock (announcements.ts): the ones still ahead
@@ -399,6 +402,7 @@ try {
     .map((a) => ({
       slug: a.slug,
       liveAt: new Date(articleGoesLiveAt(a.publishedAt)).toISOString(),
+      indexEntry: scheduledArticleIndexEntry(a),
     }));
   const { allAnnouncements, announcementIsLive, announcementSlug } =
     await server.ssrLoadModule('/src/announcements.ts');
@@ -794,10 +798,16 @@ try {
     renderRulesIndexShellForPrerender,
     rulesIndexPrerenderHead,
   } = await server.ssrLoadModule('/src/pages-static.ts');
-  for (const v of baseVariants) {
-    const head = articlesIndexPrerenderHead(host, v.lang);
+  for (const { v, view } of baseVariants.flatMap((v) =>
+    ['mistboard', 'community'].map((view) => ({ v, view })),
+  )) {
+    const head = articlesIndexPrerenderHead(host, v.lang, view);
     win.happyDOM.setURL(head.url);
-    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang);
+    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang, view);
+    if (view === 'community') {
+      const problems = crawlerCopyProblems(blogIndexInner);
+      if (problems.length) throw new Error(`${head.url}: ${problems.join('; ')}`);
+    }
     let blogIndexHtml = shell
       .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
       .replace(
@@ -817,12 +827,11 @@ try {
       '</head>',
       `${head.headLinks}${BLOG_RSS_LINK}${articleAssetLinks}${localeLinks}</head>`,
     );
-    const file = v.langDir
-      ? resolve(distDir, v.langDir, 'blog.html')
-      : resolve(distDir, 'blog.html');
+    const routeFile = view === 'community' ? 'blog/community.html' : 'blog.html';
+    const file = resolve(distDir, v.langDir ?? '', routeFile);
     await fs.mkdir(dirname(file), { recursive: true });
     await fs.writeFile(file, blogIndexHtml, 'utf-8');
-    console.log(`prerendered ${v.urlPrefix}/blog (${v.langDir ? `${v.langDir}/` : ''}blog.html)`);
+    console.log(`prerendered ${head.url} (${routeFile})`);
   }
 
   // /rules, /zh-hans/rules, /zh-hant/rules: the rules landing, once per

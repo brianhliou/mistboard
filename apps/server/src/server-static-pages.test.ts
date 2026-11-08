@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
-import { resetArticleScheduleCache } from './article-schedule.js';
+import { parseArticleSchedule, resetArticleScheduleCache } from './article-schedule.js';
 import type { TenantGameCardStore } from './og-game-tenant.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import type {
@@ -19,6 +19,7 @@ import type {
 import { recordPuzzleReport, resetPuzzleStoreForTests } from './puzzle-store.js';
 import { isClientRoute } from './server-policy.js';
 import {
+  articleIndexUpdates,
   injectPageMeta,
   positionRouteMeta,
   routePreloadLinksForPath,
@@ -483,13 +484,16 @@ test('serveArticlesIndexPage serves each locale its own prerendered index', asyn
 
 // A scheduled post (published, dated ahead) has no prerendered file; before
 // its moment the server must 404 rather than hand a crawler the shell with
-// real meta, and once it is live the stale prerendered blog index must give
-// way to the shell so the client can list it.
-test('a scheduled article 404s before its moment and the blog index goes stale after it', async () => {
+// real meta. Once it is live the baked index must survive, with the new post.
+test('a scheduled article 404s before its moment and supplements the baked index after it', async () => {
   resetArticleScheduleCache();
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
-  await writeFile(join(staticDir, 'blog.html'), '<html><body>baked index</body></html>', 'utf-8');
+  await writeFile(
+    join(staticDir, 'blog.html'),
+    '<html><body><div id="app">baked index</div></body></html>',
+    'utf-8',
+  );
   const liveAt = new Date(Date.now() + 86_400_000).toISOString();
   await writeFile(
     join(staticDir, 'article-schedule.json'),
@@ -536,7 +540,156 @@ test('a scheduled article 404s before its moment and the blog index goes stale a
     staticDir,
   });
   assert.equal(later.status, 200);
-  assert.doesNotMatch(later.body, /baked index/, 'a post went live after the build: shell instead');
+  assert.match(
+    later.body,
+    /baked index/,
+    'a post went live after the build: retain the full index',
+  );
+  assert.match(later.body, /href="\/blog\/pikafish"/);
+  assert.match(later.body, /class="crawler-copy"/);
+});
+
+test('both blog views serve their own baked community/index file in every locale', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-community-'));
+  for (const langPrefix of [undefined, 'zh-hans', 'zh-hant']) {
+    const dir = join(staticDir, langPrefix ?? '');
+    await mkdir(join(dir, 'blog'), { recursive: true });
+    for (const view of ['mistboard', 'community'] as const) {
+      const file = view === 'community' ? 'blog/community.html' : 'blog.html';
+      const html = `<div id="app">${langPrefix ?? 'en'} ${view}</div>`;
+      await writeFile(join(dir, file), html);
+      const response = captureResponse();
+      await serveArticlesIndexPage({
+        response,
+        publicHost: 'https://mistboard.test',
+        staticDir,
+        langPrefix,
+        view,
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.body, html);
+    }
+  }
+});
+
+test('stale blog and rules indexes retain all baked content/styles and prepend only newly live cards', async () => {
+  const checker = new URL('../../web/scripts/prerender-copy-check.mjs', import.meta.url).href;
+  const { crawlerCopyProblems } = await import(checker);
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-stale-index-'));
+  const builtAt = Date.now() - 3_600_000;
+  const liveAt = new Date(builtAt + 60_000).toISOString();
+  function scheduled(
+    slug: string,
+    kind: 'article' | 'rules',
+    publisher: 'mistboard' | 'community' = 'mistboard',
+  ) {
+    return {
+      slug,
+      liveAt,
+      indexEntry: {
+        kind,
+        publisher,
+        locales: Object.fromEntries(
+          ['en', 'zh-hans', 'zh-hant'].map((locale) => [
+            locale,
+            {
+              title: `${locale} ${slug} <title>`,
+              summary: `${locale} ${slug} summary $&`,
+              href: `/${locale}/${kind === 'rules' ? 'rules' : 'blog'}/${slug}`,
+            },
+          ]),
+        ),
+      },
+    };
+  }
+  await writeFile(
+    join(staticDir, 'article-schedule.json'),
+    JSON.stringify({
+      builtAt: new Date(builtAt).toISOString(),
+      scheduled: [
+        scheduled('new-post', 'article'),
+        scheduled('new-rule', 'rules'),
+        scheduled('community-post', 'article', 'community'),
+        {
+          ...scheduled('future-post', 'article'),
+          liveAt: new Date(Date.now() + 3_600_000).toISOString(),
+        },
+        {
+          ...scheduled('already-baked', 'article'),
+          liveAt: new Date(builtAt - 60_000).toISOString(),
+        },
+        { ...scheduled('unlisted', 'article'), indexEntry: null },
+        {
+          ...scheduled('newest-post', 'article'),
+          liveAt: new Date(builtAt + 120_000).toISOString(),
+        },
+      ],
+      announcements: [{ slug: 'not-an-article', liveAt }],
+    }),
+  );
+  for (const langPrefix of [undefined, 'zh-hans', 'zh-hant']) {
+    const dir = join(staticDir, langPrefix ?? '');
+    await mkdir(join(dir, 'blog'), { recursive: true });
+    for (const section of ['blog', 'community', 'rules'] as const) {
+      const file = section === 'community' ? 'blog/community.html' : `${section}.html`;
+      const html = `<html><head><link rel="stylesheet" href="/articles.css"><link rel="canonical" href="/${file}"></head><body><div id="app" class="articles-route"><main class="articles-index"><h1>Full ${section} index</h1><p>Older listed entries</p></main></div></body></html>`;
+      await writeFile(join(dir, file), html);
+      const response = captureResponse();
+      const params = { response, publicHost: 'https://mistboard.test', staticDir, langPrefix };
+      if (section === 'rules') await serveRulesIndexPage(params);
+      else
+        await serveArticlesIndexPage({
+          ...params,
+          view: section === 'community' ? 'community' : 'mistboard',
+        });
+      const copy = response.body.match(
+        /<div class="crawler-copy" data-article-index-updates>[\s\S]*?<\/div>/,
+      )?.[0];
+      assert.ok(copy, `${langPrefix} ${section}: no new cards`);
+      assert.equal(
+        response.body,
+        html
+          .replace(
+            '<main',
+            () => `<div class="crawler-copy" data-article-index-fallback>${copy}<main`,
+          )
+          .replace('</main></div>', '</main></div></div>'),
+        'all baked content and styles survive inside the first-paint protection',
+      );
+      const slug =
+        section === 'rules' ? 'new-rule' : section === 'community' ? 'community-post' : 'new-post';
+      assert.ok(copy.includes(`${langPrefix ?? 'en'} ${slug} &lt;title&gt;`));
+      assert.ok(copy.includes('summary $&'), 'literal replacement metacharacters survive');
+      assert.doesNotMatch(copy, /future-post|already-baked|unlisted|not-an-article/);
+      if (section === 'blog') {
+        assert.doesNotMatch(copy, /new-rule|community-post/);
+        assert.ok(copy.indexOf('newest-post') < copy.indexOf('new-post'));
+      } else assert.doesNotMatch(copy, /new-post|newest-post/);
+      assert.ok(response.body.indexOf(copy) < response.body.indexOf('<main'));
+      assert.deepEqual(crawlerCopyProblems(response.body.match(/<body>([\s\S]*)<\/body>/)![1]), []);
+    }
+  }
+});
+
+test('scheduled supplements pass crawler-copy ownership; a planted unwrapped list fails', async () => {
+  const checker = new URL('../../web/scripts/prerender-copy-check.mjs', import.meta.url).href;
+  const { crawlerCopyProblems } = await import(checker);
+  const schedule = parseArticleSchedule(
+    JSON.stringify({
+      builtAt: '2026-01-01T00:00:00Z',
+      scheduled: [{ slug: 'pikafish', liveAt: '2026-01-02T00:00:00Z' }],
+    }),
+  );
+  const copy = articleIndexUpdates(schedule, 'article', 'en');
+  assert.ok(copy.includes('/blog/pikafish'));
+  assert.deepEqual(crawlerCopyProblems(copy), []);
+  assert.ok(
+    crawlerCopyProblems(copy.replace(/^<div[^>]*>|<\/div>$/g, '')).includes(
+      'page text outside crawler-copy',
+    ),
+  );
+  assert.equal(articleIndexUpdates(schedule, 'article', 'en', 'community'), '');
+  assert.equal(articleIndexUpdates(schedule, 'rules', 'en'), '');
 });
 
 // The home pages keep their baked file after an announcement goes live: the
