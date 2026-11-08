@@ -279,8 +279,8 @@ const ZH_HANS: Record<string, string> = {
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
   '10,000 games played': '已下完 10,000 盘棋',
-  'How the first 10,000 games on Mistboard came in, what people played, and who played them.':
-    'Mistboard 最初的 10,000 盘棋是怎样积累起来的，大家下了什么棋，又是哪些人在下。',
+  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.':
+    'Mistboard 最初的 10,000 盘棋是怎样积累起来的：大家下了哪些棋类变体、和哪些电脑对弈，以及棋手们来自哪些国家和地区。',
   'Mistboard passed 10,000 finished games on November 8.':
     '11 月 8 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
   'Jieqi is 66% of them.': '揭棋占其中的 66%。',
@@ -6874,8 +6874,8 @@ const ZH_HANT: Record<string, string> = {
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
   '10,000 games played': '已下完 10,000 盤棋',
-  'How the first 10,000 games on Mistboard came in, what people played, and who played them.':
-    'Mistboard 最初的 10,000 盤棋是怎樣累積起來的，大家下了什麼棋，又是哪些人在下。',
+  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.':
+    'Mistboard 最初的 10,000 盤棋是怎樣累積起來的：大家下了哪些棋類變體、和哪些電腦對弈，以及棋手們來自哪些國家和地區。',
   'Mistboard passed 10,000 finished games on November 8.':
     '11 月 8 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
   'Jieqi is 66% of them.': '揭棋佔其中的 66%。',

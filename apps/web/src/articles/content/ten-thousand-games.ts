@@ -163,7 +163,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
     publisher: 'mistboard',
     title: '10,000 games played',
     seoTitle: 'Mistboard passes 10,000 games',
-    summary: 'How the first 10,000 games on Mistboard came in, what people played, and who played them.',
+    summary: 'How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.',
     showSummaryOnPage: false,
     status: 'published',
     method: [
