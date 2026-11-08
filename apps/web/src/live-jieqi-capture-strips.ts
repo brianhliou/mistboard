@@ -39,4 +39,17 @@ export function mountJieqiCaptureStrips(
   };
   place(media.matches);
   media.addEventListener('change', (event) => place(event.matches));
+  for (const { nodes } of strips) for (const { node } of nodes.slice(1)) watchOverflow(node);
+}
+
+/** Mark an odds row whose line is cut short (the narrowest board, where it
+ * scrolls sideways), so CSS can fade the cut edge. Re-checked when the row is
+ * resized and when a move re-renders its contents. */
+function watchOverflow(row: HTMLElement): void {
+  const check = (): void => {
+    row.toggleAttribute('data-overflow', row.scrollWidth > row.clientWidth + 1);
+  };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(check).observe(row);
+  new MutationObserver(check).observe(row, { childList: true, subtree: true, characterData: true });
+  check();
 }

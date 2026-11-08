@@ -2,7 +2,7 @@
 // why it is exact). A labelled pool row beside each seat's captured tray:
 // "N face-down could be:", then a piece icon per unseen role with its count
 // badge and its percentage printed under it, always visible; the uncertain side
-// adds "N taken unseen" on the label line. On for both seats,
+// adds "N taken unseen" on the label line. On for both seats and spectators,
 // rated games included (CLAUDE.md "In-game aids bar").
 //
 // Every number comes from the DISPLAYED view only (the seat's own PlayerView,
@@ -32,8 +32,6 @@ export type RevealOddsInput = {
   view: (RevealOddsView & { status: { type: string } }) | null;
   /** The ink drawn at the bottom of the board (the viewer's flip). */
   orientation: JieqiColor;
-  /** Seat whose own masked view supplies the odds; spectators have no row. */
-  viewer: JieqiColor | null;
 };
 
 export type PieceGlyph = (piece: { color: JieqiColor; role: JieqiPieceRole }) => string;
@@ -95,14 +93,12 @@ export function mountRevealOdds(slots: RevealOddsSlots, glyph: () => PieceGlyph)
   slots.capturesBottom.after(bottom);
   return {
     render(input) {
-      const odds = input.viewer ? oddsToShow(input.view) : null;
+      const odds = oddsToShow(input.view);
       const bottomInk = input.orientation;
       const topInk: JieqiColor = bottomInk === 'red' ? 'black' : 'red';
       const draw = glyph();
       renderPoolRow(top, odds?.[topInk] ?? null, draw);
       renderPoolRow(bottom, odds?.[bottomInk] ?? null, draw);
-      top.toggleAttribute('data-viewer', input.viewer === topInk);
-      bottom.toggleAttribute('data-viewer', input.viewer === bottomInk);
       // A finished or aborted game has no odds left to show. The bands stay
       // mounted but are marked so the phone layout can drop them (the
       // post-game actions would otherwise start below the fold); while the

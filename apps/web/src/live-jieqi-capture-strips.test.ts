@@ -43,4 +43,28 @@ describe('live Jieqi capture strips', () => {
     expect(room.querySelectorAll('.jieqi-capture-strip')).toHaveLength(2);
     expect(room.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
   });
+
+  it('flags an odds row only while its contents are wider than the line', async () => {
+    const room = document.createElement('div');
+    room.innerHTML = `<div class="board-stage"><div data-board></div></div>
+      <div class="game-console"><div data-top></div><div data-clock></div><div data-bottom></div></div>`;
+    const refs = {
+      board: room.querySelector<HTMLDivElement>('[data-board]')!,
+      capturesTop: room.querySelector<HTMLDivElement>('[data-top]')!,
+      capturesBottom: room.querySelector<HTMLDivElement>('[data-bottom]')!,
+    };
+    mountRevealOdds(refs, () => () => '<svg></svg>');
+    const row = room.querySelector<HTMLElement>('[data-reveal-odds="bottom"]')!;
+    let content = 300;
+    Object.defineProperty(row, 'clientWidth', { get: () => 240 });
+    Object.defineProperty(row, 'scrollWidth', { get: () => content });
+    const media = { matches: true, addEventListener: () => {} } as unknown as MediaQueryList;
+    mountJieqiCaptureStrips(refs, media);
+    expect(row.hasAttribute('data-overflow')).toBe(true);
+    // A move re-renders the row with fewer pieces: the flag clears.
+    content = 240;
+    row.append(document.createElement('span'));
+    await Promise.resolve();
+    expect(row.hasAttribute('data-overflow')).toBe(false);
+  });
 });

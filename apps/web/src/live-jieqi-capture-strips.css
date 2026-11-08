@@ -1,64 +1,191 @@
-/* Review's absolute seat rows keep material out of board/rail geometry. Each
-   band reserves two capture rows plus odds, including when empty or finished.
-   Further wrapping grows away from the board (the top strip reverses its flow).
-   Only this live Jieqi mount receives these classes. */
+/* Desktop live jieqi: one line above and one below the board, review-style.
+   Each line holds that side's captured pieces on the left and its face-down
+   odds on the right ("N face-down", the taken-unseen pill, each piece with its
+   percentage beside it). The board gives up only these two lines of height.
+
+   A line never wraps: a second row has no space reserved and would climb into
+   the header or the move list. As the board narrows it steps down instead,
+   sized from the line's own width (the strip is the container): smaller
+   pieces, then each percentage moves under its piece (the review layout, which
+   fits the same 26px line), and last the odds scroll sideways inside their own
+   box with a fade at the cut edge (data-overflow, set by
+   live-jieqi-capture-strips.ts). Nothing ever leaves the board's width. Only
+   this live Jieqi mount receives these classes. */
 @media (min-width: 800px) {
   .live-route--jieqi {
-    --uni-board-chrome-h: 224px;
+    --uni-board-chrome-h: 60px;
   }
 
   .live-route--jieqi .board-shell {
-    margin-block: 112px;
+    margin-block: 30px;
   }
 
   .live-route--jieqi .live-review__cluster :is(.moves-panel, .meta-panel) {
-    margin-top: 112px;
+    margin-top: 30px;
   }
 
   .jieqi-capture-stage > .jieqi-capture-strip {
-    height: 108px;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
+    container-type: inline-size;
+    min-height: 26px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
     pointer-events: auto;
-  }
-
-  .jieqi-capture-strip.review-seat--top {
-    flex-direction: column-reverse;
   }
 
   .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
     --capture-piece-size: 22px;
-    flex: 0 0 auto;
-    height: auto;
+    /* Captured pieces are grouped by type with a count, so this row stays
+       short; it keeps its width and the odds give way. */
+    flex: none;
+    height: 24px;
     min-height: 0;
-    margin: 0;
-    padding: 0 4px;
+    /* The space before the odds (a margin, so the steps below can narrow it;
+       the strip itself is the container and cannot be styled by them). */
+    margin: 0 12px 0 0;
+    padding: 0;
   }
 
-  .jieqi-capture-strip.review-seat--top .review-seat__material {
-    align-items: flex-end;
+  .live-route--jieqi .jieqi-capture-strip .review-captures-row {
+    flex-wrap: nowrap;
   }
 
-  .jieqi-capture-strip.review-seat--bottom .review-seat__material {
-    align-items: flex-start;
-  }
-
-  .jieqi-capture-strip .review-seat__material .captures-row {
-    flex-wrap: wrap;
-    gap: 2px;
-  }
-
-  .jieqi-capture-strip .reveal-odds-row {
-    --reveal-chip: 22px;
-    flex: 0 0 56px;
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+    --reveal-chip: 20px;
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
     min-height: 0;
-    margin: 0;
-    padding: 0 4px;
+    height: 26px;
+    margin: 0 0 0 auto;
+    /* Room for the last piece's count badge, which sits past its corner. */
+    padding: 0 5px 0 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
   }
 
-  .jieqi-capture-strip .reveal-odds-row:not([data-viewer]) {
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row::-webkit-scrollbar {
     display: none;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row[data-overflow] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__head {
+    flex: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__lead {
+    display: none;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__lead--short {
+    display: block;
+    font-size: 0.8rem;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__note {
+    margin-left: 0;
+    padding: 0 6px;
+    font-size: 0.72rem;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__pieces {
+    flex: none;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
+    flex-direction: row;
+    gap: 3px;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
+    font-size: 0.74rem;
+  }
+
+  /* A narrower board: everything one size down. */
+  @container (max-width: 600px) {
+    .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
+      --capture-piece-size: 18px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+      --reveal-chip: 17px;
+      gap: 6px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__lead--short {
+      font-size: 0.72rem;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__note {
+      padding: 0 5px;
+      font-size: 0.66rem;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__pieces {
+      gap: 6px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
+      gap: 2px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
+      font-size: 0.68rem;
+    }
+  }
+
+  /* Narrow: each percentage under its piece, so a chip is as wide as its
+     number rather than piece plus number. Piece and number fit the 26px line. */
+  @container (max-width: 460px) {
+    .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
+      --capture-piece-size: 16px;
+      margin-right: 6px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+      --reveal-chip: 16px;
+      gap: 4px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__head {
+      gap: 4px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__note {
+      padding: 0 4px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__pieces {
+      gap: 4px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .captures-count-badge {
+      min-width: 11px;
+      height: 11px;
+      font-size: 8px;
+      right: -4px;
+      bottom: -2px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
+      font-size: 0.56rem;
+      line-height: 1;
+    }
   }
 }

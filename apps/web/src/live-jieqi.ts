@@ -441,12 +441,7 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): vo
 // spectator's public view) at the ply on screen, so a scrub shows the odds as
 // they stood then and nothing reads past what this viewer was sent.
 function renderRevealOdds(view: JieqiWireView | null): void {
-  const seat = core?.state.seat;
-  revealOdds?.render({
-    view,
-    orientation: orientationFor(view),
-    viewer: isJieqiColor(seat) ? seat : null,
-  });
+  revealOdds?.render({ view, orientation: orientationFor(view) });
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
