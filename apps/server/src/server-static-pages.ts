@@ -92,6 +92,17 @@ const XIANGQI_EDITOR_EN = {
 };
 
 export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
+  '/play': {
+    title: 'Play Chinese Chess (Xiangqi) and Variants | Mistboard',
+    description:
+      'Play xiangqi (Chinese chess) and its variants online. Challenge a friend, find an opponent, or play against the computer. Free, in your browser.',
+  },
+  // Public practice tool: preview the tool, never the URL's position or hints.
+  '/practice/position': {
+    title: 'Play Out a Xiangqi Position | Mistboard',
+    description:
+      'Practise a xiangqi (Chinese chess) position against the engine. Set up a position in the board editor, then play it out to practise winning or holding a draw.',
+  },
   '/videos': {
     title: 'Xiangqi Video Library | Mistboard',
     description:

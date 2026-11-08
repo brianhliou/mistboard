@@ -949,6 +949,95 @@ test('serveSpaShellWithRoutePreloads serves route meta even with no preload mani
   assert.match(response.body, /<title>Learn Chinese Chess \(Xiangqi\) \| Mistboard<\/title>/);
 });
 
+for (const [pathname, title, description] of [
+  [
+    '/play',
+    'Play Chinese Chess (Xiangqi) and Variants | Mistboard',
+    'Play xiangqi (Chinese chess) and its variants online. Challenge a friend, find an opponent, or play against the computer. Free, in your browser.',
+  ],
+  [
+    '/practice/position',
+    'Play Out a Xiangqi Position | Mistboard',
+    'Practise a xiangqi (Chinese chess) position against the engine. Set up a position in the board editor, then play it out to practise winning or holding a draw.',
+  ],
+]) {
+  test(`${pathname} serves a public static preview without disclosing query content`, async () => {
+    const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+    await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+    let bareShell: string | undefined;
+    for (const search of [
+      '',
+      '?fen=PRIVATE_POSITION_SENTINEL&solution=SECRET_SOLUTION_SENTINEL&goal=mate&side=black',
+      '?fen=invalid&goal=INVALID_GOAL_SENTINEL&side=red&title=PRIVATE_TITLE_SENTINEL',
+    ]) {
+      const response = captureResponse();
+      const served = await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        search,
+        publicHost: 'https://mistboard.com',
+      });
+      assert.equal(served, true);
+      assert.equal(response.status, 200);
+      assert.ok(response.body.includes(`<title>${title}</title>`));
+      assert.ok(response.body.includes(`<meta property="og:title" content="${title}">`));
+      assert.ok(
+        response.body.includes(`<meta property="og:description" content="${description}">`),
+      );
+      assert.ok(response.body.includes(`<meta name="description" content="${description}">`));
+      assert.ok(response.body.includes(`<meta name="twitter:title" content="${title}">`));
+      assert.ok(
+        response.body.includes(`<meta name="twitter:description" content="${description}">`),
+      );
+      assert.ok(
+        response.body.includes(
+          `<meta property="og:url" content="https://mistboard.com${pathname}">`,
+        ),
+      );
+      assert.match(response.body, /<meta name="robots" content="max-image-preview:large"\s*\/>/);
+      assert.equal(response.body.match(/<meta name="robots"/g)?.length, 1);
+      assert.match(response.body, /<meta property="og:image" content="old">/);
+      assert.doesNotMatch(response.body, /noindex|SENTINEL|\/og\/position\//);
+      bareShell ??= response.body;
+      assert.equal(response.body, bareShell, 'query fields must not affect any part of the shell');
+    }
+  });
+}
+
+for (const pathname of [
+  '/titles',
+  '/engines',
+  '/engine/PRIVATE_ENGINE_SENTINEL',
+  '/accounts',
+  '/database',
+]) {
+  test(`${pathname} serves only the generic noindex shell`, async () => {
+    const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+    await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+    for (const suffix of ['', '/']) {
+      const response = captureResponse();
+      const served = await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: `${pathname}${suffix}`,
+        search:
+          '?q=PRIVATE_ACCOUNT_SENTINEL&fen=PRIVATE_POSITION_SENTINEL&solution=SECRET_SOLUTION_SENTINEL',
+        publicHost: 'https://mistboard.com',
+      });
+      assert.equal(served, true);
+      assert.equal(response.status, 200);
+      assert.match(response.body, /<title>Mistboard<\/title>/);
+      assert.match(response.body, /<meta property="og:title" content="old">/);
+      assert.match(response.body, /<meta property="og:description" content="old">/);
+      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+      assert.equal(response.body.match(/<meta name="robots"/g)?.length, 1);
+      assert.doesNotMatch(response.body, /SENTINEL|rel="canonical"|hreflang|\/og\//);
+      assert.equal(response.body, setRobotsMeta(indexHtml(), 'noindex, follow'));
+    }
+  });
+}
+
 // Sitemap routes whose meta comes from a dedicated per-locale renderer rather
 // than SPA_ROUTE_META: the article and rules indexes, and '/' which is the
 // static index itself. There is no third category any more. Every other

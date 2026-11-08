@@ -594,10 +594,15 @@ export function isClientRoute(pathname: string): boolean {
 export function isNoindexRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
-    // Admin reporting shells have no public search content.
+    // Admin shells have no public preview or search content.
     normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/readouts' ||
+    normalized === '/titles' ||
+    normalized === '/engines' ||
+    /^\/engine\/[^/]+$/.test(normalized) ||
+    normalized === '/accounts' ||
+    normalized === '/database' ||
     normalized === '/forum/reports' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||

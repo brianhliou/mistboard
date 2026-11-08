@@ -518,6 +518,11 @@ test('isClientRoute covers every parametric route matcher declared in main.ts', 
 // prefixes, so the parity check below actually exercises each one.
 const NOINDEX_ROUTE_SAMPLES = [
   '/ops',
+  '/titles',
+  '/engines',
+  '/engine/pikafish',
+  '/accounts',
+  '/database',
   '/metrics',
   '/readouts',
   '/forum/reports',
@@ -601,6 +606,28 @@ test('isNoindexRoute ignores a trailing slash', () => {
   assert.equal(isNoindexRoute('/account/'), true);
   assert.equal(isNoindexRoute('/following/'), true);
   assert.equal(isNoindexRoute('/forum/reports/'), true);
+});
+
+test('admin preview noindex policy matches only admin shells and preserves public routes and assets', () => {
+  for (const route of ['/titles', '/engines', '/engine/pikafish', '/accounts', '/database']) {
+    assert.equal(isClientRoute(route), true, route);
+    assert.equal(isNoindexRoute(route), true, route);
+    assert.equal(isNoindexRoute(`${route}/`), true, route);
+  }
+  for (const route of ['/play', '/practice/position', '/verify-title', '/bots', '/games/search']) {
+    // /verify-title is an existing noindex utility, not the private /titles queue.
+    assert.equal(isNoindexRoute(route), route === '/verify-title', route);
+  }
+  for (const route of [
+    '/engine',
+    '/engine/fairy-stockfish/stockfish.js',
+    '/engines-extra',
+    '/accounts-extra',
+    '/database-extra',
+    '/titles-extra',
+  ]) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
 });
 
 // The sitemap must never advertise a route the server 404s: every static route
