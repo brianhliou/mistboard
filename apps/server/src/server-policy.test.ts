@@ -43,7 +43,11 @@ import {
 } from './server-policy.js';
 import { SITEMAP_STATIC_ROUTES, serveSpaShellWithRoutePreloads } from './server-static-pages.js';
 import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
-import { sitemapContract, sitemapPathHasBody } from './sitemap-content.js';
+import {
+  sitemapConformanceFailures,
+  sitemapContract,
+  sitemapPathIsTracked,
+} from './sitemap-content.js';
 import type { XmjEvent } from './xiangqi-mahjong-tenant.js';
 
 test('live persisted events are not public replay data', () => {
@@ -642,8 +646,7 @@ test('admin preview noindex policy matches only admin shells and preserves publi
 test('sitemap static routes are live client routes, never parked ones', () => {
   assert.ok(SITEMAP_STATIC_ROUTES.length > 0, 'expected sitemap static routes');
   for (const route of SITEMAP_STATIC_ROUTES) {
-    assert.ok(sitemapPathHasBody(route), `sitemap advertises a missing body: ${route}`);
-    assert.ok(!sitemapContract(route)?.knownGap, route);
+    assert.ok(sitemapPathIsTracked(route), `sitemap advertises a missing body: ${route}`);
     if (route === '/') continue;
     assert.equal(
       PARKED_CLIENT_ROUTES.has(route),
@@ -656,14 +659,18 @@ test('sitemap static routes are live client routes, never parked ones', () => {
       `sitemap advertises ${route}, but isClientRoute() rejects it so prod serves a 404 shell`,
     );
   }
-  // Planted failures: a listed blank page, a sparse localized directory, and
-  // a new route with no independent content contract must all be rejected.
-  for (const path of ['/about', '/zh-hans/study', '/planted-unclassified']) {
-    assert.equal(sitemapPathHasBody(path), false, path);
+  for (const path of ['/about', '/zh-hans/study']) {
+    assert.ok(sitemapPathIsTracked(path), path);
+    assert.deepEqual(sitemapConformanceFailures(path, ['body below floor']), []);
   }
+  // Planted sitemap route: even a passing body needs an independent contract.
+  assert.deepEqual(sitemapConformanceFailures('/planted-unclassified', []), [
+    'sitemap route has no crawler manifest entry: /planted-unclassified',
+  ]);
+  assert.deepEqual(sitemapConformanceFailures('/', ['body below floor']), ['body below floor']);
 });
 
-test('every static sitemap URL passes its raw built crawler floor without sockets', async (t) => {
+test('every static sitemap URL passes its crawler floor or has a tracked gap without sockets', async (t) => {
   const staticDir = resolve(import.meta.dirname, '../../web/dist');
   const metadataFile = resolve(staticDir, 'prerender-sitemap.json');
   if (!existsSync(metadataFile)) {
@@ -711,7 +718,7 @@ test('every static sitemap URL passes its raw built crawler floor without socket
       manifest: CRAWLER_CONTENT_MANIFEST,
       fetchImpl,
     });
-    assert.deepEqual(result.failures, [], path);
+    assert.deepEqual(sitemapConformanceFailures(path, result.failures), [], path);
   }
 });
 

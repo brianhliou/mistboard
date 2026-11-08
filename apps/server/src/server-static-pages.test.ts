@@ -7,7 +7,6 @@ import test from 'node:test';
 import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { resetArticleScheduleCache } from './article-schedule.js';
-import { CRAWLER_CONTENT_MANIFEST } from './crawler-content-manifest.js';
 import type { TenantGameCardStore } from './og-game-tenant.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import type {
@@ -285,11 +284,7 @@ test('the real shell lets search show a large image preview, in one robots tag',
 test('the Chinese home pages and blog indexes are routed, advertised and titled', async () => {
   for (const route of ['/zh-hans', '/zh-hant', '/zh-hans/blog', '/zh-hant/blog']) {
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
-    assert.equal(
-      SITEMAP_STATIC_ROUTES.includes(route),
-      !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-      route,
-    );
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
   }
   // The bare English home stays the x-default; the prefixes are additions.
   assert.ok(SITEMAP_STATIC_ROUTES.includes('/'));
@@ -1123,11 +1118,7 @@ test('the videos library serves all three locales, each distinct and cross-linke
   const seen = new Map<string, { title: string; body: string }>();
   for (const route of ['/videos', '/zh-hans/videos', '/zh-hant/videos']) {
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
-    assert.equal(
-      SITEMAP_STATIC_ROUTES.includes(route),
-      !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-      route,
-    );
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
     const response = captureResponse();
     const served = await serveSpaShellWithRoutePreloads({
       response,
@@ -1175,11 +1166,7 @@ test('Washington Xiangqi serves three distinct locale metas with canonical and a
   ]) {
     const route = `${prefix}/washington-xiangqi`;
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit`);
-    assert.equal(
-      SITEMAP_STATIC_ROUTES.includes(route),
-      !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-      route,
-    );
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
     const response = captureResponse();
     assert.equal(
       await serveSpaShellWithRoutePreloads({
@@ -1228,11 +1215,7 @@ test('the engine champions page serves all three locales, each distinct and cros
   const titles = new Set<string>();
   for (const route of ['/champions', '/zh-hans/champions', '/zh-hant/champions']) {
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
-    assert.equal(
-      SITEMAP_STATIC_ROUTES.includes(route),
-      !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-      route,
-    );
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
     const response = captureResponse();
     const served = await serveSpaShellWithRoutePreloads({
       response,
@@ -1281,11 +1264,7 @@ test('the xiangqi course serves all three locales, each distinct and cross-linke
   const seen = new Map<string, { title: string; body: string }>();
   for (const route of ['/learn/xiangqi', '/zh-hans/learn/xiangqi', '/zh-hant/learn/xiangqi']) {
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
-    assert.equal(
-      SITEMAP_STATIC_ROUTES.includes(route),
-      !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-      route,
-    );
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
     const response = captureResponse();
     const served = await serveSpaShellWithRoutePreloads({
       response,
@@ -1326,11 +1305,7 @@ test('the practice shelf serves all three locales, each distinct and cross-linke
     ['/zh-hant/practice', 'zh-Hant'],
   ] as const) {
     assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
-    assert.equal(
-      SITEMAP_STATIC_ROUTES.includes(route),
-      !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-      route,
-    );
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
     const response = captureResponse();
     const served = await serveSpaShellWithRoutePreloads({
       response,
@@ -1407,11 +1382,7 @@ test('the xiangqi analysis board and editor serve all three locales, cross-linke
       [`/zh-hant${group}`, 'zh-Hant'],
     ] as const) {
       assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
-      assert.equal(
-        SITEMAP_STATIC_ROUTES.includes(route),
-        !CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === route)?.knownGap,
-        route,
-      );
+      assert.ok(SITEMAP_STATIC_ROUTES.includes(route), route);
       const response = captureResponse();
       const served = await serveSpaShellWithRoutePreloads({
         response,

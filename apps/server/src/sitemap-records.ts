@@ -14,7 +14,7 @@ import {
 } from './persistence-historical-xiangqi.js';
 import { discoverablePuzzles, getPuzzleStore } from './puzzle-store.js';
 import { loadDataListing } from './routes/data.js';
-import { type SitemapEntry, sitemapContract, sitemapPathHasBody } from './sitemap-content.js';
+import { type SitemapEntry, sitemapContract, sitemapPathIsTracked } from './sitemap-content.js';
 
 export function bodyMeetsSitemapFloor(path: string, body: string): boolean {
   const contract = sitemapContract(path);
@@ -25,7 +25,7 @@ export function bodyMeetsSitemapFloor(path: string, body: string): boolean {
     .trim();
   return (
     !!contract &&
-    sitemapPathHasBody(path) &&
+    sitemapPathIsTracked(path) &&
     text.length >= contract.minChars &&
     /<h1[\s>]/.test(body) &&
     (contract.routeId !== path ||

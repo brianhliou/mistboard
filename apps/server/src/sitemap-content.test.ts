@@ -10,9 +10,14 @@ import {
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
 } from './server-static-pages.js';
-import { localeAlternates, sitemapPathHasBody, sitemapXml } from './sitemap-content.js';
+import {
+  localeAlternates,
+  SITEMAP_STATIC_ROUTES,
+  sitemapPathIsTracked,
+  sitemapXml,
+} from './sitemap-content.js';
 
-test('sitemap admission rejects planted gaps, unknown paths, aliases and private routes', () => {
+test('sitemap admission retains tracked gaps and rejects unknown paths, aliases and private routes', () => {
   for (const path of [
     '/',
     '/blog',
@@ -21,21 +26,24 @@ test('sitemap admission rejects planted gaps, unknown paths, aliases and private
     '/puzzles/example',
     '/study/example',
     '/zh-hant/study/example',
-  ])
-    assert.ok(sitemapPathHasBody(path), path);
-  for (const path of [
     '/about',
     '/study',
-    '/challenges',
+    '/zh-hans/study',
+    '/zh-hant/study',
     '/broadcast/xiangqi/about',
     '/players/teams/zhejiang',
-    '/account',
-    '/new-unclassified',
   ])
-    assert.equal(sitemapPathHasBody(path), false, path);
+    assert.ok(sitemapPathIsTracked(path), path);
+  for (const path of ['/challenges', '/leaderboard', '/account', '/new-unclassified'])
+    assert.equal(sitemapPathIsTracked(path), false, path);
 });
 
-test('every dated static entry comes from the build, and known gaps stay excluded', async () => {
+test('canonical aliases and broadcast operations stay outside the public static sitemap', () => {
+  for (const path of ['/leaderboard', '/broadcast/xiangqi/ops'])
+    assert.equal(SITEMAP_STATIC_ROUTES.includes(path), false, path);
+});
+
+test('every dated static entry comes from the build, including tracked gaps', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'sitemap-content-'));
   const group = [
     { lang: 'en', path: '/' },
@@ -52,7 +60,8 @@ test('every dated static entry comes from the build, and known gaps stay exclude
     join(dir, 'prerender-sitemap.json'),
     JSON.stringify([
       ...records,
-      { path: '/about', lastmod: '2026-10-02' }, // Planted known gap.
+      { path: '/about', lastmod: '2026-10-02', contentChars: 0 }, // Tracked gap stays listed.
+      { path: '/new-unclassified', lastmod: '2026-10-02', contentChars: 10000 }, // No contract.
       { path: '/patron' }, // Planted undated static page.
       {
         path: '/changelog',
@@ -64,13 +73,19 @@ test('every dated static entry comes from the build, and known gaps stay exclude
         path: '/puzzles',
         lastmod: '2026-10-01',
         alternates: [{ lang: 'zh-Hans', path: '/zh-hans/learn/xiangqi' }],
-      }, // Planted blank alternate.
+      }, // Tracked gap alternate stays discoverable.
       { path: '/blog/skill-vs-luck', lastmod: '2026-10-03', alternates: [] },
     ]),
   );
   assert.deepEqual(await pageSitemapEntries(dir), [
     records[1],
     records[2],
+    { path: '/about', lastmod: '2026-10-02', alternates: undefined },
+    {
+      path: '/puzzles',
+      lastmod: '2026-10-01',
+      alternates: [{ lang: 'zh-Hans', path: '/zh-hans/learn/xiangqi' }],
+    },
     records[0],
     { path: '/blog/skill-vs-luck', lastmod: '2026-10-03', alternates: [] },
   ]);

@@ -82,6 +82,25 @@ test('blank, shell-only and short prerenders cannot enter the sitemap', () => {
   }
 });
 
+test('blank prerenders retain source dates only when their exact path is a tracked gap', () => {
+  const html = `<head><link rel="canonical" href="${host}/about"></head><body></body>`;
+  const record = prerenderSitemapRecord(
+    html,
+    'about.html',
+    host,
+    () => '2026-10-01',
+    new Set(['/about']),
+  );
+  assert.equal(record.path, '/about');
+  assert.equal(record.contentChars, 0);
+  assert.equal(record.lastmod, '2026-10-01');
+  // Planted untracked shell: a gap on another page must not admit this page.
+  assert.equal(
+    prerenderSitemapRecord(html, 'about.html', host, () => '2026-10-01', new Set(['/study'])),
+    null,
+  );
+});
+
 test('article lastmod uses its content date rather than a build date', () => {
   const published = head('/blog/a').replace(
     '</head>',
@@ -149,4 +168,32 @@ test('the prerender writes a sidecar for root and nested locale pages without al
     'zh-hans/washington-xiangqi.html',
   );
   assert.equal(await readFile(join(dist, 'zh-hans', 'washington-xiangqi.html'), 'utf8'), html);
+});
+
+test('server-only tracked gaps keep content dates and locale groups without a fabricated artifact', async () => {
+  const dist = await mkdtemp(join(tmpdir(), 'sitemap-tracked-gaps-'));
+  const repo = new URL('..', import.meta.url).pathname;
+  const paths = ['/study', '/zh-hans/study', '/zh-hant/study'];
+  const alternates = [
+    ...paths.map((path, index) => ({ lang: ['en', 'zh-Hans', 'zh-Hant'][index], path })),
+    { lang: 'x-default', path: '/study' },
+  ];
+  await writePrerenderSitemap(
+    dist,
+    host,
+    repo,
+    paths.map((path) => ({ path, alternates })),
+  );
+  const records = JSON.parse(await readFile(join(dist, 'prerender-sitemap.json'), 'utf8'));
+  for (const path of paths) {
+    const record = records.find((entry) => entry.path === path);
+    assert.equal(record.lastmod, gitContentDate(repo, contentSources(path)));
+    assert.deepEqual(record.alternates, alternates);
+    assert.equal(record.file, undefined);
+    assert.equal(record.contentChars, undefined);
+  }
+  assert.equal(
+    records.some((entry) => entry.path === '/planted-unclassified'),
+    false,
+  );
 });

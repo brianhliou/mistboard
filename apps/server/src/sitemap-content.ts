@@ -13,9 +13,22 @@ export function sitemapContract(path: string): CrawlerContentEntry | undefined {
   return CRAWLER_CONTENT_MANIFEST.find((entry) => patterns.some((row) => row.id === entry.routeId));
 }
 
-export function sitemapPathHasBody(path: string): boolean {
+export function sitemapPathIsTracked(path: string): boolean {
   const contract = sitemapContract(path);
-  return !!contract && !contract.knownGap && !isNoindexRoute(path) && !legacyPageRedirect(path);
+  // The build serves leaderboard.html with /player as its canonical.
+  return (
+    !!contract && path !== '/leaderboard' && !isNoindexRoute(path) && !legacyPageRedirect(path)
+  );
+}
+
+/** Decided 2026-11-07: tracked gaps retain search discovery while body fixes land. */
+export function sitemapConformanceFailures(
+  path: string,
+  bodyFailures: readonly string[],
+): string[] {
+  const contract = sitemapContract(path);
+  if (!contract) return [`sitemap route has no crawler manifest entry: ${path}`];
+  return contract.knownGap ? [] : [...bodyFailures];
 }
 
 export const SITEMAP_STATIC_ROUTES: readonly string[] = CRAWLER_CONTENT_MANIFEST.filter(
@@ -25,7 +38,9 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = CRAWLER_CONTENT_MANIFEST
     // These directories belong to their existing sitemap sections.
     entry.path !== '/players' &&
     entry.path !== '/broadcast/xiangqi' &&
-    sitemapPathHasBody(entry.path),
+    // The broadcast operations tool is outside the public sitemap.
+    entry.path !== '/broadcast/xiangqi/ops' &&
+    sitemapPathIsTracked(entry.path),
 ).map((entry) => entry.path);
 
 /** Also used by the server head: one shared group, including x-default. */

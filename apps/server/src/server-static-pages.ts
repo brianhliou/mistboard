@@ -57,7 +57,7 @@ import {
   SITEMAP_STATIC_ROUTES,
   type SitemapEntry,
   sitemapContract,
-  sitemapPathHasBody,
+  sitemapPathIsTracked,
   sitemapXml,
 } from './sitemap-content.js';
 import {
@@ -1547,7 +1547,7 @@ export async function serveSitemap(params: {
     entries = await loaders[params.section]().catch(() => [] as SitemapEntry[]);
   }
   const xml = sitemapXml(
-    entries.filter((entry) => sitemapPathHasBody(entry.path)),
+    entries.filter((entry) => sitemapPathIsTracked(entry.path)),
     params.publicHost,
   );
   params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
@@ -1559,7 +1559,7 @@ async function playerSectionEntries(staticDir: string): Promise<SitemapEntry[]> 
   if (!persistence.isInitialized()) return [];
   const entries: SitemapEntry[] = [];
   for (const entry of playerSitemapEntries(await cachedPlayers())) {
-    if (!sitemapPathHasBody(entry.path)) continue;
+    if (!sitemapPathIsTracked(entry.path)) continue;
     const page = await livePlayerPage(entry.path, staticDir);
     if (page?.body && !page.noindex && bodyMeetsSitemapFloor(entry.path, page.body))
       entries.push(entry);
@@ -1571,7 +1571,7 @@ async function broadcastSectionEntries(): Promise<SitemapEntry[]> {
   if (!persistence.isInitialized()) return [];
   const entries: SitemapEntry[] = [];
   for (const entry of broadcastSitemapEntries(await listBroadcastRoundDates())) {
-    if (!sitemapPathHasBody(entry.path)) continue;
+    if (!sitemapPathIsTracked(entry.path)) continue;
     const page = await liveBroadcastPage(entry.path);
     if (page?.body && !page.noindex && bodyMeetsSitemapFloor(entry.path, page.body))
       entries.push(entry);
@@ -1589,7 +1589,11 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
   const staleIndex = prerenderedIndexIsStale(await readArticleSchedule(staticDir));
   const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.flatMap((path) => {
     const record = baked.find((entry) => entry.path === path);
-    if (record?.contentChars !== undefined && record.contentChars < sitemapContract(path)!.minChars)
+    if (
+      !sitemapContract(path)!.knownGap &&
+      record?.contentChars !== undefined &&
+      record.contentChars < sitemapContract(path)!.minChars
+    )
       return [];
     const lastmod = dates.get(path) ?? record?.lastmod;
     return lastmod ? [{ path, lastmod, alternates: record?.alternates }] : [];
@@ -1602,9 +1606,11 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
     (entry) =>
       !!entry.lastmod &&
       !(staleIndex && /^\/(?:zh-han[st]\/)?(?:blog|feed)(?:\/\d{4}-\d{2})?$/.test(entry.path)) &&
-      sitemapPathHasBody(entry.path) &&
+      sitemapPathIsTracked(entry.path) &&
       (entry.alternates ?? []).every(
-        (alternate) => sitemapPathHasBody(alternate.path) && bakedPaths.has(alternate.path),
+        (alternate) =>
+          sitemapPathIsTracked(alternate.path) &&
+          (bakedPaths.has(alternate.path) || !!sitemapContract(alternate.path)?.knownGap),
       ),
   );
 }

@@ -9,7 +9,7 @@ const window = new Window({
   settings: { disableJavaScriptEvaluation: true, disableCSSFileLoading: true },
 });
 
-export function prerenderSitemapRecord(html, file, publicHost, sourceDate) {
+export function prerenderSitemapRecord(html, file, publicHost, sourceDate, knownGaps = new Set()) {
   const doc = new window.DOMParser().parseFromString(html, 'text/html');
   const canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href');
   if (
@@ -17,11 +17,15 @@ export function prerenderSitemapRecord(html, file, publicHost, sourceDate) {
     /noindex/i.test(doc.querySelector('meta[name="robots"]')?.getAttribute('content') ?? '')
   )
     return null;
-  // The article/rules set is discovered from emitted pages too. An accidental
-  // shell or navigation-only page must never become a sitemap candidate.
-  const contentChars = crawlerContentText(html).length;
-  if (!doc.querySelector('h1')?.textContent?.trim() || contentChars < 150) return null;
   const url = new URL(canonical, publicHost);
+  // Decided 2026-11-07: tracked gaps stay discoverable to rendering search engines.
+  // Untracked shells still cannot become sitemap candidates.
+  const contentChars = crawlerContentText(html).length;
+  if (
+    !knownGaps.has(url.pathname) &&
+    (!doc.querySelector('h1')?.textContent?.trim() || contentChars < 150)
+  )
+    return null;
   if (url.origin !== new URL(publicHost).origin)
     throw new Error(`foreign prerender canonical: ${canonical}`);
   const ldDate =
@@ -72,8 +76,9 @@ export function gitContentDate(repoRoot, sources) {
   return date;
 }
 
-export async function writePrerenderSitemap(distDir, publicHost, repoRoot) {
+export async function writePrerenderSitemap(distDir, publicHost, repoRoot, trackedGaps = []) {
   const records = [];
+  const knownGaps = new Set(trackedGaps.map((entry) => entry.path));
   const dates = new Map();
   const sourceDate = (path) => {
     const sources = contentSources(path);
@@ -92,6 +97,7 @@ export async function writePrerenderSitemap(distDir, publicHost, repoRoot) {
         relative(distDir, file),
         publicHost,
         sourceDate,
+        knownGaps,
       );
       if (record) records.push(record);
     }
@@ -108,6 +114,12 @@ export async function writePrerenderSitemap(distDir, publicHost, repoRoot) {
     alternates: [],
   });
   const unique = new Map(records.map((record) => [record.path, record]));
+  // Server-only gaps have no prerender artifact. Keep their source date and
+  // locale group in the sidecar without claiming a rendered body exists.
+  for (const entry of trackedGaps) {
+    if (!unique.has(entry.path))
+      unique.set(entry.path, { ...entry, lastmod: sourceDate(entry.path) });
+  }
   await fs.writeFile(
     resolve(distDir, 'prerender-sitemap.json'),
     `${JSON.stringify([...unique.values()])}\n`,
