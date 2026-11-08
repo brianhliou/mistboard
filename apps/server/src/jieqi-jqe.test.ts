@@ -13,7 +13,12 @@ import {
   jieqiPublicEvents,
   jieqiTenant,
 } from './jieqi-tenant.js';
-import { createTenantRuntimeRoom, replayTenantEvents } from './variant-tenant/runtime.js';
+import {
+  createTenantRuntimeRoom,
+  createTenantRuntimeRoomFromEvents,
+  replayTenantEvents,
+  tenantSnapshotPayload,
+} from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
 const test: (name: string, fn: () => void | Promise<void>) => unknown = (
@@ -121,6 +126,35 @@ test('whole stamped client views and public replay logs survive unseen identity 
         assert.equal(first.includes(`"${field}"`), false);
       assert.equal(JSON.stringify(jieqiClientEventFor(one[0]!, seat, 0)).includes('setup'), false);
     }
+  }
+});
+
+test('whole live snapshots expose only the public rule stamp and survive hidden identity swaps', () => {
+  const swapped = { ...newSetup, red: [...newSetup.red] };
+  const home = jieqiHomeSquares('red');
+  const a = home.indexOf('c1'),
+    b = home.indexOf('c4');
+  [swapped.red[a], swapped.red[b]] = [swapped.red[b]!, swapped.red[a]!];
+  const payload = (setup: unknown, seat: 'red' | 'black' | 'spectator') => {
+    const created = createTenantRuntimeRoomFromEvents(jieqiTenant, events(setup, 1));
+    if (!created.ok) throw new Error(created.error);
+    return {
+      ...tenantSnapshotPayload(jieqiTenant, created.room, {
+        id: `client-${seat}`,
+        seat,
+        solo: false,
+      }),
+      serverAt: 0,
+    };
+  };
+  for (const seat of ['red', 'black', 'spectator'] as const) {
+    const left = payload(newSetup, seat);
+    const serialized = JSON.stringify(left);
+    assert.equal((left as Record<string, unknown>).adjudicationRule, 'jqe-v1');
+    assert.equal(serialized, JSON.stringify(payload(swapped, seat)));
+    for (const field of ['setup', 'deal', 'positionCounts', 'repetitionLog', 'chase'])
+      assert.equal(serialized.includes(`"${field}"`), false);
+    assert.equal('adjudicationRule' in payload(oldSetup, seat), false);
   }
 });
 

@@ -1,0 +1,16 @@
+/* White edging separates the red ring from dark wood and pale board themes.
+   Its 18-unit radius stays recognisable when a phone scales a point to 35px. */
+.jieqi-repetition-ring {
+  fill: none;
+  stroke: #cf2438;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 1px #fff);
+  pointer-events: none;
+}
+
+.jieqi-repetition-ring-edge {
+  fill: none;
+  stroke: #fff7ed;
+  stroke-width: 9;
+  pointer-events: none;
+}

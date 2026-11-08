@@ -1,0 +1,140 @@
+// @vitest-environment happy-dom
+import { createInitialJieqiState, getJieqiPlayerView, type JieqiMove } from '@mistboard/game';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RepetitionWarning } from './jieqi-repetition-warning.js';
+import { noticeReadMs } from './live-banqi-chase-bubble.js';
+import { renderJieqiBoardSvg } from './live-jieqi-render.js';
+import { createJieqiRepetitionWarningUi } from './live-jieqi-repetition-warning.js';
+
+const move: JieqiMove = { from: 'a2', to: 'b2' };
+const analysis: RepetitionWarning = {
+  headsUp: { loser: 'red', reason: 'perpetual-chase' },
+  losingMoves: [{ move, loser: 'red', reason: 'perpetual-chase' }],
+};
+const view = {
+  ...getJieqiPlayerView(createInitialJieqiState('ui'), 'red'),
+  lastMove: { from: 'a6', to: 'b4' } as JieqiMove,
+};
+let board: HTMLElement;
+let ui: ReturnType<typeof createJieqiRepetitionWarningUi>;
+beforeEach(() => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div class="board-stage"><div class="board"></div></div>';
+  board = document.querySelector('.board')!;
+  board.innerHTML =
+    '<svg><g data-square="b2"><rect/></g><g data-square="a2"><rect/></g><g data-square="b4"><rect/></g></svg>';
+});
+afterEach(() => {
+  ui?.destroy();
+  vi.useRealTimers();
+  document.body.replaceChildren();
+});
+
+describe('?repwarn UI', () => {
+  it.each(['heads-up', 'mark'] as const)(
+    '%s plays immediately and only mark exposes losing points',
+    (mode) => {
+      ui = createJieqiRepetitionWarningUi(board, mode);
+      ui.update(view, analysis, true);
+      expect(document.querySelector('[role=status]')?.textContent).toBe(
+        'One more repeat and Red loses by perpetual chase.',
+      );
+      expect([...ui.losingDestinations('a2')]).toEqual(mode === 'mark' ? ['b2'] : []);
+      expect(ui.allowMove(move)).toBe(true);
+    },
+  );
+  it('confirm waits once, retains the ring and allows the same point on the second tap', () => {
+    ui = createJieqiRepetitionWarningUi(board, 'confirm');
+    ui.update(view, analysis, true);
+    expect(ui.allowMove(move)).toBe(false);
+    expect(document.querySelector('[role=status]')?.textContent).toContain(
+      'Perpetual chase loses.',
+    );
+    expect([...ui.losingDestinations('a2')]).toEqual(['b2']);
+    board
+      .querySelector('[data-square=b2] rect')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+    ui.update(view, analysis, true); // a re-render must not erase confirmation
+    expect(ui.allowMove(move)).toBe(true);
+    expect(document.querySelector('[role=status]')).toBeNull();
+  });
+  it.each(['other-point', 'outside', 'annotation', 'keyboard', 'scroll', 'wheel', 'drag'])(
+    '%s cancels the pending confirmation',
+    (interaction) => {
+      ui = createJieqiRepetitionWarningUi(board, 'confirm');
+      ui.update(view, analysis, true);
+      ui.allowMove(move);
+      if (interaction === 'drag') ui.cancel();
+      else if (interaction === 'keyboard')
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      else if (interaction === 'scroll' || interaction === 'wheel')
+        document.dispatchEvent(new Event(interaction));
+      else {
+        const target =
+          interaction === 'outside'
+            ? document.body
+            : board.querySelector(
+                `[data-square=${interaction === 'annotation' ? 'b2' : 'a2'}] rect`,
+              )!;
+        target.dispatchEvent(
+          new PointerEvent('pointerdown', {
+            bubbles: true,
+            button: interaction === 'annotation' ? 2 : 0,
+          }),
+        );
+      }
+      expect(ui.allowMove(move)).toBe(false);
+    },
+  );
+  it('expires after read time and does not reshow a heads-up on a clock render', () => {
+    ui = createJieqiRepetitionWarningUi(board, 'confirm');
+    ui.update(view, analysis, true);
+    vi.advanceTimersByTime(10_000);
+    ui.update(view, analysis, true);
+    expect(document.querySelector('[role=status]')).toBeNull();
+    ui.allowMove(move);
+    const text = document.querySelector('[role=status]')!.textContent!;
+    vi.advanceTimersByTime(noticeReadMs(text));
+    expect(ui.allowMove(move)).toBe(false);
+  });
+  it('clears on a new position, replay, disconnect, or finish', () => {
+    ui = createJieqiRepetitionWarningUi(board, 'confirm');
+    ui.update(view, analysis, true);
+    ui.allowMove(move);
+    ui.update({ ...view, moveNumber: view.moveNumber + 1 }, analysis, true);
+    expect(ui.allowMove(move)).toBe(false);
+    ui.update(view, analysis, false);
+    expect(document.querySelector('[role=status]')).toBeNull();
+    expect([...ui.losingDestinations('a2')]).toEqual([]);
+    ui.update(
+      { ...view, status: { type: 'finished', winner: 'black', reason: 'perpetual-chase' } },
+      analysis,
+      true,
+    );
+    expect(document.querySelector('[role=status]')).toBeNull();
+  });
+  it('replaces the normal dot with an edged red ring in either orientation and board layout', () => {
+    for (const orientation of ['red', 'black'] as const)
+      for (const layout of ['intersection', 'cell'] as const) {
+        board.innerHTML = renderJieqiBoardSvg(view, orientation, {
+          interactive: true,
+          layout,
+          selectedSquare: 'a2',
+          legalMoves: [move],
+          repetitionLossPoints: new Set(['b2']),
+        });
+        const target = board.querySelector('[data-square=b2]')!;
+        expect(target.querySelector('.jieqi-hint')).toBeNull();
+        expect(target.querySelector('.jieqi-repetition-ring')).not.toBeNull();
+        expect(target.querySelector('.jieqi-repetition-ring-edge')).not.toBeNull();
+        board.innerHTML = renderJieqiBoardSvg(view, orientation, {
+          interactive: true,
+          layout,
+          selectedSquare: 'a2',
+          legalMoves: [move],
+        });
+        expect(board.querySelector('[data-repetition-loss]')).toBeNull();
+        expect(board.querySelector('[data-square=b2] .jieqi-hint')).not.toBeNull();
+      }
+  });
+});
