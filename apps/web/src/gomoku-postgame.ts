@@ -217,7 +217,14 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
         run: async () => checkedAnalysis(await requestGameAnalysis('gomoku', roomId)),
       },
     });
-    window.addEventListener('pagehide', () => review.destroy(), { once: true });
+    const onPageHide = (event: PageTransitionEvent): void => {
+      // A back/forward-cache entry resumes this same review without remounting.
+      // Keep its board and keyboard listeners alive until a permanent departure.
+      if (event.persisted) return;
+      review.destroy();
+      window.removeEventListener('pagehide', onPageHide);
+    };
+    window.addEventListener('pagehide', onPageHide);
   } catch {
     message(t('replay.postgameUnavailable'), t('replay.gameCouldNotBeLoaded'));
   }
