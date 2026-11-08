@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
-import type { Color } from '@mistboard/game';
+import { type Color, GAME_SPECS } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
 import {
   articleIsScheduledAhead,
@@ -11,8 +11,14 @@ import {
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
+import { forumExcerpt } from './forum-excerpt.js';
 import { broadcastPageMeta } from './og-broadcast.js';
-import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
+import {
+  type TenantGameCardStore,
+  type TenantGamePageMeta,
+  tenantGamePageMeta,
+  tenantGameRoutePage,
+} from './og-game-tenant.js';
 import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
 import {
   isPositionOgVariant,
@@ -29,7 +35,8 @@ import {
   playerSitemapEntries,
 } from './player-pages.js';
 import { practiceChapterPath } from './practice-chapter-redirect.js';
-import { puzzleById } from './routes/puzzles.js';
+import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
+import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
 import { studyHasAdminOnlyChapter } from './study-admin-only.js';
@@ -85,6 +92,17 @@ const XIANGQI_EDITOR_EN = {
 };
 
 export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
+  '/play': {
+    title: 'Play Chinese Chess (Xiangqi) and Variants | Mistboard',
+    description:
+      'Play xiangqi (Chinese chess) and its variants online. Challenge a friend, find an opponent, or play against the computer. Free, in your browser.',
+  },
+  // Public practice tool: preview the tool, never the URL's position or hints.
+  '/practice/position': {
+    title: 'Play Out a Xiangqi Position | Mistboard',
+    description:
+      'Practise a xiangqi (Chinese chess) position against the engine. Set up a position in the board editor, then play it out to practise winning or holding a draw.',
+  },
   '/videos': {
     title: 'Xiangqi Video Library | Mistboard',
     description:
@@ -156,6 +174,11 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Community Forum | Mistboard',
     description:
       'The Mistboard community forum: talk about xiangqi and the other games, post a game for analysis, give feedback on the site, or chat about anything else.',
+  },
+  '/forum/etiquette': {
+    title: 'Forum etiquette · Mistboard',
+    description:
+      'A clear title, the right category, readable boards, no spam and respect for other players: guidelines for posting on the Mistboard forum.',
   },
   '/coach': {
     title: 'Xiangqi Coaches | Mistboard',
@@ -435,7 +458,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
 // the other variants have one English URL each).
 const POSITION_ROUTE = /^(?:\/(zh-hans|zh-hant))?\/(analysis|editor)(?:\/([a-z0-9-]+))?$/;
 
-type PositionRouteMeta = {
+type RoutePageMeta = {
   title: string;
   description: string;
   /** Path + query of the canonical link (no host). */
@@ -463,7 +486,7 @@ function positionPageCopy(
       };
 }
 
-export function positionRouteMeta(pathname: string, search: string): PositionRouteMeta | null {
+export function positionRouteMeta(pathname: string, search: string): RoutePageMeta | null {
   const match = POSITION_ROUTE.exec(pathname);
   if (!match) return null;
   const localePrefix: '' | '/zh-hans' | '/zh-hant' =
@@ -676,44 +699,173 @@ const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
 
-// A puzzle deep link (/puzzles/:idOrShortCode) is its own page, and served
-// with no canonical until 2026-10-17, so each ?utm= or share-tracking copy
-// read to a crawler as another URL for it.
-const QUERY_FREE_CANONICAL_PATTERNS: readonly RegExp[] = [/^\/puzzles\/[^/]+$/];
-
 const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
 
-// /puzzles/:idOrShortCode reaches one puzzle by its full id or by its short
-// code (Puzzle #bMpKA), so the query-free path alone left two self canonicals
-// per puzzle. Both name the full-id URL: the form the client pushes and the
-// short-code link in the info card points at (puzzles.ts, queue-panel.ts).
-// An unknown puzzle, or a lookup that throws, keeps the query-free path.
-async function puzzleCanonicalPath(
-  canonicalPath: string | null,
-  lookupPuzzleId: (idOrShortCode: string) => Promise<string | null>,
-): Promise<string | null> {
-  const match = canonicalPath ? PUZZLE_DEEP_LINK.exec(canonicalPath) : null;
-  if (!match) return canonicalPath;
-  let idOrShortCode: string;
+// Use the public forum reads, never a request's account or pagination. A
+// hidden topic reads as null; a hidden opening post keeps its position in the
+// list with its text blanked. Neither may acquire a preview from a later reply.
+async function forumRoutePage(
+  pathname: string,
+  lookupTopic: typeof persistence.getForumTopic,
+  listCategories: typeof persistence.listForumCategories,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  const normalized = pathname.replace(/\/+$/, '');
+  if (
+    !normalized.startsWith('/forum/') ||
+    normalized === '/forum/etiquette' ||
+    normalized === '/forum/reports'
+  )
+    return null;
   try {
-    idOrShortCode = decodeURIComponent(match[1]!);
+    const thread = /^\/forum\/t\/([^/]+)(?:\/[^/]+)?$/.exec(normalized);
+    const category = /^\/forum\/([^/]+)$/.exec(normalized);
+    const encodedId = thread?.[1] ?? category?.[1];
+    if (!encodedId) return { noindex: true };
+    const id = decodeURIComponent(encodedId);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) return { noindex: true };
+    if (thread) {
+      const topic = await lookupTopic(id, { postLimit: 1, postOffset: 0, viewerAccountId: null });
+      const opening = topic?.posts[0];
+      if (!topic || !opening || opening.hiddenAt !== null) return { noindex: true };
+      return {
+        noindex: false,
+        meta: {
+          title: `${topic.title} · ${topic.category.name} · Mistboard forum`,
+          description: forumExcerpt(opening.bodyText),
+          urlPath: `/forum/t/${encodeURIComponent(topic.id)}/${encodeURIComponent(topic.slug)}`,
+        },
+      };
+    }
+    const entry = (await listCategories()).find((entry) => entry.slug === id);
+    if (!entry) return { noindex: true };
+    return {
+      noindex: false,
+      meta: {
+        title: `${entry.name} · Mistboard forum`,
+        description: entry.description,
+        urlPath: `/forum/${encodeURIComponent(entry.slug)}`,
+      },
+    };
   } catch {
-    return canonicalPath;
+    return { noindex: true };
   }
-  const id = await lookupPuzzleId(idOrShortCode).catch(() => null);
-  return id ? `/puzzles/${encodeURIComponent(id)}` : canonicalPath;
 }
 
-async function livePuzzleId(idOrShortCode: string): Promise<string | null> {
-  return (await puzzleById(idOrShortCode))?.id ?? null;
+// Like the public profile API, always read as an anonymous visitor. Account
+// play locks and stats exclusions do not hide profiles; profile visibility
+// does. Never serialize games, puzzle content or account-only fields here.
+async function profileRoutePage(
+  pathname: string,
+  lookupProfile: typeof persistence.getUserProfileByHandle,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  if (!pathname.startsWith('/@/')) return null;
+  const match = /^\/@\/([^/]+)$/.exec(pathname.replace(/\/+$/, ''));
+  if (!match) return { noindex: true };
+  let profile: persistence.UserProfile | null;
+  try {
+    const handle = decodeURIComponent(match[1]!);
+    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(handle)) return { noindex: true };
+    profile = await lookupProfile(handle, null);
+  } catch {
+    return { noindex: true };
+  }
+  if (profile?.user.profileVisibility !== 'public') return { noindex: true };
+  const visibleClasses = visibleRatingTimeClasses();
+  const facts = GAME_SPECS.flatMap((spec) => {
+    if (!spec.rated || spec.publicSurface === 'hidden' || !isPublicRatingPool(spec.ratingPoolBase))
+      return [];
+    const buckets = profile.ratings.filter(
+      (rating) =>
+        rating.variant === spec.ratingPoolBase &&
+        visibleClasses.includes(rating.timeClass) &&
+        (rating.totalGamesPlayed > 0 || rating.ratedGamesPlayed > 0),
+    );
+    if (buckets.length === 0) return [];
+    const ratings = buckets
+      .filter((rating) => rating.eloRating !== null && rating.ratedGamesPlayed > 0)
+      .map(
+        (rating) =>
+          `${rating.timeClass} rating ${rating.eloRating}${rating.provisional ? '?' : ''}`,
+      );
+    return [`${spec.publicName}${ratings.length ? ` (${ratings.join(', ')})` : ''}`];
+  });
+  return {
+    noindex: false,
+    meta: {
+      title: `${profile.user.displayName} (@${profile.user.handle}) · Mistboard`,
+      description: facts.length
+        ? `Plays ${facts.join(', ')} on Mistboard.`
+        : `View ${profile.user.displayName}'s public profile on Mistboard.`,
+      urlPath: `/@/${encodeURIComponent(profile.user.handle)}`,
+    },
+  };
+}
+
+// Resolve through the public API's serving set: withheld/retired puzzles never
+// get meta or a canonical. One read supplies both the preview and the full-id
+// canonical shared by short-code links. No editorial title, motifs, board,
+// source game or solution moves enter the shell; those can give away an answer.
+async function puzzleRoutePage(
+  pathname: string,
+  lookupPuzzle: (idOrShortCode: string) => Promise<PublicPuzzle | null>,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  const match = PUZZLE_DEEP_LINK.exec(pathname.replace(/\/+$/, ''));
+  if (!match) return null;
+  let puzzle: PublicPuzzle | null;
+  try {
+    puzzle = await lookupPuzzle(decodeURIComponent(match[1]!));
+  } catch {
+    return { noindex: true };
+  }
+  if (!puzzle) return { noindex: true };
+  // Explicit allowlist: a future hidden-information variant must not silently
+  // acquire public previews merely by joining the puzzle store.
+  let variant: string;
+  switch (puzzle.variant) {
+    case 'xiangqi':
+      variant = 'Xiangqi';
+      break;
+    case 'jungle':
+      variant = 'Jungle';
+      break;
+    default:
+      return { noindex: true };
+  }
+  if (puzzle.initial.status.type !== 'playing') return { noindex: true };
+  const side = puzzle.initial.status.turn === 'red' ? 'Red' : 'Black';
+  // The solver already shows this count in its goal, before any moves are made.
+  const moves = Math.ceil(puzzle.solution.length / 2);
+  let goal: string;
+  let prompt: string;
+  switch (puzzle.goal.type) {
+    case 'checkmate':
+      goal = `${side} mates in ${moves}`;
+      prompt = `Find mate in ${moves}`;
+      break;
+    case 'win':
+      goal = `${side} wins in ${moves}`;
+      prompt = `Find a win in ${moves}`;
+      break;
+    case 'winning-advantage':
+      goal = `${side} to move for a winning advantage`;
+      prompt = 'Find a winning advantage';
+      break;
+    default:
+      return { noindex: true };
+  }
+  return {
+    noindex: false,
+    meta: {
+      title: `${variant} puzzle: ${goal} | Mistboard`,
+      description: `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`,
+      urlPath: `/puzzles/${encodeURIComponent(puzzle.id)}`,
+    },
+  };
 }
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ||
-    QUERY_FREE_CANONICAL_PATTERNS.some((pattern) => pattern.test(normalized))
-    ? normalized
-    : null;
+  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
 }
 
 /** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant',
@@ -767,15 +919,22 @@ export async function serveSpaShellWithRoutePreloads(params: {
   listPublicStudies?: () => Promise<persistence.PublicStudySummary[]>;
   /** Override the finished-game meta lookup (tests); the default reads persistence. */
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
+  /** Override tenant game reads (tests); live previews never load a board card. */
+  tenantGameStore?: TenantGameCardStore;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Override the player-page lookup (tests); the default reads persistence. */
   playerPage?: (pathname: string) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
   broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
-  /** Override the puzzle id-or-short-code lookup (tests); the default is the
-   *  one /api/puzzles/:id uses. */
-  puzzleId?: (idOrShortCode: string) => Promise<string | null>;
+  /** Override the public puzzle lookup (tests); the default is the one
+   *  /api/puzzles/:id uses, excluding unpublished/withheld puzzles. */
+  puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
+  /** Override the profile API's anonymous, visibility-gated read (tests). */
+  profile?: typeof persistence.getUserProfileByHandle;
+  /** Override the public forum reads (tests); previews always read anonymously. */
+  forumTopic?: typeof persistence.getForumTopic;
+  forumCategories?: typeof persistence.listForumCategories;
   /** Override the shelf deep-link lookup (tests); the default reads persistence. */
   practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
@@ -809,23 +968,55 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const player =
     playerPage ??
     (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
-  // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
-  // its own title, description, canonical review URL and card (#368). Needs
-  // persistence; without it (or for a live game) the route keeps its generic
-  // meta exactly as before.
+  // Tenant review pages distinguish missing ids from live names-only previews
+  // and finished cards. Keep the existing override for callers supplying meta.
+  const tenantGame =
+    params.gameMeta && !params.tenantGameStore
+      ? null
+      : await tenantGameRoutePage(params.pathname, params.tenantGameStore);
+  if (tenantGame?.notFound) {
+    await serveNotFoundShell(params);
+    return true;
+  }
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
-  const gameMeta = player?.meta ? null : await lookupGameMeta(params.pathname).catch(() => null);
+  const gameMeta = player?.meta
+    ? null
+    : tenantGame
+      ? tenantGame.meta
+      : await lookupGameMeta(params.pathname).catch(() => null);
+  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById);
+  const profile = await profileRoutePage(
+    params.pathname,
+    params.profile ?? persistence.getUserProfileByHandle,
+  );
+  const forum = await forumRoutePage(
+    params.pathname,
+    params.forumTopic ?? persistence.getForumTopic,
+    params.forumCategories ?? persistence.listForumCategories,
+  );
   const positionMeta =
-    player?.meta ?? gameMeta ?? positionRouteMeta(params.pathname, params.search ?? '');
+    player?.meta ??
+    gameMeta ??
+    puzzle?.meta ??
+    profile?.meta ??
+    forum?.meta ??
+    positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
-  const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
-  const canonicalPath = await puzzleCanonicalPath(
-    queryFreeCanonicalPath(params.pathname),
-    params.puzzleId ?? livePuzzleId,
-  );
+  const noindex =
+    isNoindexRoute(params.pathname) ||
+    tenantGame?.noindex === true ||
+    player?.noindex === true ||
+    puzzle?.noindex === true ||
+    profile?.noindex === true ||
+    forum?.noindex === true;
+  const canonicalPath =
+    puzzle?.meta?.urlPath ??
+    profile?.meta?.urlPath ??
+    forum?.meta?.urlPath ??
+    queryFreeCanonicalPath(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static

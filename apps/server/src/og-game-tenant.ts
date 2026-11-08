@@ -8,12 +8,13 @@
 // shows is the game's turning point when the review has been analysed, else
 // the final position (see cardPly).
 //
-// Finished games only, twice over: getGameSummary reads completed rows, and the
+// Board cards are finished games only, twice over: getGameSummary reads completed rows, and the
 // tenant's fenAtPly or finalScores yields nothing for a log that does not end
-// finished. A live game has no card and no meta.
+// finished. A live review page gets only the seat names and variant, never a card.
 
 import type { ServerResponse } from 'node:http';
 import { GAME_IMAGE_VERSION, maybeGameSpecForId, winPercent } from '@mistboard/game';
+import { liveSeatEngineName } from './first-party-bots.js';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
 import { serveGameOgImage } from './og-image.js';
 import { isPositionOgVariant, positionOgVariantLabel, resolvePositionOg } from './og-position.js';
@@ -24,6 +25,7 @@ import type { StoredPlyEval } from './persistence-game-analysis.js';
 import { isReplayableGame } from './replayable-games.js';
 import { postgamePlayers } from './routes/lib.js';
 import {
+  type TenantManagedRoom,
   type VariantTenantCard,
   type VariantTenantRegistration,
   variantTenantForRoomId,
@@ -47,11 +49,15 @@ export type TenantGameCardStore = {
   summary: (roomId: string) => Promise<persistence.GameRecord | null>;
   events: (roomId: string) => Promise<readonly { type: string; roomId: string }[] | null>;
   analysis: (roomId: string, engineId: string, depth: number) => Promise<StoredPlyEval[] | null>;
+  /** In-memory rooms only: a preview must not hydrate a room or reserve an engine. */
+  room?: (roomId: string) => Promise<TenantManagedRoom | null>;
 };
 
 const liveStore: TenantGameCardStore = {
-  summary: (roomId) => persistence.getGameSummary(roomId),
-  events: (roomId) => persistence.loadRoomEvents(roomId),
+  summary: (roomId) =>
+    persistence.isInitialized() ? persistence.getGameSummary(roomId) : Promise.resolve(null),
+  events: (roomId) =>
+    persistence.isInitialized() ? persistence.loadRoomEvents(roomId) : Promise.resolve(null),
   analysis: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
 };
 
@@ -115,7 +121,8 @@ export async function tenantGameCard(
         : null;
   if (!label) return null;
   const game = await store.summary(roomId);
-  if (!game || game.variant !== registration.gameSpecId) return null;
+  if (!game || game.variant !== registration.gameSpecId || game.visibility !== 'public')
+    return null;
   // A game whose stored log no longer replays has no card and no page meta
   // (replay-guard.ts): the page keeps its generic meta, the image its default.
   if (!(await storedGameReplays(registration, roomId, store))) return null;
@@ -254,6 +261,94 @@ export type TenantGamePageMeta = {
 
 const GAME_PAGE_ROUTE = /^(\/[a-z0-9-]+)?\/game\/([^/]+)$/;
 const ROOM_PAGE_ROUTE = /^\/room\/([^/]+)$/;
+
+export type TenantGameRoutePage = {
+  meta?: Omit<TenantGamePageMeta, 'imagePath'> & { imagePath?: string };
+  noindex: true;
+  notFound?: true;
+};
+
+/** Only the tenant review routes. Live previews are a names-only projection;
+ * neither the canonical state nor any move/event is copied into page metadata.
+ * /room and the historical archive retain their separate policies. */
+export async function tenantGameRoutePage(
+  pathname: string,
+  store: TenantGameCardStore = liveStore,
+): Promise<TenantGameRoutePage | null> {
+  const normalized = pathname.replace(/\/+$/, '');
+  const match = GAME_PAGE_ROUTE.exec(normalized);
+  if (!match?.[1] || match[1] === '/historical-xiangqi') return null;
+  const generic = { noindex: true } as const;
+  const missing = { ...generic, notFound: true } as const;
+  let roomId: string;
+  try {
+    roomId = decodeURIComponent(match[2]!);
+  } catch {
+    return missing;
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(roomId)) return missing;
+  const registration = variantTenantForRoomId(roomId);
+  if (
+    !registration ||
+    `${match[1]}/game` !== (registration.export?.gameRouteBase ?? registration.reviewRouteBase)
+  )
+    return missing;
+  const spec = maybeGameSpecForId(registration.gameSpecId);
+  // Even an enabled admin playtest has no anonymous preview.
+  if (!spec || spec.publicSurface === 'hidden' || registration.admitsConnection?.(null) === false)
+    return generic;
+  try {
+    const game = await store.summary(roomId);
+    if (game) {
+      if (game.variant !== registration.gameSpecId) return missing;
+      if (game.visibility !== 'public') return generic;
+      const meta = await tenantGamePageMeta(normalized, { ...store, summary: async () => game });
+      return meta ? { ...generic, meta } : generic;
+    }
+    const room = store.room ? await store.room(roomId) : registration.rooms.get(roomId);
+    if (!room) {
+      // A paused/unloaded persisted room still exists. Do not hydrate it merely
+      // to produce a preview: hydration can write pauses and reserve engines.
+      const events = await store.events(roomId);
+      return events?.some((event) => event.roomId === roomId) ? generic : missing;
+    }
+    if (room.id !== roomId || room.projection?.state.status.type !== 'playing') return generic;
+    const seats = room.projection.seats ?? {};
+    // These are seat names, not revealed piece inks. Require a known pair in
+    // first-mover order rather than depending on seat-assignment insertion order.
+    const colors = [
+      ['red', 'black'],
+      ['east', 'west'],
+      ['black', 'white'],
+    ].find((pair) => pair.every((color) => color in seats));
+    if (!colors || Object.keys(seats).length !== 2) return generic;
+    const players = colors.map((color) => {
+      const clientId = seats[color];
+      if (clientId && registration.isEngineClientId?.(clientId)) {
+        return liveSeatEngineName(
+          clientId,
+          room.pveBotId,
+          () => registration.engineDisplayName?.(clientId) ?? 'Computer',
+        );
+      }
+      const token = room.seatTokens?.[color];
+      return token?.userDisplayName ?? token?.userHandle ?? 'Guest';
+    });
+    const label = spec.publicName;
+    return {
+      ...generic,
+      meta: {
+        title: `${players[0]} vs ${players[1]} · ${label}, live · Mistboard`,
+        description: `${players[0]} vs ${players[1]}. Live ${label} game on Mistboard.`,
+        urlPath: normalized,
+      },
+    };
+  } catch {
+    // An unavailable read must neither advertise state nor claim a real room
+    // does not exist. Serve the ordinary noindex shell and allow a retry.
+    return generic;
+  }
+}
 
 /** Meta for a tenant game page, or null when the path is not one, names no
  *  finished tenant game, or pairs a tenant's room id with ANOTHER tenant's
