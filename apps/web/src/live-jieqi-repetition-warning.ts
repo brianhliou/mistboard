@@ -3,9 +3,12 @@ import type { JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import {
   placeRepetitionLabel,
+  type RepetitionConfirmation,
   type RepetitionLoss,
   type RepetitionWarning,
   type RepetitionWarningMode,
+  repetitionConfirmation,
+  repetitionConfirmationPosition,
 } from './jieqi-repetition-warning.js';
 import { noticeReadMs, placeChaseBubble } from './live-banqi-chase-bubble.js';
 import './live-jieqi-repetition-warning.css';
@@ -14,13 +17,16 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
   let position = '';
   let analysis: RepetitionWarning = { headsUp: null, losingMoves: [] };
   let pending: JieqiMove | null = null;
+  let armed: RepetitionConfirmation = null;
+  let touch = false;
+  const labelMode = mode === 'label' || mode === 'label-confirm';
   let expires = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let bubble: HTMLDivElement | null = null;
   let anchor: JieqiSquare | null = null;
   let origin: JieqiSquare | null = null;
   let active = false;
-  let labels: Array<{ point: JieqiSquare; element: HTMLDivElement }> = [];
+  let labels: Array<{ point: JieqiSquare; loss: RepetitionLoss; element: HTMLDivElement }> = [];
   let labelFrom: JieqiSquare | null = null;
   let legalPoints: JieqiSquare[] = [];
   const stage = board.closest<HTMLElement>('.board-stage') ?? board;
@@ -30,10 +36,35 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
   function clear() {
     clearTimeout(timer);
     pending = null;
+    armed = null;
     expires = 0;
     bubble?.remove();
     bubble = null;
     clearLabels();
+    syncArmed();
+  }
+
+  function syncArmed() {
+    for (const ring of board.querySelectorAll('[data-repetition-loss]'))
+      ring.classList.toggle(
+        'jieqi-repetition-ring--armed',
+        ring.getAttribute('data-repetition-loss') === armed?.move.to,
+      );
+    for (const { point, loss, element } of labels)
+      element.textContent = t(
+        armed?.move.to === point
+          ? touch
+            ? 'live.jieqiRepwarn.tapAgain'
+            : 'live.jieqiRepwarn.clickAgain'
+          : loss.reason === 'perpetual-check'
+            ? 'live.jieqiRepwarn.labelCheck'
+            : 'live.jieqiRepwarn.labelChase',
+      );
+  }
+
+  function disarm() {
+    armed = repetitionConfirmation(armed, { type: 'cancel' }).state;
+    sync();
   }
 
   function clearLabels() {
@@ -90,6 +121,7 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
   }
 
   function sync() {
+    syncArmed();
     syncLabels();
     syncBubble();
   }
@@ -139,10 +171,28 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
     sync();
   }
 
-  // Only a second primary tap on the pending point may retain confirmation.
-  // Outside taps, another point, annotations, keyboard navigation and scroll
-  // all dismiss it. Dragging again starts another interaction and cancels it.
+  // Label confirmation also retains the origin press for a possible second
+  // drag; a tap there is handled as deselection by the live board. The legacy
+  // bubble confirmation retains only the destination press.
   const cancelOther = (event: Event) => {
+    if (event.type === 'pointerdown') touch = (event as PointerEvent).pointerType === 'touch';
+    if (mode === 'label-confirm') {
+      const point = (event.target as Element | null)?.closest?.('[data-square]');
+      armed = repetitionConfirmation(
+        armed,
+        event.type === 'pointerdown'
+          ? {
+              type: 'interaction',
+              point: board.contains(point ?? null)
+                ? (point?.getAttribute('data-square') ?? null)
+                : null,
+              primary: (event as PointerEvent).button === 0,
+            }
+          : { type: 'cancel' },
+      ).state;
+      sync();
+      return;
+    }
     if (!pending) return;
     const point = (event.target as Element | null)?.closest?.('[data-square]');
     if (
@@ -176,7 +226,8 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
         clear();
         return;
       }
-      const key = `${view.id}:${view.moveNumber}:${JSON.stringify(view.status)}:${JSON.stringify(view.lastMove)}`;
+      const key = repetitionConfirmationPosition(view);
+      armed = repetitionConfirmation(armed, { type: 'position', position: key }).state;
       if (position !== key) {
         position = key;
         clear();
@@ -187,23 +238,28 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
     },
     /** Called after the SVG render for both tap selection and drag start. */
     select(from: JieqiSquare | null, legalMoves: readonly JieqiMove[]) {
+      armed = repetitionConfirmation(armed, { type: 'select', from }).state;
       clearLabels();
-      if (mode !== 'label' || !active || !from) return;
+      if (!labelMode || !active || !from) {
+        syncArmed();
+        return;
+      }
       labelFrom = from;
       legalPoints = legalMoves.filter((move) => move.from === from).map((move) => move.to);
       for (const loss of analysis.losingMoves.filter(({ move }) => move.from === from)) {
         const element = document.createElement('div');
         element.className = 'jieqi-repetition-label';
         element.dataset.repetitionLabel = loss.move.to;
-        element.textContent = t(
-          loss.reason === 'perpetual-check'
-            ? 'live.jieqiRepwarn.labelCheck'
-            : 'live.jieqiRepwarn.labelChase',
-        );
         stage.append(element);
-        labels.push({ point: loss.move.to, element });
+        labels.push({ point: loss.move.to, loss, element });
       }
-      syncLabels();
+      sync();
+    },
+    dragStart(from: JieqiSquare) {
+      if (mode === 'label-confirm') {
+        armed = repetitionConfirmation(armed, { type: 'select', from }).state;
+        sync();
+      } else clear();
     },
     losingDestinations(from: JieqiSquare | null): ReadonlySet<JieqiSquare> {
       return new Set(
@@ -217,6 +273,18 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
       const loss = analysis.losingMoves.find(
         (item) => item.move.from === move.from && item.move.to === move.to,
       );
+      if (mode === 'label-confirm' && active) {
+        const result = repetitionConfirmation(armed, {
+          type: 'attempt',
+          position,
+          move,
+          losing: !!loss,
+        });
+        armed = result.state;
+        if (result.play) clear();
+        else sync();
+        return result.play;
+      }
       if (!active || mode !== 'confirm' || !loss) {
         clear();
         return true;
@@ -237,7 +305,7 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
       pending = move;
       return false;
     },
-    cancel: clear,
+    cancel: () => (mode === 'label-confirm' ? disarm() : clear()),
     sync,
     destroy() {
       clear();

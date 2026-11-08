@@ -457,7 +457,7 @@ function installJieqiBoardInteraction(liveRefs: LiveRefs): void {
       return jieqiPieceGhostSvg(entry, undefined, square as JieqiSquare);
     },
     onDragStart: (from) => {
-      repetitionUi?.cancel();
+      repetitionUi?.dragStart(from as JieqiSquare);
       selectedSquare = from as JieqiSquare;
       draggingFrom = from as JieqiSquare;
       if (core?.state.view) renderBoard(liveRefs, core.state.view);

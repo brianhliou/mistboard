@@ -31,6 +31,81 @@ afterEach(() => {
 });
 
 describe('?repwarn UI', () => {
+  it.each(['mouse', 'touch'])(
+    'label-confirm arms with %s copy, survives rendering and confirms without a bubble',
+    (pointerType) => {
+      ui = createJieqiRepetitionWarningUi(board, 'label-confirm');
+      ui.update(view, analysis, true);
+      board.innerHTML = renderJieqiBoardSvg(view, 'red', {
+        interactive: true,
+        selectedSquare: 'a2',
+        legalMoves: [move],
+        repetitionLossPoints: ui.losingDestinations('a2'),
+      });
+      ui.select('a2', [move]);
+      const pointDown = (point: string) =>
+        board
+          .querySelector(`[data-square=${point}] rect`)!
+          .dispatchEvent(
+            new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType }),
+          );
+      pointDown('b2');
+      expect(ui.allowMove(move)).toBe(false);
+      ui.update(view, analysis, true);
+      ui.select('a2', [move]);
+      expect(document.querySelector('.jieqi-repetition-label')?.textContent).toBe(
+        pointerType === 'touch' ? 'Tap again to lose' : 'Click again to lose',
+      );
+      expect(
+        board
+          .querySelector('[data-repetition-loss=b2]')
+          ?.classList.contains('jieqi-repetition-ring--armed'),
+      ).toBe(true);
+      expect(document.querySelector('.jieqi-repetition-bubble')).toBeNull();
+      vi.advanceTimersByTime(60_000); // this mode has no notice expiry
+      pointDown('b2');
+      expect(ui.allowMove(move)).toBe(true);
+      expect(document.querySelector('.jieqi-repetition-label')).toBeNull();
+    },
+  );
+  it('label-confirm keeps selection/confirmation for a second drop, but resets on other interactions', () => {
+    ui = createJieqiRepetitionWarningUi(board, 'label-confirm');
+    ui.update(view, analysis, true);
+    ui.select('a2', [move]);
+    ui.dragStart('a2');
+    expect(ui.allowMove(move)).toBe(false);
+    ui.select('a2', [move]); // first drop snaps back to selected origin
+    board
+      .querySelector('[data-square=a2] rect')!
+      .dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' }),
+      );
+    ui.dragStart('a2');
+    ui.select('a2', [move]);
+    expect(ui.allowMove(move)).toBe(true);
+    ui.select('a2', [move]);
+    expect(ui.allowMove(move)).toBe(false);
+    board
+      .querySelector('[data-square=b4] rect')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+    expect(document.querySelector('.jieqi-repetition-label')?.textContent).toBe(
+      'Loses: perpetual chase',
+    );
+    expect(ui.allowMove(move)).toBe(false);
+    ui.cancel();
+    expect(document.querySelector('.jieqi-repetition-label')?.textContent).toBe(
+      'Loses: perpetual chase',
+    );
+    expect(ui.allowMove(move)).toBe(false);
+    ui.update({ ...view, moveNumber: view.moveNumber + 1 }, analysis, true);
+    ui.select('a2', [move]);
+    expect(document.querySelector('.jieqi-repetition-label')?.textContent).toBe(
+      'Loses: perpetual chase',
+    );
+    expect(ui.allowMove(move)).toBe(false);
+    ui.select(null, [move]);
+    expect(document.querySelector('.jieqi-repetition-label')).toBeNull();
+  });
   it.each(['heads-up', 'mark', 'label'] as const)(
     '%s plays immediately and only heads-up shows the notice',
     (mode) => {
@@ -188,6 +263,8 @@ describe('?repwarn UI', () => {
         expect(target.querySelector('.jieqi-hint')).toBeNull();
         expect(target.querySelector('.jieqi-repetition-ring')).not.toBeNull();
         expect(target.querySelector('.jieqi-repetition-ring-edge')).not.toBeNull();
+        expect(target.querySelector('.jieqi-target-hover--loss')).not.toBeNull();
+        const hit = target.querySelector('rect')!.outerHTML;
         board.innerHTML = renderJieqiBoardSvg(view, orientation, {
           interactive: true,
           layout,
@@ -196,6 +273,7 @@ describe('?repwarn UI', () => {
         });
         expect(board.querySelector('[data-repetition-loss]')).toBeNull();
         expect(board.querySelector('[data-square=b2] .jieqi-hint')).not.toBeNull();
+        expect(board.querySelector('[data-square=b2] rect')!.outerHTML).toBe(hit);
       }
   });
 });

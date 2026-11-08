@@ -10,12 +10,54 @@ import {
   jieqiCheckedGeneral,
 } from '@mistboard/game';
 
-export type RepetitionWarningMode = 'heads-up' | 'mark' | 'confirm' | 'label';
+export type RepetitionWarningMode = 'heads-up' | 'mark' | 'confirm' | 'label' | 'label-confirm';
 export function repetitionWarningMode(search: string): RepetitionWarningMode | null {
   const value = new URLSearchParams(search).get('repwarn');
-  return value === 'heads-up' || value === 'mark' || value === 'confirm' || value === 'label'
+  return value === 'heads-up' ||
+    value === 'mark' ||
+    value === 'confirm' ||
+    value === 'label' ||
+    value === 'label-confirm'
     ? value
     : null;
+}
+
+export type RepetitionConfirmation = { position: string; move: JieqiMove } | null;
+type ConfirmationEvent =
+  | { type: 'position'; position: string }
+  | { type: 'attempt'; position: string; move: JieqiMove; losing: boolean }
+  | { type: 'interaction'; point: string | null; primary: boolean }
+  | { type: 'select'; from: string | null }
+  | { type: 'cancel' };
+
+/** Public position identity only; mask even accidentally truth-bearing boards. */
+export function repetitionConfirmationPosition(view: JieqiPlayerView): string {
+  return JSON.stringify([view.id, view.moveNumber, view.status, view.lastMove, entry(view)?.key]);
+}
+
+/** A repeated attempt in the same public position confirms. Starting a drag
+ * from the armed origin is provisional: a click deselects, a drop is an attempt.
+ * Premoves bypass this machine; future positions cannot be judged here. */
+export function repetitionConfirmation(
+  state: RepetitionConfirmation,
+  event: ConfirmationEvent,
+): { state: RepetitionConfirmation; play: boolean } {
+  if (event.type === 'attempt') {
+    const play =
+      !event.losing ||
+      (state?.position === event.position &&
+        state.move.from === event.move.from &&
+        state.move.to === event.move.to);
+    return { state: play ? null : { position: event.position, move: { ...event.move } }, play };
+  }
+  const retain =
+    state &&
+    ((event.type === 'position' && event.position === state.position) ||
+      (event.type === 'select' && event.from === state.move.from) ||
+      (event.type === 'interaction' &&
+        event.primary &&
+        (event.point === state.move.to || event.point === state.move.from)));
+  return { state: retain ? state : null, play: false };
 }
 
 type LabelBox = { left: number; top: number; width: number; height: number };

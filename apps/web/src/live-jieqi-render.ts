@@ -696,12 +696,13 @@ function hitLayer(
               ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
               : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
         : '';
-      const hover =
-        target && !loses
-          ? raised
+      const hover = target
+        ? loses
+          ? `<circle class="jieqi-target-hover jieqi-target-hover--loss" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
+          : raised
             ? select3dHoverEdgeSvg({ x, y }, outline3d)
             : `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
-          : '';
+        : '';
       parts.push(
         `<g data-square="${sq}" class="jieqi-hit${target ? ' jieqi-hit--target' : ''}">${hover}${marker}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`,
       );

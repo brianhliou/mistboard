@@ -123,7 +123,7 @@ try {
     );
     users[seat] = rows[0].id;
   }
-  for (const mode of ['heads-up', 'mark', 'confirm']) {
+  for (const mode of ['heads-up', 'mark', 'confirm', 'label', 'label-confirm']) {
     const roomId = `jq_repwarn_${mode}_${randomUUID()}`;
     const now = Date.now();
     const events: TenantRoomEvent<JieqiColor, JieqiMove, 'jieqi'>[] = [

@@ -14,6 +14,8 @@ import { describe, expect, it } from 'vitest';
 import {
   jieqiRepetitionWarning,
   placeRepetitionLabel,
+  repetitionConfirmation,
+  repetitionConfirmationPosition,
   repetitionWarningMode,
 } from './jieqi-repetition-warning.js';
 
@@ -70,8 +72,8 @@ function play(board: JieqiBoard, cycle: string, plies: number, turn: JieqiColor 
 }
 
 describe('public Jieqi repetition warning', () => {
-  it('accepts only the four exact query modes', () => {
-    for (const value of ['heads-up', 'mark', 'confirm', 'label'])
+  it('accepts only the five exact query modes', () => {
+    for (const value of ['heads-up', 'mark', 'confirm', 'label', 'label-confirm'])
       expect(repetitionWarningMode(`?repwarn=${value}`)).toBe(value);
     for (const query of ['', '?repwarn=1', '?repwarn=', '?other=confirm'])
       expect(repetitionWarningMode(query)).toBeNull();
@@ -211,6 +213,69 @@ describe('public Jieqi repetition warning', () => {
     );
     expect(first.losingMoves).toHaveLength(1);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    expect(repetitionConfirmationPosition({ ...view, board: withHidden.at(-1)!.board })).toBe(
+      repetitionConfirmationPosition({ ...view, board: swapped.at(-1)!.board }),
+    );
+  });
+});
+
+describe('losing move confirmation state machine', () => {
+  const move: JieqiMove = { from: 'a2', to: 'b2' };
+  const attempt = { type: 'attempt', position: 'public-ply-7', move, losing: true } as const;
+
+  it('first tap arms, same tap plays and clears', () => {
+    const first = repetitionConfirmation(null, attempt);
+    expect(first).toEqual({ state: { position: attempt.position, move }, play: false });
+    expect(repetitionConfirmation(first.state, attempt)).toEqual({ state: null, play: true });
+  });
+
+  it('another point, piece, deselect, outside interaction or annotation disarms', () => {
+    const armed = repetitionConfirmation(null, attempt).state;
+    for (const event of [
+      { type: 'interaction', point: 'c2', primary: true },
+      { type: 'interaction', point: null, primary: true },
+      { type: 'interaction', point: 'b2', primary: false },
+      { type: 'select', from: 'b4' },
+      { type: 'select', from: null },
+      { type: 'cancel' },
+    ] as const) {
+      const result = repetitionConfirmation(armed, event);
+      expect(result.state).toBeNull();
+      expect(repetitionConfirmation(result.state, attempt).play).toBe(false);
+    }
+    expect(repetitionConfirmation(armed, { ...attempt, losing: false })).toEqual({
+      state: null,
+      play: true,
+    });
+  });
+
+  it('opponent move or changed position disarms, unchanged render retains', () => {
+    const { state, view } = play(chaseBoard, chaseCycle, 6);
+    const position = repetitionConfirmationPosition(view);
+    const armed = repetitionConfirmation(null, { ...attempt, position }).state;
+    expect(repetitionConfirmation(armed, { type: 'position', position }).state).toBe(armed);
+    const next = applyJieqiMove(state, parse(chaseCycle)[2]!);
+    expect(next.status).toEqual({ type: 'playing', turn: 'red' });
+    const after = repetitionConfirmationPosition(getJieqiPlayerView(next, 'red'));
+    expect(repetitionConfirmation(armed, { type: 'position', position: after }).state).toBeNull();
+    expect(repetitionConfirmation(armed, { ...attempt, position: after }).play).toBe(false);
+    expect(
+      repetitionConfirmationPosition({ ...view, board: { ...view.board, h8: undefined } }),
+    ).not.toBe(position);
+  });
+
+  it('a second drag can start at the origin and confirm the same drop', () => {
+    const armed = repetitionConfirmation(null, attempt).state;
+    const start = repetitionConfirmation(armed, {
+      type: 'interaction',
+      point: move.from,
+      primary: true,
+    });
+    const drag = repetitionConfirmation(start.state, { type: 'select', from: move.from });
+    expect(repetitionConfirmation(drag.state, attempt)).toEqual({ state: null, play: true });
+    expect(repetitionConfirmation(armed, { ...attempt, move: { from: 'a2', to: 'c2' } }).play).toBe(
+      false,
+    );
   });
 });
 
