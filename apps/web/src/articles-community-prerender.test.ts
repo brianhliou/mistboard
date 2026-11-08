@@ -58,7 +58,7 @@ it.each(SUPPORTED_LOCALES)(
 
 it('exports scheduled cards with the client listing policy and translations', async () => {
   const article = articles.find((entry) => entry.slug === 'jieqi-openings');
-  if (!article) throw new Error('missing translated fixture');
+  if (article?.kind !== 'article') throw new Error('missing translated blog fixture');
   const entry = scheduledArticleIndexEntry(article);
   expect(entry?.kind).toBe('article');
   expect(entry?.publisher).toBe('mistboard');
