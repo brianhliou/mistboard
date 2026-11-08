@@ -24,8 +24,14 @@ import {
   DATA_RANKING_FIXTURE,
   DATA_STATS_FIXTURE,
 } from './data-page-fixtures.js';
+import { isPlayerTitle } from './persistence-titles.js';
 import { serveSpaShellWithRoutePreloads } from './server-static-pages.js';
 import { renderStudyIndexBody } from './study-page-body.js';
+
+test('crawler coach fixture uses an API title value rather than its display label', () => {
+  assert.ok(isPlayerTitle(DATA_COACH_FIXTURE.title));
+  assert.equal(isPlayerTitle(DATA_COACH_FIXTURE.title.toUpperCase()), false);
+});
 
 test('stats tables contain the chart totals and weeks, excluding the partial point and engine matches', () => {
   const body = statsPageBody(DATA_STATS_FIXTURE);

@@ -80,7 +80,7 @@ export const DATA_DOWNLOAD_FIXTURE: DataListing = {
 export const DATA_COACH_FIXTURE: CoachListing = {
   handle: 'crawler-coach',
   displayName: 'Coach <Lin>',
-  title: 'XIM',
+  title: 'xim',
   headline: 'Practical xiangqi endgames and tournament preparation',
   languages: 'English, Mandarin',
   rate: '25 per lesson',
