@@ -20,6 +20,7 @@ import { type BoardLocale, boardCopy, boardTimeClass } from './board-text-copy.j
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
+import { type DataPageSources, dataRouteBody } from './data-page-body.js';
 import { forumExcerpt } from './forum-excerpt.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import {
@@ -694,6 +695,11 @@ export async function routePreloadLinksForPath(params: {
 // filed 43 of them as duplicates without a canonical (validation failed
 // 2026-10-19). /contact has no locale-prefixed form.
 const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
+  '/stats',
+  '/data',
+  '/coach',
+  '/forum',
+  '/player/rating-stats',
   '/watch',
   '/games',
   '/contact',
@@ -950,6 +956,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   tenantGameStore?: TenantGameCardStore;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
+  /** Existing public API reads for the data directories (socketless fixtures). */
+  dataPages?: DataPageSources;
   /** Override the player-page lookup (tests); the default reads persistence. */
   playerPage?: (pathname: string, locale?: BoardLocale) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
@@ -1077,7 +1085,13 @@ export async function serveSpaShellWithRoutePreloads(params: {
         : undefined,
     });
   }
-  if (locale !== 'en' && (historical || puzzle || profile || bot))
+  const dataBody = await dataRouteBody(
+    params.pathname,
+    locale,
+    params.search,
+    params.dataPages,
+  ).catch(() => null);
+  if (locale !== 'en' && (historical || puzzle || profile || bot || dataBody))
     html = html.replace('<html lang="en">', `<html lang="${locale}">`);
   if (spaMeta?.htmlLang) {
     html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
@@ -1134,6 +1148,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
     puzzle?.body ??
     profile?.body ??
     bot?.body ??
+    dataBody ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));

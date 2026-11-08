@@ -19,6 +19,7 @@
 import { maybeGameSpecForId, serializedTreeMainline, serializedTreeRootFen } from '@mistboard/game';
 import { boardTextParts } from './board-text-body.js';
 import { escapeHtml } from './crawler-html.js';
+import { DATA_PAGE_COPY } from './data-page-copy.js';
 import type { StudyChapterRecord, StudyRecord, StudyWithChapters } from './persistence-studies.js';
 import { variantName } from './player-email.js';
 import { SEO_TITLE_MIN, seoMetaLengthProblems, seoTextLength } from './seo-meta-length.js';
@@ -536,7 +537,13 @@ function renderChapterBody(params: {
 // the page's locale and its chapter count, linking the same-locale study page;
 // the client's mountStudyIndex() clears the root before it draws the tabs and
 // cards.
-export type StudyIndexEntry = Pick<StudyRecord, 'id' | 'name' | 'i18n'> & { chapterCount: number };
+export type StudyIndexEntry = Pick<StudyRecord, 'id' | 'name' | 'i18n'> & {
+  chapterCount: number;
+  chapterPreview?: { name: string; i18n: Record<string, unknown> }[];
+  chapterNames?: string[];
+  ownerDisplayName?: string;
+  likeCount?: number;
+};
 
 /** The three study list URLs, each with the locale it renders in. */
 export const STUDY_INDEX_PAGES: Readonly<
@@ -547,37 +554,35 @@ export const STUDY_INDEX_PAGES: Readonly<
   '/zh-hant/study': { locale: 'zh-Hant', localePath: '/zh-hant' },
 };
 
-const STUDY_INDEX_COPY: Record<StudyPageLocale, { heading: string; intro: string }> = {
-  en: {
-    heading: 'Studies',
-    intro:
-      'Public studies on Mistboard: annotated games of xiangqi and its variants, classical endgame compositions, opening lines and puzzles, each on an interactive board with its moves and commentary.',
-  },
-  'zh-Hans': {
-    heading: '研习',
-    intro:
-      'Mistboard 上的公开研习：象棋及其变体的带注解对局、古典残局排局、开局变着和题目，每一项都在互动棋盘上呈现，附着法和讲解。',
-  },
-  'zh-Hant': {
-    heading: '研習',
-    intro:
-      'Mistboard 上的公開研習：象棋及其變體的帶註解對局、古典殘局排局、開局變著和題目，每一項都在互動棋盤上呈現，附著法和講解。',
-  },
-};
-
 export function renderStudyIndexBody(
   studies: readonly StudyIndexEntry[],
   page: { locale: StudyPageLocale; localePath: string } = { locale: 'en', localePath: '' },
 ): string {
   const { locale, localePath } = page;
-  const copy = STUDY_INDEX_COPY[locale];
+  const copy = DATA_PAGE_COPY[locale];
   const items = studies.map((study) => {
     const name = localizedField(study.name, study.i18n, locale, 'name');
     const href = `${localePath}/study/${encodeURIComponent(study.id)}`;
-    return `<li><a href="${escapeHtml(href)}">${escapeHtml(name)}</a> · ${escapeHtml(LABELS[locale].chapters(study.chapterCount))}</li>`;
+    const previews =
+      study.chapterPreview ?? (study.chapterNames ?? []).map((name) => ({ name, i18n: {} }));
+    const chapters = previews
+      .slice(0, 4)
+      .map(
+        (chapter) =>
+          `<li>${escapeHtml(localizedField(chapter.name, chapter.i18n, locale, 'name'))}</li>`,
+      );
+    const remaining = study.chapterCount - chapters.length;
+    if (remaining > 0)
+      chapters.push(
+        `<li>${escapeHtml(copy['study.chapterPreviewMore'].replace('{count}', String(remaining)))}</li>`,
+      );
+    const owner = study.ownerDisplayName
+      ? ` · ♥ ${study.likeCount ?? 0} · ${escapeHtml(study.ownerDisplayName)}`
+      : '';
+    return `<li><a href="${escapeHtml(href)}">${escapeHtml(name)}</a>${owner}<ol>${chapters.join('')}</ol></li>`;
   });
   return (
-    `<main><h1>${escapeHtml(copy.heading)}</h1><p>${escapeHtml(copy.intro)}</p>` +
+    `<main><h1>${escapeHtml(copy['study.indexAll'])}</h1>` +
     (items.length > 0 ? `<ul>${items.join('')}</ul>` : '') +
     '</main>'
   );

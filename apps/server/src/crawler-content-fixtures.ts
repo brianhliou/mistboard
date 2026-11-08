@@ -4,6 +4,7 @@
 import { XIANGQI_BROADCAST_SCHEMA } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { type BroadcastPageSources, broadcastPageFor } from './broadcast-pages.js';
+import { crawlerDataPageSources } from './data-page-fixtures.js';
 import type { StudyWithChapters } from './persistence.js';
 import type { BotProfilePage } from './persistence-bots.js';
 import type { ProfileGameRecord } from './persistence-games.js';
@@ -173,6 +174,7 @@ export function crawlerFixtureSources(): CrawlerPageSources {
   };
   const puzzle = loadSeedPuzzleRegistry('xiangqi')[0]!;
   return {
+    dataPages: crawlerDataPageSources(),
     listPublicStudies: async () => [
       {
         ...CRAWLER_STUDY,

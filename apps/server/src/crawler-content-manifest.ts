@@ -16,7 +16,7 @@ export type CrawlerContentEntry = {
   canonical: boolean;
   hreflang: readonly string[];
   source: 'prerender' | 'server-body' | 'db-fixture';
-  knownGap?: `#${number}`;
+  knownGap?: `#${number}` | `#${number}: ${string}`;
 };
 
 export const CLIENT_ONLY_NOINDEX: readonly { routeId: string; path: string }[] = [
@@ -335,7 +335,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#960: empty directory has fewer than 150 page-content characters',
     baselineChars: 0,
   },
   {
@@ -669,16 +669,16 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/player/rating-stats',
     path: '/player/rating-stats',
-    minChars: 150,
+    minChars: 199,
     phrase: 'rating distribution',
     phraseKey: 'profile.ratingStatsSuffix',
     locale: 'en',
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'db-fixture',
+    knownGap: '#960: sparse rating pools have fewer than 150 page-content characters',
+    baselineChars: 333,
   },
   {
     routeId: '/leaderboard',
@@ -692,7 +692,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#960: alias returns a redirect to /player',
     baselineChars: 153,
   },
   {
@@ -725,16 +725,15 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/forum',
     path: '/forum',
-    minChars: 150,
+    minChars: 384,
     phrase: 'Mistboard Forum',
     phraseKey: 'forum.mistboardForum',
     locale: 'en',
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'db-fixture',
+    baselineChars: 640,
   },
   {
     routeId: '/forum/reports',
@@ -782,7 +781,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/stats',
     path: '/stats',
-    minChars: 150,
+    minChars: 487,
     phrase:
       'How much gets played here. Games between people or against the bots, counted when they finish; engine matches and test games are left out.',
     phraseKey: 'stats.lede',
@@ -790,9 +789,8 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'db-fixture',
+    baselineChars: 812,
   },
   {
     routeId: '/titles',
@@ -811,7 +809,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/coach',
     path: '/coach',
-    minChars: 150,
+    minChars: 179,
     phrase:
       'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
     phraseKey: 'coach.intro',
@@ -819,9 +817,8 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'db-fixture',
+    baselineChars: 299,
   },
   {
     routeId: '/games',
@@ -853,16 +850,15 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/data',
     path: '/data',
-    minChars: 150,
+    minChars: 838,
     phrase: 'Game data',
     phraseKey: 'data.heading',
     locale: 'en',
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'db-fixture',
+    baselineChars: 1398,
   },
   {
     routeId: '/data/about',
@@ -1101,42 +1097,42 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     routeId: '/study',
     path: '/study',
     minChars: 150,
-    phrase: 'Public studies on Mistboard:',
-    phraseKey: 'apps/server/src/study-page-body.ts#STUDY_INDEX_COPY.intro',
+    phrase: 'All studies',
+    phraseKey: 'study.indexAll',
     locale: 'en',
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 247,
   },
   {
     routeId: '/zh-hans/study',
     path: '/zh-hans/study',
     minChars: 150,
-    phrase: 'Mistboard 上的公开研习：',
-    phraseKey: 'apps/server/src/study-page-body.ts#STUDY_INDEX_COPY.intro',
+    phrase: '全部研习',
+    phraseKey: 'study.indexAll',
     locale: 'zh-hans',
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 81,
   },
   {
     routeId: '/zh-hant/study',
     path: '/zh-hant/study',
     minChars: 150,
-    phrase: 'Mistboard 上的公開研習：',
-    phraseKey: 'apps/server/src/study-page-body.ts#STUDY_INDEX_COPY.intro',
+    phrase: '全部研習',
+    phraseKey: 'study.indexAll',
     locale: 'zh-hant',
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 81,
   },
   {

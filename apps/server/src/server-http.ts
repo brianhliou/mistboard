@@ -61,6 +61,7 @@ export type CrawlerPageSources = Pick<
   | 'profile'
   | 'historicalGame'
   | 'bot'
+  | 'dataPages'
 > & {
   getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
 };

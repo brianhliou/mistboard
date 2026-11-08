@@ -52,6 +52,11 @@ export const EXTRA_PATHS = [
   '/watch',
   '/feed',
   '/changelog',
+  '/stats',
+  '/data',
+  '/coach',
+  '/forum',
+  '/player/rating-stats',
 ];
 
 const LOCALES = new Set(['zh-hans', 'zh-hant']);
