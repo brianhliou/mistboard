@@ -7,12 +7,12 @@
 // we hand it a redacted CURRENT-position FEN built by banqi-fen.ts. One process per
 // request (stateless, robust); promote to a persistent pool only under real load.
 //
-// Classical engine (no net). L1-4 use root noise at a fixed scoring depth;
-// L5-8 use node budgets so strength is independent of CPU speed.
-// A movetime cap bounds latency, with the historical full-strength bot kept as L8.
+// L1-4 use classical root noise at a fixed scoring depth; L5-7 use classical
+// node budgets. L8 uses the trained NNUE net, held without an explicit readable
+// EvalFile. Every tier keeps the same movetime cap to bound latency.
 
 import { randomInt } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { accessSync, constants, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEFAULT_NO_PROGRESS_PLY_LIMIT } from '@mistboard/game';
 import type { EngineId } from './engines/types.js';
@@ -55,11 +55,12 @@ export type BanqiEngineTier = {
   // Latency cap (ms): `go nodes N movetime CAP` halts at whichever hits first, so a slow box never
   // exceeds CAP per move. Generous enough that a normal prod CPU reaches the full node budget.
   movetimeCapMs: number;
+  evaluation: 'classical' | 'nnue';
   noise?: number;
   noiseDepth?: number;
 };
 
-// Full-strength (L8) budget history. Was 3 difficulty tiers (amateur/strong/strongest); collapsed
+// Full-strength classical (now L7) budget history. Was 3 difficulty tiers (amateur/strong/strongest); collapsed
 // to a single full-strength MistyBanqi when the cheap-strength eval shipped (v0.2.0: cover_mat +
 // king_ctx + value-aware mobility + adaptive domination + corrected value table, +16.6% vs hw3).
 // The node budget is the strength dial; the 8s cap is the latency promise to the player and
@@ -111,24 +112,27 @@ export type BanqiEngineTier = {
 // `banqiEngineMove` logs a truncation warning when a move still hits the cap, so if this
 // budget turns out not to fit on a genuinely degraded host it shows up in the logs rather
 // than silently playing a weaker move.
-// Calibrated 2026-11-07 on MistyBanqi 0.2.8 by duplicate-pair self-play (60 pairs, 120
+// Calibrated 2026-11-08 by duplicate-pair self-play (60 pairs, 120
 // games, per step; no caps, no crashes). Each level against the one below, Elo [95% CI]:
 //   L2/L1 +285 [233, 350]   L3/L2 +140 [99, 186]   L4/L3 +86 [43, 132]
-//   L5/L4 +111 [72, 152]    L6/L5 +95 [64, 128]    L7/L6 +124 [78, 173]
-//   L8/L7 +211 [161, 270]
+//   L5/L4 +203 [159, 253]   L6/L5 +124 [78, 173]   L7/L6 +211 [161, 270]
+//   L8/L7 +219 [166, 283]
+// L5-7 are classical at 32K/200K/3.5M nodes; the old 2K-node level is dropped.
+// L8 is the NNUE net at 2M nodes: its ~1.76x cost per node makes this an equal-time
+// comparison with classical L7. All levels retain the 8000ms latency cap.
 // Noise levels keep the 3.5M-node ceiling so their fixed-depth root passes complete; a
 // smaller budget cuts the depth-2 pass short and changes their strength. The engine shares
-// Flip Jungle's [-1, 1] score scale. L8 preserves today's bot and its stored id.
+// Flip Jungle's [-1, 1] score scale. L8 retains the historical bot's stored id.
 export const BANQI_PLAYABLE_ENGINES: readonly BanqiEngineTier[] = (
   [
     { level: 1, nodes: 3_500_000, noise: 1, noiseDepth: 1 },
     { level: 2, nodes: 3_500_000, noise: 0.1, noiseDepth: 2 },
     { level: 3, nodes: 3_500_000, noise: 0.05, noiseDepth: 2 },
     { level: 4, nodes: 3_500_000, noise: 0.02, noiseDepth: 2 },
-    { level: 5, nodes: 2_000 },
-    { level: 6, nodes: 32_000 },
-    { level: 7, nodes: 200_000 },
-    { level: 8, nodes: 3_500_000 },
+    { level: 5, nodes: 32_000 },
+    { level: 6, nodes: 200_000 },
+    { level: 7, nodes: 3_500_000 },
+    { level: 8, nodes: 2_000_000 },
   ] as const
 ).map(
   (settings): BanqiEngineTier => ({
@@ -137,6 +141,7 @@ export const BANQI_PLAYABLE_ENGINES: readonly BanqiEngineTier[] = (
     name: `MistyBanqi Level ${settings.level}`,
     version: BANQI_ENGINE_VERSION,
     movetimeCapMs: 8000,
+    evaluation: settings.level === 8 ? 'nnue' : 'classical',
   }),
 );
 
@@ -212,6 +217,32 @@ export function banqiEngineTierFor(engineId: string | undefined): BanqiEngineTie
   return BANQI_ENGINE_BY_ID.get(engineId) ?? null;
 }
 
+function readableNetPath(path: string | undefined): string | null {
+  if (!path) return null;
+  const resolved = resolve(path);
+  try {
+    accessSync(resolved, constants.R_OK);
+    const stat = statSync(resolved);
+    return stat.isFile() && stat.size > 0 ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+/** No implicit net: L8 is held until an operator supplies its EvalFile. */
+export function banqiNetPath(): string | null {
+  return readableNetPath(process.env.MISTBOARD_BANQI_NET);
+}
+
+export function banqiEngineAvailable(clientId: string = BANQI_DEFAULT_ENGINE_ID): boolean {
+  const tier = banqiEngineTierFor(clientId);
+  return (
+    tier !== null &&
+    banqiEngineBinaryAvailable() &&
+    (tier.evaluation !== 'nnue' || banqiNetPath() !== null)
+  );
+}
+
 // Presence check for the fail-closed analysis path: true when the binary resolves. The
 // analysis route uses this to return 503 (not a silent weaker eval) when the build is
 // missing the engine — mirrors jungleEngineBinaryAvailable().
@@ -247,6 +278,8 @@ export function banqiEngineVersion(clientId: string | undefined): string | null 
 // full list of moves still legal. MistyBanqi 0.2.6+ honours it; older builds ignore the
 // token, which the driver's validation and chase fallback cover.
 export type BanqiEngineOptions = {
+  /** Present only for L8; classical searches never send an EvalFile option. */
+  evalFile?: string;
   noise?: number;
   noiseDepth?: number;
   /** Stable per-game root-noise seed, derived from the persisted room id. */
@@ -326,9 +359,18 @@ export async function banqiLiveEngineMove(
 ): Promise<UciEval> {
   const tier = banqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Banqi engine: ${engineId}`);
+  const evalFile = tier.evaluation === 'nnue' ? banqiNetPath() : null;
+  if (tier.evaluation === 'nnue' && !evalFile) {
+    throw new Error('Banqi net is not available');
+  }
   const release = await enginePool.acquire();
   try {
+    // Recheck after queueing too: a net may disappear after room admission.
+    if (evalFile !== null && !readableNetPath(evalFile)) {
+      throw new Error('Banqi net is not available');
+    }
     return await banqiEngineSearch(fen, {
+      evalFile: evalFile ?? undefined,
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       moves: opts.moves,
@@ -413,6 +455,7 @@ export async function banqiEngineSearch(
   // Node budget = CPU-independent strength; movetime cap bounds latency (halt at whichever first).
   const commands = [
     'uci',
+    ...(opts.evalFile === undefined ? [] : [`setoption name EvalFile value ${opts.evalFile}`]),
     ...buildBanqiOptionCommands(opts.noProgressLimit),
     ...(opts.noise === undefined
       ? []

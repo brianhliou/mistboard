@@ -458,7 +458,7 @@ test('every release asset railpack fetches has a pinned sha256', () => {
   assert.ok(fetched.length > 0, 'railpack fetches release assets');
   for (const [, name] of fetched) {
     const entry = script.match(
-      new RegExp(`^  ${name.replaceAll('.', '\\.')}\\)\\n(.*\\n.*);;`, 'm'),
+      new RegExp(`^  ${name.replaceAll('.', '\\.')}\\)\\n([\\s\\S]*?);;`, 'm'),
     );
     assert.ok(entry, `scripts/fetch-release-asset.sh has no entry for ${name}`);
     assert.match(entry[1], /sha=[0-9a-f]{64}\b/, `${name} pins a sha256`);

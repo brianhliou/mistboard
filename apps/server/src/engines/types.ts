@@ -219,6 +219,8 @@ export type PikafishXiangqiEngineConfig = {
  */
 export type BanqiUciEngineConfig = {
   kind: 'banqi-uci';
+  /** Absent on retired historical configurations. */
+  evaluation?: 'classical' | 'nnue';
   movetime_ms: number;
   nodes?: number;
   noise?: number;

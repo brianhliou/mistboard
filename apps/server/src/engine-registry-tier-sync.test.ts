@@ -74,6 +74,7 @@ const TIER_SYNC_CASES: readonly TierSyncCase[] = [
       engineId: tier.id,
       config: {
         kind: 'banqi-uci',
+        evaluation: tier.evaluation,
         nodes: tier.nodes,
         movetime_ms: tier.movetimeCapMs,
         ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
@@ -135,7 +136,7 @@ test('the historical full-strength engines name their build and budget in the ha
   const banqi = loadEngine('misty-banqi');
   assert.equal(
     banqi.configHash,
-    `misty-banqi-${BANQI_ENGINE_VERSION}-nodes-${banqiEngineTierFor('misty-banqi')!.nodes}`,
+    `misty-banqi-${BANQI_ENGINE_VERSION}-nnue-nodes-${banqiEngineTierFor('misty-banqi')!.nodes}`,
   );
   const jungleFlip = loadEngine('misty-jungle-flip');
   assert.equal(

@@ -2,7 +2,8 @@
 # Private nets fetched from GitHub releases at image build time, never re-hosted
 # publicly. Pins live here, separately from the release assets.
 # Prod sets MISTBOARD_THREE_KINGDOMS_BANQI_NET=/app/bin/three-kingdoms-banqi.tknn;
-# the server deliberately has no default path and hides L8 without the net.
+# and MISTBOARD_BANQI_NET=/app/bin/banqi.bqnn. The server deliberately has no
+# default paths and hides each L8 without its net.
 #
 # Missing credentials, upstream failures and checksum mismatches warn and exit 0
 # so a net outage never blocks the web deploy. Only verified, non-empty bytes
@@ -21,6 +22,11 @@ unset MISTBOARD_NETS_TOKEN
 
 # name -> repo, tag, release asset, sha256, installed filename
 case "$name" in
+  banqi-net)
+    repo=brianhliou/mistboard-nets tag=banqi-iter14
+    asset=banqi-iter14.bqnn
+    sha=03e7052b0c5178bd1a683bc38ec9a9f0c41177367b6891f8e697dd95876e413e
+    net=banqi.bqnn ;;
   three-kingdoms-banqi-net)
     repo=brianhliou/mistboard-nets tag=tk-v17q
     asset=three-kingdoms-banqi-v17q.tknn
