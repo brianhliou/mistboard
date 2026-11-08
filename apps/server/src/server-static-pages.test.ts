@@ -2140,3 +2140,39 @@ test('the sitemap index lists the players and broadcasts sections', () => {
   assert.equal(sitemapSectionFromPath('/sitemap-players.xml'), 'players');
   assert.equal(sitemapSectionFromPath('/sitemap-broadcasts.xml'), 'broadcasts');
 });
+
+// An unlisted study is shared by link (a teaching kit sent to the player it is
+// about), so the link preview names it. It stays out of search (noindex) and
+// gets no canonical, crawler copy or generated board card: those advertise or
+// publish beyond the link. A private study stays the bare shell.
+test('an unlisted study previews with its own title but stays noindex and cardless', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const unlisted = async () =>
+    ({ ...studyFixture(), visibility: 'unlisted' }) as unknown as StudyWithChapters;
+  const response = captureResponse();
+  await serveStudyPage({
+    studyId: 'S1',
+    response,
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    getStudy: unlisted,
+  });
+  assert.match(response.body, /<title>Compositions[^<]*<\/title>/);
+  assert.match(response.body, /<meta property="og:title" content="Compositions/);
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+  assert.doesNotMatch(response.body, /rel="canonical"|hreflang|\/og\/study\//);
+
+  const privateStudy = async () =>
+    ({ ...studyFixture(), visibility: 'private' }) as unknown as StudyWithChapters;
+  const bare = captureResponse();
+  await serveStudyPage({
+    studyId: 'S1',
+    response: bare,
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    getStudy: privateStudy,
+  });
+  assert.doesNotMatch(bare.body, /Compositions/);
+  assert.match(bare.body, /<meta name="robots" content="noindex, follow">/);
+});

@@ -1056,6 +1056,18 @@ export async function serveStudyPage(params: {
     // page still serves, it just stops advertising itself. `follow` because the
     // links on it are ordinary site links.
     html = setRobotsMeta(html, 'noindex, follow');
+    // An unlisted study is shared by link (a teaching kit sent to the player
+    // it is about), so the preview names it: title and description only, the
+    // same words the page shows anyone holding the link. No canonical, crawler
+    // copy or board card (og-image.ts serves none for a non-public study).
+    if (study && study.visibility === 'unlisted' && !studyHasAdminOnlyChapter(study)) {
+      const meta = studyPageMeta({ study, locale });
+      html = injectPageMeta(html, {
+        title: meta.title,
+        description: meta.description,
+        url: `${params.publicHost}${localePath}/study/${encodeURIComponent(params.studyId)}`,
+      });
+    }
   }
 
   const preloadLinks = await routePreloadLinksForPath({
