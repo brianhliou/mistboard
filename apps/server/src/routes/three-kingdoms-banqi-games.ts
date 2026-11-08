@@ -111,7 +111,7 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
       routeId: 'three-kingdoms-banqi',
       logPrefix: 'three_kingdoms_banqi',
       variantLabel: 'Three Kingdoms banqi',
-      // The wrapper applies playtest admission, with public decisions reads.
+      // The wrapper applies playtest admission to every path.
       enabled: () => true,
       requiresPersistence: false,
       engineBinary: {
@@ -154,13 +154,11 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
     pathname: string,
   ): Promise<boolean> => {
     if (!ANALYSIS_ROUTE.test(pathname)) return false;
-    // Decisions contain public-information values only. Cached GETs (including
-    // job results) are readable signed out, like banqi; POST still needs the
-    // playtest admission and the factory's account gate. Other TK paths retain
-    // their existing admission policy.
-    const publicDecisionsRead =
-      request.method === 'GET' && ANALYSIS_ROUTE.exec(pathname)?.[1] === 'decisions';
-    if (!publicDecisionsRead && !(await deps.admits(request))) {
+    // Every TK path, decisions reads included, answers only to the playtest
+    // admission while TK is unlaunched: anyone else gets the unknown-game 404,
+    // so no route confirms that an admin's game exists. Decisions hold
+    // public-information values only; open the GET like banqi's at launch.
+    if (!(await deps.admits(request))) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
