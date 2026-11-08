@@ -220,7 +220,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
         blocks: [
           {
             kind: 'paragraph',
-            text: `Mistboard has had ${count(record.players)} players, counting a guest browser as one, so a person on two devices counts twice. ${count(record.playersWithOneGame)} of them have played once and ${count(record.playersWithTenGames)} have played at least ten. They came from at least ${count(record.countriesAndRegions)} countries and regions. The most came from China, then the United States, Taiwan and Vietnam.`,
+            text: `Mistboard has had ${count(record.players)} players, counting a guest browser as one, so a person on two devices counts twice. ${count(record.playersWithOneGame)} of them have played once and ${count(record.playersWithTenGames)} have played at least ten. The largest groups came from China, the United States, Taiwan and Vietnam, in that order.`,
           },
           {
             kind: 'paragraph',
