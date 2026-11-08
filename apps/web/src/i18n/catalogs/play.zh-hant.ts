@@ -813,6 +813,7 @@ export const ZH_HANT_PLAY = {
   'result.generalCapture': '擒將',
   'result.threefoldRepetition': '三次重複局面',
   'result.perpetualCheck': '長將',
+  'result.perpetualChase': '長捉',
   'result.gameRules': '規則判定',
   'result.noProgress': '自然限著',
   'result.noLegalMove': '無子可動',

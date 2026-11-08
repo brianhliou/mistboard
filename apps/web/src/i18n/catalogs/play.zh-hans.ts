@@ -813,6 +813,7 @@ export const ZH_HANS_PLAY = {
   'result.generalCapture': '擒将',
   'result.threefoldRepetition': '三次重复局面',
   'result.perpetualCheck': '长将',
+  'result.perpetualChase': '长捉',
   'result.gameRules': '规则判定',
   'result.noProgress': '自然限着',
   'result.noLegalMove': '无子可动',

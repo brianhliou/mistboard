@@ -222,3 +222,23 @@ describe('jieqi PvP rematch', () => {
     expect(buttons[0]?.disabled).toBe(true);
   });
 });
+
+describe('jieqi game-over reason rendering', () => {
+  it('distinguishes new perpetual chase from legacy perpetual check', async () => {
+    for (const [reason, phrase] of [
+      ['perpetual-chase', 'perpetual chase'],
+      ['chasing', 'perpetual check'],
+    ] as const) {
+      const view = servedView(finishedState(), 'red');
+      await mountFinished('red', {
+        state: { ...view, status: { type: 'finished', winner: 'black', reason } },
+        events: EVENTS.map((event) =>
+          event.type === 'game-finished' ? { ...event, winner: 'black', reason } : event,
+        ),
+      });
+      expect(document.body.textContent).toContain(
+        `${phrase[0].toUpperCase()}${phrase.slice(1)} • Black is victorious`,
+      );
+    }
+  });
+});

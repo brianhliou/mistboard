@@ -296,7 +296,7 @@ export function jieqiLiveMoveLabels(
   return moves.map((move, index) => `${move.from}-${move.to}${marks[index] ?? ''}`);
 }
 
-function jieqiReasonPhrase(reason: string): TenantReasonKey {
+export function jieqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
       return 'result.checkmate';
@@ -308,6 +308,8 @@ function jieqiReasonPhrase(reason: string): TenantReasonKey {
       return 'result.threefoldRepetition';
     case 'chasing':
       return 'result.perpetualCheck';
+    case 'perpetual-chase':
+      return 'result.perpetualChase';
     case 'timeout':
       return 'result.timeout';
     case 'resignation':

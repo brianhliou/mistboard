@@ -219,6 +219,7 @@ export const EN_REVIEW = {
   'replay.endRace': 'Den entered',
   'replay.endFive': 'Five in a row',
   'replay.endChasing': 'Perpetual check',
+  'replay.endPerpetualChase': 'Perpetual chase',
   'replay.endDenEntered': 'Den entered',
   'replay.endPiecesCaptured': 'All pieces captured',
   'replay.endDeadPosition': 'Dead position',

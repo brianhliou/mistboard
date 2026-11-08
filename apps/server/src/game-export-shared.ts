@@ -100,6 +100,7 @@ export function pgnStandardTermination(termination: string): string {
     case 'progress-clock':
     case 'race':
     case 'chasing':
+    case 'perpetual-chase':
     case 'dead-position':
     case 'points':
       return 'normal';

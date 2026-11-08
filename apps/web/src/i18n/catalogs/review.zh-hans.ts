@@ -448,6 +448,7 @@ export const ZH_HANS_REVIEW = {
   'replay.endRace': '进入兽穴',
   'replay.endFive': '五子连线',
   'replay.endChasing': '长将',
+  'replay.endPerpetualChase': '长捉',
   'replay.endDenEntered': '入兽穴',
   'replay.endPiecesCaptured': '吃光全部棋子',
   'replay.endDeadPosition': '死局',
