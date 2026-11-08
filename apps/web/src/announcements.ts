@@ -43,7 +43,7 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
-    date: '2026-11-10',
+    date: '2026-11-08',
     kind: 'status',
     headline: '10,000 games played on Mistboard.',
     body: 'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.',

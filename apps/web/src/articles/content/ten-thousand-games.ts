@@ -18,6 +18,7 @@ const VARIANT_NAMES: Record<string, string> = {
   'crazyhouse-xiangqi': 'Crazyhouse Xiangqi',
   'duck-xiangqi': 'Duck Xiangqi',
   'xiangqi-mahjong': 'Xiangqi Mahjong',
+  gomoku: 'Gomoku',
 };
 
 type BotCount = TenThousandGamesRecord['bots'][number];
@@ -26,7 +27,7 @@ type BotCount = TenThousandGamesRecord['bots'][number];
 // Keyed by the stable bot id, because a display name has changed over time, and
 // `pikafish` is two bots: Level 8 of the jieqi ladder and a separate xiangqi bot.
 // A bot in the record with no row here fails the test beside this file.
-// Only these two bots are ladders; the /api/bots list has every other bot as one
+// Only these three bots are ladders; the /api/bots list has every other bot as one
 // bot. The no-break space and word joiner keep "levels 1-8" whole when the cell
 // wraps on a phone, which would otherwise break at the hyphen.
 const EIGHT_LEVELS = '(levels\u00a01-\u20608)';
@@ -51,6 +52,11 @@ const BOT_ROWS: { name: string; variant: string; has: (b: BotCount) => boolean }
   },
   { name: 'KataGo', variant: 'Jungle Chess', has: (b) => b.bot === 'katago' },
   { name: 'General Blunder', variant: 'Xiangqi', has: (b) => b.bot === 'general-blunder' },
+  {
+    name: `Rapfi ${EIGHT_LEVELS}`,
+    variant: 'Gomoku',
+    has: (b) => /^rapfi-level-\d$/.test(b.bot),
+  },
 ];
 
 const count = (n: number): string => n.toLocaleString('en-US');
@@ -159,14 +165,14 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
     seoTitle: 'Mistboard passes 10,000 games',
     summary: 'How the first 10,000 games on Mistboard came in, what people played, and who played them.',
     showSummaryOnPage: false,
-    status: 'draft',
+    status: 'published',
     method: [
       'A game counts once both sides have moved and it ends, against a person or a bot.',
       'Engine matches, our test accounts and variants we have retired are left out; counting started on June 1.',
       'A player is an account, or a browser playing as a guest.',
       'Countries and regions are read from the network of each browser that started a game, so a VPN can place someone elsewhere.',
     ],
-    publishedAt: '2026-11-10',
+    publishedAt: '2026-11-08',
     thumbnail: {
       kind: 'image',
       src: '/article-thumbs/ten-thousand-games.jpg',
@@ -200,7 +206,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
         blocks: [
           {
             kind: 'paragraph',
-            text: `[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is ${percent(jieqi, record.totalGames)} of all games. It was ${percent(record.atOneThousand.jieqiGames, 1_000)} of the first 1,000. Crazyhouse Xiangqi and Xiangqi Mahjong launched after that post.`,
+            text: `[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is ${percent(jieqi, record.totalGames)} of all games. It was ${percent(record.atOneThousand.jieqiGames, 1_000)} of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.`,
           },
           {
             kind: 'table',
@@ -271,7 +277,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
         blocks: [
           {
             kind: 'paragraph',
-            text: 'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.',
+            text: 'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.',
           },
         ],
       },

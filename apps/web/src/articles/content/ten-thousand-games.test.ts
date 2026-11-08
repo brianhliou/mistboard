@@ -47,6 +47,7 @@ function allowed(r: TenThousandGamesRecord) {
     r.bots.filter((b) => b.variant === 'jieqi' && b.bot.startsWith('pikafish')),
     r.bots.filter((b) => b.variant === 'xiangqi' && b.bot === 'pikafish'),
     r.bots.filter((b) => b.bot.startsWith('fairy-stockfish')),
+    r.bots.filter((b) => b.bot.startsWith('rapfi')),
     ...['misty', 'ab-jchess', 'jqe', 'katago', 'general-blunder'].map((id) =>
       r.bots.filter((b) => b.bot === id),
     ),
@@ -99,7 +100,9 @@ function numbersOutsideRecord(text: string, r: TenThousandGamesRecord): string[]
       return '';
     })
     // A bot's levels are part of its name, not a measurement.
-    .replace(/[Ll]evels?\s\d(-\u2060?\d)?/g, '');
+    .replace(/[Ll]evels?\s\d(-\u2060?\d)?/g, '')
+    // So is a feature's name.
+    .replace(/\b3D\b/g, '');
   for (const [token] of withoutDates.matchAll(/\d[\d,]*%?/g)) {
     const clean = token.replace(/,$/, '');
     if (!numbers.has(clean)) out.push(clean);
@@ -177,7 +180,7 @@ describe('the 10,000 games post holds to its record', () => {
     );
     const lowPeak = { ...record, peakWeek: { ...record.peakWeek, games: 1 } };
     expect(recordProblems(lowPeak)).toContain('peak week is not the largest full week');
-    expect(recordProblems({ ...record, tenThousandOn: '2026-11-08' })).toContain(
+    expect(recordProblems({ ...record, totalGames: 9_999, tenThousandOn: '2026-11-08' })).toContain(
       'crossing dated below 10,000',
     );
     expect(
