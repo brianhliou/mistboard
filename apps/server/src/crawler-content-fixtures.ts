@@ -194,6 +194,7 @@ export function crawlerFixtureSources(): CrawlerPageSources {
         ownerDisplayName: 'Crawler fixture',
         likeCount: 0,
         chapterCount: 2,
+        chapterNames: ['Seven Stars', 'Practical endgames'],
         chapterPreview: [
           {
             name: 'Seven Stars',
