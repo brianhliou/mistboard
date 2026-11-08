@@ -23,9 +23,9 @@ async function fixture(t) {
 test('the private pin names the exact API asset, size and checksum', () => {
   assert.equal(
     PIN.url,
-    'https://api.github.com/repos/brianhliou/mistboard-private/releases/assets/723244296',
+    'https://api.github.com/repos/brianhliou/mistboard-nets/releases/assets/723355852',
   );
-  assert.equal(PIN.releaseRepo, 'brianhliou/mistboard-private');
+  assert.equal(PIN.releaseRepo, 'brianhliou/mistboard-nets');
   assert.equal(PIN.releaseTag, 'pikafish-net-7d13d735');
   assert.equal(PIN.bytes, 50_706_378);
   assert.equal(PIN.sha256, '7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e');
@@ -85,7 +85,7 @@ test('local missing token uses gh against the private release, then checks the f
       env: {},
       fetchImpl: noDownload,
       downloadWithGh: async (directory, actualPin) => {
-        assert.equal(actualPin.releaseRepo, 'brianhliou/mistboard-private');
+        assert.equal(actualPin.releaseRepo, 'brianhliou/mistboard-nets');
         assert.equal(actualPin.releaseTag, 'pikafish-net-7d13d735');
         await writeFile(join(directory, actualPin.file), bytes);
       },
