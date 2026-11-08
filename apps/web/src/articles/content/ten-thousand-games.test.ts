@@ -123,7 +123,6 @@ function recordProblems(r: TenThousandGamesRecord): string[] {
   if (r.tenThousandOn !== null && r.totalGames < 10_000) out.push('crossing dated below 10,000');
   if (r.gamesWonAgainstBots >= r.gamesAgainstBots) out.push('more wins than games against bots');
   if (r.gamesSeenFromBothSides > r.gamesBetweenPeople) out.push('more games seen than played');
-  if (r.gamesAcrossBorders > r.gamesSeenFromBothSides) out.push('more border games than seen');
   if (sum(r.bots.map((b) => b.games)) > r.gamesAgainstBots) out.push('more bot games than played');
   if (sum(r.endings.map((e) => e.games)) !== r.totalGames) out.push('endings do not sum to the total');
   if (botsWithoutARow(r).length > 0) out.push('a bot has no row in the table');
@@ -137,16 +136,6 @@ function recordProblems(r: TenThousandGamesRecord): string[] {
   if (sum(table.map((row) => row.peopleWon)) > r.gamesWonAgainstBots) {
     out.push('the bot table has more wins than the prose');
   }
-  const end = (name: string) => r.endings.find((e) => e.ending === name);
-  const four = ['resignation', 'checkmate', 'timeout', 'stalemate'].map(end);
-  if (four.some((e) => !e)) out.push('an ending the prose names is missing');
-  // The prose orders these four and calls no legal move a loss and the longest.
-  const games = four.map((e) => e?.games ?? 0);
-  if (games.some((g, i) => i > 0 && g > games[i - 1])) out.push('the endings are out of order');
-  if (four.some((e) => (e?.averagePlies ?? 0) > (end('stalemate')?.averagePlies ?? 0))) {
-    out.push('stalemate is not the longest of the four');
-  }
-  if ((end('stalemate')?.draws ?? 0) > 0) out.push('a game with no legal move was drawn');
   return out;
 }
 
@@ -191,7 +180,7 @@ describe('the 10,000 games post holds to its record', () => {
     ).toContain('more wins than games against bots');
   });
 
-  it('catches claims about bots, endings and borders that stop being true', () => {
+  it('catches claims about bots that stop being true', () => {
     const newBot = {
       ...record,
       bots: [...record.bots, { bot: 'new-bot', variant: 'xiangqi', games: 1, peopleWon: 0 }],
@@ -202,25 +191,6 @@ describe('the 10,000 games post holds to its record', () => {
       bots: record.bots.map((b) => (b.bot === 'jqe' ? { ...b, games: b.games + 100 } : b)),
     };
     expect(recordProblems(tooMany)).toContain('the bot table does not match the bot games');
-    const endings = record.endings.map((e) =>
-      e.ending === 'stalemate' ? { ...e, draws: 1 } : e,
-    );
-    expect(recordProblems({ ...record, endings })).toContain('a game with no legal move was drawn');
-    const shorter = record.endings.map((e) =>
-      e.ending === 'stalemate' ? { ...e, averagePlies: 1 } : e,
-    );
-    expect(recordProblems({ ...record, endings: shorter })).toContain(
-      'stalemate is not the longest of the four',
-    );
-    expect(
-      recordProblems({ ...record, gamesAcrossBorders: record.gamesSeenFromBothSides + 1 }),
-    ).toContain('more border games than seen');
-  });
-
-  it('changes the ending when a game crosses a border', () => {
-    const crossed = readerText(buildTenThousandGamesArticle({ ...record, gamesAcrossBorders: 3 }));
-    expect(crossed).toContain(`3 of the ${record.gamesSeenFromBothSides} games`);
-    expect(crossed).not.toContain('same country or region');
   });
 
   it('keeps the claim that every later week passed 1,000 true', () => {

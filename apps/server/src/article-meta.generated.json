@@ -630,7 +630,7 @@
   "ten-thousand-games": {
     "title": "10,000 games played",
     "kind": "article",
-    "description": "How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.",
+    "description": "How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "已下完 10,000 盘棋",
