@@ -344,7 +344,7 @@ test('critical moments require a meaningful loss, a unique answer, and an undeci
   const chapter = plan.ops.at(-1);
   assert.equal(chapter.gamebook, true);
   assert.equal(chapter.orientation, 'red');
-  assert.equal(chapter.name, 'Moment 1 · Round 4 · Red to play');
+  assert.equal(chapter.name, 'Moment 1 · Round 4');
   assert.equal(chapter.tags.ply, '11');
   assert.equal(chapter.tags.black, 'Fixture Opponent');
   assert.match(chapter.tree.rootFen, / b - - \d+ 5$/);
@@ -353,15 +353,15 @@ test('critical moments require a meaningful loss, a unique answer, and an undeci
   assert.equal(root.children.length, 1);
   const [mistake] = root.children;
   assert.equal(mistake.uci, 'i7i6');
-  assert.equal(mistake.annotations.comments[0].text, 'Round 4: Fixture Opponent just played P9+1.');
-  assert.doesNotMatch(mistake.annotations.comments[0].text, /to play|find|H8\+7/i);
+  assert.equal(mistake.annotations.comments[0].text, 'Round 4: Fixture Opponent just played Pi6.');
+  assert.doesNotMatch(mistake.annotations.comments[0].text, /to play|find|Hc3/i);
   const [best] = mistake.children;
   assert.equal(best.uci, 'b1c3');
   assert.equal(best.children[0].uci, 'b10c8');
   assert.deepEqual(best.children[0].children, []);
   assert.equal(
     best.annotations.comments[0].text,
-    'After Fixture Opponent played P9+1, Fixture Player found H8+7. Pikafish continues H8+7 H2+3 H2+3.',
+    'After Fixture Opponent played Pi6, Fixture Player found Hc3. Pikafish continues Hc3 Hc8 Hg3.',
   );
   assert.doesNotMatch(JSON.stringify(chapter), /—|square|knight|bishop|pawn/i);
 });
@@ -489,7 +489,7 @@ test('a moment names its round from the board id when the record has no round ta
   await runKit({ slug: 'fixture-player', dbUrl, root: ctx.root }, ctx.services);
   const plan = JSON.parse(await readFile(join(ctx.dir, 'study-draft.json'), 'utf8'));
   const chapter = plan.ops.at(-1);
-  assert.equal(chapter.name, 'Moment 1 · Round 6 · Red to play');
+  assert.equal(chapter.name, 'Moment 1 · Round 6');
   assert.equal(chapter.tags.round, '6');
 });
 

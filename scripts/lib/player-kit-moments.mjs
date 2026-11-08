@@ -46,8 +46,7 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   if (state.status.type !== 'playing' || state.status.turn !== board.colour)
     throw new Error('moment turn does not match the record');
   const line = pv.map(pikafishUciToXiangqiSquares);
-  const labels = formatXiangqiMoves([...prefix, ...line], 'wxf').slice(prefix.length);
-  const side = board.colour === 'red' ? 'Red' : 'Black';
+  const labels = formatXiangqiMoves([...prefix, ...line], 'algebraic').slice(prefix.length);
   // A relayed record may carry no round tag; the board id names it (…-r06-r06t02).
   const round = (
     board.roundNameEn ||
@@ -63,7 +62,7 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
   const played = board.moves[row.ply - 1];
   if (xiangqiMoveToPikafishUci(played) !== row.uci)
     throw new Error('moment move does not match the record');
-  const playedLabel = formatXiangqiMoves(prefix, 'wxf').at(-1);
+  const playedLabel = formatXiangqiMoves(prefix, 'algebraic').at(-1);
   const before = prefix.slice(0, -1);
   // Replay from the new root through the recorded mistake and the entire named line.
   replay([...before, played, ...line]);
@@ -81,7 +80,7 @@ function chapterFor({ board, annotation, row, pv, names, number }) {
     ],
   };
   return {
-    name: `Moment ${number} · Round ${round} · ${side} to play`,
+    name: `Moment ${number} · Round ${round}`,
     orientation: board.colour,
     gamebook: true,
     tree,
