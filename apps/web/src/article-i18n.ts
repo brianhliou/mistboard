@@ -6658,8 +6658,8 @@ const ZH_HANS: Record<string, string> = {
     '新版本基于 jqe 的开源代码开发，神经网络为 0.6 MB，上一版则是 144 MB。它每秒搜索的局面数约为以前的 65 倍。',
   'In a level endgame with every piece face up, AB-JChess saw a soldier push lose eight moves before jqe did, and it still saw it with its chase rule switched off and 16 times the search.':
     '在一个所有棋子都已翻开的均衡残局中，AB-JChess 比 jqe 早八个回合看出一步进兵会输棋。即使关闭长捉规则，并把搜索量增至 16 倍，它仍能看出来。',
-  "The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and 42 of the 67 draws ended that way; scored by Mistboard's rules, AB-JChess's edge is about 41 Elo.":
-    '这场比赛把所有三次重复局面都判为和棋。Mistboard 则将重复过程中每一步都将军的一方判负，67 盘和棋中有 42 盘属于这种情况；按 Mistboard 的规则计分，AB-JChess 的优势约为 41 Elo。',
+  "The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and so does a side that alone chases on every move: 45 of the 67 draws end that way. Scored by Mistboard's rules, AB-JChess's edge is about 40 Elo.":
+    '这场比赛把所有三次重复局面都判为和棋。在 Mistboard，重复过程中每一步都将军的一方判负，只有一方每一步都捉子时该方也判负：67 盘和棋中有 45 盘属于这种情况。按 Mistboard 的规则计分，AB-JChess 的优势约为 40 Elo。',
   'AB-JChess is the top [jieqi](/rules/jieqi) bot on Mistboard again. Its new release by Huorongrong and Laoxu (Kouza), AB-JChess-20261031, beat jqe, which took the title from it in October, over 600 games. jqe stays on the ladder one level below.':
     'AB-JChess 再次成为 Mistboard 上最强的[揭棋](/rules/jieqi)电脑。Huorongrong 和 Laoxu（Kouza）开发的新版本 AB-JChess-20261031，在 600 盘比赛中战胜了 10 月从它手中夺走榜首的 jqe。jqe 仍留在电脑阶梯上，排在它下面一级。',
   'AB-JChess-20261031 against jqe 0.1.0. Both engines are still being developed, so a later release of either may score differently.':
@@ -6667,18 +6667,18 @@ const ZH_HANS: Record<string, string> = {
   'The result': '比赛结果',
   "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
     '这 600 盘棋来自 300 组暗子布局，每组红黑互换各下一次，用 4 个线程，每步 4 秒。和 jqe 对上一版 AB-JChess 的比赛一样，我们的裁判程序把任何三次重复局面，以及双方各连续 60 步无吃子，都判为和棋。暗子被吃时，裁判程序会向两个引擎公开它是什么；在 Mistboard 上，只有吃子方才会知道。[全部 600 盘棋](/study/fb5Wqzbs)都收在一个研究中，每组布局的两盘棋并排放在一起。',
-  'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.':
-    '注明按 Mistboard 规则计算的成绩采用的是比赛进行时的重复局面规则。',
-  'Scored under the old rule': '按旧规则计分',
-  "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.":
-    '按 Mistboard 规则计算的数字采用比赛进行时的规则，当时重复局面只有长将判负。2026 年 11 月，Mistboard 改用 jqe 的规则，只有一方长捉时，长捉方也判负。',
+  "Added the score under Mistboard's new repetition rule, and noted that the earlier Mistboard-rules scores use the rule in force when the match was played.":
+    '补充了按 Mistboard 新重复局面规则计算的成绩，并注明之前按 Mistboard 规则计算的成绩采用的是比赛进行时的规则。',
+  'The November rule change': '十一月的规则变更',
+  "The Mistboard-rules numbers above use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses. Rescored under it, AB-JChess won 322, drew 24 and lost 254, about +40 Elo with a 95% range of +15 to +64. AB-JChess was the chaser in all three draws that become losses, and two decisive games would have been drawn earlier by the shorter no-capture limit.":
+    '上面按 Mistboard 规则计算的数字采用比赛进行时的规则，当时重复局面只有长将判负。2026 年 11 月，Mistboard 改用 jqe 的规则，只有一方长捉时，长捉方也判负。按新规则重新计分，AB-JChess 胜 322 盘、和 24 盘、负 254 盘，约 +40 Elo，95% 区间为 +15 至 +64。因此变为负局的三盘和棋，长捉的一方都是 AB-JChess；另有两盘分出胜负的对局，在较短的无吃子判和限制下会更早以和棋结束。',
   'AB-JChess': 'AB-JChess',
   'Won-drawn-lost': '胜-和-负',
   'All 600 games': '全部 600 盘',
   'With Red': '执红',
   'With Black': '执黑',
-  "Almost all of AB-JChess's edge came with Red. Over the match it comes to about +46 Elo, with a 95% range of +23 to +69. Scored by Mistboard's own repetition rule it would be about +41, as explained below.":
-    'AB-JChess 的优势几乎全部来自执红的对局。整场比赛约合 +46 Elo，95% 区间为 +23 至 +69。按 Mistboard 自己的重复局面规则计分则约为 +41，下文会说明。',
+  "Almost all of AB-JChess's edge came with Red. Over the match it comes to about +46 Elo, with a 95% range of +23 to +69. Scored by Mistboard's own repetition rule it would be about +40, as explained below.":
+    'AB-JChess 的优势几乎全部来自执红的对局。整场比赛约合 +46 Elo，95% 区间为 +23 至 +69。按 Mistboard 自己的重复局面规则计分则约为 +40，下文会说明。',
   'Five games, read by both engines': '用两个引擎解读五盘棋',
   'How to read these games': '如何查看这些对局',
   "Each board opens on a move where the engines disagreed, played by the side that went on to lose or draw. Wherever the two would have played different moves, a blue arrow shows AB-JChess's choice and an orange one jqe's. The graph under the board is the winning side's chance by each engine at match settings, AB-JChess in teal and jqe in orange, and the comments in the move list say where the game turned and what each engine expected. A die beside a reveal grades its luck from what both players could see; [the study](/study/SwSUugEY) has all six games.":
@@ -12971,8 +12971,8 @@ const ZH_HANT: Record<string, string> = {
     '新版本基於 jqe 的開源程式碼開發，神經網路為 0.6 MB，上一版則是 144 MB。它每秒搜尋的局面數約為以前的 65 倍。',
   'In a level endgame with every piece face up, AB-JChess saw a soldier push lose eight moves before jqe did, and it still saw it with its chase rule switched off and 16 times the search.':
     '在一個所有棋子都已翻開的均衡殘局中，AB-JChess 比 jqe 早八個回合看出一步進兵會輸棋。即使關閉長捉規則，並把搜尋量增至 16 倍，它仍能看出來。',
-  "The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and 42 of the 67 draws ended that way; scored by Mistboard's rules, AB-JChess's edge is about 41 Elo.":
-    '這場比賽把所有三次重複局面都判為和棋。Mistboard 則將重複過程中每一步都將軍的一方判負，67 盤和棋中有 42 盤屬於這種情況；按 Mistboard 的規則計分，AB-JChess 的優勢約為 41 Elo。',
+  "The match drew every threefold repetition. On Mistboard a side that gives check on every move of one loses, and so does a side that alone chases on every move: 45 of the 67 draws end that way. Scored by Mistboard's rules, AB-JChess's edge is about 40 Elo.":
+    '這場比賽把所有三次重複局面都判為和棋。在 Mistboard，重複過程中每一步都將軍的一方判負，只有一方每一步都捉子時該方也判負：67 盤和棋中有 45 盤屬於這種情況。按 Mistboard 的規則計分，AB-JChess 的優勢約為 40 Elo。',
   'AB-JChess is the top [jieqi](/rules/jieqi) bot on Mistboard again. Its new release by Huorongrong and Laoxu (Kouza), AB-JChess-20261031, beat jqe, which took the title from it in October, over 600 games. jqe stays on the ladder one level below.':
     'AB-JChess 再次成為 Mistboard 上最強的[揭棋](/rules/jieqi)電腦。Huorongrong 和 Laoxu（Kouza）開發的新版本 AB-JChess-20261031，在 600 盤比賽中戰勝了 10 月從它手中奪走榜首的 jqe。jqe 仍留在電腦階梯上，排在它下面一級。',
   'AB-JChess-20261031 against jqe 0.1.0. Both engines are still being developed, so a later release of either may score differently.':
@@ -12980,18 +12980,18 @@ const ZH_HANT: Record<string, string> = {
   'The result': '比賽結果',
   "The 600 games were 300 deals, each played twice with colours swapped, at 4 seconds a move on 4 threads. As in jqe's match against the last AB-JChess, our referee drew any threefold repetition and any 60 moves by each side without a capture. When a face-down piece was taken, it told both engines what it was; on Mistboard only the player who took it finds out. [All 600 games](/study/fb5Wqzbs) are in a study, the two games of each deal side by side.":
     '這 600 盤棋來自 300 組暗子佈局，每組紅黑互換各下一次，用 4 個執行緒，每步 4 秒。和 jqe 對上一版 AB-JChess 的比賽一樣，我們的裁判程式把任何三次重複局面，以及雙方各連續 60 步無吃子，都判為和棋。暗子被吃時，裁判程式會向兩個引擎公開它是什麼；在 Mistboard 上，只有吃子方才會知道。[全部 600 盤棋](/study/fb5Wqzbs)都收在一個研究中，每組佈局的兩盤棋並排放在一起。',
-  'Noted that the Mistboard-rules scores use the repetition rule in force when the match was played.':
-    '註明按 Mistboard 規則計算的成績採用的是比賽進行時的重複局面規則。',
-  'Scored under the old rule': '按舊規則計分',
-  "The Mistboard-rules numbers use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses.":
-    '按 Mistboard 規則計算的數字採用比賽進行時的規則，當時重複局面只有長將判負。2026 年 11 月，Mistboard 改用 jqe 的規則，只有一方長捉時，長捉方也判負。',
+  "Added the score under Mistboard's new repetition rule, and noted that the earlier Mistboard-rules scores use the rule in force when the match was played.":
+    '補充了按 Mistboard 新重複局面規則計算的成績，並註明之前按 Mistboard 規則計算的成績採用的是比賽進行時的規則。',
+  'The November rule change': '十一月的規則變更',
+  "The Mistboard-rules numbers above use the rule in force when the match was played, under which only perpetual check lost a repetition. In November 2026 Mistboard adopted jqe's rule, under which a sole perpetual chaser also loses. Rescored under it, AB-JChess won 322, drew 24 and lost 254, about +40 Elo with a 95% range of +15 to +64. AB-JChess was the chaser in all three draws that become losses, and two decisive games would have been drawn earlier by the shorter no-capture limit.":
+    '上面按 Mistboard 規則計算的數字採用比賽進行時的規則，當時重複局面只有長將判負。2026 年 11 月，Mistboard 改用 jqe 的規則，只有一方長捉時，長捉方也判負。按新規則重新計分，AB-JChess 勝 322 盤、和 24 盤、負 254 盤，約 +40 Elo，95% 區間為 +15 至 +64。因此變為負局的三盤和棋，長捉的一方都是 AB-JChess；另有兩盤分出勝負的對局，在較短的無吃子判和限制下會更早以和棋結束。',
   'AB-JChess': 'AB-JChess',
   'Won-drawn-lost': '勝-和-負',
   'All 600 games': '全部 600 盤',
   'With Red': '執紅',
   'With Black': '執黑',
-  "Almost all of AB-JChess's edge came with Red. Over the match it comes to about +46 Elo, with a 95% range of +23 to +69. Scored by Mistboard's own repetition rule it would be about +41, as explained below.":
-    'AB-JChess 的優勢幾乎全部來自執紅的對局。整場比賽約合 +46 Elo，95% 區間為 +23 至 +69。按 Mistboard 自己的重複局面規則計分則約為 +41，下文會說明。',
+  "Almost all of AB-JChess's edge came with Red. Over the match it comes to about +46 Elo, with a 95% range of +23 to +69. Scored by Mistboard's own repetition rule it would be about +40, as explained below.":
+    'AB-JChess 的優勢幾乎全部來自執紅的對局。整場比賽約合 +46 Elo，95% 區間為 +23 至 +69。按 Mistboard 自己的重複局面規則計分則約為 +40，下文會說明。',
   'Five games, read by both engines': '用兩個引擎解讀五盤棋',
   'How to read these games': '如何查看這些對局',
   "Each board opens on a move where the engines disagreed, played by the side that went on to lose or draw. Wherever the two would have played different moves, a blue arrow shows AB-JChess's choice and an orange one jqe's. The graph under the board is the winning side's chance by each engine at match settings, AB-JChess in teal and jqe in orange, and the comments in the move list say where the game turned and what each engine expected. A die beside a reveal grades its luck from what both players could see; [the study](/study/SwSUugEY) has all six games.":
