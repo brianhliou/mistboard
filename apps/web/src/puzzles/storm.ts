@@ -165,7 +165,12 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       tile.append(score, caption);
       row.append(tile);
     }
-    layout.append(row);
+    // The row closes the panel, so the run's numbers read as one block.
+    (
+      layout.querySelector('.puzzle-storm-feedback, .puzzle-storm-results') ??
+      layout.querySelector('.puzzle-side-panel') ??
+      layout
+    ).append(row);
   };
   const panelIntro = (status: string): HTMLElement => {
     const header = document.createElement('header');
