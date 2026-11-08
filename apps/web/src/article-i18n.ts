@@ -339,8 +339,8 @@ const ZH_HANS: Record<string, string> = {
     '网站针对手机重新设计，计分对局也开放给了更多变体。解题新增了[限时解题](/puzzles?mode=storm)、[连续解题](/puzzles?mode=streak)、按主题练习和[解题面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了专门求败的电脑 [General Blunder](/bot/general-blunder)。五子棋上线，并配有八个级别的 Rapfi 电脑对手。棋子现在可以立体呈现，暗棋棋子也有了翻面动画。[更新页面](/feed)列出了全部变化。',
   'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.':
     '三个手机画面：一局等待第一步的限时解题、一盘 Rapfi 连成五子获胜的五子棋，以及一盘立体棋子与背面朝上的棋子并列的暗棋。',
-  'Thank you to everyone who played a game, reported a bug or became a [patron](/patron). You are why Mistboard is here, and we are grateful for every game.':
-    '感谢每一位来下过棋、报告过问题，或成为[赞助会员](/patron)的朋友。因为有你们，才有 Mistboard；每一盘棋，我们都心怀感激。',
+  'Thank you to everyone who played a game, reported a bug or told a friend or an audience about Mistboard. You are why Mistboard is here, and we are grateful for every game.':
+    '感谢每一位来下过棋、报告过问题，或把 Mistboard 介绍给朋友和观众的人。因为有你们，才有 Mistboard；每一盘棋，我们都心怀感激。',
   "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
     '我们的使命是通过象棋和世界各地的经典策略游戏，让不同文化的人们走到一起。',
   'Week of 2026-06-01: 2 games': '2026-06-01 当周：2 盘',
@@ -6931,8 +6931,8 @@ const ZH_HANT: Record<string, string> = {
     '網站針對手機重新設計，計分對局也開放給了更多變體。解題新增了[限時解題](/puzzles?mode=storm)、[連續解題](/puzzles?mode=streak)、按主題練習和[解題面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了專門求敗的電腦 [General Blunder](/bot/general-blunder)。五子棋上線，並配有八個級別的 Rapfi 電腦對手。棋子現在可以立體呈現，暗棋棋子也有了翻面動畫。[更新頁面](/feed)列出了全部變化。',
   'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.':
     '三個手機畫面：一局等待第一步的限時解題、一盤 Rapfi 連成五子獲勝的五子棋，以及一盤立體棋子與背面朝上的棋子並列的暗棋。',
-  'Thank you to everyone who played a game, reported a bug or became a [patron](/patron). You are why Mistboard is here, and we are grateful for every game.':
-    '感謝每一位來下過棋、回報過問題，或成為[贊助會員](/patron)的朋友。因為有你們，才有 Mistboard；每一盤棋，我們都心懷感激。',
+  'Thank you to everyone who played a game, reported a bug or told a friend or an audience about Mistboard. You are why Mistboard is here, and we are grateful for every game.':
+    '感謝每一位來下過棋、回報過問題，或把 Mistboard 介紹給朋友和觀眾的人。因為有你們，才有 Mistboard；每一盤棋，我們都心懷感激。',
   "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
     '我們的使命是透過象棋和世界各地的經典策略遊戲，讓不同文化的人們走到一起。',
   'Week of 2026-06-01: 2 games': '2026-06-01 當週：2 盤',
