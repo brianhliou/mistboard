@@ -52,13 +52,24 @@
   }
 }
 
-/* Jieqi's rail is shorter: its face-down odds take a line above and below the
-   board (live-jieqi-capture-strips.css), so the clocks and move list need the
-   column's height. Smaller discs, capped so seven groups (six roles plus the
-   pieces taken face-down) sit on one reserved row. */
+/* Jieqi: the board's disc too, like xiangqi, capped so seven groups (six roles
+   plus the pieces taken face-down) sit on one reserved row of the rail. Its
+   face-down odds take a line above and below the board instead
+   (live-jieqi-capture-strips.css). */
 @media (min-width: 800px) {
   .live-route--jieqi .live-review__cluster .rail-material {
-    --capture-piece-size: min(28px, calc((100cqw - 20px) / 7));
+    --capture-piece-size: min(calc(var(--uni-board-width) * 0.098), calc((100cqw - 20px) / 7));
+  }
+}
+
+/* The room's page is as wide as the board's width budget assumes
+   (--uni-main-max, which grows past 1440px on large screens). At the old fixed
+   1440px cap the board was sized for a page up to 1805px wide while the page
+   stayed 1440: at 1920x1080 the rails were squeezed to their minimums (234 and
+   244px) and the captures wrapped. */
+@media (min-width: 800px) {
+  .shell:has(> .play-grid > .live-review__cluster) {
+    max-width: var(--uni-main-max);
   }
 }
 
@@ -304,7 +315,50 @@
        any board shrunk by the grip) clipped the table from the bottom: the move
        list, the seat row and Resign/Abort disappeared. The table is its
        content's height at least; the board only stretches it. */
-    min-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+    min-height: var(--live-column-h);
+  }
+}
+
+/* Large screens: the left column widens to the table's 400px. The board is
+   bound by the screen's height there, so the width it leaves went to empty
+   gutters while the game card and chat sat at 300px. */
+@media (min-width: 1500px) {
+  .live-review__cluster {
+    --uni-side-max: 400px;
+  }
+}
+
+/* The right column centres on the board, strips included (2026-11-07). The
+   column is the board's height plus the chrome stacked with it (jieqi's odds
+   strips, any hand), so a centred console lands on the board's centre line
+   instead of the strip's. The fixed-height table gives way to fit: it is 400px
+   where the column has the room and shrinks toward a floor where it does not,
+   the move window taking the cut (it scrolls; the result and the post-game
+   actions never do). --live-console-rest is the column's other rows: two
+   capture rows, two clocks and their margins (measured 256-262px). The flip
+   variants and mahjong keep their own columns. */
+.live-review__cluster {
+  --live-column-h: calc(
+    var(--uni-board-width) /
+    var(--uni-board-aspect, 1) +
+    var(--uni-board-chrome-h, 0px)
+  );
+}
+@media (min-width: 800px) {
+  .live-review__cluster:not(
+    :is(
+        .live-route--mahjong,
+        .live-route--xiangqi-mahjong,
+        .live-route--banqi,
+        .live-route--jungle-flip
+      )
+      *
+  ) {
+    --live-table-h: clamp(
+      280px,
+      calc(var(--live-column-h) - var(--live-console-rest, 262px)),
+      400px
+    );
   }
 }
 

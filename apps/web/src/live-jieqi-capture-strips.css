@@ -115,10 +115,58 @@
     bottom: -2px;
   }
 
-  /* A narrower board: everything one size down. */
-  @container (max-width: 600px) {
+  /* Wide boards (a 1080p screen and up): one size up, so the odds read at a
+     glance beside an 800px board. The taller line takes its height from the
+     board (--uni-board-chrome-h), which is the trade: a slightly smaller board
+     for odds you can read. */
+  @container (min-width: 720px) {
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
-      --reveal-chip: 22px;
+      --reveal-chip: 34px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__head {
+      gap: 8px;
+      height: 38px;
+      margin-left: 16px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__lead--short {
+      font-size: 0.95rem;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__note {
+      padding: 1px 8px;
+      font-size: 0.82rem;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__pieces {
+      gap: 2px 12px;
+      min-height: 38px;
+      margin-left: 12px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
+      gap: 4px;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
+      font-size: 0.9rem;
+    }
+
+    .live-route--jieqi .jieqi-capture-strip .captures-count-badge {
+      min-width: 14px;
+      height: 14px;
+      font-size: 10px;
+    }
+  }
+
+  /* Narrower than the full line needs (about 560px with every role still face
+     down): each percentage goes under its piece, so a chip is only as wide as
+     its piece and the line stays one row at the board's full size. A wrapped
+     second row would take height from the board and narrow it further. */
+  @container (max-width: 620px) {
+    .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
+      --reveal-chip: 24px;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__head {
@@ -126,12 +174,12 @@
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__lead--short {
-      font-size: 0.72rem;
+      font-size: 0.74rem;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__note {
       padding: 0 5px;
-      font-size: 0.66rem;
+      font-size: 0.68rem;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__pieces {
@@ -139,17 +187,17 @@
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
-      gap: 2px;
+      flex-direction: column;
+      gap: 0;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
-      font-size: 0.68rem;
+      font-size: 0.64rem;
+      line-height: 1;
     }
   }
 
-  /* Narrow: each percentage under its piece, so a chip is only as wide as its
-     number. This is the floor that stops the pieces wrapping again: every
-     extra row takes height from the board and so narrows it further. */
+  /* Narrow: everything one size down. */
   @container (max-width: 420px) {
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
       --reveal-chip: 20px;
@@ -169,14 +217,8 @@
       margin-left: 6px;
     }
 
-    .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
-      flex-direction: column;
-      gap: 0;
-    }
-
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
       font-size: 0.6rem;
-      line-height: 1;
     }
   }
 }
