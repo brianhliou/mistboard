@@ -8,7 +8,7 @@ import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboa
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
-import type { RecentEveGameRecord, StudyWithChapters } from './persistence.js';
+import type { RecentEveGameRecord, StudyWithChapters, UserProfile } from './persistence.js';
 import { recordPuzzleReport, resetPuzzleStoreForTests } from './puzzle-store.js';
 import { isClientRoute } from './server-policy.js';
 import {
@@ -2334,4 +2334,240 @@ test('the sitemap index lists the players and broadcasts sections', () => {
   assert.ok(index.body.includes('https://mistboard.test/sitemap-broadcasts.xml'));
   assert.equal(sitemapSectionFromPath('/sitemap-players.xml'), 'players');
   assert.equal(sitemapSectionFromPath('/sitemap-broadcasts.xml'), 'broadcasts');
+});
+
+function profilePreviewFixture(): UserProfile {
+  return {
+    user: {
+      handle: 'Player_1',
+      displayName: 'Lin & "棋" <player>',
+      bio: 'PROFILE_BIO_SENTINEL',
+      location: 'PROFILE_LOCATION_SENTINEL',
+      profileLinks: ['https://example.test/PROFILE_LINK_SENTINEL'],
+      profileVisibility: 'public',
+      accountRole: 'player',
+      isFounder: false,
+      title: null,
+      flair: null,
+      patronSince: null,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    },
+    ratings: [
+      {
+        variant: 'xiangqi',
+        timeClass: 'blitz',
+        eloRating: 1742,
+        ratedGamesPlayed: 12,
+        totalGamesPlayed: 15,
+        provisional: true,
+      },
+      {
+        variant: 'banqi',
+        timeClass: 'blitz',
+        eloRating: null,
+        ratedGamesPlayed: 0,
+        totalGamesPlayed: 3,
+        provisional: false,
+      },
+    ],
+    puzzleRatings: [],
+    puzzleStreak: { current: 0, best: 0 },
+    achievements: [],
+    games: [],
+    gamesTotal: 18,
+  };
+}
+
+test('profile link previews name public accounts using only public profile facts', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-profile-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  const fixture = profilePreviewFixture();
+  const title = 'Lin &amp; &quot;棋&quot; &lt;player&gt; (@Player_1) · Mistboard';
+  const description = 'Plays Xiangqi (blitz rating 1742?), Banqi on Mistboard.';
+  for (const pathname of ['/@/player_1', '/@/%50layer_1/']) {
+    const response = captureResponse();
+    let reads = 0;
+    assert.ok(isClientRoute(pathname));
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        search: '?utm_source=share&variant=banqi',
+        publicHost: 'https://mistboard.com',
+        profile: async (handle, viewerUserId) => {
+          reads++;
+          assert.equal(handle.toLowerCase(), 'player_1');
+          assert.equal(viewerUserId, null, 'previews must always use the anonymous read');
+          return fixture;
+        },
+      }),
+      true,
+    );
+    assert.equal(reads, 1);
+    assert.equal(response.status, 200);
+    assert.ok(response.body.includes(`<title>${title}</title>`));
+    for (const tag of [
+      `<meta property="og:title" content="${title}">`,
+      `<meta name="twitter:title" content="${title}">`,
+      `<meta name="description" content="${description}">`,
+      `<meta property="og:description" content="${description}">`,
+      `<meta name="twitter:description" content="${description}">`,
+      '<meta property="og:url" content="https://mistboard.com/@/Player_1">',
+      '<link rel="canonical" href="https://mistboard.com/@/Player_1">',
+      '<meta name="robots" content="max-image-preview:large" />',
+    ]) {
+      assert.ok(response.body.includes(tag), `missing ${tag}`);
+    }
+    assert.doesNotMatch(
+      response.body,
+      /noindex|PROFILE_\w+_SENTINEL|utm_source|\/og\/(game|study)/,
+    );
+    assert.match(response.body, /<div id="app"><\/div>/);
+  }
+});
+
+test('profile link previews keep unknown, private and failed lookups generic and noindex', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-profile-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  const privateProfile = profilePreviewFixture();
+  privateProfile.user.profileVisibility = 'private';
+  const shells: string[] = [];
+  for (const profile of [
+    async () => null,
+    async () => privateProfile,
+    async () => {
+      throw new Error('lookup unavailable');
+    },
+  ]) {
+    const response = captureResponse();
+    assert.equal(
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: '/@/Player_1',
+        publicHost: 'https://mistboard.com',
+        profile,
+      }),
+      true,
+    );
+    assert.equal(response.status, 200);
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /<meta property="og:title" content="old">/);
+    assert.match(response.body, /<meta property="og:description" content="old">/);
+    assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+    assert.equal((response.body.match(/name="robots"/g) ?? []).length, 1);
+    assert.doesNotMatch(response.body, /Player_1|Lin|1742|PROFILE_\w+_SENTINEL|rel="canonical"/);
+    shells.push(response.body);
+  }
+  assert.equal(new Set(shells).size, 1, 'private accounts must not disclose their existence');
+});
+
+test('profile link previews fail closed on malformed handles without reading profiles', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-profile-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  for (const pathname of ['/@/%ZZ', '/@/%2Fprivate', '/@/bad.name', `/@/${'a'.repeat(41)}`]) {
+    const response = captureResponse();
+    let reads = 0;
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      profile: async () => {
+        reads++;
+        return profilePreviewFixture();
+      },
+    });
+    assert.equal(reads, 0, 'invalid handle must not reach persistence');
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+    assert.doesNotMatch(response.body, /rel="canonical"/);
+  }
+});
+
+test('profile link previews handle unrated and new players without inventing ratings or activity', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-profile-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  for (const rated of [false, true]) {
+    const fixture = profilePreviewFixture();
+    fixture.user.displayName = 'Lin';
+    fixture.ratings = rated
+      ? [{ ...fixture.ratings[0]!, provisional: false, timeClass: 'rapid' }]
+      : [fixture.ratings[1]!];
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: '/@/Player_1',
+      publicHost: 'https://mistboard.com',
+      profile: async () => fixture,
+    });
+    assert.ok(
+      response.body.includes(
+        `content="${rated ? 'Plays Xiangqi (rapid rating 1742) on Mistboard.' : 'Plays Banqi on Mistboard.'}"`,
+      ),
+    );
+    assert.doesNotMatch(response.body, /noindex|1742\?/);
+  }
+  const fixture = profilePreviewFixture();
+  fixture.user.displayName = 'Lin';
+  fixture.ratings = [];
+  const response = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/@/Player_1',
+    publicHost: 'https://mistboard.com',
+    profile: async () => fixture,
+  });
+  assert.match(response.body, /<title>Lin \(@Player_1\) · Mistboard<\/title>/);
+  assert.match(response.body, /og:description" content="View Lin's public profile on Mistboard\."/);
+  assert.doesNotMatch(response.body, /1742|noindex|Plays /);
+});
+
+test('profile link previews ignore account restrictions and all non-preview content', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-profile-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml());
+  const fixture = profilePreviewFixture();
+  const shells: string[] = [];
+  for (const restricted of [false, true]) {
+    const response = captureResponse();
+    const profile = restricted
+      ? {
+          ...fixture,
+          user: {
+            ...fixture.user,
+            bio: 'CHANGED_BIO',
+            playDisabledAt: new Date(),
+            statsExcludedAt: new Date(),
+            email: 'PRIVATE_EMAIL_SENTINEL',
+          },
+          games: [{ roomId: 'PRIVATE_ROOM_SENTINEL', board: 'HIDDEN_PIECE_SENTINEL' }],
+          puzzleRatings: [{ solution: 'PUZZLE_SOLUTION_SENTINEL' }],
+          ratings: [
+            ...fixture.ratings,
+            { ...fixture.ratings[0]!, variant: 'atomic_xiangqi', eloRating: 9999 },
+            {
+              ...fixture.ratings[0]!,
+              variant: 'jungle',
+              eloRating: 1500,
+              ratedGamesPlayed: 0,
+              totalGamesPlayed: 0,
+            },
+          ],
+        }
+      : fixture;
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: '/@/Player_1',
+      publicHost: 'https://mistboard.com',
+      profile: async () => profile as unknown as UserProfile,
+    });
+    assert.match(response.body, /\(@Player_1\) · Mistboard/);
+    assert.doesNotMatch(response.body, /noindex|SENTINEL|CHANGED_BIO/);
+    shells.push(response.body);
+  }
+  assert.equal(shells[0], shells[1], 'non-preview data must not change the serialized shell');
 });

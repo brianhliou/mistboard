@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
-import type { Color } from '@mistboard/game';
+import { type Color, GAME_SPECS } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
 import {
   articleIsScheduledAhead,
@@ -29,6 +29,7 @@ import {
   playerSitemapEntries,
 } from './player-pages.js';
 import { practiceChapterPath } from './practice-chapter-redirect.js';
+import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
 import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
@@ -678,6 +679,56 @@ const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
 
 const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
 
+// Like the public profile API, always read as an anonymous visitor. Account
+// play locks and stats exclusions do not hide profiles; profile visibility
+// does. Never serialize games, puzzle content or account-only fields here.
+async function profileRoutePage(
+  pathname: string,
+  lookupProfile: typeof persistence.getUserProfileByHandle,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  if (!pathname.startsWith('/@/')) return null;
+  const match = /^\/@\/([^/]+)$/.exec(pathname.replace(/\/+$/, ''));
+  if (!match) return { noindex: true };
+  let profile: persistence.UserProfile | null;
+  try {
+    const handle = decodeURIComponent(match[1]!);
+    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(handle)) return { noindex: true };
+    profile = await lookupProfile(handle, null);
+  } catch {
+    return { noindex: true };
+  }
+  if (profile?.user.profileVisibility !== 'public') return { noindex: true };
+  const visibleClasses = visibleRatingTimeClasses();
+  const facts = GAME_SPECS.flatMap((spec) => {
+    if (!spec.rated || spec.publicSurface === 'hidden' || !isPublicRatingPool(spec.ratingPoolBase))
+      return [];
+    const buckets = profile.ratings.filter(
+      (rating) =>
+        rating.variant === spec.ratingPoolBase &&
+        visibleClasses.includes(rating.timeClass) &&
+        (rating.totalGamesPlayed > 0 || rating.ratedGamesPlayed > 0),
+    );
+    if (buckets.length === 0) return [];
+    const ratings = buckets
+      .filter((rating) => rating.eloRating !== null && rating.ratedGamesPlayed > 0)
+      .map(
+        (rating) =>
+          `${rating.timeClass} rating ${rating.eloRating}${rating.provisional ? '?' : ''}`,
+      );
+    return [`${spec.publicName}${ratings.length ? ` (${ratings.join(', ')})` : ''}`];
+  });
+  return {
+    noindex: false,
+    meta: {
+      title: `${profile.user.displayName} (@${profile.user.handle}) · Mistboard`,
+      description: facts.length
+        ? `Plays ${facts.join(', ')} on Mistboard.`
+        : `View ${profile.user.displayName}'s public profile on Mistboard.`,
+      urlPath: `/@/${encodeURIComponent(profile.user.handle)}`,
+    },
+  };
+}
+
 // Resolve through the public API's serving set: withheld/retired puzzles never
 // get meta or a canonical. One read supplies both the preview and the full-id
 // canonical shared by short-code links. No editorial title, motifs, board,
@@ -805,6 +856,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** Override the public puzzle lookup (tests); the default is the one
    *  /api/puzzles/:id uses, excluding unpublished/withheld puzzles. */
   puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
+  /** Override the profile API's anonymous, visibility-gated read (tests). */
+  profile?: typeof persistence.getUserProfileByHandle;
   /** Override the shelf deep-link lookup (tests); the default reads persistence. */
   practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
@@ -845,18 +898,27 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
   const gameMeta = player?.meta ? null : await lookupGameMeta(params.pathname).catch(() => null);
   const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById);
+  const profile = await profileRoutePage(
+    params.pathname,
+    params.profile ?? persistence.getUserProfileByHandle,
+  );
   const positionMeta =
     player?.meta ??
     gameMeta ??
     puzzle?.meta ??
+    profile?.meta ??
     positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
   const noindex =
-    isNoindexRoute(params.pathname) || player?.noindex === true || puzzle?.noindex === true;
-  const canonicalPath = puzzle?.meta?.urlPath ?? queryFreeCanonicalPath(params.pathname);
+    isNoindexRoute(params.pathname) ||
+    player?.noindex === true ||
+    puzzle?.noindex === true ||
+    profile?.noindex === true;
+  const canonicalPath =
+    puzzle?.meta?.urlPath ?? profile?.meta?.urlPath ?? queryFreeCanonicalPath(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static
