@@ -4,11 +4,12 @@ import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
+import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import type { RecentEveGameRecord, StudyWithChapters } from './persistence.js';
+import { recordPuzzleReport, resetPuzzleStoreForTests } from './puzzle-store.js';
 import { isClientRoute } from './server-policy.js';
 import {
   injectPageMeta,
@@ -1469,7 +1470,7 @@ test('/games names itself as canonical without its query and carries a heading',
   );
 });
 
-test('a puzzle deep link names itself as canonical, with no query string', async () => {
+test('an unknown puzzle deep link keeps the generic shell with noindex', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
   for (const pathname of ['/puzzles/pz_abc123', '/puzzles/pz_abc123/']) {
@@ -1484,12 +1485,11 @@ test('a puzzle deep link names itself as canonical, with no query string', async
       broadcastPage: async () => null,
     });
     const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
-    assert.deepEqual(
-      canonicals,
-      ['<link rel="canonical" href="https://mistboard.com/puzzles/pz_abc123">'],
-      pathname,
-    );
-    assert.doesNotMatch(response.body, /noindex/, pathname);
+    assert.deepEqual(canonicals, [], pathname);
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /<meta property="og:title" content="old">/);
+    assert.match(response.body, /<meta property="og:description" content="old">/);
+    assert.match(response.body, /<meta name="robots" content="noindex, follow">/, pathname);
   }
 });
 
@@ -1522,7 +1522,7 @@ test('a puzzle linked by id or by short code names the full-id URL as canonical'
   }
 });
 
-test('a puzzle lookup that throws keeps the query-free self canonical', async () => {
+test('a puzzle lookup that throws keeps the generic shell with noindex', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
   const response = captureResponse();
@@ -1534,15 +1534,210 @@ test('a puzzle lookup that throws keeps the query-free self canonical', async ()
     publicHost: 'https://mistboard.com',
     playerPage: async () => null,
     broadcastPage: async () => null,
-    puzzleId: async () => {
+    puzzle: async () => {
       throw new Error('store down');
     },
   });
   assert.equal(response.status, 200);
   const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
-  assert.deepEqual(canonicals, [
-    '<link rel="canonical" href="https://mistboard.com/puzzles/bMpKA">',
-  ]);
+  assert.deepEqual(canonicals, []);
+  assert.match(response.body, /<title>Mistboard<\/title>/);
+  assert.match(response.body, /<meta property="og:title" content="old">/);
+  assert.match(response.body, /<meta property="og:description" content="old">/);
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+});
+
+test('public puzzle previews name the variant, side and goal without solution hints', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const xiangqi = (loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[])[0]!;
+  const jungle = (loadSeedPuzzleRegistry('jungle') as readonly JunglePuzzle[])[0]!;
+  const cases = [
+    {
+      puzzle: { ...xiangqi, goal: { type: 'checkmate' } },
+      variant: 'Xiangqi',
+      goal: 'mates in 2',
+      prompt: 'Find mate in 2',
+    },
+    {
+      puzzle: { ...xiangqi, goal: { type: 'winning-advantage' } },
+      variant: 'Xiangqi',
+      goal: 'to move for a winning advantage',
+      prompt: 'Find a winning advantage',
+    },
+    {
+      puzzle: { ...jungle, goal: { type: 'win' } },
+      variant: 'Jungle',
+      goal: 'wins in 2',
+      prompt: 'Find a win in 2',
+    },
+    {
+      puzzle: { ...jungle, goal: { type: 'winning-advantage' } },
+      variant: 'Jungle',
+      goal: 'to move for a winning advantage',
+      prompt: 'Find a winning advantage',
+    },
+  ] as const;
+  for (const [entry, turn] of cases.flatMap((entry) =>
+    (['red', 'black'] as const).map((turn) => [entry, turn] as const),
+  )) {
+    const side = turn === 'red' ? 'Red' : 'Black';
+    const puzzle = {
+      ...entry.puzzle,
+      title: 'SOLUTION_HINT: move the cannon to e9',
+      initial: { ...entry.puzzle.initial, status: { type: 'playing', turn } },
+      solution: [
+        { from: 'a1', to: 'a2' },
+        { from: 'a9', to: 'a8' },
+        { from: 'a2', to: 'a3' },
+      ],
+    } as XiangqiPuzzle | JunglePuzzle;
+    const title = `${entry.variant} puzzle: ${side} ${entry.goal} | Mistboard`;
+    const description = `${side} to move. ${entry.prompt} in this ${entry.variant} puzzle on Mistboard. Play your moves on the board and check your solution.`;
+    let expectedBody: string | undefined;
+    for (const pathname of [`/puzzles/${puzzle.id}`, `/puzzles/${puzzleShortCode(puzzle.id)}/`]) {
+      const response = captureResponse();
+      let reads = 0;
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname,
+        search: '?utm_source=x',
+        publicHost: 'https://mistboard.com',
+        puzzle: async (id) => {
+          assert.ok(id === puzzle.id || id === puzzleShortCode(puzzle.id));
+          reads++;
+          return puzzle;
+        },
+      });
+      assert.ok(response.body.includes(`<title>${title}</title>`));
+      assert.equal(reads, 1, 'one public lookup supplies both meta and canonical');
+      for (const tag of ['<meta property="og:title"', '<meta name="twitter:title"']) {
+        assert.ok(response.body.includes(`${tag} content="${title}">`));
+      }
+      for (const tag of [
+        '<meta name="description"',
+        '<meta property="og:description"',
+        '<meta name="twitter:description"',
+      ]) {
+        assert.ok(response.body.includes(`${tag} content="${description}">`));
+      }
+      assert.match(response.body, /<meta name="robots" content="max-image-preview:large"/);
+      assert.doesNotMatch(response.body, /noindex|SOLUTION_HINT|cannon|a1|a2|a3|a9|a8|utm_source/);
+      assert.ok(
+        response.body.includes(
+          `<meta property="og:url" content="https://mistboard.com/puzzles/${puzzle.id}">`,
+        ),
+      );
+      assert.ok(
+        response.body.includes(
+          `<link rel="canonical" href="https://mistboard.com/puzzles/${puzzle.id}">`,
+        ),
+      );
+      assert.match(response.body, /<meta property="og:image" content="old">/);
+      if (expectedBody) assert.equal(response.body, expectedBody);
+      expectedBody = response.body;
+    }
+    // Neither solution moves, editorial hints nor source/board data may influence
+    // ANY byte of the shell. Only the public goal's move count is used.
+    const altered = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response: altered,
+      staticDir,
+      pathname: `/puzzles/${puzzle.id}`,
+      publicHost: 'https://mistboard.com',
+      puzzle: async () =>
+        ({
+          ...puzzle,
+          title: 'OTHER_HINT',
+          themes: [],
+          sourceGame: { gameId: 'PRIVATE_SOURCE', ply: 99 },
+          initial: { ...puzzle.initial, board: {} },
+          solution: puzzle.solution.map(() => ({ from: 'i1', to: 'i2' })),
+        }) as XiangqiPuzzle | JunglePuzzle,
+    });
+    assert.equal(altered.body, expectedBody);
+  }
+});
+
+test('withheld puzzle previews are generic and noindex by full id and short code', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  resetPuzzleStoreForTests();
+  const puzzle = (loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[])[0]!;
+  try {
+    for (const userId of ['reporter1', 'reporter2', 'reporter3']) {
+      await recordPuzzleReport({
+        puzzleId: puzzle.id,
+        userId,
+        deviceId: null,
+        reason: 'wrong-solution',
+        evidence: {
+          initial: puzzle.initial,
+          position: puzzle.initial,
+          moves: [],
+          movePlayed: null,
+          solution: puzzle.solution,
+        },
+      });
+    }
+    for (const id of [puzzle.id, puzzleShortCode(puzzle.id)]) {
+      const response = captureResponse();
+      await serveSpaShellWithRoutePreloads({
+        response,
+        staticDir,
+        pathname: `/puzzles/${id}`,
+        publicHost: 'https://mistboard.com',
+      });
+      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+      assert.match(response.body, /<title>Mistboard<\/title>/);
+      assert.match(response.body, /<meta property="og:title" content="old">/);
+      assert.match(response.body, /<meta property="og:description" content="old">/);
+      assert.doesNotMatch(response.body, /rel="canonical"/);
+      assert.ok(!response.body.includes(puzzle.title));
+    }
+  } finally {
+    resetPuzzleStoreForTests();
+  }
+});
+
+test('unpublished puzzle variants cannot expose hidden information in a preview', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const fixture = (loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[])[0]!;
+  for (const variant of ['jieqi', 'fog-xiangqi', 'three-kingdoms-banqi', 'unknown']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: '/puzzles/hidden',
+      publicHost: 'https://mistboard.com',
+      puzzle: async () =>
+        ({ ...fixture, variant, title: 'HIDDEN_TITLE' }) as unknown as XiangqiPuzzle,
+    });
+    assert.equal(
+      response.body,
+      indexHtml().replace(
+        '<meta name="robots" content="max-image-preview:large" />',
+        '<meta name="robots" content="noindex, follow">',
+      ),
+    );
+  }
+});
+
+test('malformed puzzle ids keep the generic shell with noindex', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/puzzles/%ZZ',
+    publicHost: 'https://mistboard.com',
+  });
+  assert.match(response.body, /<title>Mistboard<\/title>/);
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+  assert.doesNotMatch(response.body, /rel="canonical"/);
 });
 
 // --- tenant game pages (/<tenant>/game/:id, /room/:id) ------------------------

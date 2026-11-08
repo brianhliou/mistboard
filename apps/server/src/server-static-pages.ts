@@ -29,7 +29,7 @@ import {
   playerSitemapEntries,
 } from './player-pages.js';
 import { practiceChapterPath } from './practice-chapter-redirect.js';
-import { puzzleById } from './routes/puzzles.js';
+import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
 import { studyHasAdminOnlyChapter } from './study-admin-only.js';
@@ -435,7 +435,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
 // the other variants have one English URL each).
 const POSITION_ROUTE = /^(?:\/(zh-hans|zh-hant))?\/(analysis|editor)(?:\/([a-z0-9-]+))?$/;
 
-type PositionRouteMeta = {
+type RoutePageMeta = {
   title: string;
   description: string;
   /** Path + query of the canonical link (no host). */
@@ -463,7 +463,7 @@ function positionPageCopy(
       };
 }
 
-export function positionRouteMeta(pathname: string, search: string): PositionRouteMeta | null {
+export function positionRouteMeta(pathname: string, search: string): RoutePageMeta | null {
   const match = POSITION_ROUTE.exec(pathname);
   if (!match) return null;
   const localePrefix: '' | '/zh-hans' | '/zh-hant' =
@@ -676,44 +676,73 @@ const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
 
-// A puzzle deep link (/puzzles/:idOrShortCode) is its own page, and served
-// with no canonical until 2026-10-17, so each ?utm= or share-tracking copy
-// read to a crawler as another URL for it.
-const QUERY_FREE_CANONICAL_PATTERNS: readonly RegExp[] = [/^\/puzzles\/[^/]+$/];
-
 const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
 
-// /puzzles/:idOrShortCode reaches one puzzle by its full id or by its short
-// code (Puzzle #bMpKA), so the query-free path alone left two self canonicals
-// per puzzle. Both name the full-id URL: the form the client pushes and the
-// short-code link in the info card points at (puzzles.ts, queue-panel.ts).
-// An unknown puzzle, or a lookup that throws, keeps the query-free path.
-async function puzzleCanonicalPath(
-  canonicalPath: string | null,
-  lookupPuzzleId: (idOrShortCode: string) => Promise<string | null>,
-): Promise<string | null> {
-  const match = canonicalPath ? PUZZLE_DEEP_LINK.exec(canonicalPath) : null;
-  if (!match) return canonicalPath;
-  let idOrShortCode: string;
+// Resolve through the public API's serving set: withheld/retired puzzles never
+// get meta or a canonical. One read supplies both the preview and the full-id
+// canonical shared by short-code links. No editorial title, motifs, board,
+// source game or solution moves enter the shell; those can give away an answer.
+async function puzzleRoutePage(
+  pathname: string,
+  lookupPuzzle: (idOrShortCode: string) => Promise<PublicPuzzle | null>,
+): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  const match = PUZZLE_DEEP_LINK.exec(pathname.replace(/\/+$/, ''));
+  if (!match) return null;
+  let puzzle: PublicPuzzle | null;
   try {
-    idOrShortCode = decodeURIComponent(match[1]!);
+    puzzle = await lookupPuzzle(decodeURIComponent(match[1]!));
   } catch {
-    return canonicalPath;
+    return { noindex: true };
   }
-  const id = await lookupPuzzleId(idOrShortCode).catch(() => null);
-  return id ? `/puzzles/${encodeURIComponent(id)}` : canonicalPath;
-}
-
-async function livePuzzleId(idOrShortCode: string): Promise<string | null> {
-  return (await puzzleById(idOrShortCode))?.id ?? null;
+  if (!puzzle) return { noindex: true };
+  // Explicit allowlist: a future hidden-information variant must not silently
+  // acquire public previews merely by joining the puzzle store.
+  let variant: string;
+  switch (puzzle.variant) {
+    case 'xiangqi':
+      variant = 'Xiangqi';
+      break;
+    case 'jungle':
+      variant = 'Jungle';
+      break;
+    default:
+      return { noindex: true };
+  }
+  if (puzzle.initial.status.type !== 'playing') return { noindex: true };
+  const side = puzzle.initial.status.turn === 'red' ? 'Red' : 'Black';
+  // The solver already shows this count in its goal, before any moves are made.
+  const moves = Math.ceil(puzzle.solution.length / 2);
+  let goal: string;
+  let prompt: string;
+  switch (puzzle.goal.type) {
+    case 'checkmate':
+      goal = `${side} mates in ${moves}`;
+      prompt = `Find mate in ${moves}`;
+      break;
+    case 'win':
+      goal = `${side} wins in ${moves}`;
+      prompt = `Find a win in ${moves}`;
+      break;
+    case 'winning-advantage':
+      goal = `${side} to move for a winning advantage`;
+      prompt = 'Find a winning advantage';
+      break;
+    default:
+      return { noindex: true };
+  }
+  return {
+    noindex: false,
+    meta: {
+      title: `${variant} puzzle: ${goal} | Mistboard`,
+      description: `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`,
+      urlPath: `/puzzles/${encodeURIComponent(puzzle.id)}`,
+    },
+  };
 }
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ||
-    QUERY_FREE_CANONICAL_PATTERNS.some((pattern) => pattern.test(normalized))
-    ? normalized
-    : null;
+  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
 }
 
 /** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant',
@@ -773,9 +802,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
   playerPage?: (pathname: string) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
   broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
-  /** Override the puzzle id-or-short-code lookup (tests); the default is the
-   *  one /api/puzzles/:id uses. */
-  puzzleId?: (idOrShortCode: string) => Promise<string | null>;
+  /** Override the public puzzle lookup (tests); the default is the one
+   *  /api/puzzles/:id uses, excluding unpublished/withheld puzzles. */
+  puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
   /** Override the shelf deep-link lookup (tests); the default reads persistence. */
   practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
@@ -815,17 +844,19 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // meta exactly as before.
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
   const gameMeta = player?.meta ? null : await lookupGameMeta(params.pathname).catch(() => null);
+  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById);
   const positionMeta =
-    player?.meta ?? gameMeta ?? positionRouteMeta(params.pathname, params.search ?? '');
+    player?.meta ??
+    gameMeta ??
+    puzzle?.meta ??
+    positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
-  const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
-  const canonicalPath = await puzzleCanonicalPath(
-    queryFreeCanonicalPath(params.pathname),
-    params.puzzleId ?? livePuzzleId,
-  );
+  const noindex =
+    isNoindexRoute(params.pathname) || player?.noindex === true || puzzle?.noindex === true;
+  const canonicalPath = puzzle?.meta?.urlPath ?? queryFreeCanonicalPath(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static
