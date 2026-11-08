@@ -71,8 +71,13 @@ test('floors are nontrivial and phrases match page copy in the URL locale', asyn
     catalogs[locale] = values;
   }
   for (const entry of CRAWLER_CONTENT_MANIFEST) {
-    assert.ok(entry.minChars >= 150, entry.path);
-    assert.equal(entry.minChars, Math.max(150, Math.floor(entry.baselineChars * 0.6)), entry.path);
+    const minimum = 150;
+    assert.ok(entry.minChars >= minimum, entry.path);
+    assert.equal(
+      entry.minChars,
+      Math.max(minimum, Math.floor(entry.baselineChars * 0.6)),
+      entry.path,
+    );
     if (entry.phraseKey.startsWith('apps/')) {
       // Several page-local copy tables and seeded record titles are not in
       // the shared catalogs. Keep a source/body-key pointer, not a nav fallback.
@@ -88,7 +93,7 @@ test('floors are nontrivial and phrases match page copy in the URL locale', asyn
       assert.equal(entry.locale, entry.path.split('/')[1], entry.path);
       assert.match(entry.phrase, /\p{Script=Han}/u, entry.path);
     }
-    if (entry.knownGap) assert.match(entry.knownGap, /^#\d+$/);
+    if (entry.knownGap) assert.match(entry.knownGap, /^#\d+(?:: .+)?$/);
   }
 });
 

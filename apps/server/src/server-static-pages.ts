@@ -1338,21 +1338,7 @@ const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set(['feed.html']);
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
-  file:
-    | 'home.html'
-    | 'zh-hans-home.html'
-    | 'zh-hant-home.html'
-    | 'leaderboard.html'
-    | 'player.html'
-    | 'learn-xiangqi.html'
-    | 'feed.html'
-    | `feed-${string}.html`
-    | 'changelog.html'
-    | `changelog-${string}.html`
-    | 'puzzles.html'
-    | 'patron.html'
-    | 'washington-xiangqi.html'
-    | `zh-han${'s' | 't'}/washington-xiangqi.html`;
+  file: string;
 }): Promise<void> {
   if (
     (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&

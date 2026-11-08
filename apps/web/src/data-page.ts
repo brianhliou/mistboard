@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // /data: monthly downloads of every finished game played on Mistboard
 // (lichess's database.lichess.org). The listing comes from
 // GET /api/data; each file is built on the server the first time anyone
@@ -683,4 +685,8 @@ export function mountDataAbout(root: HTMLElement): void {
   );
   shell.append(header, body);
   root.append(shell);
+}
+
+export function renderDataAboutShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountDataAbout);
 }

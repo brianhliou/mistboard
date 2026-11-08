@@ -1,0 +1,413 @@
+[
+  {
+    "route": "/about",
+    "module": "src/pages-static.ts",
+    "export": "renderAboutShellForPrerender",
+    "file": "about.html",
+    "locales": ["en"],
+    "titleKey": "about.heading",
+    "descriptionKey": "about.lede",
+    "metaByLocale": {
+      "en": {
+        "title": "About Mistboard | Chinese Chess for Every Player",
+        "description": "Bringing people together across cultures through Chinese chess and the world's classic strategy games. Free, open-source play, study and broadcasts."
+      }
+    }
+  },
+  {
+    "route": "/source",
+    "module": "src/pages-static.ts",
+    "export": "renderSourceShellForPrerender",
+    "file": "source.html",
+    "locales": ["en"],
+    "titleKey": "source.heading",
+    "descriptionKey": "source.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "Open Source Code | Mistboard",
+        "description": "Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license."
+      }
+    }
+  },
+  {
+    "route": "/faq",
+    "module": "src/pages-static.ts",
+    "export": "renderFaqShellForPrerender",
+    "file": "faq.html",
+    "locales": ["en"],
+    "titleKey": "faq.heading",
+    "descriptionKey": "faq.playWebQuestion",
+    "metaByLocale": {
+      "en": {
+        "title": "Frequently Asked Questions | Mistboard",
+        "description": "Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from."
+      }
+    }
+  },
+  {
+    "route": "/terms",
+    "module": "src/pages-static.ts",
+    "export": "renderTermsShellForPrerender",
+    "file": "terms.html",
+    "locales": ["en"],
+    "titleKey": "terms.heading",
+    "descriptionKey": "terms.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "Terms of Use: Play, Ratings and Fair Play | Mistboard",
+        "description": "The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds."
+      }
+    }
+  },
+  {
+    "route": "/privacy",
+    "module": "src/pages-static.ts",
+    "export": "renderPrivacyShellForPrerender",
+    "file": "privacy.html",
+    "locales": ["en"],
+    "titleKey": "privacy.heading",
+    "descriptionKey": "privacy.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "Privacy: What Mistboard Collects | Mistboard",
+        "description": "What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold."
+      }
+    }
+  },
+  {
+    "route": "/contact",
+    "module": "src/pages-static.ts",
+    "export": "renderContactShellForPrerender",
+    "file": "contact.html",
+    "locales": ["en"],
+    "titleKey": "contact.heading",
+    "descriptionKey": "contact.introAnon",
+    "metaByLocale": {
+      "en": {
+        "title": "Contact: Bugs, Accounts and Billing | Mistboard",
+        "description": "A private line to the person who runs Mistboard: report a bug or a broken game, or raise an account or billing problem. Add an email if you want a reply."
+      }
+    }
+  },
+  {
+    "route": "/contribute",
+    "module": "src/contribute-page.ts",
+    "export": "renderContributeShellForPrerender",
+    "file": "contribute.html",
+    "locales": ["en"],
+    "titleKey": "contribute.heading",
+    "descriptionKey": "contribute.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "How to Contribute | Mistboard",
+        "description": "Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts."
+      }
+    }
+  },
+  {
+    "route": "/creators",
+    "module": "src/creators-page.ts",
+    "export": "renderCreatorsShellForPrerender",
+    "file": "creators.html",
+    "locales": ["en"],
+    "titleKey": "creators.heading",
+    "descriptionKey": "creators.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "Work With Us: Creators and Players | Mistboard",
+        "description": "Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch."
+      }
+    }
+  },
+  {
+    "route": "/champions",
+    "module": "src/champions-page.ts",
+    "export": "renderChampionsShellForPrerender",
+    "file": "champions.html",
+    "locales": ["en", "zh-Hans", "zh-Hant"],
+    "titleKey": "champions.heading",
+    "descriptionKey": "champions.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "Engine Champions | Mistboard",
+        "description": "The reigning champion engine for jieqi, banqi, Jungle Chess and Flip Jungle: the strongest bot on Mistboard, the title history, and how any engine can challenge for the title in a public match."
+      },
+      "zh-Hans": {
+        "title": "引擎冠军与挑战赛 | Mistboard",
+        "description": "揭棋、暗棋、斗兽棋和翻翻兽棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。"
+      },
+      "zh-Hant": {
+        "title": "引擎冠軍與挑戰賽 | Mistboard",
+        "description": "揭棋、暗棋、鬥獸棋和翻翻獸棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。"
+      }
+    }
+  },
+  {
+    "route": "/videos",
+    "module": "src/videos.ts",
+    "export": "renderVideosShellForPrerender",
+    "file": "videos.html",
+    "locales": ["en", "zh-Hans", "zh-Hant"],
+    "titleKey": "videos.heading",
+    "descriptionKey": "videos.intro",
+    "metaByLocale": {
+      "en": {
+        "title": "Xiangqi Video Library | Mistboard",
+        "description": "Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames and commented games. Search by title or author, or by topic."
+      },
+      "zh-Hans": {
+        "title": "象棋视频库：规则、开局与残局 | Mistboard",
+        "description": "精心挑选的中文与英文象棋（中国象棋）视频，内容涵盖规则、开局、战术、残局和讲解对局。可以按标题或作者搜索，也可以按主题筛选。"
+      },
+      "zh-Hant": {
+        "title": "象棋影片庫：規則、開局與殘局 | Mistboard",
+        "description": "精心挑選的中文與英文象棋（中國象棋）影片，內容涵蓋規則、開局、戰術、殘局和講解對局。可以按標題或作者搜尋，也可以按主題篩選。"
+      }
+    }
+  },
+  {
+    "route": "/data/about",
+    "module": "src/data-page.ts",
+    "export": "renderDataAboutShellForPrerender",
+    "file": "data-about.html",
+    "locales": ["en"],
+    "titleKey": "data.aboutHeading",
+    "descriptionKey": "data.aboutSubtitle",
+    "metaByLocale": {
+      "en": {
+        "title": "About the Game Data | Mistboard",
+        "description": "What the Mistboard monthly game files hold: the JSONL and PGN formats field by field, the CC BY 4.0 license, which games are included, and how fog and face-down pieces appear."
+      }
+    }
+  },
+  {
+    "route": "/forum/etiquette",
+    "module": "src/forum.ts",
+    "export": "renderForumEtiquetteShellForPrerender",
+    "file": "forum-etiquette.html",
+    "locales": ["en"],
+    "titleKey": "forum.etiquette",
+    "descriptionKey": "forum.etiquetteLede",
+    "metaByLocale": {
+      "en": {
+        "title": "Forum etiquette · Mistboard",
+        "description": "A clear title, the right category, readable boards, no spam and respect for other players: guidelines for posting on the Mistboard forum."
+      }
+    }
+  },
+  {
+    "route": "/developers",
+    "module": "src/developers-page.ts",
+    "export": "renderDevelopersShellForPrerender",
+    "file": "developers.html",
+    "locales": ["en"],
+    "titleKey": "developers.heading",
+    "description": "Embed a study chapter, a game, Mistboard TV, the daily puzzle or an analysis board on your own page.",
+    "metaByLocale": {
+      "en": {
+        "title": "Developers: Embeds and API | Mistboard",
+        "description": "Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider."
+      }
+    }
+  },
+  {
+    "route": "/api-docs",
+    "module": "src/api-docs-page.ts",
+    "export": "renderApiDocsShellForPrerender",
+    "file": "api-docs.html",
+    "locales": ["en"],
+    "titleKey": "apiDocs.heading",
+    "description": "The public Mistboard HTTP API: endpoints, parameters and responses from the OpenAPI document.",
+    "openapi": true,
+    "metaByLocale": {
+      "en": {
+        "title": "Public Read API Reference | Mistboard",
+        "description": "The public read API behind mistboard.com: games, watch feeds, puzzles, studies, ratings, the xiangqi opening explorer and the forum, as an OpenAPI 3.1 document."
+      }
+    }
+  },
+  {
+    "route": "/import",
+    "module": "src/xiangqi-import-page.ts",
+    "export": "renderImportShellForPrerender",
+    "file": "import.html",
+    "locales": ["en"],
+    "titleKey": "review.import.heading",
+    "descriptionKey": "review.import.lede",
+    "kind": "tool",
+    "metaByLocale": {
+      "en": {
+        "title": "Import a Xiangqi Game | Mistboard",
+        "description": "Paste a xiangqi (Chinese chess) game and get a browsable board with free engine analysis. Reads PGN, WXF, Chinese notation, ICCS coordinates, and dpxq records."
+      }
+    }
+  },
+  {
+    "route": "/games/search",
+    "module": "src/historical-xiangqi-search.ts",
+    "export": "renderGamesSearchShellForPrerender",
+    "file": "games-search.html",
+    "locales": ["en"],
+    "titleKey": "historical.heading",
+    "descriptionKey": "historical.heading",
+    "kind": "tool",
+    "metaByLocale": {
+      "en": {
+        "title": "Xiangqi Game Database | Mistboard",
+        "description": "Search and browse xiangqi (Chinese chess) and variant games: tournament archives, live broadcasts, engine matches, and games played on Mistboard. Filter by variant, player, event, result, date, or length."
+      }
+    }
+  },
+  {
+    "route": "/practice",
+    "module": "src/practice-index.ts",
+    "export": "renderPracticeShellForPrerender",
+    "file": "practice.html",
+    "locales": ["en", "zh-Hans", "zh-Hant"],
+    "titleKey": "practice.title",
+    "descriptionKey": "practice.subtitle",
+    "kind": "tool",
+    "metaByLocale": {
+      "en": {
+        "title": "Xiangqi Practice | Mistboard",
+        "description": "Practise xiangqi (Chinese chess) endgames against the engine: each position sets a goal, the engine defends, and it tells you when the win has slipped."
+      },
+      "zh-Hans": {
+        "title": "象棋残局练习：与电脑对练 | Mistboard",
+        "description": "和电脑练习象棋残局：每个局面都设定一个目标，比如将死对方或守和若干回合，电脑负责防守，一旦你把胜势丢掉，它会马上提示你。"
+      },
+      "zh-Hant": {
+        "title": "象棋殘局練習：與電腦對練 | Mistboard",
+        "description": "和電腦練習象棋殘局：每個局面都設定一個目標，比如將死對方或守和若干回合，電腦負責防守，一旦你把勝勢丟掉，它會馬上提示你。"
+      }
+    }
+  },
+  {
+    "route": "/analysis/:variant",
+    "module": "src/analysis-page.ts",
+    "export": "renderAnalysisShellForPrerender",
+    "file": "analysis-:variant.html",
+    "locales": ["en", "zh-Hans", "zh-Hant"],
+    "titleKey": "analysis.pageTitle",
+    "descriptionKey": "analysis.pageTitle",
+    "kind": "tool",
+    "variants": "analysis",
+    "metaByLocale": {
+      "en": {
+        "title": "Xiangqi Analysis Board | Mistboard",
+        "description": "Analyse xiangqi (Chinese chess) positions with a free engine. Import moves or a FEN, branch variations, review any game. Mistboard variants supported too."
+      },
+      "zh-Hans": {
+        "title": "象棋AI分析 · 皮卡鱼引擎免费分析棋盘 | Mistboard",
+        "description": "免费的象棋AI分析棋盘：在浏览器里用皮卡鱼引擎分析任意局面。可以粘贴棋谱或 FEN 导入，摆出变着分支，复盘任何一盘对局。无需下载，也无需注册账号。"
+      },
+      "zh-Hant": {
+        "title": "象棋AI分析 · 皮卡魚引擎免費分析棋盤 | Mistboard",
+        "description": "免費的象棋AI分析棋盤：在瀏覽器裡用皮卡魚引擎分析任意局面。可以貼上棋譜或 FEN 匯入，擺出變著分支，復盤任何一盤對局。無需下載，也無需註冊帳號。"
+      }
+    }
+  },
+  {
+    "route": "/editor/:variant",
+    "module": "src/editor/editor-page.ts",
+    "export": "renderEditorShellForPrerender",
+    "file": "editor-:variant.html",
+    "locales": ["en", "zh-Hans", "zh-Hant"],
+    "titleKey": "editor.pageTitle",
+    "descriptionKey": "editor.pageTitle",
+    "kind": "tool",
+    "variants": "editor",
+    "metaByLocale": {
+      "en": {
+        "title": "Xiangqi Board Editor | Mistboard",
+        "description": "Set up any xiangqi (Chinese chess) position by hand, get its FEN, and send it to the free analysis board. Mistboard variants supported too."
+      },
+      "zh-Hans": {
+        "title": "象棋摆残局 · 免费棋盘编辑器 | Mistboard",
+        "description": "在棋盘编辑器里摆出任意象棋局面或残局：逐个放置棋子，设定走棋方，实时得到局面的 FEN，再一键送到分析棋盘让引擎分析，或者从这个局面开始和电脑对练。免费，无需注册。"
+      },
+      "zh-Hant": {
+        "title": "象棋擺殘局 · 免費棋盤編輯器 | Mistboard",
+        "description": "在棋盤編輯器裡擺出任意象棋局面或殘局：逐個放置棋子，設定走棋方，即時得到局面的 FEN，再一鍵送到分析棋盤讓引擎分析，或者從這個局面開始和電腦對練。免費，無需註冊。"
+      }
+    }
+  },
+  {
+    "route": "/player",
+    "module": "src/profile.ts",
+    "export": "renderLeaderboardShellForPrerender",
+    "file": "player.html",
+    "locales": ["en"],
+    "classes": "landing-page",
+    "title": "Xiangqi Leaderboard | Mistboard",
+    "description": "The highest rated players on Mistboard, by game and time control. Rated games are played between signed-in accounts in xiangqi, jieqi, banqi, Jungle and more.",
+    "existing": true,
+    "aliasFiles": ["leaderboard.html"]
+  },
+  {
+    "route": "/feed",
+    "module": "src/news-page.ts",
+    "export": "renderNewsShellForPrerender",
+    "file": "feed.html",
+    "locales": ["en"],
+    "classes": "landing-page news-route",
+    "title": "Updates and Announcements | Mistboard",
+    "description": "Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.",
+    "existing": true
+  },
+  {
+    "route": "/changelog",
+    "module": "src/changelog-page.ts",
+    "export": "renderChangelogShellForPrerender",
+    "file": "changelog.html",
+    "locales": ["en"],
+    "classes": "landing-page changelog-route",
+    "title": "Changelog: Every Change, Month by Month | Mistboard",
+    "description": "Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.",
+    "existing": true
+  },
+  {
+    "route": "/learn/xiangqi",
+    "module": "src/learn-xiangqi/learn-xiangqi-page.ts",
+    "export": "renderLearnXiangqiShellForPrerender",
+    "file": "learn-xiangqi.html",
+    "locales": ["en"],
+    "classes": "",
+    "title": "Learn Chinese Chess (Xiangqi) | Mistboard",
+    "description": "A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.",
+    "existing": true
+  },
+  {
+    "route": "/puzzles",
+    "module": "src/puzzles.ts",
+    "export": "renderPuzzlesShellForPrerender",
+    "file": "puzzles.html",
+    "locales": ["en"],
+    "classes": "",
+    "title": "Xiangqi Puzzles | Mistboard",
+    "description": "Free xiangqi (Chinese chess) puzzles drawn from real games, with puzzles for Mistboard variants alongside.",
+    "existing": true
+  },
+  {
+    "route": "/patron",
+    "module": "src/patron-page.ts",
+    "export": "renderPatronShellForPrerender",
+    "file": "patron.html",
+    "locales": ["en"],
+    "classes": "landing-page patron-route",
+    "title": "Become a Patron | Mistboard",
+    "description": "Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.",
+    "existing": true,
+    "assets": ["src/pages-static.ts"]
+  },
+  {
+    "route": "/washington-xiangqi",
+    "module": "src/club-washington-page.ts",
+    "export": "renderClubWashingtonShellForPrerender",
+    "file": "washington-xiangqi.html",
+    "locales": ["en", "zh-Hans", "zh-Hant"],
+    "classes": "landing-page club-route",
+    "existing": true,
+    "headExport": "clubWashingtonPrerenderHead"
+  }
+]

@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // /import — paste a xiangqi game and land on the analysis board with it.
 //
 // The analysis board has carried an import box for a long time, but only as an
@@ -140,4 +142,8 @@ function code(text: string): HTMLElement {
   const el = document.createElement('code');
   el.textContent = text;
   return el;
+}
+
+export function renderImportShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountXiangqiImport);
 }

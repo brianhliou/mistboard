@@ -360,6 +360,16 @@ test('Washington Xiangqi serves each locale prerender and localized fallback met
       `<h1>club ${prefix || 'en'}</h1>`,
     );
   }
+  await writeFile(
+    join(staticDir, 'prerender-routes.json'),
+    JSON.stringify({
+      version: 1,
+      routes: routes.map((prefix) => ({
+        route: `${prefix}/washington-xiangqi`,
+        file: `${prefix ? `${prefix.slice(1)}/` : ''}washington-xiangqi.html`,
+      })),
+    }),
+  );
   const handler = createHttpRequestHandler({
     staticDir,
     publicHost: 'https://mistboard.com',

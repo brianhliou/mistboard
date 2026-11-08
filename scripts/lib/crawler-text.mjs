@@ -38,6 +38,8 @@ export function crawlerFacts(html, { contentOnly = false } = {}) {
   const document = crawlerDocument(html);
   const facts = {
     h1: document.querySelector('h1')?.textContent?.trim() ?? '',
+    description:
+      document.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() ?? '',
     canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? '',
     alternates: [...document.querySelectorAll('link[rel="alternate"][hreflang]')].map((link) => ({
       lang: link.getAttribute('hreflang'),

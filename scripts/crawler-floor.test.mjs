@@ -175,3 +175,23 @@ test('the same planted contracts reject bad bodies and pass the positive control
     assert.equal(result.failures.length === 0, path.includes('/positive'), JSON.stringify(result));
   }
 });
+
+test('tool floors enforce a heading and nonempty description independently of body length', () => {
+  const tool = { ...entry, kind: 'tool', minChars: 150, h1: false, hreflang: [] };
+  const content = `<p>${prose}</p>`;
+  const head = '<link rel="canonical" href="https://mistboard.test/tool">';
+  const description = '<meta name="description" content="Study Chinese chess positions">';
+  const html = (metadata, body) =>
+    `<html><head>${head}${metadata}</head><body>${body}</body></html>`;
+  const audit = (source) => pageFailures(tool, { status: 200, html: source }).failures;
+  assert.deepEqual(audit(html(description, `<h1>Chinese chess</h1>${content}`)), []);
+  // Planted failures: ample text cannot compensate for either missing field.
+  assert.deepEqual(audit(html('', `<h1>Chinese chess</h1>${content}`)), [
+    'missing meta description',
+  ]);
+  assert.deepEqual(
+    audit(html('<meta name="description" content=" ">', `<h1>Chinese chess</h1>${content}`)),
+    ['missing meta description'],
+  );
+  assert.deepEqual(audit(html(description, content)), ['missing h1']);
+});

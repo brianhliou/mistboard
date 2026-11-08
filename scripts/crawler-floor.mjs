@@ -18,7 +18,8 @@ export function pageFailures(entry, { status, html }) {
       .includes(entry.phrase.replace(/\s+/gu, '').toLowerCase())
   )
     failures.push(`missing catalog phrase: ${entry.phrase}`);
-  if (entry.h1 && !facts.h1) failures.push('missing h1');
+  if (entry.kind === 'tool' && !facts.description) failures.push('missing meta description');
+  if ((entry.h1 || entry.kind === 'tool') && !facts.h1) failures.push('missing h1');
   if (entry.canonical && !facts.canonical) failures.push('missing canonical');
   for (const lang of entry.hreflang ?? []) {
     if (!facts.alternates.some((alternate) => alternate.lang?.toLowerCase() === lang.toLowerCase()))

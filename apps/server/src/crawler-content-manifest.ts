@@ -16,7 +16,8 @@ export type CrawlerContentEntry = {
   canonical: boolean;
   hreflang: readonly string[];
   source: 'prerender' | 'server-body' | 'db-fixture';
-  knownGap?: `#${number}`;
+  kind?: 'tool';
+  knownGap?: `#${number}` | `#${number}: ${string}`;
 };
 
 export const CLIENT_ONLY_NOINDEX: readonly { routeId: string; path: string }[] = [
@@ -156,7 +157,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/about',
     path: '/about',
-    minChars: 150,
+    minChars: 1767,
     phrase:
       'Mistboard is a free, open-source place to play and study Chinese chess, in English, Simplified Chinese and Traditional Chinese.',
     phraseKey: 'about.lede',
@@ -165,8 +166,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 2945,
   },
   {
     routeId: '/learn/xiangqi',
@@ -284,7 +284,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/videos',
     path: '/videos',
-    minChars: 150,
+    minChars: 4334,
     phrase:
       'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
     phraseKey: 'videos.intro',
@@ -293,8 +293,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 7224,
   },
   {
     routeId: '/zh-hans/videos',
@@ -307,7 +306,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
     baselineChars: 0,
   },
   {
@@ -321,7 +319,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
     baselineChars: 0,
   },
   {
@@ -354,7 +351,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/source',
     path: '/source',
-    minChars: 150,
+    minChars: 2214,
     phrase:
       'Mistboard is an independent open-source strategy-game project. The source code is published under AGPL-3.0-or-later. The hosted service is not affiliated with lichess, chess.com, or any other chess platform.',
     phraseKey: 'source.intro',
@@ -362,14 +359,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'server-body',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'prerender',
+    baselineChars: 3690,
   },
   {
     routeId: '/contact',
     path: '/contact',
-    minChars: 150,
+    minChars: 369,
     phrase:
       'A private line to the person who runs Mistboard. Bugs, broken games, account or billing trouble, anything you would rather not post in public. Add an email if you want a reply.',
     phraseKey: 'contact.introAnon',
@@ -377,9 +373,8 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'server-body',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'prerender',
+    baselineChars: 615,
   },
   {
     routeId: '/patron',
@@ -397,7 +392,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/faq',
     path: '/faq',
-    minChars: 150,
+    minChars: 2034,
     phrase: 'Is there a web version? Do I need to download anything?',
     phraseKey: 'faq.playWebQuestion',
     locale: 'en',
@@ -405,13 +400,12 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 3391,
   },
   {
     routeId: '/terms',
     path: '/terms',
-    minChars: 150,
+    minChars: 1937,
     phrase:
       'These are the rules for using the hosted site at mistboard.com. This page is always the current version.',
     phraseKey: 'terms.intro',
@@ -419,14 +413,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'server-body',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'prerender',
+    baselineChars: 3229,
   },
   {
     routeId: '/privacy',
     path: '/privacy',
-    minChars: 150,
+    minChars: 902,
     phrase:
       'This page describes what we collect on the hosted site at mistboard.com. It is always the current version.',
     phraseKey: 'privacy.intro',
@@ -434,14 +427,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: [],
-    source: 'server-body',
-    knownGap: '#956',
-    baselineChars: 0,
+    source: 'prerender',
+    baselineChars: 1504,
   },
   {
     routeId: '/contribute',
     path: '/contribute',
-    minChars: 150,
+    minChars: 1120,
     phrase: 'Contribute',
     phraseKey: 'contribute.heading',
     locale: 'en',
@@ -449,13 +441,12 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 1867,
   },
   {
     routeId: '/creators',
     path: '/creators',
-    minChars: 150,
+    minChars: 1237,
     phrase:
       'Mistboard connects play and study with broadcasts, original games and engine challenges. We work with players, teachers, creators and organizers across languages, online and in person. The site is free, open source and ad-free.',
     phraseKey: 'creators.intro',
@@ -464,13 +455,12 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 2062,
   },
   {
     routeId: '/champions',
     path: '/champions',
-    minChars: 150,
+    minChars: 2061,
     phrase:
       'Each game has one reigning champion engine: the strongest bot you can play here, credited by name. Easier bots and levels sit below it. Any engine can challenge for the title in a public match. We also want to host other engines as bots you can play, not only champions; to offer one, use the submission steps below.',
     phraseKey: 'champions.intro',
@@ -479,8 +469,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 3435,
   },
   {
     routeId: '/zh-hans/champions',
@@ -494,7 +483,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
     baselineChars: 0,
   },
   {
@@ -509,7 +497,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
     baselineChars: 0,
   },
   {
@@ -574,7 +561,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/developers',
     path: '/developers',
-    minChars: 150,
+    minChars: 5791,
     phrase: 'Embed a study chapter',
     phraseKey: 'apps/web/src/developers-page.ts#embedStudyHeading',
     locale: 'en',
@@ -582,13 +569,12 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 9652,
   },
   {
     routeId: '/api-docs',
     path: '/api-docs',
-    minChars: 150,
+    minChars: 9179,
     phrase: 'API',
     phraseKey: 'apiDocs.heading',
     locale: 'en',
@@ -596,8 +582,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 15299,
   },
   {
     routeId: '/thanks',
@@ -753,7 +738,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/forum/etiquette',
     path: '/forum/etiquette',
-    minChars: 150,
+    minChars: 1362,
     phrase:
       'The forum is a good place to talk dark chess with other players. Sometimes moderators have to step in and close or hide a thread. To keep your posts up, follow these guidelines.',
     phraseKey: 'forum.etiquetteLede',
@@ -762,8 +747,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 2271,
   },
   {
     routeId: '/database',
@@ -839,6 +823,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/games/search',
     path: '/games/search',
+    kind: 'tool',
     minChars: 150,
     phrase: 'Game search',
     phraseKey: 'historical.heading',
@@ -847,7 +832,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
     baselineChars: 0,
   },
   {
@@ -867,20 +851,20 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/data/about',
     path: '/data/about',
-    minChars: 150,
-    phrase: 'About the data',
-    phraseKey: 'data.aboutHeading',
+    minChars: 3951,
+    phrase: 'Formats',
+    phraseKey: 'data.formatsHeading',
     locale: 'en',
     h1: true,
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
+    baselineChars: 6585,
   },
   {
     routeId: '/import',
     path: '/import',
+    kind: 'tool',
     minChars: 150,
     phrase: 'Import a game',
     phraseKey: 'review.import.heading',
@@ -889,7 +873,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
     baselineChars: 0,
   },
   {
@@ -1044,6 +1027,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: '/practice',
     path: '/practice',
+    kind: 'tool',
     minChars: 150,
     phrase: 'against the engine',
     phraseKey: 'practice.subtitle',
@@ -1052,12 +1036,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#960: practice study list is database-backed',
     baselineChars: 0,
   },
   {
     routeId: '/zh-hans/practice',
     path: '/zh-hans/practice',
+    kind: 'tool',
     minChars: 150,
     phrase: '与引擎对弈',
     phraseKey: 'practice.subtitle',
@@ -1066,12 +1051,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#960: practice study list is database-backed',
     baselineChars: 0,
   },
   {
     routeId: '/zh-hant/practice',
     path: '/zh-hant/practice',
+    kind: 'tool',
     minChars: 150,
     phrase: '與引擎對弈',
     phraseKey: 'practice.subtitle',
@@ -1080,7 +1066,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#960: practice study list is database-backed',
     baselineChars: 0,
   },
   {
@@ -1479,6 +1465,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: 'analysis',
     path: '/analysis/xiangqi',
+    kind: 'tool',
     minChars: 150,
     phrase: 'Edit position',
     phraseKey: 'analysis.editPosition',
@@ -1487,12 +1474,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: visible analysis controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
     routeId: 'editor',
     path: '/editor/xiangqi',
+    kind: 'tool',
     minChars: 150,
     phrase: 'Start position',
     phraseKey: 'editor.startPosition',
@@ -1501,12 +1489,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: Chinese editor alternates remain below the content floor',
     baselineChars: 0,
   },
   {
     routeId: 'localized-board',
     path: '/zh-hans/analysis/xiangqi',
+    kind: 'tool',
     minChars: 150,
     phrase: '编辑局面',
     phraseKey: 'analysis.editPosition',
@@ -1515,7 +1504,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: visible analysis controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
@@ -1549,6 +1538,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
   {
     routeId: 'localized-board',
     path: '/zh-hant/analysis/xiangqi',
+    kind: 'tool',
     minChars: 150,
     phrase: '編輯局面',
     phraseKey: 'analysis.editPosition',
@@ -1557,12 +1547,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: visible analysis controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
     routeId: 'localized-board',
     path: '/zh-hans/editor/xiangqi',
+    kind: 'tool',
     minChars: 150,
     phrase: '初始局面',
     phraseKey: 'editor.startPosition',
@@ -1571,12 +1562,13 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: visible editor controls are below the 150-character floor',
     baselineChars: 0,
   },
   {
     routeId: 'localized-board',
     path: '/zh-hant/editor/xiangqi',
+    kind: 'tool',
     minChars: 150,
     phrase: '初始局面',
     phraseKey: 'editor.startPosition',
@@ -1585,7 +1577,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: visible editor controls are below the 150-character floor',
     baselineChars: 0,
   },
   {

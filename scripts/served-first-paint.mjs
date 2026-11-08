@@ -51,6 +51,15 @@ const EXTRA_PATHS = [
   '/watch',
   '/feed',
   '/changelog',
+  '/terms',
+  '/privacy',
+  '/contact',
+  '/forum/etiquette',
+  '/practice',
+  '/analysis/xiangqi',
+  '/editor/xiangqi',
+  '/import',
+  '/games/search',
 ];
 
 const LOCALES = new Set(['zh-hans', 'zh-hant']);

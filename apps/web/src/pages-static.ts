@@ -17,6 +17,7 @@ import {
 import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -1077,4 +1078,34 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(code, heading, lede, home, quick, contact);
   return section;
+}
+
+export function renderAboutShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountAbout);
+}
+
+export function renderSourceShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountSource);
+}
+
+export function renderFaqShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountFaq);
+}
+
+export function renderTermsShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountTerms);
+}
+
+export function renderPrivacyShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, mountPrivacy);
+}
+
+export function renderContactShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    root.classList.add('landing-page', 'contact-route');
+    root.append(
+      buildNav(locale),
+      buildStaticPageLayout('contact', buildContact(null, false, locale).el, locale),
+    );
+  });
 }
