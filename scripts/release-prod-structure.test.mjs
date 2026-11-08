@@ -1,10 +1,123 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { tsImport } from 'tsx/esm/api';
+import * as changelog from './lib/changelog-entry.mjs';
+
+function releaseFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  const end = source.indexOf('\n}\n', start) + 2;
+  assert.ok(start > 0 && end > start, name);
+  return source.slice(start, end);
+}
+
+test('a failed timed push aborts before revision wait and records an incomplete failed push', (t) => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const dir = mkdtempSync(path.join(tmpdir(), 'release-failed-push-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const log = path.join(dir, 'releases.jsonl');
+  for (const command of [
+    // Node ignores SIGPIPE, so the old timing wrapper printed "failed" but
+    // exited zero after forwarding it to itself. A broken pipe must abort.
+    ['/bin/sh', '-c', 'kill -PIPE $$'],
+    [process.execPath, '-e', 'process.exit(17)'],
+    [process.execPath, '-e', "process.kill(process.pid, 'SIGTERM')"],
+    [path.join(dir, 'missing-command')],
+  ]) {
+    const release = { pushCompleted: false, pushedAt: null, stages: [] };
+    let waited = false;
+    const start = source.indexOf("    runTimed('git push release head'");
+    const end = source.indexOf('\n  } else {', start);
+    const context = vm.createContext({
+      release,
+      command,
+      path,
+      performance,
+      spawnSync,
+      mkdirSync,
+      appendFileSync,
+      workdir: path.resolve(import.meta.dirname, '..'),
+      releaseRoot: dir,
+      options: { push: true },
+      hostname: () => 'fixture',
+      releaseLogPath: () => log,
+      pushCommand: () => command,
+      quoteCommand: (args) => args.join(' '),
+      formatDuration: (ms) => `${ms}ms`,
+      enterPostPushWorkdir: () => {
+        waited = true;
+      },
+      revisionWait: () => {
+        waited = true;
+      },
+      console: { log() {}, warn() {} },
+    });
+    const functions = ['runTimed', 'run', 'recordStage', 'writeReleaseRecord']
+      .map((name) => releaseFunction(source, name))
+      .join('\n');
+    vm.runInContext(
+      `${functions}\ntry {\n${source.slice(start, end)}\nrevisionWait();
+      writeReleaseRecord({elapsedMs: 1, outcome: 'ok'});
+    } catch (error) { writeReleaseRecord({elapsedMs: 1, outcome: 'failed', error: error.message}); }`,
+      context,
+    );
+    assert.equal(waited, false);
+    assert.equal(release.pushCompleted, false);
+    assert.equal(release.pushedAt, null);
+    const record = JSON.parse(readFileSync(log, 'utf8').trim().split('\n').at(-1));
+    assert.equal(record.outcome, 'failed');
+    assert.equal(record.pushCompleted, false);
+    assert.equal(record.pushedAt, null);
+    assert.equal(record.stages.at(-1).ok, false);
+  }
+});
+
+test('changelog retries reuse all committed lines, including a changelog HEAD, but reject partial overlap', () => {
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function checkChangelogPreconditions(');
+  const end = source.indexOf('function pushCommand(', start);
+  const entry = { heading: 'Fixed', text: 'Keep the first release lines' };
+  const before = `## 2026-11\n\n### Fixed\n\n- ${entry.text} ${changelog.commitLink('12345678')}\n`;
+  for (const subject of ['docs(changelog): first attempt', 'fix: retry after a gate failure']) {
+    const release = {};
+    const options = { changelog: [entry] };
+    const git = (args) => {
+      if (args[0] === 'status') return '';
+      if (args[0] === 'show') return before;
+      if (args[0] === 'log') return subject;
+      if (args[0] === 'diff-tree')
+        return subject.startsWith('docs') ? 'CHANGELOG.md' : 'scripts/fix.mjs';
+      if (args[0] === 'rev-parse') return 'abcdef12';
+      assert.fail(`unexpected git mutation: ${args.join(' ')}`);
+    };
+    const context = vm.createContext({
+      ...changelog,
+      options,
+      release,
+      git,
+      path,
+      releaseRoot: '/fixture',
+      readFileSync: () => before,
+      console: { log() {} },
+    });
+    vm.runInContext(source.slice(start, end), context);
+    vm.runInContext('checkChangelogPreconditions(); commitChangelog();', context);
+    const plan = vm.runInContext("planChangelog('abcdef12')", context);
+    assert.equal(plan.before, before);
+    assert.equal(plan.after, before);
+    assert.equal(release.changelogCommit ?? null, null, 'no new changelog commit');
+    options.changelog.push({ heading: 'Fixed', text: 'A new line' });
+    assert.throws(() => vm.runInContext('checkChangelogPreconditions()', context), /already has/);
+    assert.throws(() => vm.runInContext('commitChangelog()', context), /already has/);
+    options.changelog = [entry, entry];
+    assert.throws(() => vm.runInContext('checkChangelogPreconditions()', context), /given twice/);
+  }
+});
 
 // release-prod.mjs runs its release from a top-level try block, and the
 // functions it calls are hoisted, so they are reachable from that block
