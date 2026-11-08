@@ -341,7 +341,11 @@ jobs:
       # job's browser coverage, which is why the Playwright install stays.
       - name: Migrate study smoke database
         run: npm run db:migrate
+      # The smoke boots the dev pair, whose web predev fetches the private
+      # Pikafish net; in CI that needs the token, as the Build job does.
       - name: Study creator persistence smoke
+        env:
+          MISTBOARD_PRIVATE_ASSETS_TOKEN: ${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}
         run: npm run test:study:persistent
 
   audit:
