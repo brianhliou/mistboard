@@ -1583,7 +1583,7 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
   const baked = await fs
     .readFile(resolve(staticDir, 'prerender-sitemap.json'), 'utf8')
     .then((json) => JSON.parse(json) as Array<SitemapEntry & { contentChars?: number }>)
-    .catch(() => [] as SitemapEntry[]);
+    .catch(() => []);
   const bakedPaths = new Set(baked.map((record) => record.path));
   const dates = await serverBodyDates().catch(() => new Map<string, string>());
   const staleIndex = prerenderedIndexIsStale(await readArticleSchedule(staticDir));
