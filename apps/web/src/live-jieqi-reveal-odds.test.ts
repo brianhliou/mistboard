@@ -138,30 +138,44 @@ describe('reveal odds visibility', () => {
     expect(top.dataset.revealOdds).toBe('top');
     expect(bottom.dataset.revealOdds).toBe('bottom');
     expect(top.childElementCount).toBe(0);
-    mount.render({ view: startView(), orientation: 'red' });
+    mount.render({ view: startView(), orientation: 'red', viewer: 'red' });
     expect(top.dataset.ink).toBe('black');
     expect(bottom.dataset.ink).toBe('red');
     expect(bottom.querySelectorAll('.reveal-odds-chip__pct')).toHaveLength(6);
-    // A spectator flipped to black: black's row at the bottom, red's on top.
-    mount.render({ view: startView(), orientation: 'black' });
+    // Flipping the board follows the ink while the viewer remains red.
+    mount.render({ view: startView(), orientation: 'black', viewer: 'red' });
     expect(top.dataset.ink).toBe('red');
     expect(bottom.dataset.ink).toBe('black');
+    expect(top.hasAttribute('data-viewer')).toBe(true);
+    expect(bottom.hasAttribute('data-viewer')).toBe(false);
     expect(top.hasAttribute('data-over')).toBe(false);
     // After the game the rows empty but stay mounted, marked over so the phone
     // layout can collapse the bands that would push the post-game actions down.
-    mount.render({ view: { ...startView(), status: { type: 'finished' } }, orientation: 'red' });
+    mount.render({
+      view: { ...startView(), status: { type: 'finished' } },
+      orientation: 'red',
+      viewer: 'red',
+    });
     expect(console.querySelectorAll('.reveal-odds-chip')).toHaveLength(0);
     expect(console.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
     expect(console.querySelectorAll('[data-reveal-odds][data-over]')).toHaveLength(2);
     // A new game in the same mount (no remount) reserves the bands again.
-    mount.render({ view: startView(), orientation: 'red' });
+    mount.render({ view: startView(), orientation: 'red', viewer: 'red' });
     expect(console.querySelectorAll('[data-reveal-odds][data-over]')).toHaveLength(0);
     // Before a view arrives the bands stay reserved, so the board does not move.
-    mount.render({ view: null, orientation: 'red' });
+    mount.render({ view: null, orientation: 'red', viewer: 'red' });
     expect(console.querySelectorAll('[data-reveal-odds][data-over]')).toHaveLength(0);
     // A remount (a room re-entry) replaces the rows rather than stacking them.
     mountRevealOdds(slots, () => glyph);
     expect(console.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
+  });
+
+  it('shows no odds for a spectator, even with a public board', () => {
+    const { console, slots } = layout();
+    const mount = mountRevealOdds(slots, () => glyph);
+    mount.render({ view: startView(), orientation: 'red', viewer: null });
+    expect(console.querySelectorAll('.reveal-odds-chip')).toHaveLength(0);
+    expect(console.querySelector('[data-viewer]')).toBeNull();
   });
 
   // Phone: the finished game's empty bands (about 150px) pushed Review game and

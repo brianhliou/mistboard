@@ -1,0 +1,64 @@
+/* Review's absolute seat rows keep material out of board/rail geometry. Each
+   band reserves two capture rows plus odds, including when empty or finished.
+   Further wrapping grows away from the board (the top strip reverses its flow).
+   Only this live Jieqi mount receives these classes. */
+@media (min-width: 800px) {
+  .live-route--jieqi {
+    --uni-board-chrome-h: 224px;
+  }
+
+  .live-route--jieqi .board-shell {
+    margin-block: 112px;
+  }
+
+  .live-route--jieqi .live-review__cluster :is(.moves-panel, .meta-panel) {
+    margin-top: 112px;
+  }
+
+  .jieqi-capture-stage > .jieqi-capture-strip {
+    height: 108px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .jieqi-capture-strip.review-seat--top {
+    flex-direction: column-reverse;
+  }
+
+  .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
+    --capture-piece-size: 22px;
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0 4px;
+  }
+
+  .jieqi-capture-strip.review-seat--top .review-seat__material {
+    align-items: flex-end;
+  }
+
+  .jieqi-capture-strip.review-seat--bottom .review-seat__material {
+    align-items: flex-start;
+  }
+
+  .jieqi-capture-strip .review-seat__material .captures-row {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  .jieqi-capture-strip .reveal-odds-row {
+    --reveal-chip: 22px;
+    flex: 0 0 56px;
+    min-height: 0;
+    margin: 0;
+    padding: 0 4px;
+  }
+
+  .jieqi-capture-strip .reveal-odds-row:not([data-viewer]) {
+    display: none;
+  }
+}

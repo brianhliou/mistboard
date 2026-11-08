@@ -26,6 +26,7 @@ import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
 import { renderJieqiMaterial } from './jieqi-material.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
+import { mountJieqiCaptureStrips } from './live-jieqi-capture-strips.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
@@ -232,6 +233,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       return ({ color, role }) =>
         renderXiangqiPieceGlyphed({ color, role }, pieceSet, { ariaLabel: '' });
     });
+    mountJieqiCaptureStrips(ctx.refs);
     // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
     // render from the stored set); mirrors the chess family's appearance hook.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
@@ -439,7 +441,12 @@ function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): vo
 // spectator's public view) at the ply on screen, so a scrub shows the odds as
 // they stood then and nothing reads past what this viewer was sent.
 function renderRevealOdds(view: JieqiWireView | null): void {
-  revealOdds?.render({ view, orientation: orientationFor(view) });
+  const seat = core?.state.seat;
+  revealOdds?.render({
+    view,
+    orientation: orientationFor(view),
+    viewer: isJieqiColor(seat) ? seat : null,
+  });
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
