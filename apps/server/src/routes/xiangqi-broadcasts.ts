@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { broadcastRecordsCredit, xiangqiBroadcastRoundStart } from '@mistboard/game';
 import * as persistence from './../persistence.js';
+import { playerPuzzleCount } from '../puzzle-store.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
 import { handleXiangqiBroadcastAnalysisRoutes } from '../xiangqi-broadcast-analysis.js';
 import { roundNumberFromRoundId } from '../xiangqi-broadcast-discovery.js';
@@ -1169,7 +1170,10 @@ export async function tryHandle(
     const slugOf = (name: string): string | null =>
       players.find((p) => p.name === name)?.slug ?? null;
     const boards = await persistence.listXiangqiPlayerBoards(player, slugOf);
-    writeJson(response, 200, { player, boards });
+    writeJson(response, 200, {
+      player: { ...player, puzzleCount: await playerPuzzleCount(slug) },
+      boards,
+    });
     return true;
   }
 

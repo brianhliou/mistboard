@@ -308,7 +308,29 @@ test('rule 6: cannon jumps exactly one screen, stops at first victim, all direct
   );
 });
 
-test('rule 6: covered capture roles are capturer-only live and finished, including HP-ending friendly captures', () => {
+test('a cannon covered capture names the role for the non-capturer and observer', () => {
+  for (const owner of ['red', 'black'] as const) {
+    const next = play(
+      playing({
+        0: up('red', 'cannon'),
+        4: down('black', 'soldier'),
+        8: down(owner, 'horse'),
+        31: down('black', 'general'),
+      }),
+      0,
+      8,
+    );
+    for (const perspective of ['black', 'observer'] as const) {
+      const view = JSON.parse(JSON.stringify(getFFQBanqiPlayerView(next, perspective)));
+      assert.equal(view.captured[0].role, 'horse');
+      assert.equal(view.pool[owner].horse, BANQI_PIECE_COUNTS.horse - 1);
+      assert.deepEqual(view.unknownCaptured, { red: 0, black: 0 });
+      assert.deepEqual(view.board[31], { faceDown: true });
+    }
+  }
+});
+
+test('rule 6: covered capture roles are public live and finished, including HP-ending friendly captures', () => {
   for (const mover of ['red', 'black'] as const) {
     for (const owner of ['red', 'black'] as const) {
       for (const role of Object.keys(BANQI_PIECE_COUNTS) as BanqiPieceRole[]) {
@@ -342,18 +364,11 @@ test('rule 6: covered capture roles are capturer-only live and finished, includi
           expectedPool[owner][role] -= 1;
           for (const perspective of ['red', 'black', 'observer'] as const) {
             const view = JSON.parse(JSON.stringify(getFFQBanqiPlayerView(next, perspective)));
-            const known = perspective === mover;
             assert.deepEqual(view.captured, [
-              { owner, role: known ? role : null, capturedBy: mover, wasFaceDown: true },
+              { owner, role, capturedBy: mover, wasFaceDown: true },
             ]);
-            const pool = structuredClone(expectedPool);
-            if (!known) pool[owner][role] += 1;
-            assert.deepEqual(view.pool, pool);
-            assert.deepEqual(view.unknownCaptured, {
-              red: 0,
-              black: 0,
-              ...(!known ? { [owner]: 1 } : {}),
-            });
+            assert.deepEqual(view.pool, expectedPool);
+            assert.deepEqual(view.unknownCaptured, { red: 0, black: 0 });
             assert.deepEqual(view.board[4], { faceDown: true });
             assert.deepEqual(view.board[31], { faceDown: true });
           }
@@ -361,7 +376,7 @@ test('rule 6: covered capture roles are capturer-only live and finished, includi
       }
     }
   }
-  assert.equal(FFQ_BANQI_RULES.coveredCaptureDisclosure, 'capturer-only');
+  assert.equal(FFQ_BANQI_RULES.coveredCaptureDisclosure, 'public');
 });
 
 test('rule 7: the 30th quiet ply draws, 29 does not; draw precedes no-legal-move', () => {
@@ -504,13 +519,7 @@ test('hidden permutations preserve complete player/observer payloads and legalit
         JSON.stringify(getFFQBanqiPlayerView({ ...state, status }, perspective)),
       );
       for (const square of hidden) assert.deepEqual(view.board[square], { faceDown: true });
-      assert.deepEqual(
-        view.captured,
-        state.captures.map((capture) => ({
-          ...capture,
-          role: capture.wasFaceDown && capture.capturedBy !== perspective ? null : capture.role,
-        })),
-      );
+      assert.deepEqual(view.captured, state.captures);
       assert.equal(
         JSON.stringify(getFFQBanqiPlayerView({ ...state, status }, perspective)),
         JSON.stringify(getFFQBanqiPlayerView({ ...permuted, status }, perspective)),
@@ -532,7 +541,7 @@ test('hidden permutations preserve complete player/observer payloads and legalit
   assert.equal(JSON.stringify(state), before);
 });
 
-test('2,000 seeded random playouts: legal endings, nonnegative HP, whole-payload secrecy and private capture pools', () => {
+test('2,000 seeded random playouts: legal endings, nonnegative HP, whole-payload secrecy and exact public capture pools', () => {
   let rngState = 0x800;
   const random = () => {
     rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
@@ -564,33 +573,22 @@ test('2,000 seeded random playouts: legal endings, nonnegative HP, whole-payload
         for (const [i, piece] of next.board.entries()) {
           if (piece?.faceDown) assert.deepEqual(view.board[i], { faceDown: true });
         }
-        const expectedPool = structuredClone(hiddenPool);
-        const unknownCaptured = { red: 0, black: 0 };
-        for (const capture of next.captures) {
-          if (capture.wasFaceDown && capture.capturedBy !== perspective) {
-            expectedPool[capture.owner][capture.role] += 1;
-            unknownCaptured[capture.owner] += 1;
-          }
-        }
-        assert.deepEqual(
-          view.captured,
-          next.captures.map((capture) => ({
-            ...capture,
-            role: capture.wasFaceDown && capture.capturedBy !== perspective ? null : capture.role,
-          })),
-        );
-        assert.deepEqual(view.pool, expectedPool);
-        assert.deepEqual(view.unknownCaptured, unknownCaptured);
+        assert.deepEqual(view.captured, next.captures);
+        assert.deepEqual(view.pool, hiddenPool);
+        assert.deepEqual(view.unknownCaptured, { red: 0, black: 0 });
         assert.equal(view.deal, undefined);
         assert.equal(view.seed, undefined);
         assert.equal(view.captures, undefined);
       }
-      // Public board and HP remain identical; capture roles and pools are private.
-      const redView = getFFQBanqiPlayerView(next, 'red');
+      // Every recipient shares public captures and pools; only turn permissions differ.
+      const { perspective: _r, legalMoves: _rl, ...redView } = getFFQBanqiPlayerView(next, 'red');
       for (const perspective of ['black', 'observer'] as const) {
-        const other = getFFQBanqiPlayerView(next, perspective);
-        assert.deepEqual(other.board, redView.board);
-        assert.deepEqual(other.hp, redView.hp);
+        const {
+          perspective: _p,
+          legalMoves: _l,
+          ...other
+        } = getFFQBanqiPlayerView(next, perspective);
+        assert.deepEqual(other, redView);
       }
       state = next;
     }

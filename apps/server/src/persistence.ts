@@ -684,6 +684,7 @@ export {
 export {
   getXiangqiPlayer,
   listXiangqiPlayerBoards,
+  listXiangqiPlayerGames,
   listXiangqiPlayers,
   type XiangqiPlayerBoardRecord,
   type XiangqiPlayerEventRecord,

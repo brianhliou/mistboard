@@ -551,7 +551,10 @@ export function createTenantWsRuntime<
     const status = room.projection.state.status;
     if (status.type !== 'playing') return;
     // Paused by a server stop: the clock is frozen until the players are back.
-    if (room.projection.paused) return;
+    if (room.projection.paused) {
+      sendPayload(client, { type: 'error', reason: 'game_paused' });
+      return;
+    }
     // No moves until both seats are filled (a fresh room starts in `playing`, so
     // a seated player could otherwise move before the opponent/engine joined).
     for (const color of tenant.colors) {

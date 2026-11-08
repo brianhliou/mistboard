@@ -6554,8 +6554,8 @@ const ZH_HANS: Record<string, string> = {
   'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
     'Mistboard 的象棋棋子有九套样式，可以画成平面或立体；象棋棋盘可以画成交叉点棋盘或方格棋盘。棋子在屏幕上会移动和翻转，河界也可以写上传统的名字。',
   'Nine piece sets': '九套棋子样式',
-  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
-    '「国际」把每个棋子画成它所代表的东西，不认识汉字也能下。「繁体」和「简体」在棋子上写汉字，分别用繁体字和简体字。「动物」换成卡通动物。最后五套是传统风格的美术棋子：「亮漆」「木质」「棋书」「毛笔」和「隶书」。每一套都能用在象棋、揭棋和暗棋上，平面或立体都可以。',
+  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. The next five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Animal Dobutsu, the last, swaps in cartoon animals. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
+    '「国际」把每个棋子画成它所代表的东西，不认识汉字也能下。「繁体」和「简体」在棋子上写汉字，分别用繁体字和简体字。接下来五套是传统风格的美术棋子：「亮漆」「木质」「棋书」「毛笔」和「隶书」。最后一套「动物」换成卡通动物。每一套都能用在象棋、揭棋和暗棋上，平面或立体都可以。',
   'The red general and horse and the black chariot and cannon in each set.':
     '每套样式里的红帅、红马、黑车和黑炮。',
   'Piece set: International': '国际',
@@ -12862,8 +12862,8 @@ const ZH_HANT: Record<string, string> = {
   'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
     'Mistboard 的象棋棋子有九套樣式，可以畫成平面或立體；象棋棋盤可以畫成交叉點棋盤或方格棋盤。棋子在螢幕上會移動和翻轉，河界也可以寫上傳統的名字。',
   'Nine piece sets': '九套棋子樣式',
-  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
-    '「國際」把每個棋子畫成它所代表的東西，不認識漢字也能下。「繁體」和「簡體」在棋子上寫漢字，分別用繁體字和簡體字。「動物」換成卡通動物。最後五套是傳統風格的美術棋子：「亮漆」「木質」「棋書」「毛筆」和「隸書」。每一套都能用在象棋、揭棋和暗棋上，平面或立體都可以。',
+  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. The next five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Animal Dobutsu, the last, swaps in cartoon animals. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
+    '「國際」把每個棋子畫成它所代表的東西，不認識漢字也能下。「繁體」和「簡體」在棋子上寫漢字，分別用繁體字和簡體字。接下來五套是傳統風格的美術棋子：「亮漆」「木質」「棋書」「毛筆」和「隸書」。最後一套「動物」換成卡通動物。每一套都能用在象棋、揭棋和暗棋上，平面或立體都可以。',
   'The red general and horse and the black chariot and cannon in each set.':
     '每套樣式裡的紅帥、紅馬、黑車和黑炮。',
   'Piece set: International': '國際',

@@ -113,6 +113,7 @@ const release = {
   // on our failure path cancels OUR drain and not a concurrent release's.
   drainOwner: `release-${hostname()}-${process.pid}-${Date.now().toString(36)}`,
   drainCommitted: false,
+  drainStarted: false,
   drainRequired: false,
   // Where safe-deploy writes what the hold cost ({commitWaitMs, refusedCreates}),
   // and that cost once read: the "new games held" line and the release record.
@@ -120,6 +121,7 @@ const release = {
   drainHold: null,
   deployRequired: false,
   headRevision: null,
+  candidateBranch: null,
   // The revision production is expected to serve, which the revision wait, the
   // smoke tier and --expect-revision all track. It is headRevision until
   // another session's push supersedes ours during the hosted CI wait and the
@@ -226,6 +228,10 @@ try {
     baseRevision: release.targetRevision,
     headRevision: release.headRevision,
   });
+  if (options.push) {
+    ciPlan.ciRequired = true;
+    ciPlan.reason = 'release_candidate_requires_ci';
+  }
   release.ciRequired = ciPlan.ciRequired;
   release.ciReason = ciPlan.reason;
   printHostedCiPlan(ciPlan);
@@ -254,16 +260,78 @@ try {
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
     await runLocalGate(gate, ciPlan.changedFiles);
+    if (release.deployRequired) {
+      runTimed('local production smokes', [
+        'npm',
+        'run',
+        'release:local-smoke',
+        '--',
+        // Targeted gates may build only one app; the smoke needs both artifacts.
+        ...(gate.kind === 'full' || gate.kind === 'broad' ? ['--skip-build'] : []),
+        '--revision',
+        release.headRevision,
+      ]);
+    }
   } else {
     console.log('skip: local gate (--skip-local-ci)');
   }
 
   if (options.push) {
     catchUpWithMain();
-    // The first count was read before the local gate, minutes ago. A game that
-    // started since would be killed by the container swap undrained (2026-10-01:
-    // the 10:38 PDT swap logged shutdown_without_drain with one game live), so
-    // read it again right before the push that triggers the deploy.
+    release.candidateBranch = `release/${release.headRevision}`;
+    runTimed(
+      'git push release candidate',
+      pushCommand(release.headRevision, release.candidateBranch),
+    );
+    // Include games that started during the local gate in the drain that
+    // overlaps hosted CI.
+    if (release.deployRequired && !release.drainRequired) {
+      const liveGames = await fetchActiveGameCount();
+      if (liveGames !== 0) {
+        release.drainRequired = true;
+        requireUsableDrainToken(liveGames);
+      }
+    }
+    // Announce a pending drain without waiting for zero or committing the
+    // restart. Games finish while hosted CI runs on the candidate branch.
+    if (release.drainRequired) {
+      release.drainStarted = true;
+      runTimed('production drain start', [
+        'node',
+        'scripts/safe-deploy.mjs',
+        '--yes',
+        '--start-only',
+        ...safeDeployBaseArgs(),
+      ]);
+    }
+  }
+
+  if (release.ciRequired && options.ciWait) {
+    const verified = await timedStage('hosted CI wait', () =>
+      waitForGithubCi({
+        headRevision: release.headRevision,
+        branch: release.candidateBranch ?? options.targetBranch,
+        exact: options.push,
+      }),
+    );
+    if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
+  } else if (!release.ciRequired) {
+    console.log(`skip: hosted CI wait (${release.ciReason})`);
+  } else {
+    console.log('skip: hosted CI wait (--skip-ci-wait)');
+  }
+
+  if (options.push) {
+    // Never merge or adopt a different tree after CI. A normal (non-forced)
+    // push also rejects a non-fast-forward race after this check.
+    const remote = readRemoteTargetRevision();
+    if (remote !== release.targetRevision && remote !== release.headRevision) {
+      throw new Error(
+        'main moved during candidate CI; re-run the release to test a fresh candidate',
+      );
+    }
+    // Games may have started during CI when the initial pool was empty.
+    // Re-read immediately before the push that actually deploys.
     if (release.deployRequired && !release.drainRequired) {
       const liveGames = await fetchActiveGameCount();
       if (liveGames !== 0) {
@@ -279,6 +347,7 @@ try {
       }
     }
     if (release.drainRequired) {
+      release.drainStarted = true;
       runTimed('production drain', [
         'node',
         'scripts/safe-deploy.mjs',
@@ -302,34 +371,6 @@ try {
     console.log('skip: git push (pass --push to publish the current commit)');
   }
 
-  // A red hosted CI run after the push no longer skips the revision wait and
-  // smoke: web auto-deploys on push whatever CI says, so the live site needs
-  // checking most exactly then. The release still fails, after the smoke.
-  // 2026-10-17: a Postgres image pull limit failed three CI jobs before any
-  // test ran, and the live-site checks had to be run by hand.
-  let ciRed = null;
-  if (release.ciRequired && options.ciWait) {
-    try {
-      const verified = await timedStage('hosted CI wait', () =>
-        waitForGithubCi({ headRevision: release.headRevision }),
-      );
-      if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
-    } catch (error) {
-      if (!release.pushCompleted || !error?.ciRed) throw error;
-      ciRed = error;
-      const { revision, adopted } = error.ciRed;
-      if (revision !== release.headRevision) settleExpectedRevision({ tip: revision, adopted });
-      console.error(`hosted CI failed after the push: ${error.message}`);
-      console.error(
-        'production deploys regardless; running the revision wait and smoke before failing',
-      );
-    }
-  } else if (!release.ciRequired) {
-    console.log(`skip: hosted CI wait (${release.ciReason})`);
-  } else {
-    console.log('skip: hosted CI wait (--skip-ci-wait)');
-  }
-
   if (release.deployRequired) {
     runTimed('production revision wait', prodWaitCommand(release.expectedRevision));
   } else {
@@ -344,13 +385,6 @@ try {
     deployRequired: release.deployRequired,
     headRevision: release.expectedRevision,
   });
-
-  if (ciRed) {
-    console.error(
-      `production serves ${shortRevision(release.expectedRevision)} and its smoke passed; the release fails on hosted CI`,
-    );
-    throw ciRed;
-  }
 
   announceNews({ deployRequired: release.deployRequired });
 
@@ -505,6 +539,11 @@ function parseArgs(args) {
       '--extra-ship bypasses the ship window for a --push: pass --push, or --dry-run',
     );
   }
+  if (parsed.push && !parsed.ciWait && !parsed.help) {
+    throw new Error(
+      '--push cannot be combined with --skip-ci-wait; candidates must pass hosted CI',
+    );
+  }
 
   return parsed;
 }
@@ -646,6 +685,11 @@ function runPlanModeAndExit() {
   const ciPlan = changedOverride
     ? classifyCiFiles(changedOverride)
     : planHostedCi({ baseRevision: release.targetRevision, headRevision: release.headRevision });
+  if (options.push) {
+    ciPlan.ciRequired = true;
+    ciPlan.reason = 'release_candidate_requires_ci';
+    console.log(`candidate_branch: release/${release.headRevision}`);
+  }
   printHostedCiPlan(ciPlan);
 
   const tier = resolveSmokeTier(release.headRevision, changedOverride);
@@ -759,6 +803,8 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
 }
 
 /**
+ * For --push, require a completed successful run on the exact candidate
+ * branch and SHA. Verification mode can follow main as described below.
  * Wait for hosted CI to pass on `headRevision`, or on whatever main's tip
  * becomes while we wait. Resolves to `{ revision, tip, adopted }`: the
  * revision whose run passed, the newest tip of main confirmed to contain it
@@ -778,7 +824,7 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
  * The decision rules, including the tips that must NOT be adopted, live in
  * lib/ci-run-verdict.mjs.
  */
-async function waitForGithubCi({ headRevision }) {
+async function waitForGithubCi({ headRevision, branch = options.targetBranch, exact = false }) {
   const deadline = Date.now() + options.timeoutMs;
   let revision = headRevision;
   const adopted = [];
@@ -788,8 +834,27 @@ async function waitForGithubCi({ headRevision }) {
   console.log(`# hosted CI wait`);
   while (Date.now() <= deadline) {
     attempt += 1;
-    run = findGithubRun(revision);
+    run = findGithubRun(revision, branch);
     if (run?.url) release.ciRunUrl = run.url;
+    // Promotion requires a successful completed run for this exact candidate.
+    // A cancelled run or partly green jobs cannot authorize production.
+    if (exact) {
+      if (run?.status === 'completed') {
+        if (run.conclusion !== 'success') {
+          throw new Error(
+            `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}: ${run.url ?? revision}`,
+          );
+        }
+        console.log(`hosted CI passed: ${run.url ?? revision}`);
+        return { revision, tip: revision, adopted };
+      }
+      console.log(
+        `attempt ${attempt}: ${run?.status ?? 'waiting for the run to appear'} on ${branch}`,
+      );
+      if (Date.now() + GITHUB_POLL_MS > deadline) break;
+      await sleep(GITHUB_POLL_MS);
+      continue;
+    }
     // Checked every poll, not once (see above).
     const superseded = supersededBy(revision);
     const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
@@ -987,18 +1052,20 @@ function supersededBy(headRevision) {
 }
 
 // The ci.yml push run for one revision, or null when GitHub lists none.
-function findGithubRun(revision) {
-  return listGithubRuns(revision).find((candidate) => candidate.headSha === revision) ?? null;
+function findGithubRun(revision, branch = options.targetBranch) {
+  return (
+    listGithubRuns(revision, branch).find((candidate) => candidate.headSha === revision) ?? null
+  );
 }
 
-function listGithubRuns(headRevision) {
+function listGithubRuns(headRevision, branch = options.targetBranch) {
   const args = [
     'run',
     'list',
     '--workflow',
     options.ciWorkflow,
     '--branch',
-    options.targetBranch,
+    branch,
     '--commit',
     headRevision,
     '--event',
@@ -1166,6 +1233,18 @@ function catchUpWithMain() {
   for (const command of commands) {
     runTimed(`local ${command.slice(2).join(' ')} (after merge)`, command);
   }
+  if (options.localCi && release.deployRequired) {
+    // The merge changed the code after the first smoke. Rebuild both apps and
+    // prove this revision too; a smoke of the earlier SHA cannot gate the push.
+    runTimed('local production smokes (after merge)', [
+      'npm',
+      'run',
+      'release:local-smoke',
+      '--',
+      '--revision',
+      release.headRevision,
+    ]);
+  }
 }
 
 // Merge the moved main into HEAD. A conflict aborts the merge and fails the
@@ -1199,7 +1278,7 @@ async function takeReleaseLock() {
     }),
     timeoutMs: options.lockTimeoutMs,
   });
-  releaseOnExit(handle);
+  releaseOnExit(handle, process, cancelDrainAfterFailure);
   release.lockWaitMs = Math.round(performance.now() - begun);
   release.lockWaited = handle.waited;
   if (handle.waited) {
@@ -1333,10 +1412,13 @@ function commitChangelog() {
   );
 }
 
-function pushCommand(headRevision) {
-  const command = ['env', 'MISTBOARD_RELEASE_PUSH=1', 'git', 'push'];
-  if (options.localCi) command.push('--no-verify');
-  command.push(options.remote, `${headRevision}:refs/heads/${options.targetBranch}`);
+function pushCommand(headRevision, branch = options.targetBranch) {
+  const command = ['env', 'MISTBOARD_RELEASE_PUSH=1'];
+  if (branch === options.targetBranch && release.candidateBranch) {
+    command.push(`MISTBOARD_RELEASE_CI_VERIFIED=${headRevision}`);
+  }
+  command.push('git', 'push');
+  command.push(options.remote, `${headRevision}:refs/heads/${branch}`);
   return command;
 }
 
@@ -1708,6 +1790,7 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     outcome,
     ...(error ? { error } : {}),
     head: release.headRevision,
+    candidateBranch: release.candidateBranch,
     expectedRevision: release.expectedRevision,
     adopted: release.adopted,
     targetRevision: release.targetRevision,
@@ -2051,8 +2134,9 @@ async function rebuildBlog({ deployRequired }) {
 // only before the push (2026-10-16 21:46Z: the banner stayed up 11 minutes).
 async function cancelDrainAfterFailure() {
   const productionRevision =
-    release.drainCommitted && release.pushCompleted ? await fetchProductionRevision() : null;
+    release.drainStarted && release.pushCompleted ? await fetchProductionRevision() : null;
   const action = postFailureDrainAction({
+    drainStarted: release.drainStarted,
     drainCommitted: release.drainCommitted,
     pushCompleted: release.pushCompleted,
     productionRevision,
@@ -2264,11 +2348,12 @@ function printHelp() {
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> drain to zero when games are live -> optional git push -> hosted GitHub CI when matched -> production revision wait when deploying -> smoke
+  ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> push release/<sha> -> start pending drain -> exact candidate hosted CI -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
 
 Options:
-  --push                   Push --head to origin/main. Drains production first
-                           only when games are live (needs a drain token then:
+  --push                   Push --head to release/<sha>, wait for green hosted
+                           CI, then fast-forward origin/main to that exact SHA.
+                           Drain during CI only when games are live (token:
                            MISTBOARD_DRAIN_TOKEN, else the keychain); an empty
                            pool deploys token-free. Without this, assume it is
                            already pushed.
@@ -2327,7 +2412,7 @@ Options:
                            and untracked paths when selecting persistence.
                            No lock, changelog, network planning, release record,
                            drain, push, hosted CI wait or production smoke.
-  --skip-ci-wait           Do not wait for hosted GitHub CI.
+  --skip-ci-wait           Skip hosted CI in verification mode; forbidden with --push.
   --ci-workflow <file>     GitHub CI workflow to wait for, default ${DEFAULT_CI_WORKFLOW}.
   --base <url>             Production base URL, default ${DEFAULT_BASE_URL}.
   --timeout-ms <ms>        Timeout for hosted CI and revision wait, default ${DEFAULT_TIMEOUT_MS}.
@@ -2340,12 +2425,14 @@ token is read from MISTBOARD_DRAIN_TOKEN, or from the macOS keychain when that
 is unset, so an unattended release never needs it typed into a shell.
 For docs-only or other non-deploy commits, the planner skips
 the exact-revision wait because production is not expected to serve that SHA,
-but still waits for hosted CI when the diff matches the CI workflow paths. When
-local ci:quick runs, --push uses git push --no-verify to avoid running the same
-broad pre-push gate twice. With --skip-local-ci, the pre-push hook still runs
-normally.
+but every --push still requires green candidate CI. Hooks remain enabled; the
+main pre-push hook recognizes the exact SHA verified by hosted CI, so it does
+not repeat the local gate while production is drained. Failed or timed-out CI
+leaves main untouched and cancels the pending drain. Candidate refs are retained
+for inspection. If main moves during candidate CI, re-run to test a fresh tree.
 
-If another session pushes to main during the hosted CI wait, ci.yml cancels the
+In verification mode (without --push), if another session pushes to main during
+the hosted CI wait, ci.yml cancels the
 run for the pushed commit. When the new tip contains that commit and has a run
 of its own, the release adopts the tip whatever its own run was doing: it waits
 for the tip's run instead, expects production to serve the tip (unless the

@@ -184,19 +184,30 @@ describe('FFQ banqi live room', () => {
       (li) => li.textContent,
     );
     for (const [i, capture] of view.captured.entries())
-      expect(damage[i]).toContain(`−${FFQ_BANQI_DAMAGE[capture.role!]} HP`);
+      expect(damage[i]).toContain(`−${FFQ_BANQI_DAMAGE[capture.role]} HP`);
     expect(damage[0]).toBe('Red captured Red Soldier: Red −2 HP');
     expect(document.querySelector('.ffq-banqi-counters')?.textContent).toBe(
       'No progress 29/30 · Red chase 3/4 · Black chase 4/4',
     );
   });
 
-  it('does not render a role or damage label for a masked covered capture', async () => {
-    const view = initial();
-    view.captured = [{ owner: 'black', role: null, capturedBy: 'red', wasFaceDown: true }];
-    await mount(view);
-    expect(document.querySelectorAll('.ffq-banqi-captures li')).toHaveLength(0);
-    expect(document.querySelector('.ffq-banqi-captures')?.textContent).toBe('');
+  it('renders a cannon covered capture role for the non-capturer and observer, live and finished', async () => {
+    const state = createInitialFFQBanqiState(ROOM, 7);
+    state.board[0] = { color: 'red', role: 'cannon', faceDown: false };
+    state.board[1] = { color: 'black', role: 'soldier', faceDown: true };
+    state.board[2] = { color: 'black', role: 'horse', faceDown: true };
+    const captured = applyFFQBanqiMove(state, { from: 0, to: 2 });
+    for (const finished of [false, true]) {
+      if (finished) captured.status = { type: 'finished', winner: 'red', reason: 'resignation' };
+      for (const perspective of ['black', 'observer'] as const) {
+        const view = getFFQBanqiPlayerView(captured, perspective);
+        await mount(view, perspective === 'observer' ? 'spectator' : perspective);
+        expect(document.querySelector('.ffq-banqi-captures')?.textContent).toBe(
+          'Red captured Black Horse: Black −5 HP',
+        );
+        expect(view.board[1]).toEqual({ faceDown: true });
+      }
+    }
   });
 
   it('drags a revealed piece to a legal target using numeric wire coordinates', async () => {
