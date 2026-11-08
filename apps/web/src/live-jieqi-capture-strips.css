@@ -7,26 +7,26 @@
    the header or the move list. As the board narrows it steps down instead,
    sized from the line's own width (the strip is the container): smaller
    pieces, then each percentage moves under its piece (the review layout, which
-   fits the same 26px line), and last the odds scroll sideways inside their own
+   fits the same 30px line), and last the odds scroll sideways inside their own
    box with a fade at the cut edge (data-overflow, set by
    live-jieqi-capture-strips.ts). Nothing ever leaves the board's width. Only
    this live Jieqi mount receives these classes. */
 @media (min-width: 800px) {
   .live-route--jieqi {
-    --uni-board-chrome-h: 60px;
+    --uni-board-chrome-h: 68px;
   }
 
   .live-route--jieqi .board-shell {
-    margin-block: 30px;
+    margin-block: 34px;
   }
 
   .live-route--jieqi .live-review__cluster :is(.moves-panel, .meta-panel) {
-    margin-top: 30px;
+    margin-top: 34px;
   }
 
   .jieqi-capture-stage > .jieqi-capture-strip {
     container-type: inline-size;
-    min-height: 26px;
+    min-height: 30px;
     flex-wrap: nowrap;
     align-items: center;
     gap: 0;
@@ -34,11 +34,11 @@
   }
 
   .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
-    --capture-piece-size: 22px;
+    --capture-piece-size: 26px;
     /* Captured pieces are grouped by type with a count, so this row stays
        short; it keeps its width and the odds give way. */
     flex: none;
-    height: 24px;
+    height: 28px;
     min-height: 0;
     /* The space before the odds (a margin, so the steps below can narrow it;
        the strip itself is the container and cannot be styled by them). */
@@ -51,14 +51,14 @@
   }
 
   .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
-    --reveal-chip: 20px;
+    --reveal-chip: 26px;
     display: flex;
     flex: 0 1 auto;
     align-items: center;
     gap: 8px;
     min-width: 0;
     min-height: 0;
-    height: 26px;
+    height: 30px;
     margin: 0 0 0 auto;
     /* Room for the last piece's count badge, which sits past its corner. */
     padding: 0 5px 0 0;
@@ -112,14 +112,26 @@
     font-size: 0.74rem;
   }
 
+  /* The count sits out on the piece's corner, small, so the face stays
+     readable. Both rows; the odds row's right padding leaves it room. */
+  .live-route--jieqi .jieqi-capture-strip .captures-count-badge {
+    min-width: 11px;
+    height: 11px;
+    padding: 0 2px;
+    border-width: 1px;
+    font-size: 8px;
+    right: -4px;
+    bottom: -3px;
+  }
+
   /* A narrower board: everything one size down. */
   @container (max-width: 600px) {
     .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
-      --capture-piece-size: 18px;
+      --capture-piece-size: 23px;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
-      --reveal-chip: 17px;
+      --reveal-chip: 22px;
       gap: 6px;
     }
 
@@ -146,20 +158,20 @@
   }
 
   /* Narrow: each percentage under its piece, so a chip is as wide as its
-     number rather than piece plus number. Piece and number fit the 26px line. */
+     number rather than piece plus number. Piece and number fit the 30px line. */
   @container (max-width: 460px) {
     .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
-      --capture-piece-size: 16px;
-      margin-right: 6px;
+      --capture-piece-size: 21px;
+      margin-right: 4px;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
-      --reveal-chip: 16px;
-      gap: 4px;
+      --reveal-chip: 19px;
+      gap: 3px;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__head {
-      gap: 4px;
+      gap: 3px;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row__note {
@@ -173,14 +185,6 @@
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip {
       flex-direction: column;
       gap: 0;
-    }
-
-    .live-route--jieqi .jieqi-capture-strip .captures-count-badge {
-      min-width: 11px;
-      height: 11px;
-      font-size: 8px;
-      right: -4px;
-      bottom: -2px;
     }
 
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-chip__pct {
