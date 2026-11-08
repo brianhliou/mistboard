@@ -1087,6 +1087,8 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 ## scripts/ — repo-root tooling
 
+`fog-sendoff-stats.mjs`: read-only Fog Chess/Fog Xiangqi send-off JSON through `prod:db`, using canonical counted-game/seat filters, public account recognition and stored-analysis candidate ranking; `fog-sendoff-stats.test.mjs` pins bot-seat SQL, output privacy, ranking and transaction behavior (#969).
+
 | Group | Files |
 |-------|-------|
 | Server test discovery | `server-test-discovery.mjs` checks every `src/**/*.test.ts` against all three server suite commands before tests run; `--list` prints the selected paths. Compiled/persistent globs are checked against source paths without a build; the persistent shard reads those same configured globs. `server-test-discovery.test.mjs` plants the omitted routes (`a962178`) and engine-protocol (`4d853ef`) fixtures and verifies shell expansion. |
