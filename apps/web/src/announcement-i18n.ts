@@ -35,6 +35,9 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Banqi and Flip Jungle now have eight bot levels.': '暗棋和翻翻兽棋的机器人现在都有八个等级。',
+  'Each used to have one bot. In both, the lower levels are new and easier. In Flip Jungle, Level 8 is the bot you know. In banqi, Level 7 is the bot you know and Level 8 is new: a small neural net trained on the engine’s own games, which beat Level 7 by 219 Elo in a 120-game match.':
+    '两个游戏原来各只有一个机器人。两边新增的低等级都更容易。翻翻兽棋的第 8 级就是你熟悉的那个机器人。暗棋的第 7 级是你熟悉的机器人，第 8 级是新的：一个用引擎自己的对局训练出来的小型神经网络，在 120 盘的对抗中比第 7 级高 219 Elo。',
   '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盘棋。',
   'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
     '最初的 10,000 盘棋是怎样积累起来的，大家下了什么棋，又是哪些人在下。感谢大家来下棋。',
@@ -573,6 +576,9 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Banqi and Flip Jungle now have eight bot levels.': '暗棋和翻翻獸棋的機器人現在都有八個等級。',
+  'Each used to have one bot. In both, the lower levels are new and easier. In Flip Jungle, Level 8 is the bot you know. In banqi, Level 7 is the bot you know and Level 8 is new: a small neural net trained on the engine’s own games, which beat Level 7 by 219 Elo in a 120-game match.':
+    '兩個遊戲原本各只有一個機器人。兩邊新增的低等級都更容易。翻翻獸棋的第 8 級就是你熟悉的那個機器人。暗棋的第 7 級是你熟悉的機器人，第 8 級是新的：一個用引擎自己的對局訓練出來的小型神經網路，在 120 盤的對抗中比第 7 級高 219 Elo。',
   '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盤棋。',
   'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
     '最初的 10,000 盤棋是怎樣累積起來的，大家下了什麼棋，又是哪些人在下。感謝大家來下棋。',

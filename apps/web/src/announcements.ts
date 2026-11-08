@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-09',
+    kind: 'release',
+    headline: 'Banqi and Flip Jungle now have eight bot levels.',
+    body: 'Each used to have one bot. In both, the lower levels are new and easier. In Flip Jungle, Level 8 is the bot you know. In banqi, Level 7 is the bot you know and Level 8 is new: a small neural net trained on the engine’s own games, which beat Level 7 by 219 Elo in a 120-game match.',
+    href: '/?play=computer&gameSpecId=banqi',
+    cta: 'Play banqi',
+  },
+  {
     date: '2026-11-08',
     kind: 'status',
     headline: '10,000 games played on Mistboard.',

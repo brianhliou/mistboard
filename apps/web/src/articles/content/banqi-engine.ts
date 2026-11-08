@@ -50,9 +50,9 @@ export const banqiEngineArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-20',
-  updatedAt: '2026-10-16',
+  updatedAt: '2026-11-09',
   updateNote:
-    'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.',
+    "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.",
   audience:
     'Banqi players curious about the bot they play against, and anyone who wants to know where a hand-written engine cracks.',
   thumbnail: { kind: 'svg', svg: BANQI_ENGINE_THUMBNAIL },
