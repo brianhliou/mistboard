@@ -41,16 +41,24 @@
    same diameter, so a jieqi pool (half the position: it is where the revealed
    pieces show) reads at a glance next to the board instead of as a row of
    thumbnails. 0.098 is piece / board viewBox width for the 9-file boards
-   (65/660 jieqi, 54/552 xiangqi; coordinates on adds a gutter and reads ~4%
-   small). Capped so five groups still sit on one row of a narrow rail; past
-   that the row wraps (the band below reserves one row, so a late-game pool can
-   grow the strip by a row). Below the two-column breakpoint --uni-board-width
-   is unset and the base clamp above holds. */
+   (54/552 xiangqi; coordinates on adds a gutter and reads ~4% small). Capped
+   so six groups, every role a side can lose, sit on one row of the rail: the
+   band below reserves one row, so a late-game pool never grows the rail.
+   Below the two-column breakpoint --uni-board-width is unset and the base
+   clamp above holds. */
 @media (min-width: 800px) {
-  :is(.live-route--jieqi, .live-route--xiangqi, .live-route--duck-xiangqi)
-    .live-review__cluster
-    .rail-material {
-    --capture-piece-size: min(calc(var(--uni-board-width) * 0.098), calc((100cqw - 20px) / 5));
+  :is(.live-route--xiangqi, .live-route--duck-xiangqi) .live-review__cluster .rail-material {
+    --capture-piece-size: min(calc(var(--uni-board-width) * 0.098), calc((100cqw - 20px) / 6));
+  }
+}
+
+/* Jieqi's rail is shorter: its face-down odds take a line above and below the
+   board (live-jieqi-capture-strips.css), so the clocks and move list need the
+   column's height. Smaller discs, capped so seven groups (six roles plus the
+   pieces taken face-down) sit on one reserved row. */
+@media (min-width: 800px) {
+  .live-route--jieqi .live-review__cluster .rail-material {
+    --capture-piece-size: min(28px, calc((100cqw - 20px) / 7));
   }
 }
 

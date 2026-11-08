@@ -1,11 +1,11 @@
-/* Desktop live jieqi: one line above and one below the board, review-style.
-   Each line holds that side's captured pieces on the left and its face-down
-   odds on the right ("N face-down", the taken-unseen pill, each piece with its
-   percentage beside it).
+/* Desktop live jieqi: one line above and one below the board, review-style,
+   holding that side's face-down odds at the right end ("N face-down", the
+   taken-unseen pill, each piece with its percentage beside it). The captured
+   pieces stay in the right column like every other variant (live-review.css).
 
    As the board narrows the line steps down (sized from its own width: the
-   strip is the container), then wraps: the odds drop to a second row, right
-   aligned, and wrap again inside it on the narrowest boards. Nothing scrolls
+   strip is the container), then wraps: the pieces drop to a second row, right
+   aligned. Nothing scrolls
    and nothing leaves the board's width. live-jieqi-capture-strips.ts writes
    each strip's height to --jieqi-strip-top-h / --jieqi-strip-bottom-h on the
    room: the margins make room for every row, so a second row never climbs
@@ -32,7 +32,9 @@
     margin-block: var(--jieqi-strip-top-space) var(--jieqi-strip-bottom-space);
   }
 
-  .live-route--jieqi .live-review__cluster :is(.moves-panel, .meta-panel) {
+  /* The game card lines up with the board; the right column starts on the
+     top strip's line, so its captured pieces sit level with the odds. */
+  .live-route--jieqi .live-review__cluster .meta-panel {
     margin-top: var(--jieqi-strip-top-space);
   }
 
@@ -47,25 +49,8 @@
     pointer-events: auto;
   }
 
-  .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
-    --capture-piece-size: 26px;
-    /* Captured pieces are grouped by type with a count, so this row stays
-       short; it keeps its width and the odds wrap below it. */
-    flex: none;
-    height: 28px;
-    min-height: 0;
-    /* Takes the line's spare width, so the odds sit at the right end. */
-    margin: 0 auto 0 0;
-    padding: 0;
-  }
-
-  .live-route--jieqi .jieqi-capture-strip .review-captures-row {
-    flex-wrap: nowrap;
-  }
-
-  /* The odds row's label and pieces join the strip's own line: the label
-     stays beside the captures and the pieces are what wrap, so a second row
-     holds only pieces and the line never needs a third. */
+  /* The odds row's label and pieces join the strip's own line: the pieces
+     are what wrap, so a second row holds only pieces. */
   .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
     --reveal-chip: 26px;
     display: contents;
@@ -119,7 +104,7 @@
   }
 
   /* The count sits out on the piece's corner, small, so the face stays
-     readable. Both rows; the odds row's right padding leaves it room. */
+     readable; the pieces' right padding leaves it room. */
   .live-route--jieqi .jieqi-capture-strip .captures-count-badge {
     min-width: 11px;
     height: 11px;
@@ -132,10 +117,6 @@
 
   /* A narrower board: everything one size down. */
   @container (max-width: 600px) {
-    .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
-      --capture-piece-size: 23px;
-    }
-
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
       --reveal-chip: 22px;
     }
@@ -170,10 +151,6 @@
      number. This is the floor that stops the pieces wrapping again: every
      extra row takes height from the board and so narrows it further. */
   @container (max-width: 420px) {
-    .live-route--jieqi .jieqi-capture-strip .rail-material.review-seat__material {
-      --capture-piece-size: 22px;
-    }
-
     .live-route--jieqi .jieqi-capture-strip .reveal-odds-row {
       --reveal-chip: 20px;
     }
