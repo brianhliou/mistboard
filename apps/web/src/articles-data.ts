@@ -39,6 +39,7 @@ import { unstyledFirstPaintArticle } from './articles/content/unstyled-first-pai
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
+import { fogFutureArticle } from './articles/content/fog-future.js';
 import { enPassantUnderFogArticle } from './articles/content/en-passant-under-fog.js';
 import { mostPlayedMoveArticle } from './articles/content/most-played-move.js';
 import { chess960StartingPositionsArticle } from './articles/content/chess960-starting-positions.js';
@@ -90,6 +91,7 @@ import { tangDanArticle } from './articles/content/tang-dan.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  fogFutureArticle,
   tangDanArticle,
   shortestStalemateXiangqiArticle,
   generalBlunderChallengeArticle,

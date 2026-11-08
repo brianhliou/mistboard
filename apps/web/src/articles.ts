@@ -54,10 +54,12 @@ import {
   findArticle,
   type HordeXiangqiReplayBlock,
   type ImageFigureBlock,
+  type ImageRowBlock,
   type InteractiveBlock,
   type JieqiReplayBlock,
   type JungleFlipReplayBlock,
   type JungleReplayBlock,
+  type ListBlock,
   type LiveBoardsBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
@@ -68,6 +70,7 @@ import {
   type SvgRowBlock,
   type TableBlock,
   type TableRowDiagram,
+  type TimelineBlock,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
@@ -1785,6 +1788,9 @@ export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElemen
   if (block.kind === 'embed') return renderEmbedBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
   if (block.kind === 'faq') return renderFaqBlock(block);
+  if (block.kind === 'timeline') return renderTimelineBlock(block, lang);
+  if (block.kind === 'list') return renderListBlock(block);
+  if (block.kind === 'image-row') return renderImageRowBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
@@ -2501,6 +2507,96 @@ function renderFaqBlock(block: FaqBlock): HTMLElement {
   return list;
 }
 
+const TIMELINE_ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A dated sequence: entries whose day has passed get a filled marker. */
+function renderTimelineBlock(block: TimelineBlock, lang?: ArticleLang): HTMLElement {
+  const list = document.createElement('ol');
+  list.className = 'article-timeline';
+  const today = new Date().toISOString().slice(0, 10);
+  const locale = lang === 'zh-Hans' ? 'zh-CN' : lang === 'zh-Hant' ? 'zh-TW' : 'en-US';
+  for (const item of block.items) {
+    const li = document.createElement('li');
+    li.className = 'article-timeline-item';
+    const date = document.createElement('p');
+    date.className = 'article-timeline-date';
+    if (TIMELINE_ISO_DAY.test(item.date)) {
+      const time = document.createElement('time');
+      time.dateTime = item.date;
+      time.textContent = new Date(`${item.date}T12:00:00Z`).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+      });
+      date.append(time);
+      if (item.date <= today) li.classList.add('is-past');
+    } else {
+      date.textContent = item.date;
+      li.classList.add('is-open');
+    }
+    const title = document.createElement('p');
+    title.className = 'article-timeline-title';
+    appendRichText(title, item.title);
+    li.append(date, title);
+    if (item.text) {
+      const text = document.createElement('p');
+      text.className = 'article-timeline-text';
+      appendRichText(text, item.text);
+      li.append(text);
+    }
+    list.append(li);
+  }
+  return list;
+}
+
+function renderListBlock(block: ListBlock): HTMLElement {
+  const list = document.createElement(block.ordered ? 'ol' : 'ul');
+  list.className = 'article-list';
+  for (const item of block.items) {
+    const li = document.createElement('li');
+    appendRichText(li, item);
+    list.append(li);
+  }
+  return list;
+}
+
+/** Standalone images side by side; each shows its dark twin under the dark theme. */
+function renderImageRowBlock(block: ImageRowBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-image-row';
+  const row = document.createElement('div');
+  row.className = 'article-image-row-items';
+  for (const item of block.items) {
+    const cell = document.createElement('div');
+    cell.className = 'article-image-row-item';
+    if (item.width) cell.style.maxWidth = `${item.width}px`;
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.alt;
+    img.loading = 'lazy';
+    cell.append(img);
+    if (item.darkSrc) {
+      img.classList.add('article-figure-light');
+      const dark = document.createElement('img');
+      dark.src = item.darkSrc;
+      dark.alt = item.alt;
+      dark.loading = 'lazy';
+      dark.className = 'article-figure-dark';
+      cell.append(dark);
+    }
+    row.append(cell);
+  }
+  figure.append(row);
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    appendRichText(cap, block.caption);
+    figure.append(cap);
+  }
+  return figure;
+}
+
 function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-embed';
@@ -2826,10 +2922,12 @@ function noteNode(text: string, label?: string): HTMLElement {
 }
 
 // Lightweight inline parser. Recognizes Markdown-style `code`, [text](href) for
-// links, and **text** for bold. External link hrefs (http/https) open in a new
+// links, **text** for bold and *text* for italics (a lone asterisk, as in
+// "5 * 3", stays literal). External link hrefs (http/https) open in a new
 // tab; internal hrefs (/foo, #foo) do not. Anything that isn't a recognized
 // token is appended as a plain text node.
-const INLINE_REGEX = /`([^`\n]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
+const INLINE_REGEX =
+  /`([^`\n]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)|(?<![*\w])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?![*\w])/g;
 function appendRichText(el: HTMLElement, text: string): void {
   let lastIndex = 0;
   for (const match of text.matchAll(INLINE_REGEX)) {
@@ -2843,6 +2941,10 @@ function appendRichText(el: HTMLElement, text: string): void {
       const strong = document.createElement('strong');
       strong.textContent = match[2];
       el.append(strong);
+    } else if (match[5] !== undefined) {
+      const em = document.createElement('em');
+      em.textContent = match[5];
+      el.append(em);
     } else {
       const linkText = match[3]!;
       const href = match[4]!;

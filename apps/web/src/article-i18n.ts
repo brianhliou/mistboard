@@ -34,6 +34,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-11-08, not native-reviewed, from the English signed
+  // off that day. Badge names follow the legacy badge catalog.
+  'fog-future',
   // Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   'ten-thousand-games',
   // Machine-drafted 2026-11-04, not native-reviewed, from the English signed
@@ -6861,6 +6864,106 @@ const ZH_HANS: Record<string, string> = {
   "AB-JChess is open source under the GPL-3.0 licence at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). The network is downloaded from the authors' own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu (Kouza). Laoxu trains AB-JChess's networks and, for this release, tested four ways of searching a reveal and kept the best; he and Huorongrong worked out together the small, fast network it plays with. And thank you, Devin O'Keefe, for the code the new release stands on.":
     "AB-JChess 以 GPL-3.0 许可证开源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。每次构建网站时，神经网络都从作者自己的发布版本下载，我们不另行托管。感谢 Huorongrong 和 Laoxu（Kouza）。Laoxu 负责训练 AB-JChess 的神经网络，这次测试了四种翻子搜索方法，保留了最好的一种；他与 Huorongrong 共同设计了这个小而快的网络。也感谢 Devin O'Keefe，新版本基于他提供的代码开发。",
   'TOP BOT AGAIN': '重回最强电脑',
+  // fog-future: machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day. Terms follow the legacy badges (迷雾国际象棋留名 / 迷霧西洋棋留名); Misty is 它; the badge images and thumbnail swap to zh renders of the same cards.
+  'The Future of Fog Variants on Mistboard': 'Mistboard 迷雾变体的未来',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
+    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。为什么它们的运行成本太高、哪些功能会保留，以及要怎样才能让它们回来。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
+    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。和朋友对弈、规则页面以及所有已完成的对局都会保留。',
+  'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
+    '迷雾机器人必须记住迷雾背后所有可能的局面。在复杂的深局中，这会达到数亿个局面，所需内存远远超出这些对局值得的投入。',
+  "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
+    '在 12 月 8 日前登录并战胜 Misty，该棋种的留名徽章就会一直留在你的个人主页上：迷雾国际象棋一枚，迷雾象棋一枚。',
+  'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
+    '从 6 月起，Mistboard 一直在运行 Misty，一个会下[迷雾国际象棋](/rules/fog-chess)和[迷雾象棋](/rules/fog-xiangqi)的机器人。在这两种棋里，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，两个迷雾机器人都将下线。**',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
+    '为了在看不见全盘的情况下下好棋，Misty 会追踪迷雾背后所有可能的局面。在漫长而复杂的对局里，这需要的内存远远超过服务器能为这少数玩家承担的。和朋友对弈、两个规则页面以及所有已完成的对局都会保留。',
+  Timeline: '时间线',
+  'This announcement': '本公告',
+  'The Fog Chess and Fog Xiangqi legacy badges go live.':
+    '迷雾国际象棋留名和迷雾象棋留名徽章上线。',
+  'The fog bots go offline': '迷雾机器人下线',
+  'Playing Fog Chess and Fog Xiangqi against Misty ends, along with Fog Chess engine review. Last day to earn a badge.':
+    '与 Misty 对弈迷雾国际象棋和迷雾象棋的功能结束，迷雾国际象棋的引擎复盘也一并停止。这是获得徽章的最后一天。',
+  Later: '之后',
+  'The games themselves': '棋种本身',
+  'What happens to Fog Chess and Fog Xiangqi as games. Each decision is added here with its date.':
+    '迷雾国际象棋和迷雾象棋这两个棋种今后如何安排。每项决定都会连同日期补充在这里。',
+  'Why the fog bots are expensive': '为什么迷雾机器人这么贵',
+  "A normal chess engine studies one board, the one in front of it. Misty can't, because she sees only what you see. Instead she keeps a list of *every* position the fog could be hiding, and picks the move that works across all of them.":
+    '普通的棋类引擎只研究一个棋盘，就是眼前这一个。Misty 做不到，因为它只能看到你看得到的东西。它改为保存一份清单，列出迷雾背后每一个可能的局面，再选出在所有局面下都行得通的着法。',
+  "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
+    '**清单可能会暴涨。** 通常它只有几十个棋盘。但它每看不到一步，清单就成倍增长；在复杂的对局里，几步之内就可能从几千个跳到几百万个。一盘与真人的对局达到了 8,200 万个局面；一盘自我对弈达到了 3.46 亿个。',
+  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
+    '**每个局面都占内存。** 为了能在服务器上运行，Misty 在迷雾国际象棋中最多保存 1,600 万个局面，在迷雾象棋中最多 2,000 万个，超出部分只取样本来下棋。即使有上限，一盘棋仍用掉了 7.7 GB。那盘 3.46 亿个局面的对局，若不设上限，需要超过 150 GB。',
+  '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
+    '**清单越长越慢。** 清单短时，Misty 大约五秒走一步；接近上限时，一步可能要将近一分钟。从 6 月至今，有 17 盘棋因为它超时或掉线而结束。',
+  '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
+    '**闲置时也占内存。** 即使没有对局在进行，这项服务也占着约 1.26 GB，这样对局一开始 Misty 就能马上应战。',
+  "Running Misty in your browser instead doesn't work: a deep game needs more memory than a browser tab gets, and her view of the board would sit on your machine. [How Misty plays](/blog/misty) explains the search in full.":
+    '改在你的浏览器里运行 Misty 也行不通：深局需要的内存超过一个浏览器标签页能分到的，而且它掌握的棋盘信息会放在你自己的电脑上。[Misty 如何下棋](/blog/misty)一文完整介绍了它的搜索。',
+  'What memory costs': '内存要花多少钱',
+  'Memory chips got much more expensive this year. [TrendForce](https://www.trendforce.com/presscenter/news/20260601-13070.html), which tracks chip prices, reported contract DRAM prices nearly doubling in the first quarter of 2026 as makers moved production toward AI servers, and it [expects](https://www.trendforce.com/presscenter/news/20260930-13258.html) another 10 to 15% rise this quarter, at a slower pace.':
+    '今年内存芯片涨价很多。追踪芯片价格的 [TrendForce 集邦咨询](https://www.trendforce.com/presscenter/news/20260601-13070.html)报告说，由于厂商把产能转向 AI 服务器，2026 年第一季度 DRAM 合约价几乎翻倍；它还[预计](https://www.trendforce.com/presscenter/news/20260930-13258.html)本季度会再涨 10% 到 15%，只是涨速放缓。',
+  'Hosts pass that on. One gigabyte held for a month costs:':
+    '主机服务商把涨价转嫁给了用户。占用 1 GB 内存一个月的费用是：',
+  "**$10** on Railway, Mistboard's host": 'Mistboard 所用的托管平台 Railway：**10 美元**',
+  '**about $4.90** on an AWS memory-optimized server': 'AWS 内存优化型服务器：**约 4.90 美元**',
+  '**about €3** on a Hetzner dedicated server': 'Hetzner 独立服务器：**约 3 欧元**',
+  "At Railway's rate, Misty's idle memory costs about $12.60 a month, room for one capped game about $80, and room for one uncapped deep game about $1,500. Even on Hetzner, the uncapped game would cost more than €400 a month.":
+    '按 Railway 的价格，Misty 闲置时占用的内存每月约 12.60 美元；为一盘有上限的对局预留内存约 80 美元；为一盘不设上限的深局预留则约 1,500 美元。即使在 Hetzner 上，不设上限的对局每月也要超过 400 欧元。',
+  "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
+    '均为各服务商官方标价，换算成 1 GB 内存使用一个月的价格。Railway 单独按内存计费；AWS 和 Hetzner 的内存随服务器一起出售，所以它们的数字是用服务器价格除以内存容量得出的。',
+  'The Fog legacy badges': '迷雾留名徽章',
+  'Beat Misty while signed in before **December 8, 2026**, and a legacy badge stays on your profile after the bots are gone:':
+    '在 **2026 年 12 月 8 日**前登录并战胜 Misty，机器人下线后，留名徽章仍会留在你的个人主页上：',
+  '**Fog Chess legacy** for a win at Fog Chess': '**迷雾国际象棋留名**：在迷雾国际象棋中获胜',
+  '**Fog Xiangqi legacy** for a win at Fog Xiangqi': '**迷雾象棋留名**：在迷雾象棋中获胜',
+  'The Fog Chess legacy badge: a shield holding a chess king rising from fog. It reads: Beat Misty at Fog Chess before the fog bots retired in December 2026.':
+    '迷雾国际象棋留名徽章：盾牌上是一个从迷雾中升起的国际象棋王。文字是：在迷雾机器人于 2026 年 12 月退役前，在迷雾国际象棋中战胜过 Misty。',
+  'The Fog Xiangqi legacy badge: a shield holding an elephant rising from fog. It reads: Beat Misty at Fog Xiangqi before the fog bots retired in December 2026.':
+    '迷雾象棋留名徽章：盾牌上是一头从迷雾中升起的大象。文字是：在迷雾机器人于 2026 年 12 月退役前，在迷雾象棋中战胜过 Misty。',
+  "Beat her at both and you hold both. Wins already on an account count, so juangamer10pro2 and rebirthfox333 have theirs. Guests can't hold badges, so sign in before your next game.":
+    '两种都赢过，就两枚都有。账号里已有的胜局也算数，所以 juangamer10pro2 和 rebirthfox333 已经拿到了徽章。访客无法持有徽章，所以下一盘棋之前请先登录。',
+  'A challenge for engine builders': '给引擎开发者的挑战',
+  "Cheaper servers won't bring the bots back. Obscuro, the superhuman fog-of-war engine from Carnegie Mellon, and Misty, built on its design, both keep every position the fog could be hiding, and that list is what outgrows the machine.":
+    '更便宜的服务器也换不回这些机器人。卡内基梅隆大学的超人类迷雾国际象棋引擎 Obscuro，以及以它的设计为基础的 Misty，都会保存迷雾背后所有可能的局面，而正是这份清单撑爆了机器。',
+  'What a fog bot needs is a small memory budget. Engines for ordinary chess and xiangqi play at superhuman strength in well under a gigabyte. A fog engine will likely need more, but not tens of gigabytes. The bar is a Fog Chess bot that:':
+    '迷雾机器人需要的是一个很小的内存预算。普通国际象棋和象棋的引擎，用远不到 1 GB 的内存就能达到超人类水平。迷雾引擎大概需要更多，但不该是几十 GB。门槛是一个迷雾国际象棋机器人能够：',
+  'scores at least 50% against Misty over a 100-game match,':
+    '在与 Misty 的 100 盘对抗赛中得分至少 50%；',
+  'averages under 10 seconds a move, with no move over 30, and':
+    '平均每步用时不到 10 秒，且没有一步超过 30 秒；并且',
+  'stays under 8 GB of memory in its deepest games, and the less the better: every game running at once needs its own.':
+    '在最深的对局中内存也不超过 8 GB，越少越好：同时进行的每一盘棋都需要各自的内存。',
+  "How it gets there is up to you. Misty's engine is public [on GitHub](https://github.com/brianhliou/misty) and installs from PyPI as `misty-chess`, so you can start from it or test against it. If you build one, [tell us](/contact). Misty's fog server is being shut down for good, but a bot that clears the bar could bring computer play back to the fog.":
+    '怎么做到由你决定。Misty 的引擎[在 GitHub 上](https://github.com/brianhliou/misty)公开，也可以从 PyPI 以 `misty-chess` 安装，你可以以它为起点，或拿它来测试。如果你做出了一个，[告诉我们](/contact)。Misty 的迷雾服务器将永久关闭，但一个达到门槛的机器人，可以让迷雾里重新有电脑对手。',
+  'First game': '首局',
+  'June 1, 2026': '2026 年 6 月 1 日',
+  'June 23, 2026': '2026 年 6 月 23 日',
+  Players: '玩家',
+  'Wins against Misty': '战胜 Misty 的局数',
+  'Counts run to November 8 and include finished games where a person moved. Most were played without an account. Every win that ended with a capture, 42 in all, is collected in two studies you can replay move by move: [Beating Misty at Fog Chess](/study/ObtCiQip) and [Beating Misty at Fog Xiangqi](/study/wpQhOVHS).':
+    '统计截至 11 月 8 日，只计有真人走过棋的已完成对局。大多数对局是在未登录的情况下下的。所有以吃子告终的胜局（共 42 盘）都收录在两个可以逐步回放的研究里：[在迷雾国际象棋中战胜 Misty](/study/ObtCiQip) 和 [在迷雾象棋中战胜 Misty](/study/wpQhOVHS)。',
+  "Mistboard's mission is to bring people together across cultures through Chinese chess and the world's classic strategy games. Every game here needs care to stay worth playing: a bot that plays well, rules that read clearly, reviews that work. Putting that care where people play most means hard calls, and this is one of them.":
+    'Mistboard 的使命是通过中国象棋和世界经典策略棋类，让不同文化的人相聚在一起。这里的每个棋种都需要用心维护才值得一下：下得好的机器人、写得清楚的规则、好用的复盘。把这份心力放在大家下得最多的地方，就意味着要做艰难的取舍，这就是其中之一。',
+  '**To everyone who sat down across from Misty in the fog: thank you.** She is here until December 8, if you want one more game.':
+    '**感谢每一位在迷雾中坐到 Misty 对面的你。** 如果你还想再下一盘，它会一直在这里等到 12 月 8 日。',
+  'Play Fog Chess against Misty': '与 Misty 下迷雾国际象棋',
+  'Play Fog Xiangqi against Misty': '与 Misty 下迷雾象棋',
+  'The Future of Fog': '迷雾变体的未来',
+  'The Fog Chess and Fog Xiangqi legacy badges side by side.':
+    '迷雾国际象棋和迷雾象棋留名徽章并排展示。',
+  'Prices as of November 7, 2026': '价格截至 2026 年 11 月 7 日',
+  '/article-thumbs/fog-future.jpg': '/article-thumbs/fog-future.zh-hans.jpg',
+  '/article-thumbs/fog-chess-legacy-badge.png':
+    '/article-thumbs/fog-chess-legacy-badge.zh-hans.png',
+  '/article-thumbs/fog-chess-legacy-badge-dark.png':
+    '/article-thumbs/fog-chess-legacy-badge-dark.zh-hans.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge.zh-hans.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge-dark.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge-dark.zh-hans.png',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -13333,6 +13436,105 @@ const ZH_HANT: Record<string, string> = {
   'Zheng Weitong': '鄭惟桐',
   'Tang Dan. Card photo: Liu Cheng / Yangcheng Evening News, at the 2026 Five Rams Cup.':
     '唐丹。卡片照片：劉程／《羊城晚報》，攝於 2026 年五羊杯。',
+  // fog-future: machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day. Terms follow the legacy badges (迷雾国际象棋留名 / 迷霧西洋棋留名); Misty is 它; the badge images and thumbnail swap to zh renders of the same cards.
+  'The Future of Fog Variants on Mistboard': 'Mistboard 迷霧變體的未來',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
+    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。為什麼它們的運行成本太高、哪些功能會保留，以及要怎樣才能讓它們回來。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
+    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。和朋友對弈、規則頁面以及所有已完成的對局都會保留。',
+  'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
+    '迷霧機器人必須記住迷霧背後所有可能的局面。在複雜的深局中，這會達到數億個局面，所需記憶體遠遠超出這些對局值得的投入。',
+  "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
+    '在 12 月 8 日前登入並戰勝 Misty，該棋種的留名徽章就會一直留在你的個人頁面上：迷霧西洋棋一枚，迷霧象棋一枚。',
+  'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
+    '從 6 月起，Mistboard 一直在運行 Misty，一個會下[迷霧西洋棋](/rules/fog-chess)和[迷霧象棋](/rules/fog-xiangqi)的機器人。在這兩種棋裡，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，兩個迷霧機器人都將下線。**',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
+    '為了在看不見全盤的情況下下好棋，Misty 會追蹤迷霧背後所有可能的局面。在漫長而複雜的對局裡，這需要的記憶體遠遠超過伺服器能為這少數玩家承擔的。和朋友對弈、兩個規則頁面以及所有已完成的對局都會保留。',
+  Timeline: '時間軸',
+  'This announcement': '本公告',
+  'The Fog Chess and Fog Xiangqi legacy badges go live.': '迷霧西洋棋留名和迷霧象棋留名徽章上線。',
+  'The fog bots go offline': '迷霧機器人下線',
+  'Playing Fog Chess and Fog Xiangqi against Misty ends, along with Fog Chess engine review. Last day to earn a badge.':
+    '與 Misty 對弈迷霧西洋棋和迷霧象棋的功能結束，迷霧西洋棋的引擎復盤也一併停止。這是獲得徽章的最後一天。',
+  Later: '之後',
+  'The games themselves': '棋種本身',
+  'What happens to Fog Chess and Fog Xiangqi as games. Each decision is added here with its date.':
+    '迷霧西洋棋和迷霧象棋這兩個棋種今後如何安排。每項決定都會連同日期補充在這裡。',
+  'Why the fog bots are expensive': '為什麼迷霧機器人這麼貴',
+  "A normal chess engine studies one board, the one in front of it. Misty can't, because she sees only what you see. Instead she keeps a list of *every* position the fog could be hiding, and picks the move that works across all of them.":
+    '普通的棋類引擎只研究一個棋盤，就是眼前這一個。Misty 做不到，因為它只能看到你看得到的東西。它改為保存一份清單，列出迷霧背後每一個可能的局面，再選出在所有局面下都行得通的走法。',
+  "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
+    '**清單可能會暴漲。** 通常它只有幾十個棋盤。但它每看不到一步，清單就成倍增長；在複雜的對局裡，幾步之內就可能從幾千個跳到幾百萬個。一盤與真人的對局達到了 8,200 萬個局面；一盤自我對弈達到了 3.46 億個。',
+  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
+    '**每個局面都佔記憶體。** 為了能在伺服器上運行，Misty 在迷霧西洋棋中最多保存 1,600 萬個局面，在迷霧象棋中最多 2,000 萬個，超出部分只取樣本來下棋。即使有上限，一盤棋仍用掉了 7.7 GB。那盤 3.46 億個局面的對局，若不設上限，需要超過 150 GB。',
+  '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
+    '**清單越長越慢。** 清單短時，Misty 大約五秒走一步；接近上限時，一步可能要將近一分鐘。從 6 月至今，有 17 盤棋因為它超時或斷線而結束。',
+  '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
+    '**閒置時也佔記憶體。** 即使沒有對局在進行，這項服務也佔著約 1.26 GB，這樣對局一開始 Misty 就能馬上應戰。',
+  "Running Misty in your browser instead doesn't work: a deep game needs more memory than a browser tab gets, and her view of the board would sit on your machine. [How Misty plays](/blog/misty) explains the search in full.":
+    '改在你的瀏覽器裡運行 Misty 也行不通：深局需要的記憶體超過一個瀏覽器分頁能分到的，而且它掌握的棋盤資訊會放在你自己的電腦上。[Misty 如何下棋](/blog/misty)一文完整介紹了它的搜尋。',
+  'What memory costs': '記憶體要花多少錢',
+  'Memory chips got much more expensive this year. [TrendForce](https://www.trendforce.com/presscenter/news/20260601-13070.html), which tracks chip prices, reported contract DRAM prices nearly doubling in the first quarter of 2026 as makers moved production toward AI servers, and it [expects](https://www.trendforce.com/presscenter/news/20260930-13258.html) another 10 to 15% rise this quarter, at a slower pace.':
+    '今年記憶體晶片漲價很多。追蹤晶片價格的 [TrendForce 集邦科技](https://www.trendforce.com/presscenter/news/20260601-13070.html)報告說，由於廠商把產能轉向 AI 伺服器，2026 年第一季 DRAM 合約價幾乎翻倍；它還[預估](https://www.trendforce.com/presscenter/news/20260930-13258.html)本季會再漲 10% 到 15%，只是漲速放緩。',
+  'Hosts pass that on. One gigabyte held for a month costs:':
+    '主機服務商把漲價轉嫁給了用戶。佔用 1 GB 記憶體一個月的費用是：',
+  "**$10** on Railway, Mistboard's host": 'Mistboard 所用的託管平台 Railway：**10 美元**',
+  '**about $4.90** on an AWS memory-optimized server': 'AWS 記憶體最佳化伺服器：**約 4.90 美元**',
+  '**about €3** on a Hetzner dedicated server': 'Hetzner 獨立伺服器：**約 3 歐元**',
+  "At Railway's rate, Misty's idle memory costs about $12.60 a month, room for one capped game about $80, and room for one uncapped deep game about $1,500. Even on Hetzner, the uncapped game would cost more than €400 a month.":
+    '按 Railway 的價格，Misty 閒置時佔用的記憶體每月約 12.60 美元；為一盤有上限的對局預留記憶體約 80 美元；為一盤不設上限的深局預留則約 1,500 美元。即使在 Hetzner 上，不設上限的對局每月也要超過 400 歐元。',
+  "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
+    '均為各服務商官方標價，換算成 1 GB 記憶體使用一個月的價格。Railway 單獨按記憶體計費；AWS 和 Hetzner 的記憶體隨伺服器一起出售，所以它們的數字是用伺服器價格除以記憶體容量得出的。',
+  'The Fog legacy badges': '迷霧留名徽章',
+  'Beat Misty while signed in before **December 8, 2026**, and a legacy badge stays on your profile after the bots are gone:':
+    '在 **2026 年 12 月 8 日**前登入並戰勝 Misty，機器人下線後，留名徽章仍會留在你的個人頁面上：',
+  '**Fog Chess legacy** for a win at Fog Chess': '**迷霧西洋棋留名**：在迷霧西洋棋中獲勝',
+  '**Fog Xiangqi legacy** for a win at Fog Xiangqi': '**迷霧象棋留名**：在迷霧象棋中獲勝',
+  'The Fog Chess legacy badge: a shield holding a chess king rising from fog. It reads: Beat Misty at Fog Chess before the fog bots retired in December 2026.':
+    '迷霧西洋棋留名徽章：盾牌上是一個從迷霧中升起的西洋棋國王。文字是：在迷霧機器人於 2026 年 12 月退役前，在迷霧西洋棋中戰勝過 Misty。',
+  'The Fog Xiangqi legacy badge: a shield holding an elephant rising from fog. It reads: Beat Misty at Fog Xiangqi before the fog bots retired in December 2026.':
+    '迷霧象棋留名徽章：盾牌上是一頭從迷霧中升起的大象。文字是：在迷霧機器人於 2026 年 12 月退役前，在迷霧象棋中戰勝過 Misty。',
+  "Beat her at both and you hold both. Wins already on an account count, so juangamer10pro2 and rebirthfox333 have theirs. Guests can't hold badges, so sign in before your next game.":
+    '兩種都贏過，就兩枚都有。帳號裡已有的勝局也算數，所以 juangamer10pro2 和 rebirthfox333 已經拿到了徽章。訪客無法持有徽章，所以下一盤棋之前請先登入。',
+  'A challenge for engine builders': '給引擎開發者的挑戰',
+  "Cheaper servers won't bring the bots back. Obscuro, the superhuman fog-of-war engine from Carnegie Mellon, and Misty, built on its design, both keep every position the fog could be hiding, and that list is what outgrows the machine.":
+    '更便宜的伺服器也換不回這些機器人。卡內基美隆大學的超人類迷霧西洋棋引擎 Obscuro，以及以它的設計為基礎的 Misty，都會保存迷霧背後所有可能的局面，而正是這份清單撐爆了機器。',
+  'What a fog bot needs is a small memory budget. Engines for ordinary chess and xiangqi play at superhuman strength in well under a gigabyte. A fog engine will likely need more, but not tens of gigabytes. The bar is a Fog Chess bot that:':
+    '迷霧機器人需要的是一個很小的記憶體預算。一般西洋棋和象棋的引擎，用遠不到 1 GB 的記憶體就能達到超人類水準。迷霧引擎大概需要更多，但不該是幾十 GB。門檻是一個迷霧西洋棋機器人能夠：',
+  'scores at least 50% against Misty over a 100-game match,':
+    '在與 Misty 的 100 盤對抗賽中得分至少 50%；',
+  'averages under 10 seconds a move, with no move over 30, and':
+    '平均每步用時不到 10 秒，且沒有一步超過 30 秒；並且',
+  'stays under 8 GB of memory in its deepest games, and the less the better: every game running at once needs its own.':
+    '在最深的對局中記憶體也不超過 8 GB，越少越好：同時進行的每一盤棋都需要各自的記憶體。',
+  "How it gets there is up to you. Misty's engine is public [on GitHub](https://github.com/brianhliou/misty) and installs from PyPI as `misty-chess`, so you can start from it or test against it. If you build one, [tell us](/contact). Misty's fog server is being shut down for good, but a bot that clears the bar could bring computer play back to the fog.":
+    '怎麼做到由你決定。Misty 的引擎[在 GitHub 上](https://github.com/brianhliou/misty)公開，也可以從 PyPI 以 `misty-chess` 安裝，你可以以它為起點，或拿它來測試。如果你做出了一個，[告訴我們](/contact)。Misty 的迷霧伺服器將永久關閉，但一個達到門檻的機器人，可以讓迷霧裡重新有電腦對手。',
+  'First game': '首局',
+  'June 1, 2026': '2026 年 6 月 1 日',
+  'June 23, 2026': '2026 年 6 月 23 日',
+  Players: '玩家',
+  'Wins against Misty': '戰勝 Misty 的局數',
+  'Counts run to November 8 and include finished games where a person moved. Most were played without an account. Every win that ended with a capture, 42 in all, is collected in two studies you can replay move by move: [Beating Misty at Fog Chess](/study/ObtCiQip) and [Beating Misty at Fog Xiangqi](/study/wpQhOVHS).':
+    '統計截至 11 月 8 日，只計有真人走過棋的已完成對局。大多數對局是在未登入的情況下下的。所有以吃子告終的勝局（共 42 盤）都收錄在兩個可以逐步回放的研究裡：[在迷霧西洋棋中戰勝 Misty](/study/ObtCiQip) 和 [在迷霧象棋中戰勝 Misty](/study/wpQhOVHS)。',
+  "Mistboard's mission is to bring people together across cultures through Chinese chess and the world's classic strategy games. Every game here needs care to stay worth playing: a bot that plays well, rules that read clearly, reviews that work. Putting that care where people play most means hard calls, and this is one of them.":
+    'Mistboard 的使命是透過象棋和世界經典策略棋類，讓不同文化的人相聚在一起。這裡的每個棋種都需要用心維護才值得一下：下得好的機器人、寫得清楚的規則、好用的復盤。把這份心力放在大家下得最多的地方，就意味著要做艱難的取捨，這就是其中之一。',
+  '**To everyone who sat down across from Misty in the fog: thank you.** She is here until December 8, if you want one more game.':
+    '**感謝每一位在迷霧中坐到 Misty 對面的你。** 如果你還想再下一盤，它會一直在這裡等到 12 月 8 日。',
+  'Play Fog Chess against Misty': '與 Misty 下迷霧西洋棋',
+  'Play Fog Xiangqi against Misty': '與 Misty 下迷霧象棋',
+  'The Future of Fog': '迷霧變體的未來',
+  'The Fog Chess and Fog Xiangqi legacy badges side by side.':
+    '迷霧西洋棋和迷霧象棋留名徽章並排展示。',
+  'Prices as of November 7, 2026': '價格截至 2026 年 11 月 7 日',
+  '/article-thumbs/fog-future.jpg': '/article-thumbs/fog-future.zh-hant.jpg',
+  '/article-thumbs/fog-chess-legacy-badge.png':
+    '/article-thumbs/fog-chess-legacy-badge.zh-hant.png',
+  '/article-thumbs/fog-chess-legacy-badge-dark.png':
+    '/article-thumbs/fog-chess-legacy-badge-dark.zh-hant.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge.zh-hant.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge-dark.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge-dark.zh-hant.png',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

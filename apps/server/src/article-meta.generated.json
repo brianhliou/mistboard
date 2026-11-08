@@ -237,6 +237,16 @@
     "description": "Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.",
     "status": "draft"
   },
+  "fog-future": {
+    "title": "The Future of Fog Variants on Mistboard",
+    "kind": "article",
+    "description": "The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Mistboard 迷雾变体的未来",
+      "zh-hant": "Mistboard 迷霧變體的未來"
+    }
+  },
   "fog-openings": {
     "title": "An Opening System for Fog Chess",
     "kind": "article",
