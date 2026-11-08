@@ -24,6 +24,7 @@ export function mountJieqiCaptureStrips(
     });
     return { strip, captures, nodes };
   });
+  const reserve = strips.map(({ strip }) => reserveStripHeight(stage, strip));
   const place = (desktop: boolean): void => {
     stage.classList.toggle('jieqi-capture-stage', desktop);
     for (const { strip, captures, nodes } of strips) {
@@ -36,20 +37,30 @@ export function mountJieqiCaptureStrips(
         strip.remove();
       }
     }
+    for (const update of reserve) update();
   };
   place(media.matches);
   media.addEventListener('change', (event) => place(event.matches));
-  for (const { nodes } of strips) for (const { node } of nodes.slice(1)) watchOverflow(node);
 }
 
-/** Mark an odds row whose line is cut short (the narrowest board, where it
- * scrolls sideways), so CSS can fade the cut edge. Re-checked when the row is
- * resized and when a move re-renders its contents. */
-function watchOverflow(row: HTMLElement): void {
-  const check = (): void => {
-    row.toggleAttribute('data-overflow', row.scrollWidth > row.clientWidth + 1);
+/** Publish a strip's height to the room (--jieqi-strip-top-h or
+ * --jieqi-strip-bottom-h), so the board reserves a second row only while the
+ * odds have wrapped onto one. Off the page (the phone layout) it is cleared and
+ * the CSS default of one row applies. */
+function reserveStripHeight(stage: HTMLElement, strip: HTMLElement): () => void {
+  const name = strip.classList.contains('review-seat--top')
+    ? '--jieqi-strip-top-h'
+    : '--jieqi-strip-bottom-h';
+  let last = '';
+  const update = (): void => {
+    const room = stage.closest<HTMLElement>('.live-route--jieqi') ?? document.documentElement;
+    const height = strip.isConnected ? Math.ceil(strip.getBoundingClientRect().height) : 0;
+    const value = height > 0 ? `${height}px` : '';
+    if (value === last) return;
+    last = value;
+    if (value) room.style.setProperty(name, value);
+    else room.style.removeProperty(name);
   };
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(check).observe(row);
-  new MutationObserver(check).observe(row, { childList: true, subtree: true, characterData: true });
-  check();
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(strip);
+  return update;
 }

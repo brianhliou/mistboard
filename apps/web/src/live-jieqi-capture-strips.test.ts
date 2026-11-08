@@ -44,27 +44,54 @@ describe('live Jieqi capture strips', () => {
     expect(room.querySelectorAll('[data-reveal-odds]')).toHaveLength(2);
   });
 
-  it('flags an odds row only while its contents are wider than the line', async () => {
+  it('reserves each strip height on the room and clears it off desktop', () => {
     const room = document.createElement('div');
+    room.className = 'live-route--jieqi';
     room.innerHTML = `<div class="board-stage"><div data-board></div></div>
       <div class="game-console"><div data-top></div><div data-clock></div><div data-bottom></div></div>`;
+    document.body.append(room);
     const refs = {
       board: room.querySelector<HTMLDivElement>('[data-board]')!,
       capturesTop: room.querySelector<HTMLDivElement>('[data-top]')!,
       capturesBottom: room.querySelector<HTMLDivElement>('[data-bottom]')!,
     };
     mountRevealOdds(refs, () => () => '<svg></svg>');
-    const row = room.querySelector<HTMLElement>('[data-reveal-odds="bottom"]')!;
-    let content = 300;
-    Object.defineProperty(row, 'clientWidth', { get: () => 240 });
-    Object.defineProperty(row, 'scrollWidth', { get: () => content });
-    const media = { matches: true, addEventListener: () => {} } as unknown as MediaQueryList;
-    mountJieqiCaptureStrips(refs, media);
-    expect(row.hasAttribute('data-overflow')).toBe(true);
-    // A move re-renders the row with fewer pieces: the flag clears.
-    content = 240;
-    row.append(document.createElement('span'));
-    await Promise.resolve();
-    expect(row.hasAttribute('data-overflow')).toBe(false);
+    const heights = new Map<string, number>([
+      ['top', 30],
+      ['bottom', 62],
+    ]);
+    const proto = HTMLElement.prototype;
+    const original = proto.getBoundingClientRect;
+    proto.getBoundingClientRect = function (this: HTMLElement) {
+      const position = this.classList.contains('review-seat--top')
+        ? 'top'
+        : this.classList.contains('review-seat--bottom')
+          ? 'bottom'
+          : null;
+      const height = position && this.isConnected ? heights.get(position)! : 0;
+      return { height, width: 0, top: 0, left: 0, right: 0, bottom: height, x: 0, y: 0 } as DOMRect;
+    };
+    try {
+      let change = (_event: { matches: boolean }) => {};
+      const media = {
+        matches: true,
+        addEventListener: (_type: string, listener: typeof change) => {
+          change = listener;
+        },
+      } as unknown as MediaQueryList;
+      mountJieqiCaptureStrips(refs, media);
+      expect(room.style.getPropertyValue('--jieqi-strip-top-h')).toBe('30px');
+      expect(room.style.getPropertyValue('--jieqi-strip-bottom-h')).toBe('62px');
+      // The phone layout puts the rows back in the player bars: no reserve.
+      change({ matches: false });
+      expect(room.querySelector('.jieqi-capture-strip')).toBeNull();
+      expect(room.style.getPropertyValue('--jieqi-strip-top-h')).toBe('');
+      expect(room.style.getPropertyValue('--jieqi-strip-bottom-h')).toBe('');
+      change({ matches: true });
+      expect(room.style.getPropertyValue('--jieqi-strip-bottom-h')).toBe('62px');
+    } finally {
+      proto.getBoundingClientRect = original;
+      room.remove();
+    }
   });
 });
