@@ -63,6 +63,7 @@ function writeEngineChoice(on: boolean): void {
 /** Capability only. A gated route/review owner may mount it; no catalog,
  * offering, menu link or route is registered here. */
 export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig): TreeReviewHandle {
+  const chapterRoot = config.root?.truth;
   const presentation: TreePresentation<
     GomokuMove,
     GomokuRoomState,
@@ -71,7 +72,7 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
     NodeShape,
     GomokuBoardMarker
   > = {
-    adapter: makeGomokuTreeAdapter(config.opening),
+    adapter: makeGomokuTreeAdapter(chapterRoot ?? config.opening),
     hideAcpl: true,
     engine: {
       panelVariant: 'gomoku',
@@ -123,6 +124,11 @@ export function mountGomokuReview(root: HTMLElement, config: GomokuReviewConfig)
   };
   const handle = mountTreeReview(root, presentation, {
     seatColors: { red: 'black', black: 'white' },
+    firstMover:
+      (chapterRoot?.status.type === 'playing' ? chapterRoot.status.turn : config.opening?.turn) ===
+      'white'
+        ? 'black'
+        : 'red',
     ...config,
     localEngine: { enabled: readEngineChoice(), onToggle: writeEngineChoice },
   });
