@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { GOMOKU_OPENINGS, getGomokuPlayerView } from '@mistboard/game';
+import { GOMOKU_DEALT_OPENINGS, getGomokuPlayerView } from '@mistboard/game';
 import { gomokuTenant } from './gomoku-tenant.js';
 
 import {
@@ -37,10 +37,10 @@ test('Gomoku has a deterministic dealt-opening fixture that finishes on a five',
   assert.deepEqual(playRandomGame(spec, 7, DEFAULT_PLY_CAP), result);
   const first = result.events[0] as { setup: { stones: unknown[]; turn: string } };
   assert.ok(
-    GOMOKU_OPENINGS.some(
+    GOMOKU_DEALT_OPENINGS.some(
       ({ stones, turn }) => JSON.stringify({ stones, turn }) === JSON.stringify(first.setup),
     ),
-    'use a recorded pool opening',
+    'use a recorded mined opening from the dealt pool',
   );
   assert.ok(first.setup.stones.length > 0);
   const hydration = createTenantRuntimeRoomFromEvents(gomokuTenant, result.events as never[]);

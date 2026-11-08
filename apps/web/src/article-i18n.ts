@@ -445,8 +445,8 @@ const ZH_HANS: Record<string, string> = {
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋规则：两人在 15×15 棋盘上轮流落子，先在横、竖或斜线上连成五子者获胜。学会落子、连成五子，以及如何在 Mistboard 发放的开局里跟着回合提示走棋。',
-  'Explained why openings are dealt and gave the game’s history its own section.':
-    '说明了开局为什么由系统发放，并把这个游戏的历史单独成节。',
+  'Updated the opening diagram to match the dealt pool: two black stones, three white stones and Black to move.':
+    '更新了开局示意图，与系统发放的开局一致：两枚黑子、三枚白子，轮到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一个空的交叉点上放一枚棋子。棋子落下后就不再移动。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -6937,8 +6937,8 @@ const ZH_HANT: Record<string, string> = {
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋規則：兩人在 15×15 棋盤上輪流落子，先在橫、豎或斜線上連成五子者獲勝。學會落子、連成五子，以及如何在 Mistboard 發放的開局裡跟著回合提示走棋。',
-  'Explained why openings are dealt and gave the game’s history its own section.':
-    '說明了開局為什麼由系統發放，並把這個遊戲的歷史單獨成節。',
+  'Updated the opening diagram to match the dealt pool: two black stones, three white stones and Black to move.':
+    '更新了開局示意圖，與系統發放的開局一致：兩枚黑子、三枚白子，輪到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一個空的交叉點上放一枚棋子。棋子落下後就不再移動。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':

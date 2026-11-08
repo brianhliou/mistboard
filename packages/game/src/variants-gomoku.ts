@@ -50,6 +50,11 @@ export const GOMOKU_OPENINGS = openingPool.openings as readonly (GomokuOpening &
     readonly forcedWin: boolean;
   };
 })[];
+// New games use only mined 2B+3W positions. Keep the full pool above and
+// opening validation unchanged so recorded classic openings still replay.
+export const GOMOKU_DEALT_OPENINGS: typeof GOMOKU_OPENINGS = GOMOKU_OPENINGS.filter(
+  (opening) => opening.source === 'mined-2B3W-7x7',
+);
 export type GomokuStatus =
   | { readonly type: 'playing'; readonly turn: GomokuColor }
   | { readonly type: 'finished'; readonly winner: GomokuColor; readonly reason: 'five' }

@@ -115,6 +115,24 @@ test('the Rapfi pool contains at least 200 distinct, legal, nonterminal near-eve
   }
 });
 
+test('the dealt pool contains only mined two-black three-white openings with Black to move', () => {
+  assert.ok(game.GOMOKU_DEALT_OPENINGS.length > 0);
+  assert.deepEqual(
+    game.GOMOKU_DEALT_OPENINGS,
+    game.GOMOKU_OPENINGS.filter((entry) => entry.source === 'mined-2B3W-7x7'),
+  );
+  for (const entry of game.GOMOKU_DEALT_OPENINGS) {
+    assert.equal(entry.stones.length, 5, entry.id);
+    assert.equal(entry.stones.filter((stone) => stone.color === 'black').length, 2, entry.id);
+    assert.equal(entry.stones.filter((stone) => stone.color === 'white').length, 3, entry.id);
+    assert.deepEqual(game.createInitialGomokuState(entry).status, {
+      type: 'playing',
+      turn: 'black',
+    });
+    assert.equal(entry.turn, 'black', entry.id);
+  }
+});
+
 test('mined importer rejects score 41, forced wins and reflected pool duplicates', async () => {
   const { importMinedOpenings } = await import(
     new URL('../../../scripts/import-gomoku-mined-openings.mjs', import.meta.url).href

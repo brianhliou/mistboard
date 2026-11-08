@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
-  GOMOKU_OPENINGS,
+  GOMOKU_DEALT_OPENINGS,
   GOMOKU_SPEC_ID,
   type GomokuColor,
   type GomokuMove,
@@ -65,7 +65,7 @@ export const gomokuTenant: VariantTenant<
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
   rules: {
     createSetup: () => {
-      const { stones, turn } = GOMOKU_OPENINGS[randomInt(GOMOKU_OPENINGS.length)]!;
+      const { stones, turn } = GOMOKU_DEALT_OPENINGS[randomInt(GOMOKU_DEALT_OPENINGS.length)]!;
       return { stones, turn };
     },
     createInitialState: (id, setup) => {
