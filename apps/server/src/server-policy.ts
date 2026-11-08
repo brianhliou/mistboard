@@ -357,17 +357,32 @@ export const EMBED_ROUTE_PATTERNS = [
     id: 'embed-study',
     test: (path: string) => /^\/embed\/study\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/.test(path),
   },
+  // A finished game, by room id. The page only ever shows what the public
+  // review page already shows (the summary and events endpoints apply the
+  // post-terminal reveal gate), so framing it widens nothing.
   { id: 'embed-game', test: (path: string) => /^\/embed\/game\/[A-Za-z0-9_-]{1,64}$/.test(path) },
+  // The live board (a channel's featured game, else its last finished one),
+  // today's puzzle or one by id, and the xiangqi analysis board. Each shows
+  // only what the anonymous public sees on /watch, /puzzles and /analysis.
   {
     id: 'embed-puzzle',
     test: (path: string) => /^\/embed\/puzzle(?:\/[A-Za-z0-9_-]{1,64})?$/.test(path),
   },
   { id: 'embed-analysis', test: (path: string) => /^\/embed\/analysis(?:\/xiangqi)?$/.test(path) },
+  // A bare move list carried in the query string, no game or study behind
+  // it, so nothing stored is read: the page shows only what the embedder
+  // typed. The variant list is the client's (EMBED_LINE_VARIANTS); an
+  // unknown one gets the embed shell and a refusal there.
   { id: 'embed-line', test: (path: string) => /^\/embed\/line\/[a-z-]{1,32}$/.test(path) },
+  // One relayed professional game: the same moves and names the public
+  // broadcast page shows, nothing hidden (xiangqi is open information).
   {
     id: 'embed-broadcast-board',
     test: (path: string) => /^\/embed\/broadcast\/xiangqi\/board\/[A-Za-z0-9_-]{1,160}$/.test(path),
   },
+  // The live board (a channel's featured game, else its last finished one),
+  // today's puzzle or one by id, and the xiangqi analysis board. Each shows
+  // only what the anonymous public sees on /watch, /puzzles and /analysis.
   { id: 'embed-tv', test: (path: string) => path === '/embed/tv' },
 ];
 
