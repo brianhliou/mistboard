@@ -91,7 +91,7 @@ const presentation: TreePresentation<
   defaultBoardAriaLabel: 'Three Kingdoms banqi board',
   boardAspect: TK_LIVE_BOARD_VIEW.width / TK_LIVE_BOARD_VIEW.height,
   boardCols: 10,
-  boardMaxPx: 560,
+  boardMaxPx: 720,
   reserveGaugeTrack: true,
   // The board is the same for both seats, so the Flip control only swaps the
   // seat rows, as on banqi.

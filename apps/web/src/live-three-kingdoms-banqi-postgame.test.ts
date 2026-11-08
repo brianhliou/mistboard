@@ -17,6 +17,7 @@ import {
   threeKingdomsBanqiPostgameRoot,
 } from './live-three-kingdoms-banqi-postgame.js';
 import { recoverThreeKingdomsBanqiDeal } from './review/three-kingdoms-banqi-tree-adapter.js';
+import { setResolvedSignedIn } from './signed-in-state.js';
 
 const ROOM = 'tkb_postgame';
 
@@ -126,9 +127,11 @@ describe('Three Kingdoms banqi deal recovery', () => {
 describe('Three Kingdoms banqi postgame page', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    setResolvedSignedIn(true);
   });
 
   afterEach(() => {
+    setResolvedSignedIn(undefined);
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
@@ -140,7 +143,11 @@ describe('Three Kingdoms banqi postgame page', () => {
   });
 
   it('renders the finished game on one review board with its move list and result', async () => {
-    const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
+    const fetchSpy = vi.fn(async (url: string | URL | Request) =>
+      String(url).endsWith('/analysis')
+        ? new Response(null, { status: 204 })
+        : jsonResponse(postgameFixture()),
+    );
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
 
@@ -157,8 +164,10 @@ describe('Three Kingdoms banqi postgame page', () => {
     expect(root.querySelector('.review-seat .tk-banqi-scores')?.textContent).toMatch(/^\d+ pts$/);
     // Nothing between the board and the move list: no right-rail material rows.
     expect(root.querySelector('.review-material-row:not(.review-seat__material)')).toBeNull();
-    // No engine for TK: no analysis request button.
-    expect(root.textContent).not.toContain('Request computer analysis');
+    expect(root.textContent).toContain('Request computer analysis');
+    expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/analysis`, {
+      method: 'GET',
+    });
   });
 
   it('shows the not-found page on a 404', async () => {
@@ -173,6 +182,137 @@ describe('Three Kingdoms banqi postgame page', () => {
 
     expect(root.querySelector('h1')?.textContent).toBe('Game not found');
     expect(root.textContent).toContain('This Three Kingdoms Banqi game is not available.');
+  });
+
+  it('runs decisions after analysis, grades flips with luck, and reloads both caches', async () => {
+    let cached = false;
+    let decisionsCached = false;
+    const decisions = {
+      engineId: 'tk-decisions@test',
+      depth: 12,
+      decisions: [
+        { ply: 1, mover: 'red', bestWin: 80, playedWin: 40, realizedWin: 25, playedRank: 2 },
+      ],
+    };
+    const analysis = {
+      engineId: 'misty-three-kingdoms-banqi-analysis@test',
+      depth: 12,
+      plies: [
+        { ply: 0, cp: 0, mate: null, best: null },
+        { ply: 1, cp: -900, mate: null, best: null },
+      ],
+      chancePlies: [1],
+    };
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/decisions')) {
+        if (init?.method === 'POST') {
+          expect(cached).toBe(true);
+          decisionsCached = true;
+        }
+        return decisionsCached ? jsonResponse(decisions) : new Response(null, { status: 204 });
+      }
+      if (!url.endsWith('/analysis')) return jsonResponse(postgameFixture());
+      if (init?.method === 'POST') cached = true;
+      return cached ? jsonResponse(analysis) : new Response(null, { status: 204 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    mountThreeKingdomsBanqiPostgame(root, ROOM);
+    await flushPromises();
+    expect(root.querySelector('.advantage-chart')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')?.click();
+    await flushPromises();
+    await flushPromises();
+    expect(root.querySelector('.advantage-chart__line')).not.toBeNull();
+    expect(root.querySelector('.review-move--blunder')).not.toBeNull();
+    expect(root.querySelector('.review-move-list__luck')?.textContent).toContain('-15%');
+    expect(root.querySelectorAll('.analysis-summary__player')).toHaveLength(2);
+
+    const reloaded = document.createElement('div');
+    mountThreeKingdomsBanqiPostgame(reloaded, ROOM);
+    await flushPromises();
+    await flushPromises();
+    expect(reloaded.querySelector('.advantage-chart__line')).not.toBeNull();
+    expect(reloaded.querySelector('.xiangqi-review__analyse')).toBeNull();
+    expect(reloaded.querySelector('.review-move--blunder')).not.toBeNull();
+    expect(reloaded.querySelector('.review-move-list__luck')?.textContent).toContain('-15%');
+    expect(fetchSpy.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(2);
+    expect(
+      fetchSpy.mock.calls.some(
+        ([url, init]) => String(url).endsWith('/decisions') && init?.method === 'GET',
+      ),
+    ).toBe(true);
+  });
+
+  it.each([true, false])(
+    'signed-out review reads decisions cache (hit=%s) without POST',
+    async (hit) => {
+      setResolvedSignedIn(false);
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/analysis'))
+          return jsonResponse({
+            engineId: 'tk-analysis@test',
+            depth: 12,
+            plies: [
+              { ply: 0, cp: 0, mate: null, best: null },
+              { ply: 1, cp: -900, mate: null, best: null },
+            ],
+            chancePlies: [1],
+          });
+        if (url.endsWith('/decisions'))
+          return hit
+            ? jsonResponse({
+                engineId: 'tk-decisions@test',
+                depth: 12,
+                decisions: [
+                  {
+                    ply: 1,
+                    mover: 'red',
+                    bestWin: 80,
+                    playedWin: 40,
+                    realizedWin: 25,
+                    playedRank: 2,
+                  },
+                ],
+              })
+            : new Response(null, { status: 204 });
+        return jsonResponse(postgameFixture());
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      mountThreeKingdomsBanqiPostgame(root, ROOM);
+      await flushPromises();
+      await flushPromises();
+      expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/decisions`, {
+        method: 'GET',
+      });
+      expect(
+        fetchSpy.mock.calls.every(
+          (call) => (call as unknown as [unknown, RequestInit?])[1]?.method !== 'POST',
+        ),
+      ).toBe(true);
+      expect(root.querySelector('.review-move--blunder') !== null).toBe(hit);
+    },
+  );
+
+  it('offers a sign-in link to a signed-out reviewer', async () => {
+    setResolvedSignedIn(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: RequestInfo | URL) =>
+        String(url).endsWith('/analysis')
+          ? new Response(null, { status: 204 })
+          : jsonResponse(postgameFixture()),
+      ),
+    );
+    const root = document.createElement('div');
+    mountThreeKingdomsBanqiPostgame(root, ROOM);
+    await flushPromises();
+    const link = root.querySelector<HTMLAnchorElement>('a.xiangqi-review__analyse');
+    expect(link?.textContent).toContain('Sign in to request analysis');
+    expect(link?.getAttribute('href')).toContain('/account?tab=login');
   });
 
   it('does not fetch where the variant is not offered', () => {
