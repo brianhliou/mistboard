@@ -11,7 +11,11 @@ import {
   jieqiRepetitionPositionKey,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { jieqiRepetitionWarning, repetitionWarningMode } from './jieqi-repetition-warning.js';
+import {
+  jieqiRepetitionWarning,
+  placeRepetitionLabel,
+  repetitionWarningMode,
+} from './jieqi-repetition-warning.js';
 
 const parse = (line: string): JieqiMove[] =>
   line.split(' ').map((token) => {
@@ -66,8 +70,8 @@ function play(board: JieqiBoard, cycle: string, plies: number, turn: JieqiColor 
 }
 
 describe('public Jieqi repetition warning', () => {
-  it('accepts only the three exact query modes', () => {
-    for (const value of ['heads-up', 'mark', 'confirm'])
+  it('accepts only the four exact query modes', () => {
+    for (const value of ['heads-up', 'mark', 'confirm', 'label'])
       expect(repetitionWarningMode(`?repwarn=${value}`)).toBe(value);
     for (const query of ['', '?repwarn=1', '?repwarn=', '?other=confirm'])
       expect(repetitionWarningMode(query)).toBeNull();
@@ -207,5 +211,51 @@ describe('public Jieqi repetition warning', () => {
     );
     expect(first.losingMoves).toHaveLength(1);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
+});
+
+describe('repetition point label placement', () => {
+  const board = { left: 10, top: 20, width: 390, height: 440 };
+  const label = { width: 128, height: 22 };
+  const selected = { left: 180, top: 100, width: 40, height: 40 };
+
+  it.each([
+    [10, 20],
+    [360, 20],
+    [10, 420],
+    [360, 420],
+  ])('clamps inside the board at edge point (%i, %i)', (left, top) => {
+    const placed = placeRepetitionLabel(
+      { left, top, width: 40, height: 40 },
+      board,
+      label,
+      selected,
+      [],
+    );
+    expect(placed.left).toBeGreaterThanOrEqual(board.left + 4);
+    expect(placed.top).toBeGreaterThanOrEqual(board.top + 4);
+    expect(placed.left + label.width).toBeLessThanOrEqual(board.left + board.width - 4);
+    expect(placed.top + label.height).toBeLessThanOrEqual(board.top + board.height - 4);
+  });
+
+  it('sits on the side away from the selected piece', () => {
+    const placed = placeRepetitionLabel(
+      { left: 180, top: 200, width: 40, height: 40 },
+      board,
+      label,
+      selected,
+      [],
+    );
+    expect(placed).toEqual({ left: 136, top: 244 });
+  });
+
+  it('prefers another outward side when a sibling legal destination is in the way', () => {
+    const point = { left: 180, top: 200, width: 40, height: 40 };
+    const sibling = { left: 180, top: 244, width: 40, height: 40 };
+    const placed = placeRepetitionLabel(point, board, label, selected, [sibling]);
+    expect(placed.top).toBeGreaterThanOrEqual(point.top + point.height);
+    expect(
+      placed.left + label.width <= sibling.left || placed.left >= sibling.left + sibling.width,
+    ).toBe(true);
   });
 });

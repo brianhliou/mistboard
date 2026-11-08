@@ -1,6 +1,8 @@
 // Play translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_PLAY = {
+  'live.jieqiRepwarn.labelCheck': 'Loses: perpetual check',
+  'live.jieqiRepwarn.labelChase': 'Loses: perpetual chase',
   'live.jieqiRepwarn.redCheck': 'One more repeat and Red loses by perpetual check.',
   'live.jieqiRepwarn.blackCheck': 'One more repeat and Black loses by perpetual check.',
   'live.jieqiRepwarn.redChase': 'One more repeat and Red loses by perpetual chase.',

@@ -1,10 +1,11 @@
 // UI and confirmation lifetime for the removable ?repwarn prototype.
 import type { JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
-import type {
-  RepetitionLoss,
-  RepetitionWarning,
-  RepetitionWarningMode,
+import {
+  placeRepetitionLabel,
+  type RepetitionLoss,
+  type RepetitionWarning,
+  type RepetitionWarningMode,
 } from './jieqi-repetition-warning.js';
 import { noticeReadMs, placeChaseBubble } from './live-banqi-chase-bubble.js';
 import './live-jieqi-repetition-warning.css';
@@ -19,6 +20,9 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
   let anchor: JieqiSquare | null = null;
   let origin: JieqiSquare | null = null;
   let active = false;
+  let labels: Array<{ point: JieqiSquare; element: HTMLDivElement }> = [];
+  let labelFrom: JieqiSquare | null = null;
+  let legalPoints: JieqiSquare[] = [];
   const stage = board.closest<HTMLElement>('.board-stage') ?? board;
   const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
   resize?.observe(board);
@@ -29,9 +33,68 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
     expires = 0;
     bubble?.remove();
     bubble = null;
+    clearLabels();
+  }
+
+  function clearLabels() {
+    for (const label of labels) label.element.remove();
+    labels = [];
+    labelFrom = null;
+    legalPoints = [];
+  }
+
+  function syncLabels() {
+    if (!labels.length || !labelFrom) return;
+    const surface = board.querySelector('svg');
+    const from = board.querySelector(`[data-square="${labelFrom}"] rect`);
+    if (!surface || !from) {
+      clearLabels();
+      return;
+    }
+    const host = stage.getBoundingClientRect();
+    const rel = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left - host.left,
+        top: rect.top - host.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    const bounds = rel(surface);
+    if (!bounds.width) return;
+    for (const { point, element } of labels) {
+      // Pin beside the visible ring rather than the larger invisible hit area.
+      const target =
+        board.querySelector(`[data-repetition-loss="${point}"] .jieqi-repetition-ring-edge`) ??
+        board.querySelector(`[data-square="${point}"] rect`);
+      if (!target) continue;
+      const siblings = legalPoints.flatMap((p) => {
+        const cell = p !== point ? board.querySelector(`[data-square="${p}"] rect`) : null;
+        return cell ? [rel(cell)] : [];
+      });
+      element.style.setProperty(
+        '--jieqi-repetition-label-max',
+        `${Math.max(0, bounds.width - 8)}px`,
+      );
+      const placed = placeRepetitionLabel(
+        rel(target),
+        bounds,
+        { width: element.offsetWidth, height: element.offsetHeight },
+        rel(from),
+        siblings,
+      );
+      element.style.left = `${placed.left}px`;
+      element.style.top = `${placed.top}px`;
+    }
   }
 
   function sync() {
+    syncLabels();
+    syncBubble();
+  }
+
+  function syncBubble() {
     if (!bubble || !anchor) return;
     const cell = board.querySelector(`[data-square="${anchor}"] rect`);
     const surface = board.querySelector('svg');
@@ -117,9 +180,30 @@ export function createJieqiRepetitionWarningUi(board: HTMLElement, mode: Repetit
       if (position !== key) {
         position = key;
         clear();
-        if (next.headsUp && view.lastMove) show(view.lastMove.to, null, headsUpText(next.headsUp));
+        if (mode === 'heads-up' && next.headsUp && view.lastMove)
+          show(view.lastMove.to, null, headsUpText(next.headsUp));
       }
       sync();
+    },
+    /** Called after the SVG render for both tap selection and drag start. */
+    select(from: JieqiSquare | null, legalMoves: readonly JieqiMove[]) {
+      clearLabels();
+      if (mode !== 'label' || !active || !from) return;
+      labelFrom = from;
+      legalPoints = legalMoves.filter((move) => move.from === from).map((move) => move.to);
+      for (const loss of analysis.losingMoves.filter(({ move }) => move.from === from)) {
+        const element = document.createElement('div');
+        element.className = 'jieqi-repetition-label';
+        element.dataset.repetitionLabel = loss.move.to;
+        element.textContent = t(
+          loss.reason === 'perpetual-check'
+            ? 'live.jieqiRepwarn.labelCheck'
+            : 'live.jieqiRepwarn.labelChase',
+        );
+        stage.append(element);
+        labels.push({ point: loss.move.to, element });
+      }
+      syncLabels();
     },
     losingDestinations(from: JieqiSquare | null): ReadonlySet<JieqiSquare> {
       return new Set(

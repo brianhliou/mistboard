@@ -31,21 +31,72 @@ afterEach(() => {
 });
 
 describe('?repwarn UI', () => {
-  it.each(['heads-up', 'mark'] as const)(
-    '%s plays immediately and only mark exposes losing points',
+  it.each(['heads-up', 'mark', 'label'] as const)(
+    '%s plays immediately and only heads-up shows the notice',
     (mode) => {
       ui = createJieqiRepetitionWarningUi(board, mode);
       ui.update(view, analysis, true);
-      expect(document.querySelector('[role=status]')?.textContent).toBe(
-        'One more repeat and Red loses by perpetual chase.',
+      expect(document.querySelector('[role=status]')?.textContent ?? null).toBe(
+        mode === 'heads-up' ? 'One more repeat and Red loses by perpetual chase.' : null,
       );
-      expect([...ui.losingDestinations('a2')]).toEqual(mode === 'mark' ? ['b2'] : []);
+      expect([...ui.losingDestinations('a2')]).toEqual(mode === 'heads-up' ? [] : ['b2']);
       expect(ui.allowMove(move)).toBe(true);
     },
   );
+  it.each(['perpetual-check', 'perpetual-chase'] as const)(
+    'labels only selected losing points for %s and clears on deselect or move',
+    (reason) => {
+      ui = createJieqiRepetitionWarningUi(board, 'label');
+      ui.update(
+        view,
+        {
+          ...analysis,
+          losingMoves: [{ move, loser: 'red', reason }],
+        },
+        true,
+      );
+      expect(document.querySelector('.jieqi-repetition-label')).toBeNull();
+      ui.select('b4', [move]);
+      expect(document.querySelector('.jieqi-repetition-label')).toBeNull();
+      ui.select('a2', [move]);
+      const label = document.querySelector('[data-repetition-label=b2]')!;
+      expect(label.textContent).toBe(`Loses: ${reason.replace('-', ' ')}`);
+      expect(label.parentElement).toBe(board.parentElement);
+      expect(document.querySelector('.jieqi-repetition-bubble')).toBeNull();
+      ui.select(null, [move]);
+      expect(document.querySelector('.jieqi-repetition-label')).toBeNull();
+      ui.select('a2', [move]);
+      expect(ui.allowMove(move)).toBe(true);
+      expect(document.querySelector('.jieqi-repetition-label')).toBeNull();
+    },
+  );
+  it('labels every losing point, survives a render, and clears on changed or inactive views', () => {
+    ui = createJieqiRepetitionWarningUi(board, 'label');
+    const next = {
+      ...analysis,
+      losingMoves: [
+        ...analysis.losingMoves,
+        { ...analysis.losingMoves[0]!, move: { from: 'a2', to: 'b4' } as JieqiMove },
+      ],
+    };
+    for (const inactive of [false, true]) {
+      ui.update(view, next, true);
+      ui.select('a2', [move, { from: 'a2', to: 'b4' }]);
+      ui.update(view, next, true);
+      ui.sync();
+      expect(document.querySelectorAll('.jieqi-repetition-label')).toHaveLength(2);
+      ui.update({ ...view, moveNumber: view.moveNumber + 1 }, next, !inactive);
+      expect(document.querySelectorAll('.jieqi-repetition-label')).toHaveLength(0);
+      if (inactive) {
+        ui.select('a2', [move]);
+        expect(document.querySelectorAll('.jieqi-repetition-label')).toHaveLength(0);
+      }
+    }
+  });
   it('confirm waits once, retains the ring and allows the same point on the second tap', () => {
     ui = createJieqiRepetitionWarningUi(board, 'confirm');
     ui.update(view, analysis, true);
+    expect(document.querySelector('[role=status]')).toBeNull();
     expect(ui.allowMove(move)).toBe(false);
     expect(document.querySelector('[role=status]')?.textContent).toContain(
       'Perpetual chase loses.',
@@ -86,7 +137,17 @@ describe('?repwarn UI', () => {
       expect(ui.allowMove(move)).toBe(false);
     },
   );
-  it('expires after read time and does not reshow a heads-up on a clock render', () => {
+  it('expires a heads-up after read time and does not reshow it on a clock render', () => {
+    ui = createJieqiRepetitionWarningUi(board, 'heads-up');
+    ui.update(view, analysis, true);
+    const text = document.querySelector('[role=status]')!.textContent!;
+    ui.update(view, analysis, true);
+    expect(document.querySelector('[role=status]')?.textContent).toBe(text);
+    vi.advanceTimersByTime(noticeReadMs(text));
+    ui.update(view, analysis, true);
+    expect(document.querySelector('[role=status]')).toBeNull();
+  });
+  it('expires a pending confirmation after read time', () => {
     ui = createJieqiRepetitionWarningUi(board, 'confirm');
     ui.update(view, analysis, true);
     vi.advanceTimersByTime(10_000);

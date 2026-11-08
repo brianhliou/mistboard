@@ -403,6 +403,7 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
       ? view.legalMoves.filter((move) => move.from === selectedSquare)
       : [],
   });
+  repetitionUi?.select(selectedSquare, view.legalMoves);
   repetitionUi?.sync();
   // Click + drag are delegated to the persistent board container once at mount
   // (installJieqiBoardInteraction), so they survive these innerHTML re-renders.

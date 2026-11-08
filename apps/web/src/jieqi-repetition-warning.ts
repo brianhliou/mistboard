@@ -10,10 +10,75 @@ import {
   jieqiCheckedGeneral,
 } from '@mistboard/game';
 
-export type RepetitionWarningMode = 'heads-up' | 'mark' | 'confirm';
+export type RepetitionWarningMode = 'heads-up' | 'mark' | 'confirm' | 'label';
 export function repetitionWarningMode(search: string): RepetitionWarningMode | null {
   const value = new URLSearchParams(search).get('repwarn');
-  return value === 'heads-up' || value === 'mark' || value === 'confirm' ? value : null;
+  return value === 'heads-up' || value === 'mark' || value === 'confirm' || value === 'label'
+    ? value
+    : null;
+}
+
+type LabelBox = { left: number; top: number; width: number; height: number };
+
+/** All boxes use rendered board coordinates, so orientation and layout need no
+ * special cases. Prefer clear legal points, then the side away from the piece.
+ * Clamping is applied before scoring, including at corners. */
+export function placeRepetitionLabel(
+  point: LabelBox,
+  board: LabelBox,
+  label: { width: number; height: number },
+  selected: LabelBox,
+  siblings: readonly LabelBox[],
+): { left: number; top: number } {
+  const x = point.left + point.width / 2;
+  const y = point.top + point.height / 2;
+  const awayX = x - (selected.left + selected.width / 2);
+  const awayY = y - (selected.top + selected.height / 2);
+  const awayLength = Math.hypot(awayX, awayY) || 1;
+  const pad = 4;
+  const gap = 4;
+  const width = Math.min(label.width, Math.max(0, board.width - pad * 2));
+  const height = Math.min(label.height, Math.max(0, board.height - pad * 2));
+  const overlap = (a: LabelBox, b: LabelBox) =>
+    Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left)) *
+    Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
+  const candidates = (
+    [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ] as const
+  ).map(([dx, dy]) => {
+    const left = Math.max(
+      board.left + pad,
+      Math.min(
+        x + dx * (point.width / 2 + gap + width / 2) - width / 2,
+        board.left + board.width - pad - width,
+      ),
+    );
+    const top = Math.max(
+      board.top + pad,
+      Math.min(
+        y + dy * (point.height / 2 + gap + height / 2) - height / 2,
+        board.top + board.height - pad - height,
+      ),
+    );
+    const box = { left, top, width, height };
+    const vx = left + width / 2 - x;
+    const vy = top + height / 2 - y;
+    const direction = (vx * awayX + vy * awayY) / ((Math.hypot(vx, vy) || 1) * awayLength);
+    // Any covered legal point outweighs directional preference. Also avoid
+    // covering the selected piece or the warning ring after edge clamping.
+    const covered = [...siblings, selected, point].reduce((sum, b) => sum + overlap(box, b), 0);
+    return { left, top, score: covered * 100 + (1 - direction) };
+  });
+  const best = candidates.reduce((a, b) => (a.score <= b.score ? a : b));
+  return { left: best.left, top: best.top };
 }
 
 export type RepetitionLoss = { loser: JieqiColor; reason: 'perpetual-check' | 'perpetual-chase' };
