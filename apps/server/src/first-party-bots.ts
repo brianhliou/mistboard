@@ -20,6 +20,7 @@
 // names; migration 111 remaps persisted attribution to the merged ids.
 
 import { RAPFI_LEVELS } from '@mistboard/game';
+import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 
 export type FirstPartyBotProfile = {
   id: string;
@@ -32,7 +33,7 @@ export type FirstPartyBotProfile = {
   /** A bot that is no rung of its variant's strength ladder (the worst-move bot):
    *  bot-vs-bot pairing never seats it. */
   offLadder?: true;
-  /** Retired engine ids whose games attribute to this bot. */
+  /** Additional engine ids whose games attribute to this bot, including retired tiers. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
    *  bookmarked /bot/<id> URLs, replayed roomCreated events). */
@@ -124,7 +125,18 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-fdx-v1.1',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
+      ...BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => tier.id),
+      ...([1, 2, 3, 4, 5, 6, 7, 8] as const).map(
+        (level) => `misty-jungle-flip-level-${level}` as const,
+      ),
     ],
+    seatNamesByEngineId: Object.fromEntries([
+      ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
+      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => [
+        `misty-jungle-flip-level-${level}`,
+        `Misty Level ${level}`,
+      ]),
+    ]),
     // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
     // rooms created before 2026-10-28 stored as their pveBotId; a resumed one
     // still finishes as Misty (migration 178 moved the rows already written).

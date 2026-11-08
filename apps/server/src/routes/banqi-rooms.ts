@@ -1,5 +1,9 @@
 import { BANQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
-import { BANQI_DEFAULT_ENGINE_ID, isBanqiEngineClientId } from './../banqi-engine.js';
+import {
+  BANQI_DEFAULT_ENGINE_ID,
+  banqiEngineAvailable,
+  isBanqiEngineClientId,
+} from './../banqi-engine.js';
 import type { DrainCreate } from '../deploy-gate.js';
 import {
   createTenantRoomsRoute,
@@ -41,6 +45,10 @@ const banqiRoute = createTenantRoomsRoute<
     kind: 'seated',
     defaultEngineId: BANQI_DEFAULT_ENGINE_ID,
     isEngineClientId: isBanqiEngineClientId,
+    heldEngineError: (engineId) =>
+      isBanqiEngineClientId(engineId) && !banqiEngineAvailable(engineId)
+        ? 'banqi_disabled'
+        : undefined,
     seats: BANQI_SEATS,
   },
   // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):

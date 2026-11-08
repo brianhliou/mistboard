@@ -90,7 +90,8 @@ export function botEngineVersion(engineId: string): string | null {
   if (engineId === JIEQI_ABJCHESS_ENGINE_ID) return abJchessVersion();
   if (engineId === JIEQI_JQE_ENGINE_ID) return jqeVersion();
   if (engineId === KATAGO_JUNGLE_ENGINE_ID) return katagoVersion();
-  if (engineId === 'misty-banqi') return BANQI_ENGINE_VERSION;
+  if (engineId === 'misty-banqi' || engineId.startsWith('misty-banqi-level-'))
+    return BANQI_ENGINE_VERSION;
   if (engineId.startsWith('misty-jungle-flip')) return JUNGLE_FLIP_ENGINE_VERSION;
   if (engineId.startsWith('misty-jungle-level-')) return JUNGLE_RUST_ENGINE_VERSION;
   if (engineId.startsWith('python-')) return registryVersion(engineId);

@@ -26,6 +26,7 @@ import {
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
 } from '@mistboard/game';
+import { BANQI_PLAYABLE_ENGINES } from '../../server/src/banqi-engine.js';
 import { crosstableReviewUrl } from '../../server/src/crosstable.js';
 import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import {
@@ -48,6 +49,23 @@ import { boardAspectForSpec, hasBoardAspect } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
+
+describe('Banqi engine picker mirror', () => {
+  it('keeps the historical id at L7 and the NNUE id at L8, with L4 selected by default', () => {
+    const landing = webVariantTenants().find((tenant) => tenant.gameSpecId === 'banqi')!.landing!;
+    expect(landing.engineOptions?.map(({ id, name }) => ({ id, name }))).toEqual(
+      [...BANQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
+        id: tier.id,
+        name: `Misty Level ${tier.level}`,
+      })),
+    );
+    expect(landing.engineOptions?.slice(0, 2).map((tier) => tier.id)).toEqual([
+      'misty-banqi-level-8',
+      'misty-banqi',
+    ]);
+    expect(landing.defaultEngineId).toBe('misty-banqi-level-4');
+  });
+});
 
 describe('FFQ banqi hidden admin playtest', () => {
   it('registers its live client without enabling public replay or discovery', () => {

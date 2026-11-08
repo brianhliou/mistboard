@@ -7,6 +7,7 @@ import {
   ATOMIC_XIANGQI_RANDOM_ENGINE_VERSION,
   type AtomicXiangqiEngineTier,
 } from '../atomic-xiangqi-fsf-engine.js';
+import { BANQI_PLAYABLE_ENGINES, BANQI_RANDOM_ENGINE_ID } from '../banqi-engine.js';
 import {
   CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION,
   CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES,
@@ -40,6 +41,11 @@ import {
   JQE_JIEQI_ENGINE_VERSION,
 } from '../jieqi-engine.js';
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
+import {
+  JUNGLE_FLIP_ENGINE_VERSION,
+  JUNGLE_FLIP_PLAYABLE_ENGINES,
+  JUNGLE_FLIP_RANDOM_ENGINE_ID,
+} from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
 import {
   THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
@@ -1055,8 +1061,8 @@ const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
 );
 
 // MistyBanqi (our own Rust αβ+TT engine, Tier-B UCI subprocess — banqi-engine.ts).
-// ONE versioned bot since 2026-06-18 (was 3 difficulty tiers). configHash carries the
-// engine version, so each game record tells which build played. The route/scheduler key off
+// Historical full-strength bot is classical L7, preserving its id; each build gets a new signature.
+// configHash carries the engine version, so each game record tells which build played. The route/scheduler key off
 // banqi-engine.ts ids, not this registry. The legacy *-amateur/strong/strongest entries are
 // KEPT (not served, not in the picker) so old game records still resolve via isKnownEngineClientId.
 const BANQI_ENGINES: Record<string, EngineDefinition> = {
@@ -1080,15 +1086,60 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     // the hash names what DECIDES play — the build and the strength dial. The movetime
     // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
     // out of the identity while remaining recorded in `config`.
-    configHash: 'misty-banqi-0.2.7-nodes-3500000',
-    playSignature: 'misty-banqi-0.2.7-nodes-3500000',
+    // 2026-11-08: 0.2.7 -> 0.3.0; classical play verified move-identical to 0.2.8 on all 78 fixture positions on linux/amd64
+    configHash: 'misty-banqi-0.3.0-nodes-3500000',
+    playSignature: 'misty-banqi-0.3.0-nodes-3500000',
     config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
+      'MistyBanqi Level 7 — classical at 3.5M nodes. Historical bot: ' +
       'MistyBanqi 0.2.4 — v0.2.1 gen_danger general-safety eval term (proximity+escape-aware, ' +
       'FEATURES 506 + w_king 28) on top of v0.2.0 cheap-strength. Modal ~385/arm vs hw3: ' +
       'no-regression + own-general-loss 35.5%->26% (~2.7sigma). Single full-strength bot at ' +
       '3.5M nodes under an 8s latency cap (budget resized from 1.5M on 2026-09-06 to fit the ' +
       'ceiling; not a claimed strength gain).',
+  },
+  ...Object.fromEntries(
+    BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => {
+      const signature = `misty-banqi-${tier.version}-${tier.evaluation}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+      return [
+        tier.id,
+        {
+          id: tier.id,
+          engineId: 'misty-banqi',
+          engineName: 'MistyBanqi',
+          name: tier.name,
+          kind: 'container',
+          gameSpecId: 'banqi',
+          configHash: signature,
+          playSignature: signature,
+          config: {
+            kind: 'banqi-uci',
+            evaluation: tier.evaluation,
+            nodes: tier.nodes,
+            movetime_ms: tier.movetimeCapMs,
+            ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+          },
+          notes:
+            tier.level === 8
+              ? 'MistyBanqi Level 8 — trained NNUE net at 2M nodes under an 8s cap. ' +
+                'MistyBanqi 0.3.0 supports EvalFile; L8 needs MISTBOARD_BANQI_NET. ' +
+                'Calibrated 2026-11-08 by duplicate-pair self-play: +219 Elo [166, 283] over classical L7.'
+              : `MistyBanqi level ${tier.level}. Calibrated 2026-11-08 by adjacent-level self-play. MistyBanqi 0.3.0 supports Noise, NoiseDepth and Seed for L1-4.`,
+        } satisfies EngineDefinition,
+      ];
+    }),
+  ),
+  [BANQI_RANDOM_ENGINE_ID]: {
+    id: BANQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-banqi',
+    engineName: 'Random legal (Banqi)',
+    name: 'Random legal (Banqi)',
+    kind: 'builtin',
+    gameSpecId: 'banqi',
+    configHash: 'random-legal-banqi-v1',
+    playSignature: 'random-legal-banqi-v1',
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes: 'EvE-only uniformly random rating anchor; not a playable level.',
   },
   'misty-banqi-amateur': {
     id: 'misty-banqi-amateur',
@@ -1135,8 +1186,8 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // prod vCPU) capped by movetime as a wall-clock guard.
 // Flip Jungle (翻翻兽棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
-// fog engine-worker). One versioned full-strength bot; strength is a node budget capped
-// by movetime.
+// fog engine-worker). The historical full-strength entry stays immutable; the
+// numbered ladder records both its node budget and any root-noise settings.
 const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
   'misty-jungle-flip': {
     id: 'misty-jungle-flip',
@@ -1159,6 +1210,43 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
       'since v0.4.0. Single full-strength bot at 2.5M nodes under a 5s latency cap ' +
       '(budget resized from 512K on 2026-09-06 to fit the ceiling; not a claimed strength ' +
       'gain). Chance-node (flip) search, not fog/belief.',
+  },
+  ...Object.fromEntries(
+    JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => {
+      const signature = `misty-jungle-flip-${tier.version}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+      return [
+        tier.id,
+        {
+          id: tier.id,
+          engineId: 'misty-jungle-flip',
+          engineName: 'MistyJungleFlip',
+          name: tier.name,
+          kind: 'container',
+          gameSpecId: 'jungle-flip',
+          configHash: signature,
+          playSignature: signature,
+          config: {
+            kind: 'jungle-flip-uci',
+            nodes: tier.nodes,
+            movetime_ms: tier.movetimeCapMs,
+            ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+          },
+          notes: `MistyJungleFlip ${JUNGLE_FLIP_ENGINE_VERSION} level ${tier.level}. L1–5 require advertised Noise, NoiseDepth and Seed. L7 budget is provisional pending calibration.`,
+        } satisfies EngineDefinition,
+      ];
+    }),
+  ),
+  [JUNGLE_FLIP_RANDOM_ENGINE_ID]: {
+    id: JUNGLE_FLIP_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-jungle-flip',
+    engineName: 'Random legal (Flip Jungle)',
+    name: 'Random legal (Flip Jungle)',
+    kind: 'builtin',
+    gameSpecId: 'jungle-flip',
+    configHash: 'random-legal-jungle-flip-v1',
+    playSignature: 'random-legal-jungle-flip-v1',
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes: 'EvE-only uniformly random rating anchor; not a playable level.',
   },
 };
 

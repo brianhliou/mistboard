@@ -677,17 +677,14 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: alwaysEnabled,
-      // One versioned bot (was 3 difficulty tiers; consolidated 2026-06-18 with the v0.2.0
-      // cheap-strength eval), fronted by the merged Misty identity since 2026-07-21.
-      engineOptions: [
-        {
-          id: 'misty-banqi',
-          name: 'Misty',
-          familyName: 'Misty',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'misty-banqi',
+      // Hand mirror of BANQI_PLAYABLE_ENGINES; strongest first. L7 keeps its stored id.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: level === 7 ? 'misty-banqi' : `misty-banqi-level-${level}`,
+        name: `Misty Level ${level}`,
+        familyName: 'Misty',
+        kind: 'container',
+      })),
+      defaultEngineId: 'misty-banqi-level-4',
     },
   },
   {
@@ -808,18 +805,14 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleFlipEnabled,
       acceptsDeepLink: jungleFlipEnabled,
-      // Tier-B MistyJungleFlip UCI engine (jungle-flip-engine in mistboard-engine),
-      // served via server-jungle-flip-engine.ts. One versioned full-strength bot, like
-      // banqi — fronted by the merged Misty identity since 2026-07-21.
-      engineOptions: [
-        {
-          id: 'misty-jungle-flip',
-          name: 'Misty',
-          familyName: 'Misty',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'misty-jungle-flip',
+      // Hand mirror of JUNGLE_FLIP_PLAYABLE_ENGINES; strongest first.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: `misty-jungle-flip-level-${level}`,
+        name: `Misty Level ${level}`,
+        familyName: 'Misty',
+        kind: 'container',
+      })),
+      defaultEngineId: 'misty-jungle-flip-level-4',
     },
   },
   {
