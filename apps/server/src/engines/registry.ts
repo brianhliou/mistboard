@@ -1060,8 +1060,8 @@ const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
 );
 
 // MistyBanqi (our own Rust αβ+TT engine, Tier-B UCI subprocess — banqi-engine.ts).
-// Historical full-strength bot is now NNUE L8, preserving its id. configHash carries the
-// engine version, so each game record tells which build played. The route/scheduler key off
+// Historical full-strength bot is classical L7, preserving its id and config signature.
+// configHash carries the engine version, so each game record tells which build played. The route/scheduler key off
 // banqi-engine.ts ids, not this registry. The legacy *-amateur/strong/strongest entries are
 // KEPT (not served, not in the picker) so old game records still resolve via isKnownEngineClientId.
 const BANQI_ENGINES: Record<string, EngineDefinition> = {
@@ -1072,17 +1072,32 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     name: 'MistyBanqi',
     kind: 'container',
     gameSpecId: 'banqi',
-    // Evaluation and budget both change play, so both belong in the new signature.
-    configHash: 'misty-banqi-0.2.7-nnue-nodes-2000000',
-    playSignature: 'misty-banqi-0.2.7-nnue-nodes-2000000',
-    config: { kind: 'banqi-uci', evaluation: 'nnue', nodes: 2_000_000, movetime_ms: 8_000 },
+    // Hash bumped 2026-09-06 from 'misty-banqi-0.2.1' because the entry had drifted
+    // from the live tier on every axis: BANQI_ENGINE_VERSION is 0.2.4, the node budget
+    // is 3.5M (the 1.5M-era `movetime_ms: 1500` here never described a real setting —
+    // the tier's latency cap has been 5000 and then 8000, never 1500), and `nodes` was
+    // not recorded at all. NOT an in-place edit under the old hash: eve_games rows carry
+    // white_config_hash / white_play_signature snapshots, so mutating a shipped
+    // (configHash, config) pair would make every past row retroactively claim settings
+    // that never ran. A config change is a new hash, always.
+    //
+    // Shape follows the pikafish-xiangqi convention (`<engine>-<version>-nodes-<N>`):
+    // the hash names what DECIDES play — the build and the strength dial. The movetime
+    // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
+    // out of the identity while remaining recorded in `config`.
+    configHash: 'misty-banqi-0.2.7-nodes-3500000',
+    playSignature: 'misty-banqi-0.2.7-nodes-3500000',
+    config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
-      'MistyBanqi Level 8 — trained NNUE net at 2M nodes under an 8s cap. ' +
-      'Requires MistyBanqi 0.3.0 with advertised EvalFile and MISTBOARD_BANQI_NET. ' +
-      'Calibrated 2026-11-08 by duplicate-pair self-play: +219 Elo [166, 283] over classical L7.',
+      'MistyBanqi Level 7 — classical at 3.5M nodes. Historical bot: ' +
+      'MistyBanqi 0.2.4 — v0.2.1 gen_danger general-safety eval term (proximity+escape-aware, ' +
+      'FEATURES 506 + w_king 28) on top of v0.2.0 cheap-strength. Modal ~385/arm vs hw3: ' +
+      'no-regression + own-general-loss 35.5%->26% (~2.7sigma). Single full-strength bot at ' +
+      '3.5M nodes under an 8s latency cap (budget resized from 1.5M on 2026-09-06 to fit the ' +
+      'ceiling; not a claimed strength gain).',
   },
   ...Object.fromEntries(
-    BANQI_PLAYABLE_ENGINES.filter((tier) => tier.level < 8).map((tier) => {
+    BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => {
       const signature = `misty-banqi-${tier.version}-${tier.evaluation}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
       return [
         tier.id,
@@ -1102,7 +1117,12 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
             movetime_ms: tier.movetimeCapMs,
             ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
           },
-          notes: `MistyBanqi level ${tier.level}. Calibrated 2026-11-08 by adjacent-level self-play. L1-4 require v0.2.8 with advertised Noise, NoiseDepth and Seed.`,
+          notes:
+            tier.level === 8
+              ? 'MistyBanqi Level 8 — trained NNUE net at 2M nodes under an 8s cap. ' +
+                'Requires MistyBanqi 0.3.0 with advertised EvalFile and MISTBOARD_BANQI_NET. ' +
+                'Calibrated 2026-11-08 by duplicate-pair self-play: +219 Elo [166, 283] over classical L7.'
+              : `MistyBanqi level ${tier.level}. Calibrated 2026-11-08 by adjacent-level self-play. L1-4 require v0.2.8 with advertised Noise, NoiseDepth and Seed.`,
         } satisfies EngineDefinition,
       ];
     }),

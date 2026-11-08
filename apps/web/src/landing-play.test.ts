@@ -697,8 +697,9 @@ describe('landing play panel', () => {
     const picker = document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!;
     expect([...picker.options].map((option) => option.value).sort()).toEqual(
       [
-        ...Array.from({ length: 7 }, (_, index) => `misty-banqi-level-${index + 1}`),
+        ...Array.from({ length: 6 }, (_, index) => `misty-banqi-level-${index + 1}`),
         'misty-banqi',
+        'misty-banqi-level-8',
       ].sort(),
     );
     expect(picker.value).toBe('misty-banqi-level-4');

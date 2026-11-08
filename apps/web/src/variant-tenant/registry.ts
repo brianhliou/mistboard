@@ -677,9 +677,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: alwaysEnabled,
-      // Hand mirror of BANQI_PLAYABLE_ENGINES; strongest first. L8 keeps its stored id.
+      // Hand mirror of BANQI_PLAYABLE_ENGINES; strongest first. L7 keeps its stored id.
       engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
-        id: level === 8 ? 'misty-banqi' : `misty-banqi-level-${level}`,
+        id: level === 7 ? 'misty-banqi' : `misty-banqi-level-${level}`,
         name: `Misty Level ${level}`,
         familyName: 'Misty',
         kind: 'container',

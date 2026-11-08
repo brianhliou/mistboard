@@ -122,7 +122,7 @@ export type BanqiEngineTier = {
 // comparison with classical L7. All levels retain the 8000ms latency cap.
 // Noise levels keep the 3.5M-node ceiling so their fixed-depth root passes complete; a
 // smaller budget cuts the depth-2 pass short and changes their strength. The engine shares
-// Flip Jungle's [-1, 1] score scale. L8 retains the historical bot's stored id.
+// Flip Jungle's [-1, 1] score scale. L7 retains the historical bot's stored id.
 export const BANQI_PLAYABLE_ENGINES: readonly BanqiEngineTier[] = (
   [
     { level: 1, nodes: 3_500_000, noise: 1, noiseDepth: 1 },
@@ -137,7 +137,7 @@ export const BANQI_PLAYABLE_ENGINES: readonly BanqiEngineTier[] = (
 ).map(
   (settings): BanqiEngineTier => ({
     ...settings,
-    id: settings.level === 8 ? BANQI_DEFAULT_ENGINE_ID : `misty-banqi-level-${settings.level}`,
+    id: settings.level === 7 ? BANQI_DEFAULT_ENGINE_ID : `misty-banqi-level-${settings.level}`,
     name: `MistyBanqi Level ${settings.level}`,
     version: BANQI_ENGINE_VERSION,
     movetimeCapMs: 8000,
@@ -151,7 +151,7 @@ const BANQI_LEGACY_IDS = ['misty-banqi-strong', 'misty-banqi-amateur', 'misty-ba
 
 const BANQI_ENGINE_BY_ID: ReadonlyMap<string, BanqiEngineTier> = new Map<string, BanqiEngineTier>([
   ...BANQI_PLAYABLE_ENGINES.map((tier): [string, BanqiEngineTier] => [tier.id, tier]),
-  ...BANQI_LEGACY_IDS.map((id): [string, BanqiEngineTier] => [id, BANQI_PLAYABLE_ENGINES[7]!]),
+  ...BANQI_LEGACY_IDS.map((id): [string, BanqiEngineTier] => [id, BANQI_PLAYABLE_ENGINES[6]!]),
 ]);
 
 // Small per-process slot pool (Tier-B UCI subprocess; shared harness).

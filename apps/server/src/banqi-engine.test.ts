@@ -97,24 +97,62 @@ async function withEngine(bin: string, run: () => Promise<void>) {
   }
 }
 
-test('Banqi offers eight levels, retaining the historical id at L8', () => {
+test('the stored Banqi id stays classical L7 at 3.5M nodes without a net or EvalFile', async () => {
+  const tier = banqiEngineTierFor('misty-banqi')!;
+  assert.equal(tier.level, 7);
+  assert.equal(tier.evaluation, 'classical');
+  assert.equal(tier.nodes, 3_500_000);
+  const registry = loadEngine('misty-banqi');
+  assert.equal(registry.configHash, 'misty-banqi-0.2.7-nodes-3500000');
+  assert.equal(registry.playSignature, registry.configHash);
+  assert.deepEqual(registry.config, {
+    kind: 'banqi-uci',
+    nodes: 3_500_000,
+    movetime_ms: 8000,
+  });
+  const engine = fakeEngine(['NoProgressLimit', 'EvalFile']);
+  await withEngine(engine.bin, async () => {
+    for (const net of [engine.net, undefined]) {
+      if (net === undefined) delete process.env.MISTBOARD_BANQI_NET;
+      else process.env.MISTBOARD_BANQI_NET = net;
+      assert.equal(banqiEngineAvailable('misty-banqi'), true);
+      assert.equal(banqiEngineAvailable(), true);
+      await banqiLiveEngineMove('misty-banqi', fen);
+    }
+  });
   assert.deepEqual(
-    BANQI_PLAYABLE_ENGINES.map((tier) => tier.id),
-    [...Array.from({ length: 7 }, (_, index) => `misty-banqi-level-${index + 1}`), 'misty-banqi'],
+    engine.commands().filter((command) => command.startsWith('setoption ')),
+    ['setoption name NoProgressLimit value 60', 'setoption name NoProgressLimit value 60'],
+  );
+  assert.deepEqual(
+    engine.commands().filter((command) => command.startsWith('go ')),
+    ['go nodes 3500000 movetime 8000', 'go nodes 3500000 movetime 8000'],
   );
 });
 
-test('the historical Banqi id resolves to level 8 and unknown ids fail closed', () => {
-  assert.equal(banqiEngineTierFor(BANQI_DEFAULT_ENGINE_ID), BANQI_PLAYABLE_ENGINES[7]);
+test('Banqi offers eight levels, retaining the historical id at L7', () => {
+  assert.deepEqual(
+    BANQI_PLAYABLE_ENGINES.map((tier) => tier.id),
+    [
+      ...Array.from({ length: 6 }, (_, index) => `misty-banqi-level-${index + 1}`),
+      'misty-banqi',
+      'misty-banqi-level-8',
+    ],
+  );
+});
+
+test('the historical Banqi id resolves to level 7 and unknown ids fail closed', () => {
+  assert.equal(banqiEngineTierFor(BANQI_DEFAULT_ENGINE_ID), BANQI_PLAYABLE_ENGINES[6]);
   for (const id of ['misty-banqi-amateur', 'misty-banqi-strong', 'misty-banqi-strongest']) {
-    assert.equal(banqiEngineTierFor(id), BANQI_PLAYABLE_ENGINES[7]);
+    assert.equal(banqiEngineTierFor(id), BANQI_PLAYABLE_ENGINES[6]);
   }
+  assert.equal(banqiEngineTierFor('misty-banqi-level-7'), null);
   assert.equal(banqiEngineTierFor('misty-banqi-level-9'), null);
   assert.equal(banqiEngineTierFor('misty-jungle-flip-level-4'), null);
 });
 
 test('L8 records NNUE and sends its EvalFile with the calibrated budget', async () => {
-  const registry = loadEngine(BANQI_DEFAULT_ENGINE_ID);
+  const registry = loadEngine('misty-banqi-level-8');
   assert.equal(registry.configHash, 'misty-banqi-0.2.7-nnue-nodes-2000000');
   assert.equal(registry.playSignature, registry.configHash);
   assert.deepEqual(registry.config, {
@@ -130,7 +168,7 @@ test('L8 records NNUE and sends its EvalFile with the calibrated budget', async 
   ]) {
     const engine = fakeEngine(['NoProgressLimit', 'EvalFile']);
     await withEngine(engine.bin, async () => {
-      await banqiLiveEngineMove(BANQI_DEFAULT_ENGINE_ID, fen, options);
+      await banqiLiveEngineMove('misty-banqi-level-8', fen, options);
     });
     const expected = `uci\nsetoption name EvalFile value ${engine.net}\nsetoption name NoProgressLimit value ${options.noProgressLimit ?? 60}\nucinewgame\nisready\nposition fen ${fen}${options.moves ? ' moves a0b0 h3g3' : ''}\ngo nodes 2000000 movetime 8000${options.searchMoves ? ' searchmoves b0c0' : ''}\n`;
     assert.deepEqual(engine.raw(), Buffer.from(expected));
@@ -141,24 +179,21 @@ test('L8 is unavailable without a readable non-empty net; classical tiers remain
   const engine = fakeEngine(['NoProgressLimit', 'EvalFile']);
   await withEngine(engine.bin, async () => {
     assert.equal(banqiNetPath(), engine.net);
-    assert.equal(banqiEngineAvailable(BANQI_DEFAULT_ENGINE_ID), true);
+    assert.equal(banqiEngineAvailable('misty-banqi-level-8'), true);
     const empty = join(engine.bin, '..', 'empty.bqnn');
     writeFileSync(empty, '');
     for (const path of [undefined, `${engine.net}.missing`, join(engine.bin, '..'), empty]) {
       if (path === undefined) delete process.env.MISTBOARD_BANQI_NET;
       else process.env.MISTBOARD_BANQI_NET = path;
       assert.equal(banqiNetPath(), null);
-      assert.equal(banqiEngineAvailable(BANQI_DEFAULT_ENGINE_ID), false);
+      assert.equal(banqiEngineAvailable('misty-banqi-level-8'), false);
       assert.deepEqual(
         BANQI_PLAYABLE_ENGINES.filter((tier) => banqiEngineAvailable(tier.id)).map(
           (tier) => tier.level,
         ),
         [1, 2, 3, 4, 5, 6, 7],
       );
-      await assert.rejects(
-        banqiLiveEngineMove(BANQI_DEFAULT_ENGINE_ID, fen),
-        /net.*not available/i,
-      );
+      await assert.rejects(banqiLiveEngineMove('misty-banqi-level-8', fen), /net.*not available/i);
     }
     assert.deepEqual(engine.raw(), Buffer.from(''), 'no process ran with an unavailable net');
     assert.equal(banqiEngineAvailable('unknown'), false);
@@ -178,7 +213,7 @@ test('L8 rechecks the net after waiting for a search slot and releases the slot 
           admit = resolve;
         }),
     );
-    const pending = banqiLiveEngineMove(BANQI_DEFAULT_ENGINE_ID, fen);
+    const pending = banqiLiveEngineMove('misty-banqi-level-8', fen);
     assert.equal(acquire.mock.callCount(), 1);
     rmSync(engine.net);
     admit(() => {
@@ -194,7 +229,7 @@ test('L8 refuses binaries that do not advertise EvalFile', async () => {
   const engine = fakeEngine(['NoProgressLimit']);
   await withEngine(engine.bin, async () => {
     await assert.rejects(
-      banqiLiveEngineMove(BANQI_DEFAULT_ENGINE_ID, fen),
+      banqiLiveEngineMove('misty-banqi-level-8', fen),
       /does not advertise.*EvalFile/,
     );
   });
@@ -232,11 +267,17 @@ test('Banqi room creation holds L8 without its net and admits classical tiers', 
     };
     assert.equal(await request(BANQI_DEFAULT_ENGINE_ID), 201);
     delete process.env.MISTBOARD_BANQI_NET;
-    assert.equal(await request(BANQI_DEFAULT_ENGINE_ID), 404);
-    assert.equal(await request(), 404, 'default L8 is held too');
-    assert.equal(await request('misty-banqi-level-7'), 201);
+    assert.equal(await request('misty-banqi-level-8'), 404);
+    assert.equal(await request(BANQI_DEFAULT_ENGINE_ID), 201);
+    assert.equal(await request(), 201, 'default classical L7 stays available without a net');
+    assert.equal(await request('misty-banqi-level-6'), 201);
     assert.equal(await request('misty-banqi-level-9'), 400);
-    assert.deepEqual(seated, [BANQI_DEFAULT_ENGINE_ID, 'misty-banqi-level-7']);
+    assert.deepEqual(seated, [
+      BANQI_DEFAULT_ENGINE_ID,
+      BANQI_DEFAULT_ENGINE_ID,
+      BANQI_DEFAULT_ENGINE_ID,
+      'misty-banqi-level-6',
+    ]);
   });
 });
 
@@ -254,7 +295,7 @@ test('each level sends exactly its calibrated weakening options and search budge
     const engine = fakeEngine(['NoProgressLimit', 'Noise', 'NoiseDepth', 'Seed', 'EvalFile']);
     await withEngine(engine.bin, async () => {
       const result = await banqiLiveEngineMove(
-        level === 8 ? BANQI_DEFAULT_ENGINE_ID : `misty-banqi-level-${level}`,
+        level === 7 ? BANQI_DEFAULT_ENGINE_ID : `misty-banqi-level-${level}`,
         fen,
         {
           seed: '12345',
@@ -300,7 +341,7 @@ test('classical play and analysis send neither EvalFile nor weakening options', 
   const engine = fakeEngine(['NoProgressLimit']);
   await withEngine(engine.bin, async () => {
     delete process.env.MISTBOARD_BANQI_NET;
-    await banqiLiveEngineMove('misty-banqi-level-7', fen, { seed: '99' });
+    await banqiLiveEngineMove(BANQI_DEFAULT_ENGINE_ID, fen, { seed: '99' });
     await evaluateBanqiFenNodes(fen, { nodes: 512_000, movetimeCapMs: 2500, noProgressLimit: 40 });
   });
   const commands = engine.commands();
@@ -367,7 +408,7 @@ test('EvE uses reproducible secret deals but sends identical whole requests for 
   const different = await start('931');
   assert.deepEqual(game.events[0], same.events[0]);
   assert.notDeepEqual(game.events[0], different.events[0]);
-  for (const id of ['misty-banqi-level-4', BANQI_DEFAULT_ENGINE_ID]) {
+  for (const id of ['misty-banqi-level-4', BANQI_DEFAULT_ENGINE_ID, 'misty-banqi-level-8']) {
     const requests: string[] = [];
     const engine = fakeEngine(['NoProgressLimit', 'Noise', 'NoiseDepth', 'Seed', 'EvalFile']);
     await withEngine(engine.bin, async () => {

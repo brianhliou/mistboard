@@ -372,8 +372,9 @@ test('banqi schedules its eight-level ladder with a random anchor; jungle stays 
   const config = botVsBotConfigFromEnv({} as NodeJS.ProcessEnv);
   const banqi = config.plans.find((plan) => plan.variant === 'banqi')!;
   assert.deepEqual(banqi.ladder, [
-    ...Array.from({ length: 7 }, (_, index) => `misty-banqi-level-${index + 1}`),
+    ...Array.from({ length: 6 }, (_, index) => `misty-banqi-level-${index + 1}`),
     'misty-banqi',
+    'misty-banqi-level-8',
   ]);
   assert.ok(banqi.calibrationRatio > 0);
   assert.equal(banqi.anchorEngineId, 'random-legal-banqi');

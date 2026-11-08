@@ -73,7 +73,7 @@ export type EngineId =
   | 'pikafish-xiangqi-strongest'
   // MistyBanqi (Banqi)
   | 'misty-banqi'
-  | `misty-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7}`
+  | `misty-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 8}`
   | 'random-legal-banqi'
   | 'misty-banqi-amateur'
   | 'misty-banqi-strong'

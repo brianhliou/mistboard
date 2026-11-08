@@ -125,7 +125,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-fdx-v1.1',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
-      ...BANQI_PLAYABLE_ENGINES.filter((tier) => tier.level < 8).map((tier) => tier.id),
+      ...BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => tier.id),
       ...([1, 2, 3, 4, 5, 6, 7, 8] as const).map(
         (level) => `misty-jungle-flip-level-${level}` as const,
       ),
