@@ -66,10 +66,18 @@ export function mountNotFound(root: HTMLElement): void {
   root.append(buildNav(locale), buildNotFound(locale));
 }
 
+/* The async mounts below fetch their page module, build the page, and only
+ * then swap it in. Emptying the root before the import left a prerendered
+ * page blank for as long as the chunk took to download: 7 s on /rules at
+ * Fast 3G with a 4x CPU. The server render stays on screen until the client
+ * page replaces it in one step, and a failed import never touches it. */
+function swapIn(root: HTMLElement, classes: string[], ...nodes: Node[]): void {
+  root.replaceChildren(...nodes);
+  root.classList.add(...classes);
+}
+
 export async function mountNews(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
-  root.replaceChildren();
-  root.classList.add('landing-page', 'news-route');
   const { buildNewsPage, newsArchiveHrefForHash, newsMonthExists, newsMonthFromPath } =
     await import('./news-page.js');
   let monthId = newsMonthFromPath(globalThis.location?.pathname ?? '');
@@ -85,7 +93,9 @@ export async function mountNews(root: HTMLElement): Promise<void> {
     globalThis.history.replaceState(null, '', '/feed');
     monthId = null;
   }
-  root.append(
+  swapIn(
+    root,
+    ['landing-page', 'news-route'],
     buildNav(locale),
     buildStaticPageLayout('news', buildNewsPage(locale, monthId), locale),
   );
@@ -93,13 +103,11 @@ export async function mountNews(root: HTMLElement): Promise<void> {
 
 export async function mountPatron(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
-  root.replaceChildren();
-  root.classList.add('landing-page', 'patron-route');
   document.title = `${t('patron.heading', {}, locale)} · Mistboard`;
   const { buildPatronPage } = await import('./patron-page.js');
   // Focused, hero-led layout (no static side rail) to match the donate page
   // shape; the footer + other pages' rails still link here.
-  root.append(buildNav(locale), buildPatronPage(locale));
+  swapIn(root, ['landing-page', 'patron-route'], buildNav(locale), buildPatronPage(locale));
 }
 
 export function mountContact(root: HTMLElement): void {
@@ -119,8 +127,6 @@ export async function mountArticlesIndex(
   lang?: import('./article-i18n.js').ArticleLang | null,
   view: import('./articles.js').ArticleIndexView = 'mistboard',
 ): Promise<void> {
-  root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route');
   const { articleTopicFromSearch, buildArticlesIndex, mountArticleThumbnails } = await import(
     './articles.js'
   );
@@ -128,7 +134,7 @@ export async function mountArticlesIndex(
   // whole list whatever the query, and its canonical stays /blog.
   const topic = articleTopicFromSearch(window.location.search);
   const index = buildArticlesIndex(lang ?? undefined, view, topic);
-  root.append(buildNav(), index);
+  swapIn(root, ['landing-page', 'articles-route'], buildNav(), index);
   mountArticleThumbnails(index);
 }
 
@@ -261,11 +267,9 @@ export async function mountRulesIndex(
   root: HTMLElement,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): Promise<void> {
-  root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route', 'rules-route');
   const { buildRulesIndex, mountArticleThumbnails } = await import('./articles.js');
   const index = buildRulesIndex(lang ?? undefined);
-  root.append(buildNav(), index);
+  swapIn(root, ['landing-page', 'articles-route', 'rules-route'], buildNav(), index);
   mountArticleThumbnails(index);
 }
 

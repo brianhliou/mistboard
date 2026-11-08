@@ -9,11 +9,14 @@ import {
   articlesIndexPrerenderHead,
   mountAbout,
   mountArticle,
+  mountArticlesIndex,
   mountContact,
   mountFaq,
   mountNews,
   mountNotFound,
+  mountPatron,
   mountPrivacy,
+  mountRulesIndex,
   mountSource,
   mountTerms,
   PIECE_SET_SOURCE_URLS,
@@ -793,4 +796,31 @@ describe('rules rail navigation', () => {
       'zh-Hans',
     );
   });
+});
+
+// The async mounts used to empty the root and then wait for their page chunk,
+// so a prerendered page went blank for the whole download (7 s on /rules at
+// Fast 3G). The server render must stay until the client page replaces it.
+describe('async mounts keep the server render until the page is built', () => {
+  const cases: [string, string, (root: HTMLElement) => Promise<void>][] = [
+    ['/rules', 'rules-route', (root) => mountRulesIndex(root)],
+    ['/zh-hans/rules', 'rules-route', (root) => mountRulesIndex(root, 'zh-Hans')],
+    ['/blog', 'articles-route', (root) => mountArticlesIndex(root)],
+    ['/feed', 'news-route', (root) => mountNews(root)],
+    ['/patron', 'patron-route', (root) => mountPatron(root)],
+  ];
+  for (const [path, routeClass, mount] of cases) {
+    it(`${path}: the baked page stays until one swap`, async () => {
+      window.history.replaceState(null, '', path);
+      document.body.innerHTML = '<div id="app"><main id="baked">server render</main></div>';
+      const root = document.getElementById('app') as HTMLElement;
+      const pending = mount(root);
+      expect(root.querySelector('#baked')).not.toBeNull();
+      expect(root.classList.contains(routeClass)).toBe(false);
+      await pending;
+      expect(root.querySelector('#baked')).toBeNull();
+      expect(root.classList.contains(routeClass)).toBe(true);
+      expect(root.firstElementChild?.tagName).toBe('NAV');
+    });
+  }
 });
