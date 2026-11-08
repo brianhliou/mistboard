@@ -1,9 +1,12 @@
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
+  GOMOKU_OPENINGS,
   type GomokuMove,
   type GomokuOpening,
   getGomokuPlayerView,
+  gomokuFen,
+  parseGomokuFen,
   parseGomokuMove,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +14,11 @@ import { writeDisplayPreference } from '../display-preferences.js';
 import { gomokuBoardSvg } from '../gomoku-board.js';
 import { computeGameAnalysis } from './game-analysis.js';
 import { createGameTree } from './game-tree.js';
-import { type GomokuReviewConfig, mountGomokuReview } from './gomoku-review.js';
+import {
+  type GomokuReviewConfig,
+  gomokuReviewPosition,
+  mountGomokuReview,
+} from './gomoku-review.js';
 import { makeGomokuTreeAdapter } from './gomoku-tree-adapter.js';
 import type { TreeReviewHandle } from './tree-review.js';
 
@@ -166,6 +173,65 @@ afterEach(() => {
 });
 
 describe('Gomoku tree review', () => {
+  it.each(['black', 'white'] as const)(
+    'navigates and reloads a parsed %s-to-move chapter root',
+    (turn) => {
+      const dealt = GOMOKU_OPENINGS.find((entry) => entry.source === 'mined-2B3W-7x7')!;
+      let state = createGomokuRoomState('chapter', dealt);
+      if (turn === 'white') state = applyGomokuRoomMove(state, { to: 'a15' });
+      const fen = gomokuFen(state);
+      const parsed = parseGomokuFen(fen, 'chapter');
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) throw new Error(parsed.error);
+      const chapter = { truth: parsed.state, fen };
+      const adapter = makeGomokuTreeAdapter(parsed.state);
+      const tree = createGameTree(adapter, moves.slice(0, 2));
+      expect(tree.root.truth).toBe(parsed.state);
+      expect(tree.nodeAt(tree.mainlinePath())!.truth.board).toEqual(
+        applyGomokuRoomMove(applyGomokuRoomMove(parsed.state, moves[0]!), moves[1]!).board,
+      );
+      const { root, handle } = mount({ root: chapter, moves: moves.slice(0, 2) });
+      press('Home');
+      expect(stones(root)).toHaveLength(state.ply);
+      expect(board(root).querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      const position = JSON.parse(gomokuReviewPosition(parsed.state));
+      expect(position.turn).toBe(turn === 'black' ? 1 : 2);
+      expect(position.stones).toHaveLength(state.ply);
+      press('ArrowRight');
+      expect(
+        board(root).querySelector(`[data-piece-square="a1"].gomoku-stone--${turn}`),
+      ).not.toBeNull();
+      press('ArrowRight');
+      expect(stones(root)).toHaveLength(state.ply + 2);
+      press('ArrowLeft');
+      board(root)
+        .querySelector('[data-square="o15"] .gomoku-hit')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const saved = handle.serialize();
+      expect(saved.rootFen).toBe(fen);
+      expect(saved.root.children[0]?.children.map((child) => child.uci)).toEqual(['b1', 'o15']);
+      const reloaded = mount({ root: chapter, initialTree: saved });
+      expect(reloaded.handle.serialize()).toEqual(saved);
+      press('Home');
+      expect(stones(reloaded.root)).toHaveLength(state.ply);
+      expect(board(reloaded.root).querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      expect(gomokuFen(parsed.state)).toBe(fen);
+    },
+  );
+
+  it('accepts an empty White-to-move parsed root without replacing it with an opening', () => {
+    const fen = `${Array(15).fill('15').join('/')} w`;
+    const parsed = parseGomokuFen(fen);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const { root } = mount({ root: { truth: parsed.state, fen }, moves: [{ to: 'a1' }] });
+    expect(stones(root)).toEqual(['a1']);
+    expect(
+      board(root).querySelector('[data-piece-square="a1"].gomoku-stone--white'),
+    ).not.toBeNull();
+    press('Home');
+    expect(stones(root)).toHaveLength(0);
+  });
+
   it('replays every recorded ply from its dealt root using the rules kernel', () => {
     const adapter = makeGomokuTreeAdapter(opening);
     const tree = createGameTree(adapter, moves);

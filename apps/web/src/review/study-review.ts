@@ -266,6 +266,17 @@ export async function mountStudyReview(
         root: { truth: parsed.state, fen: jungleFlipStateToDealtFen(parsed.state) },
       });
     }
+    case 'gomoku': {
+      const [{ mountGomokuReview }, { gomokuFen, parseGomokuFen }] = await Promise.all([
+        import('./gomoku-review.js'),
+        import('@mistboard/game'),
+      ]);
+      const parsed = rootFen ? parseGomokuFen(rootFen, STUDY_GAME_ID) : null;
+      return mountGomokuReview(root, {
+        ...(await baseReady),
+        root: parsed?.ok ? { truth: parsed.state, fen: gomokuFen(parsed.state) } : undefined,
+      });
+    }
     case 'three-kingdoms-banqi': {
       const [
         { mountThreeKingdomsBanqiReview },
