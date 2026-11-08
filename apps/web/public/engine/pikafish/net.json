@@ -1,9 +1,9 @@
 {
   "file": "pikafish.nnue",
-  "url": "https://api.github.com/repos/brianhliou/mistboard-private/releases/assets/723244296",
+  "url": "https://api.github.com/repos/brianhliou/mistboard-nets/releases/assets/723355852",
   "sha256": "7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e",
   "bytes": 50706378,
   "engineCommit": "6a59ee2f7b105bff64d9efc2692591107787e2b1",
-  "releaseRepo": "brianhliou/mistboard-private",
+  "releaseRepo": "brianhliou/mistboard-nets",
   "releaseTag": "pikafish-net-7d13d735"
 }
