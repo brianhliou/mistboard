@@ -951,9 +951,6 @@ export function robotsTxt(publicHost: string): string {
   return [
     'User-agent: *',
     'Allow: /',
-    'Disallow: /database',
-    'Disallow: /engines',
-    'Disallow: /accounts',
     'Disallow: /api/data/',
     `Sitemap: ${publicHost}/sitemap.xml`,
     '',

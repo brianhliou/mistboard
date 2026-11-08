@@ -50,7 +50,7 @@ import {
 import { practiceChapterPath } from './practice-chapter-redirect.js';
 import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
 import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
-import { isNoindexRoute } from './server-policy.js';
+import { isNoFollowRoute, isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
 import {
   localeAlternates,
@@ -911,6 +911,8 @@ async function puzzleRoutePage(
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
+  // /play mounts the home lobby and replaces its URL with / on the client.
+  if (normalized === '/play') return '/';
   return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
 }
 
@@ -1146,8 +1148,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
       crawlerCopyRoot(renderStudyIndexBody(studies, studyIndexPage)),
     );
   }
+  const nofollow = isNoFollowRoute(params.pathname);
   if (noindex) {
-    html = setRobotsMeta(html, 'noindex, follow');
+    html = setRobotsMeta(html, nofollow ? 'noindex, nofollow' : 'noindex, follow');
   }
   if (links) html = html.replace('</head>', `${links}</head>`);
   // A client route that exists to answer a search (/bots) also carries its text
@@ -1163,7 +1166,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
-  params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  params.response.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    ...(nofollow ? { 'x-robots-tag': 'noindex, nofollow' } : {}),
+  });
   params.response.end(html);
   return true;
 }

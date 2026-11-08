@@ -50,7 +50,14 @@ test('every sitemap URL and every admitted route pattern has a crawler contract'
 });
 
 test('every client-only contract is noindex, including dynamic-route samples', () => {
-  for (const entry of CLIENT_ONLY_NOINDEX) assert.ok(isNoindexRoute(entry.path), entry.path);
+  const problems = (policy: (path: string) => boolean) =>
+    CLIENT_ONLY_NOINDEX.filter((entry) => !policy(entry.path)).map((entry) => entry.path);
+  assert.deepEqual(problems(isNoindexRoute), []);
+  // Planted regression: dropping one admin branch must fail this contract.
+  assert.deepEqual(
+    problems((path) => path !== '/database' && isNoindexRoute(path)),
+    ['/database'],
+  );
 });
 
 test('floors are nontrivial and phrases match page copy in the URL locale', async () => {

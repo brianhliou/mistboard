@@ -534,6 +534,9 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/metrics',
   '/readouts',
   '/forum/reports',
+  '/broadcast/xiangqi/ops',
+  '/practice/position',
+  '/play',
   '/account',
   '/account/settings',
   '/account/settings/profile',
@@ -617,12 +620,22 @@ test('isNoindexRoute ignores a trailing slash', () => {
 });
 
 test('admin preview noindex policy matches only admin shells and preserves public routes and assets', () => {
-  for (const route of ['/titles', '/engines', '/engine/pikafish', '/accounts', '/database']) {
+  for (const route of [
+    '/titles',
+    '/engines',
+    '/engine/pikafish',
+    '/accounts',
+    '/database',
+    '/broadcast/xiangqi/ops',
+    '/forum/reports',
+    '/practice/position',
+    '/play',
+  ]) {
     assert.equal(isClientRoute(route), true, route);
     assert.equal(isNoindexRoute(route), true, route);
     assert.equal(isNoindexRoute(`${route}/`), true, route);
   }
-  for (const route of ['/play', '/practice/position', '/verify-title', '/bots', '/games/search']) {
+  for (const route of ['/verify-title', '/bots', '/games/search']) {
     // /verify-title is an existing noindex utility, not the private /titles queue.
     assert.equal(isNoindexRoute(route), route === '/verify-title', route);
   }
@@ -633,6 +646,11 @@ test('admin preview noindex policy matches only admin shells and preserves publi
     '/accounts-extra',
     '/database-extra',
     '/titles-extra',
+    '/broadcast/xiangqi',
+    '/broadcast/xiangqi/ops-extra',
+    '/forum/reports-extra',
+    '/practice/position-extra',
+    '/play-extra',
   ]) {
     assert.equal(isNoindexRoute(route), false, route);
   }

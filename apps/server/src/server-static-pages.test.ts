@@ -987,7 +987,7 @@ for (const [pathname, title, description] of [
     'Practise a xiangqi (Chinese chess) position against the engine. Set up a position in the board editor, then play it out to practise winning or holding a draw.',
   ],
 ]) {
-  test(`${pathname} serves a public static preview without disclosing query content`, async () => {
+  test(`${pathname} serves a noindex static preview without disclosing query content`, async () => {
     const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
     await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
     let bareShell: string | undefined;
@@ -1021,10 +1021,15 @@ for (const [pathname, title, description] of [
           `<meta property="og:url" content="https://mistboard.com${pathname}">`,
         ),
       );
-      assert.match(response.body, /<meta name="robots" content="max-image-preview:large"\s*\/>/);
+      assert.match(response.body, /<meta name="robots" content="noindex, nofollow">/);
+      assert.equal(response.headers['x-robots-tag'], 'noindex, nofollow');
+      if (pathname === '/play') {
+        assert.match(response.body, /<link rel="canonical" href="https:\/\/mistboard.com\/">/);
+        assert.doesNotMatch(response.body, /rel="canonical" href="[^"]*\/play/);
+      }
       assert.equal(response.body.match(/<meta name="robots"/g)?.length, 1);
       assert.match(response.body, /<meta property="og:image" content="old">/);
-      assert.doesNotMatch(response.body, /noindex|SENTINEL|\/og\/position\//);
+      assert.doesNotMatch(response.body, /SENTINEL|\/og\/position\//);
       bareShell ??= response.body;
       assert.equal(response.body, bareShell, 'query fields must not affect any part of the shell');
     }
@@ -1037,6 +1042,8 @@ for (const pathname of [
   '/engine/PRIVATE_ENGINE_SENTINEL',
   '/accounts',
   '/database',
+  '/broadcast/xiangqi/ops',
+  '/forum/reports',
 ]) {
   test(`${pathname} serves only the generic noindex shell`, async () => {
     const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
@@ -1053,13 +1060,14 @@ for (const pathname of [
       });
       assert.equal(served, true);
       assert.equal(response.status, 200);
+      assert.equal(response.headers['x-robots-tag'], 'noindex, nofollow');
       assert.match(response.body, /<title>Mistboard<\/title>/);
       assert.match(response.body, /<meta property="og:title" content="old">/);
       assert.match(response.body, /<meta property="og:description" content="old">/);
-      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+      assert.match(response.body, /<meta name="robots" content="noindex, nofollow">/);
       assert.equal(response.body.match(/<meta name="robots"/g)?.length, 1);
       assert.doesNotMatch(response.body, /SENTINEL|rel="canonical"|hreflang|\/og\//);
-      assert.equal(response.body, setRobotsMeta(indexHtml(), 'noindex, follow'));
+      assert.equal(response.body, setRobotsMeta(indexHtml(), 'noindex, nofollow'));
     }
   });
 }
@@ -2177,6 +2185,7 @@ test('serveSpaShellWithRoutePreloads leaves a public route indexable', async () 
   });
 
   assert.doesNotMatch(response.body, /noindex/);
+  assert.equal(response.headers['x-robots-tag'], undefined);
 });
 
 test('serveStudyPage without persistence serves the plain shell (no meta leak, no crash)', async () => {
@@ -3144,7 +3153,7 @@ test('forum link previews give etiquette its static metadata and keep reports ge
       assert.match(response.body, /<title>Mistboard<\/title>/);
       assert.match(response.body, /og:title" content="old"/);
       assert.match(response.body, /og:description" content="old"/);
-      assert.match(response.body, /name="robots" content="noindex, follow"/);
+      assert.match(response.body, /name="robots" content="noindex, nofollow"/);
     }
   }
 });
