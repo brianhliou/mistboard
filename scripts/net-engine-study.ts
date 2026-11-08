@@ -340,13 +340,22 @@ export async function runNetStudy(variant: NetVariant): Promise<void> {
     });
     const selected = data.games.find((g) => g.gameId === data.selectedGameId)!;
     const articlePath = resolve(`apps/web/src/articles/content/${c.article}.ts`);
-    const article = readFileSync(articlePath, 'utf8')
+    const original = readFileSync(articlePath, 'utf8');
+    const previousId = /const NET_STUDY_ID = '([^']+)';/.exec(original)?.[1];
+    const article = original
       .replace(/const NET_STUDY_ID = '[^']+';/, `const NET_STUDY_ID = '${id}';`)
       .replace(
         /const NET_CHAPTER_ID = '[^']+';/,
         `const NET_CHAPTER_ID = '${selected.chapterId}';`,
       );
     writeFileSync(articlePath, article);
+    // The zh dictionaries key translated prose by its resolved text, so a study
+    // link in a translated paragraph carries the old id in both key and value.
+    if (previousId && previousId !== id) {
+      const i18nPath = resolve('apps/web/src/article-i18n.ts');
+      const i18n = readFileSync(i18nPath, 'utf8');
+      writeFileSync(i18nPath, i18n.replaceAll(`/study/${previousId})`, `/study/${id})`));
+    }
     writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
   }
   if (flag('fill')) {
