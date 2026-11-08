@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { Window } from 'happy-dom';
 import { createServer } from 'vite';
 import { prerenderedCssMisses } from './prerender-css-coverage.mjs';
+import { writePrerenderSitemap } from './prerender-sitemap.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
@@ -1166,6 +1167,7 @@ try {
     );
   }
   console.log(`css check: ${cssCheck.pages} baked pages link every stylesheet that styles them`);
+  await writePrerenderSitemap(distDir, host, resolve(__dirname, '../../..'));
 } catch (err) {
   console.error('prerender failed:', err);
   process.exitCode = 1;

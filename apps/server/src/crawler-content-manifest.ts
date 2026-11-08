@@ -165,7 +165,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -179,7 +179,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 1228,
   },
   {
@@ -193,7 +193,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -207,7 +207,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -222,7 +222,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
     // Both advertised Chinese alternates are below the content floor.
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 295,
   },
   {
@@ -236,7 +236,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 107,
   },
   {
@@ -250,7 +250,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 106,
   },
   {
@@ -293,7 +293,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -307,7 +307,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -321,7 +321,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -363,7 +363,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -405,7 +405,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -449,7 +449,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -464,7 +464,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -479,7 +479,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -494,7 +494,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -509,7 +509,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -582,7 +582,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -596,7 +596,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -844,7 +844,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -871,7 +871,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -885,7 +885,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -927,7 +927,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -941,7 +941,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -955,7 +955,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#956',
+    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1048,7 +1048,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -1062,7 +1062,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -1076,7 +1076,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -1479,7 +1479,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -1493,7 +1493,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#957: static content still needs a crawler body',
     baselineChars: 0,
   },
   {
@@ -1507,7 +1507,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -1549,7 +1549,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -1563,7 +1563,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
@@ -1577,7 +1577,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    knownGap: '#956',
+    knownGap: '#961: localized page or its alternates remain below the crawler floor',
     baselineChars: 0,
   },
   {
