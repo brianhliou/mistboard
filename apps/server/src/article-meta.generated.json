@@ -631,7 +631,11 @@
     "title": "10,000 games played",
     "kind": "article",
     "description": "How the first 10,000 games on Mistboard came in, what people played, and who played them.",
-    "status": "draft"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "已下完 10,000 盘棋",
+      "zh-hant": "已下完 10,000 盤棋"
+    }
   },
   "three-kingdoms-banqi": {
     "title": "Three Kingdoms Banqi Rules",
