@@ -278,6 +278,7 @@ export default defineConfig(({ command }) => {
       : {}),
     test: {
       environment: 'happy-dom',
+      setupFiles: ['./src/test-setup.ts'],
       // Above vitest's 5s default. A test that opens with `await import()` is
       // charged the whole cold module graph, and the heavy ones cost ~850ms on
       // an idle machine; across 260+ files on parallel workers that blew the

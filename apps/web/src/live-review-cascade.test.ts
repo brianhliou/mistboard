@@ -195,7 +195,9 @@ function noticeBand(width: number, extra: string): { section: string; clamp: str
   const win = new Window({ width, height: 664 });
   try {
     win.document.head.innerHTML = [GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
-      .map((css) => `<style>${css}</style>`)
+      // happy-dom 21 drops vendor properties. Alias this one so the real
+      // selector, media query and two-line value still go through its cascade.
+      .map((css) => `<style>${css.replaceAll('-webkit-line-clamp:', 'line-clamp:')}</style>`)
       .join('');
     win.document.body.innerHTML = `<div class="review-shell__cluster live-review__cluster"><div class="round-table__box"><div data-action-section class="round-table__row"><div data-action-status class="action-status"><div class="action-notice default"><strong>Watching</strong><span>Spectators receive a public Fog view while the game is live.</span>${extra}</div></div></div></div></div>`;
     const section = need(win.document.querySelector('[data-action-section]'), 'section');
@@ -206,7 +208,7 @@ function noticeBand(width: number, extra: string): { section: string; clamp: str
       .height.replace(/^calc\((\d+)px - (\d+)px\)$/, (_m, a, b) => `${Number(a) - Number(b)}px`);
     return {
       section: h,
-      clamp: win.getComputedStyle(body).getPropertyValue('-webkit-line-clamp'),
+      clamp: win.getComputedStyle(body).getPropertyValue('line-clamp'),
     };
   } finally {
     void win.happyDOM.close();

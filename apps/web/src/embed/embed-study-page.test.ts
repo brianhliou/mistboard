@@ -657,8 +657,9 @@ describe('mountEmbedStudy', () => {
     // The start: every piece but the generals face down.
     expect(hidden()).toBe(30);
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
-    // i4i5 moved a dark piece: it shows what the deal made it.
-    expect(hidden()).toBe(29);
+    // i4i5 moved a dark piece: after the flip removes its temporary back,
+    // it shows what the deal made it (happy-dom 21 now runs WAAPI animations).
+    await vi.waitFor(() => expect(hidden()).toBe(29));
     expect(board?.querySelector('[data-piece-square="i5"]')?.innerHTML).not.toContain(
       'hidden piece',
     );
