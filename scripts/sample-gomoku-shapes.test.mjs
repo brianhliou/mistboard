@@ -233,7 +233,7 @@ test('CLI validates mining flags and retains a hard shape budget', () => {
 test('NO_ENGINE estimator still agrees with exact 2B+2W shape enumeration', () => {
   const result = spawnSync(
     process.execPath,
-    ['scripts/sample-gomoku-shapes.mjs', '2', '2', '2', '300', '/dev/null'],
+    ['scripts/sample-gomoku-shapes.mjs', '2', '2', '2', '1200', '/dev/null'],
     { encoding: 'utf8', env: { NO_ENGINE: '1' } },
   );
   assert.equal(result.status, 0, result.stderr);

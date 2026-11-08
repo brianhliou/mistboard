@@ -309,7 +309,13 @@ export function mineShapes(options, { screen, onCheckpoint = () => {} } = {}) {
     const set = idx.map((i) => cells[i]);
     if (!eligible(set)) continue;
     state.accepted++;
-    const order = [...set.keys()].sort(() => rand() - 0.5);
+    // Fisher-Yates: a random sort comparator is biased and its call count
+    // varies by V8 version, which made the PRNG stream differ across Node.
+    const order = [...set.keys()];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
     const cls = shapeClass(
       set.map((c, i) => [...c, order.indexOf(i) < o.black ? 'black' : 'white']),
       o.halfWidth,
