@@ -450,6 +450,14 @@ test('railpack downloads nothing inline except the rust toolchain installer', ()
   assert.deepEqual(inline, [], 'download through a checksummed scripts/fetch-*.sh instead');
 });
 
+test('Banqi serves the published v0.3.0 asset with its verified sha256', () => {
+  const script = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
+  const entry = script.match(/^ {2}banqi-engine\)\n([\s\S]*?);;/m);
+  assert.ok(entry, 'Banqi has a release asset pin');
+  assert.match(entry[1], /repo=brianhliou\/misty-banqi tag=v0\.3\.0 mode=exec/);
+  assert.match(entry[1], /sha=9a5fb0f16438bf5521e321bc64a50417cda4715aac607ba238875db6430da068\b/);
+});
+
 test('every release asset railpack fetches has a pinned sha256', () => {
   const script = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
   const fetched = railpackCommands().flatMap((command) => [

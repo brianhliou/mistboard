@@ -61,9 +61,9 @@ test('AB-JChess, jqe and KataGo show the build their version constant names', ()
 test('Misty shows each engine build she plays', () => {
   assert.equal(botEngineVersion('python-v2-v1.6'), '1.6');
   assert.equal(botEngineVersion('python-fdx-v1.2'), '1.2');
-  assert.equal(botEngineVersion('misty-banqi'), '0.2.7');
+  assert.equal(botEngineVersion('misty-banqi'), '0.3.0');
   for (const level of [1, 2, 3, 4, 5, 6, 8]) {
-    assert.equal(botEngineVersion(`misty-banqi-level-${level}`), '0.2.7');
+    assert.equal(botEngineVersion(`misty-banqi-level-${level}`), '0.3.0');
   }
   assert.equal(botEngineVersion('misty-jungle-level-2'), '0.0.6');
   assert.equal(botEngineVersion('misty-jungle-flip'), '0.5.1');

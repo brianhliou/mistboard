@@ -16,9 +16,8 @@ name=${2:?asset name}
 # name -> repo, tag, sha256, mode (exec: an executable; data: a non-empty file)
 case "$name" in
   banqi-engine)
-    # TODO: pin v0.2.8 once released for the Banqi L1-5 Noise/NoiseDepth/Seed options.
-    repo=brianhliou/misty-banqi tag=v0.2.7 mode=exec
-    sha=8ceda19822aa01cafd2006854a9916fe889da8ad184146b18d7904840a322a63 ;;
+    repo=brianhliou/misty-banqi tag=v0.3.0 mode=exec
+    sha=9a5fb0f16438bf5521e321bc64a50417cda4715aac607ba238875db6430da068 ;;
   jungle-flip-engine)
     repo=brianhliou/misty-flip-jungle tag=v0.5.4 mode=exec
     sha=5b98afc0bf1b5072793169202d53a204b4775eee22d9c160567c0ec73bdfaeae ;;

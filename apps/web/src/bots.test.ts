@@ -1121,7 +1121,7 @@ describe('bot pages', () => {
               playable: true,
               version: '1.6',
             },
-            { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true, version: '0.2.7' },
+            { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true, version: '0.3.0' },
             { gameSpecId: 'xiangqi-mahjong', engineId: 'misty-xiangqi-mahjong', playable: true },
           ],
         }),
@@ -1149,7 +1149,7 @@ describe('bot pages', () => {
     const rowText = (gameSpecId: string) =>
       mistyCard?.querySelector(`[data-game-spec-id="${gameSpecId}"]`)?.textContent ?? '';
     expect(rowText('dark-chess')).toContain('Version 1.6');
-    expect(rowText('banqi')).toContain('Version 0.2.7');
+    expect(rowText('banqi')).toContain('Version 0.3.0');
     // No recorded version: nothing, never a guess.
     expect(rowText('xiangqi-mahjong')).not.toContain('Version');
   });
@@ -1195,7 +1195,7 @@ describe('bot pages', () => {
     const profile = misty({
       playOptions: [
         { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.6', playable: true, version: '1.6' },
-        { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true, version: '0.2.7' },
+        { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true, version: '0.3.0' },
       ],
     });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
@@ -1210,6 +1210,6 @@ describe('bot pages', () => {
         ?.querySelector('.profile-side-stat-value')?.textContent;
     expect(version()).toBe('1.6');
     root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="banqi"]')?.click();
-    expect(version()).toBe('0.2.7');
+    expect(version()).toBe('0.3.0');
   });
 });

@@ -1060,7 +1060,7 @@ const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
 );
 
 // MistyBanqi (our own Rust αβ+TT engine, Tier-B UCI subprocess — banqi-engine.ts).
-// Historical full-strength bot is classical L7, preserving its id and config signature.
+// Historical full-strength bot is classical L7, preserving its id; each build gets a new signature.
 // configHash carries the engine version, so each game record tells which build played. The route/scheduler key off
 // banqi-engine.ts ids, not this registry. The legacy *-amateur/strong/strongest entries are
 // KEPT (not served, not in the picker) so old game records still resolve via isKnownEngineClientId.
@@ -1085,8 +1085,9 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     // the hash names what DECIDES play — the build and the strength dial. The movetime
     // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
     // out of the identity while remaining recorded in `config`.
-    configHash: 'misty-banqi-0.2.7-nodes-3500000',
-    playSignature: 'misty-banqi-0.2.7-nodes-3500000',
+    // 2026-11-08: 0.2.7 -> 0.3.0; classical play verified move-identical to 0.2.8 on all 78 fixture positions on linux/amd64
+    configHash: 'misty-banqi-0.3.0-nodes-3500000',
+    playSignature: 'misty-banqi-0.3.0-nodes-3500000',
     config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
       'MistyBanqi Level 7 — classical at 3.5M nodes. Historical bot: ' +
@@ -1120,9 +1121,9 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
           notes:
             tier.level === 8
               ? 'MistyBanqi Level 8 — trained NNUE net at 2M nodes under an 8s cap. ' +
-                'Requires MistyBanqi 0.3.0 with advertised EvalFile and MISTBOARD_BANQI_NET. ' +
+                'MistyBanqi 0.3.0 supports EvalFile; L8 needs MISTBOARD_BANQI_NET. ' +
                 'Calibrated 2026-11-08 by duplicate-pair self-play: +219 Elo [166, 283] over classical L7.'
-              : `MistyBanqi level ${tier.level}. Calibrated 2026-11-08 by adjacent-level self-play. L1-4 require v0.2.8 with advertised Noise, NoiseDepth and Seed.`,
+              : `MistyBanqi level ${tier.level}. Calibrated 2026-11-08 by adjacent-level self-play. MistyBanqi 0.3.0 supports Noise, NoiseDepth and Seed for L1-4.`,
         } satisfies EngineDefinition,
       ];
     }),

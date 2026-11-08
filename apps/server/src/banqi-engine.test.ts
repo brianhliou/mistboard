@@ -7,6 +7,7 @@ import test from 'node:test';
 import { createBanqiSetup, createBanqiStateFromSetup, getBanqiLegalMoves } from '@mistboard/game';
 import {
   BANQI_DEFAULT_ENGINE_ID,
+  BANQI_ENGINE_VERSION,
   BANQI_PLAYABLE_ENGINES,
   BANQI_RANDOM_ENGINE_ID,
   banqiEngineAvailable,
@@ -103,7 +104,7 @@ test('the stored Banqi id stays classical L7 at 3.5M nodes without a net or Eval
   assert.equal(tier.evaluation, 'classical');
   assert.equal(tier.nodes, 3_500_000);
   const registry = loadEngine('misty-banqi');
-  assert.equal(registry.configHash, 'misty-banqi-0.2.7-nodes-3500000');
+  assert.equal(registry.configHash, 'misty-banqi-0.3.0-nodes-3500000');
   assert.equal(registry.playSignature, registry.configHash);
   assert.deepEqual(registry.config, {
     kind: 'banqi-uci',
@@ -131,6 +132,13 @@ test('the stored Banqi id stays classical L7 at 3.5M nodes without a net or Eval
 });
 
 test('Banqi offers eight levels, retaining the historical id at L7', () => {
+  assert.equal(BANQI_ENGINE_VERSION, '0.3.0');
+  for (const tier of BANQI_PLAYABLE_ENGINES) {
+    assert.equal(tier.version, '0.3.0');
+    const registry = loadEngine(tier.id);
+    assert.ok(registry.configHash.startsWith('misty-banqi-0.3.0-'));
+    assert.equal(registry.playSignature, registry.configHash);
+  }
   assert.deepEqual(
     BANQI_PLAYABLE_ENGINES.map((tier) => tier.id),
     [
@@ -153,7 +161,7 @@ test('the historical Banqi id resolves to level 7 and unknown ids fail closed', 
 
 test('L8 records NNUE and sends its EvalFile with the calibrated budget', async () => {
   const registry = loadEngine('misty-banqi-level-8');
-  assert.equal(registry.configHash, 'misty-banqi-0.2.7-nnue-nodes-2000000');
+  assert.equal(registry.configHash, 'misty-banqi-0.3.0-nnue-nodes-2000000');
   assert.equal(registry.playSignature, registry.configHash);
   assert.deepEqual(registry.config, {
     kind: 'banqi-uci',
