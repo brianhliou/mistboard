@@ -1033,7 +1033,9 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain(
       'A player who checked on every one of their turns in the repeating cycle loses',
     );
-    expect(pageText).toContain('a player who chased on every one of their turns loses');
+    expect(pageText).toContain(
+      'only one player chased on every one of their turns, that player loses',
+    );
     const jieqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(jieqiSvgs.length).toBeGreaterThanOrEqual(4);
     // The shuffled-start board is the section hero (a single enlarged board,

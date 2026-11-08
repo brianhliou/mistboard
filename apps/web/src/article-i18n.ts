@@ -336,10 +336,10 @@ const ZH_HANS: Record<string, string> = {
     '和棋。半回合指一方走一步，所以相当于双方各走 40 步。单纯翻子不会重置计数。',
   'The same position with the same side to move occurs for the third time.':
     '同一局面第三次出现，且轮到同一方行棋。',
-  'A player who checked on every one of their turns in the repeating cycle loses. If no single player did, a player who chased on every one of their turns loses. Anything else is a draw.':
-    '重复循环中，每一步都将军的一方判负。若没有哪一方单独全程将军，则每一步都捉子的一方判负。其余情况判和。',
-  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
-    '捉子是指新攻击对方的一个棋子，而且每次攻击的都是同一个。将帅和兵卒不算捉子，将帅以及未过河的兵卒也不算被捉。攻击有保护的棋子不算捉子。在这次更新之前开始的对局仍按旧规则：只有长将判负，无吃子判和要到双方各走 60 步。',
+  'A player who checked on every one of their turns in the repeating cycle loses. If nobody gave check in the cycle and only one player chased on every one of their turns, that player loses. Anything else is a draw.':
+    '重复循环中，每一步都将军的一方判负。若循环中没有任何将军，且只有一方每一步都捉子，则该方判负。其余情况判和。',
+  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
+    '捉子是指新攻击对方的一个棋子，而且每次攻击的都是同一个。将帅和兵卒不算捉子，将帅以及未过河的兵卒也不算被捉。攻击有保护的棋子不算捉子，攻击能反吃回来的同种棋子也不算。马或炮攻击车，或士、象攻击车、马、炮，即使对方有保护也算捉子。在这次更新之前开始的对局仍按旧规则：只有长将判负，无吃子判和要到双方各走 60 步。',
   'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
     'AB-JChess 执红对 jqe，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，过河后于第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到红帅身旁的 d3。红方的翻子却不顺利：c5 的车在第 20 回合刚翻出就被吃掉，a1 角位藏的则是兵。黑方在第 30 回合将死红方。',
   'Jieqi: AB-JChess against jqe, Black mates on move 30':
@@ -6833,10 +6833,10 @@ const ZH_HANT: Record<string, string> = {
     '和棋。半回合指一方走一步，所以相當於雙方各走 40 步。單純翻子不會重設計數。',
   'The same position with the same side to move occurs for the third time.':
     '同一局面第三次出現，且輪到同一方行棋。',
-  'A player who checked on every one of their turns in the repeating cycle loses. If no single player did, a player who chased on every one of their turns loses. Anything else is a draw.':
-    '重複循環中，每一步都將軍的一方判負。若沒有哪一方單獨全程將軍，則每一步都捉子的一方判負。其餘情況判和。',
-  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
-    '捉子是指新攻擊對方的一個棋子，而且每次攻擊的都是同一個。將帥和兵卒不算捉子，將帥以及未過河的兵卒也不算被捉。攻擊有保護的棋子不算捉子。在這次更新之前開始的對局仍按舊規則：只有長將判負，無吃子判和要到雙方各走 60 步。',
+  'A player who checked on every one of their turns in the repeating cycle loses. If nobody gave check in the cycle and only one player chased on every one of their turns, that player loses. Anything else is a draw.':
+    '重複循環中，每一步都將軍的一方判負。若循環中沒有任何將軍，且只有一方每一步都捉子，則該方判負。其餘情況判和。',
+  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
+    '捉子是指新攻擊對方的一個棋子，而且每次攻擊的都是同一個。將帥和兵卒不算捉子，將帥以及未過河的兵卒也不算被捉。攻擊有保護的棋子不算捉子，攻擊能反吃回來的同種棋子也不算。馬或炮攻擊車，或士、象攻擊車、馬、炮，即使對方有保護也算捉子。在這次更新之前開始的對局仍按舊規則：只有長將判負，無吃子判和要到雙方各走 60 步。',
   'AB-JChess, playing Red, against jqe, from their 600-game match in October. Black is at the bottom of this board. Black’s advisors show what a revealed piece can do: one reveals on i6, crosses the river and takes an elephant on g4 on move 10, and the other reveals on e6 and walks to d3, next to Red’s general. Red’s reveals go the other way: a chariot on c5 is taken the moment it turns over on move 20, and the a1 corner holds a soldier. Black mates on move 30.':
     'AB-JChess 執紅對 jqe，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。黑方的士展示了翻明棋子的威力：一枚在 i6 翻明，過河後於第 10 回合吃掉 g4 的象；另一枚在 e6 翻明，走到紅帥身旁的 d3。紅方的翻子卻不順利：c5 的車在第 20 回合剛翻出就被吃掉，a1 角位藏的則是兵。黑方在第 30 回合將死紅方。',
   'Jieqi: AB-JChess against jqe, Black mates on move 30':

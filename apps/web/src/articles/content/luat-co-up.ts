@@ -190,7 +190,7 @@ export const luatCoUpArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Trên Mistboard, ván cờ tự động hòa sau 80 lượt đi, tức 40 nước mỗi bên, mà không có nước ăn quân nào. Khi cùng một thế cờ với cùng bên đi xuất hiện lần thứ ba, ván cờ kết thúc: bên chiếu ở mọi lượt của mình trong vòng lặp sẽ thua; nếu không có đúng một bên như vậy, bên đuổi bắt ở mọi lượt của mình sẽ thua; còn lại là hòa. Đuổi bắt là nước đi tấn công mới một quân của đối phương, và lần nào cũng là cùng một quân. Tướng và tốt không bao giờ tính là đuổi bắt; tướng và tốt chưa qua sông cũng không bị tính là bị đuổi bắt. Tấn công một quân có quân bảo vệ thì không tính. Các ván bắt đầu trước lần cập nhật này vẫn theo luật cũ: chỉ chiếu mãi bị xử thua, và ván hòa vì không ăn quân đến sau 60 nước mỗi bên.',
+          text: 'Trên Mistboard, ván cờ tự động hòa sau 80 lượt đi, tức 40 nước mỗi bên, mà không có nước ăn quân nào. Khi cùng một thế cờ với cùng bên đi xuất hiện lần thứ ba, ván cờ kết thúc: bên chiếu ở mọi lượt của mình trong vòng lặp sẽ thua; nếu trong vòng lặp không có nước chiếu nào và chỉ một bên đuổi bắt ở mọi lượt của mình, bên đó thua; còn lại là hòa. Đuổi bắt là nước đi tấn công mới một quân của đối phương, và lần nào cũng là cùng một quân. Tướng và tốt không bao giờ tính là đuổi bắt; tướng và tốt chưa qua sông cũng không bị tính là bị đuổi bắt. Tấn công một quân có quân bảo vệ thì không tính, tấn công một quân cùng loại có thể ăn lại cũng không tính. Mã hoặc pháo tấn công xe, hay sĩ hoặc tượng tấn công xe, mã, pháo, thì vẫn tính dù quân đó có bảo vệ. Các ván bắt đầu trước lần cập nhật này vẫn theo luật cũ: chỉ chiếu mãi bị xử thua, và ván hòa vì không ăn quân đến sau 60 nước mỗi bên.',
         },
       ],
     },
