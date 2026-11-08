@@ -291,8 +291,6 @@ const ZH_HANS: Record<string, string> = {
     '引擎之间的对局、我们的测试账号和已下线的变体不计在内；计数从 6 月 1 日开始。',
   'A player is an account, or a browser playing as a guest.':
     '一个账号，或一个以访客身份下棋的浏览器，算一位玩家。',
-  'Countries and regions are read from the network of each browser that started a game, so a VPN can place someone elsewhere.':
-    '国家和地区根据发起对局的各个浏览器所用的网络判定，因此 VPN 可能让玩家显示在别处。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盘棋用了四个月。接下来的 9,000 盘只用了 39 天。',
   'Finished games each week, Monday to Sunday, from June 1 to November 1.':
@@ -6883,8 +6881,6 @@ const ZH_HANT: Record<string, string> = {
     '引擎之間的對局、我們的測試帳號和已下線的變體不計在內；計數從 6 月 1 日開始。',
   'A player is an account, or a browser playing as a guest.':
     '一個帳號，或一個以訪客身分下棋的瀏覽器，算一位玩家。',
-  'Countries and regions are read from the network of each browser that started a game, so a VPN can place someone elsewhere.':
-    '國家和地區根據發起對局的各個瀏覽器所用的網路判定，因此 VPN 可能讓玩家顯示在別處。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盤棋用了四個月。接下來的 9,000 盤只用了 39 天。',
   'Finished games each week, Monday to Sunday, from June 1 to November 1.':

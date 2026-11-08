@@ -169,7 +169,6 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
       'A game counts once both sides have moved and it ends, against a person or a bot.',
       'Engine matches, our test accounts and variants we have retired are left out; counting started on June 1.',
       'A player is an account, or a browser playing as a guest.',
-      'Countries and regions are read from the network of each browser that started a game, so a VPN can place someone elsewhere.',
     ],
     publishedAt: '2026-11-08',
     thumbnail: {
