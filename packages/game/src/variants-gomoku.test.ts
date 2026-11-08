@@ -83,6 +83,88 @@ test('Gomoku starts with an empty freestyle 15x15 board and Black to move', () =
   assert.deepEqual(game.mustBlock(state), []);
 });
 
+test('Gomoku FEN preserves colours, coordinates and either turn without inferring parity', () => {
+  const empty = Array(15).fill('15').join('/');
+  for (const turn of ['b', 'w']) {
+    const parsed = game.parseGomokuFen(`  ${empty}\t${turn}  `, 'chapter');
+    assert.ok(parsed.ok);
+    assert.equal(parsed.state.id, 'chapter');
+    assert.deepEqual(parsed.state.board, Array(225).fill(null));
+    assert.deepEqual(parsed.state.status, {
+      type: 'playing',
+      turn: turn === 'b' ? 'black' : 'white',
+    });
+    assert.equal(game.gomokuFen(parsed.state), `${empty} ${turn}`);
+  }
+  // Ranks run from 15 down to 1; colour is explicit, even on a hand-set root.
+  const fen = `${['W13B', ...Array(13).fill('15'), 'B13W'].join('/')} w`;
+  const parsed = game.parseGomokuFen(fen);
+  assert.ok(parsed.ok);
+  assert.equal(parsed.state.board[0], 'black');
+  assert.equal(parsed.state.board[14], 'white');
+  assert.equal(parsed.state.board[210], 'white');
+  assert.equal(parsed.state.board[224], 'black');
+  assert.equal(parsed.state.ply, 4);
+  assert.equal(parsed.state.moveNumber, 1);
+  assert.equal(game.gomokuFen(parsed.state), fen);
+});
+
+test('Gomoku FEN round-trips every dealt opening and its continuations', () => {
+  for (const dealt of game.GOMOKU_OPENINGS) {
+    let state = game.createInitialGomokuState(dealt);
+    for (let ply = 0; ply < 4; ply += 1) {
+      const fen = game.gomokuFen(state);
+      const parsed = game.parseGomokuFen(fen);
+      assert.ok(parsed.ok, `${dealt.id}: ${JSON.stringify(parsed)}`);
+      assert.deepEqual(parsed.state.board, state.board);
+      assert.deepEqual(parsed.state.status, state.status);
+      assert.equal(parsed.state.ply, state.ply);
+      assert.equal(game.gomokuFen(parsed.state), fen);
+      state = game.applyGomokuMove(state, game.getGomokuLegalMoves(state)[0]!);
+    }
+  }
+});
+
+test('Gomoku FEN rejects malformed and already decided study roots', () => {
+  const rows = Array(15).fill('15');
+  const empty = rows.join('/');
+  const full = Array.from({ length: 15 }, (_, row) =>
+    drawStones()
+      .slice(row * 15, row * 15 + 15)
+      .map((stone) => (stone.color === 'black' ? 'B' : 'W'))
+      .join(''),
+  ).join('/');
+  for (const fen of [
+    '',
+    `${empty}`,
+    `${empty} x`,
+    `${empty} black`,
+    `${empty} b extra`,
+    `${rows.slice(1).join('/')} b`,
+    `${empty}/15 b`,
+    ...[
+      '14',
+      '16',
+      '015',
+      '0B14',
+      'B15',
+      '1.5',
+      '-15',
+      'X14',
+      'b14',
+      'W14B',
+      '999999999999999999999',
+    ].map((row) => `${[row, ...rows.slice(1)].join('/')} b`),
+    `${['BBBBB10', ...rows.slice(1)].join('/')} w`,
+    `${['WWWWW10', ...rows.slice(1)].join('/')} b`,
+    `${full} b`,
+  ]) {
+    const parsed = game.parseGomokuFen(fen);
+    assert.equal(parsed.ok, false, `accepted ${fen}`);
+    assert.ok(!parsed.ok && parsed.error.length > 0);
+  }
+});
+
 test('the Rapfi pool contains at least 200 distinct, legal, nonterminal near-even openings', async () => {
   const { positionKey } = await import(
     new URL('../../../scripts/screen-gomoku-openings.mjs', import.meta.url).href
@@ -112,6 +194,24 @@ test('the Rapfi pool contains at least 200 distinct, legal, nonterminal near-eve
     const next = game.applyGomokuRoomMove(room, game.getGomokuLegalMoves(initial)[0]!);
     assert.deepEqual(next.opening, room.opening);
     assert.equal(next.ply, initial.ply + 1);
+  }
+});
+
+test('the dealt pool contains only mined two-black three-white openings with Black to move', () => {
+  assert.ok(game.GOMOKU_DEALT_OPENINGS.length > 0);
+  assert.deepEqual(
+    game.GOMOKU_DEALT_OPENINGS,
+    game.GOMOKU_OPENINGS.filter((entry) => entry.source === 'mined-2B3W-7x7'),
+  );
+  for (const entry of game.GOMOKU_DEALT_OPENINGS) {
+    assert.equal(entry.stones.length, 5, entry.id);
+    assert.equal(entry.stones.filter((stone) => stone.color === 'black').length, 2, entry.id);
+    assert.equal(entry.stones.filter((stone) => stone.color === 'white').length, 3, entry.id);
+    assert.deepEqual(game.createInitialGomokuState(entry).status, {
+      type: 'playing',
+      turn: 'black',
+    });
+    assert.equal(entry.turn, 'black', entry.id);
   }
 });
 

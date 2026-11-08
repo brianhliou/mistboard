@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { syncBuiltinESMExports } from 'node:module';
 import { after, before, test } from 'node:test';
 import {
   applyGomokuMove,
   createInitialGomokuState,
+  GOMOKU_DEALT_OPENINGS,
   GOMOKU_OPENINGS,
   type GomokuColor,
   type GomokuMove,
@@ -63,20 +66,39 @@ function room(id: string) {
   return room;
 }
 
+test('Gomoku server deals exclusively from the mined opening pool at every random index', (t) => {
+  let index = 0;
+  const pick = t.mock.method(crypto, 'randomInt', (max: number) => {
+    assert.equal(max, GOMOKU_DEALT_OPENINGS.length);
+    return index;
+  });
+  syncBuiltinESMExports();
+  try {
+    for (const { stones, turn } of GOMOKU_DEALT_OPENINGS) {
+      assert.deepEqual(gomokuTenant.rules.createSetup!(), { stones, turn });
+      index += 1;
+    }
+  } finally {
+    pick.mock.restore();
+    syncBuiltinESMExports();
+  }
+});
+
 test('new Gomoku games deal an opening instead of giving Black an empty board', async () => {
   const boards = new Set(
-    GOMOKU_OPENINGS.map((opening) => JSON.stringify(createInitialGomokuState(opening).board)),
+    GOMOKU_DEALT_OPENINGS.map((opening) => JSON.stringify(createInitialGomokuState(opening).board)),
   );
   const dealt = new Set<string>();
   for (let i = 0; i < 24; i += 1) {
     const created = await createGomokuRoom();
     assert.ok(created.ok);
     const state = created.room.projection.state;
-    assert.ok([3, 4, 5].includes(state.ply));
+    assert.equal(state.ply, 5);
     assert.ok(boards.has(JSON.stringify(state.board)));
     dealt.add(JSON.stringify(state.board));
     assert.equal(state.moveNumber, 1);
     const turn = state.opening!.turn;
+    assert.equal(turn, 'black');
     assert.deepEqual(state.status, { type: 'playing', turn });
     assert.deepEqual(
       replayTenantEvents(gomokuTenant, JSON.parse(JSON.stringify(created.room.events))),

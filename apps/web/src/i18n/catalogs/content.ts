@@ -57,6 +57,44 @@ export const EN_CONTENT = {
   'articles.heading': 'Articles',
   'articles.navigation': 'Blog navigation',
   'articles.byMistboard': 'By Mistboard',
+  'articles.writer.heading': 'Become a Mistboard contributor',
+  'articles.writer.lede':
+    'Players read Mistboard all over the world, from the US and China to Vietnam and Singapore. We are looking for a few players to write for it regularly, on the part of the game they know best.',
+  'articles.writer.languagesTitle': 'Read in three languages',
+  'articles.writer.languagesBody':
+    'Every post is published in English, Simplified Chinese and Traditional Chinese, so it reaches players an English blog never would.',
+  'articles.writer.boardsTitle': 'Boards readers can play through',
+  'articles.writer.boardsBody':
+    'Your lines become interactive boards, checked with an engine before they go out.',
+  'articles.writer.homepageTitle': 'A place on the homepage',
+  'articles.writer.homepageBody': "New posts appear on the homepage and in the site's RSS feed.",
+  'articles.writer.bylineTitle': 'Your name and your links',
+  'articles.writer.bylineBody':
+    'Your byline links to your channel, club or stream, and you are free to post the piece elsewhere too.',
+  'articles.writer.gameTitle': 'A game you learned from',
+  'articles.writer.gameBody':
+    'Walk through one game: where it turned, and what you would play now.',
+  'articles.writer.openingTitle': 'Opening notes',
+  'articles.writer.openingBody':
+    'A line you have worked out, with the games that taught it to you.',
+  'articles.writer.playerTitle': 'A player or a tournament',
+  'articles.writer.playerBody': 'Who plays, how they play, and what happened at the board.',
+  'articles.writer.variantTitle': 'The case for a variant',
+  'articles.writer.variantBody':
+    'Why a variant deserves more players, and how to win your first game.',
+  'articles.writer.sampleTitle': 'Send a sample',
+  'articles.writer.sampleBody':
+    'A link to something you have written, recorded or streamed, and the column you would like to run.',
+  'articles.writer.firstPostTitle': 'Write the first post with us',
+  'articles.writer.firstPostBody': 'We edit together and build the boards.',
+  'articles.writer.continueTitle': 'Keep going',
+  'articles.writer.continueBody': 'About once a month, or on whatever schedule suits you.',
+  'articles.writer.apply': 'Apply to contribute',
+  'articles.writer.readBlog': 'Read the Mistboard blog',
+  'articles.writer.benefits': 'What you get',
+  'articles.writer.ideas': 'What a column could cover',
+  'articles.writer.steps': 'How to start',
+  'articles.writer.example': 'Example: {title}',
   'articles.communityPosts': 'Community posts',
   'articles.latest': 'From the blog',
   'articles.deepDives': 'Xiangqi deep dives',

@@ -352,219 +352,273 @@ export function gamesSearchQueryRedirect(pathname: string, search: string): stri
  * board, a puzzle, the analysis board, and nothing else. The web side mirrors
  * this list in embed/embed-route.ts.
  */
+export const EMBED_ROUTE_PATTERNS = [
+  {
+    id: 'embed-study',
+    test: (path: string) => /^\/embed\/study\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/.test(path),
+  },
+  // A finished game, by room id. The page only ever shows what the public
+  // review page already shows (the summary and events endpoints apply the
+  // post-terminal reveal gate), so framing it widens nothing.
+  { id: 'embed-game', test: (path: string) => /^\/embed\/game\/[A-Za-z0-9_-]{1,64}$/.test(path) },
+  // The live board (a channel's featured game, else its last finished one),
+  // today's puzzle or one by id, and the xiangqi analysis board. Each shows
+  // only what the anonymous public sees on /watch, /puzzles and /analysis.
+  {
+    id: 'embed-puzzle',
+    test: (path: string) => /^\/embed\/puzzle(?:\/[A-Za-z0-9_-]{1,64})?$/.test(path),
+  },
+  { id: 'embed-analysis', test: (path: string) => /^\/embed\/analysis(?:\/xiangqi)?$/.test(path) },
+  // A bare move list carried in the query string, no game or study behind
+  // it, so nothing stored is read: the page shows only what the embedder
+  // typed. The variant list is the client's (EMBED_LINE_VARIANTS); an
+  // unknown one gets the embed shell and a refusal there.
+  { id: 'embed-line', test: (path: string) => /^\/embed\/line\/[a-z-]{1,32}$/.test(path) },
+  // One relayed professional game: the same moves and names the public
+  // broadcast page shows, nothing hidden (xiangqi is open information).
+  {
+    id: 'embed-broadcast-board',
+    test: (path: string) => /^\/embed\/broadcast\/xiangqi\/board\/[A-Za-z0-9_-]{1,160}$/.test(path),
+  },
+  // The live board (a channel's featured game, else its last finished one),
+  // today's puzzle or one by id, and the xiangqi analysis board. Each shows
+  // only what the anonymous public sees on /watch, /puzzles and /analysis.
+  { id: 'embed-tv', test: (path: string) => path === '/embed/tv' },
+];
+
 export function isEmbedRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return (
-    /^\/embed\/study\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/.test(normalized) ||
-    // A finished game, by room id. The page only ever shows what the public
-    // review page already shows (the summary and events endpoints apply the
-    // post-terminal reveal gate), so framing it widens nothing.
-    /^\/embed\/game\/[A-Za-z0-9_-]{1,64}$/.test(normalized) ||
-    // The live board (a channel's featured game, else its last finished one),
-    // today's puzzle or one by id, and the xiangqi analysis board. Each shows
-    // only what the anonymous public sees on /watch, /puzzles and /analysis.
-    normalized === '/embed/tv' ||
-    /^\/embed\/puzzle(?:\/[A-Za-z0-9_-]{1,64})?$/.test(normalized) ||
-    /^\/embed\/analysis(?:\/xiangqi)?$/.test(normalized) ||
-    // A bare move list carried in the query string, no game or study behind
-    // it, so nothing stored is read: the page shows only what the embedder
-    // typed. The variant list is the client's (EMBED_LINE_VARIANTS); an
-    // unknown one gets the embed shell and a refusal there.
-    /^\/embed\/line\/[a-z-]{1,32}$/.test(normalized) ||
-    // One relayed professional game: the same moves and names the public
-    // broadcast page shows, nothing hidden (xiangqi is open information).
-    /^\/embed\/broadcast\/xiangqi\/board\/[A-Za-z0-9_-]{1,160}$/.test(normalized)
-  );
+  return EMBED_ROUTE_PATTERNS.some((row) => row.test(normalized));
 }
+
+export type ClientRoutePattern = { id: string; test(path: string): boolean };
+const exact = (path: string): ClientRoutePattern => ({ id: path, test: (value) => value === path });
+const prefix = (path: string): ClientRoutePattern => ({
+  id: `${path}*`,
+  test: (value) => value.startsWith(path),
+});
+
+// The complete admission table. The crawler manifest independently classifies
+// every row; adding an unclassified route fails its conformance test.
+export const CLIENT_ROUTE_PATTERNS: readonly ClientRoutePattern[] = [
+  // The Chinese home pages. Served from their own prerendered files, but they
+  // need to be client routes too, or the SPA fallback hands a reader the 404
+  // shell when the prerender is missing — and before they existed the static
+  // handler answered /zh-hans/ with a directory listing of the build.
+  exact('/zh-hans'),
+  exact('/zh-hant'),
+  exact('/about'),
+  exact('/zh-hans/about'),
+  exact('/zh-hant/about'),
+  // The legacy /learn hub is intentionally NOT here: it is gated off in the
+  // web build (learnEnabled), so a prod direct hit falls through to the
+  // branded 404 shell instead of booting a dead route. /learn/xiangqi (the
+  // ungated xiangqi course) stays a client route.
+  exact('/learn/xiangqi'),
+  exact('/zh-hans/learn/xiangqi'),
+  exact('/zh-hant/learn/xiangqi'),
+  // /embed/study/:studyId/:chapterId — the one route on this site meant to be
+  // rendered inside someone else's page. It is a client route like any other;
+  // what makes it an embed is that the framing headers let it be framed and
+  // the page renders the board alone (see isEmbedRoute).
+  ...EMBED_ROUTE_PATTERNS,
+  exact('/rules'),
+  exact('/zh-hans/rules'),
+  exact('/zh-hant/rules'),
+  exact('/play'),
+  exact('/watch'),
+  exact('/videos'),
+  exact('/zh-hans/videos'),
+  exact('/zh-hant/videos'),
+  exact('/streamer'),
+  exact('/puzzles'),
+  exact('/source'),
+  exact('/zh-hans/source'),
+  exact('/zh-hant/source'),
+  exact('/contact'),
+  exact('/patron'),
+  exact('/faq'),
+  exact('/zh-hans/faq'),
+  exact('/zh-hant/faq'),
+  exact('/terms'),
+  exact('/zh-hans/terms'),
+  exact('/zh-hant/terms'),
+  exact('/privacy'),
+  exact('/zh-hans/privacy'),
+  exact('/zh-hant/privacy'),
+  exact('/contribute'),
+  exact('/zh-hans/contribute'),
+  exact('/zh-hant/contribute'),
+  exact('/creators'),
+  exact('/zh-hans/creators'),
+  exact('/zh-hant/creators'),
+  exact('/champions'),
+  exact('/zh-hans/champions'),
+  exact('/zh-hant/champions'),
+  // Renamed to /champions; legacyPageRedirect 301s these before the SPA
+  // fallback, and main.ts still takes them (like /news).
+  exact('/challenges'),
+  exact('/zh-hans/challenges'),
+  exact('/zh-hant/challenges'),
+  exact('/changelog'),
+  { id: 'changelog-month', test: (path) => /^\/changelog\/\d{4}-\d{2}$/.test(path) },
+  exact('/developers'),
+  exact('/api-docs'),
+  exact('/thanks'),
+  exact('/lag'),
+  exact('/washington-xiangqi'),
+  exact('/zh-hans/washington-xiangqi'),
+  exact('/zh-hant/washington-xiangqi'),
+  exact('/account'),
+  exact('/account/settings'),
+  prefix('/account/settings/'),
+  exact('/inbox'),
+  prefix('/inbox/'),
+  exact('/following'),
+  exact('/correspondence'),
+  prefix('/challenge/'),
+  exact('/player'),
+  exact('/player/rating-stats'),
+  exact('/leaderboard'),
+  exact('/news'),
+  exact('/feed'),
+  { id: 'feed-month', test: (path) => /^\/feed\/\d{4}-\d{2}$/.test(path) },
+  exact('/forum'),
+  exact('/forum/reports'),
+  exact('/forum/etiquette'),
+  exact('/database'),
+  exact('/stats'),
+  exact('/ops'),
+  exact('/metrics'),
+  exact('/verify-title'),
+  exact('/titles'),
+  // Coach directory: /coach (list), /coach/edit (own editor), /coach/:handle
+  // (public detail). All three are SPA client routes (apps/web/src/coach.ts).
+  exact('/coach'),
+  prefix('/coach/'),
+  // Current games (/games: everything in progress right now) and the games
+  // database (/games/search). The /historical-xiangqi index paths 301 to the
+  // database in server-http and are not client routes any more. The per-game
+  // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
+  exact('/games'),
+  exact('/games/search'),
+  // Monthly game downloads (apps/web/src/data-page.ts; the files are /api/data).
+  exact('/data'),
+  exact('/data/about'),
+  exact('/zh-hans/data/about'),
+  exact('/zh-hant/data/about'),
+  // Import: paste a game, land on the analysis board. Mints nothing, so it
+  // needs no server route of its own beyond being served the SPA shell.
+  exact('/import'),
+  exact('/engines'),
+  exact('/accounts'),
+  exact('/readouts'),
+  exact('/bots'),
+  exact('/zh-hans/bots'),
+  exact('/zh-hant/bots'),
+  exact('/blog'),
+  exact('/zh-hans/blog'),
+  exact('/zh-hant/blog'),
+  prefix('/blog/'),
+  prefix('/puzzles/'),
+  prefix('/zh-hans/blog/'),
+  prefix('/zh-hant/blog/'),
+  prefix('/rules/'),
+  { id: 'forum-category', test: (path) => /^\/forum\/[^/]+$/.test(path) },
+  prefix('/forum/t/'),
+  prefix('/forum/redirect/post/'),
+  exact('/players'),
+  { id: 'player-detail', test: (path) => /^\/players\/[^/]+$/.test(path) },
+  { id: 'player-team', test: (path) => /^\/players\/teams\/[^/]+$/.test(path) },
+  exact('/broadcast/xiangqi'),
+  exact('/broadcast/xiangqi/ops'),
+  { id: 'broadcast-tour', test: (path) => /^\/broadcast\/xiangqi\/(?!board$)[^/]+$/.test(path) },
+  {
+    id: 'broadcast-round',
+    test: (path) => /^\/broadcast\/xiangqi\/[^/]+\/round\/[^/]+$/.test(path),
+  },
+  { id: 'broadcast-board', test: (path) => /^\/broadcast\/xiangqi\/board\/[^/]+$/.test(path) },
+  prefix('/zh-hans/rules/'),
+  prefix('/zh-hant/rules/'),
+  prefix('/xiangqi/game/'),
+  prefix('/historical-xiangqi/game/'),
+  prefix('/dark-xiangqi/game/'),
+  prefix('/banqi/game/'),
+  prefix('/three-kingdoms-banqi/game/'),
+  prefix('/jungle/game/'),
+  prefix('/jungle-flip/game/'),
+  prefix('/jieqi/game/'),
+  prefix('/fortress-xiangqi/game/'),
+  prefix('/duck-xiangqi/game/'),
+  prefix('/atomic-xiangqi/game/'),
+  prefix('/crazyhouse-xiangqi/game/'),
+  prefix('/xiangqi-mahjong/game/'),
+  prefix('/gomoku/game/'),
+  prefix('/game/'),
+  // Study browse index (/study) + persisted study chapters. The study pages
+  // serves the review SPA shell + mounts the ceval engine, so it is also a
+  // review-shell route (COOP/COEP) below; the bare index is a plain client page.
+  // The practice index is a plain client page: it lists curated studies and
+  // mounts no board, so unlike /study/:id it is not a review-shell route.
+  exact('/practice'),
+  // The shelf in Chinese: the page and its zh catalogue shipped with the
+  // English URL alone, and /zh-hans/practice 404'd (2026-10-07).
+  exact('/zh-hans/practice'),
+  exact('/zh-hant/practice'),
+  // Practice from any position (?fen=&goal=&side=): the endgames page and the
+  // board editor link here. It mounts the ceval engine, so it is also a
+  // review-shell route below. The query is read fail-closed by the client.
+  exact('/practice/position'),
+  // One shelf exercise by set slug and position (/practice/endgames-horse/
+  // horse-vs-advisor): the client looks the chapter up in this database and
+  // replaces the URL with /study/:id/:chapter, so article links survive a
+  // reseed and work off prod (#521). Only real set/position pairs are routes.
+  { id: 'endgame-practice', test: (path) => xiangqiEndgamePracticeRouteFromPath(path) !== null },
+  exact('/study'),
+  exact('/zh-hans/study'),
+  exact('/zh-hant/study'),
+  { id: 'study-detail', test: (path) => /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(path) },
+  // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA
+  // shell with localized meta; without these they would 404.
+  {
+    id: 'localized-study-detail',
+    test: (path) => /^\/(?:zh-hans|zh-hant)\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(path),
+  },
+  // Standalone analysis board: bare /analysis (opens the flagship variant) or
+  // /analysis/:variant, fed by a move list rather than a room. Serves the
+  // review SPA shell and mounts the ceval engine, so it must also be a
+  // review-shell route (COOP/COEP) below. Mirror analysis-catalog.ts, including
+  // Gomoku's gated roomless board. The client checks gomokuOffered before
+  // mounting; protected game data independently requires gomokuAdmits.
+  {
+    id: 'analysis',
+    test: (path) =>
+      /^\/analysis(?:\/(?:xiangqi|jieqi|banqi|duck-xiangqi|crazyhouse-xiangqi|dark-xiangqi|dark-chess|jungle|jungle-flip|gomoku|fortress-xiangqi|atomic-xiangqi))?$/.test(
+        path,
+      ),
+  },
+  // Board editor: bare /editor (the flagship) or /editor/:variant, the same
+  // catalog as /analysis. Plain client page: no engine, so not a review-shell
+  // route.
+  { id: 'editor', test: (path) => /^\/editor(?:\/[a-z0-9-]+)?$/.test(path) },
+  // The xiangqi board and editor in Chinese (象棋AI, 摆残局): xiangqi only, so
+  // a prefixed variant slug still 404s.
+  {
+    id: 'localized-board',
+    test: (path) => /^\/(?:zh-hans|zh-hant)\/(?:analysis|editor)\/xiangqi$/.test(path),
+  },
+  // /engine/:id is the admin engine-profile SPA page (single segment). Deeper
+  // paths like /engine/fairy-stockfish/stockfish.js are vendored ceval assets
+  // and MUST fall through to the static handler, not the index.html rewrite.
+  { id: 'engine-detail', test: (path) => /^\/engine\/[^/]+$/.test(path) },
+  prefix('/bot/'),
+  prefix('/@/'),
+  prefix('/room/'),
+];
 
 export function isClientRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return (
-    // The Chinese home pages. Served from their own prerendered files, but they
-    // need to be client routes too, or the SPA fallback hands a reader the 404
-    // shell when the prerender is missing — and before they existed the static
-    // handler answered /zh-hans/ with a directory listing of the build.
-    normalized === '/zh-hans' ||
-    normalized === '/zh-hant' ||
-    normalized === '/about' ||
-    // The legacy /learn hub is intentionally NOT here: it is gated off in the
-    // web build (learnEnabled), so a prod direct hit falls through to the
-    // branded 404 shell instead of booting a dead route. /learn/xiangqi (the
-    // ungated xiangqi course) stays a client route.
-    normalized === '/learn/xiangqi' ||
-    normalized === '/zh-hans/learn/xiangqi' ||
-    normalized === '/zh-hant/learn/xiangqi' ||
-    // /embed/study/:studyId/:chapterId — the one route on this site meant to be
-    // rendered inside someone else's page. It is a client route like any other;
-    // what makes it an embed is that the framing headers let it be framed and
-    // the page renders the board alone (see isEmbedRoute).
-    isEmbedRoute(normalized) ||
-    normalized === '/rules' ||
-    normalized === '/zh-hans/rules' ||
-    normalized === '/zh-hant/rules' ||
-    normalized === '/play' ||
-    normalized === '/watch' ||
-    normalized === '/videos' ||
-    normalized === '/zh-hans/videos' ||
-    normalized === '/zh-hant/videos' ||
-    normalized === '/streamer' ||
-    normalized === '/puzzles' ||
-    normalized === '/source' ||
-    normalized === '/contact' ||
-    normalized === '/patron' ||
-    normalized === '/faq' ||
-    normalized === '/terms' ||
-    normalized === '/privacy' ||
-    normalized === '/contribute' ||
-    normalized === '/creators' ||
-    normalized === '/champions' ||
-    normalized === '/zh-hans/champions' ||
-    normalized === '/zh-hant/champions' ||
-    // Renamed to /champions; legacyPageRedirect 301s these before the SPA
-    // fallback, and main.ts still takes them (like /news).
-    normalized === '/challenges' ||
-    normalized === '/zh-hans/challenges' ||
-    normalized === '/zh-hant/challenges' ||
-    normalized === '/changelog' ||
-    /^\/changelog\/\d{4}-\d{2}$/.test(normalized) ||
-    normalized === '/developers' ||
-    normalized === '/api-docs' ||
-    normalized === '/thanks' ||
-    normalized === '/lag' ||
-    normalized === '/washington-xiangqi' ||
-    normalized === '/zh-hans/washington-xiangqi' ||
-    normalized === '/zh-hant/washington-xiangqi' ||
-    normalized === '/account' ||
-    normalized === '/account/settings' ||
-    normalized.startsWith('/account/settings/') ||
-    normalized === '/inbox' ||
-    normalized.startsWith('/inbox/') ||
-    normalized === '/following' ||
-    normalized === '/correspondence' ||
-    normalized.startsWith('/challenge/') ||
-    normalized === '/player' ||
-    normalized === '/player/rating-stats' ||
-    normalized === '/leaderboard' ||
-    normalized === '/news' ||
-    normalized === '/feed' ||
-    /^\/feed\/\d{4}-\d{2}$/.test(normalized) ||
-    normalized === '/forum' ||
-    normalized === '/forum/reports' ||
-    normalized === '/forum/etiquette' ||
-    normalized === '/database' ||
-    normalized === '/stats' ||
-    normalized === '/ops' ||
-    normalized === '/metrics' ||
-    normalized === '/verify-title' ||
-    normalized === '/titles' ||
-    // Coach directory: /coach (list), /coach/edit (own editor), /coach/:handle
-    // (public detail). All three are SPA client routes (apps/web/src/coach.ts).
-    normalized === '/coach' ||
-    normalized.startsWith('/coach/') ||
-    // Current games (/games: everything in progress right now) and the games
-    // database (/games/search). The /historical-xiangqi index paths 301 to the
-    // database in server-http and are not client routes any more. The per-game
-    // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
-    normalized === '/games' ||
-    normalized === '/games/search' ||
-    // Monthly game downloads (apps/web/src/data-page.ts; the files are /api/data).
-    normalized === '/data' ||
-    normalized === '/data/about' ||
-    // Import: paste a game, land on the analysis board. Mints nothing, so it
-    // needs no server route of its own beyond being served the SPA shell.
-    normalized === '/import' ||
-    normalized === '/engines' ||
-    normalized === '/accounts' ||
-    normalized === '/readouts' ||
-    normalized === '/bots' ||
-    normalized === '/zh-hans/bots' ||
-    normalized === '/zh-hant/bots' ||
-    normalized === '/blog' ||
-    normalized === '/zh-hans/blog' ||
-    normalized === '/zh-hant/blog' ||
-    normalized.startsWith('/blog/') ||
-    normalized.startsWith('/puzzles/') ||
-    normalized.startsWith('/zh-hans/blog/') ||
-    normalized.startsWith('/zh-hant/blog/') ||
-    normalized.startsWith('/rules/') ||
-    /^\/forum\/[^/]+$/.test(normalized) ||
-    normalized.startsWith('/forum/t/') ||
-    normalized.startsWith('/forum/redirect/post/') ||
-    normalized === '/players' ||
-    /^\/players\/[^/]+$/.test(normalized) ||
-    /^\/players\/teams\/[^/]+$/.test(normalized) ||
-    normalized === '/broadcast/xiangqi' ||
-    normalized === '/broadcast/xiangqi/ops' ||
-    /^\/broadcast\/xiangqi\/(?!board$)[^/]+$/.test(normalized) ||
-    /^\/broadcast\/xiangqi\/[^/]+\/round\/[^/]+$/.test(normalized) ||
-    /^\/broadcast\/xiangqi\/board\/[^/]+$/.test(normalized) ||
-    normalized.startsWith('/zh-hans/rules/') ||
-    normalized.startsWith('/zh-hant/rules/') ||
-    normalized.startsWith('/xiangqi/game/') ||
-    normalized.startsWith('/historical-xiangqi/game/') ||
-    normalized.startsWith('/dark-xiangqi/game/') ||
-    normalized.startsWith('/banqi/game/') ||
-    normalized.startsWith('/three-kingdoms-banqi/game/') ||
-    normalized.startsWith('/jungle/game/') ||
-    normalized.startsWith('/jungle-flip/game/') ||
-    normalized.startsWith('/jieqi/game/') ||
-    normalized.startsWith('/fortress-xiangqi/game/') ||
-    normalized.startsWith('/duck-xiangqi/game/') ||
-    normalized.startsWith('/atomic-xiangqi/game/') ||
-    normalized.startsWith('/crazyhouse-xiangqi/game/') ||
-    normalized.startsWith('/xiangqi-mahjong/game/') ||
-    normalized.startsWith('/gomoku/game/') ||
-    normalized.startsWith('/game/') ||
-    // Study browse index (/study) + persisted study chapters. The study pages
-    // serves the review SPA shell + mounts the ceval engine, so it is also a
-    // review-shell route (COOP/COEP) below; the bare index is a plain client page.
-    // The practice index is a plain client page: it lists curated studies and
-    // mounts no board, so unlike /study/:id it is not a review-shell route.
-    normalized === '/practice' ||
-    // The shelf in Chinese: the page and its zh catalogue shipped with the
-    // English URL alone, and /zh-hans/practice 404'd (2026-10-07).
-    normalized === '/zh-hans/practice' ||
-    normalized === '/zh-hant/practice' ||
-    // Practice from any position (?fen=&goal=&side=): the endgames page and the
-    // board editor link here. It mounts the ceval engine, so it is also a
-    // review-shell route below. The query is read fail-closed by the client.
-    normalized === '/practice/position' ||
-    // One shelf exercise by set slug and position (/practice/endgames-horse/
-    // horse-vs-advisor): the client looks the chapter up in this database and
-    // replaces the URL with /study/:id/:chapter, so article links survive a
-    // reseed and work off prod (#521). Only real set/position pairs are routes.
-    xiangqiEndgamePracticeRouteFromPath(normalized) !== null ||
-    normalized === '/study' ||
-    normalized === '/zh-hans/study' ||
-    normalized === '/zh-hant/study' ||
-    /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
-    // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA
-    // shell with localized meta; without these they would 404.
-    /^\/(?:zh-hans|zh-hant)\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
-    // Standalone analysis board: bare /analysis (opens the flagship variant) or
-    // /analysis/:variant, fed by a move list rather than a room. Serves the
-    // review SPA shell and mounts the ceval engine, so it must also be a
-    // review-shell route (COOP/COEP) below. Mirror analysis-catalog.ts, including
-    // Gomoku's gated roomless board. The client checks gomokuOffered before
-    // mounting; protected game data independently requires gomokuAdmits.
-    /^\/analysis(?:\/(?:xiangqi|jieqi|banqi|duck-xiangqi|crazyhouse-xiangqi|dark-xiangqi|dark-chess|jungle|jungle-flip|gomoku|fortress-xiangqi|atomic-xiangqi))?$/.test(
-      normalized,
-    ) ||
-    // Board editor: bare /editor (the flagship) or /editor/:variant, the same
-    // catalog as /analysis. Plain client page: no engine, so not a review-shell
-    // route.
-    /^\/editor(?:\/[a-z0-9-]+)?$/.test(normalized) ||
-    // The xiangqi board and editor in Chinese (象棋AI, 摆残局): xiangqi only, so
-    // a prefixed variant slug still 404s.
-    /^\/(?:zh-hans|zh-hant)\/(?:analysis|editor)\/xiangqi$/.test(normalized) ||
-    // /engine/:id is the admin engine-profile SPA page (single segment). Deeper
-    // paths like /engine/fairy-stockfish/stockfish.js are vendored ceval assets
-    // and MUST fall through to the static handler, not the index.html rewrite.
-    /^\/engine\/[^/]+$/.test(normalized) ||
-    normalized.startsWith('/bot/') ||
-    normalized.startsWith('/@/') ||
-    normalized.startsWith('/room/')
-  );
+  return CLIENT_ROUTE_PATTERNS.some((route) => route.test(normalized));
 }
 
 // Client routes that must never appear in a search index: the signed-in surface
@@ -594,10 +648,11 @@ export function isClientRoute(pathname: string): boolean {
 export function isNoindexRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
-    // Admin reporting shells have no public search content.
+    // Admin shells have no public preview or search content.
     normalized === '/ops' ||
     normalized === '/metrics' ||
     normalized === '/readouts' ||
+    isNoFollowRoute(normalized) ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
@@ -612,6 +667,23 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized === '/lag' ||
     normalized === '/verify-title' ||
     isSitePlayedGamePage(normalized)
+  );
+}
+
+// Decided 2026-11-07 (#963): admin and utility shells stay fetchable so
+// crawlers can see noindex; their links do not need search discovery.
+export function isNoFollowRoute(pathname: string): boolean {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  return (
+    normalized === '/titles' ||
+    normalized === '/engines' ||
+    /^\/engine\/[^/]+$/.test(normalized) ||
+    normalized === '/accounts' ||
+    normalized === '/database' ||
+    normalized === '/forum/reports' ||
+    normalized === '/broadcast/xiangqi/ops' ||
+    normalized === '/practice/position' ||
+    normalized === '/play'
   );
 }
 

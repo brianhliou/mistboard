@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import tonyFungChapters from './study-chapter-games.fixture.json' with { type: 'json' };
 import {
   buildChapterGameRow,
+  buildChapterRowLabels,
   chapterEventGroups,
   chapterResultTone,
   displayEventName,
@@ -206,6 +207,41 @@ describe('buildChapterGameRow', () => {
       ),
     ).toBeNull();
     expect(buildChapterGameRow({ id: 'intro', tags: { event: 'x' } }, 'en')).toBeNull();
+  });
+});
+
+describe('buildChapterRowLabels', () => {
+  const buildLabel = (chapter: GameChapter) => buildChapterGameRow(chapter, 'en');
+
+  it('keeps a normal game pairing even when a lesson has the same tags', () => {
+    const chapters = [
+      { ...game('lesson', 'Lien Quoc', 'Stephen Cho'), gamebook: true },
+      game('normal', 'Lien Quoc', 'Stephen Cho'),
+    ];
+    const labels = buildChapterRowLabels(chapters, buildLabel);
+    expect([...labels.keys()]).toEqual(['normal']);
+    expect(labels.get('normal')?.textContent).toContain('Lien Quoc vs Stephen Cho');
+  });
+
+  it('falls back for every repeated label, including localized pairings', () => {
+    const chapters = [
+      game('one', 'Lien Quoc', 'Stephen Cho'),
+      game('two', 'Lien Quoc', 'Stephen Cho'),
+      {
+        ...game('three', 'Original red name', 'Original black name'),
+        i18n: { en: { tags: { red: 'Lien Quoc', black: 'Stephen Cho' } } },
+      },
+      game('unique', 'Zuo Wenjing', 'Tang Dan'),
+    ];
+    expect([...buildChapterRowLabels(chapters, buildLabel).keys()]).toEqual(['unique']);
+  });
+
+  it('keeps games whose metadata makes the rendered labels distinct', () => {
+    const chapters = [
+      game('one', 'Lien Quoc', 'Stephen Cho', '1-0', { round: '4' }),
+      game('two', 'Lien Quoc', 'Stephen Cho', '1-0', { round: '5' }),
+    ];
+    expect([...buildChapterRowLabels(chapters, buildLabel).keys()]).toEqual(['one', 'two']);
   });
 });
 

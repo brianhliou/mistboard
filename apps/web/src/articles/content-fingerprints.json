@@ -87,6 +87,10 @@
     "hash": "1e2ac1faa6270bf0",
     "updatedAt": "2026-06-04"
   },
+  "fog-future": {
+    "hash": "69725784b99bb1a8",
+    "updatedAt": null
+  },
   "fog-xiangqi": {
     "hash": "f17d4ad9306b6bd1",
     "updatedAt": "2026-07-23"
@@ -105,7 +109,7 @@
   },
   "gomoku": {
     "hash": "8cbe8e6a246c2aaf",
-    "updatedAt": "2026-11-06"
+    "updatedAt": "2026-11-07"
   },
   "helpmates-in-xiangqi": {
     "hash": "5beedc05bced4608",
@@ -233,6 +237,10 @@
   },
   "tang-dan": {
     "hash": "d5677459a1f9fff5",
+    "updatedAt": null
+  },
+  "ten-thousand-games": {
+    "hash": "a6d567546c3ee5b7",
     "updatedAt": null
   },
   "titled-players": {

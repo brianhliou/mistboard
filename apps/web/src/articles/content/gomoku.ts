@@ -24,8 +24,8 @@ export function createGomokuArticle(
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-10-31',
-    updatedAt: '2026-11-06',
-    updateNote: 'Explained why openings are dealt and gave the game’s history its own section.',
+    updatedAt: '2026-11-07',
+    updateNote: 'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.',
     audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
     thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
     tldr: [

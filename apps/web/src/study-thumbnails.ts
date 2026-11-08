@@ -39,10 +39,11 @@ export type StudyPreviewShape =
   | 'jungle'
   | 'banqi'
   | 'jungle-flip'
-  | 'three-kingdoms-banqi';
+  | 'three-kingdoms-banqi'
+  | 'gomoku';
 
 /** One character per cell, top rank first (server study-preview-board.ts):
- *  '.' empty, 'r' red (white in chess), 'b' black, 'R'/'B' face-down with a
+ *  '.' empty, 'r' red (white in chess/Gomoku), 'b' black, 'R'/'B' face-down with a
  *  public side, '?' face-down, 'd' the duck. */
 export type StudyPreviewGrid = {
   shape: StudyPreviewShape;
@@ -170,6 +171,7 @@ const SHAPES: Readonly<
   banqi: { files: 8, ranks: 4, points: false },
   'jungle-flip': { files: 4, ranks: 4, points: false },
   'three-kingdoms-banqi': { files: 9, ranks: 5, points: true },
+  gomoku: { files: 15, ranks: 15, points: true },
 };
 
 /** Draw a disc grid on its variant's board. Fail-closed: a shape this client
@@ -194,7 +196,12 @@ function gridBoardSvg(grid: StudyPreviewGrid): BoardSvg | null {
   ];
   for (let row = 0; row < spec.ranks; row += 1) {
     for (let col = 0; col < spec.files; col += 1) {
-      const disc = discSvg(grid.cells.charAt(row * spec.files + col), cx(col), cy(row), chess);
+      const disc = discSvg(
+        grid.cells.charAt(row * spec.files + col),
+        cx(col),
+        cy(row),
+        chess || grid.shape === 'gomoku',
+      );
       if (disc) parts.push(disc);
     }
   }

@@ -11,3 +11,17 @@
   height: 24px;
   vertical-align: middle;
 }
+
+/* Fog legacy badge art: each variant marker inside a shield, drawn as
+   white-on-transparent and painted over currentColor like flair.css, so it
+   tints with the card in both themes. The SVG itself has no children. */
+.ui-icon-achievement-fog-chess {
+  background: currentColor;
+  -webkit-mask: url("/icons/achievement-fog-chess-legacy.png") center / contain no-repeat;
+  mask: url("/icons/achievement-fog-chess-legacy.png") center / contain no-repeat;
+}
+.ui-icon-achievement-fog-xiangqi {
+  background: currentColor;
+  -webkit-mask: url("/icons/achievement-fog-xiangqi-legacy.png") center / contain no-repeat;
+  mask: url("/icons/achievement-fog-xiangqi-legacy.png") center / contain no-repeat;
+}

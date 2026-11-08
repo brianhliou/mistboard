@@ -12,7 +12,7 @@
 // can.
 
 import type { BanqiGameState, BanqiMove, EmbedPov } from '@mistboard/game';
-import { jieqiMoveLabel } from '@mistboard/game';
+import { createGomokuRoomState, jieqiMoveLabel, parseGomokuFen } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
@@ -37,6 +37,7 @@ import {
   mountFortressXiangqiReplayBoard,
   replayFortressXiangqiLine,
 } from '../fortress-xiangqi-replay-board.js';
+import { mountGomokuReplayBoard, replayGomokuLine } from '../gomoku-replay-board.js';
 import { t } from '../i18n/catalog.js';
 import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js';
 import { mountJungleFlipReplayBoard, replayJungleFlipLine } from '../jungle-flip-replay-board.js';
@@ -199,6 +200,7 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'jungle-flip',
   'chess',
   'dark-chess',
+  'gomoku',
 ]);
 
 /**
@@ -245,6 +247,16 @@ export async function mountChapterEmbed(
     await mountJieqiEmbed(root, credit, chapter, options);
     return;
   }
+  if (variant === 'gomoku') {
+    await mountGomokuEmbed(root, credit, chapter, options);
+    return;
+  }
+  // Only these three share the xiangqi spec; a newly listed variant must
+  // receive its own explicit dispatch rather than falling through to it.
+  if (variant !== 'xiangqi' && variant !== 'duck-xiangqi' && variant !== 'atomic-xiangqi') {
+    note(root, `A ${variant} game cannot be framed yet.`);
+    return;
+  }
   const spec = studyChapterToReplaySpec(chapter);
   if (!spec) {
     note(root, 'This chapter has no moves to show.');
@@ -284,8 +296,7 @@ export async function mountChapterEmbed(
     // the duck, which lives in the seventh FEN field, so a duck chapter used
     // to render as a xiangqi position with a piece missing. Atomic games need
     // the atomic kernel, or every explosion's victims stay on the board.
-    // Dispatch on the chapter's own variant, and fail over to xiangqi for
-    // everything else rather than guessing.
+    // The explicit guard above admits only these xiangqi renderers.
     aspect: boardAspectForSpec(isDuck ? 'duck-xiangqi' : 'xiangqi'),
     railWidthPx: embedRailWidthPx(isDuck ? 'duck-xiangqi' : 'xiangqi'),
     // Clamped by the card against the real ply count, so an out-of-range
@@ -321,6 +332,63 @@ export async function mountChapterEmbed(
               hooks,
             )
           : mountXiangqiReplayBoard(host, spec, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+async function mountGomokuEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const rootFen = chapter.root?.rootFen;
+  const parsed =
+    rootFen === undefined
+      ? { ok: true as const, state: createGomokuRoomState('study-embed') }
+      : parseGomokuFen(rootFen, 'study-embed');
+  if (!parsed.ok) {
+    note(root, 'This chapter’s Gomoku position is invalid.');
+    return;
+  }
+  const moves: string[] = [];
+  let node = chapter.root?.root;
+  while (node?.children?.length) {
+    const next = node.children[0];
+    if (!next?.uci) break;
+    moves.push(next.uci);
+    node = next;
+  }
+  const line = replayGomokuLine(parsed.state, moves);
+  const tags = chapter.tags ?? {};
+  const status = line.states.at(-1)!.status;
+  const winner = status.type === 'finished' ? status.winner : null;
+  const result =
+    tags.result === '1-0'
+      ? 'black-wins'
+      : tags.result === '0-1'
+        ? 'white-wins'
+        : tags.result === '1/2-1/2'
+          ? 'draw'
+          : winner
+            ? (`${winner}-wins` as const)
+            : status.type === 'finished'
+              ? 'draw'
+              : null;
+  await mountEmbedCard(root, {
+    header: tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study'),
+    seats: {
+      first: { name: tags.black ?? t('setup.black'), ink: 'black' },
+      second: { name: tags.white ?? t('setup.white'), ink: 'white' },
+    },
+    inkFamily: seatInkFamily('gomoku'),
+    result: result ? reviewResultLabel(result, 'gomoku') : '',
+    credit,
+    aspect: boardAspectForSpec('gomoku'),
+    railWidthPx: embedRailWidthPx('gomoku'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) => mountGomokuReplayBoard(host, line, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

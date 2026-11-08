@@ -475,7 +475,7 @@ function pikafishNnueNet() {
 
 // The Pikafish worker, wasm and net at the exact versioned URLs the client
 // fetches. The net is the one that can silently go missing: it is not tracked
-// in git and is fetched into public/ at build time (fetch-pikafish-net.mjs),
+// in git and is fetched into public/ at build time (scripts/fetch-pikafish-net.mjs, private API source),
 // so a build that skipped that step ships a 404 the engine cannot recover from.
 async function assertPikafishAssetHeaders() {
   const v = encodeURIComponent(pikafishAssetVersion());
@@ -506,7 +506,7 @@ async function assertPikafishAssetHeaders() {
   if (!net.ok) {
     throw new Error(
       `${netUrl} returned HTTP ${net.status}: the Pikafish net is not being served, so ` +
-        'every xiangqi analysis board fails to start (fetch-pikafish-net.mjs did not run at build?)',
+        'every xiangqi analysis board fails to start (scripts/fetch-pikafish-net.mjs did not run at build?)',
     );
   }
   const length = Number(net.headers.get('content-length') ?? 0);

@@ -1,3 +1,4 @@
+import { createGomokuRoomState, gomokuFen, parseGomokuFen } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountStudyIndex } from './study-index.js';
 
@@ -229,3 +230,58 @@ function jsonResponse(body: unknown): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+describe('public Gomoku study creation', () => {
+  const dealtFen = gomokuFen(
+    createGomokuRoomState('index', {
+      stones: [{ square: 'h8', color: 'black' }],
+      turn: 'white',
+    }),
+  );
+  for (const fen of ['', dealtFen]) {
+    it(`creates a public chapter with ${fen ? 'a pasted dealt position' : 'an empty position'}`, async () => {
+      const fetcher = vi.fn(async (_input: RequestInfo | URL, options?: RequestInit) => {
+        if (options?.method === 'POST') return jsonResponse({ study: { id: 'created' } });
+        return jsonResponse({ studies: [] });
+      });
+      vi.stubGlobal('fetch', fetcher);
+      const root = document.createElement('div');
+      document.body.append(root);
+      mountStudyIndex(root);
+      await vi.waitFor(() => expect(root.querySelector('.study-index__create')).not.toBeNull());
+      root.querySelector<HTMLButtonElement>('.study-index__create')!.click();
+      const dialog = document.querySelector<HTMLDialogElement>('[data-create-study]')!;
+      const selects = dialog.querySelectorAll('select');
+      const variant = selects[1]!;
+      expect([...variant.options].map((option) => option.value)).toContain('gomoku');
+      variant.value = 'gomoku';
+      variant.dispatchEvent(new Event('change'));
+      selects[0]!.value = 'public';
+      const inputs = dialog.querySelectorAll('input');
+      inputs[0]!.value = 'Gomoku lesson';
+      inputs[1]!.value = fen;
+      dialog
+        .querySelector('form')!
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await vi.waitFor(() =>
+        expect(fetcher.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true),
+      );
+      const post = fetcher.mock.calls.find((call) => call[1]?.method === 'POST')!;
+      expect(post[0]).toBe('/api/studies');
+      const body = JSON.parse(post[1]!.body as string);
+      expect(body.visibility).toBe('public');
+      expect(body.chapter.variant).toBe('gomoku');
+      expect(body.chapter.root.root.children).toEqual([]);
+      if (!fen) {
+        expect(body.chapter.root.rootFen).toBeUndefined();
+        return;
+      }
+      const parsed = parseGomokuFen(body.chapter.root.rootFen);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) throw new Error(parsed.error);
+      expect(parsed.state.board.filter(Boolean)).toHaveLength(1);
+      expect(parsed.state.status).toEqual({ type: 'playing', turn: 'white' });
+      expect(body.chapter.root.rootFen).toBe(fen);
+    });
+  }
+});

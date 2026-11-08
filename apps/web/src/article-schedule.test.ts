@@ -20,6 +20,9 @@ const OFF_DAY_EXCEPTIONS: Readonly<Record<string, string>> = {
   // Tang Dan the day after, and the board how-to keeps Friday 11-06 to itself.
   'ab-jchess-vs-jqe': '2026-11-04',
   'tang-dan': '2026-11-05',
+  // Decided 2026-11-06: the 10,000 games post goes out the day after the count
+  // crosses, whatever the weekday.
+  'ten-thousand-games': '2026-11-08',
 };
 
 // How-tos for a launched feature and engineering posts that share a day with a

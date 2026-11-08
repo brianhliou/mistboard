@@ -27,7 +27,7 @@ import {
 } from './room-manager.js';
 import { loadServerRuntimeConfig, serverConfig } from './server-config.js';
 import { createDrainController } from './server-drain.js';
-import { createHttpRequestHandler } from './server-http.js';
+import { type CrawlerPageSources, createHttpRequestHandler } from './server-http.js';
 import {
   clearRoomRuntimeTimers,
   closeHttpServer,
@@ -231,6 +231,7 @@ let shuttingDown = false;
 let seatVacateGraceMsOverride: number | null = null;
 
 export type StartServerOptions = {
+  crawlerSources?: CrawlerPageSources;
   port?: number;
   host?: string;
   seatVacateGraceMs?: number;
@@ -269,6 +270,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
 
   const httpServer = createServer(
     createHttpRequestHandler({
+      crawlerSources: options.crawlerSources,
       rooms,
       lobbyTickets,
       lobbyQueue,
@@ -317,8 +319,13 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   const port = options.port ?? serverConfig.port;
   const host = options.host ?? serverConfig.host;
   await new Promise<void>((resolve, reject) => {
+    // ws forwards the HTTP server's bind error synchronously. Handle it until
+    // listen completes so callers can report a strict-port conflict instead
+    // of crashing on an unhandled WebSocketServer error first.
+    wsServer.once('error', reject);
     httpServer.once('error', reject);
     httpServer.listen({ port, host }, () => {
+      wsServer.off('error', reject);
       httpServer.off('error', reject);
       resolve();
     });

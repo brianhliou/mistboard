@@ -13,7 +13,8 @@ type StormRun = {
   combo: number;
   best: number | null;
   dailyBest: number | null;
-  deadlineAt: number;
+  startedAt: number | null;
+  deadlineAt: number | null;
   remainingMs: number;
   finished: boolean;
   results: { id: string; outcome: 'solved' | 'failed' }[];
@@ -49,7 +50,8 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   let pendingReviewId = new URLSearchParams(window.location.search).get('review');
 
   const active = (): boolean => !stopped && shell.isConnected;
-  const remaining = (): number => Math.max(0, deadline - performance.now());
+  const remaining = (): number =>
+    run?.deadlineAt === null ? run.remainingMs : Math.max(0, deadline - performance.now());
   const request = async (body: Record<string, unknown>): Promise<StormRun> => {
     const sent = performance.now();
     const response = await fetch('/api/puzzles/storm', {
@@ -68,8 +70,8 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   };
   const adopt = (next: StormRun): void => {
     change = '';
-    if (run && next.version > run.version) {
-      const delta = next.deadlineAt - run.deadlineAt;
+    if (run && next.runId === run.runId && next.version > run.version && next.deadlineAt !== null) {
+      const delta = next.deadlineAt - (run.deadlineAt ?? next.startedAt! + 180_000);
       if (delta) change = `${delta > 0 ? '+' : '−'}${Math.abs(delta) / 1000}s`;
     }
     const completed = run !== null && !run.finished && next.finished;
@@ -116,7 +118,6 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       block.append(number, caption);
       row.append(block);
     }
-    row.prepend(clock());
     return row;
   };
   const recovery = (): HTMLElement => {
@@ -143,33 +144,63 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     }
     return box;
   };
-  const sideCard = (): HTMLElement => {
-    const card = document.createElement('section');
-    card.className = 'puzzle-left-card puzzle-streak-side';
+  const bestRuns = (): void => {
+    layout.querySelector('.puzzle-storm-bests')?.remove();
+    if (!run || run.best === null) return;
+    const row = document.createElement('section');
+    row.className = 'puzzle-storm-bests';
+    row.setAttribute('aria-label', t('puzzle.stormBestRuns'));
+    const heading = document.createElement('h2');
+    heading.textContent = t('puzzle.stormBestRuns');
+    row.append(heading);
+    for (const [label, value] of [
+      [t('puzzle.stormAllTime'), run.best],
+      [t('puzzle.stormToday'), run.dailyBest ?? 0],
+    ] as const) {
+      const tile = document.createElement('div');
+      const score = document.createElement('strong');
+      score.textContent = String(value);
+      const caption = document.createElement('span');
+      caption.textContent = label;
+      tile.append(score, caption);
+      row.append(tile);
+    }
+    // The row closes the panel, so the run's numbers read as one block.
+    (
+      layout.querySelector('.puzzle-storm-feedback, .puzzle-storm-results') ??
+      layout.querySelector('.puzzle-side-panel') ??
+      layout
+    ).append(row);
+  };
+  const panelIntro = (status: string): HTMLElement => {
+    const header = document.createElement('header');
     const title = document.createElement('h1');
     title.textContent = t('puzzle.stormTitle');
-    const rules = document.createElement('p');
-    rules.textContent = t('puzzle.stormRules');
-    const facts = document.createElement('p');
-    facts.textContent = t('puzzle.stormFacts');
-    card.append(title, rules, facts);
-    if (run?.best === null) card.append(signInCta(t('puzzle.streakSignInBest')));
-    return card;
+    const prompt = document.createElement('p');
+    prompt.className = 'puzzle-storm-status';
+    prompt.textContent = status;
+    header.append(title, prompt);
+    return header;
   };
   const feedback = (session: PuzzleSession): HTMLElement => {
     shell.classList.toggle('puzzle-storm-error', Boolean(error));
     const panel = document.createElement('section');
     panel.className = 'puzzle-storm-feedback';
     panel.setAttribute('aria-busy', String(session.submitting));
-    const prompt = document.createElement('p');
-    prompt.textContent = error
-      ? ''
-      : t('puzzle.toMove', { color: colorLabel(session.puzzle.sideToMove) });
+    const status =
+      run?.deadlineAt === null
+        ? t('puzzle.stormMoveToStart')
+        : t('puzzle.toMove', { color: colorLabel(session.puzzle.sideToMove) });
     const delta = document.createElement('span');
     delta.dataset.stormChange = 'true';
     delta.setAttribute('role', 'status');
     delta.textContent = change;
-    panel.append(tally(), prompt, delta, recovery());
+    const rules = document.createElement('p');
+    rules.className = 'puzzle-storm-rules';
+    rules.textContent = `${t('puzzle.stormRules')} ${t('puzzle.stormFacts')}`;
+    panel.append(panelIntro(status), clock(), delta, tally(), rules);
+    if (run?.best === null) panel.append(signInCta(t('puzzle.streakSignInBest')));
+    panel.append(recovery());
     return panel;
   };
   const showSummary = (): void => {
@@ -180,19 +211,10 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     solver?.dispose();
     solver = null;
     const card = document.createElement('section');
-    card.className = 'puzzle-left-card puzzle-storm-results';
+    card.className = 'puzzle-storm-results';
     card.dataset.stormResults = 'true';
     const title = document.createElement('h1');
     title.textContent = t('puzzle.stormFinished');
-    // A guest's score is lost when they leave: the buttons stand where a
-    // signed-in player sees their bests.
-    let bests: HTMLElement;
-    if (run.best !== null) {
-      bests = document.createElement('p');
-      bests.textContent = `${t('puzzle.streakBest', { best: run.best })} · ${t('puzzle.stormDailyBest', { best: run.dailyBest ?? 0 })}`;
-    } else {
-      bests = signInCta(t('puzzle.streakSignInBest'));
-    }
     const chips = puzzleResultChips(run.results, null, {
       label: t('puzzle.streakReview'),
       text: 'index',
@@ -203,8 +225,22 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       chip.href = `/puzzles?mode=storm&review=${encodeURIComponent(run!.results[index]!.id)}`;
     });
     const next = button(t('puzzle.stormNewRun'), start);
-    card.append(title, tally(), bests, chips, next, recovery());
-    shell.replaceChildren(card);
+    card.append(title, clock(), tally(), chips, next, recovery());
+    if (run.best === null) card.append(signInCta(t('puzzle.streakSignInBest')));
+    shell.replaceChildren(layout);
+    controls.replaceChildren();
+    // Keep the last board in place, locked by dispose. A results reload has
+    // no board snapshot, but reserves the same board track beside the panel.
+    let side = detail.querySelector('.puzzle-side-panel');
+    if (!side) {
+      const board = document.createElement('div');
+      board.className = 'puzzle-board puzzle-storm-finished-board';
+      side = document.createElement('aside');
+      side.className = 'puzzle-side-panel';
+      detail.replaceChildren(board, side);
+    }
+    side.replaceChildren(card);
+    bestRuns();
     next.focus({ preventScroll: true });
     openPendingReview();
   };
@@ -218,12 +254,14 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     shell.classList.remove('puzzle-storm-reviewing');
     solver?.dispose();
     shell.replaceChildren(layout);
-    controls.replaceChildren(sideCard());
+    controls.replaceChildren();
+    bestRuns();
     solver = mountSolver(run.puzzle, {
       mode: 'storm',
       analysis: false,
       initialAttempt: run.progress,
       feedback,
+      afterRender: () => bestRuns(),
       submitAttempt: async (id, moves, qualitySessionId) => {
         // An uncertain response is reconciled by resume before another move.
         if (busy || error || !run || remaining() <= 0) throw new Error('Resume required');
@@ -276,10 +314,12 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     solver = null;
     shell.replaceChildren(layout);
     detail.replaceChildren();
-    controls.replaceChildren(
-      sideCard(),
-      error ? recovery() : button(t('puzzle.stormNewRun'), start),
-    );
+    controls.replaceChildren();
+    const panel = document.createElement('aside');
+    panel.className = 'puzzle-side-panel puzzle-storm-feedback';
+    panel.append(panelIntro(t('puzzle.stormMoveToStart')));
+    panel.append(error ? recovery() : button(t('puzzle.stormNewRun'), start));
+    detail.append(panel);
   };
   function openPendingReview(): void {
     if (!pendingReviewId) return;
@@ -363,7 +403,10 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       solver = mountSolver(puzzle, {
         analysis: false,
         fast: true,
-        afterRender: (host) => host.prepend(header),
+        afterRender: (host) => {
+          host.querySelector('.puzzle-trainer-panel')?.prepend(header);
+          bestRuns();
+        },
       });
     } catch (cause) {
       showError(cause);
@@ -437,7 +480,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   window.addEventListener('pageshow', onPageShow);
   document.addEventListener('visibilitychange', beginWhenVisible);
   document.addEventListener('prerenderingchange', beginWhenVisible);
-  controls.replaceChildren(sideCard());
+  controls.replaceChildren();
   beginWhenVisible();
 }
 

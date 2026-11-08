@@ -1371,13 +1371,14 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('svg')).toBeNull();
   });
 
-  it('dispatches only study variants, fog chess among them', () => {
-    // Fail-closed: every variant the card draws is one a study can hold, and
-    // nothing else reaches a board.
+  it('dispatches only study variants, including public Gomoku', () => {
+    // Every renderer belongs to the study catalog; unknown variants get no board.
     const studyIds = new Set<string>(STUDY_VARIANTS.map((v) => v.id));
     for (const variant of CHAPTER_EMBED_VARIANTS) {
       expect(studyIds.has(variant), variant).toBe(true);
     }
+    expect(studyIds.has('gomoku')).toBe(true);
+    expect(CHAPTER_EMBED_VARIANTS.has('gomoku')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('dark-chess')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('made-up-chess')).toBe(false);
   });
@@ -1456,6 +1457,87 @@ describe('mountEmbedStudy', () => {
     const root = document.createElement('div');
     await expect(mountEmbedStudy(root, { studyId: 's', chapterId: 'c' })).resolves.toBeUndefined();
     expect(root.textContent).toContain('could not be loaded');
+  });
+});
+
+describe('Gomoku study embeds', () => {
+  const empty = `${Array(15).fill('15').join('/')} b`;
+  const dealt = `${['B13W', ...Array(6).fill('15'), '7W7', ...Array(6).fill('15'), 'W13B'].join('/')} w`;
+  const chapter = (rootFen: string | undefined, moves: string[] = ['a2', 'o14']) => ({
+    id: 'Gomoku01',
+    name: 'Gomoku position',
+    variant: 'gomoku',
+    orientation: 'black',
+    root: { ...(rootFen === undefined ? {} : { rootFen }), root: chainTree(moves) },
+  });
+  for (const [name, rootFen, count, firstInk] of [
+    ['absent empty', undefined, 0, 'black'],
+    ['explicit empty', empty, 0, 'black'],
+    ['dealt White-to-move', dealt, 5, 'white'],
+  ] as const) {
+    it(`steps from the ${name} root, preserving colours and root-relative plies`, async () => {
+      const payload = { study: { id: 's' }, chapters: [chapter(rootFen)] };
+      const original = JSON.stringify(payload);
+      stubFetch(200, payload);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' });
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count);
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 2');
+      expect(root.querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      expect(root.querySelector('.gomoku-ghost')).toBeNull();
+      expect(
+        [...root.querySelectorAll('.embed-card-seat-name')].map((el) => el.textContent),
+      ).toEqual(['White', 'Black']);
+      if (count) {
+        expect(root.querySelector('[data-square="a15"] .gomoku-stone--black')).not.toBeNull();
+        expect(root.querySelector('[data-square="a1"] .gomoku-stone--white')).not.toBeNull();
+      }
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe('1 / 2');
+      expect(root.querySelector(`[data-square="a2"] .gomoku-stone--${firstInk}`)).not.toBeNull();
+      expect(root.querySelector('[data-square="a2"] .gomoku-move-number')?.textContent).toBe('1');
+      root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')!.click();
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count + 2);
+      expect(root.querySelector('[data-square="o14"] .gomoku-move-number')?.textContent).toBe('2');
+      const previous = root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')!;
+      previous.click();
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count + 1);
+      previous.click();
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(count);
+      expect(root.querySelectorAll('.gomoku-move-number')).toHaveLength(0);
+      expect(JSON.stringify(payload)).toBe(original);
+      root.remove();
+    });
+  }
+
+  it('opens a dealt root without moves and clamps a deep link to the legal prefix', async () => {
+    for (const [moves, total] of [
+      [[], 0],
+      [['a2', 'a2', 'o14'], 1],
+    ] as const) {
+      stubFetch(200, { chapters: [chapter(dealt, [...moves])] });
+      const root = document.createElement('div');
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' }, { startPly: 99 });
+      expect(root.querySelector('.embed-card-status')?.textContent).toBe(
+        total ? `${total} / ${total}` : '',
+      );
+      expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(5 + total);
+    }
+  });
+
+  it('refuses invalid roots and unknown variants without drawing any board', async () => {
+    for (const value of [
+      chapter('not a fen'),
+      chapter(''),
+      { ...chapter(empty), variant: 'future-gomoku' },
+    ]) {
+      stubFetch(200, { chapters: [value] });
+      const root = document.createElement('div');
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Gomoku01' });
+      expect(root.querySelector('svg')).toBeNull();
+      expect(root.textContent).toMatch(/position.*invalid|cannot be framed/);
+    }
   });
 });
 

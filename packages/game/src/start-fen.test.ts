@@ -19,6 +19,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { banqiStateToDealtFen } from './banqi-fen.js';
 import { duckXiangqiFen } from './duck-xiangqi-fen.js';
+import { isStudyEligibleSpecId } from './game-specs.js';
 import { jieqiStateToDealtFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen } from './jungle-flip-fen.js';
@@ -57,6 +58,7 @@ test('every start-fen spec round-trips its own standard start', () => {
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     chess: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    gomoku: `${Array(15).fill('15').join('/')} b`,
     // Duck Xiangqi: the standard six fields plus a SEVENTH naming the duck's
     // point, '-' at the start because the duck enters on Red's first turn.
     'duck-xiangqi': duckXiangqiFen(createInitialDuckXiangqiState('t')),
@@ -87,6 +89,21 @@ test('normalizeStartFen is fail-closed off the list', () => {
     const result = normalizeStartFen(spec, 'anything');
     assert.equal(result.ok, false);
   }
+});
+
+test('Gomoku start FEN trims whitespace and preserves its explicit turn', () => {
+  assert.equal(hasStartFen('gomoku'), true);
+  assert.equal(isStudyEligibleSpecId('gomoku'), true);
+  const rows = Array(15).fill('15');
+  for (const turn of ['b', 'w']) {
+    const paste = `${rows.join('/')}\t${turn}`;
+    assert.deepEqual(normalizeStartFen('gomoku', `  ${paste}  `), {
+      ok: true,
+      fen: `${rows.join('/')} ${turn}`,
+    });
+  }
+  assert.equal(normalizeStartFen('gomoku', `${rows.join('/')} r`).ok, false);
+  assert.equal(normalizeStartFen('gomoku', 'anything').ok, false);
 });
 
 test('standard chess keeps the rule fog drops: the side not to move may not be in check', () => {

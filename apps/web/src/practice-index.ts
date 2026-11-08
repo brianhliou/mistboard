@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // /practice — the front door for engine-adjudicated exercises.
 //
 // A curated shelf, not a directory: the server resolves a hardcoded catalogue
@@ -265,4 +267,10 @@ function notice(text: string): HTMLElement {
   p.className = 'practice-index__notice';
   p.textContent = text;
   return p;
+}
+
+export function renderPracticeShellForPrerender(locale: Locale): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    root.append(sidebar([]));
+  });
 }

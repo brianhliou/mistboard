@@ -33,6 +33,12 @@ export function articleTranslationSourceStrings(sourceArticles: readonly Article
         const keyed = match[2].match(/\bdata-i18n-key="([^"]*)"/);
         if (keyed) strings.add(decodeSvgText(keyed[1]));
       }
+      // The SVG renderer also translates accessible labels independently of
+      // text nodes, so a chart's aria-label is a live dictionary key too.
+      for (const match of value.matchAll(/<svg\b[^>]*\baria-label="([^"]*)"/gi)) {
+        const label = decodeSvgText(match[1]).trim();
+        if (label) strings.add(label);
+      }
       return;
     }
     if (typeof value === 'function') {
@@ -171,6 +177,20 @@ const BLOCK_PROSE: {
       item.question,
       item.answer,
     ]),
+  list: (block) => [...((block as { items?: string[] }).items ?? [])],
+  'image-row': (block) => {
+    const b = block as { items?: { alt: string }[]; caption?: string };
+    return [...(b.items ?? []).map((item) => item.alt), ...caption(b)];
+  },
+  // An ISO day is data, not copy; a written date ("Later") is copy.
+  timeline: (block) =>
+    ((block as { items?: { date: string; title: string; text?: string }[] }).items ?? []).flatMap(
+      (item) => [
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(item.date) ? [] : [item.date]),
+        item.title,
+        ...(item.text ? [item.text] : []),
+      ],
+    ),
 };
 
 function blockProse(block: ArticleBlock, path: string): Prose[] {

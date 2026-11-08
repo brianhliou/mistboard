@@ -1,6 +1,7 @@
 import {
   applyGomokuRoomMove,
   GOMOKU_BOARD_SIZE,
+  GOMOKU_DEALT_OPENINGS,
   GOMOKU_OPENINGS,
   getGomokuPlayerView,
 } from '@mistboard/game';
@@ -229,7 +230,7 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     for (const link of page.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
       expect(page.querySelector(link.hash)).not.toBeNull();
     }
-    expect(article.updatedAt).toBe('2026-11-06');
+    expect(article.updatedAt).toBe('2026-11-07');
     expect(article.updateNote).toBeTruthy();
     const wordCount = articleProse(article)
       .filter(({ path }) => path !== 'summary')
@@ -285,10 +286,13 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
     },
   );
 
-  it('renders the dealt opening from the screened pool', () => {
+  it('renders the first dealt opening with two black and three white stones', () => {
     expect(GOMOKU_OPENINGS).toEqual(openingPool.openings);
     const root = document.createElement('div');
     root.innerHTML = GOMOKU_OPENING();
+    expect(root.querySelectorAll('.gomoku-stone--black')).toHaveLength(2);
+    expect(root.querySelectorAll('.gomoku-stone--white')).toHaveLength(3);
+    expect(GOMOKU_DEALT_OPENINGS[0].turn).toBe('black');
     expect(
       [...root.querySelectorAll('.gomoku-stone')]
         .map((stone) => ({
@@ -296,7 +300,9 @@ describe('Gomoku rules diagrams match the kernel and screened pool', () => {
           color: stone.classList.contains('gomoku-stone--black') ? 'black' : 'white',
         }))
         .sort((a, b) => a.square!.localeCompare(b.square!)),
-    ).toEqual([...GOMOKU_OPENINGS[0].stones].sort((a, b) => a.square.localeCompare(b.square)));
+    ).toEqual(
+      [...GOMOKU_DEALT_OPENINGS[0].stones].sort((a, b) => a.square.localeCompare(b.square)),
+    );
   });
 
   it.each(GOMOKU_RULES_EXAMPLES.map((example, index) => ({ ...example, index })))(

@@ -31,7 +31,7 @@ set -eu
 
 # Bump when the make flags, the packaged file set or the layout change; the
 # pins and patches are hashed on their own.
-RECIPE_VERSION=2
+RECIPE_VERSION=3
 # The ISA every server engine targets. Do not swap in avx2 without confirming
 # the container's CPU flags (stockfish.ref).
 ARCH=x86-64-sse41-popcnt
@@ -64,11 +64,10 @@ RELEASE_REPO=brianhliou/mistboard
 # else, from our own copy of the one that pairs with pikafish.ref. A Pikafish
 # bump picks its matching net and uploads it the same way.
 PIKAFISH_NET_SHA256=7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e
-PIKAFISH_NET_URL=https://github.com/$RELEASE_REPO/releases/download/pikafish-net-7d13d735/pikafish.nnue
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
-RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref jqe.ref rapfi.ref scripts/rapfi-assets.mjs"
+RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref jqe.ref rapfi.ref scripts/rapfi-assets.mjs scripts/fetch-pikafish-net.mjs apps/web/public/engine/pikafish/net.json"
 BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle jqe rapfi"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -200,7 +199,7 @@ build() {
   log "pikafish @ $ref"
   fetch_source "$work/pikafish" https://github.com/official-pikafish/Pikafish.git "$ref"
   # Placed before make, so its net.sh finds it and skips master-net.
-  curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$work/pikafish/src/pikafish.nnue" "$PIKAFISH_NET_URL"
+  node "$ROOT/scripts/fetch-pikafish-net.mjs" "$work/pikafish/src/pikafish.nnue"
   net_pinned "$work/pikafish/src/pikafish.nnue"
   sf_make "$work/pikafish/src"
   cp "$work/pikafish/src/pikafish" "$bin/pikafish"
@@ -396,7 +395,7 @@ package() {
     done
   } > "$out/MANIFEST"
   # shellcheck disable=SC2086
-  tar -C "$bin" -czf "$out/$ASSET" $BINARIES pikafish.nnue "$JQE_NET" $rapfi_files
+  tar -C "$bin" -czf "$out/$ASSET" $BINARIES "$JQE_NET" $rapfi_files
   # Ship the source pin and provenance beside the licence texts.
   cp "$ROOT/rapfi.ref" "$out/rapfi.ref"
   (cd "$out" && sha256 "$ASSET" > SHA256SUMS)

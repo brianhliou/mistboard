@@ -34,6 +34,11 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-11-08, not native-reviewed, from the English signed
+  // off that day. Badge names follow the legacy badge catalog.
+  'fog-future',
+  // Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
+  'ten-thousand-games',
   // Machine-drafted 2026-11-04, not native-reviewed, from the English signed
   // off that day (jieqi readers are mostly Chinese).
   'ab-jchess-vs-jqe',
@@ -273,6 +278,104 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
+  // Keys are the article built from the committed record, including its chart labels.
+  // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
+  '10,000 games played': '已下完 10,000 盘棋',
+  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
+    'Mistboard 最初的 10,000 盘棋是怎样积累起来的：大家下了哪些棋类变体、和哪些电脑对弈，以及在这里下棋的都是哪些玩家。',
+  'Mistboard passed 10,000 finished games on November 8.':
+    '11 月 8 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
+  'Jieqi is 66% of them.': '揭棋占其中的 66%。',
+  'All but 98 were against a bot.': '除了 98 盘，其余都是和电脑下的。',
+  'The 15 players with at least 100 games were in 40% of them.':
+    '有 15 位玩家下了至少 100 盘，他们参与了其中 40% 的对局。',
+  'Engine matches, our test accounts and variants we have retired are left out; counting started on June 1.':
+    '引擎之间的对局、我们的测试账号和已下线的变体不计在内；计数从 6 月 1 日开始。',
+  'A player is an account, or a browser playing as a guest.':
+    '一个账号，或一个以访客身份下棋的浏览器，算一位玩家。',
+  'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
+    'Mistboard 最初的 1,000 盘棋用了四个月。接下来的 9,000 盘只用了 39 天。',
+  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
+    '6 月 1 日至 11 月 1 日每周（周一至周日）完成的对局数。',
+  'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
+  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
+    '从 10 月 5 日那一周起，每周都超过了 1,000 盘。最多的是 10 月 26 日那一周，共 2,647 盘，其中一位玩家下了 557 盘。[统计页面](/stats)会持续更新计数。',
+  'What people played': '大家下了什么棋',
+  '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝上开局的象棋，占全部对局的 66%。在最初的 1,000 盘中，这个比例是 61%。上一篇文章之后，疯狂屋象棋、象棋麻将和五子棋陆续上线。',
+  Variant: '棋种',
+  Jieqi: '揭棋',
+  'Fog Xiangqi': '迷雾象棋',
+  'Crazyhouse Xiangqi': '疯狂屋象棋',
+  Banqi: '暗棋',
+  'Flip Jungle': '翻翻兽棋',
+  'Xiangqi Mahjong': '象棋麻将',
+  'Fog Chess': '迷雾国际象棋',
+  Gomoku: '五子棋',
+  'Jungle Chess': '斗兽棋',
+  'Who played them': '是谁在下棋',
+  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. The largest groups came from China, the United States, Taiwan and Vietnam, in that order.':
+    'Mistboard 已有 1,095 位玩家，每个访客浏览器算一位，所以同一个人用两台设备就会被算两次。其中 485 位只下过一盘，150 位下了至少十盘。玩家最多来自中国，其次是美国、台湾和越南。',
+  'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
+    '有 15 位玩家下了至少 100 盘，他们参与了全部对局的 40%。下得最多的一位已经下了 632 盘。',
+  '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
+    '9,913 盘是和电脑下的。真人之间的对局有 98 盘，最初的 1,000 盘中则只有 4 盘。',
+  'How often people beat the bots': '玩家赢过电脑的比例',
+  "People won 2,055 of their 9,913 games against bots. The table lists every bot, most played first, with all of a bot's levels counted together.":
+    '玩家在与电脑的 9,913 盘对局中赢了 2,055 盘。下表列出所有电脑对手，按对局数从多到少排列，同一电脑的各个级别合并统计。',
+  Bot: '电脑',
+  Beaten: '玩家胜率',
+  'Pikafish (levels 1-⁠8)': '皮卡鱼（第 1 至 8 级）',
+  Misty: 'Misty',
+  'Banqi and more': '暗棋等',
+  'Fairy-Stockfish (levels 1-⁠8)': 'Fairy-Stockfish（第 1 至 8 级）',
+  'Xiangqi and more': '象棋等',
+  'General Blunder': 'General Blunder',
+  'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 级）',
+  'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
+    '级别的影响很大：在揭棋中，玩家对皮卡鱼第 1 级的胜率是 67%，对第 8 级则是 5%。每个电脑遇到的玩家不同，所以上表不能用来评定棋力。专门求败的 General Blunder 下了 34 盘，也只输了 23 盘。',
+  'New since the first 1,000': '从最初的 1,000 盘以来的新变化',
+  'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.':
+    '网站针对手机重新设计，计分对局也开放给了更多变体。解题新增了[限时解题](/puzzles?mode=storm)、[连续解题](/puzzles?mode=streak)、按主题练习和[解题面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了专门求败的电脑 [General Blunder](/bot/general-blunder)。五子棋上线，并配有八个级别的 Rapfi 电脑对手。棋子现在可以立体呈现，暗棋棋子也有了翻面动画。[更新页面](/feed)列出了全部变化。',
+  'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.':
+    '三个手机画面：一局等待第一步的限时解题、一盘 Rapfi 连成五子获胜的五子棋，以及一盘立体棋子与背面朝上的棋子并列的暗棋。',
+  'Thank you to everyone who played a game, reported a bug or told a friend or an audience about Mistboard. You are why Mistboard is here, and we are grateful for every game.':
+    '感谢每一位来下过棋、报告过问题，或把 Mistboard 介绍给朋友和观众的人。因为有你们，才有 Mistboard；每一盘棋，我们都心怀感激。',
+  "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
+    '我们的使命是通过象棋和世界各地的经典策略游戏，让不同文化的人们走到一起。',
+  'Week of 2026-06-01: 2 games': '2026-06-01 当周：2 盘',
+  Jun: '6月',
+  'Week of 2026-06-08: 3 games': '2026-06-08 当周：3 盘',
+  'Week of 2026-06-15: 0 games': '2026-06-15 当周：0 盘',
+  'Week of 2026-06-22: 3 games': '2026-06-22 当周：3 盘',
+  'Week of 2026-06-29: 0 games': '2026-06-29 当周：0 盘',
+  'Week of 2026-07-06: 1 games': '2026-07-06 当周：1 盘',
+  'Week of 2026-07-13: 19 games': '2026-07-13 当周：19 盘',
+  'Week of 2026-07-20: 13 games': '2026-07-20 当周：13 盘',
+  'Week of 2026-07-27: 30 games': '2026-07-27 当周：30 盘',
+  'Week of 2026-08-03: 27 games': '2026-08-03 当周：27 盘',
+  Aug: '8月',
+  'Week of 2026-08-10: 21 games': '2026-08-10 当周：21 盘',
+  'Week of 2026-08-17: 45 games': '2026-08-17 当周：45 盘',
+  'Week of 2026-08-24: 21 games': '2026-08-24 当周：21 盘',
+  'Week of 2026-08-31: 67 games': '2026-08-31 当周：67 盘',
+  'Week of 2026-09-07: 68 games': '2026-09-07 当周：68 盘',
+  Sep: '9月',
+  'Week of 2026-09-14: 154 games': '2026-09-14 当周：154 盘',
+  'Week of 2026-09-21: 381 games': '2026-09-21 当周：381 盘',
+  'Week of 2026-09-28: 596 games': '2026-09-28 当周：596 盘',
+  'Week of 2026-10-05: 1,314 games': '2026-10-05 当周：1,314 盘',
+  Oct: '10月',
+  'Week of 2026-10-12: 1,118 games': '2026-10-12 当周：1,118 盘',
+  'Week of 2026-10-19: 1,304 games': '2026-10-19 当周：1,304 盘',
+  'Week of 2026-10-26: 2,647 games': '2026-10-26 当周：2,647 盘',
+  'Mistboard passes 10,000 games': 'Mistboard 突破 10,000 盘对局',
+  'Everyone who plays on Mistboard.': '每一位在 Mistboard 下棋的玩家。',
+  'A round Chinese chess piece marked with the character for ten thousand, beside the number 10,000 with a small grey cloud at its last zero.':
+    '一枚刻着「萬」字的圆形象棋棋子，旁边是数字 10,000，最后一个零处有一朵灰色小云。',
+  'Finished games per week, rising from a handful in June to a peak of 2,647':
+    '每周完成的对局数，从 6 月的寥寥几盘上升到最高 2,647 盘',
   // Expanded jieqi rules (2026-11-05).
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向双方翻明。',
@@ -445,8 +548,8 @@ const ZH_HANS: Record<string, string> = {
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋规则：两人在 15×15 棋盘上轮流落子，先在横、竖或斜线上连成五子者获胜。学会落子、连成五子，以及如何在 Mistboard 发放的开局里跟着回合提示走棋。',
-  'Explained why openings are dealt and gave the game’s history its own section.':
-    '说明了开局为什么由系统发放，并把这个游戏的历史单独成节。',
+  'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.':
+    '更新了开局示意图，与现在每局的开局方式一致：两枚黑子、三枚白子，轮到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一个空的交叉点上放一枚棋子。棋子落下后就不再移动。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -6761,10 +6864,208 @@ const ZH_HANS: Record<string, string> = {
   "AB-JChess is open source under the GPL-3.0 licence at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). The network is downloaded from the authors' own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu (Kouza). Laoxu trains AB-JChess's networks and, for this release, tested four ways of searching a reveal and kept the best; he and Huorongrong worked out together the small, fast network it plays with. And thank you, Devin O'Keefe, for the code the new release stands on.":
     "AB-JChess 以 GPL-3.0 许可证开源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。每次构建网站时，神经网络都从作者自己的发布版本下载，我们不另行托管。感谢 Huorongrong 和 Laoxu（Kouza）。Laoxu 负责训练 AB-JChess 的神经网络，这次测试了四种翻子搜索方法，保留了最好的一种；他与 Huorongrong 共同设计了这个小而快的网络。也感谢 Devin O'Keefe，新版本基于他提供的代码开发。",
   'TOP BOT AGAIN': '重回最强电脑',
+  // fog-future: machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day. Terms follow the legacy badges (迷雾国际象棋留名 / 迷霧西洋棋留名); Misty is 它; the badge images and thumbnail swap to zh renders of the same cards.
+  'The Future of Fog Variants on Mistboard': 'Mistboard 迷雾变体的未来',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
+    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。为什么它们的运行成本太高、哪些功能会保留，以及要怎样才能让它们回来。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
+    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。和朋友对弈、规则页面以及所有已完成的对局都会保留。',
+  'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
+    '迷雾机器人必须记住迷雾背后所有可能的局面。在复杂的深局中，这会达到数亿个局面，所需内存远远超出这些对局值得的投入。',
+  "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
+    '在 12 月 8 日前登录并战胜 Misty，该棋种的留名徽章就会一直留在你的个人主页上：迷雾国际象棋一枚，迷雾象棋一枚。',
+  'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
+    '从 6 月起，Mistboard 一直在运行 Misty，一个会下[迷雾国际象棋](/rules/fog-chess)和[迷雾象棋](/rules/fog-xiangqi)的机器人。在这两种棋里，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，两个迷雾机器人都将下线。**',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
+    '为了在看不见全盘的情况下下好棋，Misty 会追踪迷雾背后所有可能的局面。在漫长而复杂的对局里，这需要的内存远远超过服务器能为这少数玩家承担的。和朋友对弈、两个规则页面以及所有已完成的对局都会保留。',
+  Timeline: '时间线',
+  'This announcement': '本公告',
+  'The Fog Chess and Fog Xiangqi legacy badges go live.':
+    '迷雾国际象棋留名和迷雾象棋留名徽章上线。',
+  'The fog bots go offline': '迷雾机器人下线',
+  'Playing Fog Chess and Fog Xiangqi against Misty ends, along with Fog Chess engine review. Last day to earn a badge.':
+    '与 Misty 对弈迷雾国际象棋和迷雾象棋的功能结束，迷雾国际象棋的引擎复盘也一并停止。这是获得徽章的最后一天。',
+  Later: '之后',
+  'The games themselves': '棋种本身',
+  'What happens to Fog Chess and Fog Xiangqi as games. Each decision is added here with its date.':
+    '迷雾国际象棋和迷雾象棋这两个棋种今后如何安排。每项决定都会连同日期补充在这里。',
+  'Why the fog bots are expensive': '为什么迷雾机器人这么贵',
+  "A normal chess engine studies one board, the one in front of it. Misty can't, because she sees only what you see. Instead she keeps a list of *every* position the fog could be hiding, and picks the move that works across all of them.":
+    '普通的棋类引擎只研究一个棋盘，就是眼前这一个。Misty 做不到，因为它只能看到你看得到的东西。它改为保存一份清单，列出迷雾背后每一个可能的局面，再选出在所有局面下都行得通的着法。',
+  "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
+    '**清单可能会暴涨。** 通常它只有几十个棋盘。但它每看不到一步，清单就成倍增长；在复杂的对局里，几步之内就可能从几千个跳到几百万个。一盘与真人的对局达到了 8,200 万个局面；一盘自我对弈达到了 3.46 亿个。',
+  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
+    '**每个局面都占内存。** 为了能在服务器上运行，Misty 在迷雾国际象棋中最多保存 1,600 万个局面，在迷雾象棋中最多 2,000 万个，超出部分只取样本来下棋。即使有上限，一盘棋仍用掉了 7.7 GB。那盘 3.46 亿个局面的对局，若不设上限，需要超过 150 GB。',
+  '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
+    '**清单越长越慢。** 清单短时，Misty 大约五秒走一步；接近上限时，一步可能要将近一分钟。从 6 月至今，有 17 盘棋因为它超时或掉线而结束。',
+  '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
+    '**闲置时也占内存。** 即使没有对局在进行，这项服务也占着约 1.26 GB，这样对局一开始 Misty 就能马上应战。',
+  "Running Misty in your browser instead doesn't work: a deep game needs more memory than a browser tab gets, and her view of the board would sit on your machine. [How Misty plays](/blog/misty) explains the search in full.":
+    '改在你的浏览器里运行 Misty 也行不通：深局需要的内存超过一个浏览器标签页能分到的，而且它掌握的棋盘信息会放在你自己的电脑上。[Misty 如何下棋](/blog/misty)一文完整介绍了它的搜索。',
+  'What memory costs': '内存要花多少钱',
+  'Memory chips got much more expensive this year. [TrendForce](https://www.trendforce.com/presscenter/news/20260601-13070.html), which tracks chip prices, reported contract DRAM prices nearly doubling in the first quarter of 2026 as makers moved production toward AI servers, and it [expects](https://www.trendforce.com/presscenter/news/20260930-13258.html) another 10 to 15% rise this quarter, at a slower pace.':
+    '今年内存芯片涨价很多。追踪芯片价格的 [TrendForce 集邦咨询](https://www.trendforce.com/presscenter/news/20260601-13070.html)报告说，由于厂商把产能转向 AI 服务器，2026 年第一季度 DRAM 合约价几乎翻倍；它还[预计](https://www.trendforce.com/presscenter/news/20260930-13258.html)本季度会再涨 10% 到 15%，只是涨速放缓。',
+  'Hosts pass that on. One gigabyte held for a month costs:':
+    '主机服务商把涨价转嫁给了用户。占用 1 GB 内存一个月的费用是：',
+  "**$10** on Railway, Mistboard's host": 'Mistboard 所用的托管平台 Railway：**10 美元**',
+  '**about $4.90** on an AWS memory-optimized server': 'AWS 内存优化型服务器：**约 4.90 美元**',
+  '**about €3** on a Hetzner dedicated server': 'Hetzner 独立服务器：**约 3 欧元**',
+  "At Railway's rate, Misty's idle memory costs about $12.60 a month, room for one capped game about $80, and room for one uncapped deep game about $1,500. Even on Hetzner, the uncapped game would cost more than €400 a month.":
+    '按 Railway 的价格，Misty 闲置时占用的内存每月约 12.60 美元；为一盘有上限的对局预留内存约 80 美元；为一盘不设上限的深局预留则约 1,500 美元。即使在 Hetzner 上，不设上限的对局每月也要超过 400 欧元。',
+  "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
+    '均为各服务商官方标价，换算成 1 GB 内存使用一个月的价格。Railway 单独按内存计费；AWS 和 Hetzner 的内存随服务器一起出售，所以它们的数字是用服务器价格除以内存容量得出的。',
+  'The Fog legacy badges': '迷雾留名徽章',
+  'Beat Misty while signed in before **December 8, 2026**, and a legacy badge stays on your profile after the bots are gone:':
+    '在 **2026 年 12 月 8 日**前登录并战胜 Misty，机器人下线后，留名徽章仍会留在你的个人主页上：',
+  '**Fog Chess legacy** for a win at Fog Chess': '**迷雾国际象棋留名**：在迷雾国际象棋中获胜',
+  '**Fog Xiangqi legacy** for a win at Fog Xiangqi': '**迷雾象棋留名**：在迷雾象棋中获胜',
+  'The Fog Chess legacy badge: a shield holding a chess king rising from fog. It reads: Beat Misty at Fog Chess before the fog bots retired in December 2026.':
+    '迷雾国际象棋留名徽章：盾牌上是一个从迷雾中升起的国际象棋王。文字是：在迷雾机器人于 2026 年 12 月退役前，在迷雾国际象棋中战胜过 Misty。',
+  'The Fog Xiangqi legacy badge: a shield holding an elephant rising from fog. It reads: Beat Misty at Fog Xiangqi before the fog bots retired in December 2026.':
+    '迷雾象棋留名徽章：盾牌上是一头从迷雾中升起的大象。文字是：在迷雾机器人于 2026 年 12 月退役前，在迷雾象棋中战胜过 Misty。',
+  "Beat her at both and you hold both. Wins already on an account count, so juangamer10pro2 and rebirthfox333 have theirs. Guests can't hold badges, so sign in before your next game.":
+    '两种都赢过，就两枚都有。账号里已有的胜局也算数，所以 juangamer10pro2 和 rebirthfox333 已经拿到了徽章。访客无法持有徽章，所以下一盘棋之前请先登录。',
+  'A challenge for engine builders': '给引擎开发者的挑战',
+  "Cheaper servers won't bring the bots back. Obscuro, the superhuman fog-of-war engine from Carnegie Mellon, and Misty, built on its design, both keep every position the fog could be hiding, and that list is what outgrows the machine.":
+    '更便宜的服务器也换不回这些机器人。卡内基梅隆大学的超人类迷雾国际象棋引擎 Obscuro，以及以它的设计为基础的 Misty，都会保存迷雾背后所有可能的局面，而正是这份清单撑爆了机器。',
+  'What a fog bot needs is a small memory budget. Engines for ordinary chess and xiangqi play at superhuman strength in well under a gigabyte. A fog engine will likely need more, but not tens of gigabytes. The bar is a Fog Chess bot that:':
+    '迷雾机器人需要的是一个很小的内存预算。普通国际象棋和象棋的引擎，用远不到 1 GB 的内存就能达到超人类水平。迷雾引擎大概需要更多，但不该是几十 GB。门槛是一个迷雾国际象棋机器人能够：',
+  'scores at least 50% against Misty over a 100-game match,':
+    '在与 Misty 的 100 盘对抗赛中得分至少 50%；',
+  'averages under 10 seconds a move, with no move over 30, and':
+    '平均每步用时不到 10 秒，且没有一步超过 30 秒；并且',
+  'stays under 8 GB of memory in its deepest games, and the less the better: every game running at once needs its own.':
+    '在最深的对局中内存也不超过 8 GB，越少越好：同时进行的每一盘棋都需要各自的内存。',
+  "How it gets there is up to you. Misty's engine is public [on GitHub](https://github.com/brianhliou/misty) and installs from PyPI as `misty-chess`, so you can start from it or test against it. If you build one, [tell us](/contact). Misty's fog server is being shut down for good, but a bot that clears the bar could bring computer play back to the fog.":
+    '怎么做到由你决定。Misty 的引擎[在 GitHub 上](https://github.com/brianhliou/misty)公开，也可以从 PyPI 以 `misty-chess` 安装，你可以以它为起点，或拿它来测试。如果你做出了一个，[告诉我们](/contact)。Misty 的迷雾服务器将永久关闭，但一个达到门槛的机器人，可以让迷雾里重新有电脑对手。',
+  'First game': '首局',
+  'June 1, 2026': '2026 年 6 月 1 日',
+  'June 23, 2026': '2026 年 6 月 23 日',
+  Players: '玩家',
+  'Wins against Misty': '战胜 Misty 的局数',
+  'Counts run to November 8 and include finished games where a person moved. Most were played without an account. Every win that ended with a capture, 42 in all, is collected in two studies you can replay move by move: [Beating Misty at Fog Chess](/study/ObtCiQip) and [Beating Misty at Fog Xiangqi](/study/wpQhOVHS).':
+    '统计截至 11 月 8 日，只计有真人走过棋的已完成对局。大多数对局是在未登录的情况下下的。所有以吃子告终的胜局（共 42 盘）都收录在两个可以逐步回放的研究里：[在迷雾国际象棋中战胜 Misty](/study/ObtCiQip) 和 [在迷雾象棋中战胜 Misty](/study/wpQhOVHS)。',
+  "Mistboard's mission is to bring people together across cultures through Chinese chess and the world's classic strategy games. Every game here needs care to stay worth playing: a bot that plays well, rules that read clearly, reviews that work. Putting that care where people play most means hard calls, and this is one of them.":
+    'Mistboard 的使命是通过中国象棋和世界经典策略棋类，让不同文化的人相聚在一起。这里的每个棋种都需要用心维护才值得一下：下得好的机器人、写得清楚的规则、好用的复盘。把这份心力放在大家下得最多的地方，就意味着要做艰难的取舍，这就是其中之一。',
+  '**To everyone who sat down across from Misty in the fog: thank you.** She is here until December 8, if you want one more game.':
+    '**感谢每一位在迷雾中坐到 Misty 对面的你。** 如果你还想再下一盘，它会一直在这里等到 12 月 8 日。',
+  'Play Fog Chess against Misty': '与 Misty 下迷雾国际象棋',
+  'Play Fog Xiangqi against Misty': '与 Misty 下迷雾象棋',
+  'The Future of Fog': '迷雾变体的未来',
+  'The Fog Chess and Fog Xiangqi legacy badges side by side.':
+    '迷雾国际象棋和迷雾象棋留名徽章并排展示。',
+  'Prices as of November 7, 2026': '价格截至 2026 年 11 月 7 日',
+  '/article-thumbs/fog-future.jpg': '/article-thumbs/fog-future.zh-hans.jpg',
+  '/article-thumbs/fog-chess-legacy-badge.png':
+    '/article-thumbs/fog-chess-legacy-badge.zh-hans.png',
+  '/article-thumbs/fog-chess-legacy-badge-dark.png':
+    '/article-thumbs/fog-chess-legacy-badge-dark.zh-hans.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge.zh-hans.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge-dark.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge-dark.zh-hans.png',
 };
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
+  // Keys are the article built from the committed record, including its chart labels.
+  // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
+  '10,000 games played': '已下完 10,000 盤棋',
+  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
+    'Mistboard 最初的 10,000 盤棋是怎樣累積起來的：大家下了哪些棋類變體、和哪些電腦對弈，以及在這裡下棋的都是哪些玩家。',
+  'Mistboard passed 10,000 finished games on November 8.':
+    '11 月 8 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
+  'Jieqi is 66% of them.': '揭棋佔其中的 66%。',
+  'All but 98 were against a bot.': '除了 98 盤，其餘都是和電腦下的。',
+  'The 15 players with at least 100 games were in 40% of them.':
+    '有 15 位玩家下了至少 100 盤，他們參與了其中 40% 的對局。',
+  'Engine matches, our test accounts and variants we have retired are left out; counting started on June 1.':
+    '引擎之間的對局、我們的測試帳號和已停止提供的變體不計在內；計數從 6 月 1 日開始。',
+  'A player is an account, or a browser playing as a guest.':
+    '一個帳號，或一個以訪客身分下棋的瀏覽器，算一位玩家。',
+  'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
+    'Mistboard 最初的 1,000 盤棋用了四個月。接下來的 9,000 盤只用了 39 天。',
+  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
+    '6 月 1 日至 11 月 1 日每週（週一至週日）完成的對局數。',
+  'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
+  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
+    '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,647 盤，其中一位玩家下了 557 盤。[統計頁面](/stats)會持續更新計數。',
+  'What people played': '大家下了什麼棋',
+  '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝上開局的象棋，佔全部對局的 66%。在最初的 1,000 盤中，這個比例是 61%。上一篇文章之後，瘋狂屋象棋、象棋麻將和五子棋陸續推出。',
+  Variant: '棋種',
+  Jieqi: '揭棋',
+  'Fog Xiangqi': '迷霧象棋',
+  'Crazyhouse Xiangqi': '瘋狂屋象棋',
+  Banqi: '暗棋',
+  'Flip Jungle': '翻翻獸棋',
+  'Xiangqi Mahjong': '象棋麻將',
+  'Fog Chess': '迷霧西洋棋',
+  Gomoku: '五子棋',
+  'Jungle Chess': '鬥獸棋',
+  'Who played them': '是誰在下棋',
+  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. The largest groups came from China, the United States, Taiwan and Vietnam, in that order.':
+    'Mistboard 已有 1,095 位玩家，每個訪客瀏覽器算一位，所以同一個人用兩台裝置就會被算兩次。其中 485 位只下過一盤，150 位下了至少十盤。玩家最多來自中國，其次是美國、台灣和越南。',
+  'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
+    '有 15 位玩家下了至少 100 盤，他們參與了全部對局的 40%。下得最多的一位已經下了 632 盤。',
+  '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
+    '9,913 盤是和電腦下的。真人之間的對局有 98 盤，最初的 1,000 盤中則只有 4 盤。',
+  'How often people beat the bots': '玩家贏過電腦的比例',
+  "People won 2,055 of their 9,913 games against bots. The table lists every bot, most played first, with all of a bot's levels counted together.":
+    '玩家在與電腦的 9,913 盤對局中贏了 2,055 盤。下表列出所有電腦對手，依對局數由多到少排列，同一電腦的各個等級合併統計。',
+  Bot: '電腦',
+  Beaten: '玩家勝率',
+  'Pikafish (levels 1-⁠8)': '皮卡魚（第 1 至 8 級）',
+  Misty: 'Misty',
+  'Banqi and more': '暗棋等',
+  'Fairy-Stockfish (levels 1-⁠8)': 'Fairy-Stockfish（第 1 至 8 級）',
+  'Xiangqi and more': '象棋等',
+  'General Blunder': 'General Blunder',
+  'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 級）',
+  'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
+    '等級的影響很大：在揭棋中，玩家對皮卡魚第 1 級的勝率是 67%，對第 8 級則是 5%。每個電腦遇到的玩家不同，所以上表不能用來評定棋力。專門求敗的 General Blunder 下了 34 盤，也只輸了 23 盤。',
+  'New since the first 1,000': '從最初的 1,000 盤以來的新變化',
+  'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.':
+    '網站針對手機重新設計，計分對局也開放給了更多變體。解題新增了[限時解題](/puzzles?mode=storm)、[連續解題](/puzzles?mode=streak)、依主題練習和[解題面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了專門求敗的電腦 [General Blunder](/bot/general-blunder)。五子棋推出了，並配有八個等級的 Rapfi 電腦對手。棋子現在可以立體呈現，暗棋棋子也有了翻面動畫。[更新頁面](/feed)列出了全部變化。',
+  'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.':
+    '三個手機畫面：一局等待第一步的限時解題、一盤 Rapfi 連成五子獲勝的五子棋，以及一盤立體棋子與背面朝上的棋子並列的暗棋。',
+  'Thank you to everyone who played a game, reported a bug or told a friend or an audience about Mistboard. You are why Mistboard is here, and we are grateful for every game.':
+    '感謝每一位來下過棋、回報過問題，或把 Mistboard 介紹給朋友和觀眾的人。因為有你們，才有 Mistboard；每一盤棋，我們都心懷感激。',
+  "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
+    '我們的使命是透過象棋和世界各地的經典策略遊戲，讓不同文化的人們走到一起。',
+  'Week of 2026-06-01: 2 games': '2026-06-01 當週：2 盤',
+  Jun: '6月',
+  'Week of 2026-06-08: 3 games': '2026-06-08 當週：3 盤',
+  'Week of 2026-06-15: 0 games': '2026-06-15 當週：0 盤',
+  'Week of 2026-06-22: 3 games': '2026-06-22 當週：3 盤',
+  'Week of 2026-06-29: 0 games': '2026-06-29 當週：0 盤',
+  'Week of 2026-07-06: 1 games': '2026-07-06 當週：1 盤',
+  'Week of 2026-07-13: 19 games': '2026-07-13 當週：19 盤',
+  'Week of 2026-07-20: 13 games': '2026-07-20 當週：13 盤',
+  'Week of 2026-07-27: 30 games': '2026-07-27 當週：30 盤',
+  'Week of 2026-08-03: 27 games': '2026-08-03 當週：27 盤',
+  Aug: '8月',
+  'Week of 2026-08-10: 21 games': '2026-08-10 當週：21 盤',
+  'Week of 2026-08-17: 45 games': '2026-08-17 當週：45 盤',
+  'Week of 2026-08-24: 21 games': '2026-08-24 當週：21 盤',
+  'Week of 2026-08-31: 67 games': '2026-08-31 當週：67 盤',
+  'Week of 2026-09-07: 68 games': '2026-09-07 當週：68 盤',
+  Sep: '9月',
+  'Week of 2026-09-14: 154 games': '2026-09-14 當週：154 盤',
+  'Week of 2026-09-21: 381 games': '2026-09-21 當週：381 盤',
+  'Week of 2026-09-28: 596 games': '2026-09-28 當週：596 盤',
+  'Week of 2026-10-05: 1,314 games': '2026-10-05 當週：1,314 盤',
+  Oct: '10月',
+  'Week of 2026-10-12: 1,118 games': '2026-10-12 當週：1,118 盤',
+  'Week of 2026-10-19: 1,304 games': '2026-10-19 當週：1,304 盤',
+  'Week of 2026-10-26: 2,647 games': '2026-10-26 當週：2,647 盤',
+  'Mistboard passes 10,000 games': 'Mistboard 突破 10,000 盤對局',
+  'Everyone who plays on Mistboard.': '每一位在 Mistboard 下棋的玩家。',
+  'A round Chinese chess piece marked with the character for ten thousand, beside the number 10,000 with a small grey cloud at its last zero.':
+    '一枚刻著「萬」字的圓形象棋棋子，旁邊是數字 10,000，最後一個零處有一朵灰色小雲。',
+  'Finished games per week, rising from a handful in June to a peak of 2,647':
+    '每週完成的對局數，從 6 月的寥寥幾盤上升到最高 2,647 盤',
   // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
   'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
     '暗子的第一步按所在起始位置的棋子走法行棋，走完便向雙方翻明。',
@@ -6937,8 +7238,8 @@ const ZH_HANT: Record<string, string> = {
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
   'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.':
     '五子棋規則：兩人在 15×15 棋盤上輪流落子，先在橫、豎或斜線上連成五子者獲勝。學會落子、連成五子，以及如何在 Mistboard 發放的開局裡跟著回合提示走棋。',
-  'Explained why openings are dealt and gave the game’s history its own section.':
-    '說明了開局為什麼由系統發放，並把這個遊戲的歷史單獨成節。',
+  'Updated the starting-position diagram to match how every game now starts: two black stones, three white stones, Black to move.':
+    '更新了開局示意圖，與現在每局的開局方式一致：兩枚黑子、三枚白子，輪到黑方落子。',
   'Place a stone on an empty point each turn. Stones stay where you put them.':
     '每回合在一個空的交叉點上放一枚棋子。棋子落下後就不再移動。',
   'Five or more stones of your colour in a straight line wins in freestyle Gomoku.':
@@ -13135,6 +13436,105 @@ const ZH_HANT: Record<string, string> = {
   'Zheng Weitong': '鄭惟桐',
   'Tang Dan. Card photo: Liu Cheng / Yangcheng Evening News, at the 2026 Five Rams Cup.':
     '唐丹。卡片照片：劉程／《羊城晚報》，攝於 2026 年五羊杯。',
+  // fog-future: machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day. Terms follow the legacy badges (迷雾国际象棋留名 / 迷霧西洋棋留名); Misty is 它; the badge images and thumbnail swap to zh renders of the same cards.
+  'The Future of Fog Variants on Mistboard': 'Mistboard 迷霧變體的未來',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
+    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。為什麼它們的運行成本太高、哪些功能會保留，以及要怎樣才能讓它們回來。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
+    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。和朋友對弈、規則頁面以及所有已完成的對局都會保留。',
+  'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
+    '迷霧機器人必須記住迷霧背後所有可能的局面。在複雜的深局中，這會達到數億個局面，所需記憶體遠遠超出這些對局值得的投入。',
+  "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
+    '在 12 月 8 日前登入並戰勝 Misty，該棋種的留名徽章就會一直留在你的個人頁面上：迷霧西洋棋一枚，迷霧象棋一枚。',
+  'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
+    '從 6 月起，Mistboard 一直在運行 Misty，一個會下[迷霧西洋棋](/rules/fog-chess)和[迷霧象棋](/rules/fog-xiangqi)的機器人。在這兩種棋裡，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，兩個迷霧機器人都將下線。**',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
+    '為了在看不見全盤的情況下下好棋，Misty 會追蹤迷霧背後所有可能的局面。在漫長而複雜的對局裡，這需要的記憶體遠遠超過伺服器能為這少數玩家承擔的。和朋友對弈、兩個規則頁面以及所有已完成的對局都會保留。',
+  Timeline: '時間軸',
+  'This announcement': '本公告',
+  'The Fog Chess and Fog Xiangqi legacy badges go live.': '迷霧西洋棋留名和迷霧象棋留名徽章上線。',
+  'The fog bots go offline': '迷霧機器人下線',
+  'Playing Fog Chess and Fog Xiangqi against Misty ends, along with Fog Chess engine review. Last day to earn a badge.':
+    '與 Misty 對弈迷霧西洋棋和迷霧象棋的功能結束，迷霧西洋棋的引擎復盤也一併停止。這是獲得徽章的最後一天。',
+  Later: '之後',
+  'The games themselves': '棋種本身',
+  'What happens to Fog Chess and Fog Xiangqi as games. Each decision is added here with its date.':
+    '迷霧西洋棋和迷霧象棋這兩個棋種今後如何安排。每項決定都會連同日期補充在這裡。',
+  'Why the fog bots are expensive': '為什麼迷霧機器人這麼貴',
+  "A normal chess engine studies one board, the one in front of it. Misty can't, because she sees only what you see. Instead she keeps a list of *every* position the fog could be hiding, and picks the move that works across all of them.":
+    '普通的棋類引擎只研究一個棋盤，就是眼前這一個。Misty 做不到，因為它只能看到你看得到的東西。它改為保存一份清單，列出迷霧背後每一個可能的局面，再選出在所有局面下都行得通的走法。',
+  "**The list can explode.** Usually it holds a few dozen boards. But each move she can't see multiplies it, and in a tangled game it can jump from thousands to millions in a few moves. One game against a person reached 82 million positions; one self-play game reached 346 million.":
+    '**清單可能會暴漲。** 通常它只有幾十個棋盤。但它每看不到一步，清單就成倍增長；在複雜的對局裡，幾步之內就可能從幾千個跳到幾百萬個。一盤與真人的對局達到了 8,200 萬個局面；一盤自我對弈達到了 3.46 億個。',
+  '**Every position takes memory.** To fit on a server, Misty stops at 16 million positions in Fog Chess and 20 million in Fog Xiangqi, and plays from a sample past that. Even capped, one game used 7.7 GB. The 346-million game would have needed more than 150 GB.':
+    '**每個局面都佔記憶體。** 為了能在伺服器上運行，Misty 在迷霧西洋棋中最多保存 1,600 萬個局面，在迷霧象棋中最多 2,000 萬個，超出部分只取樣本來下棋。即使有上限，一盤棋仍用掉了 7.7 GB。那盤 3.46 億個局面的對局，若不設上限，需要超過 150 GB。',
+  '**A long list is slow.** With a short list Misty moves in about five seconds; near the cap one move can take close to a minute. Seventeen games since June ended because she ran out of time or dropped out.':
+    '**清單越長越慢。** 清單短時，Misty 大約五秒走一步；接近上限時，一步可能要將近一分鐘。從 6 月至今，有 17 盤棋因為它超時或斷線而結束。',
+  '**She uses memory even when idle.** The service holds about 1.26 GB with no game running, so Misty is ready the moment one starts.':
+    '**閒置時也佔記憶體。** 即使沒有對局在進行，這項服務也佔著約 1.26 GB，這樣對局一開始 Misty 就能馬上應戰。',
+  "Running Misty in your browser instead doesn't work: a deep game needs more memory than a browser tab gets, and her view of the board would sit on your machine. [How Misty plays](/blog/misty) explains the search in full.":
+    '改在你的瀏覽器裡運行 Misty 也行不通：深局需要的記憶體超過一個瀏覽器分頁能分到的，而且它掌握的棋盤資訊會放在你自己的電腦上。[Misty 如何下棋](/blog/misty)一文完整介紹了它的搜尋。',
+  'What memory costs': '記憶體要花多少錢',
+  'Memory chips got much more expensive this year. [TrendForce](https://www.trendforce.com/presscenter/news/20260601-13070.html), which tracks chip prices, reported contract DRAM prices nearly doubling in the first quarter of 2026 as makers moved production toward AI servers, and it [expects](https://www.trendforce.com/presscenter/news/20260930-13258.html) another 10 to 15% rise this quarter, at a slower pace.':
+    '今年記憶體晶片漲價很多。追蹤晶片價格的 [TrendForce 集邦科技](https://www.trendforce.com/presscenter/news/20260601-13070.html)報告說，由於廠商把產能轉向 AI 伺服器，2026 年第一季 DRAM 合約價幾乎翻倍；它還[預估](https://www.trendforce.com/presscenter/news/20260930-13258.html)本季會再漲 10% 到 15%，只是漲速放緩。',
+  'Hosts pass that on. One gigabyte held for a month costs:':
+    '主機服務商把漲價轉嫁給了用戶。佔用 1 GB 記憶體一個月的費用是：',
+  "**$10** on Railway, Mistboard's host": 'Mistboard 所用的託管平台 Railway：**10 美元**',
+  '**about $4.90** on an AWS memory-optimized server': 'AWS 記憶體最佳化伺服器：**約 4.90 美元**',
+  '**about €3** on a Hetzner dedicated server': 'Hetzner 獨立伺服器：**約 3 歐元**',
+  "At Railway's rate, Misty's idle memory costs about $12.60 a month, room for one capped game about $80, and room for one uncapped deep game about $1,500. Even on Hetzner, the uncapped game would cost more than €400 a month.":
+    '按 Railway 的價格，Misty 閒置時佔用的記憶體每月約 12.60 美元；為一盤有上限的對局預留記憶體約 80 美元；為一盤不設上限的深局預留則約 1,500 美元。即使在 Hetzner 上，不設上限的對局每月也要超過 400 歐元。',
+  "List prices from each host's own pricing, converted to a gigabyte held for a month. Railway bills memory on its own; AWS and Hetzner sell it with a server, so their figures divide a server's price by its memory.":
+    '均為各服務商官方標價，換算成 1 GB 記憶體使用一個月的價格。Railway 單獨按記憶體計費；AWS 和 Hetzner 的記憶體隨伺服器一起出售，所以它們的數字是用伺服器價格除以記憶體容量得出的。',
+  'The Fog legacy badges': '迷霧留名徽章',
+  'Beat Misty while signed in before **December 8, 2026**, and a legacy badge stays on your profile after the bots are gone:':
+    '在 **2026 年 12 月 8 日**前登入並戰勝 Misty，機器人下線後，留名徽章仍會留在你的個人頁面上：',
+  '**Fog Chess legacy** for a win at Fog Chess': '**迷霧西洋棋留名**：在迷霧西洋棋中獲勝',
+  '**Fog Xiangqi legacy** for a win at Fog Xiangqi': '**迷霧象棋留名**：在迷霧象棋中獲勝',
+  'The Fog Chess legacy badge: a shield holding a chess king rising from fog. It reads: Beat Misty at Fog Chess before the fog bots retired in December 2026.':
+    '迷霧西洋棋留名徽章：盾牌上是一個從迷霧中升起的西洋棋國王。文字是：在迷霧機器人於 2026 年 12 月退役前，在迷霧西洋棋中戰勝過 Misty。',
+  'The Fog Xiangqi legacy badge: a shield holding an elephant rising from fog. It reads: Beat Misty at Fog Xiangqi before the fog bots retired in December 2026.':
+    '迷霧象棋留名徽章：盾牌上是一頭從迷霧中升起的大象。文字是：在迷霧機器人於 2026 年 12 月退役前，在迷霧象棋中戰勝過 Misty。',
+  "Beat her at both and you hold both. Wins already on an account count, so juangamer10pro2 and rebirthfox333 have theirs. Guests can't hold badges, so sign in before your next game.":
+    '兩種都贏過，就兩枚都有。帳號裡已有的勝局也算數，所以 juangamer10pro2 和 rebirthfox333 已經拿到了徽章。訪客無法持有徽章，所以下一盤棋之前請先登入。',
+  'A challenge for engine builders': '給引擎開發者的挑戰',
+  "Cheaper servers won't bring the bots back. Obscuro, the superhuman fog-of-war engine from Carnegie Mellon, and Misty, built on its design, both keep every position the fog could be hiding, and that list is what outgrows the machine.":
+    '更便宜的伺服器也換不回這些機器人。卡內基美隆大學的超人類迷霧西洋棋引擎 Obscuro，以及以它的設計為基礎的 Misty，都會保存迷霧背後所有可能的局面，而正是這份清單撐爆了機器。',
+  'What a fog bot needs is a small memory budget. Engines for ordinary chess and xiangqi play at superhuman strength in well under a gigabyte. A fog engine will likely need more, but not tens of gigabytes. The bar is a Fog Chess bot that:':
+    '迷霧機器人需要的是一個很小的記憶體預算。一般西洋棋和象棋的引擎，用遠不到 1 GB 的記憶體就能達到超人類水準。迷霧引擎大概需要更多，但不該是幾十 GB。門檻是一個迷霧西洋棋機器人能夠：',
+  'scores at least 50% against Misty over a 100-game match,':
+    '在與 Misty 的 100 盤對抗賽中得分至少 50%；',
+  'averages under 10 seconds a move, with no move over 30, and':
+    '平均每步用時不到 10 秒，且沒有一步超過 30 秒；並且',
+  'stays under 8 GB of memory in its deepest games, and the less the better: every game running at once needs its own.':
+    '在最深的對局中記憶體也不超過 8 GB，越少越好：同時進行的每一盤棋都需要各自的記憶體。',
+  "How it gets there is up to you. Misty's engine is public [on GitHub](https://github.com/brianhliou/misty) and installs from PyPI as `misty-chess`, so you can start from it or test against it. If you build one, [tell us](/contact). Misty's fog server is being shut down for good, but a bot that clears the bar could bring computer play back to the fog.":
+    '怎麼做到由你決定。Misty 的引擎[在 GitHub 上](https://github.com/brianhliou/misty)公開，也可以從 PyPI 以 `misty-chess` 安裝，你可以以它為起點，或拿它來測試。如果你做出了一個，[告訴我們](/contact)。Misty 的迷霧伺服器將永久關閉，但一個達到門檻的機器人，可以讓迷霧裡重新有電腦對手。',
+  'First game': '首局',
+  'June 1, 2026': '2026 年 6 月 1 日',
+  'June 23, 2026': '2026 年 6 月 23 日',
+  Players: '玩家',
+  'Wins against Misty': '戰勝 Misty 的局數',
+  'Counts run to November 8 and include finished games where a person moved. Most were played without an account. Every win that ended with a capture, 42 in all, is collected in two studies you can replay move by move: [Beating Misty at Fog Chess](/study/ObtCiQip) and [Beating Misty at Fog Xiangqi](/study/wpQhOVHS).':
+    '統計截至 11 月 8 日，只計有真人走過棋的已完成對局。大多數對局是在未登入的情況下下的。所有以吃子告終的勝局（共 42 盤）都收錄在兩個可以逐步回放的研究裡：[在迷霧西洋棋中戰勝 Misty](/study/ObtCiQip) 和 [在迷霧象棋中戰勝 Misty](/study/wpQhOVHS)。',
+  "Mistboard's mission is to bring people together across cultures through Chinese chess and the world's classic strategy games. Every game here needs care to stay worth playing: a bot that plays well, rules that read clearly, reviews that work. Putting that care where people play most means hard calls, and this is one of them.":
+    'Mistboard 的使命是透過象棋和世界經典策略棋類，讓不同文化的人相聚在一起。這裡的每個棋種都需要用心維護才值得一下：下得好的機器人、寫得清楚的規則、好用的復盤。把這份心力放在大家下得最多的地方，就意味著要做艱難的取捨，這就是其中之一。',
+  '**To everyone who sat down across from Misty in the fog: thank you.** She is here until December 8, if you want one more game.':
+    '**感謝每一位在迷霧中坐到 Misty 對面的你。** 如果你還想再下一盤，它會一直在這裡等到 12 月 8 日。',
+  'Play Fog Chess against Misty': '與 Misty 下迷霧西洋棋',
+  'Play Fog Xiangqi against Misty': '與 Misty 下迷霧象棋',
+  'The Future of Fog': '迷霧變體的未來',
+  'The Fog Chess and Fog Xiangqi legacy badges side by side.':
+    '迷霧西洋棋和迷霧象棋留名徽章並排展示。',
+  'Prices as of November 7, 2026': '價格截至 2026 年 11 月 7 日',
+  '/article-thumbs/fog-future.jpg': '/article-thumbs/fog-future.zh-hant.jpg',
+  '/article-thumbs/fog-chess-legacy-badge.png':
+    '/article-thumbs/fog-chess-legacy-badge.zh-hant.png',
+  '/article-thumbs/fog-chess-legacy-badge-dark.png':
+    '/article-thumbs/fog-chess-legacy-badge-dark.zh-hant.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge.zh-hant.png',
+  '/article-thumbs/fog-xiangqi-legacy-badge-dark.png':
+    '/article-thumbs/fog-xiangqi-legacy-badge-dark.zh-hant.png',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

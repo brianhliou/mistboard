@@ -74,6 +74,13 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   const verify = railpack.indexOf(
     'sh /app/scripts/engine-assets.sh verify /app/bin /app/apps/server/src',
   );
+  const privateNet = railpack.indexOf(
+    'node /app/scripts/fetch-pikafish-net.mjs /app/bin/pikafish.nnue --require-token',
+  );
+  assert.ok(
+    privateNet > fetch && privateNet < verify,
+    'private Pikafish net is staged between fetch and verify',
+  );
   const net = railpack.indexOf('sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin');
   assert.ok(fetch > 0, 'railpack.json must fetch the engine assets');
   assert.ok(verify > fetch, 'verify runs after fetch');
@@ -240,6 +247,7 @@ test('Rapfi native data and licences enter the tarball and checksum manifest', a
       assert.ok(manifest.includes(`${entry.name}=sha256:${entry.sha256}`));
     }
     assert.ok(tar.includes('rapfi'));
+    assert.ok(!tar.includes('pikafish.nnue'), 'Pikafish net never enters a public archive');
     assert.ok(
       !tar.some((name) => name.endsWith('.data')),
       'the Emscripten container is not a native net',
@@ -320,7 +328,7 @@ test('the jqe net is pinned by hash, packaged with the binary, and loaded by ver
   assert.match(recipe, /^JQE_CMAKE_FLAGS=".*-DJQE_NATIVE=OFF .*-march=haswell .*-static"$/m);
   assert.match(recipe, /echo "jqe-cmake=\$JQE_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
   assert.match(recipe, /echo "jqe-net=\$JQE_NET_SHA256"/, 'the net sha is in the hash');
-  assert.match(recipe, /-czf "\$out\/\$ASSET" \$BINARIES pikafish\.nnue "\$JQE_NET"/);
+  assert.match(recipe, /-czf "\$out\/\$ASSET" \$BINARIES "\$JQE_NET"/);
   assert.match(recipe, /jqe_search_ok "\$bin\/jqe" "\$bin\/\$JQE_NET"/);
   assert.match(
     recipe,
@@ -468,4 +476,110 @@ test('every release asset railpack fetches has a pinned sha256', () => {
     'utf8',
   );
   assert.match(largeboard, /^sha=[0-9a-f]{64}$/m, 'the largeboard binary pins a sha256');
+});
+
+// Build the forbidden path from pieces so this regression test does not match itself.
+const publicNetPath = ['releases', 'download', 'pikafish-net-7d13d735'].join('/');
+const oldWebNetPath = ['github.com/brianhliou/pikafish-wasm', 'releases', 'download'].join('/');
+function publicNetReferences(root, files) {
+  return files.filter((file) => {
+    if (file === 'CHANGELOG.md' || /(?:^|\/)docs\/.*\d{4}-\d{2}-\d{2}.*\.md$/.test(file))
+      return false;
+    const path = resolve(root, file);
+    if (!existsSync(path)) return false;
+    const bytes = readFileSync(path);
+    return bytes.includes(publicNetPath) || bytes.includes(oldWebNetPath);
+  });
+}
+
+test('no repository file points at a public Pikafish net release', () => {
+  const files = execFileSync(
+    'git',
+    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    },
+  )
+    .split('\0')
+    .filter(Boolean);
+  assert.deepEqual(publicNetReferences(repoRoot, files), []);
+});
+
+test('the public net reference guard catches planted source, workflow and doc references', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'public-net-reference-'));
+  try {
+    const files = [
+      'scripts/fixture.mjs',
+      '.github/workflows/fixture.yml',
+      'docs/fetch.md',
+      'docs/archive/2026-11-07-fetch.md',
+      'CHANGELOG.md',
+    ];
+    for (const file of files) {
+      mkdirSync(dirname(resolve(root, file)), { recursive: true });
+      writeFileSync(
+        resolve(root, file),
+        `https://github.com/brianhliou/mistboard/${publicNetPath}/pikafish.nnue`,
+      );
+    }
+    assert.deepEqual(publicNetReferences(root, files), files.slice(0, 3));
+    writeFileSync(resolve(root, files[0]), publicNetPath);
+    assert.deepEqual(publicNetReferences(root, [files[0]]), [files[0]]);
+    writeFileSync(resolve(root, files[0]), `https://${oldWebNetPath}/v0.1.0/pikafish.nnue`);
+    assert.deepEqual(publicNetReferences(root, [files[0]]), [files[0]]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('the actual archive file list excludes Pikafish even when the net is staged', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'pikafish-archive-'));
+  try {
+    const bin = resolve(root, 'bin');
+    const tools = resolve(root, 'tools');
+    mkdirSync(bin);
+    mkdirSync(tools);
+    const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
+    for (const file of [...binaries, 'it014.jqn', 'pikafish.nnue', 'fixture-rapfi.bin']) {
+      writeFileSync(resolve(bin, file), 'fixture');
+    }
+    // Only stub Rapfi's unrelated checksum gate and file inventory. The real
+    // shell package function, tar, manifest and recipe hash still run.
+    writeFileSync(
+      resolve(tools, 'node'),
+      `#!${process.execPath}
+if (!process.argv[2].endsWith('/scripts/rapfi-assets.mjs')) process.exit(1);
+if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
+`,
+      { mode: 0o755 },
+    );
+    const out = resolve(root, 'dist');
+    execFileSync('sh', [script, 'package', bin, out], {
+      cwd: repoRoot,
+      env: { ...process.env, PATH: `${tools}:${process.env.PATH}` },
+    });
+    const files = execFileSync(
+      'tar',
+      ['-tzf', resolve(out, 'engines-x86-64-sse41-popcnt.tar.gz')],
+      { encoding: 'utf8' },
+    )
+      .trim()
+      .split('\n');
+    assert.deepEqual(files, [...binaries, 'it014.jqn', 'fixture-rapfi.bin']);
+    assert.ok(!files.includes('pikafish.nnue'));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('CI supplies the private token to native, browser build and web test consumers', () => {
+  const ci = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const secret = `MISTBOARD_PRIVATE_ASSETS_TOKEN: \${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}`;
+  assert.ok(workflow.includes(secret));
+  for (const job of ['build', 'unit-web']) {
+    const block = ci.split(/(?=^ {2}[\w-]+:\n)/m).find((part) => part.startsWith(`  ${job}:\n`));
+    assert.ok(block.includes(secret), `${job} must pass the repo secret to the fetch consumer`);
+    assert.match(block, /key: engine-nets-.*hashFiles.*net\.json/);
+  }
 });

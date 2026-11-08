@@ -15,7 +15,7 @@ import {
   createBanqiDeal,
   createJieqiDeal,
   createJungleFlipDeal,
-  GOMOKU_OPENINGS,
+  GOMOKU_DEALT_OPENINGS,
   getAtomicXiangqiLegalMoves,
   getBanqiLegalMoves,
   getCrazyhouseXiangqiLegalMoves,
@@ -104,7 +104,8 @@ export const VARIANTS: VariantSpec[] = [
     // Persist only the public opening, not its screening metadata. Hydration
     // must replay this exact deal rather than call the tenant's crypto RNG.
     makeSetup: (rng) => {
-      const { stones, turn } = GOMOKU_OPENINGS[Math.floor(rng() * GOMOKU_OPENINGS.length)]!;
+      const { stones, turn } =
+        GOMOKU_DEALT_OPENINGS[Math.floor(rng() * GOMOKU_DEALT_OPENINGS.length)]!;
       return { stones, turn };
     },
   },

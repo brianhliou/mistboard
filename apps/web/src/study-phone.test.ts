@@ -48,7 +48,11 @@ const CHAPTERS = [
   }),
 ];
 
-async function mountPhoneStudy(chapterId?: string): Promise<HTMLElement> {
+async function mountPhoneStudy(
+  chapterId?: string,
+  chapters = CHAPTERS,
+  isOwner = false,
+): Promise<HTMLElement> {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
@@ -60,11 +64,11 @@ async function mountPhoneStudy(chapterId?: string): Promise<HTMLElement> {
             name: 'Zuo Wenjing games',
             description: '',
             visibility: 'public',
-            isOwner: false,
+            isOwner,
             likeCount: 0,
             likedByViewer: false,
           },
-          chapters: CHAPTERS,
+          chapters,
         });
       }
       if (url === '/api/chat/study/phone1') return jsonResponse({ lines: [] });
@@ -84,6 +88,40 @@ const chapterName = (root: HTMLElement): string =>
   root.querySelector('.study-phone-bar__chapter')?.textContent ?? '';
 
 describe('phone study chrome', () => {
+  it.each([
+    { gamebook: true, isOwner: false },
+    { gamebook: true, isOwner: true },
+    { gamebook: false, isOwner: false },
+  ])(
+    'uses distinct chapter names in both lists (gamebook=$gamebook, owner=$isOwner)',
+    async ({ gamebook, isOwner }) => {
+      const tags = { red: 'Lien Quoc', black: 'Stephen Cho', round: '4', result: '1-0' };
+      const names = ['Moment 5 · Round 4 · Red to play', 'Moment 6 · Round 4 · Red to play'];
+      const chapters = [
+        ...names.map((name, index) => ({
+          ...chapter(`moment${index}`, `Source title ${index + 1}`, empty, tags),
+          i18n: { en: { name } },
+          gamebook,
+        })),
+        chapter('normal', 'Full game', empty, { red: 'Zuo Wenjing', black: 'Tang Dan' }),
+        chapter('untagged', 'A chariot ending', empty),
+      ];
+      const root = await mountPhoneStudy(undefined, chapters, isOwner);
+      const desktopLinks = [...root.querySelectorAll('.study-chapters__link')];
+      root.querySelector<HTMLButtonElement>('.study-phone__pill')!.click();
+      const phoneLinks = [...sheet()!.querySelectorAll('.study-sheet__link')];
+
+      for (const links of [desktopLinks, phoneLinks]) {
+        expect(links).toHaveLength(4);
+        expect(links[0]?.textContent).toBe(`1${names[0]}`);
+        expect(links[1]?.textContent).toBe(`2${names[1]}`);
+        expect(links[2]?.textContent).toMatch(/Zuo Wenjing.*Tang Dan/);
+        expect(links[2]?.textContent).not.toContain('Full game');
+        expect(links[3]?.textContent).toBe('4A chariot ending');
+      }
+    },
+  );
+
   it('puts a one-line chapter bar under the nav and a dock after the review', async () => {
     const root = await mountPhoneStudy();
     const bar = root.querySelector('.study-phone-bar');
@@ -242,3 +280,23 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+it('puts game details and side colours below the chapter list, outside the coach', async () => {
+  const root = await mountPhoneStudy('c1', [
+    {
+      ...CHAPTERS[0]!,
+      gamebook: true,
+      tags: { ...CHAPTERS[0]!.tags, round: '6' },
+    },
+  ]);
+  const card = root.querySelector('.gamebook__aside .gamebook__game');
+  expect(card?.previousElementSibling?.classList.contains('study-gamebook-rail')).toBe(true);
+  expect(card?.querySelector('.gamebook__game-player--red')?.textContent).toBe('Zuo Wenjing');
+  expect(card?.querySelector('.gamebook__game-player--black')?.textContent).toBe('Tang Dan');
+  expect(card?.querySelectorAll('.review-seat__disc')).toHaveLength(2);
+  expect(card?.textContent).toContain('World Championship');
+  expect(card?.textContent).toContain('Round 6');
+  expect(card?.textContent).toContain('2022.11.01');
+  expect(card?.textContent).toContain('1-0');
+  expect(root.querySelector('.gamebook__coach .gamebook__game')).toBeNull();
+});

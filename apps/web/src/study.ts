@@ -39,6 +39,7 @@ import type { TreeReviewHandle } from './review/tree-review.js';
 import type { SerializedTree } from './review/tree-serialize.js';
 import { mountXiangqiGamebook } from './review/xiangqi-gamebook.js';
 import { downloadStudyPgn } from './review/xiangqi-pgn-chapter.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildNav } from './site-shell.js';
 import {
   createStudyAutosave,
@@ -893,8 +894,7 @@ function renderStudy(
       const chapterRail = rail(statusSpan(study.isOwner), false, (model) => {
         const full = chapters.find((entry) => entry.id === model.id);
         const parts = full ? gameRowParts(full) : null;
-        // Players only: event, round and date are read once, in the coach's
-        // game card, rather than on twenty rows.
+        // Event, round and date are read once in the card below the chapter list.
         return parts ? buildGameRowLabel(parts) : null;
       });
       // Like and copy close the card, above the errata line, rather than sitting
@@ -913,6 +913,23 @@ function renderStudy(
       aside.append(railCard);
       const game = gameCoachContext(chapter);
       const players = gameRowParts(chapter);
+      if (players) {
+        const card = document.createElement('section');
+        card.className = 'gamebook__game';
+        for (const side of ['red', 'black'] as const) {
+          const player = document.createElement('p');
+          player.className = `gamebook__game-player gamebook__game-player--${side}`;
+          player.append(seatDiscEl(side, 'review-seat__disc'), players[side]);
+          card.append(player);
+        }
+        if (game?.detail) {
+          const detail = document.createElement('p');
+          detail.className = 'gamebook__game-detail';
+          detail.textContent = game.detail;
+          card.append(detail);
+        }
+        aside.append(card);
+      }
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
@@ -920,7 +937,6 @@ function renderStudy(
         // the render above put there; without it this chapter had no top bar.
         nav: buildNav(),
         aside,
-        ...(game ? { game } : {}),
         ...(players ? { seats: { red: players.red, black: players.black } } : {}),
       });
       phone.attach(root);

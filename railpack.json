@@ -17,6 +17,7 @@
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then python3 /app/scripts/check_engine_serveable.py /app/apps/server/src/engines/registry.ts /app/mistboard-engine/scripts/live_move_worker.py; fi",
         "sh /app/scripts/fetch-fairy-stockfish-largeboard.sh /app/bin",
         "sh /app/scripts/engine-assets.sh fetch /app/bin",
+        "node /app/scripts/fetch-pikafish-net.mjs /app/bin/pikafish.nnue --require-token",
         "sh /app/scripts/engine-assets.sh verify /app/bin /app/apps/server/src",
         "sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin",
         "sh /app/scripts/fetch-abjchess-net.sh /app/bin",

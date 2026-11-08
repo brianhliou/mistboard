@@ -168,6 +168,16 @@ test('storm validates moves, rejects replayed submits, penalizes misses and expi
   assert.equal(run.version, 0);
   assert.equal(run.upcoming.length, 2);
   assert.equal(JSON.stringify(run).includes('"solution":'), false);
+  assert.equal(run.startedAt, null);
+  assert.equal(run.deadlineAt, null);
+  t.mock.timers.tick(240_000);
+  const idle = await route('/api/puzzles/storm', 'POST', {
+    action: 'resume',
+    runId: run.runId,
+  });
+  assert.equal(idle.status, 200);
+  assert.deepEqual(JSON.parse(idle.body), run);
+  const firstMoveAt = Date.now();
   const puzzle = XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!;
   const firstSubmit = {
     action: 'move',
@@ -183,6 +193,10 @@ test('storm validates moves, rejects replayed submits, penalizes misses and expi
   assert.deepEqual([first.status, duplicate.status].sort(), [200, 409]);
   run = JSON.parse((first.status === 200 ? first : duplicate).body);
   assert.equal(run.combo, 1);
+  assert.equal(run.startedAt, firstMoveAt);
+  assert.equal(run.deadlineAt, firstMoveAt + 180_000);
+  assert.equal(run.remainingMs, 180_000);
+
   const resumed = await route('/api/puzzles/storm', 'POST', {
     action: 'resume',
     runId: run.runId,
@@ -190,6 +204,7 @@ test('storm validates moves, rejects replayed submits, penalizes misses and expi
   assert.equal(resumed.status, 200);
   assert.deepEqual(JSON.parse(resumed.body).moves, run.moves);
   assert.equal(JSON.parse(resumed.body).combo, 1);
+  assert.equal(JSON.parse(resumed.body).deadlineAt, run.deadlineAt);
   for (const move of puzzle.solution.filter((_, i) => i % 2 === 0).slice(1)) {
     const response = await route('/api/puzzles/storm', 'POST', {
       action: 'move',

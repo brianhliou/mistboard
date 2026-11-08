@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale.js';
+import { prerenderMount } from './prerender-copy.js';
 // Generic /analysis/<variant> entry: builds the variant dropdown (lichess's
 // top-left variant select) and dispatches to the variant's analysis mount.
 // The catalog (analysis-catalog.ts) is the fail-closed allowlist — main.ts only
@@ -118,4 +120,18 @@ export function buildVariantPicker(
   });
   wrap.append(icon, select);
   return wrap;
+}
+
+export function renderAnalysisShellForPrerender(
+  locale: Locale,
+  variant: AnalysisVariantId,
+): Promise<string> {
+  return prerenderMount(locale, (root) => {
+    const heading = document.createElement('h1');
+    heading.textContent = t('analysis.pageTitle', { variant: variantDisplayLabel(variant) });
+    const edit = document.createElement('a');
+    edit.textContent = t('analysis.editPosition');
+    edit.href = localizedHref(`/editor/${variant}`, locale);
+    root.append(heading, buildVariantPicker(variant), edit);
+  });
 }

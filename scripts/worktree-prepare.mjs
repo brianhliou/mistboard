@@ -38,7 +38,7 @@ if (!options.skipBuild) {
   console.log('skip: declaration builds disabled by --skip-build');
 }
 
-run(['node', 'apps/web/scripts/fetch-pikafish-net.mjs']);
+run(['node', 'scripts/fetch-pikafish-net.mjs']);
 run(['node', 'apps/web/scripts/fetch-rapfi-net.mjs']);
 
 if (!options.skipDrift) {

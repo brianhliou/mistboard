@@ -9,13 +9,31 @@ import {
   sitemapUrls,
 } from './seo-render-audit.mjs';
 
+test('raw floor covers ordinary sitemap pages, excluding script and template text', () => {
+  const facts = serverHtmlFacts(
+    `<body><script>${'not readable '.repeat(30)}</script><template>hidden</template></body>`,
+  );
+  assert.ok(serverHtmlFailures('/faq', facts).some((failure) => failure.includes('150')));
+});
+
+test('raw floor weights Chinese content but still rejects 74 ideographs', () => {
+  for (const [ideographs, failures] of [
+    [74, ['raw body 148 < 150 chars']],
+    [75, []],
+  ]) {
+    const facts = serverHtmlFacts(`<body><h1>${'象'.repeat(ideographs)}</h1></body>`);
+    assert.equal(facts.rawChars, ideographs * 2);
+    assert.deepEqual(serverHtmlFailures('/zh-hans/rules', facts), failures);
+  }
+});
+
 const SITEMAP =
   '<urlset><url><loc>https://mistboard.com/faq</loc></url><url><loc>https://mistboard.com/source</loc></url></urlset>';
 
 const AUDIT_URL = 'https://mistboard.com/rules/jungle-flip';
 const AUDIT_ARGS = { timeoutMs: 25_000, blockLazyChunks: true };
 const AUDIT_HTML =
-  '<html lang="en"><head><title>Flip Jungle Rules | Mistboard</title></head><body><div id="app"><h1>Flip Jungle Rules</h1></div></body></html>';
+  '<html lang="en"><head><title>Flip Jungle Rules | Mistboard</title></head><body><div id="app"><h1>Flip Jungle Rules</h1><p>Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. </p></div></body></html>';
 
 function auditBrowser({ gotoErrors = [], rendered = {}, newPageError } = {}) {
   const state = { contexts: 0, closed: 0, routes: 0 };
@@ -301,7 +319,7 @@ const EMPTY_SHELL =
   '<html lang="en"><head><title>Mistboard</title><meta name="robots" content="max-image-preview:large" /></head><body><div id="app"></div></body></html>';
 
 const SERVED =
-  '<html lang="en"><head><title>Round 2 | Mistboard</title><link rel="canonical" href="https://mistboard.com/broadcast/xiangqi/t/round/t-r02"></head><body><div id="app"><div class="crawler-copy"><main><h1>Round 2 · <span lang="zh">五羊杯</span></h1><a href="/broadcast/xiangqi/board/b1">1-0</a></main></div></div></body></html>';
+  '<html lang="en"><head><title>Round 2 | Mistboard</title><link rel="canonical" href="https://mistboard.com/broadcast/xiangqi/t/round/t-r02"></head><body><div id="app"><div class="crawler-copy"><main><h1>Round 2 · <span lang="zh">五羊杯</span></h1><a href="/broadcast/xiangqi/board/b1">1-0</a><p>Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. Tournament results and pairings. </p></main></div></div></body></html>';
 
 test('an empty shell on a broadcast, player or study URL fails', () => {
   const facts = serverHtmlFacts(EMPTY_SHELL);
@@ -320,7 +338,7 @@ test('an empty shell on a broadcast, player or study URL fails', () => {
   ]) {
     assert.deepEqual(
       serverHtmlFailures(path, facts),
-      ['empty shell: no server-rendered body and no canonical'],
+      ['raw body 0 < 150 chars', 'empty shell: no server-rendered body and no canonical'],
       path,
     );
   }
@@ -334,21 +352,22 @@ test('a server-rendered page records its canonical and h1 and passes', () => {
   assert.deepEqual(serverHtmlFailures('/broadcast/xiangqi/t/round/t-r02', facts), []);
 });
 
-test('a canonical alone, a noindexed unknown id, or another section passes', () => {
+test('a canonical cannot excuse thin content; noindex is exempt across all sections', () => {
   const canonicalOnly = serverHtmlFacts(
     EMPTY_SHELL.replace(
       '</head>',
       '<link rel="canonical" href="https://mistboard.com/study/S1"></head>',
     ),
   );
-  assert.deepEqual(serverHtmlFailures('/study/S1', canonicalOnly), []);
+  assert.deepEqual(serverHtmlFailures('/study/S1', canonicalOnly), ['raw body 0 < 150 chars']);
   const noindexed = serverHtmlFacts(
     EMPTY_SHELL.replace('max-image-preview:large', 'noindex, follow'),
   );
   assert.deepEqual(serverHtmlFailures('/broadcast/xiangqi/board/nope', noindexed), []);
-  // Known blind spot: client-only pages outside these sections are not held to
-  // the rule (the rendered-DOM checks cover them).
-  assert.deepEqual(serverHtmlFailures('/watch', serverHtmlFacts(EMPTY_SHELL)), []);
+  // The raw floor applies to every sitemap section.
+  assert.deepEqual(serverHtmlFailures('/watch', serverHtmlFacts(EMPTY_SHELL)), [
+    'raw body 0 < 150 chars',
+  ]);
 });
 
 test('a client that changes <html lang> fails the audit; case alone does not', () => {
@@ -445,4 +464,26 @@ test('an <img> with no alt attribute warns; alt="" is decorative and passes', ()
   assert.deepEqual(serverMetaFindings('/thanks', facts, HOME).warnings, ['2 <img> without alt']);
   // Known blind spot: the server HTML holds only prerendered images; the client's
   // are counted in the rendered DOM, which only the full run reads.
+});
+
+test('raw/rendered ratio below one half fails even with more than 150 raw characters', async () => {
+  const { browser } = auditBrowser({ rendered: { bodyText: 'x'.repeat(2000) } });
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => new Response(AUDIT_HTML),
+    wait: async () => {},
+  });
+  assert.ok(result.rawChars >= 150);
+  assert.ok(result.failures.some((failure) => failure.includes('raw/rendered')));
+});
+
+test('raw and rendered counts use the same weighting for Chinese ratio checks', async () => {
+  const { browser } = auditBrowser({ rendered: { bodyText: '象'.repeat(200) } });
+  const result = await auditUrl(browser, AUDIT_URL, AUDIT_ARGS, {
+    fetchImpl: async () => new Response(`<body><h1>${'象'.repeat(75)}</h1></body>`),
+    wait: async () => {},
+  });
+  assert.equal(result.rawChars, 150);
+  assert.equal(result.renderedChars, 400);
+  // Planted failure: unweighted rendered length would incorrectly pass 150/200.
+  assert.ok(result.failures.includes('raw/rendered 0.375 < 0.5'));
 });
