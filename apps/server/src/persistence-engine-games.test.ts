@@ -12,7 +12,6 @@ import {
   replayHiddenPieceRecord,
 } from '@mistboard/game';
 import './variant-tenant/register-tenants.js';
-import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import {
   type BotVsBotVariantPlan,
   botVsBotConfigFromEnv,
@@ -27,6 +26,7 @@ import {
 } from './engine-experiments.js';
 import { upsertBuiltinEngineVersions } from './engine-registry.js';
 import { runRandomLegalEngineGame } from './engine-runner.js';
+import { loadEngine } from './engines/registry.js';
 import { JIEQI_RANDOM_ENGINE_ID } from './jieqi-engine.js';
 import { seededUnitRng } from './jieqi-eve-adapter.js';
 import { getPool } from './persistence-db.js';
@@ -420,8 +420,12 @@ definePersistenceTests('scheduled engine games as public data', () => {
             ['jungle', 'public', false],
           ],
         );
-        // Banqi seats two rungs of its eight-level ladder, under their player-facing names.
-        const banqiNames = new Set(BANQI_PLAYABLE_ENGINES.map((tier) => tier.name));
+        // Banqi seats two of its ladder rungs or its random anchor, under their registry
+        // names (L7 keeps the historical "MistyBanqi"). The pairing is random, so every seat counts.
+        const banqiPlan = defaultPlan('banqi');
+        const banqiNames = new Set(
+          [...banqiPlan.ladder, banqiPlan.anchorEngineId ?? ''].map((id) => loadEngine(id).name),
+        );
         for (const name of [rows[0]!.white_name, rows[0]!.black_name]) {
           assert.ok(banqiNames.has(name), `banqi seat ${name}`);
         }
