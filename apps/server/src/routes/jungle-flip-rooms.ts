@@ -3,6 +3,7 @@ import type { DrainCreate } from '../deploy-gate.js';
 import {
   isJungleFlipEngineClientId,
   JUNGLE_FLIP_DEFAULT_ENGINE_ID,
+  jungleFlipEngineAvailable,
 } from './../jungle-flip-engine.js';
 import {
   createTenantRoomsRoute,
@@ -42,6 +43,10 @@ const jungleFlipRoute = createTenantRoomsRoute<
     kind: 'seated',
     defaultEngineId: JUNGLE_FLIP_DEFAULT_ENGINE_ID,
     isEngineClientId: isJungleFlipEngineClientId,
+    heldEngineError: (engineId) =>
+      isJungleFlipEngineClientId(engineId) && !jungleFlipEngineAvailable(engineId)
+        ? 'jungle_flip_disabled'
+        : undefined,
     seats: JUNGLE_FLIP_SEATS,
   },
   // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):

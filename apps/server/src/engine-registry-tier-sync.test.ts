@@ -91,17 +91,13 @@ const TIER_SYNC_CASES: readonly TierSyncCase[] = [
       engineId: tier.id,
       config: {
         kind: 'jungle-flip-uci',
+        ...(tier.id === 'misty-jungle-flip' ? {} : { evaluation: tier.evaluation }),
         nodes: tier.nodes,
         movetime_ms: tier.movetimeCapMs,
         ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
       },
     }),
   ),
-  {
-    family: 'jungle-flip',
-    engineId: 'misty-jungle-flip',
-    config: { kind: 'jungle-flip-uci', nodes: 2_500_000, movetime_ms: 5000 },
-  },
 ];
 
 test('registry config matches the live tier it claims to describe', () => {
@@ -194,6 +190,10 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
 // to track. They must NOT be refreshed when the surviving bot's tier moves —
 // that would be the in-place edit this whole file is against.
 const RETIRED_NO_LIVE_TIER: ReadonlyMap<string, string> = new Map([
+  [
+    'misty-jungle-flip-level-7',
+    'retired 100K-node classical rung; L7 now uses the historical full-strength id',
+  ],
   ['misty-banqi-amateur', 'retired 2026-06-18 when banqi collapsed to one node-budgeted bot'],
   ['misty-banqi-strong', 'retired 2026-06-18 when banqi collapsed to one node-budgeted bot'],
   ['misty-banqi-strongest', 'retired 2026-06-18 when banqi collapsed to one node-budgeted bot'],

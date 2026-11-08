@@ -19,6 +19,7 @@ import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-en
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES, jqeEnabled } from './jieqi-engine.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipNetPath } from './jungle-flip-engine.js';
 import { JUNGLE_PLAYABLE_ENGINE_IDS } from './server-jungle-engine.js';
 import { XIANGQI_PUBLIC_ENGINES } from './xiangqi-engine-catalog.js';
 
@@ -52,6 +53,10 @@ const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   'duck-xiangqi': () => DUCK_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'crazyhouse-xiangqi': () => CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   banqi: () => BANQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  'jungle-flip': () =>
+    JUNGLE_FLIP_PLAYABLE_ENGINES.filter(
+      (tier) => tier.evaluation !== 'nnue' || jungleFlipNetPath() !== null,
+    ).map((tier) => tier.id),
   // JUNGLE_PLAYABLE_ENGINE_IDS runs strongest first.
   jungle: () => [...JUNGLE_PLAYABLE_ENGINE_IDS].reverse(),
 };

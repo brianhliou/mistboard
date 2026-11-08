@@ -98,8 +98,9 @@ test('each variant ladder is the engines its first-party bots play, and only its
   }
   // The worst-move bot is a first-party bot but never a rung.
   assert.ok(!botLadderFor('xiangqi')!.includes('fairy-stockfish-xiangqi-worst'));
+  assert.ok(botLadderFor('jungle-flip')!.includes('misty-jungle-flip'));
+  assert.ok(!botLadderFor('jungle-flip')!.includes('misty-jungle-flip-level-7'));
   // No ladder, no fallback: a variant without one answers null, not xiangqi's.
-  assert.equal(botLadderFor('jungle-flip'), null);
   assert.equal(botLadderFor('crossroads-chess'), null);
   assert.equal(botLadderFor('constructor'), null);
 });

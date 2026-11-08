@@ -308,6 +308,28 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
   return [abJchess!, JIEQI_JQE_ENGINE_OPTION, ...below];
 }
 
+let jungleFlipNeuralEngineAvailable = false;
+
+/** Runtime confirmation only: a build flag cannot know whether the private net exists. */
+export function setJungleFlipEngineOptions(engines: readonly WebTenantEngineOption[]): void {
+  jungleFlipNeuralEngineAvailable = engines.some(
+    (engine) => engine.id === 'misty-jungle-flip-level-8',
+  );
+}
+
+export function jungleFlipEngineOptions(
+  withNet = jungleFlipNeuralEngineAvailable,
+): readonly WebTenantEngineOption[] {
+  return [8, 7, 6, 5, 4, 3, 2, 1]
+    .filter((level) => level !== 8 || withNet)
+    .map((level) => ({
+      id: level === 7 ? 'misty-jungle-flip' : `misty-jungle-flip-level-${level}`,
+      name: `Misty Level ${level}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
+}
+
 // Every tenant block, retired ones included (see WEB_VARIANT_TENANTS below).
 // Deleting a retired variant's block is its own later commit
 // (docs-private/variant-retirement-plan.md, #396).
@@ -801,13 +823,10 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleFlipEnabled,
       acceptsDeepLink: jungleFlipEnabled,
-      // Hand mirror of JUNGLE_FLIP_PLAYABLE_ENGINES; strongest first.
-      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
-        id: `misty-jungle-flip-level-${level}`,
-        name: `Misty Level ${level}`,
-        familyName: 'Misty',
-        kind: 'container',
-      })),
+      // Hand mirror of JUNGLE_FLIP_PLAYABLE_ENGINES; L8 requires the runtime roster.
+      get engineOptions() {
+        return jungleFlipEngineOptions();
+      },
       defaultEngineId: 'misty-jungle-flip-level-4',
     },
   },
