@@ -1102,10 +1102,16 @@ export function renderPrivacyShellForPrerender(locale: Locale): Promise<string> 
 
 export function renderContactShellForPrerender(locale: Locale): Promise<string> {
   return prerenderMount(locale, (root) => {
+    const contact = buildContact(null, false, locale).el;
+    // Inert crawler copy includes the hints a visitor sees in empty fields.
+    // Attribute-only placeholders contribute no text to a no-JS reader.
+    for (const field of contact.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input[placeholder],textarea[placeholder]',
+    ))
+      field.replaceWith(document.createTextNode(field.placeholder));
+    // The anti-spam field is deliberately absent from the visible page.
+    contact.querySelector('label[aria-hidden="true"]')?.remove();
     root.classList.add('landing-page', 'contact-route');
-    root.append(
-      buildNav(locale),
-      buildStaticPageLayout('contact', buildContact(null, false, locale).el, locale),
-    );
+    root.append(buildNav(locale), buildStaticPageLayout('contact', contact, locale));
   });
 }

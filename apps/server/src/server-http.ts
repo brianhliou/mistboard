@@ -13,7 +13,7 @@ import { isArticleOgLang, serveArticleOgImage, serveStudyOgImage } from './og-im
 import { servePlayerOgImage } from './og-player.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
-import { readPrerenderRoutes } from './prerender-routes.js';
+import { type PrerenderRoute, readPrerenderRoutes } from './prerender-routes.js';
 import { RequestBodyTooLargeError } from './routes/lib.js';
 import type { DrainController } from './server-drain.js';
 import {
@@ -674,7 +674,11 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       return;
     }
 
-    const prerender = prerenderRoutes.get(pathname.replace(/\/+$/, '') || '/');
+    // Older/incomplete builds have no route manifest. Keep their homepage
+    // reachable: '/' is intentionally outside the client-route allowlist.
+    const prerender: PrerenderRoute | undefined =
+      prerenderRoutes.get(pathname.replace(/\/+$/, '') || '/') ??
+      (pathname === '/' ? { route: '/', file: 'home.html' } : undefined);
     // Position/filter queries retain the existing request-specific share meta.
     if (prerender && !(prerender.kind === 'tool' && url.includes('?'))) {
       void servePrerenderedPage({

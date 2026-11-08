@@ -4,6 +4,7 @@ import { crawlerCopyProblems } from '../scripts/prerender-copy-check.mjs';
 import { renderAnalysisShellForPrerender } from './analysis-page.js';
 import { renderApiDocsShellForPrerender } from './api-docs-page.js';
 import { renderChampionsShellForPrerender } from './champions-page.js';
+import { buildContact } from './contact.js';
 import { renderContributeShellForPrerender } from './contribute-page.js';
 import { renderCreatorsShellForPrerender } from './creators-page.js';
 import { renderDataAboutShellForPrerender } from './data-page.js';
@@ -50,21 +51,21 @@ afterEach(() => {
 });
 
 const renderers = [
-  [renderAboutShellForPrerender, 'about.lede'],
-  [renderSourceShellForPrerender, 'source.intro'],
-  [renderFaqShellForPrerender, 'faq.playWebQuestion'],
-  [renderTermsShellForPrerender, 'terms.intro'],
-  [renderPrivacyShellForPrerender, 'privacy.intro'],
-  [renderContactShellForPrerender, 'contact.introAnon'],
-  [renderContributeShellForPrerender, 'contribute.intro'],
-  [renderCreatorsShellForPrerender, 'creators.intro'],
-  [renderChampionsShellForPrerender, 'champions.intro'],
-  [renderVideosShellForPrerender, 'videos.heading'],
-  [renderDataAboutShellForPrerender, 'data.aboutHeading'],
-  [renderForumEtiquetteShellForPrerender, 'forum.etiquetteLede'],
-  [renderImportShellForPrerender, 'review.import.lede'],
-  [renderGamesSearchShellForPrerender, 'historical.heading'],
-  [renderPracticeShellForPrerender, 'practice.subtitle'],
+  [renderAboutShellForPrerender, 'about.lede', '/about'],
+  [renderSourceShellForPrerender, 'source.intro', '/source'],
+  [renderFaqShellForPrerender, 'faq.playWebQuestion', '/faq'],
+  [renderTermsShellForPrerender, 'terms.intro', '/terms'],
+  [renderPrivacyShellForPrerender, 'privacy.intro', '/privacy'],
+  [renderContactShellForPrerender, 'contact.introAnon', '/contact'],
+  [renderContributeShellForPrerender, 'contribute.intro', '/contribute'],
+  [renderCreatorsShellForPrerender, 'creators.intro', '/creators'],
+  [renderChampionsShellForPrerender, 'champions.intro', '/champions'],
+  [renderVideosShellForPrerender, 'videos.heading', '/videos'],
+  [renderDataAboutShellForPrerender, 'data.aboutHeading', '/data/about'],
+  [renderForumEtiquetteShellForPrerender, 'forum.etiquetteLede', '/forum/etiquette'],
+  [renderImportShellForPrerender, 'review.import.lede', '/import'],
+  [renderGamesSearchShellForPrerender, 'historical.heading', '/games/search'],
+  [renderPracticeShellForPrerender, 'practice.subtitle', '/practice'],
 ] as const;
 
 it.each(SUPPORTED_LOCALES)(
@@ -101,6 +102,47 @@ it.each(SUPPORTED_LOCALES)(
     for (const html of [editor, analysis]) {
       expect(crawlerCopyProblems(html)).toEqual([]);
       expect(new DOMParser().parseFromString(html, 'text/html').querySelector('h1')).not.toBeNull();
+    }
+  },
+);
+
+function contentText(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  for (const node of doc.querySelectorAll(
+    'script,style,template,svg,header,nav,footer,.site-nav,#site-menu',
+  ))
+    node.remove();
+  return (doc.body.textContent ?? '').replace(/\s+/gu, ' ').trim();
+}
+
+it('static page renderers meet their unchanged manifest floors', async () => {
+  for (const [render, , path] of renderers) {
+    const entry = CRAWLER_CONTENT_MANIFEST.find((row) => row.path === path)!;
+    if (entry.knownGap) continue;
+    expect(contentText(await render('en')).length, entry.path).toBeGreaterThanOrEqual(
+      entry.minChars,
+    );
+  }
+});
+
+it.each(SUPPORTED_LOCALES)(
+  'contact includes visible field hints in %s crawler text',
+  async (locale) => {
+    await ensureLocaleCatalog(locale);
+    const live = buildContact(null, false, locale).el;
+    const html = await renderContactShellForPrerender(locale);
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    for (const field of live.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input[placeholder],textarea[placeholder]',
+    ))
+      expect(contentText(html)).toContain(field.placeholder);
+    expect(parsed.querySelector('[aria-hidden="true"] input[name="website"]')).toBeNull();
+    expect(crawlerCopyProblems(html)).toEqual([]);
+    if (locale === 'en') {
+      const entry = CRAWLER_CONTENT_MANIFEST.find((row) => row.path === '/contact')!;
+      // Planted regression: the same form with its hints only in attributes.
+      expect(contentText(live.outerHTML).length).toBeLessThan(entry.minChars);
+      expect(contentText(html).length).toBeGreaterThanOrEqual(entry.minChars);
     }
   },
 );
