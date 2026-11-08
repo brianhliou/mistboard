@@ -12,8 +12,10 @@
 //
 // Bot-ladder badges (per-level checkmarks, "beat the top bot") stay out:
 // skipped by Brian on 2026-09-15 (memory streaks_and_digest_settled), and the
-// design doc holds them for his word. Retired variants never award (the facts
-// leave their games and puzzles out). Awards are never revoked.
+// design doc holds them for his word. Fog legacy is the exception approved
+// 2026-11-07 (#967): beating Misty while the fog bots were live earns a badge,
+// even after those variants retire. Other facts leave retired variants' games
+// and puzzles out. Awards are never revoked.
 
 export type AchievementTrigger = 'game_end' | 'puzzle_attempt' | 'forum_post';
 
@@ -21,7 +23,7 @@ export type AchievementCategory = 'play' | 'puzzles' | 'community';
 
 // 'standard' achievements live on the achievements page only. 'badge' is kept
 // for the rarer, more important ones, which the profile also shows (at most
-// three). Nothing is a badge yet; the tier exists so one can be.
+// three). Fog legacy is the first badge.
 export type AchievementTier = 'standard' | 'badge';
 
 // What the ledger row points back to. 'study' and 'tournament' are reserved for
@@ -33,6 +35,7 @@ export type AchievementFactKey =
   | 'firstGame'
   | 'firstPvpGame'
   | 'firstRatedGame'
+  | 'firstFogMistyWin'
   | 'firstSolvedPuzzle'
   | 'firstForumPost';
 
@@ -115,6 +118,18 @@ export const ACHIEVEMENTS = [
     triggers: ['game_end'],
     facts: ['firstRatedGame'],
     qualify: firstOf('firstRatedGame'),
+  },
+  {
+    id: 'fog-legacy',
+    category: 'play',
+    icon: 'wins',
+    tier: 'badge',
+    titleKey: 'profile.achievementFogLegacy',
+    descriptionKey: 'profile.achievementFogLegacyDesc',
+    hintKey: 'profile.achievementFogLegacyHint',
+    triggers: ['game_end'],
+    facts: ['firstFogMistyWin'],
+    qualify: firstOf('firstFogMistyWin'),
   },
   {
     id: 'first-puzzle',

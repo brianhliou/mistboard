@@ -43,11 +43,23 @@ test('the first set holds no bot-ladder badge (skipped 2026-09-15)', () => {
   }
 });
 
-test('the starter set is all standard tier: badges are reserved for rarer feats', () => {
+test('fog legacy is the only badge, the approved exception for the retired fog bots', () => {
   assert.deepEqual(
     ACHIEVEMENTS.filter((definition) => definition.tier !== 'standard').map((d) => d.id),
-    [],
+    ['fog-legacy'],
   );
+});
+
+test('fog legacy awards the first Misty win through game end and the backfill', () => {
+  const facts: AchievementFacts = {
+    firstFogMistyWin: { at: AT, sourceKind: 'game', sourceId: 'fog-win' },
+  };
+  const expected = [
+    { achievementId: 'fog-legacy', awardedAt: AT, sourceKind: 'game', sourceId: 'fog-win' },
+  ];
+  assert.deepEqual(qualifyAchievements(facts, achievementsForTrigger('game_end')), expected);
+  assert.deepEqual(qualifyAchievements(facts), expected);
+  assert.deepEqual(qualifyAchievements(facts, achievementsForTrigger('puzzle_attempt')), []);
 });
 
 test('no facts, no awards', () => {
@@ -90,6 +102,7 @@ test('a trigger re-evaluates only its own definitions and derives only their fac
     'firstGame',
     'firstPvpGame',
     'firstRatedGame',
+    'firstFogMistyWin',
   ]);
   // The backfill: every definition, every fact once.
   assert.equal(achievementsForTrigger().length, ACHIEVEMENTS.length);

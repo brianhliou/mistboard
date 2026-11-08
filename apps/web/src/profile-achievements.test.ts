@@ -17,8 +17,8 @@ import {
   PREVIEW_FAMILY_STATES,
 } from './profile-achievements.js';
 
-// No definition is badge tier yet, so the tests add stand-ins: ids starting
-// `test-badge-` resolve to a badge-tier copy of first-game.
+// Extra badges exercise the three-badge limit alongside the real catalog.
+// Ids starting `test-badge-` resolve to a badge-tier copy of first-game.
 vi.mock('@mistboard/game', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@mistboard/game')>();
   return {
@@ -109,6 +109,25 @@ describe('achievements on the profile', () => {
       'test-badge-c',
     ]);
     expect(line?.querySelector('.profile-achievements-link')?.textContent).toBe('5 achievements');
+  });
+
+  it('shows Fog legacy in the profile badge row with localized name and description', () => {
+    for (const [locale, name] of [
+      ['en', 'Fog legacy'],
+      ['zh-Hans', '迷雾留名'],
+      ['zh-Hant', '迷霧留名'],
+    ] as const) {
+      const identity = buildProfileIdentity(
+        profile({ achievements: [{ id: 'fog-legacy', awardedAt: AUG(2) }] }),
+        locale,
+      );
+      const badge = identity.querySelector<HTMLElement>(
+        '.profile-achievement-badges [data-achievement-id="fog-legacy"]',
+      );
+      expect(badge?.textContent).toBe(name);
+      expect(badge?.title).toContain(t('profile.achievementFogLegacyDesc', {}, locale));
+      expect(identity.querySelector('.profile-achievements-link')).not.toBe(null);
+    }
   });
 
   it('a family counts once, from its first tier, however many tiers are held', () => {
@@ -248,6 +267,7 @@ describe('the achievements page', () => {
       'first-rated',
       'first-game',
       'first-pvp',
+      'fog-legacy',
       'wins',
     ]);
   });
