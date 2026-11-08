@@ -8,7 +8,7 @@ import { buildLobbyPanel } from './landing-play.js';
 // invariants worth pinning are honesty (labeled engine), separation from the
 // human seek table, and the bucket-stable rotation.
 
-// Six-hour bucket 82621: the ring's first window (bucket mod 7 = 0). The bucket picks WHICH variants
+// Six-hour bucket 82621: the ring's second window (bucket mod 3 = 1). The bucket picks WHICH variants
 // show and, per row, which rung of a Fairy-Stockfish ladder (one step either
 // side of the tier) and which of the variant's slower-or-equal clocks; the
 // Xiangqi ladder block itself is fixed (Levels 2/5/8 at 10+5) so it can be
@@ -52,15 +52,14 @@ describe('landing lobby bot seeks', () => {
       'pikafish-level-2|jieqi',
       'misty|banqi',
       'fairy-stockfish-level-5|duck-xiangqi',
-      'fairy-stockfish-level-4|crazyhouse-xiangqi',
-      'misty|dark-chess',
+      'misty|jungle',
+      'misty|jungle-flip',
     ]);
     // Fortress and Atomic Xiangqi left the rotation when they retired (2026-10-11).
     expect(new Set(signature).size).toBe(8);
     expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(6);
     // Every bot row advertises the bot default, 10+5, in every variant: it is
-    // the slowest pace, so the rotation has nothing slower to move to, and it
-    // clears the fog engines' 5s increment floor (#283).
+    // the slowest pace, so the rotation has nothing slower to move to.
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
     ).toEqual(Array(8).fill('10+5'));
@@ -105,7 +104,7 @@ describe('landing lobby bot seeks', () => {
     document.body.append(panel);
 
     const row = panel.querySelector<HTMLButtonElement>(
-      '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="dark-chess"]',
+      '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="jungle"]',
     );
     expect(row).not.toBeNull();
     row!.click();
@@ -119,7 +118,7 @@ describe('landing lobby bot seeks', () => {
     expect(JSON.parse(String((call![1] as RequestInit).body))).toEqual({
       mode: 'pve',
       botId: 'misty',
-      gameSpecId: 'dark-chess',
+      gameSpecId: 'jungle',
       // The bot default, not the house 3+2 (#283) — and the row's label
       // matches, so the click starts the clock it advertised.
       timeControl: { initialMs: 600_000, incrementMs: 5_000 },
@@ -167,7 +166,7 @@ describe('landing lobby bot seeks', () => {
               displayName: 'Misty',
               ratings: [
                 {
-                  gameSpecId: 'dark-chess',
+                  gameSpecId: 'jungle',
                   timeClass: 'blitz',
                   rating: 1874.4,
                   provisional: false,
@@ -194,7 +193,7 @@ describe('landing lobby bot seeks', () => {
     await flushPromises();
 
     const misty = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="dark-chess"] .landing-lobby-seed-rating',
+      '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="jungle"] .landing-lobby-seed-rating',
     );
     // The pool number never renders as text (#373): it reads as a player
     // rating and is not one. It rides the tooltip, labelled with its scale.
@@ -208,11 +207,11 @@ describe('landing lobby bot seeks', () => {
     expect(xiangqi?.textContent).toBe('—');
     expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
-    const crazyhouse = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="crazyhouse-xiangqi"] .landing-lobby-seed-rating',
+    const duck = panel.querySelector(
+      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-5"][data-game-spec="duck-xiangqi"] .landing-lobby-seed-rating',
     );
-    expect(crazyhouse?.textContent).toBe('—');
-    expect(crazyhouse?.getAttribute('title')).toBeNull();
+    expect(duck?.textContent).toBe('—');
+    expect(duck?.getAttribute('title')).toBeNull();
   });
 
   it('lists human seeks above the bots in one table with the same column grammar', async () => {

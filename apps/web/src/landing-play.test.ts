@@ -1,7 +1,13 @@
-import { canonicalVariantOrderIndex, type GameSpecId } from '@mistboard/game';
+import {
+  canonicalVariantOrderIndex,
+  DARK_CHESS_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
+  type GameSpecId,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildLandingPlayPanel,
+  buildLobbyPanel,
   buildLobbyRequestsWindow,
   type LandingRoomSetup,
   landingPlayDeepLinkAccepts,
@@ -51,6 +57,58 @@ describe('landing play panel', () => {
     setRoomNavigator(null);
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it.each(['true', 'false'])(
+    'keeps fog bots out of all hero lobby buckets and backfills (xiangqi mahjong enabled: %s)',
+    (mahjongEnabled) => {
+      vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', mahjongEnabled);
+      vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
+      vi.useFakeTimers({ toFake: ['Date'] });
+      const buckets: Set<string | undefined>[] = [];
+      for (let bucket = 0; bucket < 6; bucket++) {
+        vi.setSystemTime(new Date((82_620 + bucket) * 6 * 60 * 60 * 1_000));
+        const panel = buildLobbyPanel('en', { hydrate: false });
+        const specs = new Set(
+          [...panel.querySelectorAll<HTMLElement>('.landing-lobby-seed')].map(
+            (row) => row.dataset.gameSpec,
+          ),
+        );
+        expect(specs.size).toBe(6);
+        expect(specs).not.toContain(DARK_CHESS_SPEC_ID);
+        expect(specs).not.toContain(DARK_XIANGQI_SPEC_ID);
+        buckets.push(specs);
+      }
+      const expected = [
+        'xiangqi',
+        'jieqi',
+        'banqi',
+        'duck-xiangqi',
+        'crazyhouse-xiangqi',
+        'jungle',
+        'jungle-flip',
+        ...(mahjongEnabled === 'true' ? ['xiangqi-mahjong'] : []),
+      ];
+      for (let bucket = 0; bucket < buckets.length; bucket++) {
+        expect(new Set([...buckets[bucket]!, ...buckets[(bucket + 1) % buckets.length]!])).toEqual(
+          new Set(expected),
+        );
+      }
+    },
+  );
+
+  it('keeps both fog variants in the Play panel computer picker', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+    openPlaySetup(panel, 'Play a bot');
+
+    expect(variantPickerSpecs()).toContain(DARK_CHESS_SPEC_ID);
+    expect(variantPickerSpecs()).toContain(DARK_XIANGQI_SPEC_ID);
   });
 
   it('hides parked chess variants in production without client launch flags', () => {

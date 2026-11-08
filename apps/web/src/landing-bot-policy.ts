@@ -55,29 +55,30 @@ export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
   XIANGQI_MAHJONG_SPEC_ID,
 ];
 
-// Each bucket shows jieqi and three of these plus the two fixed heads (xiangqi,
-// fog chess), and any three CONSECUTIVE buckets must cover the whole shelf,
-// which is what stops a variant from disappearing for a whole day.
-//
-// Four wide (six variants with the two heads), which keeps the panel the
-// height it had once Atomic was unlisted (2026-10-06). Jieqi is the
-// most-played rotating variant (2026-09-17 read: 59% of counted human games),
-// so it holds a slot in every bucket. Xiangqi Mahjong made the others seven
-// for three slots: the window steps three along the ring each bucket, so the
-// cycle is seven long, each variant shows in three buckets of seven, and three
-// consecutive buckets (nine slots) see all seven. Where the play menu does not
-// offer Xiangqi Mahjong, the panel fills its slot from the rest of the shelf.
+// Each bucket shows xiangqi and jieqi plus four of these six, keeping six
+// distinct variants on the hero shelf. Stepping four along the ring repeats
+// after three buckets; each ring variant appears in two of the three, and any
+// two consecutive buckets cover the whole shelf. Fog games stay in the Play
+// panel's bot roster above. Where the play menu does not offer Xiangqi Mahjong,
+// the hero fills its slot from the rest of this shelf.
 const ROTATING_ANCHOR: LandingBotGameSpecId = JIEQI_SPEC_ID;
 const ROTATING_RING: readonly LandingBotGameSpecId[] = [
   BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
-  DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
 ];
-const ROTATING_WINDOW = 3;
+const ROTATING_WINDOW = 4;
+
+// Backfill uses the hero shelf too, so an unavailable variant cannot bring a
+// fog bot back into the hero from the broader Play panel roster.
+export const LANDING_HERO_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
+  XIANGQI_SPEC_ID,
+  ROTATING_ANCHOR,
+  ...ROTATING_RING,
+];
 
 // Xiangqi's Lobby block is a fixed difficulty ladder, not a rotation: the rungs
 // never change, so a returning player can climb them ("beat Level 5, try Level
@@ -119,8 +120,7 @@ const XIANGQI_ENGINE_ID_PREFIX = 'fairy-stockfish-xiangqi-level-';
 // Rungs stay within one step of the calibrated tier. Every rated ladder puts
 // Level 4 at random+400 (fortress, duck, atomic 2026-09-15), so a bucket that
 // showed Level 7 would be a worse first game than a stable Level 4; the band
-// is variety for a returning player, not a re-tuning. The cycle is three so it
-// never locks to the seven-cycle variant lineup.
+// is variety for a returning player, not a re-tuning. The rung cycle is three.
 const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 
 // The per-variant PvE memory holds a bot id after a one-click start (bot-play.ts)
@@ -197,16 +197,15 @@ export function landingBotRotationBucket(now: Date = new Date()): number {
   return Math.floor(now.getTime() / ROTATION_BUCKET_MS);
 }
 
-// Xiangqi, Fog Chess and jieqi are in every lineup. Three other slots slide
-// along the ring; any three consecutive buckets cover all eight rotating
-// variants.
+// Xiangqi and jieqi are in every lineup. Four other slots slide along the
+// six-variant ring; any two consecutive buckets cover all eight hero variants.
 export function landingBotLineup(bucket: number): readonly LandingBotGameSpecId[] {
   const start = positiveModulo(bucket, ROTATING_RING.length) * ROTATING_WINDOW;
   const rotating = Array.from(
     { length: ROTATING_WINDOW },
     (_, i) => ROTATING_RING[(start + i) % ROTATING_RING.length]!,
   );
-  return [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, ROTATING_ANCHOR, ...rotating];
+  return [XIANGQI_SPEC_ID, ROTATING_ANCHOR, ...rotating];
 }
 
 // The canonical offer for a variant: which opponent the Quick Pairing chip
