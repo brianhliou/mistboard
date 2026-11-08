@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-08',
+    kind: 'update',
+    headline: 'Jieqi now judges a perpetual chase.',
+    body: 'Perpetual check still loses, and now so does a perpetual chase: when a position repeats a third time with no check in the cycle, a player who attacked the same piece on every move loses. This follows the rule of the jqe engine. A game with no capture is now a draw after 40 moves each instead of 60. Games started before the change keep the old rules.',
+    href: '/rules/jieqi',
+    cta: 'Read the rules',
+  },
+  {
     date: '2026-11-07',
     kind: 'release',
     headline: 'Gomoku is open to everyone.',
