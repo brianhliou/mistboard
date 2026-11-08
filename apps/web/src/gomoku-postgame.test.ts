@@ -185,16 +185,98 @@ async function mount(
   const { currentLocale } = await import('./i18n/locale.js');
   const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
   await ensureLocaleCatalog(currentLocale());
-  const { mountGomokuPostgame } = await import('./gomoku-postgame.js');
+  const { webVariantTenants } = await import('./variant-tenant/registry.js');
+  const tenant = webVariantTenants().find((entry) => entry.gameRouteBase === '/gomoku/game')!;
   const root = document.querySelector<HTMLDivElement>('#app')!;
-  await mountGomokuPostgame(root, ROOM);
+  await tenant.mountPostgame!(root, ROOM);
   await vi.advanceTimersByTimeAsync(0);
   return { root, fetchSpy };
 }
 
 const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+const arrowKey = (name: string, target: Element = document.body) =>
+  target.dispatchEvent(
+    new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }),
+  );
+
+function restoreFromHistory() {
+  for (const type of ['pagehide', 'pageshow']) {
+    const event = new PageTransitionEvent(type, { persisted: true });
+    // happy-dom does not implement PageTransitionEvent.persisted yet.
+    Object.defineProperty(event, 'persisted', { value: true });
+    window.dispatchEvent(event);
+  }
+}
 
 describe('Gomoku finished-game review', () => {
+  it('steps the routed review with left/right arrows after a browser-history restore', async () => {
+    window.history.replaceState(null, '', `/gomoku/game/${ROOM}?ply=1`);
+    const { root } = await mount(fixture());
+    const shownPly = () => root.querySelectorAll('[data-piece-square]').length;
+    expect(shownPly()).toBe(1);
+    arrowKey('ArrowRight');
+    expect(shownPly()).toBe(2);
+    arrowKey('ArrowLeft');
+    expect(shownPly()).toBe(1);
+    restoreFromHistory();
+    arrowKey('ArrowRight');
+    expect(shownPly()).toBe(2);
+    arrowKey('ArrowLeft');
+    expect(shownPly()).toBe(1);
+    // A second cache visit must not consume the eventual teardown listener.
+    restoreFromHistory();
+    arrowKey('ArrowRight');
+    expect(shownPly()).toBe(2);
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }));
+    arrowKey('ArrowLeft');
+    expect(shownPly()).toBe(2);
+  });
+
+  it('keeps left/right steps on the current variation after a browser-history restore', async () => {
+    window.history.replaceState(null, '', `/gomoku/game/${ROOM}?ply=1`);
+    const { root } = await mount(fixture());
+    const stones = () =>
+      [...root.querySelectorAll('[data-piece-square]')].map((el) =>
+        el.getAttribute('data-piece-square'),
+      );
+    const place = (square: string) =>
+      root
+        .querySelector(`[data-square="${square}"] .gomoku-hit`)!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    place('o15');
+    place('n15');
+    restoreFromHistory();
+    arrowKey('ArrowLeft');
+    expect(stones()).toEqual(expect.arrayContaining(['a1', 'o15']));
+    expect(stones()).toHaveLength(2);
+    arrowKey('ArrowRight');
+    expect(stones()).toEqual(expect.arrayContaining(['a1', 'o15', 'n15']));
+    expect(stones()).toHaveLength(3);
+  });
+
+  it.each(['input', 'textarea', 'select', 'range', 'editable'])(
+    'leaves arrow keys to a focused %s after a browser-history restore',
+    async (kind) => {
+      window.history.replaceState(null, '', `/gomoku/game/${ROOM}?ply=1`);
+      const { root } = await mount(fixture());
+      restoreFromHistory();
+      const control = document.createElement(
+        kind === 'range' ? 'input' : kind === 'editable' ? 'div' : kind,
+      );
+      if (kind === 'range') (control as HTMLInputElement).type = 'range';
+      if (kind === 'editable') control.contentEditable = 'true';
+      root.append(control);
+      control.focus();
+      expect(document.activeElement).toBe(control);
+      expect(arrowKey('ArrowRight', control)).toBe(true);
+      expect(arrowKey('ArrowLeft', control)).toBe(true);
+      expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(1);
+      control.blur();
+      arrowKey('ArrowRight');
+      expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(2);
+    },
+  );
+
   it.each([
     ['black', 1],
     ['white', 1],
