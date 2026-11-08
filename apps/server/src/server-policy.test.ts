@@ -677,15 +677,26 @@ test('sitemap static routes are live client routes, never parked ones', () => {
       `sitemap advertises ${route}, but isClientRoute() rejects it so prod serves a 404 shell`,
     );
   }
-  for (const path of ['/about', '/zh-hans/study']) {
-    assert.ok(sitemapPathIsTracked(path), path);
-    assert.deepEqual(sitemapConformanceFailures(path, ['body below floor']), []);
+});
+
+test('sitemap conformance exempts only current tracked gaps from planted body failures', () => {
+  // A page can lose its knownGap as another #956 child lands. Check the current
+  // contracts rather than assuming a particular route will always be a gap.
+  const bodyFailures = ['body below floor'];
+  for (const path of SITEMAP_STATIC_ROUTES) {
+    const contract = CRAWLER_CONTENT_MANIFEST.find((entry) => entry.path === path);
+    assert.ok(contract, path);
+    assert.deepEqual(sitemapConformanceFailures(path, []), [], path);
+    assert.deepEqual(
+      sitemapConformanceFailures(path, bodyFailures),
+      contract.knownGap ? [] : bodyFailures,
+      path,
+    );
   }
   // Planted sitemap route: even a passing body needs an independent contract.
   assert.deepEqual(sitemapConformanceFailures('/planted-unclassified', []), [
     'sitemap route has no crawler manifest entry: /planted-unclassified',
   ]);
-  assert.deepEqual(sitemapConformanceFailures('/', ['body below floor']), ['body below floor']);
 });
 
 test('every static sitemap URL passes its crawler floor or has a tracked gap without sockets', async (t) => {
