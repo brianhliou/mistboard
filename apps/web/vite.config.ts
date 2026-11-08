@@ -47,8 +47,10 @@ function devWebSocketUrlForApiUrl(apiUrl: string): string | null {
 // SharedArrayBuffer. require-corp, the same COEP prod sends: WebKit ignores
 // credentialless, so a credentialless dev server can never show the engine on
 // iPhone/iPad or Safari (#276). In prod the server scopes these headers to the
-// review routes (server-http.ts); here they cover every response, which is
-// stricter.
+// review routes (server-http.ts). In dev they cover every response except
+// article documents: third-party Bilibili frames cannot opt into our COEP,
+// so those documents must stay non-isolated to preview them as in production.
+// Scripts and engine assets keep isolation even when loaded by an article.
 //
 // A middleware, not `server.headers`: Vite's static handler answers a
 // revalidation with a bare 304 that drops `server.headers`, and WebKit judges a
@@ -62,7 +64,16 @@ function crossOriginIsolationPlugin(): Plugin {
   return {
     name: 'mistboard-cross-origin-isolation',
     configureServer(server) {
-      server.middlewares.use((_req, res, next) => {
+      server.middlewares.use((req, res, next) => {
+        const pathname = (req.url ?? '').split('?')[0];
+        const articleDocument =
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          req.headers.accept?.includes('text/html') &&
+          /^\/(?:zh-han[st]\/)?(?:blog|rules)\/[a-z0-9-]+\/?$/.test(pathname);
+        if (articleDocument) {
+          next();
+          return;
+        }
         res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
         res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
         next();

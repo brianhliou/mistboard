@@ -146,3 +146,65 @@ for (const apiUrl of [undefined, 'http://127.0.0.1:3021']) {
     assert.equal(body, '{"ok":true}');
   });
 }
+
+async function devIsolationMiddleware(t) {
+  const config = await viteConfig(t);
+  const plugin = config.plugins.find((entry) => entry.name === 'mistboard-cross-origin-isolation');
+  let middleware;
+  plugin.configureServer({
+    middlewares: {
+      use: (handler) => {
+        middleware = handler;
+      },
+    },
+  });
+  return middleware;
+}
+
+for (const url of [
+  '/blog/xiangqi-lesson',
+  '/blog/xiangqi-lesson?preview=1',
+  '/rules/xiangqi',
+  '/zh-hans/blog/xiangqi-lesson',
+  '/zh-hant/rules/xiangqi',
+]) {
+  test(`Vite allows third-party embeds on article document ${url}`, async (t) => {
+    const middleware = await devIsolationMiddleware(t);
+    for (const method of ['GET', 'HEAD']) {
+      const req = { url, method, headers: { accept: 'text/html,application/xhtml+xml' } };
+      const res = new http.ServerResponse(req);
+      let passed = false;
+      middleware(req, res, () => {
+        passed = true;
+      });
+      assert.equal(passed, true);
+      assert.equal(res.getHeader('Cross-Origin-Embedder-Policy'), undefined);
+      assert.equal(res.getHeader('Cross-Origin-Opener-Policy'), undefined);
+    }
+  });
+}
+
+for (const [url, accept] of [
+  ['/analysis/xiangqi', 'text/html'],
+  ['/replay/game-id', 'text/html'],
+  ['/engine/pikafish/pikafish.js?v=1', '*/*'],
+  ['/engine/fairy-stockfish/stockfish.worker.js', '*/*'],
+  ['/engine/pikafish/pikafish.wasm', '*/*'],
+  ['/src/articles.ts', '*/*'],
+  ['/blog/xiangqi-lesson', '*/*'],
+  ['/rules/xiangqi', undefined],
+  ['/blog/worker.js', 'text/html'],
+  ['/blog/xiangqi-lesson/worker.js', 'text/html'],
+  ['/blog', 'text/html'],
+  ['/videos', 'text/html'],
+]) {
+  test(`Vite retains isolation on ${url} (${accept ?? 'no Accept header'}), including 304s`, async (t) => {
+    const middleware = await devIsolationMiddleware(t);
+    const req = { url, method: 'GET', headers: { accept } };
+    const res = new http.ServerResponse(req);
+    middleware(req, res, () => {});
+    res.writeHead(304);
+    assert.equal(res.getHeader('Cross-Origin-Embedder-Policy'), 'require-corp');
+    assert.equal(res.getHeader('Cross-Origin-Opener-Policy'), 'same-origin');
+  });
+}
