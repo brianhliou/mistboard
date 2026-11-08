@@ -75,6 +75,13 @@ export function fullWeeks(record: TenThousandGamesRecord) {
   return record.weeks.slice(0, -1);
 }
 
+// The Sunday that ends the chart's last full week.
+export function lastFullWeekEnd(record: TenThousandGamesRecord): string {
+  const weeks = fullWeeks(record);
+  const start = Date.parse(`${weeks[weeks.length - 1].weekStart}T00:00:00Z`);
+  return new Date(start + 6 * 86_400_000).toISOString().slice(0, 10);
+}
+
 // The week from which every full week has had at least 1,000 games.
 export function firstLastingThousandWeek(record: TenThousandGamesRecord) {
   const weeks = fullWeeks(record);
@@ -89,9 +96,9 @@ export function botsWithoutARow(record: TenThousandGamesRecord): string[] {
     .map((b) => `${b.bot} in ${b.variant}`);
 }
 
-// Every bot, most played first. The games left over were against engines from
-// June that predate the bot accounts, and they take the last row so the table
-// adds up to the total the prose gives.
+// Every bot, most played first. A handful of games from June were against
+// engines that predate the bot accounts; they count in the prose totals and
+// have no row.
 export function botRows(record: TenThousandGamesRecord) {
   const rows = BOT_ROWS.map(({ name, variant, has }) => {
     const levels = record.bots.filter(has);
@@ -102,10 +109,7 @@ export function botRows(record: TenThousandGamesRecord) {
       peopleWon: levels.reduce((sum, b) => sum + b.peopleWon, 0),
     };
   }).sort((a, b) => b.games - a.games);
-  const games = record.gamesAgainstBots - rows.reduce((sum, r) => sum + r.games, 0);
-  const peopleWon = record.gamesWonAgainstBots - rows.reduce((sum, r) => sum + r.peopleWon, 0);
-  if (games <= 0) return rows;
-  return [...rows, { name: 'Earlier engines', variant: 'Fog Chess', games, peopleWon }];
+  return rows;
 }
 
 function jieqiLevel(record: TenThousandGamesRecord, bot: string): string {
@@ -193,7 +197,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
       {
         kind: 'raw-svg',
         svg: weeklyGamesChartSvg(fullWeeks(record)),
-        caption: 'Finished games each week since June 1, Monday to Sunday.',
+        caption: `Finished games each week, Monday to Sunday, from June 1 to ${longDate(lastFullWeekEnd(record))}.`,
       },
       {
         kind: 'paragraph',
@@ -230,10 +234,6 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
           {
             kind: 'paragraph',
             text: `${count(record.gamesAgainstBots)} games were against a bot. ${count(record.gamesBetweenPeople)} were between two people, up from ${count(record.atOneThousand.gamesBetweenPeople)} in the first 1,000.`,
-          },
-          {
-            kind: 'paragraph',
-            text: 'To play a person, use Find opponent on the homepage, challenge a friend, or start a [correspondence game](/correspondence).',
           },
         ],
       },

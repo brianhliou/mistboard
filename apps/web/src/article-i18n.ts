@@ -295,8 +295,9 @@ const ZH_HANS: Record<string, string> = {
     '国家和地区根据发起对局的各个浏览器所用的网络判定，因此 VPN 可能让玩家显示在别处。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盘棋用了四个月。接下来的 9,000 盘只用了 39 天。',
-  'Finished games each week since June 1, Monday to Sunday.':
-    '从 6 月 1 日起，每周一至周日完成的对局数。',
+  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
+    '6 月 1 日至 11 月 1 日每周（周一至周日）完成的对局数。',
+  'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
   'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
     '从 10 月 5 日那一周起，每周都超过了 1,000 盘。最多的是 10 月 26 日那一周，共 2,647 盘，其中一位玩家下了 557 盘。[统计页面](/stats)会持续更新计数。',
   'What people played': '大家下了什么棋',
@@ -319,8 +320,6 @@ const ZH_HANS: Record<string, string> = {
     '有 15 位玩家下了至少 100 盘，他们参与了全部对局的 40%。下得最多的一位已经下了 632 盘。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
     '9,913 盘是和电脑下的。两个人对下的有 98 盘，最初的 1,000 盘中则只有 4 盘。',
-  'To play a person, use Find opponent on the homepage, challenge a friend, or start a [correspondence game](/correspondence).':
-    '想和真人对弈，可以使用首页的「寻找对手」、向朋友发起挑战，或开始一盘[通信对局](/correspondence)。',
   'How often people beat the bots': '玩家赢过电脑的比例',
   "People won 2,055 of their 9,913 games against bots. The table lists every bot, most played first, with all of a bot's levels counted together.":
     '玩家在与电脑的 9,913 盘对局中赢了 2,055 盘。下表列出所有电脑对手，按对局数从多到少排列，同一电脑的各个级别合并统计。',
@@ -333,7 +332,6 @@ const ZH_HANS: Record<string, string> = {
   'Xiangqi and more': '象棋等',
   'General Blunder': 'General Blunder',
   'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 级）',
-  'Earlier engines': '早期引擎',
   'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
     '级别的影响很大：在揭棋中，玩家对皮卡鱼第 1 级的胜率是 67%，对第 8 级则是 5%。每个电脑遇到的玩家不同，所以上表不能用来评定棋力。专门求败的 General Blunder 下了 34 盘，也只输了 23 盘。',
   'How games ended': '对局如何结束',
@@ -6890,8 +6888,9 @@ const ZH_HANT: Record<string, string> = {
     '國家和地區根據發起對局的各個瀏覽器所用的網路判定，因此 VPN 可能讓玩家顯示在別處。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盤棋用了四個月。接下來的 9,000 盤只用了 39 天。',
-  'Finished games each week since June 1, Monday to Sunday.':
-    '從 6 月 1 日起，每週一至週日完成的對局數。',
+  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
+    '6 月 1 日至 11 月 1 日每週（週一至週日）完成的對局數。',
+  'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
   'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
     '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,647 盤，其中一位玩家下了 557 盤。[統計頁面](/stats)會持續更新計數。',
   'What people played': '大家下了什麼棋',
@@ -6914,8 +6913,6 @@ const ZH_HANT: Record<string, string> = {
     '有 15 位玩家下了至少 100 盤，他們參與了全部對局的 40%。下得最多的一位已經下了 632 盤。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
     '9,913 盤是和電腦下的。兩個人對下的有 98 盤，最初的 1,000 盤中則只有 4 盤。',
-  'To play a person, use Find opponent on the homepage, challenge a friend, or start a [correspondence game](/correspondence).':
-    '想和真人對弈，可以使用首頁的「尋找對手」、向朋友發起挑戰，或開始一盤[通信對局](/correspondence)。',
   'How often people beat the bots': '玩家贏過電腦的比例',
   "People won 2,055 of their 9,913 games against bots. The table lists every bot, most played first, with all of a bot's levels counted together.":
     '玩家在與電腦的 9,913 盤對局中贏了 2,055 盤。下表列出所有電腦對手，按對局數從多到少排列，同一電腦的各個級別合併統計。',
@@ -6928,7 +6925,6 @@ const ZH_HANT: Record<string, string> = {
   'Xiangqi and more': '象棋等',
   'General Blunder': 'General Blunder',
   'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 級）',
-  'Earlier engines': '早期引擎',
   'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
     '級別的影響很大：在揭棋中，玩家對皮卡魚第 1 級的勝率是 67%，對第 8 級則是 5%。每個電腦遇到的玩家不同，所以上表不能用來評定棋力。專門求敗的 General Blunder 下了 34 盤，也只輸了 23 盤。',
   'How games ended': '對局如何結束',
