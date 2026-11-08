@@ -38,7 +38,8 @@ const asJson = args.includes('--json');
 
 // Served with body markup but absent from the sitemap (noindex, or not a page
 // a crawler should land on), so they are named here.
-const EXTRA_PATHS = [
+export const EXTRA_PATHS = [
+  '/bot/pikafish',
   '/',
   '/players',
   '/players/teams',
@@ -84,6 +85,21 @@ export function paintsBareCopy(html) {
   return text.length > 0;
 }
 
+export function boardPageSamples({ games = [], puzzles = [], players = [] }) {
+  const historical = games.find((game) => game.kind === 'historical');
+  const puzzle = puzzles[0];
+  const player = players[0];
+  if (!historical?.id || !puzzle?.id || !player?.handle)
+    throw new Error(
+      'First-paint board coverage needs a public historical game, puzzle and profile',
+    );
+  return [
+    `/historical-xiangqi/game/${encodeURIComponent(historical.id)}`,
+    `/puzzles/${encodeURIComponent(puzzle.id)}`,
+    `/@/${encodeURIComponent(player.handle)}`,
+  ];
+}
+
 async function fetchText(url) {
   const res = await fetch(url, { headers: { 'user-agent': 'mistboard-css-coverage' } });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
@@ -98,6 +114,20 @@ async function sitemapPaths() {
     const child = loc.endsWith('.xml') ? locs(await fetchText(loc)) : [loc];
     for (const url of child) out.push(new URL(url).pathname);
   }
+  // These shapes have no sitemap section yet (#959). Take public samples from
+  // the same APIs the client uses; never probe private/live room state.
+  const games = JSON.parse(
+    await fetchText(`${base}/api/historical-xiangqi/games?source=archive&limit=1`),
+  );
+  const puzzles = JSON.parse(await fetchText(`${base}/api/puzzles?variant=xiangqi`));
+  const players = JSON.parse(await fetchText(`${base}/api/leaderboard?variant=xiangqi&limit=1`));
+  out.push(
+    ...boardPageSamples({
+      games: games.games,
+      puzzles: puzzles.puzzles,
+      players: players.leaderboard,
+    }),
+  );
   return out;
 }
 

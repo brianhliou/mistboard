@@ -1720,7 +1720,12 @@ test('public puzzle previews name the variant, side and goal without solution hi
         assert.ok(response.body.includes(`${tag} content="${description}">`));
       }
       assert.match(response.body, /<meta name="robots" content="max-image-preview:large"/);
-      assert.doesNotMatch(response.body, /noindex|SOLUTION_HINT|cannon|a1|a2|a3|a9|a8|utm_source/);
+      assert.doesNotMatch(
+        response.body.split('</head>')[0]!,
+        /noindex|SOLUTION_HINT|cannon|a1|a2|a3|a9|a8|utm_source/,
+      );
+      assert.match(response.body, /class="crawler-copy"/);
+      assert.match(response.body, /<details><summary>Solution<\/summary>/);
       assert.ok(
         response.body.includes(
           `<meta property="og:url" content="https://mistboard.com/puzzles/${puzzle.id}">`,
@@ -1736,7 +1741,7 @@ test('public puzzle previews name the variant, side and goal without solution hi
       expectedBody = response.body;
     }
     // Neither solution moves, editorial hints nor source/board data may influence
-    // ANY byte of the shell. Only the public goal's move count is used.
+    // byte of the preview head. The body carries a closed solution (#959).
     const altered = captureResponse();
     await serveSpaShellWithRoutePreloads({
       response: altered,
@@ -1753,7 +1758,11 @@ test('public puzzle previews name the variant, side and goal without solution hi
           solution: puzzle.solution.map(() => ({ from: 'i1', to: 'i2' })),
         }) as XiangqiPuzzle | JunglePuzzle,
     });
-    assert.equal(altered.body, expectedBody);
+    assert.equal(
+      altered.body.split('</head>')[0],
+      expectedBody?.split('</head>')[0],
+      'solution data must not affect the preview head',
+    );
   }
 });
 
@@ -2682,7 +2691,7 @@ test('profile link previews name public accounts using only public profile facts
       response.body,
       /noindex|PROFILE_\w+_SENTINEL|utm_source|\/og\/(game|study)/,
     );
-    assert.match(response.body, /<div id="app"><\/div>/);
+    assert.match(response.body, /<div id="app"><div class="crawler-copy"><main><h1>/);
   }
 });
 

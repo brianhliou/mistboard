@@ -5,7 +5,10 @@ import { XIANGQI_BROADCAST_SCHEMA } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { type BroadcastPageSources, broadcastPageFor } from './broadcast-pages.js';
 import type { StudyWithChapters } from './persistence.js';
+import type { BotProfilePage } from './persistence-bots.js';
+import type { ProfileGameRecord } from './persistence-games.js';
 import type { HistoricalXiangqiGameInput } from './persistence-historical-xiangqi.js';
+import type { UserProfile } from './persistence-profiles.js';
 import type { XiangqiPlayerRecord } from './persistence-xiangqi-players.js';
 import { playerPageFor } from './player-pages.js';
 import { EMPTY_PLAYER_REFERENCE } from './player-reference.js';
@@ -46,7 +49,9 @@ export const CRAWLER_STUDY: StudyWithChapters = {
       root: {
         version: 1,
         root: {
-          children: [],
+          children: [
+            { id: 'h3e3', uci: 'h3e3', children: [{ id: 'h8e8', uci: 'h8e8', children: [] }] },
+          ],
           annotations: {
             comments: [
               {
@@ -81,7 +86,12 @@ export const CRAWLER_HISTORICAL_GAME: HistoricalXiangqiGameInput = {
   playedOn: '2026-11-07',
   result: '1-0',
   moveFormat: 'coordinate',
-  moves: [],
+  moves: [
+    { from: 'h3', to: 'e3' },
+    { from: 'h8', to: 'e8' },
+    { from: 'h1', to: 'g3' },
+    { from: 'h10', to: 'g8' },
+  ],
   visibility: 'public',
 };
 
@@ -136,8 +146,8 @@ const board = {
   black: { name: '尹昇', nameEn: 'Yin Sheng' },
   status: 'complete' as const,
   result: '1-0' as const,
-  moves: [],
-  plyCount: 0,
+  moves: [...CRAWLER_HISTORICAL_GAME.moves],
+  plyCount: CRAWLER_HISTORICAL_GAME.moves.length,
   finalStatus: {
     type: 'finished' as const,
     winner: 'red' as const,
@@ -149,6 +159,9 @@ const board = {
 };
 
 export function crawlerFixtureSources(): CrawlerPageSources {
+  // Explicit public launch flags in this test-only serving set. No production reads.
+  process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
+  process.env.MISTBOARD_JIEQI_ENABLED = 'true';
   const broadcasts: BroadcastPageSources = {
     listTours: async () => [tour],
     getTour: async (slug) => (slug === tour.slug ? tour : null),
@@ -173,21 +186,144 @@ export function crawlerFixtureSources(): CrawlerPageSources {
       },
     ],
     getStudy: async (id) => (id === CRAWLER_STUDY.id ? CRAWLER_STUDY : null),
-    playerPage: (path) =>
-      playerPageFor(path, {
-        listPlayers: async () => [player],
-        listBoards: async () => [],
-        reference: async () => ({
-          ...EMPTY_PLAYER_REFERENCE,
-          points: {
-            [player.name]: { points: 3105, rank: 1, group: 'men', of: 50, listDate: '2026-11-07' },
-          },
-          ratings: { [player.name]: { rating: 2650, rank: 3, of: 151, listLabel: '2026-11-07' } },
-        }),
-      }),
-    broadcastPage: (path) => broadcastPageFor(path, broadcasts),
+    playerPage: (path, locale) =>
+      playerPageFor(
+        path,
+        {
+          listPlayers: async () => [player],
+          listBoards: async () => [
+            {
+              boardId: board.id,
+              tourSlug: tour.slug,
+              tourName: tour.name,
+              tourNameEn: tour.nameEn,
+              roundId: round.id,
+              roundName: round.name,
+              roundNameEn: round.nameEn,
+              playedOn: '2026-11-07',
+              colour: 'red',
+              opponent: { name: board.black.name, nameEn: board.black.nameEn, slug: null },
+              result: '1-0',
+              outcome: 'win',
+              plyCount: board.plyCount,
+              sourceUrl: null,
+              opening: null,
+            },
+          ],
+          reference: async () => ({
+            ...EMPTY_PLAYER_REFERENCE,
+            points: {
+              [player.name]: {
+                points: 3105,
+                rank: 1,
+                group: 'men',
+                of: 50,
+                listDate: '2026-11-07',
+              },
+            },
+            ratings: { [player.name]: { rating: 2650, rank: 3, of: 151, listLabel: '2026-11-07' } },
+          }),
+        },
+        locale,
+      ),
+    broadcastPage: (path, locale) => broadcastPageFor(path, broadcasts, locale),
     puzzle: async (id) => (id === 'crawler-puzzle' || id === puzzle.id ? puzzle : null),
-    // Historical games currently have no raw-body renderer. Keep that gap in
-    // the manifest; seeding its record must not invent a passing crawler body.
+    historicalGame: async (id) =>
+      id === CRAWLER_HISTORICAL_GAME.id ? CRAWLER_HISTORICAL_GAME : null,
+    profile: async (handle) => (handle === CRAWLER_PROFILE.user.handle ? CRAWLER_PROFILE : null),
+    bot: async (id) => (id === CRAWLER_BOT.id ? CRAWLER_BOT : null),
   };
 }
+
+export const CRAWLER_PUBLIC_GAME: ProfileGameRecord = {
+  roomId: 'crawler-game',
+  variant: 'xiangqi',
+  mode: 'pvp',
+  result: '1-0',
+  termination: 'resignation',
+  plyCount: 4,
+  startedAt: at,
+  endedAt: at,
+  whiteName: 'Crawler player',
+  blackName: 'Public opponent',
+  corpusId: null,
+  rated: true,
+  visibility: 'public',
+  participants: [],
+  playerColor: 'red',
+  initialMs: 180000,
+  incrementMs: 2000,
+};
+export const CRAWLER_PROFILE: UserProfile = {
+  user: {
+    handle: 'crawler-player',
+    displayName: 'Crawler player',
+    bio: '',
+    location: '',
+    profileLinks: [],
+    profileVisibility: 'public',
+    accountRole: 'player',
+    isFounder: false,
+    title: null,
+    flair: null,
+    patronSince: null,
+    createdAt: at,
+  },
+  ratings: [
+    {
+      variant: 'xiangqi',
+      timeClass: 'blitz',
+      eloRating: 1742,
+      ratedGamesPlayed: 12,
+      totalGamesPlayed: 15,
+      provisional: true,
+    },
+  ],
+  puzzleRatings: [],
+  puzzleStreak: { current: 0, best: 0 },
+  achievements: [],
+  games: [CRAWLER_PUBLIC_GAME],
+  gamesTotal: 1,
+};
+export const CRAWLER_BOT: BotProfilePage = {
+  id: 'pikafish',
+  displayName: 'Pikafish',
+  bio: 'Pikafish',
+  ownerType: 'system',
+  ownerUserId: null,
+  activeEngineId: 'pikafish',
+  defaultGameSpecId: 'xiangqi',
+  supportedGameSpecIds: ['xiangqi', 'jieqi'],
+  play: {
+    mode: 'pve',
+    gameSpecId: 'xiangqi',
+    engineId: 'pikafish',
+    timeControl: { initialMs: 600000, incrementMs: 5000 },
+    preferredColor: 'random',
+  },
+  rating: null,
+  ratings: [
+    {
+      gameSpecId: 'xiangqi',
+      timeClass: 'blitz',
+      rating: 2700,
+      ratingDeviation: null,
+      games: 40,
+      source: 'eve-anchor',
+      sourceRef: null,
+      createdAt: at,
+      provisional: false,
+    },
+  ],
+  visibility: 'public',
+  createdAt: at,
+  updatedAt: at,
+  gamesTotal: 20,
+  record: { games: 20, wins: 12, losses: 6, draws: 2 },
+  recordsByGameSpecId: {
+    xiangqi: { games: 20, wins: 12, losses: 6, draws: 2 },
+    jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+  },
+  games: [CRAWLER_PUBLIC_GAME],
+  gamesByGameSpecId: { xiangqi: [CRAWLER_PUBLIC_GAME], jieqi: [] },
+};

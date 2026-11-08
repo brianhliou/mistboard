@@ -16,20 +16,16 @@
 // discarded milliseconds after the client boots, so its only jobs are to be
 // crawlable, to be honest about what the study contains, and to be small.
 
-import { maybeGameSpecForId } from '@mistboard/game';
+import { maybeGameSpecForId, serializedTreeMainline, serializedTreeRootFen } from '@mistboard/game';
+import { boardTextParts } from './board-text-body.js';
+import { escapeHtml } from './crawler-html.js';
 import type { StudyChapterRecord, StudyRecord, StudyWithChapters } from './persistence-studies.js';
 import { variantName } from './player-email.js';
 import { SEO_TITLE_MIN, seoMetaLengthProblems, seoTextLength } from './seo-meta-length.js';
 
 export type StudyPageLocale = 'en' | 'zh-Hans' | 'zh-Hant';
 
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
+export { escapeHtml } from './crawler-html.js';
 
 /** Pick a localized string off a `115_study_i18n` overlay, falling back to the
  *  base column. Mirrors study-i18n.ts on the client; kept here rather than
@@ -520,6 +516,16 @@ function renderChapterBody(params: {
   for (const comment of mainlineComments(chapter.root, locale, MAX_CHAPTER_PAGE_COMMENTS)) {
     parts.push(`<p>${escapeHtml(comment)}</p>`);
   }
+  parts.push(
+    boardTextParts({
+      variant: chapter.variant,
+      publicStudy: true,
+      heading: chapterName,
+      moves: serializedTreeMainline(chapter.root),
+      fen: serializedTreeRootFen(chapter.root),
+      locale,
+    }),
+  );
   return `<main>${parts.join('')}</main>`;
 }
 

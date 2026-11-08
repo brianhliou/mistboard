@@ -8,6 +8,15 @@ import {
   prerenderedIndexIsStale,
   readArticleSchedule,
 } from './article-schedule.js';
+import {
+  boardLocale,
+  botBoardPage,
+  historicalBoardPage,
+  profileBoardBody,
+  puzzleBoardBody,
+  puzzleHeading,
+} from './board-pages.js';
+import { type BoardLocale, boardCopy, boardTimeClass } from './board-text-copy.js';
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
@@ -28,6 +37,9 @@ import {
   publicPositionFen,
 } from './og-position.js';
 import * as persistence from './persistence.js';
+import type { BotProfilePage } from './persistence-bots.js';
+import type { HistoricalXiangqiGameInput } from './persistence-historical-xiangqi.js';
+import { variantName } from './player-email.js';
 import {
   cachedPlayers,
   livePlayerPage,
@@ -753,11 +765,12 @@ async function forumRoutePage(
 
 // Like the public profile API, always read as an anonymous visitor. Account
 // play locks and stats exclusions do not hide profiles; profile visibility
-// does. Never serialize games, puzzle content or account-only fields here.
+// does. The body whitelists public game summaries, never replay state or account-only fields.
 async function profileRoutePage(
   pathname: string,
   lookupProfile: typeof persistence.getUserProfileByHandle,
-): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  locale: BoardLocale,
+): Promise<{ meta?: RoutePageMeta; body?: string; noindex: boolean } | null> {
   if (!pathname.startsWith('/@/')) return null;
   const match = /^\/@\/([^/]+)$/.exec(pathname.replace(/\/+$/, ''));
   if (!match) return { noindex: true };
@@ -785,30 +798,37 @@ async function profileRoutePage(
       .filter((rating) => rating.eloRating !== null && rating.ratedGamesPlayed > 0)
       .map(
         (rating) =>
-          `${rating.timeClass} rating ${rating.eloRating}${rating.provisional ? '?' : ''}`,
+          `${locale === 'en' ? `${rating.timeClass} rating` : `${boardTimeClass(rating.timeClass, locale)} ${boardCopy(locale, 'bots.ratings')}`} ${rating.eloRating}${rating.provisional ? '?' : ''}`,
       );
-    return [`${spec.publicName}${ratings.length ? ` (${ratings.join(', ')})` : ''}`];
+    return [
+      `${locale === 'en' ? spec.publicName : variantName(spec.id, locale)}${ratings.length ? ` (${ratings.join(', ')})` : ''}`,
+    ];
   });
   return {
     noindex: false,
     meta: {
       title: `${profile.user.displayName} (@${profile.user.handle}) · Mistboard`,
-      description: facts.length
-        ? `Plays ${facts.join(', ')} on Mistboard.`
-        : `View ${profile.user.displayName}'s public profile on Mistboard.`,
+      description:
+        locale !== 'en'
+          ? facts.join(' · ')
+          : facts.length
+            ? `Plays ${facts.join(', ')} on Mistboard.`
+            : `View ${profile.user.displayName}'s public profile on Mistboard.`,
       urlPath: `/@/${encodeURIComponent(profile.user.handle)}`,
     },
+    body: profileBoardBody(profile, facts, locale),
   };
 }
 
 // Resolve through the public API's serving set: withheld/retired puzzles never
 // get meta or a canonical. One read supplies both the preview and the full-id
 // canonical shared by short-code links. No editorial title, motifs, board,
-// source game or solution moves enter the shell; those can give away an answer.
+// source game or solution moves enter the preview head; the body gates the solution in details.
 async function puzzleRoutePage(
   pathname: string,
   lookupPuzzle: (idOrShortCode: string) => Promise<PublicPuzzle | null>,
-): Promise<{ meta?: RoutePageMeta; noindex: boolean } | null> {
+  locale: BoardLocale,
+): Promise<{ meta?: RoutePageMeta; body?: string; noindex: boolean } | null> {
   const match = PUZZLE_DEEP_LINK.exec(pathname.replace(/\/+$/, ''));
   if (!match) return null;
   let puzzle: PublicPuzzle | null;
@@ -856,10 +876,17 @@ async function puzzleRoutePage(
   return {
     noindex: false,
     meta: {
-      title: `${variant} puzzle: ${goal} | Mistboard`,
-      description: `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`,
+      title:
+        locale === 'en'
+          ? `${variant} puzzle: ${goal} | Mistboard`
+          : `${puzzleHeading(puzzle, locale)} | Mistboard`,
+      description:
+        locale === 'en'
+          ? `${side} to move. ${prompt} in this ${variant} puzzle on Mistboard. Play your moves on the board and check your solution.`
+          : `${boardCopy(locale, 'puzzle.toMove').replace('{color}', boardCopy(locale, puzzle.initial.status.turn === 'red' ? 'replay.red' : 'replay.black'))}。${boardCopy(locale, 'puzzle.findBestMove')}`,
       urlPath: `/puzzles/${encodeURIComponent(puzzle.id)}`,
     },
+    body: await puzzleBoardBody(puzzle, puzzleHeading(puzzle, locale), locale),
   };
 }
 
@@ -924,14 +951,16 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Override the player-page lookup (tests); the default reads persistence. */
-  playerPage?: (pathname: string) => Promise<PlayerPage | null>;
+  playerPage?: (pathname: string, locale?: BoardLocale) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
-  broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
+  broadcastPage?: (pathname: string, locale?: BoardLocale) => Promise<BroadcastPage | null>;
   /** Override the public puzzle lookup (tests); the default is the one
    *  /api/puzzles/:id uses, excluding unpublished/withheld puzzles. */
   puzzle?: (idOrShortCode: string) => Promise<PublicPuzzle | null>;
   /** Override the profile API's anonymous, visibility-gated read (tests). */
   profile?: typeof persistence.getUserProfileByHandle;
+  historicalGame?: (id: string) => Promise<HistoricalXiangqiGameInput | null>;
+  bot?: (id: string) => Promise<BotProfilePage | null>;
   /** Override the public forum reads (tests); previews always read anonymously. */
   forumTopic?: typeof persistence.getForumTopic;
   forumCategories?: typeof persistence.listForumCategories;
@@ -954,20 +983,23 @@ export async function serveSpaShellWithRoutePreloads(params: {
     params.response.end();
     return true;
   }
+  const locale = boardLocale(params.search);
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
   // the archive does not know keeps the generic meta and is kept out of the
   // index, the way an unlisted study is.
   const playerPage = await (
-    params.playerPage ?? ((pathname: string) => livePlayerPage(pathname, params.staticDir))
-  )(params.pathname).catch(() => null);
+    params.playerPage ??
+    ((pathname: string, pageLocale?: BoardLocale) =>
+      livePlayerPage(pathname, params.staticDir, pageLocale))
+  )(params.pathname, locale).catch(() => null);
   // A broadcast index, event, round or game (broadcast-pages.ts) rides the same
   // slot: before 2026-10-17 all 195 sitemap-broadcasts URLs served an empty
   // #app with no canonical, and Google folded them as duplicates.
   const player =
     playerPage ??
-    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
+    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname, locale).catch(() => null));
   // Tenant review pages distinguish missing ids from live names-only previews
   // and finished cards. Keep the existing override for callers supplying meta.
   const tenantGame =
@@ -978,16 +1010,20 @@ export async function serveSpaShellWithRoutePreloads(params: {
     await serveNotFoundShell(params);
     return true;
   }
+  const historical = await historicalBoardPage(params.pathname, locale, params.historicalGame);
+  const bot = await botBoardPage(params.pathname, locale, params.bot);
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
-  const gameMeta = player?.meta
-    ? null
-    : tenantGame
-      ? tenantGame.meta
-      : await lookupGameMeta(params.pathname).catch(() => null);
-  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById);
+  const gameMeta =
+    player?.meta || bot?.meta
+      ? null
+      : tenantGame
+        ? tenantGame.meta
+        : await lookupGameMeta(params.pathname).catch(() => null);
+  const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById, locale);
   const profile = await profileRoutePage(
     params.pathname,
     params.profile ?? persistence.getUserProfileByHandle,
+    locale,
   );
   const forum = await forumRoutePage(
     params.pathname,
@@ -996,6 +1032,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   );
   const positionMeta =
     player?.meta ??
+    historical?.meta ??
+    bot?.meta ??
     gameMeta ??
     puzzle?.meta ??
     profile?.meta ??
@@ -1009,10 +1047,14 @@ export async function serveSpaShellWithRoutePreloads(params: {
     isNoindexRoute(params.pathname) ||
     tenantGame?.noindex === true ||
     player?.noindex === true ||
+    historical?.noindex === true ||
+    bot?.noindex === true ||
     puzzle?.noindex === true ||
     profile?.noindex === true ||
     forum?.noindex === true;
   const canonicalPath =
+    historical?.meta?.urlPath ??
+    bot?.meta?.urlPath ??
     puzzle?.meta?.urlPath ??
     profile?.meta?.urlPath ??
     forum?.meta?.urlPath ??
@@ -1035,6 +1077,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
         : undefined,
     });
   }
+  if (locale !== 'en' && (historical || puzzle || profile || bot))
+    html = html.replace('<html lang="en">', `<html lang="${locale}">`);
   if (spaMeta?.htmlLang) {
     html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
   }
@@ -1086,6 +1130,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // the root on mount, so the two never show together.
   const body =
     player?.body ??
+    historical?.body ??
+    puzzle?.body ??
+    profile?.body ??
+    bot?.body ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));

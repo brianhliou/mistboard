@@ -16,6 +16,8 @@
 // URLs, poll state or sync logs. The client clears the root on mount, so the
 // body never shows beside the rendered page.
 
+import { boardTextParts } from './board-text-body.js';
+import type { BoardLocale } from './board-text-copy.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import * as persistence from './persistence.js';
 import type {
@@ -360,6 +362,7 @@ export function renderBoardBody(
   tour: StoredXiangqiBroadcastTour | null,
   round: StoredXiangqiBroadcastRound | null,
   slugOf: SlugOf,
+  locale: BoardLocale = 'en',
 ): string {
   const crumbs = ['<a href="/broadcast/xiangqi">Xiangqi broadcasts</a>'];
   if (tour) {
@@ -381,6 +384,13 @@ export function renderBoardBody(
   if (board.details?.timeControl) {
     parts.push(`<p>Time control: ${escapeHtml(board.details.timeControl)}.</p>`);
   }
+  parts.push(
+    boardTextParts({
+      variant: 'xiangqi',
+      moves: board.moves.map((m) => `${m.from}${m.to}`),
+      locale,
+    }),
+  );
   parts.push(SECTION_LINKS);
   return `<main>${parts.join('')}</main>`;
 }
@@ -416,6 +426,7 @@ async function boardsOf(
 export async function broadcastPageFor(
   pathname: string,
   sources: BroadcastPageSources,
+  locale: BoardLocale = 'en',
 ): Promise<BroadcastPage | null> {
   const route = parseBroadcastRoute(pathname);
   if (!route) return null;
@@ -496,7 +507,7 @@ export async function broadcastPageFor(
           urlPath,
           ...(share?.imagePath ? { imagePath: share.imagePath } : {}),
         },
-        body: renderBoardBody(board, tour, round, slugOf(await slugs)),
+        body: renderBoardBody(board, tour, round, slugOf(await slugs), locale),
       };
     }
   }
@@ -536,11 +547,14 @@ const INDEX_TTL_MS = 60_000;
 let indexCache: { at: number; page: Promise<BroadcastPage | null> } | null = null;
 
 /** The live lookup: null without persistence (the shell stays as it was). */
-export async function liveBroadcastPage(pathname: string): Promise<BroadcastPage | null> {
+export async function liveBroadcastPage(
+  pathname: string,
+  locale: BoardLocale = 'en',
+): Promise<BroadcastPage | null> {
   if (!persistence.isInitialized()) return null;
   const route = parseBroadcastRoute(pathname);
   if (!route) return null;
-  if (route.kind !== 'index') return broadcastPageFor(pathname, liveBroadcastSources);
+  if (route.kind !== 'index') return broadcastPageFor(pathname, liveBroadcastSources, locale);
   const now = Date.now();
   if (!indexCache || now - indexCache.at > INDEX_TTL_MS) {
     const page = broadcastPageFor(pathname, liveBroadcastSources);

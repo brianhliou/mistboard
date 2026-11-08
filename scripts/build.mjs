@@ -35,3 +35,8 @@ for (const workspace of workspaces) {
   }
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
+
+if (!workerOnly) {
+  const { checkServerBodies } = await import('./server-body-check.mjs');
+  console.log(`Server bodies: ${await checkServerBodies()} pages wrapped with first-paint CSS`);
+}
