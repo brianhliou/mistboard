@@ -13,7 +13,12 @@ import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
 import { forumExcerpt } from './forum-excerpt.js';
 import { broadcastPageMeta } from './og-broadcast.js';
-import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
+import {
+  type TenantGameCardStore,
+  type TenantGamePageMeta,
+  tenantGamePageMeta,
+  tenantGameRoutePage,
+} from './og-game-tenant.js';
 import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
 import {
   isPositionOgVariant,
@@ -903,6 +908,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   listPublicStudies?: () => Promise<persistence.PublicStudySummary[]>;
   /** Override the finished-game meta lookup (tests); the default reads persistence. */
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
+  /** Override tenant game reads (tests); live previews never load a board card. */
+  tenantGameStore?: TenantGameCardStore;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Override the player-page lookup (tests); the default reads persistence. */
@@ -950,12 +957,22 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const player =
     playerPage ??
     (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
-  // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
-  // its own title, description, canonical review URL and card (#368). Needs
-  // persistence; without it (or for a live game) the route keeps its generic
-  // meta exactly as before.
+  // Tenant review pages distinguish missing ids from live names-only previews
+  // and finished cards. Keep the existing override for callers supplying meta.
+  const tenantGame =
+    params.gameMeta && !params.tenantGameStore
+      ? null
+      : await tenantGameRoutePage(params.pathname, params.tenantGameStore);
+  if (tenantGame?.notFound) {
+    await serveNotFoundShell(params);
+    return true;
+  }
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
-  const gameMeta = player?.meta ? null : await lookupGameMeta(params.pathname).catch(() => null);
+  const gameMeta = player?.meta
+    ? null
+    : tenantGame
+      ? tenantGame.meta
+      : await lookupGameMeta(params.pathname).catch(() => null);
   const puzzle = await puzzleRoutePage(params.pathname, params.puzzle ?? puzzleById);
   const profile = await profileRoutePage(
     params.pathname,
@@ -979,6 +996,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const routeMeta = positionMeta ?? spaMeta;
   const noindex =
     isNoindexRoute(params.pathname) ||
+    tenantGame?.noindex === true ||
     player?.noindex === true ||
     puzzle?.noindex === true ||
     profile?.noindex === true ||

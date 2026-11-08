@@ -7,6 +7,7 @@ import test from 'node:test';
 import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { resetArticleScheduleCache } from './article-schedule.js';
+import type { TenantGameCardStore } from './og-game-tenant.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import type {
   ForumCategory,
@@ -37,6 +38,7 @@ import {
   setRobotsMeta,
   sitemapSectionFromPath,
 } from './server-static-pages.js';
+import type { TenantManagedRoom } from './variant-tenant/registry.js';
 
 type ResponseCapture = {
   body: string;
@@ -1747,6 +1749,132 @@ test('malformed puzzle ids keep the generic shell with noindex', async () => {
 });
 
 // --- tenant game pages (/<tenant>/game/:id, /room/:id) ------------------------
+
+test('live game previews name only the seats and variant, never the hidden position', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const hidden = {
+    board: { a1: { role: 'chariot', secretIdentity: 'HIDDEN_PIECE_SENTINEL' } },
+    fen: 'SECRET_FEN_SENTINEL',
+    moves: ['h3e3', 'h10g8'],
+  };
+  // Reverse seat insertion order: Red still comes first. Identity fields and
+  // the entire canonical position must stay outside the serialized shell.
+  const room = {
+    id: 'jq_live',
+    clients: [],
+    pendingWrites: Promise.resolve(),
+    projection: {
+      seats: { black: 'b', red: 'r' },
+      state: { status: { type: 'playing' }, ...hidden },
+    },
+    events: [{ type: 'move-played', ...hidden }],
+    seatTokens: {
+      red: { userId: 'PRIVATE_ACCOUNT_SENTINEL', userDisplayName: 'Alice <Red>' },
+      black: { userDisplayName: 'Bob & Black' },
+    },
+  };
+  const tenantGameStore = {
+    summary: async () => null,
+    room: async () => room,
+    events: async () => {
+      throw new Error('Live preview must not read the event log');
+    },
+    analysis: async () => {
+      throw new Error('Live preview must not read analysis');
+    },
+  } satisfies TenantGameCardStore & { room: (id: string) => Promise<TenantManagedRoom | null> };
+  for (const [variant, prefix, label] of [
+    ['xiangqi', 'xq', 'Xiangqi'],
+    ['jieqi', 'jq', 'Jieqi'],
+  ]) {
+    room.id = `${prefix}_live`;
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: `/${variant}/game/${room.id}`,
+      publicHost: 'https://mistboard.com',
+      tenantGameStore,
+    });
+    const title = `Alice &lt;Red&gt; vs Bob &amp; Black · ${label}, live · Mistboard`;
+    const description = `Alice &lt;Red&gt; vs Bob &amp; Black. Live ${label} game on Mistboard.`;
+    assert.equal(response.status, 200);
+    assert.ok(response.body.includes(`<title>${title}</title>`), response.body);
+    assert.ok(response.body.includes(`<meta property="og:title" content="${title}">`));
+    assert.ok(response.body.includes(`<meta property="og:description" content="${description}">`));
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow']);
+    assert.match(response.body, /<div id="app"><\/div>/);
+    // Check the whole response, not just the meta tags.
+    assert.doesNotMatch(
+      JSON.stringify(response.body),
+      /SENTINEL|chariot|h3e3|h10g8|\bboard\b|\bfen\b|\bmoves\b|\/og\/game\//,
+    );
+    assert.doesNotMatch(response.body, /rel="canonical"/);
+  }
+});
+
+test('unknown live-game links serve a real 404 shell, including bad ids and wrong variants', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const pathname of [
+    '/xiangqi/game/xq_missing',
+    '/jieqi/game/jq_missing',
+    '/xiangqi/game/nonsense',
+    '/xiangqi/game/jq_other_variant',
+    '/jieqi/game/%ZZ',
+    '/jieqi/game/jq_%2Fbad',
+  ]) {
+    const response = captureResponse();
+    const tenantGameStore = {
+      summary: async () => null,
+      events: async () => null,
+      analysis: async () => null,
+      room: async () => null,
+    };
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      tenantGameStore,
+    });
+    assert.equal(response.status, 404, pathname);
+    assert.match(response.body, /<title>Page not found · Mistboard<\/title>/);
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow']);
+    assert.doesNotMatch(response.body, /\/og\/game\//);
+  }
+});
+
+test('hidden playtests and failed game reads keep a generic noindex shell', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const pathname of ['/three-kingdoms-banqi/game/tkb_secret', '/jieqi/game/jq_unavailable']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      tenantGameStore: {
+        summary: async () => {
+          throw new Error('unavailable');
+        },
+        events: async () => null,
+        analysis: async () => null,
+      },
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.body, /<title>Mistboard<\/title>/);
+    assert.match(response.body, /<meta property="og:title" content="old">/);
+    assert.match(response.body, /<meta property="og:description" content="old">/);
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow']);
+    assert.doesNotMatch(response.body, /\/og\/game\/|rel="canonical"/);
+  }
+});
 
 test('a finished tenant game page gets its pairing as title, the review URL as og:url, and its card', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
