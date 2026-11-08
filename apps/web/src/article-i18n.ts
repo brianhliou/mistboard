@@ -279,8 +279,8 @@ const ZH_HANS: Record<string, string> = {
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
   '10,000 games played': '已下完 10,000 盘棋',
-  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.':
-    'Mistboard 最初的 10,000 盘棋是怎样积累起来的：大家下了哪些棋类变体、和哪些电脑对弈，以及棋手们来自哪些国家和地区。',
+  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
+    'Mistboard 最初的 10,000 盘棋是怎样积累起来的：大家下了哪些棋类变体、和哪些电脑对弈，以及在这里下棋的都是哪些玩家。',
   'Mistboard passed 10,000 finished games on November 8.':
     '11 月 8 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
   'Jieqi is 66% of them.': '揭棋占其中的 66%。',
@@ -314,8 +314,8 @@ const ZH_HANS: Record<string, string> = {
   Gomoku: '五子棋',
   'Jungle Chess': '斗兽棋',
   'Who played them': '是谁在下棋',
-  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. They came from at least 43 countries and regions, most of all mainland China, then the United States, Taiwan and Vietnam.':
-    'Mistboard 已有 1,095 位玩家，每个访客浏览器算一位，所以同一个人用两台设备就会被算两次。其中 485 位只下过一盘，150 位下了至少十盘。他们来自至少 43 个国家和地区，最多的是中国大陆，其次是美国、台湾和越南。',
+  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. They came from at least 43 countries and regions.':
+    'Mistboard 已有 1,095 位玩家，每个访客浏览器算一位，所以同一个人用两台设备就会被算两次。其中 485 位只下过一盘，150 位下了至少十盘。他们来自至少 43 个国家和地区。',
   'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
     '有 15 位玩家下了至少 100 盘，他们参与了全部对局的 40%。下得最多的一位已经下了 632 盘。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
@@ -334,16 +334,13 @@ const ZH_HANS: Record<string, string> = {
   'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 级）',
   'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
     '级别的影响很大：在揭棋中，玩家对皮卡鱼第 1 级的胜率是 67%，对第 8 级则是 5%。每个电脑遇到的玩家不同，所以上表不能用来评定棋力。专门求败的 General Blunder 下了 34 盘，也只输了 23 盘。',
-  'How games ended': '对局如何结束',
-  'Resignation was the most common ending, in 3,709 games, ahead of 2,984 checkmates and 1,961 games lost on time. Another 683 ended with a player out of legal moves, which is a loss in these games and a draw in chess. Those were the longest of the four, at about 51 moves a side.':
-    '认输是最常见的结束方式，共 3,709 盘，多于将死的 2,984 盘和超时判负的 1,961 盘。另有 683 盘以一方无合法着法结束，这在这些棋类中算负棋，在国际象棋中则算和棋。这类对局在上述四类中最长，平均每方约走 51 步。',
   'New since the first 1,000': '从最初的 1,000 盘以来的新变化',
   'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.':
     '网站针对手机重新设计，计分对局也开放给了更多变体。解题新增了[限时解题](/puzzles?mode=storm)、[连续解题](/puzzles?mode=streak)、按主题练习和[解题面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了专门求败的电脑 [General Blunder](/bot/general-blunder)。五子棋上线，并配有八个级别的 Rapfi 电脑对手。棋子现在可以立体呈现，暗棋棋子也有了翻面动画。[更新页面](/feed)列出了全部变化。',
   'Thank you to everyone who played a game, reported a bug or became a [patron](/patron). You are why Mistboard is here, and we are grateful for every game.':
     '感谢每一位来下过棋、报告过问题，或成为[赞助会员](/patron)的朋友。因为有你们，才有 Mistboard；每一盘棋，我们都心怀感激。',
-  "So far, 1 of the 58 games between two people where we can see both sides crossed a border. That number will grow. Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
-    '截至目前，在能看到双方所在地的 58 盘真人对局中，有 1 盘跨越了国界或地区界线。这个数字会继续增长。我们的使命是通过象棋和世界各地的经典策略游戏，让不同文化的人们走到一起。',
+  "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
+    '我们的使命是通过象棋和世界各地的经典策略游戏，让不同文化的人们走到一起。',
   'Week of 2026-06-01: 2 games': '2026-06-01 当周：2 盘',
   Jun: '6月',
   'Week of 2026-06-08: 3 games': '2026-06-08 当周：3 盘',
@@ -6872,8 +6869,8 @@ const ZH_HANT: Record<string, string> = {
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
   '10,000 games played': '已下完 10,000 盤棋',
-  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.':
-    'Mistboard 最初的 10,000 盤棋是怎樣累積起來的：大家下了哪些棋類變體、和哪些電腦對弈，以及棋手們來自哪些國家和地區。',
+  'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
+    'Mistboard 最初的 10,000 盤棋是怎樣累積起來的：大家下了哪些棋類變體、和哪些電腦對弈，以及在這裡下棋的都是哪些玩家。',
   'Mistboard passed 10,000 finished games on November 8.':
     '11 月 8 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
   'Jieqi is 66% of them.': '揭棋佔其中的 66%。',
@@ -6907,8 +6904,8 @@ const ZH_HANT: Record<string, string> = {
   Gomoku: '五子棋',
   'Jungle Chess': '鬥獸棋',
   'Who played them': '是誰在下棋',
-  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. They came from at least 43 countries and regions, most of all mainland China, then the United States, Taiwan and Vietnam.':
-    'Mistboard 已有 1,095 位玩家，每個訪客瀏覽器算一位，所以同一個人用兩台裝置就會被算兩次。其中 485 位只下過一盤，150 位下了至少十盤。他們來自至少 43 個國家和地區，最多的是中國大陸，其次是美國、台灣和越南。',
+  'Mistboard has had 1,095 players, counting a guest browser as one, so a person on two devices counts twice. 485 of them have played once and 150 have played at least ten. They came from at least 43 countries and regions.':
+    'Mistboard 已有 1,095 位玩家，每個訪客瀏覽器算一位，所以同一個人用兩台裝置就會被算兩次。其中 485 位只下過一盤，150 位下了至少十盤。他們來自至少 43 個國家和地區。',
   'The 15 players with at least 100 games were in 40% of all games. The most active has played 632.':
     '有 15 位玩家下了至少 100 盤，他們參與了全部對局的 40%。下得最多的一位已經下了 632 盤。',
   '9,913 games were against a bot. 98 were between two people, up from 4 in the first 1,000.':
@@ -6927,16 +6924,13 @@ const ZH_HANT: Record<string, string> = {
   'Rapfi (levels 1-⁠8)': 'Rapfi（第 1 至 8 級）',
   'Levels make a large difference: in jieqi, people beat Pikafish 67% of the time at Level 1 and 5% at Level 8. Each bot meets different players, so the table is not a strength rating. General Blunder, which tries to lose, lost only 23 of its 34 games.':
     '級別的影響很大：在揭棋中，玩家對皮卡魚第 1 級的勝率是 67%，對第 8 級則是 5%。每個電腦遇到的玩家不同，所以上表不能用來評定棋力。專門求敗的 General Blunder 下了 34 盤，也只輸了 23 盤。',
-  'How games ended': '對局如何結束',
-  'Resignation was the most common ending, in 3,709 games, ahead of 2,984 checkmates and 1,961 games lost on time. Another 683 ended with a player out of legal moves, which is a loss in these games and a draw in chess. Those were the longest of the four, at about 51 moves a side.':
-    '認輸是最常見的結束方式，共 3,709 盤，多於將死的 2,984 盤和超時判負的 1,961 盤。另有 683 盤以一方無合法著法結束，這在這些棋類中算負棋，在西洋棋中則算和棋。這類對局在上述四類中最長，平均每方約走 51 步。',
   'New since the first 1,000': '從最初的 1,000 盤以來的新變化',
   'The site was rebuilt for phones, and rated play opened to more variants. Puzzles gained [Puzzle Storm](/puzzles?mode=storm), [Puzzle Streak](/puzzles?mode=streak), puzzles by theme and a [dashboard](/puzzles/dashboard). Jieqi gained [jqe](/bot/jqe), and xiangqi gained [General Blunder](/bot/general-blunder), a bot that tries to lose. Gomoku opened, with the Rapfi bot at eight levels. Pieces can now stand in 3D, and banqi tiles turn over. The [updates page](/feed) has the full list.':
     '網站針對手機重新設計，計分對局也開放給了更多變體。解題新增了[限時解題](/puzzles?mode=storm)、[連續解題](/puzzles?mode=streak)、按主題練習和[解題面板](/puzzles/dashboard)。揭棋新增了 [jqe](/bot/jqe)，象棋新增了專門求敗的電腦 [General Blunder](/bot/general-blunder)。五子棋上線，並配有八個級別的 Rapfi 電腦對手。棋子現在可以立體呈現，暗棋棋子也有了翻面動畫。[更新頁面](/feed)列出了全部變化。',
   'Thank you to everyone who played a game, reported a bug or became a [patron](/patron). You are why Mistboard is here, and we are grateful for every game.':
     '感謝每一位來下過棋、回報過問題，或成為[贊助會員](/patron)的朋友。因為有你們，才有 Mistboard；每一盤棋，我們都心懷感激。',
-  "So far, 1 of the 58 games between two people where we can see both sides crossed a border. That number will grow. Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
-    '截至目前，在能看到雙方所在地的 58 盤真人對局中，有 1 盤跨越了國界或地區界線。這個數字會繼續成長。我們的使命是透過象棋和世界各地的經典策略遊戲，讓不同文化的人們走到一起。',
+  "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
+    '我們的使命是透過象棋和世界各地的經典策略遊戲，讓不同文化的人們走到一起。',
   'Week of 2026-06-01: 2 games': '2026-06-01 當週：2 盤',
   Jun: '6月',
   'Week of 2026-06-08: 3 games': '2026-06-08 當週：3 盤',

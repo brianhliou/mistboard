@@ -155,11 +155,6 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
   const lasting = firstLastingThousandWeek(record);
   const named = record.variants.filter((v) => VARIANT_NAMES[v.variant]);
   const blunder = record.bots.find((b) => b.bot === 'general-blunder');
-  const stalemate = ending(record, 'stalemate');
-  const borders =
-    record.gamesAcrossBorders === 0
-      ? `So far, in all ${count(record.gamesSeenFromBothSides)} games between two people where we can see both sides, both players were in the same country or region. That will change.`
-      : `So far, ${count(record.gamesAcrossBorders)} of the ${count(record.gamesSeenFromBothSides)} games between two people where we can see both sides crossed a border. That number will grow.`;
 
   return {
     slug: 'ten-thousand-games',
@@ -167,7 +162,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
     publisher: 'mistboard',
     title: '10,000 games played',
     seoTitle: 'Mistboard passes 10,000 games',
-    summary: 'How the first 10,000 games on Mistboard came in, which variants and bots people played, and where the players came from.',
+    summary: 'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.',
     showSummaryOnPage: false,
     status: 'published',
     method: [
@@ -225,7 +220,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
         blocks: [
           {
             kind: 'paragraph',
-            text: `Mistboard has had ${count(record.players)} players, counting a guest browser as one, so a person on two devices counts twice. ${count(record.playersWithOneGame)} of them have played once and ${count(record.playersWithTenGames)} have played at least ten. They came from at least ${count(record.countriesAndRegions)} countries and regions, most of all mainland China, then the United States, Taiwan and Vietnam.`,
+            text: `Mistboard has had ${count(record.players)} players, counting a guest browser as one, so a person on two devices counts twice. ${count(record.playersWithOneGame)} of them have played once and ${count(record.playersWithTenGames)} have played at least ten. They came from at least ${count(record.countriesAndRegions)} countries and regions.`,
           },
           {
             kind: 'paragraph',
@@ -264,15 +259,6 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
         ],
       },
       {
-        heading: 'How games ended',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text: `Resignation was the most common ending, in ${count(ending(record, 'resignation').games)} games, ahead of ${count(ending(record, 'checkmate').games)} checkmates and ${count(ending(record, 'timeout').games)} games lost on time. Another ${count(stalemate.games)} ended with a player out of legal moves, which is a loss in these games and a draw in chess. Those were the longest of the four, at about ${count(Math.round(stalemate.averagePlies / 2))} moves a side.`,
-          },
-        ],
-      },
-      {
         heading: 'New since the first 1,000',
         blocks: [
           {
@@ -290,7 +276,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
           },
           {
             kind: 'paragraph',
-            text: `${borders} Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.`,
+            text: `Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.`,
           },
           {
             kind: 'cta',
