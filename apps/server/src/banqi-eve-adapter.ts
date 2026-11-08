@@ -1,7 +1,5 @@
-// EvE adapter for Banqi (半棋): scheduled data games between the site's own bot
-// (#488). Not a rating adapter: banqi has ONE bot (MistyBanqi) and no random
-// floor, so its games are MistyBanqi against itself, and with no anchor nothing
-// can stamp a rating_policy on them (variant-eve-registry.test.ts pins both).
+// Banqi ladder EvE adapter, using the live redacted request and an EvE-only
+// random floor for calibration.
 //
 // Like jieqi, the deal is a server secret stamped on room-created: createSetup
 // draws one from the pairing's seed, so every scheduled game (a fresh seed each)
@@ -22,8 +20,11 @@ import {
 } from '@mistboard/game';
 import {
   BANQI_PLAYABLE_ENGINES,
+  BANQI_RANDOM_ENGINE_ID,
+  type BanqiEngineTier,
   banqiEngineBinaryAvailable,
   banqiLiveEngineMove,
+  banqiNoiseSeed,
 } from './banqi-engine.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen, engineUciToBanqiMove } from './banqi-fen.js';
 import type { BanqiEvent } from './banqi-runtime.js';
@@ -32,7 +33,9 @@ import { seededUnitRng } from './jieqi-eve-adapter.js';
 import type { VariantEveAdapter } from './variant-eve.js';
 import { replayTenantEvents } from './variant-tenant/runtime.js';
 
-const BANQI_TIERS = new Map(BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, tier]));
+const BANQI_TIERS = new Map<string, BanqiEngineTier>(
+  BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, tier]),
+);
 
 /** The engine's view at the mover's turn, as server-banqi-engine.ts builds it live. */
 export function banqiEveEngineWindow(events: readonly BanqiEvent[]): {
@@ -62,12 +65,13 @@ export const banqiEveAdapter: VariantEveAdapter<
   gameSpecId: BANQI_SPEC_ID,
   colors: ['red', 'black'],
   tenant: banqiTenant,
-  // The offered bot only; the retired tier ids resolve live for old rooms but
+  // The offered ladder only; retired tier ids resolve live for old rooms but
   // are not something a scheduled game should play.
   tierFor: (engineId) => {
     const tier = engineId ? BANQI_TIERS.get(engineId) : undefined;
     return tier ? { id: tier.id, movetimeMs: tier.movetimeCapMs } : null;
   },
+  randomEngineId: BANQI_RANDOM_ENGINE_ID,
   createSetup: (seed) => createBanqiSetup(seededUnitRng(seed)),
   legalMoves: getBanqiLegalMoves,
   moveToUci: banqiMoveToEngineUci,
@@ -91,6 +95,7 @@ export const banqiEveAdapter: VariantEveAdapter<
       moves: window.moves,
       searchMoves,
       noProgressLimit: banqiNoProgressLimitOf(state),
+      seed: banqiNoiseSeed(events[0]!.roomId),
     });
   },
   requiredCapability: 'banqi_engine',

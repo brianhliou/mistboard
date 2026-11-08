@@ -682,6 +682,43 @@ describe('landing play panel', () => {
     );
   });
 
+  it('offers all eight Banqi levels, defaults to 4 and posts the picked level', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/banqi/game/bq_test' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('banqi');
+    const picker = document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!;
+    expect([...picker.options].map((option) => option.value).sort()).toEqual(
+      [
+        ...Array.from({ length: 7 }, (_, index) => `misty-banqi-level-${index + 1}`),
+        'misty-banqi',
+      ].sort(),
+    );
+    expect(picker.value).toBe('misty-banqi-level-4');
+    expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(
+      false,
+    );
+    selectModalEngine('misty-banqi-level-1');
+    clickModalButton('Start game');
+    await flushPromises();
+    expect(roomPostBody(fetchSpy)).toMatchObject({
+      gameSpecId: 'banqi',
+      engineId: 'misty-banqi-level-1',
+    });
+    document.querySelector('.landing-setup-overlay')?.remove();
+    openPlaySetup(panel, 'Play a bot');
+    expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
+      'misty-banqi-level-1',
+    );
+  });
+
   it('remembers an engine side the player actually picked', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });

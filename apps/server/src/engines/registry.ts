@@ -7,6 +7,7 @@ import {
   ATOMIC_XIANGQI_RANDOM_ENGINE_VERSION,
   type AtomicXiangqiEngineTier,
 } from '../atomic-xiangqi-fsf-engine.js';
+import { BANQI_PLAYABLE_ENGINES, BANQI_RANDOM_ENGINE_ID } from '../banqi-engine.js';
 import {
   CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION,
   CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES,
@@ -1059,7 +1060,7 @@ const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
 );
 
 // MistyBanqi (our own Rust αβ+TT engine, Tier-B UCI subprocess — banqi-engine.ts).
-// ONE versioned bot since 2026-06-18 (was 3 difficulty tiers). configHash carries the
+// Historical full-strength bot is L8, preserving its id and config signature. configHash carries the
 // engine version, so each game record tells which build played. The route/scheduler key off
 // banqi-engine.ts ids, not this registry. The legacy *-amateur/strong/strongest entries are
 // KEPT (not served, not in the picker) so old game records still resolve via isKnownEngineClientId.
@@ -1093,6 +1094,43 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
       'no-regression + own-general-loss 35.5%->26% (~2.7sigma). Single full-strength bot at ' +
       '3.5M nodes under an 8s latency cap (budget resized from 1.5M on 2026-09-06 to fit the ' +
       'ceiling; not a claimed strength gain).',
+  },
+  ...Object.fromEntries(
+    BANQI_PLAYABLE_ENGINES.filter((tier) => tier.level < 8).map((tier) => {
+      const signature = `misty-banqi-${tier.version}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+      return [
+        tier.id,
+        {
+          id: tier.id,
+          engineId: 'misty-banqi',
+          engineName: 'MistyBanqi',
+          name: tier.name,
+          kind: 'container',
+          gameSpecId: 'banqi',
+          configHash: signature,
+          playSignature: signature,
+          config: {
+            kind: 'banqi-uci',
+            nodes: tier.nodes,
+            movetime_ms: tier.movetimeCapMs,
+            ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
+          },
+          notes: `MistyBanqi level ${tier.level}. Provisional pending calibration. L1-5 require v0.2.8 with advertised Noise, NoiseDepth and Seed.`,
+        } satisfies EngineDefinition,
+      ];
+    }),
+  ),
+  [BANQI_RANDOM_ENGINE_ID]: {
+    id: BANQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-banqi',
+    engineName: 'Random legal (Banqi)',
+    name: 'Random legal (Banqi)',
+    kind: 'builtin',
+    gameSpecId: 'banqi',
+    configHash: 'random-legal-banqi-v1',
+    playSignature: 'random-legal-banqi-v1',
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes: 'EvE-only uniformly random rating anchor; not a playable level.',
   },
   'misty-banqi-amateur': {
     id: 'misty-banqi-amateur',

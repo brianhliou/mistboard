@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import {
   botLadderFor,
   pickCalibrationPairing,
@@ -92,7 +93,8 @@ test('each variant ladder is the engines its first-party bots play, and only its
       const bot = firstPartyBotForEngine(id);
       assert.ok(bot && Object.hasOwn(bot.engines, variant), `${variant}: ${id} is no bot's`);
     }
-    assert.deepEqual(new Set(ladder), new Set(fronted), variant);
+    const expected = variant === 'banqi' ? BANQI_PLAYABLE_ENGINES.map((tier) => tier.id) : fronted;
+    assert.deepEqual(new Set(ladder), new Set(expected), variant);
   }
   // The worst-move bot is a first-party bot but never a rung.
   assert.ok(!botLadderFor('xiangqi')!.includes('fairy-stockfish-xiangqi-worst'));

@@ -38,7 +38,6 @@ const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
 // NOT ladder-rated: no random floor, so no anchor, so no job of theirs can carry
 // a rating_policy and nothing reaches the Elo report. Each needs its reason.
 const EVE_DATA_ONLY_VARIANTS: ReadonlyMap<string, string> = new Map([
-  ['banqi', 'one node-budgeted bot that plays itself; nothing to rank it against'],
   [
     'jungle',
     'KataGo over Misty plus two retired Misty levels, no random floor yet; never ladder-rated',

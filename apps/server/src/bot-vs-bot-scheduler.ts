@@ -21,8 +21,8 @@
 // queued) instead of failing every 15 minutes.
 //
 // Ratings: only a plan with a random-floor anchor and at least two rungs can
-// stamp a rating_policy. Banqi (one bot, no floor) and jungle (no floor) never
-// do, so their games never reach the Elo report or a bot rating.
+// stamp a rating_policy. Jungle has no floor, so its scheduled games never
+// reach the Elo report or a bot rating.
 //
 // Environment (all optional; MISTBOARD_BOT_VS_BOT_ENABLED=true turns it on):
 //   MISTBOARD_BOT_VS_BOT_VARIANTS         comma list; default BOT_VS_BOT_DEFAULT_VARIANTS

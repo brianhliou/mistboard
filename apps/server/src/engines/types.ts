@@ -73,6 +73,8 @@ export type EngineId =
   | 'pikafish-xiangqi-strongest'
   // MistyBanqi (Banqi)
   | 'misty-banqi'
+  | `misty-banqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7}`
+  | 'random-legal-banqi'
   | 'misty-banqi-amateur'
   | 'misty-banqi-strong'
   | 'misty-banqi-strongest'
@@ -219,6 +221,8 @@ export type BanqiUciEngineConfig = {
   kind: 'banqi-uci';
   movetime_ms: number;
   nodes?: number;
+  noise?: number;
+  noiseDepth?: number;
 };
 
 /** MistyJungleFlip standalone Rust αβ+Star1+TT UCI engine. */

@@ -22,9 +22,9 @@ const VARIANT_EVE_ADAPTERS: readonly AnyVariantEveAdapter[] = [
   jieqiEveAdapter,
   threeKingdomsBanqiEveAdapter,
   jungleFlipEveAdapter,
+  banqiEveAdapter,
   // Data-only (#488): no random floor, so they play scheduled games but are
   // never ladder-rated.
-  banqiEveAdapter,
   jungleEveAdapter,
 ];
 

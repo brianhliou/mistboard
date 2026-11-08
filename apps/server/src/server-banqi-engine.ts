@@ -26,6 +26,7 @@ import {
   BANQI_ENGINE_VERSION,
   banqiEngineTierFor,
   banqiLiveEngineMove,
+  banqiNoiseSeed,
   isBanqiEngineClientId,
 } from './banqi-engine.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen, engineUciToBanqiMove } from './banqi-fen.js';
@@ -146,6 +147,7 @@ export type BanqiEngineMoveProvider = (
     moves?: readonly string[];
     searchMoves?: readonly string[];
     noProgressLimit: number;
+    seed?: string;
   },
 ) => Promise<UciEval>;
 
@@ -236,6 +238,7 @@ export async function playBanqiEngineMoveIfReady(
         // The game's own draw limit (60, or 40 for a room created before 2026-10-17):
         // without it the engine assumes 40 and plays the last 20 plies as already drawn.
         noProgressLimit: banqiNoProgressLimitOf(state),
+        seed: banqiNoiseSeed(room.id),
       });
       lastSearch = search;
       return search.best;
