@@ -28,8 +28,11 @@ import { createTenantRuntimeRoomFromEvents, replayTenantEvents } from './variant
 const SCRATCH = '/tmp/burn-scratch/mistboard-burn-866-tk-server-ladder-and-rateable';
 const L1 = 'misty-three-kingdoms-banqi-level-1';
 const L2 = 'misty-three-kingdoms-banqi-level-2';
+const L7 = 'misty-three-kingdoms-banqi-level-7';
 const L8 = 'misty-three-kingdoms-banqi-level-8';
 const ROOM = 'tkb_ladder_test';
+const REAL_ENGINE = process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH;
+const REAL_NET = process.env.MISTBOARD_THREE_KINGDOMS_BANQI_NET;
 
 function eventsFor(engineId = L2): ThreeKingdomsBanqiEvent[] {
   return [
@@ -71,8 +74,12 @@ function stubEngine(
   dir: string,
   advertiseNet = true,
   advertiseMix = true,
+  noiseOptions: readonly string[] = ['Noise', 'NoiseDepth', 'Seed'],
 ): { bin: string; log: string } {
-  const bin = join(dir, `stub-engine-net-${advertiseNet}-mix-${advertiseMix}`);
+  const bin = join(
+    dir,
+    `stub-engine-net-${advertiseNet}-mix-${advertiseMix}-${noiseOptions.join('-')}`,
+  );
   const log = `${bin}.json`;
   writeFileSync(
     bin,
@@ -85,6 +92,7 @@ rl.on('line', line => {
   if (line === 'uci') {
     ${advertiseNet ? "console.log('option name EvalFile type string default <empty>');" : ''}
     ${advertiseMix ? "console.log('option name ChanceMix type check default false');" : ''}
+    ${noiseOptions.map((name) => `console.log('option name ${name} type string default 0');`).join('\n')}
     console.log('uciok');
   }
   if (line === 'isready') console.log('readyok');
@@ -104,13 +112,28 @@ test('TK tier selection accepts eight levels, keeps the historical budget and re
   assert.equal(engine.isThreeKingdomsBanqiEngineClientId(L2), true);
   assert.equal(engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.length, 8);
   assert.equal(engine.threeKingdomsBanqiEngineTierFor(L1)?.evaluation, 'random');
-  const tiers = engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.slice(1, 7);
   assert.deepEqual(
-    tiers.map((tier) => tier.nodes),
-    [2_000, 8_000, 32_000, 128_000, 512_000, 2_048_000],
+    engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.map((tier) => [
+      tier.id,
+      tier.evaluation,
+      tier.nodes,
+      tier.noise,
+      tier.noiseDepth,
+      tier.movetimeCapMs,
+      tier.chance,
+    ]),
+    [
+      [L1, 'random', 0, undefined, undefined, 3000, undefined],
+      [L2, 'classical', 2000, 0.05, 2, 3000, 'mix'],
+      ['misty-three-kingdoms-banqi-level-3', 'classical', 2000, 0.03, 2, 3000, 'mix'],
+      ['misty-three-kingdoms-banqi-level-4', 'classical', 2000, 0.02, 2, 3000, 'mix'],
+      ['misty-three-kingdoms-banqi-level-5', 'classical', 2000, undefined, undefined, 3000, 'mix'],
+      ['misty-three-kingdoms-banqi-level-6', 'classical', 8000, undefined, undefined, 3000, 'mix'],
+      [L7, 'classical', 2048000, undefined, undefined, 3000, 'mix'],
+      [L8, 'nnue', 2048000, undefined, undefined, 3000, 'mix'],
+    ],
   );
   assert.equal(engine.threeKingdomsBanqiEngineTierFor(L8)?.evaluation, 'nnue');
-  assert.equal(engine.threeKingdomsBanqiEngineTierFor(L8)?.nodes, tiers.at(-1)!.nodes);
   assert.equal(
     engine.threeKingdomsBanqiEngineTierFor(engine.THREE_KINGDOMS_BANQI_ENGINE_ID)?.nodes,
     2_000_000,
@@ -235,6 +258,17 @@ test('TK search levels receive ChanceMix after EvalFile and before readiness/pos
         ...(id === engine.THREE_KINGDOMS_BANQI_ENGINE_ID
           ? []
           : ['setoption name ChanceMix value true']),
+        ...([
+          L2,
+          'misty-three-kingdoms-banqi-level-3',
+          'misty-three-kingdoms-banqi-level-4',
+        ].includes(id)
+          ? [
+              `setoption name Noise value ${[0.05, 0.03, 0.02][Number(id.at(-1)) - 2]}`,
+              'setoption name NoiseDepth value 2',
+              `setoption name Seed value ${engine.threeKingdomsBanqiNoiseSeed(ROOM)}`,
+            ]
+          : []),
         'ucinewgame',
         'isready',
         `position fen ${request.fen}`,
@@ -293,27 +327,164 @@ test('TK L2 and L8 refuse a binary that silently ignores unadvertised ChanceMix;
   });
 });
 
-test('TK Mix config and signatures separate L2–L8 from Star1; L1 and the historical id keep their unmixed signatures', () => {
+test('TK L7/L8 full UCI streams remain byte-identical to the pre-calibration ladder', async () => {
+  await withPaths(async (_dir, net) => {
+    const position =
+      'position fen XXXX1XXXX/XXXX1XXXX/9/XXXX1XXXX/XXXX1XXXX r - 0 0 0 1 G1A2E2R2H2C2S5g1a2e2r2h2c2s5 -';
+    for (const id of [L7, L8]) {
+      const events = eventsFor(id);
+      const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
+      const request = live.threeKingdomsBanqiTierRequestFor(events, state, id, 3000);
+      for (const history of [false, true]) {
+        assert.equal(
+          `${engine
+            .buildThreeKingdomsBanqiEngineCommands({
+              ...request,
+              ...(history ? { moves: ['a1a2'], searchMoves: ['b1b2'] } : {}),
+            })
+            .join('\n')}\n`,
+          `uci\n${id === L8 ? `setoption name EvalFile value ${net}\n` : ''}` +
+            'setoption name ChanceMix value true\nucinewgame\nisready\n' +
+            `${position}${history ? ' moves a1a2' : ''}\n` +
+            `go nodes 2048000 movetime 3000${history ? ' searchmoves b1b2' : ''}\n`,
+        );
+      }
+    }
+  });
+});
+
+test('TK noisy levels refuse binaries missing Noise, NoiseDepth or Seed; L5-L8 still play', async () => {
+  await withPaths(async (dir) => {
+    for (const options of [
+      [],
+      ['NoiseDepth', 'Seed'],
+      ['Noise', 'Seed'],
+      ['Noise', 'NoiseDepth'],
+    ]) {
+      const { bin } = stubEngine(dir, true, true, options);
+      process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = bin;
+      for (const tier of engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.slice(1)) {
+        const events = eventsFor(tier.id);
+        const request = live.threeKingdomsBanqiTierRequestFor(
+          events,
+          replayTenantEvents(threeKingdomsBanqiTenant, events).state,
+          tier.id,
+          500,
+        );
+        if (tier.level! <= 4) {
+          await assert.rejects(
+            engine.threeKingdomsBanqiLiveEngineMove(request),
+            /does not advertise configured option\(s\): (Noise|NoiseDepth|Seed)/,
+          );
+        } else {
+          assert.equal((await engine.threeKingdomsBanqiLiveEngineMove(request)).best, 'a1a1');
+        }
+      }
+    }
+  });
+});
+
+test('TK root-noise seed is stable across turns and tiers, nonzero and varies by room', () => {
+  const seeds: string[] = [];
+  for (const id of [
+    L2,
+    'misty-three-kingdoms-banqi-level-3',
+    'misty-three-kingdoms-banqi-level-4',
+  ]) {
+    const events = eventsFor(id);
+    const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
+    const request = live.threeKingdomsBanqiTierRequestFor(events, state, id, 3000);
+    assert.match(request.seed!, /^[1-9][0-9]*$/);
+    assert.ok(BigInt(request.seed!) <= 0xffffffffffffffffn);
+    seeds.push(request.seed!);
+    const nextEvents: ThreeKingdomsBanqiEvent[] = [
+      ...events,
+      {
+        type: 'move-played',
+        at: 10,
+        roomId: ROOM,
+        color: 'red',
+        move: getThreeKingdomsBanqiLegalMoves(state)[0]!,
+      },
+    ];
+    const next = replayTenantEvents(threeKingdomsBanqiTenant, nextEvents).state;
+    assert.equal(
+      live.threeKingdomsBanqiTierRequestFor(nextEvents, next, id, 3000).seed,
+      request.seed,
+    );
+    const otherEvents = events.map((event) => ({ ...event, roomId: `${ROOM}_other` }));
+    const other = replayTenantEvents(threeKingdomsBanqiTenant, otherEvents).state;
+    assert.notEqual(
+      live.threeKingdomsBanqiTierRequestFor(otherEvents, other, id, 3000).seed,
+      request.seed,
+    );
+  }
+  assert.equal(new Set(seeds).size, 1);
+});
+
+test('TK calibrated search tiers play legal moves with the local noise-capable binary and L8 net', {
+  skip: !REAL_ENGINE || !REAL_NET,
+}, async () => {
+  const bests: string[] = [];
+  for (const tier of engine.THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.slice(1)) {
+    const events = eventsFor(tier.id);
+    const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
+    const request = live.threeKingdomsBanqiTierRequestFor(events, state, tier.id, 3000);
+    const result = await engine.threeKingdomsBanqiLiveEngineMove(request);
+    assert.ok(
+      getThreeKingdomsBanqiLegalMoves(state).some(
+        (move) => live.threeKingdomsBanqiMoveToUci(move) === result.best,
+      ),
+      tier.id,
+    );
+    bests.push(result.best!);
+  }
+  const events = eventsFor(L2);
+  const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
+  assert.equal(
+    (
+      await engine.threeKingdomsBanqiLiveEngineMove(
+        live.threeKingdomsBanqiTierRequestFor(events, state, L2, 3000),
+      )
+    ).best,
+    bests[0],
+    'the same room seed reproduces the noisy move',
+  );
+});
+
+test('TK config and signatures include noise only for L2-L4; other signatures keep their shape', () => {
   for (const tier of engine.THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS) {
     const entry = loadEngine(tier.id);
     const oldSignature = `${tier.id}-0.2.0-${tier.evaluation}-nodes-${tier.nodes}`;
     const mix = tier.level !== undefined && tier.level >= 2;
-    assert.equal(entry.configHash, `${oldSignature}${mix ? '-chance-mix' : ''}`);
+    const noise = tier.level !== undefined && tier.level >= 2 && tier.level <= 4;
+    const suffix = noise ? `-noise-${tier.noise}-depth-${tier.noiseDepth}` : '';
+    assert.equal(entry.configHash, `${oldSignature}${mix ? '-chance-mix' : ''}${suffix}`);
     assert.equal(entry.playSignature, entry.configHash);
     assert.equal(
       'chance' in entry.config ? entry.config.chance : undefined,
       mix ? 'mix' : undefined,
     );
+    assert.equal('noise' in entry.config ? entry.config.noise : undefined, tier.noise);
+    assert.equal(
+      'noiseDepth' in entry.config ? entry.config.noiseDepth : undefined,
+      tier.noiseDepth,
+    );
   }
 });
 
-test('TK L2/L8 live and EvE requests are byte-identical after swapping covered identities', async () => {
+test('TK L2-L4/L8 live and EvE requests are byte-identical after swapping covered identities', async () => {
   await withPaths(async (dir) => {
     const { bin, log } = stubEngine(dir);
     process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH = bin;
     const adapter = eveAdapterFor(THREE_KINGDOMS_BANQI_SPEC_ID);
     assert.ok(adapter);
-    for (const id of [L2, L8]) {
+    for (const id of [
+      L2,
+      'misty-three-kingdoms-banqi-level-3',
+      'misty-three-kingdoms-banqi-level-4',
+      L8,
+    ]) {
       const eventsA = eventsFor(id);
       const eventsB = structuredClone(eventsA);
       const created = eventsB[0]!;

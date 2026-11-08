@@ -37,29 +37,32 @@ export type ThreeKingdomsBanqiEngineTier = {
   evaluation: 'random' | 'classical' | 'nnue';
   /** Absent for L1 and the historical Star1 tier. */
   chance?: 'mix';
+  noise?: number;
+  noiseDepth?: number;
 };
 
-// Provisional budgets, for measurement through EvE, not published Elo claims.
-// L2–L7 grow by exactly 4x; L8 changes only the evaluator at L7's budget.
-export const THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES: readonly ThreeKingdomsBanqiEngineTier[] = [
-  {
-    id: THREE_KINGDOMS_BANQI_RANDOM_ENGINE_ID,
-    level: 1,
-    nodes: 0,
-    movetimeCapMs: 0,
-    evaluation: 'random',
-  },
-  ...([2, 3, 4, 5, 6, 7, 8] as const).map(
-    (level): ThreeKingdomsBanqiEngineTier => ({
-      id: `misty-three-kingdoms-banqi-level-${level}`,
-      level,
-      nodes: 2_000 * 4 ** (Math.min(level, 7) - 2),
-      movetimeCapMs: THREE_KINGDOMS_BANQI_ENGINE_MOVETIME_CAP_MS,
-      evaluation: level === 8 ? 'nnue' : 'classical',
-      chance: 'mix',
-    }),
-  ),
-];
+// Calibrated on 120-300 games per step: L2 beat L1 120-0; measured step Elo:
+// L3 over L2 +458, L4 over L3 +191, L5 over L4 +260, L6 over L5 +183,
+// L7 over L6 +176, L8 over L7 +237. L1 stays process-free.
+export const THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES: readonly ThreeKingdomsBanqiEngineTier[] = (
+  [
+    { level: 1, evaluation: 'random', nodes: 0 },
+    { level: 2, evaluation: 'classical', nodes: 2_000, noise: 0.05, noiseDepth: 2 },
+    { level: 3, evaluation: 'classical', nodes: 2_000, noise: 0.03, noiseDepth: 2 },
+    { level: 4, evaluation: 'classical', nodes: 2_000, noise: 0.02, noiseDepth: 2 },
+    { level: 5, evaluation: 'classical', nodes: 2_000 },
+    { level: 6, evaluation: 'classical', nodes: 8_000 },
+    { level: 7, evaluation: 'classical', nodes: 2_048_000 },
+    { level: 8, evaluation: 'nnue', nodes: 2_048_000 },
+  ] as const
+).map(
+  (tier): ThreeKingdomsBanqiEngineTier => ({
+    ...tier,
+    id: `misty-three-kingdoms-banqi-level-${tier.level}`,
+    movetimeCapMs: THREE_KINGDOMS_BANQI_ENGINE_MOVETIME_CAP_MS,
+    ...(tier.level === 1 ? {} : { chance: 'mix' }),
+  }),
+);
 
 // Historical rooms retain their ID, name, version and 2M-node classical search.
 export const THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS: readonly ThreeKingdomsBanqiEngineTier[] = [
@@ -160,6 +163,17 @@ export function threeKingdomsBanqiEngineVersion(clientId: string | undefined): s
   return isThreeKingdomsBanqiEngineClientId(clientId) ? THREE_KINGDOMS_BANQI_ENGINE_VERSION : null;
 }
 
+/** Stable per-game root-noise seed, matching Flip Jungle's nonzero FNV-1a 64-bit shape. */
+export function threeKingdomsBanqiNoiseSeed(roomId: string): string {
+  const mask = 0xffffffffffffffffn;
+  const prime = 0x100000001b3n;
+  let hash = 0xcbf29ce484222325n;
+  for (let i = 0; i < roomId.length; i++) {
+    hash = ((hash ^ BigInt(roomId.charCodeAt(i))) * prime) & mask;
+  }
+  return (hash === 0n ? 1n : hash).toString();
+}
+
 export type ThreeKingdomsBanqiEngineRequest = {
   /** threeKingdomsBanqiStateToEngineFen of the state after the last flip or capture. */
   fen: string;
@@ -173,6 +187,10 @@ export type ThreeKingdomsBanqiEngineRequest = {
   evalFile?: string;
   /** L2–L8 require advertised ChanceMix support; historical requests omit it. */
   chance?: 'mix';
+  /** L2-L4 only; all three UCI options must be advertised by the binary. */
+  noise?: number;
+  noiseDepth?: number;
+  seed?: string;
 };
 
 /** The whole stdin block the engine receives; tests serialize it to prove it is redacted. */
@@ -190,6 +208,13 @@ export function buildThreeKingdomsBanqiEngineCommands(
       ? []
       : [`setoption name EvalFile value ${request.evalFile}`]),
     ...(request.chance === 'mix' ? ['setoption name ChanceMix value true'] : []),
+    ...(request.noise === undefined
+      ? []
+      : [
+          `setoption name Noise value ${request.noise}`,
+          `setoption name NoiseDepth value ${request.noiseDepth}`,
+          `setoption name Seed value ${request.seed}`,
+        ]),
     'ucinewgame',
     'isready',
     position,

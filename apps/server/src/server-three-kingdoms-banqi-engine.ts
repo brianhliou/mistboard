@@ -29,6 +29,7 @@ import {
   threeKingdomsBanqiEngineTierFor,
   threeKingdomsBanqiLiveEngineMove,
   threeKingdomsBanqiNetPath,
+  threeKingdomsBanqiNoiseSeed,
 } from './three-kingdoms-banqi-engine.js';
 import {
   isThreeKingdomsBanqiSquare,
@@ -99,7 +100,10 @@ function engineToMove(room: ThreeKingdomsBanqiEngineRoom, seat: BanqiSeat): bool
 export function threeKingdomsBanqiEngineRequestFor(
   events: readonly ThreeKingdomsBanqiEvent[],
   state: ThreeKingdomsBanqiState,
-  budget: Pick<ThreeKingdomsBanqiEngineRequest, 'nodes' | 'movetimeCapMs' | 'evalFile' | 'chance'>,
+  budget: Pick<
+    ThreeKingdomsBanqiEngineRequest,
+    'nodes' | 'movetimeCapMs' | 'evalFile' | 'chance' | 'noise' | 'noiseDepth' | 'seed'
+  >,
 ): ThreeKingdomsBanqiEngineRequest {
   const moveEvents = events.filter(
     (e): e is Extract<ThreeKingdomsBanqiEvent, { type: 'move-played' }> => e.type === 'move-played',
@@ -142,6 +146,13 @@ export function threeKingdomsBanqiTierRequestFor(
     movetimeCapMs: Math.min(movetimeCapMs, tier.movetimeCapMs),
     ...(evalFile === null ? {} : { evalFile }),
     ...(tier.chance === undefined ? {} : { chance: tier.chance }),
+    ...(tier.noise === undefined
+      ? {}
+      : {
+          noise: tier.noise,
+          noiseDepth: tier.noiseDepth,
+          seed: threeKingdomsBanqiNoiseSeed(state.id),
+        }),
   });
 }
 

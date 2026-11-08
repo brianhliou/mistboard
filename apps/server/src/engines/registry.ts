@@ -1221,7 +1221,9 @@ const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntri
 const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map((tier) => {
     const random = tier.evaluation === 'random';
-    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}`;
+    const noiseSignature =
+      tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`;
+    const signature = `${tier.id}-${THREE_KINGDOMS_BANQI_ENGINE_VERSION}-${tier.evaluation}-nodes-${tier.nodes}${tier.chance === 'mix' ? '-chance-mix' : ''}${noiseSignature}`;
     return [
       tier.id,
       {
@@ -1242,9 +1244,12 @@ const THREE_KINGDOMS_BANQI_ENGINES: Record<string, EngineDefinition> = Object.fr
                 movetime_ms: tier.movetimeCapMs,
                 evaluation: tier.evaluation,
                 ...(tier.chance === undefined ? {} : { chance: tier.chance }),
+                ...(tier.noise === undefined
+                  ? {}
+                  : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
               },
         notes:
-          'Admin-only TK playtest; provisional uncalibrated budgets. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2–L8 require advertised ChanceMix support; L1 and the historical ID do not configure it.',
+          'Admin-only TK playtest with calibrated levels. L8 requires MISTBOARD_THREE_KINGDOMS_BANQI_NET. L2-L8 require advertised ChanceMix support; L2-L4 also require Noise, NoiseDepth and Seed. L1 and the historical ID configure none of these options.',
       } satisfies EngineDefinition,
     ];
   }),
