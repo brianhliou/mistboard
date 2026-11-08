@@ -6,13 +6,11 @@ import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 const ORIGINAL = 'misty-three-kingdoms-banqi';
 const L1 = `${ORIGINAL}-level-1`;
+const L4 = `${ORIGINAL}-level-4`;
 const L8 = `${ORIGINAL}-level-8`;
-const options = [
-  ORIGINAL,
-  ...Array.from({ length: 8 }, (_, i) => `${ORIGINAL}-level-${i + 1}`),
-].map((id) => ({
+const options = Array.from({ length: 8 }, (_, i) => `${ORIGINAL}-level-${i + 1}`).map((id) => ({
   id,
-  name: id === ORIGINAL ? 'Misty' : `Misty level ${id.at(-1)}`,
+  name: `Misty level ${id.at(-1)}`,
   familyName: 'Misty',
   kind: 'container',
 }));
@@ -67,12 +65,17 @@ describe('TK setup uses the server runtime roster', () => {
     return document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]');
   }
 
-  it('offers all reported levels and submits the selected level, preserving the classical default', async () => {
+  it('offers exactly L1–L8 with L4 as the default and submits the selected level', async () => {
     const fetcher = await load();
     const select = open();
     expect(select).not.toBeNull();
     expect([...select!.options].map((o) => o.value)).toEqual(options.map((e) => e.id));
-    expect(select!.value).toBe(ORIGINAL);
+    expect([...select!.options].map((o) => o.value)).not.toContain(ORIGINAL);
+    expect([...select!.options].map((o) => o.textContent)).toEqual(
+      Array.from({ length: 8 }, (_, i) => `Misty level ${i + 1}`),
+    );
+    expect(webVariantTenantForSpecId('three-kingdoms-banqi')!.landing!.defaultEngineId).toBe(L4);
+    expect(select!.value).toBe(L4);
     select!.value = L8;
     select!.dispatchEvent(new Event('change', { bubbles: true }));
     const play = document.querySelector<HTMLButtonElement>('.landing-setup-start');
@@ -98,12 +101,31 @@ describe('TK setup uses the server runtime roster', () => {
     const select = open();
     expect(select).not.toBeNull();
     expect([...select!.options].map((o) => o.value)).not.toContain(L8);
-    expect(select!.value).toBe(ORIGINAL);
+    expect(select!.value).toBe(L4);
+  });
+
+  it('discards a remembered historical id and selects L4', async () => {
+    await load();
+    window.localStorage.setItem(
+      'mistboard:setup:pve',
+      JSON.stringify({ engineIdByGameSpec: { 'three-kingdoms-banqi': ORIGINAL } }),
+    );
+    expect(open()!.value).toBe(L4);
+  });
+
+  it('falls back to the first available level when L4 is unavailable', async () => {
+    const roster = options.filter((e) => e.id !== L1 && e.id !== L4);
+    await load(roster);
+    expect(open()!.value).toBe(roster[0]!.id);
+    expect(webVariantTenantForSpecId('three-kingdoms-banqi')!.landing!.defaultEngineId).toBe(
+      roster[0]!.id,
+    );
   });
 
   it('uses L1 when the binary is unavailable and never submits the unavailable default', async () => {
     const fetcher = await load(options.filter((e) => e.id === L1));
     open();
+    expect(webVariantTenantForSpecId('three-kingdoms-banqi')!.landing!.defaultEngineId).toBe(L1);
     document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
     await vi.waitFor(() =>
       expect(fetcher.mock.calls.some(([input]) => String(input) === '/api/rooms')).toBe(true),
@@ -136,7 +158,7 @@ describe('TK setup uses the server runtime roster', () => {
     const landing = webVariantTenantForSpecId('three-kingdoms-banqi')!.landing!;
     expect(landing.engineOptions).toBeUndefined();
     await load();
-    expect(landing.engineOptions?.length).toBe(9);
+    expect(landing.engineOptions?.length).toBe(8);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => new Response('', { status: 503 })),

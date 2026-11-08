@@ -64,6 +64,7 @@ test('playable API reports TK runtime tiers only through the admin/local gate', 
     assert.equal(await tryHandle({}, request, response, '/api/engines/playable'), true);
     assert.equal(status, 200);
     assert.ok(!body.includes(dir), 'the whole response must not expose filesystem paths');
+    assert.ok(!body.includes(`"${ORIGINAL}"`), 'the historical TK id is never offered');
     return JSON.parse(body) as {
       engines: { id: string }[];
       threeKingdomsBanqiEngines?: { id: string; name: string; familyName: string; kind: string }[];
@@ -78,10 +79,14 @@ test('playable API reports TK runtime tiers only through the admin/local gate', 
   const full = await read('admin');
   assert.deepEqual(
     full.threeKingdomsBanqiEngines?.map((e) => e.id),
-    [ORIGINAL, ...levels],
+    levels,
+  );
+  assert.deepEqual(
+    full.threeKingdomsBanqiEngines?.map((e) => e.name),
+    levels.map((_, i) => `Misty level ${i + 1}`),
   );
   assert.equal(headers['cache-control'], 'private, no-store');
-  assert.deepEqual(Object.keys(full.threeKingdomsBanqiEngines![8]!).sort(), [
+  assert.deepEqual(Object.keys(full.threeKingdomsBanqiEngines![7]!).sort(), [
     'familyName',
     'id',
     'kind',
@@ -93,7 +98,7 @@ test('playable API reports TK runtime tiers only through the admin/local gate', 
     else process.env[keys[2]] = absent;
     assert.deepEqual(
       (await read('admin')).threeKingdomsBanqiEngines?.map((e) => e.id),
-      [ORIGINAL, ...levels.slice(0, 7)],
+      levels.slice(0, 7),
     );
   }
   process.env[keys[1]] = join(dir, 'missing-binary');

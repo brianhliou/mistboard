@@ -1229,15 +1229,15 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       offerInMenu: threeKingdomsBanqiOffered,
       acceptsDeepLink: threeKingdomsBanqiOffered,
       // Runtime tiers come from the gated playable API, never build-time
-      // guesses about binaries or nets. The historical classical bot stays
-      // the default when available; L1 works even without a binary.
+      // guesses about binaries or nets. Default to L4, as in banqi, then the
+      // first available level; L1 works even without a binary.
       get engineOptions() {
         return threeKingdomsBanqiEngineOptions();
       },
       get defaultEngineId() {
         const options = threeKingdomsBanqiEngineOptions();
         return (
-          options?.find((engine) => engine.id === 'misty-three-kingdoms-banqi')?.id ??
+          options?.find((engine) => engine.id === 'misty-three-kingdoms-banqi-level-4')?.id ??
           options?.[0]?.id
         );
       },

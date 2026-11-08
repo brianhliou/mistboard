@@ -4,7 +4,7 @@ import { playableLiveEngines } from './../engine-registry.js';
 import { threeKingdomsBanqiAdmits } from '../three-kingdoms-banqi-access.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
-  THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS,
+  THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES,
   threeKingdomsBanqiEngineAvailable,
 } from '../three-kingdoms-banqi-engine.js';
 import { requireMethod, writeJson } from './lib.js';
@@ -29,13 +29,13 @@ export async function tryHandle(
       kind: engine.kind,
     }));
   const threeKingdomsBanqiEngines = admitsTk
-    ? THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.filter((tier) =>
+    ? THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.filter((tier) =>
         threeKingdomsBanqiEngineAvailable(tier.id),
       )
         .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
         .map((tier) => ({
           id: tier.id,
-          name: tier.level === undefined ? 'Misty' : `Misty level ${tier.level}`,
+          name: `Misty level ${tier.level}`,
           familyName: 'Misty',
           kind: tier.evaluation === 'random' ? 'builtin' : 'container',
         }))
