@@ -481,7 +481,6 @@ describe('Gomoku open title', () => {
     expect(hrefs(card as HTMLElement)).toEqual([
       'https://github.com/dhbloo/rapfi',
       'https://github.com/brianhliou/rapfi-wasm',
-      '#challenge',
     ]);
     expect(card!.textContent).toContain('Rapfi');
     expect(card!.querySelector('.champions-stat')).toBeNull();
