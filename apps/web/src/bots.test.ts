@@ -127,6 +127,16 @@ async function flushPromises(): Promise<void> {
 }
 
 describe('bot pages', () => {
+  it('credits only AB-JChess on its own page; jqe keeps its credit on the jqe page', async () => {
+    const { botCredits } = await import('./bots.js');
+    expect(botCredits('ab-jchess').map((credit) => credit.href)).toEqual([
+      'https://github.com/lxsgx23/AB-JChess',
+    ]);
+    expect(botCredits('jqe').map((credit) => credit.href)).toEqual([
+      'https://github.com/devinokeefe/jieqi',
+    ]);
+  });
+
   it('lists all Rapfi levels and renders their unmeasured profiles with engine credits', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
     try {
