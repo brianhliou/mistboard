@@ -93,11 +93,19 @@
    Its About link sits below the summary as a separate, muted line. */
 .landing-about {
   margin: 0 0 4px;
-  font-size: clamp(17px, 1.6vw, 20px);
+  font-size: clamp(17px, 1.95vw, 22px);
   font-weight: 300;
   line-height: 1.3;
   color: var(--site-heading);
   letter-spacing: 0;
+}
+
+/* Single column (tablet): the tagline has the full width, so it takes the
+   top size; beside the panel it scales with the rail to stay on two lines. */
+@media (max-width: 959px) {
+  .landing-about {
+    font-size: 22px;
+  }
 }
 
 .landing-about-heading {
