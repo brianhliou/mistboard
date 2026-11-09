@@ -296,8 +296,8 @@ export async function deleteExpiredCorrespondenceSeeks(now: Date = new Date()): 
        -- Every lapsed seek, private challenges included, so a dead link can say
        -- "Expired" (migration 165). Same statement as the delete, like the notice.
        INSERT INTO correspondence_seek_outcomes
-         (seek_id, outcome, creator_user_id, target_user_id, visibility, at)
-       SELECT e.id, 'expired', e.creator_user_id, e.target_user_id, e.visibility, $1
+         (seek_id, outcome, creator_user_id, target_user_id, visibility, game_spec_id, at)
+       SELECT e.id, 'expired', e.creator_user_id, e.target_user_id, e.visibility, e.game_spec_id, $1
        FROM expired e
        ON CONFLICT (seek_id) DO NOTHING
      ),
@@ -458,6 +458,8 @@ export type SeekOutcomeKind = 'taken' | 'cancelled' | 'declined' | 'expired';
 /** What happened to a closed seek, with the seek's parties kept for the privacy gate. */
 export type CorrespondenceSeekOutcome = {
   seekId: string;
+  // Null for outcomes written before migration 193.
+  gameSpecId: string | null;
   outcome: SeekOutcomeKind;
   creatorUserId: string;
   targetUserId: string | null;
@@ -475,15 +477,18 @@ export type CorrespondenceSeekOutcome = {
  * for a seek wins; a second write is a no-op.
  */
 export async function recordCorrespondenceSeekTaken(input: {
-  seek: Pick<CorrespondenceSeekRecord, 'id' | 'creatorUserId' | 'targetUserId' | 'visibility'>;
+  seek: Pick<
+    CorrespondenceSeekRecord,
+    'id' | 'creatorUserId' | 'targetUserId' | 'visibility' | 'gameSpecId'
+  >;
   roomId: string;
   accepterUserId: string;
   at?: Date;
 }): Promise<void> {
   await getPool().query(
     `INSERT INTO correspondence_seek_outcomes
-       (seek_id, outcome, creator_user_id, target_user_id, visibility, room_id, accepter_user_id, at)
-     VALUES ($1, 'taken', $2, $3, $4, $5, $6, $7)
+       (seek_id, outcome, creator_user_id, target_user_id, visibility, room_id, accepter_user_id, at, game_spec_id)
+     VALUES ($1, 'taken', $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (seek_id) DO NOTHING`,
     [
       input.seek.id,
@@ -493,6 +498,7 @@ export async function recordCorrespondenceSeekTaken(input: {
       input.roomId,
       input.accepterUserId,
       input.at ?? new Date(),
+      input.seek.gameSpecId,
     ],
   );
 }
@@ -513,12 +519,12 @@ export async function closeCorrespondenceSeek(
   const { rows } = await getPool().query<{ deleted: number }>(
     `WITH closed AS (
        DELETE FROM correspondence_seeks WHERE id = $1 AND ${scopeColumn} = $2
-       RETURNING id, creator_user_id, target_user_id, visibility
+       RETURNING id, creator_user_id, target_user_id, visibility, game_spec_id
      ),
      recorded AS (
        INSERT INTO correspondence_seek_outcomes
-         (seek_id, outcome, creator_user_id, target_user_id, visibility)
-       SELECT id, $3, creator_user_id, target_user_id, visibility FROM closed
+         (seek_id, outcome, creator_user_id, target_user_id, visibility, game_spec_id)
+       SELECT id, $3, creator_user_id, target_user_id, visibility, game_spec_id FROM closed
        ON CONFLICT (seek_id) DO NOTHING
      )
      SELECT (SELECT count(*) FROM closed)::int AS deleted`,
@@ -532,6 +538,7 @@ export async function getCorrespondenceSeekOutcome(
 ): Promise<CorrespondenceSeekOutcome | null> {
   const { rows } = await getPool().query<{
     seek_id: string;
+    game_spec_id: string | null;
     outcome: SeekOutcomeKind;
     creator_user_id: string;
     target_user_id: string | null;
@@ -541,7 +548,7 @@ export async function getCorrespondenceSeekOutcome(
     accepter_name: string | null;
     at: Date;
   }>(
-    `SELECT o.seek_id, o.outcome, o.creator_user_id, o.target_user_id, o.visibility,
+    `SELECT o.seek_id, o.game_spec_id, o.outcome, o.creator_user_id, o.target_user_id, o.visibility,
             o.room_id, o.accepter_user_id, COALESCE(a.display_name, a.handle) AS accepter_name,
             o.at
      FROM correspondence_seek_outcomes o
@@ -553,6 +560,7 @@ export async function getCorrespondenceSeekOutcome(
   if (!row) return null;
   return {
     seekId: row.seek_id,
+    gameSpecId: row.game_spec_id,
     outcome: row.outcome,
     creatorUserId: row.creator_user_id,
     targetUserId: row.target_user_id,

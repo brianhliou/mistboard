@@ -1033,12 +1033,18 @@ async function viewSeek(
 // which only a public board seek ever has, for seeks swept before outcomes existed.
 async function seekGoneFor(seekId: string, user: UserAccount): Promise<SeekGoneView | null> {
   const outcome = await persistence.getCorrespondenceSeekOutcome(seekId);
-  // Outcomes do not store the spec. Recover it from the accepted room or the
-  // public expiry notice; without either, even the outcome must stay hidden.
+  // New outcomes retain the spec; legacy rows may still identify it through
+  // the accepted room or public expiry notice.
   const specId =
+    outcome?.gameSpecId ??
     (outcome?.roomId ? variantTenantForRoomId(outcome.roomId)?.gameSpecId : null) ??
     (await persistence.getClosedCorrespondenceSeekSpecId(seekId));
-  if (!specId || (await seeksVisibleTo([{ gameSpecId: specId }], user)).length === 0) return null;
+  const knowsChallenge = outcome?.creatorUserId === user.id || outcome?.targetUserId === user.id;
+  if (
+    !knowsChallenge &&
+    (!specId || (await seeksVisibleTo([{ gameSpecId: specId }], user)).length === 0)
+  )
+    return null;
   return outcome ? seekGoneView(outcome, user.id) : { reason: 'expired' };
 }
 
