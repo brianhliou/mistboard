@@ -41,6 +41,7 @@ import {
   isTenantEventLog,
   replayTenantEvents,
   tenantReplayCheck,
+  tenantVisibleRoom,
 } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
@@ -178,6 +179,12 @@ registerVariantTenant({
     legacyVariants: ['xiangqi-mahjong'],
   },
   rooms: xiangqiMahjongRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
+  publicRoom: (room) =>
+    tenantVisibleRoom(xiangqiMahjongTenant, room as unknown as XmjRuntimeRoom, {
+      id: 'discovery-spectator',
+      seat: 'spectator',
+      solo: false,
+    }) as unknown as TenantManagedRoom,
   activeGameCount: () => countActiveTenantGames(xiangqiMahjongRooms.values()),
   getOrLoadRoom: (roomId) =>
     getOrLoadXiangqiMahjongRoom(roomId) as Promise<TenantManagedRoom | null>,

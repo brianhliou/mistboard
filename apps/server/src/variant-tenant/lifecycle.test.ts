@@ -580,7 +580,11 @@ test('a move sent after a declared seat flags broadcasts the discard the writer 
     lastSeenAt: issuedAt,
     revokedAt: null,
   };
-  const sent: { type?: string; seq?: number; event?: { type?: string } }[] = [];
+  const sent: {
+    type?: string;
+    event?: { type?: string; move?: { action?: string } };
+    events?: { type?: string; move?: { action?: string } }[];
+  }[] = [];
   let onMessage: ((data: unknown) => Promise<void> | void) | undefined;
   const socket = {
     send: (data: string) => sent.push(JSON.parse(data)),
@@ -604,17 +608,20 @@ test('a move sent after a declared seat flags broadcasts the discard the writer 
     sent.length = 0;
     await onMessage?.(Buffer.from(JSON.stringify({ type: 'move', action: 'self-draw' })));
     await room.pendingWrites;
-    for (let i = 0; i < 20 && !sent.some((f) => f.type === 'event-appended'); i += 1) {
+    for (let i = 0; i < 20 && !sent.some((f) => f.type === 'snapshot'); i += 1) {
       await Promise.resolve();
     }
 
     assert.equal(room.events.length, before + 1);
     const stored = room.events.at(-1);
     assert.ok(stored?.type === 'move-played' && stored.move.action === 'discard');
-    const frames = sent.filter((frame) => frame.type === 'event-appended');
+    // XMJ releases the held prefix in a full snapshot. Verify both the cue
+    // and the released log carry the stored discard, never clock-expired.
+    const frames = sent.filter((frame) => frame.type === 'snapshot');
     assert.equal(frames.length, 1);
-    assert.equal(frames[0].seq, before);
     assert.equal(frames[0].event?.type, 'move-played');
+    assert.equal(frames[0].event?.move?.action, 'discard');
+    assert.equal(frames[0].events?.at(-1)?.move?.action, 'discard');
   } finally {
     clearTenantRuntimeTimers(room);
     for (const client of live.clients) live.clients.delete(client);

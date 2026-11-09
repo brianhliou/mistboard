@@ -279,6 +279,7 @@ function candidateFromTenantRoom(
   isEngine: EngineSeatPredicate,
   now: number,
 ): LiveTvCandidate | null {
+  room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;
   const seats = projection.seats ?? {};
