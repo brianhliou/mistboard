@@ -171,6 +171,8 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
       'A player is an account, or a browser playing as a guest.',
     ],
     publishedAt: '2026-11-08',
+    updatedAt: '2026-11-09',
+    updateNote: 'Weeks now end at midnight Pacific time, as on the statistics page, which moves the weekly counts slightly.',
     thumbnail: {
       kind: 'image',
       src: '/article-thumbs/ten-thousand-games.jpg',
@@ -191,7 +193,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
       {
         kind: 'raw-svg',
         svg: weeklyGamesChartSvg(fullWeeks(record)),
-        caption: `Finished games each week, Monday to Sunday, from June 1 to ${longDate(lastFullWeekEnd(record))}.`,
+        caption: `Finished games each week, Monday to Sunday in Pacific time, through ${longDate(lastFullWeekEnd(record))}.`,
       },
       {
         kind: 'paragraph',

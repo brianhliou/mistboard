@@ -299,8 +299,10 @@ const ZH_HANS: Record<string, string> = {
   '10,000 games played': '已下完 10,000 盘棋',
   'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
     'Mistboard 最初的 10,000 盘棋是怎样积累起来的：大家下了哪些棋类变体、和哪些电脑对弈，以及在这里下棋的都是哪些玩家。',
-  'Mistboard passed 10,000 finished games on November 8.':
-    '11 月 8 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
+  'Mistboard passed 10,000 finished games on November 7.':
+    '11 月 7 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
+  'Weeks now end at midnight Pacific time, as on the statistics page, which moves the weekly counts slightly.':
+    '每周现在在太平洋时间午夜结束，与统计页面一致，因此每周的数字略有变化。',
   'Jieqi is 66% of them.': '揭棋占其中的 66%。',
   'All but 98 were against a bot.': '除了 98 盘，其余都是和电脑下的。',
   'The 15 players with at least 100 games were in 40% of them.':
@@ -311,11 +313,11 @@ const ZH_HANS: Record<string, string> = {
     '一个账号，或一个以访客身份下棋的浏览器，算一位玩家。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盘棋用了四个月。接下来的 9,000 盘只用了 39 天。',
-  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
-    '6 月 1 日至 11 月 1 日每周（周一至周日）完成的对局数。',
+  'Finished games each week, Monday to Sunday in Pacific time, through November 1.':
+    '截至 11 月 1 日每周（周一至周日，太平洋时间）完成的对局数。',
   'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
-  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
-    '从 10 月 5 日那一周起，每周都超过了 1,000 盘。最多的是 10 月 26 日那一周，共 2,647 盘，其中一位玩家下了 557 盘。[统计页面](/stats)会持续更新计数。',
+  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,670, and one player played 578 of those. The [statistics page](/stats) keeps the running count.':
+    '从 10 月 5 日那一周起，每周都超过了 1,000 盘。最多的是 10 月 26 日那一周，共 2,670 盘，其中一位玩家下了 578 盘。[统计页面](/stats)会持续更新计数。',
   'What people played': '大家下了什么棋',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
     '[揭棋](/rules/jieqi)，也就是棋子背面朝上开局的象棋，占全部对局的 66%。在最初的 1,000 盘中，这个比例是 61%。上一篇文章之后，疯狂屋象棋、象棋麻将和五子棋陆续上线。',
@@ -359,38 +361,39 @@ const ZH_HANS: Record<string, string> = {
     '感谢每一位来下过棋、报告过问题，或把 Mistboard 介绍给朋友和观众的人。因为有你们，才有 Mistboard；每一盘棋，我们都心怀感激。',
   "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
     '我们的使命是通过象棋和世界各地的经典策略游戏，让不同文化的人们走到一起。',
-  'Week of 2026-06-01: 2 games': '2026-06-01 当周：2 盘',
+  'Week of 2026-05-25: 1 games': '2026-05-25 当周：1 盘',
+  'Week of 2026-06-01: 1 games': '2026-06-01 当周：1 盘',
   Jun: '6月',
   'Week of 2026-06-08: 3 games': '2026-06-08 当周：3 盘',
-  'Week of 2026-06-15: 0 games': '2026-06-15 当周：0 盘',
-  'Week of 2026-06-22: 3 games': '2026-06-22 当周：3 盘',
+  'Week of 2026-06-15: 1 games': '2026-06-15 当周：1 盘',
+  'Week of 2026-06-22: 2 games': '2026-06-22 当周：2 盘',
   'Week of 2026-06-29: 0 games': '2026-06-29 当周：0 盘',
   'Week of 2026-07-06: 1 games': '2026-07-06 当周：1 盘',
   'Week of 2026-07-13: 19 games': '2026-07-13 当周：19 盘',
   'Week of 2026-07-20: 13 games': '2026-07-20 当周：13 盘',
   'Week of 2026-07-27: 30 games': '2026-07-27 当周：30 盘',
-  'Week of 2026-08-03: 27 games': '2026-08-03 当周：27 盘',
+  'Week of 2026-08-03: 28 games': '2026-08-03 当周：28 盘',
   Aug: '8月',
-  'Week of 2026-08-10: 21 games': '2026-08-10 当周：21 盘',
-  'Week of 2026-08-17: 45 games': '2026-08-17 当周：45 盘',
-  'Week of 2026-08-24: 21 games': '2026-08-24 当周：21 盘',
+  'Week of 2026-08-10: 20 games': '2026-08-10 当周：20 盘',
+  'Week of 2026-08-17: 46 games': '2026-08-17 当周：46 盘',
+  'Week of 2026-08-24: 20 games': '2026-08-24 当周：20 盘',
   'Week of 2026-08-31: 67 games': '2026-08-31 当周：67 盘',
-  'Week of 2026-09-07: 68 games': '2026-09-07 当周：68 盘',
+  'Week of 2026-09-07: 72 games': '2026-09-07 当周：72 盘',
   Sep: '9月',
-  'Week of 2026-09-14: 154 games': '2026-09-14 当周：154 盘',
-  'Week of 2026-09-21: 381 games': '2026-09-21 当周：381 盘',
-  'Week of 2026-09-28: 596 games': '2026-09-28 当周：596 盘',
-  'Week of 2026-10-05: 1,314 games': '2026-10-05 当周：1,314 盘',
+  'Week of 2026-09-14: 155 games': '2026-09-14 当周：155 盘',
+  'Week of 2026-09-21: 386 games': '2026-09-21 当周：386 盘',
+  'Week of 2026-09-28: 616 games': '2026-09-28 当周：616 盘',
+  'Week of 2026-10-05: 1,309 games': '2026-10-05 当周：1,309 盘',
   Oct: '10月',
-  'Week of 2026-10-12: 1,118 games': '2026-10-12 当周：1,118 盘',
-  'Week of 2026-10-19: 1,304 games': '2026-10-19 当周：1,304 盘',
-  'Week of 2026-10-26: 2,647 games': '2026-10-26 当周：2,647 盘',
+  'Week of 2026-10-12: 1,153 games': '2026-10-12 当周：1,153 盘',
+  'Week of 2026-10-19: 1,322 games': '2026-10-19 当周：1,322 盘',
+  'Week of 2026-10-26: 2,670 games': '2026-10-26 当周：2,670 盘',
   'Mistboard passes 10,000 games': 'Mistboard 突破 10,000 盘对局',
   'Everyone who plays on Mistboard.': '每一位在 Mistboard 下棋的玩家。',
   'A round Chinese chess piece marked with the character for ten thousand, beside the number 10,000 with a small grey cloud at its last zero.':
     '一枚刻着「萬」字的圆形象棋棋子，旁边是数字 10,000，最后一个零处有一朵灰色小云。',
-  'Finished games per week, rising from a handful in June to a peak of 2,647':
-    '每周完成的对局数，从 6 月的寥寥几盘上升到最高 2,647 盘',
+  'Finished games per week, rising from a handful in June to a peak of 2,670':
+    '每周完成的对局数，从 6 月的寥寥几盘上升到最高 2,670 盘',
   'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
@@ -7013,8 +7016,10 @@ const ZH_HANT: Record<string, string> = {
   '10,000 games played': '已下完 10,000 盤棋',
   'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
     'Mistboard 最初的 10,000 盤棋是怎樣累積起來的：大家下了哪些棋類變體、和哪些電腦對弈，以及在這裡下棋的都是哪些玩家。',
-  'Mistboard passed 10,000 finished games on November 8.':
-    '11 月 8 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
+  'Mistboard passed 10,000 finished games on November 7.':
+    '11 月 7 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
+  'Weeks now end at midnight Pacific time, as on the statistics page, which moves the weekly counts slightly.':
+    '每週現在在太平洋時間午夜結束，與統計頁面一致，因此每週的數字略有變化。',
   'Jieqi is 66% of them.': '揭棋佔其中的 66%。',
   'All but 98 were against a bot.': '除了 98 盤，其餘都是和電腦下的。',
   'The 15 players with at least 100 games were in 40% of them.':
@@ -7025,11 +7030,11 @@ const ZH_HANT: Record<string, string> = {
     '一個帳號，或一個以訪客身分下棋的瀏覽器，算一位玩家。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盤棋用了四個月。接下來的 9,000 盤只用了 39 天。',
-  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
-    '6 月 1 日至 11 月 1 日每週（週一至週日）完成的對局數。',
+  'Finished games each week, Monday to Sunday in Pacific time, through November 1.':
+    '截至 11 月 1 日每週（週一至週日，太平洋時間）完成的對局數。',
   'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
-  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
-    '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,647 盤，其中一位玩家下了 557 盤。[統計頁面](/stats)會持續更新計數。',
+  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,670, and one player played 578 of those. The [statistics page](/stats) keeps the running count.':
+    '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,670 盤，其中一位玩家下了 578 盤。[統計頁面](/stats)會持續更新計數。',
   'What people played': '大家下了什麼棋',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
     '[揭棋](/rules/jieqi)，也就是棋子背面朝上開局的象棋，佔全部對局的 66%。在最初的 1,000 盤中，這個比例是 61%。上一篇文章之後，瘋狂屋象棋、象棋麻將和五子棋陸續推出。',
@@ -7073,38 +7078,39 @@ const ZH_HANT: Record<string, string> = {
     '感謝每一位來下過棋、回報過問題，或把 Mistboard 介紹給朋友和觀眾的人。因為有你們，才有 Mistboard；每一盤棋，我們都心懷感激。',
   "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
     '我們的使命是透過象棋和世界各地的經典策略遊戲，讓不同文化的人們走到一起。',
-  'Week of 2026-06-01: 2 games': '2026-06-01 當週：2 盤',
+  'Week of 2026-05-25: 1 games': '2026-05-25 當週：1 盤',
+  'Week of 2026-06-01: 1 games': '2026-06-01 當週：1 盤',
   Jun: '6月',
   'Week of 2026-06-08: 3 games': '2026-06-08 當週：3 盤',
-  'Week of 2026-06-15: 0 games': '2026-06-15 當週：0 盤',
-  'Week of 2026-06-22: 3 games': '2026-06-22 當週：3 盤',
+  'Week of 2026-06-15: 1 games': '2026-06-15 當週：1 盤',
+  'Week of 2026-06-22: 2 games': '2026-06-22 當週：2 盤',
   'Week of 2026-06-29: 0 games': '2026-06-29 當週：0 盤',
   'Week of 2026-07-06: 1 games': '2026-07-06 當週：1 盤',
   'Week of 2026-07-13: 19 games': '2026-07-13 當週：19 盤',
   'Week of 2026-07-20: 13 games': '2026-07-20 當週：13 盤',
   'Week of 2026-07-27: 30 games': '2026-07-27 當週：30 盤',
-  'Week of 2026-08-03: 27 games': '2026-08-03 當週：27 盤',
+  'Week of 2026-08-03: 28 games': '2026-08-03 當週：28 盤',
   Aug: '8月',
-  'Week of 2026-08-10: 21 games': '2026-08-10 當週：21 盤',
-  'Week of 2026-08-17: 45 games': '2026-08-17 當週：45 盤',
-  'Week of 2026-08-24: 21 games': '2026-08-24 當週：21 盤',
+  'Week of 2026-08-10: 20 games': '2026-08-10 當週：20 盤',
+  'Week of 2026-08-17: 46 games': '2026-08-17 當週：46 盤',
+  'Week of 2026-08-24: 20 games': '2026-08-24 當週：20 盤',
   'Week of 2026-08-31: 67 games': '2026-08-31 當週：67 盤',
-  'Week of 2026-09-07: 68 games': '2026-09-07 當週：68 盤',
+  'Week of 2026-09-07: 72 games': '2026-09-07 當週：72 盤',
   Sep: '9月',
-  'Week of 2026-09-14: 154 games': '2026-09-14 當週：154 盤',
-  'Week of 2026-09-21: 381 games': '2026-09-21 當週：381 盤',
-  'Week of 2026-09-28: 596 games': '2026-09-28 當週：596 盤',
-  'Week of 2026-10-05: 1,314 games': '2026-10-05 當週：1,314 盤',
+  'Week of 2026-09-14: 155 games': '2026-09-14 當週：155 盤',
+  'Week of 2026-09-21: 386 games': '2026-09-21 當週：386 盤',
+  'Week of 2026-09-28: 616 games': '2026-09-28 當週：616 盤',
+  'Week of 2026-10-05: 1,309 games': '2026-10-05 當週：1,309 盤',
   Oct: '10月',
-  'Week of 2026-10-12: 1,118 games': '2026-10-12 當週：1,118 盤',
-  'Week of 2026-10-19: 1,304 games': '2026-10-19 當週：1,304 盤',
-  'Week of 2026-10-26: 2,647 games': '2026-10-26 當週：2,647 盤',
+  'Week of 2026-10-12: 1,153 games': '2026-10-12 當週：1,153 盤',
+  'Week of 2026-10-19: 1,322 games': '2026-10-19 當週：1,322 盤',
+  'Week of 2026-10-26: 2,670 games': '2026-10-26 當週：2,670 盤',
   'Mistboard passes 10,000 games': 'Mistboard 突破 10,000 盤對局',
   'Everyone who plays on Mistboard.': '每一位在 Mistboard 下棋的玩家。',
   'A round Chinese chess piece marked with the character for ten thousand, beside the number 10,000 with a small grey cloud at its last zero.':
     '一枚刻著「萬」字的圓形象棋棋子，旁邊是數字 10,000，最後一個零處有一朵灰色小雲。',
-  'Finished games per week, rising from a handful in June to a peak of 2,647':
-    '每週完成的對局數，從 6 月的寥寥幾盤上升到最高 2,647 盤',
+  'Finished games per week, rising from a handful in June to a peak of 2,670':
+    '每週完成的對局數，從 6 月的寥寥幾盤上升到最高 2,670 盤',
   'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
