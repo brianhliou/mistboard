@@ -131,7 +131,7 @@
   white-space: nowrap;
 }
 
-/* An event still to start (no games yet): a plain line under the cards, not a
+/* An event with no games yet: a plain line under the cards, not a
    card and not a link, since its page would be an empty intro (Brian,
    2026-10-27). No pointer, no hover. */
 .landing-event-upcoming {
@@ -143,19 +143,26 @@
 }
 
 .landing-event-upcoming-line {
-  overflow: hidden;
+  display: flex;
   margin: 0;
   color: var(--site-muted);
   font-size: 12.5px;
   line-height: 18px;
-  text-overflow: ellipsis;
   white-space: nowrap;
   cursor: default;
 }
 
 .landing-event-upcoming-title {
+  min-width: 0;
+  overflow: hidden;
   color: var(--site-text);
   font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.landing-event-upcoming-meta {
+  flex-shrink: 0;
+  white-space: pre;
 }
 
 /* Past the two-row cap: the rest are on the broadcast list. */
