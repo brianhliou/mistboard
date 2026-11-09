@@ -28,6 +28,24 @@ import type { NewDataFile, StoredDataFile } from './persistence-game-data.js';
 
 const NOW = new Date('2026-10-01T09:00:00Z');
 
+test('bot monthly files have separate immutable keys and round-trip paths', () => {
+  const target = {
+    kind: 'monthly',
+    month: '2026-09',
+    variant: 'jieqi',
+    format: 'jsonl',
+    botId: 'jqe',
+  } as const;
+  assert.equal(dataFileKey(target), 'bots/jqe/monthly/2026-09/jieqi.jsonl.gz');
+  const path = hashedDataFilePath(target, 'a'.repeat(64));
+  assert.deepEqual(parseDataFilePath(path), { ok: true, target, hash: 'a'.repeat(12) });
+  assert.equal(dataFileName(target), 'mistboard_jqe_jieqi_2026-09.jsonl.gz');
+  assert.notEqual(dataFileKey(target), dataFileKey({ ...target, botId: 'ab-jchess' }));
+  assert.notEqual(dataFileKey(target), dataFileKey({ ...target, kind: 'engine-monthly' }));
+  assert.equal(parseDataFilePath('/api/data/bots/../monthly/2026-09/jieqi.jsonl.gz')?.ok, false);
+  assert.equal(parseDataFilePath('/api/data/bots/jqe/monthly/2026-09/all.pgn.gz')?.ok, false);
+});
+
 test('parseDataFilePath fails closed: malformed month 400, unknown variant or format 404', () => {
   assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/xiangqi.pgn.gz'), {
     ok: true,

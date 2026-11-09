@@ -1314,13 +1314,13 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/cxa-listed-players.ts` | _needs a one-line description_ |
 | `apps/server/src/deploy-history.ts` | _needs a one-line description_ |
 | `apps/server/src/engine-match-import.ts` | _needs a one-line description_ |
-| `apps/server/src/game-data-files.ts` | _needs a one-line description_ |
+| `apps/server/src/game-data-files.ts` | Monthly and per-bot data file keys, content-addressed downloads, listings and shared export builds |
 | `apps/server/src/import-engine-match.ts` | _needs a one-line description_ |
 | `apps/server/src/jieqi-eve-adapter.ts` | _needs a one-line description_ |
 | `apps/server/src/jungle-eve-adapter.ts` | _needs a one-line description_ |
 | `apps/server/src/og-broadcast.ts` | _needs a one-line description_ |
 | `apps/server/src/og-player.ts` | _needs a one-line description_ |
-| `apps/server/src/persistence-game-data.ts` | _needs a one-line description_ |
+| `apps/server/src/persistence-game-data.ts` | Public monthly game selection, stable bot participant filters, bot data roster and stored file persistence |
 | `apps/server/src/persistence-xiangqi-players.ts` | _needs a one-line description_ |
 | `apps/server/src/player-pages.ts` | _needs a one-line description_ |
 | `apps/server/src/player-reference.ts` | _needs a one-line description_ |
@@ -1340,7 +1340,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/crazyhouse-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/gomoku-rules-diagrams.ts` | Static Gomoku rules figures using the live board renderer, screened opening pool and kernel-checked winning positions. |
 | `apps/web/src/crazyhouse-xiangqi-sample-game.ts` | _needs a one-line description_ |
-| `apps/web/src/data-page.ts` | _needs a one-line description_ |
+| `apps/web/src/data-page.ts` | Monthly game downloads with shareable variant and public bot filters, checksums and data documentation |
 | `apps/web/src/embed-code.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-analysis.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-jieqi-lines.ts` | Play cached best-move alternatives in Jieqi game embeds using the public deal and shared replay board |

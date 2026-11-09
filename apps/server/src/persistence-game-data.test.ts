@@ -22,8 +22,10 @@ import {
   recordGameEnd,
 } from './persistence.js';
 import {
+  countPublishedGamesByMonth,
   getStoredDataFile,
   insertDataFileIfAbsent,
+  listPublishedRoomIds,
   listStoredDataFiles,
 } from './persistence-game-data.js';
 import {
@@ -237,6 +239,123 @@ async function download(pathname: string): Promise<CapturedResponse & { location
 }
 
 definePersistenceTests('game data files', () => {
+  test('bot monthly counts include the full month beyond the profile page limit', async () => {
+    await sqlQuery(`INSERT INTO games
+      (room_id, variant, result, termination, ply_count, started_at, ended_at, mode, status, visibility)
+      SELECT 'xq_bot_page_' || n, 'xiangqi', 'red-wins', 'resignation', 20,
+        '2026-08-10T10:00:00Z'::timestamptz, '2026-08-10T10:10:00Z'::timestamptz,
+        'pve', 'completed', 'public' FROM generate_series(1, 20) AS n`);
+    await sqlQuery(`INSERT INTO game_participants
+      (game_id, color, subject_type, subject_id, display_name, visibility)
+      SELECT 'xq_bot_page_' || n, 'red', 'bot', 'page-bot', 'Page Bot', 'public'
+      FROM generate_series(1, 20) AS n`);
+    const to = new Date('2026-09-01');
+    assert.deepEqual(await countPublishedGamesByMonth(['xiangqi'], to, 'human', 'page-bot'), [
+      { month: '2026-08', variant: 'xiangqi', games: 20 },
+    ]);
+    assert.equal(
+      (await listPublishedRoomIds(['xiangqi'], new Date('2026-08-01'), to, 'human', 'page-bot'))
+        .length,
+      20,
+    );
+  });
+
+  test('bot downloads use stable public identities in either seat and fail closed', async () => {
+    await seedMonth();
+    await sqlQuery(`INSERT INTO bot_profiles
+      (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
+       supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
+      VALUES ('data-bot', 'Renamed Engine', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi','banqi'], 300000, 3000, 'public'),
+       ('private-bot', 'Private Engine', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi'], 300000, 3000, 'private'),
+       ('empty-bot', 'No games', '', 'system', 'test-engine', 'xiangqi', ARRAY['xiangqi'], 300000, 3000, 'public'),
+       ('hidden-bot', 'Hidden Engine', '', 'system', 'test-engine', 'ffq-banqi', ARRAY['ffq-banqi'], 300000, 3000, 'public')`);
+    // One game in the first seat, one in the second, and the excluded rows.
+    await sqlQuery(`UPDATE game_participants SET subject_type = 'bot', subject_id = 'data-bot', display_name = 'Old Name'
+      WHERE (game_id IN ('xq_data_a','xq_data_private','xq_data_operator','xq_data_imported','xq_data_open_month') AND color = 'red')
+         OR (game_id = 'xq_data_b' AND color = 'black')`);
+    // Both seats in one game still yield just one row. Another game merely
+    // borrowing the bot's display name must not match its stable identity.
+    await sqlQuery(`UPDATE game_participants SET subject_type = 'bot', subject_id = 'data-bot', display_name = 'Another Old Name'
+      WHERE game_id = 'xq_data_a' AND color = 'black'`);
+    await sqlQuery(
+      `UPDATE game_participants SET display_name = 'Renamed Engine' WHERE game_id = 'bq_data_d'`,
+    );
+    // Keep the operator as the other seat so the stats exclusion still applies.
+    await sqlQuery(
+      `UPDATE game_participants SET subject_type = 'bot', subject_id = 'data-bot' WHERE game_id = 'xq_data_operator' AND color = 'black'`,
+    );
+    await sqlQuery(
+      `UPDATE game_participants SET subject_type = 'user', subject_id = 'data-operator' WHERE game_id = 'xq_data_operator' AND color = 'red'`,
+    );
+
+    const from = new Date('2026-08-01');
+    const to = new Date('2026-09-01');
+    assert.deepEqual(
+      await listPublishedRoomIds(['xiangqi', 'banqi'], from, to, 'human', 'data-bot'),
+      ['xq_data_a', 'xq_data_b'],
+    );
+    assert.deepEqual(
+      await countPublishedGamesByMonth(['xiangqi', 'banqi'], to, 'human', 'data-bot'),
+      [{ month: '2026-08', variant: 'xiangqi', games: 2 }],
+    );
+    clearDataListingCache();
+    const listing = await loadDataListing(new Date('2026-09-15'), 'data-bot');
+    assert.equal(listing.months[0]?.games, 2);
+    assert.equal(
+      (await loadDataListing(new Date('2026-09-15'))).months[0]?.games,
+      4,
+      'bot cache never replaces unfiltered counts',
+    );
+    assert.equal(
+      listing.months[0]?.files[0]?.path,
+      '/api/data/bots/data-bot/monthly/2026-08/all.jsonl.gz',
+    );
+    assert.deepEqual(listing.collections, []);
+    assert.equal(
+      listing.bots?.some((bot) => bot.id === 'private-bot' || bot.id === 'hidden-bot'),
+      false,
+    );
+    assert.deepEqual((await loadDataListing(new Date('2026-09-15'), 'empty-bot')).months, []);
+    resetDataDownloadLimiterForTests();
+    const file = await download('/api/data/bots/data-bot/monthly/2026-08/xiangqi.jsonl.gz');
+    const lines = gunzipSync(file.body).toString('utf8').trimEnd().split('\n');
+    assert.deepEqual(
+      lines.map((line) => JSON.parse(line).game_id),
+      ['xq_data_a', 'xq_data_b'],
+    );
+    const single = resolveGameExport({
+      roomId: 'xq_data_a',
+      format: 'json',
+      summary: await getGameSummary('xq_data_a'),
+      events: await loadRoom('xq_data_a'),
+    });
+    assert.equal(single.status === 200 && single.body, lines[0]);
+    for (const bot of ['unknown-bot', 'private-bot', 'hidden-bot']) {
+      assert.equal((await request(`/api/data?bot=${bot}`)).status, 404);
+      assert.equal(
+        (await request(`/api/data/bots/${bot}/monthly/2026-08/xiangqi.jsonl.gz`)).status,
+        404,
+      );
+    }
+    assert.equal((await request('/api/data?bot=bad%2Fid')).status, 400);
+    assert.equal(
+      (await request('/api/data/bots/data-bot/monthly/2026-08/jungle.jsonl.gz')).status,
+      404,
+    );
+    assert.equal(
+      (await request('/api/data/bots/data-bot/monthly/2026-08/xiangqi.jsonl.gz?bot=other')).status,
+      400,
+    );
+    // An already-built file becomes inaccessible when its bot becomes private.
+    await sqlQuery(`UPDATE bot_profiles SET visibility = 'private' WHERE id = 'data-bot'`);
+    assert.equal((await request(file.location)).status, 404);
+    assert.equal(
+      (await request('/api/data?bot=data-bot')).status,
+      404,
+      'warm listing cache still checks public visibility',
+    );
+  });
+
   test('the listing counts closed months only, without the excluded games', async () => {
     await seedMonth();
     clearDataListingCache();

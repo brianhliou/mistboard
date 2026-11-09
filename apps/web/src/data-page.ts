@@ -64,6 +64,8 @@ export type DataListing = {
   /** The scheduled engine games' months, their own files. Absent from older responses. */
   engineMonths?: DataMonth[];
   collections: DataCollection[];
+  bots?: Array<{ id: string; displayName: string; variants: string[] }>;
+  botId?: string;
 };
 
 export const ALL_VARIANTS = 'all';
@@ -113,15 +115,65 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
     return;
   }
 
+  const botFilter = document.createElement('label');
+  botFilter.className = 'data-bot-filter';
+  const botLabel = document.createElement('span');
+  botLabel.textContent = t('data.botFilter');
+  const botSelect = document.createElement('select');
+  botSelect.setAttribute('aria-label', t('data.botFilter'));
+  botFilter.append(botLabel, botSelect);
+  header.append(botFilter);
+
   let variant = readVariant(listing);
+  let requestSequence = 0;
+  async function reloadListing(): Promise<void> {
+    const sequence = ++requestSequence;
+    const next = await fetchListing();
+    if (sequence !== requestSequence || !root.isConnected) return;
+    if (!next) {
+      monthsHost.replaceChildren(buildNotice(t('data.unavailable'), t('data.subtitle')));
+      return;
+    }
+    listing = next;
+    variant = readVariant(listing);
+    render();
+  }
+  botSelect.addEventListener('change', () => {
+    const url = new URL(window.location.href);
+    if (botSelect.value) url.searchParams.set('bot', botSelect.value);
+    else url.searchParams.delete('bot');
+    window.history.pushState(null, '', url);
+    void reloadListing();
+  });
   const render = (): void => {
     if (!listing) return;
     renderCount(countLine, listing);
+    const allBots = document.createElement('option');
+    allBots.value = '';
+    allBots.textContent = t('data.allBots');
+    botSelect.replaceChildren(
+      allBots,
+      ...(listing.bots ?? []).map((bot) => {
+        const option = document.createElement('option');
+        option.value = bot.id;
+        option.textContent = bot.displayName;
+        return option;
+      }),
+    );
+    botSelect.value = listing.botId ?? '';
+    botFilter.hidden = (listing.bots?.length ?? 0) === 0;
+
     renderRail(rail, listing, variant, (next) => {
       variant = next;
       writeVariant(next);
       render();
     });
+    for (const link of rail.querySelectorAll<HTMLAnchorElement>('a')) {
+      if (!listing.botId) continue;
+      const url = new URL(link.href);
+      url.searchParams.set('bot', listing.botId);
+      link.href = `${url.pathname}${url.search}`;
+    }
     renderMonths(monthsHost, listing, variant, onDownload);
   };
 
@@ -132,25 +184,22 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
     if (refreshTimer !== null) window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(async () => {
       refreshTimer = null;
-      const next = await fetchListing();
-      if (next && root.isConnected) {
-        listing = next;
-        render();
-      }
+      await reloadListing();
     }, 4000);
   }
 
   window.addEventListener('popstate', () => {
     if (!root.isConnected || !listing) return;
-    variant = readVariant(listing);
-    render();
+    void reloadListing();
   });
   render();
 }
 
 async function fetchListing(): Promise<DataListing | null> {
   try {
-    const response = await fetch('/api/data', { cache: 'no-store' });
+    const botId = new URLSearchParams(window.location.search).get('bot');
+    const path = botId ? `/api/data?bot=${encodeURIComponent(botId)}` : '/api/data';
+    const response = await fetch(path, { cache: 'no-store' });
     if (!response.ok) return null;
     return (await response.json()) as DataListing;
   } catch {
@@ -663,6 +712,7 @@ export function mountDataAbout(root: HTMLElement): void {
     aboutSection(
       'data.includedHeading',
       paragraph(t('data.included')),
+      paragraph(t('data.botFilterNote')),
       paragraph(t('data.excluded')),
     ),
     aboutSection(
