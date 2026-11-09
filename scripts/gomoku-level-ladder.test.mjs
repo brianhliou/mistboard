@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { once } from 'node:events';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { tsImport } from 'tsx/esm/api';
 import * as ladder from './gomoku-level-ladder.mjs';
@@ -10,8 +15,8 @@ import * as ladder from './gomoku-level-ladder.mjs';
 const { baselineMove, playGame, runPairing, seededRandom } = ladder;
 
 // The calibration records (18 MB of games) live in the private docs repo, not
-// the public tree. GOMOKU_LADDER_DATA points elsewhere; without them the four
-// record pins skip by name and the policy tests still run.
+// the public tree. GOMOKU_LADDER_DATA points elsewhere; without the private
+// records their pins skip by name and the synthetic policy tests still run.
 const LADDER_DATA = process.env.GOMOKU_LADDER_DATA
   ? new URL(`file://${process.env.GOMOKU_LADDER_DATA.replace(/\/?$/, '/')}`)
   : new URL('../docs-private/gomoku/', import.meta.url);
@@ -262,6 +267,197 @@ const candidateOutput = [100, 80, -1000]
   ])
   .concat('MESSAGE +29999 | 1-1 | C1', '2,0');
 
+async function withNativeFixture(output, check) {
+  const dir = mkdtempSync(join(tmpdir(), 'gomoku-native-'));
+  const binary = join(dir, 'rapfi');
+  const log = join(dir, 'commands.jsonl');
+  writeFileSync(
+    binary,
+    `#!${process.execPath}
+const fs = require('node:fs');
+require('node:readline').createInterface({input: process.stdin}).on('line', line => {
+  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({pid: process.pid, line}) + '\\n');
+  if (line === 'START 15') console.log('OK');
+  if (line === 'DONE' || line === 'BEGIN' || line.startsWith('YXNBEST ')) {
+    // YXBOARD/DONE only loads the board; YXNBEST searches it.
+    if (line !== 'DONE' && ${output !== null}) console.log(${JSON.stringify(output)});
+  }
+  if (line === 'END') process.exit(0);
+});
+`,
+    { mode: 0o755 },
+  );
+  const previous = process.env.RAPFI_BIN;
+  process.env.RAPFI_BIN = binary;
+  let native;
+  try {
+    native = await ladder.loadNativeRapfi();
+    await check(native, binary, () => readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse));
+  } finally {
+    await native?.stop();
+    if (previous === undefined) delete process.env.RAPFI_BIN;
+    else process.env.RAPFI_BIN = previous;
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('native runner uses the live server seeded policy, fresh processes and binary fingerprint', async () => {
+  await withNativeFixture(candidateOutput.join('\n'), async (native, binary, commands) => {
+    assert.deepEqual(native.pin, {
+      kind: 'native',
+      binaryPath: binary,
+      sha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
+    });
+    const tier = RAPFI_LEVELS[0];
+    const player = native.player(tier);
+    const state = game.createInitialGomokuState({
+      turn: 'black',
+      stones: [
+        { square: 'h8', color: 'black' },
+        { square: 'o15', color: 'white' },
+      ],
+    });
+    for (const gameSeed of [17, 99]) {
+      const plySeed = rapfi.rapfiPlySeed(gameSeed, state.ply);
+      const point = rapfi.selectRapfiMove(
+        {
+          turn: 1,
+          stones: [
+            { x: 7, y: 7, player: 1 },
+            { x: 14, y: 14, player: 2 },
+          ],
+        },
+        rapfi.parseRapfiOutput(candidateOutput),
+        { ...tier, seed: plySeed },
+      );
+      const expected = { to: `${String.fromCharCode(97 + point.x)}${point.y + 1}` };
+      assert.deepEqual(await player.choose(state, { gameSeed, plySeed }), expected);
+      const measured = player.telemetry.moves.at(-1);
+      assert.equal(measured.to, expected.to);
+      assert.equal(measured.gameSeed, gameSeed);
+      assert.equal(measured.plySeed, plySeed);
+      assert.ok(Number.isFinite(measured.elapsedMs) && measured.elapsedMs >= 0);
+      assert.equal(measured.completedNodes, 300);
+      assert.equal(measured.reportedNodes, null);
+      assert.equal(measured.engineTimeMs, null);
+    }
+    const lines = commands();
+    assert.equal(new Set(lines.map(({ pid }) => pid)).size, 2);
+    assert.equal(lines.filter(({ line }) => line === 'END').length, 2);
+    assert.equal(lines.filter(({ line }) => line === `INFO max_node ${tier.nodes}`).length, 2);
+    assert.equal(lines.filter(({ line }) => line === `YXNBEST ${tier.candidateCount}`).length, 2);
+    assert.throws(() => native.player({ ...tier, bestRate: 0.5 }), /live RAPFI_LEVELS/);
+  });
+});
+
+test('native errors reap the child and remove runner exit handlers', async () => {
+  const listeners = ['exit', 'SIGINT', 'SIGTERM'].map((signal) => process.listenerCount(signal));
+  await withNativeFixture('ERROR bad position', async (native, _binary, commands) => {
+    const context = { gameSeed: 17, plySeed: rapfi.rapfiPlySeed(17, 0) };
+    await assert.rejects(
+      native.player(RAPFI_LEVELS[0]).choose(game.createInitialGomokuState(), context),
+      /network\/config error/,
+    );
+    const pid = commands()[0].pid;
+    assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
+    assert.deepEqual(
+      ['exit', 'SIGINT', 'SIGTERM'].map((signal) => process.listenerCount(signal)),
+      listeners,
+    );
+  });
+});
+
+test('native forced replies keep unreported search evidence null', async () => {
+  await withNativeFixture('7,7', async (native) => {
+    const player = native.player(RAPFI_LEVELS[7]);
+    assert.deepEqual(
+      await player.choose(game.createInitialGomokuState(), {
+        gameSeed: 17,
+        plySeed: rapfi.rapfiPlySeed(17, 0),
+      }),
+      { to: 'h8' },
+    );
+    for (const field of ['completedNodes', 'reportedNodes', 'engineTimeMs', 'summary'])
+      assert.equal(player.telemetry.moves[0][field], null, field);
+  });
+});
+
+test('native CLI kills its in-flight child on SIGINT and SIGTERM', async () => {
+  for (const [signal, exitCode] of [
+    ['SIGINT', 130],
+    ['SIGTERM', 143],
+  ]) {
+    await withNativeFixture(null, async (_native, binary, commands) => {
+      const runner = spawn(
+        process.execPath,
+        [
+          fileURLToPath(new URL('./gomoku-level-ladder.mjs', import.meta.url)),
+          '--engine',
+          'native',
+          '--games',
+          '2',
+          '--pairs',
+          '1-2',
+          '--output',
+          `${binary}.json`,
+        ],
+        { stdio: 'ignore' },
+      );
+      const closed = once(runner, 'close');
+      try {
+        let pid;
+        const deadline = Date.now() + 10_000;
+        while (!pid && Date.now() < deadline) {
+          try {
+            pid = commands().find(({ line }) => line.startsWith('YXNBEST '))?.pid;
+          } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+          }
+          if (!pid) {
+            assert.equal(runner.exitCode, null, 'native runner exited before searching');
+            await delay(10);
+          }
+        }
+        assert.ok(pid, 'native runner never began its search');
+        runner.kill(signal);
+        assert.deepEqual(await closed, [exitCode, null]);
+        // SIGKILL delivery/reaping may trail the runner exit slightly.
+        let alive = true;
+        for (let attempt = 0; alive && attempt < 100; attempt++) {
+          try {
+            process.kill(pid, 0);
+          } catch (error) {
+            assert.equal(error.code, 'ESRCH');
+            alive = false;
+          }
+          if (alive) await delay(10);
+        }
+        assert.equal(alive, false, 'native engine survived its runner');
+      } finally {
+        if (runner.exitCode === null && runner.signalCode === null) runner.kill('SIGTERM');
+        await closed;
+      }
+    });
+  }
+});
+
+test('native missing binary fails with the configured path and installation instructions', async () => {
+  const previous = process.env.RAPFI_BIN;
+  const missing = join(tmpdir(), 'missing-rapfi-native-ladder-binary');
+  process.env.RAPFI_BIN = missing;
+  try {
+    await assert.rejects(ladder.loadNativeRapfi(), (error) => {
+      assert.ok(error.message.includes(missing));
+      assert.match(error.message, /RAPFI_BIN/);
+      assert.match(error.message, /scripts\/engine-assets\.sh/);
+      return true;
+    });
+  } finally {
+    if (previous === undefined) delete process.env.RAPFI_BIN;
+    else process.env.RAPFI_BIN = previous;
+  }
+});
+
 test('ladder uses the shared multi-PV policy and varies choice by game and ply', async () => {
   const commands = [];
   const tier = { ...RAPFI_LEVELS[0], candidateCount: 3, evalMargin: 100 };
@@ -500,11 +696,74 @@ test('measurement pin rejects candidate-count or margin drift with identical bud
   );
 });
 
-test('the recorded complete policy agrees with RAPFI_LEVELS and a measured pairing', {
+test('the historical complete policy agrees with its recorded policy and a measured pairing', {
   skip: calibrationSkip,
 }, () => {
   const record = calibrationRecord('gomoku-level-ladder.json');
-  assertMeasuredPolicies(record, RAPFI_LEVELS);
+  assertMeasuredPolicies(record, record.runs.at(-1).levels);
+});
+
+const CURRENT_DATA = new URL('ladder-current-1105/', LADDER_DATA);
+const currentSkip = existsSync(CURRENT_DATA)
+  ? false
+  : 'current calibration records not present (docs-private/gomoku/ladder-current-1105)';
+function currentRecords() {
+  const files = readdirSync(CURRENT_DATA)
+    .filter((file) => file.endsWith('.json'))
+    .sort();
+  assert.ok(files.length, 'current calibration directory has no JSON records');
+  return files.map((file) => JSON.parse(readFileSync(new URL(file, CURRENT_DATA), 'utf8')));
+}
+
+function assertCurrentPolicy(record) {
+  // Compare whole objects, including absent/extra fields, never only budgets.
+  assert.deepEqual(record.levels, RAPFI_LEVELS, 'current record full policy');
+  assert.ok(record.runs.length, 'current record has no runs');
+  for (const run of record.runs) {
+    assert.deepEqual(run.levels, RAPFI_LEVELS, 'current run full policy');
+    assert.ok(run.pairings.length, 'current run has no measured pairings');
+    for (const pair of run.pairings)
+      for (const side of [pair.weaker, pair.stronger])
+        if (side.level !== 'baseline')
+          assert.deepEqual(
+            side,
+            RAPFI_LEVELS.find((tier) => tier.level === side.level),
+            'current pairing full policy',
+          );
+  }
+}
+
+test('current calibration records pin the full RAPFI_LEVELS policy including choice fields', {
+  skip: currentSkip,
+}, () => {
+  const records = currentRecords();
+  for (const record of records) assertCurrentPolicy(record);
+  const runs = records.flatMap((record) => record.runs);
+  assertMeasuredPolicies({ levels: RAPFI_LEVELS, runs }, RAPFI_LEVELS);
+  for (const { level } of RAPFI_LEVELS.slice(1))
+    assert.ok(
+      runs.some((run) => run.pairings.some((pair) => pair.id === `${level - 1}-${level}`)),
+      `missing current adjacent pair ${level - 1}-${level}`,
+    );
+});
+
+test('current-policy check rejects a planted bestRate-only change in a real record', {
+  skip: currentSkip,
+}, () => {
+  const record = currentRecords()[0];
+  assertCurrentPolicy(record);
+  for (const location of ['record', 'run', 'pairing']) {
+    const planted = structuredClone(record);
+    const tier =
+      location === 'record'
+        ? planted.levels.find((tier) => tier.bestRate !== undefined)
+        : location === 'run'
+          ? planted.runs[0].levels.find((tier) => tier.bestRate !== undefined)
+          : planted.runs[0].pairings[0].stronger;
+    assert.equal(typeof tier.bestRate, 'number');
+    tier.bestRate += 0.01;
+    assert.throws(() => assertCurrentPolicy(planted), /full policy/, location);
+  }
 });
 
 test('every recorded game replays to its claimed terminal result in the real kernel', {
@@ -596,12 +855,12 @@ test('fixed BOARD calibration is a separate full attempt plus 60 games per top p
   const fixed = calibrationRecord('gomoku-level-ladder-fixed.json');
   const [full, ...top] = fixed.runs;
   assert.equal(fixed.runs.length, 3);
-  assertMeasuredPolicies(fixed, RAPFI_LEVELS);
+  assertMeasuredPolicies(fixed, full.levels);
   assert.equal(full.label, 'fixed-board-full');
   assert.equal(full.gamesPerPair, 20);
   assert.deepEqual(
     full.pairings.map((pair) => pair.id),
-    ladder.pairingPlan().map((pair) => pair.id),
+    ladder.pairingPlan(full.levels).map((pair) => pair.id),
   );
   for (const run of top) {
     assert.ok(run.label.startsWith('fixed-board-top60-'));
@@ -617,7 +876,7 @@ test('fixed BOARD calibration is a separate full attempt plus 60 games per top p
   );
   for (const run of fixed.runs) {
     assert.equal(run.seed, 20261101);
-    assert.deepEqual(run.levels, RAPFI_LEVELS);
+    assert.deepEqual(run.levels, fixed.levels);
     assert.deepEqual(run.engine, original.runs.at(-1).engine);
     assert.equal(run.openingsSha256, original.runs.at(-1).openingsSha256);
     assert.match(run.boardPolicy, /ebb6b3637/);
@@ -644,8 +903,8 @@ test('eight-level calibration measures every active pairing, preserving history 
   const runs = record.runs.filter((run) => run.label.startsWith('eight-level-'));
   assert.ok(runs.length >= 1 && runs.length <= 2);
   const run = runs.at(-1);
-  assert.deepEqual(run.levels, RAPFI_LEVELS);
-  const activePlan = ladder.pairingPlan(RAPFI_LEVELS);
+  assert.deepEqual(run.levels, record.levels);
+  const activePlan = ladder.pairingPlan(run.levels);
   for (const pair of activePlan) {
     assert.ok(
       runs.some((attempt) =>
