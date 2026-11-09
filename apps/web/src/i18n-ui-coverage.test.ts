@@ -31,6 +31,7 @@ const ALLOWED: Record<string, Reason> = {
   // admin / ops / labs
   'accounts-admin.ts': 'admin',
   'belief-panel.ts': 'admin',
+  'content-readout.ts': 'admin',
   'database.ts': 'admin',
   'engine-profile.ts': 'admin',
   'engines.ts': 'admin',
