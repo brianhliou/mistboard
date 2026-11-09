@@ -80,7 +80,7 @@ test('Gomoku is a public casual, rated freestyle placement game', () => {
   assert.equal(ratingPoolForSpec(spec.id), 'gomoku');
   assert.equal(isRatedPoolBase('gomoku'), true);
   assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), true);
-  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), true);
   assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
   assert.equal(isCorrespondenceRatedSpec(spec.id), false);
   assert.equal(isStudyEligibleSpecId(spec.id), true);
@@ -112,8 +112,10 @@ test('Gomoku is allowlisted while hidden and takes its shelf place only at launc
     ...hidden.canonicalVariantOrder,
     GOMOKU_SPEC_ID,
   ]);
-  assert.deepEqual(launched.correspondenceEligible, hidden.correspondenceEligible);
-  assert.ok(!launched.correspondenceEligible.includes(GOMOKU_SPEC_ID));
+  assert.deepEqual(launched.correspondenceEligible, [
+    ...hidden.correspondenceEligible,
+    GOMOKU_SPEC_ID,
+  ]);
   assert.ok(!launched.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
 });
 
@@ -348,18 +350,19 @@ test('retired specs: Fortress, Atomic Xiangqi and Mahjong, hidden but still reso
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
 });
 
-test('isCorrespondenceRatedSpec is exactly correspondence-eligible AND an active rating pool', () => {
+test('rated correspondence requires eligibility and an active pool, with Gomoku casual-only', () => {
   // The one predicate the seek route, the rating bucket and the web Rated toggle share.
-  // Derived, not listed: a spec another change makes correspondence-eligible is rated
-  // exactly when it has a pool, and a casual-only spec is cleanly excluded.
+  // Gomoku keeps its live pool without admitting rated correspondence.
   for (const spec of GAME_SPECS) {
     const expected =
-      CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id) && ratingPoolForSpec(spec.id) !== null;
+      CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id) &&
+      ratingPoolForSpec(spec.id) !== null &&
+      spec.id !== GOMOKU_SPEC_ID;
     assert.equal(isCorrespondenceRatedSpec(spec.id), expected, spec.id);
   }
-  // Today's eligible set is rated in full: xiangqi and Fog chess both have pools.
   assert.equal(isCorrespondenceRatedSpec(XIANGQI_SPEC_ID), true);
   assert.equal(isCorrespondenceRatedSpec(DARK_CHESS_SPEC_ID), true);
+  assert.equal(isCorrespondenceRatedSpec(GOMOKU_SPEC_ID), false);
   // A live-rated spec that is not correspondence-eligible is not rated by correspondence.
   if (!CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(JIEQI_SPEC_ID)) {
     assert.equal(isCorrespondenceRatedSpec(JIEQI_SPEC_ID), false);

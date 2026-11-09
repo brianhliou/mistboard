@@ -8,6 +8,8 @@ import {
   type GomokuOpening,
   getGomokuLegalMoves,
   isCorrespondenceAllowlistedSpec,
+  isCorrespondenceRatedSpec,
+  ratingPoolForSpec,
 } from '@mistboard/game';
 import { gomokuRooms } from './gomoku-registration.js';
 import { type GomokuRuntimeRoom, gomokuTenant } from './gomoku-tenant.js';
@@ -180,28 +182,34 @@ test('Gomoku correspondence factory and seek creation remain behind the Gomoku f
     error: 'disabled',
   });
   assert.equal(gomokuRooms.size, 0);
-  // Public correspondence stays held off even for an admin, regardless of the flag.
-  const admin = { id: 'admin', accountRole: 'admin' } as UserAccount;
+  const user = { id: 'player' } as UserAccount;
   const ctx = {} as HttpApiContext;
   const body = { gameSpecId: 'gomoku', daysPerMove: 0 };
-  assert.deepEqual(await createSeekResult(ctx, admin, body, 'board'), {
-    status: 501,
-    body: { error: 'correspondence_unsupported_spec' },
+  assert.deepEqual(await createSeekResult(ctx, user, body, 'board'), {
+    status: 404,
+    body: { error: 'variant_disabled' },
   });
   process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
-  assert.deepEqual(await createSeekResult(ctx, admin, body, 'board'), {
-    status: 501,
-    body: { error: 'correspondence_unsupported_spec' },
+  assert.deepEqual(await createSeekResult(ctx, user, body, 'board'), {
+    status: 400,
+    body: { error: 'invalid_days_per_move' },
   });
 });
 
-test('public Gomoku has no correspondence seeks or rating pool', async () => {
-  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), false);
+test('public Gomoku correspondence seeks are visible without grants and remain casual-only', async () => {
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), true);
   assert.equal(isCorrespondenceAllowlistedSpec('gomoku'), false);
   const seeks = [{ gameSpecId: 'xiangqi' }, { gameSpecId: 'gomoku' }];
   const user = { id: 'reader' } as UserAccount;
   for (const reader of [null, user]) {
-    assert.deepEqual(await seeksVisibleTo(seeks, reader, async () => ['gomoku']), [seeks[0]]);
+    assert.deepEqual(
+      await seeksVisibleTo(seeks, reader, async () => {
+        assert.fail('public Gomoku seeks do not require a grant lookup');
+      }),
+      seeks,
+    );
   }
+  assert.equal(ratingPoolForSpec('gomoku'), 'gomoku', 'the live rating pool stays active');
+  assert.equal(isCorrespondenceRatedSpec('gomoku'), false);
   assert.equal(ratedSeekError('gomoku', terms.timeControl, true), 'rated_unsupported_spec');
 });

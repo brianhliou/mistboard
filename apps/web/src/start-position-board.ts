@@ -26,6 +26,15 @@ export async function renderStartPositionSvg(
   const id = `start-${gameSpecId}`;
   const color = side === 'second' ? 'black' : 'red';
   switch (gameSpecId) {
+    case 'gomoku': {
+      const [game, render] = await Promise.all([
+        import('@mistboard/game'),
+        import('./gomoku-board.js'),
+        import('./gomoku-board.css'),
+      ]);
+      const view = game.getGomokuPlayerView(game.createGomokuRoomState(id), 'black');
+      return render.gomokuBoardSvg(view, false);
+    }
     case 'xiangqi':
     case 'atomic-xiangqi':
     case 'duck-xiangqi':

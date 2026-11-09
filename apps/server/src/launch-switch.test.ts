@@ -21,6 +21,7 @@ import {
   GAME_SPECS,
   type GameSpecId,
   isCorrespondenceAllowlistedSpec,
+  isCorrespondenceRatedSpec,
   isPublicGameSpec,
   PLAYTEST_GAME_SPEC_IDS,
   publicSpecPredicate,
@@ -169,7 +170,7 @@ test('every server list agrees with the launch switch as it stands', () => {
   assert.deepEqual(xmjListedNow(), xmjListedUnder(isPublicGameSpec));
 });
 
-test('Gomoku is launched with a public rated pool and no public correspondence', async () => {
+test('Gomoku is launched with a public live rating pool and casual correspondence', async () => {
   assert.equal(isPublicGameSpec('gomoku'), true);
   assert.equal(articleIsIndexable('gomoku'), true);
   assert.equal(CANONICAL_VARIANT_ORDER.at(-1), 'gomoku');
@@ -177,7 +178,8 @@ test('Gomoku is launched with a public rated pool and no public correspondence',
   assert.equal(await mayPlayVariant(null, 'gomoku'), true);
   assert.equal(isPublicRatingPool('gomoku'), true);
   assert.ok(!countedPublicGame('g').includes("'gomoku'"));
-  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), true);
+  assert.equal(isCorrespondenceRatedSpec('gomoku'), false);
   assert.equal(isCorrespondenceAllowlistedSpec('gomoku'), false);
   const hidden = publicSpecPredicate(
     GAME_SPECS.map((spec) =>

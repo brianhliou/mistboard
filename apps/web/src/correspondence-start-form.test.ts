@@ -43,6 +43,26 @@ describe('correspondence Start a game: Casual/Rated', () => {
     vi.stubGlobal('fetch', fetchMock);
     expect(postedBody(panel, fetchMock).rated).toBe(true);
   });
+
+  it('offers Gomoku with Black/White sides and keeps it casual when rated correspondence is on', () => {
+    setRatedModeEnabled(true, true);
+    const panel = buildStartForm(() => {}, { gameSpecId: 'gomoku', rated: true });
+    const picker = panel.querySelector<HTMLSelectElement>('select');
+    expect([...picker!.options].some((option) => option.value === 'gomoku')).toBe(true);
+    expect(picker?.value).toBe('gomoku');
+    const ratedButton = [...gameTypeField(panel)!.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Rated',
+    );
+    expect(ratedButton?.disabled).toBe(true);
+    expect([...panel.querySelectorAll('button')].map((button) => button.textContent)).toEqual(
+      expect.arrayContaining(['Black', 'White']),
+    );
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    const body = postedBody(panel, fetchMock);
+    expect(body).toMatchObject({ gameSpecId: 'gomoku' });
+    expect(body.rated).not.toBe(true);
+  });
 });
 
 describe('correspondence Start a game: prefill', () => {

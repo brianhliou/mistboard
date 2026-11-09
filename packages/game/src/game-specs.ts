@@ -884,11 +884,7 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
-    // Gomoku's live launch does not open public correspondence (#868).
-    // Its hidden playtest binding remains available for legacy granted games.
-    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(
-      (id) => id !== GOMOKU_SPEC_ID && isPublic(id),
-    ),
+    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
     correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
       allowlisted.includes(id),
     ),
@@ -982,12 +978,14 @@ export function ratingPoolForSpec(id: GameSpecId): RatingVariant | null {
 // casual or rated, and a rated one writes the variant's pool under its OWN
 // 'correspondence' time class, never a live one. THE single predicate every surface
 // asks (seek create, accept, the rating bucket, the web Rated toggle): a spec qualifies
-// exactly when it is correspondence-eligible AND has an active rating pool. Nothing
-// variant-specific beyond that: the rating write is generic over pools and seat colors,
+// when it is correspondence-eligible AND has an active rating pool, except Gomoku:
+// Gomoku correspondence is casual-only even though live play has a rating pool.
+// The rating write is generic over pools and seat colors,
 // and the tenant seek factory carries `rated` into the room (createTenantCorrespondence
 // GameForSeek), which correspondence-eligibility.test.ts proves for every spec this
 // returns true for. A casual-only spec (no pool) is cleanly excluded.
 export function isCorrespondenceRatedSpec(id: string | null | undefined): boolean {
+  if (id === GOMOKU_SPEC_ID) return false;
   if (!id || !CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id as GameSpecId)) return false;
   const spec = maybeGameSpecForId(id);
   return spec !== null && ratingPoolForSpec(spec.id) !== null;

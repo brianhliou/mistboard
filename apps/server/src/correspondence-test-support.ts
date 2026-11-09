@@ -12,6 +12,7 @@ import {
   getCrazyhouseXiangqiLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
+  getGomokuLegalMoves,
   getJieqiLegalMoves,
   getJungleFlipLegalMoves,
   getJungleLegalMoves,
@@ -26,6 +27,7 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
@@ -79,6 +81,7 @@ export const CORRESPONDENCE_TEST_TENANTS: Record<
     tenant: jungleFlipTenant as unknown as AnyTenant,
     moves: getJungleFlipLegalMoves,
   },
+  gomoku: { tenant: gomokuTenant as unknown as AnyTenant, moves: getGomokuLegalMoves },
   'xiangqi-mahjong': {
     tenant: xiangqiMahjongTenant as unknown as AnyTenant,
     // A reply is a pass then a discard, rather than a single board move.
@@ -112,6 +115,7 @@ export function enableCorrespondenceVariantFlags(): void {
     'MISTBOARD_DARK_XIANGQI_ENABLED',
     'MISTBOARD_JUNGLE_ENABLED',
     'MISTBOARD_JUNGLE_FLIP_ENABLED',
+    'MISTBOARD_GOMOKU_ENABLED',
     'MISTBOARD_XIANGQI_MAHJONG_ENABLED',
   ]) {
     process.env[name] = 'true';
