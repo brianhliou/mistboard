@@ -533,7 +533,7 @@ describe('Gomoku launch capabilities and deliberate exclusions', () => {
     expect(VARIANTS.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
     expect(profileRatingVariants.map((variant) => variant.gameSpecId)).toContain(GOMOKU_SPEC_ID);
-    expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(GOMOKU_SPEC_ID);
+    expect(LANDING_BOT_GAME_SPEC_IDS).toContain(GOMOKU_SPEC_ID);
     expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);
     expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);
     expect(STUDY_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);

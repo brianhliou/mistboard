@@ -553,15 +553,22 @@
   }
 }
 
-/* Homepage three-column band (Brian, 2026-10-26): compact rows, so the panel
-   is never what pushes the article rows below a laptop fold. The band's height
-   is set by the tallest column (often the play rail beside it), and the panel
-   stretches to it; the rows share any height left over instead of leaving
-   dead panel under the last one. Still no internal scroll and no dropped row:
-   a list longer than the band grows the band, as before. */
+/* Three-column hero: preserve the ten-row footprint when fewer games are
+   listed (#1016). The shared card's floor plus the in-flow tab strip sets the
+   grid row's minimum, which the side rails stretch to (landing.css). Both tabs
+   share this card; rows keep their natural height and spare room stays below
+   them. Longer lists still grow the band without an internal scrollbar. */
 @media (min-width: 1241px) {
   .landing-demo .pp-board {
     --pp-icon: 34px;
+    --pp-row-height: 40px;
+    --pp-min-rows: 10;
+    --pp-card-border-width: 1px;
+  }
+
+  .landing-demo .pp-card {
+    min-height: calc(var(--pp-min-rows) * var(--pp-row-height) + 2 * var(--pp-card-border-width));
+    border-width: var(--pp-card-border-width);
   }
 
   .landing-demo .pp-view-computer .pp-scroll {
@@ -570,8 +577,8 @@
   }
 
   .landing-demo .pp-view-computer .pp-row {
-    flex: 1 0 auto;
-    min-height: 40px;
+    flex: 0 0 auto;
+    min-height: var(--pp-row-height);
   }
 
   .landing-demo .pp-feature {
@@ -633,7 +640,8 @@
    tiny bit more"). Spare height stays under the last row. */
 @media (min-width: 1241px) {
   .landing-demo .pp-view-person .pp-row-person {
-    max-height: 40px;
+    flex: 0 0 auto;
+    max-height: var(--pp-row-height);
   }
 }
 

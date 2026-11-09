@@ -134,6 +134,7 @@ describe('homepage TV widget link', () => {
 });
 
 describe('landing shell', () => {
+  afterEach(() => vi.unstubAllEnvs());
   it('prerenders the exact English home description and Open Graph description', () => {
     const shell = readFileSync('index.html', 'utf8');
     const html = renderLandingPageForPrerender(shell, 'en');
@@ -156,6 +157,22 @@ describe('landing shell', () => {
     expect(shouldUseBundledShowcaseDemos('')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?only=xiangqi')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
+  });
+
+  it('prerenders the same hero rows on both tabs, Gomoku last and Fog absent', () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const shell = document.createElement('div');
+    shell.innerHTML = renderLandingShellForPrerender();
+    for (const kind of ['bot', 'person']) {
+      const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+        (el) => el.dataset.gameSpec,
+      );
+      expect(specs.at(-1)).toBe('gomoku');
+      for (const spec of ['dark-xiangqi', 'dark-chess', 'three-kingdoms-banqi', 'ffq-banqi']) {
+        expect(specs).not.toContain(spec);
+      }
+    }
   });
 
   it('bakes no admin menu into the signed-out prerender, in any language', async () => {
@@ -373,7 +390,9 @@ describe('homepage band layout (CSS)', () => {
     // three-column band, the bot rows' floor.
     expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
     expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
-    expect(panel).toMatch(/\.landing-demo \.pp-view-person \.pp-row-person \{\s*max-height: 40px;/);
+    expect(panel).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
   });
 
   it('puts the deep-dives row above the blog row at every width', () => {

@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { RATED_TIME_CONTROLS } from '@mistboard/game';
+import { GAME_SPECS, isPublicGameSpec, RATED_TIME_CONTROLS } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
+import { enabledLandingVariantGameSpecs } from './landing-play.js';
 import {
   buildPlayPanel,
   orderPanelSpecs,
@@ -57,6 +59,7 @@ describe('homepage play panel', () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.useRealTimers();
     setRatedModeEnabled(false);
     setResolvedStatsExcluded(undefined);
@@ -99,14 +102,145 @@ describe('homepage play panel', () => {
     expect(stepValue(jieqi, 'level')).toBe('AB-JChess');
   });
 
-  it('keeps Fog Chess and Fog Xiangqi on a fixed Misty', () => {
-    const board = buildPlayPanel('en', { hydrate: false });
-    for (const spec of ['dark-chess', 'dark-xiangqi']) {
-      const bot = row(board, spec);
-      expect(stepValue(bot, 'level')).toBe('Misty');
-      expect(bot.querySelector('.pp-step-level.is-fixed')).not.toBeNull();
-      expect(bot.querySelector('.pp-step-sub')).toBeNull();
+  it('lists every launched bot variant except the named Fog exclusions on both tabs', () => {
+    for (const flag of [
+      'XIANGQI',
+      'JIEQI',
+      'BANQI',
+      'DARK_XIANGQI',
+      'JUNGLE',
+      'JUNGLE_FLIP',
+      'XIANGQI_MAHJONG',
+      'GOMOKU',
+      'THREE_KINGDOMS_BANQI',
+      'FFQ_BANQI',
+      'MAHJONG',
+    ]) {
+      vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     }
+    const board = buildPlayPanel('en', { hydrate: false });
+    const excluded = ['dark-xiangqi', 'dark-chess'];
+    // The same bot identities used by /api/bots, independent of the web
+    // picker's PvE predicate: a server bot omitted by the web must fail too.
+    const botSpecs = new Set(FIRST_PARTY_BOT_PROFILES.flatMap((bot) => Object.keys(bot.engines)));
+    const expected = GAME_SPECS.filter(
+      (spec) =>
+        spec.runtimeStatus === 'live' &&
+        isPublicGameSpec(spec.id) &&
+        !excluded.includes(spec.id) &&
+        botSpecs.has(spec.id),
+    ).map((spec) => spec.id);
+    const bots = [...board.querySelectorAll<HTMLElement>('.pp-row-bot')].map(
+      (el) => el.dataset.gameSpec,
+    );
+    expect(bots).toEqual(orderPanelSpecs(expected));
+    const people = [...board.querySelectorAll<HTMLElement>('.pp-row-person')].map(
+      (el) => el.dataset.gameSpec,
+    );
+    expect(people).toEqual(
+      orderPanelSpecs(
+        enabledLandingVariantGameSpecs('pvp', 'en')
+          .filter(
+            (spec) => isPublicGameSpec(spec.gameSpecId) && !excluded.includes(spec.gameSpecId),
+          )
+          .map((spec) => spec.gameSpecId),
+      ),
+    );
+    for (const spec of [
+      ...excluded,
+      ...GAME_SPECS.filter((spec) => !isPublicGameSpec(spec.id)).map((spec) => spec.id),
+    ]) {
+      expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+    }
+    expect(bots.at(-1)).toBe('gomoku');
+    expect(people.at(-1)).toBe('gomoku');
+  });
+
+  it('omits flag-off variants and hidden playtests from both tabs', () => {
+    vi.stubEnv('DEV', false);
+    for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG']) {
+      vi.stubEnv(`VITE_${flag}_ENABLED`, 'false');
+    }
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const board = buildPlayPanel('en', { hydrate: false });
+    for (const spec of [
+      'xiangqi',
+      'gomoku',
+      'xiangqi-mahjong',
+      'three-kingdoms-banqi',
+      'ffq-banqi',
+    ]) {
+      expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+    }
+  });
+
+  it.each(['dark-xiangqi', 'dark-chess'])(
+    'keeps %s off remembered and waiting-player hero rows',
+    async (spec) => {
+      vi.useFakeTimers();
+      localStorage.setItem(
+        'mistboard.playPanel.v1',
+        JSON.stringify({ last: { gameSpecId: spec, botId: 'misty', tc: '10m5' } }),
+      );
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: string) => {
+          if (input === '/api/lobby')
+            return Response.json({
+              requests: [
+                {
+                  gameSpecId: spec,
+                  rated: false,
+                  timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+                  createdAt: Date.now(),
+                },
+              ],
+            });
+          if (input === '/api/correspondence/seeks')
+            return Response.json({
+              seeks: [{ id: 'fog-seek', gameSpecId: spec, daysPerMove: 1, rated: false }],
+            });
+          return Response.json({ bots: [], engines: [], playing: 0, online: 0 });
+        }),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      await flush();
+      expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+      expect(board.querySelector('.pp-feature-again')).toBeNull();
+      expect(board.querySelector('.pp-feature-waiting')).toBeNull();
+      expect(board.querySelector<HTMLElement>('.pp-badge')?.hidden).toBe(true);
+      board.remove();
+      await vi.advanceTimersByTimeAsync(3_000);
+    },
+  );
+
+  it('walks Gomoku Levels 1-8, shows its icon and clock, and starts the chosen Rapfi level', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    const fetchSpy = vi.fn(async (_input: string, _init?: RequestInit) =>
+      Response.json({ url: '/room/gomoku' }, { status: 201 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    const gomoku = row(board, 'gomoku');
+    expect(gomoku.querySelector('[data-variant-marker-id="gomoku"]')).not.toBeNull();
+    expect(stepValue(gomoku, 'clock')).toBe('10+5');
+    for (let level = 1; level <= 8; level++) {
+      expect(stepValue(gomoku, 'level')).toBe(`Level ${level}`);
+      expect(gomoku.querySelector('.pp-step-main')?.textContent).toBe('Rapfi');
+      if (level < 8) clickNext(gomoku, 'level');
+    }
+    expect(
+      gomoku.querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]?.disabled,
+    ).toBe(true);
+    gomoku.querySelector<HTMLButtonElement>('.pp-act')!.click();
+    await flush();
+    expect(JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))).toMatchObject({
+      botId: 'rapfi-level-8',
+      gameSpecId: 'gomoku',
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    });
   });
 
   it.each(['banqi', 'jungle-flip'])(
@@ -233,6 +367,32 @@ describe('homepage play panel', () => {
     expect(landingCss).toMatch(/^\.landing-lobby-seed-thumb \{[^}]*width: 24px/m);
     expect(panelCss).toMatch(/^\.pp-board \.pp-thumb \{[^}]*width: var\(--pp-icon\)/m);
     expect(panelCss).not.toMatch(/^\.pp-thumb \{/m);
+  });
+
+  it('reserves ten natural-height rows on the shared card only in the three-column hero', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const desktop = css.match(/@media \(min-width: 1241px\) \{([\s\S]*?)^\}/m)?.[1] ?? '';
+    expect(desktop).toMatch(/--pp-min-rows: 10;/);
+    expect(desktop).toMatch(/--pp-row-height: 40px;/);
+    expect(desktop).toMatch(/--pp-card-border-width: 1px;/);
+    expect(desktop).toMatch(
+      /\.landing-demo \.pp-card \{[^}]*min-height: calc\(\s*var\(--pp-min-rows\) \* var\(--pp-row-height\) \+ 2 \* var\(--pp-card-border-width\)\s*\);[^}]*border-width: var\(--pp-card-border-width\);/,
+    );
+    expect(desktop).toMatch(
+      /\.landing-demo \.pp-view-computer \.pp-row \{\s*flex: 0 0 auto;\s*min-height: var\(--pp-row-height\);/,
+    );
+    expect(css).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
+    // No minimum leaks into the two-column or stacked layouts.
+    expect(css.replace(desktop, '')).not.toContain('--pp-min-rows');
+
+    const board = buildPlayPanel('en', { hydrate: false });
+    const card = board.querySelector('.pp-card')!;
+    expect(card.contains(board.querySelector('.pp-view-computer'))).toBe(true);
+    expect(card.contains(board.querySelector('.pp-view-person'))).toBe(true);
+    board.querySelectorAll<HTMLButtonElement>('.pp-tab')[1]!.click();
+    expect(board.querySelector('.pp-card')).toBe(card);
   });
 
   // #543: .pp-name clips its overflow, so a line box shorter than the font's
