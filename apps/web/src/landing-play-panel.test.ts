@@ -14,6 +14,7 @@ import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn, setResolvedStatsExcluded } from './signed-in-state.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -63,6 +64,7 @@ describe('homepage play panel', () => {
     vi.useRealTimers();
     setRatedModeEnabled(false);
     setResolvedStatsExcluded(undefined);
+    setThreeKingdomsBanqiEngineOptions([]);
     window.history.replaceState(null, '', '/');
   });
 
@@ -158,10 +160,9 @@ describe('homepage play panel', () => {
 
   it('omits flag-off variants and hidden playtests from both tabs', () => {
     vi.stubEnv('DEV', false);
-    for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG']) {
+    for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG', 'THREE_KINGDOMS_BANQI']) {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'false');
     }
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
     const board = buildPlayPanel('en', { hydrate: false });
     for (const spec of [
@@ -172,6 +173,24 @@ describe('homepage play panel', () => {
       'ffq-banqi',
     ]) {
       expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+    }
+  });
+
+  it.each(['true', 'false'])('offers TK on both tabs only with its launch flag on (%s)', (flag) => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
+    setThreeKingdomsBanqiEngineOptions([
+      {
+        id: 'misty-three-kingdoms-banqi-level-1',
+        name: 'Misty Level 1',
+        familyName: 'Misty',
+        kind: 'container',
+      },
+    ]);
+    const board = buildPlayPanel('en', { hydrate: false });
+    for (const kind of ['bot', 'person']) {
+      expect(
+        board.querySelector(`.pp-row-${kind}[data-game-spec="three-kingdoms-banqi"]`) !== null,
+      ).toBe(flag === 'true');
     }
   });
 

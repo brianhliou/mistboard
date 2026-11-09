@@ -51,7 +51,7 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-8|xiangqi',
       'pikafish-level-2|jieqi',
       'misty|banqi',
-      'fairy-stockfish-level-3|duck-xiangqi',
+      'fairy-stockfish-level-5|duck-xiangqi',
       'misty|jungle',
       'misty|jungle-flip',
     ]);
@@ -208,7 +208,7 @@ describe('landing lobby bot seeks', () => {
     expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
     const duck = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-3"][data-game-spec="duck-xiangqi"] .landing-lobby-seed-rating',
+      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-5"][data-game-spec="duck-xiangqi"] .landing-lobby-seed-rating',
     );
     expect(duck?.textContent).toBe('—');
     expect(duck?.getAttribute('title')).toBeNull();

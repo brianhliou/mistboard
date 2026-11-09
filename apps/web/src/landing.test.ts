@@ -13,6 +13,7 @@ import {
 } from './landing.js';
 import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
 
 const ROSTER = [
@@ -134,7 +135,10 @@ describe('homepage TV widget link', () => {
 });
 
 describe('landing shell', () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    setThreeKingdomsBanqiEngineOptions([]);
+  });
   it('prerenders the exact English home description and Open Graph description', () => {
     const shell = readFileSync('index.html', 'utf8');
     const html = renderLandingPageForPrerender(shell, 'en');
@@ -159,21 +163,33 @@ describe('landing shell', () => {
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
   });
 
-  it('prerenders the same hero rows on both tabs, Gomoku last and Fog absent', () => {
-    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
-    const shell = document.createElement('div');
-    shell.innerHTML = renderLandingShellForPrerender();
-    for (const kind of ['bot', 'person']) {
-      const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
-        (el) => el.dataset.gameSpec,
-      );
-      expect(specs.at(-1)).toBe('gomoku');
-      for (const spec of ['dark-xiangqi', 'dark-chess', 'three-kingdoms-banqi', 'ffq-banqi']) {
-        expect(specs).not.toContain(spec);
+  it.each(['true', 'false'])(
+    'prerenders offered TK rows (%s), Gomoku last and Fog absent on both tabs',
+    (flag) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
+      setThreeKingdomsBanqiEngineOptions([
+        {
+          id: 'misty-three-kingdoms-banqi-level-1',
+          name: 'Misty Level 1',
+          familyName: 'Misty',
+          kind: 'container',
+        },
+      ]);
+      const shell = document.createElement('div');
+      shell.innerHTML = renderLandingShellForPrerender();
+      for (const kind of ['bot', 'person']) {
+        const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+          (el) => el.dataset.gameSpec,
+        );
+        expect(specs.at(-1)).toBe('gomoku');
+        expect(specs.includes('three-kingdoms-banqi')).toBe(flag === 'true');
+        for (const spec of ['dark-xiangqi', 'dark-chess', 'ffq-banqi']) {
+          expect(specs).not.toContain(spec);
+        }
       }
-    }
-  });
+    },
+  );
 
   it('bakes no admin menu into the signed-out prerender, in any language', async () => {
     // The prerender is what crawlers index; a hidden admin menu still put
