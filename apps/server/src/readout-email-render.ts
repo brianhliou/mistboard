@@ -1,3 +1,4 @@
+import { CONTENT_CAVEATS, contentSummary } from './content-readout.js';
 import { emailPublicHost, escapeHtml, type RenderedEmail } from './email-layout.js';
 import type {
   MistboardReadoutAction,
@@ -250,7 +251,19 @@ export function buildReadoutSummary(report: MistboardReadoutV1) {
   const deploy = disruptive.length
     ? `${disruptive.length} release${disruptive.length === 1 ? '' : 's'} held new-game creation over 5 minutes or refused a request. Longest hold: ${(Math.max(...disruptive.map((entry) => entry.heldMs)) / 60_000).toFixed(1)} min; ${disruptive.reduce((sum, entry) => sum + entry.refusedCreates, 0)} refused requests recorded. Agent next: inspect release timings before the next ship.`
     : null;
-  return { title, period, summary, metrics, actions, extraActions, breakdown, context, deploy };
+  return {
+    title,
+    period,
+    summary,
+    metrics,
+    actions,
+    extraActions,
+    breakdown,
+    context,
+    deploy,
+    content: contentSummary(report.content),
+    contentCaveats: [...CONTENT_CAVEATS],
+  };
 }
 
 /** Every value and state is also present in text; color never carries meaning alone. */
@@ -258,6 +271,9 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
   if (report.trigger !== 'weekly') return renderDailyEmail(report);
   const { title, period, summary, metrics, actions, extraActions, breakdown, context, deploy } =
     buildReadoutSummary(report);
+  const content = contentSummary(report.content);
+  const contentUrl = `${emailPublicHost}/ops?tab=activity#content`;
+  const contentHtml = `<h2 style="font-size:17px;margin:24px 0 9px">Content</h2><p style="font-size:13px;line-height:1.7">${content.map(E).join('<br>')}</p><p style="font-size:12px">Observed visitors may include automation. Board events cover xiangqi replays only; assisted outcomes overlap.</p><a href="${E(contentUrl)}">Article comparison and definitions →</a>`;
   const text: string[] = ['Mistboard weekly review', period, '', summary, ''];
   for (const metric of metrics)
     text.push(
@@ -291,6 +307,11 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
     '',
     ...context,
     '',
+    'Content',
+    ...content,
+    'Observed visitors may include automation. Board events cover xiangqi replays only; assisted outcomes overlap.',
+    contentUrl,
+    '',
     'Database counts include guest browsers and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.',
     `${emailPublicHost}/ops`,
   );
@@ -308,7 +329,7 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
   const table = breakdown.length
     ? `<h2 style="font-size:17px;margin:24px 0 10px">Where the change came from</h2><table width="100%" cellspacing="0" cellpadding="7" style="font-size:12px;border-collapse:collapse"><thead><tr><th scope="col" align="left">Variant games</th><th scope="col" align="right">This week</th><th scope="col" align="right">Last week</th><th scope="col" align="right">Change</th></tr></thead><tbody>${breakdown.map((entry) => `<tr><th scope="row" align="left" style="font-weight:400;border-top:1px solid #eeece6">${E(entry.label)}</th><td align="right" style="border-top:1px solid #eeece6">${number(entry.current)}</td><td align="right" style="border-top:1px solid #eeece6">${entry.previous === undefined ? '—' : number(entry.previous)}</td><td align="right" style="border-top:1px solid #eeece6">${E(readoutDelta(entry.current, entry.previous))}</td></tr>`).join('')}</tbody></table>`
     : '';
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(title)}</title></head><body style="margin:0;background:#eeeae3;color:#34322d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${E(summary)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 8px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;border:1px solid #d8d7d4;border-radius:9px;background:#fff"><tr><td style="padding:24px 16px"><div style="font-size:12px;color:#1f6f5b;font-weight:700">MISTBOARD / ${report.trigger === 'weekly' ? 'WEEKLY REVIEW' : 'OPERATING CHECK'}</div><p style="font-size:12px;color:${muted};line-height:1.6">${E(period)}</p><h1 style="font-size:25px;line-height:1.25;margin:12px 0">${E(title)}</h1><p style="font-size:14px;line-height:1.6">${E(summary)}</p><table role="presentation" width="100%" cellspacing="6" cellpadding="0">${cards.length ? `<tr>${cards.slice(0, 2).join('')}</tr><tr>${cards.slice(2, 4).join('')}</tr>` : ''}</table><h2 style="font-size:17px;margin:24px 0 10px">What needs attention</h2>${attention || '<p style="font-size:14px">No action needed.</p>'}${deploy ? `<div style="margin-top:12px;padding:14px;border:1px solid #dedbd4;border-radius:4px"><strong style="font-size:12px">Release follow-up</strong><p style="font-size:13px;line-height:1.6">${E(deploy)}</p><a href="${E(emailPublicHost)}/ops?tab=operations#deploy-history" style="font-size:13px;color:#1f6f5b">Open deploy history →</a></div>` : ''}${extraActions ? `<p>${extraActions} more ${extraActions === 1 ? 'action' : 'actions'} in the full report.</p>` : ''}${table}${context.length ? `<h2 style="font-size:17px;margin:24px 0 9px">Other changes</h2><p style="font-size:13px;line-height:1.7">${context.map(E).join('<br>')}</p>` : ''}<p style="font-size:11px;color:${muted};line-height:1.6">UTC days. Database counts include guests and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.</p><a href="${E(emailPublicHost)}/ops" style="display:inline-block;margin-top:8px;padding:12px 16px;background:#1f6f5b;color:#fff;border-radius:5px;text-decoration:none;font-size:13px;font-weight:700">Full report and history →</a></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(title)}</title></head><body style="margin:0;background:#eeeae3;color:#34322d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${E(summary)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 8px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;border:1px solid #d8d7d4;border-radius:9px;background:#fff"><tr><td style="padding:24px 16px"><div style="font-size:12px;color:#1f6f5b;font-weight:700">MISTBOARD / ${report.trigger === 'weekly' ? 'WEEKLY REVIEW' : 'OPERATING CHECK'}</div><p style="font-size:12px;color:${muted};line-height:1.6">${E(period)}</p><h1 style="font-size:25px;line-height:1.25;margin:12px 0">${E(title)}</h1><p style="font-size:14px;line-height:1.6">${E(summary)}</p><table role="presentation" width="100%" cellspacing="6" cellpadding="0">${cards.length ? `<tr>${cards.slice(0, 2).join('')}</tr><tr>${cards.slice(2, 4).join('')}</tr>` : ''}</table><h2 style="font-size:17px;margin:24px 0 10px">What needs attention</h2>${attention || '<p style="font-size:14px">No action needed.</p>'}${deploy ? `<div style="margin-top:12px;padding:14px;border:1px solid #dedbd4;border-radius:4px"><strong style="font-size:12px">Release follow-up</strong><p style="font-size:13px;line-height:1.6">${E(deploy)}</p><a href="${E(emailPublicHost)}/ops?tab=operations#deploy-history" style="font-size:13px;color:#1f6f5b">Open deploy history →</a></div>` : ''}${extraActions ? `<p>${extraActions} more ${extraActions === 1 ? 'action' : 'actions'} in the full report.</p>` : ''}${table}${contentHtml}${context.length ? `<h2 style="font-size:17px;margin:24px 0 9px">Other changes</h2><p style="font-size:13px;line-height:1.7">${context.map(E).join('<br>')}</p>` : ''}<p style="font-size:11px;color:${muted};line-height:1.6">UTC days. Database counts include guests and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.</p><a href="${E(emailPublicHost)}/ops" style="display:inline-block;margin-top:8px;padding:12px 16px;background:#1f6f5b;color:#fff;border-radius:5px;text-decoration:none;font-size:13px;font-weight:700">Full report and history →</a></td></tr></table></td></tr></table></body></html>`;
   return { text: text.join('\n'), html };
 }
 

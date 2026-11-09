@@ -93,3 +93,7 @@ test('reused snapshots and dry runs never create another notification', async ()
     assert.equal(f.calls.length, 0);
   }
 });
+
+test('workflow allows the bounded weekly collector and database generation to finish', () => {
+  assert.match(source, /AbortSignal\.timeout\(180_000\)/);
+});

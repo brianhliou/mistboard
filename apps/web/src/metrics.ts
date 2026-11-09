@@ -6,6 +6,7 @@
 import './metrics.css';
 import { CANONICAL_VARIANT_ORDER, isRetiredGameSpec } from '@mistboard/game';
 import { buildReportingNav, type ReportingTab } from './admin-reporting-nav.js';
+import { loadContentReadout } from './content-readout.js';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -308,7 +309,7 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
       sectionHeading('Lifetime totals and live status'),
       ...lifetime,
     );
-  if (tab === 'activity') parts.push(...charts.slice(3));
+  if (tab === 'activity') parts.push(await loadContentReadout(), ...charts.slice(3));
   if (tab === 'retention') parts.push(buildRetentionSection(admin.retentionCohorts ?? []));
   if (tab === 'operations') {
     parts.push(buildEnginesSection(admin, locale));
@@ -320,6 +321,7 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
     }
   }
   body.replaceChildren(...parts);
+  if (window.location.hash === '#content') document.getElementById('content')?.scrollIntoView();
   if (window.location.hash === '#deploy-history')
     document.getElementById('deploy-history')?.scrollIntoView();
 }
