@@ -1,8 +1,10 @@
 // Generated, fictional local data. Never import player/game content from prod.
 import {
+  createThreeKingdomsBanqiSetup,
   createXmjSetup,
   darkChessVariant,
   type GameEvent,
+  getThreeKingdomsBanqiLegalMoves,
   maybeGameSpecForId,
   replayGameEvents,
   type XmjMove,
@@ -24,7 +26,12 @@ import {
 } from './jungle-flip-analysis.js';
 import type { StoredPlyEval } from './persistence-game-analysis.js';
 import type { GameParticipantColor, GameSummary } from './persistence-games.js';
-import { playRandomGame, VARIANTS } from './variant-postgame-fixtures.js';
+import {
+  THREE_KINGDOMS_BANQI_ANALYSIS_DEPTH,
+  THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID,
+} from './three-kingdoms-banqi-analysis.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
+import { playRandomGame, VARIANTS, type VariantSpec } from './variant-postgame-fixtures.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from './xiangqi-analysis.js';
@@ -145,7 +152,16 @@ export function buildQaGame(specId: string, index: number, now: number): QaGame 
     events = tape;
     colors = ['white', 'black'];
   } else {
-    const spec = VARIANTS.find((entry) => entry.tenant.gameSpecId === specId);
+    // Keep TK's deterministic secret setup local to the QA tape. The shared
+    // harness drives kernel legal moves and hydration below validates replay.
+    const spec: VariantSpec | undefined =
+      specId === 'three-kingdoms-banqi'
+        ? {
+            tenant: threeKingdomsBanqiTenant,
+            enumerate: getThreeKingdomsBanqiLegalMoves,
+            makeSetup: createThreeKingdomsBanqiSetup,
+          }
+        : VARIANTS.find((entry) => entry.tenant.gameSpecId === specId);
     if (!spec && specId !== 'xiangqi-mahjong')
       throw new Error(`No QA legal-play generator for ${specId}`);
     const tenant = specId === 'xiangqi-mahjong' ? xiangqiMahjongTenant : spec!.tenant;
@@ -228,6 +244,10 @@ export function qaGameAnalysis(game: QaGame): QaAnalysis | null {
     ['xiangqi', [XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH]],
     ['jieqi', [JIEQI_ANALYSIS_ENGINE_ID, JIEQI_ANALYSIS_DEPTH]],
     ['banqi', [BANQI_ANALYSIS_ENGINE_ID, BANQI_ANALYSIS_DEPTH]],
+    [
+      'three-kingdoms-banqi',
+      [THREE_KINGDOMS_BANQI_ANALYSIS_ENGINE_ID, THREE_KINGDOMS_BANQI_ANALYSIS_DEPTH],
+    ],
     ['jungle', [JUNGLE_ANALYSIS_ENGINE_ID, JUNGLE_ANALYSIS_DEPTH]],
     ['jungle-flip', [JUNGLE_FLIP_ANALYSIS_ENGINE_ID, JUNGLE_FLIP_ANALYSIS_DEPTH]],
     [

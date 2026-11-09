@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
-import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { CORRESPONDENCE_RESTRICTED_SPEC_IDS, XIANGQI_SPEC_ID } from '@mistboard/game';
 import {
   type AccountSession,
   createAccountSession,
@@ -124,7 +124,9 @@ definePersistenceTests('correspondence seek outcomes', () => {
     });
   }
 
-  for (const gameSpecId of ['ffq-banqi', 'three-kingdoms-banqi']) {
+  // TK launched: its public seek metadata follows the other public variants.
+  // The kill switch still blocks creation/acceptance, not public outcome reads.
+  for (const gameSpecId of CORRESPONDENCE_RESTRICTED_SPEC_IDS) {
     test(`${gameSpecId}: inaccessible seeks return identical responses in every state`, async (t) => {
       for (const name of [
         'MISTBOARD_FFQ_BANQI_ENABLED',

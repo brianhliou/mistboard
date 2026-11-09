@@ -662,6 +662,17 @@ test('every tenant with a review URL binds a card on a position-card variant', a
       assert.equal(entry.card.finalScores([], `${entry.roomIdPrefix}x`), null);
       continue;
     }
+    if (entry.gameSpecId === 'three-kingdoms-banqi') {
+      // TK deliberately has no export or seatBoard: its existing card uses a
+      // masked public FEN and the explicit review route, never the secret deal.
+      assert.equal(entry.export, null);
+      assert.equal(entry.reviewRouteBase, '/three-kingdoms-banqi/game');
+      assert.equal(entry.seatBoard, undefined);
+      assert.ok(entry.card);
+      assert.equal(entry.card.variant, entry.gameSpecId);
+      assert.equal(entry.card.fenAtPly([], `${entry.roomIdPrefix}x`, 0), null);
+      continue;
+    }
     if (!entry.export) {
       assert.ok(!entry.card, `${entry.kind}: a card needs the export's review URL`);
       continue;
