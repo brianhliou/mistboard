@@ -571,7 +571,7 @@ function buildHeadlineCards(
       statCard(
         'Games played',
         publicStats.totalCompletedGames,
-        `+${formatStatNumber(publicStats.last30dCompletedGames)} this month`,
+        `+${formatStatNumber(publicStats.last30dCompletedGames)} in the last 30 days`,
       ),
     );
   }

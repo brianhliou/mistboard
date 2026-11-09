@@ -238,6 +238,55 @@ definePersistenceTests('site stats', () => {
     assert.equal(admin.gamesByVariant['atomic-xiangqi'], 1);
   });
 
+  test('public stats cut days and weeks at Pacific midnight, not UTC', async () => {
+    // Sunday 2026-11-08 20:00 PST is Monday 04:00 UTC. Under UTC buckets that
+    // game opened the next week (the /stats "so far this week" read 8 games at
+    // Sunday 18:53 Pacific); in Pacific time it closes the week of 11-02. The
+    // second game, Monday 01:00 PST, is the first of the week of 11-09.
+    const sundayEvening = new Date('2026-11-09T04:00:00.000Z');
+    const mondayEarly = new Date('2026-11-09T09:00:00.000Z');
+    const now = new Date('2026-11-09T10:00:00.000Z');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO games
+           (room_id, variant, result, termination, ply_count, started_at, ended_at,
+            white_client, black_client, white_name, black_name, mode, status, visibility)
+         VALUES
+           ('tz-sunday-evening', 'xiangqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('tz-monday-early', 'xiangqi', 'red-wins', 'resignation', 30, $2, $2,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public')`,
+        [sundayEvening, mondayEarly],
+      );
+    } finally {
+      await client.end();
+    }
+
+    const stats = await getPublicSiteStats({ now });
+    assert.deepEqual(stats.weeklyCompletedGames, [
+      { weekStart: '2026-11-02', completedGames: 1 },
+      { weekStart: '2026-11-09', completedGames: 1 },
+    ]);
+    assert.deepEqual(stats.weeklyByVariant[0]?.weeks, stats.weeklyCompletedGames);
+    const daily = stats.dailyCompletedGames.filter((d) => d.completedGames > 0);
+    assert.deepEqual(
+      daily.map((d) => [d.date, d.completedGames]),
+      [
+        ['2026-11-08', 1],
+        ['2026-11-09', 1],
+      ],
+    );
+    assert.deepEqual(
+      stats.variantDaily[0]?.days.filter((d) => d.completedGames > 0).map((d) => d.date),
+      ['2026-11-08', '2026-11-09'],
+    );
+    // Both series start on the same Pacific Monday.
+    assert.equal(stats.dailyCompletedGames[0]?.date, '2026-11-02');
+    assert.equal(stats.dailyCompletedGames.at(-1)?.date, '2026-11-09');
+  });
+
   test('public stats count a playtest variant exactly when its launch switch is on', async () => {
     // Xiangqi Mahjong is a hidden playtest until its publicSurface flips
     // (packages/game game-specs.ts). While hidden its games stay out of every

@@ -80,7 +80,7 @@ export const EN_SHELL = {
   'home.activityAria': 'Activity',
   'home.gamesPlayed': 'games played',
   // The durable total is the headline; the month count rides along inline.
-  'home.gamesPlayedMonth': 'games played ({count} this month)',
+  'home.gamesPlayedMonth': 'games played ({count} in the last 30 days)',
   // Server-side that count is a rolling 30-day window, not a calendar
   // month. The tooltip says so without forcing a zh retranslation of the
   // visible copy (non-critical keys fall back to English).

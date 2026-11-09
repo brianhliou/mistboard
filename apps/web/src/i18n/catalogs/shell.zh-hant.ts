@@ -79,7 +79,7 @@ export const ZH_HANT_SHELL = {
   'home.playSummary': '免費網頁版 · 無需下載和註冊 · 人機對戰從入門到高手 · 和朋友線上對弈',
   'home.activityAria': '活躍度',
   'home.gamesPlayed': '局已下完',
-  'home.gamesPlayedMonth': '局已下完（本月 {count} 局）',
+  'home.gamesPlayedMonth': '局已下完（最近 30 天 {count} 局）',
   'home.gameInPlay': '局進行中',
   'home.gamesInPlay': '局進行中',
   'home.tvLive': '直播',
