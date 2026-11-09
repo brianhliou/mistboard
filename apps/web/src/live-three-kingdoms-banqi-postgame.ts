@@ -1,11 +1,9 @@
 import {
   type BanqiSeat,
-  createThreeKingdomsBanqiStateFromSetup,
   THREE_KINGDOMS_BANQI_SPEC_ID,
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
   type ThreeKingdomsBanqiStatus,
-  threeKingdomsBanqiStateToDealtFen,
 } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -24,8 +22,7 @@ import {
   fetchCachedThreeKingdomsBanqiDecisions,
   requestThreeKingdomsBanqiDecisions,
 } from './review/three-kingdoms-banqi-decisions.js';
-import { mountThreeKingdomsBanqiReview } from './review/three-kingdoms-banqi-review.js';
-import { recoverThreeKingdomsBanqiDeal } from './review/three-kingdoms-banqi-tree-adapter.js';
+import { mountThreeKingdomsBanqiRecordedReview } from './review/three-kingdoms-banqi-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
@@ -35,12 +32,8 @@ import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
 // a TK room would (threeKingdomsBanqiOffered), and the API answers only an
 // admin session.
 //
-// The server sends a FINISHED game only, never the deal as such: the client
-// reads the deal off the ply-0 revealed board, roots the shared tree there, and
-// replays the move list; the board renders masked as played, so a tile stays
-// face down until the line flips it. Scores per ply come from the review's own
-// material row. Server analysis grades board moves, then its follow-on pass
-// separates flip decisions from luck. No exports during the playtest.
+// Finished review navigates the server's as-played masked snapshots. No dealt
+// position reaches the browser, and review cannot branch into covered pieces.
 
 export type ThreeKingdomsBanqiPostgameResponse = {
   game: {
@@ -133,21 +126,7 @@ export function threeKingdomsBanqiPostgameApiUrl(roomId: string): string {
   return `/api/three-kingdoms-banqi/games/${encodeURIComponent(roomId)}`;
 }
 
-/** The tree's root: the recovered deal, face down, as the room dealt it. Throws
- *  when the payload has no complete ply-0 revealed board. */
-export function threeKingdomsBanqiPostgameRoot(postgame: ThreeKingdomsBanqiPostgameResponse) {
-  const dealt = postgame.history?.revealed?.find((snapshot) => snapshot.ply === 0);
-  if (!dealt) {
-    throw new Error('three kingdoms banqi postgame: no ply-0 revealed board to read the deal from');
-  }
-  const deal = recoverThreeKingdomsBanqiDeal(dealt.view);
-  const truth = createThreeKingdomsBanqiStateFromSetup(postgame.game.roomId, { deal });
-  return { truth, fen: threeKingdomsBanqiStateToDealtFen(truth) };
-}
-
 function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameResponse): void {
-  const start = threeKingdomsBanqiPostgameRoot(postgame);
-
   const moveEvents = postgame.timeline.filter(
     (entry): entry is typeof entry & { move: ThreeKingdomsBanqiMove } =>
       entry.type === 'move-played' && !!entry.move,
@@ -187,11 +166,7 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
   });
 
   root.replaceChildren(buildNav());
-  mountThreeKingdomsBanqiReview(root, {
-    // A finished game: what the still-face-down pieces were, on hover and
-    // from the menu (#824). The payload already carries the whole deal.
-    showFaceDown: true,
-    root: start,
+  mountThreeKingdomsBanqiRecordedReview(root, postgame.history?.truth ?? [], {
     pageClassName: 'banqi-review tk-banqi-review',
     ariaLabel: variantName,
     title: variantName,

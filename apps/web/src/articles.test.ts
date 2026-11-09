@@ -37,6 +37,85 @@ afterEach(() => setImmediate());
 // rewritten every time the calendar moves past one of them.
 const NO_AGE_CUT = { maxAgeDays: Number.POSITIVE_INFINITY };
 
+describe('Jieqi review explanation', () => {
+  it('explains grading before the reveal and luck after it, with a worked example', () => {
+    const page = buildArticlePage('jieqi-platform');
+    const headings = [...page.querySelectorAll('h3')].map((heading) => heading.textContent);
+    expect(headings).toEqual(
+      expect.arrayContaining(['How the review grades a move', 'How the review measures luck']),
+    );
+    expect(headings.indexOf('How the review grades a move')).toBeLessThan(
+      headings.indexOf('How the review measures luck'),
+    );
+    const text = page.textContent ?? '';
+    for (const explanation of [
+      '5 points of winning chance or more',
+      'At 10 points it is a mistake, and at 15 a blunder.',
+      'weights each one by how many of that piece are left',
+      'it never depends on what actually turned over',
+      'The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.',
+      'plus any of your pieces your opponent captured while they were still face-down',
+      'Luck averages out to zero over many flips, by design.',
+    ]) {
+      expect(text).toContain(explanation);
+    }
+    const list = [...page.querySelectorAll('ul')].find((element) =>
+      element.textContent.includes('your winning chance with the piece you actually got'),
+    );
+    expect([...(list?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual([
+      'your winning chance with the piece you actually got;',
+      'the average over every piece you could have got.',
+    ]);
+    const example = [...page.querySelectorAll('p')].find((paragraph) =>
+      paragraph.textContent.startsWith('An example: three pieces'),
+    );
+    expect(example?.textContent).toContain('(70 + 45 + 45) / 3, about 53');
+    expect(example?.textContent).toContain('17 points lucky');
+    expect(example?.textContent).toContain('8 points unlucky');
+    expect(text.match(/a lucky flip cannot flatter/g)).toHaveLength(1);
+    expect(page.querySelector('.article-piece-marks--grades')).not.toBeNull();
+    expect(page.querySelector('.article-piece-marks--luck')).not.toBeNull();
+    expect(page.querySelector('img[src="/article-thumbs/jieqi-review-marks.png"]')).not.toBeNull();
+  });
+
+  for (const [slug, lang, grading, luck, note] of [
+    [
+      'jieqi-platform',
+      'zh-Hans',
+      '复盘如何为着法评分',
+      '复盘如何衡量运气',
+      '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
+    ],
+    [
+      'jieqi-platform',
+      'zh-Hant',
+      '復盤如何為著法評分',
+      '復盤如何衡量運氣',
+      '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
+    ],
+    [
+      'co-up',
+      undefined,
+      'Cách phần xem lại chấm điểm nước đi',
+      'Cách phần xem lại đo may rủi',
+      'Đã bổ sung cách phần xem lại chấm điểm nước lật quân và đo may rủi, đồng thời làm rõ rằng AB-JChess chấm điểm phần xem lại.',
+    ],
+  ] as const) {
+    it(`${slug} ${lang ?? 'vi'} serves the explanation and update note in its language`, () => {
+      const page = buildArticlePage(slug, lang);
+      const headings = [...page.querySelectorAll('h3')].map((heading) => heading.textContent);
+      expect(headings).toEqual(expect.arrayContaining([grading, luck]));
+      expect(page.textContent).toContain('(70 + 45 + 45) / 3');
+      expect(page.textContent).toContain('+12%');
+      expect(page.textContent).toContain(note);
+      expect(page.textContent).toContain('AB-JChess');
+      expect(page.textContent).not.toContain('your winning chance with the piece you actually got');
+      const source = articles.find((article) => article.slug === slug);
+      expect(source?.updatedAt).toBe('2026-11-09');
+    });
+  }
+});
+
 describe('Pikafish search intent', () => {
   for (const [lang, name, online, download] of [
     ['zh-Hans', '皮卡鱼', '在线', '下载'],

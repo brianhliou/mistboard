@@ -186,6 +186,19 @@ describe('buildChapterGameRow', () => {
     expect(chip.dataset.outcome).toBe('red');
   });
 
+  it('prints a run and game round as written beside the date', () => {
+    const row = buildChapterGameRow(
+      game('a', 'AB-JChess-20261031', 'jqe', '1-0', {
+        date: '2026-10-31',
+        round: 'Run 2, game 22',
+      }),
+      'en',
+    )!;
+    expect(row.querySelector('.study-game-line__meta')?.textContent).toBe(
+      'Oct 31, 2026 · Run 2, game 22',
+    );
+  });
+
   // R612nAlt: two engines in all 100 games, so no focus player. The chips were
   // all one neutral outline and the list could not be scanned for who won.
   it('colours the chip by the winning seat without a focus player', () => {
@@ -223,17 +236,30 @@ describe('buildChapterRowLabels', () => {
     expect(labels.get('normal')?.textContent).toContain('Lien Quoc vs Stephen Cho');
   });
 
-  it('falls back for every repeated label, including localized pairings', () => {
+  it('keeps repeated rich labels and adds localized chapter names', () => {
     const chapters = [
-      game('one', 'Lien Quoc', 'Stephen Cho'),
-      game('two', 'Lien Quoc', 'Stephen Cho'),
+      { ...game('one', 'Lien Quoc', 'Stephen Cho'), name: 'Game 1' },
+      { ...game('two', 'Lien Quoc', 'Stephen Cho'), name: 'Game 2' },
       {
         ...game('three', 'Original red name', 'Original black name'),
-        i18n: { en: { tags: { red: 'Lien Quoc', black: 'Stephen Cho' } } },
+        name: 'Original chapter name',
+        i18n: { en: { name: 'Game 3', tags: { red: 'Lien Quoc', black: 'Stephen Cho' } } },
       },
-      game('unique', 'Zuo Wenjing', 'Tang Dan'),
+      { ...game('unique', 'Zuo Wenjing', 'Tang Dan'), name: 'Full game' },
     ];
-    expect([...buildChapterRowLabels(chapters, buildLabel).keys()]).toEqual(['unique']);
+    const labels = buildChapterRowLabels(chapters, buildLabel);
+    expect([...labels.keys()]).toEqual(['one', 'two', 'three', 'unique']);
+    for (const [index, id] of ['one', 'two', 'three'].entries()) {
+      const row = labels.get(id)!;
+      expect(row.querySelector('.study-game-line__players')?.textContent).toBe(
+        'Lien Quoc vs Stephen Cho',
+      );
+      expect(row.querySelector('.study-game-line__result')?.textContent).toBe('1-0');
+      const name = row.querySelector('.study-game-line__chapter');
+      expect(name?.textContent).toBe(`Game ${index + 1}`);
+      expect(name?.classList.contains('study-game-line__meta')).toBe(true);
+    }
+    expect(labels.get('unique')?.textContent).not.toContain('Full game');
   });
 
   it('keeps games whose metadata makes the rendered labels distinct', () => {

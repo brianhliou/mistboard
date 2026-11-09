@@ -41,10 +41,10 @@ describe('classifyTkOpponentSound', () => {
 
   // Seat red plays black here, so a black piece gone is a capture of mine;
   // reading the seat name as the colour would miss it.
-  it('plays captured when one of my ink is taken', () => {
+  it('plays capture when one of my ink is taken', () => {
     const prev = view({ board: { a1: redChariot, a2: blackHorse }, status: opponentToMove });
     const next = view({ board: { a2: redChariot }, status: myTurn });
-    expect(classifyTkOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyTkOpponentSound(prev, next, 'red')).toBe('capture');
   });
 
   it('plays move for a plain opponent move', () => {

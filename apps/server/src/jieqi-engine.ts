@@ -69,9 +69,8 @@ export const ABJCHESS_ENGINE_REF = 'efc83867';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
-// when the binary or the analysis search config itself changes. Analysis now runs a fixed
-// depth (JIEQI_ANALYSIS_DEPTH_SEARCH), single-threaded, on its OWN fixed Hash — see
-// jieqiAnalysisResourceOptions; it is no longer "default hash", and depth is no longer 12.
+// when the binary or the analysis search config itself changes. New analysis uses fixed
+// nodes, one thread and Hash=256; the Level 8 budget/rules contract is also in its cache ids.
 // 0.2.0 (2026-08-27): jieqi analysis runs `go depth N movetime T` and halts on
 // whichever binds first. When movetime wins, the final iteration is aborted and
 // the last `info` line is a bound with a one-move pv — which the UCI reader used
@@ -383,6 +382,14 @@ export function abJchessNetPath(): string {
   return found;
 }
 
+function abJchessStartupOptions(): string[] {
+  // Site kernel uses jqe's chase rule since 2026-11-08; AB-JChess-20261031 defaults to skyrule.
+  return [
+    `setoption name EvalFile value ${abJchessNetPath()}`,
+    'setoption name ChaseRule value default',
+  ];
+}
+
 // jqe and its net: the engines release puts both in /app/bin. No dev fallback; jqe
 // builds on x86-64 only, so locally point MISTBOARD_JQE_PATH at a wrapper that runs the
 // released binary (docker --platform linux/amd64) and MISTBOARD_JQE_NET at the net.
@@ -465,8 +472,7 @@ export function jieqiEngineTierFor(engineId: string | undefined): JieqiEngineTie
 }
 
 // Presence check: true when the PikaJieQi binary resolves (live levels 1-8, the live
-// prewarm). The analysis route gates on jieqiAnalysisEngineAvailable() below instead,
-// which also accepts AB-JChess.
+// prewarm). Review grading prefers AB-JChess when its binary and net resolve.
 export function jieqiEngineBinaryAvailable(): boolean {
   try {
     pikaJieqiPath();
@@ -480,16 +486,15 @@ export function jieqiEngineBinaryAvailable(): boolean {
 export type JieqiAnalysisEngine = 'ab-jchess' | 'pikafish-jieqi';
 
 /**
- * Which engine computes NEW jieqi analysis: AB-JChess whenever its binary and net
- * resolve (prod), else PikaJieQi, so a dev box or CI without the net still analyses.
- * Each engine files under its own cache ids and the client reads the curve off the
- * stored id, so the two never mix inside one series (jieqi-analysis.ts).
+ * AB-JChess grades new reviews when its binary and net resolve (prod): it is the
+ * strongest jieqi bot on the site, above Pikafish Level 8. PikaJieQi is the dev
+ * fallback. Stored analyses retain their own engine ids and win curves.
  */
 export function jieqiAnalysisEngine(): JieqiAnalysisEngine {
   return abJchessAvailable() ? 'ab-jchess' : 'pikafish-jieqi';
 }
 
-/** The analysis route's fail-closed gate: either engine can serve it. */
+/** Fail closed unless either grading engine resolves. */
 export function jieqiAnalysisEngineAvailable(): boolean {
   return abJchessAvailable() || jieqiEngineBinaryAvailable();
 }
@@ -526,17 +531,22 @@ export function jieqiAnalysisResourceOptions(
  *  net (AB-JChess always loads its own; PikaJieQi only when MISTBOARD_PIKAFISH_NET is
  *  set), then the fixed analysis Hash/Threads. */
 export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): string[] {
-  const net =
-    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
-  return ['uci', ...net, ...jieqiAnalysisResourceOptions(engine), 'ucinewgame', 'isready'];
+  const startupOptions = engine === 'ab-jchess' ? abJchessStartupOptions() : netOption();
+  return [
+    'uci',
+    ...startupOptions,
+    ...jieqiAnalysisResourceOptions(engine),
+    'ucinewgame',
+    'isready',
+  ];
 }
 
 /**
  * The search budget for ONE analysis eval, as a union so a call site must pick exactly one
  * dial and cannot silently set both.
  *
- * NODES is the Layer-1 (whole-game sweep) dial; DEPTH is the Layer-2 (decisions) dial. The
- * difference matters and is not cosmetic: a fixed DEPTH is not a fixed amount of search.
+ * New sweeps and decisions both use NODES; DEPTH remains for historical tooling. A
+ * fixed DEPTH is not a fixed amount of search.
  * Measured over one 64-ply jieqi game at depth 16, per-ply cost ranged from 94k to 7.8M nodes
  * (median 173k, mean 845k) because check extensions and singular extensions spend the budget
  * for you. That makes NEIGHBOURING plies incomparable: a position one ply before a discovered
@@ -546,28 +556,28 @@ export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): str
  * same everywhere, so the series is internally comparable. (This is also what lichess/fishnet
  * budget on, for the same reason.)
  *
- * The movetime cap on the nodes arm is a BACKSTOP that must never bind: 500k nodes is ~200ms
- * at the 2-3M nps this binary runs at, against a 6s cap, so binding it would take a box under
- * ~84k nps. If it ever binds, the result stops being reproducible for that ply.
+ * Movetime on the nodes arm is a safety BACKSTOP. The calibrated Level 8 budget and
+ * its 4x consistency re-search fit inside 30s; if the cap binds, that ply is no longer
+ * reproducible at the promised node count.
  */
 export type JieqiEvalBudget =
   | { nodes: number; movetimeMs: number; depth?: undefined }
   | { depth: number; movetimeMs: number; nodes?: undefined };
 
-function jieqiGoCommand(opts: JieqiEvalBudget): string {
-  return opts.nodes != null
-    ? `go nodes ${Math.max(1, Math.floor(opts.nodes))} movetime ${opts.movetimeMs}`
-    : `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`;
+function jieqiGoCommand(opts: JieqiEvalBudget & { searchMoves?: readonly string[] }): string {
+  const go =
+    opts.nodes != null
+      ? `go nodes ${Math.max(1, Math.floor(opts.nodes))} movetime ${opts.movetimeMs}`
+      : `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`;
+  // The parser consumes every token after searchmoves as a move.
+  return opts.searchMoves?.length ? `${go} searchmoves ${opts.searchMoves.join(' ')}` : go;
 }
 
 /** The exact UCI block a fixed-budget analysis eval sends. Exported so the analysis
  *  resource options (fixed Hash, single thread) are testable: a cached sweep is keyed
  *  by (room, engine, depth) and promises a CPU-independent result, which a second
  *  search thread would not preserve. */
-export function buildJieqiAnalysisCommands(
-  fen: string,
-  opts: JieqiEvalBudget & { moves?: readonly string[] },
-): string[] {
+export function buildJieqiAnalysisCommands(fen: string, opts: JieqiAnalysisRequest): string[] {
   return [
     'uci',
     ...netOption(),
@@ -582,15 +592,12 @@ export function buildJieqiAnalysisCommands(
 // Whole-game ANALYSIS eval (distinct from the playable move provider above): read PikaJieQi's
 // `info … score` for a redacted current-position FEN, side-to-move POV. Unlike the 3 custom
 // engines, Pikafish ALREADY emits `info score` — no engine change was needed here, so this just
-// reads what the binary already prints. The dial is a fixed search DEPTH (CPU-independent
-// result, so the cached analysis stays stable) with a movetime cap bounding latency. Gated
+// reads what the binary already prints. Fixed nodes bound search effort, with a movetime
+// backstop bounding pathological latency. Gated
 // through the dedicated ANALYSIS pool so a sweep can never occupy a live bot-move slot. Caller
 // owns POV normalization; the redacted (as-played info-state) FEN is sent as-is — the engine
 // never sees a hidden id.
-export async function evaluateJieqiFen(
-  fen: string,
-  opts: JieqiEvalBudget & { moves?: readonly string[] },
-): Promise<UciEval> {
+export async function evaluateJieqiFen(fen: string, opts: JieqiAnalysisRequest): Promise<UciEval> {
   const commands = buildJieqiAnalysisCommands(fen, opts);
   const release = await analysisPool.acquire();
   try {
@@ -609,6 +616,8 @@ export async function evaluateJieqiFen(
  *  per-request switches a shared session needs because it outlives any one search. */
 export type JieqiAnalysisRequest = JieqiEvalBudget & {
   moves?: readonly string[];
+  /** Kernel-legal nonterminal roots. Terminal moves are scored by the kernel. */
+  searchMoves?: readonly string[];
   /** Clear the hash (`ucinewgame`) before this search, so its result depends only on
    *  (fen, moves, budget) and not on what the session searched before. The decisions
    *  pass sets it: its evals used to run one process each, and keep that contract. */
@@ -645,7 +654,7 @@ function jieqiAnalysisSessionSpec(engine: JieqiAnalysisEngine) {
  * pattern): binary spawn + option setup + net load happen once for the whole run, then
  * each position is a `position fen …` + `go` round-trip built by the SAME
  * jieqiGoCommand the per-spawn path uses, so eval semantics are unchanged. `engine`
- * picks the binary (jieqiAnalysisEngine() by default: AB-JChess when it resolves). The
+ * picks the binary (jieqiAnalysisEngine() prefers AB-JChess when it resolves). The
  * sweep and the decisions pass both run here: decisions used to spawn a process per
  * eval, several hundred per game, which for AB-JChess v0.2d meant reloading a 133 MB net
  * each time. Scores are side-to-move POV; the caller owns normalization, and the
@@ -858,13 +867,13 @@ export async function jieqiLiveEngineMove(
 /** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
  *  set here, once per process lifetime; AB-JChess and jqe load their nets here too. */
 export function buildJieqiLiveInitCommands(engine?: JieqiLiveEngine): string[] {
-  const net =
+  const startupOptions =
     engine === 'ab-jchess'
-      ? [`setoption name EvalFile value ${abJchessNetPath()}`]
+      ? abJchessStartupOptions()
       : engine === 'jqe'
         ? [`setoption name EvalFile value ${jqeNetPath()}`]
         : netOption();
-  return ['uci', ...net, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
+  return ['uci', ...startupOptions, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
 }
 
 /** The `go` line for a live move: a depth cap (if any) stops the search early for the

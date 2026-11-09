@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import type pg from 'pg';
+import { type ContentReadout, collectContentReadout } from './content-readout.js';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
   buildMistboardReadout,
@@ -65,17 +66,51 @@ export async function generateMistboardReadout(input: {
    *  the CLI pass the real fetch; left out (the tests), the line is not
    *  collected, so no test reaches dpxq. */
   dpxqIndexFetch?: XiangqiBroadcastSourceFetch;
+  contentCollect?: (now: Date) => Promise<ContentReadout>;
 }): Promise<{ report: MistboardReadoutV1; reused: boolean; previousAlertKey: string | null }> {
   const db = input.db ?? getPool();
   const now = input.now ?? new Date();
   const snapshotKey = readoutSnapshotKey(input.trigger, now);
+
+  // Scheduled retries return before any external collector. The transaction
+  // still checks again to make insertion idempotent across concurrent callers.
+  if (snapshotKey && !input.dryRun) {
+    const existing = await db.query<{ payload: unknown }>(
+      'SELECT payload FROM ops_readout_snapshots WHERE snapshot_key = $1',
+      [snapshotKey],
+    );
+    if (existing.rows[0])
+      return {
+        report: parseStoredReadout(existing.rows[0].payload),
+        reused: true,
+        previousAlertKey: null,
+      };
+  }
+  // Context is fetched outside the advisory lock, and ordinary dailies retain
+  // the last successful source window/as-of timestamp. The first deployment
+  // bootstraps without waiting until Monday. Missing credentials never retry
+  // the provider; a failed configured bootstrap may retry on the next day.
+  const previousContent = await db.query<{ payload: { content?: ContentReadout } }>(
+    `SELECT payload FROM ops_readout_snapshots
+     WHERE payload->'content'->>'status' = 'available'
+       AND payload->'content'->>'version' = '1'
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+  );
+  const storedContent = previousContent.rows[0]?.payload.content;
+  const content =
+    input.trigger === 'weekly' || !storedContent
+      ? await (input.contentCollect ?? collectContentReadout)(now)
+      : storedContent;
 
   // Read dpxq before taking the generation lock: a slow source must not hold
   // the transaction open.
   const untrackedEvents = input.dpxqIndexFetch
     ? await collectUntrackedDpxqEvents(db, now, input.dpxqIndexFetch)
     : undefined;
-  const collect = () => collectMistboardReadoutFacts(db, now, { untrackedEvents });
+  const collect = async () => ({
+    ...(await collectMistboardReadoutFacts(db, now, { untrackedEvents })),
+    content,
+  });
 
   if (input.dryRun) {
     const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);

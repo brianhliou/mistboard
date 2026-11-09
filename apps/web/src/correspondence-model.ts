@@ -5,8 +5,8 @@
 // directly (correspondence-model.test.ts).
 
 import {
-  CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
   isCorrespondenceRatedSpec,
   maybeGameSpecForId,
@@ -403,8 +403,8 @@ const NONE_OFFERED: CorrespondenceSpecOffer = () => false;
 
 /**
  * The specs this viewer may start a correspondence game in: every public one
- * (CORRESPONDENCE_ELIGIBLE_SPEC_IDS), then each allowlisted playtest spec the
- * menu offers them (xiangqi mahjong, casual only). The server checks the grant
+ * (CORRESPONDENCE_ELIGIBLE_SPEC_IDS), then each restricted playtest spec the
+ * menu offers them (casual only). The server checks the same room access gate
  * again on every seek; this only keeps the picker from offering a refusal.
  */
 export function correspondenceSpecIdsFor(
@@ -412,7 +412,7 @@ export function correspondenceSpecIdsFor(
 ): readonly string[] {
   return [
     ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
-    ...CORRESPONDENCE_ALLOWLISTED_SPEC_IDS.filter((specId) => offered(specId)),
+    ...CORRESPONDENCE_RESTRICTED_SPEC_IDS.filter((specId) => offered(specId)),
   ];
 }
 

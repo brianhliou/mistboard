@@ -3,6 +3,7 @@ import {
   isTenantEventLog,
   tenantPerPlyViews,
   tenantSeatDisplayNames,
+  tenantVisibleRoom,
 } from './variant-tenant/runtime.js';
 import type { XmjRuntimeRoom } from './xiangqi-mahjong-registration.js';
 import {
@@ -45,7 +46,7 @@ export function xmjWatchTimeline(events: readonly XmjEvent[]): XmjWatchMove[] {
   for (const event of events) {
     if (event.type !== 'move-played') continue;
     ply += 1;
-    const shaped = xmjClientEventFor(event, 'spectator', ply);
+    const shaped = xmjClientEventFor(event, 'spectator', ply, events);
     if (shaped?.type !== 'move-played') continue;
     const move = shaped.move;
     timeline.push({
@@ -74,6 +75,12 @@ export function xmjLiveWatchPayloadFor(
   const projection = room.projection;
   if (projection.state.status.type !== 'playing') return null;
   if (!isTenantEventLog(xiangqiMahjongTenant, room.events, roomId)) return null;
+  room = tenantVisibleRoom(xiangqiMahjongTenant, room, {
+    id: 'tv-spectator',
+    seat: 'spectator',
+    solo: false,
+  });
+  const visibleProjection = room.projection;
   const events = room.events;
   const timeline = xmjWatchTimeline(events);
   const isEngine = xiangqiMahjongTenant.engine?.isEngineClientId ?? (() => false);
@@ -105,10 +112,10 @@ export function xmjLiveWatchPayloadFor(
       incrementMs: projection.timeControl?.incrementMs ?? null,
     },
     state: {
-      status: projection.state.status,
-      moveNumber: projection.state.moveNumber,
-      ...(projection.clock ? { clock: projection.clock } : {}),
-      ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
+      status: visibleProjection.state.status,
+      moveNumber: visibleProjection.state.moveNumber,
+      ...(visibleProjection.clock ? { clock: visibleProjection.clock } : {}),
+      ...(visibleProjection.timeControl ? { timeControl: visibleProjection.timeControl } : {}),
     },
     timeline,
     // The names the room shows its spectators, by seat (east and west are not

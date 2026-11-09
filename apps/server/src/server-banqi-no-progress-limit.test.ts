@@ -88,6 +88,8 @@ function withFakeEngine(run: (log: () => string[]) => Promise<void>): () => Prom
     const dir = mkdtempSync(join(tmpdir(), 'banqi-limit-'));
     const logPath = join(dir, 'stdin.log');
     const bin = join(dir, 'fake-banqi-engine');
+    const net = join(dir, 'net.bqnn');
+    writeFileSync(net, 'stub net');
     writeFileSync(
       bin,
       [
@@ -95,7 +97,7 @@ function withFakeEngine(run: (log: () => string[]) => Promise<void>): () => Prom
         'while IFS= read -r line; do',
         `  printf '%s\\n' "$line" >> '${logPath}'`,
         '  case "$line" in',
-        '    uci) echo "id name MistyBanqi fake"; echo "option name NoProgressLimit type spin default 40 min 1 max 1000"; echo uciok ;;',
+        '    uci) echo "id name MistyBanqi fake"; echo "option name EvalFile type string default none"; echo "option name NoProgressLimit type spin default 40 min 1 max 1000"; echo uciok ;;',
         '    isready) echo readyok ;;',
         '    go*) echo "info depth 1 score cp 0 nodes 1"; echo "bestmove a0a0" ;;',
         '  esac',
@@ -105,12 +107,16 @@ function withFakeEngine(run: (log: () => string[]) => Promise<void>): () => Prom
     );
     chmodSync(bin, 0o755);
     const previous = process.env.MISTBOARD_BANQI_ENGINE_PATH;
+    const previousNet = process.env.MISTBOARD_BANQI_NET;
+    process.env.MISTBOARD_BANQI_NET = net;
     process.env.MISTBOARD_BANQI_ENGINE_PATH = bin;
     try {
       await run(() => readFileSync(logPath, 'utf8').trim().split('\n'));
     } finally {
       if (previous === undefined) delete process.env.MISTBOARD_BANQI_ENGINE_PATH;
       else process.env.MISTBOARD_BANQI_ENGINE_PATH = previous;
+      if (previousNet === undefined) delete process.env.MISTBOARD_BANQI_NET;
+      else process.env.MISTBOARD_BANQI_NET = previousNet;
       rmSync(dir, { recursive: true, force: true });
     }
   };
@@ -143,6 +149,7 @@ test(
   withFakeEngine(async (log) => {
     await evaluateBanqiFenNodes(FEN, { nodes: 10, movetimeCapMs: 200, noProgressLimit: 40 });
     const options = buildBanqiOptionCommands(40);
-    assert.deepEqual(log().slice(0, options.length + 2), ['uci', ...options, 'ucinewgame']);
+    assert.deepEqual(log().slice(2, options.length + 3), [...options, 'ucinewgame']);
+    assert.match(log()[1]!, /^setoption name EvalFile value /);
   }),
 );

@@ -9,9 +9,9 @@
 //
 // --regrade-decisions recomputes the decisions blob of every finished jieqi game whose only
 // decisions rows were written by an earlier decomposition algorithm (any jieqi decisions id
-// that is not a current one) and has no row under a current id. Dry by default: it lists
-// those games; --apply computes and writes them under the current id. The old row is kept
-// (never served since d6: it was graded from the real deal). The Layer-1 sweep is not
+// that is not a current one) and has no row under a current full or grade-only id.
+// Dry by default: it lists those games; --apply computes and writes them under the current id.
+// The old row is kept (never served since d6: it was graded from the real deal). The Layer-1 sweep is not
 // recomputed here; a plain run warms it under the current analysis ids.
 //
 // Against prod, via the pattern that never prints the credential:
@@ -57,6 +57,7 @@ import {
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from '../apps/server/dist/jieqi-analysis.js';
+import { jieqiAnalysisEngine } from '../apps/server/dist/jieqi-engine.js';
 import { getPool, init as initPersistence } from '../apps/server/dist/persistence-db.js';
 import { loadFinishedJieqiGameInputs } from '../apps/server/dist/routes/jieqi-games.js';
 
@@ -71,19 +72,19 @@ const regrade = has('--regrade-decisions');
 // A regrade is dry unless --apply; the warm-cache mode is live unless --dry-run.
 const dryRun = regrade ? !has('--apply') : has('--dry-run');
 const requestedConcurrency = Math.max(1, Number(flagValue('--concurrency')) || 1);
-// A regrade grades every game on the AB-JChess analysis pool (jieqi-engine.ts), one slot
-// by default with a 30s queue wait: a second worker only waits, times out and fails its
-// game (10-07: 9 of 11 failed at --concurrency 2). Never run more workers than slots.
-const abJchessAnalysisSlots = Math.max(
+// Select the grading engine's dedicated analysis pool. Never queue more workers
+// than slots: a whole-game run holds its slot for the entire sweep/fan-out.
+const gradingEngine = jieqiAnalysisEngine();
+const analysisSlots = Math.max(
   1,
-  Number(process.env.MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES) || 1,
+  gradingEngine === 'ab-jchess'
+    ? Number(process.env.MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES) || 1
+    : Number(process.env.MISTBOARD_PIKAFISH_JIEQI_ANALYSIS_MAX_PROCESSES) || 2,
 );
-const concurrency = regrade
-  ? Math.min(requestedConcurrency, abJchessAnalysisSlots)
-  : requestedConcurrency;
+const concurrency = regrade ? Math.min(requestedConcurrency, analysisSlots) : requestedConcurrency;
 if (concurrency < requestedConcurrency) {
   console.log(
-    `--concurrency ${requestedConcurrency} capped to ${concurrency}: the AB-JChess analysis pool has ${abJchessAnalysisSlots} slot(s)`,
+    `--concurrency ${requestedConcurrency} capped to ${concurrency}: the ${gradingEngine} analysis pool has ${analysisSlots} slot(s)`,
   );
 }
 const withDecisions = !has('--no-decisions');
@@ -163,11 +164,29 @@ for (const row of rows) {
       console.log(`  ${roomId}  SKIP (not a finished jieqi event log)`);
       continue;
     }
-    await resolveJieqiAnalysis(roomId, inputs.moves, inputs.deal, undefined, undefined, true);
+    await resolveJieqiAnalysis(
+      roomId,
+      inputs.moves,
+      inputs.deal,
+      undefined,
+      undefined,
+      true,
+      undefined,
+      inputs.rules,
+    );
     const afterSweep = Date.now();
     let decisionsMs = 0;
     if (withDecisions) {
-      await resolveJieqiDecisions(roomId, inputs.moves, inputs.deal, undefined, undefined, true);
+      await resolveJieqiDecisions(
+        roomId,
+        inputs.moves,
+        inputs.deal,
+        undefined,
+        undefined,
+        true,
+        undefined,
+        { rules: inputs.rules },
+      );
       decisionsMs = Date.now() - afterSweep;
     }
     done++;
@@ -192,7 +211,11 @@ process.exit(failed > 0 ? 1 : 0);
 // ── --regrade-decisions ──────────────────────────────────────────────────────────────
 
 async function runRegrade() {
-  const currentIds = [JIEQI_DECISIONS_ENGINE_ID, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID];
+  // Grade-only rows use the current algorithm too, regardless of the luck flag.
+  // This sweep upgrades algorithms; it must not turn luck back on for those rooms.
+  const currentIds = [JIEQI_DECISIONS_ENGINE_ID, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID].flatMap(
+    (id) => [id, `${id}+no-luck1`],
+  );
   const { rows: stale } = await pool.query(
     `SELECT g.room_id, g.ply_count, g.result,
             array_agg(DISTINCT a.engine_id) AS legacy_ids
@@ -249,7 +272,7 @@ async function runRegrade() {
           undefined,
           true,
           undefined,
-          { servePreviousAlgorithms: false },
+          { servePreviousAlgorithms: false, rules: inputs.rules },
         );
         done++;
         console.log(

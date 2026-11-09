@@ -73,6 +73,9 @@ export type GameAnalysisRoutesConfig<Inputs, A extends object, D extends object>
   analysisExtras?(inputs: Inputs): Record<string, unknown>;
   /** Layer-2 decision decomposition; presence enables the `/decisions` endpoint. */
   resolveDecisions?(roomId: string, inputs: Inputs, computeIfMissing: boolean): Promise<D | null>;
+  /** Viewer projection, applied on every read, including already-completed jobs.
+   *  Shared job/cache results must remain independent of the requesting viewer. */
+  decisionsForViewer?(decisions: D, request: IncomingMessage): Promise<object>;
 };
 
 /** Test seams: the account-session lookup and the per-IP enqueue limiter,
@@ -156,7 +159,11 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
         writeJson(response, 404, { error: 'not_found' });
         return true;
       }
-      writeJson(response, 200, analysisJobStatusBody(job));
+      const body = analysisJobStatusBody(job);
+      if (endpoint === 'decisions' && job.status === 'done' && config.decisionsForViewer) {
+        body.result = await config.decisionsForViewer(job.result as D, request);
+      }
+      writeJson(response, 200, body);
       return true;
     }
 
@@ -254,7 +261,13 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
         ? await config.resolveDecisions?.(roomId, inputs, false)
         : null;
       if (cachedAnalysis && cachedDecisions) {
-        writeJson(response, 200, cachedDecisions);
+        writeJson(
+          response,
+          200,
+          config.decisionsForViewer
+            ? await config.decisionsForViewer(cachedDecisions, request)
+            : cachedDecisions,
+        );
         return true;
       }
       if (method === 'GET') {

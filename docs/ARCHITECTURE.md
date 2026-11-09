@@ -53,6 +53,8 @@ Finished games review through one shared shell: `apps/web/src/review/review-shel
 
 Analysis comes in layers: server-side whole-game engine eval cached in the `game_analysis` table, a decision-vs-luck decomposition for chance-reveal variants, and study/gamebook tooling built on serialized move trees.
 
+Jieqi reveal luck is enabled by default. `MISTBOARD_JIEQI_LUCK_ENABLED=false` omits realized outcomes from review and study decisions, including cached results and completed job polls. `jieqiLuckAllowed(viewer)` is the server policy seam for future viewer entitlements. Disabling luck preserves move grades, accuracy, and their pool-average searches; grade-only computations use separate cache and checkpoint keys so re-enabling luck can compute the missing outcomes. The web review, study, and embeds render no dice when outcomes are absent. Game exports and share cards do not include decision data.
+
 ## In-browser engines (ceval)
 
 Review and analysis surfaces can run an engine in the browser behind a single `CevalHandle` contract (`apps/web/src/review/engine/`): Fairy-Stockfish, Pikafish (xiangqi), Pikafish-jieqi, and Misty WASM backends (Misty is first-party Rust compiled to WebAssembly). Backends are dispatched per variant, evaluate one redacted FEN per position, and stream MultiPV lines to the engine panel and eval bar. Hidden-information variants feed the browser engine the same redacted encoding the server-side engines get.

@@ -2,6 +2,7 @@ import type { ServerResponse } from 'node:http';
 import {
   CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
   DARK_CHESS_SPEC_ID,
   DAY_MS,
@@ -54,6 +55,10 @@ export const CORRESPONDENCE_ELIGIBLE_SPECS: ReadonlySet<string> = new Set(
 // (correspondence-eligibility.test.ts).
 export const CORRESPONDENCE_ALLOWLISTED_SPECS: ReadonlySet<string> = new Set(
   CORRESPONDENCE_ALLOWLISTED_SPEC_IDS,
+);
+
+export const CORRESPONDENCE_RESTRICTED_SPECS: ReadonlySet<string> = new Set(
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
 );
 
 // Dev/test only: accept compressed non-official allowances (fractional

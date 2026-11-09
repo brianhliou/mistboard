@@ -320,7 +320,8 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
     refs: LiveRefs,
     view: V | null,
     takePendingAnimation: () => TenantPendingAnimation<C, V, M> | null,
-  ): number | undefined;
+    // biome-ignore lint/suspicious/noConfusingVoidType: Existing hooks return void; duration is optional.
+  ): number | void;
   /** Between board and move list: hands, promotion pickers, etc. */
   renderExtras?(refs: LiveRefs, view: V | null): void;
   /**

@@ -237,6 +237,8 @@ function chapter(g: Game, n: number) {
   if (!comments[moves.length]) throw new Error(`${where}: no note on the finish`);
 
   const result = g.winner === 'red' ? '1-0' : g.winner === 'black' ? '0-1' : '1/2-1/2';
+  const [, run, gameIndex] = /^run(\d+):(\d+)$/.exec(g.key) ?? [];
+  if (!run || !gameIndex) throw new Error(`${where}: missing run or game index`);
   const intro =
     `${g.chase ? 'The chase rule' : `Game ${n} of the post`}: one of ${data.total.games} games between AB-JChess-20261031 and jqe on 2026-10-31, ${a.movetimeMs / 1000} seconds a move on ${a.threads} threads. ` +
     `${NAME[redE]} has Red. ` +
@@ -269,6 +271,7 @@ function chapter(g: Game, n: number) {
       result,
       event: `AB-JChess vs jqe, ${data.total.games} games, 2026-10-31`,
       date: '2026-10-31',
+      round: `Run ${run}, game ${gameIndex}`,
     },
     scoreSeries: {
       side: wSide,
@@ -313,16 +316,19 @@ const plan = {
     scoreSeries: b.scoreSeries,
   })),
 };
-// --update: the same chapters as tree replacements on the study the post embeds
-// (AB_JQE_STUDY), keeping its chapter ids, so the post's links stay good.
+// --update: replace trees and tags on the study the post embeds (AB_JQE_STUDY),
+// keeping its chapter ids, so the post's links stay good.
 const update = {
   study: AB_JQE_STUDY.id,
   ops: [
     { op: 'study', name: NAME_STUDY, description: DESCRIPTION },
-    ...built.map((b) => {
+    ...built.flatMap((b) => {
       const chapter = AB_JQE_STUDY.chapters[b.key];
       if (!chapter) throw new Error(`${b.key}: no chapter in AB_JQE_STUDY`);
-      return { op: 'tree', chapter, tree: b.tree };
+      return [
+        { op: 'rename', chapter, name: b.name, tags: b.tags },
+        { op: 'tree', chapter, tree: b.tree },
+      ];
     }),
   ],
 };

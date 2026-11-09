@@ -345,8 +345,8 @@
 
 .xq-live-hint-capture {
   fill: none;
-  stroke: rgba(31, 111, 91, 0.48);
-  stroke-width: 3;
+  stroke: var(--board-move-hint, rgba(31, 111, 91, 0.72));
+  stroke-width: 4;
   pointer-events: none;
 }
 
@@ -360,8 +360,7 @@
   opacity: 1;
 }
 
-.xq-live-hit--target:hover .xq-live-hint-dot,
-.xq-live-hit--target:hover .xq-live-hint-capture {
+.xq-live-hit--target:hover .xq-live-hint-dot {
   opacity: 0;
 }
 

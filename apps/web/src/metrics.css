@@ -43,6 +43,41 @@
   font-size: 12px;
 }
 
+/* Public headlines stay together, including on the narrowest phones. */
+.stats-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stats-cards-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stats-cards > .metrics-card {
+  min-width: 0;
+}
+
+.stats-cards .metrics-card-value {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .stats-cards {
+    gap: 8px;
+  }
+
+  .stats-cards > .metrics-card {
+    padding: 10px 6px;
+  }
+
+  .stats-cards .metrics-card-value {
+    font-size: clamp(13px, calc(5vw - 3px), 20px);
+  }
+
+  .stats-cards .metrics-card-label {
+    font-size: 12px;
+  }
+}
+
 .metrics-section {
   margin-bottom: 28px;
 }
@@ -150,6 +185,13 @@
   color: var(--site-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.stats-updated {
+  display: block;
+  margin: -6px 0 14px;
+  color: var(--site-muted);
+  font-size: 13px;
 }
 
 /* Public /stats weekly chart: variant chips above the weekly primitive, the

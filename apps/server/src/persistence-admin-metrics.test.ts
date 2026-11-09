@@ -40,6 +40,111 @@ async function insertGame(input: {
 }
 
 definePersistenceTests('admin metrics', () => {
+  for (const scenario of [
+    {
+      name: 'ordinary Pacific week',
+      now: '2026-10-21T19:00:00Z',
+      weekStart: '2026-10-19T07:00:00Z',
+      lastWeekStart: '2026-10-12T07:00:00Z',
+      samePoint: '2026-10-14T19:00:00Z',
+    },
+    {
+      name: 'fall daylight-saving change',
+      now: '2026-11-04T20:00:00Z', // Wednesday noon PST
+      weekStart: '2026-11-02T08:00:00Z',
+      lastWeekStart: '2026-10-26T07:00:00Z',
+      samePoint: '2026-10-28T19:00:00Z', // Wednesday noon PDT, 169 hours ago
+    },
+    {
+      name: 'spring daylight-saving change',
+      now: '2027-03-17T19:00:00Z', // Wednesday noon PDT
+      weekStart: '2027-03-15T07:00:00Z',
+      lastWeekStart: '2027-03-08T08:00:00Z',
+      samePoint: '2027-03-10T20:00:00Z', // Wednesday noon PST, 167 hours ago
+    },
+  ]) {
+    test(`game pace counts half-open same-point windows through ${scenario.name}`, async () => {
+      const now = new Date(scenario.now);
+      assert.deepEqual((await getAdminMetrics({ now, weeks: 1 })).gamePace, {
+        thisWeekSoFar: 0,
+        lastWeekSamePoint: 0,
+        lastWeekTotal: 0,
+      });
+      const offset = (at: string, ms: number) => new Date(Date.parse(at) + ms).toISOString();
+      let id = 0;
+      const game = (
+        endedAt: string,
+        options: {
+          mode?: 'pve' | 'eve' | 'imported';
+          plyCount?: number;
+          subjectType?: ParticipantFixture['subjectType'];
+          subjectId?: string;
+        } = {},
+      ) =>
+        insertGame({
+          roomId: `pace-${id++}`,
+          variant: 'jieqi',
+          mode: options.mode ?? 'pve',
+          endedAt,
+          plyCount: options.plyCount,
+          participants: [
+            {
+              color: 'white',
+              subjectType: options.subjectType ?? 'guest',
+              subjectId: options.subjectId ?? 'player',
+            },
+            { color: 'black', subjectType: 'engine-version', subjectId: 'bot' },
+          ],
+        });
+      await game(offset(scenario.lastWeekStart, -1)); // outside last week
+      await game(scenario.lastWeekStart);
+      await game(offset(scenario.samePoint, -1));
+      await game(scenario.samePoint); // outside same-point window
+      await game(offset(scenario.samePoint, 30 * 60_000)); // catches an elapsed-168h cutoff
+      await game(offset(scenario.weekStart, -1));
+      await game(scenario.weekStart);
+      await game(offset(scenario.now, -1));
+      await game(scenario.now); // outside this week's as-of window
+      await game(offset(scenario.now, 1));
+
+      await createUser({
+        id: 'operator',
+        email: 'operator@example.com',
+        emailVerifiedAt: now,
+        handle: 'operator',
+        displayName: 'Operator',
+        now,
+      });
+      await getPool().query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'operator'`);
+      await getPool().query(
+        `INSERT INTO stats_excluded_devices (device_id, account_id) VALUES ('internal-device', 'operator')`,
+      );
+      // All three pace counts inherit the canonical mode, ply and seat filters.
+      for (const at of [offset(scenario.samePoint, -1), offset(scenario.now, -1)]) {
+        await game(at, { mode: 'eve' });
+        await game(at, { mode: 'imported' });
+        await game(at, { plyCount: 1 });
+        await game(at, { subjectType: 'user', subjectId: 'operator' });
+        await game(at, { subjectId: 'internal-device' });
+      }
+      assert.deepEqual((await getAdminMetrics({ now, weeks: 1 })).gamePace, {
+        thisWeekSoFar: 2,
+        lastWeekSamePoint: 2,
+        lastWeekTotal: 5,
+      });
+      // At Pacific Monday midnight the current and prior same-point windows
+      // are empty, while the full last-week count remains available.
+      assert.deepEqual(
+        (await getAdminMetrics({ now: new Date(scenario.weekStart), weeks: 1 })).gamePace,
+        {
+          thisWeekSoFar: 0,
+          lastWeekSamePoint: 0,
+          lastWeekTotal: 5,
+        },
+      );
+    });
+  }
+
   test('login email delivery exposes only rolling aggregate counts, including empty windows', async () => {
     const now = new Date('2026-11-03T20:00:00Z');
     const zero = {

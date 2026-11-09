@@ -69,10 +69,10 @@ describe('classifyAtomicXiangqiOpponentSound', () => {
     expect(classifyAtomicXiangqiOpponentSound(prev, next, 'red')).toBe('blast');
   });
 
-  it("is 'captured' for the opponent's cannon shot, which has no aftermath", () => {
+  it("is 'capture' for the opponent's cannon shot, which has no aftermath", () => {
     const prev = view({ board: { a1: redChariot, e3: redSoldier }, turn: 'black' });
     const next = view({ board: { a1: redChariot }, turn: 'red' });
-    expect(classifyAtomicXiangqiOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyAtomicXiangqiOpponentSound(prev, next, 'red')).toBe('capture');
   });
 
   it('stays silent for spectators, as standard xiangqi does', () => {

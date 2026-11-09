@@ -498,19 +498,26 @@ export async function evaluateBanqiFenNodes(
     nodes: number;
     movetimeCapMs: number;
     moves?: readonly string[];
+    searchMoves?: readonly string[];
     noProgressLimit: number;
   },
 ): Promise<UciEval> {
+  // Review uses the same NNUE weights as L8. Missing weights must fail the job,
+  // never produce/cache a weaker classical evaluation under the NNUE identity.
+  const evalFile = banqiNetPath();
+  if (evalFile === null) throw new Error('Banqi net is not available');
   const commands = [
     'uci',
+    `setoption name EvalFile value ${evalFile}`,
     ...buildBanqiOptionCommands(opts.noProgressLimit),
     'ucinewgame',
     'isready',
     buildBanqiPositionCommand(fen, opts.moves),
-    `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
+    buildBanqiGoCommand(opts.nodes, opts.movetimeCapMs, opts.searchMoves),
   ];
   const release = await analysisPool.acquire();
   try {
+    if (!readableNetPath(evalFile)) throw new Error('Banqi net is not available');
     return await runUciEval({
       bin: banqiEnginePath(),
       commands,

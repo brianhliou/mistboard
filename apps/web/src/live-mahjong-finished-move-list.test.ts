@@ -30,12 +30,14 @@ vi.mock('./feature-flags.js', async (importOriginal) => {
   return { ...actual, mahjongEnabled: () => true };
 });
 
-const sound = vi.hoisted(() => ({ terminal: [] as unknown[][] }));
+const sound = vi.hoisted(() => ({ terminal: [] as unknown[][], moves: [] as string[] }));
 vi.mock('./live-sound.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./live-sound.js')>();
   return {
     ...actual,
-    playSound: () => {},
+    playSound: (kind: string) => {
+      sound.moves.push(kind);
+    },
     playTerminalPlan: (...args: unknown[]) => {
       sound.terminal.push(args);
     },
@@ -153,6 +155,7 @@ function playedCells(): HTMLElement[] {
 
 beforeEach(() => {
   sound.terminal = [];
+  sound.moves = [];
   document.body.innerHTML = '';
   vi.stubGlobal(
     'fetch',
@@ -258,5 +261,41 @@ describe('game-over sound', () => {
       }),
     );
     expect(sound.terminal).toHaveLength(0);
+  });
+});
+
+describe('mahjong move audio', () => {
+  it.each(['east', 'south', 'spectator'] as const)(
+    'uses a move click for every discard heard by %s',
+    async (seat) => {
+      const options = await mount();
+      const view = mahjongViewFor(GAME.states[0]!, seat);
+      options.applyHello(frame('hello', { seat, state: view, events: [CREATED] }));
+      for (const color of ['east', 'south']) {
+        options.applySnapshot(
+          frame('snapshot', {
+            seat,
+            state: view,
+            event: { type: 'move-played', color, move: { action: 'discard', tile: 0 } },
+          }),
+        );
+      }
+      expect(sound.moves).toEqual(['move', 'move']);
+    },
+  );
+
+  it('keeps claims sharp and draws, passes and timeouts silent', async () => {
+    const options = await mount();
+    const view = mahjongViewFor(GAME.states[0]!, 'east');
+    options.applyHello(frame('hello', { state: view, events: [CREATED] }));
+    for (const action of ['draw', 'pass', 'timeout', 'claim']) {
+      options.applySnapshot(
+        frame('snapshot', {
+          state: view,
+          event: { type: 'move-played', color: 'south', move: { action } },
+        }),
+      );
+    }
+    expect(sound.moves).toEqual(['capture']);
   });
 });

@@ -8,13 +8,18 @@
  * persistence-correspondence-e2e.test.ts; this is the same loop, per tenant.
  */
 
-import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, DAY_MS, type RoomTimeControl } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+  DAY_MS,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import {
   CORRESPONDENCE_TEST_TENANTS,
   enableCorrespondenceVariantFlags,
   legalMoveFor,
 } from './correspondence-test-support.js';
-import { collectCurrentGames } from './current-games.js';
+import { type CurrentGamePlayer, collectCurrentGames } from './current-games.js';
 import { createUser, getGameSummary, loadRoom } from './persistence.js';
 import {
   assert,
@@ -47,7 +52,10 @@ type AnyRoom = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<st
 definePersistenceTests('correspondence variants e2e', () => {
   test('accepted correspondence seats show both account names before either player connects', async () => {
     enableCorrespondenceVariantFlags();
-    for (const specId of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+    for (const specId of [
+      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+      ...CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+    ]) {
       const registration = correspondenceTenantForSpecId(specId);
       assert.ok(registration?.createCorrespondenceGameForSeek, `${specId} registration`);
       const first = await makeUser(`${specId}-a`);
@@ -61,15 +69,41 @@ definePersistenceTests('correspondence variants e2e', () => {
       try {
         const room = registration.rooms.get(created.room.id) as unknown as AnyRoom;
         assert.equal(room.clients.size, 0, `${specId}: neither account connected`);
+        for (const [color, id] of [
+          [created.seats.first, first],
+          [created.seats.second, second],
+        ] as const) {
+          const token = room.seatTokens[color];
+          assert.deepEqual(
+            { name: token?.userDisplayName, handle: token?.userHandle },
+            { name: id.slice(5), handle: id.slice(5) },
+            `${specId}/${color}: the reserved account has an identity before connecting`,
+          );
+        }
         const game = collectCurrentGames({ rooms: new Map() } as HttpApiContext).find(
           (game) => game.roomId === created.room.id,
         );
+        // FFQ correspondence reuses the admin playtest's permanent exclusion
+        // from public discovery; reserving named seats does not open that door.
+        if (specId === 'ffq-banqi') {
+          assert.equal(game, undefined, 'FFQ stays off /games with its flag on');
+          continue;
+        }
         assert.ok(game, `${specId}: listed on /games`);
-        assert.deepEqual(
-          game.players.map(({ name, handle }) => ({ name, handle })),
-          [first, second].map((id) => ({ name: id.slice(5), handle: id.slice(5) })),
-          `${specId}: both reserved accounts have public identities`,
-        );
+        assert.equal(game.players.length, 2);
+        for (const [color, id] of [
+          [created.seats.first, first],
+          [created.seats.second, second],
+        ] as const) {
+          const player: CurrentGamePlayer | undefined = game.players.find(
+            (entry) => entry.color === color,
+          );
+          assert.deepEqual(
+            { name: player?.name, handle: player?.handle },
+            { name: id.slice(5), handle: id.slice(5) },
+            `${specId}/${color}: the reserved account has a public identity`,
+          );
+        }
       } finally {
         registration.clearRooms();
       }
@@ -78,8 +112,11 @@ definePersistenceTests('correspondence variants e2e', () => {
 
   test('every variant: accept indexes the deadline, a lapsed clock forfeits on a cold sweep', async () => {
     enableCorrespondenceVariantFlags();
-    const specs = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.filter((id) => id !== 'dark-chess');
-    const started: Array<{ specId: string; roomId: string; first: string; second: string }> = [];
+    const specs = [
+      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+      ...CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+    ].filter((id) => id !== 'dark-chess');
+    const started: Array<{ specId: string; roomId: string; secondSeat: string }> = [];
 
     for (const specId of specs) {
       const { tenant, firstReplyPlies = 2 } = CORRESPONDENCE_TEST_TENANTS[specId]!;
@@ -98,7 +135,7 @@ definePersistenceTests('correspondence variants e2e', () => {
       // Seated at accept: the first mover owes a move, and the row names them.
       const seated = await deadlineRow(roomId);
       assert.ok(seated, `${specId}: a room_deadlines row once both seats are filled`);
-      assert.equal(seated.seat, tenant.colors[0]);
+      assert.equal(seated.seat, created.seats.first);
       assert.equal(seated.seat_user_id, first);
       assert.equal(seated.game_spec_id, specId);
 
@@ -122,9 +159,9 @@ definePersistenceTests('correspondence variants e2e', () => {
       }
       const armed = await deadlineRow(roomId);
       assert.ok(armed, `${specId}: a row while the clock runs`);
-      assert.equal(armed.seat, tenant.colors[0], `${specId}: back to the first mover`);
+      assert.equal(armed.seat, created.seats.first, `${specId}: back to the first mover`);
       assert.equal(armed.seat_user_id, first);
-      started.push({ specId, roomId, first, second });
+      started.push({ specId, roomId, secondSeat: created.seats.second });
     }
 
     // Restart path: nothing in memory when the deadlines lapse.
@@ -132,8 +169,7 @@ definePersistenceTests('correspondence variants e2e', () => {
     await sleep(SETTLE_MS);
     await sweepOnce();
 
-    for (const { specId, roomId } of started) {
-      const { tenant } = CORRESPONDENCE_TEST_TENANTS[specId]!;
+    for (const { specId, roomId, secondSeat } of started) {
       const registration = correspondenceTenantForSpecId(specId)!;
       const hydrated = (await registration.getOrLoadRoom(roomId)) as unknown as AnyRoom | null;
       assert.ok(hydrated, `${specId}: hydrates`);
@@ -144,7 +180,7 @@ definePersistenceTests('correspondence variants e2e', () => {
       };
       assert.equal(status.type, 'finished', `${specId}: finished`);
       assert.equal(status.reason, 'timeout', `${specId}: on time`);
-      assert.equal(status.winner, tenant.colors[1], `${specId}: the waiting player wins`);
+      assert.equal(status.winner, secondSeat, `${specId}: the waiting player wins`);
       const events = await loadRoom(roomId);
       assert.equal(events?.at(-1)?.type, 'clock-expired', `${specId}: durable timeout`);
       assert.equal(await deadlineRow(roomId), null, `${specId}: row cleared`);

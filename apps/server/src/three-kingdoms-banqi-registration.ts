@@ -2,7 +2,7 @@
  * Three Kingdoms banqi (#628) registry entry: an admin-only prod playtest (#684).
  *
  * As narrow as mahjong's: no TV channel, no lobby seek, no export, no card, no
- * correspondence, never rated. A finished game has a review page
+ * public correspondence, never rated. A finished game has a review page
  * (/three-kingdoms-banqi/game/:id), behind the same admin gate. A room exists only through the create route,
  * which admits an admin account, or anyone when the local flag
  * MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true (three-kingdoms-banqi-access.ts).
@@ -30,6 +30,7 @@ import {
   type ThreeKingdomsBanqiRuntimeRoom,
   threeKingdomsBanqiTenant,
 } from './three-kingdoms-banqi-tenant.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -145,6 +146,18 @@ registerVariantTenant({
   reviewRouteBase: '/three-kingdoms-banqi/game',
   export: null,
   card: null,
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...tenantCorrespondenceBinding(threeKingdomsBanqiTenant, {
+    factoryContext: () => ({
+      rooms: threeKingdomsBanqiRooms,
+      isRoomIdTaken: (id) => variantTenantRoomIdTaken(id, threeKingdomsBanqiTenant.kind),
+      appendRoomEvent: persistence.appendRoomEvent,
+      isPersistenceEnabled: persistence.isInitialized,
+      recordPersistenceError: (id, seq, type, err) =>
+        recordTenantPersistenceError(threeKingdomsBanqiTenant, id, seq, type, err),
+    }),
+    getOrLoadRoom: getOrLoadThreeKingdomsBanqiRoom,
+    lifecycleCtx: threeKingdomsBanqiWs.lifecycleCtx,
+    seatBoard: true,
+    casualOnly: true,
+  }),
 });

@@ -67,7 +67,7 @@ export function jungleTerminalSoundKey(view: JunglePlayerView | null, seat: Seat
 }
 
 // Classify the opponent's just-completed move from the visible board delta: a drop in
-// the seated player's piece count is 'captured' (mutual-destruction trades count too),
+// the seated player's piece count is 'capture' (mutual-destruction trades count too),
 // anything else is a plain 'move'. Counts only. Exported pure for tests.
 export function classifyJungleOpponentSound(
   prev: JunglePlayerView | null,
@@ -79,7 +79,7 @@ export function classifyJungleOpponentSound(
   if (prev.status.type !== 'playing') return null;
   if (prev.status.turn === seat) return null;
   if (next.status.type === 'playing' && next.status.turn !== seat) return null;
-  return pieceCount(next, seat) < pieceCount(prev, seat) ? 'captured' : 'move';
+  return pieceCount(next, seat) < pieceCount(prev, seat) ? 'capture' : 'move';
 }
 
 function pieceCount(view: JunglePlayerView, color: JungleColor): number {

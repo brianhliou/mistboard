@@ -10,7 +10,7 @@ import {
   oppositeBanqiSeat,
 } from '@mistboard/game';
 import { resolveBanqiAnalysis, resolveBanqiDecisions } from './../banqi-analysis.js';
-import { banqiEngineBinaryAvailable } from './../banqi-engine.js';
+import { banqiEngineBinaryAvailable, banqiNetPath } from './../banqi-engine.js';
 import { banqiRooms } from './../banqi-registration.js';
 import type { BanqiEvent } from './../banqi-runtime.js';
 import { banqiTenant } from './../banqi-tenant.js';
@@ -23,7 +23,7 @@ import {
   replayTenantEvents,
 } from './../variant-tenant/runtime.js';
 import { registerLiveWatchPayloadBuilder } from './../watch-live.js';
-import { createGameAnalysisRoutes } from './game-analysis-route.js';
+import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import {
   type HttpApiContext,
   postgameGameSummary,
@@ -76,37 +76,54 @@ const defaultPersistence: BanqiPostgamePersistence = {
 // the swing into decision quality vs luck. Banqi is hidden-info, so reconstruction needs
 // the per-game DEAL (events[0].setup) — we replay the raw event log (which retains the
 // server-secret deal) rather than the client payload. Gates/envelopes: the shared factory.
-const handleAnalysisRoutes = createGameAnalysisRoutes({
-  routeId: 'banqi',
-  logPrefix: 'banqi',
-  variantLabel: 'Banqi',
-  enabled: banqiEnabled,
-  requiresPersistence: true,
-  // Fail closed, not open: the analysis engine is the MistyBanqi binary ONLY. A missing
-  // binary is a broken deploy, so surface it (alertable log + 503) instead of a weaker eval.
-  engineBinary: { available: banqiEngineBinaryAvailable, label: 'banqi-engine binary' },
-  loadInputs: loadFinishedBanqiGameInputs,
-  countPlies: (inputs) => inputs.moves.length,
-  resolveAnalysis: (roomId, inputs, computeIfMissing) =>
-    resolveBanqiAnalysis(roomId, inputs.moves, inputs.deal, undefined, undefined, computeIfMissing),
-  // Mark the flip (chance) plies so the client leaves them unjudged: a flip is a move with
-  // from === to, and the move at index i lands on ply i+1.
-  analysisExtras: (inputs) => ({
-    chancePlies: inputs.moves.reduce<number[]>((acc, move, i) => {
-      if (move.from === move.to) acc.push(i + 1);
-      return acc;
-    }, []),
-  }),
-  resolveDecisions: (roomId, inputs, computeIfMissing) =>
-    resolveBanqiDecisions(
-      roomId,
-      inputs.moves,
-      inputs.deal,
-      undefined,
-      undefined,
-      computeIfMissing,
-    ),
-});
+export function createBanqiAnalysisRoutes(deps: GameAnalysisRouteDeps = {}) {
+  return createGameAnalysisRoutes(
+    {
+      routeId: 'banqi',
+      logPrefix: 'banqi',
+      variantLabel: 'Banqi',
+      enabled: banqiEnabled,
+      requiresPersistence: true,
+      // Grading requires both the MistyBanqi binary and L8 NNUE weights. Fail before
+      // enqueueing so a broken deploy consumes neither rate limits nor pending-job slots.
+      engineBinary: {
+        available: () => banqiEngineBinaryAvailable() && banqiNetPath() !== null,
+        label: 'banqi-engine binary and NNUE net',
+      },
+      loadInputs: loadFinishedBanqiGameInputs,
+      countPlies: (inputs) => inputs.moves.length,
+      resolveAnalysis: (roomId, inputs, computeIfMissing) =>
+        resolveBanqiAnalysis(
+          roomId,
+          inputs.moves,
+          inputs.deal,
+          undefined,
+          undefined,
+          computeIfMissing,
+        ),
+      // Mark the flip (chance) plies so the client leaves them unjudged: a flip is a move with
+      // from === to, and the move at index i lands on ply i+1.
+      analysisExtras: (inputs) => ({
+        chancePlies: inputs.moves.reduce<number[]>((acc, move, i) => {
+          if (move.from === move.to) acc.push(i + 1);
+          return acc;
+        }, []),
+      }),
+      resolveDecisions: (roomId, inputs, computeIfMissing) =>
+        resolveBanqiDecisions(
+          roomId,
+          inputs.moves,
+          inputs.deal,
+          undefined,
+          undefined,
+          computeIfMissing,
+        ),
+    },
+    deps,
+  );
+}
+
+const handleAnalysisRoutes = createBanqiAnalysisRoutes();
 
 export async function tryHandle(
   _ctx: HttpApiContext,

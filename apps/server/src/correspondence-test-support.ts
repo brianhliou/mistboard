@@ -11,11 +11,14 @@ import {
   getBanqiLegalMoves,
   getCrazyhouseXiangqiLegalMoves,
   getDuckXiangqiLegalTurns,
+  getFFQBanqiLegalMoves,
   getFortressXiangqiLegalMoves,
+  getGomokuLegalMoves,
   getJieqiLegalMoves,
   getJungleFlipLegalMoves,
   getJungleLegalMoves,
   getStandardXiangqiLegalMoves,
+  getThreeKingdomsBanqiLegalMoves,
   getLegalMoves as getXiangqiPseudoLegalMoves,
   xmjClockOwner,
   xmjViewFor,
@@ -25,10 +28,13 @@ import { banqiTenant } from './banqi-tenant.js';
 import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { gomokuTenant } from './gomoku-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import type { TenantGameStateLike, VariantTenant } from './variant-tenant/tenant.js';
 import { xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
@@ -49,6 +55,11 @@ export const CORRESPONDENCE_TEST_TENANTS: Record<
   string,
   { tenant: AnyTenant; moves: MoveSource; firstReplyPlies?: number }
 > = {
+  'ffq-banqi': { tenant: ffqBanqiTenant as unknown as AnyTenant, moves: getFFQBanqiLegalMoves },
+  'three-kingdoms-banqi': {
+    tenant: threeKingdomsBanqiTenant as unknown as AnyTenant,
+    moves: getThreeKingdomsBanqiLegalMoves,
+  },
   xiangqi: { tenant: xiangqiTenant as unknown as AnyTenant, moves: getStandardXiangqiLegalMoves },
   jieqi: { tenant: jieqiTenant as unknown as AnyTenant, moves: getJieqiLegalMoves },
   banqi: { tenant: banqiTenant as unknown as AnyTenant, moves: getBanqiLegalMoves },
@@ -79,6 +90,7 @@ export const CORRESPONDENCE_TEST_TENANTS: Record<
     tenant: jungleFlipTenant as unknown as AnyTenant,
     moves: getJungleFlipLegalMoves,
   },
+  gomoku: { tenant: gomokuTenant as unknown as AnyTenant, moves: getGomokuLegalMoves },
   'xiangqi-mahjong': {
     tenant: xiangqiMahjongTenant as unknown as AnyTenant,
     // A reply is a pass then a discard, rather than a single board move.
@@ -102,6 +114,8 @@ export const CORRESPONDENCE_TEST_TENANTS: Record<
 export function enableCorrespondenceVariantFlags(): void {
   for (const name of [
     'MISTBOARD_CORRESPONDENCE_ENABLED',
+    'MISTBOARD_FFQ_BANQI_ENABLED',
+    'MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED',
     'MISTBOARD_XIANGQI_ENABLED',
     'MISTBOARD_JIEQI_ENABLED',
     'MISTBOARD_BANQI_ENABLED',
@@ -112,6 +126,7 @@ export function enableCorrespondenceVariantFlags(): void {
     'MISTBOARD_DARK_XIANGQI_ENABLED',
     'MISTBOARD_JUNGLE_ENABLED',
     'MISTBOARD_JUNGLE_FLIP_ENABLED',
+    'MISTBOARD_GOMOKU_ENABLED',
     'MISTBOARD_XIANGQI_MAHJONG_ENABLED',
   ]) {
     process.env[name] = 'true';

@@ -94,6 +94,12 @@ export function jieqiEnabled(): boolean {
   return process.env.MISTBOARD_JIEQI_ENABLED === 'true';
 }
 
+// Review reveal luck stays on by default. This also gates luck-only computation;
+// viewer access belongs in jieqiLuckAllowed, independently of shared engine caches.
+export function jieqiLuckEnabled(): boolean {
+  return process.env.MISTBOARD_JIEQI_LUCK_ENABLED !== 'false';
+}
+
 // Banqi (8x4 Chinese Dark Chess, symmetric hidden-identity) live rooms.
 // Server-side opt-in, default off — the tenant exists but is not launched. PvP
 // only at first (PvE is gated on an engine, like jieqi).

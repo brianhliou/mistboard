@@ -527,6 +527,9 @@ export type VariantTenant<
     // move, so the seat has to be stamped onto the move here to survive into
     // the event log and back out on replay.
     canonicalMove?(state: State, move: M, seat: C): M | null;
+    // A tenant with canonical move timestamps uses the same effective time
+    // for the durable event and clock arithmetic. Default: receipt time.
+    moveEventAt?(move: M, receivedAt: number): number;
     // May this seat act right now? Defaults to "it is this seat's turn".
     //
     // Mahjong is why this exists. Every other tenant is strictly alternating:
@@ -558,6 +561,16 @@ export type VariantTenant<
     clockExpiryMove?(state: State, color: C, at: number): M | null;
   };
   visibility: {
+    // Optional durable delivery frontier. Events at/after this index remain
+    // private to this recipient. Snapshots, clocks and reconnect history use
+    // the same prefix (plus public non-move bookkeeping); broadcasts release
+    // it in an atomic full-log snapshot.
+    // undefined keeps the ordinary delta transport (e.g. correspondence).
+    clientEventCount?(
+      state: State,
+      events: readonly TenantRoomEvent<C, M, Spec>[],
+      seat: TenantSeat<C>,
+    ): number | undefined;
     // Per-seat wire-event redaction. Fog tenants hide opponent moves and
     // foreign seat assignments; perfect-info tenants pass events through.
     // Returning null drops the event for that seat entirely.
@@ -565,6 +578,9 @@ export type VariantTenant<
       event: TenantRoomEvent<C, M, Spec>,
       seat: TenantSeat<C>,
       ply: number,
+      // The log already restricted to this recipient's delivery frontier.
+      // Allows a formerly private event to be released with a public action.
+      visibleEvents?: readonly TenantRoomEvent<C, M, Spec>[],
     ): TenantClientEvent<C, M, Spec> | null;
     // The seat's redacted view, including the spectator policy. Receives the
     // event log so fog tenants can derive context (e.g. whether the viewer

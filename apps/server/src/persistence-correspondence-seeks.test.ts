@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { DAY_MS } from '@mistboard/game';
+import { darkChessTenantRooms } from './dark-chess-registration.js';
 import {
   type AccountSession,
   CORRESPONDENCE_SEEK_TTL_MS,
@@ -467,7 +468,8 @@ definePersistenceTests('correspondence seeks', () => {
     assert.notEqual(await getCorrespondenceSeek('ttl-recent'), null);
   });
 
-  test('accepting a public seek past the TTL is refused; one inside it is not', async () => {
+  test('accepting a public seek past the TTL is refused; one inside it is not', async (t) => {
+    t.after(() => darkChessTenantRooms.clear());
     await withCorrespondenceEnabled(async () => {
       const gus = await seedUser('ttl-gus', 'ttlgus', 'Gus');
       const hal = await seedUser('ttl-hal', 'ttlhal', 'Hal');
@@ -501,9 +503,9 @@ definePersistenceTests('correspondence seeks', () => {
         '/api/correspondence/seeks/acc-recent/accept',
         cookie,
       );
-      // Past the expiry gate the accept consumes the row. No tenant is registered
-      // in this file, so the seat step answers 501; the point is that it got there.
-      assert.notEqual(recent.status, 410, 'a 13-day-old seek is still acceptable');
+      // The real tenant must seat the game before we can call this an accept:
+      // an unavailable factory leaves the seek standing rather than consuming it.
+      assert.equal(recent.status, 201, 'a 13-day-old seek is still acceptable');
       assert.equal(await getCorrespondenceSeek('acc-recent'), null, 'the accept took the seek');
     });
   });

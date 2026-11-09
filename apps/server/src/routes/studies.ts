@@ -26,6 +26,7 @@ import {
   startIsDealt,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
 import * as persistence from './../persistence.js';
 import { STUDY_PAGE_MAX, type StudyListAccess } from './../persistence-studies.js';
 import { studyHasAdminOnlyChapter } from './../study-admin-only.js';
@@ -466,7 +467,11 @@ export async function tryHandle(
       response.end();
     } else {
       const { engineId, source, decisions } = found.decisions;
-      writeJson(response, 200, { engineId, source, decisions });
+      writeJson(response, 200, {
+        engineId,
+        source,
+        decisions: jieqiDecisionsForViewer(decisions, user ?? (await currentAccountUser(request))),
+      });
     }
     return true;
   }

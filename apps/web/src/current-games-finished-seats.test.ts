@@ -20,6 +20,7 @@ import {
   seatsTopToBottom,
 } from './current-games-model.js';
 import type { FeaturedGame, GameParticipant } from './game-display.js';
+import type { ReplayHandle } from './replay.js';
 import { mountShowcaseBoard } from './showcase-board.js';
 
 function participant(color: GameParticipant['color'], displayName: string): GameParticipant {
@@ -174,6 +175,7 @@ async function mountFinished(root: HTMLElement, specId: string) {
   const postgame = tenantPostgame();
   return mountShowcaseBoard(root, specId, ROOM_ID, {
     autoplay: false,
+    followEnd: true,
     hideReserve: true,
     loaderForId: async () => CHESS_EVENTS,
     loadPostgameOverride: async () => ({ ok: true, postgame }),
@@ -186,12 +188,22 @@ async function mountFinished(root: HTMLElement, specId: string) {
   });
 }
 
+function displayedPly(handle: ReplayHandle): number | null {
+  let shown: number | null = null;
+  handle.setBoardOverlay?.((ply) => {
+    shown = ply;
+    return { arrows: [], glyphs: [] };
+  });
+  return shown;
+}
+
 describe('the thumbnail orientation the names follow', () => {
   it('chess renderer: the first mover (White) is at the bottom', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     const handle = await mountFinished(root, 'dark-chess');
     try {
+      expect(displayedPly(handle)).toBe(2);
       expect(handle.bottomSeat?.()).toBe(FINISHED_BOARD_BOTTOM_SEAT);
     } finally {
       handle.destroy();
@@ -204,6 +216,7 @@ describe('the thumbnail orientation the names follow', () => {
     document.body.append(root);
     const handle = await mountFinished(root, CRAZYHOUSE_XIANGQI_SPEC_ID);
     try {
+      expect(displayedPly(handle)).toBe(2);
       expect(handle.bottomSeat?.()).toBe(FINISHED_BOARD_BOTTOM_SEAT);
       // The renderer's own (hidden) seat rows agree: the first seat's name last.
       const seats = [...root.querySelectorAll('.showcase-seat')].map((el) => el.textContent ?? '');

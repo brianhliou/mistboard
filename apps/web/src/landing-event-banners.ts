@@ -28,7 +28,7 @@ export type EventBanner = {
   // "starts Aug 31, 7:00 AM"). Plain text, composed by the editor.
   subtitle: string;
   href: string;
-  // A broadcast that has not started and has no games yet. Its tour page is an
+  // A broadcast with no games yet, before or during its dates. Its tour page is an
   // empty intro, so it shows as a plain announcement line, never a card or a
   // link (Brian, 2026-10-27).
   upcoming?: true;
@@ -77,7 +77,7 @@ const UPCOMING_WINDOW_MS = 14 * DAY_MS;
 
 // The slot has room for two cards; the rest are one link away.
 export const MAX_BROADCAST_BANNERS = 2;
-// Under the cards, up to two one-line announcements of events about to start.
+// Under the cards, up to two one-line announcements of events with no games yet.
 export const MAX_UPCOMING_LINES = 2;
 
 type Words = {
@@ -247,7 +247,10 @@ function bannerState(
       order: -endsAt,
     };
   }
-  if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt) && entry.recordedBoardCount > 0) {
+  if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt)) {
+    if (entry.recordedBoardCount === 0) {
+      return { subtitle: words.inProgress, rank: RANK_UPCOMING, order: startsAt };
+    }
     // Between rounds of a tour that is under way by its dates. A tour with no
     // dates and nothing live is a record, not an event (the Team
     // Championship's 14 boards showed as a second row on 2026-09-20).
@@ -261,8 +264,8 @@ function bannerState(
 }
 
 /** What the broadcast part of the slot shows: up to two cards for events
- *  with games to watch, up to two announcement lines for events still to
- *  start, and how many rows are left for the "more" link. */
+ *  with games to watch, up to two announcement lines for events with no games
+ *  yet, and how many rows are left for the "more" link. */
 export function broadcastSlot(rows: readonly EventBanner[]): {
   cards: EventBanner[];
   upcoming: EventBanner[];
@@ -344,7 +347,7 @@ function renderBroadcastSlot(host: HTMLElement, rows: readonly EventBanner[], lo
   }
 }
 
-/** An event still to start: its name and start date as plain text. */
+/** An event with no games yet: its name and date or status as plain text. */
 function upcomingLine(banner: EventBanner): HTMLElement {
   const lines = cardLines(banner);
   const line = document.createElement('p');
@@ -355,7 +358,10 @@ function upcomingLine(banner: EventBanner): HTMLElement {
   title.textContent = lines.title;
   // cardLines moved the year to the front of the meta; the line reads
   // "World Rapid Championship · Starts Nov 10", so the year stays out.
-  line.append(title, ` · ${banner.subtitle}`);
+  const meta = document.createElement('span');
+  meta.className = 'landing-event-upcoming-meta';
+  meta.textContent = ` · ${banner.subtitle}`;
+  line.append(title, meta);
   return line;
 }
 

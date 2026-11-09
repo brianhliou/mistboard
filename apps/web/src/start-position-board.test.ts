@@ -3,10 +3,14 @@
 // may draw one: the seek card keeps its plain tile for those.
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+  createGomokuRoomState,
   createInitialCrazyhouseXiangqiState,
+  getGomokuPlayerView,
   maybeGameSpecForId,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { gomokuBoardSvg } from './gomoku-board.js';
 import { renderStartPositionSvg } from './start-position-board.js';
 
 // Every piece glyph a xiangqi-family board draws carries this class.
@@ -14,7 +18,7 @@ const pieceCount = (svg: string): number => (svg.match(/class="xq-piece[ "]/g) ?
 
 describe('renderStartPositionSvg', () => {
   it('draws a board for every open or face-down variant a seek can be posted in', async () => {
-    for (const id of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+    for (const id of [...CORRESPONDENCE_ELIGIBLE_SPEC_IDS, ...CORRESPONDENCE_RESTRICTED_SPEC_IDS]) {
       const spec = maybeGameSpecForId(id);
       const svg = await renderStartPositionSvg(id);
       // Fog, and the mahjong tables (a dealt hand is concealed, and there is
@@ -38,5 +42,18 @@ describe('renderStartPositionSvg', () => {
 
   it('returns null for an unknown id instead of guessing a board', async () => {
     expect(await renderStartPositionSvg('not-a-variant')).toBeNull();
+  });
+
+  it('draws a static Gomoku board from the empty kernel without dealing an opening', async () => {
+    const expected = gomokuBoardSvg(
+      getGomokuPlayerView(createGomokuRoomState('start-gomoku'), 'black'),
+      false,
+    );
+    for (const side of [undefined, 'first', 'second'] as const) {
+      const svg = await renderStartPositionSvg('gomoku', side);
+      expect(svg).toBe(expected);
+      expect(svg).not.toContain('data-piece-square');
+      expect(svg).not.toContain('tabindex="0"');
+    }
   });
 });

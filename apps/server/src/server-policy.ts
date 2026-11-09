@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
+import { BlockList, isIP } from 'node:net';
 import {
   type GameEvent,
   type GameProjection,
@@ -248,6 +249,9 @@ export function roomViewPolicy(
   // spectators alike (Brian, 2026-09-06). Before this, the room never revealed
   // at any status and the public reveal lived only at /game/:id, which left a
   // shared room link showing a blank board.
+  if (gameSpecId === 'ffq-banqi' || gameSpecId === 'three-kingdoms-banqi') {
+    return seat === 'player' ? 'own-view' : 'public-view';
+  }
   if (finished) return 'truth';
   switch (visibility) {
     case 'open':
@@ -884,6 +888,39 @@ export function trustedProxyHops(env: RuntimeEnv = process.env): number {
   return parseNonNegativeInteger(env.MISTBOARD_TRUSTED_PROXY_HOPS) ?? 1;
 }
 
+// Source: https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6,
+// fetched 2026-11-09. Only these hops may vouch for cf-connecting-ip.
+export const CLOUDFLARE_IP_RANGES = [
+  '173.245.48.0/20',
+  '103.21.244.0/22',
+  '103.22.200.0/22',
+  '103.31.4.0/22',
+  '141.101.64.0/18',
+  '108.162.192.0/18',
+  '190.93.240.0/20',
+  '188.114.96.0/20',
+  '197.234.240.0/22',
+  '198.41.128.0/17',
+  '162.158.0.0/15',
+  '104.16.0.0/13',
+  '104.24.0.0/14',
+  '172.64.0.0/13',
+  '131.0.72.0/22',
+  '2400:cb00::/32',
+  '2606:4700::/32',
+  '2803:f800::/32',
+  '2405:b500::/32',
+  '2405:8100::/32',
+  '2a06:98c0::/29',
+  '2c0f:f248::/32',
+] as const;
+
+const cloudflareAddresses = new BlockList();
+for (const range of CLOUDFLARE_IP_RANGES) {
+  const [address, prefix] = range.split('/');
+  cloudflareAddresses.addSubnet(address!, Number(prefix), isIP(address!) === 4 ? 'ipv4' : 'ipv6');
+}
+
 // True if `ip` is private, loopback, link-local, CGNAT, unspecified, or the
 // 'unknown' sentinel — i.e. not a public address. A correctly-resolved client
 // IP should be public, so a private one signals that MISTBOARD_TRUSTED_PROXY_HOPS
@@ -935,7 +972,7 @@ export function proxyTrustWarningFor(
   if (!isProductionLikeRuntime(env)) return null;
   if (!isPrivateOrReservedIp(ip)) return null;
   return (
-    `[proxy-trust] client IP "${ip}" resolved from X-Forwarded-For is private/reserved; ` +
+    `[proxy-trust] client IP resolved from X-Forwarded-For is private/reserved; ` +
     `MISTBOARD_TRUSTED_PROXY_HOPS=${hops} likely no longer matches the real proxy depth. ` +
     `Rate-limit keys may collapse into one bucket (over-throttle), or if hops is too high the ` +
     `spoofable X-Forwarded-For prefix is being read (GHSA-3fx7 reopened). Verify the proxy topology.`
@@ -957,6 +994,9 @@ export function getProxyTrustWarning(): string | null {
 // address when the header is missing, has too few hops, or hop trust is disabled,
 // and to a stable 'unknown' so address-less requests still share one bucket
 // rather than slipping past the limiter.
+// A Cloudflare hop may supply the visitor address in cf-connecting-ip. Check
+// only the already-trusted hop against Cloudflare's ranges, so direct-origin
+// callers cannot forge that header to rotate rate-limit keys.
 export function clientIpForRateLimit(
   request: Pick<IncomingMessage, 'headers' | 'socket'>,
   env: RuntimeEnv = process.env,
@@ -964,13 +1004,15 @@ export function clientIpForRateLimit(
   const hops = trustedProxyHops(env);
   const header = request.headers['x-forwarded-for'];
   const raw = Array.isArray(header) ? header.join(',') : header;
+  let trusted = request.socket.remoteAddress ?? 'unknown';
   if (hops > 0 && typeof raw === 'string' && raw.length > 0) {
     const forwarded = raw
       .split(',')
       .map((part) => part.trim())
       .filter((part) => part.length > 0);
-    const trusted = forwarded[forwarded.length - hops];
-    if (trusted) {
+    const forwardedHop = forwarded[forwarded.length - hops];
+    if (forwardedHop) {
+      trusted = forwardedHop;
       if (cachedProxyTrustWarning === null) {
         const warning = proxyTrustWarningFor(trusted, hops, env);
         if (warning) {
@@ -978,10 +1020,20 @@ export function clientIpForRateLimit(
           console.warn(warning);
         }
       }
-      return trusted;
     }
   }
-  return request.socket.remoteAddress ?? 'unknown';
+  const visitorHeader = request.headers['cf-connecting-ip'];
+  const visitor = typeof visitorHeader === 'string' ? visitorHeader.trim() : '';
+  const family = isIP(trusted);
+  // BlockList's IPv6 lookup also matches IPv4 subnets for mapped IPv6 addresses.
+  if (
+    family !== 0 &&
+    cloudflareAddresses.check(trusted, family === 4 ? 'ipv4' : 'ipv6') &&
+    isIP(visitor) !== 0
+  ) {
+    return visitor;
+  }
+  return trusted;
 }
 
 function parseBooleanEnv(value: string | undefined): boolean {
