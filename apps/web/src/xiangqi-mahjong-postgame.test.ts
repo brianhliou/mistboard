@@ -301,6 +301,73 @@ describe('Xiangqi Mahjong review page', () => {
     target?.click();
   };
 
+  function claimStart(): XmjRoomState {
+    const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'rP', 'rP'];
+    const rest = xmjOrderedTiles();
+    for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+    const wall = [...front, ...rest];
+    return createXmjRoomState(
+      { walls: [wall, wall], firstDealer: 'east', taiTable: 2 },
+      'xmj_review',
+    );
+  }
+
+  it('sends a claimant pass immediately during the pause', async () => {
+    const state = applyXmjMove(claimStart(), {
+      action: 'discard',
+      by: 'east',
+      tile: 'rP',
+      at: Date.now(),
+    });
+    const view = xmjViewFor(state, 'west');
+    expect(view.legal.pass).toBe(true);
+    expect(view.claimPauseEndsAt).toBeGreaterThan(Date.now());
+    await mountLive(view);
+    click('[data-xmj-pass]');
+    expect(liveHarness.sent).toEqual([{ type: 'move', action: 'pass' }]);
+  });
+
+  it('renders the released pass and discard in one snapshot, preserving replay plies', async () => {
+    const start = claimStart();
+    const moves: XmjMove[] = [
+      { action: 'discard', by: 'east', tile: 'rP', at: 4000 },
+      { action: 'pass', by: 'west', at: 4100 },
+      { action: 'discard', by: 'west', tile: 'bK', at: 12000 },
+    ];
+    const states = [start];
+    for (const move of moves) states.push(applyXmjMove(states.at(-1)!, move));
+    await mountLive(xmjViewFor(states[1]!, 'east'));
+    expect(document.querySelector('[data-xmj-ply="3"]')).toBeNull();
+    const options = liveHarness.options as TenantSocketClientOptions;
+    const events = moves.map((move, index) => ({
+      type: 'move-played',
+      move,
+      color: move.by,
+      at: move.at,
+      ply: index + 1,
+    }));
+    options.applySnapshot({
+      type: 'snapshot',
+      seat: 'east',
+      seats: {},
+      events,
+      event: events.at(-1),
+      state: xmjViewFor(states[3]!, 'east'),
+      liveHistory: states.map((state, ply) => ({ ply, view: xmjViewFor(state, 'east') })),
+    } as unknown as TenantLiveFrame<XmjSeat, XmjPlayerView>);
+    options.render();
+    expect(document.querySelectorAll('[data-xmj-pond="west"] .xmj-pond > .xmj-tile')).toHaveLength(
+      1,
+    );
+    expect(document.querySelector('.xmj-log [data-xmj-ply="3"]')).not.toBeNull();
+    click('.xmj-log [data-xmj-ply="1"]');
+    expect(document.querySelector('.xmj-log__row.active')?.getAttribute('data-xmj-ply')).toBe('1');
+    expect(document.querySelectorAll('[data-xmj-pond="west"] .xmj-pond > .xmj-tile')).toHaveLength(
+      0,
+    );
+    expect(liveHarness.sent).toEqual([]);
+  });
+
   it('enters and cancels declaration mode, and sends one atomic discard', async () => {
     const view = xmjViewFor(declarationStart(), 'east');
     const redraw = await mountLive(view);

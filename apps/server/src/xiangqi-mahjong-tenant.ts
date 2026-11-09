@@ -96,8 +96,9 @@ export type XmjTenantType = VariantTenant<
 
 export function xmjClientEventFor(
   event: XmjEvent,
-  _seat: TenantSeat<XmjSeat>,
+  seat: TenantSeat<XmjSeat>,
   ply: number,
+  visibleEvents?: readonly XmjEvent[],
 ): XmjClientEvent | null {
   if (event.type === 'room-created') {
     // The walls: every tile of every hand of the match, in order.
@@ -112,6 +113,11 @@ export function xmjClientEventFor(
   // says the discarder still holds a twin of the thrown tile, and no client
   // needs it (it only feeds the server's drawnDiscards).
   if (event.type === 'move-played') {
+    // Without a released log context, a pass is private to its owner. The
+    // delivery frontier excludes it until the next public move or hand end.
+    if (event.move.action === 'pass' && seat !== event.color && !visibleEvents?.includes(event)) {
+      return null;
+    }
     if (
       (event.move.action === 'discard' || event.move.action === 'declare-ready') &&
       event.move.handCopy !== undefined
@@ -230,6 +236,19 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     reservationReleaseTag: 'xiangqi-mahjong',
   },
   visibility: {
+    clientEventCount: (state, events, seat) => {
+      if (state.correspondence) return undefined;
+      if (state.status.type !== 'playing' || state.match.between) return events.length;
+      for (let index = events.length - 1; index >= 0; index -= 1) {
+        const event = events[index];
+        if (event?.type !== 'move-played') continue;
+        // A pass and its draw stay one private step. Any subsequent move is
+        // public, so the entire prefix can then be released, in order. This
+        // is reconstructed from durable events, including after a restart.
+        return event.move.action === 'pass' && event.color !== seat ? index : events.length;
+      }
+      return events.length;
+    },
     clientEventFor: xmjClientEventFor,
     viewForClient: (state, client) => getXmjClientView(state, client),
     // The walls are a server secret, live or finished, so the client cannot
@@ -243,6 +262,13 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     snapshotExtras: (room, client) => {
       const pveEngineId = tenantPveEngineId(xiangqiMahjongTenant, room);
       return {
+        // The ordinary pregame deadline disappears on the second action,
+        // which can be a private automatic pass. After the first discard the
+        // claimant's running clock is the public timer, choice or no choice.
+        abortDeadline:
+          !room.projection.state.correspondence && room.projection.state.moveNumber > 0
+            ? null
+            : room.abortDeadline,
         roomMode: pveEngineId === null ? 'pvp' : 'pve',
         ...(pveEngineId === null ? {} : { pveEngineId }),
         rated: room.rated,

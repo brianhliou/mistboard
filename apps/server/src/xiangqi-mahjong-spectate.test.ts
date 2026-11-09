@@ -114,7 +114,7 @@ function publicPart(view: XmjPlayerView): unknown {
   });
 }
 
-/** The spectator view is the public part of each seat's view, exactly. */
+/** The spectator shares the public table; a claimant alone sees its held draw. */
 function assertSpectatorIsPublic(
   spectator: XmjPlayerView,
   seatViews: Record<XmjSeat, XmjPlayerView>,
@@ -122,7 +122,33 @@ function assertSpectatorIsPublic(
 ): void {
   const seen = publicPart(spectator);
   for (const seat of SEATS) {
-    assert.deepEqual(seen, publicPart(seatViews[seat]), `${where}: spectator != ${seat}'s public`);
+    const own = seatViews[seat];
+    if (own.moveNumber === spectator.moveNumber + 1) {
+      // #990: only the claimant can be one private pass/draw ahead. Everything
+      // else at the table is still shared, including the open discard.
+      assert.equal(own.phase.type, 'discard', where);
+      assert.equal(spectator.phase.type, 'claim', where);
+      assert.equal(own.turn, seat, where);
+      assert.equal(own.wallCount, spectator.wallCount - 1, where);
+      assert.equal(own.handCounts[seat], spectator.handCounts[seat] + 1, where);
+      assert.equal(own.claimPauseEndsAt, null, where);
+      assert.deepEqual(
+        seen,
+        publicPart({
+          ...own,
+          status: spectator.status,
+          turn: spectator.turn,
+          phase: spectator.phase,
+          moveNumber: spectator.moveNumber,
+          wallCount: spectator.wallCount,
+          handCounts: { ...own.handCounts, [seat]: spectator.handCounts[seat] },
+          claimPauseEndsAt: spectator.claimPauseEndsAt,
+        }),
+        `${where}: private draw changed another public field`,
+      );
+    } else {
+      assert.deepEqual(seen, publicPart(own), `${where}: spectator != ${seat}'s public`);
+    }
   }
   assert.deepEqual(
     [spectator.legal.discard.length, spectator.legal.claims.length],
@@ -250,7 +276,11 @@ test('xmj spectate: snapshot, live history, events and reconnect log hold only w
         east: tenantLiveHistoryExtras(tenant, live, client('east')).liveHistory ?? [],
         west: tenantLiveHistoryExtras(tenant, live, client('west')).liveHistory ?? [],
       };
-      assert.equal(history.length, ply + 1, `${where}: one history entry per ply`);
+      assert.equal(
+        history.length,
+        spectator.moveNumber + 1,
+        `${where}: one history entry per delivered ply`,
+      );
       for (const [index, entry] of history.entries()) {
         assertSpectatorIsPublic(
           entry.view,
