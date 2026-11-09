@@ -40,10 +40,6 @@ import type { Article, ArticleBlock } from '../types.js';
 // diagram pairs sit side by side, and the two notes hold the chain-capture house
 // rule and the 40-to-60-ply history. The chase rule moved from a note into the
 // body, since it is a rule of play.
-// Filled from the study API by scripts/banqi-net-study.ts --fill <id>.
-const NET_STUDY_ID = 'BANQI_NET_STUDY_PENDING';
-const NET_CHAPTER_ID = 'BANQI_NET_CHAPTER_PENDING';
-
 export const banqiArticle: Article = {
   slug: 'banqi',
   gameSpecId: 'banqi',
@@ -58,7 +54,8 @@ export const banqiArticle: Article = {
   status: 'published',
   publishedAt: '2026-06-15',
   updatedAt: '2026-11-07',
-  updateNote: 'Replaced the self-play example with a net-versus-classical game and a twenty-game companion study.',
+  updateNote:
+    'A chase from a game on Mistboard now shows, step by step, the move the chase rule removes.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -283,11 +280,11 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. At ply 49 red turns up a black soldier beside its own general, and the soldier takes the general. The net wins in 130 plies, when red has nothing left to move. Step through with the arrows.',
+          text: '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.',
         },
         {
           kind: 'embed',
-          path: `/embed/study/${NET_STUDY_ID}/${NET_CHAPTER_ID}?ply=49`,
+          path: '/embed/study/FsA5sowX/F8fezAhm',
           title: 'Banqi: an engine game under the competition rules',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.
@@ -295,7 +292,7 @@ export const banqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: `The [companion study](/study/${NET_STUDY_ID}) has all twenty games: eighteen net wins, one draw and one loss. Each chapter opens into its own deal. For a separate classical self-play run, see [Banqi by the Numbers](/blog/banqi-statistics).`,
+          text: 'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.',
         },
       ],
     },
