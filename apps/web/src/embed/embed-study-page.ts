@@ -53,6 +53,11 @@ import { fetchStudyChapterDecisions } from '../review/study-decisions.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
+import { TK_LIVE_BOARD_VIEW } from '../three-kingdoms-banqi-diagrams.js';
+import {
+  mountThreeKingdomsBanqiReplayBoard,
+  replayThreeKingdomsBanqiLine,
+} from '../three-kingdoms-banqi-replay-board.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import {
@@ -196,6 +201,7 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'crazyhouse-xiangqi',
   'jieqi',
   'banqi',
+  'three-kingdoms-banqi',
   'jungle',
   'jungle-flip',
   'chess',
@@ -221,6 +227,10 @@ export async function mountChapterEmbed(
   }
   if (variant === 'chess' || variant === 'dark-chess') {
     await mountChessEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'three-kingdoms-banqi') {
+    await mountThreeKingdomsBanqiEmbed(root, credit, chapter, options);
     return;
   }
   if (variant === 'banqi') {
@@ -936,4 +946,40 @@ function darkChessEndingLabel(spec: NonNullable<ReturnType<typeof chessChapterTo
   if (status.winner === 'white') return reviewResultLabel('white-wins', 'dark-chess');
   if (status.winner === 'black') return reviewResultLabel('black-wins', 'dark-chess');
   return reviewResultLabel('draw', 'dark-chess');
+}
+
+async function mountThreeKingdomsBanqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const line = replayThreeKingdomsBanqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no legal dealt line to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states.at(-1)!;
+  const firstInk = final.firstColor;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'First seat', ink: firstInk },
+      second: {
+        name: tags.black ?? 'Second seat',
+        ink: firstInk === null ? null : firstInk === 'red' ? 'black' : 'red',
+      },
+    },
+    result: token ? banqiResultLabel(token, firstInk) : '',
+    credit: { href: credit.href, text: credit.text },
+    inkFamily: seatInkFamily('three-kingdoms-banqi'),
+    aspect: TK_LIVE_BOARD_VIEW.width / TK_LIVE_BOARD_VIEW.height,
+    railWidthPx: embedRailWidthPx('three-kingdoms-banqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) => mountThreeKingdomsBanqiReplayBoard(host, line, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

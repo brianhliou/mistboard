@@ -22,6 +22,10 @@ import type { Article } from '../types.js';
 // on 2026-10-25 (THREE_KINGDOMS_BANQI_RULES in the engine). The app's help has no
 // section for this mode, so the page presents them as Mistboard's rules, not
 // Gamesofa's; change the engine and this page together.
+// Filled by scripts/three-kingdoms-net-study.ts --fill <id>.
+const NET_STUDY_ID = 'THREE_KINGDOMS_NET_STUDY_PENDING';
+const NET_CHAPTER_ID = 'THREE_KINGDOMS_NET_CHAPTER_PENDING';
+
 export const threeKingdomsBanqiArticle: Article = {
   slug: 'three-kingdoms-banqi',
   boardFamily: 'xiangqi',
@@ -186,6 +190,26 @@ export const threeKingdomsBanqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'You may not play a chase that brings about the same position, with the same player to move, for the third time or later, unless forbidding those chases would leave you with no legal move. A flip or capture starts that count again. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.',
+        },
+      ],
+    },
+    {
+      heading: 'An engine game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'MistyBanqi with its 0.2.1 net against classical evaluation, both at 200,000 nodes a move. At ply 104 the classical general takes the net general on d2. The net horse recaptures it on ply 105 to lead 95 to 90, then a soldier capture on b4 reaches 100. The game lasts 107 plies.',
+        },
+        {
+          kind: 'embed',
+          path: `/embed/study/${NET_STUDY_ID}/${NET_CHAPTER_ID}?ply=103`,
+          title: 'Three Kingdoms Banqi: net against classical',
+          // Measured locally: SVG 586x330, 226px sheet, seat/control rows and credit.
+          aspect: [702, 430],
+        },
+        {
+          kind: 'paragraph',
+          text: `The [companion study](/study/${NET_STUDY_ID}) has all twenty games, each with its own deal. The net won sixteen and lost four.`,
         },
       ],
     },

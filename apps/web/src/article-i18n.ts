@@ -568,6 +568,11 @@ const ZH_HANS: Record<string, string> = {
   'How is this different from regular banqi?': '它和标准暗棋有什么不同？',
   'Regular banqi is played on a 4 by 8 board, pieces move one square, cannons capture by jumping, and other captures follow a rank order with the soldier able to take the general. Three Kingdoms banqi uses a 9 by 5 board, xiangqi moves and no rank order, and you win on points, not by taking every enemy piece.':
     '标准暗棋在 4×8 的棋盘上下，棋子每次走一格，炮隔子吃子，其他棋子按大小顺序吃子，其中兵可以吃将。三国暗棋用 9×5 的棋盘，按象棋的走法，没有大小顺序，靠得分获胜，而不是吃光对方的棋子。',
+  'MistyBanqi with its 0.2.1 net against classical evaluation, both at 200,000 nodes a move. At ply 104 the classical general takes the net general on d2. The net horse recaptures it on ply 105 to lead 95 to 90, then a soldier capture on b4 reaches 100. The game lasts 107 plies.':
+    'MistyBanqi 用 0.2.1 版神经网络对阵传统评估，双方每步都搜索二十万个节点。第 104 步传统评估的将在 d2 吃掉了神经网络的将。第 105 步神经网络用马吃回，以 95 比 90 领先，随后在 b4 吃掉一个兵，达到 100 分。全局共 107 步。',
+  'Three Kingdoms Banqi: net against classical': '三国暗棋：神经网络对传统评估',
+  'The [companion study](/study/THREE_KINGDOMS_NET_STUDY_PENDING) has all twenty games, each with its own deal. The net won sixteen and lost four.':
+    '[配套研究](/study/THREE_KINGDOMS_NET_STUDY_PENDING)收了全部二十盘，每盘都有各自的摆法。神经网络赢十六盘，输四盘。',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
@@ -3407,10 +3412,10 @@ const ZH_HANS: Record<string, string> = {
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 采用的是台湾规则。',
   'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
     'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
-    '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。',
-  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. At ply 49 red turns up a black soldier beside its own general, and the soldier takes the general. The net wins in 130 plies, when red has nothing left to move. Step through with the arrows.':
+    '[MistyBanqi](/blog/mistybanqi) 用 0.3.0 版神经网络对阵传统评估，双方每步都搜索二十万个节点。第 49 步红方翻出一颗黑卒，正好在红方自己的帅旁边，这颗卒随即吃掉了帅。神经网络在第 130 步获胜，那时红方已无子可走。用箭头一步步看。',
+  'The [companion study](/study/BANQI_NET_STUDY_PENDING) has all twenty games: eighteen net wins, one draw and one loss. Each chapter opens into its own deal. For a separate classical self-play run, see [Banqi by the Numbers](/blog/banqi-statistics).':
+    '[配套研究](/study/BANQI_NET_STUDY_PENDING)收了全部二十盘：神经网络赢十八盘，和一盘，输一盘。每一章都从各自的摆法开始。另一批传统评估自我对弈的棋，见[用数字看暗棋](/blog/banqi-statistics)。',
   'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
     '不行。兵只能吃兵和将。炮只比兵大一级，所以马和比马大的子都可以吃炮，兵不能。',
   'Can the horse move or capture diagonally in banqi?': '暗棋的马可以斜走或斜吃吗？',
@@ -3424,6 +3429,8 @@ const ZH_HANS: Record<string, string> = {
     '可以。炮不看大小：只要两者在同一直线上、中间正好隔一颗子，炮就能吃将，或吃任何已翻开的敌子。',
   'Play the computer or send a friend a link. No account needed.':
     '和电脑下一盘，或把链接传给朋友。不用注册。',
+  'Replaced the self-play example with a net-versus-classical game and a twenty-game companion study.':
+    '把自我对弈的示例换成一盘神经网络对传统评估的对局，并附上二十盘的配套研究。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
     '普通国际象棋的规则，也是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、各种和棋规则，以及一盘可以逐步回放的著名对局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
@@ -7285,6 +7292,11 @@ const ZH_HANT: Record<string, string> = {
   'How is this different from regular banqi?': '它和標準暗棋有什麼不同？',
   'Regular banqi is played on a 4 by 8 board, pieces move one square, cannons capture by jumping, and other captures follow a rank order with the soldier able to take the general. Three Kingdoms banqi uses a 9 by 5 board, xiangqi moves and no rank order, and you win on points, not by taking every enemy piece.':
     '標準暗棋在 4×8 的棋盤上下，棋子每次走一格，炮隔子吃子，其他棋子按大小順序吃子，其中兵可以吃將。三國暗棋用 9×5 的棋盤，按象棋的走法，沒有大小順序，靠得分獲勝，而不是吃光對方的棋子。',
+  'MistyBanqi with its 0.2.1 net against classical evaluation, both at 200,000 nodes a move. At ply 104 the classical general takes the net general on d2. The net horse recaptures it on ply 105 to lead 95 to 90, then a soldier capture on b4 reaches 100. The game lasts 107 plies.':
+    'MistyBanqi 用 0.2.1 版神經網路對陣傳統評估，雙方每步都搜尋二十萬個節點。第 104 步傳統評估的將在 d2 吃掉了神經網路的將。第 105 步神經網路用馬吃回，以 95 比 90 領先，隨後在 b4 吃掉一個兵，達到 100 分。全局共 107 步。',
+  'Three Kingdoms Banqi: net against classical': '三國暗棋：神經網路對傳統評估',
+  'The [companion study](/study/THREE_KINGDOMS_NET_STUDY_PENDING) has all twenty games, each with its own deal. The net won sixteen and lost four.':
+    '[配套研究](/study/THREE_KINGDOMS_NET_STUDY_PENDING)收了全部二十盤，每盤都有各自的擺法。神經網路贏十六盤，輸四盤。',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
@@ -10465,10 +10477,10 @@ const ZH_HANT: Record<string, string> = {
   'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 採用的是台灣規則。',
   'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
     'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
-    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。',
-  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  '[MistyBanqi](/blog/mistybanqi) with its 0.3.0 net against classical evaluation, both at 200,000 nodes a move. At ply 49 red turns up a black soldier beside its own general, and the soldier takes the general. The net wins in 130 plies, when red has nothing left to move. Step through with the arrows.':
+    '[MistyBanqi](/blog/mistybanqi) 用 0.3.0 版神經網路對陣傳統評估，雙方每步都搜尋二十萬個節點。第 49 步紅方翻出一顆黑卒，正好在紅方自己的帥旁邊，這顆卒隨即吃掉了帥。神經網路在第 130 步獲勝，那時紅方已無子可走。用箭頭一步步看。',
+  'The [companion study](/study/BANQI_NET_STUDY_PENDING) has all twenty games: eighteen net wins, one draw and one loss. Each chapter opens into its own deal. For a separate classical self-play run, see [Banqi by the Numbers](/blog/banqi-statistics).':
+    '[配套研究](/study/BANQI_NET_STUDY_PENDING)收了全部二十盤：神經網路贏十八盤，和一盤，輸一盤。每一章都從各自的擺法開始。另一批傳統評估自我對弈的棋，見[用數字看暗棋](/blog/banqi-statistics)。',
   'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
     '不行。兵只能吃兵和將。炮只比兵大一級，所以馬和比馬大的子都可以吃炮，兵不能。',
   'Can the horse move or capture diagonally in banqi?': '暗棋的馬可以斜走或斜吃嗎？',
@@ -10482,6 +10494,8 @@ const ZH_HANT: Record<string, string> = {
     '可以。炮不看大小：只要兩者在同一直線上、中間正好隔一顆子，炮就能吃將，或吃任何已翻開的敵子。',
   'Play the computer or send a friend a link. No account needed.':
     '和電腦下一盤，或把連結傳給朋友。不用註冊。',
+  'Replaced the self-play example with a net-versus-classical game and a twenty-game companion study.':
+    '把自我對弈的示例換成一盤神經網路對傳統評估的對局，並附上二十盤的配套研究。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
     '普通西洋棋的規則，也是迷霧西洋棋背後的規則基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
