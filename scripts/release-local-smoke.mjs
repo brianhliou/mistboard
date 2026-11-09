@@ -1,6 +1,11 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { isLocalBuild, localBaseUrl, runLocalSmokes } from './local-prod-smoke.mjs';
+import {
+  createEngineBootCheckReader,
+  isLocalBuild,
+  localBaseUrl,
+  runLocalSmokes,
+} from './local-prod-smoke.mjs';
 import { PRODUCT_SERVER_FLAGS } from './product-profile.mjs';
 
 const DEFAULT_PORT = 3099;
@@ -19,6 +24,7 @@ const buildAt = new Date().toISOString();
 
 let server = null;
 let stoppingServer = false;
+const engineBootCheck = createEngineBootCheckReader();
 
 try {
   if (!options.skipBuild) await run('npm', ['run', 'build']);
@@ -29,9 +35,12 @@ try {
 
   // Own the actual server process so cleanup cannot leave an npm grandchild listening.
   server = spawn(process.execPath, ['apps/server/dist/main.js'], {
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'pipe', 'inherit'],
     env: {
       ...process.env,
+      // The boot-check reader needs the structured info-level summary even
+      // when the operator's shell suppresses informational logging.
+      LOG_LEVEL: 'info',
       PORT: String(port),
       DATABASE_URL: databaseUrl,
       MISTBOARD_REVISION: revision,
@@ -39,6 +48,11 @@ try {
       MISTBOARD_HOST: baseUrl,
       ...Object.fromEntries(PRODUCT_SERVER_FLAGS.map((flag) => [flag, 'true'])),
     },
+  });
+  server.stdout.setEncoding('utf8');
+  server.stdout.on('data', (chunk) => {
+    process.stdout.write(chunk);
+    engineBootCheck.write(chunk);
   });
 
   server.on('exit', (code, signal) => {
@@ -51,7 +65,11 @@ try {
   });
 
   await waitForHealth(baseUrl, 30_000);
-  await runLocalSmokes(baseUrl, { revision });
+  const { checked, missing } = engineBootCheck.result();
+  console.log(
+    `local engine boot check: ${missing.length}/${checked} binaries missing${missing.length ? `: ${missing.map(({ binary }) => binary).join(', ')}` : ''}`,
+  );
+  await runLocalSmokes(baseUrl, { revision, missingEngines: missing });
 
   console.log(
     JSON.stringify({
@@ -105,8 +123,12 @@ async function waitForHealth(baseUrl, timeoutMs) {
         });
         const state = await status.json();
         // A listener from another session must never pass this gate for our build.
-        if (status.ok && isLocalBuild(state, revision, buildAt)) return;
-        lastError = new Error('local server revision/build timestamp does not match this run');
+        if (status.ok && isLocalBuild(state, revision, buildAt)) {
+          if (engineBootCheck.result()) return;
+          lastError = new Error('waiting for local server engine boot check summary');
+        } else {
+          lastError = new Error('local server revision/build timestamp does not match this run');
+        }
       } else {
         lastError = new Error(`/health returned ${response.status}`);
       }
@@ -186,8 +208,10 @@ Options:
   --revision <sha>          Revision exposed through /api/server-status
   --skip-build              Reuse the build just checked by the release gate
 
-Runs all local production smokes, including every ceval backend, before stopping
-its server. Requires Postgres, local variant engine binaries and browser assets.
+Runs local production smokes, including every ceval backend, before stopping
+its server. Requires Postgres and browser assets. The server's engine boot check
+skips only probes needing a missing native binary, naming its path env var.
+Available-engine probes and unrelated checks still gate the release.
 For an already-running production-shaped pair, use npm run smoke:local -- --base <url>.
 `);
 }
