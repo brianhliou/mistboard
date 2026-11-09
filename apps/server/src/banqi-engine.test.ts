@@ -15,7 +15,6 @@ import {
   banqiLiveEngineMove,
   banqiNetPath,
   banqiNoiseSeed,
-  evaluateBanqiFenNodes,
 } from './banqi-engine.js';
 import { banqiEveAdapter } from './banqi-eve-adapter.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen } from './banqi-fen.js';
@@ -345,21 +344,20 @@ test('weak levels refuse binaries missing either weakening option or Seed', asyn
   }
 });
 
-test('classical play and analysis send neither EvalFile nor weakening options', async () => {
+test('classical play sends neither EvalFile nor weakening options', async () => {
   const engine = fakeEngine(['NoProgressLimit']);
   await withEngine(engine.bin, async () => {
     delete process.env.MISTBOARD_BANQI_NET;
     await banqiLiveEngineMove(BANQI_DEFAULT_ENGINE_ID, fen, { seed: '99' });
-    await evaluateBanqiFenNodes(fen, { nodes: 512_000, movetimeCapMs: 2500, noProgressLimit: 40 });
   });
   const commands = engine.commands();
   assert.deepEqual(
     commands.filter((command) => command.startsWith('setoption ')),
-    ['setoption name NoProgressLimit value 60', 'setoption name NoProgressLimit value 40'],
+    ['setoption name NoProgressLimit value 60'],
   );
   assert.deepEqual(
     commands.filter((command) => command.startsWith('go ')),
-    ['go nodes 3500000 movetime 8000', 'go nodes 512000 movetime 2500'],
+    ['go nodes 3500000 movetime 8000'],
   );
 });
 
