@@ -121,16 +121,23 @@ function keyedCache<T>(): {
 
 // ── Which engine computes ────────────────────────────────────────────────────
 
-test('AB-JChess computes new analysis when its binary and net resolve, PikaJieQi otherwise', async () => {
+test('new analysis always selects Pikafish; explicit AB-JChess profiles remain readable', async () => {
   const bin = join(fixtureDir, 'ab-jchess');
   const net = join(fixtureDir, 'abjchess-20261030.nnue');
   writeFileSync(bin, '');
   writeFileSync(net, '');
-  await withEnv({ MISTBOARD_ABJCHESS_PATH: bin, MISTBOARD_ABJCHESS_NET: net }, () => {
-    assert.equal(jieqiAnalysisEngine(), 'ab-jchess');
-    assert.equal(currentJieqiAnalysisProfile(), ABJCHESS_JIEQI_ANALYSIS_PROFILE);
-    assert.equal(jieqiAnalysisEngineAvailable(), true);
-  });
+  await withEnv(
+    {
+      MISTBOARD_ABJCHESS_PATH: bin,
+      MISTBOARD_ABJCHESS_NET: net,
+      MISTBOARD_PIKAFISH_PATH: process.execPath,
+    },
+    () => {
+      assert.equal(jieqiAnalysisEngine(), 'pikafish-jieqi');
+      assert.equal(currentJieqiAnalysisProfile(), PIKAFISH_JIEQI_ANALYSIS_PROFILE);
+      assert.equal(jieqiAnalysisEngineAvailable(), true);
+    },
+  );
   await withEnv(
     { MISTBOARD_ABJCHESS_PATH: join(fixtureDir, 'missing'), MISTBOARD_ABJCHESS_NET: net },
     () => {
@@ -702,7 +709,7 @@ test('AB known captures use a fresh public child FEN with public pool surplus in
   );
 });
 
-test('legacy decision profiles still request MultiPV 12 with their original budget', async () => {
+test('Level 8 decisions request MultiPV 12 and fixed nodes on a fresh hash', async () => {
   const fen = jieqiStateToPikafishFen(createInitialJieqiState('legacy', STANDARD_JIEQI_DEAL));
   const calls: unknown[] = [];
   const deps = jieqiDecisionDepsFromSession(
@@ -724,8 +731,8 @@ test('legacy decision profiles still request MultiPV 12 with their original budg
     {
       fen: 'anchor',
       opts: {
-        depth: 16,
-        movetimeMs: 6_000,
+        nodes: 5_000_000,
+        movetimeMs: 30_000,
         multiPv: 12,
         moves: ['e0e1'],
         fresh: true,
@@ -733,7 +740,7 @@ test('legacy decision profiles still request MultiPV 12 with their original budg
     },
     {
       fen: 'child anchor',
-      opts: { depth: 16, movetimeMs: 6_000, moves: ['e9e8'], fresh: true },
+      opts: { nodes: 5_000_000, movetimeMs: 30_000, moves: ['e9e8'], fresh: true },
     },
   ]);
 });
@@ -748,10 +755,13 @@ test('AB-JChess-20261031 budgets use 500k sweep, 2M re-search, 50k ranking and 2
   assert.deepEqual(profile.decisionRank, { nodes: 50_000, movetimeMs: 30_000 });
   assert.ok(profile.decisionsEngineId.includes('+nodes200000+rank50000+'));
   assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionCandidates, 'multipv');
-  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.sweepNodes, 500_000);
-  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.researchNodes, 2_000_000);
-  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.movetimeCapMs, 6_000);
-  assert.deepEqual(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionEval, { depth: 16, movetimeMs: 6_000 });
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.sweepNodes, 10_000_000);
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.researchNodes, 40_000_000);
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.movetimeCapMs, 30_000);
+  assert.deepEqual(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionEval, {
+    nodes: 5_000_000,
+    movetimeMs: 30_000,
+  });
   assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionRank, undefined);
 });
 

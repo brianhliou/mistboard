@@ -71,19 +71,16 @@ const regrade = has('--regrade-decisions');
 // A regrade is dry unless --apply; the warm-cache mode is live unless --dry-run.
 const dryRun = regrade ? !has('--apply') : has('--dry-run');
 const requestedConcurrency = Math.max(1, Number(flagValue('--concurrency')) || 1);
-// A regrade grades every game on the AB-JChess analysis pool (jieqi-engine.ts), one slot
-// by default with a 30s queue wait: a second worker only waits, times out and fails its
-// game (10-07: 9 of 11 failed at --concurrency 2). Never run more workers than slots.
-const abJchessAnalysisSlots = Math.max(
+// New grading uses Pikafish's dedicated analysis pool. Never queue more workers
+// than slots: a whole-game run holds its slot for the entire sweep/fan-out.
+const analysisSlots = Math.max(
   1,
-  Number(process.env.MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES) || 1,
+  Number(process.env.MISTBOARD_PIKAFISH_JIEQI_ANALYSIS_MAX_PROCESSES) || 2,
 );
-const concurrency = regrade
-  ? Math.min(requestedConcurrency, abJchessAnalysisSlots)
-  : requestedConcurrency;
+const concurrency = regrade ? Math.min(requestedConcurrency, analysisSlots) : requestedConcurrency;
 if (concurrency < requestedConcurrency) {
   console.log(
-    `--concurrency ${requestedConcurrency} capped to ${concurrency}: the AB-JChess analysis pool has ${abJchessAnalysisSlots} slot(s)`,
+    `--concurrency ${requestedConcurrency} capped to ${concurrency}: the Pikafish analysis pool has ${analysisSlots} slot(s)`,
   );
 }
 const withDecisions = !has('--no-decisions');
@@ -163,11 +160,29 @@ for (const row of rows) {
       console.log(`  ${roomId}  SKIP (not a finished jieqi event log)`);
       continue;
     }
-    await resolveJieqiAnalysis(roomId, inputs.moves, inputs.deal, undefined, undefined, true);
+    await resolveJieqiAnalysis(
+      roomId,
+      inputs.moves,
+      inputs.deal,
+      undefined,
+      undefined,
+      true,
+      undefined,
+      inputs.rules,
+    );
     const afterSweep = Date.now();
     let decisionsMs = 0;
     if (withDecisions) {
-      await resolveJieqiDecisions(roomId, inputs.moves, inputs.deal, undefined, undefined, true);
+      await resolveJieqiDecisions(
+        roomId,
+        inputs.moves,
+        inputs.deal,
+        undefined,
+        undefined,
+        true,
+        undefined,
+        { rules: inputs.rules },
+      );
       decisionsMs = Date.now() - afterSweep;
     }
     done++;
@@ -249,7 +264,7 @@ async function runRegrade() {
           undefined,
           true,
           undefined,
-          { servePreviousAlgorithms: false },
+          { servePreviousAlgorithms: false, rules: inputs.rules },
         );
         done++;
         console.log(

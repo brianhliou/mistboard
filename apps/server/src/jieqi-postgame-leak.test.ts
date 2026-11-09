@@ -24,7 +24,13 @@ import {
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import { buildTenantGamePgn, buildTenantGamePublicationJson } from './game-export-tenant.js';
-import { analyzeJieqiDecisions, analyzeJieqiPostgame } from './jieqi-analysis.js';
+import {
+  analyzeJieqiDecisions,
+  analyzeJieqiPostgame,
+  evaluateJieqiPosition,
+  jieqiDecisionDepsFromSession,
+  PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+} from './jieqi-analysis.js';
 import type { JieqiEvent } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import type { RecentEveGameRecord } from './persistence.js';
@@ -280,22 +286,63 @@ test('finished jieqi leak: the analysis chart and decisions are the same whateve
   assert.equal(start.board.b10?.unknown, true);
   const fens: string[] = [];
   await sameForEveryDealAsync('analysis', async (deal) => {
-    const { deal: analysed, moves } = jieqiAnalysisInputsFromEvents(finishedEvents(deal))!;
-    const chart = await analyzeJieqiPostgame(moves, analysed, async (_state, window) => {
-      const key = `${window.fen}|${window.moves.join(',')}`;
-      fens.push(key);
-      return { cp: fenHashCp(key), mate: null, best: null };
-    });
-    const decisions = await analyzeJieqiDecisions(moves, analysed, {
-      multiPv: async (fen) => [
-        { index: 1, move: 'a0a1', cp: fenHashCp(fen), mate: null, depth: 1, pv: [], bound: null },
-      ],
-      evalPosition: async (fen, window) => ({
-        cp: fenHashCp(`${fen}|${window?.moves.join(',') ?? ''}`),
-        mate: null,
-      }),
-    });
-    return { chart, decisions };
+    const { deal: analysed, moves, rules } = jieqiAnalysisInputsFromEvents(finishedEvents(deal))!;
+    const requests: unknown[] = [];
+    const chart = await analyzeJieqiPostgame(
+      moves,
+      analysed,
+      async (_state, window) => {
+        const key = `${window.fen}|${window.moves.join(',')}`;
+        fens.push(key);
+        return evaluateJieqiPosition(
+          _state,
+          async (fen, opts) => {
+            requests.push({ fen, opts });
+            return { cp: fenHashCp(JSON.stringify({ fen, opts })), mate: null, best: null };
+          },
+          window,
+        );
+      },
+      undefined,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      rules,
+    );
+    const decisions = await analyzeJieqiDecisions(
+      moves,
+      analysed,
+      jieqiDecisionDepsFromSession(
+        {
+          multiPv: async (fen, opts) => {
+            requests.push({ fen, opts });
+            return [
+              {
+                index: 1,
+                move: 'a0a1',
+                cp: fenHashCp(fen),
+                mate: null,
+                depth: 1,
+                pv: [],
+                bound: null,
+              },
+            ];
+          },
+          evaluateFen: async (fen, opts) => {
+            requests.push({ fen, opts });
+            return {
+              cp: fenHashCp(JSON.stringify({ fen, opts })),
+              mate: null,
+              best: null,
+              depth: 1,
+            };
+          },
+        },
+        PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      ),
+      undefined,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      rules,
+    );
+    return { chart, decisions, requests };
   });
   assert.ok(fens.length > 0, 'the stand-in engine was asked');
 });
