@@ -3,15 +3,16 @@
 // (5 s on 2026-10-23), and the figures move by a game or two an hour, so one
 // read per PUBLIC_STATS_CACHE_MS serves every visitor.
 //
-// Stale-while-revalidate: once a value exists, an expired read returns it at
-// once and refreshes in the background, so only the first visitor after a
-// boot waits on the query. Concurrent misses share one in-flight query, and a
-// failed read keeps the last good value (the site-counters.ts pattern).
+// Stale-while-revalidate below 15 minutes: an expired read returns at once
+// and refreshes in the background. Older copies wait for the fresh query.
+// Concurrent misses share one in-flight query, and a failed read keeps the
+// last good value (the site-counters.ts pattern).
 
 import type { PublicSiteStats } from './persistence.js';
 import * as persistence from './persistence.js';
 
 export const PUBLIC_STATS_CACHE_MS = 5 * 60_000;
+export const PUBLIC_STATS_MAX_STALE_MS = 15 * 60_000;
 
 type Loader = () => Promise<PublicSiteStats>;
 
@@ -43,6 +44,7 @@ export async function getCachedPublicStats(
   load: Loader = () => persistence.getPublicSiteStats(),
 ): Promise<PublicSiteStats | null> {
   if (!cached) return refresh(nowMs, load);
+  if (nowMs - cached.at >= PUBLIC_STATS_MAX_STALE_MS) return refresh(nowMs, load);
   if (nowMs - cached.at >= PUBLIC_STATS_CACHE_MS) void refresh(nowMs, load);
   return cached.value;
 }
