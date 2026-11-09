@@ -96,8 +96,8 @@ class PoolWorker {
   private readyPromise: Promise<void> | null = null;
   private readyResolve: (() => void) | null = null;
   private readyReject: ((err: Error) => void) | null = null;
-  /** True once the worker has been started AND was ready at least once. */
-  private hasBeenReady = false;
+  /** Startup time does not count as healthy uptime for the crash-loop guard. */
+  private readyAt: number | null = null;
   /** True after dispose() — suppresses restart on the resulting close event. */
   private disposed = false;
   /** Set once handleDeath() has fired so we don't restart twice for one death. */
@@ -107,7 +107,11 @@ class PoolWorker {
     public readonly index: number,
     private readonly opts: PythonPoolOptions,
     private readonly onIdle: () => void,
-    private readonly onPermanentDeath: (worker: PoolWorker, err: Error) => void,
+    private readonly onPermanentDeath: (
+      worker: PoolWorker,
+      err: Error,
+      countCrash: boolean,
+    ) => void,
     // R1-recover: hand a failed request back to the pool to retry-or-reject,
     // instead of rejecting the caller directly.
     private readonly onRequestFailure: (req: PendingRequest, err: Error) => void,
@@ -119,6 +123,10 @@ class PoolWorker {
 
   isAlive(): boolean {
     return this.ready && !this.disposed && this.process !== null && !this.process.killed;
+  }
+
+  hadStableUptime(): boolean {
+    return this.readyAt !== null && Date.now() - this.readyAt >= 30_000;
   }
 
   async start(): Promise<void> {
@@ -224,7 +232,7 @@ class PoolWorker {
 
     if (msg.kind === 'ready') {
       this.ready = true;
-      this.hasBeenReady = true;
+      this.readyAt = Date.now();
       this.readyResolve?.();
       this.readyResolve = null;
       this.readyReject = null;
@@ -307,7 +315,7 @@ class PoolWorker {
     this.onIdle();
   }
 
-  private fail(err: Error): void {
+  private fail(err: Error, countCrash = true): void {
     if (this.readyReject) {
       this.readyReject(err);
       this.readyResolve = null;
@@ -354,19 +362,13 @@ class PoolWorker {
     // replace this slot. Suppressed during dispose() — the pool is tearing
     // down on purpose.
     if (this.disposed || this.deathHandled) return;
-    if (!this.hasBeenReady) return; // initial-start failure surfaces via readyReject above
+    if (this.readyAt === null) return; // initial-start failure surfaces via readyReject above
     this.deathHandled = true;
-    this.onPermanentDeath(this, err);
+    this.onPermanentDeath(this, err, countCrash);
   }
 
   markDisposed(): void {
     this.disposed = true;
-  }
-
-  expire(req: PendingRequest, err: Error): boolean {
-    if (this.current !== req) return false;
-    this.fail(err);
-    return true;
   }
 
   dispatch(req: PendingRequest): void {
@@ -384,7 +386,9 @@ class PoolWorker {
     );
     req.timeoutHandle = setTimeout(() => {
       if (this.current !== req) return;
-      this.fail(new Error(`pool request timeout ${req.timeoutMs}ms`));
+      // A total deadline may have already rejected the caller. Still bound the
+      // outstanding search, without charging deadline cleanup to the crash guard.
+      this.fail(new Error(`pool request timeout ${req.timeoutMs}ms`), !req.settled);
     }, req.timeoutMs);
     const line = `${JSON.stringify({ ...req.payload, requestId: req.requestId })}\n`;
     this.process!.stdin.write(line, (err) => {
@@ -435,8 +439,6 @@ export class PythonPool {
   private queue: PendingRequest[] = [];
   /** Restart attempts per slot, used for crash-loop backoff. */
   private restartCount = new Map<number, number>();
-  /** Last-restart timestamp per slot. */
-  private lastRestartAt = new Map<number, number>();
   private readonly restartTimers = new Map<number, NodeJS.Timeout>();
   private readonly retiredSlots = new Set<number>();
   private disposed = false;
@@ -478,7 +480,7 @@ export class PythonPool {
       index,
       this.opts,
       () => this.tryDispatch(),
-      (worker, err) => this.handleWorkerDeath(worker, err),
+      (worker, err, countCrash) => this.handleWorkerDeath(worker, err, countCrash),
       (req, err) => this.handleRequestFailure(req, err),
     );
   }
@@ -498,7 +500,7 @@ export class PythonPool {
   // cold-starts the belief from the transcript (correct continuation). The
   // dispatch timeout bounds each attempt; the enqueue deadline bounds queueing
   // and all attempts together without depending on the caller's HTTP connection.
-  private handleRequestFailure(req: PendingRequest, err: Error): void {
+  private handleRequestFailure(req: PendingRequest, err: Error, retry = true): void {
     if (req.settled) return;
     if (this.disposed) {
       req.reject(err);
@@ -514,6 +516,7 @@ export class PythonPool {
       timedOut: req.timedOut,
     });
     if (
+      retry &&
       this.hasRecoverableCapacity() &&
       Date.now() < req.deadlineAt &&
       req.attempts < MAX_MOVE_ATTEMPTS
@@ -548,7 +551,7 @@ export class PythonPool {
     req.reject(err);
   }
 
-  private handleWorkerDeath(dead: PoolWorker, err: Error): void {
+  private handleWorkerDeath(dead: PoolWorker, err: Error, countCrash = true): void {
     if (this.disposed || this.workers[dead.index] !== dead) return;
     dead.markDisposed();
     const slot = dead.index;
@@ -557,15 +560,15 @@ export class PythonPool {
     for (const [game, idx] of this.roomWorker) {
       if (idx === slot) this.roomWorker.delete(game);
     }
-    const now = Date.now();
-    const lastAt = this.lastRestartAt.get(slot) ?? 0;
-    const sinceLast = now - lastAt;
-    // Crash-loop guard: if this slot died within 30s of its previous restart,
-    // back off exponentially. After 5 quick restarts give up on the slot —
-    // the pool keeps running with fewer workers and an alert-worthy log.
-    const burst = sinceLast < 30_000 ? (this.restartCount.get(slot) ?? 0) + 1 : 1;
-    this.restartCount.set(slot, burst);
-    this.lastRestartAt.set(slot, now);
+    // Only 30s of ready uptime resets a crash streak. Replacements that never
+    // become ready must accumulate failures even when startup itself is slow.
+    // Deadline-driven replacements do not consume the crash allowance.
+    const burst = countCrash
+      ? dead.hadStableUptime()
+        ? 1
+        : (this.restartCount.get(slot) ?? 0) + 1
+      : 0;
+    if (countCrash) this.restartCount.set(slot, burst);
 
     if (burst > 5) {
       engineCounters.recordPythonPoolError();
@@ -586,7 +589,7 @@ export class PythonPool {
       return;
     }
 
-    const delay = burst === 1 ? 0 : Math.min(5_000, 250 * 2 ** (burst - 1));
+    const delay = burst <= 1 ? 0 : Math.min(5_000, 250 * 2 ** (burst - 1));
     logger.warn(
       {
         kind: 'python_pool_worker_restart',
@@ -651,7 +654,8 @@ export class PythonPool {
         if (req.settled) return;
         req.settled = true;
         if (req.deadlineHandle) clearTimeout(req.deadlineHandle);
-        if (req.timeoutHandle) clearTimeout(req.timeoutHandle);
+        // The worker owns its attempt timer until it replies or fails. A total
+        // deadline settles the caller without freeing or killing a busy worker.
         run();
       };
       const req: PendingRequest = {
@@ -672,9 +676,8 @@ export class PythonPool {
       req.deadlineHandle = setTimeout(() => {
         this.queue = this.queue.filter((queued) => queued !== req);
         const err = new Error(`pool total request timeout ${totalTimeoutMs}ms`);
-        if (!this.workers.some((worker) => worker.expire(req, err))) {
-          this.handleRequestFailure(req, err);
-        }
+        // The timer is authoritative even if Date.now() is just under deadlineAt.
+        this.handleRequestFailure(req, err, false);
       }, totalTimeoutMs).unref();
       this.queue.push(req);
       this.tryDispatch();
