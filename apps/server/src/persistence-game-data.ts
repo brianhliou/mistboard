@@ -9,8 +9,34 @@
 // on the page and the rooms a build reads come from the same WHERE clause, so
 // the two cannot disagree about what "the games of September" means.
 
+import { firstPartyBotForId } from './first-party-bots.js';
 import { bothSidesMoved, countedHumanGame } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
+
+/** Public bot identities eligible for the existing data variants, without
+ * loading profile ratings or lifetime game aggregates for each download. */
+export async function listPublicDataBots(
+  variants: readonly string[],
+): Promise<Array<{ id: string; displayName: string; variants: string[] }>> {
+  const { rows } = await getPool().query<{
+    id: string;
+    display_name: string;
+    supported_game_spec_ids: string[];
+    default_game_spec_id: string;
+  }>(
+    `SELECT id, display_name, supported_game_spec_ids, default_game_spec_id
+     FROM bot_profiles WHERE visibility = 'public' ORDER BY display_name, id`,
+  );
+  return rows.flatMap((bot) => {
+    const supported = bot.supported_game_spec_ids.length
+      ? bot.supported_game_spec_ids
+      : [bot.default_game_spec_id];
+    const publicVariants = variants.filter((variant) => supported.includes(variant));
+    return publicVariants.length
+      ? [{ id: bot.id, displayName: bot.display_name, variants: publicVariants }]
+      : [];
+  });
+}
 
 export function publishedGame(gamesAlias = 'g'): string {
   return `${countedHumanGame(gamesAlias)} AND ${gamesAlias}.visibility = 'public'`;
@@ -52,6 +78,26 @@ function monthlyWhere(games: MonthlyGames): string {
   return games === 'engine' ? publishedEngineGame('g') : publishedGame('g');
 }
 
+// EXISTS selects a game once, including when both seats refer to this bot.
+// Direct bot seats use profile IDs. Historical first-party engine seats use
+// only the explicit canonical/legacy attribution table, never display names
+// or an arbitrary outside engine's current owner.
+function botParticipantFilter(parameter: number): string {
+  return ` AND EXISTS (SELECT 1 FROM game_participants bp
+    WHERE bp.game_id = g.room_id AND bp.visibility = 'public' AND (
+      (bp.subject_type = 'bot' AND bp.subject_id = ANY($${parameter}::text[])) OR
+      (bp.subject_type = 'engine-version' AND bp.subject_id = ANY($${parameter + 1}::text[]))
+    ))`;
+}
+
+function botIdentityParams(botId: string): [string[], string[]] {
+  const bot = firstPartyBotForId(botId);
+  return [
+    bot ? [bot.id, ...(bot.legacyBotIds ?? [])] : [botId],
+    bot ? [...new Set([...Object.values(bot.engines), ...(bot.attributionEngineIds ?? [])])] : [],
+  ];
+}
+
 export type PublishedMonthCount = { month: string; variant: string; games: number };
 
 // Per (closed month, variant) game counts. `before` is the start of the
@@ -60,6 +106,7 @@ export async function countPublishedGamesByMonth(
   variants: readonly string[],
   before: Date,
   games: MonthlyGames = 'human',
+  botId?: string,
 ): Promise<PublishedMonthCount[]> {
   const { rows } = await getPool().query<{ month: string; variant: string; games: number }>(
     `SELECT to_char(date_trunc('month', g.ended_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
@@ -68,10 +115,10 @@ export async function countPublishedGamesByMonth(
      FROM games g
      WHERE ${monthlyWhere(games)}
        AND g.variant = ANY($1)
-       AND g.ended_at < $2
+       AND g.ended_at < $2${botId ? botParticipantFilter(3) : ''}
      GROUP BY 1, 2
      ORDER BY 1 DESC, 2`,
-    [[...variants], before],
+    [[...variants], before, ...(botId ? botIdentityParams(botId) : [])],
   );
   return rows;
 }
@@ -84,6 +131,7 @@ export async function listPublishedRoomIds(
   from: Date,
   to: Date,
   games: MonthlyGames = 'human',
+  botId?: string,
 ): Promise<string[]> {
   const { rows } = await getPool().query<{ room_id: string }>(
     `SELECT g.room_id
@@ -91,9 +139,9 @@ export async function listPublishedRoomIds(
      WHERE ${monthlyWhere(games)}
        AND g.variant = ANY($1)
        AND g.ended_at >= $2
-       AND g.ended_at < $3
+       AND g.ended_at < $3${botId ? botParticipantFilter(4) : ''}
      ORDER BY g.ended_at, g.room_id`,
-    [[...variants], from, to],
+    [[...variants], from, to, ...(botId ? botIdentityParams(botId) : [])],
   );
   return rows.map((row) => row.room_id);
 }

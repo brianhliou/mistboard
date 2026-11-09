@@ -1,3 +1,4 @@
+import { INTERNAL_BANQI_CORPUS_ID, internalEngineTestFor } from '../internal-engine-test.js';
 /**
  * Generic event writer for tenant rooms: persistence-first append serialized
  * through room.pendingWrites, lifecycle re-arming, engine-reservation release
@@ -283,7 +284,8 @@ export function buildTenantGameSummary<
   // longer kept private. Fog variants stay hidden WHILE LIVE via the separate
   // spectate gate; this only affects the concluded row's browsability. Guest
   // seats still render as "Guest" and non-account handles are never invented.
-  const visibility: persistence.GameVisibility = 'public';
+  const internal = internalEngineTestFor(room.events);
+  const visibility: persistence.GameVisibility = internal ? 'private' : 'public';
   const participants = tenant.colors.map((color) =>
     tenantParticipant(tenant, color, room, visibility),
   );
@@ -303,7 +305,7 @@ export function buildTenantGameSummary<
     blackClient: null,
     whiteName: null,
     blackName: null,
-    corpusId: null,
+    corpusId: internal ? INTERNAL_BANQI_CORPUS_ID : null,
     initialMs: room.projection.timeControl?.initialMs ?? null,
     incrementMs: room.projection.timeControl?.incrementMs ?? null,
     rated,
@@ -496,6 +498,16 @@ export function tenantParticipant<
 ): persistence.GameParticipant {
   const seatedClientId = room.projection.seats[color];
   if (seatedClientId && tenant.engine?.isEngineClientId(seatedClientId)) {
+    const internal = internalEngineTestFor(room.events);
+    if (internal?.engineId === seatedClientId)
+      return {
+        color: color as persistence.GameParticipantColor,
+        displayName: internal.displayName,
+        subjectType: 'engine-version',
+        subjectId: internal.engineId,
+        engineVersion: internal.engineVersion,
+        visibility: 'private',
+      };
     const engineVersion = tenant.engine.engineVersion?.(seatedClientId) ?? null;
     // The live seat name, verbatim (tenantSeatDisplayNames): the finished game
     // keeps the name the room showed, rung label included.

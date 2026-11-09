@@ -5,6 +5,9 @@ variants use UCI engines; see [`ARCHITECTURE.md`](ARCHITECTURE.md)). This docume
 specifies what the server sends, what an engine returns, and the redaction
 guarantees that make the protocol auditable.
 
+For Banqi's separate private executable/HTTP provider kit, checked exchange and
+local probe, see [Banqi engine providers](banqi-engine-providers.md).
+
 The canonical machine-readable types live in
 [`packages/game/src/engine-protocol.ts`](../packages/game/src/engine-protocol.ts).
 This document is the human-readable contract.

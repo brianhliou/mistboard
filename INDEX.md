@@ -376,6 +376,10 @@ Edit task → find file → open only that file.
 | `flip-first-color.ts` | Recovers a finished FLIP game's bound `firstColor` (ink) by replaying the event log, since results are stored by seat not ink; covers banqi + jungle-flip (one resolver per tenant, fail-closed on a mismatched log), per-room cache for the polled watch feed |
 | `banqi-engine.ts` | MistyBanqi move provider for Banqi PvE: our own `banqi-engine` Rust αβ+Star1+TT UCI subprocess (Tier-B via the shared `uci-engine-harness`, one process per request, NOT the fog engine-worker); fed a redacted current-position FEN from `banqi-fen.ts` |
 | `server-banqi-engine.ts` | Server-side MistyBanqi PvE loop; injects engine moves through the shared append+broadcast path. Mirrors `server-jieqi-engine.ts` |
+| `banqi-provider-protocol.ts` + `.test.ts` | Versioned masked Banqi turn contract, kernel validation, immutable snapshots, whole-request hidden-information invariance and checked contributor samples |
+| `banqi-provider.ts` + `.test.ts` | Trusted native UCI and authenticated HTTP providers with shared deadlines, admission caps, local-only model paths and bounded sanitized output |
+| `banqi-provider-live.ts` + `.test.ts` | Fail-closed adapter for the existing Banqi live move seam: stale/expired replies and forbidden chase moves cannot be substituted |
+| `banqi-provider-bridge.ts` | Authenticated loopback reference bridge over the same Banqi provider contract |
 | `server-banqi-room-factory.ts` | Thin adapter over `variant-tenant/room-factory.ts` for banqi (PvP + Tier-B engine seat; no running-game record) |
 | `server-ws-banqi.ts` | Banqi WebSocket handler — thin adapter over `variant-tenant/ws.ts` (positions public, so no fog wiring); the Tier-B MistyBanqi scheduler rides the post-connect/post-move hook |
 | `jungle-tenant.ts` | Jungle (斗兽棋, perfect-information 7×9 Dou Shou Qi) `VariantTenant`: NO hidden state — positions + moves public, wire events pass through, `viewForClient` is the open board. The simplest tenant (no redaction). PvP + in-process PvE |
@@ -856,7 +860,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `dark-xiangqi-tree-board.ts` | Interactive Fog Xiangqi board factory for the analysis/review tree (`review/dark-xiangqi-review.ts`): select-and-move / drag on `renderDarkXiangqiInteractiveBoardSvg` via the shared `installBoardDrag`, reusing the pure `darkXiangqiClickResult`. Holds its OWN selection/drag state so the fog triptych can mount three independent boards; `showFog` is driven off `enabled()` (the interactive truth board is fully revealed) |
 | `dark-chess-tree-board.ts` | Interactive Fog Chess board factory for the analysis/review tree (`review/dark-chess-review.ts`): select-and-move / drag on `renderDarkChessInteractiveBoardSvg` (grid renderer) via the shared `installBoardDrag`; auto-queens promotions. First chess-family tree consumer; same triptych/`enabled()`-fog model as `dark-xiangqi-tree-board.ts` |
 | `dark-chess-postgame.ts` | Flagship Fog Chess postgame/review route renderer (reached at `/game/:id` via `landing.ts` when the game carries no engine belief/trace artifacts). Rides the shared interactive tree (`review/dark-chess-review.ts` → `mountTreeReview`): seeds from the event log's true moves and reconstructs the triptych CLIENT-side through the fog kernel, letting you branch. Loads the shared `dark-xiangqi-postgame.css` scaffold |
-| `live-banqi-postgame.ts` | Banqi postgame/review route renderer. Rides the shared interactive tree (`review/banqi-review.ts` → `mountTreeReview`): reconstructs the deal from `history.revealed` via `recoverBanqiDeal`, replays the move list, and lets you branch. Board renders MASKED (tiles flip in a line). Keeps `postgameViewAtPly`/`postgameReplayMaxPly`/`postgameViewEntries` for `watch-banqi-replay.ts` |
+| `banqi-postgame-data.ts` | Banqi postgame payload types, API loader and per-ply masked replay selectors shared by review and watch. |
+| `live-banqi-postgame.ts` | Banqi postgame/review route renderer; private masked games use the recorded watch replay without a hidden deal or analysis branches. Rides the shared interactive tree (`review/banqi-review.ts` → `mountTreeReview`): reconstructs the deal from `history.revealed` via `recoverBanqiDeal`, replays the move list, and lets you branch. Board renders MASKED (tiles flip in a line). Keeps `postgameViewAtPly`/`postgameReplayMaxPly`/`postgameViewEntries` for `watch-banqi-replay.ts` |
 | `live-banqi-sound.ts` | Banqi sound policy: a flip on a face-down reveal (own move + the opponent's public flip), capture/cannon classification, reusing the shared `SoundController` (banqi is symmetric-information, so opponent flips are sounded precisely) |
 | `live-jungle-sound.ts` | Jungle / Dou Shou Qi sound policy: perfect-information (no drops/flips/king), every move sounded precisely, reusing the shared `SoundController` |
 | `live-jungle-flip-sound.ts` | Flip Jungle (翻翻兽棋) sound policy: hidden identity not position, so a flip (face-down → revealed) is public and sounded precisely for both seats, reusing the shared `SoundController` |
@@ -1324,13 +1329,13 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/cxa-listed-players.ts` | _needs a one-line description_ |
 | `apps/server/src/deploy-history.ts` | _needs a one-line description_ |
 | `apps/server/src/engine-match-import.ts` | _needs a one-line description_ |
-| `apps/server/src/game-data-files.ts` | _needs a one-line description_ |
+| `apps/server/src/game-data-files.ts` | Monthly and per-bot data file keys, content-addressed downloads, listings and shared export builds |
 | `apps/server/src/import-engine-match.ts` | _needs a one-line description_ |
 | `apps/server/src/jieqi-eve-adapter.ts` | _needs a one-line description_ |
 | `apps/server/src/jungle-eve-adapter.ts` | _needs a one-line description_ |
 | `apps/server/src/og-broadcast.ts` | _needs a one-line description_ |
 | `apps/server/src/og-player.ts` | _needs a one-line description_ |
-| `apps/server/src/persistence-game-data.ts` | _needs a one-line description_ |
+| `apps/server/src/persistence-game-data.ts` | Public monthly game selection, stable bot participant filters, bot data roster and stored file persistence |
 | `apps/server/src/persistence-xiangqi-players.ts` | _needs a one-line description_ |
 | `apps/server/src/player-pages.ts` | _needs a one-line description_ |
 | `apps/server/src/player-reference.ts` | _needs a one-line description_ |
@@ -1350,7 +1355,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/crazyhouse-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/gomoku-rules-diagrams.ts` | Static Gomoku rules figures using the live board renderer, screened opening pool and kernel-checked winning positions. |
 | `apps/web/src/crazyhouse-xiangqi-sample-game.ts` | _needs a one-line description_ |
-| `apps/web/src/data-page.ts` | _needs a one-line description_ |
+| `apps/web/src/data-page.ts` | Monthly game downloads with shareable variant and public bot filters, checksums and data documentation |
 | `apps/web/src/embed-code.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-analysis.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-jieqi-lines.ts` | Play cached best-move alternatives in Jieqi game embeds using the public deal and shared replay board |
@@ -1387,3 +1392,9 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 `scripts/study-chapter-decisions.mjs`: dry-run diff / explicit apply of validated offline Jieqi luck through `prod:db`; chapter edits invalidate stored rows.
 
 `apps/server/src/xiangqi-rules-replay.test.ts`: stored standard xiangqi draw-limit replay, reconnect, postgame views and export regressions.
+
+`scripts/banqi-provider.mjs`: local opaque-executable direct/HTTP probe and loopback bridge; `docs/banqi-engine-providers.md` and `docs/examples/banqi-provider-*.json` document the checked contributor contract.
+
+`apps/server/src/internal-engine-test.ts` and `banqi-internal-provider.ts`: durable private Banqi worker identity, default-off operator routing, hydration/config checks and internal-count policy. `banqi-internal-provider.test.ts` covers gates, privacy, replay and worker version/deadline handling.
+
+`scripts/banqi-provider-game.mjs`: full local HTTP/WebSocket game through a separate opaque worker with persisted quiet-history hydration, private attribution and metrics/export assertions; `--keep` retains only its local review pair.

@@ -1,3 +1,4 @@
+import type { InternalEngineTest } from './internal-engine-test.js';
 /**
  * Thin adapter over the generic tenant room factory
  * (variant-tenant/room-factory.ts) for banqi. PvP + PvE (Tier-B MistyBanqi engine
@@ -35,6 +36,7 @@ export async function createBanqiLiveRoom(
   creatorPreference?: BanqiCreatorPreference,
   engine?: BanqiRoomEngineSeat,
   rated = false,
+  internalEngineTest?: InternalEngineTest,
 ): Promise<BanqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     banqiTenant,
@@ -46,7 +48,7 @@ export async function createBanqiLiveRoom(
       isPersistenceEnabled: ctx.isPersistenceEnabled,
       recordPersistenceError: ctx.recordPersistenceError,
     },
-    { timeControl, creatorPreference, engine, rated },
+    { timeControl, creatorPreference, engine, rated, internalEngineTest },
   );
   if (!created.ok) {
     return created.error === 'disabled'
