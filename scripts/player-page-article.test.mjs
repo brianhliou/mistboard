@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -44,4 +44,205 @@ test('a draft never updated needs no updateNote', () => {
   const result = build('publishedAt: 2026-10-02');
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stdout, /updateNote/);
+});
+
+function chartBuild(change = (a) => a) {
+  const dir = mkdtempSync(join(tmpdir(), 'player-page-chart-'));
+  const player = join(dir, 'player');
+  mkdirSync(join(player, 'specs'), { recursive: true });
+  mkdirSync(join(player, 'annot1m'));
+  mkdirSync(join(dir, 'content'));
+  const spec = {
+    iccs: 'h2e2 h9g7',
+    red: 'Red',
+    black: 'Black',
+    event: 'Synthetic',
+    resultText: '1-0',
+    annotations: { byPly: {} },
+  };
+  const site = {
+    engineId: 'pikafish-xiangqi-analysis@5',
+    depth: 12,
+    plies: [
+      { ply: 0, cp: 24, mate: null, best: 'h3e3' },
+      { ply: 1, cp: -53, mate: null, best: 'h10g8' },
+      { ply: 2, cp: null, mate: 5, best: null },
+    ],
+  };
+  writeFileSync(join(player, 'specs', 'fixture.json'), JSON.stringify(spec));
+  writeFileSync(
+    join(player, 'annot1m', 'fixture.json'),
+    JSON.stringify(
+      change({ game: { date: '2026-01-01' }, rows: [{ uci: 'h2e2' }, { uci: 'h9g7' }], site }),
+    ),
+  );
+  const draft = join(player, 'draft.md');
+  writeFileSync(
+    draft,
+    '---\nslug: test-player\nexport: testPlayerArticle\ntitle: Test Player\nsummary: Test\naudience: Test\nplayer: Red\nstatus: draft\n---\n\nIntro.\n\n## Game\n\n[board key=fixture ply=0]\n',
+  );
+  const args = [
+    SCRIPT,
+    draft,
+    '--out',
+    join(dir, 'content', 'test-player.ts'),
+    '--preview',
+    '--no-measure',
+  ];
+  return { dir, site, run: () => spawnSync(process.execPath, args, { encoding: 'utf8' }) };
+}
+test('generating an article automatically prepares exact stored site analysis and keeps it on regeneration', () => {
+  const f = chartBuild();
+  try {
+    const run = f.run();
+    assert.equal(run.status, 0, run.stderr);
+    const files = readdirSync(join(f.dir, 'analysis'));
+    assert.equal(files.length, 1);
+    assert.match(files[0], /^[0-9a-f]{14}\.json$/);
+    const first = readFileSync(join(f.dir, 'analysis', files[0]), 'utf8');
+    assert.deepEqual(JSON.parse(first).plies, f.site.plies);
+    assert.equal(JSON.parse(first).engineId, f.site.engineId);
+    assert.equal(f.run().status, 0);
+    assert.equal(readFileSync(join(f.dir, 'analysis', files[0]), 'utf8'), first);
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
+});
+test('automatic charts reject stale moves, wrong engine, missing/duplicate plies and malformed evals without computing replacements', () => {
+  const mutations = [
+    (a) => ({ ...a, rows: [{ uci: 'a0a1' }, a.rows[1]] }),
+    (a) => ({ ...a, site: { ...a.site, engineId: 'different-engine' } }),
+    (a) => ({ ...a, site: { ...a.site, plies: a.site.plies.slice(1) } }),
+    (a) => ({
+      ...a,
+      site: { ...a.site, plies: [a.site.plies[0], a.site.plies[0], a.site.plies[2]] },
+    }),
+    (a) => ({
+      ...a,
+      site: { ...a.site, plies: a.site.plies.map((p) => ({ ...p, cp: 'invalid' })) },
+    }),
+  ];
+  for (const mutate of mutations) {
+    const f = chartBuild(mutate);
+    try {
+      const run = f.run();
+      assert.notEqual(run.status, 0, 'invalid chart unexpectedly accepted');
+      assert.match(run.stderr, /chart|analysis/i);
+    } finally {
+      rmSync(f.dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test('source game metadata overrides older annotation fields and survives regeneration', () => {
+  const f = chartBuild();
+  try {
+    const player = join(f.dir, 'player');
+    mkdirSync(join(player, 'games'));
+    writeFileSync(
+      join(player, 'games', 'fixture.json'),
+      JSON.stringify({
+        key: 'fixture',
+        date: '2026-02-03 09:00',
+        round: 'Round 7',
+        timeControl: '5分＋3秒',
+        sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_143873.html',
+        moves: [
+          { from: 'h3', to: 'e3' },
+          { from: 'h10', to: 'g8' },
+        ],
+      }),
+    );
+    const run = f.run();
+    assert.equal(run.status, 0, run.stderr);
+    const path = join(f.dir, 'content', 'test-player.ts');
+    const first = readFileSync(path, 'utf8');
+    assert.match(first, /"date": "2026-02-03 09:00"/);
+    assert.match(first, /"timeControl": "5分＋3秒"/);
+    assert.match(first, /"round": "Round 7"/);
+    assert.equal(f.run().status, 0);
+    assert.equal(readFileSync(path, 'utf8'), first);
+    writeFileSync(
+      join(player, 'games', 'fixture.json'),
+      JSON.stringify({ key: 'wrong', date: '2026-02-03' }),
+    );
+    assert.notEqual(f.run().status, 0);
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
+});
+function embedBuild(directive) {
+  const dir = mkdtempSync(join(tmpdir(), 'player-page-embed-'));
+  try {
+    const path = join(dir, 'draft.md');
+    writeFileSync(
+      path,
+      `---\nslug: test\nexport: testArticle\ntitle: Test\nsummary: Test\naudience: Test\nstatus: draft\n---\n\nIntro.\n\n## Exercise\n\n${directive}\n`,
+    );
+    return spawnSync(process.execPath, [SCRIPT, path, '--preview'], { encoding: 'utf8' });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+test('embed directives preserve a relative line path and explicit solution booleans', () => {
+  for (const [raw, expected] of [
+    ['1', true],
+    ['true', true],
+    ['0', false],
+    ['false', false],
+  ]) {
+    const result = embedBuild(
+      `[embed path="/embed/line/xiangqi?moves=h3e3&fen=test" title="Find Meng’s reply" hideSolution=${raw}] Try the position.`,
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /kind: 'embed'/);
+    assert.ok(result.stdout.includes(`hideSolution: ${expected}`));
+    assert.ok(result.stdout.includes('Find Meng’s reply'));
+    assert.ok(result.stdout.includes('Try the position.'));
+  }
+});
+test('embed directives reject external URLs, encoded paths, fragments and ambiguous booleans', () => {
+  for (const path of [
+    'https://evil.test/embed/line/xiangqi?moves=h3e3',
+    '//evil.test/embed/line/xiangqi?moves=h3e3',
+    '/embed/line/jieqi?moves=h3e3',
+    '/embed/line/xiangqi?moves=h3e3#fragment',
+    '/embed/line/xiangqi/../xiangqi?moves=h3e3',
+    '/embed/line/%78iangqi?moves=h3e3',
+  ]) {
+    const result = embedBuild(`[embed path="${path}" title="Test" hideSolution=1]`);
+    assert.notEqual(result.status, 0, path);
+  }
+  for (const value of ['yes', '2', '', 'TRUE']) {
+    const result = embedBuild(
+      `[embed path="/embed/line/xiangqi?moves=h3e3" title="Test" hideSolution="${value}"]`,
+    );
+    assert.notEqual(result.status, 0, value);
+  }
+});
+
+test('a decision exercise may keep a thumbnail from its source game without embedding another replay', () => {
+  const f = chartBuild();
+  try {
+    const path = join(f.dir, 'player', 'draft.md');
+    const text = readFileSync(path, 'utf8')
+      .replace(
+        'status: draft',
+        'status: draft\nthumbnailBoard: fixture ply=1 half=bottom\nthumbnailAlt: A recorded decision',
+      )
+      .replace(
+        '[board key=fixture ply=0]',
+        '[embed path="/embed/line/xiangqi?moves=h3e3" title="Find the move" hideSolution=1] Try this.',
+      );
+    writeFileSync(path, text);
+    const result = f.run();
+    assert.equal(result.status, 0, result.stderr);
+    const module = readFileSync(join(f.dir, 'content', 'test-player.ts'), 'utf8');
+    assert.match(module, /const THUMBNAIL_GAME_RECORD/);
+    assert.match(module, /kind: 'svg'/);
+    assert.doesNotMatch(module, /kind: 'xq-replay'/);
+    assert.match(module, /kind: 'embed'/);
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
 });

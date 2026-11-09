@@ -1069,6 +1069,7 @@ export const ZH_HANS_REVIEW = {
   'review.luckCard.bothEffect.unlucky': '{side}胜率比平均结果低{points}个百分点',
   'review.luckCard.bothEffect.even': '{side}胜率与平均结果相当',
   'replay.solutionHidden': '找出杀法。',
+  'replay.whatWouldYouPlay': '你会怎么走？',
   'replay.showSolution': '显示答案',
   'replay.solutionHiddenHeader': '{study} · 第{n}章',
   'analysis.banqiTablebase.clockDraw': '依 {limit} 步规则判和',

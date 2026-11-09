@@ -34,6 +34,7 @@ import {
 } from './board-lastmove.js';
 import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import { t } from './i18n/catalog.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
 import { GLYPH_SUFFIX_CLASS } from './study-chapter-annotations.js';
@@ -62,6 +63,7 @@ import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed, XIANGQI_PIECE_SETS } from './xiangqi-piece-sets.js';
 import type { ReplayChartSource } from './xiangqi-replay-chart.js';
+import { normalizeReplayMetadata, type XiangqiReplayMetadata } from './xiangqi-replay-metadata.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
@@ -179,6 +181,8 @@ export type XiangqiReplaySpec = {
   red: string;
   black: string;
   event: string;
+  /** Verified recorded header fields; absent values are never inferred. */
+  metadata?: XiangqiReplayMetadata;
   // Optional standalone title, used when the record is a named study or manual
   // line rather than a game between two players. When set, the header reads
   // "<title> · <event>" instead of "<red> (Red) vs <black> (Black) · <event>".
@@ -586,9 +590,61 @@ export function mountXiangqiReplay(
 
   const header = document.createElement('div');
   header.className = 'xq-replay-header';
-  header.textContent = spec.title
+  const eventHeader = document.createElement('div');
+  eventHeader.className = 'xq-replay-header-event';
+  eventHeader.textContent = spec.title
     ? `${spec.title} · ${spec.event}`
     : `${spec.red}${copy.firstRole} vs ${spec.black}${copy.secondRole} · ${spec.event}`;
+  header.append(eventHeader);
+  if (spec.metadata !== undefined) {
+    const metadata = normalizeReplayMetadata(spec.metadata);
+    const locale = options.lang ?? 'en';
+    const list = document.createElement('dl');
+    list.className = 'xq-replay-metadata';
+    const add = (label: string, value?: string, href?: string) => {
+      const group = document.createElement('div');
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const detail = document.createElement('dd');
+      if (href && value) {
+        const link = document.createElement('a');
+        link.href = href;
+        link.textContent = value;
+        link.rel = 'noopener noreferrer';
+        detail.append(link);
+      } else detail.textContent = value || t('articles.replay.notRecorded', {}, locale);
+      group.append(term, detail);
+      list.append(group);
+    };
+    add(t('articles.replay.date', {}, locale), metadata.date);
+    // Translate notation only when the source explicitly records both units.
+    // Preserve the raw source fields in the spec, and never infer a control.
+    const roundNumber = metadata.round?.match(/^第(\d+)轮$/)?.[1];
+    const control = metadata.timeControl?.match(/^(\d{1,3})分[＋+](\d{1,3})秒$/);
+    add(
+      t('articles.replay.round', {}, locale),
+      roundNumber ? String(Number(roundNumber)) : metadata.round,
+    );
+    const timeControl = control
+      ? t(
+          'articles.replay.timeIncrement',
+          { minutes: Number(control[1]), seconds: Number(control[2]) },
+          locale,
+        )
+      : metadata.timeControl || t('articles.replay.notRecorded', {}, locale);
+    add(t('articles.replay.timeControl', {}, locale), timeControl);
+    add(t('articles.replay.source', {}, locale), metadata.source?.label, metadata.source?.url);
+    const clock = document.createElement('span');
+    clock.className = 'xq-replay-clock';
+    clock.textContent = `${t('articles.replay.timeControl', {}, locale)}: ${timeControl}`;
+    const details = document.createElement('details');
+    details.className = 'xq-replay-details';
+    const summary = document.createElement('summary');
+    summary.textContent = t('articles.replay.details', {}, locale);
+    details.append(summary, list);
+    header.classList.add('xq-replay-header--metadata');
+    header.append(clock, details);
+  }
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
@@ -725,7 +781,7 @@ export function mountXiangqiReplay(
     // The names live in the seat bars now, so the line above the card carries
     // only the event; repeating the players there read as a caption on a card
     // that already names them.
-    header.textContent = spec.title ? `${spec.title} · ${spec.event}` : spec.event;
+    eventHeader.textContent = spec.title ? `${spec.title} · ${spec.event}` : spec.event;
 
     const seat = (name: string, side: 'red' | 'black') => {
       const el = document.createElement('div');

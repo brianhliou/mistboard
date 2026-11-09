@@ -25,6 +25,7 @@ import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
 import './hover-grammar.css';
+import { trackArticleDecisionFrame } from './article-embed-engagement.js';
 import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
@@ -2631,6 +2632,7 @@ function renderEmbedBlock(block: EmbedBlock): HTMLElement {
   // its width, so no block's guess leaves empty space under it.
   iframe.style.aspectRatio = `${w} / ${h}`;
   autosizeEmbedFrame(iframe);
+  if (block.hideSolution) trackArticleDecisionFrame(iframe);
   figure.append(iframe);
   if (block.caption) {
     const caption = document.createElement('figcaption');

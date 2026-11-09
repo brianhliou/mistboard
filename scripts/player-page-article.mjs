@@ -8,6 +8,9 @@
 //   node scripts/player-page-article.mjs docs-private/players/cao-yanlei/draft.md
 //   node scripts/player-page-article.mjs <draft.md> --out apps/web/src/articles/content/<slug>.ts
 //
+// With --out, non-archive game charts are prepared from exact stored annot1m.site
+// series into the sibling analysis/ directory; missing/mismatched series fail
+// generation rather than silently dropping the chart. No engine is launched.
 // Without --out it prints to stdout. The player folder beside the draft holds
 // `specs/<key>.json` (annotated-game-to-spec.mjs output, one per board) and an
 // optional `positives.json` of reviewed positive glyphs. Line verdicts come from
@@ -64,12 +67,18 @@
 //   | Player | Rating |             the first row is the header, a |---| rule
 //   |---|---|                        line is skipped
 //   | Yin Sheng | 2454 |
+//   [embed path="/embed/line/xiangqi?moves=h3e3" title="Find the reply" hideSolution=1] Caption
 //   [FILL: what goes here]           a hole; refuses to build without --preview
 //   Anything else is a paragraph; wrapped lines are joined with a space.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import {
+  normalizeReplayMetadata,
+  replayMetadataFromGame,
+} from '../apps/web/src/xiangqi-replay-metadata.js';
+import { prepareArticleChart } from './lib/article-chart-cache.mjs';
 
 const args = process.argv.slice(2);
 const draftPath = args.find((a) => !a.startsWith('--'));
@@ -201,6 +210,37 @@ for (const chunk of chunks) {
       ...(a.ply != null ? { startPly: Number(a.ply) } : {}),
       ...(caption ? { caption } : {}),
     });
+  } else if (name === 'embed') {
+    if (typeof a.path !== 'string' || typeof a.title !== 'string' || !a.title.trim())
+      fail('[embed] needs path and title');
+    const path = a.path;
+    if (path.length > 12000 || /[\\\s]/u.test(path) || /\p{Cc}/u.test(path))
+      fail('[embed] needs a safe site-relative line path');
+    let url;
+    try {
+      url = new URL(path, 'https://mistboard.com');
+    } catch {
+      fail('[embed] invalid path');
+    }
+    if (
+      !path.startsWith('/embed/line/xiangqi?') ||
+      url.origin !== 'https://mistboard.com' ||
+      url.pathname !== '/embed/line/xiangqi' ||
+      url.hash
+    )
+      fail('[embed] only a site-relative /embed/line/xiangqi?... path is supported');
+    const hidden = a.hideSolution;
+    if (hidden !== undefined && !['0', '1', 'true', 'false'].includes(hidden))
+      fail('[embed] hideSolution must be 0, 1, true or false');
+    if (Object.keys(a).some((key) => !['path', 'title', 'hideSolution'].includes(key)))
+      fail('[embed] unknown attribute');
+    target.push({
+      kind: 'embed',
+      path,
+      title: a.title,
+      ...(hidden !== undefined ? { hideSolution: hidden === '1' || hidden === 'true' } : {}),
+      ...(caption ? { caption } : {}),
+    });
   } else if (name === 'cta') {
     const buttons = rest.split('|').map((b) => {
       const m = b.trim().match(/^(.*?)\s*->\s*(\S+)(?:\s*\((primary|secondary)\))?$/);
@@ -258,14 +298,58 @@ for (const [boardIndex, { key, constName }] of boards.entries()) {
     );
   }
   const record = JSON.parse(readFileSync(specPath, 'utf8'));
+  // The original source header is authoritative when it was enriched after
+  // annotation. No event/round-based guess for a missing time control.
+  let sourceGame;
+  for (const dir of ['annot1m', 'annot10m', 'site']) {
+    const file = join(playerDir, dir, `${key}.json`);
+    if (existsSync(file)) {
+      sourceGame = JSON.parse(readFileSync(file, 'utf8')).game;
+      if (sourceGame) break;
+    }
+  }
+  const original = join(playerDir, 'games', `${key}.json`);
+  if (existsSync(original)) {
+    const game = JSON.parse(readFileSync(original, 'utf8'));
+    if (game.key !== undefined && game.key !== key) fail(`${key}: source game key does not match`);
+    if (Array.isArray(game.moves)) {
+      const iccs = game.moves
+        .map(
+          (m) => `${m.from[0]}${Number(m.from.slice(1)) - 1}${m.to[0]}${Number(m.to.slice(1)) - 1}`,
+        )
+        .join(' ');
+      if (iccs !== record.iccs.trim().split(/\s+/).join(' '))
+        fail(`${key}: source game moves do not match`);
+    }
+    sourceGame = { ...sourceGame, ...game };
+  }
+  const metadata = sourceGame
+    ? replayMetadataFromGame(sourceGame)
+    : normalizeReplayMetadata(record.metadata);
+
   // The board id sits with the game's own fields, ahead of the annotations.
   const boardId = broadcastBoards[key];
   const { annotations: recordAnnotations, ...recordHead } = record;
   const spec = {
     ...recordHead,
+    metadata,
     ...(boardId ? { boardId } : {}),
     ...(recordAnnotations ? { annotations: recordAnnotations } : {}),
   };
+  // Every generated non-archive game carries its chart asset automatically.
+  // Reuse the exact stored site pass; never launch an engine during generation.
+  if (out && !boardId && !spec.startFen) {
+    try {
+      prepareArticleChart(
+        spec,
+        join(playerDir, 'annot1m', `${key}.json`),
+        join(dirname(out), '..', 'analysis'),
+        `dpxq ${key}, stored site-budget run`,
+      );
+    } catch (error) {
+      fail(`${key}: ${error.message}`);
+    }
+  }
   const byPly = spec.annotations?.byPly ?? {};
   for (const [ply, glyph] of Object.entries(positives[key] ?? {})) {
     if (ply === '_' || byPly[ply]) continue; // a judged negative keeps the ply
@@ -320,10 +404,11 @@ const MONTHS =
     ' ',
   );
 function gameDate(key) {
-  for (const dir of ['annot10m', 'annot1m', 'site']) {
+  for (const dir of ['games', 'annot10m', 'annot1m', 'site']) {
     const p = join(playerDir, dir, `${key}.json`);
     if (!existsSync(p)) continue;
-    const date = JSON.parse(readFileSync(p, 'utf8')).game?.date;
+    const source = JSON.parse(readFileSync(p, 'utf8'));
+    const date = source.game?.date ?? source.date;
     if (date) return date.slice(0, 10);
   }
   return null;
@@ -392,8 +477,18 @@ let boardThumb = null;
 if (meta.thumbnailBoard) {
   const [key, ...rest] = meta.thumbnailBoard.split(/\s+/);
   const a = attrs(rest.join(' '));
-  const board = boards.find((b) => b.key === key);
-  if (!board) fail(`thumbnailBoard ${key} is not a board on the page`);
+  let board = boards.find((b) => b.key === key);
+  if (!board) {
+    // An exercise can replace a full replay while its recorded game remains
+    // the card art. Bake only that record, without adding a replay or chart.
+    const path = join(playerDir, 'specs', `${key}.json`);
+    if (!existsSync(path)) fail(`thumbnailBoard ${key} has no recorded spec`);
+    const { annotations: _annotations, ...record } = JSON.parse(readFileSync(path, 'utf8'));
+    board = { key, constName: 'THUMBNAIL_GAME_RECORD' };
+    specConsts.push(
+      `const ${board.constName}: XiangqiReplaySpec = ${JSON.stringify(record, null, 2)};`,
+    );
+  }
   const ply = Number(a.ply);
   if (!Number.isInteger(ply) || ply < 0) fail('thumbnailBoard needs ply=<n>');
   if (a.half !== 'top' && a.half !== 'bottom') fail('thumbnailBoard needs half=top|bottom');

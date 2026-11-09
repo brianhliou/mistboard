@@ -80,6 +80,7 @@ import { helpmatesInXiangqiArticle } from './articles/content/helpmates-in-xiang
 import { shortestStalemateXiangqiArticle } from './articles/content/shortest-stalemate-xiangqi.js';
 import { generalBlunderChallengeArticle } from './articles/content/general-blunder-challenge.js';
 import { longestForcedMatesXiangqiArticle } from './articles/content/longest-forced-mates-xiangqi.js';
+import { mengFanruiArticle } from './articles/content/meng-fanrui.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
 import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
@@ -91,6 +92,7 @@ import { tangDanArticle } from './articles/content/tang-dan.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  mengFanruiArticle,
   fogFutureArticle,
   tangDanArticle,
   shortestStalemateXiangqiArticle,

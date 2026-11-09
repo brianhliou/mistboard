@@ -1758,6 +1758,58 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   text-align: center;
 }
 
+.xq-replay-header--metadata {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  width: 100%;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--site-border);
+  text-align: left;
+}
+.xq-replay-header--metadata .xq-replay-header-event {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--site-text);
+}
+.xq-replay-clock {
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.xq-replay-details {
+  font-size: 12px;
+  font-weight: 400;
+}
+.xq-replay-details summary {
+  cursor: pointer;
+}
+.xq-replay-details[open] {
+  flex: 1 0 100%;
+}
+.xq-replay-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+  gap: 6px 12px;
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.xq-replay-metadata dt {
+  color: var(--site-muted);
+}
+.xq-replay-metadata dd {
+  margin: 2px 0 0;
+  color: var(--site-text);
+  overflow-wrap: anywhere;
+}
+
 /* Second header line (event / context): de-emphasised under the players line. */
 .xq-replay-header-event {
   margin-top: 2px;
@@ -2206,6 +2258,20 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   height: 104px;
 }
 
+/* Keep a complete replay legible within a desktop browser, including its
+   clock, controls and graph. A phone retains its natural board size. */
+.xq-replay-header--metadata + .xq-replay-grid .xq-replay-chart {
+  height: 80px;
+}
+.xq-replay-header--metadata + .xq-replay-grid .advantage-chart__svg {
+  height: 68px;
+}
+@media (min-width: 721px) {
+  .xq-replay-header--metadata + .xq-replay-grid .xq-article-svg[data-xq-layout="single"] {
+    max-height: max(280px, min(480px, calc(100svh - 350px)));
+  }
+}
+
 .xq-replay:not(.xq-replay-annotated) .xq-replay-chart {
   max-width: 316px;
 }
@@ -2532,6 +2598,11 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
 
 /* Narrow: the move tree drops under the board instead of beside it. */
 @media (max-width: 720px) {
+  .xq-replay-details summary {
+    min-height: 44px;
+    line-height: 44px;
+  }
+
   .xq-replay-annotated .xq-replay-grid {
     grid-template-columns: minmax(0, 1fr);
   }

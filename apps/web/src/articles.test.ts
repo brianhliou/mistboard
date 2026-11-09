@@ -231,6 +231,7 @@ describe('article public listing gates', () => {
 
     expect(hrefs).toEqual([
       '/blog/fog-future',
+      '/blog/meng-fanrui',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/ten-thousand-games',
@@ -639,6 +640,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/meng-fanrui',
       '/blog/tang-dan',
       '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',

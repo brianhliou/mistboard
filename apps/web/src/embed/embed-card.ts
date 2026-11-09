@@ -338,7 +338,8 @@ function seatRow(seat: EmbedSeat, side: 'first' | 'second'): SeatRow {
 }
 
 /** The neutral header and credit text a hidden-solution card wears. */
-export type SolutionHiddenLabels = { header: string; credit: string };
+export const EMBED_ENGAGEMENT_MESSAGE = 'mistboard-embed-engaged';
+export type SolutionHiddenLabels = { header: string; credit: string; prompt?: string };
 
 export async function mountEmbedCard(
   root: HTMLElement,
@@ -408,6 +409,18 @@ export async function mountEmbedCard(
       headerTitle.textContent = options.header;
       credit.textContent = options.credit.text;
     }
+    // Aggregate engagement only, once per actual reveal, to an owned parent.
+    // A differently hosted parent cannot receive this target-origin message.
+    if (window.parent !== window) {
+      try {
+        window.parent.postMessage(
+          { type: EMBED_ENGAGEMENT_MESSAGE, action: 'solution-revealed' },
+          window.location.origin,
+        );
+      } catch {
+        /* A blocked parent must not interrupt showing the solution. */
+      }
+    }
   };
   if (options.hideSolution) {
     rail.classList.add('embed-card-rail--solution-hidden');
@@ -417,7 +430,7 @@ export async function mountEmbedCard(
     solutionCover.className = 'embed-card-solution-cover';
     const prompt = document.createElement('p');
     prompt.className = 'embed-card-solution-prompt';
-    prompt.textContent = t('replay.solutionHidden');
+    prompt.textContent = hiddenLabels?.prompt ?? t('replay.solutionHidden');
     const show = document.createElement('button');
     show.type = 'button';
     show.className = 'embed-card-solution-show';

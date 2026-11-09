@@ -1158,6 +1158,7 @@ export const EN_REVIEW = {
     'Cost {side} {points} points of win chance vs. an average outcome',
   'review.luckCard.bothEffect.even': 'About as good for {side} as an average outcome',
   'replay.solutionHidden': 'Find the mate.',
+  'replay.whatWouldYouPlay': 'What would you play?',
   'replay.showSolution': 'Show the solution',
   // A hidden-solution embed's header until the reveal: the study, then the chapter's number.
   'replay.solutionHiddenHeader': '{study} · chapter {n}',

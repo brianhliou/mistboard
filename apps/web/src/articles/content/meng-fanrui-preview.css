@@ -1,0 +1,5 @@
+/* Temporary local portrait review; publication permission remains unverified. */
+.article-figure-meng-preview {
+  width: min(320px, 100%);
+  margin-inline: auto;
+}
