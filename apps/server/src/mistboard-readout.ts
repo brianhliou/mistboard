@@ -1048,17 +1048,17 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
         `${report.deploys.disruptive.length} held new games over ${DEPLOY_HELD_CREATES_MS / 60_000} min or refused a create`,
     );
   }
+  if (report.collectorErrors.length > 0) {
+    lines.push(
+      `- Unknown sections: ${report.collectorErrors.map((error) => error.section).join(', ')}`,
+    );
+  }
   lines.push(
     '',
     '## Content',
     ...contentSummary(report.content),
     ...CONTENT_CAVEATS.map((line) => `- ${line}`),
   );
-  if (report.collectorErrors.length > 0) {
-    lines.push(
-      `- Unknown sections: ${report.collectorErrors.map((error) => error.section).join(', ')}`,
-    );
-  }
   lines.push('', `<!-- mistboard-readout-snapshot:${report.snapshotId} -->`, '');
   return lines.join('\n');
 }

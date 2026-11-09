@@ -837,6 +837,19 @@ function collectKeys(value: unknown, keys = new Set<string>()): Set<string> {
   return keys;
 }
 
+test('unknown collector sections stay under Operations before Content', () => {
+  const markdown = renderMistboardReadoutMarkdown(
+    reportWith({
+      ...emptyFacts,
+      collectorErrors: [{ section: 'mining', code: 'collector_failed' }],
+    }),
+  );
+  const operations = markdown.match(/^## Operations\n([\s\S]*?)(?=^## )/m)?.[1];
+  assert.ok(operations, 'Operations section exists');
+  assert.ok(operations.includes('- Unknown sections: mining'));
+  assert.doesNotMatch(markdown.slice(markdown.indexOf('## Content')), /Unknown sections:/);
+});
+
 test('the operations section carries the broadcast viewer peak only when the runtime has one', () => {
   const without = renderMistboardReadoutMarkdown(reportWith(emptyFacts));
   assert.doesNotMatch(without, /Broadcast viewers/);
