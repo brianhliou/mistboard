@@ -4685,8 +4685,18 @@ const ZH_HANS: Record<string, string> = {
   Inaccuracy: '不精确',
   Mistake: '失误',
   Blunder: '严重失误',
-  'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.':
-    '紫色骰子表示揭得不走运，灰色表示接近预期，青绿色表示幸运。点数越多、颜色越深，影响越大。',
+  'How the review measures luck': '复盘如何衡量运气',
+  'Once the piece turns over, we compare two numbers:': '棋子揭开后，我们比较两个数值：',
+  'your winning chance with the piece you actually got;': '实际揭出这枚棋子时，你的获胜机会；',
+  'the average over every piece you could have got.': '所有可能揭出的棋子所对应的平均获胜机会。',
+  'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.':
+    '两者之差就是这次揭子的运气。棋子旁的骰子会显示它：揭出的棋子好于平均时为青绿色，差于平均时为紫色，接近平均时为灰色；点数越多，影响越大。着法列表会给出数值，例如 +12%。',
+  'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.':
+    '举个例子：这次可能揭出三枚棋子中的一枚，一枚车、两枚兵。揭出车时，你的获胜机会是 70；揭出兵时是 45。平均值为 (70 + 45 + 45) / 3，约为 53。如果揭出车，这次就走运了 17 个百分点；如果揭出兵，就不走运了 8 个百分点。',
+  '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.':
+    '“可能揭出”指的是你无法排除的棋子。包括你所有仍未揭开的棋子，以及对手在它们尚未揭开时吃掉的你的棋子，因为你从未见过那些棋子是什么。',
+  "Luck averages out to zero over many flips, by design. Adding up a game's dice tells you who drew better. Your accuracy tells you who played better. The two never mix, so a lucky flip cannot flatter your accuracy and an unlucky one cannot spoil it.":
+    '按这种计算方式，经过很多次揭子后，运气的平均值会趋近于零。把一盘棋的骰子数值加起来，可以看出谁揭得更好。准确率则告诉你谁下得更好。两者从不混在一起，所以揭得幸运不会抬高你的准确率，揭得不幸也不会拉低它。',
   'Illustrative examples. The same revealed piece can be lucky or unlucky depending on the position.':
     '示意图。同一种揭出的棋子，在不同局面下可能幸运，也可能不幸。',
   'Very unlucky': '非常不幸',
@@ -4740,15 +4750,17 @@ const ZH_HANS: Record<string, string> = {
     '同一盘棋，逐步评分。点击曲线或棋谱，回到局势转折的地方。',
   'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
     '已分析的揭棋对局，显示优势曲线、双方准确率和着法标记。',
-  'Good decisions and lucky flips are different': '好决定和好手气是两回事',
-  'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.':
-    '一步棋可以选得很好，却揭出不走运的棋子。着法质量符号评价揭子前的选择；骰子标记表示这次揭出的棋子，比其他可能揭出的棋子好或差多少。',
+  'How the review grades a move': '复盘如何为着法评分',
+  'Before each move, the engine estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
+    '每步棋之前，引擎都会估计你的获胜机会，范围是 0 到 100。普通着法的评分方式与 Lichess 评国际象棋相同：把你的着法与引擎找到的最佳着法比较。如果你的着法损失了至少 5 个百分点的获胜机会，就会被标为不精确；损失达到 10 个百分点是失误，达到 15 个百分点是严重失误。你的准确率就是根据每步棋的这些损失计算出来的。',
+  'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.':
+    '揭开暗子的着法更难评，因为还没有人知道下面是什么。因此，引擎用平均值来评估这一步。它会考虑对你而言仍可能是暗子的每一种棋子，计算揭出该种棋子时你的获胜机会，再按这种棋子剩余的数量加权。我们评分用的就是这个平均值。评分评价的是你根据当时已知信息作出的选择，所以绝不会取决于实际揭出了什么。',
   'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
     '符号评价决定，骰子说明揭子的结果。两者都会显示在棋子旁和棋谱里。',
   'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.':
     '揭棋局面：移动后的棋子旁有着法质量符号和揭子运气骰子，棋谱中显示更好的着法。',
-  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
-    '当另一步明显更好时，复盘会给出最佳着法建议。你可以开启候选着法，探索更多选择。准确率只衡量决定，所以揭得幸运不会抬高它，揭得不幸也不会拉低它。',
+  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates.':
+    '当另一步明显更好时，复盘会给出最佳着法建议。你可以开启候选着法，探索更多选择。',
   'The same decision and luck marks on a phone.': '手机上也有同样的决定和运气标记。',
   'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.':
     '手机上的同一盘揭棋复盘，显示着法质量和揭子运气注解。',
@@ -6501,7 +6513,8 @@ const ZH_HANS: Record<string, string> = {
     '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
   'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
-  'Corrected how a face-down piece is described.': '更正了对暗子走法的说明。',
+  'Added how the review grades a flip and measures luck.':
+    '补充了复盘如何为揭子着法评分及衡量运气的说明。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
@@ -11438,8 +11451,18 @@ const ZH_HANT: Record<string, string> = {
   Inaccuracy: '不精確',
   Mistake: '失誤',
   Blunder: '嚴重失誤',
-  'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.':
-    '紫色骰子表示揭得不走運，灰色表示接近預期，青綠色表示幸運。點數越多、顏色越深，影響越大。',
+  'How the review measures luck': '復盤如何衡量運氣',
+  'Once the piece turns over, we compare two numbers:': '棋子揭開後，我們比較兩個數值：',
+  'your winning chance with the piece you actually got;': '實際揭出這枚棋子時，你的獲勝機會；',
+  'the average over every piece you could have got.': '所有可能揭出的棋子所對應的平均獲勝機會。',
+  'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.':
+    '兩者之差就是這次揭子的運氣。棋子旁的骰子會顯示它：揭出的棋子好於平均時為青綠色，差於平均時為紫色，接近平均時為灰色；點數越多，影響越大。著法列表會給出數值，例如 +12%。',
+  'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.':
+    '舉個例子：這次可能揭出三枚棋子中的一枚，一枚車、兩枚兵。揭出車時，你的獲勝機會是 70；揭出兵時是 45。平均值為 (70 + 45 + 45) / 3，約為 53。如果揭出車，這次就走運了 17 個百分點；如果揭出兵，就不走運了 8 個百分點。',
+  '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.':
+    '「可能揭出」指的是你無法排除的棋子。包括你所有仍未揭開的棋子，以及對手在它們尚未揭開時吃掉的你的棋子，因為你從未見過那些棋子是什麼。',
+  "Luck averages out to zero over many flips, by design. Adding up a game's dice tells you who drew better. Your accuracy tells you who played better. The two never mix, so a lucky flip cannot flatter your accuracy and an unlucky one cannot spoil it.":
+    '按這種計算方式，經過很多次揭子後，運氣的平均值會趨近於零。把一盤棋的骰子數值加起來，可以看出誰揭得更好。準確率則告訴你誰下得更好。兩者從不混在一起，所以揭得幸運不會抬高你的準確率，揭得不幸也不會拉低它。',
   'Illustrative examples. The same revealed piece can be lucky or unlucky depending on the position.':
     '示意圖。同一種揭出的棋子，在不同局面下可能幸運，也可能不幸。',
   'Very unlucky': '非常不幸',
@@ -11493,15 +11516,17 @@ const ZH_HANT: Record<string, string> = {
     '同一盤棋，逐步評分。點擊曲線或棋譜，回到局勢轉折的地方。',
   'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
     '已分析的揭棋對局，顯示優勢曲線、雙方準確率和著法標記。',
-  'Good decisions and lucky flips are different': '好決定和好手氣是兩回事',
-  'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.':
-    '一步棋可以選得很好，卻揭出不走運的棋子。著法質量符號評價揭子前的選擇；骰子標記表示這次揭出的棋子，比其他可能揭出的棋子好或差多少。',
+  'How the review grades a move': '復盤如何為著法評分',
+  'Before each move, the engine estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
+    '每步棋之前，引擎都會估計你的獲勝機會，範圍是 0 到 100。普通著法的評分方式與 Lichess 評西洋棋相同：把你的著法與引擎找到的最佳著法比較。如果你的著法損失了至少 5 個百分點的獲勝機會，就會被標為不精確；損失達到 10 個百分點是失誤，達到 15 個百分點是嚴重失誤。你的準確率就是根據每步棋的這些損失計算出來的。',
+  'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.':
+    '揭開暗子的著法更難評，因為還沒有人知道下面是什麼。因此，引擎用平均值來評估這一步。它會考慮對你而言仍可能是暗子的每一種棋子，計算揭出該種棋子時你的獲勝機會，再按這種棋子剩餘的數量加權。我們評分用的就是這個平均值。評分評價的是你根據當時已知資訊作出的選擇，所以絕不會取決於實際揭出了什麼。',
   'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
     '符號評價決定，骰子說明揭子的結果。兩者都會顯示在棋子旁和棋譜裡。',
   'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.':
     '揭棋局面：移動後的棋子旁有著法質量符號和揭子運氣骰子，棋譜中顯示更好的著法。',
-  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
-    '當另一步明顯更好時，復盤會給出最佳著法建議。你可以開啓候選著法，探索更多選擇。準確率只衡量決定，所以揭得幸運不會抬高它，揭得不幸也不會拉低它。',
+  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates.':
+    '當另一步明顯更好時，復盤會給出最佳著法建議。你可以開啟候選著法，探索更多選擇。',
   'The same decision and luck marks on a phone.': '手機上也有同樣的決定和運氣標記。',
   'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.':
     '手機上的同一盤揭棋復盤，顯示著法質量和揭子運氣註解。',
@@ -13034,7 +13059,8 @@ const ZH_HANT: Record<string, string> = {
     '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
   'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
-  'Corrected how a face-down piece is described.': '更正了對暗子走法的說明。',
+  'Added how the review grades a flip and measures luck.':
+    '補充了復盤如何為揭子著法評分及衡量運氣的說明。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
