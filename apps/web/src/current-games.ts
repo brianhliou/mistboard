@@ -431,6 +431,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           card.game.roomId,
           {
             autoplay: false,
+            followEnd: true,
             hideReserve: !liveCardShowsHands(card.game.gameSpecId),
             live: true,
             loadPostgameOverride: async (roomId) =>
@@ -447,8 +448,6 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       } else {
         await card.handle.loadGame(card.game.roomId);
       }
-      const end = card.handle.plyCount?.() ?? 0;
-      card.handle.jumpToPly?.(end);
       card.shownPly = card.game.ply;
     };
     card.mounting = (card.mounting ?? Promise.resolve()).then(run).catch((err) => {
@@ -566,6 +565,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
         game.roomId,
         {
           autoplay: false,
+          followEnd: true,
           hideReserve: true,
           loaderForId: apiEventLoader,
           metadataByRoomId: { [game.roomId]: gameMetaForGame(game) },
@@ -593,7 +593,6 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
         return;
       }
       entry.handle = handle;
-      handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
       fitFinishedBoard(host);
       // The names were placed for the expected orientation; the mounted board
       // has the final word.
