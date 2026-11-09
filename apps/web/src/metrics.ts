@@ -167,7 +167,7 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
 
   const parts: HTMLElement[] = [];
   const cards = document.createElement('div');
-  cards.className = 'metrics-cards';
+  cards.className = 'metrics-cards stats-cards';
   cards.append(
     statCard(
       t('stats.gamesPlayed', {}, locale),
@@ -183,11 +183,12 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
     cards.append(statCard(t('stats.accounts', {}, locale), publicStats.accounts));
   }
   if (live) cards.append(statCard(t('stats.inPlay', {}, locale), live.playing));
+  if (cards.childElementCount === 2) cards.classList.add('stats-cards-two');
   parts.push(cards);
   const updated = document.createElement('time');
   updated.className = 'stats-updated';
   updated.dateTime = publicStats.generatedAt;
-  parts.push(updated);
+  heading.after(updated);
 
   const weekly = publicStats.weeklyCompletedGames ?? [];
   if (weekly.length > 0) {

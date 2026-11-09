@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type DeployHistoryEntry, deployRowCells, mountMetrics } from './metrics.js';
@@ -317,7 +318,11 @@ describe('metrics page', () => {
       const label = root.querySelector<HTMLTimeElement>('.stats-updated')!;
       expect(label.textContent).toBe(justNow);
       expect(label.dateTime).toBe(publicStats.generatedAt);
-      expect(label.previousElementSibling?.className).toBe('metrics-cards');
+      expect(label.previousElementSibling?.className).toBe('site-section-heading');
+      expect(
+        label.compareDocumentPosition(root.querySelector('.metrics-cards')!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       await vi.advanceTimersByTimeAsync(1);
       expect(label.textContent).toBe(minuteAgo);
       await vi.advanceTimersByTimeAsync(3 * 60_000);
@@ -518,6 +523,7 @@ describe('metrics page', () => {
     expect(root.querySelector('.static-page-rail-link.active')?.textContent).toBe('Statistics');
     const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
     expect(cardLabels).toEqual(['Games played', 'Registered players', 'In play now']);
+    expect(root.querySelectorAll('.stats-cards > .metrics-card')).toHaveLength(3);
     const gamesCard = [...root.querySelectorAll('.metrics-card')].find(
       (c) => c.querySelector('.metrics-card-label')?.textContent === 'Games played',
     );
@@ -572,6 +578,29 @@ describe('metrics page', () => {
     expect(variantSection?.textContent).not.toContain('retired');
 
     expect(vi.mocked(fetch)).not.toHaveBeenCalledWith('/api/stats/admin', expect.anything());
+  });
+
+  it('keeps two public cards in equal columns when live stats are unavailable', async () => {
+    stubFetch({ '/api/live-stats': () => json({}, 503) });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: false });
+    const cards = root.querySelector('.stats-cards');
+    expect(cards?.children).toHaveLength(2);
+    expect(cards?.classList.contains('stats-cards-two')).toBe(true);
+  });
+
+  it('uses three shrinkable public columns at every width, including phones', () => {
+    const css = readFileSync('src/metrics.css', 'utf8');
+    expect(css).toMatch(
+      /\.stats-cards \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+    expect(css).toMatch(
+      /\.stats-cards-two \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
+    );
+    // The admin grid keeps its existing minimum card width and wrapping.
+    expect(css).toMatch(
+      /\.metrics-cards \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(130px, 1fr\)\)/,
+    );
   });
 
   it('public /stats renders in Traditional Chinese', async () => {
