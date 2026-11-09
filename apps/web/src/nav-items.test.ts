@@ -202,7 +202,7 @@ describe('phone nav', () => {
     },
   );
 
-  it('lists the thirteen About destinations in their rail order', async () => {
+  it('lists the About destinations in their rail order', async () => {
     const { mistboardMenuItems } = await import('./nav-items.js');
     expect(mistboardMenuItems().map((item) => item.href)).toEqual([
       '/about',
@@ -211,13 +211,19 @@ describe('phone nav', () => {
       '/changelog',
       '/faq',
       '/contact',
+      '/lag',
+      '/verify-title',
       '/patron',
       '/terms',
       '/privacy',
       '/source',
+      '/contribute',
       '/creators',
       '/champions',
       '/developers',
+      '/data',
+      '/api-docs',
+      '/thanks',
     ]);
   });
 });
