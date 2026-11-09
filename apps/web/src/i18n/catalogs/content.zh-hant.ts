@@ -217,6 +217,8 @@ export const ZH_HANT_CONTENT = {
     '這裡的對局量。計入人與人或人與引擎之間已完成的對局；引擎對引擎的比賽和測試對局不計入。',
   'stats.gamesPlayed': '已完成對局',
   'stats.gamesThisMonth': '最近 30 天 +{count}',
+  'stats.updatedJustNow': '剛剛更新',
+  'stats.updatedMinutesAgo': '{count} 分鐘前更新',
   'stats.accounts': '註冊玩家',
   'stats.inPlay': '正在進行',
   'stats.gamesPerWeek': '每週對局數',

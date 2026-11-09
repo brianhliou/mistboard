@@ -119,6 +119,7 @@ const adminMetrics = {
   accountsLast30d: 11,
   humanGames: 682,
   humanGamesLast7d: 30,
+  gamePace: { thisWeekSoFar: 30, lastWeekSamePoint: 20, lastWeekTotal: 70 },
   publicHumanGames: 540,
   activePlayers28d: 12,
   previousActivePlayers28d: 9,
@@ -290,12 +291,73 @@ describe('metrics page', () => {
   );
 
   afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
     window.history.replaceState(null, '', '/metrics');
     vi.unstubAllGlobals();
     document.body.replaceChildren();
     document.body.className = '';
     window.history.replaceState(null, '', '/metrics');
   });
+
+  it.each([
+    ['en', '/stats', 'Updated just now', 'Updated 1 min ago', 'Updated 4 min ago'],
+    ['zh-Hans', '/zh-hans/stats', '刚刚更新', '1 分钟前更新', '4 分钟前更新'],
+    ['zh-Hant', '/zh-hant/stats', '剛剛更新', '1 分鐘前更新', '4 分鐘前更新'],
+  ] as const)(
+    'keeps the payload age current in %s while /stats stays open',
+    async (locale, path, justNow, minuteAgo, minutesAgo) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', path);
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.parse(publicStats.generatedAt) + 59_999);
+      stubFetch();
+      const root = mountRoot();
+      await mountMetrics(root, { admin: false });
+      const label = root.querySelector<HTMLTimeElement>('.stats-updated')!;
+      expect(label.textContent).toBe(justNow);
+      expect(label.dateTime).toBe(publicStats.generatedAt);
+      expect(label.previousElementSibling?.className).toBe('metrics-cards');
+      await vi.advanceTimersByTimeAsync(1);
+      expect(label.textContent).toBe(minuteAgo);
+      await vi.advanceTimersByTimeAsync(3 * 60_000);
+      expect(label.textContent).toBe(minutesAgo);
+      expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+      root.remove();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each([
+    [30, 20, '+50.0%'],
+    [10, 20, '-50.0%'],
+    [20, 20, '+0.0%'],
+    [0, 0, '0%'],
+    [10, 0, 'no games at this point last week'],
+  ])(
+    'renders admin-only Pacific pace for %i games versus %i',
+    async (thisWeekSoFar, lastWeekSamePoint, change) => {
+      window.history.replaceState(null, '', '/metrics');
+      stubFetch({
+        '/api/stats/admin': () =>
+          json({
+            ...adminMetrics,
+            gamePace: { thisWeekSoFar, lastWeekSamePoint, lastWeekTotal: 70 },
+          }),
+      });
+      const root = mountRoot();
+      await mountMetrics(root, { admin: true });
+      expect(root.querySelector('.metrics-game-pace')?.textContent).toBe(
+        `This week so far: ${thisWeekSoFar}, last week at the same point: ${lastWeekSamePoint} (${change}), last week total: 70. Pacific weeks.`,
+      );
+      await mountMetrics(root, { admin: false });
+      expect(root.querySelector('.metrics-game-pace')).toBeNull();
+      stubFetch({ '/api/stats/admin': () => json({}, 403) });
+      await mountMetrics(root, { admin: true });
+      expect(root.querySelector('.metrics-game-pace')).toBeNull();
+    },
+  );
 
   it('explains return visits with fixed next-week and fourth-week columns', async () => {
     window.history.replaceState(null, '', '/metrics?tab=retention');

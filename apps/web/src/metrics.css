@@ -152,6 +152,13 @@
   line-height: 1.5;
 }
 
+.stats-updated {
+  display: block;
+  margin: -6px 0 14px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
 /* Public /stats weekly chart: variant chips above the weekly primitive, the
    in-progress week as a line of text below it instead of a dashed dive. */
 .stats-weekly .stats-chart-filter {

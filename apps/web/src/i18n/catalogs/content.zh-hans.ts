@@ -217,6 +217,8 @@ export const ZH_HANS_CONTENT = {
     '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
   'stats.gamesPlayed': '已完成对局',
   'stats.gamesThisMonth': '最近 30 天 +{count}',
+  'stats.updatedJustNow': '刚刚更新',
+  'stats.updatedMinutesAgo': '{count} 分钟前更新',
   'stats.accounts': '注册玩家',
   'stats.inPlay': '正在进行',
   'stats.gamesPerWeek': '每周对局数',

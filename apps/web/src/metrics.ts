@@ -98,6 +98,11 @@ export type AdminMetrics = {
   accountsLast30d: number;
   humanGames: number;
   humanGamesLast7d: number;
+  gamePace: {
+    thisWeekSoFar: number;
+    lastWeekSamePoint: number;
+    lastWeekTotal: number;
+  };
   publicHumanGames: number;
   activePlayers28d: number;
   previousActivePlayers28d: number;
@@ -179,6 +184,10 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
   }
   if (live) cards.append(statCard(t('stats.inPlay', {}, locale), live.playing));
   parts.push(cards);
+  const updated = document.createElement('time');
+  updated.className = 'stats-updated';
+  updated.dateTime = publicStats.generatedAt;
+  parts.push(updated);
 
   const weekly = publicStats.weeklyCompletedGames ?? [];
   if (weekly.length > 0) {
@@ -202,6 +211,21 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
     ),
   );
   body.replaceChildren(...parts);
+  updateStatsAge(updated, publicStats.generatedAt, locale);
+}
+
+// Recompute from the payload's timestamp, including after a sleeping tab wakes.
+// Stop scheduling when navigation removes the label from the document.
+function updateStatsAge(label: HTMLElement, generatedAt: string, locale: Locale): void {
+  const generatedMs = Date.parse(generatedAt);
+  if (!Number.isFinite(generatedMs) || !label.isConnected) return;
+  const age = Math.max(0, Date.now() - generatedMs);
+  const minutes = Math.floor(age / 60_000);
+  label.textContent =
+    minutes < 1
+      ? t('stats.updatedJustNow', {}, locale)
+      : t('stats.updatedMinutesAgo', { count: formatStatNumber(minutes, locale) }, locale);
+  window.setTimeout(() => updateStatsAge(label, generatedAt, locale), 60_000 - (age % 60_000));
 }
 
 async function mountAdminMetrics(root: HTMLElement): Promise<void> {
@@ -275,6 +299,7 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   if (tab === 'play')
     parts.push(
       buildWeekReview(admin),
+      buildGamePace(admin.gamePace),
       lede,
       charts[2],
       charts[0],
@@ -299,6 +324,22 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function buildGamePace(pace: AdminMetrics['gamePace']): HTMLElement {
+  const line = document.createElement('p');
+  line.className = 'metrics-game-pace';
+  const change =
+    pace.lastWeekSamePoint === 0
+      ? pace.thisWeekSoFar === 0
+        ? '0%'
+        : 'no games at this point last week'
+      : `${pace.thisWeekSoFar >= pace.lastWeekSamePoint ? '+' : ''}${(
+          (100 * (pace.thisWeekSoFar - pace.lastWeekSamePoint)) / pace.lastWeekSamePoint
+        ).toFixed(1)}%`;
+  line.textContent = `This week so far: ${formatStatNumber(pace.thisWeekSoFar)}, last week at the same point: ${formatStatNumber(pace.lastWeekSamePoint)} (${change}), last week total: ${formatStatNumber(pace.lastWeekTotal)}. Pacific weeks.`;
+  return line;
+}
+
 function buildWeekReview(admin: AdminMetrics): HTMLElement {
   const section = document.createElement('section');
   section.className = 'metrics-week-review';
