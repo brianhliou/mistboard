@@ -185,6 +185,22 @@ describe('site author byline and drafted note', () => {
 });
 
 describe('update note and method box', () => {
+  it('keeps each labeled date in its own span', () => {
+    const page = buildArticlePage('site-piece');
+    const dates = page.querySelector('.article-meta-dates');
+    expect(Array.from(dates?.children ?? []).map((date) => date.textContent)).toEqual([
+      'Published September 1, 2026',
+      'Updated September 10, 2026',
+    ]);
+    expect(dates?.querySelectorAll('.article-meta-date')).toHaveLength(2);
+  });
+
+  it('omits a redundant updated date', () => {
+    const dates = buildArticlePage('site-same-day').querySelector('.article-meta-dates');
+    expect(dates?.querySelectorAll('.article-meta-date')).toHaveLength(1);
+    expect(dates?.textContent).toBe('Published September 1, 2026');
+  });
+
   it('says what changed when the updated date differs from the publish date', () => {
     const page = buildArticlePage('site-piece');
     const note = page.querySelector('.article-update-note');

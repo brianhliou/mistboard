@@ -1,5 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { afterEach, describe, expect, it } from 'vitest';
+import { isArticleTranslationPublished } from './article-i18n.js';
+import { CROSS_LANGUAGE_PAIRS } from './articles/language-pairs.js';
 import { buildArticlePage } from './articles.js';
+import { articles } from './articles-data.js';
 import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 
 // The page chrome (table of contents, dates, <html lang>) follows the site UI
@@ -61,31 +66,61 @@ describe('article content language', () => {
   });
 });
 
-// A Vietnamese page is left out of the blog index by design, so the link
-// between the two pages of a pair is the only crawlable path to it; until
-// 2026-10-21 /blog/lai-ly-huynh-co-tuong had none (articles/language-pairs.ts).
 describe('cross-language link', () => {
-  it('links the English article to its Vietnamese page, named in Vietnamese', () => {
+  it.each(CROSS_LANGUAGE_PAIRS)('omits the Vietnamese link on $en', ({ en }) => {
     useUiLocale('en');
-    const link =
-      buildArticlePage('lai-ly-huynh').querySelector<HTMLAnchorElement>('.article-meta-language');
-    expect(link?.getAttribute('href')).toBe('/blog/lai-ly-huynh-co-tuong');
-    expect(link?.getAttribute('hreflang')).toBe('vi');
-    expect(link?.textContent).toBe('Tiếng Việt');
+    expect(buildArticlePage(en).querySelector('.article-meta-language')).toBeNull();
   });
 
-  it('links the Vietnamese page back to English', () => {
+  it.each(CROSS_LANGUAGE_PAIRS)('links $vi back to English in its byline', ({ en, vi }) => {
     useUiLocale('en');
-    const link =
-      buildArticlePage('lai-ly-huynh-co-tuong').querySelector<HTMLAnchorElement>(
-        '.article-meta-language',
-      );
-    expect(link?.getAttribute('href')).toBe('/blog/lai-ly-huynh');
+    const page = buildArticlePage(vi!);
+    const link = page.querySelector<HTMLAnchorElement>('.article-meta-language');
+    const target = articles.find((article) => article.slug === en)!;
+    expect(link?.getAttribute('href')).toBe(`/${target.kind === 'rules' ? 'rules' : 'blog'}/${en}`);
+    expect(link?.getAttribute('hreflang')).toBe('en');
+    expect(link?.getAttribute('lang')).toBe('en');
     expect(link?.textContent).toBe('English');
+    const byline = page.querySelector('.article-meta-byline');
+    expect(link?.parentElement).toBe(byline);
+    expect(byline?.textContent).toMatch(/ · English$/);
   });
 
   it('draws no language link on an article without a partner', () => {
     useUiLocale('en');
     expect(buildArticlePage(SLUG).querySelector('.article-meta-language')).toBeNull();
+  });
+
+  it('keeps the prerendered hreflang group for the English and Vietnamese pages', () => {
+    // Exercise the unchanged build-time group builder without running the entire
+    // site build. Its dependencies are the real catalog and language-pair table.
+    const prerender = readFileSync('scripts/prerender-articles.mjs', 'utf8');
+    const groupBuilder = prerender.slice(
+      prerender.indexOf('  const englishRootOf = new Map();'),
+      prerender.indexOf('  let count = 0;'),
+    );
+    expect(groupBuilder).toContain('const translationGroupLinks =');
+    const links = runInNewContext(
+      `${groupBuilder}\n[translationGroupLinks(publishedBySlug.get('jieqi-platform')), translationGroupLinks(publishedBySlug.get('co-up'))]`,
+      {
+        CROSS_LANGUAGE_PAIRS,
+        publishedBySlug: new Map(articles.map((article) => [article.slug, article])),
+        host: 'https://mistboard.test',
+        isArticleTranslationPublished,
+      },
+    );
+    const expected = [
+      ['en', '/blog/jieqi-platform'],
+      ['zh-Hans', '/zh-hans/blog/jieqi-platform'],
+      ['zh-Hant', '/zh-hant/blog/jieqi-platform'],
+      ['vi', '/blog/co-up'],
+      ['x-default', '/blog/jieqi-platform'],
+    ]
+      .map(
+        ([lang, path]) =>
+          `<link rel="alternate" hreflang="${lang}" href="https://mistboard.test${path}" />`,
+      )
+      .join('');
+    expect(links).toEqual([expected, expected]);
   });
 });

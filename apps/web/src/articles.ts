@@ -1141,22 +1141,28 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   if (article.publishedAt) {
     const dates = document.createElement('span');
     dates.className = 'article-meta-dates';
-    dates.textContent = `${t('articles.published', {}, locale)} ${formatArticleDate(
+    const published = document.createElement('span');
+    published.className = 'article-meta-date';
+    published.textContent = `${t('articles.published', {}, locale)} ${formatArticleDate(
       article.publishedAt,
       locale,
     )}`;
+    dates.append(published);
     if (article.updatedAt && article.updatedAt !== article.publishedAt) {
-      dates.textContent += ` · ${t('articles.updated', {}, locale)} ${formatArticleDate(
+      const updated = document.createElement('span');
+      updated.className = 'article-meta-date';
+      updated.textContent = `${t('articles.updated', {}, locale)} ${formatArticleDate(
         article.updatedAt,
         locale,
       )}`;
+      dates.append(updated);
     }
     metaRow.append(dates);
   }
-  // The page's other language, named in that language. A Vietnamese page is
-  // left out of the blog index by design, so this link is the only crawlable
-  // path to it (articles/language-pairs.ts).
+  // Vietnamese readers can return to the English page from the byline.
+  // The sitemap and hreflang alternates cover discovery in both directions.
   for (const partner of languagePartnersOf(base.slug)) {
+    if (base.sourceLang !== 'vi' || partner.lang !== 'en') continue;
     const target = findArticle(partner.slug);
     if (!target || !isArticleVisibleInThisEnv(target)) continue;
     const link = document.createElement('a');
@@ -1165,7 +1171,14 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     link.hreflang = partner.lang;
     link.lang = partner.lang;
     link.textContent = LANGUAGE_ENDONYMS[partner.lang];
-    metaRow.append(link);
+    let byline = metaRow.querySelector('.article-meta-byline');
+    if (!byline) {
+      byline = document.createElement('span');
+      byline.className = 'article-meta-byline';
+      metaRow.prepend(byline);
+    }
+    if (byline.hasChildNodes()) byline.append(' · ');
+    byline.append(link);
   }
   if (metaRow.childElementCount > 0) header.append(metaRow);
 
