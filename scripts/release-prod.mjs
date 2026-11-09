@@ -15,6 +15,10 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { tsImport } from 'tsx/esm/api';
 import { printGateSummary, runCiChecks, runGateCommand, skippedCommand } from './ci-checks.mjs';
+import {
+  assertAgentBranchesAccountedFor,
+  readUnshippedAgentBranches,
+} from './lib/agent-branches.mjs';
 import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
   assertEntriesAreNew,
@@ -42,8 +46,6 @@ import {
   describeShipWindow,
   evaluateShipWindow,
   lastProdPush,
-  parkedBranches,
-  parseBranchRefs,
   parseExtraShipReason,
   parseReleaseLog,
   parseWindowHours,
@@ -184,6 +186,7 @@ try {
     process.exit(0);
   }
   if (!options.plan) ensureCleanWorktree();
+  if (options.push || options.plan) enforceAgentBranchAccounting();
   if (options.changelog.length > 0) checkChangelogPreconditions();
   // One release at a time on this machine, taken before anything reads or
   // fetches origin/main: a release that queued finds main moved by the one it
@@ -197,6 +200,7 @@ try {
     await takeReleaseLock();
     enforceShipWindow('after taking the release lock');
     catchUpBeforeGate();
+    enforceAgentBranchAccounting();
   }
   if (options.changelog.length > 0 && !options.plan) commitChangelog();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
@@ -279,6 +283,7 @@ try {
 
   if (options.push) {
     catchUpWithMain();
+    enforceAgentBranchAccounting();
     release.candidateBranch = `release/${release.headRevision}`;
     runTimed(
       'git push release candidate',
@@ -331,6 +336,7 @@ try {
         'main moved during candidate CI; re-run the release to test a fresh candidate',
       );
     }
+    enforceAgentBranchAccounting();
     // Games may have started during CI when the initial pool was empty.
     // Re-read immediately before the push that actually deploys.
     if (release.deployRequired && !release.drainRequired) {
@@ -1995,19 +2001,19 @@ function readRemoteTip() {
   return remoteTipCache;
 }
 
-// Local agent/* branches with commits the remote main lacks, and their
-// worktrees: the work to batch into the next ship.
+function enforceAgentBranchAccounting() {
+  assertAgentBranchesAccountedFor({
+    root: workdir,
+    head: options.head,
+    base: `${options.remote}/${options.targetBranch}`,
+  });
+}
+
+// The ship-window reminder uses the same branch inventory as the release gate.
 function readParkedWork() {
   try {
     const base = readRemoteTip()?.revision ?? `${options.remote}/${options.targetBranch}`;
-    const refs = parseBranchRefs(
-      git(['for-each-ref', '--format=%(refname:short)%09%(worktreepath)', 'refs/heads/agent/']),
-    );
-    const entries = refs.map((ref) => ({
-      ...ref,
-      ahead: Number(git(['rev-list', '--count', `${base}..${ref.branch}`])),
-    }));
-    return parkedBranches(entries, { current: git(['rev-parse', '--abbrev-ref', 'HEAD']) });
+    return readUnshippedAgentBranches({ root: workdir, head: options.head, base });
   } catch {
     return [];
   }
@@ -2385,7 +2391,13 @@ function printHelp() {
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> push release/<sha> -> start pending drain -> exact candidate hosted CI -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
+  agent branch accounting -> ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> push release/<sha> -> start pending drain -> exact candidate hosted CI -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
+
+Branch accounting:
+  Local agent/* work outside both --head and origin/main must be merged or
+  parked: npm run branch:park -- <branch> "<reason>". agent/ship-* is exempt.
+  Marks are local git config, shared across worktrees. branch:unpark removes a
+  mark; branch:parked lists reasons and dates. Dry runs refuse with exit 1 too.
 
 Options:
   --push                   Push --head to release/<sha>, wait for green hosted
