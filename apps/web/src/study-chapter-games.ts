@@ -11,7 +11,7 @@
 import { translateXiangqiEventNameStrict } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
-import { localizedChapterTags } from './study-i18n.js';
+import { localizedChapterTags, localizedStudyName } from './study-i18n.js';
 
 export type GameChapterTags = {
   red?: string;
@@ -25,15 +25,16 @@ export type GameChapterTags = {
 
 export type GameChapter = {
   id: string;
+  name?: string;
   i18n?: unknown;
   tags?: GameChapterTags;
 };
 
 /**
- * Rich labels are for distinct games. Lessons keep their chapter names, and
- * identical rendered labels fall back to names in both chapter lists.
+ * Lessons keep their chapter names. Games keep their rich labels, adding the
+ * chapter name when labels clash so both chapter lists can tell them apart.
  */
-export function buildChapterRowLabels<T extends { id: string; gamebook?: boolean }>(
+export function buildChapterRowLabels<T extends GameChapter & { gamebook?: boolean }>(
   chapters: readonly T[],
   buildLabel: (chapter: T) => HTMLElement | null,
 ): Map<string, HTMLElement> {
@@ -47,8 +48,13 @@ export function buildChapterRowLabels<T extends { id: string; gamebook?: boolean
     const text = label.textContent ?? '';
     counts.set(text, (counts.get(text) ?? 0) + 1);
   }
-  for (const [id, label] of labels) {
-    if (counts.get(label.textContent ?? '')! > 1) labels.delete(id);
+  for (const chapter of chapters) {
+    const label = labels.get(chapter.id);
+    if (!label || !chapter.name || counts.get(label.textContent ?? '')! <= 1) continue;
+    const name = document.createElement('span');
+    name.className = 'study-game-line__meta study-game-line__chapter';
+    name.textContent = localizedStudyName(chapter.name, chapter.i18n);
+    label.querySelector('.study-game-line__text')?.append(name);
   }
   return labels;
 }
