@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, request, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -15,6 +15,122 @@ import {
 } from './server-http.js';
 
 const HTML_ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+
+async function withRequestHandler(
+  options: Partial<Parameters<typeof createHttpRequestHandler>[0]>,
+  run: (send: (path: string, method?: string) => Promise<number>) => Promise<void>,
+): Promise<void> {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-http-path-'));
+  const handler = createHttpRequestHandler({
+    staticDir,
+    databaseRequired: false,
+    persistenceErrors: [],
+    drainController: { isDraining: () => false },
+    ...options,
+  } as Parameters<typeof createHttpRequestHandler>[0]);
+  const escaped: unknown[] = [];
+  const server = createServer((req, res) => {
+    // Record escapes instead of crashing the test runner. Production registers
+    // handler directly; any entry here is a failure of its error boundary.
+    try {
+      handler(req, res);
+    } catch (err) {
+      escaped.push(err);
+      res.writeHead(500);
+      res.end();
+    }
+  });
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const port = (server.address() as AddressInfo).port;
+  const send = (path: string, method = 'GET') =>
+    new Promise<number>((resolve, reject) => {
+      // Pass the raw target, including malformed authorities, without fetch's
+      // URL normalization or client-side URL validation.
+      const req = request({ host: '127.0.0.1', port, path, method, agent: false }, (res) => {
+        res.resume();
+        res.on('end', () => resolve(res.statusCode!));
+        res.on('error', reject);
+      });
+      req.on('error', reject);
+      req.setTimeout(2000, () => req.destroy(new Error('request timed out')));
+      req.end();
+    });
+  try {
+    await run(send);
+    assert.deepEqual(escaped, [], 'no exception may escape the HTTP request handler');
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+}
+
+test('malformed request targets return 400 and leave the HTTP server healthy', async () => {
+  await withRequestHandler({}, async (send) => {
+    for (const path of [
+      '/og/article/%ZZ.png',
+      '/game/%ZZ',
+      '//[bad',
+      '/og/game/%ZZ.png',
+      '/og/broadcast/board/%ZZ.png',
+      '/og/player/%ZZ.png',
+      '/og/study/%ZZ.png',
+      '/og/study/valid/%ZZ.png',
+      '/study/%ZZ',
+      '/study/valid/%ZZ',
+      '/zh-hans/study/valid/%ZZ',
+      '/blog/%ZZ',
+      '/articles/%ZZ',
+      '/rules/%ZZ',
+      '/thumb/article/%ZZ.png',
+      '/og/article/%.png',
+      '/og/article/%E0%A4%A.png',
+      '/og/article/%C0%AF.png',
+      '/api/games/%ZZ',
+    ]) {
+      assert.equal(await send(path), 400, path);
+      assert.equal(await send('/health'), 200, `healthy after ${path}`);
+    }
+    // Valid escapes stay encoded for routing; a literal percent is not decoded twice.
+    assert.equal(await send('/og/article/%25.png'), 302);
+    assert.equal(await send('/og/article/%E4%B8%AD.png'), 302);
+  });
+});
+
+test('request boundary contains synchronous and deferred dispatch decoding failures', async () => {
+  await withRequestHandler(
+    {
+      rooms: new Map(),
+      drainController: {
+        isDraining: () => {
+          throw new URIError('invalid route component');
+        },
+      } as unknown as Parameters<typeof createHttpRequestHandler>[0]['drainController'],
+    },
+    async (send) => {
+      for (const path of ['/unknown', '/game/known']) {
+        assert.equal(await send(path, 'POST'), 400, path);
+        assert.equal(await send('/health'), 200, `healthy after ${path}`);
+      }
+    },
+  );
+});
+
+test('request boundary contains unexpected synchronous failures', async (t) => {
+  const errors = t.mock.method(console, 'error', () => {});
+  await withRequestHandler(
+    {
+      drainController: {
+        isDraining: () => {
+          throw new Error('unexpected dispatch failure');
+        },
+      } as unknown as Parameters<typeof createHttpRequestHandler>[0]['drainController'],
+    },
+    async (send) => {
+      assert.equal(await send('/unknown', 'POST'), 500);
+      assert.equal(await send('/health'), 200);
+    },
+  );
+  assert.equal(errors.mock.callCount(), 1);
+});
 
 test('page navigation: extensionless GET asking for HTML → true', () => {
   assert.equal(
