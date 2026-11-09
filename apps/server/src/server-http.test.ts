@@ -132,6 +132,119 @@ test('request boundary contains unexpected synchronous failures', async (t) => {
   assert.equal(errors.mock.callCount(), 1);
 });
 
+test('embed widgets stay frameable but carry noindex in HTML and HTTP headers', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-embed-indexing-'));
+  await writeFile(
+    join(staticDir, 'index.html'),
+    '<html lang="en"><head><title>shell</title><meta name="robots" content="max-image-preview:large"></head><body><div id="app"></div></body></html>',
+  );
+  const server = createServer(
+    createHttpRequestHandler({
+      staticDir,
+      publicHost: 'https://mistboard.com',
+      crawlerSources: { gameMeta: async () => null },
+      drainController: { isDraining: () => false },
+    } as unknown as Parameters<typeof createHttpRequestHandler>[0]),
+  );
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    for (const path of [
+      '/embed/broadcast/xiangqi/board/2026-xiangqi-league-2026-xiangqi-league-r11-r11m05t136g1',
+      '/embed/study/Study1/Chapter1',
+      '/embed/game/Game1',
+      '/embed/puzzle/Puzzle1',
+      '/embed/analysis/xiangqi',
+      '/embed/line/xiangqi',
+      '/embed/tv',
+    ]) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await fetch(`${base}${path}?theme=dark&ply=2`, { method });
+        assert.equal(response.status, 200, `${method} ${path}`);
+        assert.equal(response.headers.get('x-robots-tag'), 'noindex, follow', path);
+        assert.equal(response.headers.get('x-frame-options'), null, path);
+        assert.equal(response.headers.get('content-security-policy'), null, path);
+        assert.equal(response.headers.get('cache-control'), 'no-cache', path);
+        const body = await response.text();
+        if (method === 'GET') {
+          assert.match(body, /<meta name="robots" content="noindex, follow">/, path);
+          assert.equal((body.match(/<meta name="robots"/g) ?? []).length, 1, path);
+        }
+      }
+    }
+    const fullPage = await fetch(`${base}/analysis/xiangqi`);
+    assert.equal(fullPage.headers.get('x-robots-tag'), null);
+    assert.doesNotMatch(await fullPage.text(), /<meta name="robots"[^>]*noindex/);
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+});
+
+test('page trailing slashes redirect before the generic shell, preserving queries', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-canonical-'));
+  await writeFile(join(staticDir, 'index.html'), '<html><head><title>shell</title></head></html>');
+  await mkdir(join(staticDir, 'rules'), { recursive: true });
+  await writeFile(
+    join(staticDir, 'rules', 'banqi.html'),
+    '<html><head><link rel="canonical" href="https://mistboard.com/rules/banqi"></head><body><h1>Banqi rules</h1></body></html>',
+  );
+  const server = createServer(
+    createHttpRequestHandler({
+      staticDir,
+      publicHost: 'https://mistboard.com',
+      drainController: { isDraining: () => false },
+    } as unknown as Parameters<typeof createHttpRequestHandler>[0]),
+  );
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    for (const path of [
+      '/rules/banqi/',
+      '/blog/pikafish/',
+      '/articles/pikafish/',
+      '/zh-hant/rules/banqi/',
+      '/zh-hans/blog/pikafish/',
+      '/zh-hant/study/',
+      '/study/S1/c1/',
+      '/analysis/xiangqi/',
+      '/players/',
+      '/zh-hans/',
+    ]) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await fetch(`${base}${path}?utm_source=audit&fen=a%2Fb`, {
+          method,
+          redirect: 'manual',
+          headers: { accept: HTML_ACCEPT },
+        });
+        assert.equal(response.status, 301, `${method} ${path}`);
+        assert.equal(
+          response.headers.get('location'),
+          `${path.slice(0, -1)}?utm_source=audit&fen=a%2Fb`,
+          path,
+        );
+        await response.text();
+      }
+    }
+    const article = await fetch(`${base}/rules/banqi/?utm_source=audit`);
+    assert.equal(article.url, `${base}/rules/banqi?utm_source=audit`);
+    assert.equal(article.status, 200);
+    assert.match(await article.text(), /<h1>Banqi rules<\/h1>/);
+    // Root, API, asset and mutation requests retain their own handlers.
+    for (const [path, method] of [
+      ['/', 'GET'],
+      ['/api/nope/', 'GET'],
+      ['/assets/nope.js/', 'GET'],
+      ['/rules/banqi/', 'POST'],
+    ]) {
+      const response = await fetch(`${base}${path}`, { method, redirect: 'manual' });
+      assert.notEqual(response.status, 301, `${method} ${path}`);
+      await response.text();
+    }
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+});
+
 test('page navigation: extensionless GET asking for HTML → true', () => {
   assert.equal(
     isPageNavigationRequest({ method: 'GET', headers: { accept: HTML_ACCEPT } }, '/asdfasdf'),
