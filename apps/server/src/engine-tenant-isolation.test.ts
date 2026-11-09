@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import {
   isPlayableLiveEngineClientId,
@@ -26,6 +29,10 @@ import {
 //   git apply -R apps/server/src/fixtures/variant-pve-picker-leak.patch
 //   node --import tsx --test apps/server/src/engine-tenant-isolation.test.ts
 const EXTRA_ENGINES = 'MISTBOARD_EXTRA_PLAYABLE_ENGINES';
+// Flip Jungle refuses a PvE room when its bot binary is missing, so stand a file in for it:
+// these tests check which engine is seated, never ask it for a move.
+const JUNGLE_FLIP_BIN = join(mkdtempSync(join(tmpdir(), 'jungle-flip-bin-')), 'jungle-flip-engine');
+writeFileSync(JUNGLE_FLIP_BIN, '');
 
 async function withEnv(values: Record<string, string | undefined>, run: () => Promise<void>) {
   const previous = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]));
@@ -154,20 +161,27 @@ for (const tenant of [
   });
 
   test(`${tenant.specId} PvE accepts its own engine without shared-pool membership`, async () => {
-    await withEnv({ [tenant.flag]: 'true', [EXTRA_ENGINES]: undefined }, async () => {
-      assert.equal(isPlayableLiveEngineClientId(tenant.ownEngine), false);
-      const { ctx, engines } = createContext();
-      // The route default and an explicit id must both use the tenant gate.
-      for (const request of [body, { ...body, engineId: tenant.ownEngine }]) {
-        const response = captureResponse();
-        await tenant.handleCreate(ctx, response, request);
-        assert.equal(response.status, 201, response.body);
-      }
-      assert.deepEqual(engines, [
-        { engineId: tenant.ownEngine, seat: 'black' },
-        { engineId: tenant.ownEngine, seat: 'black' },
-      ]);
-    });
+    await withEnv(
+      {
+        [tenant.flag]: 'true',
+        [EXTRA_ENGINES]: undefined,
+        MISTBOARD_JUNGLE_FLIP_ENGINE_PATH: JUNGLE_FLIP_BIN,
+      },
+      async () => {
+        assert.equal(isPlayableLiveEngineClientId(tenant.ownEngine), false);
+        const { ctx, engines } = createContext();
+        // The route default and an explicit id must both use the tenant gate.
+        for (const request of [body, { ...body, engineId: tenant.ownEngine }]) {
+          const response = captureResponse();
+          await tenant.handleCreate(ctx, response, request);
+          assert.equal(response.status, 201, response.body);
+        }
+        assert.deepEqual(engines, [
+          { engineId: tenant.ownEngine, seat: 'black' },
+          { engineId: tenant.ownEngine, seat: 'black' },
+        ]);
+      },
+    );
   });
 
   test(`${tenant.specId} PvE rejects dark-chess and other tenants' engines`, async () => {
