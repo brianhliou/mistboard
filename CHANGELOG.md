@@ -15,6 +15,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Banqi, Three Kingdoms banqi and Flip Jungle each have eight computer levels, chosen from a level picker ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
+- New jieqi games judge a perpetual chase: a side that chases the same piece on every move of a repetition loses, and the no-capture draw comes at 40 moves each ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
+- In jieqi, a move that would lose by perpetual chase asks you to confirm first, unless you turned off move confirmations ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - Live jieqi on desktop keeps captured pieces in the right column like every other variant, with the face-down odds above and below the board, larger on wide screens ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - The right column of a live game now lines up with the centre of the board on desktop ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Challenge a friend is offered after games against people, not only after bot games ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
@@ -76,6 +79,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Rules tiles now say what each game is, in English and Chinese ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - Shared links to puzzles, profiles, forum threads, live games, unlisted studies and tool pages now preview with their own title ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Search engines now get the text of static, tool, community and translated pages without running scripts, and admin and utility pages stay out of search ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - The piece picker now lists International, Traditional and Simplified first, with Animal Dobutsu last ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
@@ -99,6 +103,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Arrow keys step through a finished Gomoku game again after returning to it with the Back button ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
+- Rules, blog and news pages no longer go blank for a few seconds while loading on slow connections ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - A study's chapter list keeps chapters from the same game apart instead of showing the same label twice ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Gomoku games now start only from the screened two-black, three-white openings, and the rules page diagram shows one of them ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - The server-restart pause shade no longer blurs the board, and its corners match the board's ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
