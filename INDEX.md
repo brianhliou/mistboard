@@ -376,6 +376,10 @@ Edit task → find file → open only that file.
 | `flip-first-color.ts` | Recovers a finished FLIP game's bound `firstColor` (ink) by replaying the event log, since results are stored by seat not ink; covers banqi + jungle-flip (one resolver per tenant, fail-closed on a mismatched log), per-room cache for the polled watch feed |
 | `banqi-engine.ts` | MistyBanqi move provider for Banqi PvE: our own `banqi-engine` Rust αβ+Star1+TT UCI subprocess (Tier-B via the shared `uci-engine-harness`, one process per request, NOT the fog engine-worker); fed a redacted current-position FEN from `banqi-fen.ts` |
 | `server-banqi-engine.ts` | Server-side MistyBanqi PvE loop; injects engine moves through the shared append+broadcast path. Mirrors `server-jieqi-engine.ts` |
+| `banqi-provider-protocol.ts` + `.test.ts` | Versioned masked Banqi turn contract, kernel validation, immutable snapshots, whole-request hidden-information invariance and checked contributor samples |
+| `banqi-provider.ts` + `.test.ts` | Trusted native UCI and authenticated HTTP providers with shared deadlines, admission caps, local-only model paths and bounded sanitized output |
+| `banqi-provider-live.ts` + `.test.ts` | Fail-closed adapter for the existing Banqi live move seam: stale/expired replies and forbidden chase moves cannot be substituted |
+| `banqi-provider-bridge.ts` | Authenticated loopback reference bridge over the same Banqi provider contract |
 | `server-banqi-room-factory.ts` | Thin adapter over `variant-tenant/room-factory.ts` for banqi (PvP + Tier-B engine seat; no running-game record) |
 | `server-ws-banqi.ts` | Banqi WebSocket handler — thin adapter over `variant-tenant/ws.ts` (positions public, so no fog wiring); the Tier-B MistyBanqi scheduler rides the post-connect/post-move hook |
 | `jungle-tenant.ts` | Jungle (斗兽棋, perfect-information 7×9 Dou Shou Qi) `VariantTenant`: NO hidden state — positions + moves public, wire events pass through, `viewForClient` is the open board. The simplest tenant (no redaction). PvP + in-process PvE |
@@ -1322,13 +1326,13 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/cxa-listed-players.ts` | _needs a one-line description_ |
 | `apps/server/src/deploy-history.ts` | _needs a one-line description_ |
 | `apps/server/src/engine-match-import.ts` | _needs a one-line description_ |
-| `apps/server/src/game-data-files.ts` | _needs a one-line description_ |
+| `apps/server/src/game-data-files.ts` | Monthly and per-bot data file keys, content-addressed downloads, listings and shared export builds |
 | `apps/server/src/import-engine-match.ts` | _needs a one-line description_ |
 | `apps/server/src/jieqi-eve-adapter.ts` | _needs a one-line description_ |
 | `apps/server/src/jungle-eve-adapter.ts` | _needs a one-line description_ |
 | `apps/server/src/og-broadcast.ts` | _needs a one-line description_ |
 | `apps/server/src/og-player.ts` | _needs a one-line description_ |
-| `apps/server/src/persistence-game-data.ts` | _needs a one-line description_ |
+| `apps/server/src/persistence-game-data.ts` | Public monthly game selection, stable bot participant filters, bot data roster and stored file persistence |
 | `apps/server/src/persistence-xiangqi-players.ts` | _needs a one-line description_ |
 | `apps/server/src/player-pages.ts` | _needs a one-line description_ |
 | `apps/server/src/player-reference.ts` | _needs a one-line description_ |
@@ -1348,7 +1352,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/crazyhouse-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/gomoku-rules-diagrams.ts` | Static Gomoku rules figures using the live board renderer, screened opening pool and kernel-checked winning positions. |
 | `apps/web/src/crazyhouse-xiangqi-sample-game.ts` | _needs a one-line description_ |
-| `apps/web/src/data-page.ts` | _needs a one-line description_ |
+| `apps/web/src/data-page.ts` | Monthly game downloads with shareable variant and public bot filters, checksums and data documentation |
 | `apps/web/src/embed-code.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-analysis.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-jieqi-lines.ts` | Play cached best-move alternatives in Jieqi game embeds using the public deal and shared replay board |
@@ -1385,3 +1389,5 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 `scripts/study-chapter-decisions.mjs`: dry-run diff / explicit apply of validated offline Jieqi luck through `prod:db`; chapter edits invalidate stored rows.
 
 `apps/server/src/xiangqi-rules-replay.test.ts`: stored standard xiangqi draw-limit replay, reconnect, postgame views and export regressions.
+
+`scripts/banqi-provider.mjs`: local opaque-executable direct/HTTP probe and loopback bridge; `docs/banqi-engine-providers.md` and `docs/examples/banqi-provider-*.json` document the checked contributor contract.

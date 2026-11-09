@@ -147,13 +147,19 @@ export const DATA_API_PREFIX = '/api/data';
 export type DataMonthlyKind = 'monthly' | 'engine-monthly';
 
 export type DataFileTarget =
-  | { kind: DataMonthlyKind; month: string; variant: string; format: DataFileFormat }
+  | {
+      kind: DataMonthlyKind;
+      month: string;
+      variant: string;
+      format: DataFileFormat;
+      botId?: string;
+    }
   | { kind: 'collection'; corpusId: string; format: DataFileFormat };
 
 export function dataFileKey(target: DataFileTarget): string {
-  return target.kind === 'collection'
-    ? `collections/${target.corpusId}.${target.format}.gz`
-    : `${target.kind}/${target.month}/${target.variant}.${target.format}.gz`;
+  if (target.kind === 'collection') return `collections/${target.corpusId}.${target.format}.gz`;
+  const prefix = target.botId ? `bots/${target.botId}/` : '';
+  return `${prefix}${target.kind}/${target.month}/${target.variant}.${target.format}.gz`;
 }
 
 export function dataFilePath(target: DataFileTarget): string {
@@ -164,7 +170,7 @@ export function dataFilePath(target: DataFileTarget): string {
 export function dataFileName(target: DataFileTarget): string {
   if (target.kind === 'collection') return `mistboard_${target.corpusId}.${target.format}.gz`;
   const prefix = target.kind === 'engine-monthly' ? 'mistboard_engine' : 'mistboard';
-  return `${prefix}_${target.variant}_${target.month}.${target.format}.gz`;
+  return `${prefix}${target.botId ? `_${target.botId}` : ''}_${target.variant}_${target.month}.${target.format}.gz`;
 }
 
 /** Hex digits of the sha256 a content-addressed URL carries: 48 bits, which
@@ -179,14 +185,15 @@ export function dataFileHash(sha256: string): string {
  *  DATA_HASH_LENGTH hex of its sha256 before the format. */
 export function hashedDataFilePath(target: DataFileTarget, sha256: string): string {
   const hash = dataFileHash(sha256);
-  return target.kind === 'collection'
-    ? `${DATA_API_PREFIX}/collections/${target.corpusId}.${hash}.${target.format}.gz`
-    : `${DATA_API_PREFIX}/${target.kind}/${target.month}/${target.variant}.${hash}.${target.format}.gz`;
+  return dataFilePath(target).replace(`.${target.format}.gz`, `.${hash}.${target.format}.gz`);
 }
 
 const SLUG = '[a-z0-9][a-z0-9-]{0,119}';
 // A slug has no dot, so `<slug>.<12 hex>.<format>.gz` cannot be read two ways.
 const HASH = `(?:\\.([0-9a-f]{${DATA_HASH_LENGTH}}))?`;
+const BOT_PATH_RE = new RegExp(
+  `^${DATA_API_PREFIX}/bots/([a-zA-Z0-9_-]{1,80})/(monthly|engine-monthly)/(.+)$`,
+);
 const MONTHLY_PATH_RE = new RegExp(
   `^${DATA_API_PREFIX}/(monthly|engine-monthly)/([^/]+)/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
 );
@@ -206,6 +213,15 @@ export type ParsedDataPath =
  * is closed and has games, or the collection exists, is the route's question.
  */
 export function parseDataFilePath(pathname: string): ParsedDataPath | null {
+  const botPath = BOT_PATH_RE.exec(pathname);
+  if (botPath) {
+    const [, botId, kind, rest] = botPath;
+    const parsed = parseDataFilePath(`${DATA_API_PREFIX}/${kind}/${rest}`);
+    if (!parsed?.ok || parsed.target.kind === 'collection') return parsed;
+    return { ...parsed, target: { ...parsed.target, botId } };
+  }
+  if (pathname.startsWith(`${DATA_API_PREFIX}/bots/`))
+    return { ok: false, status: 404, error: 'not_found' };
   const monthly = MONTHLY_PATH_RE.exec(pathname);
   if (monthly) {
     const [, kind, month, variant, hash, format] = monthly as unknown as [
@@ -293,6 +309,8 @@ export type DataListing = {
    *  their own files (#488). Never folded into `months`. */
   engineMonths: DataMonth[];
   collections: DataCollection[];
+  bots?: Array<{ id: string; displayName: string; variants: string[] }>;
+  botId?: string;
 };
 
 export type ListedCollection = {
@@ -349,6 +367,7 @@ function buildMonths(
   stored: ReadonlyMap<string, StoredDataFileMeta>,
   now: Date,
   seenVariants: Set<string>,
+  botId?: string,
 ): DataMonth[] {
   const byMonth = new Map<string, DataMonthVariant[]>();
   for (const count of counts) {
@@ -358,7 +377,11 @@ function buildMonths(
     if (count.games <= 0) continue;
     seenVariants.add(count.variant);
     const files = dataFormatsForVariant(count.variant).map((format) =>
-      fileEntry({ kind, month: count.month, variant: count.variant, format }, count.games, stored),
+      fileEntry(
+        { kind, month: count.month, variant: count.variant, format, ...(botId ? { botId } : {}) },
+        count.games,
+        stored,
+      ),
     );
     const list = byMonth.get(count.month) ?? [];
     list.push({ variant: count.variant, games: count.games, files });
@@ -371,13 +394,18 @@ function buildMonths(
       variants.sort((a, b) => order(a.variant) - order(b.variant));
       const games = variants.reduce((sum, v) => sum + v.games, 0);
       const files = dataFormatsForVariant(ALL_VARIANTS_KEY).map((format) =>
-        fileEntry({ kind, month, variant: ALL_VARIANTS_KEY, format }, games, stored),
+        fileEntry(
+          { kind, month, variant: ALL_VARIANTS_KEY, format, ...(botId ? { botId } : {}) },
+          games,
+          stored,
+        ),
       );
       return { month, games, files, variants };
     });
 }
 
 export function buildDataListing(input: {
+  botId?: string;
   counts: readonly PublishedMonthCount[];
   /** Scheduled engine games per (closed month, variant); absent means none. */
   engineCounts?: readonly PublishedMonthCount[];
@@ -387,13 +415,14 @@ export function buildDataListing(input: {
 }): DataListing {
   const stored = new Map(input.stored.map((file) => [file.key, file]));
   const seenVariants = new Set<string>();
-  const months = buildMonths('monthly', input.counts, stored, input.now, seenVariants);
+  const months = buildMonths('monthly', input.counts, stored, input.now, seenVariants, input.botId);
   const engineMonths = buildMonths(
     'engine-monthly',
     input.engineCounts ?? [],
     stored,
     input.now,
     seenVariants,
+    input.botId,
   );
   const collections: DataCollection[] = input.collections.map((collection) => ({
     id: collection.corpusId,
@@ -414,6 +443,7 @@ export function buildDataListing(input: {
   return {
     license: LICENSE,
     schemaVersion: SCHEMA_VERSION,
+    ...(input.botId ? { botId: input.botId } : {}),
     variants: DATA_VARIANTS.filter((variant) => seenVariants.has(variant)),
     months,
     engineMonths,

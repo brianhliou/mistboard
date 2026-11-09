@@ -379,3 +379,26 @@
     padding-top: 2px;
   }
 }
+
+.data-bot-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.data-bot-filter[hidden] {
+  display: none;
+}
+
+.data-bot-filter select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--site-text);
+  background: var(--site-bg);
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+}
