@@ -1,11 +1,107 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { BANQI_SPEC_ID, STANDARD_BANQI_DEAL } from '@mistboard/game';
+import { banqiEngineBinaryAvailable } from '../banqi-engine.js';
 import type { BanqiEvent } from '../banqi-runtime.js';
+import { findPendingAnalysisJob } from '../game-analysis-jobs.js';
+import { logger } from '../obs.js';
 import type { RecentEveGameRecord } from '../persistence.js';
-import { type BanqiPostgamePersistence, banqiPostgameForApi } from './banqi-games.js';
+import {
+  type BanqiPostgamePersistence,
+  banqiPostgameForApi,
+  createBanqiAnalysisRoutes,
+} from './banqi-games.js';
 
 const ROOM_ID = 'bq_postgame';
+
+function captureResponse(): ServerResponse & { status: number | null; body: string } {
+  const capture = {
+    status: null as number | null,
+    body: '',
+    writeHead(status: number) {
+      capture.status = status;
+      return capture;
+    },
+    end(body = '') {
+      capture.body = body;
+      return capture;
+    },
+  };
+  return capture as unknown as ServerResponse & typeof capture;
+}
+
+test('Banqi analysis and decisions reject unavailable nets before persistence or enqueue limits', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'banqi-route-net-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const net = join(dir, 'net.bqnn');
+  const empty = join(dir, 'empty.bqnn');
+  writeFileSync(net, 'stub net');
+  writeFileSync(empty, '');
+  const previous = {
+    MISTBOARD_BANQI_ENABLED: process.env.MISTBOARD_BANQI_ENABLED,
+    MISTBOARD_BANQI_ENGINE_PATH: process.env.MISTBOARD_BANQI_ENGINE_PATH,
+    MISTBOARD_BANQI_NET: process.env.MISTBOARD_BANQI_NET,
+  };
+  t.after(() => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+  process.env.MISTBOARD_BANQI_ENABLED = 'true';
+  process.env.MISTBOARD_BANQI_ENGINE_PATH = process.execPath;
+  process.env.MISTBOARD_BANQI_NET = net;
+  assert.equal(banqiEngineBinaryAvailable(), true);
+  const error = t.mock.method(logger, 'error', () => {});
+  let limitChecks = 0;
+  const handler = createBanqiAnalysisRoutes({
+    currentUser: async () => ({ id: 'banqi-net-account' }),
+    enqueueLimiter: {
+      check: () => {
+        limitChecks += 1;
+        return false;
+      },
+    },
+  });
+  const post = { method: 'POST', headers: {} } as IncomingMessage;
+  for (const endpoint of ['analysis', 'decisions'] as const) {
+    for (const path of [undefined, join(dir, 'missing.bqnn'), empty, dir]) {
+      await t.test(`${endpoint}: ${path === undefined ? 'unset' : path}`, async () => {
+        if (path === undefined) delete process.env.MISTBOARD_BANQI_NET;
+        else process.env.MISTBOARD_BANQI_NET = path;
+        const response = captureResponse();
+        assert.equal(
+          await handler(post, response, `/api/banqi/games/${ROOM_ID}/${endpoint}`),
+          true,
+        );
+        assert.equal(response.status, 503);
+        assert.deepEqual(JSON.parse(response.body), { error: 'analysis_engine_unavailable' });
+        assert.deepEqual(error.mock.calls.at(-1)?.arguments[0], {
+          kind: `banqi_${endpoint}_engine_unavailable`,
+        });
+        assert.equal(findPendingAnalysisJob('banqi', ROOM_ID, endpoint), null);
+        assert.equal(limitChecks, 0);
+      });
+    }
+    // A usable net passes the engine gate; GET remains a cache read even without it.
+    for (const method of ['POST', 'GET']) {
+      if (method === 'POST') process.env.MISTBOARD_BANQI_NET = net;
+      else delete process.env.MISTBOARD_BANQI_NET;
+      const response = captureResponse();
+      await handler(
+        { ...post, method } as IncomingMessage,
+        response,
+        `/api/banqi/games/${ROOM_ID}/${endpoint}`,
+      );
+      assert.equal(response.status, 503);
+      assert.deepEqual(JSON.parse(response.body), { error: 'persistence_disabled' });
+    }
+  }
+});
 
 // Red (the first seat) flips a1 — binding its ink to the revealed red general —
 // then Black resigns. Banqi is symmetric: a face-down tile is hidden from both
