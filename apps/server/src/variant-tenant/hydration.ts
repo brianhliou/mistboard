@@ -9,6 +9,7 @@
 
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
+import { hydrateRoomOnce } from '../room-hydration.js';
 import { serverConfig } from '../server-config.js';
 import { reserveHydratedLiveEngineSeat } from '../server-live-engine-reservations.js';
 import { recordTenantPersistenceError } from './events.js';
@@ -41,6 +42,21 @@ export async function getOrLoadTenantRoom<
   if (existing) return existing;
   if (!persistence.isInitialized()) return null;
 
+  return hydrateRoomOnce(rooms, roomId, () => hydrateTenantRoom(tenant, rooms, roomId));
+}
+
+async function hydrateTenantRoom<
+  Kind extends string,
+  C extends persistence.RoomSeatTokenSeat,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  rooms: Map<string, TenantRuntimeRoom<Kind, C, M, State, Spec>>,
+  roomId: string,
+): Promise<TenantRuntimeRoom<Kind, C, M, State, Spec> | null> {
   let events: persistence.PersistedRoomEvent[] | null = null;
   try {
     events = await persistence.loadRoomEvents<persistence.PersistedRoomEvent>(roomId);

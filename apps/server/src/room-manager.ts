@@ -524,6 +524,12 @@ export async function appendEvent(
   // Serialize per-room writes. Chaining onto pendingWrites guarantees
   // sequence assignment is atomic with the persistence write.
   const myWrite = room.pendingWrites.then(async () => {
+    if (event.type === 'pause' && event.reason === 'shutdown') {
+      if (room.projection.state.status.type !== 'playing' || room.projection.paused) return;
+      // Earlier accepted moves may still have been in persistence when the
+      // stop began. Freeze only after they commit to this serialized chain.
+      event.clock = freezeClock(room.projection.state.clock, event.at);
+    }
     const seq = room.events.length;
     if (persistence.isInitialized()) {
       try {
@@ -898,17 +904,15 @@ export async function pauseRoomOnShutdown(
 ): Promise<void> {
   if (room.projection.state.status.type !== 'playing') return;
   if (room.projection.paused) return;
-  const eventSeq = room.events.length;
-  const turn = room.projection.state.status.turn;
-  const moveNumber = room.projection.state.moveNumber;
-  const frozenClock = freezeClock(room.projection.state.clock, at);
-  await appendEvent(ctx, room, {
+  const event: Extract<GameEvent, { type: 'pause' }> = {
     type: 'pause',
     at,
     roomId: room.id,
     reason: 'shutdown',
-    ...(frozenClock ? { clock: frozenClock } : {}),
-  });
+  };
+  await appendEvent(ctx, room, event);
+  const eventSeq = room.events.indexOf(event);
+  if (eventSeq < 0) return; // an earlier write finished or paused the game
   // Deliver the frozen, per-recipient view while the sockets are still open.
   broadcastSnapshot(ctx, room);
   await recordRoomLifecycleAuditSafe({
@@ -918,9 +922,10 @@ export async function pauseRoomOnShutdown(
     eventSeq,
     payload: {
       mode: room.mode,
-      turn,
-      moveNumber,
-      clockFrozen: frozenClock !== undefined,
+      turn:
+        room.projection.state.status.type === 'playing' ? room.projection.state.status.turn : null,
+      moveNumber: room.projection.state.moveNumber,
+      clockFrozen: event.clock !== undefined,
     },
   });
 }

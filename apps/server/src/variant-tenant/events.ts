@@ -21,6 +21,7 @@ import {
   applyTenantEvent,
   tenantClockExpiryEventFor,
   tenantEventWasAccepted,
+  tenantPauseEventFor,
 } from './runtime.js';
 import type {
   TenantGameStateLike,
@@ -112,10 +113,15 @@ export async function appendTenantEvent<
     // the old request act on it, even if the same seat is still on move.
     if (requestedEvent.type === 'clock-expired' && room.projection.clock !== expectedClock)
       return -1;
+    // Shutdown may be requested while an earlier move is awaiting its INSERT.
+    // Freeze the committed projection here, preserving that move's increment
+    // and the new clock owner. Never persist the caller's earlier snapshot.
     const event =
-      requestedEvent.type === 'clock-expired'
-        ? tenantClockExpiryEventFor(tenant, room.projection, requestedEvent)
-        : requestedEvent;
+      requestedEvent.type === 'clock-paused' && requestedEvent.reason === 'shutdown'
+        ? tenantPauseEventFor<C, M, Spec>(room.projection, requestedEvent.at, 'shutdown')
+        : requestedEvent.type === 'clock-expired'
+          ? tenantClockExpiryEventFor(tenant, room.projection, requestedEvent)
+          : requestedEvent;
     if (!event) return -1;
     // Decide acceptance INSIDE the serialized write, before anything is durable.
     // The WebSocket turn guard reads the projection synchronously and then
