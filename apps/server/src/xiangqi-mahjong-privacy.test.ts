@@ -56,7 +56,10 @@ const SPECTATOR = { id: 'privacy-spectator', seat: 'spectator' as const, solo: f
 // --test-name-pattern='claim timing is invariant' src/xiangqi-mahjong-privacy.test.ts
 // (from apps/server). The fixture's deliverPassImmediately mutation must fail.
 const claimTiming = JSON.parse(
-  readFileSync(new URL('./fixtures/xiangqi-mahjong-claim-timing.json', import.meta.url), 'utf8'),
+  readFileSync(
+    new URL('../src/fixtures/xiangqi-mahjong-claim-timing.json', import.meta.url),
+    'utf8',
+  ),
 ) as {
   noClaimFront: XmjTile[];
   claimFront: XmjTile[];

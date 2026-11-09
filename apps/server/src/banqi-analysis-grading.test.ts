@@ -28,7 +28,7 @@ import { UciEnginePool } from './uci-engine-harness.js';
 // Extracted from the finished game's public payload. Never-revealed identities are
 // assigned deterministically from the public pool; no player ids or private deal.
 const fixture = JSON.parse(
-  readFileSync(new URL('./fixtures/banqi-review-bq_24e67740.json', import.meta.url), 'utf8'),
+  readFileSync(new URL('../src/fixtures/banqi-review-bq_24e67740.json', import.meta.url), 'utf8'),
 ) as {
   setup: BanqiSetup;
   moves: BanqiMove[];
