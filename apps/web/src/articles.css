@@ -1260,6 +1260,28 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   color: var(--site-heading);
 }
 
+/* Wrap rather than truncate: at 375px a tile column is ~150px, and a
+   one-line ellipsis cut every tagline to three or four words. keep-all
+   breaks Chinese lines at punctuation, not inside a word; overflow-wrap
+   still breaks a clause too long for the column (Fog Chess in zh). */
+.rules-landing-tile-tagline {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--site-muted);
+  text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* This prerender already holds the styled client DOM. Keep its first paint
+   immediate and its nav/main layout identical through the ownership wrapper. */
+.rules-route > .crawler-copy {
+  display: contents;
+  animation: none;
+}
+
 .rules-landing-tile:hover .rules-landing-tile-label {
   text-decoration: underline;
 }

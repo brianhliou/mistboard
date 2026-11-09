@@ -20,6 +20,7 @@ export function createGomokuArticle(
     kind: 'rules',
     title: 'Gomoku Rules',
     seoTitle: 'Gomoku Rules: Freestyle 15x15 and Dealt Openings',
+    tagline: 'Five stones in a row wins.',
     summary: 'Learn to place stones, make five in a row and follow the turn indicator from Mistboard’s dealt openings.',
     showSummaryOnPage: false,
     status: 'published',

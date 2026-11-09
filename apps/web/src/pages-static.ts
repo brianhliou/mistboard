@@ -260,7 +260,7 @@ export async function renderRulesIndexShellForPrerender(
 ): Promise<string> {
   const { buildRulesIndex } = await import('./articles.js');
   const locale: Locale = lang ?? 'en';
-  return `${buildNav(locale).outerHTML}${buildRulesIndex(lang ?? undefined).outerHTML}`;
+  return prerenderCopy(buildNav(locale), buildRulesIndex(lang ?? undefined));
 }
 
 export async function mountRulesIndex(

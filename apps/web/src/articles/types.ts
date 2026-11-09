@@ -668,7 +668,11 @@ type ArticleBase = {
 
 export type Article = ArticleBase &
   (
-    | { kind: 'rules' }
+    | {
+        kind: 'rules';
+        /** One short line under the game's name on /rules. */
+        tagline?: string;
+      }
     | {
         kind: 'article';
         // Explicit so the official-only view stays fail-closed when community

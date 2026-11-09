@@ -29,6 +29,7 @@ export const crazyhouseXiangqiArticle: Article = {
   boardFamily: 'xiangqi',
   kind: 'rules',
   title: 'Crazyhouse Xiangqi Rules',
+  tagline: 'Captured pieces join your hand and drop back in.',
   summary:
     'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.',
   showSummaryOnPage: false,

@@ -278,6 +278,21 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Rules landing taglines, decided 2026-11-08 (#971).
+  'A river, a palace, and cannons that jump to capture.': '有河界、九宫，炮靠炮架吃子。',
+  'Xiangqi with every piece but the general face-down.': '除将帅外全是暗子，走出才揭晓。',
+  'Face-down xiangqi on half the board; capture by rank.': '半盘象棋，先翻子，再按大小吃子。',
+  'Face-down pieces, any piece takes any piece, first to 100 wins.':
+    '暗子开局，不分大小吃子，先得 100 分胜。',
+  'Captured pieces join your hand and drop back in.': '吃来的子归自己，还能打入棋盘。',
+  'After every move, place a duck that blocks both sides.': '每步棋后放一只鸭子，挡住双方去路。',
+  '4×4 animal chess with every animal face-down.': '4×4 斗兽棋，所有动物背面朝上开局。',
+  'Five stones in a row wins.': '五子连成一线就赢。',
+  'Standard chess, the base of Fog Chess.': '标准国际象棋，迷雾国际象棋的基础。',
+  'Xiangqi under fog; capture the general to win.': '迷雾中的象棋，吃掉将帅就赢。',
+  'Chess where you see only the squares your pieces can reach.': '只能看见己方棋子能走到的格子。',
+  'Ranked animals race to enter the enemy den.': '动物按大小吃子，抢进对方兽穴。',
+  'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻将，每手五张牌。',
   // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
@@ -6977,6 +6992,21 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // Rules landing taglines, decided 2026-11-08 (#971).
+  'A river, a palace, and cannons that jump to capture.': '有河界、九宮，炮靠炮架吃子。',
+  'Xiangqi with every piece but the general face-down.': '除將帥外全是暗子，走出才揭曉。',
+  'Face-down xiangqi on half the board; capture by rank.': '半盤象棋，先翻子，再按大小吃子。',
+  'Face-down pieces, any piece takes any piece, first to 100 wins.':
+    '暗子開局，不分大小吃子，先得 100 分勝。',
+  'Captured pieces join your hand and drop back in.': '吃來的子歸自己，還能打入棋盤。',
+  'After every move, place a duck that blocks both sides.': '每步棋後放一隻鴨子，擋住雙方去路。',
+  '4×4 animal chess with every animal face-down.': '4×4 鬥獸棋，所有動物背面朝上開局。',
+  'Five stones in a row wins.': '五子連成一線就贏。',
+  'Standard chess, the base of Fog Chess.': '標準西洋棋，迷霧西洋棋的基礎。',
+  'Xiangqi under fog; capture the general to win.': '迷霧中的象棋，吃掉將帥就贏。',
+  'Chess where you see only the squares your pieces can reach.': '只能看見己方棋子能走到的格子。',
+  'Ranked animals race to enter the enemy den.': '動物按大小吃子，搶進對方獸穴。',
+  'A xiangqi set becomes mahjong tiles in five-tile hands.': '用象棋子打麻將，每手五張牌。',
   // ten-thousand-games: Machine-drafted 2026-11-08, not native-reviewed, from the English signed off that day.
   // Keys are the article built from the committed record, including its chart labels.
   // Terms follow the zh shell catalog; bot names follow the existing article dictionary.
