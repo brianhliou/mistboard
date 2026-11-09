@@ -74,5 +74,44 @@ function buildStaticPageRail(
   }
 
   aside.append(nav);
+  observeStaticPageRail(aside, nav);
   return aside;
+}
+
+function observeStaticPageRail(rail: HTMLElement, nav: HTMLElement): void {
+  const updateFade = () => {
+    const maxScroll = rail.scrollWidth - rail.clientWidth;
+    // scrollLeft can be fractional, or extend past either edge during bounce.
+    rail.classList.toggle('fade-left', maxScroll > 1 && rail.scrollLeft > 1);
+    rail.classList.toggle('fade-right', maxScroll > 1 && rail.scrollLeft < maxScroll - 1);
+  };
+  let revealedCurrent = false;
+  const sync = () => {
+    // The shell is built before its caller inserts it into the document.
+    if (!rail.isConnected || rail.clientWidth === 0) return;
+    if (
+      !revealedCurrent &&
+      window.matchMedia('(max-width: 720px)').matches &&
+      rail.scrollWidth > rail.clientWidth + 1
+    ) {
+      const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+      if (active) {
+        const viewport = rail.getBoundingClientRect();
+        const link = active.getBoundingClientRect();
+        // Move only the strip, with room for the 28px fade beside the tab.
+        if (link.right > viewport.right) rail.scrollLeft += link.right - viewport.right + 28;
+        else if (link.left < viewport.left) rail.scrollLeft += link.left - viewport.left - 28;
+      }
+      revealedCurrent = true;
+    }
+    updateFade();
+  };
+  rail.addEventListener('scroll', updateFade, { passive: true });
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(sync);
+    observer.observe(rail);
+    // Font loading and translated labels can resize the content independently.
+    observer.observe(nav);
+  }
+  requestAnimationFrame(sync);
 }
