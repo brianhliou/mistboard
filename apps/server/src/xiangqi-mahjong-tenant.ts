@@ -49,6 +49,8 @@ import {
   type XmjRoomState,
   type XmjSeat,
   xmjAnswerAt,
+  xmjClaimAnswerEarliestAt,
+  xmjClaimant,
   xmjClockOwner,
   xmjIsDeclared,
   xmjIsLegalMove,
@@ -124,6 +126,31 @@ export function xmjClientEventFor(
     ) {
       const { handCopy: _concealed, ...move } = event.move;
       return { ...event, move, ply };
+    }
+    if (event.move.action === 'pass' && seat !== event.color && visibleEvents) {
+      const created = visibleEvents[0];
+      const correspondence =
+        created?.type === 'room-created' &&
+        isXmjRoomSetup(created.setup) &&
+        created.setup.correspondence;
+      if (!correspondence) {
+        // A released pass is bookkeeping, not a record of private thinking
+        // time. Keep the durable timestamp for clocks, but give every public
+        // pass the same date as an automatic pass on this discard.
+        const index = visibleEvents.indexOf(event);
+        const discard = visibleEvents
+          .slice(0, index)
+          .reverse()
+          .find(
+            (previous) =>
+              previous.type === 'move-played' &&
+              (previous.move.action === 'discard' || previous.move.action === 'declare-ready'),
+          );
+        if (discard?.type === 'move-played') {
+          const at = discard.move.at + XMJ_CLAIM_PAUSE_MS;
+          return { ...event, at, move: { by: event.move.by, at, action: 'pass' }, ply };
+        }
+      }
     }
     return { ...event, ply };
   }
@@ -216,11 +243,15 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     // by/at are placeholders; canonicalMove stamps them from the socket and the
     // server clock. 'timeout' is refused here: it is the runtime's move.
     moveFromMessage: xmjMoveFromMessage,
+    moveEventAt: (move) => move.at,
     canonicalMove: (state, move, seat) => {
-      // A claim-window answer made at once is dated to the pause end, like the
-      // runtime's pass for an empty hand (xmjAnswerAt), so `at` on the wire
-      // says nothing about whether there was a choice.
-      const stamped = { ...move, by: seat, at: xmjAnswerAt(state, Date.now()) } as XmjMove;
+      const now = Date.now();
+      // The universal pause is enforced on the server too. An early pass
+      // cannot draw privately and then release a discard (or stop a declared
+      // hand's clock) before an automatic pass could have drawn.
+      const earliest = xmjClaimAnswerEarliestAt(state);
+      if (move.action === 'pass' && earliest !== null && now < earliest) return null;
+      const stamped = { ...move, by: seat, at: xmjAnswerAt(state, now) } as XmjMove;
       if (!xmjSeatMayAct(state, seat)) return null;
       if (!xmjIsLegalMove(state, stamped)) return null;
       return stamped;
@@ -262,11 +293,12 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     snapshotExtras: (room, client) => {
       const pveEngineId = tenantPveEngineId(xiangqiMahjongTenant, room);
       return {
-        // The ordinary pregame deadline disappears on the second action,
-        // which can be a private automatic pass. After the first discard the
-        // claimant's running clock is the public timer, choice or no choice.
+        // Only the claimant needs the active first-reply countdown. Hiding it
+        // from others prevents its disappearance exposing a private pass.
         abortDeadline:
-          !room.projection.state.correspondence && room.projection.state.moveNumber > 0
+          !room.projection.state.correspondence &&
+          room.projection.state.moveNumber > 0 &&
+          client.seat !== xmjClaimant(room.projection.state)
             ? null
             : room.abortDeadline,
         roomMode: pveEngineId === null ? 'pvp' : 'pve',

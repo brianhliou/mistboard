@@ -214,6 +214,7 @@ describe('Xiangqi Mahjong review page', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     document.body.replaceChildren();
@@ -312,7 +313,8 @@ describe('Xiangqi Mahjong review page', () => {
     );
   }
 
-  it('sends a claimant pass immediately during the pause', async () => {
+  it('queues a claimant pass until the universal pause has ended', async () => {
+    vi.useFakeTimers();
     const state = applyXmjMove(claimStart(), {
       action: 'discard',
       by: 'east',
@@ -324,6 +326,10 @@ describe('Xiangqi Mahjong review page', () => {
     expect(view.claimPauseEndsAt).toBeGreaterThan(Date.now());
     await mountLive(view);
     click('[data-xmj-pass]');
+    expect(liveHarness.sent).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1499);
+    expect(liveHarness.sent).toEqual([]);
+    await vi.advanceTimersByTimeAsync(121);
     expect(liveHarness.sent).toEqual([{ type: 'move', action: 'pass' }]);
   });
 

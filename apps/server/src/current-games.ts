@@ -285,6 +285,7 @@ function gameFromTenantRoom(
   now: number,
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
+  room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;
   if (!isGameInPlay(room as Parameters<typeof isGameInPlay>[0], now)) return null;

@@ -527,6 +527,9 @@ export type VariantTenant<
     // move, so the seat has to be stamped onto the move here to survive into
     // the event log and back out on replay.
     canonicalMove?(state: State, move: M, seat: C): M | null;
+    // A tenant with canonical move timestamps uses the same effective time
+    // for the durable event and clock arithmetic. Default: receipt time.
+    moveEventAt?(move: M, receivedAt: number): number;
     // May this seat act right now? Defaults to "it is this seat's turn".
     //
     // Mahjong is why this exists. Every other tenant is strictly alternating:

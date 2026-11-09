@@ -603,7 +603,7 @@ export function createTenantWsRuntime<
     }
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'move-played',
-      at: Date.now(),
+      at: tenant.rules.moveEventAt?.(canonical, Date.now()) ?? Date.now(),
       roomId: room.id,
       color: mover,
       move: canonical,

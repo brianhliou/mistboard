@@ -76,6 +76,20 @@ function serverNow(): number {
   return Date.now() + (offsetSamples.length > 0 ? Math.max(...offsetSamples) : 0);
 }
 
+/**
+ * A Pass pressed during the pause after a discard waits for the pause to end:
+ * an answer sooner than an empty hand's automatic pass would tell the
+ * discarder there was something to decide. Keyed by the pause it waits out,
+ * which is new for every discard.
+ */
+let queuedPass: { window: number; timer: ReturnType<typeof setTimeout> } | null = null;
+const PASS_MARGIN_MS = 120;
+
+function clearQueuedPass(): void {
+  if (queuedPass) clearTimeout(queuedPass.timer);
+  queuedPass = null;
+}
+
 function seatNames(): Record<XmjSeat, string> {
   const own = core?.state.seat;
   const shown = core?.state.seatDisplayNames ?? {};
@@ -428,6 +442,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     startTicker(refs.board);
     return;
   }
+  if (queuedPass && view.claimPauseEndsAt !== queuedPass.window) clearQueuedPass();
   if (armedDiscard && (!view.legal.selfDraw || armedDiscard.hand !== view.handNumber)) {
     armedDiscard = null;
   }
@@ -443,6 +458,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
     canAct: core?.canActNow() === true,
     names: seatNames(),
     now: serverNow(),
+    passQueued: queuedPass !== null,
     pieceSet: readStoredXiangqiPieceSet(),
     tileLook: look,
     armedDiscard,
@@ -547,6 +563,7 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
     roomMode = 'pve';
     forfeitDeadline = null;
     offsetSamples.length = 0;
+    clearQueuedPass();
     declarationMode = null;
     armedDiscard = null;
   },
@@ -612,7 +629,7 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
       return;
     }
     if (data.xmjSelfdraw !== undefined) ctx.send({ type: 'move', action: 'self-draw' });
-    else if (data.xmjPass !== undefined) ctx.send({ type: 'move', action: 'pass' });
+    else if (data.xmjPass !== undefined) sendPass(ctx);
     else if (data.xmjNext !== undefined) ctx.send({ type: 'move', action: 'next-hand' });
     else if (data.xmjClaim) {
       const tiles = (data.xmjFrom ?? '').split(',').filter(Boolean);
@@ -659,6 +676,28 @@ function installTableInteraction(ctx: TenantLiveClientContext<XmjSeat, XmjPlayer
       });
     }
   });
+}
+
+function sendPass(ctx: TenantLiveClientContext<XmjSeat, XmjPlayerView>): void {
+  const view = ctx.state.view;
+  const pauseEnd = view?.claimPauseEndsAt ?? null;
+  const wait = pauseEnd === null ? 0 : pauseEnd + PASS_MARGIN_MS - serverNow();
+  if (wait <= 0 || pauseEnd === null) {
+    ctx.send({ type: 'move', action: 'pass' });
+    return;
+  }
+  if (queuedPass) return;
+  queuedPass = {
+    window: pauseEnd,
+    timer: setTimeout(() => {
+      const still =
+        queuedPass?.window === pauseEnd && ctx.state.view?.claimPauseEndsAt === pauseEnd;
+      queuedPass = null;
+      if (still && ctx.canActNow()) ctx.send({ type: 'move', action: 'pass' });
+      ctx.renderAll();
+    }, wait),
+  };
+  ctx.renderAll();
 }
 
 export function bootstrapXiangqiMahjongLiveRoom(): void {

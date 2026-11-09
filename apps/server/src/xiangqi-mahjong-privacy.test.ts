@@ -3,8 +3,11 @@
 // At the first deal no tile is public, so even a single tile face is a leak.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import type { IncomingMessage } from 'node:http';
 import test, { mock } from 'node:test';
 import {
+  applyXmjMove,
+  createXmjRoomState,
   createXmjSetup,
   XIANGQI_MAHJONG_SPEC_ID,
   type XmjMove,
@@ -14,10 +17,15 @@ import {
   type XmjTile,
   xmjOrderedTiles,
 } from '@mistboard/game';
+import { collectCurrentGames } from './current-games.js';
 import { resolveGameExport } from './game-export-tenant.js';
 import { tenantGameCard, tenantGamePageMeta } from './og-game-tenant.js';
 import type { RecentEveGameRecord } from './persistence.js';
+import type { HttpApiContext } from './routes/lib.js';
 import { xiangqiMahjongPostgameForApi } from './routes/xiangqi-mahjong-games.js';
+import { hashSeatToken } from './server-seat-session.js';
+import { variantTenantForSpecId } from './variant-tenant/registry.js';
+import { collectLiveTvCandidates } from './watch-live.js';
 import './variant-tenant/register-tenants.js';
 import { appendTenantEvent } from './variant-tenant/events.js';
 import { clearTenantRuntimeTimers } from './variant-tenant/lifecycle.js';
@@ -33,7 +41,7 @@ import {
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
 import { createTenantWsRuntime } from './variant-tenant/ws.js';
-import type { XmjRuntimeRoom } from './xiangqi-mahjong-registration.js';
+import { type XmjRuntimeRoom, xiangqiMahjongRooms } from './xiangqi-mahjong-registration.js';
 import { xiangqiMahjongTenant as tenant, type XmjEvent } from './xiangqi-mahjong-tenant.js';
 import { xmjLiveWatchPayloadFor } from './xiangqi-mahjong-watch.js';
 
@@ -41,7 +49,7 @@ const SPECTATOR = { id: 'privacy-spectator', seat: 'spectator' as const, solo: f
 
 // #990 replay: discard rP at 4000; runtime pass at 5500 (noClaimFront),
 // human pass at 9000 (claimFront); poll/reconnect at every sampleAt; discard
-// bK at 12000. Each schedule reuses its exact walls. The paired walls differ
+// bK at 12000, including the complete release frame. Each schedule reuses its exact walls. The paired walls differ
 // only in west's concealed tiles and the unseen wall, so east's whole payload
 // and the spectator's whole payload must also match across the two deals.
 // Planted failure: MISTBOARD_XMJ_PLANT_PASS_LEAK=1 node --import tsx --test
@@ -164,6 +172,11 @@ function assertClaimTimingInvariant(plantLeak = false): void {
       automatic.play(pending.move);
     }
     if (now === claimTiming.delayedPassAt) delayed.play({ action: 'pass', by: 'west', at: now });
+    if (now === claimTiming.publicMoveAt) {
+      for (const table of [automatic, delayed, immediate]) {
+        table.play({ action: 'discard', by: 'west', at: now, tile: 'bK' });
+      }
+    }
     for (const seat of ['east', 'spectator'] as const) {
       assert.equal(
         automatic.payload(seat),
@@ -183,6 +196,198 @@ test('XMJ privacy: claim timing is invariant in complete wire, reconnect and TV 
   mock.method(Date, 'now', () => claimTiming.discardAt);
   try {
     assertClaimTimingInvariant(process.env.MISTBOARD_XMJ_PLANT_PASS_LEAK === '1');
+  } finally {
+    mock.restoreAll();
+  }
+});
+
+test('XMJ privacy: WebSocket refuses early passes and stamps accepted answers at the pause end', async () => {
+  mock.method(Date, 'now', () => 4100);
+  const table = timingTable(true);
+  table.live.clients.clear();
+  table.room.seatTokens.west = {
+    clientId: 'west-client',
+    seat: 'west',
+    tokenHash: hashSeatToken('west-token'),
+    userId: null,
+    userHandle: null,
+    userDisplayName: null,
+    issuedAt: new Date(0),
+    lastSeenAt: new Date(0),
+    revokedAt: null,
+  };
+  let onMessage: ((data: unknown) => void) | undefined;
+  const socket = {
+    send: (_data: string) => {},
+    close: () => {},
+    on(event: string, cb: (data: unknown) => void) {
+      if (event === 'message') onMessage = cb;
+      return this;
+    },
+  };
+  try {
+    await table.runtime.handleConnection(
+      { wsMessageLimit: 100, wsMessageWindowMs: 1000 },
+      socket as never,
+      {
+        url: '/?client=west-client',
+        headers: {
+          host: 'localhost',
+          'sec-websocket-protocol': 'mistboard-seat.west-token',
+        },
+      } as IncomingMessage,
+      table.live,
+    );
+    assert.ok(onMessage);
+    const before = table.room.events.length;
+    const sendPass = async () => {
+      onMessage!(Buffer.from(JSON.stringify({ type: 'move', action: 'pass' })));
+      await table.room.pendingWrites;
+      for (let i = 0; i < 20; i += 1) await Promise.resolve();
+    };
+    await sendPass();
+    assert.equal(table.room.events.length, before, 'a custom client cannot pass before the pause');
+    mock.method(Date, 'now', () => 5620);
+    await sendPass();
+    const stored = table.room.events.at(-1);
+    assert.equal(stored?.type, 'move-played');
+    assert.ok(stored?.type === 'move-played');
+    assert.equal(stored.move.action, 'pass');
+    assert.equal(stored.move.at, 5500);
+    assert.equal(stored.at, 5500, 'clock arithmetic uses the same effective time');
+  } finally {
+    clearTenantRuntimeTimers(table.room);
+    table.live.clients.clear();
+    mock.restoreAll();
+  }
+});
+
+test('XMJ privacy: a fast public move cannot precede the universal claim pause', () => {
+  mock.method(Date, 'now', () => 4100);
+  try {
+    const table = timingTable(true);
+    assert.equal(
+      tenant.rules.canonicalMove!(
+        table.room.projection.state,
+        { action: 'pass', by: 'west', at: 0 },
+        'west',
+      ),
+      null,
+    );
+    const before = table.payload('spectator');
+    mock.method(Date, 'now', () => 4300);
+    assert.equal(
+      tenant.rules.canonicalMove!(
+        table.room.projection.state,
+        { action: 'discard', by: 'west', at: 0, tile: 'bK' },
+        'west',
+      ),
+      null,
+    );
+    mock.method(Date, 'now', () => 4100);
+    assert.equal(table.payload('spectator'), before);
+    mock.method(Date, 'now', () => 5500);
+    const pass = tenant.rules.canonicalMove!(
+      table.room.projection.state,
+      { action: 'pass', by: 'west', at: 0 },
+      'west',
+    );
+    assert.ok(pass);
+    table.play(pass);
+    assert.ok(
+      tenant.rules.canonicalMove!(
+        table.room.projection.state,
+        { action: 'discard', by: 'west', at: 0, tile: 'bK' },
+        'west',
+      ),
+    );
+  } finally {
+    mock.restoreAll();
+  }
+});
+
+test('XMJ privacy: a declared pass waits for the pause and schedules the same discard as an automatic pass', () => {
+  const front = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', 'rA'] as XmjTile[];
+  const rest = xmjOrderedTiles();
+  for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+  let state = createXmjRoomState({
+    walls: [[...front, ...rest]],
+    firstDealer: 'east',
+    taiTable: 3,
+  });
+  for (const move of [
+    { action: 'declare-ready', by: 'east', at: 1000, tile: 'bH' },
+    { action: 'pass', by: 'west', at: 3000 },
+    { action: 'discard', by: 'west', at: 4000, tile: 'bR' },
+  ] as XmjMove[])
+    state = applyXmjMove(state, move);
+  mock.method(Date, 'now', () => 4100);
+  try {
+    assert.equal(
+      tenant.rules.canonicalMove!(state, { action: 'pass', by: 'east', at: 0 }, 'east'),
+      null,
+    );
+    mock.method(Date, 'now', () => 5500);
+    const pass = tenant.rules.canonicalMove!(state, { action: 'pass', by: 'east', at: 0 }, 'east');
+    assert.ok(pass);
+    const pending = tenant.rules.pendingAction!(applyXmjMove(state, pass));
+    assert.equal(pending?.at, 7000);
+    const automatic = tenant.rules.pendingAction!(state);
+    assert.ok(automatic);
+    assert.deepEqual(pending, tenant.rules.pendingAction!(applyXmjMove(state, automatic.move)));
+  } finally {
+    mock.restoreAll();
+  }
+});
+
+test('XMJ privacy: live lists use the spectator frontier, including the TV eligibility threshold', () => {
+  const registration = variantTenantForSpecId(XIANGQI_MAHJONG_SPEC_ID)!;
+  mock.method(registration, 'enabled', () => true);
+  mock.method(Date, 'now', () => 7000);
+  const ctx = { rooms: new Map() } as HttpApiContext;
+  const list = () =>
+    JSON.stringify({ games: collectCurrentGames(ctx), tv: collectLiveTvCandidates(ctx) });
+  try {
+    const table = timingTable(true);
+    xiangqiMahjongRooms.set(table.room.id, table.room);
+    const before = list();
+    assert.equal(collectCurrentGames(ctx).length, 1);
+    assert.equal(collectLiveTvCandidates(ctx).length, 0);
+    table.play({ action: 'pass', by: 'west', at: 6000 });
+    assert.equal(list(), before, 'a held pass must not add a TV candidate or change a game card');
+    table.play({ action: 'discard', by: 'west', at: 12000, tile: 'bK' });
+    const released = list();
+    assert.equal(collectLiveTvCandidates(ctx).length, 1);
+    table.play({ action: 'pass', by: 'east', at: 14000 });
+    assert.equal(
+      list(),
+      released,
+      'an already eligible TV candidate must not expose its next held pass',
+    );
+  } finally {
+    xiangqiMahjongRooms.clear();
+    mock.restoreAll();
+  }
+});
+
+test('XMJ privacy: the claimant sees its active abort deadline until it answers', () => {
+  mock.method(Date, 'now', () => 4000);
+  try {
+    const table = timingTable(true);
+    assert.ok(table.room.abortDeadline);
+    const west = { id: 'west-client', seat: 'west' as const, solo: false };
+    assert.equal(
+      tenantSnapshotPayload(tenant, table.room, west).abortDeadline,
+      table.room.abortDeadline,
+    );
+    const before = table.payload('east');
+    table.play({ action: 'pass', by: 'west', at: 5500 });
+    assert.equal(tenantSnapshotPayload(tenant, table.room, west).abortDeadline, null);
+    assert.equal(
+      table.payload('east'),
+      before,
+      'the countdown must not disclose the private answer',
+    );
   } finally {
     mock.restoreAll();
   }
