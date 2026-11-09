@@ -21,6 +21,7 @@ import {
   getThreeKingdomsBanqiLegalMoves,
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
+import { mayPlayCorrespondence } from './correspondence-access.js';
 import { collectLiveRoomStats } from './live-room-stats.js';
 import type { UserAccount } from './persistence.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -140,7 +141,11 @@ test('the registration is wired to the admit rule and stays unlisted with the fl
     // Every listing surface (TV, current games, lobby, bot profiles) reads this.
     assert.equal(reg.enabled(), false);
     assert.equal(reg.lobby, null, 'no Find opponent');
-    assert.equal(reg.createCorrespondenceGameForSeek, null, 'no correspondence');
+    assert.equal(typeof reg.createCorrespondenceGameForSeek, 'function');
+    assert.equal(typeof reg.sweepDueDeadline, 'function');
+    assert.equal(await mayPlayCorrespondence(null, THREE_KINGDOMS_BANQI_SPEC_ID), false);
+    assert.equal(await mayPlayCorrespondence(PLAYER, THREE_KINGDOMS_BANQI_SPEC_ID), false);
+    assert.equal(await mayPlayCorrespondence(ADMIN, THREE_KINGDOMS_BANQI_SPEC_ID), true);
   });
 });
 

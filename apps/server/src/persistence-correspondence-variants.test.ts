@@ -69,9 +69,26 @@ definePersistenceTests('correspondence variants e2e', () => {
       try {
         const room = registration.rooms.get(created.room.id) as unknown as AnyRoom;
         assert.equal(room.clients.size, 0, `${specId}: neither account connected`);
+        for (const [color, id] of [
+          [created.seats.first, first],
+          [created.seats.second, second],
+        ] as const) {
+          const token = room.seatTokens[color];
+          assert.deepEqual(
+            { name: token?.userDisplayName, handle: token?.userHandle },
+            { name: id.slice(5), handle: id.slice(5) },
+            `${specId}/${color}: the reserved account has an identity before connecting`,
+          );
+        }
         const game = collectCurrentGames({ rooms: new Map() } as HttpApiContext).find(
           (game) => game.roomId === created.room.id,
         );
+        // FFQ correspondence reuses the admin playtest's permanent exclusion
+        // from public discovery; reserving named seats does not open that door.
+        if (specId === 'ffq-banqi') {
+          assert.equal(game, undefined, 'FFQ stays off /games with its flag on');
+          continue;
+        }
         assert.ok(game, `${specId}: listed on /games`);
         assert.equal(game.players.length, 2);
         for (const [color, id] of [
