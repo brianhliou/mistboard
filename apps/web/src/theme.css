@@ -800,15 +800,21 @@
   background-image:
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 60%, transparent) 1.5px,
-      transparent 1.5px
+      transparent calc(50% - 0.75px),
+      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 60%, transparent) calc(50% - 0.75px)
+        calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
     ),
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 60%, transparent) 1.5px,
-      transparent 1.5px
+      transparent calc(50% - 0.75px),
+      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 60%, transparent) calc(50% - 0.75px)
+        calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
     );
-  background-position: 12px 12px;
+  /* Each repeat draws its line through its middle and the pattern is centred on
+     the tile, so the lines sit symmetrically whatever the tile's size. */
+  background-position: center;
   background-size: 24px 24px;
 }
 .theme-tile-preview-xqboard[data-id="cell"] {
@@ -819,6 +825,7 @@
     color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 12%, transparent) 0 75%,
     transparent 0
   );
+  background-position: center;
   background-size: 48px 48px;
 }
 
