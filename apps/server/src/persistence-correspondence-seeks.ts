@@ -564,14 +564,19 @@ export async function getCorrespondenceSeekOutcome(
   };
 }
 
-/** Whether the sweep left an expiry notice (161) for this seek: only ever a public
- *  board seek, so the fact is public. Covers seeks swept before migration 165. */
-export async function hasSeekExpiryNotice(seekId: string): Promise<boolean> {
-  const { rows } = await getPool().query(
-    'SELECT 1 FROM correspondence_seek_expiry_notices WHERE seek_id = $1',
+/** Recover a closed seek's spec without assuming that a public seek's variant
+ *  is public. Notices also cover seeks swept before outcomes existed. */
+export async function getClosedCorrespondenceSeekSpecId(seekId: string): Promise<string | null> {
+  const { rows } = await getPool().query<{ game_spec_id: string }>(
+    `SELECT game_spec_id FROM correspondence_seek_expiry_notices WHERE seek_id = $1
+     UNION ALL
+     SELECT g.variant AS game_spec_id FROM correspondence_seek_outcomes o
+     JOIN games g ON g.room_id = o.room_id
+     WHERE o.seek_id = $1
+     LIMIT 1`,
     [seekId],
   );
-  return rows.length > 0;
+  return rows[0]?.game_spec_id ?? null;
 }
 
 /**

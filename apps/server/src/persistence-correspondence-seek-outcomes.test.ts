@@ -1,8 +1,8 @@
 /**
  * #527: a dead /challenge/<id> link says what happened to the offer. Accept,
  * cancel, decline and the expiry sweep each leave one correspondence_seek_outcomes
- * row (migration 165), and the view route turns it into a 410 for anyone who may
- * know, while a stranger to a private challenge still gets the plain 404.
+ * row (migration 165). The view route returns 410 only when the variant is known
+ * and accessible; an unknown variant or a stranger to a private challenge gets 404.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
@@ -13,6 +13,7 @@ import {
   createCorrespondenceSeek,
   createUser,
   deleteExpiredCorrespondenceSeeks,
+  getClosedCorrespondenceSeekSpecId,
   getCorrespondenceSeekOutcome,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
@@ -26,6 +27,158 @@ process.env.MISTBOARD_CORRESPONDENCE_ENABLED = 'true';
 process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
 
 definePersistenceTests('correspondence seek outcomes', () => {
+  for (const loss of ['flag disabled', 'admin demoted'] as const) {
+    test(`a restricted seek creator can list, view and cancel after ${loss}`, async (t) => {
+      const prior = process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+      process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
+      t.after(() => {
+        if (prior === undefined) delete process.env.MISTBOARD_FFQ_BANQI_ENABLED;
+        else process.env.MISTBOARD_FFQ_BANQI_ENABLED = prior;
+      });
+      const owner = await seedUser('so-owner', 'Owner');
+      const other = await seedUser('so-other', 'Other');
+      await getPool().query(`UPDATE users SET account_role = 'admin' WHERE id = $1`, [owner]);
+      const ownerCookie = await makeSessionCookie(owner);
+      const otherCookie = await makeSessionCookie(other);
+      const ids = Array.from({ length: 6 }, (_, i) => `so-restricted-${i}`);
+      for (const [i, id] of ids.entries()) {
+        await createCorrespondenceSeek({
+          id,
+          creatorUserId: owner,
+          gameSpecId: 'ffq-banqi',
+          daysPerMove: 3,
+          preferredColor: 'random',
+          visibility: i % 2 === 0 ? 'public' : 'private',
+          targetUserId: i === 5 ? other : null,
+          expiresAt: new Date(Date.now() + 86_400_000),
+        });
+      }
+      if (loss === 'flag disabled') process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'false';
+      else await getPool().query(`UPDATE users SET account_role = 'player' WHERE id = $1`, [owner]);
+
+      assert.deepEqual(
+        await callSeekRoute('POST', '/api/correspondence/seeks', ownerCookie, {
+          gameSpecId: XIANGQI_SPEC_ID,
+          daysPerMove: 3,
+        }),
+        { status: 409, json: { error: 'seek_limit_reached', limit: 6 } },
+      );
+      const mine = await callSeekRoute('GET', '/api/correspondence/seeks/mine', ownerCookie);
+      assert.equal(mine.status, 200);
+      const views = [];
+      for (const id of ids) {
+        const view = await callSeekRoute('GET', `/api/correspondence/seeks/${id}`, ownerCookie);
+        views.push({ status: view.status, isMine: view.json.isMine });
+        assert.deepEqual(
+          await callSeekRoute('GET', `/api/correspondence/seeks/${id}`, otherCookie),
+          { status: 404, json: { error: 'seek_not_found' } },
+        );
+      }
+      for (const id of ids) {
+        assert.equal(
+          (await callSeekRoute('DELETE', `/api/correspondence/seeks/${id}`, otherCookie)).status,
+          404,
+        );
+        assert.equal(
+          (await callSeekRoute('DELETE', `/api/correspondence/seeks/${id}`, ownerCookie)).status,
+          200,
+        );
+      }
+      assert.equal(
+        (
+          await callSeekRoute('POST', '/api/correspondence/seeks', ownerCookie, {
+            gameSpecId: XIANGQI_SPEC_ID,
+            daysPerMove: 3,
+          })
+        ).status,
+        201,
+      );
+      assert.deepEqual(
+        { outgoing: (mine.json.seeks as { id: string }[]).map((s) => s.id).sort(), views },
+        { outgoing: ids, views: ids.map(() => ({ status: 200, isMine: true })) },
+      );
+    });
+  }
+
+  for (const gameSpecId of ['ffq-banqi', 'three-kingdoms-banqi']) {
+    test(`${gameSpecId}: inaccessible seeks return identical responses in every state`, async (t) => {
+      for (const name of [
+        'MISTBOARD_FFQ_BANQI_ENABLED',
+        'MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED',
+      ]) {
+        const prior = process.env[name];
+        process.env[name] = 'false';
+        t.after(() => {
+          if (prior === undefined) delete process.env[name];
+          else process.env[name] = prior;
+        });
+      }
+      const owner = await seedUser('so-hidden-owner', 'Owner');
+      const viewer = await seedUser('so-hidden-viewer', 'Viewer');
+      const ownerCookie = await makeSessionCookie(owner);
+      const viewerCookie = await makeSessionCookie(viewer);
+      const responses = [];
+      for (const state of ['open', 'cancelled', 'declined', 'expired'] as const) {
+        const id = `so-hidden-${state}`;
+        await createCorrespondenceSeek({
+          id,
+          creatorUserId: owner,
+          gameSpecId,
+          daysPerMove: 3,
+          preferredColor: 'random',
+          targetUserId: state === 'declined' ? viewer : null,
+          visibility: state === 'declined' ? 'private' : 'public',
+          expiresAt: new Date(Date.now() + 86_400_000),
+        });
+        if (state === 'cancelled') {
+          assert.equal(
+            (await callSeekRoute('DELETE', `/api/correspondence/seeks/${id}`, ownerCookie)).status,
+            200,
+          );
+        } else if (state === 'declined') {
+          assert.equal(
+            (await callSeekRoute('POST', `/api/correspondence/seeks/${id}/decline`, viewerCookie))
+              .status,
+            200,
+          );
+        } else if (state === 'expired') {
+          await getPool().query(
+            `UPDATE correspondence_seeks SET expires_at = now() WHERE id = $1`,
+            [id],
+          );
+          assert.equal(await deleteExpiredCorrespondenceSeeks(), 1);
+        }
+        responses.push(await callSeekRoute('GET', `/api/correspondence/seeks/${id}`, viewerCookie));
+      }
+      await getPool().query(`UPDATE users SET account_role = 'admin' WHERE id = $1`, [owner]);
+      process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
+      const expiredView = { status: 410, json: { error: 'seek_gone', reason: 'expired' } };
+      assert.equal(await getClosedCorrespondenceSeekSpecId('so-hidden-expired'), gameSpecId);
+      assert.deepEqual(
+        await callSeekRoute('GET', '/api/correspondence/seeks/so-hidden-expired', ownerCookie),
+        expiredView,
+      );
+      // Also cover the pre-outcome expiry-notice fallback.
+      await getPool().query(`DELETE FROM correspondence_seek_outcomes WHERE seek_id = $1`, [
+        'so-hidden-expired',
+      ]);
+      responses.push(
+        await callSeekRoute('GET', '/api/correspondence/seeks/so-hidden-expired', viewerCookie),
+      );
+      assert.deepEqual(
+        await callSeekRoute('GET', '/api/correspondence/seeks/so-hidden-expired', ownerCookie),
+        expiredView,
+      );
+      assert.deepEqual(
+        responses,
+        Array.from({ length: 5 }, () => ({
+          status: 404,
+          json: { error: 'seek_not_found' },
+        })),
+      );
+    });
+  }
+
   test('a taken public seek tells anyone who took it and links the game', async () => {
     const ann = await seedUser('so-ann', 'Ann');
     const bo = await seedUser('so-bo', 'Bo');
@@ -66,9 +219,32 @@ definePersistenceTests('correspondence seek outcomes', () => {
     const creator = await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, annCookie);
     assert.equal(creator.status, 410);
     assert.equal(creator.json.youPlay, true);
+
+    // A legacy room id has no tenant prefix; its stored game still identifies
+    // the spec. Removing that metadata must fail closed rather than guess.
+    const legacyRoomId = 'so-legacy-room';
+    await getPool().query(
+      `INSERT INTO games (room_id, variant, result, termination, ply_count, started_at, ended_at)
+       VALUES ($1, $2, 'red-wins', 'resignation', 2, now(), now())`,
+      [legacyRoomId, XIANGQI_SPEC_ID],
+    );
+    await getPool().query(
+      `UPDATE correspondence_seek_outcomes SET room_id = $2 WHERE seek_id = $1`,
+      [seekId, legacyRoomId],
+    );
+    assert.equal(await getClosedCorrespondenceSeekSpecId(seekId), XIANGQI_SPEC_ID);
+    assert.deepEqual(await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, cyCookie), {
+      ...stranger,
+      json: { ...stranger.json, roomId: legacyRoomId },
+    });
+    await getPool().query(`DELETE FROM games WHERE room_id = $1`, [legacyRoomId]);
+    assert.deepEqual(await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, cyCookie), {
+      status: 404,
+      json: { error: 'seek_not_found' },
+    });
   });
 
-  test('a withdrawn public seek reads as withdrawn; an unknown id stays 404', async () => {
+  test('a withdrawn seek without a recoverable spec and an unknown id both stay 404', async () => {
     const dee = await seedUser('so-dee', 'Dee');
     const eli = await seedUser('so-eli', 'Eli');
     const deeCookie = await makeSessionCookie(dee);
@@ -91,15 +267,14 @@ definePersistenceTests('correspondence seek outcomes', () => {
     );
     assert.equal(cancelled.status, 200);
     const view = await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, eliCookie);
-    assert.equal(view.status, 410);
-    assert.equal(view.json.reason, 'withdrawn');
+    assert.deepEqual(view, { status: 404, json: { error: 'seek_not_found' } });
 
     const unknown = await callSeekRoute('GET', '/api/correspondence/seeks/seek_nope', eliCookie);
     assert.equal(unknown.status, 404);
     assert.equal(unknown.json.error, 'seek_not_found');
   });
 
-  test('a declined direct challenge: the two players see it, a stranger gets 404', async () => {
+  test('a declined challenge without a recoverable spec stays 404 for everyone', async () => {
     const fox = await seedUser('so-fox', 'Fox');
     const gil = await seedUser('so-gil', 'Gil');
     const hal = await seedUser('so-hal', 'Hal');
@@ -124,8 +299,7 @@ definePersistenceTests('correspondence seek outcomes', () => {
 
     for (const cookie of [foxCookie, gilCookie]) {
       const view = await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, cookie);
-      assert.equal(view.status, 410);
-      assert.equal(view.json.reason, 'declined');
+      assert.deepEqual(view, { status: 404, json: { error: 'seek_not_found' } });
     }
     const stranger = await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, halCookie);
     assert.equal(stranger.status, 404);
@@ -198,10 +372,9 @@ definePersistenceTests('correspondence seek outcomes', () => {
     assert.equal(board.status, 410);
     assert.equal(board.json.reason, 'expired');
     const target = await callSeekRoute('GET', '/api/correspondence/seeks/so-direct', moCookie);
-    assert.equal(target.status, 410);
-    assert.equal(target.json.reason, 'expired');
+    assert.deepEqual(target, { status: 404, json: { error: 'seek_not_found' } });
     const creator = await callSeekRoute('GET', '/api/correspondence/seeks/so-direct', louCookie);
-    assert.equal(creator.json.reason, 'expired');
+    assert.deepEqual(creator, { status: 404, json: { error: 'seek_not_found' } });
     const stranger = await callSeekRoute('GET', '/api/correspondence/seeks/so-direct', nedCookie);
     assert.equal(stranger.status, 404);
 
