@@ -330,7 +330,11 @@ export async function pauseTenantRoomsOnShutdown<
         kind: 'pause_on_shutdown',
         atMs: at,
         eventSeq: seq,
-        payload: { mode: 'tenant', gameSpecId: room.gameSpecId, turn: event.activeColor },
+        payload: {
+          mode: 'tenant',
+          gameSpecId: room.gameSpecId,
+          turn: appended?.type === 'clock-paused' ? appended.activeColor : null,
+        },
       });
     } catch (err) {
       (ctx.logTimerFailure ?? tenantTimerFailureLogger(tenant))('pause', room.id, err as Error);

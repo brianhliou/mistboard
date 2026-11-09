@@ -8,6 +8,7 @@ import {
   type VariantId,
 } from '@mistboard/game';
 import * as persistence from './persistence.js';
+import { hydrateRoomOnce } from './room-hydration.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
 import {
   appendEvent,
@@ -157,6 +158,10 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     const existing = config.rooms.get(roomId);
     if (existing) return existing;
 
+    return hydrateRoomOnce(config.rooms, roomId, () => hydrateRoom(roomId, variant));
+  }
+
+  async function hydrateRoom(roomId: string, variant: VariantId): Promise<Room> {
     let events: GameEvent[] | null = null;
     let createdNewPersistentRoom = false;
     if (persistence.isInitialized()) {
