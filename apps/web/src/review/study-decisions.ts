@@ -25,7 +25,7 @@ export async function fetchStudyChapterDecisions(
     );
     // Studies import luck only. Even full room-shaped rows do not introduce decision glyphs here.
     const rows = body.decisions
-      .filter((row) => row.ply <= covered)
+      .filter((row) => row.ply <= covered && row.realizedWin !== undefined)
       .map(({ ply, mover, playedWin, realizedWin }) => ({ ply, mover, playedWin, realizedWin }));
     return rows.length ? jieqiDecisionOverlay(summarizeDecisions(rows)) : null;
   } catch {

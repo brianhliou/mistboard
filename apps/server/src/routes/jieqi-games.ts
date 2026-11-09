@@ -11,6 +11,7 @@ import {
   jieqiTruthView,
   oppositeJieqiColor,
 } from '@mistboard/game';
+import { currentAccountUser } from './../account-session.js';
 import { jieqiEnabled } from './../feature-flags.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import {
@@ -19,6 +20,7 @@ import {
   resolveJieqiDecisions,
 } from './../jieqi-analysis.js';
 import { jieqiAnalysisEngineAvailable } from './../jieqi-engine.js';
+import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
 import { jieqiRooms } from './../jieqi-registration.js';
 import type { JieqiEvent, JieqiProjection } from './../jieqi-runtime.js';
 import { jieqiPublicEvents, jieqiTenant } from './../jieqi-tenant.js';
@@ -123,6 +125,10 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
       undefined,
       computeIfMissing,
     ),
+  decisionsForViewer: async (result, request) => ({
+    ...result,
+    decisions: jieqiDecisionsForViewer(result.decisions, await currentAccountUser(request)),
+  }),
 });
 
 export async function tryHandle(

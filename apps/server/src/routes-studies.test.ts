@@ -8,6 +8,66 @@ import { parseChapterTags, setAdminOnlyStudyGateForTests, tryHandle } from './ro
 
 type ResponseCapture = { body: string; headers: Record<string, string>; status: number | null };
 
+test('study decision reads omit disabled luck and preserve the stored row for re-enabling', async (t) => {
+  const previous = process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  t.after(() => {
+    if (previous === undefined) delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+    else process.env.MISTBOARD_JIEQI_LUCK_ENABLED = previous;
+  });
+  init('postgres://mistboard@127.0.0.1:9/never');
+  t.after(close);
+  const tree = {
+    version: 1,
+    rootFen:
+      'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB',
+    root: { children: [{ uci: 'i4i5', children: [] }] },
+  };
+  const decisions = [{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 62 }];
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    if (sql.includes('FROM study_chapters c JOIN studies'))
+      return {
+        rows: [
+          {
+            chapter_id: 'c',
+            visibility: 'public',
+            owner_id: 'owner',
+            variant: 'jieqi',
+            root: tree,
+            engine_id: 'offline',
+            source: 'match',
+            decisions,
+            updated_at: new Date(),
+          },
+        ],
+      };
+    if (sql.includes('LEFT JOIN study_chapters')) return { rows: [{ variant: 'jieqi' }] };
+    assert.fail(`Unexpected study query: ${sql}`);
+  });
+  const read = async () => {
+    const response = captureResponse();
+    assert.equal(
+      await tryHandle(
+        {},
+        { method: 'GET', headers: {} } as IncomingMessage,
+        response,
+        '/api/studies/s/chapters/c/decisions',
+      ),
+      true,
+    );
+    assert.equal(response.status, 200);
+    return JSON.parse(response.body);
+  };
+  delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  const enabled = await read();
+  assert.deepEqual(enabled, { engineId: 'offline', source: 'match', decisions });
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'false';
+  const disabled = await read();
+  assert.doesNotMatch(JSON.stringify(disabled), /"(?:realizedWin|luck|netLuck|totalLuck)"/);
+  assert.deepEqual(disabled.decisions, [{ ply: 1, mover: 'red', playedWin: 50 }]);
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'true';
+  assert.deepEqual(await read(), enabled);
+});
+
 test('Staff picks curation rejects a non-admin before reading persistence', async () => {
   const previousNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'production';
