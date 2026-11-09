@@ -422,11 +422,7 @@ export function botCredits(botId: string): BotCredit[] {
     return [{ label: t('bots.jqeCredit'), href: 'https://github.com/devinokeefe/jieqi' }];
   }
   if (botId === 'ab-jchess') {
-    // AB-JChess-20261031 is built on jqe's MIT code, so jqe's author is credited too.
-    return [
-      { label: t('bots.abJchessCredit'), href: 'https://github.com/lxsgx23/AB-JChess' },
-      { label: t('bots.jqeCredit'), href: 'https://github.com/devinokeefe/jieqi' },
-    ];
+    return [{ label: t('bots.abJchessCredit'), href: 'https://github.com/lxsgx23/AB-JChess' }];
   }
   if (botId !== JUNGLE_TOP_BOT_ID) return [];
   return [
