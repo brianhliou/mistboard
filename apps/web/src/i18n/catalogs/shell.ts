@@ -71,6 +71,11 @@ export const EN_SHELL = {
   'nav.darkMode': 'Dark mode',
   'home.tagline':
     "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
+  // Phone home's closing block; the sentence is about.mission (set 2026-10-31).
+  'home.missionLabel': 'Our mission',
+  'home.mission':
+    "Bring people together across cultures through Chinese chess and the world's classic strategy games.",
+  'home.missionAbout': 'About Mistboard',
   'home.playSummary':
     'Free in the browser · No download or sign-up · Bots for every level · Play a friend',
   'home.supportTitle': 'Mistboard Patron',
@@ -256,6 +261,9 @@ export const CRITICAL_SHELL_I18N_KEYS = [
   'nav.boardAndPieces',
   'nav.darkMode',
   'home.tagline',
+  'home.missionLabel',
+  'home.mission',
+  'home.missionAbout',
   'home.playSummary',
   'home.supportTitle',
   'home.supportSubtitle',

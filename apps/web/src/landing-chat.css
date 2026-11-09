@@ -329,10 +329,10 @@ a.landing-chat-token:focus-visible {
   outline: none;
 }
 
-/* Phone home: chat is the last block before the footer, so keep it to about
-   five lines; older messages scroll inside it. */
+/* Phone home: about eight lines of chat over the composer (was five at 208px;
+   2026-11-08, it read as cramped); older messages scroll inside it. */
 @media (max-width: 600px) {
   .landing-chat {
-    --landing-chat-height: 208px;
+    --landing-chat-height: 320px;
   }
 }

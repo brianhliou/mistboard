@@ -19,7 +19,10 @@ import { rulesHrefPublicSurfaceEnabled } from './variant-public-surfaces.js';
 // the work of "there is more here".
 const MAX_FEED_ROWS = 12;
 
-export function buildLandingAnnouncements(locale: Locale = currentLocale()): HTMLElement {
+export function buildLandingAnnouncements(
+  locale: Locale = currentLocale(),
+  opts: { maxRows?: number; moreRow?: boolean } = {},
+): HTMLElement {
   const ordered = announcements()
     .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -48,14 +51,14 @@ export function buildLandingAnnouncements(locale: Locale = currentLocale()): HTM
 
   const updates = document.createElement('div');
   updates.className = 'landing-news-updates';
-  for (const entry of ordered.slice(0, MAX_FEED_ROWS)) {
+  for (const entry of ordered.slice(0, opts.maxRows ?? MAX_FEED_ROWS)) {
     updates.append(renderFeedEntry(entry, locale));
   }
   // The timeline ends on a disc that leads to the archive, so a reader who
   // scrolls to the bottom finds the way on, in the same grammar as the rows.
   // The header's "More »" stays: it is the affordance that is visible without
   // scrolling (the reason a terminal row alone was retired on 2026-08-27).
-  updates.append(renderMoreRow(locale));
+  if (opts.moreRow !== false) updates.append(renderMoreRow(locale));
   body.append(updates);
 
   return box;

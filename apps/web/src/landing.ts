@@ -35,6 +35,7 @@ import {
 } from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
+  buildLandingPhoneMission,
   buildLandingPhoneTiles,
   buildLandingTvStrip,
   isPhoneHome,
@@ -217,7 +218,6 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
       stage.tvStrip.update({
         mode,
         variantLabel: variantDisplayLabel(variantByRoomId[roomId] ?? specId),
-        watchHref: stage.viewerLink.getAttribute('href') ?? '',
       });
       stage.caption.textContent =
         mode === 'live'
@@ -617,8 +617,11 @@ export function watchHrefForTvGame(mode: LandingTvMode, roomId: string): string 
 // the shortcut tiles, the blog strip and the chat room, then the footer. The
 // lobby panel, correspondence card, event banners (until the broadcast pages
 // work on a phone, Brian 2026-10-23), daily puzzle, forum topics, top studies
-// and News are not built at all there, so none of them fetches, polls or opens
-// a socket on a phone. The prerender always bakes the full desktop shell.
+// are not built at all there, so none of them fetches, polls or opens
+// a socket on a phone. The tagline and the three newest News entries came back
+// to the phone home 2026-11-08. The prerender always bakes the full desktop shell.
+export const PHONE_NEWS_ROWS = 3;
+
 export function buildLandingStage(
   engines: PlayableEngine[],
   opts: { skipLiveWidgets?: boolean; phone?: boolean } = {},
@@ -675,8 +678,8 @@ export function buildLandingStage(
   caption.className = 'showcase-caption';
   viewerColumn.append(boardColumn);
   // Phone only (hidden above 600px): one line over the board saying what it is
-  // and linking to it, which the desktop rail never needed.
-  const tvStrip = buildLandingTvStrip(locale, viewerLink.getAttribute('href') ?? '');
+  // (the board under it is the link), which the desktop rail never needed.
+  const tvStrip = buildLandingTvStrip(locale);
   leftColumn.append(tvStrip.el, viewerColumn);
 
   // ── Center panel (grid-area: panel, band 1): the tabbed lobby board — Lobby
@@ -800,7 +803,14 @@ export function buildLandingStage(
   // flag is confirmed). ──
   const newsColumn = document.createElement('div');
   newsColumn.className = 'landing-news-column';
-  if (!phone) newsColumn.append(buildLandingAnnouncements(locale));
+  // The phone home shows the three newest entries; the rest stay at /feed.
+  newsColumn.append(
+    buildLandingAnnouncements(locale, phone ? { maxRows: PHONE_NEWS_ROWS, moreRow: false } : {}),
+  );
+  // Phone only: the mission closes the page, under the chat, so the TV board and
+  // the Play buttons keep the first screen (2026-11-08). The h1 tagline stays in
+  // the DOM for search and screen readers.
+  const missionBlock = phone ? buildLandingPhoneMission(locale) : null;
   const chatColumn = document.createElement('div');
   chatColumn.className = 'landing-chat-column';
   chatColumn.append(
@@ -847,7 +857,7 @@ export function buildLandingStage(
   // forum · chat]. Append order is irrelevant (grid-area governs).
   section.append(
     ...(phone
-      ? [leftColumn, playColumn, chatColumn]
+      ? [leftColumn, playColumn, ...(missionBlock ? [missionBlock] : []), newsColumn, chatColumn]
       : [
           leftColumn,
           lobbyPanel,
