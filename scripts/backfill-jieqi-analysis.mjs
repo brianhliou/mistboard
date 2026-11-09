@@ -9,9 +9,9 @@
 //
 // --regrade-decisions recomputes the decisions blob of every finished jieqi game whose only
 // decisions rows were written by an earlier decomposition algorithm (any jieqi decisions id
-// that is not a current one) and has no row under a current id. Dry by default: it lists
-// those games; --apply computes and writes them under the current id. The old row is kept
-// (never served since d6: it was graded from the real deal). The Layer-1 sweep is not
+// that is not a current one) and has no row under a current full or grade-only id.
+// Dry by default: it lists those games; --apply computes and writes them under the current id.
+// The old row is kept (never served since d6: it was graded from the real deal). The Layer-1 sweep is not
 // recomputed here; a plain run warms it under the current analysis ids.
 //
 // Against prod, via the pattern that never prints the credential:
@@ -192,7 +192,11 @@ process.exit(failed > 0 ? 1 : 0);
 // ── --regrade-decisions ──────────────────────────────────────────────────────────────
 
 async function runRegrade() {
-  const currentIds = [JIEQI_DECISIONS_ENGINE_ID, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID];
+  // Grade-only rows use the current algorithm too, regardless of the luck flag.
+  // This sweep upgrades algorithms; it must not turn luck back on for those rooms.
+  const currentIds = [JIEQI_DECISIONS_ENGINE_ID, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID].flatMap(
+    (id) => [id, `${id}+no-luck1`],
+  );
   const { rows: stale } = await pool.query(
     `SELECT g.room_id, g.ply_count, g.result,
             array_agg(DISTINCT a.engine_id) AS legacy_ids
