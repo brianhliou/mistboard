@@ -85,7 +85,7 @@ test('regrade still applies a genuine legacy row with previous-algorithm cache r
         computed++;
         assert.equal(args[0], 'legacy-room');
         assert.equal(args[5], true);
-        assert.deepEqual(args[7], { servePreviousAlgorithms: false });
+        assert.deepEqual(args[7], { servePreviousAlgorithms: false, rules: undefined });
         return { engineId: pikafishId, decisions: [] };
       },
     },

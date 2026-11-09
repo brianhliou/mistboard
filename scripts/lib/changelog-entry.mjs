@@ -125,6 +125,63 @@ export function assertEntriesAreNew(source, entries) {
   }
 }
 
+// A changelog HEAD can only be retried with the complete set it added. Match
+// headings as well as text, and ignore argument order and generated links.
+export function assertChangelogCommitMatches(before, after, entries) {
+  assertEntriesAreNew('', entries);
+  const readEntries = (source) => {
+    const result = [];
+    let heading = null;
+    let current = null;
+    const flush = () => {
+      if (heading && current) result.push(`${heading}: ${entryText(current)}`);
+      current = null;
+    };
+    for (const line of source.split('\n')) {
+      if (line.startsWith('- ')) {
+        flush();
+        current = line;
+      } else if (current && /^\s+\S/.test(line)) {
+        current += ` ${line.trim()}`;
+      } else {
+        flush();
+        if (MONTH_LINE.test(line)) heading = null;
+        const match = HEADING_LINE.exec(line);
+        if (match) heading = match[1];
+      }
+    }
+    flush();
+    return result;
+  };
+  const subtract = (left, right) => {
+    const remaining = [...right];
+    return left.filter((value) => {
+      const index = remaining.indexOf(value);
+      if (index === -1) return true;
+      remaining.splice(index, 1);
+      return false;
+    });
+  };
+  const oldLines = readEntries(before);
+  const newLines = readEntries(after);
+  const added = subtract(newLines, oldLines);
+  const removed = subtract(oldLines, newLines);
+  const requested = entries.map(({ heading, text }) => `${heading}: ${text}`);
+  const missing = subtract(added, requested);
+  const extra = subtract(requested, added);
+  if (missing.length || extra.length || removed.length) {
+    throw new Error(
+      '--changelog: HEAD changelog commit differs from the requested lines:\n' +
+        [
+          ...missing.map((line) => `- ${line}`),
+          ...extra.map((line) => `+ ${line}`),
+          ...removed.map((line) => `removed by HEAD: ${line}`),
+        ].join('\n') +
+        '\n- committed only; + requested only; retry with exactly the committed additions',
+    );
+  }
+}
+
 /**
  * Return `source` with each entry inserted under `month` and its heading,
  * creating the month (in newest-first position) and the heading (in canonical

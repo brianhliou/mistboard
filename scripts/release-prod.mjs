@@ -21,6 +21,7 @@ import {
 } from './lib/agent-branches.mjs';
 import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
+  assertChangelogCommitMatches,
   assertEntriesAreNew,
   currentMonth,
   findExistingEntries,
@@ -154,6 +155,7 @@ const release = {
   // the changelog commit made on top of it; null without --changelog.
   featureRevision: null,
   changelogCommit: null,
+  changelogPlanned: false,
   // How long this release queued behind another for the machine-wide lock.
   lockWaitMs: null,
   lockWaited: false,
@@ -185,13 +187,30 @@ try {
     await runLocalGate(localGateFor(changed, base, true), changed);
     process.exit(0);
   }
-  if (!options.plan) ensureCleanWorktree();
-  if (options.push || options.plan) enforceAgentBranchAccounting();
-  if (options.changelog.length > 0) checkChangelogPreconditions();
+  if (options.rehearse) {
+    await timedStage('argument and changelog validation', () => {
+      ensureCleanWorktree();
+      enforceAgentBranchAccounting();
+      if (options.changelog.length > 0) checkChangelogPreconditions();
+    });
+  } else {
+    if (!options.plan) ensureCleanWorktree();
+    if (options.push || options.plan) enforceAgentBranchAccounting();
+    if (options.changelog.length > 0) checkChangelogPreconditions();
+  }
   // One release at a time on this machine, taken before anything reads or
   // fetches origin/main: a release that queued finds main moved by the one it
   // waited for, and the catch-up below has to see that move.
-  if (options.push && !options.plan) {
+  if (options.rehearse) {
+    await timedStage('ship window before lock', () =>
+      enforceShipWindow('before the release lock', { onRefuse: 'throw' }),
+    );
+    await timedStage('release lock', takeReleaseLock);
+    await timedStage('ship window after lock', () =>
+      enforceShipWindow('after taking the release lock', { onRefuse: 'throw' }),
+    );
+    await timedStage('main ancestry check', catchUpBeforeGate);
+  } else if (options.push && !options.plan) {
     // The ship window, checked before the lock and again once it is held (the
     // release this one queued behind may have pushed meanwhile). Both run
     // before the catch-up merge and the --changelog commit, so a refusal
@@ -218,14 +237,18 @@ try {
   console.log(`push: ${options.push ? 'yes' : 'no'}`);
   console.log(`smoke: ${options.smoke}`);
 
-  const plan = runPlan({ headRevision: release.headRevision });
+  const plan = options.rehearse
+    ? await timedStage('production deploy plan', () =>
+        runPlan({ headRevision: release.headRevision }),
+      )
+    : runPlan({ headRevision: release.headRevision });
   release.deployRequired = plan.deployRequired;
   release.planReason = plan.reason;
   release.productionRevision = plan.productionRevision;
   // Backstop: the early guard estimated no deploy from this branch's own diff,
   // but the plan against production says this push deploys (the merged-in main
   // carried something undeployed). Check the window now, before the gate.
-  if (options.push && release.deployRequired && release.shipWindow === null) {
+  if ((options.push || options.rehearse) && release.deployRequired && release.shipWindow === null) {
     enforceShipWindow('after the deploy plan', { force: true, onRefuse: 'throw' });
   }
 
@@ -233,7 +256,10 @@ try {
     baseRevision: release.targetRevision,
     headRevision: release.headRevision,
   });
-  if (options.push) {
+  if (release.changelogPlanned) {
+    ciPlan.changedFiles = unique([...ciPlan.changedFiles, 'CHANGELOG.md']);
+  }
+  if (options.push || options.rehearse) {
     ciPlan.ciRequired = true;
     ciPlan.reason = 'release_candidate_requires_ci';
   }
@@ -246,7 +272,7 @@ try {
   // unattended; a deploy that would interrupt live games still requires the
   // token and drains first. When the active-game count can't be read, fail
   // safe and require the drain.
-  if (options.push && release.deployRequired) {
+  if ((options.push || options.rehearse) && release.deployRequired) {
     const liveGames = await fetchActiveGameCount();
     if (liveGames === null) {
       release.drainRequired = true;
@@ -264,7 +290,11 @@ try {
 
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, release.targetRevision, options.fullCi);
-    await runLocalGate(gate, ciPlan.changedFiles);
+    if (options.rehearse) {
+      await timedStage('local release gate', () => runLocalGate(gate, ciPlan.changedFiles));
+    } else {
+      await runLocalGate(gate, ciPlan.changedFiles);
+    }
     if (release.deployRequired) {
       runTimed('local production smokes', [
         'npm',
@@ -279,6 +309,12 @@ try {
     }
   } else {
     console.log('skip: local gate (--skip-local-ci)');
+  }
+
+  if (options.rehearse) {
+    await timedStage('final main check', catchUpWithMain);
+    printRehearsalSummary();
+    process.exit(0);
   }
 
   if (options.push) {
@@ -409,6 +445,7 @@ try {
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
+  if (options.rehearse) printRehearsalSummary(error);
   writeReleaseRecord({
     elapsedMs,
     outcome: 'failed',
@@ -423,6 +460,9 @@ function parseArgsOrExit(args) {
     return parseArgs(args);
   } catch (error) {
     console.error(`release-prod: ${error instanceof Error ? error.message : String(error)}`);
+    if (args.includes('--rehearse')) {
+      console.error('# rehearsal stage summary\nargument and changelog validation: failed');
+    }
     process.exit(2);
   }
 }
@@ -446,6 +486,7 @@ function parseArgs(args) {
     planBase: null,
     planFiles: [],
     push: false,
+    rehearse: false,
     remote: DEFAULT_REMOTE,
     smoke: DEFAULT_SMOKE,
     shipWindowHours: DEFAULT_SHIP_WINDOW_HOURS,
@@ -460,6 +501,17 @@ function parseArgs(args) {
       parsed.baseUrl = requiredValue(args, ++index, arg);
     } else if (arg === '--changelog') {
       parsed.changelog.push(parseChangelogArg(requiredValue(args, ++index, arg)));
+    } else if (arg === '--changelog-file') {
+      const file = requiredValue(args, ++index, arg);
+      const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+      for (const [lineNumber, line] of lines.entries()) {
+        if (!line.trim()) continue;
+        try {
+          parsed.changelog.push(parseChangelogArg(line));
+        } catch (error) {
+          throw new Error(`${file}:${lineNumber + 1}: ${error.message}`);
+        }
+      }
     } else if (arg === '--changelog-summary') {
       parsed.changelogSummary = requiredValue(args, ++index, arg);
     } else if (arg === '--ci-workflow') {
@@ -486,6 +538,8 @@ function parseArgs(args) {
       parsed.plan = true;
     } else if (arg === '--push') {
       parsed.push = true;
+    } else if (arg === '--rehearse') {
+      parsed.rehearse = true;
     } else if (arg === '--remote') {
       parsed.remote = requiredValue(args, ++index, arg);
     } else if (arg === '--skip-ci-wait') {
@@ -516,6 +570,15 @@ function parseArgs(args) {
   }
 
   if (
+    parsed.rehearse &&
+    !parsed.help &&
+    (parsed.push || parsed.plan || parsed.gateOnly || !parsed.localCi || !parsed.ciWait)
+  ) {
+    throw new Error(
+      '--rehearse cannot be combined with --push, plan, --gate-only, --skip-local-ci or --skip-ci-wait',
+    );
+  }
+  if (
     parsed.gateOnly &&
     !parsed.help &&
     (parsed.push ||
@@ -532,16 +595,20 @@ function parseArgs(args) {
     if (parsed.head !== 'HEAD') {
       throw new Error('--changelog commits on top of HEAD; it cannot be combined with --head');
     }
-    if (!parsed.push && !parsed.plan) {
-      throw new Error(
-        '--changelog commits the line for the push to carry: pass --push, or --dry-run to preview it',
-      );
+    if (!parsed.push && !parsed.plan && !parsed.rehearse) {
+      throw new Error('--changelog needs --push, --rehearse, or --dry-run to preview it');
     }
   }
   if (parsed.changelogSummary !== null && parsed.changelog.length === 0) {
     throw new Error('--changelog-summary needs at least one --changelog');
   }
-  if (parsed.extraShip !== null && !parsed.push && !parsed.plan && !parsed.help) {
+  if (
+    parsed.extraShip !== null &&
+    !parsed.push &&
+    !parsed.plan &&
+    !parsed.rehearse &&
+    !parsed.help
+  ) {
     throw new Error(
       '--extra-ship bypasses the ship window for a --push: pass --push, or --dry-run',
     );
@@ -1207,6 +1274,9 @@ function catchUpWithMain() {
   if (!remote || !release.targetRevision || revisionMatches(remote, release.targetRevision)) {
     return;
   }
+  if (options.rehearse) {
+    throw new Error('main moved during the gate; re-run --rehearse against the new main');
+  }
   git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
   const contained = spawnSync('git', ['merge-base', '--is-ancestor', remote, 'HEAD'], {
     cwd: workdir,
@@ -1312,6 +1382,11 @@ function catchUpBeforeGate() {
     stdio: 'ignore',
   });
   if (contained.status === 0) return;
+  if (options.rehearse) {
+    throw new Error(
+      'main moved: merge it before --rehearse so the tested tree is current; rehearsal never changes HEAD',
+    );
+  }
   console.log(
     `${options.remote}/${options.targetBranch} is at ${shortRevision(remote)}, which HEAD does not contain${
       release.lockWaited ? ' (it moved while this release queued)' : ''
@@ -1328,7 +1403,6 @@ function checkChangelogPreconditions() {
     throw new Error('--changelog: CHANGELOG.md has uncommitted edits; commit or drop them first');
   }
   const source = git(['show', 'HEAD:CHANGELOG.md']);
-  if (changelogAlreadyPresent(source)) return;
   const subject = git(['log', '-1', '--format=%s', 'HEAD']);
   const touched = git(['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', 'HEAD'])
     .split('\n')
@@ -1337,10 +1411,11 @@ function checkChangelogPreconditions() {
     /^docs\(changelog\)/.test(subject) ||
     (touched.length === 1 && touched[0] === 'CHANGELOG.md')
   ) {
-    throw new Error(
-      `--changelog: HEAD is already a changelog commit (${subject}); release without --changelog`,
-    );
+    const parent = git(['show', 'HEAD^:CHANGELOG.md']);
+    assertChangelogCommitMatches(parent, source, options.changelog);
+    return;
   }
+  if (changelogAlreadyPresent(source)) return;
   const shortHash = git(['rev-parse', '--short=8', 'HEAD']);
   if (source.includes(`/commit/${shortHash})`)) {
     throw new Error(`--changelog: CHANGELOG.md already links ${shortHash}`);
@@ -1397,6 +1472,8 @@ function commitChangelog() {
   console.log('# changelog');
   console.log(previewInsertion(planned.before, planned.after));
   writeFileSync(file, planned.after);
+  const restore = () => writeFileSync(file, planned.before);
+  if (options.rehearse) process.once('exit', restore);
   try {
     runTimed('changelog grammar test', [
       'npm',
@@ -1408,8 +1485,18 @@ function commitChangelog() {
       'src/changelog-data.test.ts',
     ]);
   } catch (error) {
-    writeFileSync(file, planned.before);
+    restore();
     throw new Error(`changelog grammar test failed; CHANGELOG.md restored (${error.message})`);
+  } finally {
+    if (options.rehearse) {
+      restore();
+      process.removeListener('exit', restore);
+    }
+  }
+  if (options.rehearse) {
+    release.changelogPlanned = true;
+    console.log('changelog: rehearsed and restored; nothing committed');
+    return;
   }
   // SKIP_PRECOMMIT: the hook's Biome pass does not cover Markdown and its
   // typecheck cannot see a CHANGELOG.md edit; the grammar test above is this
@@ -1809,7 +1896,7 @@ function recordStage(stage) {
 // an afternoon of transcript parsing. Never fails the release: a record that
 // cannot be written is a warning.
 function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
-  if (options.plan || options.gateOnly) return;
+  if (options.plan || options.gateOnly || options.rehearse) return;
   const logPath = releaseLogPath();
   const record = {
     v: 1,
@@ -1853,6 +1940,16 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
       })`,
     );
   }
+}
+
+function printRehearsalSummary(error = null) {
+  console.log('# rehearsal stage summary');
+  for (const stage of release.stages) {
+    console.log(`${stage.label}: ${stage.ok ? 'ok' : 'failed'} (${formatDuration(stage.ms)})`);
+  }
+  console.log(
+    error ? `rehearsal: failed (${error.message})` : 'rehearsal: ok; stopped before remote writes',
+  );
 }
 
 function releaseLogPath() {
@@ -2384,6 +2481,7 @@ function printHelp() {
   npm run release:prod -- --gate-only
   npm run release:prod -- --push --smoke lite
   npm run release:prod -- --push --changelog "Playing: Flip board in a live game"
+  npm run release:prod -- --rehearse --changelog-file /tmp/release-lines.txt
   node scripts/release-prod.mjs --dry-run --changelog "Fixed: ..." --plan-file CHANGELOG.md
   npm run release:prod -- --skip-local-ci --smoke web
   node scripts/release-prod.mjs --plan
@@ -2407,6 +2505,14 @@ Options:
                            pool deploys token-free. Without this, assume it is
                            already pushed.
   --head <ref>             Commit/ref to release, default HEAD.
+  --rehearse              Run pre-push validation, ship-window checks, deploy/CI
+                           planning, local gate and local production smokes.
+                           Holds the release lock until exit. Tests proposed
+                           changelog lines, then restores the file; no commit,
+                           push, drain, hosted CI wait or release log entry.
+                           If main moved, merge it first; HEAD stays unchanged.
+                           Incompatible with --push, plan, --gate-only and
+                           either skip flag. Gate reuse and --full-ci apply.
   --changelog "<Heading>: <line>"
                            Add a CHANGELOG.md line for HEAD (repeatable): under
                            the current ## YYYY-MM and ### <Heading> (created
@@ -2418,7 +2524,12 @@ Options:
                            Community, Site, Removed, Fixed, Technical. No em
                            dashes, no trailing period, no link of your own.
                            Runs the changelog grammar test before committing.
-                           Needs --push, or --dry-run to preview.
+                           Needs --push, --rehearse, or --dry-run to preview.
+                           Retrying a changelog HEAD requires exactly its added
+                           lines (any order); differing lines print a diff.
+  --changelog-file <path>  Read one "<Heading>: <line>" per nonblank line using
+                           the same validation as --changelog. Repeatable and
+                           combinable with --changelog; expanded in flag order.
   --changelog-summary <t>  The <summary> in that commit message. Default: HEAD's
                            subject without its type(scope): prefix.
   --extra-ship "<reason>"  Bypass the ship window for a production bug. The
@@ -2434,7 +2545,7 @@ Options:
                            logged release pushed it. The refusal lists the
                            parked agent/* branches to batch into the next ship.
                            --dry-run prints what the guard would decide.
-  --lock-timeout-ms <ms>   How long --push queues behind another release on
+  --lock-timeout-ms <ms>   How long --push/--rehearse queues behind another release on
                            this machine before failing, default ${DEFAULT_LOCK_TIMEOUT_MS}.
                            Lock file: ~/.local/share/mistboard/release.lock
                            (MISTBOARD_RELEASE_LOCK overrides); a dead holder's
