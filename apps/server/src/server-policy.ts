@@ -648,6 +648,9 @@ export function isClientRoute(pathname: string): boolean {
 export function isNoindexRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
+    // Frame-only widgets duplicate the full public pages and have no useful
+    // search landing content. They keep working in third-party iframes.
+    isEmbedRoute(normalized) ||
     // Admin shells have no public preview or search content.
     normalized === '/ops' ||
     normalized === '/metrics' ||

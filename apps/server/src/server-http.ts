@@ -161,6 +161,9 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       response.setHeader('X-Frame-Options', 'SAMEORIGIN');
       response.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
     } else {
+      // Widgets are alternate presentations, not search landing pages. Keep
+      // them crawlable so engines can observe this policy on existing URLs.
+      response.setHeader('X-Robots-Tag', 'noindex, follow');
       // An embed shell lives in OTHER PEOPLE'S pages, and the static fallback
       // that serves it sets no Cache-Control and no ETag: only Last-Modified.
       // Chrome then applies heuristic freshness, roughly a tenth of the
@@ -176,6 +179,25 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       // no-cache is "revalidate", not "do not store": the browser still keeps
       // it and still takes a 304, it just may not replay it unasked.
       response.setHeader('Cache-Control', 'no-cache');
+    }
+
+    // The client allowlist trims slashes, but page metadata and article/study
+    // handlers match exact paths. Redirect first so /rules/banqi/ cannot fall
+    // through to an indexable homepage shell with no canonical. Keep the query
+    // intact for shared positions, filters and campaign attribution.
+    const cleanPath = pathname.replace(/\/+$/, '') || '/';
+    if (
+      pathname !== cleanPath &&
+      !pathname.startsWith('//') &&
+      (isClientRoute(cleanPath) ||
+        prerenderRoutes.has(cleanPath) ||
+        /^(?:\/zh-han[st])?\/articles\/[^/]+$/.test(cleanPath)) &&
+      (request.method === 'GET' || request.method === 'HEAD') &&
+      !cleanPath.slice(cleanPath.lastIndexOf('/') + 1).includes('.')
+    ) {
+      response.writeHead(301, { location: `${cleanPath}${url.slice(pathname.length)}` });
+      response.end();
+      return;
     }
 
     // The postgame review shell mounts an in-browser analysis engine that runs

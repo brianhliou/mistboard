@@ -181,6 +181,26 @@ test('serveArticlePage returns prerendered rules files from the rules base', asy
   assert.equal(response.body, '<h1>prerendered</h1>');
 });
 
+test('unknown articles return a real 404 rather than a homepage shell or redirect', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const base of ['blog', 'rules', 'articles'] as const) {
+    for (const slug of ['no-such-article-1109', 'constructor', '__proto__']) {
+      const response = captureResponse();
+      await serveArticlePage({
+        slug,
+        base,
+        response,
+        publicHost: 'https://mistboard.com',
+        staticDir,
+      });
+      assert.equal(response.status, 404, `${base}/${slug}`);
+      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+      assert.equal(response.headers.location, undefined);
+    }
+  }
+});
+
 test('serveArticlePage falls back to index shell with rules metadata', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
@@ -203,6 +223,10 @@ test('serveArticlePage falls back to index shell with rules metadata', async () 
   assert.match(
     response.body,
     /<meta property="og:image" content="https:\/\/mistboard.test\/og\/article\/fog-chess.png\?v=\d+">/,
+  );
+  assert.match(
+    response.body,
+    /<link rel="canonical" href="https:\/\/mistboard.test\/rules\/fog-chess">/,
   );
 });
 
@@ -2621,10 +2645,10 @@ test('/contact canonicalises to the bare path whatever its ?about=', async () =>
 
 // The other English-only pages with no canonical of their own: a ?utm= or
 // ?ref= copy of any of them would be filed the same way as the contact copies.
-test('/terms, /privacy, /thanks and /faq canonicalise to the bare path', async () => {
+test('/terms, /privacy, /thanks, /faq and /streamer canonicalise to the bare path', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
-  for (const pathname of ['/terms', '/privacy', '/thanks', '/faq']) {
+  for (const pathname of ['/terms', '/privacy', '/thanks', '/faq', '/streamer']) {
     const response = captureResponse();
     const served = await serveSpaShellWithRoutePreloads({
       response,

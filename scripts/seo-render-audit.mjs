@@ -136,7 +136,9 @@ function baseTitle(title) {
 export function serverHtmlFacts(html) {
   const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? null;
   const noindex = /<meta[^>]+name="robots"[^>]+noindex/i.test(html);
-  const canonical = html.match(/<link[^>]+rel="canonical"[^>]+href="([^"]*)"/)?.[1] ?? null;
+  const head = html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? '';
+  const canonicalLinks = [...head.matchAll(/<link\b(?=[^>]*\brel=["']canonical["'])[^>]*>/gi)];
+  const canonical = canonicalLinks[0]?.[0].match(/\bhref=["']([^"']*)["']/i)?.[1] ?? null;
   const h1 =
     html
       .match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1]
@@ -156,6 +158,7 @@ export function serverHtmlFacts(html) {
     title: title === null ? null : decodeEntities(title),
     noindex,
     canonical,
+    canonicalCount: canonicalLinks.length,
     h1,
     prerendered,
     htmlLang,
@@ -220,6 +223,8 @@ const SERVER_RENDERED_PAGE =
 export function serverHtmlFailures(pathname, facts) {
   if (facts.noindex) return [];
   const failures = [];
+  if (!facts.canonical) failures.push('missing canonical');
+  if (facts.canonicalCount > 1) failures.push(`multiple canonicals: ${facts.canonicalCount}`);
   if (facts.rawChars < 150) failures.push(`raw body ${facts.rawChars} < 150 chars`);
   if (!SERVER_RENDERED_PAGE.test(pathname)) return failures;
   if (!facts.prerendered && !facts.canonical) {
