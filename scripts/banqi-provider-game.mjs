@@ -160,6 +160,7 @@ try {
   let revision = 0;
   let reconnects = 0;
   let hydrated = false;
+  let retiredRoom;
   let highestQuiet = 0;
   let humanMoves = 0;
   async function connect() {
@@ -229,7 +230,13 @@ try {
         socket.close();
         await once(socket, 'close');
         const room = banqiRooms.get(roomId);
+        // Client close precedes the server close callback, which rearms timers.
+        // Retire only after that callback has removed the final server client.
+        const closeDeadline = Date.now() + 2000;
+        while (room.clients.size > 0 && Date.now() < closeDeadline) await delay(5);
+        assert.equal(room.clients.size, 0, 'Server must finish disconnect before eviction');
         await room.pendingWrites;
+        retiredRoom = room;
         clearBanqiRuntimeTimers(room);
         banqiRooms.delete(roomId);
         const loaded = await getOrLoadBanqiRoom(roomId);
@@ -256,6 +263,16 @@ try {
   }
   const room = banqiRooms.get(roomId);
   await room.pendingWrites;
+  assert.ok(retiredRoom, 'Expected a retired room after hydration');
+  for (const field of [
+    'abortTimer',
+    'clockTimer',
+    'forfeitTimer',
+    'actionTimer',
+    'engineTimer',
+    'resumeTimer',
+  ])
+    assert.equal(retiredRoom[field] ?? null, null, `Evicted room rearmed ${field}`);
   const events = await persistence.loadRoomEvents(roomId);
   const replay = replayTenantEvents(banqiTenant, events);
   assert.equal(replay.state.status.type, 'finished');
@@ -295,6 +312,7 @@ try {
       highestQuiet,
       reconnects,
       persistedHydration: hydrated,
+      retiredRoomQuiescent: true,
       private: true,
       counted: false,
       base,
