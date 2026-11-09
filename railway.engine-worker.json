@@ -21,6 +21,7 @@
       "/fairy-stockfish-atomic-xiangqi.patch",
       "/pikafish-jieqi.ref",
       "/pikafish.ref",
+      "/pikafish-cc0-net.patch",
       "/ab-jchess.ref",
       "/katago-jungle.ref",
       "/jqe.ref",
