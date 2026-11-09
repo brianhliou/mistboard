@@ -155,6 +155,25 @@
     overflow-y: hidden;
   }
 
+  .static-page-rail.fade-left,
+  .static-page-rail.fade-right {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--rail-fade-left, 0px),
+      #000 calc(100% - var(--rail-fade-right, 0px)),
+      transparent
+    );
+  }
+
+  .static-page-rail.fade-left {
+    --rail-fade-left: 28px;
+  }
+
+  .static-page-rail.fade-right {
+    --rail-fade-right: 28px;
+  }
+
   .static-page-rail-nav {
     display: flex;
     gap: 14px;
