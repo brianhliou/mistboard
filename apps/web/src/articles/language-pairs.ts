@@ -7,10 +7,9 @@
 //
 // One list, two readers: prerender-articles.mjs turns each pair into the
 // hreflang alternates of the whole group, and articles.ts draws a visible
-// link between the partners. The visible link is the only crawlable path to a
-// Vietnamese page, which the blog index leaves out by design
-// (isArticleListedInThisEnv): until 2026-10-21 nothing linked to
-// /blog/lai-ly-huynh-co-tuong but its own hreflang tags.
+// link from each Vietnamese page to its English partner. Vietnamese pages
+// stay out of the blog index by design (isArticleListedInThisEnv); the sitemap
+// includes them for discovery alongside the reciprocal hreflang alternates.
 
 export type ContentLanguage = 'vi';
 

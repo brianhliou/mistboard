@@ -899,6 +899,31 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   font-size: 13px;
 }
 
+.article-meta-dates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 1em;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.article-meta-date {
+  flex: 1 0 auto;
+  position: relative;
+  white-space: nowrap;
+}
+
+/* Each wrapped date fills its line. Its separator sits in the preceding gap,
+   outside the clipped date row when it starts a new line. */
+.article-meta-date + .article-meta-date::before {
+  content: "·";
+  position: absolute;
+  inset-inline-start: -1em;
+  width: 1em;
+  text-align: center;
+}
+
 .article-chip {
   display: inline-block;
   padding: 2px 10px;
@@ -3682,8 +3707,7 @@ a.article-meta-author:hover .article-meta-author-name {
   text-decoration: underline;
 }
 
-/* The page's other language (articles/language-pairs.ts), named in that
-   language: a quiet link in the meta row, beside the dates. */
+/* A Vietnamese page's English partner, beside its author in the byline. */
 .article-meta-language {
   color: inherit;
   font-weight: 600;
