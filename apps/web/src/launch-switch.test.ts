@@ -185,3 +185,51 @@ it('a hidden Gomoku switch removes every public listing again', async () => {
   const listed = await gomokuListedOnWeb();
   expect(listed).toEqual(everyValue(listed, false));
 });
+
+async function threeKingdomsListedOnWeb() {
+  const surfaces = await import('./variant-public-surfaces.js');
+  const metrics = await import('./metrics.js');
+  const game = await import('@mistboard/game');
+  return {
+    public: surfaces.variantPublicSurfaceEnabled('three-kingdoms-banqi'),
+    rules: surfaces.rulesSlugPublicSurfaceEnabled('three-kingdoms-banqi'),
+    indexable: !surfaces.articleIsNoindex({ kind: 'rules', slug: 'three-kingdoms-banqi' }),
+    shelf: game.CANONICAL_VARIANT_ORDER.includes('three-kingdoms-banqi'),
+    stats:
+      metrics.publicVariantEntries(
+        {
+          variantTotals: [{ variant: 'three-kingdoms-banqi', count: 1 }],
+        } as unknown as PublicStats,
+        'en',
+      ).length === 1,
+  };
+}
+
+it('Three Kingdoms Banqi is launched, casual and unrated', async () => {
+  const game = await import('@mistboard/game');
+  expect(game.gameSpecForId('three-kingdoms-banqi')).toMatchObject({ publicSurface: 'casual' });
+  expect(game.gameSpecForId('three-kingdoms-banqi').rated).not.toBe(true);
+  expect(game.ratingPoolForSpec('three-kingdoms-banqi')).toBeNull();
+  const listed = await threeKingdomsListedOnWeb();
+  expect(listed).toEqual(everyValue(listed, true));
+  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain('three-kingdoms-banqi');
+});
+
+it('hiding Three Kingdoms Banqi removes every public web listing again', async () => {
+  vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
+  const isPublic = publicSpecPredicate(
+    GAME_SPECS.map((spec) =>
+      spec.id === 'three-kingdoms-banqi' ? { ...spec, publicSurface: 'hidden' as const } : spec,
+    ),
+  );
+  const lists = deriveLaunchLists(isPublic);
+  vi.resetModules();
+  vi.doMock('@mistboard/game', async (importOriginal) => ({
+    ...(await importOriginal<typeof Game>()),
+    isPublicGameSpec: (id: string | null | undefined) => id != null && isPublic(id),
+    CANONICAL_VARIANT_ORDER: lists.canonicalVariantOrder,
+  }));
+  const listed = await threeKingdomsListedOnWeb();
+  expect(listed).toEqual(everyValue(listed, false));
+  vi.unstubAllEnvs();
+});

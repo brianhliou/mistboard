@@ -1,5 +1,5 @@
-// Live room client for Three Kingdoms banqi (三國暗棋, #628): a playtest for
-// admin accounts on prod (#684) and for everyone in a local build with
+// Live room client for public casual Three Kingdoms Banqi (#628). Play opens
+// to everyone in a build with
 // VITE_THREE_KINGDOMS_BANQI_ENABLED (three-kingdoms-banqi-access.ts). Built on the
 // generic live-client core like live-jungle-flip.ts, which it follows closely:
 // symmetric hidden identity (the server sends both seats the same masked board),
@@ -137,8 +137,8 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   isColor: isSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   // The room is gated on the server, never here: its WebSocket refuses a
-  // non-admin with 1008 'game spec disabled' (three-kingdoms-banqi-access.ts),
-  // and the notice says the playtest is admin-only. A client gate read the
+  // non-admin with 1008 'game spec disabled' while the runtime flag is off,
+  // and the notice explains the unavailable room. A client gate read the
   // admin hint, which a fresh browser does not have yet, and drew a dead room
   // for a real admin. 'room unavailable' keeps the generic no-such-room line.
   enabled: () => true,

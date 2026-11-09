@@ -1195,16 +1195,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Three Kingdoms banqi (三國暗棋, #628): a playtest offered to admin
-    // accounts on prod (#684) and to everyone in a build with
-    // VITE_THREE_KINGDOMS_BANQI_ENABLED (local only). See
-    // ../three-kingdoms-banqi-access.ts. A finished game opens its review page
-    // (under the same admission gate), with finished exports and a TV surface.
+    // Public casual Three Kingdoms Banqi. Play respects the build-time gate;
+    // the server independently admits sockets and creates. Always unrated.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
     // /room/tkb_* loads this client whatever the admin hint says; the server's
-    // WebSocket door refuses a non-admin with 1008 and the room says why.
+    // WebSocket door enforces the runtime gate and its admin fallback.
     liveRoomServerGated: true,
     pageTitleKey: 'variant.threeKingdomsBanqi.name',
     gameRouteBase: '/three-kingdoms-banqi/game',

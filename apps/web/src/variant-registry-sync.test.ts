@@ -577,3 +577,20 @@ describe('retired variants: replay kept on both sides, play offered on neither',
     }
   });
 });
+
+describe('launched casual Three Kingdoms Banqi registry parity', () => {
+  it('registers its own review and TV board, with an unrated lobby', () => {
+    const server = registeredVariantTenants().find(
+      (tenant) => tenant.gameSpecId === 'three-kingdoms-banqi',
+    )!;
+    const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'three-kingdoms-banqi')!;
+    expect(maybeGameSpecForId(server.gameSpecId)?.publicSurface).toBe('casual');
+    expect(server.lobby?.supportsRated).toBe(false);
+    expect(web.landing?.capabilities.supportsRated).toBe(false);
+    expect(server.watch?.channelId).toBe('three-kingdoms-banqi');
+    expect(web.watch?.family).toBe(server.watch?.family);
+    expect(server.export?.gameRouteBase).toBe(web.gameRouteBase);
+    expect(server.card?.variant).toBe('three-kingdoms-banqi');
+    expect(isClientRoute('/three-kingdoms-banqi/game/tkb_launched')).toBe(true);
+  });
+});

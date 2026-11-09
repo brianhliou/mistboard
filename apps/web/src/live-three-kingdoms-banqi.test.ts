@@ -405,15 +405,15 @@ describe('Three Kingdoms banqi live room', () => {
   // The playtest is gated on the server: a non-admin's socket closes 1008
   // 'game spec disabled', and the room says it is admin-only rather than
   // drawing a dead board or calling the room inactive.
-  it('a refused socket says the playtest is admin-only', async () => {
+  it('a refused socket explains that play is switched off', async () => {
     const options = await mount();
     socket.connection = 'rejected';
     socket.closeReason = 'game spec disabled';
     options.render();
-    expect(document.body.textContent).toContain('opens only for admin accounts');
+    expect(document.body.textContent).toContain('unavailable while play is switched off');
     socket.closeReason = 'room unavailable';
     options.render();
-    expect(document.body.textContent).not.toContain('opens only for admin accounts');
+    expect(document.body.textContent).not.toContain('unavailable while play is switched off');
   });
 
   // Hidden information: the strips, the tally and its reveal odds are built from

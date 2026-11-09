@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-10',
+    kind: 'release',
+    headline: 'Three Kingdoms Banqi is open to everyone.',
+    body: 'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.',
+    href: '/?play=computer&gameSpecId=three-kingdoms-banqi',
+    cta: 'Play Three Kingdoms Banqi',
+  },
+  {
     date: '2026-11-09',
     kind: 'release',
     headline: 'Banqi and Flip Jungle now have eight bot levels.',

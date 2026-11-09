@@ -1,5 +1,4 @@
-// The Three Kingdoms banqi (三國暗棋, #628) bot for the admin-only prod playtest
-// (#684).
+// The Three Kingdoms Banqi (三國暗棋, #628) bot for public casual play.
 //
 // The engine is the Rust `three-kingdoms-banqi-engine` binary from the private
 // engine repo (three_kingdoms_banqi_rust), driven as a UCI subprocess, one

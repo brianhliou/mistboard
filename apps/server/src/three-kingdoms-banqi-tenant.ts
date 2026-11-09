@@ -1,11 +1,8 @@
 /**
- * Three Kingdoms banqi (三國暗棋, #628) VariantTenant: a hidden playtest.
- *
- * Playable by everyone under MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true (local),
- * and by admin accounts only on prod (#684; the gate is three-kingdoms-banqi-
- * access.ts, checked at create and at every websocket connection). The registration supplies casual lobby, TV, export and card capabilities;
- * rating and correspondence remain unavailable. Whether it gets a public surface is
- * a checkpoint decision.
+ * Three Kingdoms Banqi (三國暗棋, #628): public casual play, always unrated.
+ * Runtime admission follows the flag, with an admin fallback when it is off.
+ * The registration supplies lobby, TV, finished export and card capabilities.
+ * Correspondence remains unavailable.
  *
  * Same hidden-information shape as banqi (banqi-tenant.ts): every occupied square
  * is public, so the masked board is the same for both seats; the one secret is
@@ -167,8 +164,8 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
   roomIdPrefix: THREE_KINGDOMS_BANQI_ROOM_ID_PREFIX,
   colors: SEATS,
-  // The runtime is on in every build: createTenantRuntimeRoom's enabled()
-  // backstop would otherwise refuse the admin playtest's rooms. Who may start
+  // The runtime stays on so historical rooms replay and admins can test
+  // while the runtime creation flag is off. Who may start
   // one is decided at the doors (three-kingdoms-banqi-access.ts); lobby creation
   // is separately gated by the registration flag.
   enabled: () => true,

@@ -96,8 +96,7 @@ registerVariantTenant({
   ownsSpecRouting: true,
   replays: tenantReplayCheck(threeKingdomsBanqiTenant),
   errorPrefix: 'three_kingdoms_banqi',
-  // The env flag only: listing surfaces (current games, TV, lobby, bot
-  // profiles, live stats) read this and must not show the admin playtest.
+  // Runtime kill-switch for TV, current games, lobby, bot profiles and live stats.
   enabled: threeKingdomsBanqiEnabled,
   admitsConnection: threeKingdomsBanqiAdmits,
   watch: {
@@ -135,7 +134,7 @@ registerVariantTenant({
   http: {
     matchesCreateRequest: requestsThreeKingdomsBanqi,
     // The dispatcher resolves the account only for a rated request; the admin
-    // gate needs it for every create.
+    // fallback needs it for every create while the runtime flag is off.
     handleCreate: async (ctx, request, response, body, accountUser) =>
       handleThreeKingdomsBanqiCreate(
         { ...ctx, createThreeKingdomsBanqiRoom },

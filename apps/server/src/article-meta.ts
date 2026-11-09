@@ -35,6 +35,7 @@ const PLAYTEST_RULES_SLUG: Readonly<Record<string, string>> = {
   mahjong: 'mahjong',
   'xiangqi-mahjong': 'xiangqi-mahjong-32',
   gomoku: 'gomoku',
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
 };
 
 /** The playtest rules slugs kept out of the index under a public predicate:

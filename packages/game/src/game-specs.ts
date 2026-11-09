@@ -166,9 +166,7 @@ export type GameSpecId =
   | 'jungle'
   | 'jungle-flip'
   // Three Kingdoms banqi (三國暗棋, #628): banqi's pieces on a 9x5 board, scored to
-  // 100. LOCAL PLAYTEST ONLY until the 10-31 checkpoint decides on a surface:
-  // publicSurface 'hidden', server flag MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED
-  // off by default, no menu entry, no sitemap. Rules engine:
+  // 100. Launched casual and unrated; runtime flags remain kill-switches. Rules engine:
   // packages/game/src/variants-three-kingdoms-banqi.ts.
   | 'three-kingdoms-banqi'
   | 'fortress-xiangqi'
@@ -309,6 +307,10 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
+  // Three Kingdoms banqi (#628): a tree-review stack (review/three-kingdoms-banqi-
+  // review.ts) and a dealt FEN (three-kingdoms-banqi-fen.ts) pinning the deal in
+  // the chapter root. Launched studies are public, like the casual game.
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   // Duck Xiangqi qualifies on the same two counts as the rest: it has a
   // tree-review stack (review/duck-xiangqi-tree-adapter.ts + -review.ts) and a
   // deterministic start position spellable as a FEN (duck-xiangqi-fen.ts, whose
@@ -327,11 +329,6 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   // Gomoku: the tree review accepts a canonical position, including a dealt
   // opening and either side to move. Public since launch; no admin-only gate.
   GOMOKU_SPEC_ID,
-  // Three Kingdoms banqi (#628): a tree-review stack (review/three-kingdoms-banqi-
-  // review.ts) and a dealt FEN (three-kingdoms-banqi-fen.ts) pinning the deal in
-  // the chapter root. Unlaunched, so ADMIN_ONLY_STUDY_SPEC_IDS below holds its
-  // studies to admins until the public launch.
-  THREE_KINGDOMS_BANQI_SPEC_ID,
   // Retired 2026-10-11 (Fortress; Atomic, which has a tree-review stack over the
   // standard board and start): off the canonical order, so at the tail. They
   // stay eligible so existing chapters keep loading; the picker no longer
@@ -357,7 +354,7 @@ export function isStudyEligibleSpecId(value: string): value is GameSpecId {
 // to an admin. A launch removes the id here in the same change that flips its
 // publicSurface: game-specs.test.ts fails while an id is both listed here and
 // public. The ids are plain [a-z0-9-] slugs, which the list queries rely on.
-export const ADMIN_ONLY_STUDY_SPEC_IDS: readonly GameSpecId[] = [THREE_KINGDOMS_BANQI_SPEC_ID];
+export const ADMIN_ONLY_STUDY_SPEC_IDS: readonly GameSpecId[] = [];
 
 export function isAdminOnlyStudySpecId(value: string): boolean {
   return (ADMIN_ONLY_STUDY_SPEC_IDS as readonly string[]).includes(value);
@@ -384,6 +381,8 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
+  // Keep the launched banqi family together.
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -758,11 +757,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Three Kingdoms banqi (三國暗棋, #628): banqi's 32 pieces on a 9x5 board
-    // (setup leaves the e-file and rank 3 empty), first to 100 points. Local
-    // playtest only: 'hidden' (no menu, no listing, no sitemap), never rated, and
-    // its server flag is off unless set in a local env. Whether it gets a public
-    // surface is the 2026-10-31 checkpoint's decision.
+    // Three Kingdoms banqi: banqi's 32 pieces on 9x5 points, first to 100.
+    // Launched casual and unrated; server and build flags remain kill-switches.
     id: THREE_KINGDOMS_BANQI_SPEC_ID,
     publicName: 'Three Kingdoms Banqi',
     family: 'xiangqi',
@@ -774,7 +770,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'three_kingdoms_banqi',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
   },
   {
@@ -865,6 +861,7 @@ export const PLAYTEST_GAME_SPEC_IDS: readonly GameSpecId[] = [
   MAHJONG_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
   GOMOKU_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
 ];
 
 export type LaunchLists = {

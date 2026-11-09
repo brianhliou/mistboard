@@ -359,13 +359,17 @@ test('tenant preview lookup preserves finished cards and refuses nonpublic recor
 
 test('tenant preview lookup fails closed for playtests, read failures and unloaded rooms', async () => {
   await loadRegistry();
-  const noReads = store({
-    summary: async () => assert.fail('A hidden playtest must not be read'),
-    events: async () => assert.fail('A hidden playtest must not be read'),
+  let tkReads = 0;
+  const missingTk = store({
+    summary: async () => {
+      tkReads += 1;
+      return null;
+    },
   });
-  assert.deepEqual(await tenantGameRoutePage('/three-kingdoms-banqi/game/tkb_preview', noReads), {
+  assert.deepEqual(await tenantGameRoutePage('/three-kingdoms-banqi/game/tkb_preview', missingTk), {
     noindex: true,
   });
+  assert.equal(tkReads, 0, 'runtime-disabled route previews do not read game data');
   assert.deepEqual(
     await tenantGameRoutePage(
       '/xiangqi/game/xq_error',
@@ -387,6 +391,9 @@ test('tenant preview lookup fails closed for playtests, read failures and unload
     { noindex: true },
   );
   // The archive and live room URLs keep their existing route policies.
+  const noReads = store({
+    summary: async () => assert.fail('unrelated route must not read a game'),
+  });
   assert.equal(await tenantGameRoutePage('/historical-xiangqi/game/123', noReads), null);
   assert.equal(await tenantGameRoutePage('/room/jq_live', noReads), null);
 });

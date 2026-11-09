@@ -80,9 +80,8 @@ export function localizedRulesHrefForRoom(roomId: string): string | null {
   return localizedRulesHref(webVariantTenantForRoomId(roomId)?.gameSpecId);
 }
 
-/** A hidden spec whose local playtest build is on:
- *  its rules page lists in the rail and offers the board in that build only.
- *  Production never sets the flag, so there the page stays hidden. */
+/** Preview a hidden spec in an explicitly enabled build. Launched rules pages
+ * follow publicSurface independently of their build-time play gate. */
 export function variantPlaytestSurfaceEnabled(id: GameSpecId): boolean {
   return (
     (id === THREE_KINGDOMS_BANQI_SPEC_ID && threeKingdomsBanqiEnabled()) ||

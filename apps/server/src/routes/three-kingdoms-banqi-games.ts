@@ -43,10 +43,8 @@ import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } fr
 
 // Three Kingdoms banqi (#628) postgame review: GET /api/three-kingdoms-banqi/games/:roomId.
 //
-// ADMIN PLAYTEST (#684). The route opens to exactly who may open a TK room
-// (three-kingdoms-banqi-access.ts: an admin account, or anyone under the local
-// flag). Everyone else gets the same 404 as a game that does not exist, so the
-// route cannot confirm that an admin's game is there.
+// Public casual release. Admission follows the runtime flag and its admin
+// fallback; a refused caller receives the same 404 as an unknown game.
 //
 // HIDDEN INFORMATION, banqi's finished-game policy exactly (routes/banqi-games.ts).
 // TK is symmetric hidden identity: a face-down tile is hidden from both seats
@@ -118,7 +116,7 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
       routeId: 'three-kingdoms-banqi',
       logPrefix: 'three_kingdoms_banqi',
       variantLabel: 'Three Kingdoms banqi',
-      // The wrapper applies playtest admission to every path.
+      // The wrapper applies runtime admission to every path.
       enabled: () => true,
       requiresPersistence: false,
       engineBinary: {
@@ -161,10 +159,7 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
     pathname: string,
   ): Promise<boolean> => {
     if (!ANALYSIS_ROUTE.test(pathname)) return false;
-    // Every TK path, decisions reads included, answers only to the playtest
-    // admission while TK is unlaunched: anyone else gets the unknown-game 404,
-    // so no route confirms that an admin's game exists. Decisions hold
-    // public-information values only; open the GET like banqi's at launch.
+    // Apply runtime admission consistently to every TK path, including decisions.
     if (!(await deps.admits(request))) {
       writeJson(response, 404, { error: 'not_found' });
       return true;

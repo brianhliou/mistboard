@@ -12,11 +12,8 @@ import {
 } from '../../three-kingdoms-banqi-diagrams.js';
 import type { Article } from '../types.js';
 
-// Draft for #628, written 2026-10-24 alongside the engine
-// (packages/game/src/variants-three-kingdoms-banqi.ts) and checked against it
-// rule by rule. Registered as a draft so dev serves it for review and
-// production 404s it until the variant launches. Every move diagram asks the
-// kernel for its marks (three-kingdoms-banqi-diagrams.ts).
+// Launched rules for #628, checked against the kernel. English editorial
+// review continues; article wording and translation publication are unchanged.
 // Five rules the app leaves unwritten (perpetual chase, what resets the 40-ply
 // count, face-down capture, wipe-out, no legal move) were decided for Mistboard
 // on 2026-10-25 (THREE_KINGDOMS_BANQI_RULES in the engine). The app's help has no
@@ -31,7 +28,8 @@ export const threeKingdomsBanqiArticle: Article = {
   summary:
     'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
+  publishedAt: '2026-11-10',
   thumbnail: { kind: 'svg', svg: TK_THUMBNAIL },
   tldr: [
     'All thirty-two pieces start face-down. On your turn, flip one or move one of your face-up pieces.',

@@ -32,16 +32,15 @@ import { buildNav } from './site-shell.js';
 import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
 
 // Postgame review for Three Kingdoms banqi (#628), on banqi's page
-// (live-banqi-postgame.ts). An admin playtest (#684): the page opens only where
-// a TK room would (threeKingdomsBanqiOffered), and the API answers only an
-// admin session.
+// (live-banqi-postgame.ts). Play and review admission follow the runtime
+// and build-time flags, with an admin fallback while they are off.
 //
 // The server sends a FINISHED game only, never the deal as such: the client
 // reads the deal off the ply-0 revealed board, roots the shared tree there, and
 // replays the move list; the board renders masked as played, so a tile stays
 // face down until the line flips it. Scores per ply come from the review's own
 // material row. Server analysis grades board moves, then its follow-on pass
-// separates flip decisions from luck. No exports during the playtest.
+// separates flip decisions from luck. Finished games export like Banqi.
 
 export type ThreeKingdomsBanqiPostgameResponse = {
   game: {
