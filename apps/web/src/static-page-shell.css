@@ -49,6 +49,10 @@
   overflow: visible;
 }
 
+.static-page-rail-control {
+  display: none;
+}
+
 .static-page-rail-nav {
   display: grid;
   gap: 26px;
@@ -148,30 +152,72 @@
     padding: 24px 18px 40px;
   }
 
-  .static-page-rail {
-    position: static;
+  .static-page-rail-shell {
+    position: relative;
     margin: 0 0 10px;
+    min-width: 0;
+  }
+
+  .static-page-rail {
     overflow-x: auto;
     overflow-y: hidden;
   }
 
-  .static-page-rail.fade-left,
-  .static-page-rail.fade-right {
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      #000 var(--rail-fade-left, 0px),
-      #000 calc(100% - var(--rail-fade-right, 0px)),
-      transparent
-    );
+  .static-page-rail-control:not([hidden]) {
+    position: absolute;
+    top: 0;
+    bottom: 4px;
+    display: flex;
+    align-items: center;
+    width: 48px;
+    pointer-events: none;
   }
 
-  .static-page-rail.fade-left {
-    --rail-fade-left: 28px;
+  .static-page-rail-previous {
+    left: 0;
+    background: linear-gradient(to right, var(--site-bg) 32px, transparent);
   }
 
-  .static-page-rail.fade-right {
-    --rail-fade-right: 28px;
+  .static-page-rail-more {
+    right: 0;
+    justify-content: flex-end;
+    background: linear-gradient(to left, var(--site-bg) 32px, transparent);
+  }
+
+  .static-page-rail-control button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--site-border);
+    border-radius: 50%;
+    background: var(--site-panel);
+    color: var(--site-text);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .static-page-rail-control button::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    transform: translateX(-2px) rotate(45deg);
+  }
+
+  .static-page-rail-previous button::after {
+    transform: translateX(2px) rotate(-135deg);
+  }
+
+  .static-page-rail-control button:hover {
+    border-color: var(--site-accent);
+  }
+
+  .static-page-rail-control button:focus-visible {
+    outline: 2px solid var(--site-accent);
+    outline-offset: -3px;
   }
 
   .static-page-rail-nav {

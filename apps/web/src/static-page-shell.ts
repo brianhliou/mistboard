@@ -48,7 +48,9 @@ function buildStaticPageRail(
   locale: Locale = currentLocale(),
 ): HTMLElement {
   const aside = document.createElement('aside');
-  aside.className = 'static-page-rail';
+  aside.className = 'static-page-rail-shell';
+  const rail = document.createElement('div');
+  rail.className = 'static-page-rail';
 
   const nav = document.createElement('nav');
   nav.className = 'static-page-rail-nav';
@@ -73,17 +75,46 @@ function buildStaticPageRail(
     nav.append(list);
   }
 
-  aside.append(nav);
-  observeStaticPageRail(aside, nav);
+  const controls = (['previous', 'more'] as const).map((direction) => {
+    const edge = document.createElement('div');
+    edge.className = `static-page-rail-control static-page-rail-${direction}`;
+    edge.hidden = true;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute(
+      'aria-label',
+      t(direction === 'more' ? 'about.morePages' : 'about.previousPages', {}, locale),
+    );
+    button.addEventListener('click', () => {
+      rail.scrollBy({
+        left: rail.clientWidth * 0.7 * (direction === 'more' ? 1 : -1),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'instant'
+          : 'smooth',
+      });
+    });
+    edge.append(button);
+    return edge;
+  });
+  rail.append(nav);
+  aside.append(rail, ...controls);
+  observeStaticPageRail(rail, nav, controls[0], controls[1]);
   return aside;
 }
 
-function observeStaticPageRail(rail: HTMLElement, nav: HTMLElement): void {
+function observeStaticPageRail(
+  rail: HTMLElement,
+  nav: HTMLElement,
+  previous: HTMLElement,
+  more: HTMLElement,
+): void {
   const updateFade = () => {
     const maxScroll = rail.scrollWidth - rail.clientWidth;
     // scrollLeft can be fractional, or extend past either edge during bounce.
     rail.classList.toggle('fade-left', maxScroll > 1 && rail.scrollLeft > 1);
     rail.classList.toggle('fade-right', maxScroll > 1 && rail.scrollLeft < maxScroll - 1);
+    previous.hidden = !rail.classList.contains('fade-left');
+    more.hidden = !rail.classList.contains('fade-right');
   };
   let revealedCurrent = false;
   const sync = () => {
@@ -98,9 +129,13 @@ function observeStaticPageRail(rail: HTMLElement, nav: HTMLElement): void {
       if (active) {
         const viewport = rail.getBoundingClientRect();
         const link = active.getBoundingClientRect();
-        // Move only the strip, with room for the 28px fade beside the tab.
-        if (link.right > viewport.right) rail.scrollLeft += link.right - viewport.right + 28;
-        else if (link.left < viewport.left) rail.scrollLeft += link.left - viewport.left - 28;
+        // Match the 32px buttons in CSS. Only reserve an edge with more pages.
+        const maxScroll = rail.scrollWidth - rail.clientWidth;
+        const right = viewport.right - (rail.scrollLeft < maxScroll - 1 ? 32 : 0);
+        const left = viewport.left + (rail.scrollLeft > 1 ? 32 : 0);
+        // Move only the strip, including tabs just inside a button's overlay.
+        if (link.right > right) rail.scrollLeft += link.right - right;
+        else if (link.left < left) rail.scrollLeft += link.left - left;
       }
       revealedCurrent = true;
     }

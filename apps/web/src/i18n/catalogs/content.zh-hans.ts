@@ -179,6 +179,8 @@ export const ZH_HANS_CONTENT = {
   'contact.correctionsLink': '联系我们',
   'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相关页面：{path}',
+  'about.previousPages': '前面的页面',
+  'about.morePages': '更多页面',
   'about.heading': '关于 Mistboard',
   'about.mission': '通过中国象棋与世界经典策略游戏，让不同文化背景的人走到一起。',
   'about.lede': 'Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。',
