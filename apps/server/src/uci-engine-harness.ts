@@ -467,6 +467,13 @@ export type RunUciBestmoveArgs = {
   timeoutMessage: string;
   /** Extra env vars merged over the parent env for the spawned process (e.g. a seed). */
   env?: Readonly<Record<string, string>>;
+  /** Optional provider boundary: abort queue/search and cap total stdout bytes. */
+  signal?: AbortSignal;
+  maxOutputBytes?: number;
+  /** Absolute provider deadline, including the physical-process admission wait. */
+  deadlineUnixMs?: number;
+  /** Outside executables need not inherit the web process's environment. */
+  inheritEnv?: boolean;
 };
 
 /**
@@ -698,10 +705,18 @@ class UciEvalAccumulator {
  * rank-1 evaluation. Same spawn / hard-timeout / SIGKILL-cleanup contract.
  */
 export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
-  const { bin, commands, timeoutMs, timeoutMessage, env } = args;
+  const { bin, commands, timeoutMs, timeoutMessage, env, signal } = args;
   return withEngineProcess(
     (track) =>
       new Promise<UciEval>((resolveEval, reject) => {
+        const runTimeoutMs = Math.min(
+          timeoutMs,
+          (args.deadlineUnixMs ?? Number.POSITIVE_INFINITY) - Date.now(),
+        );
+        if (signal?.aborted || runTimeoutMs <= 0) {
+          reject(new Error('UCI request cancelled or expired before spawn'));
+          return;
+        }
         // `env` is honoured here exactly as in runUciBestmove. It was silently
         // dropped until 2026-09-05, which mattered the moment the Flip Jungle live
         // move switched to this runner to record its search: its per-game tie-break
@@ -709,12 +724,17 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
         // flip identical in every game rather than merely reproducible per room.
         const child = spawn(bin, [], {
           stdio: ['pipe', 'pipe', 'pipe'],
-          ...(env ? { env: { ...process.env, ...env } } : {}),
+          ...(args.inheritEnv === false
+            ? { env: { ...env } }
+            : env
+              ? { env: { ...process.env, ...env } }
+              : {}),
         });
         track(child);
         const trace = new UciOutputTrace('spawn');
         let buf = '';
         let settled = false;
+        let outputBytes = 0;
         const evaluation = new UciEvalAccumulator();
         const advertisedOptions = new Set<string>();
 
@@ -722,6 +742,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
+          signal?.removeEventListener('abort', onAbort);
           try {
             child.kill('SIGKILL');
           } catch {
@@ -730,6 +751,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           run();
         };
 
+        const onAbort = (): void => finish(() => reject(abortReason(signal!)));
         const readStderrTail = captureStderrTail(child);
         const timer = setTimeout(
           () =>
@@ -738,9 +760,15 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
                 timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail())),
               ),
             ),
-          timeoutMs,
+          runTimeoutMs,
         );
         child.on('error', (err) => finish(() => reject(err)));
+        child.stdin.on('error', (err) => finish(() => reject(err)));
+        signal?.addEventListener('abort', onAbort, { once: true });
+        if (signal?.aborted) {
+          onAbort();
+          return;
+        }
         const consume = (): void => {
           let newline = buf.indexOf('\n');
           while (newline >= 0) {
@@ -771,6 +799,11 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           }
         };
         child.stdout.on('data', (chunk: Buffer) => {
+          outputBytes += chunk.length;
+          if (outputBytes > (args.maxOutputBytes ?? Number.POSITIVE_INFINITY)) {
+            finish(() => reject(new Error('UCI output limit exceeded')));
+            return;
+          }
           buf += chunk.toString('utf8');
           consume();
         });
@@ -787,6 +820,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
 
         child.stdin.write(`${commands.join('\n')}\n`);
       }),
+    signal,
   );
 }
 

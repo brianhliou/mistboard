@@ -1,0 +1,7 @@
+{
+  "protocol": "mistboard-banqi/1",
+  "requestId": "example-turn",
+  "gameId": "example-game",
+  "ply": 0,
+  "move": "a0a0"
+}
