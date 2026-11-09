@@ -16,7 +16,11 @@ function authenticated(header: string | undefined, token: string): boolean {
 
 /** Reference wrapper for an operator-owned process. The CLI binds loopback;
  * any production network listener requires its own TLS and deployment review. */
-export function createBanqiProviderBridge(provider: BanqiTurnProvider, token: string): Server {
+export function createBanqiProviderBridge(
+  provider: BanqiTurnProvider,
+  token: string,
+  engineVersion?: string,
+): Server {
   if (!token || /[\r\n]/.test(token)) throw new BanqiProviderError('invalid-request');
   const server = createServer(async (request, response) => {
     const write = (status: number, body: unknown): void => {
@@ -27,6 +31,14 @@ export function createBanqiProviderBridge(provider: BanqiTurnProvider, token: st
       });
       response.end(JSON.stringify(body));
     };
+    if (
+      request.url === '/health' &&
+      request.method === 'GET' &&
+      authenticated(request.headers.authorization, token)
+    ) {
+      write(200, { protocol: 'mistboard-banqi/1', engineVersion: engineVersion ?? null });
+      return;
+    }
     if (request.method !== 'POST' || request.url !== '/turn') {
       write(404, { error: 'not-found' });
       return;

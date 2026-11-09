@@ -1,3 +1,4 @@
+import { isInternalEngineTestLog } from './internal-engine-test.js';
 /**
  * Current games (/games): every game in progress right now, across the legacy
  * chess map and every registered variant tenant, live AND correspondence.
@@ -285,6 +286,7 @@ function gameFromTenantRoom(
   now: number,
   deadlines: DeadlineByRoom,
 ): CurrentGame | null {
+  if (isInternalEngineTestLog(room.events)) return null;
   room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;

@@ -889,3 +889,14 @@ test('GET /api/watch/live never features a playing fog game (route-level fail-cl
   const channel = await getLive('?channel=dark-xiangqi');
   assert.equal(channel.payload.featured, null);
 });
+
+test('internal engine test rooms never enter public live discovery, even with malformed private metadata', () => {
+  const room = tenantRoom({ id: 'fko_internal' });
+  openRooms.set(room.id, room);
+  assert.ok(collectLiveTvCandidates(context(), NOW).some((entry) => entry.roomId === room.id));
+  Object.assign(room.events![0]!, { internalEngineTest: {} });
+  assert.equal(
+    collectLiveTvCandidates(context(), NOW).some((entry) => entry.roomId === room.id),
+    false,
+  );
+});

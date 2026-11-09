@@ -609,3 +609,14 @@ test('the route filters by channel, counts per channel, and 404s unknown channel
   const missing = await getCurrent('?channel=no-such-channel');
   assert.equal(missing.status, 404);
 });
+
+test('internal engine test rooms never enter public live discovery, even with malformed private metadata', () => {
+  const room = tenantRoom({ id: 'fko_internal' });
+  openRooms.set(room.id, room);
+  assert.ok(collectCurrentGames(context(), NOW).some((entry) => entry.roomId === room.id));
+  Object.assign(room.events![0]!, { internalEngineTest: {} });
+  assert.equal(
+    collectCurrentGames(context(), NOW).some((entry) => entry.roomId === room.id),
+    false,
+  );
+});

@@ -163,6 +163,7 @@ test('native move-only executable has no evaluation and inherits no service envi
 
 test('operator EvalFile reaches only the native process, never the shared turn payload', async () => {
   const evalFile = join(dir, 'operator-model.nnue');
+  writeFileSync(evalFile, 'fixture-only-model');
   const bin = executable(
     `console.log('bestmove '+(evalFile===${JSON.stringify(evalFile)}?move:'invalid'));`,
   );
@@ -401,4 +402,32 @@ test('dispatch snapshots caller state and checks the reply against that original
   } finally {
     await close(server);
   }
+});
+
+test('configured model load failure rejects a legal classical fallback without leaking diagnostics', async () => {
+  const evalFile = join(dir, 'invalid-model.nnue');
+  writeFileSync(evalFile, 'invalid-model');
+  const bin = executable(
+    "console.log('info string error EvalFile: PRIVATE_PATH; using classical');console.log('bestmove '+move);",
+  );
+  const provider = createBanqiUciProvider({ bin, evalFile });
+  await assert.rejects(
+    provider.turn(request()),
+    (error) =>
+      error instanceof BanqiProviderError &&
+      error.code === 'transport' &&
+      !error.message.includes('PRIVATE_PATH'),
+  );
+  assert.throws(
+    () => createBanqiUciProvider({ bin, evalFile: join(dir, 'missing-model.nnue') }),
+    code('invalid-request'),
+  );
+});
+
+test('native provider pins the self-reported UCI name without recording a different build', async () => {
+  const bin = executable("console.log('bestmove '+move);");
+  const matching = createBanqiUciProvider({ bin, expectedUciName: 'Opaque fixture' });
+  assert.ok((await matching.turn(request())).move);
+  const mismatch = createBanqiUciProvider({ bin, expectedUciName: 'Wrong build' });
+  await assert.rejects(mismatch.turn(request()), code('transport'));
 });

@@ -1,3 +1,5 @@
+import { internalBanqiMoveProvider } from './banqi-internal-provider.js';
+import { internalEngineTestFor } from './internal-engine-test.js';
 /**
  * Server-side MistyBanqi loop for Banqi (半棋) PvE.
  *
@@ -186,12 +188,18 @@ export function banqiChaseFallbackMove(state: BanqiGameState): BanqiMove | null 
 export async function playBanqiEngineMoveIfReady(
   ctx: BanqiEngineContext,
   room: BanqiEngineRoom,
-  moveProvider: BanqiEngineMoveProvider = banqiLiveEngineMove,
+  moveProvider?: BanqiEngineMoveProvider,
 ): Promise<void> {
   const seat = banqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
   const engineId = room.projection.seats[seat]!;
-  const tier = banqiEngineTierFor(engineId);
+  const internal = internalEngineTestFor(room.events);
+  moveProvider = internal
+    ? internalBanqiMoveProvider(internal)
+    : (moveProvider ?? banqiLiveEngineMove);
+  const tier = internal
+    ? { nodes: internal.nodes, movetimeCapMs: internal.budgetMs }
+    : banqiEngineTierFor(engineId);
   if (!tier) return;
 
   const now = ctx.now?.() ?? Date.now();

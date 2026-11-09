@@ -1,3 +1,4 @@
+import { INTERNAL_BANQI_CORPUS_ID } from './internal-engine-test.js';
 // One definition of "a game that counts" for every aggregate surface: the
 // public /stats page and the homepage number (persistence-site-stats.ts), the
 // admin /metrics series (persistence-admin-metrics.ts), and the scheduled
@@ -123,6 +124,7 @@ export function bothSidesMoved(gamesAlias: string): string {
 // seats (excludedFromStats).
 export function countedHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
@@ -225,6 +227,7 @@ export function humanSeatExists(gamesAlias: string): string {
 // (the readout's demand signal).
 export function countedAbortedGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'aborted' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND ${humanSeatExists(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
@@ -235,13 +238,14 @@ export function countedAbortedGame(gamesAlias = 'g'): string {
 // exclusion is visible rather than silent.
 export function internalHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
-    AND ${excludedFromStats(gamesAlias)}`;
+    AND (${gamesAlias}.corpus_id IS NOT DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}' OR ${excludedFromStats(gamesAlias)})`;
 }
 
 // Completed pvp/pve game before the launch date with no excluded seat: the
 // second thing the counts leave out, reported the same way.
 export function preLaunchHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND NOT ${sinceLaunch(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
 }
@@ -251,6 +255,7 @@ export function preLaunchHumanGame(gamesAlias = 'g'): string {
 // not-counted rows and the counted row partition completed human games.
 export function shortHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND NOT ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
