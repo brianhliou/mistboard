@@ -2003,5 +2003,145 @@
     "cp": -279,
     "mate": null,
     "symbol": "−+"
+  },
+  "meng-fanrui:0:31": {
+    "cp": 65,
+    "mate": null,
+    "symbol": "⩲",
+    "nodes": 10000000,
+    "source": "m_143657:cached-root:30"
+  },
+  "meng-fanrui:0:49": {
+    "cp": -22,
+    "mate": null,
+    "symbol": "=",
+    "nodes": 10000000,
+    "source": "m_143657:cached-root:48"
+  },
+  "meng-fanrui:0:53": {
+    "cp": -102,
+    "mate": null,
+    "symbol": "∓",
+    "nodes": 10000000,
+    "source": "m_143657:cached-root:52"
+  },
+  "meng-fanrui:0:57": {
+    "cp": -253,
+    "mate": null,
+    "symbol": "−+",
+    "nodes": 10000000,
+    "source": "m_143657:cached-root:56"
+  },
+  "meng-fanrui:0:114": {
+    "cp": -722,
+    "mate": null,
+    "symbol": "−+",
+    "nodes": 10000000,
+    "source": "m_143657:cached-root:113"
+  },
+  "meng-fanrui:0:115": {
+    "cp": -549,
+    "mate": null,
+    "symbol": "−+",
+    "nodes": 10000000,
+    "source": "m_143657:cached-root:114"
+  },
+  "meng-fanrui:1:53": {
+    "cp": -32,
+    "mate": null,
+    "symbol": "⩱",
+    "nodes": 10000000,
+    "source": "m_143947:cached-root:52"
+  },
+  "meng-fanrui:1:57": {
+    "cp": -128,
+    "mate": null,
+    "symbol": "∓",
+    "nodes": 10000000,
+    "source": "m_143947:cached-root:56"
+  },
+  "meng-fanrui:1:62": {
+    "cp": -262,
+    "mate": null,
+    "symbol": "−+",
+    "nodes": 10000000,
+    "source": "m_143947:cached-root:61"
+  },
+  "meng-fanrui:1:98": {
+    "cp": -249,
+    "mate": null,
+    "symbol": "∓",
+    "nodes": 10000000,
+    "source": "m_143947:cached-root:97"
+  },
+  "meng-fanrui:1:99": {
+    "cp": -146,
+    "mate": null,
+    "symbol": "∓",
+    "nodes": 10000000,
+    "source": "m_143947:cached-root:98"
+  },
+  "meng-fanrui:2:56": {
+    "cp": 58,
+    "mate": null,
+    "symbol": "⩲",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:55"
+  },
+  "meng-fanrui:2:57": {
+    "cp": 203,
+    "mate": null,
+    "symbol": "±",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:56"
+  },
+  "meng-fanrui:2:92": {
+    "cp": 57,
+    "mate": null,
+    "symbol": "⩲",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:91"
+  },
+  "meng-fanrui:2:98": {
+    "cp": 159,
+    "mate": null,
+    "symbol": "±",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:97"
+  },
+  "meng-fanrui:2:101": {
+    "cp": 286,
+    "mate": null,
+    "symbol": "+−",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:100"
+  },
+  "meng-fanrui:2:102": {
+    "cp": 212,
+    "mate": null,
+    "symbol": "±",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:101"
+  },
+  "meng-fanrui:2:105": {
+    "cp": 296,
+    "mate": null,
+    "symbol": "+−",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:104"
+  },
+  "meng-fanrui:2:113": {
+    "cp": 263,
+    "mate": null,
+    "symbol": "+−",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:112"
+  },
+  "meng-fanrui:2:114": {
+    "cp": 189,
+    "mate": null,
+    "symbol": "±",
+    "nodes": 10000000,
+    "source": "m_143873:cached-root:113"
   }
 }

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 const script = new URL('./annotated-game-to-spec.mjs', import.meta.url).pathname;
-function convert(game) {
+function convert(game, engine) {
   const dir = mkdtempSync(join(tmpdir(), 'annotated-meta-'));
   try {
     const path = join(dir, 'annot.json');
@@ -15,6 +15,7 @@ function convert(game) {
       JSON.stringify({
         game: { red: 'Red', black: 'Black', event: 'Synthetic', result: '*', ...game },
         rows: [{ uci: 'h2e2' }, { uci: 'h9g7' }],
+        ...(engine ? { engine } : {}),
       }),
     );
     const result = spawnSync(process.execPath, [script, path], { encoding: 'utf8' });
@@ -60,4 +61,11 @@ test('unknown time control is absent; guessed events and arbitrary source links 
 test('explicit unknown source timeControl clears a legacy timerule rather than implying a clock', () => {
   const spec = convert({ timeControl: null, timerule: '5分＋3秒' });
   assert.equal(spec.metadata.timeControl, undefined);
+});
+
+test('annotation conversion preserves a positive integer node budget without inventing one', () => {
+  assert.equal(convert({}, { nodes: 10_000_000 }).analysisNodes, 10_000_000);
+  assert.equal(convert({}, { nodes: 1_000_000 }).analysisNodes, 1_000_000);
+  for (const nodes of [undefined, null, 0, -1, 1.5, '10000000'])
+    assert.equal(convert({}, { nodes }).analysisNodes, undefined);
 });

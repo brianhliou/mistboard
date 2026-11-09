@@ -12,8 +12,118 @@ import type { Article } from '../types.js';
 // scripts/data/article-line-evals.json. Baked, not fetched: the page must not
 // depend on a study still existing.
 
+const G_M_143657: XiangqiReplaySpec = {
+  "iccs": "h2e2 h9g7 h0g2 i9h9 i0h0 b9c7 g3g4 c6c5 b0a2 a6a5 b2c2 c7b5 a0a1 a9a6 a1d1 c9e7 d1d7 b7c7 c2c1 f9e8 d7d4 h7h5 e2f2 b5a3 g0e2 a6b6 h0h4 b6b1 g2f4 c5c4 d4d2 h5f5 h4h9 f5f2 e2c4 g7h9 d2f2 c7c3 a2c3 b1c1 f4d5 a3c4 f2f8 h9i7 c0e2 c4e3 f0e1 c1c2 i3i4 e7c5 c3e4 c2e2 f8f3 e3c4 e4d6 e8d7 e0f0 d9e8 f3c3 e2e5 c3c4 e5d5 d6b7 c5e7 b7a9 d5c5 c4c5 e7c5 a9b7 i7g8 b7a5 g8h6 a5b3 h6g4 b3d4 g4h2 d4e6 h2i4 f0e0 g9e7 e6g7 i4g5 g7i8 g5e4 i8h6 e4f6 e1d2 i6i5 d0e1 g6g5 e0f0 g5g4 f0e0 g4f4 e0f0 f6h5 f0e0 i5i4 h6f5 i4i3 f5h4 i3h3 h4f5 h3g3 f5d4 f4e4 d4b5 e4d4 b5c3 d4d3 c3d5 g3f3 e0d0 f3e3 e1f2 e8f9 d2e1 e3f3 d0d1 e7g9 d1d0 h5i3 d5f6 d3e3 d0d1 e3e2 f6e4 i3g4",
+  "analysisNodes": 10000000,
+  "red": "Luo Hangyuan",
+  "black": "Meng Fanrui",
+  "event": "2026 Shanghai Cup",
+  "resultText": "0-1",
+  "metadata": {
+    "date": "2026-09-09 13:30",
+    "round": "第01轮",
+    "source": {
+      "label": "DPXQ",
+      "url": "http://www.dpxq.com/hldcg/search/view_m_143657.html"
+    }
+  },
+  "annotations": {
+    "byPly": {
+      "31": {
+        "glyph": "?!",
+        "note": "inaccuracy: 6.1 win% given up, eval -0.02 after. The engine wanted the line in the sibling branch.",
+        "line": "d4d6 c7c3 f0e1 a3b5 d6b6 c3i3 f4d5 a5a4 b6c6 a4a3 d5b6 h5d5 h4h9 g7h9 c6c4 d5d7 f2f8 i3f3 b6c8 e9f9 f8i8 f3f7 g4g5 g6g5 c4h4 h9g7 i8i9 g9i7 c1c4 g5g4 h4g4 e7g5",
+        "lineEval": "⩲"
+      },
+      "49": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.6 win% given up, eval -0.83 after. The engine wanted the line in the sibling branch.",
+        "line": "d5e3 c2c3 e3d5 c3i3 d5e7 i3c3 e7g8 i7g8 f8g8 c3e3 g8g9 e8f9 e2g0 i6i5 g9g6 i5i4 g4g5 a5a4 g5f5 i4h4 g6g2 e3e4 g2d2 h4g4 d2e2 e4e2 g0e2 g4g3 e2g4 e9e8 e0f0 a4b4",
+        "lineEval": "="
+      },
+      "53": {
+        "glyph": "?",
+        "note": "mistake: 12.5 win% given up, eval -2.54 after. The engine wanted the line in the sibling branch.",
+        "line": "d5e3 e2e3 e4c5 e3g3 f8i8 e9f9 e1f0 g3c3 c5b7 c3b3 b7d8 b3d3 d8c6 d3d7 c6a5 e6e5 i8h8 e5e4 h8h4 d7f7 d0e1 e4f4 a5c6 f9e9 h4h6 f7f6 c6a7 f4g4 a7c8 e9f9 h6i6 f6c6",
+        "lineEval": "∓"
+      },
+      "57": {
+        "glyph": "?!",
+        "note": "inaccuracy: 7.4 win% given up, eval -3.62 after. The engine wanted the line in the sibling branch.",
+        "line": "f3f7 e2h2 d5c3 h2h0 e1f0 h0h3 c3d1 c4e5 f7f6 e5g4 f6e6 d9e8 e6e4 g4f6 e4b4 g9e7 b4b6 e9f9 d0e1 e7c9 d1b2 i7g8 b6b5 h3h5 d6c4 h5f5 b5a5 g6g5 c4e3 f5f3 e3c4 f6e4",
+        "lineEval": "−+"
+      },
+      "114": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.1 win% given up, eval -5.49 after. The engine wanted the line in the sibling branch.",
+        "line": "h5g3 d0e0 e8f7 e0d0 g3f1 d0e0 e7g5 d5f6 d3d2 f6d7 e9e8 d7e5 f1h2 e0d0 d2e2 e1f0 f3f2 e5f7 h2f3 f7g9 e8e7 g9i8 f3d2 i8h6 d2b1 d0e0 e7e8 h6f5",
+        "lineEval": "−+"
+      },
+      "115": {
+        "glyph": "?!",
+        "note": "inaccuracy: 7.2 win% given up, eval -8.33 after. The engine wanted the line in the sibling branch.",
+        "line": "e1f0 h5i3 d2e1 i3g2 d5f6 e3e2 f6g8 e9d9 d0e0 e8f7 g8h6 e7g5 h6f7 g2f4 f7g5 d3e3 e0d0 f4g2 d0e0 g2h4 g5h3 h4f3 e1f2 d7e8 f0e1 e8f7 e1d0 e2d2 d0e1 d2d1",
+        "lineEval": "−+"
+      }
+    }
+  }
+};
+
+const G_M_143947: XiangqiReplaySpec = {
+  "iccs": "c3c4 b7c7 h2e2 c9e7 c0a2 h9g7 h0g2 i9h9 i0h0 g6g5 h0h4 h7i7 h4h9 g7h9 b0c2 a9a8 c2d4 a8b8 b2d2 h9g7 d0e1 d9e8 a0d0 c7a7 d4e6 g7f5 d2c2 f5g3 e6d4 b9d8 e2f2 i7f7 c2c3 a7a3 g0e2 g5g4 e2g4 a3e3 f2e2 e3e4 d0d3 b8b0 c3c0 g3e2 g4e2 f7f2 d3e3 f2a2 e3e4 a2g2 e4g4 g2h2 d4f5 d8e6 g4h4 h2g2 c0d0 e6g5 f5d6 e8d7 h4g4 g2h2 d6e4 g5e4 g4e4 h2h0 e2g0 b0c0 e4h4 h0i0 h4h6 c0c4 d0d6 i6i5 d6a6 c4c0 e1d0 c0c3 d0e1 c6c5 a6e6 e7g5 h6h0 i0i1 h0h4 c3g3 i3i4 g3g0 i4i5 g0g2 e6i6 i1g1 h4e4 g5e7 i6e6 f9e8 e1d0 g2g5 i5h5 g5h5 e4g4 g1f1 g4g9 f1f9 g9g6 c5c4 d0e1 h5e5 e6a6 c4d4 g6g4 d4d3 a6i6 f9f6 g4g6 f6f4 g6g3 f4e4 e0d0 e5d5 g3g2 e4e6 i6i2 d3c3 e1d2 c3c2",
+  "analysisNodes": 10000000,
+  "red": "Ju Longfei",
+  "black": "Meng Fanrui",
+  "event": "2026 National Xiangqi Men’s Division A League",
+  "resultText": "0-1",
+  "metadata": {
+    "date": "2026-09-17 13:00",
+    "round": "第07轮",
+    "timeControl": "40分＋20秒",
+    "source": {
+      "label": "DPXQ",
+      "url": "http://www.dpxq.com/hldcg/search/view_m_143947.html"
+    }
+  },
+  "annotations": {
+    "byPly": {
+      "53": {
+        "glyph": "?!",
+        "note": "inaccuracy: 9.0 win% given up, eval -1.32 after. The engine wanted the line in the sibling branch.",
+        "line": "c0d0 e8d7 g4h4 h2i2 h4h2 i2i1 h2h1 i1i2 h1h7 d8b7 d4c6 b7d6 c4c5 d6e4 c6e7 i2i0 h7h0 g9e7 h0i0 e4c5 i0i1 b0b2 i1i2 c5e4 e2g0 b2i2 g0i2 e4g3 i2g0 g3h1 d0d2 d7e8",
+        "lineEval": "⩱"
+      },
+      "57": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.6 win% given up, eval -1.95 after. The engine wanted the line in the sibling branch.",
+        "line": "h4g4 g2h2 g4h4 h2g2 e1d0 b0b2 h4e4 e6g5 f0e1 g2h2 e4e3 b2b5 f5d4 b5d5 d4f3 g5f3 e3f3 d5e5 c0c6 e5e2 f3h3 h2i2 c6d6 e2e6 h3h2 i2i0 h2d2 a6a5 c4c5 i0h0 d2d4 h0h2",
+        "lineEval": "∓"
+      },
+      "62": {
+        "glyph": "?!",
+        "note": "inaccuracy: 9.5 win% given up, eval -1.44 after. The engine wanted the line in the sibling branch.",
+        "line": "g2i2 d6e4 g5e4 g4e4 i2i0 e2g0 b0b3 d0d5 b3g3 e4e2 g3g0 d5e5 e9d9 e2i2 i6i5 e5b5 d9e9 b5d5 a6a5 c4c5 c6c5 d5a5 c5c4 a5e5 e7c9 e5e4 c4d4 e4e2 e9e8 e2e3 d4d3 e3e4",
+        "lineEval": "−+"
+      },
+      "98": {
+        "glyph": "?!",
+        "note": "inaccuracy: 8.3 win% given up, eval -1.46 after. The engine wanted the line in the sibling branch.",
+        "line": "g2g6 f0e1 g1i1 e4i4 i1h1 e6e4 g6g0 e1f0 g0g5 f0e1 h1h6 e4e6 h6h0 i4i0 h0h4 e6e4 h4h3 e4e3 c5c4 e3f3 h3h7 i0i4 c4c3 f3f2 h7h6 i4i3 g5g0 e1f0 g0g2 f0e1 h6e6 e0f0",
+        "lineEval": "∓"
+      },
+      "99": {
+        "glyph": "?!",
+        "note": "inaccuracy: 6.9 win% given up, eval -2.30 after. The engine wanted the line in the sibling branch.",
+        "line": "f0e1 g5g6 i5h5 g9i7 e6e5 g1g3 e1d2 i7g9 e5f5 g3b3 e4b4 b3f3 d0e1 f3e3 e0d0 g6g0 f5f0 g0h0 h5i5 h0h6 b4b9 e8d9 b9b3 e3e4 b3b4 e4e3 f0f5 h6a6 f5f0 e3a3 b4g4 a6b6",
+        "lineEval": "∓"
+      }
+    }
+  }
+};
+
 const G_M_143873: XiangqiReplaySpec = {
   "iccs": "c3c4 h7e7 h0g2 h9g7 i0h0 i9h9 b0c2 b9a7 c0e2 g6g5 d0e1 b7b3 c2b4 b3g3 a0d0 h9h5 d0d5 a9a8 e0d0 d9e8 h2i2 e7d7 d0e0 h5h0 g2h0 g9e7 e3e4 g3h3 d5d3 h3h5 h0g2 c6c5 c4c5 h5c5 g2h4 c5b5 h4g6 b5b2 i2b2 e7g9 e4e5 a8c8 d3d6 c8c3 b2c2 a7c8 c2c8 c3c8 e5e6 c8b8 b4c2 b8b5 d6c6 d7d9 c2e3 e8d7 e1d0 f9e8 e3c4 b5f5 c4b6 c9e7 e6e7 g9e7 g6e7 f5f7 c6c9 e9f9 c9d9 f9f8 d9g9 f7e7 f0e1 g7e6 g9g6 e6d4 b6c4 e7e6 g6g5 e6f6 g5g4 d4f3 e1f2 f8f9 g4g9 f9f8 d0e1 f3d4 g9g4 d4f3 c4e3 f8f9 e3d5 f6f5 d5e7 f5f7 e7d5 i6i5 a3a4 f9e9 g4g9 f7f9 g9g6 f9f5 d5e3 f5e5 e3c4 e5c5 g6a6 f3e5 c4e3 c5c3 e3f5 e5f7 f5e7 e8d9 a6f6 d9e8 f6i6",
+  "analysisNodes": 10000000,
   "red": "Meng Fanrui",
   "black": "Li Hanlin",
   "event": "2026 National Xiangqi Men’s Division A League",
@@ -31,43 +141,57 @@ const G_M_143873: XiangqiReplaySpec = {
     "byPly": {
       "56": {
         "glyph": "?",
-        "note": "mistake: 13.3 win% given up, eval +2.28 after. The engine wanted the line in the sibling branch.",
-        "line": "c9a7 e6d6 b5b3 e3f5 b3b7 d6e6 a6a5 e2c0 g7i8 f5d6 d9d7 g0e2 i8g7 e6f6 g9e7 e1f2 e9d9 f0e1 d9e9 i3i4 e9d9 d6c4 e7c9 c4a5 b7b5 a3a4"
+        "note": "mistake: 12.5 win% given up, eval +2.03 after. The engine wanted the line in the sibling branch.",
+        "line": "c9a7 e6d6 b5b3 e3f5 g7i8 d6e6 a6a5 f5d6 e8d7 d6e4 i8h6 g6f8 d7e8 c6c7 d9d8 f8h7 d8d3 e4d6 e9d9 d6c8 d3e3 c7c0 a7c9 c0d0 e3d3 h7g9 h6f5 g9h7 g5g4 h7f6 f5d4 e6e7",
+        "lineEval": "⩲"
       },
       "57": {
-        "glyph": "?",
-        "note": "mistake: 10.1 win% given up, eval +1.07 after. The engine wanted the line in the sibling branch.",
-        "line": "e6d6 b5b7 g6e5 d7e8 c6c9 b7b5 e3c4 g7f5 e1d0 f5e3 a3a4 e3c4 e5c4 e8f7 d6e6 f9e8 c9c6 e9f9 e6f6"
-      },
-      "61": {
         "glyph": "?!",
-        "note": "inaccuracy: 5.5 win% given up, eval +0.23 after. The engine wanted the line in the sibling branch.",
-        "line": "a3a4 e9f9 d0e1 c9a7 c6a6 g5g4 a4a5 g4g3 e6f6 a7c9 a6c6 c9e7 a5a6 f5c5 a6b6 c5c6 b6c6 f9e9"
-      },
-      "64": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.6 win% given up, eval +1.13 after. The engine wanted the line in the sibling branch.",
-        "line": "e9f9 f0e1 g9e7 g6e7 f5f7 e7d5 d9d5 c6c9 f9f8 b6d5 f7f5 d5e3 f5f6 c9c5 g7i8 c5g5 i8h6 g5g9 h6f7 e3g2 f6h6 g2f4 f7e5 e1f2 h6b6 d0e1"
+        "note": "inaccuracy: 8.8 win% given up, eval +0.99 after. The engine wanted the line in the sibling branch.",
+        "line": "e6d6 d7e8 c6c9 b5b6 e3f5 b6b7 c9c6 b7f7 f5g7 f7g7 g6e5 g7b7 e1d0 b7b5 e5c4 a6a5 i3i4 g5g4 e2g4 b5d5 c6c7 d5d0 e0e1 d0d4 c4b6 d4e4 g0e2 e4b4 b6c8 d9d8 d6d7 e8d7",
+        "lineEval": "±"
       },
       "92": {
         "glyph": "?!",
-        "note": "inaccuracy: 5.7 win% given up, eval +1.16 after. The engine wanted the line in the sibling branch.",
-        "line": "f3e5 g4g8 f8f9 g8g9 f9f8 g9h9 e5f7 h9i9 f6g6 i9i7 f7g5 i7h7 g6e6 h7h8 f8f9 h8h9 f9f8 e3g2 g5f7 h9i9 e6h6 e1d2 f7e5"
+        "note": "inaccuracy: 5.9 win% given up, eval +1.23 after. The engine wanted the line in the sibling branch.",
+        "line": "f3e5 g4b4 e5f7 b4b9 f6f3 e3d5 f3f5 d5e3 f5e5 e3g2 e5g5 g2f4 g5f5 f4g2 f5h5 e1d2 h5g5 g2h4 g5h5 h4g2 h5h6 b9i9 f7e5 f2e1 h6h3 i9g9 h3h6 g2e3 h6g6 g9b9 g6g3 e3f5",
+        "lineEval": "⩲"
       },
       "98": {
         "glyph": "?",
-        "note": "mistake: 13.9 win% given up, eval +2.92 after. The engine wanted the line in the sibling branch.",
-        "line": "f3e5 g4g9 f9f8 g9g5 e5d3 i3i4 f8f9 g5g9 f9f8 g9g8 f8f9 g8g5 d3c1 e0f0 c1d3 g5g4 f9f8 g4c4 f7f5 d5e3 f5h5"
+        "note": "mistake: 10.6 win% given up, eval +2.96 after. The engine wanted the line in the sibling branch.",
+        "line": "f3e5 g4g5 e5d3 i3i4 d3c1 e0f0 c1d3 g5g9 f9f8 g9g4 f7f5 d5e7 f5f7 e7d5 f8f9 f0f1 f7f5 d5e7 f5f7 e7d5 a6a5 g4g5 d3f4 d5c3 f9e9 g5a5 f7f6 c3e4 f6e6 e4c5 e6d6 f1f0",
+        "lineEval": "±"
+      },
+      "101": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.6 win% given up, eval +2.12 after. The engine wanted the line in the sibling branch.",
+        "line": "g4g6 f7f5 d5e7 f5g5 g6a6 e8f7 a6a7 f3e5 e7d5 f7e8 a7a6 e5f7 d5f6 e9d9 f6g4 f7e5 a6a9 d9d8 a9a5 e5f3 a5g5 f3g5 g4i5 d8d9 e1d0 g5i4",
+        "lineEval": "+−"
+      },
+      "102": {
+        "glyph": "?!",
+        "note": "inaccuracy: 6.0 win% given up, eval +2.92 after. The engine wanted the line in the sibling branch.",
+        "line": "f7f9 g9g7 f9f5 d5b6 e9f9 g7g6 f3e5 b6c8 e5f7 g6a6 f5c5 c8b6 c5c6 a6a9 f9f8 b6c4 i5i4 i3i4 c6i6 c4e3 i6i4 e3f5 i4i8 f5g7 i8g8 g7h5 f7g5 h5i7 g5h7 a9h9 g8g7 h9h8",
+        "lineEval": "±"
       },
       "105": {
         "glyph": "?!",
-        "note": "inaccuracy: 6.6 win% given up, eval +1.88 after. The engine wanted the line in the sibling branch.",
-        "line": "d5e7 f5g5 g6a6 e8f7 a6a7 f3e5 e7d5 f7e8 a7a6 e5d3 d5f6 d3c1 e0f0 e9d9 a6c6 c1b3 c6b6 b3c5 a4a5 g5f5 a5b5 c5e4 b6b9 d9d8 f6h7 e4f6"
+        "note": "inaccuracy: 5.8 win% given up, eval +2.18 after. The engine wanted the line in the sibling branch.",
+        "line": "d5e7 f5g5 g6a6 e8f7 a6a7 f3e5 e7d5 f7e8 a7a6 e5f7 d5f6 e9d9 f6g4 f7e5 a6a9 d9d8 a9a5 e5f3 a5g5 f3g5 g4i5 e8f7 a4a5 d7e8 i5g6 e8f9 a5b5 g5h3 b5c5 h3g1 e0f0 d8d9",
+        "lineEval": "+−"
+      },
+      "113": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.8 win% given up, eval +1.89 after. The engine wanted the line in the sibling branch.",
+        "line": "e3d5 c3i3 a6e6 e5d3 d5b6 e9d9 e6c6 i3f3 b6c8 f3f5 c6a6 f5c5 a6a9 d9d8 c8a7 c5c7 a4a5 d3b4 a7b5 c7c6 a9i9 e8f7 b5a7 c6b6 i9i5 b4d3 e0f0 b6b0 f0f1 b0b6",
+        "lineEval": "+−"
       },
       "114": {
         "glyph": "?!",
-        "note": "inaccuracy: 9.7 win% given up, eval +3.14 after. The engine wanted the line in the sibling branch.",
-        "line": "c3i3 f5e7 e8f7 a6a5 e5c6 a5a9 e9e8 e7f5 i3f3 f5h6 e8f8 h6g8 f3g3 g8i7 f8e8 a9a8 e8e9 i7g8 e9f9 g8f6 f7e8 a8a6"
+        "note": "inaccuracy: 9.3 win% given up, eval +3.14 after. The engine wanted the line in the sibling branch.",
+        "line": "c3i3 f5h6 i3f3 a6a9 e8d9 a9a5 e5d3 a5i5 d7e8 h6f5 d3c5 a4a5 c5d7 a5b5 f3f4 e2c0 f4e4 f5h6 d7f8 b5c5 e4e6 h6g4 e8f9 c5d5 e6g6 g0e2 f8d7 g4e3 d9e8 e3f5 g6b6",
+        "lineEval": "±"
       }
     }
   }
@@ -109,14 +233,14 @@ export const mengFanruiArticle: Article = {
   boardFamily: 'xiangqi',
   title: "Meng Fanrui 孟繁睿",
   seoTitle: "Meng Fanrui 孟繁睿: 2025 year-end champion, games and analysis",
-  summary: "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Two decisions to try and a 5+3 win to explore, from his 2026 games.",
+  summary: "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Two decisions to try and three annotated wins from his 2026 games, including a 5+3 tiebreak.",
   showSummaryOnPage: false,
   status: "draft",
   publishedAt: "2026-11-13",
   thumbnail: { kind: 'svg', svg: THUMBNAIL },
   audience: "Xiangqi players looking up Meng Fanrui, his year-end title and his games. English source for the usual reviewed English and Chinese editions.",
   readNext: ["yin-sheng","tang-dan","tony-fung-ga-zen"],
-  tldr: ["Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.","In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.","Find a reply with black, choose between two elephant captures, then use the evaluation graph to explore a 5+3 win."],
+  tldr: ["Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.","In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.","Try two decision positions, then explore three full wins with both colours. The replays and graphs use 10M-node analysis."],
   intro: [
     {
       kind: 'paragraph',
@@ -124,7 +248,7 @@ export const mengFanruiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: "Meng plays for Hebei. Below, try two decisions from his wins, then use the evaluation graph to explore a 5+3 tiebreak. The two position answers begin with his recorded replies; the continuations are Pikafish lines.",
+      text: "Meng plays for Hebei. Below, try two decisions from his wins, then explore three full games with both colours. Pikafish checked the positions and replays at a budget of ten million nodes per position. The two position answers begin with his recorded replies; the continuations are engine lines.",
     },
   ],
   sections: [
@@ -193,6 +317,15 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
+          text: "His other win over Luo came with Black, earlier that day. Use the alternative at Red's 27th move to compare Luo's choice with the engine's preference, then follow Meng's reply.",
+        },
+        {
+          kind: 'xq-replay',
+          spec: { ...G_M_143657, startPly: 53, perspective: 'black' },
+          caption: "Luo Hangyuan vs Meng Fanrui, 2026 Shanghai Cup, 9 September 2026. Meng won with black in 64 moves. The board opens after red's move 27, with Meng to move.",
+        },
+        {
+          kind: 'paragraph',
           text: "Meng reached the quarterfinal, where Yin Sheng advanced after a seven-game match. The [tournament report](https://www.sport.gov.cn/n20001280/n20067662/n20067613/c30036315/content.html) follows Yin through to the title.",
         },
       ],
@@ -206,7 +339,16 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Where did the balance change against Li? Click a sharp change on the graph, then inspect the nearby marked move and its engine alternative. Replay Meng's reply from there.",
+          text: "How do the two league wins develop? Start with the 40+20 game against Ju and follow the evaluation alongside the moves.",
+        },
+        {
+          kind: 'xq-replay',
+          spec: { ...G_M_143947, startPly: 53, perspective: 'black' },
+          caption: "Ju Longfei vs Meng Fanrui, 2026 National Xiangqi Men’s Division A League, 17 September 2026. Meng won with black in 63 moves. The board opens after red's move 27, with Meng to move.",
+        },
+        {
+          kind: 'paragraph',
+          text: "Then look at the 5+3 game against Li. Click a sharp change on its graph, inspect the nearby marked move and its engine alternative, and replay Meng's reply from there.",
         },
         {
           kind: 'xq-replay',
@@ -220,7 +362,7 @@ export const mengFanruiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the three wins selected for the positions and replay.",
+          text: "These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the five wins selected for the positions and replays.",
         },
         {
           kind: 'table',
@@ -242,13 +384,12 @@ export const mengFanruiArticle: Article = {
   ],
 };
 
-// PROVISIONAL LOCAL REVIEW ONLY: final publication waits for the selected 10M
-// analysis, reviewed opening plies, positive marks and measured line verdicts.
-// Regeneration removes these temporary local notices; the private draft is canonical.
+// LOCAL REVIEW ONLY: 10M analysis is integrated; publication remains held.
+// Regeneration removes this local notice and reference portrait.
 mengFanruiArticle.intro?.unshift({
   kind: 'note',
-  label: 'Provisional local review',
-  text: 'The full replay uses stored 1M-node annotations. Both decision positions were separately checked from their displayed positions at 10M nodes. Full-game 10M analysis is complete; positive annotations and final engine-line verdicts remain under review. This draft is for local review and is not approved for publication.',
+  label: 'Local review',
+  text: 'The three full replays, their graphs and alternative-line assessments now use 10M-node analysis. Both decision positions were independently checked at the same budget. This is a local English draft awaiting final review and publication approval.',
 }, {
   kind: 'image-figure',
   src: '/player-photos/meng-fanrui-baidu-preview.webp',

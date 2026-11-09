@@ -8,8 +8,8 @@
 //   node scripts/player-page-article.mjs docs-private/players/cao-yanlei/draft.md
 //   node scripts/player-page-article.mjs <draft.md> --out apps/web/src/articles/content/<slug>.ts
 //
-// With --out, non-archive game charts are prepared from exact stored annot1m.site
-// series into the sibling analysis/ directory; missing/mismatched series fail
+// With --out, game charts are prepared from exact stored annot1m.site series
+// or raw annot10m initial/rows when analysisNodes=10000000, into analysis/; missing/mismatched series fail
 // generation rather than silently dropping the chart. No engine is launched.
 // Without --out it prints to stdout. The player folder beside the draft holds
 // `specs/<key>.json` (annotated-game-to-spec.mjs output, one per board) and an
@@ -328,8 +328,13 @@ for (const [boardIndex, { key, constName }] of boards.entries()) {
     : normalizeReplayMetadata(record.metadata);
 
   // The board id sits with the game's own fields, ahead of the annotations.
-  const boardId = broadcastBoards[key];
-  const { annotations: recordAnnotations, ...recordHead } = record;
+  const nodes = record.analysisNodes ?? 1_000_000;
+  if (![1_000_000, 10_000_000].includes(nodes))
+    fail(`${key}: unsupported analysis node budget ${nodes}`);
+  // Archive charts use the default site budget; deep records need a static
+  // budget-specific source so boardId can never route them back to 1M.
+  const { annotations: recordAnnotations, boardId: recordedBoardId, ...recordHead } = record;
+  const boardId = nodes === 1_000_000 ? (broadcastBoards[key] ?? recordedBoardId) : undefined;
   const spec = {
     ...recordHead,
     metadata,
@@ -337,14 +342,14 @@ for (const [boardIndex, { key, constName }] of boards.entries()) {
     ...(recordAnnotations ? { annotations: recordAnnotations } : {}),
   };
   // Every generated non-archive game carries its chart asset automatically.
-  // Reuse the exact stored site pass; never launch an engine during generation.
+  // Reuse the exact stored budget-specific pass; never launch an engine during generation.
   if (out && !boardId && !spec.startFen) {
     try {
       prepareArticleChart(
         spec,
-        join(playerDir, 'annot1m', `${key}.json`),
+        join(playerDir, nodes === 10_000_000 ? 'annot10m' : 'annot1m', `${key}.json`),
         join(dirname(out), '..', 'analysis'),
-        `dpxq ${key}, stored site-budget run`,
+        `dpxq ${key}, stored ${nodes}-node run`,
       );
     } catch (error) {
       fail(`${key}: ${error.message}`);

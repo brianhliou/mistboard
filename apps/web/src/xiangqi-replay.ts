@@ -168,6 +168,8 @@ export type XiangqiReplaySpec = {
   // Space-separated ICCS coordinate tokens (e.g. "h2e2 h9g7 ..."). ICCS ranks
   // are 0-9 with 0 = Red's back rank; engine ranks are 1-10, so rank + 1.
   iccs: string;
+  /** Exact chart analysis budget; absent means the legacy 1M site pass. */
+  analysisNodes?: number;
   /**
    * Position the line starts from, as a standard xiangqi FEN. Omitted means the
    * opening, which is right for a game record and wrong for everything else: a

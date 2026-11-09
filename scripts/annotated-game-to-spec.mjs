@@ -90,6 +90,9 @@ function rename(raw) {
 const iccs = rows.map((r) => r.uci).join(' ');
 const spec = {
   iccs,
+  ...(Number.isSafeInteger(data.engine?.nodes) && data.engine.nodes > 0
+    ? { analysisNodes: data.engine.nodes }
+    : {}),
   red: rename(game.red),
   black: rename(game.black),
   event: argOf('event', game.event ?? ''),

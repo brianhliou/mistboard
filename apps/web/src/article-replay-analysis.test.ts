@@ -34,6 +34,14 @@ describe('articleAnalysisKey', () => {
     expect(articleAnalysisKey({ iccs: '  h2e2  h9g7\nh0g2 i9h9 ' })).toBe(key);
   });
 
+  it('preserves legacy keys for default budgets and separates deep analysis of the same record', () => {
+    const legacy = articleAnalysisKey(record);
+    expect(legacy).toBe('09bca05521d103');
+    expect(articleAnalysisKey({ ...record, analysisNodes: 1_000_000 })).toBe(legacy);
+    expect(articleAnalysisKey({ ...record, analysisNodes: 10_000_000 })).not.toBe(legacy);
+    expect(articleAnalysisKey({ ...record, analysisNodes: 10_000_000 })).toMatch(/^[0-9a-f]{14}$/);
+  });
+
   it('changes with any move or the start position', () => {
     const key = articleAnalysisKey(record);
     expect(articleAnalysisKey({ iccs: 'h2e2 h9g7 h0g2' })).not.toBe(key);
@@ -68,7 +76,14 @@ describe('article boards and their charts', () => {
       if (!load) continue; // reported by the test above
       const body = await load();
       const name = `${label(record)} (${articleAnalysisKey(record.spec)}.json)`;
-      expect(body.engineId, name).toBe(ENGINE_ID);
+      const nodes = record.spec.analysisNodes ?? 1_000_000;
+      expect(body.engineId, name).toBe(
+        nodes === 1_000_000 ? ENGINE_ID : `${ENGINE_ID}:nodes=${nodes}`,
+      );
+      if (nodes !== 1_000_000) {
+        expect((body as typeof body & { nodes?: number }).nodes, name).toBe(nodes);
+        expect(body.depth, name).toBe(0);
+      }
       expect(body.plies.length, `${name}: ${FIX}`).toBe(plies(record.spec.iccs) + 1);
       expect(
         body.plies.every((p, i) => p.ply === i),

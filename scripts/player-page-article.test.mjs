@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { articleAnalysisKey } from '../apps/web/src/article-analysis-key.js';
 
 const SCRIPT = new URL('./player-page-article.mjs', import.meta.url).pathname;
 
@@ -244,5 +245,97 @@ test('a decision exercise may keep a thumbnail from its source game without embe
     assert.match(module, /kind: 'embed'/);
   } finally {
     rmSync(f.dir, { recursive: true, force: true });
+  }
+});
+
+function makeDeepFixture(f, mutate = (a) => a) {
+  const player = join(f.dir, 'player');
+  const specPath = join(player, 'specs', 'fixture.json');
+  const spec = {
+    ...JSON.parse(readFileSync(specPath, 'utf8')),
+    analysisNodes: 10_000_000,
+    boardId: 'synthetic-archive-game',
+  };
+  writeFileSync(specPath, JSON.stringify(spec));
+  mkdirSync(join(player, 'annot10m'), { recursive: true });
+  const deep = mutate({
+    game: { date: '2026-01-01' },
+    engine: { nodes: 10_000_000 },
+    initial: { cp: 91, mate: null },
+    rows: [
+      { ply: 1, uci: 'h2e2', best: 'b2e2', cp: 333, mate: null },
+      { ply: 2, uci: 'h9g7', best: 'b7c7', cp: -444, mate: null },
+    ],
+    site: f.site,
+  });
+  writeFileSync(join(player, 'annot10m', 'fixture.json'), JSON.stringify(deep));
+  return { spec, deep };
+}
+test('deep generation uses its actual evaluations with a different key, never the cached 1M site series', () => {
+  const f = chartBuild();
+  try {
+    assert.equal(f.run().status, 0);
+    const { spec } = makeDeepFixture(f);
+    const run = f.run();
+    assert.equal(run.status, 0, run.stderr);
+    const deepPath = join(f.dir, 'analysis', `${articleAnalysisKey(spec)}.json`);
+    const first = readFileSync(deepPath, 'utf8');
+    const result = JSON.parse(first);
+    assert.equal(result.engineId, 'pikafish-xiangqi-analysis@5:nodes=10000000');
+    assert.equal(result.nodes, 10_000_000);
+    assert.equal(result.depth, 0);
+    assert.doesNotMatch(
+      readFileSync(join(f.dir, 'content', 'test-player.ts'), 'utf8'),
+      /"boardId"/,
+    );
+    assert.deepEqual(result.plies, [
+      { ply: 0, cp: 91, mate: null, best: 'b3e3' },
+      { ply: 1, cp: 333, mate: null, best: 'b8c8' },
+      { ply: 2, cp: -444, mate: null, best: null },
+    ]);
+    assert.equal(readdirSync(join(f.dir, 'analysis')).length, 2);
+    assert.equal(f.run().status, 0);
+    assert.equal(readFileSync(deepPath, 'utf8'), first);
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
+});
+test('deep generation fails when deep data is absent, despite a valid stored 1M graph', () => {
+  const f = chartBuild();
+  try {
+    assert.equal(f.run().status, 0);
+    const path = join(f.dir, 'player', 'specs', 'fixture.json');
+    writeFileSync(
+      path,
+      JSON.stringify({ ...JSON.parse(readFileSync(path, 'utf8')), analysisNodes: 10_000_000 }),
+    );
+    const result = f.run();
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /10M|10000000|annot10m/);
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
+});
+test('deep generation rejects missing initial scores, mismatched budgets/plies/moves and malformed evaluations', () => {
+  const mutations = [
+    (a) => ({ ...a, initial: undefined }),
+    (a) => ({ ...a, engine: { nodes: 1_000_000 } }),
+    (a) => ({ ...a, rows: a.rows.slice(1) }),
+    (a) => ({ ...a, rows: [a.rows[0], { ...a.rows[1], ply: 1 }] }),
+    (a) => ({ ...a, rows: [{ ...a.rows[0], uci: 'a0a1' }, a.rows[1]] }),
+    (a) => ({ ...a, initial: { cp: 'not-a-score', mate: null } }),
+    (a) => ({ ...a, rows: [a.rows[0], { ...a.rows[1], cp: null, mate: null }] }),
+    (a) => ({ ...a, rows: [{ ...a.rows[0], best: 'b3e3bad' }, a.rows[1]] }),
+  ];
+  for (const mutation of mutations) {
+    const f = chartBuild();
+    try {
+      makeDeepFixture(f, mutation);
+      const result = f.run();
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /chart|analysis/);
+    } finally {
+      rmSync(f.dir, { recursive: true, force: true });
+    }
   }
 });
