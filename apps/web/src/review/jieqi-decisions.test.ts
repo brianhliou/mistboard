@@ -21,6 +21,15 @@ function decision(p: Partial<JieqiDecision>): JieqiDecision {
 }
 
 describe('decisionView', () => {
+  it('keeps the same grade and accuracy when the server withholds luck', () => {
+    const full = decision({ bestWin: 70, playedWin: 50, realizedWin: 62 });
+    const { realizedWin: _outcome, ...grade } = full;
+    const { luck: _luck, ...enabled } = decisionView(full);
+    expect(decisionView(grade)).toEqual(enabled);
+    const overlay = jieqiDecisionOverlay(summarizeDecisions([grade]));
+    expect(overlay.red).toEqual(jieqiDecisionOverlay(summarizeDecisions([full])).red);
+    expect(JSON.stringify([...overlay.byPly.values()])).not.toContain('luck');
+  });
   it('leaves a decision loss under the inaccuracy bar unjudged', () => {
     // 3 points is under moveJudgment's own 5-point bar, so no glyph.
     const v = decisionView(decision({ bestWin: 53, playedWin: 50 }));

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -15,9 +16,11 @@ import {
   type EngineMatchManifest,
   parseEnrichedMatchJsonl,
 } from '../engine-match-import.js';
+import { enqueueAnalysisJob, getAnalysisJob } from '../game-analysis-jobs.js';
 import type { JieqiEvent } from '../jieqi-runtime.js';
 import { getJieqiClientView, jieqiTenant } from '../jieqi-tenant.js';
 import type { RecentEveGameRecord } from '../persistence.js';
+import { close, getPool, init } from '../persistence-db.js';
 import { replayTenantEvents } from '../variant-tenant/runtime.js';
 import {
   clearJieqiWatchPostgameCache,
@@ -25,9 +28,100 @@ import {
   jieqiLiveWatchPayloadFor,
   jieqiPostgameForApi,
   jieqiWatchPostgameForApi,
+  tryHandle,
 } from './jieqi-games.js';
+import type { HttpApiContext } from './lib.js';
 
 const ROOM_ID = 'jq_postgame';
+
+test('review decisions omit luck when disabled without changing cached grades or analysis', async (t) => {
+  const previous = process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  const previousJieqi = process.env.MISTBOARD_JIEQI_ENABLED;
+  t.after(() => {
+    if (previous === undefined) delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+    else process.env.MISTBOARD_JIEQI_LUCK_ENABLED = previous;
+    if (previousJieqi === undefined) delete process.env.MISTBOARD_JIEQI_ENABLED;
+    else process.env.MISTBOARD_JIEQI_ENABLED = previousJieqi;
+  });
+  process.env.MISTBOARD_JIEQI_ENABLED = 'true';
+  init('postgres://mistboard@127.0.0.1:9/never');
+  t.after(close);
+  const decisions = [
+    {
+      ply: 1,
+      mover: 'red',
+      bestWin: 70,
+      playedWin: 50,
+      realizedWin: 62,
+      playedRank: 2,
+      candidates: [{ move: 'b2b9', win: 50, played: true }],
+    },
+  ];
+  const plies = [{ ply: 0, cp: 100, mate: null, best: null }];
+  t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
+    if (sql.includes('FROM events'))
+      return { rows: finishedCaptureEvents().map((payload) => ({ payload })) };
+    if (sql.includes('FROM game_analysis'))
+      return { rows: [{ plies: String(values[1]).includes('decisions@') ? decisions : plies }] };
+    assert.fail(`Unexpected review query: ${sql}`);
+  });
+  const read = async (endpoint: string) => {
+    let body = '';
+    let status = 0;
+    const response = {
+      writeHead(code: number) {
+        status = code;
+        return this;
+      },
+      end(chunk = '') {
+        body += chunk;
+      },
+    } as unknown as ServerResponse;
+    const path = `/api/jieqi/games/${ROOM_ID}/${endpoint}`;
+    assert.equal(
+      await tryHandle(
+        {} as HttpApiContext,
+        { method: 'GET', headers: {} } as IncomingMessage,
+        response,
+        path,
+        new URL(path, 'http://localhost'),
+      ),
+      true,
+    );
+    assert.equal(status, 200);
+    return JSON.parse(body);
+  };
+  delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  const enabled = await read('decisions');
+  assert.deepEqual(enabled.decisions, decisions);
+  // A completed job can outlive a policy change and can be polled by another
+  // viewer. Its stored result must be projected again on each poll.
+  const queued = enqueueAnalysisJob({
+    variant: 'jieqi',
+    roomId: ROOM_ID,
+    kind: 'decisions',
+    accountId: 'reviewer',
+    run: async () => enabled,
+  });
+  assert.ok(queued.ok);
+  for (let i = 0; i < 200 && getAnalysisJob(queued.job.id)?.status === 'pending'; i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.equal(getAnalysisJob(queued.job.id)?.status, 'done');
+  const analysis = await read('analysis');
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'false';
+  const disabled = await read('decisions');
+  assert.doesNotMatch(JSON.stringify(disabled), /"(?:realizedWin|luck|netLuck|totalLuck)"/);
+  assert.deepEqual(
+    disabled.decisions,
+    decisions.map(({ realizedWin: _luck, ...grade }) => grade),
+  );
+  assert.deepEqual((await read(`decisions/jobs/${queued.job.id}`)).result, disabled);
+  assert.deepEqual(await read('analysis'), analysis);
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'true';
+  assert.deepEqual(await read('decisions'), enabled);
+  assert.deepEqual((await read(`decisions/jobs/${queued.job.id}`)).result, enabled);
+});
 
 // Red cannon b3 captures Black's face-down piece on b10 (over the b8 screen),
 // then Black resigns. After the capture Red's cannon is revealed; every other

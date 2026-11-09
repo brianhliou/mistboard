@@ -43,7 +43,7 @@ vi.mock('../variant-tenant/registry.js', async (importOriginal) => ({
 
 import { mountEmbedGame } from './embed-game-page.js';
 
-function fixture(noAnalysis = false, incomplete = false) {
+function fixture(noAnalysis = false, incomplete = false, withLuck = true) {
   const state = createInitialJieqiState('embed-analysis');
   const postgame = {
     history: { truth: [{ ply: 0, view: jieqiTruthView(state) }] },
@@ -83,7 +83,9 @@ function fixture(noAnalysis = false, incomplete = false) {
           JSON.stringify({
             engineId: 'pikafish-jieqi',
             depth: 12,
-            decisions: [{ ply: 1, mover: 'red', playedWin: 50, realizedWin: 60 }],
+            decisions: [
+              { ply: 1, mover: 'red', playedWin: 50, ...(withLuck ? { realizedWin: 60 } : {}) },
+            ],
           }),
         );
       if (url === '/api/jieqi/games/jq_fixture') return new Response(JSON.stringify(postgame));
@@ -100,6 +102,16 @@ afterEach(() => {
   watch.options = null;
 });
 describe('stored analysis in finished Jieqi game embeds', () => {
+  it('keeps the analysis graph without dice when decisions have no luck', async () => {
+    fixture(false, false, false);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedGame(root, { roomId: 'jq_fixture' });
+    expect(root.querySelector('.embed-score-chart')).not.toBeNull();
+    expect(root.querySelector('.review-move-list__luck')).toBeNull();
+    expect(JSON.stringify(watch.overlay?.(1))).not.toContain('"kind":"luck"');
+    expect(root.textContent).not.toMatch(/🎲|NaN/);
+  });
   it('stacks from the padded frame width, including just above the viewport breakpoint', async () => {
     fixture();
     vi.stubGlobal('innerWidth', 480);

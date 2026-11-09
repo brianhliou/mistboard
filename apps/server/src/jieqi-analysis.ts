@@ -32,6 +32,7 @@ import {
   winPercent,
   winPercentK,
 } from '@mistboard/game';
+import { jieqiLuckEnabled } from './feature-flags.js';
 import {
   type AnalysisProgressStore,
   liveAnalysisProgressStore,
@@ -725,8 +726,8 @@ export type JieqiDecision = {
   bestWin: number;
   /** True pool-mean EV (win%) of the move actually played — the decision, before the dice. */
   playedWin: number;
-  /** Win% the reveal ACTUALLY produced (the actual role's term of the played move's mean). */
-  realizedWin: number;
+  /** Win% the reveal ACTUALLY produced. Absent when luck computation is disabled. */
+  realizedWin?: number;
   /** Rank of the played move among the candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
   /** The candidates that were true-baselined, best first. Every one of these was already
@@ -1022,7 +1023,8 @@ async function poolMeanWin(
   repWindow: JieqiDecisionWindow,
   engineId: string,
   candidateCount = 1,
-): Promise<{ baseline: number; realized: number }> {
+  includeLuck = false,
+): Promise<{ baseline: number; realized?: number }> {
   const source = state.board[move.from];
   const moverPool = source?.faceDown ? believedMoverPool(state, mover) : null;
   const roles: (JieqiPieceRole | null)[] = moverPool ? [...moverPool.keys()] : [null];
@@ -1045,6 +1047,9 @@ async function poolMeanWin(
   roles.forEach((role, idx) => {
     baseline += ((role ? moverPool!.get(role)! : 1) / total) * wins[idx]!;
   });
+  // These searches are required for grading. Only selecting the actual draw's
+  // term is luck-only; neither candidate ranking nor flag-off runs need it.
+  if (!includeLuck) return { baseline };
   // A source still undetermined in the deal (never in a public deal: a moved piece is named)
   // has no true term, so it realizes the mean.
   const trueIndex = source?.unknown
@@ -1076,6 +1081,7 @@ export async function analyzeJieqiDecisions(
   progress?: AnalysisProgressStore<JieqiDecision>,
   profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
   rules: JieqiInitialStateOptions = {},
+  includeLuck = jieqiLuckEnabled(),
 ): Promise<JieqiDecision[]> {
   if (!deps) {
     // The live path: one analysis session for the whole decomposition.
@@ -1088,6 +1094,7 @@ export async function analyzeJieqiDecisions(
           progress,
           profile,
           rules,
+          includeLuck,
         ),
       profile.engine,
     );
@@ -1119,7 +1126,7 @@ export async function analyzeJieqiDecisions(
         playedUci,
       ]);
       let playedWin = 50;
-      let realizedWin = 50;
+      let realizedWin: number | undefined;
       const scored: JieqiDecisionCandidate[] = [];
       for (const uci of candidateUcis) {
         const candidate = uci === playedUci ? move : pikafishUciToJieqiMove(uci);
@@ -1132,6 +1139,7 @@ export async function analyzeJieqiDecisions(
           repWindow,
           profile.decisionsEngineId,
           candidateUcis.size,
+          includeLuck && uci === playedUci,
         );
         scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
@@ -1149,7 +1157,7 @@ export async function analyzeJieqiDecisions(
         mover,
         bestWin,
         playedWin,
-        realizedWin,
+        ...(realizedWin === undefined ? {} : { realizedWin }),
         playedRank,
         ...(candidates.length ? { candidates } : {}),
       });
@@ -1301,16 +1309,19 @@ export async function resolveJieqiDecisions(
     rules?: JieqiInitialStateOptions;
   } = {},
 ): Promise<JieqiDecisionsResult | null> {
-  const engineId = profile.decisionsEngineId;
+  const includeLuck = jieqiLuckEnabled();
+  // Grade-only rows must never satisfy a later flag-on read. Reuse a full row
+  // for grading when off, but isolate grade-only results and their checkpoints.
+  const engineId = includeLuck
+    ? profile.decisionsEngineId
+    : `${profile.decisionsEngineId}+no-luck1`;
   const depth = JIEQI_DECISION_DEPTH;
   // Decisions are stored in win%, already on their engine's curve, so either engine's
   // blob reads correctly; serve whichever exists before computing.
-  const stored = await firstStoredResult(
-    cache,
-    roomId,
-    depth,
-    jieqiStoredIdsFor(profile, 'decisionsEngineId', options.servePreviousAlgorithms ?? true),
-  );
+  const stored = await firstStoredResult(cache, roomId, depth, [
+    ...jieqiStoredIdsFor(profile, 'decisionsEngineId', options.servePreviousAlgorithms ?? true),
+    ...(includeLuck ? [] : [engineId]),
+  ]);
   if (stored) return { engineId: stored.engineId, depth, decisions: stored.value };
   const progress = analyze
     ? null
@@ -1331,13 +1342,19 @@ export async function resolveJieqiDecisions(
             progress ?? undefined,
             profile,
             options.rules,
+            includeLuck,
           ),
     validate: (series) => {
       // A scoreless engine makes every position eval null, so every win% collapses to 50
       // (best === played === realized). Never cache that; a fixed engine recomputes.
       if (
         series.length > 0 &&
-        series.every((d) => d.bestWin === 50 && d.playedWin === 50 && d.realizedWin === 50)
+        series.every(
+          (d) =>
+            d.bestWin === 50 &&
+            d.playedWin === 50 &&
+            (d.realizedWin === undefined || d.realizedWin === 50),
+        )
       ) {
         throw new VacuousAnalysisError('jieqi');
       }

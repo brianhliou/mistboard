@@ -611,6 +611,7 @@ test('AB true-baselines a selected quiet move and a played reveal outside the to
     decision.realizedWin,
     ...decision.candidates!.map((candidate) => candidate.win),
   ]) {
+    assert.ok(value !== undefined);
     assert.ok(Math.abs(value - 50) < 1e-9, 'all output scores use full-budget equality');
   }
   const quietCalls = fullCalls.filter(({ opts }) => opts.moves?.length);
