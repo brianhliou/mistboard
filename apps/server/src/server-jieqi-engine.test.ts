@@ -112,6 +112,7 @@ process.stdin.on('data', (chunk) => {
     buf = buf.slice(nl + 1);
     if (line === 'uci') {
       process.stdout.write('option name EvalFile type string default\\n');
+      process.stdout.write('option name ChaseRule type combo default skyrule var none var default var skyrule\\n');
       process.stdout.write('option name Hash type spin default 16 min 1 max 4096\\n');
       process.stdout.write('option name Threads type spin default 1 min 1 max 16\\n');
       process.stdout.write('uciok\\n');

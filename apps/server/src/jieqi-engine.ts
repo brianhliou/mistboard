@@ -383,6 +383,14 @@ export function abJchessNetPath(): string {
   return found;
 }
 
+function abJchessStartupOptions(): string[] {
+  // Site kernel uses jqe's chase rule since 2026-11-08; AB-JChess-20261031 defaults to skyrule.
+  return [
+    `setoption name EvalFile value ${abJchessNetPath()}`,
+    'setoption name ChaseRule value default',
+  ];
+}
+
 // jqe and its net: the engines release puts both in /app/bin. No dev fallback; jqe
 // builds on x86-64 only, so locally point MISTBOARD_JQE_PATH at a wrapper that runs the
 // released binary (docker --platform linux/amd64) and MISTBOARD_JQE_NET at the net.
@@ -526,9 +534,14 @@ export function jieqiAnalysisResourceOptions(
  *  net (AB-JChess always loads its own; PikaJieQi only when MISTBOARD_PIKAFISH_NET is
  *  set), then the fixed analysis Hash/Threads. */
 export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): string[] {
-  const net =
-    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
-  return ['uci', ...net, ...jieqiAnalysisResourceOptions(engine), 'ucinewgame', 'isready'];
+  const startupOptions = engine === 'ab-jchess' ? abJchessStartupOptions() : netOption();
+  return [
+    'uci',
+    ...startupOptions,
+    ...jieqiAnalysisResourceOptions(engine),
+    'ucinewgame',
+    'isready',
+  ];
 }
 
 /**
@@ -858,13 +871,13 @@ export async function jieqiLiveEngineMove(
 /** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
  *  set here, once per process lifetime; AB-JChess and jqe load their nets here too. */
 export function buildJieqiLiveInitCommands(engine?: JieqiLiveEngine): string[] {
-  const net =
+  const startupOptions =
     engine === 'ab-jchess'
-      ? [`setoption name EvalFile value ${abJchessNetPath()}`]
+      ? abJchessStartupOptions()
       : engine === 'jqe'
         ? [`setoption name EvalFile value ${jqeNetPath()}`]
         : netOption();
-  return ['uci', ...net, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
+  return ['uci', ...startupOptions, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
 }
 
 /** The `go` line for a live move: a depth cap (if any) stops the search early for the
