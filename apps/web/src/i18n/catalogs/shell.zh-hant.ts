@@ -79,7 +79,7 @@ export const ZH_HANT_SHELL = {
   'home.missionLabel': '我們的使命',
   'home.mission': '透過象棋與世界經典策略遊戲，連結不同文化背景的人。',
   'home.missionAbout': '關於 Mistboard',
-  'home.playSummary': '免費 · 無需註冊 · 人機對戰從入門到高手',
+  'home.playSummary': '免費 · 無需註冊 · 真人或電腦對弈',
   'home.activityAria': '活躍度',
   'home.gamesPlayed': '局已下完',
   'home.gamesPlayedMonth': '局已下完（最近 30 天 {count} 局）',

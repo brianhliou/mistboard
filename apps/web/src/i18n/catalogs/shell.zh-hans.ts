@@ -79,7 +79,7 @@ export const ZH_HANS_SHELL = {
   'home.missionLabel': '我们的使命',
   'home.mission': '通过中国象棋与世界经典策略游戏，让不同文化背景的人走到一起。',
   'home.missionAbout': '关于 Mistboard',
-  'home.playSummary': '免费 · 无需注册 · 人机对战从入门到高手',
+  'home.playSummary': '免费 · 无需注册 · 真人或电脑对弈',
   'home.activityAria': '活跃度',
   'home.gamesPlayed': '局已下完',
   'home.gamesPlayedMonth': '局已下完（最近 30 天 {count} 局）',

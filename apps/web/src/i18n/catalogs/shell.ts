@@ -75,7 +75,7 @@ export const EN_SHELL = {
   'home.mission':
     "Bring people together across cultures through Chinese chess and the world's classic strategy games.",
   'home.missionAbout': 'About Mistboard',
-  'home.playSummary': 'Free · No sign-up · Bots for every level',
+  'home.playSummary': 'Free · No sign-up · Play people or bots',
   'home.supportTitle': 'Mistboard Patron',
   'home.supportSubtitle': 'Become a patron',
   'home.storeTitle': 'Store',
