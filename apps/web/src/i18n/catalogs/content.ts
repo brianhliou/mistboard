@@ -459,7 +459,6 @@ export const EN_CONTENT = {
     'Every other game with a bot. The strongest bot on the site holds the title until a challenger beats it in a match. No challenger has played one yet.',
   'champions.heldBy': 'Held by',
   'champions.openBadge': 'Title open',
-  'champions.challengeCta': 'Challenge for this title',
   'champions.enginePikafish': 'Pikafish',
   'champions.engineFairyStockfish8': 'Fairy-Stockfish Level 8',
   'champions.writeUpLink': 'write-up',

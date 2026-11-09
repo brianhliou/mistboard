@@ -535,7 +535,6 @@ export const ZH_HANT_CONTENT = {
     '其他所有有機器人的遊戲。網站上最強的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
   'champions.heldBy': '持有者',
   'champions.openBadge': '頭銜待爭',
-  'champions.challengeCta': '挑戰此頭銜',
   'champions.enginePikafish': '皮卡魚',
   'champions.engineFairyStockfish8': 'Fairy-Stockfish 第 8 級',
   'champions.writeUpLink': '文章',
