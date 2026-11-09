@@ -7,6 +7,7 @@ import { firstPartyBotEngineFor } from './first-party-bots.js';
 import {
   ABJCHESS_JIEQI_ENGINE_VERSION,
   buildJieqiAnalysisCommands,
+  buildJieqiAnalysisInitCommands,
   buildJieqiGoCommand,
   buildJieqiLiveCommands,
   buildJieqiLiveInitCommands,
@@ -349,6 +350,30 @@ test('the AB-JChess handshake loads its net from MISTBOARD_ABJCHESS_NET; PikaJie
     if (saved === undefined) delete process.env.MISTBOARD_ABJCHESS_NET;
     else process.env.MISTBOARD_ABJCHESS_NET = saved;
   }
+});
+
+test('live AB-JChess uses the site chase rule; Pikafish and jqe receive no chase option', () => {
+  withEnv({ MISTBOARD_ABJCHESS_NET: process.execPath, MISTBOARD_JQE_NET: process.execPath }, () => {
+    assert.ok(
+      buildJieqiLiveInitCommands('ab-jchess').includes('setoption name ChaseRule value default'),
+    );
+    for (const engine of [undefined, 'jqe'] as const) {
+      assert.ok(!buildJieqiLiveInitCommands(engine).some((line) => line.includes('ChaseRule')));
+    }
+  });
+});
+
+test('analysis AB-JChess uses the site chase rule; Pikafish receives no chase option', () => {
+  withEnv({ MISTBOARD_ABJCHESS_NET: process.execPath }, () => {
+    assert.ok(
+      buildJieqiAnalysisInitCommands('ab-jchess').includes(
+        'setoption name ChaseRule value default',
+      ),
+    );
+    assert.ok(
+      !buildJieqiAnalysisInitCommands('pikafish-jieqi').some((line) => line.includes('ChaseRule')),
+    );
+  });
 });
 
 // jqe (2026-10) sits one rung under AB-JChess on its own binary and net, held behind
