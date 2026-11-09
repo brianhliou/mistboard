@@ -26,6 +26,7 @@ export const GAME_EXPORT_FORMATS = {
   'dark-xiangqi': ['pgn', 'json'],
   jieqi: ['pgn', 'json'],
   banqi: ['pgn', 'json'],
+  'three-kingdoms-banqi': ['pgn', 'json'],
   // The FFQ FEN is a masked observer snapshot, not a replay/import format.
   // No tenant or export adapter exists; never expose the canonical hidden deal.
   'ffq-banqi': [],

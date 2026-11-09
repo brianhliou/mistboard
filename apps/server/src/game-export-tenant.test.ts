@@ -603,6 +603,7 @@ test('the PGN Variant tag is the registry public name for every exported tenant 
     'dark-xiangqi': 'Fog Xiangqi',
     jieqi: 'Jieqi',
     banqi: 'Banqi',
+    'three-kingdoms-banqi': 'Three Kingdoms Banqi',
     'fortress-xiangqi': 'Fortress',
     'duck-xiangqi': 'Duck Xiangqi',
     'atomic-xiangqi': 'Atomic Xiangqi',

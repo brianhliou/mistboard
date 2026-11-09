@@ -12,6 +12,7 @@ import {
   createInitialJieqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
+  createInitialThreeKingdomsBanqiState,
   createInitialXiangqiState,
   duckXiangqiFen,
   fortressXiangqiEngineFen,
@@ -19,6 +20,7 @@ import {
   jungleFlipStateToEngineFen,
   jungleStateToEngineFen,
   standardXiangqiFen,
+  threeKingdomsBanqiStateToPublicFen,
 } from '@mistboard/game';
 import { CARD_BOARD_HEIGHT, intersectionLayout } from './og-card-board.js';
 import {
@@ -34,6 +36,9 @@ import {
 // Every variant's start position, spelled by the kernel's own writer so the
 // fixture cannot drift from the parser it feeds.
 const START_FENS: Record<PositionOgVariant, string> = {
+  'three-kingdoms-banqi': threeKingdomsBanqiStateToPublicFen(
+    createInitialThreeKingdomsBanqiState('t', 0),
+  ),
   xiangqi: standardXiangqiFen(createInitialXiangqiState('t')),
   'dark-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
   // Same board and writer as standard xiangqi; the explosion is a capture rule.

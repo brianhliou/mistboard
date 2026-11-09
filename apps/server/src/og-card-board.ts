@@ -504,6 +504,15 @@ function renderIntersection(
     const cx = g.px(extra.file);
     const cy = g.py(extra.rank);
     if (extra.kind === 'face-down') parts.push(piece(cx, cy, g.pieceSize, backInner(extra.ink)));
+    else if (extra.kind === 'hidden-tile')
+      parts.push(
+        piece(
+          cx,
+          cy,
+          g.pieceSize,
+          '<circle cx="50" cy="50" r="46" fill="#99c4b5" stroke="#3a6b5c" stroke-width="3"/>',
+        ),
+      );
     else if (extra.kind === 'duck')
       parts.push(piece(cx, cy, g.pieceSize, duckInner(art, g.pieceSize, pieceSet)));
     else

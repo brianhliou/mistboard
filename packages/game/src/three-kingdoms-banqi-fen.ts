@@ -121,6 +121,18 @@ function poolField(board: ThreeKingdomsBanqiBoard): string {
   return out === '' ? '-' : out;
 }
 
+/** Public five-field position for cards and analysis links, without the deal. */
+export function threeKingdomsBanqiStateToPublicFen(state: ThreeKingdomsBanqiState): string {
+  const ink = banqiInkForSeat(state, threeKingdomsBanqiSeatToMove(state));
+  return [
+    placementField(state.board),
+    ink === null ? '-' : ink[0],
+    poolField(state.board),
+    state.noProgressClock,
+    state.moveNumber,
+  ].join(' ');
+}
+
 /** The six-field dealt FEN: the public position, the pool, and the exact deal. */
 export function threeKingdomsBanqiStateToDealtFen(state: ThreeKingdomsBanqiState): string {
   const ink = banqiInkForSeat(state, threeKingdomsBanqiSeatToMove(state));

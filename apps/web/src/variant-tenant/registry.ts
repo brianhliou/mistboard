@@ -1199,7 +1199,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // accounts on prod (#684) and to everyone in a build with
     // VITE_THREE_KINGDOMS_BANQI_ENABLED (local only). See
     // ../three-kingdoms-banqi-access.ts. A finished game opens its review page
-    // (admin-only, like the room); no export and no watch surface.
+    // (under the same admission gate), with finished exports and a TV surface.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
@@ -1219,6 +1219,14 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           () =>
             bootstrapThreeKingdomsBanqiLiveRoom(),
       ),
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-three-kingdoms-banqi-replay.js').then(
+          ({ mountThreeKingdomsBanqiWatchReplay }) =>
+            mountThreeKingdomsBanqiWatchReplay(root, roomId, options),
+        ),
+    },
     landing: {
       // Ink binds on the opening flip, so the picker offers move order, as banqi.
       capabilities: {

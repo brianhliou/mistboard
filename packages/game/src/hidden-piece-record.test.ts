@@ -1,3 +1,15 @@
+import { threeKingdomsBanqiPlyReveal } from './hidden-piece-record.js';
+import {
+  threeKingdomsBanqiStateToDealtFen,
+  threeKingdomsBanqiStateToPublicFen,
+} from './three-kingdoms-banqi-fen.js';
+import {
+  applyThreeKingdomsBanqiMove,
+  createThreeKingdomsBanqiSetup,
+  createThreeKingdomsBanqiStateFromSetup,
+  getThreeKingdomsBanqiLegalMoves,
+  type ThreeKingdomsBanqiState,
+} from './variants-three-kingdoms-banqi.js';
 // The hidden-piece game record (#484): reveals in the moves, the deal optional,
 // and a reference replayer that rebuilds a game from the record alone. Random
 // games of all three variants are played through the real kernels, written out
@@ -150,9 +162,32 @@ function playJungleFlip(seed: number, maxPlies: number): Played {
   };
 }
 
+function playThreeKingdomsBanqi(seed: number, maxPlies: number): Played {
+  const rng = mulberry32(seed);
+  let state: ThreeKingdomsBanqiState = createThreeKingdomsBanqiStateFromSetup(
+    'g',
+    createThreeKingdomsBanqiSetup(rng),
+  );
+  const dealFen = threeKingdomsBanqiStateToDealtFen(state);
+  const plies: HiddenPieceRecordPly[] = [];
+  while (state.status.type === 'playing' && plies.length < maxPlies) {
+    const moves = getThreeKingdomsBanqiLegalMoves(state);
+    const move = moves[Math.floor(rng() * moves.length)]!;
+    plies.push(ply(flipUci(move), threeKingdomsBanqiPlyReveal(state, move)));
+    state = applyThreeKingdomsBanqiMove(state, move);
+  }
+  return {
+    record: { variant: 'three-kingdoms-banqi', deal_fen: dealFen, plies },
+    finalFen: threeKingdomsBanqiStateToPublicFen(state),
+    finalDealtFen: threeKingdomsBanqiStateToDealtFen(state),
+    darkCaptures: 0,
+  };
+}
+
 const PLAYERS: Record<HiddenPieceVariant, (seed: number, maxPlies: number) => Played> = {
   jieqi: playJieqi,
   banqi: playBanqi,
+  'three-kingdoms-banqi': playThreeKingdomsBanqi,
   'jungle-flip': playJungleFlip,
 };
 

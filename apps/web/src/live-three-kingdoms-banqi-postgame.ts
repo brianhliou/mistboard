@@ -18,6 +18,7 @@ import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
 import {
@@ -199,6 +200,7 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
     metaCard,
     details,
     phoneInfoSheet: true,
+    ...gameExportShareExtra(VARIANT, postgame.game.roomId),
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,

@@ -139,7 +139,7 @@ test('the registration is wired to the admit rule and stays unlisted with the fl
   await withFlag(undefined, async () => {
     // Every listing surface (TV, current games, lobby, bot profiles) reads this.
     assert.equal(reg.enabled(), false);
-    assert.equal(reg.lobby, null, 'no Find opponent');
+    assert.equal(reg.lobby?.supportsRated, false, 'casual Find opponent');
     assert.equal(reg.createCorrespondenceGameForSeek, null, 'no correspondence');
   });
 });
