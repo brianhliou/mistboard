@@ -13,6 +13,8 @@ import { banqiTile3dBox } from './live-banqi-render.js';
 import { animateJieqiReveal, renderJieqiBoardSvg } from './live-jieqi-render.js';
 import {
   BANQI_PIECE_3D,
+  PIECE_3D_DOBUTSU_TAN,
+  PIECE_3D_IVORY,
   PIECE_3D_THICK_EDGE,
   piece3dLook,
   XIANGQI_PIECE_3D,
@@ -206,6 +208,15 @@ describe('xiangqi and jieqi 3D pieces', () => {
       expect(centre.x).toBe(100);
       expect(centre.y + (box * XIANGQI_PIECE_3D.depthShare) / 2).toBeCloseTo(200, 1);
     }
+  });
+
+  it('gives Animal Dobutsu a tan rim so it shows under the ivory faces', () => {
+    const body = (set: Parameters<typeof piece3dLook>[0]) =>
+      piece3dLook(set, banqiTile3dBox(64), BANQI_PIECE_3D).body;
+    expect(body('animal-dobutsu')).toEqual(PIECE_3D_DOBUTSU_TAN);
+    expect(body('animal-dobutsu')).not.toEqual(PIECE_3D_IVORY);
+    expect(body('traditional')).toEqual(PIECE_3D_IVORY);
+    expect(body('international')).toEqual(PIECE_3D_IVORY);
   });
 
   it("deepens every board's rim 1.5x on the Thicker edge, at the same footprint", () => {
