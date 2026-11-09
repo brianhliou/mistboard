@@ -1,19 +1,17 @@
-/** Three Kingdoms Banqi registry: casual lobby, TV, finished exports and cards.
- * Public admission and listing still follow the runtime access gate.
- * Correspondence is deliberately unavailable; games are always unrated. */
+/** Three Kingdoms Banqi registry: casual lobby, TV, cards and casual correspondence.
+ * Public admission and listing follow the runtime access gate; games are always
+ * unrated. No export: covered identities stay masked after the game (#1002), and
+ * an export would carry the deal, which names pieces nobody turned over. */
 
 import {
   type BanqiSeat,
   banqiInkForSeat,
   type RoomTimeControl,
-  threeKingdomsBanqiPlyReveal,
-  threeKingdomsBanqiStateToDealtFen,
   threeKingdomsBanqiStateToPublicFen,
 } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { tenantCardBinding } from './game-card-tenant.js';
-import { flipOrBoardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
@@ -30,6 +28,7 @@ import {
   type ThreeKingdomsBanqiRuntimeRoom,
   threeKingdomsBanqiTenant,
 } from './three-kingdoms-banqi-tenant.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -153,22 +152,24 @@ registerVariantTenant({
     },
   },
   reviewRouteBase: '/three-kingdoms-banqi/game',
-  export: tenantExportBinding(threeKingdomsBanqiTenant, {
-    gameRouteBase: '/three-kingdoms-banqi/game',
-    uci: flipOrBoardMoveUci,
-    firstMoverInk: (state) => state.firstColor,
-    hiddenPieces: {
-      variant: 'three-kingdoms-banqi',
-      reveal: threeKingdomsBanqiPlyReveal,
-      dealFen: threeKingdomsBanqiStateToDealtFen,
-    },
-  }),
+  export: null,
   card: tenantCardBinding(threeKingdomsBanqiTenant, {
     variant: 'three-kingdoms-banqi',
     analysis: null,
     fen: threeKingdomsBanqiStateToPublicFen,
     seatInk: banqiInkForSeat,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...tenantCorrespondenceBinding(threeKingdomsBanqiTenant, {
+    factoryContext: () => ({
+      rooms: threeKingdomsBanqiRooms,
+      isRoomIdTaken: (id) => variantTenantRoomIdTaken(id, threeKingdomsBanqiTenant.kind),
+      appendRoomEvent: persistence.appendRoomEvent,
+      isPersistenceEnabled: persistence.isInitialized,
+      recordPersistenceError: (id, seq, type, err) =>
+        recordTenantPersistenceError(threeKingdomsBanqiTenant, id, seq, type, err),
+    }),
+    getOrLoadRoom: getOrLoadThreeKingdomsBanqiRoom,
+    lifecycleCtx: threeKingdomsBanqiWs.lifecycleCtx,
+    casualOnly: true,
+  }),
 });

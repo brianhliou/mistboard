@@ -1020,9 +1020,10 @@ test('isPrivateOrReservedIp treats real public addresses as public', () => {
 
 test('proxyTrustWarningFor warns only in production when the resolved IP is private', () => {
   const prod: RuntimeEnv = { RAILWAY_SERVICE_NAME: 'web' };
-  // prod + private resolved IP → warns, and names the IP + hops in the message
+  // prod + private resolved IP → warns with the hop count, never header values
   const warning = proxyTrustWarningFor('10.0.0.5', 1, prod);
-  assert.ok(warning?.includes('10.0.0.5') && warning.includes('MISTBOARD_TRUSTED_PROXY_HOPS=1'));
+  assert.ok(warning?.includes('MISTBOARD_TRUSTED_PROXY_HOPS=1'));
+  assert.equal(warning?.includes('10.0.0.5'), false);
   // prod + public resolved IP → no warning
   assert.equal(proxyTrustWarningFor('203.0.113.7', 1, prod), null);
   // non-production → never warns, even for a private IP

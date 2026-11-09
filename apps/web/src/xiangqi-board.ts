@@ -27,6 +27,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { captureTargetSvg, selectionMarkSvg } from './board-capture-target.js';
 import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -129,6 +130,8 @@ export const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
 /** The box a piece is drawn in: its outline spans 98% of the point gap (2026-10-14). */
 export const XIANGQI_LIVE_PIECE_SIZE = xiangqiPieceDrawSize(CELL);
 const PIECE_SIZE = XIANGQI_LIVE_PIECE_SIZE;
+// Capture rings must clear the enlarged drawing, rather than the layout token.
+const RING_CAPTURE = PIECE_SIZE / 2 + 1;
 /** The layout piece size the marks are tuned on (board-lastmove.ts); it did not
  *  grow with the drawing, so the halo, glow and rings keep their geometry. */
 const MARK_PIECE_SIZE = tokenPieceSize(CELL);
@@ -310,7 +313,7 @@ export function xiangqiBoardSvg(
       <g class="xq-live-lastmove">${lastMoveMarks('under')}</g>
       <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout, markSet) : ''}</g>
       <g class="xq-live-selection">${outline3d ? '' : selectionLayer(state.selectedSquare, perspective, layout)}</g>
-      <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout, outline3d !== null)}</g>
+      <g class="xq-live-hints">${hintLayer(view, perspective, state.selectedSquare, layout, outline3d !== null, state.interactive)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet, tile3d)}</g>
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarks('over')}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, perspective, state.selectedSquare, layout, outline3d)}</g>` : ''}
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'point')}</g>
@@ -496,7 +499,7 @@ function selectionLayer(
   if (!square) return '';
   const coord = coordOf(square);
   const center = intersection(coord.file, coord.rank, perspective, layout);
-  return `<circle class="xq-live-selection-cell" cx="${center.x}" cy="${center.y}" r="30"/>`;
+  return selectionMarkSvg('xq-live-selection-cell', center, CELL, layout, 30);
 }
 
 function hintLayer(
@@ -505,6 +508,7 @@ function hintLayer(
   selectedSquare: XiangqiSquare | null,
   layout: XiangqiBoardLayout,
   raised = false,
+  capturesOnly = false,
 ): string {
   if (!selectedSquare) return '';
   return view.legalMoves
@@ -514,9 +518,9 @@ function hintLayer(
       const center = intersection(coord.file, coord.rank, perspective, layout);
       const occupied = view.board[move.to] !== undefined;
       // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
-      if (occupied && raised) return '';
+      if ((occupied && raised) || (capturesOnly && !occupied)) return '';
       return occupied
-        ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="28"/>`
+        ? captureTargetSvg('xq-live-hint-capture', center, CELL, layout, RING_CAPTURE)
         : `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`;
     })
     .join('');
@@ -666,13 +670,11 @@ function clickLayer(
       // A 3D capture target carries its marks on the piece: its face tint over
       // the pieces (select3dLayer) and, under the pointer, its side in green.
       const raised = target?.capture && outline3d;
-      const marker = target
-        ? raised
-          ? ''
-          : target.capture
-            ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="28"/>`
-            : `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`
-        : '';
+      // Capture marks live below every piece.
+      const marker =
+        target && !target.capture
+          ? `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`
+          : '';
       const hover = target
         ? raised
           ? select3dHoverEdgeSvg(center, outline3d)

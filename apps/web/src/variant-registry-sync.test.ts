@@ -589,7 +589,8 @@ describe('launched casual Three Kingdoms Banqi registry parity', () => {
     expect(web.landing?.capabilities.supportsRated).toBe(false);
     expect(server.watch?.channelId).toBe('three-kingdoms-banqi');
     expect(web.watch?.family).toBe(server.watch?.family);
-    expect(server.export?.gameRouteBase).toBe(web.gameRouteBase);
+    // No export: covered identities stay masked after the game (#1002).
+    expect(server.export).toBeNull();
     expect(server.card?.variant).toBe('three-kingdoms-banqi');
     expect(isClientRoute('/three-kingdoms-banqi/game/tkb_launched')).toBe(true);
   });

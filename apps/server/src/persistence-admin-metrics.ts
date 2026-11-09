@@ -22,6 +22,7 @@ import {
   type LoginEmailDeliveryMetrics,
 } from './persistence-email-delivery.js';
 import { PATRON_ACTIVE_STATUSES, patronQualifyingRowSql } from './persistence-patron.js';
+import { SITE_STATS_TIME_ZONE } from './persistence-site-stats.js';
 
 // Admin /metrics, Postgres-true. Everything in `weekly` and the headline
 // figures is COUNTED play only (persistence-counted-games.ts): completed
@@ -122,6 +123,11 @@ export interface AdminMetrics {
   accountsLast30d: number;
   humanGames: number;
   humanGamesLast7d: number;
+  gamePace: {
+    thisWeekSoFar: number;
+    lastWeekSamePoint: number;
+    lastWeekTotal: number;
+  };
   publicHumanGames: number;
   activePlayers28d: number;
   previousActivePlayers28d: number;
@@ -175,6 +181,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     puzzlePlayersByWeek,
     retentionCohorts,
     loginEmailDelivery,
+    gamePace,
   ] = await Promise.all([
     weekAxis(pool, now, weeks),
     collectHeadline(pool, now),
@@ -186,6 +193,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     collectPuzzlePlayersByWeek(pool, now, weeks),
     collectRetentionCohorts(pool, now, weeks),
     getLoginEmailDeliveryMetrics(now),
+    collectGamePace(pool, now),
   ]);
 
   const weekly = axis.map((weekStart): AdminMetricsWeek => {
@@ -230,7 +238,43 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     weekly,
     retentionCohorts,
     loginEmailDelivery,
+    gamePace,
     engines,
+  };
+}
+
+// Pace uses Pacific calendar weeks, like /stats. Subtract the week in local
+// wall time before converting the bounds to instants: 168 elapsed hours is
+// not the same weekday and time when a daylight-saving transition intervenes.
+async function collectGamePace(db: Queryable, now: Date): Promise<AdminMetrics['gamePace']> {
+  const result = await db.query<{
+    this_week: number;
+    last_week_same_point: number;
+    last_week_total: number;
+  }>(
+    `WITH local AS (
+       SELECT $1::timestamptz AT TIME ZONE '${SITE_STATS_TIME_ZONE}' AS now
+     ), bounds AS (
+       SELECT
+         date_trunc('week', now) AT TIME ZONE '${SITE_STATS_TIME_ZONE}' AS week_start,
+         (date_trunc('week', now) - INTERVAL '1 week') AT TIME ZONE '${SITE_STATS_TIME_ZONE}' AS last_week_start,
+         (now - INTERVAL '1 week') AT TIME ZONE '${SITE_STATS_TIME_ZONE}' AS last_week_same_point
+       FROM local
+     )
+     SELECT
+       count(*) FILTER (WHERE g.ended_at >= b.week_start)::int AS this_week,
+       count(*) FILTER (WHERE g.ended_at < b.last_week_same_point)::int AS last_week_same_point,
+       count(*) FILTER (WHERE g.ended_at < b.week_start)::int AS last_week_total
+     FROM games g CROSS JOIN bounds b
+     WHERE ${HUMAN_GAME}
+       AND g.ended_at >= b.last_week_start AND g.ended_at < $1::timestamptz`,
+    [now],
+  );
+  const row = result.rows[0];
+  return {
+    thisWeekSoFar: row?.this_week ?? 0,
+    lastWeekSamePoint: row?.last_week_same_point ?? 0,
+    lastWeekTotal: row?.last_week_total ?? 0,
   };
 }
 

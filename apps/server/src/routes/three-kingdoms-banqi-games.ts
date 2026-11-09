@@ -24,7 +24,6 @@ import {
 import { threeKingdomsBanqiEngineAvailable } from './../three-kingdoms-banqi-engine.js';
 import { threeKingdomsBanqiRooms } from '../three-kingdoms-banqi-registration.js';
 import {
-  getThreeKingdomsBanqiTruthView,
   type ThreeKingdomsBanqiEvent,
   threeKingdomsBanqiTenant,
 } from './../three-kingdoms-banqi-tenant.js';
@@ -46,15 +45,9 @@ import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } fr
 // Public casual release. Admission follows the runtime flag and its admin
 // fallback; a refused caller receives the same 404 as an unknown game.
 //
-// HIDDEN INFORMATION, banqi's finished-game policy exactly (routes/banqi-games.ts).
-// TK is symmetric hidden identity: a face-down tile is hidden from both seats
-// and every capture is of a face-up piece, so the deal is the one secret. The
-// route answers ONLY for a log that replays to 'finished' (a finished room
-// reveals everything); a live or aborted game gets the 404. The deal itself
-// (room-created setup) never goes out as such: the payload is the truth view of
-// the final position, the as-played masked board at every ply (`history.truth`,
-// the red seat's view, identical for both seats), and the revealed board at every
-// ply (`history.revealed`). Regression: routes/three-kingdoms-banqi-games.test.ts.
+// Covered identities stay secret after completion. Only finished logs are
+// reviewable; both history keys carry the as-played masked snapshots for wire
+// compatibility. No dealt position or revealed track reaches the browser.
 //
 // Whole-game analysis uses the live engine's public information state at L8.
 
@@ -230,8 +223,8 @@ export async function threeKingdomsBanqiPostgameForApi(
       ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
     },
     timeline: threeKingdomsBanqiPostgameTimeline(events),
-    // Every identity revealed: postgame only, never on a live wire.
-    view: getThreeKingdomsBanqiTruthView(projection.state),
+    // Completion does not reveal identities that remained covered.
+    view: getThreeKingdomsBanqiPlayerView(projection.state, 'red'),
     history: threeKingdomsBanqiPostgameHistory(events),
   };
 }
@@ -250,9 +243,8 @@ async function loadFinishedGame(roomId: string, deps: ThreeKingdomsBanqiPostgame
   return { game, events, projection };
 }
 
-// Per-ply snapshots in banqi's two tracks: 'truth' is the as-played masked board
-// (a tile not yet flipped is face down), 'revealed' shows every identity at every
-// ply. The masked view is the same for both seats, so 'red' is arbitrary.
+// Both legacy history keys contain the same masked snapshots. The second key
+// remains for older clients; it must never become a route around the mask.
 function threeKingdomsBanqiPostgameHistory(events: readonly ThreeKingdomsBanqiEvent[]): {
   truth: ThreeKingdomsBanqiPostgameSnapshot[];
   revealed: ThreeKingdomsBanqiPostgameSnapshot[];
@@ -262,13 +254,13 @@ function threeKingdomsBanqiPostgameHistory(events: readonly ThreeKingdomsBanqiEv
   let projection = replayTenantEvents(threeKingdomsBanqiTenant, [created]);
   let ply = 0;
   const truth = [{ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') }];
-  const revealed = [{ ply, view: getThreeKingdomsBanqiTruthView(projection.state) }];
+  const revealed = [{ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') }];
   for (const event of events.slice(1)) {
     projection = applyTenantEvent(threeKingdomsBanqiTenant, projection, event);
     if (event.type !== 'move-played') continue;
     ply += 1;
     truth.push({ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') });
-    revealed.push({ ply, view: getThreeKingdomsBanqiTruthView(projection.state) });
+    revealed.push({ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') });
   }
   return { truth, revealed };
 }

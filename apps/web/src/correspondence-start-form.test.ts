@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildStartForm } from './correspondence.js';
 import { setRatedModeEnabled } from './rated-flag.js';
+import { setResolvedAdmin } from './signed-in-state.js';
 
 // The /correspondence Start a game form's Casual/Rated control. Rated correspondence is
 // held behind the server's MISTBOARD_CORRESPONDENCE_RATED_ENABLED (off by default), so
@@ -42,6 +43,26 @@ describe('correspondence Start a game: Casual/Rated', () => {
     const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetchMock);
     expect(postedBody(panel, fetchMock).rated).toBe(true);
+  });
+
+  it('offers Gomoku with Black/White sides and keeps it casual when rated correspondence is on', () => {
+    setRatedModeEnabled(true, true);
+    const panel = buildStartForm(() => {}, { gameSpecId: 'gomoku', rated: true });
+    const picker = panel.querySelector<HTMLSelectElement>('select');
+    expect([...picker!.options].some((option) => option.value === 'gomoku')).toBe(true);
+    expect(picker?.value).toBe('gomoku');
+    const ratedButton = [...gameTypeField(panel)!.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Rated',
+    );
+    expect(ratedButton?.disabled).toBe(true);
+    expect([...panel.querySelectorAll('button')].map((button) => button.textContent)).toEqual(
+      expect.arrayContaining(['Black', 'White']),
+    );
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    const body = postedBody(panel, fetchMock);
+    expect(body).toMatchObject({ gameSpecId: 'gomoku' });
+    expect(body.rated).not.toBe(true);
   });
 });
 
@@ -86,5 +107,42 @@ describe('correspondence Start a game: opponent', () => {
     const body = postedBody(panel, fetchMock) as Record<string, unknown>;
     expect(body.visibility).toBe('private');
     expect('targetHandle' in body).toBe(false);
+  });
+});
+
+describe('correspondence Start a game: restricted banqi', () => {
+  afterEach(() => {
+    setResolvedAdmin(undefined);
+    setRatedModeEnabled(false);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('uses each tenant room gate for picker visibility and posts only casual', () => {
+    const offered = () =>
+      [...buildStartForm(() => {}).querySelector('select')!.options].map((option) => option.value);
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    setResolvedAdmin(false);
+    expect(offered()).not.toContain('ffq-banqi');
+    // Three Kingdoms launched (casual): offered to everyone.
+    expect(offered()).toContain('three-kingdoms-banqi');
+    setResolvedAdmin(true);
+    expect(offered()).not.toContain('ffq-banqi');
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    expect(offered()).toContain('ffq-banqi');
+    setResolvedAdmin(false);
+    expect(offered()).not.toContain('ffq-banqi');
+    setResolvedAdmin(true);
+    setRatedModeEnabled(true, true);
+    for (const gameSpecId of ['ffq-banqi', 'three-kingdoms-banqi']) {
+      const panel = buildStartForm(() => {}, { gameSpecId, rated: true });
+      expect(panel.querySelector('select')?.value).toBe(gameSpecId);
+      const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+      vi.stubGlobal('fetch', fetchMock);
+      const body = postedBody(panel, fetchMock);
+      expect(body).toMatchObject({ gameSpecId });
+      expect(body.rated).not.toBe(true);
+    }
   });
 });

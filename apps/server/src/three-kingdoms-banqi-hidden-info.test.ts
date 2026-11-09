@@ -38,6 +38,7 @@ import {
   type ThreeKingdomsBanqiEngineRequest,
 } from './three-kingdoms-banqi-engine.js';
 import {
+  getThreeKingdomsBanqiTruthView,
   type ThreeKingdomsBanqiEvent,
   threeKingdomsBanqiTenant,
 } from './three-kingdoms-banqi-tenant.js';
@@ -178,10 +179,7 @@ test('the scripted line exercises flips, quiet windows and captures, and keeps t
 test('the truth differs between the two deals (the planted difference is real)', () => {
   const truth = (events: readonly ThreeKingdomsBanqiEvent[]) =>
     JSON.stringify(
-      threeKingdomsBanqiTenant.visibility.truthView!(
-        replayTenantEvents(threeKingdomsBanqiTenant, events).state,
-        events,
-      ),
+      getThreeKingdomsBanqiTruthView(replayTenantEvents(threeKingdomsBanqiTenant, events).state),
     );
   assert.notEqual(truth(eventsA), truth(eventsB));
   // And the server-side event logs differ: the deal is in room-created.
@@ -253,48 +251,17 @@ test('the live PvE turn hands the provider that same redacted request and plays 
   assert.equal(appended.a[0]!.type, 'move-played');
 });
 
-test('a finished room: the deal never ships, and only the final board is the truth', () => {
-  // A finished room reveals the final board to everyone, by the site's policy
-  // (roomViewPolicy). What must still hold: the deal itself (room-created.setup)
-  // never reaches a client, the move log and every masked per-ply history view
-  // are identical under the swap, and the only difference between the two
-  // rooms is the final board, which is exactly the truth view.
-  const resign = (events: readonly ThreeKingdomsBanqiEvent[]): ThreeKingdomsBanqiEvent[] => [
+test('finished room and history payloads keep covered identities masked for every recipient', () => {
+  const finish = (events: readonly ThreeKingdomsBanqiEvent[]): ThreeKingdomsBanqiEvent[] => [
     ...events,
     { type: 'seat-resigned', at: 9_999, roomId: ROOM, color: 'red' },
   ];
-  const finishedA = resign(eventsA);
-  const finishedB = resign(eventsB);
-  assert.equal(
-    replayTenantEvents(threeKingdomsBanqiTenant, finishedA).state.status.type,
-    'finished',
-  );
-  const truth = (events: readonly ThreeKingdomsBanqiEvent[]) =>
-    JSON.stringify(
-      threeKingdomsBanqiTenant.visibility.truthView!(
-        replayTenantEvents(threeKingdomsBanqiTenant, events).state,
-        events,
-      ),
-    );
   for (const seat of ['red', 'black', 'spectator'] as const) {
-    const a = JSON.parse(joinPayload(finishedA, seat)) as Record<string, unknown> & {
-      snapshot: { state: unknown };
-    };
-    const b = JSON.parse(joinPayload(finishedB, seat)) as typeof a;
-    const raw = JSON.stringify(a);
-    assert.ok(!raw.includes('"setup"'), `${seat}: the deal never reaches a client`);
-    assert.equal(JSON.stringify(a.snapshot.state), truth(finishedA), `${seat}: final board`);
-    assert.equal(JSON.stringify(b.snapshot.state), truth(finishedB), `${seat}: final board`);
-    // Planted: the final boards differ, so the comparison below is not vacuous.
-    assert.notEqual(JSON.stringify(a.snapshot.state), JSON.stringify(b.snapshot.state));
-    const withoutFinalBoard = (p: typeof a) =>
-      JSON.stringify({ ...p, snapshot: { ...p.snapshot, state: null } });
-    assert.equal(
-      withoutFinalBoard(a),
-      withoutFinalBoard(b),
-      `${seat}: a finished payload carries a face-down identity outside the final board`,
-    );
-    assert.ok(Array.isArray(a.liveHistory), `${seat}: the masked per-ply history ships`);
+    const a = joinPayload(finish(eventsA), seat);
+    const b = joinPayload(finish(eventsB), seat);
+    assert.equal(a, b, `${seat}: whole finished payload is invariant under a hidden swap`);
+    assert.doesNotMatch(a, /"setup"|"deal"/);
+    assert.ok(Array.isArray(JSON.parse(a).liveHistory));
   }
 });
 
@@ -362,7 +329,7 @@ test('an attempted face-down capture is rejected and reveals nothing to the oppo
   assert.ok(attempts > 0);
 });
 
-test('registration offers casual-only Banqi time controls, TV, export and a card', async () => {
+test('registration offers casual-only Banqi time controls, TV and a card, and no export', async () => {
   const registration = variantTenantForRoomId(ROOM)!;
   assert.equal(registration.lobby?.supportsRated, false);
   assert.equal(
@@ -371,15 +338,6 @@ test('registration offers casual-only Banqi time controls, TV, export and a card
   );
   assert.equal(registration.lobby?.allowsTimeControl({ initialMs: 123, incrementMs: 0 }), false);
   assert.equal(registration.watch?.channelId, 'three-kingdoms-banqi');
-  assert.equal(registration.createCorrespondenceGameForSeek, null);
-  assert.equal(registration.export?.finishedGame(eventsA, ROOM), null, 'never export a live deal');
-  const finished: ThreeKingdomsBanqiEvent[] = [
-    ...eventsA,
-    { type: 'seat-resigned', at: 9999, roomId: ROOM, color: 'red' },
-  ];
-  const exported = registration.export?.finishedGame(finished, ROOM);
-  assert.ok(exported?.dealFen);
-  assert.equal(exported.plies.length, moveEventCount);
-  assert.ok(exported.plies.some((ply) => ply.revealed));
-  assert.ok(exported.plies.every((ply) => !ply.capturedHidden));
+  assert.equal(typeof registration.createCorrespondenceGameForSeek, 'function');
+  assert.equal(registration.export, null, 'no export: the deal names pieces nobody turned over');
 });

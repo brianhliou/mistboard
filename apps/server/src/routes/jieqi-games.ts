@@ -5,12 +5,14 @@ import {
   type JieqiColor,
   type JieqiDeal,
   type JieqiGameState,
+  type JieqiInitialStateOptions,
   type JieqiMove,
   type JieqiPlayerView,
   jieqiTruthBoard,
   jieqiTruthView,
   oppositeJieqiColor,
 } from '@mistboard/game';
+import { currentAccountUser } from './../account-session.js';
 import { jieqiEnabled } from './../feature-flags.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import {
@@ -19,9 +21,15 @@ import {
   resolveJieqiDecisions,
 } from './../jieqi-analysis.js';
 import { jieqiAnalysisEngineAvailable } from './../jieqi-engine.js';
+import { jieqiDecisionsForViewer } from './../jieqi-luck.js';
 import { jieqiRooms } from './../jieqi-registration.js';
 import type { JieqiEvent, JieqiProjection } from './../jieqi-runtime.js';
-import { jieqiPublicEvents, jieqiTenant } from './../jieqi-tenant.js';
+import {
+  enforcesRepetition,
+  jieqiPublicEvents,
+  jieqiSetupAdjudicationRule,
+  jieqiTenant,
+} from './../jieqi-tenant.js';
 import * as persistence from './../persistence.js';
 import type { JieqiLiveRoom } from './../server-ws-jieqi.js';
 import {
@@ -98,22 +106,31 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
   variantLabel: 'Jieqi',
   enabled: jieqiEnabled,
   requiresPersistence: true,
-  // Fail closed, not open: analysis runs on AB-JChess when its binary and net resolve,
-  // else on PikaJieQi (jieqiAnalysisEngine). With neither present the deploy is broken,
-  // so surface it (alertable log + 503) instead of a weaker eval.
+  // New grading prefers AB-JChess, with Pikafish fallback; either engine's cached rows remain readable.
   engineBinary: {
     available: jieqiAnalysisEngineAvailable,
-    label: 'jieqi analysis engine (AB-JChess or PikaJieQi)',
+    label: 'jieqi analysis engine (AB-JChess, with Pikafish fallback)',
   },
   loadInputs: loadFinishedJieqiGameInputs,
   countPlies: (inputs) => inputs.moves.length,
   resolveAnalysis: (roomId, inputs, computeIfMissing) =>
-    resolveJieqiAnalysis(roomId, inputs.moves, inputs.deal, undefined, undefined, computeIfMissing),
+    resolveJieqiAnalysis(
+      roomId,
+      inputs.moves,
+      inputs.deal,
+      undefined,
+      undefined,
+      computeIfMissing,
+      undefined,
+      inputs.rules,
+    ),
   // Mark the chance plies (a reveal, or a capture of a face-down piece) so the client leaves
   // them unjudged on the chart and grades them from the decisions layer. Unlike banqi's
   // from===to flip, both are normal moves, so we detect them by replaying the deal
   // (jieqiChancePlies), not by move shape.
-  analysisExtras: (inputs) => ({ chancePlies: jieqiChancePlies(inputs.moves, inputs.deal) }),
+  analysisExtras: (inputs) => ({
+    chancePlies: jieqiChancePlies(inputs.moves, inputs.deal, inputs.rules),
+  }),
   resolveDecisions: (roomId, inputs, computeIfMissing) =>
     resolveJieqiDecisions(
       roomId,
@@ -122,7 +139,13 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
       undefined,
       undefined,
       computeIfMissing,
+      undefined,
+      { rules: inputs.rules },
     ),
+  decisionsForViewer: async (result, request) => ({
+    ...result,
+    decisions: jieqiDecisionsForViewer(result.decisions, await currentAccountUser(request)),
+  }),
 });
 
 export async function tryHandle(
@@ -329,7 +352,7 @@ registerLiveWatchPayloadBuilder('jieqi', jieqiLiveWatchPayload);
 // drift that silently produces a differently-keyed cache row.
 export async function loadFinishedJieqiGameInputs(
   roomId: string,
-): Promise<{ deal: JieqiDeal; moves: JieqiMove[] } | null> {
+): Promise<{ deal: JieqiDeal; moves: JieqiMove[]; rules: JieqiInitialStateOptions } | null> {
   const events = await persistence.loadRoomEvents<JieqiEvent>(roomId);
   if (!events || !isTenantEventLog(jieqiTenant, events, roomId)) return null;
   return jieqiAnalysisInputsFromEvents(events);
@@ -341,7 +364,7 @@ export async function loadFinishedJieqiGameInputs(
 // never turned over. Exported for the whole-payload leak test.
 export function jieqiAnalysisInputsFromEvents(
   events: readonly JieqiEvent[],
-): { deal: JieqiDeal; moves: JieqiMove[] } | null {
+): { deal: JieqiDeal; moves: JieqiMove[]; rules: JieqiInitialStateOptions } | null {
   const projection = replayTenantEvents(jieqiTenant, [...events]);
   if (projection.state.status.type !== 'finished') return null;
   const created = events[0];
@@ -358,7 +381,15 @@ export function jieqiAnalysisInputsFromEvents(
         event.type === 'move-played',
     )
     .map((event) => event.move as JieqiMove);
-  return { deal, moves };
+  const adjudicationRule = jieqiSetupAdjudicationRule(created.setup);
+  return {
+    deal,
+    moves,
+    rules: {
+      repetition: enforcesRepetition(created.setup),
+      ...(adjudicationRule ? { adjudicationRule } : {}),
+    },
+  };
 }
 
 export async function jieqiPostgameForApi(

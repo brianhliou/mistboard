@@ -92,10 +92,17 @@ describe('phone study chrome', () => {
     { gamebook: true, isOwner: false },
     { gamebook: true, isOwner: true },
     { gamebook: false, isOwner: false },
+    { gamebook: false, isOwner: true },
   ])(
     'uses distinct chapter names in both lists (gamebook=$gamebook, owner=$isOwner)',
     async ({ gamebook, isOwner }) => {
-      const tags = { red: 'Lien Quoc', black: 'Stephen Cho', round: '4', result: '1-0' };
+      const tags = {
+        red: 'Lien Quoc',
+        black: 'Stephen Cho',
+        round: '4',
+        result: '1-0',
+        date: '2026.10.31',
+      };
       const names = ['Moment 5 · Round 4 · Red to play', 'Moment 6 · Round 4 · Red to play'];
       const chapters = [
         ...names.map((name, index) => ({
@@ -113,8 +120,23 @@ describe('phone study chrome', () => {
 
       for (const links of [desktopLinks, phoneLinks]) {
         expect(links).toHaveLength(4);
-        expect(links[0]?.textContent).toBe(`1${names[0]}`);
-        expect(links[1]?.textContent).toBe(`2${names[1]}`);
+        for (const [index, name] of names.entries()) {
+          const link = links[index]!;
+          if (gamebook) {
+            expect(link.textContent).toBe(`${index + 1}${name}`);
+            expect(link.querySelector('.study-game-line')).toBeNull();
+          } else {
+            expect(link.querySelector('.study-game-line__players')?.textContent).toBe(
+              'Lien Quoc vs Stephen Cho',
+            );
+            expect(link.querySelector('.is-winner')?.textContent).toBe('Lien Quoc');
+            expect(link.querySelector('.study-game-line__meta')?.textContent).toBe(
+              'Oct 31, 2026 · Round 4',
+            );
+            expect(link.querySelector('.study-game-line__result')?.textContent).toBe('1-0');
+            expect(link.querySelector('.study-game-line__chapter')?.textContent).toBe(name);
+          }
+        }
         expect(links[2]?.textContent).toMatch(/Zuo Wenjing.*Tang Dan/);
         expect(links[2]?.textContent).not.toContain('Full game');
         expect(links[3]?.textContent).toBe('4A chariot ending');

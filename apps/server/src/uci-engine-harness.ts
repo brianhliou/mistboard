@@ -528,6 +528,8 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
           timeoutMs,
         );
         child.on('error', (err) => finish(() => reject(err)));
+        // stdin is a separate emitter; keep its handler through teardown too.
+        child.stdin.on('error', (err) => finish(() => reject(err)));
         const consume = (): void => {
           let newline = buf.indexOf('\n');
           while (newline >= 0) {
@@ -755,6 +757,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           timeoutMs,
         );
         child.on('error', (err) => finish(() => reject(err)));
+        child.stdin.on('error', (err) => finish(() => reject(err)));
         const consume = (): void => {
           let newline = buf.indexOf('\n');
           while (newline >= 0) {
@@ -917,6 +920,7 @@ export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[
           timeoutMs,
         );
         child.on('error', (err) => finish(() => reject(err)));
+        child.stdin.on('error', (err) => finish(() => reject(err)));
         const consume = (): void => {
           let newline = buf.indexOf('\n');
           while (newline >= 0) {
@@ -1019,6 +1023,7 @@ export class UciEngineSession {
         track(this.child);
         const readStderrTail = captureStderrTail(this.child);
         this.child.on('error', (err) => this.fail(err));
+        this.child.stdin?.on('error', (err) => this.fail(err));
         this.child.on('exit', (code, signal) => {
           if (this.closed) return;
           const how = signal !== null ? `was killed by ${signal}` : `exited with code ${code}`;

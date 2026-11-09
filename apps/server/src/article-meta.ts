@@ -24,6 +24,8 @@ type GeneratedArticleMeta = {
   description: string;
   status: 'outline' | 'draft' | 'published';
   zhTitles?: ArticleZhTitles;
+  publishedAt?: string;
+  liveAt?: number;
 };
 
 const GENERATED = generated as Record<string, GeneratedArticleMeta>;
@@ -145,4 +147,25 @@ export const ARTICLE_META: Record<
 
 export function canonicalArticleBase(slug: string): 'blog' | 'rules' {
   return ARTICLE_META[slug]?.kind === 'rules' ? 'rules' : 'blog';
+}
+
+/** Generated inventory for aggregate reporting, evaluated at the window end. */
+export function reportingArticles(
+  at: Date,
+  metadata: Record<string, GeneratedArticleMeta> = GENERATED,
+) {
+  return Object.entries(metadata)
+    .filter(
+      ([, meta]) =>
+        meta.kind === 'article' &&
+        meta.status === 'published' &&
+        (meta.liveAt === undefined ||
+          (Number.isFinite(meta.liveAt) && meta.liveAt <= at.getTime())),
+    )
+    .map(([slug, meta]) => ({
+      slug,
+      title: meta.title,
+      publishedAt: meta.publishedAt ?? null,
+      liveAt: meta.liveAt ?? null,
+    }));
 }

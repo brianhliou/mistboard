@@ -53,7 +53,8 @@ jobs:
                 trigger: process.env.REQUESTED_TRIGGER,
                 dryRun: process.env.DRY_RUN === 'true',
               }),
-              signal: AbortSignal.timeout(60_000),
+              // Includes the bounded 90s weekly content collector before DB work.
+              signal: AbortSignal.timeout(180_000),
             });
             if (!response.ok) {
               throw new Error(`readout endpoint failed with HTTP ${response.status}`);

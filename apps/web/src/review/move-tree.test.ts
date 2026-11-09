@@ -174,11 +174,15 @@ describe('createMoveTree', () => {
     expect(cell?.querySelector('.review-move-list__eval')?.textContent).toBe('+2.0');
     // The badge names its move, so the luck card can open for it from any ply.
     expect(cell?.querySelector<HTMLElement>('.review-move-list__luck')?.dataset.luckPath).toBe(key);
-    // A move with no luck leaves its (empty) badge slot unkeyed: nothing to open.
+    // Moves without luck have no empty slot or margin beside their label.
+    expect(moveTree.el.querySelectorAll('.review-move-list__luck')).toHaveLength(1);
     const keyed = [...moveTree.el.querySelectorAll<HTMLElement>('.review-move-list__luck')].filter(
       (badge) => badge.dataset.luckPath !== undefined,
     );
     expect(keyed).toHaveLength(1);
+    moveTree.annotate(new Map([[key, { eval: '+2.0' }]]));
+    expect(moveTree.el.querySelector('.review-move-list__luck')).toBeNull();
+    expect(moveTree.el.querySelector('.review-move-list__eval')?.textContent).toBe('+2.0');
   });
 
   it('renders an annotated advice comment row before the move variations', () => {

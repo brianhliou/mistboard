@@ -158,8 +158,7 @@ function maybeAutoDraw(view: MahjongPlayerView | null): void {
  * Four things are worth distinguishing and nothing else is. A draw happens every
  * single turn, so it is silent: a sound that frequent stops carrying meaning and
  * starts being a reason to mute the tab. A discard is the signature tile-on-mat
- * click, pitched differently for yours and somebody else's so you can follow the
- * table without watching it. A claim is sharper, because a claim INTERRUPTS: it
+ * click for every seat. A claim is sharper, because a claim INTERRUPTS: it
  * is the sound that should make you look up. A win is the only one allowed to
  * last longer than a blip.
  *
@@ -167,16 +166,13 @@ function maybeAutoDraw(view: MahjongPlayerView | null): void {
  * The discard already carries that moment, and a second noise on top would make
  * every discard a two-note event.
  */
-function soundForEvent(event: unknown, seat: unknown): void {
+function soundForEvent(event: unknown): void {
   const played = event as { type?: string; color?: string; move?: { action?: string } } | undefined;
   if (played?.type !== 'move-played') return;
   const action = played.move?.action;
-  const mine = played.color === seat;
   if (action === 'draw' || action === 'pass' || action === 'timeout') return;
   if (action === 'discard') {
-    // 'captured' is the wood set's quieter, lower cousin of a move: somebody
-    // else's tile landing rather than your own.
-    playSound(mine ? 'move' : 'captured');
+    playSound('move');
     return;
   }
   if (action === 'claim') playSound('capture');
@@ -226,7 +222,7 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
-    soundForEvent(frame.event, frame.seat);
+    soundForEvent(frame.event);
     maybePlayTerminalSound();
   },
   resetState: () => {

@@ -69,15 +69,13 @@ export const EN_SHELL = {
   'nav.closeMenu': 'Close menu',
   'nav.boardAndPieces': 'Pieces',
   'nav.darkMode': 'Dark mode',
-  'home.tagline':
-    "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
+  'home.tagline': 'Bringing people together across cultures through Chinese chess.',
   // Phone home's closing block; the sentence is about.mission (set 2026-10-31).
   'home.missionLabel': 'Our mission',
   'home.mission':
     "Bring people together across cultures through Chinese chess and the world's classic strategy games.",
   'home.missionAbout': 'About Mistboard',
-  'home.playSummary':
-    'Free in the browser · No download or sign-up · Bots for every level · Play a friend',
+  'home.playSummary': 'Free · No sign-up · Play people or bots',
   'home.supportTitle': 'Mistboard Patron',
   'home.supportSubtitle': 'Become a patron',
   'home.storeTitle': 'Store',

@@ -7,6 +7,7 @@ import { type FFQBanqiRuntimeRoom, ffqBanqiTenant } from './ffq-banqi-tenant.js'
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import * as persistence from './persistence.js';
 import { writeJson } from './routes/lib.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -129,6 +130,21 @@ registerVariantTenant({
   lobby: null,
   export: null,
   card: null,
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...tenantCorrespondenceBinding(
+    { ...ffqBanqiTenant, enabled: ffqBanqiEnabled },
+    {
+      factoryContext: () => ({
+        rooms: ffqBanqiRooms,
+        isRoomIdTaken: (id) => variantTenantRoomIdTaken(id, ffqBanqiTenant.kind),
+        appendRoomEvent: persistence.appendRoomEvent,
+        isPersistenceEnabled: persistence.isInitialized,
+        recordPersistenceError: (id, seq, type, err) =>
+          recordTenantPersistenceError(ffqBanqiTenant, id, seq, type, err),
+      }),
+      getOrLoadRoom: getOrLoadFFQBanqiRoom,
+      lifecycleCtx: ffqBanqiWs.lifecycleCtx,
+      seatBoard: true,
+      casualOnly: true,
+    },
+  ),
 });

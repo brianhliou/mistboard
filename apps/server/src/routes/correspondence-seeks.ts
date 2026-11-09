@@ -10,6 +10,10 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import {
+  mayPlayCorrespondence,
+  mayPlayCorrespondenceByUserId,
+} from './../correspondence-access.js';
+import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
@@ -23,10 +27,14 @@ import type {
 } from './../persistence.js';
 import * as persistence from './../persistence.js';
 import { notifySeekPosted, type SeekAlertNotice } from './../seek-alert-email.js';
-import { correspondenceTenantForSpecId } from './../variant-tenant/registry.js';
+import {
+  correspondenceTenantForSpecId,
+  variantTenantForRoomId,
+} from './../variant-tenant/registry.js';
 import {
   CORRESPONDENCE_ALLOWLISTED_SPECS,
   CORRESPONDENCE_ELIGIBLE_SPECS,
+  CORRESPONDENCE_RESTRICTED_SPECS,
   parseCorrespondenceTimeControl,
 } from './correspondence-rooms.js';
 import {
@@ -113,8 +121,8 @@ export function challengeAcceptError(
 }
 
 /**
- * Seeks this reader may see, dropping any on an allowlisted spec (xiangqi mahjong)
- * unless the reader holds its grant. An anonymous reader sees none of them. Costs a
+ * Seeks this reader may see, admitting a hidden variant only through its
+ * existing room access policy. An anonymous reader sees none of them. Costs a
  * query only when the list holds such a seek.
  */
 export async function seeksVisibleTo<T extends { gameSpecId: string; creatorUserId?: string }>(
@@ -128,16 +136,25 @@ export async function seeksVisibleTo<T extends { gameSpecId: string; creatorUser
   const supported = seeks.filter(
     (seek) =>
       CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) ||
-      CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId),
+      CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId),
   );
-  if (!supported.some((seek) => CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId))) {
+  if (!supported.some((seek) => CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId))) {
     return supported;
   }
-  const playable = new Set(user ? await playableSpecs(user) : []);
-  return supported.filter(
-    (seek) =>
-      !CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId) || playable.has(seek.gameSpecId),
+  const needsGrants = supported.some((seek) =>
+    CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId),
   );
+  const playable = new Set(user && needsGrants ? await playableSpecs(user) : []);
+  const visible = await Promise.all(
+    supported.map(async (seek) => {
+      if (!CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId)) return true;
+      if (CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId)) {
+        return playable.has(seek.gameSpecId);
+      }
+      return mayPlayCorrespondence(user, seek.gameSpecId);
+    }),
+  );
+  return supported.filter((_, index) => visible[index]);
 }
 
 // Pure view model for the challenge landing page, shared by the view route and
@@ -476,16 +493,16 @@ export async function createSeekResult(
   }
   // Fork-6 fail-closed allowlist — the same set the create route enforces — plus
   // the allowlisted playtest specs, for an account that holds the grant.
-  const allowlisted = CORRESPONDENCE_ALLOWLISTED_SPECS.has(gameSpecId);
+  const allowlisted = CORRESPONDENCE_RESTRICTED_SPECS.has(gameSpecId);
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId) && !allowlisted) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
   }
-  if (allowlisted && !(await persistence.mayPlayVariant(user, gameSpecId))) {
+  if (allowlisted && !(await mayPlayCorrespondence(user, gameSpecId))) {
     return { status: 403, body: { error: 'variant_not_granted' } };
   }
   // A variant whose server flag is off cannot back a game: refuse the seek now,
   // not at accept time after the row is gone.
-  if (correspondenceTenantForSpecId(gameSpecId)?.enabled() === false) {
+  if (!allowlisted && correspondenceTenantForSpecId(gameSpecId)?.enabled() === false) {
     return { status: 404, body: { error: 'variant_disabled' } };
   }
   const timeControl = parseCorrespondenceTimeControl(body.daysPerMove);
@@ -540,7 +557,7 @@ export async function createSeekResult(
     }
     // An allowlisted variant is offered only to granted accounts: a challenge to
     // anyone else could never be accepted, and would show them the variant.
-    if (allowlisted && !(await persistence.mayPlayVariantByUserId(targetUserId, gameSpecId))) {
+    if (allowlisted && !(await mayPlayCorrespondenceByUserId(targetUserId, gameSpecId))) {
       return { status: 403, body: { error: 'target_variant_not_granted' } };
     }
     // A rated challenge to an uncounted account could never become a rated game.
@@ -709,17 +726,17 @@ export async function acceptSeekResult(
   if (isRetiredGameSpec(seek.gameSpecId)) {
     return { status: 410, body: { error: 'retired_game_spec' } };
   }
-  const allowlisted = CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId);
+  const allowlisted = CORRESPONDENCE_RESTRICTED_SPECS.has(seek.gameSpecId);
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId) && !allowlisted) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
   }
-  // Both seats of an allowlisted variant need the grant, checked before the race
+  // Both seats of a restricted variant need access, checked before the race
   // consumes the row: a refused accepter leaves the seek standing.
   if (allowlisted) {
-    if (!(await persistence.mayPlayVariant(user, seek.gameSpecId))) {
+    if (!(await mayPlayCorrespondence(user, seek.gameSpecId))) {
       return { status: 403, body: { error: 'variant_not_granted' } };
     }
-    if (!(await persistence.mayPlayVariantByUserId(seek.creatorUserId, seek.gameSpecId))) {
+    if (!(await mayPlayCorrespondenceByUserId(seek.creatorUserId, seek.gameSpecId))) {
       return { status: 409, body: { error: 'opponent_variant_not_granted' } };
     }
   }
@@ -729,7 +746,7 @@ export async function acceptSeekResult(
   }
   // Variant switched off since the seek was posted: keep the row (it accepts
   // again once the flag is back) instead of consuming it for a 404.
-  if (correspondenceTenantForSpecId(seek.gameSpecId)?.enabled() === false) {
+  if (!allowlisted && correspondenceTenantForSpecId(seek.gameSpecId)?.enabled() === false) {
     return { status: 404, body: { error: 'variant_disabled' } };
   }
   // A rated seek re-passes the rated gate at accept (the terms may have stopped
@@ -751,13 +768,6 @@ export async function acceptSeekResult(
       return { status: 409, body: { error: 'opponent_rated_requires_counted_account' } };
     }
   }
-  // The DB decides the race: deleteCorrespondenceSeek removes the row once, so
-  // exactly one of two simultaneous accepters proceeds to create the game; the
-  // loser gets 409 and the row is already gone.
-  const won = await persistence.deleteCorrespondenceSeek(seekId);
-  if (!won) {
-    return { status: 409, body: { error: 'seek_taken' } };
-  }
   // Which tenant backs this spec's correspondence rooms. Fail-closed twice over: the spec
   // already passed CORRESPONDENCE_ELIGIBLE_SPECS above, and a spec whose tenant offers no
   // seek factory is refused here rather than silently seated by another variant's.
@@ -765,6 +775,13 @@ export async function acceptSeekResult(
   const createGame = tenant?.createCorrespondenceGameForSeek ?? null;
   if (!createGame) {
     return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  // The DB decides the race: deleteCorrespondenceSeek removes the row once, so
+  // exactly one of two simultaneous accepters proceeds to create the game; the
+  // loser gets 409 and the row is already gone.
+  const won = await persistence.deleteCorrespondenceSeek(seekId);
+  if (!won) {
+    return { status: 409, body: { error: 'seek_taken' } };
   }
   // Creator's side is honored; the accepter takes the other (random → coin flip). Move
   // order, not color: the tenant maps first/second onto its own colors, so this path stays
@@ -982,17 +999,14 @@ async function viewSeek(
   const seek = await persistence.getCorrespondenceSeekListing(seekId);
   if (!seek) {
     // Gone: say why when this viewer may know (#527), else the plain 404.
-    const gone = await seekGoneFor(seekId, user.id);
+    const gone = await seekGoneFor(seekId, user);
     if (gone) writeJson(response, 410, { error: 'seek_gone', ...gone });
     else writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
   const view = challengeViewModel(seek, user.id, Date.now());
-  // An allowlisted variant's challenge does not exist for an account without the grant.
-  const hidden =
-    CORRESPONDENCE_ALLOWLISTED_SPECS.has(seek.gameSpecId) &&
-    !view.isMine &&
-    !(await persistence.mayPlayVariant(user, seek.gameSpecId));
+  // Creators retain management access; every other reader must pass the room door.
+  const hidden = !view.isMine && (await seeksVisibleTo([seek], user)).length === 0;
   if (!view.visible || hidden) {
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;
@@ -1017,11 +1031,21 @@ async function viewSeek(
 
 // A closed seek's outcome row first (migration 165); then the 161 expiry notice,
 // which only a public board seek ever has, for seeks swept before outcomes existed.
-async function seekGoneFor(seekId: string, viewerUserId: string): Promise<SeekGoneView | null> {
+async function seekGoneFor(seekId: string, user: UserAccount): Promise<SeekGoneView | null> {
   const outcome = await persistence.getCorrespondenceSeekOutcome(seekId);
-  if (outcome) return seekGoneView(outcome, viewerUserId);
-  if (await persistence.hasSeekExpiryNotice(seekId)) return { reason: 'expired' };
-  return null;
+  // New outcomes retain the spec; legacy rows may still identify it through
+  // the accepted room or public expiry notice.
+  const specId =
+    outcome?.gameSpecId ??
+    (outcome?.roomId ? variantTenantForRoomId(outcome.roomId)?.gameSpecId : null) ??
+    (await persistence.getClosedCorrespondenceSeekSpecId(seekId));
+  const knowsChallenge = outcome?.creatorUserId === user.id || outcome?.targetUserId === user.id;
+  if (
+    !knowsChallenge &&
+    (!specId || (await seeksVisibleTo([{ gameSpecId: specId }], user)).length === 0)
+  )
+    return null;
+  return outcome ? seekGoneView(outcome, user.id) : { reason: 'expired' };
 }
 
 // The named target rejecting a directed challenge: deletes the seek. A link

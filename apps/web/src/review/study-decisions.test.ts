@@ -7,6 +7,13 @@ const tree = {
 };
 afterEach(() => vi.unstubAllGlobals());
 describe('study decisions read', () => {
+  it('has no luck overlay when the server omits realized outcomes', async () => {
+    vi.stubGlobal('fetch', async () => ({
+      status: 200,
+      json: async () => ({ decisions: [{ ply: 1, mover: 'red', playedWin: 50 }] }),
+    }));
+    expect(await fetchStudyChapterDecisions('s', 'c', tree)).toBeNull();
+  });
   it('keeps full stored rows luck-only and excludes an unsaved changed mainline', async () => {
     vi.stubGlobal('fetch', async () => ({
       status: 200,

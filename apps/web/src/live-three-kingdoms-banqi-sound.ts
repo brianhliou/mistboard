@@ -67,7 +67,7 @@ export function classifyTkOpponentSound(
   if (next.status.type === 'playing' && next.status.turn !== seat) return null;
   if (someTileFlipped(prev, next)) return 'flip';
   const ink = flipSeatInk(seat, next.firstColor);
-  if (ink && faceUpCount(next, ink) < faceUpCount(prev, ink)) return 'captured';
+  if (ink && faceUpCount(next, ink) < faceUpCount(prev, ink)) return 'capture';
   return 'move';
 }
 

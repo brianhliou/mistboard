@@ -182,13 +182,11 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     // the glyph visible right after the move.
     const suffixEl = document.createElement('span');
     suffixEl.className = 'review-move-list__suffix';
-    const luckEl = document.createElement('span');
-    luckEl.className = 'review-move-list__luck';
     const evalEl = document.createElement('span');
     evalEl.className = 'review-move-list__eval';
     const assessEl = document.createElement('span');
     assessEl.className = 'review-move-list__assessment';
-    button.append(san, suffixEl, luckEl, assessEl, evalEl);
+    button.append(san, suffixEl, assessEl, evalEl);
     const ann = annotations.get(key);
     // data-grade-path lets the grade card (grade-mark-card.ts) find the move a glyph labels.
     if (ann?.suffix) {
@@ -199,9 +197,12 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
     // data-luck-path lets the luck card (luck-mark-card.ts) find the move a badge labels.
     if (ann?.luck) {
+      const luckEl = document.createElement('span');
+      luckEl.className = 'review-move-list__luck';
       fillLuckBadge(luckEl, ann.luck);
       luckEl.dataset.luckPath = key;
       if (ann.luckTone) luckEl.classList.add(`review-move-list__luck--${ann.luckTone}`);
+      assessEl.before(luckEl);
     }
     // Every move carries its eval, reveals included: the three slots read orthogonally — glyph =
     // decision quality, luck badge = the reveal's variance, eval = the objective value of the

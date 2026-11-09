@@ -171,12 +171,12 @@ async function gomokuListedOnWeb() {
   };
 }
 
-it('Gomoku is public and rated with correspondence still disabled', async () => {
+it('Gomoku is public with rated live play and casual-only correspondence', async () => {
   const game = await import('@mistboard/game');
   expect(game.gameSpecForId('gomoku')).toMatchObject({ publicSurface: 'casual', rated: true });
   const listed = await gomokuListedOnWeb();
   expect(listed).toEqual(everyValue(listed, true));
-  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain('gomoku');
+  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).toContain('gomoku');
   expect(game.isCorrespondenceRatedSpec('gomoku')).toBe(false);
 });
 
@@ -212,7 +212,8 @@ it('Three Kingdoms Banqi is launched, casual and unrated', async () => {
   expect(game.ratingPoolForSpec('three-kingdoms-banqi')).toBeNull();
   const listed = await threeKingdomsListedOnWeb();
   expect(listed).toEqual(everyValue(listed, true));
-  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain('three-kingdoms-banqi');
+  // Correspondence follows launch (#1002 built it), casual only.
+  expect(game.CORRESPONDENCE_ELIGIBLE_SPEC_IDS).toContain('three-kingdoms-banqi');
 });
 
 it('hiding Three Kingdoms Banqi removes every public web listing again', async () => {

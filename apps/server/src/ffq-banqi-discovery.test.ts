@@ -100,13 +100,7 @@ test('FFQ stays off current games, TV and presence Watch links with an enabled t
   const registration = registeredVariantTenants().find(
     (entry) => entry.gameSpecId === FFQ_BANQI_SPEC_ID,
   )!;
-  for (const capability of [
-    'watch',
-    'lobby',
-    'export',
-    'card',
-    'createCorrespondenceGameForSeek',
-  ] as const)
+  for (const capability of ['watch', 'lobby', 'export', 'card'] as const)
     assert.equal(registration[capability], null, capability);
   t.after(() => rooms.clear());
   let built = 0;

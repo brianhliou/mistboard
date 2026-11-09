@@ -11,7 +11,11 @@ import { animateFortressXiangqiBoardMove } from '../fortress-xiangqi-render.js';
 import { animateJungleFlipBoardMove } from '../jungle-flip-render.js';
 import { animateJungleBoardMove } from '../jungle-render.js';
 import { animateBanqiBoardMove, flipBanqiFamilyReveal } from '../live-banqi-render.js';
-import { animateJieqiBoardMove, animateJieqiReveal } from '../live-jieqi-render.js';
+import {
+  animateJieqiBoardMove,
+  animateJieqiReveal,
+  animateJieqiStepReveal,
+} from '../live-jieqi-render.js';
 import { animateThreeKingdomsBanqiBoardMove } from '../three-kingdoms-banqi-diagrams.js';
 import { animateXiangqiBoardMove } from '../xiangqi-board.js';
 import { animateMoveGlyphs, refreshMoveGlyphs } from './move-glyph.js';
@@ -224,6 +228,36 @@ describe('board glyph arrival', () => {
       Math.min(100, pieceAnimationDurationMs()),
       Math.max(0, pieceAnimationDurationMs() - 100),
     );
+  });
+  it('starts step-reveal glyphs at the flip midpoint and keeps refreshes on that timeline', () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const host = board();
+    const move = { from: 'a1', to: 'a2' } as const;
+    animateJieqiBoardMove(host, move, 'red');
+    const arrival = fadeFor(host, '.luck-mark');
+    expect(
+      animateJieqiStepReveal(
+        host,
+        move,
+        { a1: { faceDown: true } },
+        { a2: { faceDown: false, color: 'red' } },
+        'red',
+      ),
+    ).toBe(true);
+    expect(arrival.cancel).toHaveBeenCalledOnce();
+    const delay = Math.round(Math.round(pieceAnimationDurationMs() * 0.75) / 2);
+    expect(delay).toBe(94);
+    for (const selector of ['.xq-marker--glyph', '.luck-mark']) {
+      const fades = effects.get(host.querySelector(selector)!)!;
+      expectLandingFade(fades[fades.length - 1]!, 150, delay);
+    }
+
+    host.querySelector('.luck-mark')!.outerHTML = '<g class="luck-mark" data-luck-square="a2"/>';
+    clock.mockReturnValue(1120);
+    refreshMoveGlyphs(host);
+    const patched = fadeFor(host, '.luck-mark');
+    expectLandingFade(patched, 150, delay);
+    expect((patched as unknown as Animation).currentTime).toBe(120);
   });
   it('keeps badges immediate without WAAPI and cancels a pending fade when disabled', () => {
     const host = board();

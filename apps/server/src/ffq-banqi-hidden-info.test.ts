@@ -1,5 +1,5 @@
 /** Whole serialized payloads must be invariant under swapping still-covered
- * identities. Unlike Three Kingdoms, this includes the finished snapshot.
+ * identities, including the finished snapshot.
  * Planting its truthView in the FFQ tenant must fail this regression.
  */
 import assert from 'node:assert/strict';
@@ -214,6 +214,30 @@ test('whole FFQ room payload names covered capture roles for both seats and obse
         assert.deepEqual(wire.liveHistory.at(-1).view.unknownCaptured, { red: 0, black: 0 });
         assert.ok(wire.fen.endsWith(' 0 0'));
       }
+    }
+  }
+});
+
+test('FFQ correspondence retains public covered captures in every seat and observer payload', () => {
+  const deal = [...createFFQBanqiDeal(800)];
+  const cannon = deal.findIndex((piece) => piece.color === 'red' && piece.role === 'cannon');
+  [deal[6], deal[cannon]] = [deal[cannon], deal[6]];
+  const events = log(deal, [{ from: 6, to: 4 }]);
+  const created = events[0];
+  assert.ok(created?.type === 'room-created');
+  created.timeControl = { initialMs: 86_400_000, incrementMs: 0, daysPerMove: 1 };
+  const state = replayTenantEvents(ffqBanqiTenant, events).state;
+  assert.ok(state.captures.some((capture) => capture.wasFaceDown));
+  for (const finished of [false, true]) {
+    if (finished) events.push({ type: 'seat-resigned', roomId: ROOM, color: 'black', at: 100 });
+    for (const viewer of VIEWERS) {
+      const json = payload(events, viewer);
+      const wire = JSON.parse(json);
+      assert.deepEqual(wire.snapshot.state.captured, state.captures);
+      assert.deepEqual(wire.liveHistory.at(-1).view.captured, state.captures);
+      assert.ok(
+        wire.snapshot.state.board.some((piece: { faceDown?: boolean } | null) => piece?.faceDown),
+      );
     }
   }
 });

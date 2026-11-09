@@ -6,7 +6,7 @@
 // the capturer (private). The classifier drives the flip off public board signals
 // only (a moved piece that was face-down in the prior snapshot), so a private
 // capture-reveal never leaks through audio -- to the victim it lands as a plain
-// `captured`.
+// `capture`.
 
 import type {
   JieqiColor,
@@ -99,7 +99,7 @@ export function jieqiTerminalSoundKey(
 
 // Public board signals only. A drop in our own piece count is a capture of one
 // of our pieces -- if that piece was face-down, its identity reveals to the
-// capturer, never to us, so it stays a plain `captured`. A moved piece that was
+// capturer, never to us, so it stays a plain `capture`. A moved piece that was
 // face-down in the prior snapshot is a public reveal -> flip. Otherwise a move.
 export function classifyJieqiOpponentSound(
   prev: JieqiSoundView | null,
@@ -111,7 +111,7 @@ export function classifyJieqiOpponentSound(
   if (prev.status.type !== 'playing') return null;
   if (prev.status.turn === seat) return null;
   if (next.status.type === 'playing' && next.status.turn !== seat) return null;
-  if (ownPieceCount(next, seat) < ownPieceCount(prev, seat)) return 'captured';
+  if (ownPieceCount(next, seat) < ownPieceCount(prev, seat)) return 'capture';
   const revealedFrom = next.lastMove?.from;
   if (revealedFrom && prev.board[revealedFrom]?.faceDown) return 'flip';
   return 'move';

@@ -177,7 +177,7 @@ function neverFlippedPair(): [number, number] {
   throw new Error('no swappable pair of never-flipped tiles');
 }
 
-test('a finished game replays every ply, masked as played and revealed', async () => {
+test('a finished game replays every ply with covered identities masked', async () => {
   const payload = await threeKingdomsBanqiPostgameForApi(
     ROOM_ID,
     deps(gameRecord(), finishedEvents()),
@@ -199,20 +199,12 @@ test('a finished game replays every ply, masked as played and revealed', async (
     color: 'black',
     winner: 'red',
   });
-  // Ply 0: every setup tile face down in the masked track, every one revealed
-  // in the revealed track, identity equal to the deal.
   const start = payload.history.truth[0]!.view.board;
-  const revealedStart = payload.history.revealed[0]!.view.board;
-  for (const [index, square] of THREE_KINGDOMS_BANQI_SETUP_SQUARES.entries()) {
+  for (const square of THREE_KINGDOMS_BANQI_SETUP_SQUARES) {
     assert.deepEqual(start[square], { faceDown: true }, `masked ${square}`);
-    assert.deepEqual(
-      revealedStart[square],
-      { color: DEAL[index]!.color, role: DEAL[index]!.role, faceDown: false },
-      `revealed ${square}`,
-    );
   }
-  // The final view is the full board, no tile face down.
-  for (const entry of Object.values(payload.view.board)) assert.equal(entry?.faceDown, false);
+  assert.deepEqual(payload.history.revealed, payload.history.truth);
+  assert.ok(Object.values(payload.view.board).some((entry) => entry?.faceDown));
   // The stored setup never goes out as such.
   const json = JSON.stringify(payload);
   assert.equal(json.includes('"setup"'), false);
@@ -230,9 +222,8 @@ test('the masked track carries no identity for a tile still face down', async ()
   );
   assert.ok(a && b);
   assert.equal(JSON.stringify(a.history.truth), JSON.stringify(b.history.truth));
-  // Planted: the revealed track and the final view must see the swap.
-  assert.notEqual(JSON.stringify(a.history.revealed), JSON.stringify(b.history.revealed));
-  assert.notEqual(JSON.stringify(a.view), JSON.stringify(b.view));
+  assert.notDeepEqual(DEAL, swapped, 'the hidden swap is real');
+  assert.equal(JSON.stringify(a), JSON.stringify(b), 'the entire review payload stays masked');
 });
 
 test('a live game is not found', async () => {

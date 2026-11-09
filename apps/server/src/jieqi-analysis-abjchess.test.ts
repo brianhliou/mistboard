@@ -121,16 +121,23 @@ function keyedCache<T>(): {
 
 // ── Which engine computes ────────────────────────────────────────────────────
 
-test('AB-JChess computes new analysis when its binary and net resolve, PikaJieQi otherwise', async () => {
+test('new analysis selects AB-JChess with its net, otherwise Pikafish', async () => {
   const bin = join(fixtureDir, 'ab-jchess');
   const net = join(fixtureDir, 'abjchess-20261030.nnue');
   writeFileSync(bin, '');
   writeFileSync(net, '');
-  await withEnv({ MISTBOARD_ABJCHESS_PATH: bin, MISTBOARD_ABJCHESS_NET: net }, () => {
-    assert.equal(jieqiAnalysisEngine(), 'ab-jchess');
-    assert.equal(currentJieqiAnalysisProfile(), ABJCHESS_JIEQI_ANALYSIS_PROFILE);
-    assert.equal(jieqiAnalysisEngineAvailable(), true);
-  });
+  await withEnv(
+    {
+      MISTBOARD_ABJCHESS_PATH: bin,
+      MISTBOARD_ABJCHESS_NET: net,
+      MISTBOARD_PIKAFISH_PATH: process.execPath,
+    },
+    () => {
+      assert.equal(jieqiAnalysisEngine(), 'ab-jchess');
+      assert.equal(currentJieqiAnalysisProfile(), ABJCHESS_JIEQI_ANALYSIS_PROFILE);
+      assert.equal(jieqiAnalysisEngineAvailable(), true);
+    },
+  );
   await withEnv(
     { MISTBOARD_ABJCHESS_PATH: join(fixtureDir, 'missing'), MISTBOARD_ABJCHESS_NET: net },
     () => {
@@ -167,6 +174,7 @@ test('an AB-JChess analysis session loads its net on a single-threaded fixed tab
     assert.ok(commands.includes(`setoption name EvalFile value ${net}`));
     assert.ok(commands.includes('setoption name Threads value 1'));
     assert.ok(commands.includes('setoption name Hash value 64'));
+    assert.ok(commands.includes('setoption name ChaseRule value default'));
   });
 });
 
@@ -430,7 +438,7 @@ test('AB decision searches never put a reveal or capture in UCI history', async 
   }
 });
 
-test('AB ranks every legal move at 50k and uses only 200k evals for final values', async () => {
+test('AB ranks every legal move with a 200k reveal floor and independently baselines final values', async () => {
   const state = createInitialJieqiState('candidates', STANDARD_JIEQI_DEAL);
   const played = { from: 'b1', to: 'c3' } as const;
   const playedUci = jieqiMoveToPikafishUci(played);
@@ -452,7 +460,7 @@ test('AB ranks every legal move at 50k and uses only 200k evals for final values
       const rankCp =
         landing && !landing.faceDown && landing.role !== 'general' ? cpByRole[landing.role] : 1200;
       // Distinct scores make leaking even one ranking term into the output observable.
-      const cp = opts.nodes === 50_000 ? rankCp : rankCp + 200;
+      const cp = callsAfterRanking === 0 ? rankCp : rankCp + 200;
       evaluations.push({ fen, opts, cp });
       return { cp, mate: null, best: null, depth: 4 };
     },
@@ -514,13 +522,16 @@ test('AB ranks every legal move at 50k and uses only 200k evals for final values
   const fullCalls = evaluations.slice(callsAfterRanking);
   assert.equal(rankingCalls.length, 259, 'opening: 43 reveals * 6 roles + one quiet move');
   assert.ok(fullCalls.length > 0, 'selected candidates are independently true-baselined');
-  for (const { opts } of rankingCalls) assert.equal(opts.nodes, 50_000);
+  for (const { opts } of rankingCalls)
+    assert.equal(opts.nodes, opts.moves?.length ? 50_000 : 200_000);
   for (const { opts } of fullCalls) assert.equal(opts.nodes, 200_000);
-  assert.equal(
-    new Set(evaluations.map(({ fen, opts }) => JSON.stringify([fen, opts.moves, opts.nodes]))).size,
-    evaluations.length,
-    'each role term searched once per budget',
-  );
+  for (const calls of [rankingCalls, fullCalls]) {
+    assert.equal(
+      new Set(calls.map(({ fen, opts }) => JSON.stringify([fen, opts.moves, opts.nodes]))).size,
+      calls.length,
+      'each role term is searched once in each pass',
+    );
+  }
   const candidateWins: number[] = [];
   for (const candidate of decision.candidates!) {
     const move = pikafishUciToJieqiMove(candidate.move)!;
@@ -564,7 +575,7 @@ test('AB true-baselines a selected quiet move and a played reveal outside the to
     {
       multiPv: async () => assert.fail('new profile must not request MultiPV'),
       evaluateFen: async (fen, opts) => {
-        assert.equal(opts.nodes, rankingComplete ? 200_000 : 50_000);
+        assert.equal(opts.nodes, rankingComplete || !opts.moves?.length ? 200_000 : 50_000);
         const parsed = parseJieqiFen(fen, { rng: () => 0 });
         assert.ok(parsed.ok);
         // Rank the quiet general move first and the played reveal below the top three.
@@ -604,6 +615,7 @@ test('AB true-baselines a selected quiet move and a played reveal outside the to
     decision.realizedWin,
     ...decision.candidates!.map((candidate) => candidate.win),
   ]) {
+    assert.ok(value !== undefined);
     assert.ok(Math.abs(value - 50) < 1e-9, 'all output scores use full-budget equality');
   }
   const quietCalls = fullCalls.filter(({ opts }) => opts.moves?.length);
@@ -631,7 +643,11 @@ test('AB only appends reversible moves to the repetition window', async () => {
     {
       multiPv: async () => assert.fail('new profile must not request MultiPV'),
       evaluateFen: async (fen, opts) => {
-        assert.equal(opts.nodes, 50_000, 'reversible child ranking uses the rank budget');
+        assert.equal(
+          opts.nodes,
+          opts.moves?.length ? 50_000 : 200_000,
+          'reveal terms retain the floor',
+        );
         if (opts.moves?.length) {
           assert.equal(fen, anchorFen);
           assert.deepEqual(opts.moves.slice(0, -1), moves);
@@ -673,7 +689,7 @@ test('AB known captures use a fresh public child FEN with public pool surplus in
     {
       multiPv: async () => assert.fail('new profile must not request MultiPV'),
       evaluateFen: async (fen, opts) => {
-        assert.equal(opts.nodes, 50_000, 'known and dark capture ranking uses the rank budget');
+        assert.ok(opts.nodes === 50_000 || opts.nodes === 200_000);
         calls.push({ fen, opts });
         return { cp: 70, mate: null, best: null, depth: 3 };
       },
@@ -702,7 +718,7 @@ test('AB known captures use a fresh public child FEN with public pool surplus in
   );
 });
 
-test('legacy decision profiles still request MultiPV 12 with their original budget', async () => {
+test('Level 8 decisions request MultiPV 12 and fixed nodes on a fresh hash', async () => {
   const fen = jieqiStateToPikafishFen(createInitialJieqiState('legacy', STANDARD_JIEQI_DEAL));
   const calls: unknown[] = [];
   const deps = jieqiDecisionDepsFromSession(
@@ -724,8 +740,8 @@ test('legacy decision profiles still request MultiPV 12 with their original budg
     {
       fen: 'anchor',
       opts: {
-        depth: 16,
-        movetimeMs: 6_000,
+        nodes: 5_000_000,
+        movetimeMs: 30_000,
         multiPv: 12,
         moves: ['e0e1'],
         fresh: true,
@@ -733,7 +749,7 @@ test('legacy decision profiles still request MultiPV 12 with their original budg
     },
     {
       fen: 'child anchor',
-      opts: { depth: 16, movetimeMs: 6_000, moves: ['e9e8'], fresh: true },
+      opts: { nodes: 5_000_000, movetimeMs: 30_000, moves: ['e9e8'], fresh: true },
     },
   ]);
 });
@@ -748,10 +764,13 @@ test('AB-JChess-20261031 budgets use 500k sweep, 2M re-search, 50k ranking and 2
   assert.deepEqual(profile.decisionRank, { nodes: 50_000, movetimeMs: 30_000 });
   assert.ok(profile.decisionsEngineId.includes('+nodes200000+rank50000+'));
   assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionCandidates, 'multipv');
-  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.sweepNodes, 500_000);
-  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.researchNodes, 2_000_000);
-  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.movetimeCapMs, 6_000);
-  assert.deepEqual(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionEval, { depth: 16, movetimeMs: 6_000 });
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.sweepNodes, 10_000_000);
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.researchNodes, 40_000_000);
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.movetimeCapMs, 30_000);
+  assert.deepEqual(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionEval, {
+    nodes: 5_000_000,
+    movetimeMs: 30_000,
+  });
   assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionRank, undefined);
 });
 

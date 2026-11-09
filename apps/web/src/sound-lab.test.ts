@@ -22,6 +22,17 @@ describe('sound lab lifecycle preview', () => {
     document.body.replaceChildren();
   });
 
+  it('offers one shared capture cue and no obsolete captured cue', () => {
+    const root = document.createElement('div');
+    mountSoundLab(root);
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('button')];
+    expect(buttons.some((button) => button.textContent === 'captured')).toBe(false);
+    const capture = buttons.filter((button) => button.textContent === 'capture');
+    expect(capture).toHaveLength(1);
+    capture[0]?.click();
+    expect(playSound).toHaveBeenCalledExactlyOnceWith('capture');
+  });
+
   it.each([
     ['start', 'start', 'game-start'],
     ['win', 'finish-win', 'win'],

@@ -165,9 +165,8 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   roomIdPrefix: THREE_KINGDOMS_BANQI_ROOM_ID_PREFIX,
   colors: SEATS,
   // The runtime stays on so historical rooms replay and admins can test
-  // while the runtime creation flag is off. Who may start
-  // one is decided at the doors (three-kingdoms-banqi-access.ts); lobby creation
-  // is separately gated by the registration flag.
+  // while the runtime flag is off. Who may start one is decided at the doors
+  // (three-kingdoms-banqi-access.ts); every start path carries its own admission.
   enabled: () => true,
   oppositeColor: oppositeBanqiSeat,
   rules: {
@@ -199,12 +198,10 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   visibility: {
     clientEventFor: threeKingdomsBanqiClientEventFor,
     viewForClient: (state, client) => getThreeKingdomsBanqiClientView(state, client),
-    truthView: (state) => getThreeKingdomsBanqiTruthView(state),
     // The deal is a server secret, so a reload gets the server's per-ply masked
     // views rather than replaying the log itself.
     liveHistory: (events, viewer) => tenantPerPlyViews(threeKingdomsBanqiTenant, events, viewer),
-    // A finished room keeps the masked per-ply views too, so a reload can still
-    // step back through the game (the final position is the truth view).
+    // Keep covered identities masked after completion, including every per-ply view.
     liveHistoryWhenFinished: true,
   },
   // Keep the existing Play again flow; rematch is a separate product change.

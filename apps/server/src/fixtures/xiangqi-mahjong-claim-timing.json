@@ -1,0 +1,9 @@
+{
+  "noClaimFront": ["rK", "rA", "rE", "rP", "bH", "bK", "bA", "bE", "bR", "bP"],
+  "claimFront": ["rK", "rA", "rE", "rP", "bH", "bK", "bA", "bE", "rP", "rP"],
+  "discardAt": 4000,
+  "delayedPassAt": 9000,
+  "publicMoveAt": 12000,
+  "sampleAt": [4000, 5499, 5500, 7000, 8999, 9000, 11999, 12000],
+  "plantedFailure": { "deliverPassImmediately": true }
+}

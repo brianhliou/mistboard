@@ -64,6 +64,7 @@ export function tenantCorrespondenceBinding<
     // Serve the inbox the seat's own redacted board. Only for tenants whose
     // public feed carries no board (fog) and that the web can draw.
     seatBoard?: boolean;
+    casualOnly?: boolean;
   },
 ): TenantCorrespondenceBinding {
   const binding: TenantCorrespondenceBinding = {
@@ -78,7 +79,7 @@ export function tenantCorrespondenceBinding<
       const created = await createTenantCorrespondenceGameForSeek(
         tenant,
         deps.factoryContext(),
-        args,
+        deps.casualOnly ? { ...args, rated: false } : args,
       );
       if (!created.ok) return created;
       const colors = tenantTurnOrder(tenant, created.room.projection.state);

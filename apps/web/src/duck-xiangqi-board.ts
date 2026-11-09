@@ -21,6 +21,7 @@
 
 import type { DuckXiangqiPlayerView, DuckXiangqiSquare, DuckXiangqiTurn } from '@mistboard/game';
 import { PIECE_GLIDE_EASING, pieceAnimationDurationMs } from './board-anim.js';
+import { selectionMarkSvg } from './board-capture-target.js';
 import {
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
@@ -452,7 +453,7 @@ export function duckXiangqiBoardSvg(
   const selectionSvg = selected
     ? (() => {
         const p = point(selected, perspective, layout);
-        return `<circle class="xq-live-selection-cell" cx="${p.x}" cy="${p.y}" r="30"/>`;
+        return selectionMarkSvg('xq-live-selection-cell', p, LIVE_BOARD_GEO.cell, layout, 30);
       })()
     : '';
   // In phase two the piece has already moved on screen but not on the server.

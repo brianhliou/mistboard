@@ -58,9 +58,16 @@ describe('xmjMoveSound', () => {
     expect(xmjMoveSound(move('east', { action: 'self-draw' }), 'east', true)).toBeNull();
   });
 
+  it.each(['east', 'south', 'west', 'north', 'spectator'])(
+    'gives %s the same discard click',
+    (seat) => {
+      expect(xmjMoveSound(move('east', { action: 'discard' }), seat, false)).toBe('move');
+    },
+  );
+
   it('keeps the discard clicks and stays silent on everything else', () => {
     expect(xmjMoveSound(move('east', { action: 'discard' }), 'east', false)).toBe('move');
-    expect(xmjMoveSound(move('east', { action: 'discard' }), 'west', false)).toBe('captured');
+    expect(xmjMoveSound(move('east', { action: 'discard' }), 'west', false)).toBe('move');
     expect(xmjMoveSound(move('east', { action: 'pass' }), 'east', false)).toBeNull();
     expect(xmjMoveSound({ type: 'seat-assigned' }, 'east', false)).toBeNull();
   });

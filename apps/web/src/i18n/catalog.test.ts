@@ -36,6 +36,20 @@ describe('app i18n catalog', () => {
     expect(missing).toEqual([]);
   });
 
+  it.each(SUPPORTED_LOCALES)(
+    '%s keeps the home tagline separate from About and three benefits',
+    (locale) => {
+      const tagline = t('home.tagline', {}, locale);
+      const summary = t('home.playSummary', {}, locale);
+      expect(tagline).not.toContain('Mistboard');
+      expect(tagline).not.toContain('—');
+      expect(summary).not.toContain('—');
+      expect(summary.split(' · ')).toHaveLength(3);
+      expect(summary.split(' · ').every((item) => item.trim().length > 0)).toBe(true);
+      expect(t('home.missionAbout', {}, locale)).toContain('Mistboard');
+    },
+  );
+
   describe('Gomoku bot copy', () => {
     const keys = [
       'live.gomokuBotThinking',

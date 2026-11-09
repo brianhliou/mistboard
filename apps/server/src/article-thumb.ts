@@ -23,15 +23,14 @@
 import { promises as fs } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
-import { Resvg } from '@resvg/resvg-js';
 import { loadCardArt } from './og-card-board.js';
 import { OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import {
+  coverSvgBelowFrame,
   createPngCache,
   halveImage,
   halvePng,
   OG_CARD_ZOOM,
-  OG_FONT_OPTIONS,
   pngSize,
   svgToPng,
   svgToRgba,
@@ -56,10 +55,6 @@ const MIN_ART_PX = 64;
  */
 const PHOTO_BYTES = 40 * 1024;
 const PHOTO_COLORS = 128;
-/** How deep the canvas may grow to cover art below the frame (coverBelowFrame). */
-const MAX_CANVAS_HEIGHT = ARTICLE_THUMB_HEIGHT * 8;
-/** Room under the measured art for stroke widths, which the bbox approximates. */
-const BELOW_MARGIN = 16;
 const MAX_ASSET_BYTES = 8 * 1024 * 1024;
 
 const SLUG = /^[a-z0-9-]+$/;
@@ -287,7 +282,7 @@ export async function inlineThumbImages(
 
 /**
  * `svg` on a canvas tall enough to hold all of its art, or null when that would
- * pass MAX_CANVAS_HEIGHT (or the SVG does not parse).
+ * pass eight frame heights (or the SVG does not parse).
  *
  * resvg 2.6 aborts the whole process (a Rust panic in geom.rs:27 that no JS
  * handler catches, renderAsync included) when a layer (opacity, clip-path,
@@ -303,19 +298,7 @@ export function coverBelowFrame(svg: string): string | null {
   const root = /^<svg\b[^>]*>/.exec(svg)?.[0];
   const frame = `height="${ARTICLE_THUMB_HEIGHT}" viewBox="0 0 ${ARTICLE_THUMB_WIDTH} ${ARTICLE_THUMB_HEIGHT}"`;
   if (!root?.includes(frame)) return null;
-  let artBottom: number;
-  try {
-    const box = new Resvg(svg, { font: OG_FONT_OPTIONS, logLevel: 'off' }).getBBox();
-    artBottom = box ? Math.ceil(box.y + box.height) : 0;
-  } catch {
-    return null;
-  }
-  if (!Number.isFinite(artBottom)) return null;
-  if (artBottom <= ARTICLE_THUMB_HEIGHT) return svg;
-  const bottom = artBottom + BELOW_MARGIN;
-  if (bottom > MAX_CANVAS_HEIGHT) return null;
-  const tall = `height="${bottom}" viewBox="0 0 ${ARTICLE_THUMB_WIDTH} ${bottom}"`;
-  return root.replace(frame, tall) + svg.slice(root.length);
+  return coverSvgBelowFrame(svg)?.svg ?? null;
 }
 
 /** The share card is wider than the art, so its crop loses 24 units off the top
