@@ -498,7 +498,11 @@ describe('Gomoku hidden registration', () => {
       for (const option of web?.landing?.engineOptions ?? [])
         expect(server?.engineDisplayName?.(option.id)).toBe('Rapfi');
       expect(server?.engineDisplayName?.('human')).toBeNull();
-      expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
+      expect(landingBotOffer(GOMOKU_SPEC_ID)).toMatchObject({
+        botId: 'rapfi-level-1',
+        gameSpecId: GOMOKU_SPEC_ID,
+        timeControlId: '10m5',
+      });
       for (const path of ['/gomoku', '/gomoku/review/test']) {
         expect(isClientRoute(path), path).toBe(false);
       }

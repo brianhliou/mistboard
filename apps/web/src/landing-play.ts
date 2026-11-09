@@ -1656,7 +1656,10 @@ function formatWaitAge(waitingMs: number): string {
 export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   const locale = currentLocale();
   const params = new URLSearchParams(window.location.search);
-  const play = params.get('play');
+  // A variant-only link opens friend setup on the named game as well.
+  const play =
+    params.get('play') ??
+    (landingPlayDeepLinkAccepts(params.get('variant') ?? '') ? 'friend' : null);
   if (!play) return;
 
   const availableEngines = engines.length > 0 ? engines : fallbackPlayableEngines();

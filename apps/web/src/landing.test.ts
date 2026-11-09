@@ -129,10 +129,27 @@ describe('homepage TV widget link', () => {
 });
 
 describe('landing shell', () => {
+  afterEach(() => vi.unstubAllEnvs());
   it('uses bundled showcase games only when a demo is explicitly requested', () => {
     expect(shouldUseBundledShowcaseDemos('')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?only=xiangqi')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
+  });
+
+  it('prerenders the same hero rows on both tabs, Gomoku last and Fog absent', () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const shell = document.createElement('div');
+    shell.innerHTML = renderLandingShellForPrerender();
+    for (const kind of ['bot', 'person']) {
+      const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+        (el) => el.dataset.gameSpec,
+      );
+      expect(specs.at(-1)).toBe('gomoku');
+      for (const spec of ['dark-xiangqi', 'dark-chess', 'three-kingdoms-banqi', 'ffq-banqi']) {
+        expect(specs).not.toContain(spec);
+      }
+    }
   });
 
   it('bakes no admin menu into the signed-out prerender, in any language', async () => {
