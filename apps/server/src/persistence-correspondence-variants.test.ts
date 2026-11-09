@@ -8,7 +8,12 @@
  * persistence-correspondence-e2e.test.ts; this is the same loop, per tenant.
  */
 
-import { CORRESPONDENCE_ELIGIBLE_SPEC_IDS, DAY_MS, type RoomTimeControl } from '@mistboard/game';
+import {
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+  DAY_MS,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import {
   CORRESPONDENCE_TEST_TENANTS,
   enableCorrespondenceVariantFlags,
@@ -47,7 +52,10 @@ type AnyRoom = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<st
 definePersistenceTests('correspondence variants e2e', () => {
   test('accepted correspondence seats show both account names before either player connects', async () => {
     enableCorrespondenceVariantFlags();
-    for (const specId of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+    for (const specId of [
+      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+      ...CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+    ]) {
       const registration = correspondenceTenantForSpecId(specId);
       assert.ok(registration?.createCorrespondenceGameForSeek, `${specId} registration`);
       const first = await makeUser(`${specId}-a`);
@@ -87,7 +95,10 @@ definePersistenceTests('correspondence variants e2e', () => {
 
   test('every variant: accept indexes the deadline, a lapsed clock forfeits on a cold sweep', async () => {
     enableCorrespondenceVariantFlags();
-    const specs = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.filter((id) => id !== 'dark-chess');
+    const specs = [
+      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+      ...CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+    ].filter((id) => id !== 'dark-chess');
     const started: Array<{ specId: string; roomId: string; secondSeat: string }> = [];
 
     for (const specId of specs) {

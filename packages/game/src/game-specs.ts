@@ -278,6 +278,8 @@ const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   GOMOKU_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   // Xiangqi Mahjong is held out at launch (Brian, 2026-10-25: "let's not support
   // correspondence for this variant yet"). Its tenant keeps the correspondence
   // binding and its tests, so opening it again is adding XIANGQI_MAHJONG_SPEC_ID here.
@@ -874,6 +876,8 @@ export type LaunchLists = {
   readonly correspondenceEligible: readonly GameSpecId[];
   /** CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: correspondence for granted accounts. */
   readonly correspondenceAllowlisted: readonly GameSpecId[];
+  /** Hidden correspondence specs, admitted by their existing tenant access policy. */
+  readonly correspondenceRestricted: readonly GameSpecId[];
   /** ALLOWLISTED_GAME_SPEC_IDS: playable only with a per-account grant. */
   readonly allowlisted: readonly GameSpecId[];
 };
@@ -885,6 +889,7 @@ export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): Launch
   return {
     canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
     correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
+    correspondenceRestricted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) => !isPublic(id)),
     correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
       allowlisted.includes(id),
     ),
@@ -906,6 +911,10 @@ export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] =
 /** See isCorrespondenceAllowlistedSpec. */
 export const CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: readonly GameSpecId[] =
   LAUNCH_LISTS.correspondenceAllowlisted;
+
+/** Hidden correspondence variants. This includes grant-based and admin playtests. */
+export const CORRESPONDENCE_RESTRICTED_SPEC_IDS: readonly GameSpecId[] =
+  LAUNCH_LISTS.correspondenceRestricted;
 
 /** Display order of the public shelf (see VARIANT_SHELF_ORDER). */
 export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = LAUNCH_LISTS.canonicalVariantOrder;

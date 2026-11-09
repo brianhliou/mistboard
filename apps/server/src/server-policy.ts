@@ -248,6 +248,9 @@ export function roomViewPolicy(
   // spectators alike (Brian, 2026-09-06). Before this, the room never revealed
   // at any status and the public reveal lived only at /game/:id, which left a
   // shared room link showing a blank board.
+  if (gameSpecId === 'ffq-banqi' || gameSpecId === 'three-kingdoms-banqi') {
+    return seat === 'player' ? 'own-view' : 'public-view';
+  }
   if (finished) return 'truth';
   switch (visibility) {
     case 'open':

@@ -67,6 +67,35 @@ export async function renderStartPositionSvg(
       const view = game.getJieqiPlayerView(game.createInitialJieqiState(id), color);
       return render.renderJieqiBoardSvg(view, color, { coordinates: false });
     }
+    case 'ffq-banqi': {
+      const [game, render, ffq] = await Promise.all([
+        import('@mistboard/game'),
+        import('./live-banqi-render.js'),
+        import('./ffq-banqi-board.js'),
+      ]);
+      render.installBanqiBoardStyles();
+      const view = game.getFFQBanqiPlayerView(
+        game.createInitialFFQBanqiState(id, () => 0.5),
+        'observer',
+      );
+      return render.renderBanqiBoardSvg(ffq.ffqBanqiBoardView(view), 'red');
+    }
+    case 'three-kingdoms-banqi': {
+      const [game, render, styles] = await Promise.all([
+        import('@mistboard/game'),
+        import('./three-kingdoms-banqi-diagrams.js'),
+        import('./live-banqi-render.js'),
+      ]);
+      styles.installBanqiBoardStyles();
+      const state = game.createThreeKingdomsBanqiStateFromSetup(
+        id,
+        game.createThreeKingdomsBanqiSetup(() => 0.5),
+      );
+      return render.renderThreeKingdomsBanqiLiveBoardSvg(
+        game.getThreeKingdomsBanqiPlayerView(state, 'red').board,
+        { selected: null, targets: [], draggingFrom: null, lastMove: null },
+      );
+    }
     case 'banqi': {
       const [game, render] = await Promise.all([
         import('@mistboard/game'),
