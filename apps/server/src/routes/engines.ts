@@ -1,6 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from '../account-session.js';
 import { playableLiveEngines } from './../engine-registry.js';
+import {
+  isJungleFlipEngineClientId,
+  JUNGLE_FLIP_PLAYABLE_ENGINES,
+  jungleFlipEngineAvailable,
+} from '../jungle-flip-engine.js';
 import { threeKingdomsBanqiAdmits } from '../three-kingdoms-banqi-access.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
@@ -22,6 +27,9 @@ export async function tryHandle(
   // when a local operator adds a TK id to EXTRA_PLAYABLE_ENGINES.
   const engines = playableLiveEngines()
     .filter((engine) => !isThreeKingdomsBanqiEngineClientId(engine.id))
+    .filter(
+      (engine) => !isJungleFlipEngineClientId(engine.id) || jungleFlipEngineAvailable(engine.id),
+    )
     .map((engine) => ({
       id: engine.id,
       name: engine.name,
@@ -40,10 +48,23 @@ export async function tryHandle(
           kind: tier.evaluation === 'random' ? 'builtin' : 'container',
         }))
     : undefined;
+  const jungleFlipEngines = [...JUNGLE_FLIP_PLAYABLE_ENGINES]
+    .filter((tier) => jungleFlipEngineAvailable(tier.id))
+    .reverse()
+    .map((tier) => ({
+      id: tier.id,
+      name: `Misty Level ${tier.level}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
   writeJson(
     response,
     200,
-    { engines, ...(threeKingdomsBanqiEngines ? { threeKingdomsBanqiEngines } : {}) },
+    {
+      engines,
+      jungleFlipEngines,
+      ...(threeKingdomsBanqiEngines ? { threeKingdomsBanqiEngines } : {}),
+    },
     { 'cache-control': 'private, no-store' },
   );
   return true;

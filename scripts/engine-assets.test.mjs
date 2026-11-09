@@ -466,6 +466,26 @@ test('Banqi serves the published v0.3.0 asset with its verified sha256', () => {
   assert.match(entry[1], /sha=9a5fb0f16438bf5521e321bc64a50417cda4715aac607ba238875db6430da068\b/);
 });
 
+test('Flip Jungle serves v0.6.0 with the private r6 net and keeps its v0.5.1 tablebase', () => {
+  const fetch = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
+  const entry = fetch.match(/^ {2}jungle-flip-engine\)\n([\s\S]*?);;/m);
+  assert.ok(entry);
+  assert.match(entry[1], /repo=brianhliou\/misty-flip-jungle tag=v0\.6\.0 mode=exec/);
+  assert.match(entry[1], /sha=8f5b97a8c4433034e5763f89d913db2d45946a02f9b0d4ed47a27a241395fe33\b/);
+  assert.match(
+    fetch.match(/^ {2}jungle_flip_tb_4.bin\)\n([\s\S]*?);;/m)[1],
+    /tag=v0\.5\.1 mode=data/,
+  );
+  const provider = readFileSync(resolve(repoRoot, 'apps/server/src/jungle-flip-engine.ts'), 'utf8');
+  assert.match(provider, /JUNGLE_FLIP_ENGINE_VERSION = '0\.6\.0'/);
+  assert.doesNotMatch(
+    recipe,
+    /jungle-flip\.jfnn/,
+    'the private net never enters the public engines archive',
+  );
+  assert.ok(railpack.includes('sh /app/scripts/fetch-private-net.sh /app/bin jungle-flip-net'));
+});
+
 test('every release asset railpack fetches has a pinned sha256', () => {
   const script = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
   const fetched = railpackCommands().flatMap((command) => [

@@ -10,6 +10,7 @@ import {
   JIEQI_JQE_ENGINE_ID,
   jqeAvailable,
 } from '../jieqi-engine.js';
+import { isJungleFlipEngineClientId, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, katagoJungleAvailable } from '../jungle-katago-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
@@ -52,6 +53,8 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
       firstParty?.engines[gameSpecId] ??
       (gameSpecId === bot.defaultGameSpecId ? bot.activeEngineId : null);
     if (!engineId) continue;
+    // A missing private net must never advertise the neural rung as playable.
+    if (isJungleFlipEngineClientId(engineId) && !jungleFlipEngineAvailable(engineId)) continue;
     // An engine the box cannot run is unplayable, not missing: AB-JChess and KataGo
     // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), which a
     // dev box usually lacks. jqe also needs MISTBOARD_JQE_ENABLED, held off until its

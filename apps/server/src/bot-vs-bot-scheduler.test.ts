@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -332,13 +333,13 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
     config.plans.map((plan) => [plan.variant, plan.dailyMax]),
     [
       ['crazyhouse-xiangqi', 1],
+      ['jungle-flip', 1],
       ['jieqi', 2],
     ],
   );
   assert.deepEqual(config.skipped, [
     // Retired 2026-11-06, and it never went public.
     { variant: 'mahjong', reason: 'not-live' },
-    { variant: 'jungle-flip', reason: 'no-ladder' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },
     // Retired 2026-10-11: skipped even when a stale env names them, though
@@ -609,5 +610,33 @@ test('nothing on the engine-game path can send to PostHog', () => {
   ]) {
     const source = readFileSync(join(dir, file), 'utf8');
     assert.doesNotMatch(source, /analytics-server|posthog/i, file);
+  }
+});
+
+test('Flip Jungle schedules L1-7 without a net and includes neural L8 only with a readable file', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'jgf-scheduler-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const net = join(dir, 'net.jfnn');
+  writeFileSync(net, 'fixture net');
+  const saved = process.env.MISTBOARD_JUNGLE_FLIP_NET;
+  t.after(() => {
+    if (saved === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_NET;
+    else process.env.MISTBOARD_JUNGLE_FLIP_NET = saved;
+  });
+  const classical = [
+    ...Array.from({ length: 6 }, (_, index) => `misty-jungle-flip-level-${index + 1}`),
+    'misty-jungle-flip',
+  ];
+  for (const path of [undefined, `${net}.missing`, dir, net]) {
+    if (path === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_NET;
+    else process.env.MISTBOARD_JUNGLE_FLIP_NET = path;
+    const config = botVsBotConfigFromEnv({ MISTBOARD_BOT_VS_BOT_VARIANTS: 'jungle-flip' });
+    assert.deepEqual(config.skipped, []);
+    assert.equal(config.plans[0]!.anchorEngineId, 'random-legal-jungle-flip');
+    assert.equal(config.plans[0]!.requiredCapability, 'jungle_flip_engine');
+    assert.deepEqual(
+      config.plans[0]!.ladder,
+      path === net ? [...classical, 'misty-jungle-flip-level-8'] : classical,
+    );
   }
 });

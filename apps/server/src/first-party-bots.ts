@@ -21,6 +21,7 @@
 
 import { RAPFI_LEVELS } from '@mistboard/game';
 import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
 
 export type FirstPartyBotProfile = {
   id: string;
@@ -126,16 +127,15 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-level-1',
       'misty-jungle-level-3',
       ...BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => tier.id),
-      ...([1, 2, 3, 4, 5, 6, 7, 8] as const).map(
-        (level) => `misty-jungle-flip-level-${level}` as const,
+      ...JUNGLE_FLIP_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-jungle-flip').map(
+        (tier) => tier.id,
       ),
+      'misty-jungle-flip-level-7', // retired 100K rung: keep historical attribution
     ],
     seatNamesByEngineId: Object.fromEntries([
       ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
-      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => [
-        `misty-jungle-flip-level-${level}`,
-        `Misty Level ${level}`,
-      ]),
+      ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
+      ['misty-jungle-flip-level-7', 'Misty Level 7'],
     ]),
     // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
     // rooms created before 2026-10-28 stored as their pveBotId; a resumed one

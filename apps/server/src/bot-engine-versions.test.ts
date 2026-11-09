@@ -66,7 +66,11 @@ test('Misty shows each engine build she plays', () => {
     assert.equal(botEngineVersion(`misty-banqi-level-${level}`), '0.3.0');
   }
   assert.equal(botEngineVersion('misty-jungle-level-2'), '0.0.6');
-  assert.equal(botEngineVersion('misty-jungle-flip'), '0.5.1');
+  assert.equal(botEngineVersion('misty-jungle-flip'), '0.6.0');
+  for (const level of [1, 2, 3, 4, 5, 6, 8]) {
+    assert.equal(botEngineVersion(`misty-jungle-flip-level-${level}`), '0.6.0');
+  }
+  assert.equal(botEngineVersion('misty-jungle-flip-level-7'), '0.5.1');
 });
 
 test('an engine with no recorded version shows nothing rather than a guess', () => {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { close, getPool, init } from '../persistence-db.js';
@@ -113,6 +114,54 @@ test('playable API reports TK runtime tiers only through the admin/local gate', 
     assert.deepEqual(
       (await read(role)).threeKingdomsBanqiEngines?.map((e) => e.id),
       [levels[0]],
+    );
+  }
+});
+
+test('public runtime roster hides neural Flip Jungle L8 without its file and never exposes paths', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'jgf-roster-'));
+  const bin = join(dir, 'engine');
+  const net = join(dir, 'net.jfnn');
+  writeFileSync(bin, 'fixture engine');
+  writeFileSync(net, 'fixture net');
+  const keys = ['MISTBOARD_JUNGLE_FLIP_ENGINE_PATH', 'MISTBOARD_JUNGLE_FLIP_NET'] as const;
+  const saved = keys.map((key) => process.env[key]);
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+    keys.forEach((key, i) => {
+      if (saved[i] === undefined) delete process.env[key];
+      else process.env[key] = saved[i];
+    });
+  });
+  process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = bin;
+  for (const path of [undefined, `${net}.missing`, dir, net]) {
+    if (path === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_NET;
+    else process.env.MISTBOARD_JUNGLE_FLIP_NET = path;
+    let body = '';
+    const response = {
+      writeHead: () => {},
+      end: (chunk: string) => {
+        body += chunk;
+      },
+    } as unknown as ServerResponse;
+    await tryHandle(
+      {},
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      '/api/engines/playable',
+    );
+    const roster = JSON.parse(body).jungleFlipEngines;
+    assert.equal(roster.length, path === net ? 8 : 7);
+    assert.equal(
+      roster.some((tier: { id: string }) => tier.id === 'misty-jungle-flip-level-8'),
+      path === net,
+    );
+    assert.ok(!body.includes(dir));
+    assert.ok(
+      roster.some(
+        (tier: { id: string; name: string }) =>
+          tier.id === 'misty-jungle-flip' && tier.name === 'Misty Level 7',
+      ),
     );
   }
 });

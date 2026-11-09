@@ -29,6 +29,7 @@ import {
 import { BANQI_PLAYABLE_ENGINES } from '../../server/src/banqi-engine.js';
 import { crosstableReviewUrl } from '../../server/src/crosstable.js';
 import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES } from '../../server/src/jungle-flip-engine.js';
 import {
   JUNGLE_PLAYABLE_ENGINE_ID,
   JUNGLE_PLAYABLE_ENGINE_IDS,
@@ -43,7 +44,11 @@ import {
 import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
-import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
+import {
+  jieqiEngineOptions,
+  jungleFlipEngineOptions,
+  webVariantTenants,
+} from './variant-tenant/registry.js';
 import { VARIANTS } from './variants.js';
 import { boardAspectForSpec, hasBoardAspect } from './watch-board-aspect.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
@@ -64,6 +69,23 @@ describe('Banqi engine picker mirror', () => {
       'misty-banqi',
     ]);
     expect(landing.defaultEngineId).toBe('misty-banqi-level-4');
+  });
+});
+
+describe('Flip Jungle engine picker mirror', () => {
+  it('keeps historical classical L7 and neural L8 separate, with L4 selected by default', () => {
+    for (const withNet of [false, true]) {
+      expect(jungleFlipEngineOptions(withNet).map(({ id, name }) => ({ id, name }))).toEqual(
+        [...JUNGLE_FLIP_PLAYABLE_ENGINES]
+          .filter((tier) => tier.level !== 8 || withNet)
+          .reverse()
+          .map((tier) => ({ id: tier.id, name: `Misty Level ${tier.level}` })),
+      );
+    }
+    expect(
+      webVariantTenants().find((tenant) => tenant.gameSpecId === 'jungle-flip')!.landing!
+        .defaultEngineId,
+    ).toBe('misty-jungle-flip-level-4');
   });
 });
 

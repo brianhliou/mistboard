@@ -1,5 +1,6 @@
 import { canonicalVariantOrderIndex, type GameSpecId } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchPlayableEnginesOnce } from './landing.js';
 import {
   buildLandingPlayPanel,
   buildLobbyRequestsWindow,
@@ -12,6 +13,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { jungleFlipEngineOptions, setJungleFlipEngineOptions } from './variant-tenant/registry.js';
 import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 // The public shelf keeps the xiangqi family together, pairs Fog Xiangqi with
@@ -28,7 +30,10 @@ const BASELINE_PICKER_SPECS = [
 ];
 
 // /api/live-stats reads are shared through a module cache; start each test cold.
-beforeEach(() => resetLiveStatsCacheForTests());
+beforeEach(() => {
+  resetLiveStatsCacheForTests();
+  setJungleFlipEngineOptions([]);
+});
 
 // These pin the old desktop accordion (still reachable with ?setup=accordion);
 // the default desktop layout opens every row, like the phone sheet.
@@ -654,7 +659,8 @@ describe('landing play panel', () => {
     });
   });
 
-  it('offers all eight Flip Jungle levels, defaults to 4 and posts the picked level', async () => {
+  it('offers all eight Flip Jungle levels after runtime confirmation, defaults to 4 and posts the picked level', async () => {
+    setJungleFlipEngineOptions(jungleFlipEngineOptions(true));
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
       if (String(input) === '/api/rooms')
@@ -669,7 +675,11 @@ describe('landing play panel', () => {
     selectModalVariant('jungle-flip');
     const picker = document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!;
     expect([...picker.options].map((option) => option.value).sort()).toEqual(
-      Array.from({ length: 8 }, (_, index) => `misty-jungle-flip-level-${index + 1}`),
+      [
+        ...Array.from({ length: 6 }, (_, index) => `misty-jungle-flip-level-${index + 1}`),
+        'misty-jungle-flip',
+        'misty-jungle-flip-level-8',
+      ].sort(),
     );
     expect(picker.value).toBe('misty-jungle-flip-level-4');
     expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(
@@ -687,6 +697,34 @@ describe('landing play panel', () => {
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
       'misty-jungle-flip-level-1',
     );
+  });
+
+  it('hides neural Flip Jungle L8 when runtime net confirmation is absent, missing or lost', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/engines/playable')
+        return jsonResponse({
+          engines: [{ id: 'fixture', name: 'Fixture', familyName: 'Fixture', kind: 'container' }],
+          jungleFlipEngines: jungleFlipEngineOptions(false),
+        });
+      return jsonResponse({});
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    for (const reload of [false, true]) {
+      if (reload) {
+        setJungleFlipEngineOptions(jungleFlipEngineOptions(true));
+        await fetchPlayableEnginesOnce();
+      }
+      const panel = buildLandingPlayPanel([]);
+      document.body.replaceChildren(panel);
+      openPlaySetup(panel, 'Play a bot');
+      selectModalVariant('jungle-flip');
+      const picker = document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!;
+      expect([...picker.options].map((option) => option.value)).toEqual(
+        jungleFlipEngineOptions(false).map((tier) => tier.id),
+      );
+      expect(picker.value).toBe('misty-jungle-flip-level-4');
+      document.querySelector('.landing-setup-overlay')?.remove();
+    }
   });
 
   it('offers all eight Banqi levels, defaults to 4 and posts the picked level', async () => {

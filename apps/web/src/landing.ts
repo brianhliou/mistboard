@@ -61,7 +61,11 @@ import { type ShowcaseEntry, showcaseAirFields } from './showcase-cycler.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildHomeFooter, buildNav, buildNotice } from './site-shell.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
-import { type WebVariantTenant, webVariantTenantForRoomId } from './variant-tenant/registry.js';
+import {
+  setJungleFlipEngineOptions,
+  type WebVariantTenant,
+  webVariantTenantForRoomId,
+} from './variant-tenant/registry.js';
 
 // Adaptive hero-pool refresh. Poll faster while games are being played (they
 // unlock on completion, soon), slower when idle. Pool is capped. These three are
@@ -520,14 +524,17 @@ export async function mountGame(root: HTMLElement, roomId: string): Promise<void
 // an empty list — callers keep the placeholder and may retry. Never throws.
 export async function fetchPlayableEnginesOnce(): Promise<PlayableEngine[] | null> {
   setThreeKingdomsBanqiEngineOptions([]);
+  setJungleFlipEngineOptions([]);
   try {
     const resp = await fetch('/api/engines/playable');
     if (!resp.ok) return null;
     const data = (await resp.json()) as {
       engines: PlayableEngine[];
       threeKingdomsBanqiEngines?: PlayableEngine[];
+      jungleFlipEngines?: PlayableEngine[];
     };
     setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
+    setJungleFlipEngineOptions(data.jungleFlipEngines ?? []);
     return data.engines.length > 0 ? data.engines : null;
   } catch {
     return null;

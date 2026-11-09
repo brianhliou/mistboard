@@ -19,8 +19,8 @@ case "$name" in
     repo=brianhliou/misty-banqi tag=v0.3.0 mode=exec
     sha=9a5fb0f16438bf5521e321bc64a50417cda4715aac607ba238875db6430da068 ;;
   jungle-flip-engine)
-    repo=brianhliou/misty-flip-jungle tag=v0.5.4 mode=exec
-    sha=5b98afc0bf1b5072793169202d53a204b4775eee22d9c160567c0ec73bdfaeae ;;
+    repo=brianhliou/misty-flip-jungle tag=v0.6.0 mode=exec
+    sha=8f5b97a8c4433034e5763f89d913db2d45946a02f9b0d4ed47a27a241395fe33 ;;
   jungle_flip_tb_4.bin)
     repo=brianhliou/misty-flip-jungle tag=v0.5.1 mode=data
     sha=65b275f494048ec41be1db48836f167e315859e9c3c317ee66d7751a27cc9eba ;;

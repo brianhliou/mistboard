@@ -8,6 +8,7 @@ import {
   watchHrefForTvGame,
 } from './landing.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
+import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
 
 const ROSTER = [
   { id: 'python-v2-v1.0', name: 'Misty 1.0', familyName: 'Misty', kind: 'container' },
@@ -56,6 +57,24 @@ describe('playable engines loading', () => {
       vi.fn(async () => jsonResponse({ engines: ROSTER })),
     );
     expect(await fetchPlayableEnginesOnce()).toEqual(ROSTER);
+  });
+
+  it('offers neural Flip Jungle L8 only after the server confirms it and clears it on failure', async () => {
+    const roster = jungleFlipEngineOptions(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ engines: ROSTER, jungleFlipEngines: roster })),
+    );
+    await fetchPlayableEnginesOnce();
+    expect(jungleFlipEngineOptions()[0]!.id).toBe('misty-jungle-flip-level-8');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 503 })),
+    );
+    await fetchPlayableEnginesOnce();
+    expect(jungleFlipEngineOptions().map((engine) => engine.id)).not.toContain(
+      'misty-jungle-flip-level-8',
+    );
   });
 
   it('retries transient failures and resolves once the roster is available', async () => {
