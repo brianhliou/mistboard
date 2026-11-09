@@ -326,19 +326,23 @@
   "gamesWithThosePlayers": 4022,
   "peakWeek": {
     "weekStart": "2026-10-26",
-    "games": 2647,
-    "gamesByItsBusiestPlayer": 557
+    "games": 2670,
+    "gamesByItsBusiestPlayer": 578
   },
   "atOneThousand": {
     "jieqiGames": 608,
     "gamesBetweenPeople": 4
   },
-  "firstThousandOn": "2026-09-30",
-  "tenThousandOn": "2026-11-08",
+  "firstThousandOn": "2026-09-29",
+  "tenThousandOn": "2026-11-07",
   "weeks": [
     {
+      "weekStart": "2026-05-25",
+      "games": 1
+    },
+    {
       "weekStart": "2026-06-01",
-      "games": 2
+      "games": 1
     },
     {
       "weekStart": "2026-06-08",
@@ -346,11 +350,11 @@
     },
     {
       "weekStart": "2026-06-15",
-      "games": 0
+      "games": 1
     },
     {
       "weekStart": "2026-06-22",
-      "games": 3
+      "games": 2
     },
     {
       "weekStart": "2026-06-29",
@@ -374,19 +378,19 @@
     },
     {
       "weekStart": "2026-08-03",
-      "games": 27
+      "games": 28
     },
     {
       "weekStart": "2026-08-10",
-      "games": 21
+      "games": 20
     },
     {
       "weekStart": "2026-08-17",
-      "games": 45
+      "games": 46
     },
     {
       "weekStart": "2026-08-24",
-      "games": 21
+      "games": 20
     },
     {
       "weekStart": "2026-08-31",
@@ -394,39 +398,39 @@
     },
     {
       "weekStart": "2026-09-07",
-      "games": 68
+      "games": 72
     },
     {
       "weekStart": "2026-09-14",
-      "games": 154
+      "games": 155
     },
     {
       "weekStart": "2026-09-21",
-      "games": 381
+      "games": 386
     },
     {
       "weekStart": "2026-09-28",
-      "games": 596
+      "games": 616
     },
     {
       "weekStart": "2026-10-05",
-      "games": 1314
+      "games": 1309
     },
     {
       "weekStart": "2026-10-12",
-      "games": 1118
+      "games": 1153
     },
     {
       "weekStart": "2026-10-19",
-      "games": 1304
+      "games": 1322
     },
     {
       "weekStart": "2026-10-26",
-      "games": 2647
+      "games": 2670
     },
     {
       "weekStart": "2026-11-02",
-      "games": 2177
+      "games": 2076
     }
   ],
   "variants": [

@@ -47,9 +47,9 @@ export function buildLandingActivity(
 }
 
 // The durable total is the headline; the month count rides along in a
-// parenthetical rather than as its own stat line. "this month" is the server's
-// rolling 30-day window (persistence-site-stats.ts), so the label carries a
-// title tooltip spelling that out.
+// parenthetical rather than as its own stat line. The count is the server's
+// rolling 30-day window (persistence-site-stats.ts), and the label says so:
+// "this month" read as the calendar month.
 function gamesPlayedLabel(monthCount: number): string {
   return t('home.gamesPlayedMonth', { count: formatCount(monthCount) });
 }
