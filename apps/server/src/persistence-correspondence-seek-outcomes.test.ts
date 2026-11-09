@@ -168,10 +168,12 @@ definePersistenceTests('correspondence seek outcomes', () => {
             200,
           );
         } else if (state === 'expired') {
-          await getPool().query(
-            `UPDATE correspondence_seeks SET expires_at = now() WHERE id = $1`,
-            [id],
-          );
+          // Node's clock, not Postgres now(): the sweep compares against new Date(),
+          // and the database container's clock can run a few ms ahead.
+          await getPool().query(`UPDATE correspondence_seeks SET expires_at = $2 WHERE id = $1`, [
+            id,
+            new Date(Date.now() - 1_000),
+          ]);
           assert.equal(await deleteExpiredCorrespondenceSeeks(), 1);
         }
         responses.push(await callSeekRoute('GET', `/api/correspondence/seeks/${id}`, viewerCookie));

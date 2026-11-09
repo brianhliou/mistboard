@@ -246,6 +246,8 @@ for (const spec of specs) {
       });
       return json;
     };
+    // One timestamp for both rooms: two Date.now() reads can differ by a millisecond.
+    const resignedAt = Date.now() + 10_000;
     for (const finished of [false, true]) {
       if (finished) {
         for (const candidate of [room, swapped.room])
@@ -253,7 +255,7 @@ for (const spec of specs) {
             type: 'seat-resigned',
             roomId: room.id,
             color: 'black',
-            at: Date.now() + 10_000,
+            at: resignedAt,
           });
       }
       for (const seat of ['red', 'black', 'spectator']) {
