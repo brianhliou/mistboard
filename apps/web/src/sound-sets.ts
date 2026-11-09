@@ -3,10 +3,9 @@
 // 'wood' is the default: tactile recordings of pieces on a wooden board. 'mist'
 // is Mistboard's own WebAudio-synthesized set with zero assets. The other file
 // sets are lichess's AGPL sets (public/sound/<set>/, see CREDITS.md there). They
-// cover the universal vocabulary, while the fog-native kinds keep per-kind tweaks (rate/gain)
-// so 'captured' stays darker than 'capture' even when both use the same
-// source file. A kind with no file entry falls back to the synthesized
-// tones, so partial sets degrade to Mist rather than silence.
+// cover the universal vocabulary, with per-kind rate/gain tweaks for special
+// cues. Every ordinary capture uses the same source and pitch for both sides.
+// A kind with no file entry falls back to synthesized tones rather than silence.
 //
 // The policy layer (live-sound.ts) never sees any of this: it picks a
 // SoundKind from the player's view; the controller resolves kind -> source.
@@ -40,8 +39,7 @@ const SOUND_SET_STORAGE_KEY = 'mistboard.soundSet';
 
 export type SoundFileSpec = {
   file: string;
-  // Playback-rate tweak: <1 darkens/pitches down. Lets one source file serve
-  // two asymmetric kinds (capture vs captured).
+  // Playback-rate tweak: <1 darkens/pitches down for special cues.
   rate?: number;
   gain?: number;
 };
@@ -50,9 +48,6 @@ export type SoundFileSpec = {
 const FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   move: { file: 'Move.mp3' },
   capture: { file: 'Capture.mp3' },
-  // Losing a piece is the alarm bell of dark chess: same source as capture,
-  // pitched down and slightly quieter so it reads as "done to you".
-  captured: { file: 'Capture.mp3', rate: 0.72, gain: 0.85 },
   castle: { file: 'Move.mp3' },
   'king-capture': { file: 'Explosion.mp3' },
   // The loser's side of a king capture: same source, dragged down so it
@@ -79,8 +74,6 @@ const FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
 const WOOD_FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   move: { file: 'move.mp3' },
   capture: { file: 'capture.mp3' },
-  // Losing a piece: the same capture, dragged down so it reads as done-to-you.
-  captured: { file: 'capture.mp3', rate: 0.82, gain: 0.9 },
   castle: { file: 'slide.mp3' },
   drop: { file: 'move.mp3' },
   flip: { file: 'move.mp3' },
