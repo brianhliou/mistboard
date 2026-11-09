@@ -8,11 +8,17 @@ import {
 } from '@mistboard/game';
 import { pgnStandardTermination } from './game-export-shared.js';
 import {
+  analyzeJieqiDecisions,
+  analyzeJieqiPostgame,
+  PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+} from './jieqi-analysis.js';
+import {
   getJieqiClientView,
   jieqiClientEventFor,
   jieqiPublicEvents,
   jieqiTenant,
 } from './jieqi-tenant.js';
+import { jieqiAnalysisInputsFromEvents } from './routes/jieqi-games.js';
 import {
   createTenantRuntimeRoom,
   createTenantRuntimeRoomFromEvents,
@@ -51,6 +57,47 @@ function events(setup: unknown, count = 120): Event[] {
 }
 const oldSetup = { ...STANDARD_JIEQI_DEAL, repetition: true };
 const newSetup = { ...oldSetup, adjudicationRule: 'jqe-v1' };
+
+test('review analysis preserves the stored rules and the 80/120-ply terminal verdict', async () => {
+  for (const [setup, limit] of [
+    [oldSetup, 120],
+    [newSetup, 80],
+  ] as const) {
+    const inputs = jieqiAnalysisInputsFromEvents(events(setup));
+    assert.ok(inputs);
+    assert.deepEqual(inputs.rules, {
+      repetition: true,
+      ...(limit === 80 ? { adjudicationRule: 'jqe-v1' } : {}),
+    });
+    const result = await analyzeJieqiPostgame(
+      inputs.moves,
+      inputs.deal,
+      async (state) => {
+        assert.equal(state.adjudicationRule, limit === 80 ? 'jqe-v1' : undefined);
+        assert.ok(state.positionCounts);
+        return { cp: 10, mate: null, best: null };
+      },
+      undefined,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      inputs.rules,
+    );
+    assert.equal(result.plies[limit]!.cp, 0);
+    assert.equal(result.plies[limit - 1]!.cp, 10);
+    const decisions = await analyzeJieqiDecisions(
+      inputs.moves,
+      inputs.deal,
+      {
+        multiPv: async () => [],
+        evalPosition: async () => ({ cp: 25, mate: null }),
+      },
+      undefined,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+      inputs.rules,
+    );
+    assert.ok(decisions.length > 0);
+    assert.ok(decisions.every((decision) => decision.ply <= limit));
+  }
+});
 
 test('new rooms stamp jqe-v1; absent/unknown stamps never opt in implicitly', () => {
   const room = createTenantRuntimeRoom(jieqiTenant, 'jq_stamp', { now: 1 });
