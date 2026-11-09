@@ -100,7 +100,8 @@ export function lastBotGame(): LastBotGame | null {
 export function rememberBotRoomRequest(body: Record<string, unknown>): void {
   if (body.mode !== 'pve') return;
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : body.variant;
-  const botId = typeof body.botId === 'string' ? body.botId : body.engineId;
+  // A shared bot identity can select a tier; Play again needs that exact tier.
+  const botId = typeof body.engineId === 'string' ? body.engineId : body.botId;
   if (typeof gameSpecId !== 'string' || typeof botId !== 'string' || !botId) return;
   const record: LastBotGame = {
     gameSpecId,

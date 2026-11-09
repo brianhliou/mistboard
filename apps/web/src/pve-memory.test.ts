@@ -99,4 +99,14 @@ describe('pve-memory', () => {
     rememberBotRoomRequest({ mode: 'pve', gameSpecId: 'xiangqi' });
     expect(lastBotGame()?.botId).toBe('misty');
   });
+
+  it('remembers an explicit engine tier ahead of its shared bot identity', () => {
+    rememberBotRoomRequest({
+      mode: 'pve',
+      gameSpecId: 'banqi',
+      botId: 'misty',
+      engineId: 'misty-banqi-level-5',
+    });
+    expect(lastBotGame()).toEqual({ gameSpecId: 'banqi', botId: 'misty-banqi-level-5' });
+  });
 });

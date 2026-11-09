@@ -340,12 +340,14 @@ function positiveModulo(value: number, divisor: number): number {
 // full-strength Pikafish; jieqi's Pikafish Levels 1-8 (Level 8 is the
 // `pikafish` bot, the strongest Pikafish setting), then jqe where the server can
 // seat it, then AB-JChess on top; the other
-// Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo; the other
-// house-built variants a single Misty (no stepper). Mirrors the server roster in
-// apps/server/src/first-party-bots.ts; a rung the server cannot serve fails the
-// room create, so landing-bot-policy.test.ts pins the ids.
+// Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo;
+// Banqi and Flip Jungle Misty Levels 1-8 (L8 only with its net); the remaining
+// house-built variants a single Misty. Numbered Misty rungs share the public
+// bot identity and select an engine tier, matching the setup dialog.
 export type LandingBotRung = {
   botId: string;
+  /** Optional tier within a shared bot identity; also the stored pick's key. */
+  engineId?: string;
   /** Ladder level when the rung is a numbered level; null for a named bot. */
   level: number | null;
   /** Display name for a named rung (Pikafish, AB-JChess, jqe, Misty). */
@@ -356,11 +358,12 @@ export type LandingBotRung = {
    *  xiangqi Fairy-Stockfish Level 8 (the official xiangqi net), xiangqi
    *  Pikafish, AB-JChess and jqe; the jieqi Pikafish levels run classical, its jieqi
    *  branch has never had weights. KataGo plays a ResNet under MCTS, which is a
-   *  neural net but not an NNUE, so it gets the general tag. */
+   *  neural net but not an NNUE, so it gets the general tag. Banqi and Flip
+   *  Jungle L8 use the general neural tag too. */
   net: 'nnue' | 'neural' | null;
   /** The engine needs a binary and net the server box may lack (KataGo), or a flag
    *  that can be off (jqe, MISTBOARD_JQE_ENABLED), so the rung is offered only where
-   *  GET /api/bots reports it playable. */
+   *  GET /api/bots reports it playable, or /api/engines/playable lists its tier. */
   gated?: boolean;
 };
 
@@ -373,15 +376,31 @@ const JIEQI_LADDER_TOP_LEVEL = 7;
 
 const NO_PLAYABLE_BOTS: ReadonlySet<string> = new Set();
 
-// `playable` is the set of bot ids the server says it can seat for this variant
-// (playableBotIdsBySpec over GET /api/bots). Only gated rungs consult it; until
+// `playable` holds bot ids from GET /api/bots; `playableEngines` holds runtime
+// tier ids from GET /api/engines/playable. Only gated rungs consult them; until
 // the roster arrives, or where the box lacks the engine, a gated rung is left
 // off and the ladder is what every box can serve.
 export function landingBotLadder(
   gameSpecId: string,
   playable: ReadonlySet<string> = NO_PLAYABLE_BOTS,
+  playableEngines: ReadonlySet<string> = NO_PLAYABLE_BOTS,
 ): readonly LandingBotRung[] {
   if (!isLandingBotGameSpecId(gameSpecId)) return [];
+  if (gameSpecId === BANQI_SPEC_ID || gameSpecId === JUNGLE_FLIP_SPEC_ID) {
+    const base = gameSpecId === BANQI_SPEC_ID ? 'misty-banqi' : 'misty-jungle-flip';
+    return Array.from(
+      { length: 8 },
+      (_, i): LandingBotRung => ({
+        botId: 'misty',
+        engineId: i === 6 ? base : `${base}-level-${i + 1}`,
+        level: i + 1,
+        name: `Misty Level ${i + 1}`,
+        engine: 'Misty',
+        net: i === 7 ? 'neural' : null,
+        ...(i === 7 ? { gated: true } : {}),
+      }),
+    ).filter((rung) => !rung.gated || playableEngines.has(rung.engineId!));
+  }
   if (FSF_LADDER_SPECS.includes(gameSpecId)) {
     const levels: LandingBotRung[] = Array.from({ length: 8 }, (_, i) => ({
       botId: `${LADDER_BOT_ID_PREFIX}${i + 1}`,
@@ -492,6 +511,12 @@ export function landingBotLadderIndex(
   remembered: string | null | undefined,
 ): number {
   if (!remembered) return -1;
+  const tier = ladder.findIndex((rung) => rung.engineId === remembered);
+  if (tier >= 0) return tier;
+  // Old one-click Misty picks meant the legacy engine, now Level 7.
+  if (remembered === 'misty' && ladder.some((rung) => rung.engineId)) {
+    return ladder.findIndex((rung) => rung.level === 7);
+  }
   const direct = ladder.findIndex((rung) => rung.botId === remembered);
   if (direct >= 0) return direct;
   const jieqiLevel = /^pikafish-jieqi-level-(\d+)$/.exec(remembered)?.[1];
