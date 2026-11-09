@@ -800,16 +800,16 @@
   background-image:
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 55%, transparent) 1px,
-      transparent 1px
+      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 60%, transparent) 1.5px,
+      transparent 1.5px
     ),
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 55%, transparent) 1px,
-      transparent 1px
+      color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 60%, transparent) 1.5px,
+      transparent 1.5px
     );
-  background-position: 7px 7px;
-  background-size: 12px 12px;
+  background-position: 12px 12px;
+  background-size: 24px 24px;
 }
 .theme-tile-preview-xqboard[data-id="cell"] {
   background-color: var(--xq-custom-bg, #f5dca8);
@@ -819,7 +819,7 @@
     color-mix(in srgb, var(--xq-custom-ink, #5a3a14) 12%, transparent) 0 75%,
     transparent 0
   );
-  background-size: 16px 16px;
+  background-size: 48px 48px;
 }
 
 /* Xiangqi piece tiles show the set's red general on a neutral ground. */
