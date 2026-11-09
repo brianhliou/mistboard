@@ -2912,8 +2912,9 @@
     display: none;
   }
 
-  /* The page's one h1 stays for search and screen readers; the strip and the
-     board say what the site is on a phone. */
+  /* The page's one h1 stays for search and screen readers; the TV board and
+     the Play buttons keep the first screen, and the mission sits under the
+     shortcut tiles, above News (.landing-phone-mission, 2026-11-08). */
   .landing-demo .landing-play-intro {
     position: absolute;
     width: 1px;
@@ -2933,8 +2934,10 @@
     white-space: normal;
   }
 
+  /* The strip names the board right under it: 4px, not the column's 12px. */
   .landing-demo .landing-left-column {
     order: 1;
+    gap: 4px;
   }
 
   .landing-demo .landing-play-panel,
@@ -2946,17 +2949,36 @@
     order: 3;
   }
 
-  /* Deep dives above the blog row here too, as at every width (2026-10-26). */
-  .landing-demo .landing-dives-row {
+  /* The three newest News entries, the freshest thing on the page, above the
+     evergreen article strips (2026-11-08). */
+  .landing-demo .landing-phone-mission {
     order: 4;
   }
 
-  .landing-demo .landing-articles-row:not(.landing-dives-row) {
+  .landing-demo .landing-news-column {
     order: 5;
   }
 
-  .landing-demo .landing-chat-column {
+  /* Deep dives above the blog row here too, as at every width (2026-10-26). */
+  .landing-demo .landing-dives-row {
+    order: 6;
+  }
+
+  .landing-demo .landing-articles-row:not(.landing-dives-row) {
     order: 7;
+  }
+
+  .landing-demo .landing-news-column .landing-announcements {
+    height: auto;
+    max-height: none;
+  }
+
+  .landing-demo .landing-news-column .site-box-body.landing-news-scroll {
+    overflow: visible;
+  }
+
+  .landing-demo .landing-chat-column {
+    order: 8;
   }
 
   /* The phone home ends here: a phone mount never builds the widgets below
@@ -2966,8 +2988,7 @@
   .landing-demo .landing-event-banners,
   .landing-demo .landing-puzzle-column,
   .landing-demo .landing-forum-column,
-  .landing-demo .landing-studies-column,
-  .landing-demo .landing-news-column {
+  .landing-demo .landing-studies-column {
     display: none;
   }
 
@@ -3006,20 +3027,6 @@
     color: var(--site-muted);
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  /* A 44px tap box inside the 26px line: the negative block margin keeps the
-     strip its height. */
-  .landing-tv-strip-watch {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    min-height: 44px;
-    margin: -9px -6px -9px auto;
-    padding: 0 6px;
-    color: var(--site-link);
-    font-weight: 600;
-    text-decoration: none;
   }
 
   .landing-board-column #landing-replay {
@@ -3085,12 +3092,14 @@
   /* Shortcut tiles: three by two, each a sticker drawing over its label
      (home-tile-art.ts). Brian, 2026-10-27: less empty space in each tile,
      with a larger drawing and label, so the tile is 84px (was 92px) around a
-     52px drawing (was 44px) and a 15px label (was 14px). */
+     52px drawing (was 44px) and a 15px label (was 14px). They sit one 6px
+     gutter under the Play pair, as the pair sits under Play a game, so the
+     buttons and tiles read as one block (2026-11-08; the page gap is 10px). */
   .landing-phone-tiles {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    margin-top: 6px;
+    margin-top: -4px;
   }
 
   .landing-phone-tile {
@@ -3139,7 +3148,7 @@
   /* Blog rows: a strip the thumb swipes, bleeding off the right edge, in place
      of the auto-rotating carousel (its transform is pinned off). */
   .landing-demo .landing-articles-row {
-    margin-top: 12px;
+    margin-top: 0;
   }
 
   .landing-demo .landing-articles-row .landing-carousel {
@@ -3189,5 +3198,33 @@
 
   .landing-demo .landing-articles-row .landing-carousel-nav {
     display: none;
+  }
+
+  /* The mission closes the phone home, under the chat. */
+  .landing-phone-mission {
+    padding: 4px 2px;
+  }
+
+  .landing-phone-mission-label {
+    margin: 0 0 4px;
+    color: var(--site-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+
+  .landing-phone-mission-text {
+    margin: 0 0 6px;
+    color: var(--site-text);
+    font-size: 17px;
+    line-height: 1.4;
+  }
+
+  .landing-phone-mission-about {
+    color: var(--site-link);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
   }
 }

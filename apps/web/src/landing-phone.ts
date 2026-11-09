@@ -3,8 +3,9 @@
 // landing.css shows them, so tablet and desktop paint exactly what they did.
 //
 // - The TV strip: one line over the showcase board naming what it shows
-//   ("Live · Mistboard TV · Xiangqi") with a Watch link, since the phone board
-//   has no rail around it to say so.
+//   ("Live · Mistboard TV · Xiangqi"), since the phone board has no rail around
+//   it to say so. No link of its own: the board under it opens the TV
+//   (2026-11-08, one path fewer into the watch page, not yet phone-shaped).
 // - The shortcut tiles: the six places a phone visitor goes after playing,
 //   under the Play buttons, so they need not open the menu. Each carries a
 //   sticker drawing in the broadcast TV's style (home-tile-art.ts).
@@ -32,10 +33,10 @@ export function isPhoneHome(): boolean {
 export interface LandingTvStrip {
   el: HTMLElement;
   /** Re-label the strip for the game the TV just switched to. */
-  update(game: { mode: LandingTvMode; variantLabel: string; watchHref: string }): void;
+  update(game: { mode: LandingTvMode; variantLabel: string }): void;
 }
 
-export function buildLandingTvStrip(locale: Locale, watchHref: string): LandingTvStrip {
+export function buildLandingTvStrip(locale: Locale): LandingTvStrip {
   const el = document.createElement('div');
   el.className = 'landing-tv-strip';
 
@@ -54,25 +55,40 @@ export function buildLandingTvStrip(locale: Locale, watchHref: string): LandingT
   label.className = 'landing-tv-strip-label';
   label.textContent = t('nav.tv', {}, locale);
 
-  const watch = document.createElement('a');
-  watch.className = 'landing-tv-strip-watch';
-  watch.href = watchHref;
-  watch.textContent = t('nav.watch', {}, locale);
-
-  el.append(live, label, watch);
+  el.append(live, label);
 
   return {
     el,
-    update({ mode, variantLabel, watchHref: href }) {
+    update({ mode, variantLabel }) {
       const isLive = mode === 'live';
       live.hidden = !isLive;
       el.classList.toggle('is-live', isLive);
       label.textContent = variantLabel
         ? `${t('nav.tv', {}, locale)} · ${variantLabel}`
         : t('nav.tv', {}, locale);
-      watch.href = href;
     },
   };
+}
+
+/**
+ * The mission line that closes the phone home, under the chat, with a link to
+ * /about. The top of the phone keeps the TV board and the Play buttons.
+ */
+export function buildLandingPhoneMission(locale: Locale): HTMLElement {
+  const el = document.createElement('section');
+  el.className = 'landing-phone-mission';
+  const label = document.createElement('p');
+  label.className = 'landing-phone-mission-label';
+  label.textContent = t('home.missionLabel', {}, locale);
+  const text = document.createElement('p');
+  text.className = 'landing-phone-mission-text';
+  text.textContent = t('home.mission', {}, locale);
+  const about = document.createElement('a');
+  about.className = 'landing-phone-mission-about';
+  about.href = localizedHref('/about', locale);
+  about.textContent = t('home.missionAbout', {}, locale);
+  el.append(label, text, about);
+  return el;
 }
 
 export const LANDING_PHONE_TILES: readonly {
