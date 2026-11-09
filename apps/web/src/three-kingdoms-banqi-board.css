@@ -208,31 +208,37 @@
   }
 }
 
-/* Phone: use the same edge-to-edge board as banqi, without fitting it to the
-   height left by the material and status. Let the page scroll instead. At
-   390px the SVG is 390px wide and 390 * 330 / 586 = 219.6px tall. The seat
-   bands keep their shared order, above and below the board. The panel takes
-   its content height, with labels beside 28px discs and readable chances. */
+/* Phone: keep Banqi's shared board and band budgets (live-review.css).
+   Give its spare height to the score panel instead of the two margins around
+   the pool. The panel scrolls inside that space, so the shared moves strip
+   and control bar end the screen during play and after the game. */
 @media (max-width: 600px) {
-  .live-route--banqi.live-route--three-kingdoms-banqi .review-shell__cluster.live-review__cluster {
-    --phone-room-slack: 0px;
-  }
-  .live-route--three-kingdoms-banqi .live-review__cluster > .review-shell__center {
-    height: auto;
-  }
-  .live-route--three-kingdoms-banqi .live-review__cluster .board-shell {
-    width: 100%;
-    max-width: none;
-  }
-  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool:not(:empty) {
+  .live-route--three-kingdoms-banqi
+    .review-shell__cluster.live-review__cluster
+    .hidden-pool:not(:empty) {
     --tk-piece: 28px;
     --tk-key: 6rem;
     grid-template-columns: minmax(0, 1fr);
     gap: 3px;
-    height: auto;
-    margin-top: 4px;
+    height: calc(var(--phone-room-pool, 96px) + var(--phone-room-slack));
+    margin-top: 0;
     padding: 0;
-    overflow: visible;
+    overflow-y: auto;
+  }
+  .live-route--banqi.live-route--three-kingdoms-banqi
+    .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty))
+    .game-table-moves {
+    margin-top: 0;
+  }
+  /* Confirmation questions use one shared band above the controls. Take it
+     from the pool, where Banqi normally takes it from the slack margin. */
+  .live-route--three-kingdoms-banqi
+    .review-shell__cluster.live-review__cluster:has(.game-controls__question)
+    .hidden-pool:not(:empty) {
+    height: max(
+      0px,
+      calc(var(--phone-room-pool, 96px) + var(--phone-room-slack) - var(--phone-room-band))
+    );
   }
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
     grid-template-columns: var(--tk-key) minmax(0, 1fr);
@@ -267,37 +273,5 @@
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .reveal-odds-chip__pct,
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .captures-count-badge {
     font-size: 11px;
-  }
-  .live-route--three-kingdoms-banqi
-    .live-review__cluster
-    [data-action-section]:has(.action-notice > span:last-child) {
-    height: auto;
-    margin: 4px 12px;
-    overflow: visible;
-  }
-  .live-route--three-kingdoms-banqi
-    .live-review__cluster
-    .action-status:has(> .action-notice > span:last-child) {
-    height: auto;
-  }
-  .live-route--three-kingdoms-banqi .live-review__cluster .action-notice:has(> span:last-child) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 8px;
-    height: auto;
-    padding: 4px 8px;
-  }
-  .live-route--three-kingdoms-banqi
-    .live-review__cluster
-    .action-notice:has(> span:last-child)
-    > strong {
-    font-size: 13px;
-  }
-  .live-route--three-kingdoms-banqi
-    .live-review__cluster
-    .action-notice:has(> span:last-child)
-    > span {
-    display: block;
   }
 }
