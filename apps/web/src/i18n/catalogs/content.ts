@@ -238,6 +238,8 @@ export const EN_CONTENT = {
   'contact.correctionsLink': 'contact us',
   'contact.correctionsSuffix': '.',
   'contact.aboutPage': 'About: {path}',
+  'about.previousPages': 'Previous pages',
+  'about.morePages': 'More pages',
   'about.heading': 'About Mistboard',
   'about.mission':
     "Bring people together across cultures through Chinese chess and the world's classic strategy games.",

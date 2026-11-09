@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
+import type { Locale } from './i18n/locale.js';
 import { buildStaticPageLayout, type StaticPageKey } from './static-page-shell.js';
 
 describe('phone About rail', () => {
@@ -20,7 +22,9 @@ describe('phone About rail', () => {
       frame = callback;
       return 1;
     });
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) => ({ matches: query === '(max-width: 720px)' }) as MediaQueryList,
+    );
   });
 
   afterEach(() => {
@@ -55,6 +59,50 @@ describe('phone About rail', () => {
     rail.dispatchEvent(new Event('scroll'));
     expect(rail.classList.contains('fade-left')).toBe(fadeLeft);
     expect(rail.classList.contains('fade-right')).toBe(fadeRight);
+    const previous = rail.parentElement!.querySelector<HTMLElement>('.static-page-rail-previous')!;
+    const more = rail.parentElement!.querySelector<HTMLElement>('.static-page-rail-more')!;
+    expect(previous.hidden).toBe(!fadeLeft);
+    expect(more.hidden).toBe(!fadeRight);
+  });
+
+  it.each([false, true])('scrolls only the strip on click (reduced motion: %s)', (reduced) => {
+    vi.mocked(window.matchMedia).mockImplementation(
+      (query) =>
+        ({ matches: query === '(prefers-reduced-motion: reduce)' && reduced }) as MediaQueryList,
+    );
+    const rail = mount();
+    rail.scrollLeft = 300;
+    rail.dispatchEvent(new Event('scroll'));
+    const scroll = vi.spyOn(rail, 'scrollBy').mockImplementation(() => {});
+    const windowScroll = vi.spyOn(window, 'scrollBy');
+    const buttons = rail.parentElement!.querySelectorAll('button');
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) {
+      expect(button.type).toBe('button');
+      expect(button.tabIndex).toBe(0);
+    }
+    rail.parentElement!.querySelector<HTMLButtonElement>('.static-page-rail-more button')!.click();
+    rail
+      .parentElement!.querySelector<HTMLButtonElement>('.static-page-rail-previous button')!
+      .click();
+    const behavior = reduced ? 'instant' : 'smooth';
+    expect(scroll.mock.calls).toEqual([[{ left: 210, behavior }], [{ left: -210, behavior }]]);
+    expect(windowScroll).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['en', 'Previous pages', 'More pages'],
+    ['zh-Hans', '前面的页面', '更多页面'],
+    ['zh-Hant', '前面的頁面', '更多頁面'],
+  ] as const)('localizes the controls in %s', async (locale: Locale, previous, more) => {
+    await ensureLocaleCatalog(locale);
+    const layout = buildStaticPageLayout('about', document.createElement('div'), locale);
+    expect(
+      layout.querySelector('.static-page-rail-previous button')?.getAttribute('aria-label'),
+    ).toBe(previous);
+    expect(layout.querySelector('.static-page-rail-more button')?.getAttribute('aria-label')).toBe(
+      more,
+    );
   });
 
   it('updates on initial layout and observes both viewport and link content resizing', () => {
@@ -79,7 +127,7 @@ describe('phone About rail', () => {
     const windowScroll = vi.spyOn(window, 'scrollTo');
     const scrollIntoView = vi.spyOn(active, 'scrollIntoView');
     resize();
-    expect(rail.scrollLeft).toBe(508);
+    expect(rail.scrollLeft).toBe(512);
     expect(active.classList.contains('active')).toBe(true);
     expect(windowScroll).not.toHaveBeenCalled();
     expect(scrollIntoView).not.toHaveBeenCalled();
@@ -87,6 +135,25 @@ describe('phone About rail', () => {
     resize();
     expect(rail.scrollLeft).toBe(0);
   });
+
+  it.each([
+    ['right', 0, 250, 310, 28],
+    ['left', 300, 20, 100, 274],
+  ] as const)(
+    'clears the %s button when the current tab is already inside the strip',
+    (_edge, left, linkLeft, linkRight, expected) => {
+      const rail = mount('news');
+      rail.scrollLeft = left;
+      const active = rail.querySelector<HTMLElement>('[aria-current="page"]')!;
+      vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({ left: 14, right: 314 } as DOMRect);
+      vi.spyOn(active, 'getBoundingClientRect').mockReturnValue({
+        left: linkLeft,
+        right: linkRight,
+      } as DOMRect);
+      resize();
+      expect(rail.scrollLeft).toBe(expected);
+    },
+  );
 
   it('leaves the desktop rail scroll position alone', () => {
     vi.mocked(window.matchMedia).mockReturnValue({ matches: false } as MediaQueryList);

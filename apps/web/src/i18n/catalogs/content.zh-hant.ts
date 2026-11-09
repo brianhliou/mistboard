@@ -179,6 +179,8 @@ export const ZH_HANT_CONTENT = {
   'contact.correctionsLink': '聯絡我們',
   'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相關頁面：{path}',
+  'about.previousPages': '前面的頁面',
+  'about.morePages': '更多頁面',
   'about.heading': '關於 Mistboard',
   'about.mission': '透過象棋與世界經典策略遊戲，連結不同文化背景的人。',
   'about.lede': 'Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。',
