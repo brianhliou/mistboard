@@ -912,7 +912,14 @@ export function animateJieqiStepReveal(
   const square = jieqiRevealSquare(move, before, after);
   const piece = square ? after[square] : undefined;
   if (!square || !piece) return false;
-  return animateJieqiReveal(host, square, piece.color, perspective, {
-    alongGlide: move.from !== move.to,
+  const alongGlide = move.from !== move.to;
+  const revealed = animateJieqiReveal(host, square, piece.color, perspective, {
+    alongGlide,
   });
+  if (revealed && alongGlide) {
+    // The face starts to show halfway through the flip. Its badges arrive
+    // with it; later glyph refreshes inherit this same fade timeline.
+    animateMoveGlyphs(host, 150, Math.round(revealFlipDurationMs(true) / 2));
+  }
+  return revealed;
 }
