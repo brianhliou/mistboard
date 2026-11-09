@@ -4,12 +4,13 @@ import type pg from 'pg';
 import type { EngineAlertEmailPayload } from './engine-alert-email.js';
 import {
   deliverEnginePoolWaitDigestOn,
+  poolWaitDayWarrantsDigest,
   recordEnginePoolWaitOn,
 } from './persistence-engine-capacity.js';
 
 const now = new Date('2026-10-31T00:01:00Z');
 const rows = [
-  { day: '2026-10-30', pool: 'jieqi', wait_count: 3, max_wait_ms: 1_500, max_queue_depth: 2 },
+  { day: '2026-10-30', pool: 'jieqi', wait_count: 12, max_wait_ms: 1_500, max_queue_depth: 2 },
   {
     day: '2026-10-30',
     pool: 'katago-jungle',
@@ -55,9 +56,9 @@ test('a new process delivers the stored completed day and only then marks it sen
     now,
   );
   assert.deepEqual(result, { status: 'sent' });
-  assert.equal(alerts[0]!.wait_count, 4);
+  assert.equal(alerts[0]!.wait_count, 13);
   assert.equal(alerts[0]!.day, '2026-10-30');
-  assert.match(String(alerts[0]!.pools), /jieqi: count=3/);
+  assert.match(String(alerts[0]!.pools), /jieqi: count=12/);
   assert.match(String(alerts[0]!.pools), /katago-jungle: count=1/);
   assert.match(queries[1]!.sql, /day < \$1 AND digest_sent_at IS NULL/);
   assert.deepEqual(queries[1]!.params, ['2026-10-31']);
@@ -109,4 +110,49 @@ test('a completed day without slow waits sends no email', async () => {
     ),
     null,
   );
+});
+
+test('the digest bar: ten waits in a day, or one wait of five seconds', () => {
+  assert.equal(poolWaitDayWarrantsDigest([{ count: 1, maxWaitMs: 1_000 }]), false);
+  assert.equal(
+    poolWaitDayWarrantsDigest([
+      { count: 5, maxWaitMs: 4_999 },
+      { count: 4, maxWaitMs: 2_000 },
+    ]),
+    false,
+    'nine short waits across pools stay under the bar',
+  );
+  assert.equal(
+    poolWaitDayWarrantsDigest([
+      { count: 5, maxWaitMs: 1_000 },
+      { count: 5, maxWaitMs: 1_000 },
+    ]),
+    true,
+    'the count is the day total across pools',
+  );
+  assert.equal(poolWaitDayWarrantsDigest([{ count: 1, maxWaitMs: 5_000 }]), true);
+});
+
+test('a planted completed day under the bar is settled without an email', async () => {
+  const quiet = [
+    {
+      day: '2026-11-08',
+      pool: 'xiangqi-fsf',
+      wait_count: 1,
+      max_wait_ms: 1_000,
+      max_queue_depth: 1,
+    },
+  ];
+  const { db, queries } = database([[{ locked: true }], quiet]);
+  const result = await deliverEnginePoolWaitDigestOn(
+    db,
+    async () => {
+      assert.fail('one short wait is not an alert');
+    },
+    new Date('2026-11-09T00:01:00Z'),
+  );
+  assert.equal(result, null);
+  assert.match(queries[2]!.sql, /UPDATE engine_pool_wait_days SET digest_sent_at/);
+  assert.equal(queries[2]!.params?.[0], '2026-11-08', 'the day is settled, so it is not retried');
+  assert.match(queries[3]!.sql, /digest_sent_at IS NOT NULL/);
 });
