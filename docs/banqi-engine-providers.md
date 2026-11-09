@@ -251,3 +251,8 @@ canary first, drain its active test rooms, then stop/replace the worker. Re-enab
 only after health/version, a complete private game and failure behavior pass on
 the intended host. TLS, secrets, sandbox/resource policy and an actual hosted
 canary remain operator setup; no production deployment has been performed.
+
+A dedicated [temporary Linux host package](../services/banqi-provider/README.md)
+now supplies the external listener, strict public build context and local container
+rehearsal. Its model remains runtime-only; an actual hosted deployment and approved
+credential provisioning remain separate operator steps.
