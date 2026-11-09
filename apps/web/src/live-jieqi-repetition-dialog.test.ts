@@ -89,6 +89,10 @@ function piece(square: string) {
 }
 
 beforeEach(async () => {
+  // The preference-off cases write confirmGameActions=false; without this the
+  // next case inherits it where storage outlives resetModules (Node 22 in CI;
+  // Node 26 has no window.localStorage here, so it only failed in CI).
+  window.localStorage?.clear();
   document.body.innerHTML = '<div id="app"></div>';
   window.history.replaceState(null, '', '/room/jq_dialog');
   vi.stubGlobal(
