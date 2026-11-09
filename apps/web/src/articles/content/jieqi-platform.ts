@@ -56,8 +56,8 @@ export const jieqiPlatformArticle: Article = {
   // The date ring used to lead with the puzzle-mining post; with that one an
   // engineering post, it handed this page three xiangqi posts, yin-sheng's trio.
   readNext: ['jieqi-openings', 'jieqi-bot-wins', 'jieqi-puzzle-search'],
-  updatedAt: '2026-11-06',
-  updateNote: 'Corrected how a face-down piece is described.',
+  updatedAt: '2026-11-09',
+  updateNote: 'Added how the review grades a flip and measures luck.',
   tldr: [
     'Play Level 1 or invite a friend, with no account needed for casual games.',
     'Full-game analysis grades your moves and measures reveal luck separately.',
@@ -137,15 +137,47 @@ export const jieqiPlatformArticle: Article = {
           alt: 'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.',
           caption: 'One game, graded move by move. Click the graph or move list to revisit a turning point.',
         },
-        { kind: 'sub-heading', text: 'Good decisions and lucky flips are different' },
+        { kind: 'sub-heading', text: 'How the review grades a move' },
         {
           kind: 'paragraph',
-          text: 'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.',
+          text: 'Before each move, the engine estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.',
         },
         JIEQI_GRADE_EXAMPLES,
+        { kind: 'sub-heading', text: 'How the review measures luck' },
         {
           kind: 'paragraph',
-          text: 'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.',
+          text: 'Once the piece turns over, we compare two numbers:',
+        },
+        {
+          kind: 'list',
+          items: [
+            'your winning chance with the piece you actually got;',
+            'the average over every piece you could have got.',
+          ],
+        },
+        {
+          kind: 'paragraph',
+          text: 'The difference is your luck on that flip. The die badge shows it: teal and a plus sign when the piece was better than average, violet and a minus sign when it was worse, grey when it was close.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'More pips and a deeper colour mean a bigger swing.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.',
+        },
+        {
+          kind: 'paragraph',
+          text: '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.',
+        },
+        {
+          kind: 'paragraph',
+          text: "Luck averages out to zero over many flips, by design. Adding up a game's dice tells you who drew better. Your accuracy tells you who played better. The two never mix, so a lucky flip cannot flatter your accuracy and an unlucky one cannot spoil it.",
         },
         JIEQI_LUCK_EXAMPLES,
         {
@@ -157,7 +189,7 @@ export const jieqiPlatformArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.',
+          text: 'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates.',
         },
         {
           kind: 'image-figure',
