@@ -13,7 +13,7 @@ import {
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { renderJieqiBoardSvg } from './live-jieqi-render.js';
+import { installJieqiBoardStyles, renderJieqiBoardSvg } from './live-jieqi-render.js';
 import { xiangqiBoardSvg } from './xiangqi-board.js';
 
 beforeEach(() => {
@@ -43,6 +43,40 @@ function hit(svg: string, square: string): string {
   return doc.querySelector(`[data-square="${square}"]`)?.outerHTML ?? '';
 }
 
+describe('flat capture ring colours', () => {
+  it.each(['light', 'dark'])('uses the move-hint token in the %s site theme', (theme) => {
+    const style = document.createElement('style');
+    style.textContent = readFileSync(resolve(__dirname, 'live-xiangqi.css'), 'utf-8');
+    document.head.append(style);
+    installJieqiBoardStyles();
+    const root = document.documentElement;
+    const oldTheme = root.dataset.effectiveTheme;
+    const oldHint = root.style.getPropertyValue('--board-move-hint');
+    root.dataset.effectiveTheme = theme;
+    // Override the shared token: capture rings and quiet dots must follow it.
+    root.style.setProperty('--board-move-hint', 'rgb(31, 111, 91)');
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<svg><circle class="jieqi-hint-capture"/><circle class="xq-live-hint-capture"/></svg>';
+    document.body.append(host);
+    try {
+      for (const ring of host.querySelectorAll('circle')) {
+        const computed = getComputedStyle(ring);
+        expect(computed.getPropertyValue('stroke')).toBe('rgb(31, 111, 91)');
+        expect(computed.getPropertyValue('stroke-width')).toBe('4');
+        expect(computed.getPropertyValue('fill')).toBe('none');
+      }
+    } finally {
+      host.remove();
+      style.remove();
+      if (oldTheme === undefined) delete root.dataset.effectiveTheme;
+      else root.dataset.effectiveTheme = oldTheme;
+      if (oldHint) root.style.setProperty('--board-move-hint', oldHint);
+      else root.style.removeProperty('--board-move-hint');
+    }
+  });
+});
+
 describe('xiangqi board selection on 3D pieces', () => {
   // Red cannon b3 captures the black horse on b10 over the cannon on b8.
   const view = getStandardXiangqiPlayerView(createInitialXiangqiState('sel3d'), 'red');
@@ -60,7 +94,8 @@ describe('xiangqi board selection on 3D pieces', () => {
   it('keeps the flat rings on 2D pieces and draws no 3D marks', () => {
     const svg = render(false);
     expect(svg).toContain('xq-live-selection-cell');
-    expect(hit(svg, 'b10')).toContain('xq-live-hint-capture');
+    expect(group(svg, 'xq-live-hints')).toContain('xq-live-hint-capture');
+    expect(hit(svg, 'b10')).not.toContain('xq-live-hint-capture');
     expect(hit(svg, 'b10')).toContain('xq-live-target-hover');
     expect(svg).not.toContain('board-select3d');
   });
@@ -158,7 +193,8 @@ describe('jieqi board selection on 3D pieces', () => {
   it('keeps the flat rings on 2D pieces', () => {
     const svg = render(false);
     expect(svg).toContain('jieqi-selection');
-    expect(hit(svg, 'b10')).toContain('jieqi-hint-capture');
+    expect(group(svg, 'jieqi-hints')).toContain('jieqi-hint-capture');
+    expect(hit(svg, 'b10')).not.toContain('jieqi-hint-capture');
     expect(svg).not.toContain('board-select3d');
   });
 
