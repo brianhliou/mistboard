@@ -9,7 +9,7 @@ import {
   withKnownEngineFailure,
 } from './engine-known-failures.js';
 import { engineCounters, logger } from './obs.js';
-import { getPythonPool } from './python-pool.js';
+import { getPythonPool, pythonPoolsReady } from './python-pool.js';
 
 const HEALTH_PATH = '/health';
 const CAPACITY_PATH = '/internal/engine/capacity';
@@ -61,26 +61,31 @@ export async function startEngineHttpService(
   const lifecycle = { draining: false };
 
   const server = createServer((req, res) => {
-    void handleRequest(req, res, { handler, limiter, lifecycle, reservations, token }).catch(
-      (err) => {
-        const status = err instanceof HttpError ? err.status : 500;
-        logger.error(
-          {
-            kind: 'engine_http_error',
-            status,
-            error: err instanceof Error ? err.message : String(err),
-          },
-          'engine HTTP request failed',
-        );
-        // `known_failure` lets the web service tell a known signature from any
-        // other 500 (engine-known-failures.ts); the error text stays internal.
-        const knownFailure = knownEngineFailureOf(err);
-        writeJson(res, status, {
-          error: status === 500 ? 'internal_error' : err.message,
-          ...(knownFailure ? { known_failure: knownFailure } : {}),
-        });
-      },
-    );
+    void handleRequest(req, res, {
+      handler,
+      limiter,
+      lifecycle,
+      reservations,
+      token,
+      ready: options.handler ? () => true : pythonPoolsReady,
+    }).catch((err) => {
+      const status = err instanceof HttpError ? err.status : 500;
+      logger.error(
+        {
+          kind: 'engine_http_error',
+          status,
+          error: err instanceof Error ? err.message : String(err),
+        },
+        'engine HTTP request failed',
+      );
+      // `known_failure` lets the web service tell a known signature from any
+      // other 500 (engine-known-failures.ts); the error text stays internal.
+      const knownFailure = knownEngineFailureOf(err);
+      writeJson(res, status, {
+        error: status === 500 ? 'internal_error' : err.message,
+        ...(knownFailure ? { known_failure: knownFailure } : {}),
+      });
+    });
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -199,12 +204,17 @@ async function handleRequest(
     lifecycle: { draining: boolean };
     reservations: EngineReservationStore;
     token: string | null;
+    ready: () => boolean;
   },
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://engine-worker.internal');
   if (req.method === 'GET' && url.pathname === HEALTH_PATH) {
     if (context.lifecycle.draining) {
       writeJson(res, 503, { ok: false, service: 'engine-worker', draining: true }, { close: true });
+      return;
+    }
+    if (!context.ready()) {
+      writeJson(res, 503, { ok: false, service: 'engine-worker', ready: false });
       return;
     }
     writeJson(res, 200, { ok: true, service: 'engine-worker' });
