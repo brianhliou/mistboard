@@ -189,9 +189,18 @@ test('served data pages pass the floor and first-paint guard; removing the wrapp
   try {
     await writeFile(
       join(staticDir, 'index.html'),
-      '<html lang="en"><head><title>Mistboard</title></head><body><div id="app"></div></body></html>',
+      '<html lang="en"><head><title>Mistboard</title><meta name="description" content="Mistboard"></head><body><div id="app"></div></body></html>',
     );
-    for (const pathname of ['/stats', '/data', '/coach', '/forum']) {
+    for (const pathname of [
+      '/stats',
+      '/data',
+      '/coach',
+      '/forum',
+      '/player/rating-stats',
+      ...['', '/zh-hans', '/zh-hant'].flatMap((prefix) =>
+        ['/bots', '/study', '/practice'].map((path) => `${prefix}${path}`),
+      ),
+    ]) {
       let html = '';
       const response = {
         writeHead() {},
@@ -207,6 +216,7 @@ test('served data pages pass the floor and first-paint guard; removing the wrapp
         publicHost: 'https://mistboard.test',
       });
       const entry = CRAWLER_CONTENT_MANIFEST.find((e) => e.path === pathname)!;
+      assert.equal(entry.knownGap, undefined, pathname);
       assert.deepEqual(pageFailures(entry, { status: 200, html }).failures, [], pathname);
       assert.deepEqual(serverBodyProblems(html, css), [], pathname);
       assert.ok(

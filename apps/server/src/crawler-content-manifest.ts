@@ -19,6 +19,7 @@ export type CrawlerContentEntry = {
   hreflang: readonly string[];
   source: 'prerender' | 'server-body' | 'db-fixture';
   kind?: 'tool';
+  redirect?: { status: 301 | 302 | 307 | 308; location: string };
   knownGap?: `#${number}` | `#${number}: ${string}`;
 };
 
@@ -563,7 +564,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#960: empty directory has fewer than 150 page-content characters',
+    knownGap: '#960: curated streamer list is empty; a real listing would change visible UI',
     baselineChars: 0,
   },
   {
@@ -893,7 +894,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    knownGap: '#960: sparse rating pools have fewer than 150 page-content characters',
     baselineChars: 333,
   },
   {
@@ -908,7 +908,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#960: alias returns a redirect to /player',
+    redirect: { status: 308, location: '/player' },
     baselineChars: 153,
   },
   {
@@ -1071,7 +1071,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1085,7 +1084,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1099,7 +1097,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1217,8 +1214,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
-    source: 'prerender',
-    knownGap: '#960: practice study list is database-backed',
+    source: 'db-fixture',
     baselineChars: 0,
   },
   {
@@ -1232,8 +1228,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
-    source: 'prerender',
-    knownGap: '#960: practice study list is database-backed',
+    source: 'db-fixture',
     baselineChars: 0,
   },
   {
@@ -1247,8 +1242,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
-    source: 'prerender',
-    knownGap: '#960: practice study list is database-backed',
+    source: 'db-fixture',
     baselineChars: 0,
   },
   {
@@ -1262,7 +1256,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 247,
   },
   {
@@ -1276,7 +1269,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 141,
   },
   {
@@ -1290,7 +1282,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 141,
   },
   {

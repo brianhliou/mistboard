@@ -70,6 +70,8 @@ export const EXTRA_PATHS = [
   '/contact',
   '/forum/etiquette',
   '/practice',
+  '/zh-hans/practice',
+  '/zh-hant/practice',
   '/analysis/xiangqi',
   '/editor/xiangqi',
   '/import',

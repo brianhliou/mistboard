@@ -1,8 +1,9 @@
 // Deterministic in-memory page sources for the built-server integration probe.
 // Use the same source interfaces as player-pages.test, broadcast-pages.test
 // and server-static-pages.test; no production DB and no synthetic HTML bodies.
-import { XIANGQI_BROADCAST_SCHEMA } from '@mistboard/game';
+import { PRACTICE_SECTIONS, XIANGQI_BROADCAST_SCHEMA } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
+import { botsDirectoryBody } from './bots-page-body.js';
 import { type BroadcastPageSources, broadcastPageFor } from './broadcast-pages.js';
 import { crawlerDataPageSources } from './data-page-fixtures.js';
 import type { StudyWithChapters } from './persistence.js';
@@ -10,10 +11,12 @@ import type { BotProfilePage } from './persistence-bots.js';
 import type { ProfileGameRecord } from './persistence-games.js';
 import type { HistoricalXiangqiGameInput } from './persistence-historical-xiangqi.js';
 import type { UserProfile } from './persistence-profiles.js';
+import type { PracticeStudySummary } from './persistence-studies.js';
 import type { XiangqiPlayerRecord } from './persistence-xiangqi-players.js';
 import { playerPageFor } from './player-pages.js';
 import { EMPTY_PLAYER_REFERENCE } from './player-reference.js';
 import type { CrawlerPageSources } from './server-http.js';
+import { PRACTICE_SET_I18N } from './xiangqi-endgame-study-i18n.js';
 
 export const CRAWLER_STUDY: StudyWithChapters = {
   id: 'CrawlerStudy',
@@ -175,18 +178,35 @@ export function crawlerFixtureSources(): CrawlerPageSources {
   const puzzle = loadSeedPuzzleRegistry('xiangqi')[0]!;
   return {
     dataPages: crawlerDataPageSources(),
-    listPublicStudies: async () => [
-      {
+    practiceStudies: async () => CRAWLER_PRACTICE_STUDIES,
+    routeBody: (path) => botsDirectoryBody(path, async () => CRAWLER_BOTS),
+    listPublicStudies: async () =>
+      Array.from({ length: 5 }, (_, i) => ({
         ...CRAWLER_STUDY,
+        id: i === 0 ? CRAWLER_STUDY.id : `CrawlerStudy${i}`,
+        ...(i > 0
+          ? {
+              name: CRAWLER_PRACTICE_STUDIES[i - 1]!.name,
+              i18n: CRAWLER_PRACTICE_STUDIES[i - 1]!.i18n,
+            }
+          : {}),
         ownerHandle: 'crawler-owner',
         ownerDisplayName: 'Crawler fixture',
         likeCount: 0,
-        chapterCount: 1,
-        chapterPreview: [{ name: 'Seven Stars', i18n: {} }],
-        chapterNames: ['Seven Stars'],
+        chapterCount: 2,
+        chapterNames: ['Seven Stars', 'Practical endgames'],
+        chapterPreview: [
+          {
+            name: 'Seven Stars',
+            i18n: { 'zh-Hans': { name: '七星聚会' }, 'zh-Hant': { name: '七星聚會' } },
+          },
+          {
+            name: 'Practical endgames',
+            i18n: { 'zh-Hans': { name: '实用残局' }, 'zh-Hant': { name: '實用殘局' } },
+          },
+        ],
         previewBoard: null,
-      },
-    ],
+      })),
     getStudy: async (id) => (id === CRAWLER_STUDY.id ? CRAWLER_STUDY : null),
     playerPage: (path, locale) =>
       playerPageFor(
@@ -329,3 +349,30 @@ export const CRAWLER_BOT: BotProfilePage = {
   games: [CRAWLER_PUBLIC_GAME],
   gamesByGameSpecId: { xiangqi: [CRAWLER_PUBLIC_GAME], jieqi: [] },
 };
+
+// API-shaped directory rows, not filler HTML: both complete level ladders.
+export const CRAWLER_BOTS = [
+  CRAWLER_BOT,
+  ...['fairy-stockfish', 'pikafish'].flatMap((engine) =>
+    Array.from({ length: 7 }, (_, i) => ({
+      ...CRAWLER_BOT,
+      id: `${engine}-level-${i + 1}`,
+      displayName: `${engine} Level ${i + 1}`,
+      defaultGameSpecId: engine === 'pikafish' ? 'jieqi' : 'xiangqi',
+      supportedGameSpecIds: [engine === 'pikafish' ? 'jieqi' : 'xiangqi'],
+      ratings: CRAWLER_BOT.ratings.map((rating) => ({ ...rating, rating: 1000 + i * 150 })),
+    })),
+  ),
+];
+
+export const CRAWLER_PRACTICE_STUDIES: PracticeStudySummary[] = PRACTICE_SECTIONS.flatMap(
+  (section) =>
+    section.cards.map((card, i) => ({
+      id: `CrawlerPractice${i}`,
+      slug: card.slug,
+      name: card.title,
+      description: '',
+      i18n: PRACTICE_SET_I18N[card.slug] ?? {},
+      exerciseCount: 5 + i,
+    })),
+);

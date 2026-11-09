@@ -63,6 +63,8 @@ export type CrawlerPageSources = Pick<
   | 'historicalGame'
   | 'bot'
   | 'dataPages'
+  | 'practiceStudies'
+  | 'routeBody'
 > & {
   getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
 };
@@ -693,6 +695,8 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
         response,
         staticDir: options.staticDir,
         file: prerender.file,
+        pathname,
+        practiceStudies: options.crawlerSources?.practiceStudies,
       }).catch(() => {
         if (prerender.fallback) {
           response.writeHead(302, { location: prerender.fallback });

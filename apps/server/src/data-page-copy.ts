@@ -1,6 +1,18 @@
 // Catalog strings for request-time data bodies; data-page-body.test.ts pins every locale.
 export const DATA_PAGE_COPY = {
   en: {
+    'practice.title': 'Practice',
+    'practice.subtitle': 'against the engine',
+    'practice.empty': 'No practice sets are published yet.',
+    'practice.progress': 'Progress: {pct}%',
+    'practice.solvedOfTotal': '{solved} of {total} solved',
+    'practice.section.endgames': 'Basic endgames',
+    'practice.ribbon.play': 'Play!',
+    'practice.card.soldier': 'It never moves back',
+    'practice.card.chariot': 'Wins on its own',
+    'practice.card.horse': 'Mind the blocked leg',
+    'practice.card.cannon': 'Needs a screen',
+    'practice.card.insufficient': 'Hold the draw',
     'stats.heading': 'Statistics',
     'stats.lede':
       'How much gets played here. Games between people or against the bots, counted when they finish; engine matches and test games are left out.',
@@ -87,6 +99,18 @@ export const DATA_PAGE_COPY = {
     'setup.correspondence': 'Correspondence',
   },
   'zh-Hans': {
+    'practice.title': '练习',
+    'practice.subtitle': '与引擎对弈',
+    'practice.empty': '暂无已发布的练习。',
+    'practice.progress': '进度：{pct}%',
+    'practice.solvedOfTotal': '已完成 {solved} / {total}',
+    'practice.section.endgames': '基本残局',
+    'practice.ribbon.play': '开始',
+    'practice.card.soldier': '兵不能后退',
+    'practice.card.chariot': '单车就能取胜',
+    'practice.card.horse': '当心蹩马腿',
+    'practice.card.cannon': '要有炮架',
+    'practice.card.insufficient': '守住和棋',
     'stats.heading': '统计',
     'stats.lede':
       '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
@@ -169,6 +193,18 @@ export const DATA_PAGE_COPY = {
     'setup.correspondence': '通信对局',
   },
   'zh-Hant': {
+    'practice.title': '練習',
+    'practice.subtitle': '與引擎對弈',
+    'practice.empty': '暫無已發布的練習。',
+    'practice.progress': '進度：{pct}%',
+    'practice.solvedOfTotal': '已完成 {solved} / {total}',
+    'practice.section.endgames': '基本殘局',
+    'practice.ribbon.play': '開始',
+    'practice.card.soldier': '兵不能後退',
+    'practice.card.chariot': '單車就能取勝',
+    'practice.card.horse': '當心蹩馬腿',
+    'practice.card.cannon': '要有砲架',
+    'practice.card.insufficient': '守住和棋',
     'stats.heading': '統計',
     'stats.lede':
       '這裡的對局量。計入人與人或人與引擎之間已完成的對局；引擎對引擎的比賽和測試對局不計入。',

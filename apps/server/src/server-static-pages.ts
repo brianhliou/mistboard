@@ -49,6 +49,7 @@ import {
   playerSitemapEntries,
 } from './player-pages.js';
 import { practiceChapterPath } from './practice-chapter-redirect.js';
+import { practiceRouteBody } from './practice-page-body.js';
 import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
 import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
 import { isNoFollowRoute, isNoindexRoute } from './server-policy.js';
@@ -1092,6 +1093,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Existing public API reads for the data directories (socketless fixtures). */
   dataPages?: DataPageSources;
+  /** The practice API's single public shelf read. */
+  practiceStudies?: typeof persistence.getPracticeStudiesBySlug;
   /** Override the player-page lookup (tests); the default reads persistence. */
   playerPage?: (pathname: string, locale?: BoardLocale) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
@@ -1283,6 +1286,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
     puzzle?.body ??
     profile?.body ??
     bot?.body ??
+    (await practiceRouteBody(params.pathname, params.practiceStudies).catch(() => null)) ??
     dataBody ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
@@ -1540,6 +1544,8 @@ export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
   file: string;
+  pathname?: string;
+  practiceStudies?: typeof persistence.getPracticeStudiesBySlug;
 }): Promise<void> {
   if (
     (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&
@@ -1547,7 +1553,18 @@ export async function servePrerenderedPage(params: {
   ) {
     throw new Error(`${params.file} predates a scheduled entry that is now live`);
   }
-  const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
+  let html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
+  const practice = await practiceRouteBody(params.pathname ?? '', params.practiceStudies).catch(
+    () => null,
+  );
+  if (practice) {
+    // Replace the hidden, baked sidebar with today's complete hidden shelf.
+    // Keep the built head and all its stylesheet links intact.
+    html = html.replace(
+      /(<div id="app"[^>]*>)[\s\S]*(<\/div>)/,
+      (_match, root, end) => `${root}<div class="crawler-copy">${practice}</div>${end}`,
+    );
+  }
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
@@ -1703,7 +1720,9 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
   const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.flatMap((path) => {
     const record = baked.find((entry) => entry.path === path);
     const contract = sitemapContract(path)!;
+    // Server-body routes use the build for dates and alternates, not body copy.
     if (
+      contract.source === 'prerender' &&
       !contract.knownGap &&
       record?.contentChars !== undefined &&
       record.contentChars <
