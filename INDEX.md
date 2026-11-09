@@ -799,7 +799,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `fortress-xiangqi-postgame.ts` | Fortress Xiangqi postgame/review route renderer: truth-board replay with reserve strips and per-ply history from the postgame API |
 | `fortress-xiangqi-replay.ts` | Fortress Xiangqi rules-article replay: parses board/drop notation (R/N/C/P/T/A/E), replays through the real kernel, and renders the sample game on the live board renderer with reserve strips |
 | `fortress-xiangqi-rules-diagrams.ts` | Inline board diagrams for the Fortress Xiangqi rules article (start position, Treasure moves, defender drop zones), built on the live renderer with kernel-derived targets |
-| `board-capture-target.ts` | Shared flat Xiangqi/Jieqi capture hints: bounded cell fills, traditional rings, and a temporary URL comparison switch |
+| `board-capture-target.ts` | Shared flat Xiangqi/Jieqi capture hints: bounded cell fills, traditional rings, and layout-specific selection marks |
 | `board-metrics.ts` | Canonical piece-to-cell proportion (`TOKEN_PIECE_RATIO`) shared by every disc/token board renderer, intersection- or cell-anchored, plus the shared board corner rounding (`BOARD_CORNER_RATIO`, `boardCornerRadius`) |
 | `watch-fortress-xiangqi-replay.ts` | Mistboard TV (`/watch`) renderer for Fortress Xiangqi: single open-information `truth` pane over the postgame API, with board orientation and sided reserve strips |
 | `watch-dark-xiangqi-replay.ts` | Mistboard TV (`/watch`) renderer for full Dark Xiangqi (9×10) — thin adapter over `watch-tenant-replay.ts` rendering the red/truth/black fog triptych (per-view fog mask) |
