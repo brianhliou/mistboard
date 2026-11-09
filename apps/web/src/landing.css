@@ -105,6 +105,12 @@
   letter-spacing: 0;
 }
 
+.landing-about-heading {
+  display: inline;
+  margin: 0;
+  font: inherit;
+}
+
 .landing-about a {
   display: inline-block;
   font-size: 13px;

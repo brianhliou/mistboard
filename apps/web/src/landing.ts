@@ -17,6 +17,7 @@ import {
   variantDisplayLabel,
 } from './game-display.js';
 import { gameMetaForGame } from './game-meta.js';
+import { updateHomeDescription } from './home-meta.js';
 import {
   cachedHomeDailyPuzzle,
   loadHomeDailyPuzzle,
@@ -100,6 +101,7 @@ function showcaseCaptionText(variant: string | undefined, endedAt: string | unde
 }
 
 export async function mountLanding(root: HTMLElement): Promise<void> {
+  updateHomeDescription();
   // Kick the showcase fetch off before any DOM work. Measured on prod: waiting
   // for the first refresh tick serialized it behind a /api/live-stats round-trip
   // and it didn't start until ~900ms in, so the static demo always painted first
@@ -717,7 +719,7 @@ export function buildLandingStage(
   // prerendered shell carries the same frames, hydration skipped.
   playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
   // The page's single (small) h1: the about tagline at the top of the right rail.
-  const about = document.createElement('h1');
+  const about = document.createElement('div');
   about.className = 'landing-about';
   appendLinkedTagline(about, t('home.tagline', {}, locale), localizedHref('/about', locale));
   // The tagline, button and stats centre against the lobby panel as before
@@ -925,6 +927,12 @@ export function renderLandingShellForPrerender(): string {
   return `${nav.outerHTML}${stage.el.outerHTML}`;
 }
 
+export function renderLandingPageForPrerender(shell: string, htmlLang: string): string {
+  return shell
+    .replace('<html lang="en">', `<html lang="${htmlLang}">`)
+    .replace('<div id="app"></div>', `<div id="app">${renderLandingShellForPrerender()}</div>`);
+}
+
 function appendLinkedTagline(target: HTMLElement, tagline: string, href: string): void {
   const mistboardIndex = tagline.indexOf('Mistboard');
   const dotBoundary = mistboardIndex >= 0 ? tagline.lastIndexOf('. ', mistboardIndex) : -1;
@@ -932,18 +940,20 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   const useDot = dotBoundary > fullStopBoundary;
   const boundary = useDot ? dotBoundary : fullStopBoundary;
   if (boundary < 0) {
-    const fallback = document.createElement('a');
-    fallback.className = 'hover-link';
-    fallback.href = href;
-    fallback.textContent = tagline;
-    target.append(fallback);
+    const heading = document.createElement('h1');
+    heading.className = 'landing-about-heading';
+    heading.textContent = tagline;
+    target.append(heading);
     return;
   }
 
   const linkStart = boundary + (useDot ? 2 : 1);
   const lead = tagline.slice(0, linkStart);
   const linkedText = tagline.slice(linkStart);
-  target.append(document.createTextNode(useDot ? lead : `${lead} `));
+  const heading = document.createElement('h1');
+  heading.className = 'landing-about-heading';
+  heading.textContent = lead.trimEnd();
+  target.append(heading, document.createTextNode(' '));
   const link = document.createElement('a');
   link.className = 'hover-link';
   link.href = href;

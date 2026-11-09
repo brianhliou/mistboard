@@ -99,7 +99,7 @@ describe('phone home widget set', () => {
     // hides it; the mission sits above News, with a link to /about
     // (2026-11-08). The footer still closes the page.
     expect(
-      stage.el.querySelector('.landing-play-intro h1.landing-about')?.textContent,
+      stage.el.querySelector('.landing-play-intro .landing-about h1')?.textContent,
     ).toBeTruthy();
     const mission = stage.el.querySelector(
       '.landing-phone-mission + .landing-news-column',

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchPlayableEnginesOnce,
   loadPlayableEnginesWithRetry,
+  renderLandingPageForPrerender,
   renderLandingShellForPrerender,
   shouldUseBundledShowcaseDemos,
   watchHrefForTvGame,
@@ -129,6 +130,24 @@ describe('homepage TV widget link', () => {
 });
 
 describe('landing shell', () => {
+  it('prerenders the exact English home description and Open Graph description', () => {
+    const shell = readFileSync('index.html', 'utf8');
+    const html = renderLandingPageForPrerender(shell, 'en');
+    // Template contents stay inert, including the real shell's stylesheet.
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const parsed = template.content;
+    const description =
+      'Bringing people together across cultures through Chinese chess. Play xiangqi, jieqi and banqi online for free, against a bot or a friend, no sign-up.';
+    for (const selector of ['meta[name="description"]', 'meta[property="og:description"]']) {
+      expect(parsed.querySelectorAll(selector)).toHaveLength(1);
+      expect(parsed.querySelector(selector)?.getAttribute('content')).toBe(description);
+    }
+    expect(parsed.querySelector('#app h1')?.textContent).toBe(
+      "Chinese chess and the world's classic strategy games. Free and open source.",
+    );
+  });
+
   it('uses bundled showcase games only when a demo is explicitly requested', () => {
     expect(shouldUseBundledShowcaseDemos('')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?only=xiangqi')).toBe(false);
@@ -272,20 +291,23 @@ describe('landing shell', () => {
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
   });
 
-  it('links only the About Mistboard tagline tail', () => {
+  it('keeps the About link immediately after the h1, outside its text', () => {
     const wrap = document.createElement('div');
     wrap.innerHTML = renderLandingShellForPrerender();
 
     const about = wrap.querySelector('.landing-about');
-    const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
+    const heading = about?.querySelector('h1');
+    const link = heading?.nextElementSibling as HTMLAnchorElement | null;
 
     expect(about?.textContent).toBe(
       "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
     );
-    expect(link?.textContent).toBe('About Mistboard...');
-    expect(about?.childNodes[0]?.textContent).toBe(
-      "Chinese chess and the world's classic strategy games. Free and open source. ",
+    expect(heading?.textContent).toBe(
+      "Chinese chess and the world's classic strategy games. Free and open source.",
     );
+    expect(heading?.querySelector('a')).toBeNull();
+    expect(link?.getAttribute('href')).toBe('/about');
+    expect(link?.textContent).toBe('About Mistboard...');
   });
 });
 
