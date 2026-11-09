@@ -1,4 +1,3 @@
-import { INTERNAL_BANQI_CORPUS_ID } from './internal-engine-test.js';
 // One definition of "a game that counts" for every aggregate surface: the
 // public /stats page and the homepage number (persistence-site-stats.ts), the
 // admin /metrics series (persistence-admin-metrics.ts), and the scheduled
@@ -43,6 +42,9 @@ import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
+// Keep this filter module loadable directly by native-TypeScript reporting
+// scripts, without importing the server's unbuilt .js source graph.
+export const INTERNAL_BANQI_CORPUS_ID = 'internal-banqi-provider';
 
 // An excluded seat is a signed-in seat of a stats-excluded account, or a
 // guest seat whose device id belongs to a browser such an account has used

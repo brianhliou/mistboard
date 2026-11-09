@@ -1,7 +1,7 @@
 /** Durable, server-written provenance for the one private Banqi worker canary.
  * No endpoint, credential, command or filesystem path belongs in this record. */
 export const INTERNAL_BANQI_ENGINE_ID = 'private-banqi-worker';
-export const INTERNAL_BANQI_CORPUS_ID = 'internal-banqi-provider';
+export { INTERNAL_BANQI_CORPUS_ID } from './persistence-counted-games.js';
 export type InternalEngineTest = {
   kind: 'banqi-provider';
   ownerUserId: string;
