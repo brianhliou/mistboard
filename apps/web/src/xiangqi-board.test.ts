@@ -10,6 +10,7 @@ import {
   animateXiangqiBoardMove,
   createXiangqiInteractiveBoard,
   renderXiangqiBoardSvg as renderSharedXiangqiBoardSvg,
+  XIANGQI_LIVE_PIECE_SIZE,
   type XiangqiBoardArrow,
   xiangqiArrowSvg,
   xiangqiBoardSvg,
@@ -46,6 +47,42 @@ const NON_SELECTABLE_RIVER_GROUP =
   '<g class="xq-live-river" aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;">';
 
 describe('standard Xiangqi board SVG', () => {
+  for (const layout of ['intersection', 'cell'] as const) {
+    for (const perspective of ['red', 'black'] as const) {
+      it.each([false, true])(
+        `keeps capture rings outside and below all flat pieces (${layout}, ${perspective}, interactive=%s)`,
+        (interactive) => {
+          const view = getStandardXiangqiPlayerView(
+            createInitialXiangqiState('capture-ring'),
+            'red',
+          );
+          expect(view.legalMoves.some((move) => move.from === 'b3' && move.to === 'b10')).toBe(
+            true,
+          );
+          const svg = xiangqiBoardSvg(view, perspective, {
+            layout,
+            interactive,
+            tile3d: false,
+            pieceSet: 'traditional',
+            selectedSquare: 'b3',
+            draggingFrom: null,
+          });
+          const circles = [
+            ...svg.matchAll(/<circle class="xq-live-hint-capture"[^>]*r="([\d.]+)"/g),
+          ];
+          expect(circles).toHaveLength(
+            view.legalMoves.filter((move) => move.from === 'b3' && view.board[move.to]).length,
+          );
+          expect(circles.length).toBeGreaterThan(0);
+          for (const circle of circles) {
+            expect(Number(circle[1])).toBeGreaterThan(XIANGQI_LIVE_PIECE_SIZE / 2);
+            expect(circle.index).toBeLessThan(svg.indexOf('<g class="xq-live-pieces">'));
+          }
+        },
+      );
+    }
+  }
+
   it('renders a 9 by 10 square grid without moving the logical board centers', () => {
     const state = createInitialXiangqiState('xq-board-cell-layout');
     const view = getStandardXiangqiPlayerView(state, 'red');
