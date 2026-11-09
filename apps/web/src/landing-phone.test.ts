@@ -98,9 +98,12 @@ describe('phone home widget set', () => {
     // The h1 tagline stays in the DOM (search, screen readers) though the phone
     // hides it; the mission sits above News, with a link to /about
     // (2026-11-08). The footer still closes the page.
+    expect(stage.el.querySelector('.landing-play-intro .landing-about h1')?.textContent).toBe(
+      'Bringing people together across cultures through Chinese chess.',
+    );
     expect(
-      stage.el.querySelector('.landing-play-intro .landing-about h1')?.textContent,
-    ).toBeTruthy();
+      stage.el.querySelector('.landing-play-intro > .landing-about-more')?.getAttribute('href'),
+    ).toBe('/about');
     const mission = stage.el.querySelector(
       '.landing-phone-mission + .landing-news-column',
     )?.previousElementSibling;

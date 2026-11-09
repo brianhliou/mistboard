@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
+import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
+  buildLandingStage,
   fetchPlayableEnginesOnce,
   loadPlayableEnginesWithRetry,
   renderLandingPageForPrerender,
@@ -8,6 +11,7 @@ import {
   shouldUseBundledShowcaseDemos,
   watchHrefForTvGame,
 } from './landing.js';
+import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
 
@@ -144,7 +148,7 @@ describe('landing shell', () => {
       expect(parsed.querySelector(selector)?.getAttribute('content')).toBe(description);
     }
     expect(parsed.querySelector('#app h1')?.textContent).toBe(
-      "Chinese chess and the world's classic strategy games. Free and open source.",
+      'Bringing people together across cultures through Chinese chess.',
     );
   });
 
@@ -291,23 +295,48 @@ describe('landing shell', () => {
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
   });
 
-  it('keeps the About link immediately after the h1, outside its text', () => {
-    const wrap = document.createElement('div');
-    wrap.innerHTML = renderLandingShellForPrerender();
+  describe.each(SUPPORTED_LOCALES)('%s intro', (locale) => {
+    it.each(['client', 'prerender'])('renders the same three-line %s structure', async (mode) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', localizedHref('/', locale));
+      try {
+        const wrap = document.createElement('div');
+        if (mode === 'prerender') {
+          wrap.innerHTML = renderLandingShellForPrerender();
+        } else {
+          wrap.append(
+            buildLandingStage(fallbackPlayableEngines(), {
+              skipLiveWidgets: true,
+              phone: false,
+            }).el,
+          );
+        }
+        const intro = wrap.querySelector('.landing-play-intro');
+        const about = intro?.querySelector('.landing-about');
+        const heading = about?.querySelector('h1');
+        const summary = about?.nextElementSibling;
+        const link = summary?.nextElementSibling;
 
-    const about = wrap.querySelector('.landing-about');
-    const heading = about?.querySelector('h1');
-    const link = heading?.nextElementSibling as HTMLAnchorElement | null;
-
-    expect(about?.textContent).toBe(
-      "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
-    );
-    expect(heading?.textContent).toBe(
-      "Chinese chess and the world's classic strategy games. Free and open source.",
-    );
-    expect(heading?.querySelector('a')).toBeNull();
-    expect(link?.getAttribute('href')).toBe('/about');
-    expect(link?.textContent).toBe('About Mistboard...');
+        expect(wrap.querySelectorAll('h1')).toHaveLength(1);
+        expect(heading?.textContent).toBe(t('home.tagline', {}, locale));
+        expect(about?.textContent).toBe(heading?.textContent);
+        expect(heading?.querySelector('a')).toBeNull();
+        expect(summary?.className).toBe('landing-play-summary');
+        const phrases = Array.from(
+          summary?.querySelectorAll('.landing-play-summary-phrase') ?? [],
+          (phrase) => phrase.textContent,
+        );
+        expect(phrases).toHaveLength(3);
+        expect(phrases).toEqual(t('home.playSummary', {}, locale).split(' · '));
+        expect(link?.matches('a.hover-link.landing-about-more')).toBe(true);
+        expect(link?.parentElement).toBe(intro);
+        expect(link?.getAttribute('href')).toBe(localizedHref('/about', locale));
+        expect(link?.textContent).toBe(t('home.missionAbout', {}, locale));
+        expect(link?.nextElementSibling).toBeNull();
+      } finally {
+        window.history.replaceState(null, '', '/');
+      }
+    });
   });
 });
 

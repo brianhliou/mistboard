@@ -721,7 +721,10 @@ export function buildLandingStage(
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('div');
   about.className = 'landing-about';
-  appendLinkedTagline(about, t('home.tagline', {}, locale), localizedHref('/about', locale));
+  const heading = document.createElement('h1');
+  heading.className = 'landing-about-heading';
+  heading.textContent = t('home.tagline', {}, locale);
+  about.append(heading);
   // The tagline, button and stats centre against the lobby panel as before
   // (inside .landing-play-center, which takes the column's free height); the
   // event spotlight sits at the column's bottom edge, level with the panel's
@@ -760,7 +763,11 @@ export function buildLandingStage(
   // button below.
   const playIntro = document.createElement('div');
   playIntro.className = 'landing-play-intro';
-  playIntro.append(about, playSummary);
+  const aboutLink = document.createElement('a');
+  aboutLink.className = 'hover-link landing-about-more';
+  aboutLink.href = localizedHref('/about', locale);
+  aboutLink.textContent = t('home.missionAbout', {}, locale);
+  playIntro.append(about, playSummary, aboutLink);
   const playCenter = document.createElement('div');
   playCenter.className = 'landing-play-center';
   playCenter.append(playIntro, playStack);
@@ -931,34 +938,6 @@ export function renderLandingPageForPrerender(shell: string, htmlLang: string): 
   return shell
     .replace('<html lang="en">', `<html lang="${htmlLang}">`)
     .replace('<div id="app"></div>', `<div id="app">${renderLandingShellForPrerender()}</div>`);
-}
-
-function appendLinkedTagline(target: HTMLElement, tagline: string, href: string): void {
-  const mistboardIndex = tagline.indexOf('Mistboard');
-  const dotBoundary = mistboardIndex >= 0 ? tagline.lastIndexOf('. ', mistboardIndex) : -1;
-  const fullStopBoundary = mistboardIndex >= 0 ? tagline.lastIndexOf('。', mistboardIndex) : -1;
-  const useDot = dotBoundary > fullStopBoundary;
-  const boundary = useDot ? dotBoundary : fullStopBoundary;
-  if (boundary < 0) {
-    const heading = document.createElement('h1');
-    heading.className = 'landing-about-heading';
-    heading.textContent = tagline;
-    target.append(heading);
-    return;
-  }
-
-  const linkStart = boundary + (useDot ? 2 : 1);
-  const lead = tagline.slice(0, linkStart);
-  const linkedText = tagline.slice(linkStart);
-  const heading = document.createElement('h1');
-  heading.className = 'landing-about-heading';
-  heading.textContent = lead.trimEnd();
-  target.append(heading, document.createTextNode(' '));
-  const link = document.createElement('a');
-  link.className = 'hover-link';
-  link.href = href;
-  link.textContent = linkedText;
-  target.append(link);
 }
 
 function buildGameExportLinks(roomId: string): HTMLElement | null {
