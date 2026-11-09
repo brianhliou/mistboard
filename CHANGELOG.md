@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- The homepage Play the computer table has Levels 1-8 for Banqi and Flip Jungle ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
+- Flip Jungle Level 8 is now a neural net bot, and the bot you knew moves to Level 7 ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Banqi, Three Kingdoms banqi and Flip Jungle each have eight computer levels, chosen from a level picker ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - New jieqi games judge a perpetual chase: a side that chases the same piece on every move of a repetition loses, and the no-capture draw comes at 40 moves each ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - In jieqi, a move that would lose by perpetual chase asks you to confirm first, unless you turned off move confirmations ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
@@ -54,6 +56,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Review pages share through your device's share sheet, or copy the link where it has none ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Broadcast and professional player pages show event, round, player and federation names in the page's language ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Players from the 2026 North American Xiangqi Championship now have player pages ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Finished xiangqi mahjong matches are now in the /data downloads, walls and all ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
@@ -79,6 +82,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- On phones the homepage keeps the TV and Play on the first screen, with News above the articles ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
+- The homepage hero no longer offers the fog of war bots ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Rules tiles now say what each game is, in English and Chinese ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - Shared links to puzzles, profiles, forum threads, live games, unlisted studies and tool pages now preview with their own title ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Search engines now get the text of static, tool, community and translated pages without running scripts, and admin and utility pages stay out of search ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
@@ -103,6 +108,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- /stats days and weeks now end at midnight Pacific, and the homepage labels its 30-day count as such ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
+- The champions page shows one challenge button under the open titles instead of one per card ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
+- Animal Dobutsu 3D pieces have a tan rim ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Arrow keys step through a finished Gomoku game again after returning to it with the Back button ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - Rules, blog and news pages no longer go blank for a few seconds while loading on slow connections ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
 - A study's chapter list keeps chapters from the same game apart instead of showing the same label twice ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
@@ -128,6 +136,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Search engines get the full text of data pages and study summaries ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Search engines are told only about pages that changed in a release ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Visitor analytics now flags browsers with real input, so headless crawlers can be filtered out ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
