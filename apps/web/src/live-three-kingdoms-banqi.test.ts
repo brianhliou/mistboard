@@ -16,7 +16,7 @@ import {
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { banqiRevealOdds } from './banqi-reveal-odds.js';
 import type { ThreeKingdomsBanqiWireView } from './live-three-kingdoms-banqi.js';
@@ -143,6 +143,14 @@ function moveMessages(): unknown[] {
   return socket.sent.filter((p) => (p as { type?: string }).type === 'move');
 }
 
+function phoneMedia(): void {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => {
+    const media = new EventTarget() as MediaQueryList;
+    Object.defineProperty(media, 'matches', { value: query === '(max-width: 600px)' });
+    return media;
+  });
+}
+
 beforeEach(() => {
   document.body.innerHTML = '';
   vi.stubGlobal(
@@ -152,6 +160,80 @@ beforeEach(() => {
 });
 
 describe('Three Kingdoms banqi live room', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each(['playing', 'finished'] as const)(
+    "mounts the %s room's bar in Banqi's shared phone layout",
+    async (status) => {
+      phoneMedia();
+      const { states } = playLine(2);
+      const options = await mount();
+      const state = view(states[2]!, 'red');
+      if (status === 'finished') {
+        state.status = { type: 'finished', winner: 'red', reason: 'resignation' };
+      }
+      options.applyHello(hello({ type: 'hello', seat: 'red', state, events: [CREATED] }));
+      options.render();
+      const cluster = document.querySelector('.review-shell__cluster.live-review__cluster');
+      expect(cluster).not.toBeNull();
+      expect(cluster?.querySelector('.round-table__box .move-nav-bar')).not.toBeNull();
+      expect(cluster?.querySelector('.game-console [data-hidden-pool]')).not.toBeNull();
+      expect(
+        cluster?.querySelector(
+          status === 'playing' ? '.game-controls' : '.room-actions .postgame-sheet-toggle',
+        ),
+      ).not.toBeNull();
+    },
+  );
+
+  it('keeps the shared phone height budget and scrolls material inside the remaining space', () => {
+    const css = readFileSync(resolve(__dirname, 'three-kingdoms-banqi-board.css'), 'utf-8');
+    const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
+    expect(phone).not.toContain('--phone-room-slack:');
+    expect(phone).not.toMatch(/\.review-shell__center\s*\{[^}]*height:\s*auto/);
+    const pool = phone.match(/\.hidden-pool:not\(:empty\)\s*\{([^}]+)\}/)?.[1];
+    expect(pool).toContain('height: calc(var(--phone-room-pool, 96px) + var(--phone-room-slack));');
+    expect(pool).toContain('overflow-y: auto;');
+    expect(pool).toContain('margin-top: 0;');
+    expect(phone).toMatch(/\.game-table-moves\s*\{\s*margin-top:\s*0;/);
+    // Notices and the board keep the shared bands the height budget reserves.
+    expect(phone).not.toContain('.action-notice');
+  });
+
+  it('reopens the dismissed post-game sheet from the shared Game over bar button', async () => {
+    phoneMedia();
+    const { states, moves } = playLine(2);
+    const options = await mount();
+    const state = view(states[2]!, 'red');
+    state.status = { type: 'finished', winner: 'red', reason: 'resignation' };
+    options.applyHello(
+      hello({
+        type: 'hello',
+        seat: 'red',
+        roomMode: 'pve',
+        state,
+        events: [CREATED, ...moveEvents(moves)],
+      }),
+    );
+    options.render();
+    const sheet = document.querySelector<HTMLDialogElement>('.postgame-sheet')!;
+    const trigger = document.querySelector<HTMLButtonElement>('.postgame-sheet-toggle')!;
+    expect(sheet.open).toBe(true);
+    expect(trigger.textContent).toBe('Game over');
+    expect(trigger.hidden).toBe(false);
+    sheet.querySelector<HTMLButtonElement>('.postgame-sheet__close')!.click();
+    expect(sheet.open).toBe(false);
+    options.render();
+    expect(sheet.open).toBe(false);
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    trigger.click();
+    expect(sheet.open).toBe(true);
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      sheet.querySelector<HTMLAnchorElement>('a[href*="/three-kingdoms-banqi/game/"]')?.textContent,
+    ).toBe('Review game');
+  });
+
   it('draws 45 points, every setup tile face down, and each ink face-down before a flip', async () => {
     const { states } = playLine(0);
     const options = await mount();
