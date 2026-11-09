@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Play banqi',
   },
   {
+    date: '2026-11-09',
+    kind: 'release',
+    headline: 'Play a correspondence game against Brian H. Liou, who builds Mistboard.',
+    body: 'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.',
+    href: '/correspondence',
+    cta: 'Play Brian H. Liou',
+  },
+  {
     date: '2026-11-08',
     kind: 'status',
     headline: '10,000 games played on Mistboard.',

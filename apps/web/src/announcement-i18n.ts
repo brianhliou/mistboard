@@ -49,6 +49,12 @@ const ZH_HANS: Record<string, string> = {
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盘上玩休闲自由五子棋，从预设开局开始。可以邀请朋友下一盘计分对局，也可以与八个等级的 Rapfi 机器人对弈。计分对局采用 1+1、3+2 或 5+5 时限，双方均须登录。',
   'Play Gomoku': '开始下五子棋',
+  // ── 2026-11-09 (play Brian by correspondence) ── 通信对局 / 休闲 / 对弈 follow the play catalog's host card.
+  'Play a correspondence game against Brian H. Liou, who builds Mistboard.':
+    '与 Mistboard 的开发者 Brian H. Liou 下一盘通信对局。',
+  'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.':
+    '对手是真人，不是电脑。在通信对局页面的一张卡片上开始一盘休闲对局：选好变体和执子方，双方每步各有两天时间。登录后即可对弈。',
+  'Play Brian H. Liou': '与 Brian H. Liou 对弈',
   // ── 2026-11-02 (AB-JChess-20261031) ── 电脑 / 级 follow the 2026-10-22 jqe entry.
   'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成为最强揭棋电脑。',
   "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
@@ -594,6 +600,12 @@ const ZH_HANT: Record<string, string> = {
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盤上玩休閒自由五子棋，從預設開局開始。可以邀請朋友下一盤計分對局，也可以與八個等級的 Rapfi 機器人對弈。計分對局採用 1+1、3+2 或 5+5 時限，雙方均須登入。',
   'Play Gomoku': '開始下五子棋',
+  // ── 2026-11-09 (play Brian by correspondence) ── 通信對局 / 休閒 / 對弈 follow the play catalog's host card.
+  'Play a correspondence game against Brian H. Liou, who builds Mistboard.':
+    '與 Mistboard 的開發者 Brian H. Liou 下一盤通信對局。',
+  'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.':
+    '對手是真人，不是電腦。在通信對局頁面的一張卡片上開始一盤休閒對局：選好變體和執子方，雙方每步各有兩天時間。登入後即可對弈。',
+  'Play Brian H. Liou': '與 Brian H. Liou 對弈',
   // ── 2026-11-02 (AB-JChess-20261031) ── 電腦 / 級 follow the 2026-10-22 jqe entry.
   'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成為最強揭棋電腦。',
   "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
