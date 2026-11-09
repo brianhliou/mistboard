@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildStartForm } from './correspondence.js';
 import { setRatedModeEnabled } from './rated-flag.js';
+import { setResolvedAdmin } from './signed-in-state.js';
 
 // The /correspondence Start a game form's Casual/Rated control. Rated correspondence is
 // held behind the server's MISTBOARD_CORRESPONDENCE_RATED_ENABLED (off by default), so
@@ -106,5 +107,44 @@ describe('correspondence Start a game: opponent', () => {
     const body = postedBody(panel, fetchMock) as Record<string, unknown>;
     expect(body.visibility).toBe('private');
     expect('targetHandle' in body).toBe(false);
+  });
+});
+
+describe('correspondence Start a game: restricted banqi', () => {
+  afterEach(() => {
+    setResolvedAdmin(undefined);
+    setRatedModeEnabled(false);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('uses each tenant room gate for picker visibility and posts only casual', () => {
+    const offered = () =>
+      [...buildStartForm(() => {}).querySelector('select')!.options].map((option) => option.value);
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
+    setResolvedAdmin(false);
+    expect(offered()).not.toContain('ffq-banqi');
+    expect(offered()).not.toContain('three-kingdoms-banqi');
+    setResolvedAdmin(true);
+    expect(offered()).not.toContain('ffq-banqi');
+    expect(offered()).toContain('three-kingdoms-banqi');
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    expect(offered()).toContain('ffq-banqi');
+    setResolvedAdmin(false);
+    expect(offered()).not.toContain('ffq-banqi');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    expect(offered()).toContain('three-kingdoms-banqi');
+    setResolvedAdmin(true);
+    setRatedModeEnabled(true, true);
+    for (const gameSpecId of ['ffq-banqi', 'three-kingdoms-banqi']) {
+      const panel = buildStartForm(() => {}, { gameSpecId, rated: true });
+      expect(panel.querySelector('select')?.value).toBe(gameSpecId);
+      const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+      vi.stubGlobal('fetch', fetchMock);
+      const body = postedBody(panel, fetchMock);
+      expect(body).toMatchObject({ gameSpecId });
+      expect(body.rated).not.toBe(true);
+    }
   });
 });

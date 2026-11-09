@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   correspondenceTimeControl,
   DAY_MS,
   type DaysPerMove,
@@ -50,7 +51,10 @@ enableCorrespondenceVariantFlags();
 
 type AnyRoom = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<string>, string>;
 
-const VARIANT_SPEC_IDS = CORRESPONDENCE_ELIGIBLE_SPEC_IDS.filter((id) => id !== 'dark-chess');
+const VARIANT_SPEC_IDS = [
+  ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  ...CORRESPONDENCE_RESTRICTED_SPEC_IDS,
+].filter((id) => id !== 'dark-chess');
 
 function registrationFor(specId: string): VariantTenantRegistration {
   const registration = correspondenceTenantForSpecId(specId);
@@ -273,7 +277,7 @@ test('dark-xiangqi: seat A’s inbox board is exactly A’s room view, and never
 
 test('every other new variant serves no seat board: the inbox reads the public card', async () => {
   for (const specId of VARIANT_SPEC_IDS) {
-    if (specId === 'dark-xiangqi') continue;
+    if (specId === 'dark-xiangqi' || CORRESPONDENCE_RESTRICTED_SPEC_IDS.includes(specId)) continue;
     const { tenant } = CORRESPONDENCE_TEST_TENANTS[specId]!;
     const { registration, room } = await acceptSeek(specId);
     try {

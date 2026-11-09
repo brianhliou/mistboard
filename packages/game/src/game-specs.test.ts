@@ -6,6 +6,7 @@ import {
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -403,4 +404,16 @@ test('Gomoku studies are public and position-rooted', () => {
   assert.equal(hasStartFen(GOMOKU_SPEC_ID), true);
   assert.equal(isPublicGameSpec(GOMOKU_SPEC_ID), true);
   assert.equal(isAdminOnlyStudySpecId(GOMOKU_SPEC_ID), false);
+});
+
+test('hidden banqi correspondence derives a restricted set, separate from grants and public play', () => {
+  assert.deepEqual(CORRESPONDENCE_RESTRICTED_SPEC_IDS, ['ffq-banqi', 'three-kingdoms-banqi']);
+  for (const id of CORRESPONDENCE_RESTRICTED_SPEC_IDS) {
+    assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), false);
+    assert.equal(isCorrespondenceRatedSpec(id), false);
+    assert.equal(isCorrespondenceAllowlistedSpec(id), false);
+  }
+  const launched = deriveLaunchLists((id) => isPublicGameSpec(id) || id === 'three-kingdoms-banqi');
+  assert.ok(!launched.correspondenceRestricted.includes('three-kingdoms-banqi'));
+  assert.ok(launched.correspondenceEligible.includes('three-kingdoms-banqi'));
 });

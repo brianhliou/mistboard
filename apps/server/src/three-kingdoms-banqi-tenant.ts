@@ -170,7 +170,7 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   // The runtime is on in every build: createTenantRuntimeRoom's enabled()
   // backstop would otherwise refuse the admin playtest's rooms. Who may start
   // one is decided at the doors (three-kingdoms-banqi-access.ts), and no other
-  // path starts a TK game (no lobby, correspondence, rematch or bot-vs-bot).
+  // path starts a TK game without its own admission (no lobby, rematch or bot-vs-bot).
   enabled: () => true,
   oppositeColor: oppositeBanqiSeat,
   rules: {
@@ -202,12 +202,10 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   visibility: {
     clientEventFor: threeKingdomsBanqiClientEventFor,
     viewForClient: (state, client) => getThreeKingdomsBanqiClientView(state, client),
-    truthView: (state) => getThreeKingdomsBanqiTruthView(state),
     // The deal is a server secret, so a reload gets the server's per-ply masked
     // views rather than replaying the log itself.
     liveHistory: (events, viewer) => tenantPerPlyViews(threeKingdomsBanqiTenant, events, viewer),
-    // A finished room keeps the masked per-ply views too, so a reload can still
-    // step back through the game (the final position is the truth view).
+    // Keep covered identities masked after completion, including every per-ply view.
     liveHistoryWhenFinished: true,
   },
   // The default rematch builds its room from the lobby factory, and this

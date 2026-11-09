@@ -3,6 +3,7 @@
 // may draw one: the seek card keeps its plain tile for those.
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CORRESPONDENCE_RESTRICTED_SPEC_IDS,
   createGomokuRoomState,
   createInitialCrazyhouseXiangqiState,
   getGomokuPlayerView,
@@ -17,7 +18,7 @@ const pieceCount = (svg: string): number => (svg.match(/class="xq-piece[ "]/g) ?
 
 describe('renderStartPositionSvg', () => {
   it('draws a board for every open or face-down variant a seek can be posted in', async () => {
-    for (const id of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
+    for (const id of [...CORRESPONDENCE_ELIGIBLE_SPEC_IDS, ...CORRESPONDENCE_RESTRICTED_SPEC_IDS]) {
       const spec = maybeGameSpecForId(id);
       const svg = await renderStartPositionSvg(id);
       // Fog, and the mahjong tables (a dealt hand is concealed, and there is

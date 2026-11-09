@@ -26,6 +26,7 @@ import { isAllowlistedGameSpec } from './persistence-variant-access.js';
 import {
   CORRESPONDENCE_ALLOWLISTED_SPECS,
   CORRESPONDENCE_ELIGIBLE_SPECS,
+  CORRESPONDENCE_RESTRICTED_SPECS,
 } from './routes/correspondence-rooms.js';
 // Side-effect import: registers every tenant, so this sees the set the server boots with.
 import './variant-tenant/register-tenants.js';
@@ -33,7 +34,7 @@ import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
 
 test('every correspondence-eligible spec can create AND time out a game', () => {
   assert.ok(CORRESPONDENCE_ELIGIBLE_SPECS.size > 0);
-  for (const specId of CORRESPONDENCE_ELIGIBLE_SPECS) {
+  for (const specId of [...CORRESPONDENCE_ELIGIBLE_SPECS, ...CORRESPONDENCE_RESTRICTED_SPECS]) {
     const tenant = correspondenceTenantForSpecId(specId);
     assert.ok(tenant, `${specId} is correspondence-eligible but has no registration`);
     assert.equal(
