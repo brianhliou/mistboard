@@ -360,7 +360,8 @@
   opacity: 1;
 }
 
-.xq-live-hit--target:hover .xq-live-hint-dot {
+.xq-live-hit--target:hover .xq-live-hint-dot,
+.xq-live-hit--target:hover .xq-live-hint-capture-legacy {
   opacity: 0;
 }
 

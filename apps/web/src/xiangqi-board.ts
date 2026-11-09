@@ -27,6 +27,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { captureTargetStyle, captureTargetSvg } from './board-capture-target.js';
 import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -517,9 +518,13 @@ function hintLayer(
       const center = intersection(coord.file, coord.rank, perspective, layout);
       const occupied = view.board[move.to] !== undefined;
       // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
-      if ((occupied && raised) || (capturesOnly && !occupied)) return '';
+      if (
+        (occupied && raised) ||
+        (capturesOnly && (!occupied || captureTargetStyle(layout) === 'legacy'))
+      )
+        return '';
       return occupied
-        ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="${RING_CAPTURE}"/>`
+        ? captureTargetSvg('xq-live-hint-capture', center, CELL, layout, RING_CAPTURE, 28)
         : `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`;
     })
     .join('');
@@ -669,11 +674,14 @@ function clickLayer(
       // A 3D capture target carries its marks on the piece: its face tint over
       // the pieces (select3dLayer) and, under the pointer, its side in green.
       const raised = target?.capture && outline3d;
-      // Capture bands live below every piece; only quiet dots belong here.
-      const marker =
-        target && !target.capture
+      // Capture marks live below every piece, except in the temporary legacy comparison.
+      const marker = target
+        ? !target.capture
           ? `<circle class="xq-live-hint-dot" cx="${center.x}" cy="${center.y}" r="7"/>`
-          : '';
+          : !raised && captureTargetStyle(layout) === 'legacy'
+            ? captureTargetSvg('xq-live-hint-capture', center, CELL, layout, RING_CAPTURE, 28)
+            : ''
+        : '';
       const hover = target
         ? raised
           ? select3dHoverEdgeSvg(center, outline3d)

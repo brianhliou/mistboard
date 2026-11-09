@@ -43,7 +43,7 @@ describe('renderJieqiBoardSvg', () => {
   for (const layout of ['intersection', 'cell'] as const) {
     for (const perspective of ['red', 'black'] as const) {
       it.each([false, true])(
-        `keeps capture rings outside and below all flat pieces (${layout}, ${perspective}, interactive=%s)`,
+        `keeps layout-specific capture hints below all flat pieces (${layout}, ${perspective}, interactive=%s)`,
         (interactive) => {
           // The covered cannon on b3 can take b10 over the covered piece on b8.
           const moves = view.legalMoves.filter((move) => move.from === 'b3');
@@ -56,13 +56,31 @@ describe('renderJieqiBoardSvg', () => {
             selectedSquare: 'b3',
             legalMoves: moves,
           });
-          const circles = [...svg.matchAll(/<circle class="jieqi-hint-capture"[^>]*r="([\d.]+)"/g)];
-          expect(circles).toHaveLength(moves.filter((move) => view.board[move.to]).length);
-          expect(circles.length).toBeGreaterThan(0);
+          const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+          const circles = [...doc.querySelectorAll('circle.jieqi-hint-capture')];
+          const fills = [...doc.querySelectorAll('rect.jieqi-hint-capture-fill')];
+          const captureCount = moves.filter((move) => view.board[move.to]).length;
+          expect(captureCount).toBeGreaterThan(0);
+          expect(circles).toHaveLength(layout === 'intersection' ? captureCount : 0);
+          expect(fills).toHaveLength(layout === 'cell' ? captureCount : 0);
           for (const circle of circles) {
-            expect(Number(circle[1])).toBeGreaterThan(JIEQI_PIECE_PX / 2);
-            // Even a neighbouring piece must cover the ring where they overlap.
-            expect(circle.index).toBeLessThan(svg.indexOf('<g class="jieqi-piece-slot'));
+            expect(Number(circle.getAttribute('r'))).toBeGreaterThan(JIEQI_PIECE_PX / 2);
+          }
+          for (const fill of fills) {
+            // A full cell with no stroke cannot bleed into a neighbour or river.
+            const bounds = ['x', 'y', 'width', 'height'];
+            const cells = [...doc.querySelectorAll('rect.xq-live-cell')];
+            expect(
+              cells.some((cell) =>
+                bounds.every((attr) => cell.getAttribute(attr) === fill.getAttribute(attr)),
+              ),
+            ).toBe(true);
+            expect(fill.getAttribute('style')).toContain('stroke: none');
+          }
+          for (const hint of [...circles, ...fills]) {
+            const index = svg.indexOf(`<${hint.tagName} class="${hint.getAttribute('class')}"`);
+            expect(index).toBeGreaterThan(-1);
+            expect(index).toBeLessThan(svg.indexOf('<g class="jieqi-piece-slot'));
           }
         },
       );

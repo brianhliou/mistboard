@@ -13,6 +13,7 @@ import {
   pieceFlipDurationMs,
   pieceFlipStyle,
 } from './board-anim.js';
+import { captureTargetStyle, captureTargetSvg } from './board-capture-target.js';
 import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -288,7 +289,7 @@ export function renderJieqiBoardSvg(
       ${lastMoveMarkers(view, perspective, 'under', pieceSet, tile3d)}
       ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
       ${outline3d ? '' : selectionRing(selectedSquare, perspective)}
-      <g class="jieqi-hints">${moveHints(view, underMoves, perspective, outline3d !== null)}</g>
+      <g class="jieqi-hints">${options.interactive && captureTargetStyle(layout) === 'legacy' ? '' : moveHints(view, underMoves, perspective, outline3d !== null)}</g>
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d, options.faceDownFaces)}
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, legalMoves, selectedSquare, perspective, outline3d)}</g>` : ''}
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
@@ -595,7 +596,14 @@ function moveHints(
       // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
       if (capture && raised) return '';
       return capture
-        ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
+        ? captureTargetSvg(
+            'jieqi-hint-capture',
+            { x, y },
+            CELL,
+            activeLayout,
+            RING_CAPTURE,
+            MARK_PIECE_SIZE / 2 + 1,
+          )
         : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`;
     })
     .join('');
@@ -699,7 +707,16 @@ function hitLayer(
         ? loses
           ? `<g data-repetition-loss="${sq}" aria-hidden="true"><circle class="jieqi-repetition-ring-edge" cx="${x}" cy="${y}" r="18"/><circle class="jieqi-repetition-ring" cx="${x}" cy="${y}" r="18"/></g>`
           : target.capture
-            ? ''
+            ? !raised && captureTargetStyle(activeLayout) === 'legacy'
+              ? captureTargetSvg(
+                  'jieqi-hint-capture',
+                  { x, y },
+                  CELL,
+                  activeLayout,
+                  RING_CAPTURE,
+                  MARK_PIECE_SIZE / 2 + 1,
+                )
+              : ''
             : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
         : '';
       const hover = target
@@ -757,7 +774,8 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit--target:hover .jieqi-target-hover {
       opacity: 1;
     }
-    .jieqi-hit--target:hover .jieqi-hint {
+    .jieqi-hit--target:hover .jieqi-hint,
+    .jieqi-hit--target:hover .jieqi-hint-capture-legacy {
       opacity: 0;
     }
     /* The disc shadow is drawn into each piece (xiangqiPieceShadowMarks). */
