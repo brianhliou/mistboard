@@ -310,7 +310,7 @@ export const EN_CONTENT = {
   'source.fairyStockfish':
     'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
   'source.pikafishJieqi':
-    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi bots and jieqi analysis, GPL-3.0.",
+    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi levels and browser analysis, with AB-JChess grading reviews, GPL-3.0.",
   'source.chessPieceSets':
     'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
   'source.sounds':

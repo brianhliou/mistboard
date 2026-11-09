@@ -84,21 +84,21 @@ describe('Jieqi review explanation', () => {
       'zh-Hans',
       '复盘如何为着法评分',
       '复盘如何衡量运气',
-      '补充了复盘如何为揭子着法评分及衡量运气的说明。',
+      '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
     ],
     [
       'jieqi-platform',
       'zh-Hant',
       '復盤如何為著法評分',
       '復盤如何衡量運氣',
-      '補充了復盤如何為揭子著法評分及衡量運氣的說明。',
+      '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
     ],
     [
       'co-up',
       undefined,
       'Cách phần xem lại chấm điểm nước đi',
       'Cách phần xem lại đo may rủi',
-      'Đã bổ sung cách phần xem lại chấm điểm nước lật quân và đo may rủi.',
+      'Đã bổ sung cách phần xem lại chấm điểm nước lật quân và đo may rủi, đồng thời làm rõ rằng AB-JChess chấm điểm phần xem lại.',
     ],
   ] as const) {
     it(`${slug} ${lang ?? 'vi'} serves the explanation and update note in its language`, () => {
@@ -108,6 +108,7 @@ describe('Jieqi review explanation', () => {
       expect(page.textContent).toContain('(70 + 45 + 45) / 3');
       expect(page.textContent).toContain('+12%');
       expect(page.textContent).toContain(note);
+      expect(page.textContent).toContain('AB-JChess');
       expect(page.textContent).not.toContain('your winning chance with the piece you actually got');
       const source = articles.find((article) => article.slug === slug);
       expect(source?.updatedAt).toBe('2026-11-09');

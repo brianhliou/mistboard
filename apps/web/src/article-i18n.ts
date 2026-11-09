@@ -4751,8 +4751,8 @@ const ZH_HANS: Record<string, string> = {
   'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
     '已分析的揭棋对局，显示优势曲线、双方准确率和着法标记。',
   'How the review grades a move': '复盘如何为着法评分',
-  'Before each move, the engine estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
-    '每步棋之前，引擎都会估计你的获胜机会，范围是 0 到 100。普通着法的评分方式与 Lichess 评国际象棋相同：把你的着法与引擎找到的最佳着法比较。如果你的着法损失了至少 5 个百分点的获胜机会，就会被标为不精确；损失达到 10 个百分点是失误，达到 15 个百分点是严重失误。你的准确率就是根据每步棋的这些损失计算出来的。',
+  'AB-JChess, the strongest jieqi bot on Mistboard, grades your review. Before each move, it estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
+    'Mistboard 上最强的揭棋引擎 AB-JChess 为复盘评分。每步棋之前，它都会估计你的获胜机会，范围是 0 到 100。普通着法的评分方式与 Lichess 评国际象棋相同：把你的着法与引擎找到的最佳着法比较。如果你的着法损失了至少 5 个百分点的获胜机会，就会被标为不精确；损失达到 10 个百分点是失误，达到 15 个百分点是严重失误。你的准确率就是根据每步棋的这些损失计算出来的。',
   'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.':
     '揭开暗子的着法更难评，因为还没有人知道下面是什么。因此，引擎用平均值来评估这一步。它会考虑对你而言仍可能是暗子的每一种棋子，计算揭出该种棋子时你的获胜机会，再按这种棋子剩余的数量加权。我们评分用的就是这个平均值。评分评价的是你根据当时已知信息作出的选择，所以绝不会取决于实际揭出了什么。',
   'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
@@ -6513,8 +6513,8 @@ const ZH_HANS: Record<string, string> = {
     '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
   'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
-  'Added how the review grades a flip and measures luck.':
-    '补充了复盘如何为揭子着法评分及衡量运气的说明。',
+  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
+    '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
@@ -11517,8 +11517,8 @@ const ZH_HANT: Record<string, string> = {
   'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
     '已分析的揭棋對局，顯示優勢曲線、雙方準確率和著法標記。',
   'How the review grades a move': '復盤如何為著法評分',
-  'Before each move, the engine estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
-    '每步棋之前，引擎都會估計你的獲勝機會，範圍是 0 到 100。普通著法的評分方式與 Lichess 評西洋棋相同：把你的著法與引擎找到的最佳著法比較。如果你的著法損失了至少 5 個百分點的獲勝機會，就會被標為不精確；損失達到 10 個百分點是失誤，達到 15 個百分點是嚴重失誤。你的準確率就是根據每步棋的這些損失計算出來的。',
+  'AB-JChess, the strongest jieqi bot on Mistboard, grades your review. Before each move, it estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
+    'Mistboard 上最強的揭棋引擎 AB-JChess 為復盤評分。每步棋之前，它都會估計你的獲勝機會，範圍是 0 到 100。普通著法的評分方式與 Lichess 評西洋棋相同：把你的著法與引擎找到的最佳著法比較。如果你的著法損失了至少 5 個百分點的獲勝機會，就會被標為不精確；損失達到 10 個百分點是失誤，達到 15 個百分點是嚴重失誤。你的準確率就是根據每步棋的這些損失計算出來的。',
   'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.':
     '揭開暗子的著法更難評，因為還沒有人知道下面是什麼。因此，引擎用平均值來評估這一步。它會考慮對你而言仍可能是暗子的每一種棋子，計算揭出該種棋子時你的獲勝機會，再按這種棋子剩餘的數量加權。我們評分用的就是這個平均值。評分評價的是你根據當時已知資訊作出的選擇，所以絕不會取決於實際揭出了什麼。',
   'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
@@ -13059,8 +13059,8 @@ const ZH_HANT: Record<string, string> = {
     '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
   'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
-  'Added how the review grades a flip and measures luck.':
-    '補充了復盤如何為揭子著法評分及衡量運氣的說明。',
+  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
+    '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':

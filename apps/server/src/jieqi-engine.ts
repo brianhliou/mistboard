@@ -472,7 +472,7 @@ export function jieqiEngineTierFor(engineId: string | undefined): JieqiEngineTie
 }
 
 // Presence check: true when the PikaJieQi binary resolves (live levels 1-8, the live
-// prewarm), and for new Level 8 review grading.
+// prewarm). Review grading prefers AB-JChess when its binary and net resolve.
 export function jieqiEngineBinaryAvailable(): boolean {
   try {
     pikaJieqiPath();
@@ -486,17 +486,17 @@ export function jieqiEngineBinaryAvailable(): boolean {
 export type JieqiAnalysisEngine = 'ab-jchess' | 'pikafish-jieqi';
 
 /**
- * New review grading uses the released Level 8 Pikafish, regardless of whether
- * AB-JChess is configured (#1000). Explicit AB sessions remain available to tools;
- * existing stored analyses retain their engine ids and win curves.
+ * AB-JChess grades new reviews when its binary and net resolve (prod): it is the
+ * strongest jieqi bot on the site, above Pikafish Level 8. PikaJieQi is the dev
+ * fallback. Stored analyses retain their own engine ids and win curves.
  */
 export function jieqiAnalysisEngine(): JieqiAnalysisEngine {
-  return 'pikafish-jieqi';
+  return abJchessAvailable() ? 'ab-jchess' : 'pikafish-jieqi';
 }
 
-/** Fail closed when Level 8 is missing, even if AB-JChess is installed. */
+/** Fail closed unless either grading engine resolves. */
 export function jieqiAnalysisEngineAvailable(): boolean {
-  return jieqiEngineBinaryAvailable();
+  return abJchessAvailable() || jieqiEngineBinaryAvailable();
 }
 
 // Per-process search resources for ANALYSIS. Single-threaded, because parallel search
@@ -654,7 +654,7 @@ function jieqiAnalysisSessionSpec(engine: JieqiAnalysisEngine) {
  * pattern): binary spawn + option setup + net load happen once for the whole run, then
  * each position is a `position fen …` + `go` round-trip built by the SAME
  * jieqiGoCommand the per-spawn path uses, so eval semantics are unchanged. `engine`
- * picks the binary (jieqiAnalysisEngine() defaults to the released Level 8 Pikafish). The
+ * picks the binary (jieqiAnalysisEngine() prefers AB-JChess when it resolves). The
  * sweep and the decisions pass both run here: decisions used to spawn a process per
  * eval, several hundred per game, which for AB-JChess v0.2d meant reloading a 133 MB net
  * each time. Scores are side-to-move POV; the caller owns normalization, and the
