@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { resolve } from 'node:path';
+import { type TestContext, test } from 'node:test';
 import type { XiangqiMove } from '@mistboard/game';
 import { buildXiangqiEngineDecisionPayload, legalMoveForUci } from './server-xiangqi-engine.js';
 import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
@@ -12,6 +15,8 @@ import {
 } from './xiangqi-engine-catalog.js';
 import {
   isXiangqiEngineClientId,
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
   XIANGQI_DEFAULT_ENGINE_ID,
   XIANGQI_LEGACY_ENGINE_TIERS,
   XIANGQI_PLAYABLE_ENGINES,
@@ -21,6 +26,90 @@ import {
   xiangqiMoveToPikafishUci,
   xiangqiSquareToPikafish,
 } from './xiangqi-pikafish-engine.js';
+
+function mockPikafishPaths(t: TestContext, files: string[]) {
+  const savedPath = process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
+  const savedNet = process.env.MISTBOARD_PIKAFISH_XIANGQI_NET;
+  delete process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
+  delete process.env.MISTBOARD_PIKAFISH_XIANGQI_NET;
+  t.mock.method(fs, 'existsSync', (path: fs.PathLike) => files.includes(String(path)));
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+    if (savedPath === undefined) delete process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
+    else process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH = savedPath;
+    if (savedNet === undefined) delete process.env.MISTBOARD_PIKAFISH_XIANGQI_NET;
+    else process.env.MISTBOARD_PIKAFISH_XIANGQI_NET = savedNet;
+  });
+}
+
+test('Pikafish defaults to the patched dev build instead of the January binary', (t) => {
+  assert.ok(process.env.HOME, 'dev build lookup needs a home directory');
+  const dev = resolve(process.env.HOME, 'projects/tools/pikafish-6a59ee2f-cc0/src/pikafish');
+  const january = resolve(
+    process.env.HOME,
+    'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
+  );
+  mockPikafishPaths(t, [dev, january]);
+  assert.equal(pikafishXiangqiPath(), dev);
+});
+
+test('Pikafish skips the January binary and keeps packaged binary locations', (t) => {
+  const packaged = resolve(process.cwd(), 'bin/pikafish');
+  const january = resolve(
+    process.env.HOME ?? '',
+    'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
+  );
+  mockPikafishPaths(t, [january, packaged, '/app/bin/pikafish', '/usr/local/bin/pikafish']);
+  assert.equal(pikafishXiangqiPath(), packaged);
+  for (const bin of ['/app/bin/pikafish', '/usr/local/bin/pikafish']) {
+    t.mock.method(fs, 'existsSync', (path: fs.PathLike) => String(path) === bin);
+    syncBuiltinESMExports();
+    assert.equal(pikafishXiangqiPath(), bin);
+  }
+});
+
+test('Pikafish resolves only the CC0 net beside the binary or its parent', (t) => {
+  const bin = '/engines/src/pikafish';
+  const net = '/engines/src/xiangqi-c07e94a5c7cb.nnue';
+  const parentNet = '/engines/xiangqi-c07e94a5c7cb.nnue';
+  mockPikafishPaths(t, [net, parentNet, '/engines/src/pikafish.nnue']);
+  assert.equal(pikafishXiangqiNetPath(bin), net);
+  t.mock.method(fs, 'existsSync', (path: fs.PathLike) => String(path) === parentNet);
+  syncBuiltinESMExports();
+  assert.equal(pikafishXiangqiNetPath(bin), parentNet);
+});
+
+test('Pikafish fails closed when only the old net or binary exists', (t) => {
+  mockPikafishPaths(t, [
+    '/engines/src/pikafish.nnue',
+    '/engines/pikafish.nnue',
+    resolve(
+      process.env.HOME ?? '',
+      'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
+    ),
+  ]);
+  assert.throws(() => pikafishXiangqiPath(), /MISTBOARD_PIKAFISH_XIANGQI_PATH/);
+  assert.throws(
+    () => pikafishXiangqiNetPath('/engines/src/pikafish'),
+    /xiangqi-c07e94a5c7cb\.nnue.*MISTBOARD_PIKAFISH_XIANGQI_NET/,
+  );
+});
+
+test('Pikafish keeps explicit path and net overrides and rejects missing overrides', (t) => {
+  const bin = resolve('custom/pikafish');
+  const net = resolve('custom/cc0.nnue');
+  mockPikafishPaths(t, [bin, net, '/app/bin/pikafish']);
+  process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH = 'custom/pikafish';
+  process.env.MISTBOARD_PIKAFISH_XIANGQI_NET = 'custom/cc0.nnue';
+  assert.equal(pikafishXiangqiPath(), bin);
+  assert.equal(pikafishXiangqiNetPath(bin), net);
+  process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH = 'missing/pikafish';
+  process.env.MISTBOARD_PIKAFISH_XIANGQI_NET = 'missing/cc0.nnue';
+  assert.throws(() => pikafishXiangqiPath(), /binary does not exist/);
+  assert.throws(() => pikafishXiangqiNetPath(bin), /file does not exist/);
+});
 
 // Our XiangqiSquare is `${file a-i}${rank 1-10}` (red back rank = rank 1);
 // Pikafish UCI uses rank 0-9 (red back rank = rank 0). The only translation is a
@@ -70,6 +159,19 @@ test('xiangqi ladder exposes exactly eight levels with unique level-N ids', () =
 });
 
 test('xiangqi ladder parameters are within range and monotonic', () => {
+  assert.deepEqual(
+    XIANGQI_PLAYABLE_ENGINES.map(({ nodes, movetimeMs }) => [nodes, movetimeMs]),
+    [
+      [1_000, 300],
+      [3_000, 400],
+      [10_000, 500],
+      [30_000, 800],
+      [100_000, 1_200],
+      [300_000, 1_500],
+      [1_000_000, 2_500],
+      [3_000_000, 4_000],
+    ],
+  );
   for (const tier of XIANGQI_PLAYABLE_ENGINES) {
     assert.ok(tier.nodes >= 1, `${tier.id}: node budget must be positive`);
     assert.ok(tier.movetimeMs >= 1, `${tier.id}: movetime must be positive`);
@@ -124,6 +226,10 @@ test('xiangqi public catalog exposes the FSF ladder plus one elite Pikafish chal
     ],
   );
   assert.equal(XIANGQI_PUBLIC_DEFAULT_ENGINE_ID, 'fairy-stockfish-xiangqi-level-4');
+  for (const tier of XIANGQI_PLAYABLE_ENGINES) {
+    assert.equal(xiangqiEngineVersion(tier.id), '0.4.0');
+    assert.equal(catalogXiangqiEngineVersion(tier.id), '0.4.0');
+  }
   assert.ok(
     XIANGQI_PUBLIC_ENGINES.some((engine) => engine.id === XIANGQI_PUBLIC_DEFAULT_ENGINE_ID),
   );
