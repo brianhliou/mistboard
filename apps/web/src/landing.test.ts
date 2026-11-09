@@ -390,7 +390,9 @@ describe('homepage band layout (CSS)', () => {
     // three-column band, the bot rows' floor.
     expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
     expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
-    expect(panel).toMatch(/\.landing-demo \.pp-view-person \.pp-row-person \{\s*max-height: 40px;/);
+    expect(panel).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
   });
 
   it('puts the deep-dives row above the blog row at every width', () => {

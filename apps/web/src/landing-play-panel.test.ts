@@ -369,6 +369,32 @@ describe('homepage play panel', () => {
     expect(panelCss).not.toMatch(/^\.pp-thumb \{/m);
   });
 
+  it('reserves ten natural-height rows on the shared card only in the three-column hero', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const desktop = css.match(/@media \(min-width: 1241px\) \{([\s\S]*?)^\}/m)?.[1] ?? '';
+    expect(desktop).toMatch(/--pp-min-rows: 10;/);
+    expect(desktop).toMatch(/--pp-row-height: 40px;/);
+    expect(desktop).toMatch(/--pp-card-border-width: 1px;/);
+    expect(desktop).toMatch(
+      /\.landing-demo \.pp-card \{[^}]*min-height: calc\(\s*var\(--pp-min-rows\) \* var\(--pp-row-height\) \+ 2 \* var\(--pp-card-border-width\)\s*\);[^}]*border-width: var\(--pp-card-border-width\);/,
+    );
+    expect(desktop).toMatch(
+      /\.landing-demo \.pp-view-computer \.pp-row \{\s*flex: 0 0 auto;\s*min-height: var\(--pp-row-height\);/,
+    );
+    expect(css).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
+    // No minimum leaks into the two-column or stacked layouts.
+    expect(css.replace(desktop, '')).not.toContain('--pp-min-rows');
+
+    const board = buildPlayPanel('en', { hydrate: false });
+    const card = board.querySelector('.pp-card')!;
+    expect(card.contains(board.querySelector('.pp-view-computer'))).toBe(true);
+    expect(card.contains(board.querySelector('.pp-view-person'))).toBe(true);
+    board.querySelectorAll<HTMLButtonElement>('.pp-tab')[1]!.click();
+    expect(board.querySelector('.pp-card')).toBe(card);
+  });
+
   // #543: .pp-name clips its overflow, so a line box shorter than the font's
   // glyph box (Noto Sans 1.36, CJK fallback 1.45) cuts descenders.
   it('gives both name lines a line box tall enough for descenders', () => {
