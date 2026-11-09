@@ -27,7 +27,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { captureTargetStyle, captureTargetSvg } from './board-capture-target.js';
+import { captureTargetStyle, captureTargetSvg, selectionMarkSvg } from './board-capture-target.js';
 import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -499,7 +499,7 @@ function selectionLayer(
   if (!square) return '';
   const coord = coordOf(square);
   const center = intersection(coord.file, coord.rank, perspective, layout);
-  return `<circle class="xq-live-selection-cell" cx="${center.x}" cy="${center.y}" r="30"/>`;
+  return selectionMarkSvg('xq-live-selection-cell', center, CELL, layout, 30);
 }
 
 function hintLayer(

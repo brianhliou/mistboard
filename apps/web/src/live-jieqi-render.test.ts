@@ -40,6 +40,18 @@ describe('renderJieqiBoardSvg', () => {
     expect(svg).toContain('jieqi-hint');
   });
 
+  it('shades the selected cell on the square grid and rings the point on the traditional board', () => {
+    const select = (layout: 'intersection' | 'cell') =>
+      renderJieqiBoardSvg(view, 'red', {
+        layout,
+        selectedSquare: 'a1',
+        legalMoves: view.legalMoves.filter((move) => move.from === 'a1'),
+      });
+    expect(select('cell')).toMatch(/<rect class="jieqi-selection"/);
+    expect(select('cell')).not.toMatch(/<circle class="jieqi-selection"/);
+    expect(select('intersection')).toMatch(/<circle class="jieqi-selection"/);
+  });
+
   for (const layout of ['intersection', 'cell'] as const) {
     for (const perspective of ['red', 'black'] as const) {
       it.each([false, true])(

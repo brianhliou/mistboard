@@ -53,3 +53,18 @@ export function captureTargetSvg(
   ];
   return `<g class="${className}-corners" style="${paint}">${triangles.map((points) => `<polygon points="${points}"/>`).join('')}</g>`;
 }
+
+/** The selected piece's mark: the whole cell on a square grid, a disc on points. */
+export function selectionMarkSvg(
+  className: string,
+  center: { x: number; y: number },
+  cell: number,
+  layout: XiangqiBoardLayout,
+  radius: number,
+): string {
+  const { x, y } = center;
+  if (layout === 'cell') {
+    return `<rect class="${className}" x="${x - cell / 2}" y="${y - cell / 2}" width="${cell}" height="${cell}"/>`;
+  }
+  return `<circle class="${className}" cx="${x}" cy="${y}" r="${radius}"/>`;
+}

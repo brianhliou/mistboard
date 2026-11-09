@@ -13,7 +13,7 @@ import {
   pieceFlipDurationMs,
   pieceFlipStyle,
 } from './board-anim.js';
-import { captureTargetStyle, captureTargetSvg } from './board-capture-target.js';
+import { captureTargetStyle, captureTargetSvg, selectionMarkSvg } from './board-capture-target.js';
 import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -578,8 +578,13 @@ export function animateJieqiBoardMove(
 function selectionRing(selection: JieqiSquare | null, perspective: JieqiColor): string {
   if (!selection) return '';
   const { file, rank } = jieqiCoordOf(selection);
-  const { x, y } = intersection(file, rank, perspective);
-  return `<circle class="jieqi-selection" cx="${x}" cy="${y}" r="${RING_SELECTION}"/>`;
+  return selectionMarkSvg(
+    'jieqi-selection',
+    intersection(file, rank, perspective),
+    CELL,
+    activeLayout,
+    RING_SELECTION,
+  );
 }
 
 function moveHints(
