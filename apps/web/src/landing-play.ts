@@ -45,7 +45,7 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { jungleDobutsuPieceHref } from './jungle-art.js';
 import {
-  LANDING_BOT_GAME_SPEC_IDS,
+  LANDING_HERO_BOT_GAME_SPEC_IDS,
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
@@ -615,7 +615,7 @@ function landingEngineSeeds(locale: Locale, rotationBucket: number): LandingEngi
   const picked = desired.filter(landingSeedVariantOffered);
   // Kill-switched variants drop out without shrinking the table when another
   // supported live variant can backfill the slot.
-  for (const gameSpecId of LANDING_BOT_GAME_SPEC_IDS) {
+  for (const gameSpecId of LANDING_HERO_BOT_GAME_SPEC_IDS) {
     if (picked.length >= LANDING_ENGINE_SEED_VARIANT_COUNT) break;
     if (!picked.includes(gameSpecId) && landingSeedVariantOffered(gameSpecId)) {
       picked.push(gameSpecId);

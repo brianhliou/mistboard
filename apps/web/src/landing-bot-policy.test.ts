@@ -1,3 +1,4 @@
+import { DARK_CHESS_SPEC_ID, DARK_XIANGQI_SPEC_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   fairyStockfishLevel,
@@ -27,16 +28,26 @@ describe('landing bot policy', () => {
     expect(after).toBe(before + 1);
   });
 
-  it('shows six distinct variants, jieqi every time, and the full shelf in any three buckets', () => {
-    for (let bucket = -2; bucket < 9; bucket++) {
+  it('shows six distinct variants, xiangqi and jieqi every time, and the hero shelf in any two buckets', () => {
+    const heroShelf = LANDING_BOT_GAME_SPEC_IDS.filter(
+      (id) => id !== DARK_CHESS_SPEC_ID && id !== DARK_XIANGQI_SPEC_ID,
+    );
+    // Visit every ring offset, including the wrap into the next cycle.
+    for (let bucket = -1; bucket <= heroShelf.length - 2; bucket++) {
       const current = landingBotLineup(bucket);
 
       expect(current).toHaveLength(6);
       expect(new Set(current).size).toBe(6);
+      expect(current).toContain(XIANGQI_SPEC_ID);
       expect(current).toContain('jieqi');
-      expect(
-        new Set([...current, ...landingBotLineup(bucket + 1), ...landingBotLineup(bucket + 2)]),
-      ).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
+      expect(new Set([...current, ...landingBotLineup(bucket + 1)])).toEqual(new Set(heroShelf));
+    }
+  });
+
+  it('never puts either fog variant in the hero lineup across a full ring cycle', () => {
+    for (let bucket = 0; bucket < LANDING_BOT_GAME_SPEC_IDS.length; bucket++) {
+      expect(landingBotLineup(bucket)).not.toContain(DARK_CHESS_SPEC_ID);
+      expect(landingBotLineup(bucket)).not.toContain(DARK_XIANGQI_SPEC_ID);
     }
   });
 
