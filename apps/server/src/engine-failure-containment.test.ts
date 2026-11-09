@@ -245,7 +245,10 @@ test('PythonPool total deadline also stops a retry already running on a replacem
   t.mock.timers.tick(10);
   await flush();
   assert.match(String(failure), /total.*timeout/i);
-  assert.equal(children[1]!.killed, true, 'discard a worker with an expired in-flight search');
+  assert.equal(children[1]!.killed, false, 'the caller deadline does not kill an active search');
+  t.mock.timers.tick(10);
+  await flush();
+  assert.equal(children[1]!.killed, true, 'the per-attempt timeout still bounds a stuck search');
   await result;
 });
 
@@ -366,6 +369,116 @@ test('PythonPool rejects queued and new work when every slot exhausts restart at
   t.mock.timers.tick(100_000);
   await flush();
   assert.equal(children.length, 6, 'restart attempts are bounded');
+});
+
+for (const affinity of [false, true]) {
+  test(`PythonPool queue wait never sacrifices a healthy worker (affinity ${affinity})`, async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_800_000_000_000 });
+    const children = fakeSpawns(t);
+    const pool = makePool(1, affinity);
+    t.after(() => pool.dispose());
+    const start = pool.start();
+    children[0]!.send({ kind: 'ready' });
+    await start;
+    const active = pool.chooseMove(payload, 1_000).catch((err: unknown) => err);
+    const queued = pool.chooseMove(payload, 20).catch((err: unknown) => err);
+    t.mock.timers.tick(30); // Only 10ms of the queued move's 40ms total budget remains.
+    children[0]!.send({ requestId: children[0]!.requests[0]!.requestId, ok: true, response });
+    await active;
+    t.mock.timers.tick(10);
+    await flush();
+    assert.equal(children[0]!.killed, false, 'queue delay must not kill a healthy worker');
+    assert.equal(children[0]!.requests.length, 2, 'the queued request started its search');
+    assert.match(String(await queued), /timeout/i);
+    assert.equal(children.length, 1, 'queue expiry must not restart the slot');
+    const next = pool.chooseMove(payload, 20).catch((err: unknown) => err);
+    assert.equal(children[0]!.requests.length, 2, 'the expired search still occupies its worker');
+    t.mock.timers.tick(5);
+    children[0]!.send({ requestId: children[0]!.requests[1]!.requestId, ok: true, response });
+    assert.equal(children[0]!.requests.length, 3, 'a late response frees the worker');
+    children[0]!.send({ requestId: children[0]!.requests[2]!.requestId, ok: true, response });
+    assert.deepEqual(await next, response, 'the same worker still serves fresh work');
+  });
+}
+
+test('PythonPool total deadline replacements do not consume the crash burst', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_800_000_000_000 });
+  const children = fakeSpawns(t);
+  const pool = makePool();
+  t.after(() => pool.dispose());
+  const start = pool.start();
+  children[0]!.send({ kind: 'ready' });
+  await start;
+  for (let i = 0; i < 6; i += 1) {
+    const child = children[i]!;
+    const active = pool.chooseMove(payload, 1_000).catch((err: unknown) => err);
+    const expiring = pool.chooseMove(payload, 20).catch((err: unknown) => err);
+    t.mock.timers.tick(20);
+    child.send({ requestId: child.requests[0]!.requestId, ok: true, response });
+    await active;
+    assert.equal(child.requests.length, 2, 'a full attempt budget still permits dispatch');
+    t.mock.timers.tick(20); // Total deadline and per-attempt timeout coincide.
+    await flush();
+    assert.match(String(await expiring), /total.*timeout/i);
+    assert.equal(children.length, i + 2, 'deadline replacement must not back off or retire');
+    children[i + 1]!.send({ kind: 'ready' });
+    await flush();
+  }
+  assert.equal(pool.isReady(), true);
+});
+
+test('PythonPool retires replacements that repeatedly time out before ready', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_800_000_000_000 });
+  const children = fakeSpawns(t);
+  const pool = makePool();
+  t.after(() => pool.dispose());
+  const start = pool.start();
+  children[0]!.send({ kind: 'ready' });
+  await start;
+  let failure: unknown;
+  const queued = pool.chooseMove(payload, 1_000_000).catch((err: unknown) => {
+    failure = err;
+  });
+  children[0]!.kill();
+  await flush();
+  for (let i = 1; i <= 5; i += 1) {
+    t.mock.timers.tick(30_000);
+    await flush();
+    t.mock.timers.tick(5_000);
+    await flush();
+  }
+  assert.match(String(failure), /no recoverable.*workers/i);
+  await queued;
+  await assert.rejects(pool.chooseMove(payload, 1_000), /no recoverable.*workers/i);
+  t.mock.timers.tick(100_000);
+  await flush();
+  assert.equal(children.length, 6, 'slow startup failures still exhaust restart attempts');
+});
+
+test('PythonPool deadline is terminal even when the wall clock is just before deadlineAt', async (t) => {
+  const now = 1_800_000_000_000;
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now });
+  const children = fakeSpawns(t);
+  const pool = makePool();
+  t.after(() => pool.dispose());
+  const start = pool.start();
+  children[0]!.send({ kind: 'ready' });
+  await start;
+  const active = pool.chooseMove(payload, 1_000).catch((err: unknown) => err);
+  let failure: unknown;
+  const queued = pool.chooseMove(payload, 20).catch((err: unknown) => {
+    failure = err;
+  });
+  const retries = engineCounters.totalPythonPoolRetries;
+  t.mock.method(Date, 'now', () => now + 39);
+  t.mock.timers.tick(40);
+  await flush();
+  assert.match(String(failure), /total.*timeout/i, 'the fired deadline must settle the request');
+  assert.equal(engineCounters.totalPythonPoolRetries, retries, 'a deadline cannot retry');
+  children[0]!.send({ requestId: children[0]!.requests[0]!.requestId, ok: true, response });
+  await active;
+  await queued;
+  assert.equal(children[0]!.requests.length, 1, 'expired work must never be dispatched later');
 });
 
 test('engine-worker health reports unavailable required pools and recovers with a live worker', async (t) => {
