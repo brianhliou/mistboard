@@ -36,6 +36,33 @@ export async function persistEnginePoolWait(
   return true;
 }
 
+/** A day's waits email only when they say a pool is short of slots: many
+ * waits, or one long one. A single short wait is two games asking for a move
+ * at the same moment, and emailing it trained the reader to ignore the digest.
+ * Dropped requests page separately (engine_pool_queue_timeout). */
+export const POOL_WAIT_DIGEST_MIN_WAITS = 10;
+export const POOL_WAIT_DIGEST_MIN_WAIT_MS = 5_000;
+
+export function poolWaitDayWarrantsDigest(
+  pools: ReadonlyArray<{ count: number; maxWaitMs: number }>,
+): boolean {
+  const waits = pools.reduce((sum, pool) => sum + pool.count, 0);
+  return (
+    waits >= POOL_WAIT_DIGEST_MIN_WAITS ||
+    pools.some((pool) => pool.maxWaitMs >= POOL_WAIT_DIGEST_MIN_WAIT_MS)
+  );
+}
+
+async function settleEnginePoolWaitDay(db: Queryable, day: string, now: Date): Promise<void> {
+  await db.query(`UPDATE engine_pool_wait_days SET digest_sent_at = $2 WHERE day = $1`, [day, now]);
+  // A month of aggregate history is enough; unsent summaries are never pruned.
+  await db.query(
+    `DELETE FROM engine_pool_wait_days
+                  WHERE day < $1::date - 30 AND digest_sent_at IS NOT NULL`,
+    [now.toISOString().slice(0, 10)],
+  );
+}
+
 /** Called inside a transaction; serialize deliveries across overlapping ticks
  * and processes. Failed/disabled sends leave the completed day available. */
 export async function deliverEnginePoolWaitDigestOn(
@@ -62,10 +89,20 @@ export async function deliverEnginePoolWaitDigestOn(
     [now.toISOString().slice(0, 10)],
   );
   if (result.rows.length === 0) return null;
+  const day = result.rows[0]!.day;
+  if (
+    !poolWaitDayWarrantsDigest(
+      result.rows.map((row) => ({ count: row.wait_count, maxWaitMs: row.max_wait_ms })),
+    )
+  ) {
+    // Below the bar: settle the day without an email (digest_sent_at marks it handled).
+    await settleEnginePoolWaitDay(db, day, now);
+    return null;
+  }
   const sent = await send({
     severity: 'warning',
     kind: 'engine_pool_queue_wait',
-    day: result.rows[0]!.day,
+    day,
     window_hours: 24,
     wait_count: result.rows.reduce((sum, row) => sum + row.wait_count, 0),
     pools: result.rows
@@ -75,18 +112,7 @@ export async function deliverEnginePoolWaitDigestOn(
       )
       .join('; '),
   });
-  if (sent.status === 'sent') {
-    await db.query(`UPDATE engine_pool_wait_days SET digest_sent_at = $2 WHERE day = $1`, [
-      result.rows[0]!.day,
-      now,
-    ]);
-    // A month of aggregate history is enough; unsent summaries are never pruned.
-    await db.query(
-      `DELETE FROM engine_pool_wait_days
-                    WHERE day < $1::date - 30 AND digest_sent_at IS NOT NULL`,
-      [now.toISOString().slice(0, 10)],
-    );
-  }
+  if (sent.status === 'sent') await settleEnginePoolWaitDay(db, day, now);
   return sent;
 }
 

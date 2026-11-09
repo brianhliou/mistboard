@@ -17,7 +17,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dispatchAlertEmail, logger, recordEnginePoolWait } from './obs.js';
+import { dispatchAlertEmail, logEnginePoolWait, logger, recordEnginePoolWait } from './obs.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -78,6 +78,9 @@ type QueueEntry = {
   resolve(release: () => void): void;
   timer: ReturnType<typeof setTimeout>;
   warnTimer: ReturnType<typeof setTimeout>;
+  startedAt: number;
+  /** Queue depth when the slow-wait warning fired; unset until it fires. */
+  warnedDepth?: number;
   /** Detach the caller's abort listener once the entry leaves the queue. */
   detach(): void;
 };
@@ -148,7 +151,10 @@ export class UciEnginePool {
       const startedAt = Date.now();
       const warnTimer = setTimeout(
         () => {
-          recordEnginePoolWait(
+          // Log while the request is still waiting; the digest records the
+          // whole wait once a slot is granted (release below).
+          entry.warnedDepth = this.queue.length;
+          logEnginePoolWait(
             this.config.name ?? 'unnamed',
             Date.now() - startedAt,
             this.queue.length,
@@ -193,6 +199,7 @@ export class UciEnginePool {
         resolve: resolveSlot,
         timer,
         warnTimer,
+        startedAt,
         detach: () => signal?.removeEventListener('abort', onAbort),
       };
       signal?.addEventListener('abort', onAbort, { once: true });
@@ -211,6 +218,13 @@ export class UciEnginePool {
       this.active += 1;
       this.acquired += 1;
       next.resolve(this.releaseOnce());
+      if (next.warnedDepth !== undefined) {
+        recordEnginePoolWait(
+          this.config.name ?? 'unnamed',
+          Date.now() - next.startedAt,
+          next.warnedDepth,
+        );
+      }
     }
   };
 
