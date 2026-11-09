@@ -184,22 +184,36 @@
     background: linear-gradient(to left, var(--site-bg) 32px, transparent);
   }
 
+  /* 44px tap target (phone floor) around a 32px drawn circle. */
   .static-page-rail-control button {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     padding: 0;
-    border: 1px solid var(--site-border);
-    border-radius: 50%;
-    background: var(--site-panel);
+    border: 0;
+    background: none;
     color: var(--site-text);
     cursor: pointer;
     pointer-events: auto;
   }
 
+  .static-page-rail-control button::before,
   .static-page-rail-control button::after {
     content: "";
+    grid-area: 1 / 1;
+  }
+
+  .static-page-rail-control button::before {
+    width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+    border: 1px solid var(--site-border);
+    border-radius: 50%;
+    background: var(--site-panel);
+  }
+
+  .static-page-rail-control button::after {
     width: 7px;
     height: 7px;
     border-top: 2px solid currentColor;
@@ -211,13 +225,17 @@
     transform: translateX(2px) rotate(-135deg);
   }
 
-  .static-page-rail-control button:hover {
+  .static-page-rail-control button:hover::before {
     border-color: var(--site-accent);
   }
 
   .static-page-rail-control button:focus-visible {
+    outline: none;
+  }
+
+  .static-page-rail-control button:focus-visible::before {
     outline: 2px solid var(--site-accent);
-    outline-offset: -3px;
+    outline-offset: 2px;
   }
 
   .static-page-rail-nav {

@@ -129,10 +129,10 @@ function observeStaticPageRail(
       if (active) {
         const viewport = rail.getBoundingClientRect();
         const link = active.getBoundingClientRect();
-        // Match the 32px buttons in CSS. Only reserve an edge with more pages.
+        // Match the 44px buttons in CSS. Only reserve an edge with more pages.
         const maxScroll = rail.scrollWidth - rail.clientWidth;
-        const right = viewport.right - (rail.scrollLeft < maxScroll - 1 ? 32 : 0);
-        const left = viewport.left + (rail.scrollLeft > 1 ? 32 : 0);
+        const right = viewport.right - (rail.scrollLeft < maxScroll - 1 ? 44 : 0);
+        const left = viewport.left + (rail.scrollLeft > 1 ? 44 : 0);
         // Move only the strip, including tabs just inside a button's overlay.
         if (link.right > right) rail.scrollLeft += link.right - right;
         else if (link.left < left) rail.scrollLeft += link.left - left;

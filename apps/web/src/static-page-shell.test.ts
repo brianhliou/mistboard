@@ -127,7 +127,7 @@ describe('phone About rail', () => {
     const windowScroll = vi.spyOn(window, 'scrollTo');
     const scrollIntoView = vi.spyOn(active, 'scrollIntoView');
     resize();
-    expect(rail.scrollLeft).toBe(512);
+    expect(rail.scrollLeft).toBe(524);
     expect(active.classList.contains('active')).toBe(true);
     expect(windowScroll).not.toHaveBeenCalled();
     expect(scrollIntoView).not.toHaveBeenCalled();
@@ -137,8 +137,8 @@ describe('phone About rail', () => {
   });
 
   it.each([
-    ['right', 0, 250, 310, 28],
-    ['left', 300, 20, 100, 274],
+    ['right', 0, 250, 310, 40],
+    ['left', 300, 20, 100, 262],
   ] as const)(
     'clears the %s button when the current tab is already inside the strip',
     (_edge, left, linkLeft, linkRight, expected) => {
