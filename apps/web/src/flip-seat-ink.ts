@@ -1,6 +1,6 @@
 import { maybeGameSpecForId } from '@mistboard/game';
 
-// Flip variants (Banqi, Flip Jungle) seat their players as first/second MOVER under
+// Flip variants (Banqi, Flip Jungle, Three Kingdoms Banqi) seat their players as first/second MOVER under
 // the color ids 'red'/'black'. The ink each seat plays binds on the opening flip and
 // travels as the game state's `firstColor` — it is never a stored column, so the
 // recorded result, the timeline's `color`, and the participant rows are all
@@ -19,7 +19,11 @@ export type FlipSeat = 'red' | 'black';
 // the members are typed union values rather than loose strings. Note that
 // 'jieqi-deal' is NOT here: jieqi deals its pieces face down but its seats own a
 // fixed ink from move one.
-const FLIP_INK_SETUPS: ReadonlySet<string> = new Set(['banqi-deal', 'jungle-flip-deal']);
+const FLIP_INK_SETUPS: ReadonlySet<string> = new Set([
+  'banqi-deal',
+  'jungle-flip-deal',
+  'three-kingdoms-banqi-deal',
+]);
 
 /** True when the variant's seats are move-order slots whose ink binds on a flip. */
 export function isFlipSeatVariant(variant: string | null | undefined): boolean {

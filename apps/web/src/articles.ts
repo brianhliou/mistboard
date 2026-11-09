@@ -110,6 +110,10 @@ import {
   readStoredXiangqiPieceSet,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
+import {
+  loadThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiOffered,
+} from './three-kingdoms-banqi-access.js';
 import { renderPlaceholderVariantMarker, renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
@@ -2844,6 +2848,19 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
       });
     });
     row.append(a);
+  }
+  // TK's bots come from the server's playable roster, which only the landing
+  // page loads; fetch it here and redraw the row once a bot is there.
+  if (
+    gameSpecId === 'three-kingdoms-banqi' &&
+    !variantSupportsPve(gameSpecId) &&
+    threeKingdomsBanqiOffered()
+  ) {
+    void loadThreeKingdomsBanqiEngineOptions().then(() => {
+      if (!variantSupportsPve(gameSpecId) || !row.isConnected) return;
+      const fresh = buildRulesPlayCta(slug, title, locale);
+      if (fresh) row.replaceWith(fresh);
+    });
   }
   return row;
 }
