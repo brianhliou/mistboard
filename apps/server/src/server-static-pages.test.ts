@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -40,6 +40,28 @@ import {
   sitemapSectionFromPath,
 } from './server-static-pages.js';
 import type { TenantManagedRoom } from './variant-tenant/registry.js';
+
+test('the English home snippet leaves every other route description unchanged', async () => {
+  const shell = await readFile(new URL('../../web/index.html', import.meta.url), 'utf8');
+  for (const [path, meta] of Object.entries(SPA_ROUTE_META)) {
+    const html = injectPageMeta(shell, { ...meta, url: `https://mistboard.com${path}` });
+    const description = meta.description
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    assert.equal(
+      html.match(/<meta\s+name="description"\s+content="([^"]*)"/)?.[1],
+      description,
+      path,
+    );
+    assert.equal(
+      html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/)?.[1],
+      description,
+      path,
+    );
+  }
+});
 
 test('locale static routes are admitted, advertised and have locale shell metadata', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-locales-'));
