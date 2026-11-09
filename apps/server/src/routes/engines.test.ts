@@ -165,3 +165,59 @@ test('public runtime roster hides neural Flip Jungle L8 without its file and nev
     );
   }
 });
+
+test('public runtime roster lists Banqi L8 only with a readable net and binary', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'banqi-roster-'));
+  const bin = join(dir, 'engine');
+  const net = join(dir, 'net');
+  writeFileSync(bin, 'fixture binary');
+  writeFileSync(net, 'fixture net');
+  const keys = ['MISTBOARD_BANQI_ENGINE_PATH', 'MISTBOARD_BANQI_NET'] as const;
+  const saved = keys.map((key) => process.env[key]);
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+    keys.forEach((key, i) => {
+      if (saved[i] === undefined) delete process.env[key];
+      else process.env[key] = saved[i];
+    });
+  });
+  process.env[keys[0]] = bin;
+  for (const path of [undefined, `${net}.missing`, dir, net]) {
+    if (path === undefined) delete process.env[keys[1]];
+    else process.env[keys[1]] = path;
+    let body = '';
+    const response = {
+      writeHead: () => {},
+      end: (chunk: string) => {
+        body += chunk;
+      },
+    } as unknown as ServerResponse;
+    await tryHandle(
+      {},
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      '/api/engines/playable',
+    );
+    const roster = JSON.parse(body).banqiEngines as { id: string }[];
+    const levels = path === net ? [8, 7, 6, 5, 4, 3, 2, 1] : [7, 6, 5, 4, 3, 2, 1];
+    assert.deepEqual(
+      roster.map((tier) => tier.id),
+      levels.map((level) => (level === 7 ? 'misty-banqi' : `misty-banqi-level-${level}`)),
+    );
+    assert.ok(!body.includes(dir));
+  }
+  process.env[keys[0]] = `${bin}.missing`;
+  let body = '';
+  await tryHandle(
+    {},
+    { method: 'GET', headers: {} } as IncomingMessage,
+    {
+      writeHead: () => {},
+      end: (chunk: string) => {
+        body += chunk;
+      },
+    } as unknown as ServerResponse,
+    '/api/engines/playable',
+  );
+  assert.deepEqual(JSON.parse(body).banqiEngines, []);
+});

@@ -99,14 +99,105 @@ describe('homepage play panel', () => {
     expect(stepValue(jieqi, 'level')).toBe('AB-JChess');
   });
 
-  it('shows one fixed Misty for the house-built games', () => {
+  it('keeps Fog Chess and Fog Xiangqi on a fixed Misty', () => {
     const board = buildPlayPanel('en', { hydrate: false });
-    const banqi = row(board, 'banqi');
-    expect(stepValue(banqi, 'level')).toBe('Misty');
-    expect(banqi.querySelector('.pp-step-level')?.classList.contains('is-fixed')).toBe(true);
-    expect(banqi.querySelector('.pp-step-level .pp-step-sub')).toBeNull();
-    expect(banqi.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
+    for (const spec of ['dark-chess', 'dark-xiangqi']) {
+      const bot = row(board, spec);
+      expect(stepValue(bot, 'level')).toBe('Misty');
+      expect(bot.querySelector('.pp-step-level.is-fixed')).not.toBeNull();
+      expect(bot.querySelector('.pp-step-sub')).toBeNull();
+    }
   });
+
+  it.each(['banqi', 'jungle-flip'])(
+    'starts %s at Level 4, sends Level 5 and remembers it for Play again',
+    async (spec) => {
+      const fetchSpy = vi.fn(async (_input: string, _init?: RequestInit) =>
+        Response.json({ url: '/room/level-5' }, { status: 201 }),
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      const board = buildPlayPanel('en', { hydrate: false });
+      const bot = row(board, spec);
+      expect(bot.querySelector('.pp-step-main')?.textContent).toBe('Misty');
+      expect(stepValue(bot, 'level')).toBe('Level 4');
+      clickNext(bot, 'level');
+      bot.querySelector<HTMLButtonElement>('.pp-act')!.click();
+      await flush();
+      const engineId = `misty-${spec}-level-5`;
+      expect(JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))).toMatchObject({
+        botId: 'misty',
+        gameSpecId: spec,
+        engineId,
+        mode: 'pve',
+        rated: false,
+      });
+      expect(JSON.parse(localStorage.getItem('mistboard.playPanel.v1')!).bots[spec].botId).toBe(
+        engineId,
+      );
+      expect(
+        JSON.parse(localStorage.getItem('mistboard:setup:pve')!).engineIdByGameSpec[spec],
+      ).toBe(engineId);
+      expect(JSON.parse(localStorage.getItem('mistboard:last-bot-game')!).botId).toBe(engineId);
+      const returning = buildPlayPanel('en', { hydrate: false });
+      expect(stepValue(row(returning, spec), 'level')).toBe('Level 5');
+      expect(returning.querySelector('.pp-feature-again')?.textContent).toContain('Misty Level 5');
+      returning.querySelector<HTMLButtonElement>('.pp-feature-again .pp-act')!.click();
+      await flush();
+      expect(JSON.parse(String(fetchSpy.mock.calls[1]?.[1]?.body)).engineId).toBe(engineId);
+    },
+  );
+
+  it.each(['banqi', 'jungle-flip'])('maps an old %s stored Misty pick to Level 7', (spec) => {
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({ bots: { [spec]: { botId: 'misty', tc: '10m5' } } }),
+    );
+    const board = buildPlayPanel('en', { hydrate: false });
+    expect(stepValue(row(board, spec), 'level')).toBe('Level 7');
+    clickNext(row(board, spec), 'level', 4);
+    expect(stepValue(row(board, spec), 'level')).toBe('Level 7');
+  });
+
+  it.each(['banqi', 'jungle-flip'])(
+    'offers neural %s L8 only after the runtime roster confirms it',
+    async (spec) => {
+      vi.useFakeTimers();
+      const engineId = `misty-${spec}-level-8`;
+      localStorage.setItem(
+        'mistboard.playPanel.v1',
+        JSON.stringify({ bots: { [spec]: { botId: engineId, tc: '10m5' } } }),
+      );
+      let available = true;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) =>
+          Response.json(
+            url === '/api/engines/playable'
+              ? {
+                  [spec === 'banqi' ? 'banqiEngines' : 'jungleFlipEngines']: available
+                    ? [{ id: engineId }]
+                    : [],
+                }
+              : {},
+          ),
+        ),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      expect(stepValue(row(board, spec), 'level')).toBe('Level 4');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(stepValue(row(board, spec), 'level')).toBe('Level 8');
+      expect(row(board, spec).querySelector('.pp-step-tag')?.textContent).toBe('Neural net');
+      board.remove();
+      available = false;
+      const noNet = buildPlayPanel('en');
+      document.body.append(noNet);
+      await vi.advanceTimersByTimeAsync(0);
+      clickNext(row(noNet, spec), 'level', 12);
+      expect(stepValue(row(noNet, spec), 'level')).toBe('Level 7');
+      expect(row(noNet, spec).querySelector('.pp-step-tag')).toBeNull();
+    },
+  );
 
   it('puts the engine on top and the level with its NNUE tag under it', () => {
     const board = buildPlayPanel('en', { hydrate: false });
@@ -231,8 +322,8 @@ describe('homepage play panel', () => {
     expect(jungle.querySelector('.pp-step-level .pp-step-meta .pp-step-tag')?.textContent).toBe(
       'Neural net',
     );
-    // Flip Jungle keeps its single Misty.
-    expect(row(board, 'jungle-flip').querySelector('.pp-step-level.is-fixed')).not.toBeNull();
+    // Flip Jungle's classical ladder does not depend on the bot profile.
+    expect(stepValue(row(board, 'jungle-flip'), 'level')).toBe('Level 4');
 
     jungle.querySelector<HTMLButtonElement>('.pp-act')!.click();
     await flush();

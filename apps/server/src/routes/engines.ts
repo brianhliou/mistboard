@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from '../account-session.js';
+import { BANQI_PLAYABLE_ENGINES, banqiEngineAvailable } from '../banqi-engine.js';
 import { playableLiveEngines } from './../engine-registry.js';
 import {
   isJungleFlipEngineClientId,
@@ -57,11 +58,21 @@ export async function tryHandle(
       familyName: 'Misty',
       kind: 'container',
     }));
+  const banqiEngines = [...BANQI_PLAYABLE_ENGINES]
+    .filter((tier) => banqiEngineAvailable(tier.id))
+    .reverse()
+    .map((tier) => ({
+      id: tier.id,
+      name: `Misty Level ${tier.level}`,
+      familyName: 'Misty',
+      kind: 'container',
+    }));
   writeJson(
     response,
     200,
     {
       engines,
+      banqiEngines,
       jungleFlipEngines,
       ...(threeKingdomsBanqiEngines ? { threeKingdomsBanqiEngines } : {}),
     },

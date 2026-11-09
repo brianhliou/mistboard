@@ -370,15 +370,48 @@ describe('landing bot ladder (homepage play panel)', () => {
     expect(nnue('banqi')).toEqual([]);
   });
 
-  it('gives the house-built variants a single Misty', () => {
-    for (const spec of [
-      'dark-chess',
-      'dark-xiangqi',
-      'banqi',
-      'jungle',
-      'jungle-flip',
-      'xiangqi-mahjong',
-    ]) {
+  it.each(['banqi', 'jungle-flip'])(
+    'walks %s Misty tiers weakest first and gates neural L8',
+    (spec) => {
+      const base = `misty-${spec}`;
+      const engines = Array.from({ length: 8 }, (_, i) =>
+        i === 6 ? base : `${base}-level-${i + 1}`,
+      );
+      const ladder = landingBotLadder(spec, new Set(['misty']), new Set(engines));
+      expect(ladder.map((rung) => rung.engineId)).toEqual(engines);
+      expect(ladder.map((rung) => rung.botId)).toEqual(Array(8).fill('misty'));
+      expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+      expect(ladder.map((rung) => rung.engine)).toEqual(Array(8).fill('Misty'));
+      expect(ladder.map((rung) => rung.net)).toEqual([
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        'neural',
+      ]);
+      expect(ladder[7]?.gated).toBe(true);
+      expect(landingBotLadder(spec, new Set(['misty'])).map((rung) => rung.engineId)).toEqual(
+        engines.slice(0, 7),
+      );
+      expect(landingBotLadder(spec, new Set(), new Set(['misty-other-level-8']))).toHaveLength(7);
+      expect(landingBotLadderIndex(ladder, 'misty')).toBe(6);
+      for (const [i, engine] of engines.entries())
+        expect(landingBotLadderIndex(ladder, engine)).toBe(i);
+      expect(landingBotLadderIndex(landingBotLadder(spec), engines[7])).toBe(-1);
+      expect(landingBotLadderIndex(ladder, 'misty-other-level-5')).toBe(-1);
+      expect(
+        ladder[
+          landingBotLadderIndex(ladder, webVariantTenantForSpecId(spec)?.landing?.defaultEngineId)
+        ]?.level,
+      ).toBe(4);
+    },
+  );
+
+  it('keeps the remaining house-built variants on a single Misty', () => {
+    for (const spec of ['dark-chess', 'dark-xiangqi', 'jungle', 'xiangqi-mahjong']) {
       expect(ids(spec)).toEqual(['misty']);
     }
     expect(ids('not-a-variant')).toEqual([]);
@@ -393,7 +426,7 @@ describe('landing bot ladder (homepage play panel)', () => {
     // Flip Jungle has no KataGo seat, whatever the roster says.
     expect(
       landingBotLadder('jungle-flip', new Set(['misty', 'katago'])).map((r) => r.botId),
-    ).toEqual(['misty']);
+    ).toEqual(Array(7).fill('misty'));
     const top = landingBotLadder('jungle', new Set(['katago']))[1];
     expect(top).toMatchObject({ name: 'KataGo', engine: 'KataGo', level: null, net: 'neural' });
   });
