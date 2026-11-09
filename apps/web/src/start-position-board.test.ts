@@ -3,10 +3,13 @@
 // may draw one: the seek card keeps its plain tile for those.
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  createGomokuRoomState,
   createInitialCrazyhouseXiangqiState,
+  getGomokuPlayerView,
   maybeGameSpecForId,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { gomokuBoardSvg } from './gomoku-board.js';
 import { renderStartPositionSvg } from './start-position-board.js';
 
 // Every piece glyph a xiangqi-family board draws carries this class.
@@ -38,5 +41,18 @@ describe('renderStartPositionSvg', () => {
 
   it('returns null for an unknown id instead of guessing a board', async () => {
     expect(await renderStartPositionSvg('not-a-variant')).toBeNull();
+  });
+
+  it('draws a static Gomoku board from the empty kernel without dealing an opening', async () => {
+    const expected = gomokuBoardSvg(
+      getGomokuPlayerView(createGomokuRoomState('start-gomoku'), 'black'),
+      false,
+    );
+    for (const side of [undefined, 'first', 'second'] as const) {
+      const svg = await renderStartPositionSvg('gomoku', side);
+      expect(svg).toBe(expected);
+      expect(svg).not.toContain('data-piece-square');
+      expect(svg).not.toContain('tabindex="0"');
+    }
   });
 });
