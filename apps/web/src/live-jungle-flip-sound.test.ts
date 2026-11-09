@@ -96,10 +96,10 @@ describe('classifyJungleFlipOpponentSound', () => {
     expect(classifyJungleFlipOpponentSound(prev, next, 'red')).toBe('flip');
   });
 
-  it('plays captured when our revealed-piece count drops', () => {
+  it('plays capture when our revealed-piece count drops', () => {
     const prev = view({ board: { a1: myAnimal }, status: playingBlack, firstColor: 'red' });
     const next = view({ board: {}, status: playingRed, firstColor: 'red' });
-    expect(classifyJungleFlipOpponentSound(prev, next, 'red')).toBe('captured');
+    expect(classifyJungleFlipOpponentSound(prev, next, 'red')).toBe('capture');
   });
 
   it('plays move after a plain opponent board move', () => {

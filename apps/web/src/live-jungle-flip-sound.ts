@@ -6,7 +6,7 @@
 // flip; a board move is a capture of a revealed enemy animal (face-down tiles are
 // never captured) or a plain move. The opponent classifier diffs the visible board:
 // a freshly turned tile is 'flip', a drop in the seat's revealed-piece count is
-// 'captured', anything else is 'move'. It only ever reads revealed pieces, so no
+// 'capture', anything else is 'move'. It only ever reads revealed pieces, so no
 // face-down identity is ever consulted.
 
 import type {
@@ -107,7 +107,7 @@ export function classifyJungleFlipOpponentSound(
   if (next.status.type === 'playing' && next.status.turn !== seat) return null;
   if (someTileFlipped(prev, next)) return 'flip';
   const ink = seatInk(next, seat) ?? seatInk(prev, seat);
-  if (ink && ownRevealedCount(next, ink) < ownRevealedCount(prev, ink)) return 'captured';
+  if (ink && ownRevealedCount(next, ink) < ownRevealedCount(prev, ink)) return 'capture';
   return 'move';
 }
 
