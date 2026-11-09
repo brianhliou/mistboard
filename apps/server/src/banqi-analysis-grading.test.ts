@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  ALL_BANQI_SQUARES,
   applyBanqiMove,
   type BanqiGameState,
   type BanqiMove,
@@ -308,13 +309,21 @@ test('live flip grading requests the same NNUE net, split budget and full budget
   });
 });
 
-test('whole analysis requests remain identical when hidden identities are permuted', async () => {
-  let state = createBanqiStateFromSetup('hidden-request', fixture.setup);
-  const states = [state];
-  for (const move of fixture.moves.slice(0, 84)) {
-    state = applyBanqiMove(state, move);
-    states.push(state);
+test('whole analysis requests remain identical when hidden identities are permuted', async (t) => {
+  const moves = fixture.moves.slice(0, 84);
+  function replay(setup: BanqiSetup): BanqiGameState[] {
+    let state = createBanqiStateFromSetup('hidden-request', setup);
+    const states = [state];
+    for (const move of moves) {
+      const next = applyBanqiMove(state, move);
+      assert.equal(next.ply, state.ply + 1);
+      states.push(next);
+      state = next;
+    }
+    return states;
   }
+  const states = replay(fixture.setup);
+  const state = states[moves.length]!;
   const hidden = (Object.keys(state.board) as (keyof typeof state.board)[]).filter(
     (sq) => state.board[sq]?.faceDown,
   );
@@ -325,12 +334,33 @@ test('whole analysis requests remain identical when hidden identities are permut
       state.board[sq]!.color !== state.board[a]!.color,
   )!;
   assert.ok(b);
-  const swapped = { ...state, board: { ...state.board, [a]: state.board[b], [b]: state.board[a] } };
-  const window = banqiAnalysisRepetitionWindow(states, fixture.moves, 84);
+  // These tiles have never moved or flipped. Swap the original deal and replay
+  // it independently so BOTH the current FEN and the history-root FEN see the swap.
+  const setup = { ...fixture.setup, deal: [...fixture.setup.deal] };
+  const ai = ALL_BANQI_SQUARES.indexOf(a);
+  const bi = ALL_BANQI_SQUARES.indexOf(b);
+  [setup.deal[ai], setup.deal[bi]] = [setup.deal[bi]!, setup.deal[ai]!];
+  const swappedStates = replay(setup);
+  const swapped = swappedStates[moves.length]!;
+  assert.notDeepEqual(swapped.board, state.board, 'the hidden permutation must be real');
+  assert.deepEqual(swapped.board[a], state.board[b]);
+  assert.deepEqual(swapped.board[b], state.board[a]);
+  const window = banqiAnalysisRepetitionWindow(states, moves, moves.length);
+  const swappedWindow = banqiAnalysisRepetitionWindow(swappedStates, moves, moves.length);
+  assert.ok(window.moves.length > 0, 'exercise a history-root FEN before the current ply');
   await withGradingEngine(async (engine) => {
-    await evaluateBanqiPosition(state, window);
-    const first = engine.commands();
-    await evaluateBanqiPosition(swapped, { ...window });
-    assert.equal(JSON.stringify(engine.commands().slice(first.length)), JSON.stringify(first));
+    for (const history of [false, true]) {
+      await t.test(history ? 'repetition history' : 'current position', async () => {
+        const start = engine.commands().filter(Boolean).length;
+        await evaluateBanqiPosition(state, history ? window : undefined);
+        const first = engine.commands().slice(start);
+        await evaluateBanqiPosition(swapped, history ? swappedWindow : undefined);
+        assert.equal(
+          JSON.stringify(engine.commands().slice(start + first.length)),
+          JSON.stringify(first),
+          history ? 'independently rebuilt repetition windows' : 'current-position FENs',
+        );
+      });
+    }
   });
 });
