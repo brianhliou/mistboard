@@ -6515,8 +6515,8 @@ const ZH_HANS: Record<string, string> = {
   "Material counted on the engine's own value table.": '子力按引擎自己的价值表计算。',
   'The games measure this engine, not banqi between people.':
     '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
-  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
-    '新增引擎的构建过程：自我对弈、价值表、搜索的平台期和重复局面的修复。',
+  "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
+    '第 8 级现在在这套搜索上加入了一个训练好的神经网络。第 1 到第 7 级就是本文介绍的经典引擎。这个网络暂未公开，之后会发布，届时本页会更新说明。',
   'Added an FAQ on what the bot cannot see, and the sample game as a study.':
     '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
   'The Treasure figure now shows the five moves the rules allow, not eight.':
@@ -13045,8 +13045,8 @@ const ZH_HANT: Record<string, string> = {
   "Material counted on the engine's own value table.": '子力按引擎自己的價值表計算。',
   'The games measure this engine, not banqi between people.':
     '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
-  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
-    '新增引擎的構建過程：自我對弈、價值表、搜尋的平台期和重複局面的修復。',
+  "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
+    '第 8 級現在在這套搜尋上加入了一個訓練好的神經網路。第 1 到第 7 級就是本文介紹的經典引擎。這個網路暫未公開，之後會發布，屆時本頁會更新說明。',
   'Added an FAQ on what the bot cannot see, and the sample game as a study.':
     '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
   'The Treasure figure now shows the five moves the rules allow, not eight.':
