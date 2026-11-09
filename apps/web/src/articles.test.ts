@@ -53,9 +53,7 @@ describe('Jieqi review explanation', () => {
       'At 10 points it is a mistake, and at 15 a blunder.',
       'weights each one by how many of that piece are left',
       'it never depends on what actually turned over',
-      'teal and a plus sign',
-      'violet and a minus sign',
-      'More pips and a deeper colour mean a bigger swing.',
+      'The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.',
       'plus any of your pieces your opponent captured while they were still face-down',
       'Luck averages out to zero over many flips, by design.',
     ]) {
@@ -108,6 +106,7 @@ describe('Jieqi review explanation', () => {
       const headings = [...page.querySelectorAll('h3')].map((heading) => heading.textContent);
       expect(headings).toEqual(expect.arrayContaining([grading, luck]));
       expect(page.textContent).toContain('(70 + 45 + 45) / 3');
+      expect(page.textContent).toContain('+12%');
       expect(page.textContent).toContain(note);
       expect(page.textContent).not.toContain('your winning chance with the piece you actually got');
       const source = articles.find((article) => article.slug === slug);

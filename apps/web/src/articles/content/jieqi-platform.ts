@@ -161,11 +161,7 @@ export const jieqiPlatformArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The difference is your luck on that flip. The die badge shows it: teal and a plus sign when the piece was better than average, violet and a minus sign when it was worse, grey when it was close.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'More pips and a deeper colour mean a bigger swing.',
+          text: 'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.',
         },
         {
           kind: 'paragraph',

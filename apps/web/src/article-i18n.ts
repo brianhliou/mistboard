@@ -4686,9 +4686,8 @@ const ZH_HANS: Record<string, string> = {
   'Once the piece turns over, we compare two numbers:': '棋子揭开后，我们比较两个数值：',
   'your winning chance with the piece you actually got;': '实际揭出这枚棋子时，你的获胜机会；',
   'the average over every piece you could have got.': '所有可能揭出的棋子所对应的平均获胜机会。',
-  'The difference is your luck on that flip. The die badge shows it: teal and a plus sign when the piece was better than average, violet and a minus sign when it was worse, grey when it was close.':
-    '两者之差就是这次揭子的运气。骰子标记会显示它：揭出的棋子好于平均时，用青绿色和加号；差于平均时，用紫色和减号；接近平均时，用灰色。',
-  'More pips and a deeper colour mean a bigger swing.': '点数越多、颜色越深，影响越大。',
+  'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.':
+    '两者之差就是这次揭子的运气。棋子旁的骰子会显示它：揭出的棋子好于平均时为青绿色，差于平均时为紫色，接近平均时为灰色；点数越多，影响越大。着法列表会给出数值，例如 +12%。',
   'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.':
     '举个例子：这次可能揭出三枚棋子中的一枚，一枚车、两枚兵。揭出车时，你的获胜机会是 70；揭出兵时是 45。平均值为 (70 + 45 + 45) / 3，约为 53。如果揭出车，这次就走运了 17 个百分点；如果揭出兵，就不走运了 8 个百分点。',
   '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.':
@@ -11450,9 +11449,8 @@ const ZH_HANT: Record<string, string> = {
   'Once the piece turns over, we compare two numbers:': '棋子揭開後，我們比較兩個數值：',
   'your winning chance with the piece you actually got;': '實際揭出這枚棋子時，你的獲勝機會；',
   'the average over every piece you could have got.': '所有可能揭出的棋子所對應的平均獲勝機會。',
-  'The difference is your luck on that flip. The die badge shows it: teal and a plus sign when the piece was better than average, violet and a minus sign when it was worse, grey when it was close.':
-    '兩者之差就是這次揭子的運氣。骰子標記會顯示它：揭出的棋子好於平均時，用青綠色和加號；差於平均時，用紫色和減號；接近平均時，用灰色。',
-  'More pips and a deeper colour mean a bigger swing.': '點數越多、顏色越深，影響越大。',
+  'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.':
+    '兩者之差就是這次揭子的運氣。棋子旁的骰子會顯示它：揭出的棋子好於平均時為青綠色，差於平均時為紫色，接近平均時為灰色；點數越多，影響越大。著法列表會給出數值，例如 +12%。',
   'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.':
     '舉個例子：這次可能揭出三枚棋子中的一枚，一枚車、兩枚兵。揭出車時，你的獲勝機會是 70；揭出兵時是 45。平均值為 (70 + 45 + 45) / 3，約為 53。如果揭出車，這次就走運了 17 個百分點；如果揭出兵，就不走運了 8 個百分點。',
   '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.':
