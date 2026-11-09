@@ -74,5 +74,13 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["scripts/data/win-curve-samples-pikafish-cc0.json"],
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ]
 }

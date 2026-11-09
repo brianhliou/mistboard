@@ -275,3 +275,24 @@ describe('withPraise', () => {
     expect(praiseGlyph(undefined)).toBeNull();
   });
 });
+
+describe('CC0 Xiangqi @6 review percentages', () => {
+  it('uses the stored curve for move grades, aggregate accuracy, regrading and decision merge', () => {
+    const old = computeGameAnalysis({
+      ...evals([0, -90, -90, -90]),
+      engineId: 'pikafish-xiangqi-analysis@5',
+    });
+    const fresh = computeGameAnalysis({
+      ...evals([0, -90, -90, -90]),
+      engineId: 'pikafish-xiangqi-analysis@6',
+    });
+    expect(old.moves[0]?.judgment).toBe('inaccuracy');
+    expect(fresh.moves[0]?.judgment).toBe('mistake');
+    expect(fresh.moves[0]?.winLoss).toBeCloseTo(50 - 100 / (1 + Math.exp(0.00465696 * 90)), 8);
+    expect(fresh.red.accuracy).toBeLessThan(old.red.accuracy);
+    const regraded = regradeBestPlayed(fresh, new Set([3]));
+    expect(regraded.moves[0]?.judgment).toBe('mistake');
+    expect(regraded.red.accuracy).toBeCloseTo(fresh.red.accuracy);
+    expect(mergeDecisionAnalysis(fresh, new Map()).red.accuracy).toBeCloseTo(fresh.red.accuracy);
+  });
+});

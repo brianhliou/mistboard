@@ -111,3 +111,19 @@ test('capture-line analysis includes offers after a recorded repetition', async 
   assert.equal(plies.find((row) => row.ply === 13)?.offerLine?.capture, CAPTURE_UCI);
   assert.ok(calls.some((line) => line.length === ucis.length + 1 && line.at(-1) === CAPTURE_UCI));
 });
+
+test('CC0 offer grading rejects a loss that only the historical curve calls near-best', async () => {
+  // A 20cp drop from even loses 1.84 points at @5 but 2.33 at @6, crossing
+  // the classifier's 2-point near-best bar. It must cost no capture search.
+  const calls: string[][] = [];
+  const evaluate = fakeEvaluate(calls);
+  const plies = await analyzeXiangqiGame(MOVES_UCI, {
+    moves: MOVES,
+    evaluate: async (moves) => ({
+      ...(await evaluate(moves)),
+      cp: moves.length === 5 ? -20 : 0,
+    }),
+  });
+  assert.equal(plies.find((row) => row.ply === 5)?.offerLine, undefined);
+  assert.equal(calls.length, MOVES_UCI.length + 1);
+});

@@ -210,3 +210,27 @@ test("Rapfi analyses are read on Rapfi's own win curve", () => {
   // Rapfi printed EVAL 414 beside WINRATE 0.887953 for one recorded position.
   assert.ok(Math.abs(winPercent(414, null, winPercentK(id)) - 88.8) < 0.1);
 });
+
+test('CC0 Xiangqi @6 uses its paired curve while historical and unrelated ids stay unchanged', () => {
+  const id = 'pikafish-xiangqi-analysis@6';
+  assert.equal(winPercentK(id), 0.00465696);
+  for (const old of [1, 2, 3, 4, 5]) {
+    assert.equal(winPercentK(`pikafish-xiangqi-analysis@${old}`), WIN_PCT_K);
+  }
+  for (const other of [
+    'pikafish-xiangqi-analysis@60',
+    'pikafish-xiangqi-level-6',
+    'pikafish-jieqi-analysis@6',
+  ]) {
+    assert.equal(winPercentK(other), WIN_PCT_K);
+  }
+  assert.equal(moveJudgment(50, winPercent(-90, null, id)), 'mistake');
+  assert.equal(
+    moveJudgment(50, winPercent(-90, null, 'pikafish-xiangqi-analysis@5')),
+    'inaccuracy',
+  );
+  assert.equal(winPercent(null, null, id), 50);
+  assert.equal(winPercent(2000, null, id), winPercent(1000, null, id));
+  assert.ok(winPercent(null, 1, id) > winPercent(1000, null, id));
+  assert.ok(Math.abs(winPercent(-90, null, id) + winPercent(90, null, id) - 100) < 1e-9);
+});
