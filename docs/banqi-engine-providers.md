@@ -45,12 +45,18 @@ To keep the reference bridge running locally, supply a token through the operato
 environment. This example contains a placeholder, never a real credential:
 
 ```sh
-MISTBOARD_BANQI_PROVIDER_TOKEN='<local-test-token>' npm run engine:banqi-provider -- bridge --bin /absolute/path/to/engine --port 3217
+MISTBOARD_BANQI_PROVIDER_TOKEN='<local-test-token>' npm run engine:banqi-provider -- bridge --bin /absolute/path/to/engine --port 3217 --version Engine-v1-modelA --uci-name 'Engine 1.0'
 ```
 
 `--eval-file` also works with `bridge`. It binds only `127.0.0.1`; production
 TLS, credential provisioning, isolation and deployment are separate operator
 work. The bridge route is `POST /turn`, with JSON and a Bearer token.
+Authenticated `GET /health` reports the protocol and operator-pinned version.
+Before listening, the worker verifies the exact UCI name and completes a legal
+opening search. A configured model must be readable; model-load diagnostics or
+a reported classical fallback reject, including when a legal move follows.
+Keep private artifact hashes in the operator's record; the version tag should
+distinguish both engine build and evaluator.
 
 ## The turn contract
 
@@ -159,3 +165,89 @@ Before an actual outside bot is enabled, the operator must:
 The reference bridge is a local proof, not a general production hosting service.
 An outbound pull-worker API, public self-service registration and provider-backed
 grading remain outside this implementation.
+
+## Complete-game rehearsal and private canary
+
+The local rehearsal starts a **separate worker process**, a real HTTP/WebSocket
+server and a dedicated local Postgres database (`mistboard_provider_1025` on the
+repository's development Postgres). It creates an internal admin account/session
+without sending email. The driver chooses only from the human seat's received
+public board/legal moves, plays to a natural kernel ending, reconnects a real
+socket, evicts the room and reloads its persisted event history during quiet
+play. It verifies private attribution, the internal-count partition and refused
+public export. It never prints credentials or saves the hidden deal as evidence.
+
+```sh
+npm run engine:banqi-provider-game -- --bin /absolute/path/to/engine --version Engine-v1-modelA --uci-name 'Engine 1.0' --eval-file /absolute/path/to/model.nnue
+```
+
+Omit `--eval-file` for classical evaluation. `--nodes N` overrides the rehearsal's
+2048-node test budget, bounded by the server's canary limits. `--keep` retains
+the local API/worker pair for browser review; SIGINT/SIGTERM shuts down that pair.
+Local admin email is `provider-rehearsal@example.test`; sign in through local dev
+auth. The resulting log reports the room, actual completion, reconnection,
+hydration and configured identity. These checks have passed using an existing
+classical executable and a matching NNUE executable/model. This proves local
+transport and room integration, **not** a separately hosted production worker,
+strength, or compatibility with another author's engine.
+
+An operator may enable the fixed `private-banqi-worker` canary using these web
+process settings. They are never read from a client request:
+
+| Setting | Meaning |
+|---|---|
+| `MISTBOARD_BANQI_TEST_PROVIDER_ENABLED=true` | Explicit opt-in; off by default. |
+| `MISTBOARD_BANQI_TEST_PROVIDER_URL` | Trusted HTTPS URL ending `/turn`. |
+| `MISTBOARD_BANQI_PROVIDER_TOKEN` | Secret shared with that worker, provisioned outside source/logs. |
+| `MISTBOARD_BANQI_TEST_PROVIDER_VERSION` | Must match authenticated worker health and the persisted room stamp. |
+| `MISTBOARD_BANQI_TEST_PROVIDER_NAME` | Truthful private display name, default `Private Banqi worker`. |
+| `MISTBOARD_BANQI_TEST_PROVIDER_NODES` | Integer 1–3,500,000; default 32,000. |
+| `MISTBOARD_BANQI_TEST_PROVIDER_BUDGET_MS` | Integer 100–8000; default 3000, reduced by the live clock. |
+| `MISTBOARD_BANQI_TEST_ALLOW_LOOPBACK=true` | Development-only numeric loopback HTTP; ignored in production. |
+
+A signed-in admin can `POST /api/rooms` with
+`{"gameSpecId":"banqi","mode":"pve","engineId":"private-banqi-worker","internalEngineTest":true}`,
+plus optional `preferredColor` (`red` or `black`) and live `timeControl`.
+No public menu or ladder exposes this selector. Other fields, including endpoint,
+command, model, bot profile and rated selection, reject. The creator remains the
+only admitted account and must still be an admin. Build/name/budgets/owner persist
+in the initial event; changing the operator configuration refuses a live room
+on reload. Unavailable or mismatched workers fail closed, without built-in
+substitution. Authentication and worker-version checking share the turn's
+absolute deadline.
+
+These rooms and their participants finish **private**, under a dedicated internal
+corpus. They are excluded from live discovery, public postgame reads, cards,
+exports and counted/short/prelaunch game metrics, and classified as internal
+games. The owner can read masked as-played postgame data; no hidden-deal overlay
+is supplied, including after completion. The public Banqi opponent is unchanged.
+
+## Worker operation recipe (not deployed)
+
+Use a dedicated process supervisor/container with the reviewed executable and
+optional model mounted read-only. Run as an unprivileged user; give the engine no
+web/database credentials, writable application tree or network access. The native
+adapter supplies only a minimal PATH. Set an explicit CPU/memory/process ceiling
+at the supervisor/container boundary; start with one engine process at a time
+(`MISTBOARD_BANQI_PROVIDER_MAX_CONCURRENT=1`) and an 8-second maximum admitted
+turn budget. The repository does not provision these isolation controls.
+
+Run the bridge command above on loopback behind an operator-managed TLS reverse
+proxy on the same host/container network namespace. Keep its raw port inaccessible
+to other hosts; expose only `/turn` and authenticated `/health` over TLS. Forward
+the authorization header, reject bodies above 64 KiB, refuse redirects, and set
+proxy timeouts just above the admitted turn budget. Configure the web process with
+the HTTPS `/turn` endpoint and matching version; do not enable the loopback
+exception in production. An authenticated health check becomes ready only after
+the startup search. Logs must omit authorization headers, model paths and raw
+engine diagnostics.
+
+SIGTERM stops admission, lets bounded active work finish and closes the server;
+after nine seconds remaining connections are forcibly closed. Native searches
+are killed on their deadline/cancellation. The supervisor's termination grace
+must exceed that bound. A parent IPC disconnect also shuts down rehearsal workers.
+Keep the previous executable/model and version for rollback; disable the web
+canary first, drain its active test rooms, then stop/replace the worker. Re-enable
+only after health/version, a complete private game and failure behavior pass on
+the intended host. TLS, secrets, sandbox/resource policy and an actual hosted
+canary remain operator setup; no production deployment has been performed.

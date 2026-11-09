@@ -457,6 +457,8 @@ function stderrDetail(tail: string): string {
 }
 
 export type RunUciBestmoveArgs = {
+  /** Optional provider-specific fatal diagnostic; message is deliberately sanitized. */
+  rejectOutputLine?: (line: string) => boolean;
   /** Absolute path to the engine binary. */
   bin: string;
   /** UCI command block written to stdin (joined by newlines, trailing newline added). */
@@ -774,6 +776,10 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           while (newline >= 0) {
             const line = buf.slice(0, newline).trim();
             buf = buf.slice(newline + 1);
+            if (args.rejectOutputLine?.(line)) {
+              finish(() => reject(new Error('Engine configuration rejected')));
+              return;
+            }
             trace.note(line);
             const option = parseUciOptionLine(line);
             if (option) advertisedOptions.add(option);

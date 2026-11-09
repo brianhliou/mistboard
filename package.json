@@ -46,6 +46,7 @@
     "build": "node scripts/build.mjs",
     "build:all": "npm run build --workspaces",
     "start": "node scripts/start.mjs",
+    "engine:banqi-provider-game": "node --import tsx scripts/banqi-provider-game.mjs",
     "engine:banqi-provider": "node --import tsx scripts/banqi-provider.mjs",
     "engine:enqueue": "npm run engine:enqueue --workspace=@mistboard/server",
     "engine:enqueue-smoke": "npm run engine:enqueue-smoke --workspace=@mistboard/server",

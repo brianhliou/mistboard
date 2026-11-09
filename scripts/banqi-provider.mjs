@@ -24,8 +24,11 @@ if (!bin || !['probe', 'bridge'].includes(mode)) {
   process.exit(2);
 }
 const evalFile = option('--eval-file');
+const expectedUciName = option('--uci-name');
+const engineVersion = option('--version');
 const provider = createBanqiUciProvider({
   bin: resolve(bin),
+  ...(expectedUciName ? { expectedUciName } : {}),
   ...(evalFile ? { evalFile: resolve(evalFile) } : {}),
 });
 
@@ -36,13 +39,45 @@ if (mode === 'bridge') {
     process.exit(2);
   }
   const port = Number(option('--port') ?? 3217);
-  if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid local port');
-  const server = createBanqiProviderBridge(provider, token);
-  server.listen(port, '127.0.0.1', () =>
-    console.log(`Local Banqi bridge listening on port ${port}`),
+  if (!Number.isInteger(port) || (port !== 0 && port < 1024) || port > 65535)
+    throw new Error('Invalid local port');
+  if (
+    !engineVersion ||
+    !expectedUciName ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9_.:+-]{0,119}$/.test(engineVersion)
+  )
+    throw new Error('Bridge requires --version and --uci-name');
+  // Startup canary verifies the pinned handshake and model before declaring health.
+  await provider.turn(
+    buildBanqiProviderRequest({
+      state: createInitialBanqiState('worker-startup', undefined, {
+        noProgressLimit: 60,
+        chaseRule: 'repetition',
+      }),
+      requestId: randomUUID(),
+      engineId: 'private-banqi-worker',
+      nowMs: Date.now(),
+      budgetMs: 3000,
+      remainingMs: null,
+      incrementMs: 0,
+      nodes: 64,
+    }),
   );
-  for (const signal of ['SIGINT', 'SIGTERM'])
-    process.on(signal, () => server.close(() => process.exit(0)));
+  const server = createBanqiProviderBridge(provider, token, engineVersion);
+  server.listen(port, '127.0.0.1', () => {
+    const actual = server.address().port;
+    console.log(`Local Banqi bridge listening on port ${actual}`);
+    process.send?.({ ready: true, port: actual });
+  });
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+    const deadline = setTimeout(() => {
+      server.closeAllConnections();
+      process.exit(1);
+    }, 9000);
+    deadline.unref();
+  };
+  for (const signal of ['SIGINT', 'SIGTERM', 'disconnect']) process.once(signal, shutdown);
 } else {
   // The probe generates its own ephemeral credential; it is never printed.
   const token = randomUUID();

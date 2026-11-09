@@ -1,3 +1,4 @@
+import { accessSync, constants, statSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import {
   BANQI_PROVIDER_MAX_BUDGET_MS,
@@ -86,6 +87,7 @@ export function createBanqiUciProvider(config: {
   bin: string;
   /** Operator-local path, never serialized into a turn or HTTP header. */
   evalFile?: string;
+  expectedUciName?: string;
   concurrency?: number;
 }): BanqiTurnProvider {
   if (
@@ -95,6 +97,14 @@ export function createBanqiUciProvider(config: {
       (!isAbsolute(config.evalFile) || /[\r\n\0]/.test(config.evalFile)))
   )
     throw new BanqiProviderError('invalid-request');
+  if (config.evalFile) {
+    try {
+      accessSync(config.evalFile, constants.R_OK);
+      if (!statSync(config.evalFile).isFile()) throw new Error();
+    } catch {
+      throw new BanqiProviderError('invalid-request');
+    }
+  }
   return boundedProvider(async (request, signal) => {
     const remaining = request.limits.deadlineUnixMs - Date.now();
     if (remaining <= 0) throw new BanqiProviderError('deadline');
@@ -105,6 +115,7 @@ export function createBanqiUciProvider(config: {
     if (Number(window.fen.split(' ')[3]) !== 0 || window.moves.length !== quietPlies) {
       throw new BanqiProviderError('invalid-request');
     }
+    let nameVerified = config.expectedUciName === undefined;
     const result = await runUciEval({
       bin: config.bin,
       commands: [
@@ -119,12 +130,23 @@ export function createBanqiUciProvider(config: {
       timeoutMs: remaining,
       deadlineUnixMs: request.limits.deadlineUnixMs,
       timeoutMessage: 'Banqi provider deadline',
+      rejectOutputLine: (line) => {
+        if (line.startsWith('id name ') && config.expectedUciName !== undefined) {
+          nameVerified = line.slice(8) === config.expectedUciName;
+          if (!nameVerified) return true;
+        }
+        return (
+          config.evalFile !== undefined &&
+          /(?:error.*EvalFile|EvalFile.*error|using classical)/i.test(line)
+        );
+      },
       signal,
       maxOutputBytes: BANQI_PROVIDER_MAX_BYTES,
       // Executables receive no web service credentials or unrelated configuration.
       inheritEnv: false,
       env: { PATH: '/usr/bin:/bin' },
     });
+    if (!nameVerified) throw new BanqiProviderError('transport');
     if (!result.best) throw new BanqiProviderError('illegal-move');
     let analysis: BanqiProviderAnalysis | undefined;
     if (result.cp !== null || result.mate !== null) {
@@ -194,10 +216,30 @@ export function createBanqiHttpProvider(config: {
   token: string;
   allowLocalhostHttp?: boolean;
   concurrency?: number;
+  expectedVersion?: string;
 }): BanqiTurnProvider {
   const endpoint = checkedBanqiProviderEndpoint(config.endpoint, config.allowLocalhostHttp);
   if (!config.token || /[\r\n]/.test(config.token)) throw new BanqiProviderError('invalid-request');
   return boundedProvider(async (request, signal) => {
+    if (config.expectedVersion) {
+      const health = new URL(endpoint);
+      health.pathname = '/health';
+      const response = await fetch(health, {
+        signal,
+        redirect: 'manual',
+        headers: { authorization: `Bearer ${config.token}` },
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new BanqiProviderError('transport');
+      }
+      const value = (await readBanqiProviderBody(response)) as {
+        protocol?: unknown;
+        engineVersion?: unknown;
+      };
+      if (value.protocol !== 'mistboard-banqi/1' || value.engineVersion !== config.expectedVersion)
+        throw new BanqiProviderError('invalid-response');
+    }
     const response = await fetch(endpoint, {
       method: 'POST',
       redirect: 'manual',

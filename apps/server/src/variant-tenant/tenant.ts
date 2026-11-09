@@ -148,6 +148,7 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       creatorPreference?: C | 'random';
       rated?: boolean;
       pveBotId?: string;
+      internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
       timeControl?: RoomTimeControl;
       // Server-secret per-game setup (e.g. a jieqi deal). Produced by
       // rules.createSetup at room creation, persisted here as the replay source

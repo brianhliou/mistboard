@@ -1,3 +1,4 @@
+import { internalEngineTestFor, isInternalEngineTest } from '../internal-engine-test.js';
 /**
  * Generic event-sourced live-room runtime over a VariantTenant.
  *
@@ -317,6 +318,7 @@ export function createTenantRuntimeRoom<
   options: {
     creatorPreference?: C | 'random';
     now?: number;
+    internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
     pveBotId?: string;
     rated?: boolean;
     timeControl?: RoomTimeControl;
@@ -343,6 +345,7 @@ export function createTenantRuntimeRoom<
       roomId,
       gameSpecId: tenant.gameSpecId,
       ...(options.creatorPreference ? { creatorPreference: options.creatorPreference } : {}),
+      ...(options.internalEngineTest ? { internalEngineTest: options.internalEngineTest } : {}),
       ...(options.pveBotId ? { pveBotId: options.pveBotId } : {}),
       ...(options.rated ? { rated: true } : {}),
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
@@ -897,6 +900,11 @@ export function tenantSeatDisplayNames<
     const clientId = room.projection.seats[color];
     if (clientId && tenant.engine?.isEngineClientId(clientId)) {
       const engine = tenant.engine;
+      const internal = internalEngineTestFor(room.events);
+      if (internal?.engineId === clientId) {
+        names[color] = internal.displayName;
+        continue;
+      }
       names[color] = liveSeatEngineName(clientId, room.pveBotId, () =>
         engine.displayName(clientId),
       );
@@ -1297,6 +1305,7 @@ function tenantRoomRevealsTruth<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): boolean {
+  if (internalEngineTestFor(room.events)) return false;
   const spec = maybeGameSpecForId(tenant.gameSpecId);
   if (!spec) return false;
   // A tenant reveals as a unit or not at all. Requiring truthView here is what
@@ -1380,6 +1389,11 @@ export function isTenantEvent<
         event.creatorPreference === 'random' ||
         tenant.rules.isColor(event.creatorPreference)) &&
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
+      (event.internalEngineTest === undefined ||
+        (tenant.gameSpecId === 'banqi' &&
+          isInternalEngineTest(event.internalEngineTest) &&
+          event.rated !== true &&
+          event.pveBotId === undefined)) &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
       (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
       (event.origin === undefined || isTenantGameOrigin(event.origin)) &&

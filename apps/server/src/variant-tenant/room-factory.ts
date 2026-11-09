@@ -94,6 +94,7 @@ export async function createTenantLiveRoom<
      * Supply one or the other, never both.
      */
     engines?: readonly TenantRoomEngineSeat<C>[];
+    internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
     rated?: boolean;
     /** Made by a lobby match. Defaults to whether createAsLobbyMatch is running. */
     lobbyMatch?: boolean;
@@ -113,6 +114,7 @@ export async function createTenantLiveRoom<
     }
     const created = createTenantRuntimeRoom(tenant, roomId, {
       creatorPreference,
+      internalEngineTest: options.internalEngineTest,
       pveBotId: firstEngine?.botId,
       rated,
       timeControl,

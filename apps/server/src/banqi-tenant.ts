@@ -110,9 +110,10 @@ export function banqiClientEventFor(
   ply: number,
 ): TenantClientEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID> | null {
   if (event.type === 'room-created') {
-    if (event.setup === undefined) return event;
+    if (event.setup === undefined && event.internalEngineTest === undefined) return event;
     const redacted = { ...event };
     delete redacted.setup;
+    delete redacted.internalEngineTest;
     return redacted;
   }
   if (event.type === 'move-played') return { ...event, ply };
