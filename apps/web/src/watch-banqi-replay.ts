@@ -4,9 +4,6 @@
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
 import { type BanqiMove, type BanqiPlayerView, banqiMoveLabelOnBoard } from '@mistboard/game';
 import { renderBanqiMaterial } from './banqi-material.js';
-import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
-import { boardCoordinatesEnabled } from './display-preferences.js';
-import { flipSeatInk } from './flip-seat-ink.js';
 import {
   type BanqiPostgameResponse,
   type BanqiPostgameViewKey,
@@ -14,7 +11,10 @@ import {
   postgameReplayMaxPly,
   postgameViewAtPly,
   postgameViewEntries,
-} from './live-banqi-postgame.js';
+} from './banqi-postgame-data.js';
+import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
+import { flipSeatInk } from './flip-seat-ink.js';
 import {
   animateBanqiBoardMove,
   animateBanqiReveal,
