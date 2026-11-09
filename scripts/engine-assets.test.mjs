@@ -692,13 +692,14 @@ if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
   }
 });
 
-test('CI supplies the private token to native, browser build and web test consumers', () => {
+test('CI caches the CC0 browser net without credentials; private native nets retain their token', () => {
   const ci = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const secret = `MISTBOARD_PRIVATE_ASSETS_TOKEN: \${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}`;
   assert.ok(workflow.includes(secret));
   for (const job of ['build', 'unit-web']) {
     const block = ci.split(/(?=^ {2}[\w-]+:\n)/m).find((part) => part.startsWith(`  ${job}:\n`));
-    assert.ok(block.includes(secret), `${job} must pass the repo secret to the fetch consumer`);
+    assert.ok(!block.includes(secret), `${job} uses the public CC0 net without a repo secret`);
+    assert.ok(block.includes('apps/web/public/engine/pikafish/xiangqi-c07e94a5c7cb.nnue'));
     assert.match(block, /key: engine-nets-.*hashFiles.*net\.json/);
   }
 });

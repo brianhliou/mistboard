@@ -1,0 +1,2269 @@
+diff --git a/scripts/net.sh b/scripts/net.sh
+index 8f17c907..bf5e0840 100644
+--- a/scripts/net.sh
++++ b/scripts/net.sh
+@@ -1,33 +1,3 @@
+ #!/bin/sh
+-
+-# download commands with a 5min time-out to ensure things fail if the server stalls
+-wget_or_curl=$( (command -v wget >/dev/null 2>&1 && echo "wget -qO- --timeout=300 --tries=1") ||
+-  (command -v curl >/dev/null 2>&1 && echo "curl -skL --max-time 300"))
+-
+-fetch_network() {
+-  _filename="pikafish.nnue"
+-
+-  if [ -f "$_filename" ]; then
+-    echo "Exists $_filename, skipping download"
+-    return
+-  fi
+-
+-  if [ -z "$wget_or_curl" ]; then
+-    >&2 printf "%s\n" "Neither wget or curl is installed." \
+-      "Install one of these tools to download NNUE files automatically."
+-    exit 1
+-  fi
+-
+-  url="https://github.com/official-pikafish/Networks/releases/download/master-net/$_filename"
+-    echo "Downloading from $url ..."
+-    if $wget_or_curl "$url" > "$_filename"; then
+-      echo "Successfully downloaded $_filename"
+-    else
+-      # Download was not successful, return false.
+-      rm -f $_filename
+-      echo "Failed to download $_filename from $url"
+-      return 1
+-    fi
+-}
+-
+-$call fetch_network
++# This fork never downloads neural networks.
++echo "Supply the CC0 xiangqi-c07e94a5c7cb.nnue locally and set EvalFile."
+diff --git a/src/Makefile b/src/Makefile
+index 9f3ac948..63e18d83 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -76,7 +76,7 @@ BINDIR = $(PREFIX)/bin
+ PGOBENCH = $(RUN_PREFIX) ./$(EXE) bench
+ 
+ ### Source and object files
+-SRCS = $(shell find -L . \( -path './universal' -o -path './temp_builds' \) -prune -o \( -name '*.cpp' -o -name '*.S' \) -print | sed 's|^\./||')
++SRCS = $(filter-out nnue/features/full_threats.cpp nnue/features/half_ka_v2_hm.cpp,$(shell find -L . \( -path './universal' -o -path './temp_builds' \) -prune -o \( -name '*.cpp' -o -name '*.S' \) -print | sed 's|^\./||'))
+ 
+ HEADERS = $(shell find -L . \( -path './universal' -o -path './temp_builds' \) -prune -o -name '*.h' -print | sed 's|^\./||')
+ 
+@@ -993,7 +993,7 @@ help:
+ 	echo "profile-build           > standard build with profile-guided optimization" && \
+ 	echo "build                   > skip profile-guided optimization" && \
+ 	echo "macos-lipo              > macOS x86-64 + Apple silicon universal binary" && \
+-	echo "net                     > Download the default nnue nets" && \
++	echo "net                     > No-op: supply the CC0 FSF net locally" && \
+ 	echo "strip                   > Strip executable" && \
+ 	echo "install                 > Install executable" && \
+ 	echo "clean                   > Clean up" && \
+@@ -1201,7 +1201,7 @@ universalclean:
+ 
+ # evaluation network (nnue)
+ net:
+-	@$(SHELL) ../scripts/net.sh
++	@echo "Supply xiangqi-c07e94a5c7cb.nnue locally; downloads disabled."
+ 
+ format:
+ 	$(CLANG-FORMAT) -i $(filter %.cpp,$(SRCS)) $(HEADERS) -style=file
+@@ -1445,7 +1445,7 @@ $(TEMP_DIR):
+ 
+ # Download nnue files once in src/ (reused by every sub-arch via --embed-dir).
+ $(NET_SENTINEL): | $(TEMP_DIR)
+-	@cd $(CURDIR) && $(SHELL) ../scripts/net.sh
++	@echo "Supply xiangqi-c07e94a5c7cb.nnue locally; downloads disabled."
+ 	@touch $@
+ 
+ $(UNIVERSAL_ENTRY_OBJ): $(UNIVERSAL_ENTRY_SRC) | $(TEMP_DIR)
+diff --git a/src/engine.cpp b/src/engine.cpp
+index 37b15968..aee5721a 100644
+--- a/src/engine.cpp
++++ b/src/engine.cpp
+@@ -33,6 +33,10 @@
+ #include "misc.h"
+ #include "nnue/network.h"
+ #include "nnue/nnue_common.h"
++#include "nnue/nnue_accumulator.h"
++#include "movegen.h"
++#include <random>
++#include <cstdlib>
+ #include "numa.h"
+ #include "perft.h"
+ #include "position.h"
+@@ -108,6 +112,13 @@ Engine::Engine(std::optional<std::filesystem::path> path) :
+ 
+     options.add("UCI_ShowWDL", Option(false));
+ 
++    options.add("NNUEScale", Option(79, 1, 400, [this](const Option& o) {
++        wait_for_search_finished();
++        Eval::NNUEScale = int(o);
++        search_clear();
++        return std::nullopt;
++    }));
++
+     options.add(  //
+       "EvalFile", Option(EvalFileDefaultName, [this](const Option& o) {
+           load_network(path_from_utf8(std::string(o)));
+@@ -293,6 +304,93 @@ void Engine::save_network(const std::optional<std::filesystem::path>& file) {
+ 
+ // utility functions
+ 
++namespace {
++[[noreturn]] void nnue_failure(const std::string& message) {
++    sync_cout << "ERROR: " << message << sync_endl;
++    std::exit(EXIT_FAILURE);
++}
++}
++// Debug commands run synchronously with search stopped. They also work in check.
++void Engine::nnue_raw() const {
++    verify_network();
++    auto stack = std::make_unique<NN::AccumulatorStack>();
++    auto cache = std::make_unique<NN::AccumulatorCaches>(*network);
++    sync_cout << "NNUE raw " << network->raw(pos, *stack, *cache) << sync_endl;
++}
++
++void Engine::nnue_check(int games, int plies, unsigned seed) const {
++    verify_network();
++    if (games < 1 || games > 1000 || plies < 1 || plies > MAX_PLY - 1)
++        nnue_failure("nnuecheck: games 1..1000, plies 1..245");
++    auto stack = std::make_unique<NN::AccumulatorStack>();
++    auto cache = std::make_unique<NN::AccumulatorCaches>(*network);
++#ifdef NDEBUG
++    sync_cout << "NNUE check build=release" << sync_endl;
++#else
++    sync_cout << "NNUE check build=debug" << sync_endl;
++#endif
++    std::mt19937 rng(seed);
++    u64 checks = 0, moves = 0, captures = 0, kings = 0, nulls = 0;
++    auto check = [&](const Position& p) {
++        if (!network->check_accumulator(p, *stack, *cache))
++            nnue_failure("NNUE accumulator mismatch: " + p.fen());
++        ++checks;
++    };
++    for (int game = 0; game < games; ++game) {
++        Position p;
++        std::deque<StateInfo> gameStates(1);
++        if (auto err = p.set(pos.fen(), &gameStates.back()))
++            nnue_failure(err->what());
++        stack->reset();
++        check(p);
++        std::vector<Move> played;
++        for (int ply = 0; ply < plies; ++ply) {
++            MoveList<LEGAL> legal(p);
++            if (legal.size() == 0) break;
++            Move m = legal.begin()[rng() % legal.size()];
++            captures += p.capture(m);
++            kings += type_of(p.moved_piece(m)) == KING;
++            gameStates.emplace_back();
++            auto& dirties = stack->push();
++            p.do_move(m, gameStates.back(), p.gives_check(m), dirties, nullptr, nullptr);
++            played.push_back(m); ++moves;
++            check(p);
++            if (ply % 19 == 0)
++                sync_cout << "NNUE sample " << p.fen() << sync_endl;
++            if (!p.checkers() && ply % 17 == 0) {
++                StateInfo nullState;
++                p.do_null_move(nullState); check(p);
++                p.undo_null_move(); check(p); ++nulls;
++            }
++        }
++        // Undo all the way to the root; cached child entries must not leak into parents.
++        while (!played.empty()) {
++            p.undo_move(played.back()); stack->pop();
++            played.pop_back(); gameStates.pop_back(); check(p);
++        }
++        // Replay with evaluations deferred for multiple plies, as in real search.
++        for (int ply = 0; ply < plies; ++ply) {
++            MoveList<LEGAL> legal(p);
++            if (!legal.size()) break;
++            Move m = legal.begin()[rng() % legal.size()];
++            gameStates.emplace_back();
++            auto& dirties = stack->push();
++            p.do_move(m, gameStates.back(), p.gives_check(m), dirties, nullptr, nullptr);
++            played.push_back(m);
++            if (ply % 11 == 10) check(p);
++        }
++        check(p);
++        while (!played.empty()) {
++            p.undo_move(played.back()); stack->pop();
++            played.pop_back(); gameStates.pop_back();
++            if (played.size() % 7 == 0) check(p);
++        }
++    }
++    sync_cout << "NNUE check passed games=" << games << " moves=" << moves
++              << " checks=" << checks << " captures=" << captures << " kings=" << kings
++              << " nulls=" << nulls << sync_endl;
++}
++
+ void Engine::trace_eval() const {
+     StateListPtr trace_states(new std::deque<StateInfo>(1));
+     Position     p;
+diff --git a/src/engine.h b/src/engine.h
+index 7ae62b14..fb4146fe 100644
+--- a/src/engine.h
++++ b/src/engine.h
+@@ -101,6 +101,8 @@ class Engine {
+     // utility functions
+ 
+     void trace_eval() const;
++    void nnue_raw() const;
++    void nnue_check(int games, int plies, unsigned seed) const;
+ 
+     const OptionsMap& get_options() const;
+     OptionsMap&       get_options();
+diff --git a/src/evaluate.cpp b/src/evaluate.cpp
+index 828f76ac..1db963a9 100644
+--- a/src/evaluate.cpp
++++ b/src/evaluate.cpp
+@@ -47,9 +47,10 @@ Value Eval::evaluate(const Eval::NNUE::Network&     network,
+ 
+     assert(!pos.checkers());
+ 
+-    auto [psqt, positional] = network.evaluate(pos, accumulators, caches);
+-
+-    Value nnue = psqt + positional;
++    auto [psqt, positional] = network.evaluate_unscaled(pos, accumulators, caches);
++    Value nnue = ((psqt + positional) / NNUE::OutputScale) * i64(NNUEScale) / 100;
++    psqt = psqt * i64(NNUEScale) / (100 * NNUE::OutputScale);
++    positional = positional * i64(NNUEScale) / (100 * NNUE::OutputScale);
+ 
+     // Blend optimism and eval with nnue complexity
+     int nnueComplexity = std::abs(psqt - positional);
+@@ -87,6 +88,7 @@ std::string Eval::trace(Position& pos, const Eval::NNUE::Network& network) {
+     ss << std::showpoint << std::showpos << std::fixed << std::setprecision(2) << std::setw(15);
+ 
+     auto [psqt, positional] = network.evaluate(pos, *accumulators, *caches);
++    ss << "NNUE raw " << network.raw(pos, *accumulators, *caches) << " (side to move, before NNUEScale)\n";
+     Value v                 = psqt + positional;
+     ss << "NNUE evaluation          " << v << " (side to move, internal units)\n";
+     v = pos.side_to_move() == WHITE ? v : -v;
+diff --git a/src/evaluate.h b/src/evaluate.h
+index 99de6408..cf34125b 100644
+--- a/src/evaluate.h
++++ b/src/evaluate.h
+@@ -29,11 +29,10 @@ class Position;
+ 
+ namespace Eval {
+ 
+-// The default net name MUST follow the format nn-[SHA256 first 12 digits].nnue
+-// for the build process (profile-build and fishtest) to work. Do not change the
+-// name of the macro or the location where this macro is defined, as it is used
+-// in the Makefile/Fishtest.
+-#define EvalFileDefaultName "pikafish.nnue"
++// Only the explicitly named local CC0 Fairy-Stockfish net is supported.
++#define EvalFileDefaultName "xiangqi-c07e94a5c7cb.nnue"
++// Fitted scale percentage for the CC0 Fairy-Stockfish net.
++inline int NNUEScale = 79;
+ 
+ namespace NNUE {
+ class Network;
+diff --git a/src/nnue/features/half_ka_v2_xq.cpp b/src/nnue/features/half_ka_v2_xq.cpp
+new file mode 100644
+index 00000000..a790e1a1
+--- /dev/null
++++ b/src/nnue/features/half_ka_v2_xq.cpp
+@@ -0,0 +1,72 @@
++/*
++  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
++  Copyright (C) 2004-2022 The Stockfish developers (see AUTHORS file)
++
++  Stockfish is free software: you can redistribute it and/or modify
++  it under the terms of the GNU General Public License as published by
++  the Free Software Foundation, either version 3 of the License, or
++  (at your option) any later version.
++
++  Stockfish is distributed in the hope that it will be useful,
++  but WITHOUT ANY WARRANTY; without even the implied warranty of
++  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++  GNU General Public License for more details.
++
++  You should have received a copy of the GNU General Public License
++  along with this program.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
++// Definition of input features HalfKAv2_xq of NNUE evaluation function
++
++#include "half_ka_v2_xq.h"
++
++#include "../../position.h"
++
++namespace Stockfish::Eval::NNUE::Features {
++
++  // Index of a feature for a given king position and another piece on some square
++  IndexType HalfKAv2_xq::make_index(Color perspective, Square s, Piece pc, Square ksq) {
++    return IndexType(Orient[perspective][s] + PieceSquareIndex[perspective][pc] + PS_NB * KingBuckets[ksq]);
++  }
++
++  // Get a list of indices for active features
++  void HalfKAv2_xq::append_active_indices(
++    const Position& pos,
++    Color perspective,
++    IndexList& active
++  ) {
++    Square ksq = pos.king_square(perspective);
++    Bitboard bb = pos.pieces();
++    while (bb)
++    {
++      Square s = pop_lsb(bb);
++      active.push_back(make_index(perspective, s, pos.piece_on(s), ksq));
++    }
++  }
++
++
++  // append_changed_indices() : get a list of indices for recently changed features
++
++  void HalfKAv2_xq::append_changed_indices(
++    Square ksq,
++    const DirtyPiece& dp,
++    Color perspective,
++    IndexList& removed,
++    IndexList& added
++  ) {
++    removed.push_back(make_index(perspective, dp.from, dp.pc, ksq));
++    if (dp.to != SQ_NONE)
++      added.push_back(make_index(perspective, dp.to, dp.pc, ksq));
++    if (dp.remove_sq != SQ_NONE)
++      removed.push_back(make_index(perspective, dp.remove_sq, dp.remove_pc, ksq));
++  }
++
++  IndexType HalfKAv2_xq::make_layer_stack_bucket(const Position& pos) {
++    return std::min((pos.count<ALL_PIECES>() - 1) * 8 / 32, 7);
++  }
++
++  bool HalfKAv2_xq::requires_refresh(const DirtyPiece& dp, Color perspective) {
++    return dp.pc == make_piece(perspective, KING);
++  }
++
++}  // namespace Stockfish::Eval::NNUE::Features
+diff --git a/src/nnue/features/half_ka_v2_xq.h b/src/nnue/features/half_ka_v2_xq.h
+new file mode 100644
+index 00000000..199e6432
+--- /dev/null
++++ b/src/nnue/features/half_ka_v2_xq.h
+@@ -0,0 +1,142 @@
++/*
++  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
++  Copyright (C) 2004-2022 The Stockfish developers (see AUTHORS file)
++
++  Stockfish is free software: you can redistribute it and/or modify
++  it under the terms of the GNU General Public License as published by
++  the Free Software Foundation, either version 3 of the License, or
++  (at your option) any later version.
++
++  Stockfish is distributed in the hope that it will be useful,
++  but WITHOUT ANY WARRANTY; without even the implied warranty of
++  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++  GNU General Public License for more details.
++
++  You should have received a copy of the GNU General Public License
++  along with this program.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
++//Definition of input features HalfKAv2_xq of NNUE evaluation function
++
++#ifndef NNUE_FEATURES_HALF_KA_V2_XQ_H_INCLUDED
++#define NNUE_FEATURES_HALF_KA_V2_XQ_H_INCLUDED
++
++#include "../nnue_common.h"
++
++#include "../../evaluate.h"
++#include "../../misc.h"
++
++namespace Stockfish {
++  struct StateInfo;
++}
++
++namespace Stockfish::Eval::NNUE::Features {
++
++  // Feature HalfKAv2_xq: Combination of the position of own king and the position of pieces.
++  class HalfKAv2_xq {
++
++    // unique number for each piece type on each square
++    enum {
++      PS_NONE      =  0,
++      PS_W_ROOK    =  0,
++      PS_B_ROOK    =  1  * SQUARE_NB,
++      PS_W_ADVISOR =  2  * SQUARE_NB,
++      PS_B_ADVISOR =  3  * SQUARE_NB,
++      PS_W_CANNON  =  4  * SQUARE_NB,
++      PS_B_CANNON  =  5  * SQUARE_NB,
++      PS_W_PAWN    =  6  * SQUARE_NB,
++      PS_B_PAWN    =  7  * SQUARE_NB,
++      PS_W_KNIGHT  =  8  * SQUARE_NB,
++      PS_B_KNIGHT  =  9  * SQUARE_NB,
++      PS_W_BISHOP  =  10 * SQUARE_NB,
++      PS_B_BISHOP  =  11 * SQUARE_NB,
++      PS_KING      =  12 * SQUARE_NB,
++      PS_NB        =  13 * SQUARE_NB
++    };
++
++    static constexpr IndexType PieceSquareIndex[COLOR_NB][PIECE_NB] = {
++      // convention: W - us, B - them
++      // viewed from other side, W and B are reversed
++      { PS_NONE, PS_W_ROOK, PS_W_ADVISOR, PS_W_CANNON, PS_W_PAWN, PS_W_KNIGHT, PS_W_BISHOP, PS_KING,
++        PS_NONE, PS_B_ROOK, PS_B_ADVISOR, PS_B_CANNON, PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_KING },
++      { PS_NONE, PS_B_ROOK, PS_B_ADVISOR, PS_B_CANNON, PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_KING,
++        PS_NONE, PS_W_ROOK, PS_W_ADVISOR, PS_W_CANNON, PS_W_PAWN, PS_W_KNIGHT, PS_W_BISHOP, PS_KING, }
++    };
++
++   public:
++    // Index of a feature for a given king position and another piece on some square
++    static IndexType make_index(Color perspective, Square s, Piece pc, Square ksq);
++
++   public:
++    // Feature name
++    static constexpr const char* Name = "HalfKAv2_xq";
++
++    // Hash value embedded in the evaluation file
++    static constexpr u32 HashValue = 0x5f234cb8u;
++
++    // Number of feature dimensions
++    static constexpr IndexType Dimensions = 9 * static_cast<IndexType>(PS_NB);
++
++    static constexpr int KingBuckets[SQUARE_NB] = {
++         0,  0,  0,  0,  1,  2,  0,  0,  0,
++         0,  0,  0,  3,  4,  5,  0,  0,  0,
++         0,  0,  0,  6,  7,  8,  0,  0,  0,
++         0,  0,  0,  0,  0,  0,  0,  0,  0,
++         0,  0,  0,  0,  0,  0,  0,  0,  0,
++         0,  0,  0,  0,  0,  0,  0,  0,  0,
++         0,  0,  0,  0,  0,  0,  0,  0,  0,
++         0,  0,  0,  6,  7,  8,  0,  0,  0,
++         0,  0,  0,  3,  4,  5,  0,  0,  0,
++         0,  0,  0,  0,  1,  2,  0,  0,  0,
++    };
++
++    // Orient a square according to perspective (flips ranks only for black)
++    static constexpr int Orient[COLOR_NB][SQUARE_NB] = {
++      {   0,  1,  2,  3,  4,  5,  6,  7,  8,
++          9, 10, 11, 12, 13, 14, 15, 16, 17,
++         18, 19, 20, 21, 22, 23, 24, 25, 26,
++         27, 28, 29, 30, 31, 32, 33, 34, 35,
++         36, 37, 38, 39, 40, 41, 42, 43, 44,
++         45, 46, 47, 48, 49, 50, 51, 52, 53,
++         54, 55, 56, 57, 58, 59, 60, 61, 62,
++         63, 64, 65, 66, 67, 68, 69, 70, 71,
++         72, 73, 74, 75, 76, 77, 78, 79, 80,
++         81, 82, 83, 84, 85, 86, 87, 88, 89,  },
++
++      {  81, 82, 83, 84, 85, 86, 87, 88, 89,
++         72, 73, 74, 75, 76, 77, 78, 79, 80,
++         63, 64, 65, 66, 67, 68, 69, 70, 71,
++         54, 55, 56, 57, 58, 59, 60, 61, 62,
++         45, 46, 47, 48, 49, 50, 51, 52, 53,
++         36, 37, 38, 39, 40, 41, 42, 43, 44,
++         27, 28, 29, 30, 31, 32, 33, 34, 35,
++         18, 19, 20, 21, 22, 23, 24, 25, 26,
++          9, 10, 11, 12, 13, 14, 15, 16, 17,
++          0,  1,  2,  3,  4,  5,  6,  7,  8,  }
++    };
++
++    // Maximum number of simultaneously active features.
++    static constexpr IndexType MaxActiveDimensions = 32;
++    using IndexList = ValueList<IndexType, MaxActiveDimensions>;
++
++    // Get a list of indices for active features
++    static void append_active_indices(
++      const Position& pos,
++      Color perspective,
++      IndexList& active);
++
++    // Get a list of indices for recently changed features
++    static void append_changed_indices(
++      Square ksq,
++      const DirtyPiece& dp,
++      Color perspective,
++      IndexList& removed,
++      IndexList& added
++    );
++
++    static IndexType make_layer_stack_bucket(const Position& pos);
++    static bool requires_refresh(const DirtyPiece& dp, Color perspective);
++  };
++
++}  // namespace Stockfish::Eval::NNUE::Features
++#endif
+diff --git a/src/nnue/layers/affine_transform.h b/src/nnue/layers/affine_transform.h
+index c8a1c01b..2dcc3e2c 100644
+--- a/src/nnue/layers/affine_transform.h
++++ b/src/nnue/layers/affine_transform.h
+@@ -152,7 +152,7 @@ class AffineTransform {
+     static constexpr IndexType get_weight_index_scrambled(IndexType i) {
+         IndexType inputIndex = i % PaddedInputDimensions;
+ 
+-#if defined(USE_PAIR_ACTIVATIONS) || defined(USE_LASX)
++#if defined(USE_PAIR_ACTIVATIONS)
+         // At load time, pre-permute the weights to match the per-128-bit-lane interleaving that
+         // the previous layer produces, either via SqrClippedReLU::propagate_pair() or via the
+         // separate SqrClippedReLU/ClippedReLU propagate() calls, so no shuffle is needed at runtime.
+diff --git a/src/nnue/network.cpp b/src/nnue/network.cpp
+index e8c90e2a..caa0f7dc 100644
+--- a/src/nnue/network.cpp
++++ b/src/nnue/network.cpp
+@@ -73,6 +73,9 @@ void Network::load(const fs::path& rootDirectory, fs::path evalfilePath, EvalFil
+     if (evalfilePath.empty())
+         evalfilePath = evalFile.defaultName;
+ 
++    if (evalfilePath.filename() != EvalFileDefaultName)
++        return;
++
+     for (const auto& directory : dirs)
+     {
+         if (evalFile.current != evalfilePath)
+@@ -109,23 +112,44 @@ bool Network::save(const EvalFile& evalFile, const std::optional<fs::path>& file
+     return saved;
+ }
+ 
+-NetworkOutput Network::evaluate(const Position&    pos,
+-                                AccumulatorStack&  accumulatorStack,
+-                                AccumulatorCaches& cache) const {
+-
+-    constexpr u64 alignment = CacheLineSize;
+-
+-    alignas(alignment) TransformedFeatureType transformedFeatures[FeatureTransformer::BufferSize];
+-
+-    ASSERT_ALIGNED(transformedFeatures, alignment);
+-
+-    NNZInfo<L1> nnzInfo;
+-
+-    const int  bucket     = PSQFeatureSet::make_layer_stack_bucket(pos);
+-    const auto psqt       = featureTransformer.transform(pos, accumulatorStack, cache,
+-                                                         transformedFeatures, bucket, nnzInfo);
+-    const auto positional = network[bucket].propagate(transformedFeatures, nnzInfo);
+-    return {static_cast<Value>(psqt / OutputScale), static_cast<Value>(positional / OutputScale)};
++NetworkOutput Network::evaluate_unscaled(const Position& pos, AccumulatorStack& stack,
++                                           AccumulatorCaches& cache) const {
++    alignas(CacheLineSize) TransformedFeatureType transformed[FeatureTransformer::BufferSize];
++    NNZInfo<L1> unused;
++    int bucket = PSQFeatureSet::make_layer_stack_bucket(pos);
++    i32 psqt = featureTransformer.transform(pos, stack, cache, transformed, bucket, unused);
++    return {psqt, network[bucket].propagate(transformed, unused)};
++}
++NetworkOutput Network::evaluate(const Position& pos, AccumulatorStack& stack,
++                                 AccumulatorCaches& cache) const {
++    auto [psqt, positional] = evaluate_unscaled(pos, stack, cache);
++    return {psqt / OutputScale, positional / OutputScale};
++}
++Value Network::raw(const Position& pos, AccumulatorStack& stack, AccumulatorCaches& cache) const {
++    auto [psqt, positional] = evaluate_unscaled(pos, stack, cache);
++    return (psqt + positional) / OutputScale;
++}
++bool Network::check_accumulator(const Position& pos, AccumulatorStack& stack,
++                                 AccumulatorCaches& cache) const {
++    stack.evaluate(pos, featureTransformer, cache);
++    const auto& a = stack.latest();
++    for (Color p : {WHITE, BLACK}) {
++        std::array<i32, L1> full{};
++        std::copy(featureTransformer.biases.begin(), featureTransformer.biases.end(), full.begin());
++        std::array<i32, PSQTBuckets> psqt{};
++        PSQFeatureSet::IndexList active;
++        PSQFeatureSet::append_active_indices(pos, p, active);
++        for (auto idx : active) {
++            for (IndexType j = 0; j < L1; ++j)
++                full[j] += featureTransformer.weights[idx * L1 + j];
++            for (IndexType j = 0; j < PSQTBuckets; ++j)
++                psqt[j] += featureTransformer.psqtWeights[idx * PSQTBuckets + j];
++        }
++        for (IndexType j = 0; j < L1; ++j)
++            if (full[j] != a.accumulation[p][j]) return false;
++        if (psqt != a.psqtAccumulation[p]) return false;
++    }
++    return true;
+ }
+ 
+ 
+@@ -145,10 +169,7 @@ void Network::verify(const std::function<void(std::string_view)>& f,
+               "The network file " + evalfilePath.string() + " was not loaded successfully.";
+             std::string msg3 = "The UCI option EvalFile might need to specify the full path, "
+                                "including the directory name, to the network file.";
+-            std::string msg4 =
+-              "The default net can be downloaded from: "
+-              "https://github.com/official-pikafish/Networks/releases/download/master-net/"
+-              + std::string(evalFile.defaultName);
++            std::string msg4 = "Supply the local CC0 Fairy-Stockfish xiangqi net; downloads are disabled.";
+             std::string msg5 = "The engine will be terminated now.";
+ 
+             std::string msg = "ERROR: " + msg1 + '\n' + "ERROR: " + msg2 + '\n' + "ERROR: " + msg3
+@@ -201,7 +222,9 @@ NnueEvalTrace Network::trace_evaluate(const Position&    pos,
+ 
+ 
+ void Network::load_external(const fs::path& dir, const fs::path& evalfilePath, EvalFile& evalFile) {
+-    std::stringstream stream(read_compressed_nnue(dir / evalfilePath));
++    if (evalfilePath.filename() != EvalFileDefaultName)
++        return;
++    std::ifstream stream(dir / evalfilePath, std::ios::binary);
+     auto              description = load(stream);
+ 
+     if (description.has_value())
+diff --git a/src/nnue/network.h b/src/nnue/network.h
+index 488afa59..208081c9 100644
+--- a/src/nnue/network.h
++++ b/src/nnue/network.h
+@@ -70,6 +70,10 @@ class Network {
+                            AccumulatorCaches& cache) const;
+ 
+ 
++    NetworkOutput evaluate_unscaled(const Position&, AccumulatorStack&, AccumulatorCaches&) const;
++    Value raw(const Position&, AccumulatorStack&, AccumulatorCaches&) const;
++    bool check_accumulator(const Position&, AccumulatorStack&, AccumulatorCaches&) const;
++
+     void verify(const std::function<void(std::string_view)>& f,
+                 const EvalFile&                              evalFile,
+                 std::filesystem::path                        evalfilePath) const;
+diff --git a/src/nnue/nnue_accumulator.cpp b/src/nnue/nnue_accumulator.cpp
+index 8e7cd5e4..a128eadf 100644
+--- a/src/nnue/nnue_accumulator.cpp
++++ b/src/nnue/nnue_accumulator.cpp
+@@ -16,747 +16,90 @@
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
++// Lazy incremental HalfKAv2 accumulators with king-square Finny refresh cache.
+ #include "nnue_accumulator.h"
+-
+-#include <algorithm>
+-#include <cassert>
+-#include <new>
+-
+-#include "../bitboard.h"
+-#include "../misc.h"
++#include "nnue_feature_transformer.h"
+ #include "../position.h"
+-#include "../types.h"
+-#include "nnue_architecture.h"
+-#include "nnue_common.h"
+-#include "nnue_feature_transformer.h"  // IWYU pragma: keep
+-#include "simd.h"
+-
+ namespace Stockfish::Eval::NNUE {
+-
+-using namespace SIMD;
+-
+ namespace {
+-
+-template<bool Forward>
+-void update_accumulator_incremental(Color                     perspective,
+-                                    const FeatureTransformer& featureTransformer,
+-                                    const int                 bucket,
+-                                    const bool                mirror,
+-                                    AccumulatorState&         target_state,
+-                                    const AccumulatorState&   computed);
+-
+-void update_accumulator_incremental_both(const FeatureTransformer& featureTransformer,
+-                                         int                       white_bucket,
+-                                         bool                      white_mirror,
+-                                         int                       black_bucket,
+-                                         bool                      black_mirror,
+-                                         AccumulatorState&         target_state,
+-                                         const AccumulatorState&   computed);
+-
+-void update_accumulator_refresh_cache(Color                     perspective,
+-                                      const FeatureTransformer& featureTransformer,
+-                                      const Position&           pos,
+-                                      AccumulatorState&         accumulatorState,
+-                                      AccumulatorCaches&        cache);
++template<typename A> void apply(A& a, const FeatureTransformer& ft, IndexType idx, int sign) {
++    const auto* w = ft.weights.data() + idx * L1;
++    for (IndexType j = 0; j < L1; ++j)
++        a.accumulation[j] = i16(a.accumulation[j] + sign * w[j]);
++    const auto* p = ft.psqtWeights.data() + idx * PSQTBuckets;
++    for (IndexType j = 0; j < PSQTBuckets; ++j)
++        a.psqtAccumulation[j] += sign * p[j];
++}
++struct Side {
++    std::array<i16, L1>& accumulation;
++    std::array<i32, PSQTBuckets>& psqtAccumulation;
++};
+ }
+-
+ const AccumulatorState& AccumulatorStack::latest() const noexcept { return accumulators[size - 1]; }
+-
+ AccumulatorState& AccumulatorStack::mut_latest() noexcept { return accumulators[size - 1]; }
+-
+ void AccumulatorStack::reset() noexcept {
+-    accumulators[0].dirtyPiece = {};
+-    new (&accumulators[0].dirtyThreats) DirtyThreats;
+-    accumulators[0].computed.fill(false);
+     size = 1;
++    mut_latest().computed.fill(false);
++    new (&mut_latest().dirtyThreats) DirtyThreats;
+ }
+-
+ Dirties& AccumulatorStack::push() noexcept {
+     assert(size < MaxSize);
+-    auto& st = accumulators[size];
+-    st.computed.fill(false);
+-    new (&st.dirtyThreats) DirtyThreats;
+-    size++;
+-    return st;
++    auto& a = accumulators[size++];
++    a.computed.fill(false);
++    // Position still appends threats: reset their list whenever a stack slot is reused.
++    new (&a.dirtyThreats) DirtyThreats;
++    return a;
+ }
+-
+-void AccumulatorStack::pop() noexcept {
+-    assert(size > 1);
+-    size--;
+-}
+-
+-void AccumulatorStack::evaluate(const Position&           pos,
+-                                const FeatureTransformer& featureTransformer,
+-                                // Silence spurious warning on GCC 10
+-                                [[maybe_unused]] AccumulatorCaches& cache) noexcept {
+-    const usize last_white = find_last_usable_accumulator(WHITE);
+-    const usize last_black = find_last_usable_accumulator(BLACK);
+-
+-    if (accumulators[last_white].computed[WHITE] && accumulators[last_black].computed[BLACK])
+-        forward_update_incremental_both(pos, featureTransformer, last_white, last_black);
+-    else
+-    {
+-        evaluate_side(WHITE, pos, featureTransformer, cache, last_white);
+-        evaluate_side(BLACK, pos, featureTransformer, cache, last_black);
++void AccumulatorStack::pop() noexcept { assert(size > 1); --size; }
++void AccumulatorStack::refresh(Color p, const Position& pos, const FeatureTransformer& ft,
++                               AccumulatorCaches& caches) noexcept {
++    Square king = pos.king_square(p);
++    int bucket = PSQFeatureSet::KingBuckets[king];
++    auto& entry = caches[bucket][p];
++    // Compare cached board to current board; the cache key fixes the feature king bucket.
++    Bitboard changed = entry.pieceBB | pos.pieces();
++    while (changed) {
++        Square s = pop_lsb(changed);
++        Piece old = entry.pieces[s], pc = pos.piece_on(s);
++        if (old == pc) continue;
++        if (old != NO_PIECE)
++            apply(entry, ft, PSQFeatureSet::make_index(p, s, old, king), -1);
++        if (pc != NO_PIECE)
++            apply(entry, ft, PSQFeatureSet::make_index(p, s, pc, king), 1);
++        entry.pieces[s] = pc;
+     }
+-}
+-
+-void AccumulatorStack::evaluate_side(Color                     perspective,
+-                                     const Position&           pos,
+-                                     const FeatureTransformer& featureTransformer,
+-                                     AccumulatorCaches&        cache,
+-                                     usize                     last_usable_accum) noexcept {
+-
+-    if (accumulators[last_usable_accum].computed[perspective])
+-        forward_update_incremental(perspective, pos, featureTransformer, last_usable_accum);
+-
+-    else
+-    {
+-        update_accumulator_refresh_cache(perspective, featureTransformer, pos, mut_latest(), cache);
+-        backward_update_incremental(perspective, pos, featureTransformer, last_usable_accum);
+-    }
+-}
+-
+-// Find the earliest usable accumulator, this can either be a computed accumulator or the accumulator
+-// state just before a change that requires full refresh.
+-usize AccumulatorStack::find_last_usable_accumulator(Color perspective) const noexcept {
+-
+-    for (usize curr_idx = size - 1; curr_idx > 0; curr_idx--)
+-    {
+-        if (accumulators[curr_idx].computed[perspective])
+-            return curr_idx;
+-
+-        // Threat feature set refreshes require a king move across the center, i.e.,
+-        // a subset of halfka refreshes
+-        if (PSQFeatureSet::requires_refresh(accumulators[curr_idx].dirtyPiece, perspective))
+-            return curr_idx;
+-    }
+-
+-    return 0;
+-}
+-
+-void AccumulatorStack::forward_update_incremental(Color                     perspective,
+-                                                  const Position&           pos,
+-                                                  const FeatureTransformer& featureTransformer,
+-                                                  const usize               begin) noexcept {
+-
+-    assert(begin < accumulators.size());
+-    assert(accumulators[begin].computed[perspective]);
+-
+-    auto [bucket, mirror, _] = PSQFeatureSet::make_feature_bucket(perspective, pos);
+-
+-    for (usize next = begin + 1; next < size; next++)
+-        update_accumulator_incremental<true>(perspective, featureTransformer, bucket, mirror,
+-                                             accumulators[next], accumulators[next - 1]);
+-
+-    assert(latest().computed[perspective]);
+-}
+-
+-void AccumulatorStack::backward_update_incremental(Color                     perspective,
+-                                                   const Position&           pos,
+-                                                   const FeatureTransformer& featureTransformer,
+-                                                   const usize               end) noexcept {
+-
+-    assert(end < accumulators.size());
+-    assert(end < size);
+-    assert(latest().computed[perspective]);
+-
+-    auto [bucket, mirror, _] = PSQFeatureSet::make_feature_bucket(perspective, pos);
+-
+-    for (i64 next = i64(size) - 2; next >= i64(end); next--)
+-        update_accumulator_incremental<false>(perspective, featureTransformer, bucket, mirror,
+-                                              accumulators[next], accumulators[next + 1]);
+-
+-    assert(accumulators[end].computed[perspective]);
+-}
+-
+-void AccumulatorStack::forward_update_incremental_both(const Position&           pos,
+-                                                       const FeatureTransformer& featureTransformer,
+-                                                       usize                     white_begin,
+-                                                       usize black_begin) noexcept {
+-
+-    assert(white_begin < size);
+-    assert(black_begin < size);
+-    assert(accumulators[white_begin].computed[WHITE]);
+-    assert(accumulators[black_begin].computed[BLACK]);
+-
+-    auto [white_bucket, white_mirror, _w] = PSQFeatureSet::make_feature_bucket(WHITE, pos);
+-    auto [black_bucket, black_mirror, _b] = PSQFeatureSet::make_feature_bucket(BLACK, pos);
+-    const usize shared_begin              = std::max(white_begin, black_begin);
+-
+-    // Catch up the lagging perspective, then traverse the common suffix once.
+-    for (usize next = white_begin + 1; next <= shared_begin; ++next)
+-        update_accumulator_incremental<true>(WHITE, featureTransformer, white_bucket, white_mirror,
+-                                             accumulators[next], accumulators[next - 1]);
+-    for (usize next = black_begin + 1; next <= shared_begin; ++next)
+-        update_accumulator_incremental<true>(BLACK, featureTransformer, black_bucket, black_mirror,
+-                                             accumulators[next], accumulators[next - 1]);
+-
+-    for (usize next = shared_begin + 1; next < size; ++next)
+-        update_accumulator_incremental_both(featureTransformer, white_bucket, white_mirror,
+-                                            black_bucket, black_mirror, accumulators[next],
+-                                            accumulators[next - 1]);
+-
+-    assert(latest().computed[WHITE]);
+-    assert(latest().computed[BLACK]);
+-}
+-
+-namespace {
+-
+-constexpr IndexType Dimensions = FeatureTransformer::OutputDimensions;
+-
+-#ifdef USE_RVV
+-
+-struct Tiling {
+-    static constexpr int NumRegs     = 1;
+-    static constexpr int NumPsqtRegs = 1;
+-};
+-
+-using Tile     = vint16m8_t;
+-using PsqtTile = vint32m1_t;
+-
+-sf_always_inline Tile load_tile(IndexType j, const i16* data) {
+-    usize vl = __riscv_vsetvl_e16m8(Dimensions - j);
+-    return __riscv_vle16_v_i16m8(data + j, vl);
+-}
+-
+-sf_always_inline void store_tile(IndexType j, i16* dest, Tile acc) {
+-    usize vl = __riscv_vsetvl_e16m8(Dimensions - j);
+-    __riscv_vse16_v_i16m8(dest + j, acc, vl);
+-}
+-
+-sf_always_inline PsqtTile load_psqt(IndexType j, const i32* data) {
+-    usize vl = __riscv_vsetvl_e32m1(PSQTBuckets - j);
+-    return __riscv_vle32_v_i32m1(data + j, vl);
+-}
+-
+-sf_always_inline void store_psqt(IndexType j, i32* dest, PsqtTile psqt) {
+-    usize vl = __riscv_vsetvl_e32m1(PSQTBuckets - j);
+-    __riscv_vse32_v_i32m1(dest + j, psqt, vl);
+-}
+-
+-sf_always_inline void increment_index(IndexType& j) { j += __riscv_vsetvl_e16m8(Dimensions - j); }
+-
+-sf_always_inline void increment_psqt_index(IndexType& j) {
+-    j += __riscv_vsetvl_e32m1(PSQTBuckets - j);
+-}
+-
+-template<int sign>
+-sf_always_inline Tile apply(IndexType j, Tile acc, const i8* data) {
+-    static_assert(sign == 1 || sign == -1);
+-    usize     vl       = __riscv_vsetvl_e16m8(Dimensions - j);
+-    vint8m4_t data_vec = __riscv_vle8_v_i8m4(data + j, vl);
+-    if constexpr (sign == +1)
+-        acc = __riscv_vwadd_wv_i16m8(acc, data_vec, vl);
+-    else
+-        acc = __riscv_vwsub_wv_i16m8(acc, data_vec, vl);
+-    return acc;
+-}
+-
+-template<int sign>
+-sf_always_inline PsqtTile apply(IndexType j, PsqtTile acc, const i32* data) {
+-    static_assert(sign == 1 || sign == -1);
+-    usize      vl       = __riscv_vsetvl_e32m1(PSQTBuckets - j);
+-    vint32m1_t data_vec = __riscv_vle32_v_i32m1(data + j, vl);
+-    if constexpr (sign == +1)
+-        acc = __riscv_vadd_vv_i32m1(acc, data_vec, vl);
+-    else
+-        acc = __riscv_vsub_vv_i32m1(acc, data_vec, vl);
+-    return acc;
+-}
+-
+-#else  // VECTOR or non VECTOR
+-
+-    #ifdef VECTOR
+-
+-using Tiling = SIMDTiling<Dimensions, Dimensions, PSQTBuckets>;
+-
+-    #else
+-
+-// Treat scalar impl as degenerate size-1 vector
+-struct Tiling {
+-    static constexpr int NumRegs        = 1;
+-    static constexpr int NumPsqtRegs    = 1;
+-    static constexpr int TileHeight     = 1;
+-    static constexpr int PsqtTileHeight = 1;
+-};
+-
+-using vec_t      = i16;
+-using vec_i8_t   = i8;
+-using psqt_vec_t = i32;
+-
+-        #define vec_add_16(a, b) ((a) + (b))
+-        #define vec_sub_16(a, b) ((a) - (b))
+-        #define vec_add_psqt_32(a, b) ((a) + (b))
+-        #define vec_sub_psqt_32(a, b) ((a) - (b))
+-        #define vec_convert_8_16(a) (i16(a))
+-
+-    #endif
+-
+-struct PsqtTile {
+-    psqt_vec_t inner[Tiling::NumPsqtRegs];
+-    auto&      operator[](int i) { return inner[i]; }
+-};
+-
+-struct Tile {
+-    vec_t inner[Tiling::NumRegs];
+-    auto& operator[](int i) { return inner[i]; }
+-};
+-
+-sf_always_inline Tile load_tile(IndexType j, const i16* data) {
+-    Tile  acc;
+-    auto* column = reinterpret_cast<const vec_t*>(&data[j]);
+-    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+-        acc[k] = column[k];
+-    return acc;
+-}
+-
+-sf_always_inline void store_tile(IndexType j, i16* dest, Tile acc) {
+-    auto* column = reinterpret_cast<vec_t*>(&dest[j]);
+-    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+-        column[k] = acc[k];
+-}
+-
+-sf_always_inline PsqtTile load_psqt(IndexType j, const i32* data) {
+-    PsqtTile psqt;
+-    auto*    column = reinterpret_cast<const psqt_vec_t*>(&data[j]);
+-    for (IndexType k = 0; k < Tiling::NumPsqtRegs; ++k)
+-        psqt[k] = column[k];
+-    return psqt;
+-}
+-
+-sf_always_inline void store_psqt(IndexType j, i32* dest, PsqtTile psqt) {
+-    auto* column = reinterpret_cast<psqt_vec_t*>(&dest[j]);
+-    for (IndexType k = 0; k < Tiling::NumPsqtRegs; ++k)
+-        column[k] = psqt[k];
+-}
+-
+-sf_always_inline void increment_index(IndexType& j) { j += Tiling::TileHeight; }
+-
+-sf_always_inline void increment_psqt_index(IndexType& j) { j += Tiling::PsqtTileHeight; }
+-
+-template<int sign>
+-sf_always_inline Tile apply(IndexType j, Tile acc, const i8* data) {
+-    static_assert(sign == 1 || sign == -1);
+-    const auto* column = reinterpret_cast<const vec_i8_t*>(data + j);
+-    #ifdef USE_NEON
+-    for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
+-    {
+-        if constexpr (sign == +1)
+-        {
+-            acc[k]     = vaddw_s8(acc[k], vget_low_s8(column[k / 2]));
+-            acc[k + 1] = vaddw_high_s8(acc[k + 1], column[k / 2]);
+-        }
+-        else
+-        {
+-            acc[k]     = vsubw_s8(acc[k], vget_low_s8(column[k / 2]));
+-            acc[k + 1] = vsubw_high_s8(acc[k + 1], column[k / 2]);
+-        }
+-    }
+-    #elif defined(USE_LSX) && !defined(USE_LASX)
+-    for (IndexType k = 0; k < Tiling::NumRegs; k += 2)
+-    {
+-        const __m128i weight = __lsx_vld(reinterpret_cast<const void*>(&column[k]), 0);
+-        if constexpr (sign == +1)
+-        {
+-            acc[k]     = vec_add_16(acc[k], __lsx_vsllwil_h_b(weight, 0));
+-            acc[k + 1] = vec_add_16(acc[k + 1], __lsx_vexth_h_b(weight));
+-        }
+-        else
+-        {
+-            acc[k]     = vec_sub_16(acc[k], __lsx_vsllwil_h_b(weight, 0));
+-            acc[k + 1] = vec_sub_16(acc[k + 1], __lsx_vexth_h_b(weight));
+-        }
+-    }
+-    #else
+-    for (IndexType k = 0; k < Tiling::NumRegs; ++k)
+-        if constexpr (sign == +1)
+-            acc[k] = vec_add_16(acc[k], vec_convert_8_16(column[k]));
+-        else
+-            acc[k] = vec_sub_16(acc[k], vec_convert_8_16(column[k]));
+-    #endif
+-    return acc;
+-}
+-
+-template<int sign>
+-sf_always_inline PsqtTile apply(IndexType j, PsqtTile acc, const i32* data) {
+-    static_assert(sign == 1 || sign == -1);
+-    const auto* column = reinterpret_cast<const psqt_vec_t*>(data + j);
+-    for (IndexType k = 0; k < Tiling::NumPsqtRegs; ++k)
+-        if constexpr (sign == +1)
+-            acc[k] = vec_add_psqt_32(acc[k], column[k]);
+-        else
+-            acc[k] = vec_sub_psqt_32(acc[k], column[k]);
+-    return acc;
+-}
+-
+-#endif
+-
+-template<int sign, bool Incremental = false>
+-sf_always_inline Tile apply_psq_features(IndexType                       j,
+-                                         Tile                            acc,
+-                                         const PSQFeatureSet::IndexList& list,
+-                                         const FeatureTransformer&       ft) {
+-    static_assert(sign == 1 || sign == -1);
+-    if constexpr (Incremental)
+-    {
+-        assert(list.size() == 1 || list.size() == 2);
+-        acc = apply<sign>(j, acc, &ft.weights[list[0] * Dimensions]);
+-        if (list.size() > 1)
+-            acc = apply<sign>(j, acc, &ft.weights[list[1] * Dimensions]);
+-        return acc;
+-    }
+-    for (int i = 0; i < list.ssize(); ++i)
+-        acc = apply<sign>(j, acc, &ft.weights[list[i] * Dimensions]);
+-    return acc;
+-}
+-
+-template<int sign>
+-sf_always_inline Tile apply_threat_features(IndexType                          j,
+-                                            Tile                               acc,
+-                                            const ThreatFeatureSet::IndexList& list,
+-                                            const FeatureTransformer&          ft) {
+-    static_assert(sign == 1 || sign == -1);
+-    for (int i = 0; i < list.ssize(); ++i)
+-        acc = apply<sign>(j, acc, &ft.threatWeights[list[i] * Dimensions]);
+-    return acc;
+-}
+-
+-template<int sign, typename IdxType, usize MaxLen>
+-sf_always_inline PsqtTile apply_psqt(IndexType                         j,
+-                                     PsqtTile                          acc,
+-                                     const ValueList<IdxType, MaxLen>& list,
+-                                     const PSQTWeightType*             weights) {
+-    static_assert(sign == 1 || sign == -1);
+-    for (int i = 0; i < list.ssize(); ++i)
+-        acc = apply<sign>(j, acc, &weights[list[i] * PSQTBuckets]);
+-    return acc;
+-}
+-
+-void apply_combined(Color                              perspective,
+-                    const FeatureTransformer&          featureTransformer,
+-                    const AccumulatorState&            from,
+-                    AccumulatorState&                  to,
+-                    const PSQFeatureSet::IndexList&    psqAdded,
+-                    const PSQFeatureSet::IndexList&    psqRemoved,
+-                    const ThreatFeatureSet::IndexList& thrAdded,
+-                    const ThreatFeatureSet::IndexList& thrRemoved) {
+-
+-    const auto& fromAcc = from.accumulation[perspective];
+-    auto&       toAcc   = to.accumulation[perspective];
+-
+-    const auto& fromPsqtAcc = from.psqtAccumulation[perspective];
+-    auto&       toPsqtAcc   = to.psqtAccumulation[perspective];
+-
+-    Tile     acc;
+-    PsqtTile psqt;
+-
+-    for (IndexType j = 0; j < Dimensions; increment_index(j))
+-    {
+-        acc = load_tile(j, fromAcc.data());
+-
+-        acc = apply_psq_features<-1, true>(j, acc, psqRemoved, featureTransformer);
+-        acc = apply_psq_features<+1, true>(j, acc, psqAdded, featureTransformer);
+-
+-        acc = apply_threat_features<-1>(j, acc, thrRemoved, featureTransformer);
+-        acc = apply_threat_features<+1>(j, acc, thrAdded, featureTransformer);
+-
+-        store_tile(j, toAcc.data(), acc);
+-    }
+-
+-    for (IndexType j = 0; j < PSQTBuckets; increment_psqt_index(j))
+-    {
+-        psqt = load_psqt(j, fromPsqtAcc.data());
+-
+-        psqt = apply_psqt<-1>(j, psqt, psqRemoved, featureTransformer.psqtWeights.data());
+-        psqt = apply_psqt<+1>(j, psqt, psqAdded, featureTransformer.psqtWeights.data());
+-
+-        psqt = apply_psqt<-1>(j, psqt, thrRemoved, featureTransformer.threatPsqtWeights.data());
+-        psqt = apply_psqt<+1>(j, psqt, thrAdded, featureTransformer.threatPsqtWeights.data());
+-
+-        store_psqt(j, toPsqtAcc.data(), psqt);
+-    }
+-}
+-
+-template<bool Forward>
+-void update_accumulator_incremental(Color                     perspective,
+-                                    const FeatureTransformer& featureTransformer,
+-                                    const int                 bucket,
+-                                    const bool                mirror,
+-                                    AccumulatorState&         target_state,
+-                                    const AccumulatorState&   computed) {
+-
+-    assert(computed.computed[perspective]);
+-    assert(!target_state.computed[perspective]);
+-
+-    // The size must be enough to contain the largest possible update.
+-    // That might depend on the feature set and generally relies on the
+-    // feature set's update cost calculation to be correct and never allow
+-    // updates with more added/removed features than MaxActiveDimensions.
+-    PSQFeatureSet::IndexList    psqRemoved, psqAdded;
+-    ThreatFeatureSet::IndexList thrRemoved, thrAdded;
+-
+-    const auto& dirtyPiece   = Forward ? target_state.dirtyPiece : computed.dirtyPiece;
+-    const auto& dirtyThreats = Forward ? target_state.dirtyThreats : computed.dirtyThreats;
+-
+-    // Used solely for prefetching
+-    const auto* threatBase = &featureTransformer.threatWeights[0];
+-    IndexType   pfStride   = FeatureTransformer::OutputDimensions;
+-
+-    if constexpr (Forward)
+-    {
+-        ThreatFeatureSet::append_changed_indices(perspective, mirror, dirtyThreats, thrRemoved,
+-                                                 thrAdded, threatBase, pfStride);
+-        PSQFeatureSet::append_changed_indices(perspective, bucket, mirror, dirtyPiece, psqRemoved,
+-                                              psqAdded);
+-    }
+-    else
+-    {
+-        ThreatFeatureSet::append_changed_indices(perspective, mirror, dirtyThreats, thrAdded,
+-                                                 thrRemoved, threatBase, pfStride);
+-        PSQFeatureSet::append_changed_indices(perspective, bucket, mirror, dirtyPiece, psqAdded,
+-                                              psqRemoved);
+-    }
+-
+-    apply_combined(perspective, featureTransformer, computed, target_state, psqAdded, psqRemoved,
+-                   thrAdded, thrRemoved);
+-
+-    target_state.computed[perspective] = true;
+-}
+-
+-void update_accumulator_incremental_both(const FeatureTransformer& featureTransformer,
+-                                         int                       white_bucket,
+-                                         bool                      white_mirror,
+-                                         int                       black_bucket,
+-                                         bool                      black_mirror,
+-                                         AccumulatorState&         target_state,
+-                                         const AccumulatorState&   computed) {
+-
+-    assert(computed.computed[WHITE]);
+-    assert(computed.computed[BLACK]);
+-    assert(!target_state.computed[WHITE]);
+-    assert(!target_state.computed[BLACK]);
+-
+-    PSQFeatureSet::IndexList    psq_removed[COLOR_NB], psq_added[COLOR_NB];
+-    ThreatFeatureSet::IndexList thr_removed[COLOR_NB], thr_added[COLOR_NB];
+-
+-    const auto* threat_base = &featureTransformer.threatWeights[0];
+-    const auto  pf_stride   = FeatureTransformer::OutputDimensions;
+-
+-    ThreatFeatureSet::append_changed_indices_both(
+-      white_mirror, black_mirror, target_state.dirtyThreats, thr_removed[WHITE], thr_added[WHITE],
+-      thr_removed[BLACK], thr_added[BLACK], threat_base, pf_stride);
+-    PSQFeatureSet::append_changed_indices(WHITE, white_bucket, white_mirror,
+-                                          target_state.dirtyPiece, psq_removed[WHITE],
+-                                          psq_added[WHITE]);
+-    PSQFeatureSet::append_changed_indices(BLACK, black_bucket, black_mirror,
+-                                          target_state.dirtyPiece, psq_removed[BLACK],
+-                                          psq_added[BLACK]);
+-
+-    apply_combined(WHITE, featureTransformer, computed, target_state, psq_added[WHITE],
+-                   psq_removed[WHITE], thr_added[WHITE], thr_removed[WHITE]);
+-    apply_combined(BLACK, featureTransformer, computed, target_state, psq_added[BLACK],
+-                   psq_removed[BLACK], thr_added[BLACK], thr_removed[BLACK]);
+-
+-    target_state.computed[WHITE] = true;
+-    target_state.computed[BLACK] = true;
+-}
+-
+-Bitboard get_changed_pieces(const std::array<Piece, SQUARE_NB>& oldPieces,
+-                            const std::array<Piece, SQUARE_NB>& newPieces) {
+-#if defined(USE_AVX2)
+-    static_assert(sizeof(Piece) == 1);
+-    Bitboard sameBB = 0;
+-
+-    for (int i : {0, 32, 58})
+-    {
+-        const __m256i old_v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&oldPieces[i]));
+-        const __m256i new_v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&newPieces[i]));
+-        const __m256i cmpEqual  = _mm256_cmpeq_epi8(old_v, new_v);
+-        const u32     equalMask = _mm256_movemask_epi8(cmpEqual);
+-        sameBB |= static_cast<Bitboard>(equalMask) << i;
+-    }
+-    return ~sameBB;
+-#elif defined(USE_LASX)
+-    static_assert(sizeof(Piece) == 1);
+-
+-    Bitboard changed = 0;
+-
+-    for (int i : {0, 32, 58})
+-    {
+-        const __m256i old_v = __lasx_xvld(reinterpret_cast<const void*>(&oldPieces[i]), 0);
+-        const __m256i new_v = __lasx_xvld(reinterpret_cast<const void*>(&newPieces[i]), 0);
+-        const __m256i diff  = __lasx_xvxor_v(old_v, new_v);
+-        const __m256i mask  = __lasx_xvmsknz_b(diff);
+-        const auto    lo    = __lasx_xvpickve2gr_d(mask, 0);
+-        const auto    hi    = __lasx_xvpickve2gr_d(mask, 2);
+-
+-        changed |= (static_cast<Bitboard>(lo) | (static_cast<Bitboard>(hi) << 16)) << i;
+-    }
+-
+-    return changed;
+-#elif defined(USE_LSX)
+-    static_assert(sizeof(Piece) == 1);
+-
+-    Bitboard changed = 0;
+-
+-    for (int i : {0, 16, 32, 48, 64, 74})
+-    {
+-        const __m128i old_v = __lsx_vld(reinterpret_cast<const void*>(&oldPieces[i]), 0);
+-        const __m128i new_v = __lsx_vld(reinterpret_cast<const void*>(&newPieces[i]), 0);
+-        const __m128i diff  = __lsx_vxor_v(old_v, new_v);
+-        const __m128i mask  = __lsx_vmsknz_b(diff);
+-
+-        changed |= static_cast<Bitboard>(__lsx_vpickve2gr_d(mask, 0)) << i;
+-    }
+-
+-    return changed;
+-#elif defined(USE_NEON)
+-    Bitboard sameBB = 0;
+-
+-    constexpr uint8x16_t mask_weights = {1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128};
+-
+-    for (int i : {0, 16, 32, 48, 64, 74})
+-    {
+-        uint8x16_t old_v = vld1q_u8(reinterpret_cast<const u8*>(&oldPieces[i]));
+-        uint8x16_t new_v = vld1q_u8(reinterpret_cast<const u8*>(&newPieces[i]));
+-
+-        uint8x16_t eq     = vceqq_u8(old_v, new_v);
+-        uint8x16_t masked = vandq_u8(eq, mask_weights);
+-        u16        mask16 = vaddv_u8(vget_low_u8(masked)) | (vaddv_u8(vget_high_u8(masked)) << 8);
+-
+-        sameBB |= static_cast<Bitboard>(mask16) << i;
+-    }
+-
+-    return ~sameBB;
+-#elif defined(USE_SSE2)
+-    Bitboard sameBB = 0;
+-
+-    for (int i : {0, 16, 32, 48, 64, 74})
+-    {
+-        const __m128i old_v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&oldPieces[i]));
+-        const __m128i new_v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&newPieces[i]));
+-        const __m128i same  = _mm_cmpeq_epi8(old_v, new_v);
+-
+-        sameBB |= static_cast<Bitboard>(_mm_movemask_epi8(same)) << i;
+-    }
+-
+-    return ~sameBB;
+-#elif defined(USE_RVV)
+-
+-    #define RVV_MASK(mx, bx, offset, n) \
+-        __riscv_vmv_x_s_u64m1_u64(__riscv_vreinterpret_v_u8m1_u64m1( \
+-          __riscv_vreinterpret_v_b##bx##_u8m1(__riscv_vmsne_vv_i8m##mx##_b##bx( \
+-            __riscv_vle8_v_i8m##mx(reinterpret_cast<const i8*>(oldPieces.data() + offset), n), \
+-            __riscv_vle8_v_i8m##mx(reinterpret_cast<const i8*>(newPieces.data() + offset), n), \
+-            n))))
+-    #define IMPL(mx, bx) \
+-        { \
+-            u64 lo   = RVV_MASK(mx, bx, 0, 64); \
+-            u64 tail = RVV_MASK(mx, bx, 58, 32); \
+-            return Bitboard(lo) | (Bitboard(tail) << 58); \
+-        }
+-
+-
+-    usize vl = __riscv_vsetvlmax_e8m1();
+-    if (vl >= 64)
+-        IMPL(1, 8);
+-    else if (vl == 32)
+-        IMPL(2, 4);
+-    else
+-        IMPL(4, 2);
+-
+-    #undef IMPL
+-    #undef RVV_MASK
+-
+-#else
+-    Bitboard changed = 0;
+-
+-    for (Square sq = SQUARE_ZERO; sq < SQUARE_NB; ++sq)
+-        changed |= static_cast<Bitboard>(oldPieces[sq] != newPieces[sq]) << sq;
+-
+-    return changed;
+-#endif
+-}
+-
+-// HalfKA data comes from the Finny table entry, while the threats are built
+-// from the active threat features
+-void update_accumulator_refresh_cache(Color                     perspective,
+-                                      const FeatureTransformer& featureTransformer,
+-                                      const Position&           pos,
+-                                      AccumulatorState&         accumulator,
+-                                      AccumulatorCaches&        cache) {
+-
+-    auto [bucket, mirror, attack_bucket] = PSQFeatureSet::make_feature_bucket(perspective, pos);
+-
+-    auto cache_index = AccumulatorCaches::KingCacheMaps[pos.king_square(perspective)];
+-    if (cache_index < 3 && mirror)
+-    {
+-        cache_index += 9;
+-        if (PSQFeatureSet::requires_mid_mirror(pos, perspective))
+-            cache_index += 3;
+-    }
+-
+-    auto& entry = cache[cache_index * PSQFeatureSet::AttackBucketNB + attack_bucket][perspective];
+-    PSQFeatureSet::IndexList removed, added;
+-
+-    const Bitboard changedBB = get_changed_pieces(entry.pieces, pos.piece_array());
+-    Bitboard       removedBB = changedBB & entry.pieceBB;
+-    Bitboard       addedBB   = changedBB & pos.pieces();
+-
+-    while (removedBB)
+-    {
+-        Square sq = pop_lsb(removedBB);
+-        removed.push_back(
+-          PSQFeatureSet::make_index(perspective, sq, entry.pieces[sq], bucket, mirror));
+-    }
+-    while (addedBB)
+-    {
+-        Square sq = pop_lsb(addedBB);
+-        added.push_back(
+-          PSQFeatureSet::make_index(perspective, sq, pos.piece_on(sq), bucket, mirror));
+-    }
+-
+     entry.pieceBB = pos.pieces();
+-    entry.pieces  = pos.piece_array();
+-
+-    ThreatFeatureSet::IndexList active;
+-    ThreatFeatureSet::append_active_indices(perspective, pos, active);
+-
+-    accumulator.computed[perspective] = true;
+-
+-    Tile     acc;
+-    PsqtTile psqt;
+-
+-    for (IndexType j = 0; j < Dimensions; increment_index(j))
+-    {
+-        acc = load_tile(j, entry.accumulation.data());
+-
+-        acc = apply_psq_features<-1>(j, acc, removed, featureTransformer);
+-        acc = apply_psq_features<+1>(j, acc, added, featureTransformer);
+-
+-        store_tile(j, entry.accumulation.data(), acc);
+-
+-        acc = apply_threat_features<+1>(j, acc, active, featureTransformer);
+-
+-        store_tile(j, accumulator.accumulation[perspective].data(), acc);
+-    }
+-
+-    for (IndexType j = 0; j < PSQTBuckets; increment_psqt_index(j))
+-    {
+-        psqt = load_psqt(j, entry.psqtAccumulation.data());
+-
+-        psqt = apply_psqt<-1>(j, psqt, removed, featureTransformer.psqtWeights.data());
+-        psqt = apply_psqt<+1>(j, psqt, added, featureTransformer.psqtWeights.data());
+-
+-        store_psqt(j, entry.psqtAccumulation.data(), psqt);
+-
+-        psqt = apply_psqt<+1>(j, psqt, active, featureTransformer.threatPsqtWeights.data());
+-
+-        store_psqt(j, accumulator.psqtAccumulation[perspective].data(), psqt);
++    auto& a = mut_latest();
++    a.accumulation[p] = entry.accumulation;
++    a.psqtAccumulation[p] = entry.psqtAccumulation;
++    a.computed[p] = true;
++}
++void AccumulatorStack::update(Color p, const Position& pos, const FeatureTransformer& ft,
++                              usize from, usize to) noexcept {
++    auto& a = accumulators[to];
++    const auto& prev = accumulators[from];
++    a.accumulation[p] = prev.accumulation[p];
++    a.psqtAccumulation[p] = prev.psqtAccumulation[p];
++    Side side{a.accumulation[p], a.psqtAccumulation[p]};
++    PSQFeatureSet::IndexList removed, added;
++    PSQFeatureSet::append_changed_indices(pos.king_square(p), a.dirtyPiece, p, removed, added);
++    for (auto idx : removed) apply(side, ft, idx, -1);
++    for (auto idx : added) apply(side, ft, idx, 1);
++    a.computed[p] = true;
++}
++void AccumulatorStack::evaluate(const Position& pos, const FeatureTransformer& ft,
++                                 AccumulatorCaches& caches) noexcept {
++    for (Color p : {WHITE, BLACK}) {
++        usize base = size - 1;
++        while (!accumulators[base].computed[p]) {
++            if (base == 0 || PSQFeatureSet::requires_refresh(accumulators[base].dirtyPiece, p)) {
++                refresh(p, pos, ft, caches);
++                break;
++            }
++            --base;
++        }
++        if (!latest().computed[p])
++            for (usize i = base + 1; i < size; ++i) update(p, pos, ft, i - 1, i);
+     }
+ }
+-
+-}
+-
+ }
+diff --git a/src/nnue/nnue_accumulator.h b/src/nnue/nnue_accumulator.h
+index e2fab0ff..3a1c2a1b 100644
+--- a/src/nnue/nnue_accumulator.h
++++ b/src/nnue/nnue_accumulator.h
+@@ -41,7 +41,7 @@ struct alignas(CacheLineSize) Accumulator;
+ class FeatureTransformer;
+ 
+ // Class that holds the result of affine transformation of input features,
+-// combined HalfKA + Threats
++// HalfKAv2_xq (threat dirties are computed by Position but unread here)
+ struct alignas(CacheLineSize) Accumulator {
+     std::array<std::array<i16, L1>, COLOR_NB>          accumulation;
+     std::array<std::array<i32, PSQTBuckets>, COLOR_NB> psqtAccumulation;
+@@ -57,21 +57,6 @@ struct alignas(CacheLineSize) Accumulator {
+ // is commonly referred to as "Finny Tables".
+ struct AccumulatorCaches {
+ 
+-    // clang-format off
+-    static constexpr u8 KingCacheMaps[SQUARE_NB] = {
+-      0,  0,  0,  6,  0,  3,  0,  0,  0,
+-      0,  0,  0,  7,  1,  4,  0,  0,  0,
+-      0,  0,  0,  8,  2,  5,  0,  0,  0,
+-      0,  0,  0,  0,  0,  0,  0,  0,  0,
+-      0,  0,  0,  0,  0,  0,  0,  0,  0,
+-      0,  0,  0,  0,  0,  0,  0,  0,  0,
+-      0,  0,  0,  0,  0,  0,  0,  0,  0,
+-      0,  0,  0,  8,  2,  5,  0,  0,  0,
+-      0,  0,  0,  7,  1,  4,  0,  0,  0,
+-      0,  0,  0,  6,  0,  3,  0,  0,  0,
+-    };
+-    // clang-format on
+-
+     template<typename Network>
+     AccumulatorCaches(const Network& network) {
+         clear(network);
+@@ -101,7 +86,7 @@ struct AccumulatorCaches {
+ 
+     std::array<Entry, COLOR_NB>& operator[](int index) { return entries[index]; }
+ 
+-    std::array<std::array<Entry, COLOR_NB>, (9 + 6) * PSQFeatureSet::AttackBucketNB> entries;
++    std::array<std::array<Entry, COLOR_NB>, 9> entries;
+ };
+ 
+ 
+@@ -125,30 +110,8 @@ class AccumulatorStack {
+    private:
+     [[nodiscard]] AccumulatorState& mut_latest() noexcept;
+ 
+-    void evaluate_side(Color                     perspective,
+-                       const Position&           pos,
+-                       const FeatureTransformer& featureTransformer,
+-                       // Silence spurious warning on GCC 10
+-                       [[maybe_unused]] AccumulatorCaches& cache,
+-                       usize                               last_usable_accum) noexcept;
+-
+-    [[nodiscard]] usize find_last_usable_accumulator(Color perspective) const noexcept;
+-
+-    void forward_update_incremental(Color                     perspective,
+-                                    const Position&           pos,
+-                                    const FeatureTransformer& featureTransformer,
+-                                    const usize               begin) noexcept;
+-
+-    void backward_update_incremental(Color                     perspective,
+-                                     const Position&           pos,
+-                                     const FeatureTransformer& featureTransformer,
+-                                     const usize               end) noexcept;
+-
+-    void forward_update_incremental_both(const Position&           pos,
+-                                         const FeatureTransformer& featureTransformer,
+-                                         usize                     white_begin,
+-                                         usize                     black_begin) noexcept;
+-
++    void refresh(Color, const Position&, const FeatureTransformer&, AccumulatorCaches&) noexcept;
++    void update(Color, const Position&, const FeatureTransformer&, usize from, usize to) noexcept;
+     std::array<AccumulatorState, MaxSize> accumulators;
+     usize                                 size = 1;
+ };
+diff --git a/src/nnue/nnue_architecture.h b/src/nnue/nnue_architecture.h
+index 0cfedd51..5d90d9ae 100644
+--- a/src/nnue/nnue_architecture.h
++++ b/src/nnue/nnue_architecture.h
+@@ -16,158 +16,67 @@
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-// Input features and network structure used in NNUE evaluation function
+-
++// SF14 HalfKAv2 xiangqi architecture (CC0 FSF net).
+ #ifndef NNUE_ARCHITECTURE_H_INCLUDED
+ #define NNUE_ARCHITECTURE_H_INCLUDED
+-
+-#include <cstdint>
+-#include <iosfwd>
+-
+-#include "features/half_ka_v2_hm.h"
+-#include "features/full_threats.h"
++#include "features/half_ka_v2_xq.h"
+ #include "layers/affine_transform.h"
+-#include "layers/affine_transform_sparse_input.h"
+ #include "layers/clipped_relu.h"
+-#include "layers/sqr_clipped_relu.h"
+-#include "nnue_common.h"
+ #include "nnz_helper.h"
+-
+ namespace Stockfish::Eval::NNUE {
+-
+-// Input features used in evaluation function
+-using ThreatFeatureSet = Features::FullThreats;
+-using PSQFeatureSet    = Features::HalfKAv2_hm;
+-
+-// Number of input feature dimensions after conversion
+-constexpr IndexType L1 = 1024;
+-constexpr int       L2 = 32;
+-constexpr int       L3 = 32;
+-
+-constexpr IndexType PSQTBuckets = 16;
+-constexpr IndexType LayerStacks = 16;
+-
+-// If vector instructions are enabled, we update and refresh the
+-// accumulator tile by tile such that each tile fits in the CPU's
+-// vector registers.
+-static_assert(
+-  PSQTBuckets % 16 == 0,
+-  "Per feature PSQT values cannot be processed at granularity lower than 16 at a time.");
+-
++using PSQFeatureSet = Features::HalfKAv2_xq;
++constexpr IndexType L1 = 512;
++constexpr int L2 = 16, L3 = 32;
++constexpr IndexType PSQTBuckets = 8, LayerStacks = 8;
+ struct NetworkArchitecture {
+-    static constexpr IndexType TransformedFeatureDimensions = L1;
+-    static constexpr int       FC_0_OUTPUTS                 = L2;
+-    static constexpr int       FC_1_OUTPUTS                 = L3;
+-
+-    Layers::AffineTransformSparseInput<TransformedFeatureDimensions, FC_0_OUTPUTS> fc_0;
+-    Layers::SqrClippedReLU<FC_0_OUTPUTS, WeightScaleBits + 1>                      ac_sqr_0;
+-    Layers::ClippedReLU<FC_0_OUTPUTS, WeightScaleBits + 1>                         ac_0;
+-    Layers::AffineTransform<FC_0_OUTPUTS * 2, FC_1_OUTPUTS>                        fc_1;
+-    Layers::SqrClippedReLU<FC_1_OUTPUTS, WeightScaleBits>                          ac_sqr_1;
+-    Layers::ClippedReLU<FC_1_OUTPUTS, WeightScaleBits>                             ac_1;
+-    Layers::AffineTransform<FC_0_OUTPUTS * 2 + FC_1_OUTPUTS * 2, 1>                fc_2;
+-
+-    // Hash value embedded in the evaluation file
++    static constexpr IndexType TransformedFeatureDimensions = 2 * L1;
++    static constexpr int FC_0_OUTPUTS = L2, FC_1_OUTPUTS = L3;
++    Layers::AffineTransform<2 * L1, L2> fc_0;
++    Layers::ClippedReLU<L2> ac_0;
++    Layers::AffineTransform<L2, L3> fc_1;
++    Layers::ClippedReLU<L3> ac_1;
++    Layers::AffineTransform<L3, 1> fc_2;
+     static constexpr u32 get_hash_value() {
+-        // input slice hash
+-        u32 hashValue = 0xEC42E90Du;
+-        hashValue ^= TransformedFeatureDimensions * 2;
+-
+-        hashValue = decltype(fc_0)::get_hash_value(hashValue);
+-        // TODO: consider including hash value of ac_sqr_0 in the overall hash value.
+-        // For now omitted on purpose because hash value is not written by trainer (yet)
+-        hashValue = decltype(ac_0)::get_hash_value(hashValue);
+-        hashValue = decltype(fc_1)::get_hash_value(hashValue);
+-        hashValue = decltype(ac_1)::get_hash_value(hashValue);
+-        hashValue = decltype(fc_2)::get_hash_value(hashValue);
+-
+-        return hashValue;
++        u32 h = 0xEC42E90Du ^ (2 * L1);
++        h = decltype(fc_0)::get_hash_value(h);
++        h = decltype(ac_0)::get_hash_value(h);
++        h = decltype(fc_1)::get_hash_value(h);
++        h = decltype(ac_1)::get_hash_value(h);
++        return decltype(fc_2)::get_hash_value(h);
+     }
+-
+-    // Read network parameters
+-    bool read_parameters(std::istream& stream) {
+-        return fc_0.read_parameters(stream) && ac_0.read_parameters(stream)
+-            && fc_1.read_parameters(stream) && ac_1.read_parameters(stream)
+-            && fc_2.read_parameters(stream);
++    bool read_parameters(std::istream& s) {
++        return fc_0.read_parameters(s) && fc_1.read_parameters(s) && fc_2.read_parameters(s);
+     }
+-
+-    // Write network parameters
+-    bool write_parameters(std::ostream& stream) const {
+-        return fc_0.write_parameters(stream) && ac_0.write_parameters(stream)
+-            && fc_1.write_parameters(stream) && ac_1.write_parameters(stream)
+-            && fc_2.write_parameters(stream);
++    bool write_parameters(std::ostream& s) const {
++        return fc_0.write_parameters(s) && fc_1.write_parameters(s) && fc_2.write_parameters(s);
+     }
+-
+-    i32 propagate(const TransformedFeatureType* transformedFeatures,
+-                  const NNZInfo<L1>&            nnzInfo) const {
+-        struct alignas(CacheLineSize) Buffer {
+-            alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
+-            alignas(CacheLineSize) typename decltype(ac_sqr_0)::OutputType
+-              concat_buffer[ceil_to_multiple<IndexType>(FC_0_OUTPUTS * 2 + FC_1_OUTPUTS * 2, 32)];
+-            alignas(CacheLineSize) typename decltype(fc_1)::OutputBuffer fc_1_out;
+-            alignas(CacheLineSize) typename decltype(fc_2)::OutputBuffer fc_2_out;
+-        };
+-
+-        Buffer buffer;
+-
+-        fc_0.propagate(transformedFeatures, buffer.fc_0_out, nnzInfo);
+-#if defined(USE_PAIR_ACTIVATIONS)
+-        ac_sqr_0.propagate_pair(buffer.fc_0_out, buffer.concat_buffer,
+-                                buffer.concat_buffer + FC_0_OUTPUTS);
+-#else
+-        ac_sqr_0.propagate(buffer.fc_0_out, buffer.concat_buffer);
+-        ac_0.propagate(buffer.fc_0_out, buffer.concat_buffer + FC_0_OUTPUTS);
+-#endif
+-
+-        fc_1.propagate(buffer.concat_buffer, buffer.fc_1_out);
+-#if defined(USE_PAIR_ACTIVATIONS)
+-        ac_sqr_1.propagate_pair(buffer.fc_1_out, buffer.concat_buffer + FC_0_OUTPUTS * 2,
+-                                buffer.concat_buffer + FC_0_OUTPUTS * 2 + FC_1_OUTPUTS);
+-#else
+-        ac_sqr_1.propagate(buffer.fc_1_out, buffer.concat_buffer + FC_0_OUTPUTS * 2);
+-        ac_1.propagate(buffer.fc_1_out, buffer.concat_buffer + FC_0_OUTPUTS * 2 + FC_1_OUTPUTS);
+-#endif
+-
+-        fc_2.propagate(buffer.concat_buffer, buffer.fc_2_out);
+-
+-        static_assert(FC_0_OUTPUTS >= 2);
+-        i32 fwdOut = buffer.fc_2_out[0];
+-        i32 skip_0 = buffer.fc_0_out[FC_0_OUTPUTS - 2] - buffer.fc_0_out[FC_0_OUTPUTS - 1];
+-        fwdOut += skip_0;
+-
+-        // fwdOut is such that 1.0 is equal to HiddenOneVal*(1<<WeightScaleBits)*2 in
+-        // quantized form, but we want 1.0 to be equal to 600*OutputScale
+-        // to make overflow impossible we cast to int64_t
+-        constexpr i64 multiplier = 600 * OutputScale;
+-        constexpr i64 denominator =
+-          static_cast<i64>(HiddenOneVal) * static_cast<i64>(1U << WeightScaleBits) * 2;
+-
+-        i32 outputValue = static_cast<i32>((static_cast<i64>(fwdOut) * multiplier) / denominator);
+-        return outputValue;
++    i32 propagate(const TransformedFeatureType* x, const NNZInfo<L1>&) const {
++        // Zero padding is required by affine SIMD kernels (16 -> padded 32).
++        alignas(CacheLineSize) decltype(fc_0)::OutputBuffer a{};
++        alignas(CacheLineSize) decltype(ac_0)::OutputBuffer b{};
++        alignas(CacheLineSize) decltype(fc_1)::OutputBuffer c{};
++        alignas(CacheLineSize) decltype(ac_1)::OutputBuffer d{};
++        alignas(CacheLineSize) decltype(fc_2)::OutputBuffer e{};
++        fc_0.propagate(x, a); ac_0.propagate(a, b);
++        fc_1.propagate(b, c); ac_1.propagate(c, d);
++        fc_2.propagate(d, e);
++        return e[0];
+     }
+-
+     usize get_content_hash() const {
+         usize h = 0;
+         hash_combine(h, fc_0.get_content_hash());
+-        hash_combine(h, ac_sqr_0.get_content_hash());
+-        hash_combine(h, ac_0.get_content_hash());
+         hash_combine(h, fc_1.get_content_hash());
+-        // hash_combine(h, ac_sqr_1.get_content_hash()); TODO
+-        hash_combine(h, ac_1.get_content_hash());
+         hash_combine(h, fc_2.get_content_hash());
+-        hash_combine(h, get_hash_value());
+         return h;
+     }
+ };
+-
+-}  // namespace Stockfish::Eval::NNUE
+-
+-template<>
+-struct std::hash<Stockfish::Eval::NNUE::NetworkArchitecture> {
+-    Stockfish::usize
+-    operator()(const Stockfish::Eval::NNUE::NetworkArchitecture& arch) const noexcept {
+-        return arch.get_content_hash();
++static_assert(NetworkArchitecture::get_hash_value() == 0x633376CAu);
++}
++namespace std {
++template<> struct hash<Stockfish::Eval::NNUE::NetworkArchitecture> {
++    size_t operator()(const Stockfish::Eval::NNUE::NetworkArchitecture& n) const noexcept {
++        return n.get_content_hash();
+     }
+ };
+-
+-#endif  // #ifndef NNUE_ARCHITECTURE_H_INCLUDED
++}
++#endif
+diff --git a/src/nnue/nnue_common.h b/src/nnue/nnue_common.h
+index f2d39045..794b498e 100644
+--- a/src/nnue/nnue_common.h
++++ b/src/nnue/nnue_common.h
+@@ -57,17 +57,17 @@ namespace Stockfish::Eval::NNUE {
+ 
+ using BiasType         = i16;
+ using ThreatWeightType = i8;
+-using WeightType       = i8;
++using WeightType       = i16;
+ using PSQTWeightType   = i32;
+ using IndexType        = u32;
+ 
+ // Version of the evaluation file
+-constexpr u32 Version = 0x6A448AFAu;
++constexpr u32 Version = 0x7AF32F20u;
+ 
+ // Constant used in evaluation value calculation
+ constexpr int OutputScale     = 16;
+ constexpr int WeightScaleBits = 6;
+-constexpr int FtMaxVal        = 255;
++constexpr int FtMaxVal        = 127;
+ constexpr int HiddenOneVal    = 128;
+ 
+ // Size of cache line (in bytes)
+diff --git a/src/nnue/nnue_feature_transformer.h b/src/nnue/nnue_feature_transformer.h
+index 55a51122..256a139f 100644
+--- a/src/nnue/nnue_feature_transformer.h
++++ b/src/nnue/nnue_feature_transformer.h
+@@ -16,401 +16,57 @@
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-// A class that converts the input features of the NNUE evaluation function
+-
++// Plain int16 HalfKAv2 feature transformer. File rows remain in canonical order.
+ #ifndef NNUE_FEATURE_TRANSFORMER_H_INCLUDED
+ #define NNUE_FEATURE_TRANSFORMER_H_INCLUDED
+-
+-#include <algorithm>
+-#include <cstdint>
+-#include <cstring>
+-#include <iosfwd>
+-#include <iterator>
+-
+ #include "../position.h"
+-#include "../types.h"
+ #include "nnue_accumulator.h"
+-#include "nnue_architecture.h"
+-#include "nnue_common.h"
+-#include "simd.h"
+-
+ namespace Stockfish::Eval::NNUE {
+-
+-// Returns the inverse of a permutation
+-template<usize Len>
+-constexpr std::array<usize, Len> invert_permutation(const std::array<usize, Len>& order) {
+-    std::array<usize, Len> inverse{};
+-    for (usize i = 0; i < order.size(); i++)
+-        inverse[order[i]] = i;
+-    return inverse;
+-}
+-
+-// Divide a byte region of size TotalSize to chunks of size
+-// BlockSize, and permute the blocks by a given order
+-template<usize BlockSize, typename T, usize N, usize OrderSize>
+-void permute(std::array<T, N>& data, const std::array<usize, OrderSize>& order) {
+-    constexpr usize TotalSize = N * sizeof(T);
+-
+-    static_assert(TotalSize % (BlockSize * OrderSize) == 0,
+-                  "ChunkSize * OrderSize must perfectly divide TotalSize");
+-
+-    constexpr usize ProcessChunkSize = BlockSize * OrderSize;
+-
+-    std::array<std::byte, ProcessChunkSize> buffer{};
+-
+-    std::byte* const bytes = reinterpret_cast<std::byte*>(data.data());
+-
+-    for (usize i = 0; i < TotalSize; i += ProcessChunkSize)
+-    {
+-        std::byte* const values = &bytes[i];
+-
+-        for (usize j = 0; j < OrderSize; j++)
+-        {
+-            auto* const buffer_chunk = &buffer[j * BlockSize];
+-            auto* const value_chunk  = &values[order[j] * BlockSize];
+-
+-            std::copy(value_chunk, value_chunk + BlockSize, buffer_chunk);
+-        }
+-
+-        std::copy(std::begin(buffer), std::end(buffer), values);
+-    }
+-}
+-
+-// Input feature converter
+ class FeatureTransformer {
+-    // Number of output dimensions for one side
+-    static constexpr IndexType HalfDimensions = L1;
+-
+-   public:
+-    // Output type
+-    using OutputType = TransformedFeatureType;
+-
+-    // Number of input/output dimensions
+-    static constexpr IndexType ThreatInputDimensions = ThreatFeatureSet::Dimensions;
+-    static constexpr IndexType PsqDimensions         = PSQFeatureSet::Dimensions;
+-    static constexpr IndexType InputDimensions       = PsqDimensions + ThreatInputDimensions;
+-    static constexpr IndexType OutputDimensions      = HalfDimensions;
+-    static constexpr IndexType ThreatWeightSize      = ThreatInputDimensions * HalfDimensions;
+-    static constexpr IndexType ThreatPsqtWeightSize  = ThreatInputDimensions * PSQTBuckets;
+-
+-    using BiasesArray       = std::array<BiasType, HalfDimensions>;
+-    using WeightArray       = std::array<WeightType, HalfDimensions * PsqDimensions>;
+-    using ThreatWeightArray = std::array<ThreatWeightType, ThreatWeightSize>;
+-    using PsqtWeightArray   = std::array<PSQTWeightType, PSQTBuckets * PsqDimensions>;
+-    using ThreatPsqtArray   = std::array<PSQTWeightType, ThreatPsqtWeightSize>;
+-
+-    // Size of forward propagation buffer
+-    static constexpr usize BufferSize = OutputDimensions * sizeof(OutputType);
+-
+-    // Store the order by which 128-bit blocks of a 1024-bit data must
+-    // be permuted so that calling packus on adjacent vectors of 16-bit
+-    // integers loaded from the data results in the pre-permutation order
+-    static constexpr auto PackusEpi16Order = []() -> std::array<usize, 8> {
+-#if defined(USE_AVX512)
+-        // _mm512_packus_epi16 after permutation:
+-        // |   0   |   2   |   4   |   6   | // Vector 0
+-        // |   1   |   3   |   5   |   7   | // Vector 1
+-        // | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | // Packed Result
+-        return {0, 2, 4, 6, 1, 3, 5, 7};
+-#elif defined(USE_AVX2) || defined(USE_LASX)
+-        // _mm256_packus_epi16 after permutation:
+-        // |   0   |   2   |  |   4   |   6   | // Vector 0, 2
+-        // |   1   |   3   |  |   5   |   7   | // Vector 1, 3
+-        // | 0 | 1 | 2 | 3 |  | 4 | 5 | 6 | 7 | // Packed Result
+-        return {0, 2, 1, 3, 4, 6, 5, 7};
+-#else
+-        return {0, 1, 2, 3, 4, 5, 6, 7};
+-#endif
+-    }();
+-
+-    static constexpr auto InversePackusEpi16Order = invert_permutation(PackusEpi16Order);
+-
+-    static constexpr u32 combine_hash(std::initializer_list<u32> hashes) {
+-        u32 hash = 0;
+-        for (const auto component_hash : hashes)
+-        {
+-            hash = (hash << 1) | (hash >> 31);
+-            hash ^= component_hash;
+-        }
+-        return hash;
++ public:
++    static constexpr IndexType InputDimensions = PSQFeatureSet::Dimensions;
++    static constexpr IndexType OutputDimensions = 2 * L1;
++    static constexpr usize BufferSize = OutputDimensions;
++    static constexpr u32 get_hash_value() { return PSQFeatureSet::HashValue ^ OutputDimensions; }
++    alignas(CacheLineSize) std::array<BiasType, L1> biases;
++    alignas(CacheLineSize) std::array<WeightType, L1 * InputDimensions> weights;
++    alignas(CacheLineSize) std::array<PSQTWeightType, PSQTBuckets * InputDimensions> psqtWeights;
++    bool read_parameters(std::istream& s) {
++        read_little_endian(s, biases.data(), biases.size());
++        read_little_endian(s, weights.data(), weights.size());
++        read_little_endian(s, psqtWeights.data(), psqtWeights.size());
++        return !s.fail();
+     }
+-
+-    // Hash value embedded in the evaluation file
+-    static constexpr u32 get_hash_value() {
+-        return combine_hash({ThreatFeatureSet::HashValue, PSQFeatureSet::HashValue})
+-             ^ (OutputDimensions * 2);
++    bool write_parameters(std::ostream& s) const {
++        write_little_endian(s, biases.data(), biases.size());
++        write_little_endian(s, weights.data(), weights.size());
++        write_little_endian(s, psqtWeights.data(), psqtWeights.size());
++        return !s.fail();
+     }
+-
+-    void permute_weights() {
+-        permute<16>(biases, PackusEpi16Order);
+-        permute<8>(weights, PackusEpi16Order);
+-        permute<8>(threatWeights, PackusEpi16Order);
++    i32 transform(const Position& pos, AccumulatorStack& stack, AccumulatorCaches& cache,
++                  TransformedFeatureType* out, int bucket, NNZInfo<L1>&) const {
++        stack.evaluate(pos, *this, cache);
++        const auto& a = stack.latest();
++        Color us = pos.side_to_move();
++        for (int p = 0; p < 2; ++p)
++            for (IndexType j = 0; j < L1; ++j)
++                out[p * L1 + j] = u8(std::clamp<int>(a.accumulation[p ? ~us : us][j], 0, 127));
++        return (a.psqtAccumulation[us][bucket] - a.psqtAccumulation[~us][bucket]) / 2;
+     }
+-
+-    void unpermute_weights() {
+-        permute<16>(biases, InversePackusEpi16Order);
+-        permute<8>(weights, InversePackusEpi16Order);
+-        permute<8>(threatWeights, InversePackusEpi16Order);
+-    }
+-
+-    // Read network parameters
+-    bool read_parameters(std::istream& stream) {
+-        read_leb_128(stream, biases);
+-
+-        read_little_endian(stream, threatWeights.data(), ThreatWeightSize);
+-        read_leb_128(stream, threatPsqtWeights.data(), ThreatPsqtWeightSize);
+-
+-        read_little_endian(stream, weights.data(), weights.size());
+-        read_leb_128(stream, psqtWeights);
+-
+-        permute_weights();
+-
+-        return !stream.fail();
+-    }
+-
+-    // Write network parameters
+-    bool write_parameters(std::ostream& stream) const {
+-        std::unique_ptr<FeatureTransformer> copy = std::make_unique<FeatureTransformer>(*this);
+-
+-        copy->unpermute_weights();
+-
+-        write_leb_128<BiasType>(stream, copy->biases);
+-
+-        write_little_endian(stream, copy->threatWeights.data(), ThreatWeightSize);
+-        write_leb_128(stream, copy->threatPsqtWeights.data(), ThreatPsqtWeightSize);
+-
+-        write_little_endian(stream, copy->weights.data(), copy->weights.size());
+-        write_leb_128<PSQTWeightType>(stream, copy->psqtWeights);
+-
+-        return !stream.fail();
+-    }
+-
+     usize get_content_hash() const {
+         usize h = 0;
+-
+         hash_combine(h, get_raw_data_hash(biases));
+         hash_combine(h, get_raw_data_hash(weights));
+         hash_combine(h, get_raw_data_hash(psqtWeights));
+-
+-        hash_combine(h, get_raw_data_hash(threatWeights));
+-        hash_combine(h, get_raw_data_hash(threatPsqtWeights));
+-
+-        hash_combine(h, get_hash_value());
+-
+         return h;
+     }
+-
+-    // Convert input features
+-    i32 transform(const Position&                             pos,
+-                  AccumulatorStack&                           accumulatorStack,
+-                  AccumulatorCaches&                          cache,
+-                  OutputType*                                 output,
+-                  int                                         bucket,
+-                  [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo) const {
+-        accumulatorStack.evaluate(pos, *this, cache);
+-        const auto& accumulatorState = accumulatorStack.latest();
+-
+-        const Color perspectives[2]  = {pos.side_to_move(), ~pos.side_to_move()};
+-        const auto& psqtAccumulation = accumulatorState.psqtAccumulation;
+-        const auto  psqt =
+-          (psqtAccumulation[perspectives[0]][bucket] - psqtAccumulation[perspectives[1]][bucket])
+-          / 2;
+-
+-        const auto& accumulation = accumulatorState.accumulation;
+-
+-        for (IndexType p = 0; p < 2; ++p)
+-            transform_perspective(accumulation[perspectives[p]], output, p, nnzInfo);
+-
+-        return psqt;
++};
++}
++namespace std {
++template<> struct hash<Stockfish::Eval::NNUE::FeatureTransformer> {
++    size_t operator()(const Stockfish::Eval::NNUE::FeatureTransformer& f) const noexcept {
++        return f.get_content_hash();
+     }
+-
+-   private:
+-    static void transform_perspective(const std::array<i16, HalfDimensions>&      accumulation,
+-                                      OutputType*                                 output,
+-                                      IndexType                                   perspective,
+-                                      [[maybe_unused]] NNZInfo<OutputDimensions>& nnzInfo) {
+-
+-        using namespace SIMD;
+-        const IndexType offset = (HalfDimensions / 2) * perspective;
+-
+-#if defined(VECTOR)
+-
+-        [[maybe_unused]] auto cursor = nnzInfo.make_cursor(perspective);
+-
+-        constexpr IndexType OutputChunkSize = MaxChunkSize;
+-        static_assert((HalfDimensions / 2) % OutputChunkSize == 0);
+-        constexpr IndexType NumOutputChunks = HalfDimensions / 2 / OutputChunkSize;
+-
+-        [[maybe_unused]] const vec_t   Zero  = vec_zero();
+-        [[maybe_unused]] const vec_t   FtMax = vec_set_16(FtMaxVal);
+-        [[maybe_unused]] constexpr int shift = 7;
+-
+-        const vec_t* in0 = reinterpret_cast<const vec_t*>(&accumulation[0]);
+-        const vec_t* in1 = reinterpret_cast<const vec_t*>(&accumulation[HalfDimensions / 2]);
+-        vec_t*       out = reinterpret_cast<vec_t*>(output + offset);
+-
+-        // Per the NNUE architecture, here we want to multiply pairs of
+-        // clipped elements and divide the product by 512. To do this,
+-        // we can naively perform min/max operation to clip each of the
+-        // four int16 vectors, mullo pairs together, then pack them into
+-        // one int8 vector. However, there exists a faster way.
+-
+-        // The idea here is to use the implicit clipping from packus to
+-        // save us two vec_max_16 instructions. This clipping works due
+-        // to the fact that any int16 integer below zero will be zeroed
+-        // on packus.
+-
+-        // Consider the case where the second element is negative.
+-        // If we do standard clipping, that element will be zero, which
+-        // means our pairwise product is zero. If we perform packus and
+-        // remove the lower-side clip for the second element, then our
+-        // product before packus will be negative, and is zeroed on pack.
+-        // The two operations produce equivalent results, but the second
+-        // one (using packus) saves one max operation per pair.
+-
+-        // But here we run into a problem: mullo does not preserve the
+-        // sign of the multiplication. We can get around this by doing
+-        // mulhi, which keeps the sign. But that requires an additional
+-        // tweak.
+-
+-        // mulhi cuts off the last 16 bits of the resulting product,
+-        // which is the same as performing a rightward shift of 16 bits.
+-        // We can use this to our advantage. Recall that we want to
+-        // divide the final product by 512, which is equivalent to a
+-        // 9-bit right shift. Intuitively, if we shift the clipped
+-        // value left by 7, and perform mulhi, which shifts the product
+-        // right by 16 bits, then we will net a right shift of 9 bits.
+-
+-        for (IndexType j = 0; j < NumOutputChunks; j += 2)
+-        {
+-            vec_t packed[2];
+-            for (IndexType k = 0; k < 2; ++k)
+-            {
+-                const IndexType i = (j + k) * 2;
+-
+-                vec_t acc0a = in0[i + 0];
+-                vec_t acc0b = in0[i + 1];
+-                vec_t acc1a = in1[i + 0];
+-                vec_t acc1b = in1[i + 1];
+-
+-                static_assert(FtMaxVal == 255);
+-
+-    #if defined(USE_NEON)
+-                uint16x8_t mul0 = vmull_u8(vqmovun_s16(acc0a), vqmovun_s16(acc1a));
+-                uint16x8_t mul1 = vmull_u8(vqmovun_s16(acc0b), vqmovun_s16(acc1b));
+-
+-                uint8x16x2_t uzp = vuzpq_u8(vreinterpretq_u8_u16(mul0), vreinterpretq_u8_u16(mul1));
+-                uint8x16_t   pab = vshrq_n_u8(uzp.val[1], 1);
+-                vec_t        result = reinterpret_cast<vec_t>(pab);
+-    #elif defined(USE_LSX) || defined(USE_LASX)
+-                vec_t pa = vec_packus_16(acc0a, acc0b);
+-                vec_t pb = vec_packus_16(acc1a, acc1b);
+-
+-                vec_t hi     = vec_mulhi_8(pa, pb);
+-                vec_t result = vec_srli_8(hi, 1);
+-    #elif defined(__wasm__)
+-                // _mm_mulhi_epi16 is lowered to 32-bit multiplies, so we take
+-                // a similar approach as the NEON path.
+-                vec_t mul0 = vec_packus_16(acc0a, acc0b);
+-                vec_t mul1 = vec_packus_16(acc1a, acc1b);
+-
+-                vec_t low = wasm_u16x8_extmul_low_u8x16(mul0, mul1);
+-                vec_t hi  = wasm_u16x8_extmul_high_u8x16(mul0, mul1);
+-
+-                // equivalent to vuzp2_u8
+-                vec_t merged = wasm_i8x16_shuffle(low, hi, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21,
+-                                                  23, 25, 27, 29, 31);
+-                vec_t result = wasm_u8x16_shr(merged, 1);
+-    #else
+-                vec_t sum0a = vec_slli_16(vec_max_16(vec_min_16(acc0a, FtMax), Zero), shift);
+-                vec_t sum0b = vec_slli_16(vec_max_16(vec_min_16(acc0b, FtMax), Zero), shift);
+-                vec_t sum1a = vec_min_16(acc1a, FtMax);
+-                vec_t sum1b = vec_min_16(acc1b, FtMax);
+-
+-                vec_t pa = vec_mulhi_16(sum0a, sum1a);
+-                vec_t pb = vec_mulhi_16(sum0b, sum1b);
+-
+-                vec_t result = vec_packus_16(pa, pb);
+-    #endif
+-
+-                packed[k] = out[j + k] = result;
+-            }
+-
+-            cursor.record2(packed[0], packed[1]);
+-        }
+-
+-#elif defined(USE_RVV)
+-
+-        usize       j  = 0;
+-        usize       VL = __riscv_vsetvlmax_e8m1();
+-        vuint8m1_t  vid8;
+-        vuint16m2_t vid16;
+-        if (VL <= 256)
+-            vid8 = __riscv_vid_v_u8m1(VL);
+-        else
+-            vid16 = __riscv_vid_v_u16m2(VL);
+-
+-        for (usize vl; j < HalfDimensions / 2; j += vl)
+-        {
+-            vl = __riscv_vsetvl_e16m2(HalfDimensions / 2 - j);
+-
+-            vint16m2_t acc0 = __riscv_vle16_v_i16m2(&accumulation[j], vl);
+-            vint16m2_t acc1 = __riscv_vle16_v_i16m2(&accumulation[j + HalfDimensions / 2], vl);
+-
+-            acc0 = __riscv_vmax(acc0, 0, vl);
+-            acc1 = __riscv_vmax(acc1, 0, vl);
+-
+-            vuint8m1_t pa = __riscv_vnclipu(__riscv_vreinterpret_u16m2(acc0), 0, 0, vl);
+-            vuint8m1_t pb = __riscv_vnclipu(__riscv_vreinterpret_u16m2(acc1), 0, 0, vl);
+-
+-            vuint8m1_t hi     = __riscv_vmulhu(pa, pb, vl);
+-            vuint8m1_t result = __riscv_vsrl(hi, 1, vl);
+-
+-            __riscv_vse8(&output[offset + j], result, vl);
+-
+-            vbool8_t    m   = __riscv_vmsne(result, 0, vl);
+-            usize       cnt = __riscv_vcpop(m, vl);
+-            vuint16m2_t vidx;
+-            if (VL <= 256)
+-                vidx = __riscv_vzext_vf2(__riscv_vcompress(vid8, m, vl), cnt);
+-            else
+-                vidx = __riscv_vcompress(vid16, m, vl);
+-            __riscv_vse16(&nnzInfo.nnz[nnzInfo.count], __riscv_vadd(vidx, offset + j, cnt), cnt);
+-            nnzInfo.count += cnt;
+-        }
+-
+-#else
+-
+-        for (IndexType j = 0; j < HalfDimensions / 2; ++j)
+-        {
+-            BiasType sum0 = accumulation[j];
+-            BiasType sum1 = accumulation[j + HalfDimensions / 2];
+-
+-            sum0 = std::clamp<BiasType>(sum0, 0, FtMaxVal);
+-            sum1 = std::clamp<BiasType>(sum1, 0, FtMaxVal);
+-
+-            output[offset + j] = static_cast<OutputType>(unsigned(sum0 * sum1) / 512);
+-        }
+-
++};
++}
+ #endif
+-    }
+-
+-   public:
+-    alignas(CacheLineSize) BiasesArray biases;
+-    alignas(CacheLineSize) WeightArray weights;
+-    alignas(CacheLineSize) ThreatWeightArray threatWeights;
+-    alignas(CacheLineSize) PsqtWeightArray psqtWeights;
+-    alignas(CacheLineSize) ThreatPsqtArray threatPsqtWeights;
+-};
+-
+-}  // namespace Stockfish::Eval::NNUE
+-
+-template<>
+-struct std::hash<Stockfish::Eval::NNUE::FeatureTransformer> {
+-    Stockfish::usize
+-    operator()(const Stockfish::Eval::NNUE::FeatureTransformer& ft) const noexcept {
+-        return ft.get_content_hash();
+-    }
+-};
+-
+-#endif  // #ifndef NNUE_FEATURE_TRANSFORMER_H_INCLUDED
+diff --git a/src/nnue/simd.h b/src/nnue/simd.h
+index d77c6066..27e1ee5f 100644
+--- a/src/nnue/simd.h
++++ b/src/nnue/simd.h
+@@ -51,9 +51,7 @@
+ 
+ namespace Stockfish::Eval::NNUE::SIMD {
+ 
+-#if defined(USE_AVX2)
+-    #define USE_PAIR_ACTIVATIONS
+-#endif
++// SF14 uses ordinary CReLU, without paired activation interleaving.
+ 
+ // If vector instructions are enabled, we update and refresh the
+ // accumulator tile by tile such that each tile fits in the CPU's
+diff --git a/src/position.cpp b/src/position.cpp
+index bfca22b9..1194193e 100644
+--- a/src/position.cpp
++++ b/src/position.cpp
+@@ -656,40 +656,14 @@ void Position::do_move(Move                      m,
+         prefetch(&history->nonpawn_correction_entry<BLACK>(*this));
+     }
+ 
+-    bool mirror_before[2] = {
+-      PSQFeatureSet::KingBuckets[king_square(us)][king_square(them)]
+-                                [PSQFeatureSet::requires_mid_mirror(*this, us)]
+-                                  .second,
+-      PSQFeatureSet::KingBuckets[king_square(them)][king_square(us)]
+-                                [PSQFeatureSet::requires_mid_mirror(*this, them)]
+-                                  .second};
+     dp.requires_refresh[them] = false;
+     dp.requires_refresh[us]   = pc == make_piece(us, KING);
+-
+-    if (captured)
+-    {
+-        auto attack_bucket_before = PSQFeatureSet::make_attack_bucket(*this, them);
+-
++    if (captured) {
+         remove_piece(from, &dts);
+         swap_piece(to, pc, &dts);
+-
+-        auto attack_bucket_after = PSQFeatureSet::make_attack_bucket(*this, them);
+-
+-        dp.requires_refresh[them] |= (attack_bucket_before != attack_bucket_after);
+-    }
+-    else
++    } else
+         move_piece(from, to, &dts);
+ 
+-    bool mirror_after[2] = {
+-      PSQFeatureSet::KingBuckets[king_square(us)][king_square(them)]
+-                                [PSQFeatureSet::requires_mid_mirror(*this, us)]
+-                                  .second,
+-      PSQFeatureSet::KingBuckets[king_square(them)][king_square(us)]
+-                                [PSQFeatureSet::requires_mid_mirror(*this, them)]
+-                                  .second};
+-    dp.requires_refresh[us] |= (mirror_before[0] != mirror_after[0]);
+-    dp.requires_refresh[them] |= (mirror_before[1] != mirror_after[1]);
+-
+     // Set capture piece
+     st->capturedPiece = captured;
+ 
+diff --git a/src/uci.cpp b/src/uci.cpp
+index 1cc837c7..489a4c8f 100644
+--- a/src/uci.cpp
++++ b/src/uci.cpp
+@@ -158,6 +158,17 @@ void UCIEngine::loop() {
+             benchmark(is);
+         else if (token == "d")
+             sync_cout << engine.visualize() << sync_endl;
++        else if (token == "nnueraw") {
++            engine.wait_for_search_finished();
++            engine.nnue_raw();
++        }
++        else if (token == "nnuecheck") {
++            int games = 200, plies = 160;
++            unsigned seed = 20261107;
++            is >> games >> plies >> seed;
++            engine.wait_for_search_finished();
++            engine.nnue_check(games, plies, seed);
++        }
+         else if (token == "eval")
+             engine.trace_eval();
+         else if (token == "compiler")

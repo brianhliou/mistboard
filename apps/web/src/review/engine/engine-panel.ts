@@ -393,7 +393,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     const generation = ++searchGeneration;
     void handle
       .preload((progress) => {
-        // Pikafish's net is 51 MB; the first open of a xiangqi board is a real
+        // Pikafish's CC0 net is about 11 MB; the first open of a xiangqi board is a real
         // download, and a bare "loading…" for ten seconds reads as a hang.
         if (on && generation === searchGeneration)
           sub.textContent = formatLoadProgress(engineName, progress);
@@ -633,7 +633,7 @@ function formatKnps(nps: number): string {
   return nps >= 1000 ? `${Math.round(nps / 1000)}k nps` : `${nps} nps`;
 }
 
-/** `loading Pikafish · 23 / 51 MB` while a large engine asset downloads. */
+/** `loading Pikafish · 6 / 11 MB` while a large engine asset downloads. */
 export function formatLoadProgress(engineName: string, progress: CevalLoadProgress): string {
   const mb = (bytes: number) => `${Math.round(bytes / 1_000_000)}`;
   const amount =

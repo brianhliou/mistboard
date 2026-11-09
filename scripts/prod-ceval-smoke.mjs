@@ -11,8 +11,8 @@
 //           The atomic board is gated on BEHAVIOUR: the vendored build is
 //           patched for atomic's rules, and a stock build loads the same .ini
 //           without complaint and plays a different game.
-//   pikafish - mainline Pikafish pthread wasm on /analysis/xiangqi with its
-//           51 MB NNUE net (pikafish-ceval.ts). Gated on the net's versioned URL
+//   pikafish - patched Pikafish pthread wasm on /analysis/xiangqi with its
+//           CC0 NNUE net (about 11 MB) (pikafish-ceval.ts). Gated on the net's versioned URL
 //           serving AND on the engine naming itself and reading a dead-drawn
 //           endgame near 0.0: Pikafish refuses to search without a net, so a
 //           panel that answers at all proves the net loaded.
@@ -160,11 +160,12 @@ async function checkAtomicXiangqiPatched(browser) {
  * the engine, so a panel that names Pikafish and answers with a number has
  * loaded the net. The number is still checked, on the same dead-drawn basic
  * endgame the FSF gate used (a red soldier stranded on the last rank plus an
- * elephant), which Pikafish reads about +0.3 and a broken build would not read
- * at all.
+ * elephant). Re-measure this probe after rebuilding the CC0 wasm; its
+ * evaluation bound below is retained pending that measurement.
  */
 async function checkPikafishNetLoaded(browser) {
   const probeFen = '5P3/9/3k5/9/9/2B6/9/9/9/4K4 w - - 17 17';
+  // Legacy bound: re-measure on the rebuilt CC0 wasm before shipping #988.
   const maxAbsEval = 0.8;
   const url = `${baseUrl}/analysis/xiangqi?fen=${encodeURIComponent(probeFen)}`;
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -192,8 +193,8 @@ async function checkPikafishNetLoaded(browser) {
     }
     if (Math.abs(score) > maxAbsEval) {
       throw new Error(
-        `Pikafish reads ${panel.eval} on a dead-drawn endgame; with its net it reads about +0.3. ` +
-          'Check that the served pikafish.nnue matches net.json and the engine commit ' +
+        `Pikafish reads ${panel.eval} on a dead-drawn endgame; expected |eval| <= ${maxAbsEval}. ` +
+          'Check that the served CC0 network matches net.json and the engine commit ' +
           '(apps/web/public/engine/pikafish/README.md).',
       );
     }
@@ -475,7 +476,7 @@ function pikafishNnueNet() {
 
 // The Pikafish worker, wasm and net at the exact versioned URLs the client
 // fetches. The net is the one that can silently go missing: it is not tracked
-// in git and is fetched into public/ at build time (scripts/fetch-pikafish-net.mjs, private API source),
+// in git and is fetched into public/ at build time (scripts/fetch-pikafish-net.mjs, public CC0 source),
 // so a build that skipped that step ships a 404 the engine cannot recover from.
 async function assertPikafishAssetHeaders() {
   const v = encodeURIComponent(pikafishAssetVersion());
@@ -510,8 +511,11 @@ async function assertPikafishAssetHeaders() {
     );
   }
   const length = Number(net.headers.get('content-length') ?? 0);
-  if (length > 0 && length < 40_000_000) {
-    throw new Error(`${netUrl} is ${length} bytes; the net is about 51 MB`);
+  const pin = JSON.parse(
+    readFileSync(new URL('../apps/web/public/engine/pikafish/net.json', import.meta.url), 'utf8'),
+  );
+  if (length > 0 && length !== pin.bytes) {
+    throw new Error(`${netUrl} is ${length} bytes; expected ${pin.bytes} for the CC0 net`);
   }
   return netUrl;
 }

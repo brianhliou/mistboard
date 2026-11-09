@@ -44,7 +44,7 @@ index 57667d13..01ce5a5a 100644
 +
 +// Builds the engine once. Call after the NNUE file is in the module's
 +// filesystem so the default EvalFile load succeeds, or follow with
-+// `setoption name EvalFile value /path/to/pikafish.nnue`.
++// `setoption name EvalFile value /path/to/xiangqi-c07e94a5c7cb.nnue`.
 +EMSCRIPTEN_KEEPALIVE
 +void pikafish_initialize() {
 +    if (wasmUci)
