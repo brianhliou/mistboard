@@ -275,9 +275,14 @@ export function currentMonthKey(now: Date = new Date()): string {
 
 // ── Header and rail ──────────────────────────────────────────────────────────
 
+function headlineMonths(listing: DataListing): DataMonth[] {
+  return listing.botId ? [...listing.months, ...(listing.engineMonths ?? [])] : listing.months;
+}
+
 function renderCount(el: HTMLElement, listing: DataListing): void {
-  const games = listing.months.reduce((sum, month) => sum + month.games, 0);
-  const months = listing.months.length;
+  const counted = headlineMonths(listing);
+  const games = counted.reduce((sum, month) => sum + month.games, 0);
+  const months = new Set(counted.map((month) => month.month)).size;
   el.textContent = t(months === 1 ? 'data.countOneMonth' : 'data.countManyMonths', {
     games: gamesLabel(games),
     months: formatCount(months),
@@ -286,7 +291,7 @@ function renderCount(el: HTMLElement, listing: DataListing): void {
 
 function variantTotals(listing: DataListing): Map<string, number> {
   const totals = new Map<string, number>();
-  for (const month of listing.months) {
+  for (const month of headlineMonths(listing)) {
     for (const row of month.variants)
       totals.set(row.variant, (totals.get(row.variant) ?? 0) + row.games);
   }
@@ -552,8 +557,9 @@ function renderMonths(
   host.replaceChildren(sectionHeading(label));
   if (variant === ALL_VARIANTS) host.append(note(t('data.allVariantsNote')));
   const rows = monthRows(listing, variant);
+  const engineRows = monthRows(listing, variant, 'engine');
   if (rows.length === 0) {
-    host.append(note(t('data.noMonths')));
+    if (!listing.botId || engineRows.length === 0) host.append(note(t('data.noMonths')));
   } else {
     const { table, body } = dataTable('data.colMonth');
     for (const row of rows)
@@ -567,7 +573,6 @@ function renderMonths(
   );
   // The engine games, only where there are some: their own heading, note and
   // table, after everything about the human files.
-  const engineRows = monthRows(listing, variant, 'engine');
   if (engineRows.length > 0) {
     const { table, body } = dataTable('data.colMonth');
     table.classList.add('data-table-engine');
