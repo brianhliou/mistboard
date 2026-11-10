@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import childProcess from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PassThrough, Writable } from 'node:stream';
 import test, { type TestContext } from 'node:test';
 import { startEngineHttpService } from './engine-service.js';
@@ -481,7 +484,27 @@ test('PythonPool deadline is terminal even when the wall clock is just before de
   assert.equal(children[0]!.requests.length, 1, 'expired work must never be dispatched later');
 });
 
+// The pool factory resolves the private engine repo for its paths even though
+// the spawn is faked. CI has no sibling checkout, so point every path at a
+// temporary directory instead of relying on this machine's layout.
+function stubEngineDir(t: TestContext): void {
+  const dir = mkdtempSync(join(tmpdir(), 'engine-dir-'));
+  const keys = ['MISTBOARD_ENGINE_DIR', 'PYTHON_ENGINE_PYTHON', 'PYTHON_ENGINE_LIVE_WORKER'];
+  const saved = keys.map((key) => [key, process.env[key]] as const);
+  process.env.MISTBOARD_ENGINE_DIR = dir;
+  process.env.PYTHON_ENGINE_PYTHON = 'python3';
+  process.env.PYTHON_ENGINE_LIVE_WORKER = join(dir, 'live_move_worker.py');
+  t.after(() => {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
+
 test('engine-worker health reports unavailable required pools and recovers with a live worker', async (t) => {
+  stubEngineDir(t);
   const children = fakeSpawns(t);
   t.after(() => disposeAllPythonPools());
   const service = await startEngineHttpService({ host: '127.0.0.1', port: 0 });

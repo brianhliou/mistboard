@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Every variant plays the same capture sound for both sides ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Gomoku is open for casual correspondence games ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - The homepage Play the computer table has Levels 1-8 for Banqi and Flip Jungle ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Flip Jungle Level 8 is now a neural net bot, and the bot you knew moves to Level 7 ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Banqi, Three Kingdoms banqi and Flip Jungle each have eight computer levels, chosen from a level picker ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
@@ -36,6 +38,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The jieqi guide explains review grades, reveal luck and the board die ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Studies can hold Gomoku boards, and Gomoku studies can be shared publicly ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Guess-the-move studies now play the opponent's last move on the board first, with its last-move mark, and show a move list and the game's players and event beside the board ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Puzzle Storm is the board and one panel with the clock, solved count, combo and your best runs, and the three minutes start at your first move ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
@@ -56,6 +59,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Game cards open on the latest position and glide only a new move, instead of replaying the game ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Jieqi reviews judge repetition, perpetual chase and the 40-move draw the way the game does ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Banqi reviews are graded by the Level 8 neural net ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Review pages share through your device's share sheet, or copy the link where it has none ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Broadcast and professional player pages show event, round, player and federation names in the page's language ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
 - Players from the 2026 North American Xiangqi Championship now have player pages ([01c2c320](https://github.com/brianhliou/mistboard/commit/01c2c320))
@@ -82,6 +88,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- /stats shows how fresh its counts are and refreshes them every 15 minutes ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- The phone About strip has arrows to scroll its pages and shows where it continues ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - On phones the homepage keeps the TV and Play on the first screen, with News above the articles ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - The homepage hero no longer offers the fog of war bots ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Rules tiles now say what each game is, in English and Chinese ([b5cd0741](https://github.com/brianhliou/mistboard/commit/b5cd0741))
@@ -108,6 +116,12 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- Studies keep each game's label when names repeat, and jieqi reveal marks stay in step with the board ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- The AB-JChess bot plays under the same perpetual chase rule the site judges ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Xiangqi Mahjong keeps claim decisions private until the next public move ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Stats cards stay on one row on phones ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Article dates no longer break across lines, and Vietnamese pages link to their English version in the byline ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
+- Live games hold up better through simultaneous reconnects, server restarts and engine failures ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - /stats days and weeks now end at midnight Pacific, and the homepage labels its 30-day count as such ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - The champions page shows one challenge button under the open titles instead of one per card ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Animal Dobutsu 3D pieces have a tan rim ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
@@ -136,6 +150,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- A weekly article engagement report joins the operating email and Ops Activity ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Search engines get the full text of data pages and study summaries ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Search engines are told only about pages that changed in a release ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
 - Visitor analytics now flags browsers with real input, so headless crawlers can be filtered out ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
