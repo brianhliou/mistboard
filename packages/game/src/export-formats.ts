@@ -30,7 +30,7 @@ export const GAME_EXPORT_FORMATS = {
   // carry the deal, which names pieces nobody turned over.
   'three-kingdoms-banqi': [],
   // The FFQ FEN is a masked observer snapshot, not a replay/import format.
-  // TODO: Brian must decide whether FFQ public exports should be supported.
+  // Decided 2026-11-10: FFQ launches with no public export or share card (#808).
   'ffq-banqi': [],
   'fortress-xiangqi': ['json'],
   // JSON only, for the same reason as the others: a turn here is a piece move
