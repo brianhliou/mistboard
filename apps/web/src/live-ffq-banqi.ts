@@ -7,7 +7,6 @@ import {
   FFQ_BANQI_DAMAGE,
   FFQ_BANQI_NO_PROGRESS_LIMIT,
   FFQ_BANQI_SPEC_ID,
-  FFQ_BANQI_START_HP,
   type FFQBanqiMove,
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
@@ -16,22 +15,24 @@ import './live-ffq-banqi.css';
 import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
-import {
-  ffqBanqiBoardView,
-  ffqBanqiClickResult,
-  ffqBanqiIndex,
-  ffqBanqiSquare,
-} from './ffq-banqi-board.js';
+import { ffqBanqiClickResult, ffqBanqiIndex, ffqBanqiSquare } from './ffq-banqi-board.js';
+import { createFFQBanqiHpRow } from './ffq-banqi-hp.js';
+import { variantDisplayLabel } from './game-display.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
+import {
+  type BanqiChaseBubble,
+  createBanqiChaseBubble,
+  noticeReadMs,
+} from './live-banqi-chase-bubble.js';
 import {
   animateBanqiBoardMove,
   animateBanqiReveal,
   BANQI_PIECE_PX,
   banqiPieceGhostSvg,
   installBanqiBoardStyles,
-  renderBanqiBoardSvg,
 } from './live-banqi-render.js';
+import { renderFFQBanqiBoardSvg } from './live-ffq-banqi-render.js';
 import type { LiveRefs } from './live-state.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
@@ -50,6 +51,8 @@ type MoveEvent = TenantMovePlayed<BanqiColor, FFQBanqiMove>;
 let core: TenantLiveClientContext<BanqiColor, FFQBanqiWireView> | null = null;
 let selectedSquare: BanqiSquare | null = null;
 let draggingFrom: BanqiSquare | null = null;
+let chaseBubble: BanqiChaseBubble | null = null;
+let chaseNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
 function isSeat(value: unknown): value is BanqiColor {
   return value === 'red' || value === 'black';
@@ -80,7 +83,7 @@ const tenant: WebVariantTenant<BanqiColor> = {
   isColor: isSeat,
   oppositeColor: (seat) => (seat === 'red' ? 'black' : 'red'),
   enabled: ffqBanqiEnabled,
-  reviewUrl: (room) => `/room/${encodeURIComponent(room)}`,
+  reviewUrl: (room) => `/ffq-banqi/game/${encodeURIComponent(room)}`,
   reasonPhrase,
   rejectedBodyByReason: { 'game spec disabled': 'live.ffq.adminOnly' },
   spectatorBody: 'live.spectatorWatchingGame',
@@ -101,15 +104,18 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
   resetState: () => {
+    clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
   // A new view may revoke the selection's moves, including a turn change.
   onSnapshotApplied: () => {
+    clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
   onEventApplied: () => {
+    clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;
   },
@@ -141,6 +147,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
   },
   setup: (ctx) => {
     core = ctx;
+    chaseBubble = createBanqiChaseBubble(ctx.refs.board);
     installBanqiBoardStyles();
     placeHiddenPoolUnderBoard(ctx.refs);
     installBoardDrag({
@@ -155,6 +162,11 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
           selectedSquare,
           square as BanqiSquare,
         );
+        if (result.kind === 'forbidden') {
+          showChaseNotice(result.move.to);
+          return;
+        }
+        if (result.kind !== 'noop') clearChaseNotice();
         if (result.kind === 'select') selectedSquare = result.square;
         else if (result.kind === 'clear') selectedSquare = null;
         else if (result.kind === 'move') {
@@ -176,7 +188,9 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
           !!entry &&
           !entry.faceDown &&
           entry.color === core?.state.seat &&
-          view.legalMoves.some((m) => m.from === index && m.to !== index)
+          [...view.legalMoves, ...(view.forbiddenMoves ?? [])].some(
+            (m) => m.from === index && m.to !== index,
+          )
         );
       },
       ghostHtml: (square) => {
@@ -184,12 +198,24 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
         return entry && !entry.faceDown ? banqiPieceGhostSvg(entry) : null;
       },
       onDragStart: (square) => {
+        clearChaseNotice();
         selectedSquare = draggingFrom = square as BanqiSquare;
         renderBoard(ctx.refs, core?.state.view ?? null);
       },
       onDrop: (from, to) => {
         const view = core?.state.view;
+        clearChaseNotice();
         if (view && to && canInteract()) {
+          const forbidden = view.forbiddenMoves?.find(
+            (m) => m.from === ffqBanqiIndex(from) && m.to === ffqBanqiIndex(to),
+          );
+          if (forbidden) {
+            selectedSquare = from as BanqiSquare;
+            draggingFrom = null;
+            renderBoard(ctx.refs, view);
+            showChaseNotice(to as BanqiSquare);
+            return;
+          }
           const move = view.legalMoves.find(
             (m) => m.from === ffqBanqiIndex(from) && m.to === ffqBanqiIndex(to) && m.from !== m.to,
           );
@@ -204,6 +230,7 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
       roots: () => [ctx.refs.board],
       hasSelection: () => selectedSquare !== null,
       clearSelection: () => {
+        clearChaseNotice();
         selectedSquare = draggingFrom = null;
         renderBoard(ctx.refs, ctx.displayedView());
       },
@@ -252,21 +279,39 @@ function canInteract(): boolean {
 
 function renderBoard(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   refs.board.className = 'board banqi-live-board';
-  refs.board.setAttribute('aria-label', 'FFQ Banqi board');
+  refs.board.setAttribute('aria-label', variantDisplayLabel(FFQ_BANQI_SPEC_ID));
   if (!view) {
+    clearChaseNotice();
     refs.board.replaceChildren();
     return;
   }
-  const projected = ffqBanqiBoardView(view);
-  refs.board.innerHTML = renderBanqiBoardSvg(projected, projected.perspective, {
+  const selectedIndex = selectedSquare ? ffqBanqiIndex(selectedSquare) : null;
+  refs.board.innerHTML = renderFFQBanqiBoardSvg(view, {
     interactive: true,
     selectedSquare,
+    forbiddenMoves: selectedSquare
+      ? (view.forbiddenMoves ?? [])
+          .filter((move) => move.from === selectedIndex)
+          .map((move) => ({ from: ffqBanqiSquare(move.from), to: ffqBanqiSquare(move.to) }))
+      : [],
     draggingFrom,
     coordinates: boardCoordinatesEnabled(),
-    legalMoves: selectedSquare
-      ? projected.legalMoves.filter((m) => m.from === selectedSquare && m.from !== m.to)
-      : [],
   });
+  if (!canInteract()) clearChaseNotice();
+  chaseBubble?.sync();
+}
+
+function showChaseNotice(square: BanqiSquare): void {
+  clearChaseNotice();
+  const text = t('live.ffq.chaseForbidden');
+  chaseBubble?.show(square, selectedSquare, text);
+  chaseNoticeTimer = setTimeout(clearChaseNotice, noticeReadMs(text));
+}
+
+function clearChaseNotice(): void {
+  if (chaseNoticeTimer) clearTimeout(chaseNoticeTimer);
+  chaseNoticeTimer = null;
+  chaseBubble?.clear();
 }
 
 function renderProgress(refs: LiveRefs, view: FFQBanqiWireView | null): void {
@@ -275,19 +320,7 @@ function renderProgress(refs: LiveRefs, view: FFQBanqiWireView | null): void {
   const panel = document.createElement('div');
   panel.className = 'ffq-banqi-progress';
   for (const side of tenant.colors) {
-    const row = document.createElement('div');
-    row.className = 'ffq-banqi-hp';
-    row.dataset.side = side;
-    const name = document.createElement('span');
-    name.textContent = t(side === 'red' ? 'setup.red' : 'setup.black');
-    const bar = document.createElement('progress');
-    bar.max = FFQ_BANQI_START_HP;
-    bar.value = view.hp[side];
-    bar.setAttribute('aria-label', name.textContent);
-    const value = document.createElement('span');
-    value.textContent = t('live.ffq.hp', { hp: view.hp[side], max: FFQ_BANQI_START_HP });
-    row.append(name, bar, value);
-    panel.append(row);
+    panel.append(createFFQBanqiHpRow(view, side));
   }
   const counters = document.createElement('div');
   counters.className = 'ffq-banqi-counters';

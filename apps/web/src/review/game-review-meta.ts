@@ -104,6 +104,8 @@ export type ReviewMetaConfig = {
   /** Optional seat→ink binding for flip variants. Player order remains seat
    *  order, but each row's disc uses the color established by the opening flip. */
   seatColors?: ReviewSeatColors;
+  /** Private playtests can close the spectator-chat endpoint. */
+  spectatorChat?: boolean;
 };
 
 export type ReviewMeta = {
@@ -133,7 +135,10 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
   if (game.origin) card.el.append(reviewOriginBlock(game.origin));
   return {
     metaCard: card.el,
-    details: game.mode === 'imported' ? undefined : buildSpectatorChat(game.roomId),
+    details:
+      game.mode === 'imported' || config.spectatorChat === false
+        ? undefined
+        : buildSpectatorChat(game.roomId),
   };
 }
 

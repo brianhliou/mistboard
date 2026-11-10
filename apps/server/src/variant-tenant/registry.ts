@@ -137,6 +137,9 @@ export type TenantExportPly = {
   // know a piece taken face-down (Brian, 2026-10-16).
   revealed?: HiddenPieceIdentity;
   capturedHidden?: HiddenPieceIdentity;
+  // Public HP variants, by ink: remaining HP and damage taken on this ply.
+  hpAfter?: Readonly<Record<string, number>>;
+  damage?: Readonly<Record<string, number>>;
 } & (
   | { uci: string; san: string | null; move?: never; notation?: never }
   | { move: XmjMove; notation: string; uci?: never; san?: never }
@@ -171,6 +174,8 @@ export type TenantExportGame = {
   // game had a real deal (every site game). Absent for an imported game, whose
   // source drew identities at reveal time: its stored deal is partly invented.
   dealFen?: string;
+  // Public starting snapshot, with covered identities masked.
+  initialFen?: string;
   // Gomoku's stored opening, separate from event-counted placements. Legacy
   // games explicitly export the empty board with Black to move.
   opening?: GomokuOpening;

@@ -8,6 +8,7 @@ import {
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ffqBanqiSquare } from './ffq-banqi-board.js';
+import type { Locale } from './i18n/locale.js';
 import type {
   TenantSocketClientOptions,
   TenantSocketFrame,
@@ -50,14 +51,29 @@ const ROOM = 'ffqb_webtest';
 function initial(): FFQBanqiPlayerView {
   return getFFQBanqiPlayerView(createInitialFFQBanqiState(ROOM, 7), 'red');
 }
+function chaseView(): FFQBanqiPlayerView {
+  const state = createInitialFFQBanqiState(ROOM, 7);
+  state.board.fill(null);
+  state.board[0] = { color: 'red', role: 'chariot', faceDown: false };
+  state.board[2] = { color: 'black', role: 'horse', faceDown: false };
+  state.board[4] = { color: 'red', role: 'soldier', faceDown: false };
+  state.board[31] = { color: 'red', role: 'soldier', faceDown: false };
+  state.chaseCounts.red = 4;
+  return getFFQBanqiPlayerView(state, 'red');
+}
 async function mount(
   view = initial(),
   seat = 'red',
   extra: Record<string, unknown> = {},
+  locale: Locale = 'en',
 ): Promise<TenantSocketClientOptions> {
   document.body.innerHTML = '<div id="app"></div>';
   window.history.replaceState(null, '', `/room/${ROOM}`);
   vi.resetModules();
+  const { setStoredLocale } = await import('./i18n/locale.js');
+  setStoredLocale(locale);
+  const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+  await ensureLocaleCatalog(locale);
   const { bootstrapFFQBanqiLiveRoom } = await import('./live-ffq-banqi.js');
   bootstrapFFQBanqiLiveRoom();
   const options = socket.options;
@@ -93,7 +109,22 @@ beforeEach(() => {
     vi.fn(async () => new Response('{}', { status: 404 })),
   );
 });
+// Node's native localStorage can shadow happy-dom's storage in the test worker.
+beforeEach(() => {
+  const values = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+      clear: () => values.clear(),
+    },
+  });
+});
 afterEach(() => {
+  vi.useRealTimers();
+  window.localStorage.removeItem('mistboard.locale');
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
@@ -163,6 +194,89 @@ describe('FFQ banqi live room', () => {
     expect(moves()).toHaveLength(1);
   });
 
+  it.each<[Locale, string]>([
+    [
+      'en',
+      'Fanfanqi allows only four chases in a row. This move would be your fifth. Play another move.',
+    ],
+    ['zh-Hans', '翻翻棋最多允许连续捉子四次。这步棋会是第五次。请走别的着法。'],
+    ['zh-Hant', '翻翻棋最多允許連續捉子四次。這步棋會是第五次。請走別的著法。'],
+  ])(
+    'marks a fifth chase with a cross and explains it in %s without sending a move',
+    async (locale, copy) => {
+      const view = chaseView();
+      await mount(view, 'red', {}, locale);
+      expect(document.querySelector('[data-forbidden-move]')).toBeNull();
+      // This piece has only forbidden moves, but must remain selectable.
+      expect(view.legalMoves.some((move) => move.from === 0)).toBe(false);
+      click(0);
+      const cross = document.querySelector('[data-square="a2"][data-forbidden-move]');
+      expect(cross?.querySelector('.banqi-hint-forbidden')).not.toBeNull();
+      expect(cross?.querySelector('.banqi-hint')).toBeNull();
+      expect(document.querySelectorAll('[data-forbidden-move]')).toHaveLength(1);
+      click(1);
+      expect(moves()).toEqual([]);
+      const bubble = document.querySelector('[data-banqi-chase-notice]');
+      expect(bubble?.textContent).toBe(copy);
+      expect(bubble?.closest('.board-stage')).not.toBeNull();
+      expect(document.querySelector('[data-square="a2"][data-forbidden-move]')).not.toBeNull();
+      click(31);
+      expect(document.querySelector('[data-banqi-chase-notice]')).toBeNull();
+      expect(document.querySelector('[data-forbidden-move]')).toBeNull();
+      expect(document.querySelector('[data-square="h3"] .banqi-hint')).not.toBeNull();
+      click(30);
+      expect(moves()).toEqual([{ type: 'move', from: 31, to: 30 }]);
+    },
+  );
+
+  it('clears the chase bubble after its reading time and on a fresh snapshot', async () => {
+    vi.useFakeTimers();
+    const view = chaseView();
+    const options = await mount(view);
+    const { noticeReadMs } = await import('./live-banqi-chase-bubble.js');
+    click(0);
+    click(1);
+    const text = document.querySelector('[data-banqi-chase-notice]')!.textContent!;
+    vi.advanceTimersByTime(noticeReadMs(text) - 1);
+    expect(document.querySelector('[data-banqi-chase-notice]')).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(document.querySelector('[data-banqi-chase-notice]')).toBeNull();
+    expect(document.querySelector('[data-forbidden-move]')).not.toBeNull();
+    click(1);
+    expect(document.querySelector('[data-banqi-chase-notice]')).not.toBeNull();
+    options.applySnapshot({ type: 'snapshot', state: view } as TenantSocketFrame);
+    options.render();
+    expect(document.querySelector('[data-banqi-chase-notice]')).toBeNull();
+    expect(document.querySelector('[data-forbidden-move]')).toBeNull();
+    expect(moves()).toEqual([]);
+  });
+
+  it('shows no cross or bubble when the view has no forbidden moves', async () => {
+    const view = chaseView();
+    delete view.forbiddenMoves;
+    await mount(view);
+    click(0);
+    click(1);
+    expect(document.querySelector('[data-forbidden-move]')).toBeNull();
+    expect(document.querySelector('[data-banqi-chase-notice]')).toBeNull();
+    expect(moves()).toEqual([]);
+  });
+
+  it('shows crosses only for the selected piece', async () => {
+    const view = chaseView();
+    view.board[29] = { color: 'black', role: 'general', faceDown: false };
+    // h4-h3 would chase the black general on h2.
+    view.legalMoves = view.legalMoves.filter((move) => !(move.from === 31 && move.to === 30));
+    view.forbiddenMoves!.push({ from: 31, to: 30 });
+    await mount(view);
+    click(0);
+    expect(document.querySelector('[data-square="a2"][data-forbidden-move]')).not.toBeNull();
+    expect(document.querySelector('[data-square="h3"][data-forbidden-move]')).toBeNull();
+    click(31);
+    expect(document.querySelector('[data-square="a2"][data-forbidden-move]')).toBeNull();
+    expect(document.querySelector('[data-square="h3"][data-forbidden-move]')).not.toBeNull();
+  });
+
   it('shows each capture damage against its owner, including a friendly covered capture', async () => {
     const view = initial();
     view.hp = { red: 58, black: 15 };
@@ -180,6 +294,11 @@ describe('FFQ banqi live room', () => {
     await mount(view);
     expect(document.querySelector('[data-side="red"]')?.textContent).toContain('58/60 HP');
     expect(document.querySelector('[data-side="black"]')?.textContent).toContain('15/60 HP');
+    const bars = [...document.querySelectorAll<HTMLProgressElement>('.ffq-banqi-hp progress')];
+    expect(bars.map((bar) => [bar.value, bar.max, bar.getAttribute('aria-label')])).toEqual([
+      [58, 60, 'Red'],
+      [15, 60, 'Black'],
+    ]);
     const damage = [...document.querySelectorAll('.ffq-banqi-captures li')].map(
       (li) => li.textContent,
     );
@@ -231,6 +350,29 @@ describe('FFQ banqi live room', () => {
     );
     expect(moves()).toEqual([{ type: 'move', from: 0, to: 1 }]);
     expect(document.querySelector('.banqi-selection')).toBeNull();
+  });
+
+  it('keeps a forbidden-only piece selected after dragging to its cross and sends nothing', async () => {
+    await mount(chaseView());
+    const source = document.querySelector('[data-square="a1"] rect')!;
+    vi.spyOn(document, 'elementFromPoint').mockImplementation(() =>
+      document.querySelector('[data-square="a2"] rect'),
+    );
+    source.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: 50, clientY: 50 }),
+    );
+    document.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, clientX: 60, clientY: 60 }),
+    );
+    document.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 60 }),
+    );
+    expect(moves()).toEqual([]);
+    expect(document.querySelector('[data-forbidden-move]')).not.toBeNull();
+    expect(document.querySelector('[data-banqi-chase-notice]')?.textContent).toContain(
+      'four chases in a row',
+    );
+    expect(document.querySelector('.banqi-selection')).not.toBeNull();
   });
 
   it.each<[FFQBanqiEndReason, string]>([

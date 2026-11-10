@@ -32,6 +32,7 @@ import * as dataRoute from './routes/data.js';
 import * as duckXiangqiGamesRoute from './routes/duck-xiangqi-games.js';
 import * as enginesRoute from './routes/engines.js';
 import * as feedbackRoute from './routes/feedback.js';
+import * as ffqBanqiGamesRoute from './routes/ffq-banqi-games.js';
 import * as fortressXiangqiGamesRoute from './routes/fortress-xiangqi-games.js';
 import * as forumRoute from './routes/forum.js';
 import * as gamesRoute from './routes/games.js';
@@ -139,6 +140,7 @@ export const routes: RouteModule[] = [
   jungleFlipGamesRoute,
   banqiGamesRoute,
   threeKingdomsBanqiGamesRoute,
+  ffqBanqiGamesRoute,
   xiangqiMahjongGamesRoute,
   gomokuGamesRoute,
   gamesRoute,

@@ -9,12 +9,15 @@ import {
 import { close, getPool, init } from './persistence-db.js';
 import {
   countWatchSealedGames,
+  gameAggregates,
+  gameFacets,
   getGameFavoriteState,
   listFavoriteGames,
   listRecentEveGames,
   listRecentPublicGames,
   listShowcaseGames,
   listWatchUnlockedGames,
+  queryGames,
   queryHeadToHeadGames,
   setGameFavorite,
   tallyHeadToHeadGames,
@@ -102,4 +105,43 @@ test('FFQ SQL discovery filters run before ordering, pagination and window total
       }
     });
   }
+});
+
+test('authorized FFQ profile pages and admin queries keep the variant before pagination', async (t) => {
+  init('postgres://mistboard@127.0.0.1:9/never-connect');
+  t.after(() => close());
+  const queries: string[] = [];
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    queries.push(sql);
+    if (sql.includes('FROM users') && sql.includes('lower(handle)')) {
+      return {
+        rows: [
+          {
+            id: 'admin',
+            handle: 'admin',
+            account_role: 'admin',
+            profile_visibility: 'public',
+            profile_links: [],
+            created_at: new Date(0),
+          },
+        ],
+      };
+    }
+    return { rows: [] };
+  });
+  await getUserGamesPage('admin', 'admin', 0, 15, { includeFFQ: true });
+  const profileQuery = queries.find((sql) => sql.includes('WITH matching_games'));
+  assert.ok(profileQuery);
+  assert.ok(!profileQuery.includes("games.variant NOT IN ('ffq-banqi')"));
+  queries.length = 0;
+  await queryGames({ variant: FFQ_BANQI_SPEC_ID, excludeFFQ: false });
+  await gameAggregates({ variant: FFQ_BANQI_SPEC_ID, excludeFFQ: false });
+  await gameFacets(false);
+  assert.ok(queries.every((sql) => !sql.includes("games.variant NOT IN ('ffq-banqi')")));
+  queries.length = 0;
+  await queryGames({ excludeFFQ: true });
+  await gameAggregates({ excludeFFQ: true });
+  await gameFacets(true);
+  assert.ok(queries.length >= 3);
+  assert.ok(queries.every((sql) => sql.includes("games.variant NOT IN ('ffq-banqi')")));
 });

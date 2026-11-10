@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
+  exportFormatsForVariant,
   FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
@@ -422,13 +423,7 @@ describe('rules link conformance', () => {
   it('every live variant links to a rules page that exists and points back', () => {
     const rulesSlugs = new Set(articles.filter((a) => a.kind === 'rules').map((a) => a.slug));
     for (const spec of GAME_SPECS) {
-      if (
-        isRetiredGameSpec(spec.id) ||
-        spec.id === 'chess' ||
-        spec.id === GOMOKU_SPEC_ID ||
-        spec.id === FFQ_BANQI_SPEC_ID
-      )
-        continue;
+      if (isRetiredGameSpec(spec.id) || spec.id === 'chess' || spec.id === GOMOKU_SPEC_ID) continue;
       const slug = rulesSlugForGameSpec(spec.id);
       expect(rulesSlugs.has(slug), `${spec.id}: no /rules/${slug}`).toBe(true);
       expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
@@ -465,7 +460,18 @@ describe('FFQ banqi canonical web metadata', () => {
   it('uses FFQ banqi canonical name metadata without borrowing the Banqi name', () => {
     expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
     expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
-    expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('FFQ Banqi');
+    expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('Fanfanqi');
+  });
+
+  it('links FFQ finished games to the private review without advertising watch', () => {
+    const tenant = webVariantTenantForSpecId(FFQ_BANQI_SPEC_ID);
+    expect(tenant?.gameRouteBase).toBe('/ffq-banqi/game');
+    expect(tenant?.reviewRouteBase).toBe('/ffq-banqi/game');
+    expect(tenant?.watch).toBeUndefined();
+    expect(exportFormatsForVariant(FFQ_BANQI_SPEC_ID)).toEqual([]);
+    expect(finishedGameHref('ffq_finished', FFQ_BANQI_SPEC_ID)).toBe(
+      '/ffq-banqi/game/ffq_finished',
+    );
   });
 
   it('keeps FFQ banqi fixed Red/Black seats after canonical registration', () => {
@@ -502,7 +508,11 @@ describe('FFQ banqi canonical web metadata', () => {
     expect(EDITOR_VARIANT_IDS as readonly string[]).not.toContain(id);
     expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(id);
     expect(rulesHrefForGameSpec(id)).toBeNull();
-    expect(articles.some((article) => article.kind === 'rules' && article.slug === id)).toBe(false);
+    expect(rulesSlugForGameSpec(id)).toBe('fanfanqi');
+    expect(articles.find((article) => article.slug === 'fanfanqi')).toMatchObject({
+      kind: 'rules',
+      status: 'draft',
+    });
     expect(embedRendererKindForVariant(id)).toBeNull();
   });
 });

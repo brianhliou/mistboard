@@ -128,6 +128,7 @@ registerVariantTenant({
   },
   watch: null,
   lobby: null,
+  reviewRouteBase: '/ffq-banqi/game',
   export: null,
   card: null,
   ...tenantCorrespondenceBinding(
