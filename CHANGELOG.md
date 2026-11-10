@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Three Kingdoms Banqi is open to everyone as a casual game, with Find opponent, TV and correspondence ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- Three Kingdoms Banqi on a phone keeps its controls at the bottom of the screen, and the game-over sheet reopens from the bar ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Every variant plays the same capture sound for both sides ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Gomoku is open for casual correspondence games ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - The homepage Play the computer table has Levels 1-8 for Banqi and Flip Jungle ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
@@ -59,6 +61,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- game analysis keeps running after a refresh and shows its progress ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- a finished Banqi game offers an optional Reveal all pieces view of the full deal ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Game cards open on the latest position and glide only a new move, instead of replaying the game ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Jieqi reviews judge repetition, perpetual chase and the 40-move draw the way the game does ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Banqi reviews are graded by the Level 8 neural net ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
@@ -88,6 +92,12 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- the homepage opens with a shorter tagline and About on its own line ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the Data page offers a month of one bot's public games as its own download ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the homepage Play table adds Gomoku and drops the two fog variants ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- embedded boards stay out of search, and page aliases point search engines to one canonical address ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the About sidebar and phone menu link the public resources again ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the Coaches and Streamers pages invite teachers and creators to work with us, starting from studies ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - /stats shows how fresh its counts are and refreshes them every 15 minutes ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - The phone About strip has arrows to scroll its pages and shows where it continues ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - On phones the homepage keeps the TV and Play on the first screen, with News above the articles ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
@@ -116,6 +126,13 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- the homepage lists a broadcast that has started before its first game, and keeps its date visible ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- square-grid boards shade the selected cell and tint the cells a capture can land on ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the AB-JChess bot page credits AB-JChess only ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- correspondence seeks and game lists name Three Kingdoms Banqi seats First and Second, as banqi does ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the room chat can be resized again on every variant ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- the homepage Play table labels Banqi and Flip Jungle Level 8 as NNUE ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
+- a bot no longer resigns when a late search answers a position the game has already moved past ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Studies keep each game's label when names repeat, and jieqi reveal marks stay in step with the board ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - The AB-JChess bot plays under the same perpetual chase rule the site judges ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Xiangqi Mahjong keeps claim decisions private until the next public move ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
