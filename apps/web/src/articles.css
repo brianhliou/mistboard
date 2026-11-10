@@ -1405,6 +1405,13 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   max-width: 100%;
 }
 
+/* An image that carries its own frame (phone screens on a transparent
+   background): no border or rounded box drawn around it. */
+.article-figure-image.article-figure-bare img {
+  border: 0;
+  border-radius: 0;
+}
+
 /* A single static chess board (an SVG drawn at about 300px): at the default
    560px cap it fills the column and reads as a poster, not a diagram. */
 .article-figure-board img {
