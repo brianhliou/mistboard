@@ -1,0 +1,16 @@
+{
+  "protocol": "mistboard-banqi/1",
+  "requestId": "example-turn",
+  "gameId": "example-game",
+  "ply": 0,
+  "move": "a0a0",
+  "analysis": {
+    "score": {
+      "type": "cp",
+      "value": 0,
+      "pov": "side-to-move"
+    },
+    "nodes": 64,
+    "pv": ["a0a0"]
+  }
+}

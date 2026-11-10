@@ -122,19 +122,17 @@ describe('correspondence Start a game: restricted banqi', () => {
     const offered = () =>
       [...buildStartForm(() => {}).querySelector('select')!.options].map((option) => option.value);
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'false');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
     setResolvedAdmin(false);
     expect(offered()).not.toContain('ffq-banqi');
-    expect(offered()).not.toContain('three-kingdoms-banqi');
+    // Three Kingdoms launched (casual): offered to everyone.
+    expect(offered()).toContain('three-kingdoms-banqi');
     setResolvedAdmin(true);
     expect(offered()).not.toContain('ffq-banqi');
-    expect(offered()).toContain('three-kingdoms-banqi');
     vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
     expect(offered()).toContain('ffq-banqi');
     setResolvedAdmin(false);
     expect(offered()).not.toContain('ffq-banqi');
-    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
-    expect(offered()).toContain('three-kingdoms-banqi');
     setResolvedAdmin(true);
     setRatedModeEnabled(true, true);
     for (const gameSpecId of ['ffq-banqi', 'three-kingdoms-banqi']) {

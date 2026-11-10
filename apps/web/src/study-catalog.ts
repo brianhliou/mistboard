@@ -31,6 +31,7 @@ const STUDY_VARIANT_IDS = [
   'xiangqi',
   'jieqi',
   'banqi',
+  'three-kingdoms-banqi',
   'duck-xiangqi',
   'crazyhouse-xiangqi',
   'dark-xiangqi',
@@ -38,8 +39,6 @@ const STUDY_VARIANT_IDS = [
   'jungle',
   'jungle-flip',
   'gomoku',
-  // Unlaunched (#628): admin-only on the server until the public launch.
-  'three-kingdoms-banqi',
   // Retired 2026-10-11, off the canonical order so at the tail: existing
   // studies in these variants keep opening.
   'fortress-xiangqi',

@@ -21,7 +21,9 @@ test('raw floor weights Chinese content but still rejects 74 ideographs', () => 
     [74, ['raw body 148 < 150 chars']],
     [75, []],
   ]) {
-    const facts = serverHtmlFacts(`<body><h1>${'象'.repeat(ideographs)}</h1></body>`);
+    const facts = serverHtmlFacts(
+      `<head><link rel="canonical" href="https://mistboard.com/zh-hans/rules"></head><body><h1>${'象'.repeat(ideographs)}</h1></body>`,
+    );
     assert.equal(facts.rawChars, ideographs * 2);
     assert.deepEqual(serverHtmlFailures('/zh-hans/rules', facts), failures);
   }
@@ -33,7 +35,23 @@ const SITEMAP =
 const AUDIT_URL = 'https://mistboard.com/rules/jungle-flip';
 const AUDIT_ARGS = { timeoutMs: 25_000, blockLazyChunks: true };
 const AUDIT_HTML =
-  '<html lang="en"><head><title>Flip Jungle Rules | Mistboard</title></head><body><div id="app"><h1>Flip Jungle Rules</h1><p>Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. </p></div></body></html>';
+  '<html lang="en"><head><title>Flip Jungle Rules | Mistboard</title><link rel="canonical" href="https://mistboard.com/rules/jungle-flip"></head><body><div id="app"><h1>Flip Jungle Rules</h1><p>Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. Readable xiangqi rules. </p></div></body></html>';
+
+test('every indexable page needs exactly one canonical, even with a full body', () => {
+  const missing = AUDIT_HTML.replace(/<link rel="canonical"[^>]*>/, '');
+  for (const path of ['/streamer', '/rules/banqi/', '/blog/pikafish/', '/zh-hant/study/']) {
+    assert.deepEqual(serverHtmlFailures(path, serverHtmlFacts(missing)), ['missing canonical']);
+  }
+  const duplicate = AUDIT_HTML.replace(
+    '</head>',
+    '<link href="https://mistboard.com/" rel="canonical"></head>',
+  );
+  assert.deepEqual(serverHtmlFailures('/rules/jungle-flip', serverHtmlFacts(duplicate)), [
+    'multiple canonicals: 2',
+  ]);
+  const noindexed = missing.replace('</head>', '<meta name="robots" content="noindex"></head>');
+  assert.deepEqual(serverHtmlFailures('/account', serverHtmlFacts(noindexed)), []);
+});
 
 function auditBrowser({ gotoErrors = [], rendered = {}, newPageError } = {}) {
   const state = { contexts: 0, closed: 0, routes: 0 };
@@ -338,7 +356,11 @@ test('an empty shell on a broadcast, player or study URL fails', () => {
   ]) {
     assert.deepEqual(
       serverHtmlFailures(path, facts),
-      ['raw body 0 < 150 chars', 'empty shell: no server-rendered body and no canonical'],
+      [
+        'missing canonical',
+        'raw body 0 < 150 chars',
+        'empty shell: no server-rendered body and no canonical',
+      ],
       path,
     );
   }
@@ -366,6 +388,7 @@ test('a canonical cannot excuse thin content; noindex is exempt across all secti
   assert.deepEqual(serverHtmlFailures('/broadcast/xiangqi/board/nope', noindexed), []);
   // The raw floor applies to every sitemap section.
   assert.deepEqual(serverHtmlFailures('/watch', serverHtmlFacts(EMPTY_SHELL)), [
+    'missing canonical',
     'raw body 0 < 150 chars',
   ]);
 });

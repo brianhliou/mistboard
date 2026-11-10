@@ -51,6 +51,7 @@ test('canonical display order contains exactly the current public variant shelf'
     XIANGQI_SPEC_ID,
     JIEQI_SPEC_ID,
     BANQI_SPEC_ID,
+    THREE_KINGDOMS_BANQI_SPEC_ID,
     DUCK_XIANGQI_SPEC_ID,
     CRAZYHOUSE_XIANGQI_SPEC_ID,
     DARK_XIANGQI_SPEC_ID,
@@ -113,10 +114,11 @@ test('Gomoku is allowlisted while hidden and takes its shelf place only at launc
     ...hidden.canonicalVariantOrder,
     GOMOKU_SPEC_ID,
   ]);
-  assert.deepEqual(launched.correspondenceEligible, [
-    ...hidden.correspondenceEligible,
-    GOMOKU_SPEC_ID,
-  ]);
+  assert.deepEqual(
+    launched.correspondenceEligible.filter((id) => id !== GOMOKU_SPEC_ID),
+    hidden.correspondenceEligible,
+  );
+  assert.ok(launched.correspondenceEligible.includes(GOMOKU_SPEC_ID));
   assert.ok(!launched.correspondenceAllowlisted.includes(GOMOKU_SPEC_ID));
 });
 
@@ -381,7 +383,7 @@ test('Xiangqi Mahjong is not played by correspondence, publicly or by allowlist'
 });
 
 test('admin-only study variants are study-eligible and not yet launched', () => {
-  assert.deepEqual(ADMIN_ONLY_STUDY_SPEC_IDS, [THREE_KINGDOMS_BANQI_SPEC_ID]);
+  assert.deepEqual(ADMIN_ONLY_STUDY_SPEC_IDS, []);
   for (const id of ADMIN_ONLY_STUDY_SPEC_IDS) {
     assert.equal(isStudyEligibleSpecId(id), true, `${id} is admin-only but has no study board`);
     // A launch flips publicSurface; this fails until the same change lets
@@ -394,7 +396,7 @@ test('admin-only study variants are study-eligible and not yet launched', () => 
     // The list queries splice the ids into SQL as literals.
     assert.match(id, /^[a-z0-9-]+$/);
   }
-  assert.equal(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID), true);
+  assert.equal(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID), false);
   assert.equal(isAdminOnlyStudySpecId(BANQI_SPEC_ID), false);
   assert.equal(isAdminOnlyStudySpecId('three-kingdoms-banqi '), false);
 });
@@ -407,13 +409,19 @@ test('Gomoku studies are public and position-rooted', () => {
 });
 
 test('hidden banqi correspondence derives a restricted set, separate from grants and public play', () => {
-  assert.deepEqual(CORRESPONDENCE_RESTRICTED_SPEC_IDS, ['ffq-banqi', 'three-kingdoms-banqi']);
+  assert.deepEqual(CORRESPONDENCE_RESTRICTED_SPEC_IDS, [FFQ_BANQI_SPEC_ID]);
   for (const id of CORRESPONDENCE_RESTRICTED_SPEC_IDS) {
     assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), false);
     assert.equal(isCorrespondenceRatedSpec(id), false);
     assert.equal(isCorrespondenceAllowlistedSpec(id), false);
   }
-  const launched = deriveLaunchLists((id) => isPublicGameSpec(id) || id === 'three-kingdoms-banqi');
-  assert.ok(!launched.correspondenceRestricted.includes('three-kingdoms-banqi'));
-  assert.ok(launched.correspondenceEligible.includes('three-kingdoms-banqi'));
+  assert.ok(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(THREE_KINGDOMS_BANQI_SPEC_ID));
+  assert.equal(isCorrespondenceAllowlistedSpec(THREE_KINGDOMS_BANQI_SPEC_ID), false);
+  assert.equal(isCorrespondenceRatedSpec(THREE_KINGDOMS_BANQI_SPEC_ID), false);
+  // Exercise the pre-launch policy independently of TK's current public state.
+  const hidden = deriveLaunchLists((id) =>
+    id === THREE_KINGDOMS_BANQI_SPEC_ID ? false : isPublicGameSpec(id),
+  );
+  assert.ok(hidden.correspondenceRestricted.includes(THREE_KINGDOMS_BANQI_SPEC_ID));
+  assert.ok(!hidden.correspondenceEligible.includes(THREE_KINGDOMS_BANQI_SPEC_ID));
 });

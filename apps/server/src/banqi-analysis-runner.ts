@@ -11,6 +11,14 @@ const cache = new BanqiAnalysisQueryCache();
 const active = new Set<AbortController>();
 let coldCalls = 0;
 let stopped = false;
+const NET_UNAVAILABLE = 'Banqi analysis net is not available';
+async function analysisModel(path: string, signal: AbortSignal) {
+  try {
+    return await analysisAsset(path, false, signal);
+  } catch {
+    throw new Error(NET_UNAVAILABLE);
+  }
+}
 export function openBanqiAnalysisQueries(): void {
   stopped = false;
 }
@@ -32,7 +40,7 @@ export async function runBanqiAnalysisQuery(args: {
   timeout.unref();
   try {
     const binary = await analysisAsset(args.binaryPath, true, controller.signal);
-    const model = await analysisAsset(args.modelPath, false, controller.signal);
+    const model = await analysisModel(args.modelPath, controller.signal);
     if (controller.signal.aborted) throw new Error();
     const query: BanqiAnalysisQuery = {
       binary,
@@ -47,6 +55,10 @@ export async function runBanqiAnalysisQuery(args: {
       const release = await args.pool.acquire(controller.signal);
       try {
         if (controller.signal.aborted) throw new Error();
+        const admittedBinary = await analysisAsset(binary.path, true, controller.signal);
+        const admittedModel = await analysisModel(model.path, controller.signal);
+        if (admittedBinary.stamp !== binary.stamp || admittedModel.stamp !== model.stamp)
+          throw new Error('Banqi analysis assets changed while queued');
         coldCalls++;
         const value = await runUciEval({
           bin: binary.path,
@@ -54,14 +66,12 @@ export async function runBanqiAnalysisQuery(args: {
           timeoutMs: Math.max(1, deadline - Date.now()),
           timeoutMessage: 'Banqi analysis timed out',
           signal: controller.signal,
-          rejectLine: (line) =>
-            /^info string error EvalFile:/i.test(line)
-              ? new Error('Banqi analysis model rejected')
-              : null,
+          deadlineUnixMs: deadline,
+          rejectOutputLine: (line) => /^info string error EvalFile:/i.test(line),
         });
         if (controller.signal.aborted) throw new Error();
         const afterBinary = await analysisAsset(binary.path, true, controller.signal);
-        const afterModel = await analysisAsset(model.path, false, controller.signal);
+        const afterModel = await analysisModel(model.path, controller.signal);
         if (afterBinary.stamp !== binary.stamp || afterModel.stamp !== model.stamp)
           throw new Error();
         return value;
@@ -71,11 +81,20 @@ export async function runBanqiAnalysisQuery(args: {
     });
     if (controller.signal.aborted) throw new Error();
     return value;
-  } catch {
+  } catch (error) {
+    // Preserve useful fixed diagnostics without returning engine output or paths.
+    const missingEvalFile =
+      error instanceof Error &&
+      error.message.startsWith('UCI engine does not advertise configured option(s): ') &&
+      error.message.split(': ')[1]?.split(', ').includes('EvalFile');
     throw new Error(
       controller.signal.aborted
         ? 'Banqi analysis timed out or closed'
-        : 'Banqi analysis query failed',
+        : error instanceof Error && error.message === NET_UNAVAILABLE
+          ? NET_UNAVAILABLE
+          : missingEvalFile
+            ? 'Banqi analysis engine does not advertise EvalFile'
+            : 'Banqi analysis query failed',
     );
   } finally {
     clearTimeout(timeout);

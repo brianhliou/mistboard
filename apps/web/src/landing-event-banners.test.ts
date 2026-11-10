@@ -144,12 +144,14 @@ describe('broadcastBanners', () => {
     expect(rows[0]?.subtitle).toMatch(/^Finished Sep 1[89] · 174 games$/);
   });
 
-  it('gives a tour no row when its results came without moves', () => {
+  it('keeps results without moves as a plain line only while the tour is in progress', () => {
     // The 2026 women's league: six results on the source, no game records.
     const resultsOnly = { ...LEAGUE, recordedBoardCount: 0 };
     expect(broadcastBanners([resultsOnly], 'en', endsAt + 2 * day)).toEqual([]);
     const startsAt = Date.parse(LEAGUE.tour.startsAt!);
-    expect(broadcastBanners([resultsOnly], 'en', startsAt + day)).toEqual([]);
+    expect(broadcastBanners([resultsOnly], 'en', startsAt + day)).toEqual([
+      expect.objectContaining({ upcoming: true, subtitle: 'In progress' }),
+    ]);
   });
 
   it('drops a tour a week after it ended', () => {
@@ -361,6 +363,12 @@ describe('the broadcast slot', () => {
     expect(cards.map((card) => card.dataset.eventId)).toEqual(['broadcast-League']);
     const line = host.querySelector<HTMLElement>('.landing-event-upcoming-line');
     expect(line?.textContent).toBe('World Rapid Championship · Starts Nov 10');
+    expect(line?.querySelector('.landing-event-upcoming-title')?.textContent).toBe(
+      'World Rapid Championship',
+    );
+    expect(line?.querySelector('.landing-event-upcoming-meta')?.textContent).toBe(
+      ' · Starts Nov 10',
+    );
     expect(line?.closest('a')).toBeNull();
     expect(line?.querySelector('a')).toBeNull();
     expect(line?.hasAttribute('href')).toBe(false);
@@ -371,6 +379,77 @@ describe('the broadcast slot', () => {
     ).toBeNull();
     // The lines come after the cards, and are not counted as "more".
     expect(host.lastElementChild?.className).toBe('landing-event-upcoming');
+  });
+
+  it.each([
+    ['en', 'In progress'],
+    ['zh-Hans', '进行中'],
+    ['zh-Hant', '進行中'],
+  ] as const)(
+    'keeps an empty event one hour after its start as a plain line in %s',
+    async (locale, subtitle) => {
+      vi.useFakeTimers({
+        now: Date.parse(rapid.tour.startsAt!) + 60 * 60 * 1000,
+        toFake: ['Date'],
+      });
+      stubIndex([rapid]);
+      const host = buildLandingEventBanners([]);
+      await loadBroadcastBanners(host, locale);
+      expect(host.querySelectorAll('.landing-event-banner, a')).toHaveLength(0);
+      const line = host.querySelector('.landing-event-upcoming-line');
+      expect(line?.textContent).toBe(`World Rapid Championship · ${subtitle}`);
+      expect(line?.querySelector('.landing-event-upcoming-meta')?.textContent).toBe(
+        ` · ${subtitle}`,
+      );
+    },
+  );
+
+  it('includes both date boundaries but drops an empty event after its end', () => {
+    const startsAt = Date.parse(rapid.tour.startsAt!);
+    const endsAt = Date.parse(rapid.tour.endsAt!);
+    for (const now of [startsAt, endsAt]) {
+      const slot = broadcastSlot(broadcastBanners([rapid], 'en', now));
+      expect(slot.cards).toEqual([]);
+      expect(slot.upcoming).toEqual([
+        expect.objectContaining({ id: `broadcast-${rapid.tour.slug}`, subtitle: 'In progress' }),
+      ]);
+    }
+    expect(broadcastBanners([rapid], 'en', endsAt + 1)).toEqual([]);
+  });
+
+  it.each([
+    { recordedBoardCount: 1, liveBoardCount: 0, subtitle: 'In progress · 1 game' },
+    { recordedBoardCount: 0, liveBoardCount: 1, subtitle: 'Live now · 1 game' },
+  ])(
+    'replaces the empty-event line with a card once there is $subtitle',
+    ({ subtitle, ...counts }) => {
+      const now = Date.parse(rapid.tour.startsAt!) + 60 * 60 * 1000;
+      const slot = broadcastSlot(
+        broadcastBanners([{ ...rapid, boardCount: 1, ...counts }], 'en', now),
+      );
+      expect(slot.upcoming).toEqual([]);
+      expect(slot.cards).toEqual([
+        expect.objectContaining({ id: `broadcast-${rapid.tour.slug}`, subtitle }),
+      ]);
+    },
+  );
+
+  it('orders empty-event lines by start time, including events already under way', () => {
+    const now = Date.parse(rapid.tour.startsAt!) + 60 * 60 * 1000;
+    const next = {
+      ...rapid,
+      tour: {
+        ...rapid.tour,
+        slug: 'next',
+        name: 'next',
+        startsAt: new Date(now + day).toISOString(),
+      },
+    };
+    const slot = broadcastSlot(broadcastBanners([next, rapid], 'en', now));
+    expect(slot.upcoming.map((row) => row.id)).toEqual([
+      `broadcast-${rapid.tour.slug}`,
+      'broadcast-next',
+    ]);
   });
 
   it('keeps the card for an event that is on, and caps the lines at two', () => {

@@ -1,0 +1,13 @@
+.review-analysis-request {
+  width: 100%;
+}
+.review-analysis-job-note {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.review-analysis-job-retry {
+  min-height: 44px;
+  padding: 8px 12px;
+  cursor: pointer;
+}

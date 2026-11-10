@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { crawlerCharCount, crawlerContentText } from '../../../scripts/lib/crawler-text.mjs';
 import { CRAWLER_CONTENT_MANIFEST } from '../../server/src/crawler-content-manifest.js';
 import { crawlerCopyProblems } from '../scripts/prerender-copy-check.mjs';
-import { hasTranslation, translateArticle } from './article-i18n.js';
+import { hasTranslation, isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { buildRulesIndex } from './articles.js';
 import { articles } from './articles-data.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
@@ -18,7 +18,12 @@ function taglineProblems(page: ParentNode, locale: Locale): string[] {
     const href = tile.getAttribute('href');
     const text = tile.querySelector('.rules-landing-tile-tagline')?.textContent?.trim();
     if (!text) return [`${href}: missing tagline`];
-    if (locale !== 'en' && (!/\p{Script=Han}/u.test(text) || /\p{Script=Latin}/u.test(text)))
+    const slug = href?.split('/').at(-1) ?? '';
+    if (
+      locale !== 'en' &&
+      isArticleTranslationPublished(slug) &&
+      (!/\p{Script=Han}/u.test(text) || /\p{Script=Latin}/u.test(text))
+    )
       return [`${href}: untranslated tagline`];
     return [];
   });
@@ -38,7 +43,8 @@ it.each(SUPPORTED_LOCALES)('every %s tile uses its article tagline', async (loca
     expect(source.tagline?.trim(), slug).toBeTruthy();
     expect(source.tagline!.length, slug).toBeLessThan(70);
     if (lang) expect(hasTranslation(lang, source.tagline!), slug).toBe(true);
-    const localized = lang ? translateArticle(source, lang) : source;
+    const localized =
+      lang && isArticleTranslationPublished(source.slug) ? translateArticle(source, lang) : source;
     if (localized.kind !== 'rules') throw new Error(`not a rules article: ${slug}`);
     expect(tile.querySelector('.rules-landing-tile-tagline')?.textContent, slug).toBe(
       localized.tagline,

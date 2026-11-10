@@ -815,14 +815,12 @@ describe('article public listing gates', () => {
     }
   });
 
-  // Three Kingdoms banqi became a game spec for the local playtest (#628), hidden
-  // like Xiangqi Mahjong, so its rules page follows the launch switch: reachable
-  // by URL, off the tiles and unindexed until the spec goes public.
-  it('keeps the three kingdoms banqi rules tile off while its spec is hidden', () => {
-    expect(rulesSlugPublicSurfaceEnabled('three-kingdoms-banqi')).toBe(false);
+  // The launched rules page follows the shared publicSurface switch.
+  it('lists the launched Three Kingdoms Banqi rules tile', () => {
+    expect(rulesSlugPublicSurfaceEnabled('three-kingdoms-banqi')).toBe(true);
     expect(
       buildRulesIndex().querySelector('.rules-landing-tile[href="/rules/three-kingdoms-banqi"]'),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 
   it('sorts three kingdoms banqi right after banqi in the rules rail order', () => {

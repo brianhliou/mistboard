@@ -154,25 +154,39 @@ test('analysis fails visibly without a net and rejects binaries without EvalFile
 test('analysis rechecks the net after waiting for its dedicated pool slot', async (t) => {
   await withGradingEngine(async (engine) => {
     let admit!: (release: () => void) => void;
+    let entered!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
     let released = false;
     const acquire = UciEnginePool.prototype.acquire;
-    t.mock.method(UciEnginePool.prototype, 'acquire', function (this: UciEnginePool) {
-      return this.stats().name === 'banqi-analysis'
-        ? new Promise<() => void>((resolve) => {
-            admit = resolve;
-          })
-        : acquire.call(this);
-    });
+    t.mock.method(
+      UciEnginePool.prototype,
+      'acquire',
+      function (this: UciEnginePool, signal?: AbortSignal) {
+        return this.stats().name === 'banqi-analysis'
+          ? new Promise<() => void>((resolve) => {
+              admit = resolve;
+              entered();
+            })
+          : acquire.call(this, signal);
+      },
+    );
     const pending = evaluateBanqiFenNodes('unused', {
       nodes: 1,
       movetimeCapMs: 200,
       noProgressLimit: 60,
     });
+    await Promise.race([
+      waiting,
+      pending.then(() => assert.fail('analysis must wait for its dedicated pool slot')),
+    ]);
+    const rejected = assert.rejects(pending, /net.*not available/i);
     writeFileSync(engine.net, '');
     admit(() => {
       released = true;
     });
-    await assert.rejects(pending, /net.*not available/i);
+    await rejected;
     assert.equal(released, true);
     assert.deepEqual(engine.commands(), ['']);
   });

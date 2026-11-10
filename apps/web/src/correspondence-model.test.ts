@@ -365,11 +365,14 @@ describe('xiangqi mahjong is not offered by correspondence', () => {
 
 describe('restricted banqi correspondence picker', () => {
   it('offers each hidden variant only through its own room gate and keeps it casual', () => {
-    for (const specId of ['ffq-banqi', 'three-kingdoms-banqi']) {
+    for (const specId of ['ffq-banqi']) {
       expect(correspondenceSpecIdsFor()).not.toContain(specId);
       expect(correspondenceSpecIdsFor((id) => id === specId)).toContain(specId);
       expect(correspondenceRatedAvailable(specId, true)).toBe(false);
     }
+    // Three Kingdoms launched: offered to everyone, still casual only.
+    expect(correspondenceSpecIdsFor()).toContain('three-kingdoms-banqi');
+    expect(correspondenceRatedAvailable('three-kingdoms-banqi', true)).toBe(false);
     expect(correspondenceSpecIdsFor(() => true)).not.toContain('unknown-banqi');
   });
 });

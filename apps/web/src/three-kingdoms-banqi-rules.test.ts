@@ -10,6 +10,8 @@ import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-acces
 afterEach(() => {
   setThreeKingdomsBanqiEngineOptions([]);
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  document.body.replaceChildren();
 });
 
 function playButtons(page: HTMLElement): (string | null)[][][] {
@@ -21,6 +23,10 @@ function playButtons(page: HTMLElement): (string | null)[][][] {
 describe('Three Kingdoms Banqi rules page buttons', () => {
   it('offers no bot in either row from build flags alone', () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ engines: [], threeKingdomsBanqiEngines: [] })),
+    );
     setThreeKingdomsBanqiEngineOptions([]);
     const friendOnly = [
       ['Play Three Kingdoms Banqi', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
@@ -38,6 +44,32 @@ describe('Three Kingdoms Banqi rules page buttons', () => {
       ['Play a friend', '/?play=friend&gameSpecId=three-kingdoms-banqi'],
     ];
     expect(playButtons(buildArticlePage('three-kingdoms-banqi'))).toEqual([both, both]);
+  });
+
+  // A reader who lands on the rules page from search never loaded the landing,
+  // which is where the roster used to be fetched; both rows showed no bot.
+  it('loads the roster itself and redraws both rows with the bot', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    setThreeKingdomsBanqiEngineOptions([]);
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        engines: [],
+        threeKingdomsBanqiEngines: [
+          {
+            id: 'misty-three-kingdoms-banqi',
+            name: 'Misty',
+            familyName: 'Misty',
+            kind: 'container',
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const page = buildArticlePage('three-kingdoms-banqi');
+    document.body.append(page);
+    await vi.waitFor(() => expect(playButtons(page).map((row) => row.length)).toEqual([2, 2]));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(playButtons(page)[0]?.[0]?.[1]).toBe('/?play=computer&gameSpecId=three-kingdoms-banqi');
   });
 });
 

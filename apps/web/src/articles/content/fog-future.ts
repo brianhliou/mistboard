@@ -20,7 +20,7 @@ export const fogFutureArticle: Article = {
     alt: 'The Fog Chess and Fog Xiangqi legacy badges side by side.',
   },
   tldr: [
-    'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.',
+    'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. For now, playing a friend stays. The rules pages and every finished game stay too.',
     'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.',
     'Beat Misty while signed in before December 8 and that game\'s legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.',
   ],
@@ -31,7 +31,7 @@ export const fogFutureArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.',
+      text: 'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. For now, games against a friend stay. Both rules pages and every finished game stay too.',
     },
   ],
   sections: [

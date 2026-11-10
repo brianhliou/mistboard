@@ -1,3 +1,4 @@
+import { INTERNAL_BANQI_ENGINE_ID } from './internal-engine-test.js';
 // MistyBanqi move provider for Banqi (半棋) PvE.
 //
 // The engine is our own `banqi-engine` binary ("MistyBanqi", in
@@ -262,13 +263,13 @@ export function banqiEngineDisplayName(engineId: string): string {
 }
 
 export function isBanqiEngineClientId(clientId: string | undefined): boolean {
-  return banqiEngineTierFor(clientId) !== null;
+  return clientId === INTERNAL_BANQI_ENGINE_ID || banqiEngineTierFor(clientId) !== null;
 }
 
 // Engine BUILD version recorded per PvE game (subject_id is version-less). Bump
 // BANQI_ENGINE_VERSION on each shipped eval/search change.
 export function banqiEngineVersion(clientId: string | undefined): string | null {
-  return isBanqiEngineClientId(clientId) ? BANQI_ENGINE_VERSION : null;
+  return banqiEngineTierFor(clientId) ? BANQI_ENGINE_VERSION : null;
 }
 
 // `moves`: the quiet plies since the last irreversible move (capture/flip). When present,

@@ -5,6 +5,7 @@ import {
   JIEQI_FIRST_GAME_LEVEL,
   jieqiPrimaryLevel,
   LANDING_BOT_GAME_SPEC_IDS,
+  LANDING_HERO_BOT_GAME_SPEC_IDS,
   landingBotLadder,
   landingBotLadderIndex,
   landingBotLineup,
@@ -29,9 +30,7 @@ describe('landing bot policy', () => {
   });
 
   it('shows six distinct variants, xiangqi and jieqi every time, and the hero shelf in any two buckets', () => {
-    const heroShelf = LANDING_BOT_GAME_SPEC_IDS.filter(
-      (id) => id !== DARK_CHESS_SPEC_ID && id !== DARK_XIANGQI_SPEC_ID,
-    );
+    const heroShelf = LANDING_HERO_BOT_GAME_SPEC_IDS;
     // Visit every ring offset, including the wrap into the next cycle.
     for (let bucket = -1; bucket <= heroShelf.length - 2; bucket++) {
       const current = landingBotLineup(bucket);
@@ -360,6 +359,16 @@ describe('landing bot ladder (homepage play panel)', () => {
     }
   });
 
+  it('offers Gomoku Rapfi Levels 1-8 and keeps remembered levels', () => {
+    const ladder = landingBotLadder('gomoku');
+    expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(ladder.map((rung) => rung.botId)).toEqual(
+      Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+    );
+    expect(landingBotOffer('gomoku')?.botId).toBe('rapfi-level-1');
+    expect(landingBotLadderIndex(ladder, 'rapfi-level-5')).toBe(4);
+  });
+
   it('offers no ladder, row or chip for a retired variant', () => {
     for (const spec of ['fortress-xiangqi', 'atomic-xiangqi']) {
       expect(ids(spec)).toEqual([]);
@@ -382,7 +391,7 @@ describe('landing bot ladder (homepage play panel)', () => {
   });
 
   it.each(['banqi', 'jungle-flip'])(
-    'walks %s Misty tiers weakest first and gates neural L8',
+    'walks %s Misty tiers weakest first and gates NNUE L8',
     (spec) => {
       const base = `misty-${spec}`;
       const engines = Array.from({ length: 8 }, (_, i) =>
@@ -401,7 +410,7 @@ describe('landing bot ladder (homepage play panel)', () => {
         null,
         null,
         null,
-        'neural',
+        'nnue',
       ]);
       expect(ladder[7]?.gated).toBe(true);
       expect(landingBotLadder(spec, new Set(['misty'])).map((rung) => rung.engineId)).toEqual(

@@ -1,13 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
+import { localizedHref, SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
+  buildLandingStage,
   fetchPlayableEnginesOnce,
   loadPlayableEnginesWithRetry,
+  renderLandingPageForPrerender,
   renderLandingShellForPrerender,
   shouldUseBundledShowcaseDemos,
   watchHrefForTvGame,
 } from './landing.js';
+import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import { jungleFlipEngineOptions } from './variant-tenant/registry.js';
 
 const ROSTER = [
@@ -129,11 +135,61 @@ describe('homepage TV widget link', () => {
 });
 
 describe('landing shell', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    setThreeKingdomsBanqiEngineOptions([]);
+  });
+  it('prerenders the exact English home description and Open Graph description', () => {
+    const shell = readFileSync('index.html', 'utf8');
+    const html = renderLandingPageForPrerender(shell, 'en');
+    // Template contents stay inert, including the real shell's stylesheet.
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const parsed = template.content;
+    const description =
+      'Bringing people together across cultures through Chinese chess. Play xiangqi, jieqi and banqi online for free, against a bot or a friend, no sign-up.';
+    for (const selector of ['meta[name="description"]', 'meta[property="og:description"]']) {
+      expect(parsed.querySelectorAll(selector)).toHaveLength(1);
+      expect(parsed.querySelector(selector)?.getAttribute('content')).toBe(description);
+    }
+    expect(parsed.querySelector('#app h1')?.textContent).toBe(
+      'Bringing people together across cultures through Chinese chess.',
+    );
+  });
+
   it('uses bundled showcase games only when a demo is explicitly requested', () => {
     expect(shouldUseBundledShowcaseDemos('')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?only=xiangqi')).toBe(false);
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
   });
+
+  it.each(['true', 'false'])(
+    'prerenders offered TK rows (%s), Gomoku last and Fog absent on both tabs',
+    (flag) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
+      setThreeKingdomsBanqiEngineOptions([
+        {
+          id: 'misty-three-kingdoms-banqi-level-1',
+          name: 'Misty Level 1',
+          familyName: 'Misty',
+          kind: 'container',
+        },
+      ]);
+      const shell = document.createElement('div');
+      shell.innerHTML = renderLandingShellForPrerender();
+      for (const kind of ['bot', 'person']) {
+        const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+          (el) => el.dataset.gameSpec,
+        );
+        expect(specs.at(-1)).toBe('gomoku');
+        expect(specs.includes('three-kingdoms-banqi')).toBe(flag === 'true');
+        for (const spec of ['dark-xiangqi', 'dark-chess', 'ffq-banqi']) {
+          expect(specs).not.toContain(spec);
+        }
+      }
+    },
+  );
 
   it('bakes no admin menu into the signed-out prerender, in any language', async () => {
     // The prerender is what crawlers index; a hidden admin menu still put
@@ -272,20 +328,48 @@ describe('landing shell', () => {
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
   });
 
-  it('links only the About Mistboard tagline tail', () => {
-    const wrap = document.createElement('div');
-    wrap.innerHTML = renderLandingShellForPrerender();
+  describe.each(SUPPORTED_LOCALES)('%s intro', (locale) => {
+    it.each(['client', 'prerender'])('renders the same three-line %s structure', async (mode) => {
+      await ensureLocaleCatalog(locale);
+      window.history.replaceState(null, '', localizedHref('/', locale));
+      try {
+        const wrap = document.createElement('div');
+        if (mode === 'prerender') {
+          wrap.innerHTML = renderLandingShellForPrerender();
+        } else {
+          wrap.append(
+            buildLandingStage(fallbackPlayableEngines(), {
+              skipLiveWidgets: true,
+              phone: false,
+            }).el,
+          );
+        }
+        const intro = wrap.querySelector('.landing-play-intro');
+        const about = intro?.querySelector('.landing-about');
+        const heading = about?.querySelector('h1');
+        const summary = about?.nextElementSibling;
+        const link = summary?.nextElementSibling;
 
-    const about = wrap.querySelector('.landing-about');
-    const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
-
-    expect(about?.textContent).toBe(
-      "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
-    );
-    expect(link?.textContent).toBe('About Mistboard...');
-    expect(about?.childNodes[0]?.textContent).toBe(
-      "Chinese chess and the world's classic strategy games. Free and open source. ",
-    );
+        expect(wrap.querySelectorAll('h1')).toHaveLength(1);
+        expect(heading?.textContent).toBe(t('home.tagline', {}, locale));
+        expect(about?.textContent).toBe(heading?.textContent);
+        expect(heading?.querySelector('a')).toBeNull();
+        expect(summary?.className).toBe('landing-play-summary');
+        const phrases = Array.from(
+          summary?.querySelectorAll('.landing-play-summary-phrase') ?? [],
+          (phrase) => phrase.textContent,
+        );
+        expect(phrases).toHaveLength(3);
+        expect(phrases).toEqual(t('home.playSummary', {}, locale).split(' · '));
+        expect(link?.matches('a.hover-link.landing-about-more')).toBe(true);
+        expect(link?.parentElement).toBe(intro);
+        expect(link?.getAttribute('href')).toBe(localizedHref('/about', locale));
+        expect(link?.textContent).toBe(t('home.missionAbout', {}, locale));
+        expect(link?.nextElementSibling).toBeNull();
+      } finally {
+        window.history.replaceState(null, '', '/');
+      }
+    });
   });
 });
 
@@ -322,7 +406,9 @@ describe('homepage band layout (CSS)', () => {
     // three-column band, the bot rows' floor.
     expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
     expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
-    expect(panel).toMatch(/\.landing-demo \.pp-view-person \.pp-row-person \{\s*max-height: 40px;/);
+    expect(panel).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
   });
 
   it('puts the deep-dives row above the blog row at every width', () => {

@@ -1,7 +1,12 @@
 import './game-shell.css';
 import { t } from './i18n/catalog.js';
 import { createMoveNavBar, syncMoveNavMenu } from './move-nav-bar.js';
-import { REPLAY_ICON_ANALYSIS, REPLAY_ICON_FLIP, REPLAY_ICON_INFO } from './replay-icons.js';
+import {
+  REPLAY_ICON_ANALYSIS,
+  REPLAY_ICON_FLIP,
+  REPLAY_ICON_INFO,
+  REPLAY_ICON_REVEAL,
+} from './replay-icons.js';
 
 export type GameTableRefs = {
   actionSection: HTMLElement;
@@ -101,6 +106,28 @@ export function setReplayFlipHandler(anchor: HTMLElement, onFlip: (() => void) |
   syncMoveNavMenu(button);
 }
 
+/** Banqi-only opt-in final board. Other rooms leave this menu row hidden. */
+export function setReplayRevealControl(
+  anchor: HTMLElement,
+  control: {
+    label: string;
+    disabled: boolean;
+    pressed: boolean;
+    onClick(): void;
+  } | null,
+): void {
+  const button = anchor
+    .closest('.game-console')
+    ?.querySelector<HTMLButtonElement>('[data-replay-reveal]');
+  if (!button) return;
+  button.hidden = !control;
+  button.disabled = control?.disabled ?? true;
+  button.dataset.revealLabel = control?.label ?? '';
+  button.dataset.revealPressed = String(control?.pressed ?? false);
+  button.onclick = control?.onClick ?? null;
+  syncMoveNavMenu(button);
+}
+
 /**
  * Shows the bar menu's game info and chat row and runs `onOpen` on press, or
  * hides it (null) where the card and chat sit on the page (wider screens).
@@ -175,6 +202,15 @@ export function createGameTable(opts: { navMenu?: boolean } = {}): GameTable {
     menuPlacement: 'down',
     menu: opts.navMenu !== false,
     menuItems: [
+      {
+        label: () =>
+          el.querySelector<HTMLElement>('[data-replay-reveal]')?.dataset.revealLabel ?? '',
+        icon: REPLAY_ICON_REVEAL,
+        pressed: () =>
+          el.querySelector<HTMLElement>('[data-replay-reveal]')?.dataset.revealPressed === 'true',
+        dataset: { replayReveal: '' },
+        hidden: true,
+      },
       {
         label: t('review.flipBoard'),
         icon: REPLAY_ICON_FLIP,

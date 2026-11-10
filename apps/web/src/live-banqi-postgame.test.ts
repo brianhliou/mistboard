@@ -51,6 +51,40 @@ describe('Banqi postgame page', () => {
     expect(banqiPostgameApiUrl('bq room')).toBe('/api/banqi/games/bq%20room');
   });
 
+  it('replays a private masked game without recovering or requesting its hidden deal', async () => {
+    const initial = createInitialBanqiState('bq_postgame', [...STANDARD_BANQI_DEAL]);
+    const afterFlip = applyBanqiMove(initial, { from: 'a1', to: 'a1' });
+    const fixture = {
+      ...postgameFixture(),
+      view: getBanqiPlayerView(afterFlip, 'red'),
+      history: {
+        truth: [
+          { ply: 0, view: getBanqiPlayerView(initial, 'red') },
+          { ply: 1, view: getBanqiPlayerView(afterFlip, 'red') },
+        ],
+      },
+    };
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL) => jsonResponse(fixture));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountBanqiPostgame(root, 'bq_postgame');
+    await vi.waitFor(() => expect(root.querySelector('.banqi-board')).not.toBeNull());
+
+    expect(root.textContent).not.toContain('Postgame unavailable');
+    expect(root.querySelector('.tree-review')).toBeNull();
+    expect(root.querySelector('[aria-label="Reveal hidden identities"]')).toBeNull();
+    expect(fetchSpy.mock.calls.map(([url]) => String(url))).toEqual([
+      '/api/banqi/games/bq_postgame',
+    ]);
+    const rendered = root.querySelector('.banqi-board')!;
+    expect(rendered.querySelectorAll('.banqi-back')).toHaveLength(31);
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelectorAll('.banqi-back')).toHaveLength(32);
+    root.remove();
+  });
+
   it('reconstructs the deal, renders one review board, and lists the flip move', async () => {
     const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
     vi.stubGlobal('fetch', fetchSpy);

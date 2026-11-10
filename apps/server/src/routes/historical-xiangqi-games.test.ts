@@ -208,6 +208,7 @@ test('searchable variants are the launched channels in the canonical shelf order
     'XIANGQI',
     'JIEQI',
     'BANQI',
+    'THREE_KINGDOMS_BANQI',
     'ATOMIC_XIANGQI',
     'DARK_XIANGQI',
     'DUCK_XIANGQI',

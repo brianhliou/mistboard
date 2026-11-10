@@ -1,5 +1,5 @@
-// Live room client for Three Kingdoms banqi (三國暗棋, #628): a playtest for
-// admin accounts on prod (#684) and for everyone in a local build with
+// Live room client for public casual Three Kingdoms Banqi (#628). Play opens
+// to everyone in a build with
 // VITE_THREE_KINGDOMS_BANQI_ENABLED (three-kingdoms-banqi-access.ts). Built on the
 // generic live-client core like live-jungle-flip.ts, which it follows closely:
 // symmetric hidden identity (the server sends both seats the same masked board),
@@ -26,6 +26,7 @@ import type {
   ThreeKingdomsBanqiSquare,
   ThreeKingdomsBanqiStatus,
 } from '@mistboard/game';
+import { threeKingdomsBanqiMoveLabel } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
@@ -137,8 +138,8 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   isColor: isSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   // The room is gated on the server, never here: its WebSocket refuses a
-  // non-admin with 1008 'game spec disabled' (three-kingdoms-banqi-access.ts),
-  // and the notice says the playtest is admin-only. A client gate read the
+  // non-admin with 1008 'game spec disabled' while the runtime flag is off,
+  // and the notice explains the unavailable room. A client gate read the
   // admin hint, which a fresh browser does not have yet, and drew a dead room
   // for a real admin. 'room unavailable' keeps the generic no-such-room line.
   enabled: () => true,
@@ -276,27 +277,15 @@ export function bootstrapThreeKingdomsBanqiLiveRoom(): void {
 
 // ── Notation ──────────────────────────────────────────────────────────────────
 
-// Banqi's letters, so the move list reads like a banqi study (G general, S soldier).
-const ROLE_LETTER: Record<BanqiPieceRole, string> = {
-  general: 'G',
-  advisor: 'A',
-  elephant: 'E',
-  chariot: 'R',
-  horse: 'H',
-  cannon: 'C',
-  soldier: 'S',
-};
-
-// "c2-c4" (a capture reads the same), and a flip names what it turned up: "c2(H)".
+// "c2-c4" (a capture reads the same), and a flip names what it turned up, in
+// the shared flip label every TK surface uses: upper case red, lower case
+// black ("c2(H)", "c2(h)"), "(?)" when the view after it is not in hand.
 function notate(
   move: ThreeKingdomsBanqiMove,
   boardAfter: Partial<Record<Square, TkLiveBoardEntry>> | undefined,
 ): string {
-  if (move.from === move.to) {
-    const entry = boardAfter?.[move.to];
-    return entry && !entry.faceDown ? `${move.to}(${ROLE_LETTER[entry.role]})` : `${move.to}()`;
-  }
-  return `${move.from}-${move.to}`;
+  const entry = boardAfter?.[move.to];
+  return threeKingdomsBanqiMoveLabel(move, entry && !entry.faceDown ? entry : null);
 }
 
 // ── Material and the no-progress line ─────────────────────────────────────────

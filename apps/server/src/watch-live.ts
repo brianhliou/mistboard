@@ -1,3 +1,4 @@
+import { isInternalEngineTestLog } from './internal-engine-test.js';
 /**
  * Mistboard TV live-featured election (watch-live).
  *
@@ -279,6 +280,7 @@ function candidateFromTenantRoom(
   isEngine: EngineSeatPredicate,
   now: number,
 ): LiveTvCandidate | null {
+  if (isInternalEngineTestLog(room.events)) return null;
   room = registration.publicRoom?.(room) ?? room;
   const projection = room.projection;
   if (projection?.state.status.type !== 'playing') return null;

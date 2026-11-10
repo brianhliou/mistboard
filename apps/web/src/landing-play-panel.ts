@@ -1,8 +1,11 @@
 import {
   canonicalVariantOrderIndex,
+  DARK_CHESS_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
   DAYS_PER_MOVE_OPTIONS,
   defaultEngineTimeControl,
   type GameSpecId,
+  isPublicGameSpec,
   RATED_TIME_CONTROLS,
   TIME_CONTROLS,
   type TimeControlId,
@@ -78,6 +81,13 @@ type StoredPanel = {
    *  Play button. Read as a fallback until a bot game writes the shared one. */
   last?: { gameSpecId: string; botId: string; tc: TimeControlId };
 };
+
+// Homepage merchandising only: these games remain in the Play menu, lobby
+// and setup deep links. New launches join automatically unless excluded here.
+export const HOMEPAGE_HERO_EXCLUDED_GAME_SPEC_IDS: readonly GameSpecId[] = [
+  DARK_XIANGQI_SPEC_ID,
+  DARK_CHESS_SPEC_ID,
+];
 
 const STORAGE_KEY = 'mistboard.playPanel.v1';
 const LOBBY_POLL_MS = 3_000;
@@ -280,10 +290,13 @@ export function buildPlayPanel(
     rated: boolean;
   } | null = null;
   const othersRequests = (): OpenLobbyRequest[] => {
-    if (!ownSeek) return openRequests;
+    const offered = openRequests.filter((r) =>
+      variants.some((v) => v.gameSpecId === (r.gameSpecId ?? DARK_CHESS_SPEC_ID)),
+    );
+    if (!ownSeek) return offered;
     const own = ownSeek;
     let skipped = false;
-    return openRequests.filter((r) => {
+    return offered.filter((r) => {
       const mine =
         !skipped &&
         (r.gameSpecId ?? 'dark-chess') === own.gameSpecId &&
@@ -295,7 +308,10 @@ export function buildPlayPanel(
     });
   };
 
-  const variants = enabledLandingVariantGameSpecs('pvp', locale);
+  const variants = enabledLandingVariantGameSpecs('pvp', locale).filter(
+    ({ gameSpecId }) =>
+      isPublicGameSpec(gameSpecId) && !HOMEPAGE_HERO_EXCLUDED_GAME_SPEC_IDS.includes(gameSpecId),
+  );
   const labelFor = (id: string): string =>
     variants.find((v) => v.gameSpecId === id)?.label ??
     variantLabelForGameSpec(id as LandingGameSpecId, locale);
@@ -1026,7 +1042,10 @@ export function buildPlayPanel(
       if (!correspondenceEnabled()) return;
       void fetchCorrespondenceSeeks()
         .then((feed) => {
-          corrSeeks = feed.status === 'ok' ? feed.seeks : [];
+          corrSeeks =
+            feed.status === 'ok'
+              ? feed.seeks.filter((s) => variants.some((v) => v.gameSpecId === s.gameSpecId))
+              : [];
           renderOffers();
           renderBadge();
         })

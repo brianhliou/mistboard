@@ -37,6 +37,8 @@ import './variant-tenant/register-tenants.js';
 
 type Room = TenantRuntimeRoom<string, string, unknown, TenantGameStateLike<string>, string>;
 const specs = ['ffq-banqi', 'three-kingdoms-banqi'] as const;
+// FFQ is still an admin playtest; Three Kingdoms launched (casual) on 2026-11-10.
+const restricted = ['ffq-banqi'] as const;
 const admin = { id: 'admin', accountRole: 'admin' } as UserAccount;
 const player = { id: 'player', accountRole: 'player' } as UserAccount;
 const ctx = { refusesCreate: () => false, drainDeadlineMs: () => null };
@@ -53,7 +55,7 @@ function flags(t: TestContext, enabled: boolean) {
 }
 
 test('restricted correspondence membership is derived, casual and fail-closed', () => {
-  assert.deepEqual(CORRESPONDENCE_RESTRICTED_SPEC_IDS, specs);
+  assert.deepEqual(CORRESPONDENCE_RESTRICTED_SPEC_IDS, restricted);
   for (const spec of specs) {
     assert.equal(isCorrespondenceRatedSpec(spec), false);
     assert.equal(
@@ -67,14 +69,14 @@ test('restricted correspondence membership is derived, casual and fail-closed', 
   assert.equal(correspondenceTenantForSpecId('unknown-banqi'), null);
 });
 
-test('picker/seek access follows each existing room door, including TK admins with the flag off', async (t) => {
+test('picker/seek access follows the FFQ room door', async (t) => {
   flags(t, false);
-  const seeks = specs.map((gameSpecId) => ({ gameSpecId }));
+  const seeks = restricted.map((gameSpecId) => ({ gameSpecId }));
   assert.deepEqual(await seeksVisibleTo(seeks, null), []);
   assert.deepEqual(await seeksVisibleTo(seeks, player), []);
-  assert.deepEqual(await seeksVisibleTo(seeks, admin), [seeks[1]]);
+  assert.deepEqual(await seeksVisibleTo(seeks, admin), []);
   assert.equal(await mayPlayCorrespondence(admin, 'unknown-banqi'), false);
-  for (const spec of specs) {
+  for (const spec of restricted) {
     assert.equal(await mayPlayCorrespondence(null, spec), false);
     const refused = await createSeekResult(
       ctx,
@@ -85,12 +87,11 @@ test('picker/seek access follows each existing room door, including TK admins wi
     assert.equal(refused.status, 403);
   }
   process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
-  process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED = 'true';
   assert.deepEqual(await seeksVisibleTo(seeks, admin), seeks);
-  assert.deepEqual(await seeksVisibleTo(seeks, player), [seeks[1]]);
-  assert.equal(await mayPlayCorrespondence(admin, specs[0]), true);
-  assert.equal(await mayPlayCorrespondence(player, specs[0]), false);
-  for (const spec of specs) {
+  assert.deepEqual(await seeksVisibleTo(seeks, player), []);
+  assert.equal(await mayPlayCorrespondence(admin, 'ffq-banqi'), true);
+  assert.equal(await mayPlayCorrespondence(player, 'ffq-banqi'), false);
+  for (const spec of restricted) {
     assert.deepEqual(
       await createSeekResult(ctx, admin, { gameSpecId: spec, daysPerMove: 0 }, 'board'),
       {
@@ -105,7 +106,27 @@ test('picker/seek access follows each existing room door, including TK admins wi
   );
 });
 
-for (const spec of specs) {
+test('three-kingdoms-banqi: launched correspondence is casual and follows the kill switch', async (t) => {
+  const spec = 'three-kingdoms-banqi';
+  flags(t, false);
+  assert.equal(CORRESPONDENCE_RESTRICTED_SPEC_IDS.includes(spec), false);
+  assert.equal(await mayPlayCorrespondence(null, spec), false);
+  assert.equal(await mayPlayCorrespondence(player, spec), false, 'switch off: players refused');
+  assert.equal(await mayPlayCorrespondence(admin, spec), true, 'switch off: admins can test');
+  assert.deepEqual(
+    await createSeekResult(ctx, player, { gameSpecId: spec, daysPerMove: 3 }, 'board'),
+    { status: 404, body: { error: 'variant_disabled' } },
+  );
+  process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED = 'true';
+  assert.equal(await mayPlayCorrespondence(null, spec), false);
+  assert.equal(await mayPlayCorrespondence(player, spec), true);
+  assert.deepEqual(
+    await createSeekResult(ctx, player, { gameSpecId: spec, daysPerMove: 0 }, 'board'),
+    { status: 400, body: { error: 'invalid_days_per_move' } },
+  );
+});
+
+for (const spec of restricted) {
   test(`${spec}: directed target and both accepting accounts are rechecked before consuming the seek`, async (t) => {
     flags(t, false);
     process.env.MISTBOARD_FFQ_BANQI_ENABLED = 'true';
@@ -168,7 +189,9 @@ for (const spec of specs) {
     creatorRole = 'admin';
     assert.equal(await mayPlayCorrespondenceByUserId('creator', spec), true);
   });
+}
 
+for (const spec of specs) {
   test(`${spec}: cold replay, room/history and inbox payloads preserve every covered identity`, async (t) => {
     flags(t, true);
     const registration = correspondenceTenantForSpecId(spec)!;
@@ -284,7 +307,15 @@ for (const spec of specs) {
         assert.equal(JSON.stringify(await inbox(room)), JSON.stringify(await inbox(swapped.room)));
       }
     }
-    assert.equal(registration.seatBoard!(room as unknown as TenantManagedRoom, 'spectator'), null);
+    if (spec === 'three-kingdoms-banqi') {
+      // Launched with a public masked card, so the inbox reads that like Banqi.
+      assert.equal(registration.seatBoard, undefined);
+    } else {
+      assert.equal(
+        registration.seatBoard!(room as unknown as TenantManagedRoom, 'spectator'),
+        null,
+      );
+    }
   });
 }
 

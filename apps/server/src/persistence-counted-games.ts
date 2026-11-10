@@ -42,6 +42,9 @@ import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
+// Keep this filter module loadable directly by native-TypeScript reporting
+// scripts, without importing the server's unbuilt .js source graph.
+export const INTERNAL_BANQI_CORPUS_ID = 'internal-banqi-provider';
 
 // An excluded seat is a signed-in seat of a stats-excluded account, or a
 // guest seat whose device id belongs to a browser such an account has used
@@ -123,6 +126,7 @@ export function bothSidesMoved(gamesAlias: string): string {
 // seats (excludedFromStats).
 export function countedHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
@@ -225,6 +229,7 @@ export function humanSeatExists(gamesAlias: string): string {
 // (the readout's demand signal).
 export function countedAbortedGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'aborted' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND ${humanSeatExists(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
@@ -235,13 +240,14 @@ export function countedAbortedGame(gamesAlias = 'g'): string {
 // exclusion is visible rather than silent.
 export function internalHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
-    AND ${excludedFromStats(gamesAlias)}`;
+    AND (${gamesAlias}.corpus_id IS NOT DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}' OR ${excludedFromStats(gamesAlias)})`;
 }
 
 // Completed pvp/pve game before the launch date with no excluded seat: the
 // second thing the counts leave out, reported the same way.
 export function preLaunchHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND NOT ${sinceLaunch(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;
 }
@@ -251,6 +257,7 @@ export function preLaunchHumanGame(gamesAlias = 'g'): string {
 // not-counted rows and the counted row partition completed human games.
 export function shortHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${gamesAlias}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
     AND ${sinceLaunch(gamesAlias)}
     AND NOT ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedFromStats(gamesAlias)}`;

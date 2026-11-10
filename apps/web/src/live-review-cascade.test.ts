@@ -74,6 +74,22 @@ describe('room cluster cascade (#618)', () => {
     expect(banqiPoolHeight(360, 740, false)).toBe('96px');
     expect(banqiPoolHeight(390, 664, true)).toBe('80px');
   });
+
+  it('shows chat in the open phone info sheet at its fixed phone height', () => {
+    const win = new Window({ width: 390, height: 844 });
+    try {
+      win.document.head.innerHTML = [LIVE_REVIEW, REVIEW_SHELL]
+        .map((css) => `<style>${css}</style>`)
+        .join('');
+      win.document.body.innerHTML =
+        '<div class="review-shell__cluster live-review__cluster" data-room-sheet="open"><aside class="meta-panel"><section class="review-spectator-chat review-spectator-chat--live"></section></aside></div>';
+      const chat = need(win.document.querySelector('.review-spectator-chat'), 'chat');
+      expect(win.getComputedStyle(chat).display).toBe('flex');
+      expect(win.getComputedStyle(chat).height).toBe('240px');
+    } finally {
+      void win.happyDOM.close();
+    }
+  });
 });
 
 function banqiPoolHeight(width: number, height: number, odds: boolean): string {

@@ -21,6 +21,7 @@ import {
   qaVolumeSpecIds,
 } from './qa-volume.js';
 import { resolveXiangqiAnalysis } from './routes/xiangqi-games.js';
+import { resolveThreeKingdomsBanqiAnalysis } from './three-kingdoms-banqi-analysis.js';
 
 const profile = JSON.parse(
   readFileSync(new URL('../../../config/product-profile.json', import.meta.url), 'utf8'),
@@ -93,6 +94,7 @@ test('synthetic stored chart series cover every ply, have varying scores and no 
     'xiangqi',
     'jieqi',
     'banqi',
+    'three-kingdoms-banqi',
     'jungle',
     'jungle-flip',
     'crazyhouse-xiangqi',
@@ -116,8 +118,8 @@ test('synthetic stored chart series cover every ply, have varying scores and no 
   }
 });
 
-test('jieqi, xiangqi and banqi chart fixtures are returned by the real cache resolvers without computing', async () => {
-  for (const spec of ['jieqi', 'xiangqi', 'banqi']) {
+test('jieqi, xiangqi, banqi and TK chart fixtures are returned by the real cache resolvers without computing', async () => {
+  for (const spec of ['jieqi', 'xiangqi', 'banqi', 'three-kingdoms-banqi']) {
     const game = buildQaGame(spec, 0, now);
     const analysis = qaGameAnalysis(game)!;
     assert.ok(Array.isArray(analysis.payload));
@@ -142,14 +144,16 @@ test('jieqi, xiangqi and banqi chart fixtures are returned by the real cache res
           )
         : spec === 'jieqi'
           ? await resolveJieqiAnalysis(game.roomId, [], undefined as never, cache, undefined, false)
-          : await resolveBanqiAnalysis(
-              game.roomId,
-              [],
-              undefined as never,
-              cache,
-              undefined,
-              false,
-            );
+          : spec === 'three-kingdoms-banqi'
+            ? await resolveThreeKingdomsBanqiAnalysis(game.roomId, [], cache, undefined, false)
+            : await resolveBanqiAnalysis(
+                game.roomId,
+                [],
+                undefined as never,
+                cache,
+                undefined,
+                false,
+              );
     assert.deepEqual(result?.plies, plies);
   }
 });

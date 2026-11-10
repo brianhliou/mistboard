@@ -52,7 +52,7 @@ test('cold analysis cache coalesces exact queries, guards assets and drains canc
     assert.equal(hit.lines![0]!.pv[0], 'a0a0');
     assert.equal((await readFile(counter, 'utf8')).trim().split('\n').length, 1);
     await rm(model);
-    await assert.rejects(runBanqiAnalysisQuery(args), /query failed/);
+    await assert.rejects(runBanqiAnalysisQuery(args), /net.*not available/);
     await writeFile(model, 'reject');
     await assert.rejects(runBanqiAnalysisQuery(args), /query failed/);
     await writeFile(model, 'slow');

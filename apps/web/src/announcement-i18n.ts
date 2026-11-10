@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Three Kingdoms Banqi is open to everyone.': '三国暗棋向所有人开放。',
+  'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
+    '与朋友休闲对弈，在大厅寻找对手，或挑战 Misty。在 9×5 棋盘上翻子，按象棋走法吃子，先得 100 分获胜。所有对局均不计分。',
+  'Play Three Kingdoms Banqi': '开始下三国暗棋',
   'Banqi and Flip Jungle now have eight bot levels.': '暗棋和翻翻兽棋的机器人现在都有八个等级。',
   'Each used to have one bot. In both, Levels 1 to 6 are new and easier, Level 7 is the bot you know, and Level 8 is new: a small neural net trained on the engine’s own games. In banqi it beat Level 7 by 219 Elo in a 120-game match; in Flip Jungle it beat the old bot by 139 Elo at equal thinking time.':
     '两个游戏原来各只有一个机器人。两边的第 1 到第 6 级都是新的、更容易；第 7 级是你熟悉的那个机器人；第 8 级是新的：一个用引擎自己的对局训练出来的小型神经网络。在暗棋中，它在 120 盘的对抗中比第 7 级高 219 Elo；在翻翻兽棋中，相同思考时间下它比原来的机器人高 139 Elo。',
@@ -586,6 +590,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Three Kingdoms Banqi is open to everyone.': '三國暗棋向所有人開放。',
+  'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
+    '與朋友休閒對弈，在大廳尋找對手，或挑戰 Misty。在 9×5 棋盤上翻子，按象棋走法吃子，先得 100 分獲勝。所有對局均不計分。',
+  'Play Three Kingdoms Banqi': '開始下三國暗棋',
   'Banqi and Flip Jungle now have eight bot levels.': '暗棋和翻翻獸棋的機器人現在都有八個等級。',
   'Each used to have one bot. In both, Levels 1 to 6 are new and easier, Level 7 is the bot you know, and Level 8 is new: a small neural net trained on the engine’s own games. In banqi it beat Level 7 by 219 Elo in a 120-game match; in Flip Jungle it beat the old bot by 139 Elo at equal thinking time.':
     '兩個遊戲原本各只有一個機器人。兩邊的第 1 到第 6 級都是新的、更容易；第 7 級是你熟悉的那個機器人；第 8 級是新的：一個用引擎自己的對局訓練出來的小型神經網路。在暗棋中，它在 120 盤的對抗中比第 7 級高 219 Elo；在翻翻獸棋中，相同思考時間下它比原來的機器人高 139 Elo。',
@@ -1122,18 +1130,30 @@ const ZH_HANT: Record<string, string> = {
   'Play the engine': '與引擎對弈',
 };
 
+// Vietnamese launch copy; older entries retain their English fallback.
+const VI: Record<string, string> = {
+  'Three Kingdoms Banqi is open to everyone.': 'Cờ úp Tam Quốc đã mở cho mọi người.',
+  'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
+    'Chơi Cờ úp Tam Quốc giao hữu với bạn bè, tìm đối thủ ở sảnh hoặc đấu với Misty. Lật quân trên bàn 9×5, bắt quân theo cách đi của cờ tướng và đua đến 100 điểm. Mọi ván đều không tính điểm xếp hạng.',
+  'Play Three Kingdoms Banqi': 'Chơi Cờ úp Tam Quốc',
+};
+
 const ANNOUNCEMENT_DICTS: Record<AnnouncementLang, Record<string, string>> = {
   'zh-Hans': ZH_HANS,
   'zh-Hant': ZH_HANT,
 };
 
-function dictFor(locale: Locale): Record<string, string> | null {
+type AnnouncementLocale = Locale | 'vi';
+
+function dictFor(locale: AnnouncementLocale): Record<string, string> | null {
+  if (locale === 'vi') return VI;
   return locale === 'zh-Hans' || locale === 'zh-Hant' ? ANNOUNCEMENT_DICTS[locale] : null;
 }
 
 /** Translate one announcement string, falling back to the English source. */
-export function localizeAnnouncementString(text: string, locale: Locale): string {
-  return personNamesInText(dictFor(locale)?.[text] ?? text, locale);
+export function localizeAnnouncementString(text: string, locale: AnnouncementLocale): string {
+  const translated = dictFor(locale)?.[text] ?? text;
+  return locale === 'vi' ? translated : personNamesInText(translated, locale);
 }
 
 /**
@@ -1141,7 +1161,10 @@ export function localizeAnnouncementString(text: string, locale: Locale): string
  * dictionary) returns the entry untouched, so callers can render the result
  * unconditionally.
  */
-export function localizeAnnouncement(entry: Announcement, locale: Locale): Announcement {
+export function localizeAnnouncement(
+  entry: Announcement,
+  locale: AnnouncementLocale,
+): Announcement {
   const dict = dictFor(locale);
   if (!dict) return entry;
   return {

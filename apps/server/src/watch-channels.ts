@@ -170,7 +170,11 @@ export function gameSpecIsPublic(gameSpecId: string): boolean {
 // Mahjong can be flagged on for playtests, so a flag cannot be the listing
 // gate. The other hidden specs (atomic xiangqi, HK mahjong, chess) keep their
 // flag-only listing until someone decides to move them here.
-const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set(['xiangqi-mahjong', 'gomoku']);
+const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set([
+  'xiangqi-mahjong',
+  'gomoku',
+  'three-kingdoms-banqi',
+]);
 
 /** Public listing policy: permanent FFQ exclusion, then each existing surface gate. */
 export function listedOnSurface(gameSpecId: string): boolean {

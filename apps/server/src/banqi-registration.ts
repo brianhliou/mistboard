@@ -1,3 +1,7 @@
+import { currentAccountUser } from './account-session.js';
+import { internalBanqiStampMatches } from './banqi-internal-provider.js';
+import type { InternalEngineTest } from './internal-engine-test.js';
+import { internalEngineTestFor } from './internal-engine-test.js';
 /**
  * Banqi registry entry. Owns the tenant's live-room map, the room-factory
  * binding, and hydration. No rematch flow yet. Matchmaking is random-seat,
@@ -50,6 +54,7 @@ export async function createBanqiRoom(
   engine?: BanqiRoomEngineSeat,
   // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
   rated = false,
+  internalEngineTest?: InternalEngineTest,
 ): Promise<BanqiLiveRoomCreation> {
   return createBanqiLiveRoom(
     {
@@ -64,6 +69,7 @@ export async function createBanqiRoom(
     creatorPreference,
     engine,
     rated,
+    internalEngineTest,
   );
 }
 
@@ -73,6 +79,13 @@ export async function getOrLoadBanqiRoom(roomId: string): Promise<BanqiLiveRoom 
     banqiRooms as unknown as Map<string, BanqiRuntimeRoom>,
     roomId,
   );
+  const stamp = internalEngineTestFor(room?.events);
+  if (
+    stamp &&
+    room?.projection.state.status.type === 'playing' &&
+    !internalBanqiStampMatches(stamp)
+  )
+    return null;
   return room as BanqiLiveRoom | null;
 }
 
@@ -137,8 +150,15 @@ registerVariantTenant({
   http: {
     matchesCreateRequest: requestsBanqi,
     // POST /api/rooms resolves the account for a rated request (registry.ts).
-    handleCreate: (ctx, _request, response, body, accountUser) =>
-      handleBanqiCreate({ ...ctx, createBanqiRoom }, response, body, accountUser),
+    handleCreate: async (ctx, request, response, body, accountUser) =>
+      handleBanqiCreate(
+        { ...ctx, createBanqiRoom },
+        response,
+        body,
+        body.internalEngineTest !== undefined || body.engineId === 'private-banqi-worker'
+          ? await currentAccountUser(request)
+          : accountUser,
+      ),
   },
   lobby: {
     supportsRated: true,

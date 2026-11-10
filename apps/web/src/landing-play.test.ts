@@ -1408,6 +1408,27 @@ describe('landing play panel', () => {
     expect(roomPostBody(fetchSpy)).not.toHaveProperty('engineId');
   });
 
+  it.each([
+    ['dark-xiangqi', 'play=computer&gameSpecId=dark-xiangqi'],
+    ['dark-chess', 'play=computer&variant=dark-chess'],
+    ['dark-chess', 'variant=dark-chess'],
+  ])(
+    'keeps the excluded %s deep link on Fog after a remembered Jieqi setup (%s)',
+    (spec, query) => {
+      vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+      );
+      for (const mode of ['pve', 'pvp']) {
+        localStorage.setItem(`mistboard:setup:${mode}`, JSON.stringify({ gameSpecId: 'jieqi' }));
+      }
+      window.history.replaceState(null, '', `/?${query}`);
+      maybeOpenPlayDeepLink([]);
+      expect(selectedVariantSpec()).toBe(spec);
+    },
+  );
+
   it('keeps the old engine deep-link alias working', () => {
     window.history.replaceState(null, '', '/?play=engine');
 

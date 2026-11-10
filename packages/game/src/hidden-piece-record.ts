@@ -66,6 +66,11 @@ import {
   parseJungleFlipFen,
 } from './jungle-flip-fen.js';
 import {
+  parseThreeKingdomsBanqiFen,
+  threeKingdomsBanqiStateToDealtFen,
+  threeKingdomsBanqiStateToPublicFen,
+} from './three-kingdoms-banqi-fen.js';
+import {
   applyBanqiMove,
   type BanqiBoard,
   type BanqiGameState,
@@ -94,8 +99,21 @@ import {
   type JungleFlipPieceRole,
   type JungleFlipSquare,
 } from './variants-jungle-flip.js';
+import {
+  applyThreeKingdomsBanqiMove,
+  createInitialThreeKingdomsBanqiState,
+  type ThreeKingdomsBanqiBoard,
+  type ThreeKingdomsBanqiMove,
+  type ThreeKingdomsBanqiSquare,
+  type ThreeKingdomsBanqiState,
+} from './variants-three-kingdoms-banqi.js';
 
-export const HIDDEN_PIECE_VARIANTS = ['jieqi', 'banqi', 'jungle-flip'] as const;
+export const HIDDEN_PIECE_VARIANTS = [
+  'jieqi',
+  'banqi',
+  'jungle-flip',
+  'three-kingdoms-banqi',
+] as const;
 export type HiddenPieceVariant = (typeof HIDDEN_PIECE_VARIANTS)[number];
 
 export function isHiddenPieceVariant(variant: string): variant is HiddenPieceVariant {
@@ -151,6 +169,15 @@ export function banqiPlyReveal(before: BanqiGameState, move: BanqiMove): HiddenP
   return { revealed: tile?.faceDown ? identity(tile) : null, capturedHidden: null };
 }
 
+/** TK only captures revealed pieces; a flip publicly names its identity. */
+export function threeKingdomsBanqiPlyReveal(
+  before: ThreeKingdomsBanqiState,
+  move: ThreeKingdomsBanqiMove,
+): HiddenPieceReveal {
+  const tile = move.from === move.to ? before.board[move.from] : undefined;
+  return { revealed: tile?.faceDown ? identity(tile) : null, capturedHidden: null };
+}
+
 /** A Flip Jungle ply's reveal, the same rule as banqi. */
 export function jungleFlipPlyReveal(
   before: JungleFlipGameState,
@@ -164,6 +191,8 @@ export function jungleFlipPlyReveal(
 
 /** The standard face-down start as the variant's public FEN (no identities). */
 export function hiddenPieceStartFen(variant: HiddenPieceVariant): string {
+  if (variant === 'three-kingdoms-banqi')
+    return threeKingdomsBanqiStateToPublicFen(createInitialThreeKingdomsBanqiState('start', 0));
   if (variant === 'jieqi') return jieqiStateToPikafishFen(createInitialJieqiState('start'));
   if (variant === 'banqi') return banqiStateToEngineFen(createInitialBanqiState('start'));
   return jungleFlipStateToEngineFen(createInitialJungleFlipState('start'));
@@ -205,7 +234,7 @@ const JUNGLE_FLIP_LETTER: Record<JungleFlipPieceRole, string> = {
 
 function letterTable(variant: HiddenPieceVariant): Readonly<Record<string, string>> {
   if (variant === 'jieqi') return JIEQI_LETTER;
-  if (variant === 'banqi') return BANQI_ICGA_LETTER;
+  if (variant === 'banqi' || variant === 'three-kingdoms-banqi') return BANQI_ICGA_LETTER;
   return JUNGLE_FLIP_LETTER;
 }
 
@@ -286,7 +315,13 @@ export function parseHiddenPiecePgnToken(
     const to = icgaSquareToBanqi(move[2]!);
     return from && to ? { uci: `${from}${to}` } : null;
   }
-  const m = (variant === 'jieqi' ? JIEQI_TOKEN : JUNGLE_FLIP_TOKEN).exec(token);
+  const m = (
+    variant === 'jieqi'
+      ? JIEQI_TOKEN
+      : variant === 'three-kingdoms-banqi'
+        ? /^(@[a-i][1-5]|[a-i][1-5][a-i][1-5])(?:=([A-Za-z]))?$/
+        : JUNGLE_FLIP_TOKEN
+  ).exec(token);
   if (!m) return null;
   const revealed = letter(m[2]);
   const capturedHidden = letter(m[3]);
@@ -551,7 +586,7 @@ function jieqiUnnamedRoles(record: HiddenPieceRecord): Record<JieqiColor, JieqiP
 }
 
 type FlipKernel<State, Board extends FaceDownBoard, Move> = {
-  variant: 'banqi' | 'jungle-flip';
+  variant: 'banqi' | 'jungle-flip' | 'three-kingdoms-banqi';
   parse(fen: string): { ok: true; state: State; sampled: boolean } | { ok: false; error: string };
   board(state: State): Board;
   withBoard(state: State, board: Board): State;
@@ -624,6 +659,22 @@ export function replayHiddenPieceRecord(record: HiddenPieceRecord): HiddenPieceR
     return { ok: false, ply: 0, error: `not a hidden-piece variant: ${record.variant}` };
   }
   if (record.variant === 'jieqi') return replayJieqi(record);
+  if (record.variant === 'three-kingdoms-banqi') {
+    return replayFlip<ThreeKingdomsBanqiState, ThreeKingdomsBanqiBoard, ThreeKingdomsBanqiMove>(
+      record,
+      {
+        variant: 'three-kingdoms-banqi',
+        parse: (fen) => parseThreeKingdomsBanqiFen(fen, { gameId: 'record', rng: PLACEHOLDER_RNG }),
+        board: (state) => state.board,
+        withBoard: (state, board) => ({ ...state, board }),
+        apply: applyThreeKingdomsBanqiMove,
+        fen: threeKingdomsBanqiStateToPublicFen,
+        dealtFen: threeKingdomsBanqiStateToDealtFen,
+        status: (state) => state.status,
+        move: (uci) => flipUciMove<ThreeKingdomsBanqiSquare>(uci, /[a-i][1-5]/),
+      },
+    );
+  }
   if (record.variant === 'banqi') {
     return replayFlip<BanqiGameState, BanqiBoard, BanqiMove>(record, {
       variant: 'banqi',

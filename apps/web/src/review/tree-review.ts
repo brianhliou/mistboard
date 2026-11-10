@@ -19,6 +19,9 @@
 
 import '../seat-disc-ink.css';
 import './seat-labels.css';
+import type { AnalysisJobPollOptions, AnalysisJobStatus } from './analysis-job-poll.js';
+import { analysisJobFailure, analysisJobLabel } from './analysis-job-status.js';
+import './analysis-job-status.css';
 import { winPercent, winPercentK } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
@@ -377,11 +380,12 @@ export type AnalysisSource = {
   /** When present, the request control is a link and never enters progress state. */
   requestHref?: string;
   /** Cached result that never computes (server path). Optional. */
-  fetchCached?(): Promise<GameAnalysis | null>;
+  fetchCached?(options?: AnalysisJobPollOptions): Promise<GameAnalysis | null>;
   /** Compute the whole-game analysis; report progress when known. */
   run(
     onProgress: (done: number, total: number) => void,
     signal?: AbortSignal,
+    onStatus?: (status: AnalysisJobStatus) => void,
   ): Promise<GameAnalysis>;
 };
 
@@ -402,11 +406,11 @@ export { decisionBestQuote } from './analysis-marks.js';
  *  the decomposition existed would otherwise wedge on the pending note forever).
  *  null/undefined disables the affordance entirely for variants without chance moves. */
 export type DecisionSource = {
-  fetchCached?(): Promise<DecisionOverlay | null>;
+  fetchCached?(options?: AnalysisJobPollOptions): Promise<DecisionOverlay | null>;
   /** Whether run() is allowed to compute. The POST is account-gated server-side, so signed-out
    *  viewers set false and get the base (reveals-ungraded) summary instead of a doomed 401. */
   canRun: boolean;
-  run(): Promise<DecisionOverlay>;
+  run(options?: AnalysisJobPollOptions): Promise<DecisionOverlay>;
 };
 
 export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
@@ -2669,104 +2673,203 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     for (const child of node.children) applyUserAnnotations(child, map);
   }
 
-  function renderAnalysisRequest(source: AnalysisSource): void {
+  let analysisControl: HTMLButtonElement | HTMLAnchorElement | null = null;
+  let analysisLabel: HTMLElement | null = null;
+  let decisionsRunning = false;
+  const decisionSource = config.decisions ?? null;
+  const analysisSource = config.analysis;
+  // Route callers may replace the review DOM without retaining destroy().
+  // Detaching this shell stops browser reads, never the server computation.
+  const reviewShell = root.querySelector('.review-shell');
+  if ((analysisSource || decisionSource) && reviewShell) {
+    let wasConnected = reviewShell.isConnected;
+    const observer = new MutationObserver(() => {
+      if (reviewShell.isConnected) wasConnected = true;
+      else if (wasConnected) mountAbort.abort();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    mountAbort.signal.addEventListener('abort', () => observer.disconnect(), { once: true });
+  }
+
+  function showAnalysisStatus(status: AnalysisJobStatus): void {
+    if (mountAbort.signal.aborted || !analysisSource) return;
+    if (!(analysisControl instanceof HTMLButtonElement))
+      renderAnalysisRequest(analysisSource, undefined, true);
+    if (analysisControl instanceof HTMLButtonElement && !analysisControl.disabled)
+      analysisControl.disabled = true;
+    const label = analysisJobLabel(status);
+    if (analysisLabel && analysisLabel.textContent !== label) analysisLabel.textContent = label;
+  }
+  const analysisOptions = (): AnalysisJobPollOptions => ({
+    signal: mountAbort.signal,
+    onStatus: showAnalysisStatus,
+  });
+
+  function renderAnalysisRequest(source: AnalysisSource, error?: unknown, pending = false): void {
+    if (mountAbort.signal.aborted) return;
     if (mainlineLen < 1) {
       setAnalysisContent(null);
       return;
     }
-    const control = source.requestHref
-      ? document.createElement('a')
-      : document.createElement('button');
-    if (control instanceof HTMLButtonElement) control.type = 'button';
+    const control =
+      source.requestHref && !pending && !error
+        ? document.createElement('a')
+        : document.createElement('button');
+    if (control instanceof HTMLButtonElement) {
+      control.type = 'button';
+      control.disabled = pending;
+    }
     control.className = 'xiangqi-review__analyse';
-    // Prominent lichess-style request button: a bar-chart glyph + the label. The
-    // label lives in its own span so progress updates don't clobber the icon.
     const icon = document.createElement('span');
     icon.className = 'xiangqi-review__analyse-icon';
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML =
-      '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">' +
-      '<rect x="1" y="8" width="3" height="6" rx="0.6"/>' +
-      '<rect x="6.5" y="4" width="3" height="10" rx="0.6"/>' +
-      '<rect x="12" y="1" width="3" height="13" rx="0.6"/></svg>';
+      '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="8" width="3" height="6" rx="0.6"/><rect x="6.5" y="4" width="3" height="10" rx="0.6"/><rect x="12" y="1" width="3" height="13" rx="0.6"/></svg>';
     const label = document.createElement('span');
-    label.textContent = source.requestLabel;
+    label.textContent = error ? t('replay.analysisRetry') : source.requestLabel;
     control.replaceChildren(icon, label);
-    if (control instanceof HTMLAnchorElement && source.requestHref) {
+    analysisControl = control;
+    analysisLabel = label;
+    if (control instanceof HTMLAnchorElement && source.requestHref)
       control.href = source.requestHref;
-    } else if (control instanceof HTMLButtonElement) {
+    else if (control instanceof HTMLButtonElement)
       control.addEventListener('click', () => {
         control.disabled = true;
         label.textContent = t('replay.analysingWholeGame');
-        source
-          .run((done, total) => {
-            label.textContent = t('replay.analysingProgress', { done, total });
-          }, mountAbort.signal)
-          .then((analysis) => {
-            applyAnalysis(analysis);
-            // The decomposition (jieqi) is the heavier follow-on pass; kick it off once the basic
-            // sweep is in (it depends on it). Failure leaves the eval graph standing on its own.
-            if (decisionSource) {
-              label.textContent = t('replay.analysingReveals');
-              return runDecisions();
+        void (async () => {
+          // Retry first discovers saved/in-flight work. An unavailable status does
+          // not authorize new work; only a confirmed miss (or failed job) can POST.
+          let cached: GameAnalysis | null = null;
+          if (error && source.fetchCached) {
+            try {
+              cached = await source.fetchCached(analysisOptions());
+            } catch (readError) {
+              if (
+                !(
+                  readError instanceof Error &&
+                  /_analysis_(failed|engine_unavailable)$/.test(readError.message)
+                )
+              )
+                throw readError;
             }
-          })
-          .catch(() => {
-            control.disabled = false;
-            label.textContent = t('replay.analysisFailed');
-          });
+          }
+          if (mountAbort.signal.aborted) return;
+          if (!cached && source.requestHref) {
+            renderAnalysisRequest(source);
+            return;
+          }
+          const analysis =
+            cached ??
+            (await source.run(
+              (done, total) => {
+                if (!mountAbort.signal.aborted)
+                  label.textContent = t('replay.analysingProgress', { done, total });
+              },
+              mountAbort.signal,
+              showAnalysisStatus,
+            ));
+          if (mountAbort.signal.aborted) return;
+          applyAnalysis(analysis);
+          if (decisionSource) await loadCachedDecisions(true);
+        })().catch((failure) => {
+          if (!mountAbort.signal.aborted) renderAnalysisRequest(source, failure);
+        });
       });
+    const box = document.createElement('div');
+    box.className = 'review-analysis-request';
+    box.setAttribute('role', 'status');
+    box.append(control);
+    if (error) {
+      const note = document.createElement('p');
+      note.className = 'review-analysis-job-note';
+      note.setAttribute('role', 'alert');
+      note.textContent = analysisJobFailure(error);
+      box.append(note);
     }
-    setAnalysisContent({ kind: 'request', el: control });
+    setAnalysisContent({ kind: 'request', el: box });
   }
 
-  const decisionSource = config.decisions ?? null;
-  async function loadCachedDecisions(): Promise<void> {
-    if (!decisionSource) return;
-    let overlay: DecisionOverlay | null = null;
-    try {
-      overlay = (await decisionSource.fetchCached?.()) ?? null;
-    } catch {
-      /* a failed cache read is a miss */
-    }
-    if (overlay) {
-      applyDecisions(overlay);
+  function showDecisionStatus(status: AnalysisJobStatus): void {
+    if (mountAbort.signal.aborted) return;
+    const label = analysisJobLabel(status, true);
+    const current = decisionSummaryEl.firstElementChild;
+    if (
+      decisionSummaryEl.childElementCount === 1 &&
+      current?.getAttribute('role') === 'status' &&
+      current.textContent === label
+    )
       return;
-    }
-    // Cache miss (e.g. the game was analysed before the decomposition shipped): compute it now
-    // if this viewer may, so the "Grading reveals…" note is an honest in-progress state and not
-    // a dead end. Otherwise fall straight back to the base summary.
-    if (decisionSource.canRun) await runDecisions();
-    else showDecisionsUnavailable();
+    const note = decisionPendingNote();
+    note.setAttribute('role', 'status');
+    note.textContent = label;
+    decisionSummaryEl.replaceChildren(note);
   }
-  async function runDecisions(): Promise<void> {
-    if (!decisionSource) return;
+  function decisionFailure(error: unknown): void {
+    if (mountAbort.signal.aborted) return;
+    showDecisionsUnavailable(); // keep graph and ordinary-move grades
+    const note = document.createElement('p');
+    note.className = 'review-analysis-job-note';
+    note.setAttribute('role', 'alert');
+    note.textContent = analysisJobFailure(error);
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'review-analysis-job-retry';
+    retry.textContent = t('replay.revealsRetry');
+    retry.addEventListener('click', () => {
+      void loadCachedDecisions(true);
+    });
+    decisionSummaryEl.append(note, retry);
+  }
+  async function loadCachedDecisions(explicitRetry = false): Promise<void> {
+    if (!decisionSource || decisionsRunning || mountAbort.signal.aborted) return;
+    decisionsRunning = true;
+    const options: AnalysisJobPollOptions = {
+      signal: mountAbort.signal,
+      onStatus: showDecisionStatus,
+    };
     try {
-      applyDecisions(await decisionSource.run());
-    } catch {
-      // The eval graph stands on its own; swap the pending note for the base summary so the
-      // page never wedges on "Grading reveals…".
-      showDecisionsUnavailable();
+      let overlay: DecisionOverlay | null = null;
+      try {
+        overlay = (await decisionSource.fetchCached?.(options)) ?? null;
+      } catch (error) {
+        if (
+          !(
+            explicitRetry &&
+            error instanceof Error &&
+            /_analysis_(failed|engine_unavailable)$/.test(error.message)
+          )
+        )
+          throw error;
+      }
+      if (!overlay && decisionSource.canRun) {
+        showDecisionStatus({ status: 'pending', state: 'queued' });
+        overlay = await decisionSource.run(options);
+      }
+      if (mountAbort.signal.aborted) return;
+      if (overlay) applyDecisions(overlay);
+      else showDecisionsUnavailable();
+    } catch (error) {
+      decisionFailure(error);
+    } finally {
+      decisionsRunning = false;
     }
   }
 
-  const analysisSource = config.analysis;
   if (analysisSource) {
     if (analysisSource.fetchCached) {
       void analysisSource
-        .fetchCached()
+        .fetchCached(analysisOptions())
         .then((cached) => {
+          if (mountAbort.signal.aborted) return;
           if (cached) {
             applyAnalysis(cached);
-            void loadCachedDecisions(); // a cached decomposition loads straight in too
-          } else {
-            renderAnalysisRequest(analysisSource);
-          }
+            void loadCachedDecisions();
+          } else renderAnalysisRequest(analysisSource);
         })
-        .catch(() => renderAnalysisRequest(analysisSource));
-    } else {
-      renderAnalysisRequest(analysisSource);
-    }
+        .catch((error) => {
+          if (!mountAbort.signal.aborted) renderAnalysisRequest(analysisSource, error);
+        });
+    } else renderAnalysisRequest(analysisSource);
   }
 
   if (decisionSource && !analysisSource) void loadCachedDecisions();

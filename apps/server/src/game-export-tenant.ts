@@ -1,3 +1,4 @@
+import { isInternalEngineTestLog } from './internal-engine-test.js';
 // PGN/JSON export for variant-tenant games (xiangqi, fog xiangqi, jieqi,
 // banqi, fortress xiangqi, jungle, flip jungle): the neutral builders, the
 // per-registration binding helper, and the route dispatch.
@@ -194,6 +195,7 @@ export function tenantExportBinding<
   return {
     gameRouteBase: options.gameRouteBase,
     finishedGame(storedEvents, roomId) {
+      if (isInternalEngineTestLog(storedEvents)) return null;
       if (!isTenantEventLog(tenant, storedEvents, roomId)) return null;
       const events = options.publicEvents
         ? (options.publicEvents(storedEvents) as typeof storedEvents)
@@ -499,6 +501,8 @@ export function resolveGameExport(args: {
   tenantForRoomId?: (roomId: string) => VariantTenantRegistration | null;
 }): GameExportResponse {
   const { roomId, format, summary, events } = args;
+  if (isInternalEngineTestLog(events ?? undefined) || summary?.visibility === 'private')
+    return NOT_PUBLIC;
   if (!summary || !events) return { status: 404, body: { error: 'not_found' } };
 
   // persistence.loadRoom types every room's log as chess GameEvent[]; the

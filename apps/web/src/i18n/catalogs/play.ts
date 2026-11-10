@@ -684,7 +684,7 @@ export const EN_PLAY = {
   // Tenant live room (variant-tenant/room-chrome.ts and the live-*.ts tenants), #427.
   'variant.mahjong.name': 'Mahjong',
   'variant.xiangqiMahjong.name': 'Xiangqi Mahjong',
-  // Local playtest only (#628).
+  // Public casual Three Kingdoms Banqi (#628).
   'variant.threeKingdomsBanqi.name': 'Three Kingdoms Banqi',
   'variant.threeKingdomsBanqi.cardName': '3 Kingdoms Banqi',
   'variant.ffqBanqi.name': 'FFQ Banqi',
@@ -928,8 +928,7 @@ export const EN_PLAY = {
   'live.tk.none': 'None',
   'live.tk.movesLeft': '{count} moves left before the game is decided on points',
   'live.tk.oneMoveLeft': '1 move left before the game is decided on points',
-  'live.tk.adminOnly':
-    'This {variant} room opens only for admin accounts while the variant is in a closed playtest.',
+  'live.tk.adminOnly': 'This {variant} room is unavailable while play is switched off.',
   'lobby.panelTabComputer': 'Play the computer',
   'lobby.panelTabPerson': 'Play a person',
   'lobby.panelPlayAgain': 'Play again',

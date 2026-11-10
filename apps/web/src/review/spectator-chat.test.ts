@@ -39,10 +39,7 @@ describe('live room chat', () => {
 
     expect(panel.getAttribute('aria-label')).toBe('Game chat');
     expect(panel.textContent).toContain('Chat room');
-    // No resize handle in the live room: its rail flex-fills the chat to the
-    // board line, so the drag did nothing (Brian, 2026-10-02). The review
-    // page's spectator room keeps it, where a drag does resize the panel.
-    expect(panel.querySelector('[role="separator"][aria-label="Resize chat"]')).toBeNull();
+    expect(panel.querySelector('[role="separator"][aria-label="Resize chat"]')).not.toBeNull();
     expect(
       buildSpectatorChat('room with spaces').querySelector(
         '[role="separator"][aria-label="Resize chat"]',
