@@ -15,6 +15,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Gomoku on a touch screen shows your stone on the first tap and plays it on the second, with a setting to turn this off ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - Three Kingdoms Banqi is open to everyone as a casual game, with Find opponent, TV and correspondence ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Three Kingdoms Banqi on a phone keeps its controls at the bottom of the screen, and the game-over sheet reopens from the bar ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Every variant plays the same capture sound for both sides ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
@@ -40,6 +41,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- the xiangqi rules page shows chess players how the soldier moves, with three diagrams ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - The jieqi guide explains review grades, reveal luck and the board die ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Studies can hold Gomoku boards, and Gomoku studies can be shared publicly ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
 - Guess-the-move studies now play the opponent's last move on the board first, with its last-move mark, and show a move list and the game's players and event beside the board ([a86a23b4](https://github.com/brianhliou/mistboard/commit/a86a23b4))
@@ -61,6 +63,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Banqi analysis reuses exact evaluations and overlaps position searches without weakening them ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Banqi and Three Kingdoms Banqi review keep their controls at the bottom of a phone screen ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Banqi and Three Kingdoms Banqi review on a phone let you pick a side line at a fork ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - game analysis keeps running after a refresh and shows its progress ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - a finished Banqi game offers an optional Reveal all pieces view of the full deal ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - Game cards open on the latest position and glide only a new move, instead of replaying the game ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
@@ -126,6 +131,14 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- signed-out visitors read the room chat without polling for a sign-in error ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Misty bot names fit on game cards in Banqi and Three Kingdoms Banqi, old games included ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Three Kingdoms Banqi watch pages and game cards show which player has red and which has black ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Mistboard TV no longer lists engine games stopped at the move limit, which could not be opened ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Three Kingdoms Banqi is in Play the computer on the homepage ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- the site menu shows one dropdown at a time, including after going back a page ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Flip Jungle replays, studies, TV and review turn a tile over when a step reaches a flip ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- month labels on the 10,000 games chart no longer overlap ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - the homepage lists a broadcast that has started before its first game, and keeps its date visible ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - square-grid boards shade the selected cell and tint the cells a capture can land on ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
 - the AB-JChess bot page credits AB-JChess only ([32383009](https://github.com/brianhliou/mistboard/commit/32383009))
@@ -167,6 +180,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Technical
 
+- Xiangqi bots and server review analysis run patched Pikafish on the public CC0 network ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
+- Browser xiangqi analysis uses the public CC0 network with patched Pikafish ([0a3067e7](https://github.com/brianhliou/mistboard/commit/0a3067e7))
 - A weekly article engagement report joins the operating email and Ops Activity ([d1dd8175](https://github.com/brianhliou/mistboard/commit/d1dd8175))
 - Search engines get the full text of data pages and study summaries ([621a50de](https://github.com/brianhliou/mistboard/commit/621a50de))
 - Search engines are told only about pages that changed in a release ([e2c86104](https://github.com/brianhliou/mistboard/commit/e2c86104))
