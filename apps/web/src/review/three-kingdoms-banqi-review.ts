@@ -93,6 +93,7 @@ const presentation: TreePresentation<
   boardAspect: TK_LIVE_BOARD_VIEW.width / TK_LIVE_BOARD_VIEW.height,
   boardCols: 10,
   boardMaxPx: 720,
+  phoneForkPicker: true,
   reserveGaugeTrack: true,
   // The board is the same for both seats, so the Flip control only swaps the
   // seat rows, as on banqi.
