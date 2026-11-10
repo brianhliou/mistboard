@@ -391,7 +391,7 @@ describe('landing bot ladder (homepage play panel)', () => {
   });
 
   it.each(['banqi', 'jungle-flip'])(
-    'walks %s Misty tiers weakest first and gates neural L8',
+    'walks %s Misty tiers weakest first and gates NNUE L8',
     (spec) => {
       const base = `misty-${spec}`;
       const engines = Array.from({ length: 8 }, (_, i) =>
@@ -410,7 +410,7 @@ describe('landing bot ladder (homepage play panel)', () => {
         null,
         null,
         null,
-        'neural',
+        'nnue',
       ]);
       expect(ladder[7]?.gated).toBe(true);
       expect(landingBotLadder(spec, new Set(['misty'])).map((rung) => rung.engineId)).toEqual(

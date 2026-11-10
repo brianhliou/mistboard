@@ -399,7 +399,7 @@ export function landingBotLadder(
         level: i + 1,
         name: `Misty Level ${i + 1}`,
         engine: 'Misty',
-        net: i === 7 ? 'neural' : null,
+        net: i === 7 ? 'nnue' : null,
         ...(i === 7 ? { gated: true } : {}),
       }),
     ).filter((rung) => !rung.gated || playableEngines.has(rung.engineId!));

@@ -312,7 +312,7 @@ describe('homepage play panel', () => {
   });
 
   it.each(['banqi', 'jungle-flip'])(
-    'offers neural %s L8 only after the runtime roster confirms it',
+    'offers NNUE %s L8 only after the runtime roster confirms it',
     async (spec) => {
       vi.useFakeTimers();
       const engineId = `misty-${spec}-level-8`;
@@ -340,7 +340,7 @@ describe('homepage play panel', () => {
       expect(stepValue(row(board, spec), 'level')).toBe('Level 4');
       await vi.advanceTimersByTimeAsync(0);
       expect(stepValue(row(board, spec), 'level')).toBe('Level 8');
-      expect(row(board, spec).querySelector('.pp-step-tag')?.textContent).toBe('Neural net');
+      expect(row(board, spec).querySelector('.pp-step-tag')?.textContent).toBe('NNUE');
       board.remove();
       available = false;
       const noNet = buildPlayPanel('en');
