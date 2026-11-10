@@ -55,8 +55,16 @@ import {
   isLikelyStatsExcluded,
   statsExcludedResolvedEvent,
 } from './signed-in-state.js';
+import {
+  setThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiEngineOptions,
+} from './three-kingdoms-banqi-access.js';
 import { renderVariantMarker } from './variant-markers.js';
-import { webVariantOfferedInMenu, webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import {
+  type WebTenantEngineOption,
+  webVariantOfferedInMenu,
+  webVariantTenantForSpecId,
+} from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 
 // The homepage's bot-first play panel (#491), replacing the lichess-shaped
@@ -385,7 +393,14 @@ export function buildPlayPanel(
   let playableBots = new Map<string, ReadonlySet<string>>();
   let playableEngines: ReadonlySet<string> = new Set();
   const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
-    landingBotLadder(gameSpecId, playableBots.get(gameSpecId), playableEngines);
+    landingBotLadder(
+      gameSpecId,
+      playableBots.get(gameSpecId),
+      new Set([
+        ...playableEngines,
+        ...(threeKingdomsBanqiEngineOptions() ?? []).map((engine) => engine.id),
+      ]),
+    );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
     a.length === b.length &&
     a.every((rung, i) => rung.botId === b[i]?.botId && rung.engineId === b[i]?.engineId);
@@ -394,8 +409,7 @@ export function buildPlayPanel(
     const state = botState.get(gameSpecId)!;
     const preset = LANDING_TIME_PRESETS.find((p) => p.id === state.tc);
     return {
-      botId: state.ladder[state.at]!.botId,
-      ...(state.ladder[state.at]!.engineId ? { engineId: state.ladder[state.at]!.engineId } : {}),
+      ...state.ladder[state.at]!,
       gameSpecId,
       ...(preset
         ? { timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs } }
@@ -580,8 +594,7 @@ export function buildPlayPanel(
       bindBotPlayControl(
         again,
         () => ({
-          botId: lastRung.botId,
-          ...(lastRung.engineId ? { engineId: lastRung.engineId } : {}),
+          ...lastRung,
           gameSpecId: last.gameSpecId,
           ...(preset
             ? { timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs } }
@@ -1058,8 +1071,8 @@ export function buildPlayPanel(
       });
     };
     const refreshBotLadders = (): void => {
-      const changed = [...botState].some(
-        ([gameSpecId, state]) => !sameLadder(state.ladder, ladderFor(gameSpecId)),
+      const changed = ordered().some(
+        (gameSpecId) => !sameLadder(botState.get(gameSpecId)?.ladder ?? [], ladderFor(gameSpecId)),
       );
       if (!changed) return;
       renderBotRows();
@@ -1073,11 +1086,13 @@ export function buildPlayPanel(
           ? (r.json() as Promise<{
               banqiEngines?: { id: string }[];
               jungleFlipEngines?: { id: string }[];
+              threeKingdomsBanqiEngines?: WebTenantEngineOption[];
             }>)
           : null,
       )
       .then((data) => {
         if (!data) return;
+        setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
         playableEngines = new Set(
           [...(data.banqiEngines ?? []), ...(data.jungleFlipEngines ?? [])].map((e) => e.id),
         );

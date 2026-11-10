@@ -12,11 +12,13 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   TIME_CONTROLS,
   type TimeControlId,
   XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
+import type { BotPlayTarget } from './bot-play.js';
 
 // One small merchandising policy shared by the Lobby rows and Quick Pairing's
 // Computer chips. Room creation remains server-authoritative.
@@ -335,13 +337,10 @@ function positiveModulo(value: number, divisor: number): number {
 // `pikafish` bot, the strongest Pikafish setting), then jqe where the server can
 // seat it, then AB-JChess on top; the other
 // Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo;
-// Banqi and Flip Jungle Misty Levels 1-8 (L8 only with its net); the remaining
-// house-built variants a single Misty. Numbered Misty rungs share the public
-// bot identity and select an engine tier, matching the setup dialog.
-export type LandingBotRung = {
-  botId: string;
-  /** Optional tier within a shared bot identity; also the stored pick's key. */
-  engineId?: string;
+// Banqi, TK and Flip Jungle Misty Levels 1-8 (L8 only with its net); the
+// remaining house-built variants a single Misty. Numbered Misty rungs select
+// an engine tier, matching the setup dialog; TK creates by engine id alone.
+export type LandingBotRung = BotPlayTarget & {
   /** Ladder level when the rung is a numbered level; null for a named bot. */
   level: number | null;
   /** Display name for a named rung (Pikafish, AB-JChess, jqe, Misty). */
@@ -380,6 +379,23 @@ export function landingBotLadder(
   playableEngines: ReadonlySet<string> = NO_PLAYABLE_BOTS,
 ): readonly LandingBotRung[] {
   if (!isLandingBotGameSpecId(gameSpecId)) return [];
+  if (gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) {
+    // TK's setup creates by engine id, without botId: Misty's public profile
+    // does not list TK and resolveBotRoomRequest would reject that pairing.
+    // Unlike Banqi, L7 has a numbered id too. Every search tier depends on
+    // runtime assets, so use exactly the server's roster (L8 also needs NNUE).
+    return Array.from(
+      { length: 8 },
+      (_, i): LandingBotRung => ({
+        engineId: `misty-three-kingdoms-banqi-level-${i + 1}`,
+        level: i + 1,
+        name: `Misty Level ${i + 1}`,
+        engine: 'Misty',
+        net: i === 7 ? 'nnue' : null,
+        gated: true,
+      }),
+    ).filter((rung) => playableEngines.has(rung.engineId!));
+  }
   if (gameSpecId === GOMOKU_SPEC_ID) {
     return Array.from({ length: 8 }, (_, i) => ({
       botId: `rapfi-level-${i + 1}`,
@@ -456,7 +472,9 @@ export function landingBotLadder(
       { botId: 'jqe', level: null, name: 'jqe', engine: 'jqe', net: 'nnue', gated: true },
       { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', net: 'nnue' },
     ];
-    return rungs.filter((rung) => !rung.gated || playable.has(rung.botId));
+    return rungs.filter(
+      (rung) => !rung.gated || (rung.botId !== undefined && playable.has(rung.botId)),
+    );
   }
   const misty: LandingBotRung = {
     botId: 'misty',
