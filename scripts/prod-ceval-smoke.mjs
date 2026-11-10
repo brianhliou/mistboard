@@ -160,12 +160,11 @@ async function checkAtomicXiangqiPatched(browser) {
  * the engine, so a panel that names Pikafish and answers with a number has
  * loaded the net. The number is still checked, on the same dead-drawn basic
  * endgame the FSF gate used (a red soldier stranded on the last rank plus an
- * elephant). Re-measure this probe after rebuilding the CC0 wasm; its
- * evaluation bound below is retained pending that measurement.
+ * elephant). Measured on the CC0 wasm (2026-11-09, local pair, two runs):
+ * -0.1, so the 0.8 bound keeps its margin.
  */
 async function checkPikafishNetLoaded(browser) {
   const probeFen = '5P3/9/3k5/9/9/2B6/9/9/9/4K4 w - - 17 17';
-  // Legacy bound: re-measure on the rebuilt CC0 wasm before shipping #988.
   const maxAbsEval = 0.8;
   const url = `${baseUrl}/analysis/xiangqi?fen=${encodeURIComponent(probeFen)}`;
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
