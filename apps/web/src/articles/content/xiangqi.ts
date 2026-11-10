@@ -40,7 +40,7 @@ export const xiangqiArticle: Article = {
       {
         kind: 'paragraph',
         text:
-          'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.',
+          'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. It is now among the most widely played board games in the world.',
       },
       {
         kind: 'paragraph',
@@ -391,7 +391,7 @@ export const xiangqiArticle: Article = {
               {
                 question: 'When was xiangqi invented?',
                 answer:
-                  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.',
+                  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess.',
               },
               {
                 question: 'What is the difference between xiangqi and chess?',
