@@ -1398,6 +1398,8 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 `scripts/banqi-provider.mjs`: local opaque-executable direct/HTTP probe and loopback bridge; `docs/banqi-engine-providers.md` and `docs/examples/banqi-provider-*.json` document the checked contributor contract.
 
+The provider guide's postgame section separates existing grading/luck algorithms from a new engine's evaluator adapter; the response-analysis JSON example carries an illustrative, explicitly typed score.
+
 `apps/server/src/internal-engine-test.ts` and `banqi-internal-provider.ts`: durable private Banqi worker identity, default-off operator routing, hydration/config checks and internal-count policy. `banqi-internal-provider.test.ts` covers gates, privacy, replay and worker version/deadline handling.
 
 `scripts/banqi-provider-game.mjs`: full local HTTP/WebSocket game through a separate opaque worker with persisted quiet-history hydration, private attribution and metrics/export assertions; `--keep` retains only its local review pair.
@@ -1405,3 +1407,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 `apps/server/src/analysis-job-progress.ts`: async-scoped numeric checkpoint observation; game-analysis-kernel reports cursor counts without checkpoint items. Recovery/projection/coalescing regressions are in routes/game-analysis-route.test.ts and game-analysis-kernel.test.ts.
 
 `apps/web/src/review/analysis-job-status.ts` + `.css`: localized queued/running, position/reveal move-cursor and actionable failure/retry presentation shared by tree reviews. analysis-job-poll.test.ts and tree-review-phone-analysis.test.ts cover reload discovery, aborted/detached views, independent reveal failure and read-only retry.
+
+`services/banqi-provider/`: isolated Linux host package: nonroot pinned-release Dockerfile and strict context ignore, external status/auth listener over loopback bridge, bounded private GitHub model loader with a clean exec environment, lightweight tests, MIT engine notice and direct Railway settings reference. `scripts/banqi-host-context.mjs` builds its exact public context; `scripts/banqi-host.test.mjs` joins lightweight checks to tooling; `scripts/banqi-host-smoke.mjs` runs the opt-in Linux container/full-game proof.
+
+`scripts/banqi-provider-game.mjs --endpoint`: complete local HTTP/WebSocket rehearsal through an independently hosted loopback worker; existing native subprocess mode is preserved. `scripts/banqi-provider-store-token.mjs` + `.test.mjs`: human-only interactive macOS Keychain creation of the dedicated worker token, with no display, reads or overwrite; the helper is not executed by package preparation.

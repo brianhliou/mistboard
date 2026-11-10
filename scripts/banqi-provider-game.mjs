@@ -12,15 +12,30 @@ const option = (name) => {
   const i = process.argv.indexOf(name);
   return i < 0 ? undefined : process.argv[i + 1];
 };
+const endpoint = option('--endpoint');
+if (endpoint) {
+  const url = new URL(endpoint);
+  assert.ok(
+    url.protocol === 'http:' &&
+      ['127.0.0.1', '[::1]'].includes(url.hostname) &&
+      url.pathname === '/turn' &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash,
+    'Endpoint rehearsal requires numeric loopback /turn',
+  );
+}
 const bin = option('--bin');
 const version = option('--version');
 const uciName = option('--uci-name');
 const evalFile = option('--eval-file');
 assert.ok(
-  bin && version && uciName,
+  version && (endpoint || (bin && uciName)),
   'Required: --bin PATH --version TAG --uci-name NAME [--eval-file PATH] [--keep]',
 );
-const token = randomUUID();
+const token = endpoint ? process.env.MISTBOARD_BANQI_PROVIDER_TOKEN : randomUUID();
+assert.ok(token, 'Endpoint rehearsal requires an operator-supplied token in the environment');
 const databaseUrl = 'postgres://mistboard:mistboard@localhost:5435/mistboard_provider_1025';
 await ensureTestDatabase({ databaseUrl });
 Object.assign(process.env, {
@@ -51,7 +66,7 @@ const args = [
   'scripts/banqi-provider.mjs',
   'bridge',
   '--bin',
-  resolve(bin),
+  bin ? resolve(bin) : '',
   '--port',
   '0',
   '--version',
@@ -60,11 +75,17 @@ const args = [
   uciName,
 ];
 if (evalFile) args.push('--eval-file', resolve(evalFile));
-const worker = spawn(process.execPath, args, {
-  cwd: resolve(import.meta.dirname, '..'),
-  env: { PATH: '/usr/bin:/bin', NODE_ENV: 'development', MISTBOARD_BANQI_PROVIDER_TOKEN: token },
-  stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
-});
+const worker = endpoint
+  ? null
+  : spawn(process.execPath, args, {
+      cwd: resolve(import.meta.dirname, '..'),
+      env: {
+        PATH: '/usr/bin:/bin',
+        NODE_ENV: 'development',
+        MISTBOARD_BANQI_PROVIDER_TOKEN: token,
+      },
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+    });
 let server;
 let socket;
 let stopped = false;
@@ -73,7 +94,7 @@ async function stop() {
   stopped = true;
   socket?.terminate();
   await server?.close();
-  if (worker.exitCode === null && worker.signalCode === null) {
+  if (worker && worker.exitCode === null && worker.signalCode === null) {
     worker.kill('SIGTERM');
     const deadline = setTimeout(() => worker.kill('SIGKILL'), 10000);
     deadline.unref();
@@ -89,22 +110,27 @@ for (const signal of ['SIGINT', 'SIGTERM'])
     void stop().then(() => process.exit(130));
   });
 try {
-  const ready = await new Promise((done, reject) => {
-    const timer = setTimeout(() => reject(new Error('Worker startup failed or timed out')), 10000);
-    worker.once('message', (data) => {
-      clearTimeout(timer);
-      done(data);
-    });
-    worker.once('exit', () => {
-      clearTimeout(timer);
-      reject(new Error('Worker refused startup'));
-    });
-    worker.once('error', () => {
-      clearTimeout(timer);
-      reject(new Error('Worker spawn failed'));
-    });
-  });
-  process.env.MISTBOARD_BANQI_TEST_PROVIDER_URL = `http://127.0.0.1:${ready.port}/turn`;
+  const ready = endpoint
+    ? null
+    : await new Promise((done, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error('Worker startup failed or timed out')),
+          10000,
+        );
+        worker.once('message', (data) => {
+          clearTimeout(timer);
+          done(data);
+        });
+        worker.once('exit', () => {
+          clearTimeout(timer);
+          reject(new Error('Worker refused startup'));
+        });
+        worker.once('error', () => {
+          clearTimeout(timer);
+          reject(new Error('Worker spawn failed'));
+        });
+      });
+  process.env.MISTBOARD_BANQI_TEST_PROVIDER_URL = endpoint ?? `http://127.0.0.1:${ready.port}/turn`;
   const { startServer } = await import('../apps/server/src/index.ts');
   const persistence = await import('../apps/server/src/persistence.ts');
   const { getPool } = await import('../apps/server/src/persistence-db.ts');
@@ -304,9 +330,10 @@ try {
       roomId,
       engineVersion: version,
       uciName,
-      workerPid: worker.pid,
+      workerPid: worker?.pid ?? null,
+      transport: endpoint ? 'external-endpoint' : 'native-process',
       webPid: process.pid,
-      separateProcess: true,
+      ...(worker ? { separateProcess: true } : {}),
       plies: replay.state.ply,
       terminal: replay.state.status,
       highestQuiet,
