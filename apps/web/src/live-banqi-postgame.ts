@@ -195,8 +195,9 @@ async function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('banqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('banqi', postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('banqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('banqi', postgame.game.roomId, { signal, onStatus }),
     },
     // Decision-vs-luck decomposition: flip plies get a decision-quality glyph + per-move luck
     // readout + a two-number summary. Computed on top of the basic analysis (heavier, so it runs
@@ -204,12 +205,13 @@ async function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse
     // game analysed before the decomposition shipped). The POST is account-gated, so canRun keeps
     // signed-out viewers on the base summary instead of a 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedBanqiDecisions(postgame.game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedBanqiDecisions(postgame.game.roomId, options).then((summary) =>
           summary ? banqiDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestBanqiDecisions(postgame.game.roomId).then(banqiDecisionOverlay),
+      run: (options) =>
+        requestBanqiDecisions(postgame.game.roomId, options).then(banqiDecisionOverlay),
     },
   });
 }

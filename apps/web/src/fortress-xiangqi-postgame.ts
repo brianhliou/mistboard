@@ -190,8 +190,10 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('fortress-xiangqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('fortress-xiangqi', postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedGameAnalysis('fortress-xiangqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('fortress-xiangqi', postgame.game.roomId, { signal, onStatus }),
     },
   });
 }

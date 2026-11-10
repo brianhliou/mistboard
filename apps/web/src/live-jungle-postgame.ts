@@ -181,8 +181,9 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('jungle', postgame.game.roomId),
-      run: () => requestGameAnalysis('jungle', postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('jungle', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('jungle', postgame.game.roomId, { signal, onStatus }),
     },
   });
 }

@@ -191,13 +191,15 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId),
-      run: () => requestGameAnalysis(VARIANT, postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis(VARIANT, postgame.game.roomId, { signal, onStatus }),
     },
     decisions: {
-      fetchCached: () => fetchCachedThreeKingdomsBanqiDecisions(postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedThreeKingdomsBanqiDecisions(postgame.game.roomId, options),
       canRun: isLikelySignedIn(),
-      run: () => requestThreeKingdomsBanqiDecisions(postgame.game.roomId),
+      run: (options) => requestThreeKingdomsBanqiDecisions(postgame.game.roomId, options),
     },
   });
 }

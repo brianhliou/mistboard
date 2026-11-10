@@ -4,7 +4,11 @@
 // those into the display numbers: a DECISION-quality glyph (graded) and a LUCK value (shown per
 // move, never graded). Mirrors review/jieqi-decisions.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 import type { DecisionOverlay } from './analysis-marks.js';
 import { formatFlipVariantBestMove } from './move-advice-text.js';
 
@@ -117,17 +121,25 @@ function decisionsUrl(roomId: string): string {
 /** GET the already-cached decomposition, or null on a miss (204). Never triggers a compute. */
 export async function fetchCachedBanqiDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<BanqiDecisionSummary | null> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return summarizeDecisions(((await response.json()) as BanqiDecisionsResponse).decisions);
+  const cached = await fetchAnalysisJob<BanqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
+    errorPrefix: 'decisions_request_failed',
+  });
+  if (!cached) return null;
+  return summarizeDecisions(cached.decisions);
 }
 
 /** POST to compute the decomposition (account-gated on the server), then summarize it.
  *  A cached game answers immediately (200); otherwise the server enqueues a background
  *  job (202) and this polls it to completion (see analysis-job-poll). */
-export async function requestBanqiDecisions(roomId: string): Promise<BanqiDecisionSummary> {
+export async function requestBanqiDecisions(
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<BanqiDecisionSummary> {
   const body = await postAnalysisJob<BanqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);

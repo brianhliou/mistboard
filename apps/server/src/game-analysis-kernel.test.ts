@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { withAnalysisJobProgress } from './analysis-job-progress.js';
 import {
   type GameAnalysisCacheOps,
   inflightComputationCount,
+  liveAnalysisProgressStore,
   mapWithConcurrency,
   resolveCachedComputation,
 } from './game-analysis-kernel.js';
@@ -238,4 +240,20 @@ test('mapWithConcurrency rejects when any call rejects', async () => {
 test('mapWithConcurrency handles empty input and clamps concurrency to >= 1', async () => {
   assert.deepEqual(await mapWithConcurrency([], 4, async (x) => x), []);
   assert.deepEqual(await mapWithConcurrency([1, 2], 0, async (x) => x), [1, 2]);
+});
+
+test('checkpoint observation carries only cursor counts and is scoped to the async computation', async () => {
+  const seen: unknown[] = [];
+  const store = liveAnalysisProgressStore('numeric-progress', 'test', 1);
+  await withAnalysisJobProgress(
+    (update) => seen.push(update),
+    async () => {
+      await store.save({ nextIndex: 2, items: [{ hiddenDeal: 'do-not-expose' }] });
+      await new Promise((resolve) => setImmediate(resolve));
+      await store.save({ nextIndex: 3, items: [] });
+    },
+  );
+  await store.save({ nextIndex: 4, items: [] });
+  assert.deepEqual(seen, [{ completed: 2 }, { completed: 3 }]);
+  assert.doesNotMatch(JSON.stringify(seen), /hiddenDeal|do-not-expose|items/);
 });

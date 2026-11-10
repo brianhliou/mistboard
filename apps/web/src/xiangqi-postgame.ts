@@ -206,8 +206,9 @@ function renderPostgame(
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('xiangqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('xiangqi', postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('xiangqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('xiangqi', postgame.game.roomId, { signal, onStatus }),
     },
   });
 }
