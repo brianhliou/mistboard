@@ -39,7 +39,7 @@ import {
   readBanqiSetup,
 } from '@mistboard/game';
 import { analyzeBanqiPostgame } from './banqi-analysis.js';
-import { banqiTenant } from './banqi-tenant.js';
+import { banqiTenant, getBanqiTruthView } from './banqi-tenant.js';
 import { replayTenantEvents } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
@@ -242,9 +242,12 @@ test('a new room applies the rule: its state and every view carry it', () => {
   );
   assert.equal(view.chaseRule, BANQI_CHASE_RULE);
   assert.deepEqual(banqiRulesFromView(view), { chaseRule: BANQI_CHASE_RULE, noProgressLimit: 40 });
-  const truth = banqiTenant.visibility.truthView?.(projection.state, events);
-  assert.equal(truth?.chaseRule, BANQI_CHASE_RULE);
-  assert.equal(truth?.noProgressLimit, 40);
+  // A finished room stays as played (#1038); the explicit final-reveal surface
+  // builds its board from getBanqiTruthView, which must carry the rules too.
+  assert.equal(banqiTenant.visibility.truthView, undefined);
+  const truth = getBanqiTruthView(projection.state);
+  assert.equal(truth.chaseRule, BANQI_CHASE_RULE);
+  assert.equal(truth.noProgressLimit, 40);
 });
 
 test('a room created since 2026-10-17 carries the 60-ply limit in its state and every view', () => {
@@ -272,7 +275,7 @@ test('a room created since 2026-10-17 carries the 60-ply limit in its state and 
       noProgressLimit: 60,
     });
   }
-  assert.equal(banqiTenant.visibility.truthView?.(projection.state, events)?.noProgressLimit, 60);
+  assert.equal(getBanqiTruthView(projection.state).noProgressLimit, 60);
   // A view from an older server (no field) replays at 40, never at 60.
   const { noProgressLimit: _dropped, ...withoutLimit } = red;
   assert.deepEqual(banqiRulesFromView(withoutLimit), {
