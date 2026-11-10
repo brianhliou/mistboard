@@ -107,6 +107,54 @@ centipawns from those values. Postgame grading also needs an agreed score meanin
 and the ability to analyze arbitrary public positions at their historical ply;
 it must never look ahead into later reveals or receive the hidden deal.
 
+### Connecting an engine to postgame grading
+
+Mistboard already implements move classification, accuracy, evaluation graphs,
+and the Banqi decision-versus-luck calculation. A new engine does not implement
+those product features. Its adapter supplies the position evaluations they use.
+
+| Engine author supplies | Mistboard supplies |
+| --- | --- |
+| Existing input/output protocol and runnable build or hosted access | Protocol translation, masked position/history construction and response validation |
+| Legal move/flip; position evaluation if supported | Whole-game replay, ordinary-move grading, graphs and result storage |
+| Score units, viewpoint, search controls, build/model identity and rules assumptions | Score integration, cache identity, hypothetical-reveal enumeration and probability weighting |
+| Runtime requirements; hosted capacity/availability limits if applicable | Test fixtures, admission limits, deadlines and capacity scheduling on our side |
+
+Basic review evaluates the recorded positions. Luck grading reuses the same
+evaluation operation for additional hypothetical public reveal outcomes and
+legal alternatives; it does not require a separate engine-side "luck" command.
+The engine must accept the supplied positions and relevant history, rather than
+only reporting a score for moves it happened to play. A move-only response cannot
+support grading. A recorded score alone cannot value an unplayed reveal.
+
+The existing Banqi sweep accepts an injected evaluator; the decision calculation
+accepts `evalPosition(fen, repetitionWindow, search)`. Their default implementation
+still calls MistyBanqi. Adding a provider therefore requires wiring and validating
+that evaluator, agreeing on score semantics and search/rules compatibility,
+identifying the engine/model in caches, and checking the resulting grades and
+cost. The live provider's optional score field is useful transport groundwork;
+it is not an already-connected third-party postgame backend. Probability/WDL
+conversion remains additional work. In particular, win probability and expected
+match score (`win + draw / 2`) are different quantities.
+
+Reference exchanges are checked against the implemented protocol:
+
+- [Complete turn request](examples/banqi-provider-request.json).
+- [Move-only response](examples/banqi-provider-response.json).
+- [Response with an optional illustrative evaluation](examples/banqi-provider-response-analysis.json).
+
+These examples describe our adapter boundary, not a requirement to replace an
+author's existing engine interface. IDs and search budgets are illustrative;
+the request's zero-based example timestamps must be regenerated before sending
+a real turn. The example evaluation is not a measured CLAP_CDC result.
+
+Agree on a separate analysis work budget before enabling it on a hosted engine.
+One review job can produce many searches; luck is not free reuse of the mainline
+scores. Cap internal fan-out as well as whole-game jobs, preserve live capacity,
+and keep cached reads free of new engine work. A play provider may legitimately
+offer no analysis capacity; a game played against it can use Misty's separately
+labeled review instead.
+
 ## Rule compatibility
 
 New games draw after **60 plies without a capture or flip**; older stamped games

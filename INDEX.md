@@ -1393,6 +1393,8 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 `scripts/banqi-provider.mjs`: local opaque-executable direct/HTTP probe and loopback bridge; `docs/banqi-engine-providers.md` and `docs/examples/banqi-provider-*.json` document the checked contributor contract.
 
+The provider guide's postgame section separates existing grading/luck algorithms from a new engine's evaluator adapter; the response-analysis JSON example carries an illustrative, explicitly typed score.
+
 `apps/server/src/internal-engine-test.ts` and `banqi-internal-provider.ts`: durable private Banqi worker identity, default-off operator routing, hydration/config checks and internal-count policy. `banqi-internal-provider.test.ts` covers gates, privacy, replay and worker version/deadline handling.
 
 `scripts/banqi-provider-game.mjs`: full local HTTP/WebSocket game through a separate opaque worker with persisted quiet-history hydration, private attribution and metrics/export assertions; `--keep` retains only its local review pair.
