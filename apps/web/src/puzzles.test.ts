@@ -37,8 +37,17 @@ import {
   resetPuzzleReloadCheckForTest,
   sourceGameLines,
 } from './puzzles.js';
-import { xiangqiAppearanceChangedEvent } from './theme.js';
-import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import {
+  setBoardCoordinatesPreference,
+  setXiangqiBoardChoicePreference,
+  setXiangqiBoardColorPreference,
+  setXiangqiPieceSetPreference,
+  xiangqiAppearanceChangedEvent,
+} from './theme.js';
+import {
+  writeStoredXiangqiBoardLayout,
+  writeStoredXiangqiPieceSet,
+} from './xiangqi-appearance-storage.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
 
 vi.mock('./live-sound.js', async (importOriginal) => {
@@ -560,6 +569,41 @@ describe('puzzles route', () => {
       international.querySelector('[aria-label="red general"] image')?.getAttribute('href'),
     ).toContain('/piece-sets/xiangqi/international/red-general');
     expect(traditional.querySelector('[aria-label="red general"] image')).toBeNull();
+  });
+
+  it('redraws history boards when the piece set or board theme changes', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    writeStoredXiangqiBoardLayout('intersection');
+    writeStoredXiangqiPieceSet('traditional');
+    const fetchSpy = vi.fn(async () =>
+      json({ attempts: [historyEntry(RED_MATE, '2026-10-31T16:00:00Z')], nextCursor: null }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzleHistory(root);
+    const board = () => root.querySelector('.puzzle-history__board')!;
+    const before = board().innerHTML;
+    setXiangqiPieceSetPreference('international');
+    expect(board().innerHTML).not.toBe(before);
+    expect(
+      board().querySelector('[aria-label="red general"] image')?.getAttribute('href'),
+    ).toContain('/piece-sets/xiangqi/international/red-general');
+    const lined = board().innerHTML;
+    setXiangqiBoardChoicePreference('cell');
+    expect(board().innerHTML).not.toBe(lined);
+    expect(board().querySelector('svg')?.getAttribute('data-xiangqi-layout')).toBe('cell');
+    expect(board().querySelector('.xq-live-cell--light')).not.toBeNull();
+    const cells = board().innerHTML;
+    setXiangqiBoardColorPreference('jungle');
+    expect(board().innerHTML).not.toBe(cells);
+    expect(board().querySelector('image')?.getAttribute('href')).toContain('jungle');
+    setBoardCoordinatesPreference(true);
+    expect(board().querySelector('svg')?.getAttribute('viewBox')).toMatch(/^-\d/);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    setXiangqiBoardChoicePreference('lined');
+    setBoardCoordinatesPreference(false);
+    root.remove();
   });
 
   it.each([
