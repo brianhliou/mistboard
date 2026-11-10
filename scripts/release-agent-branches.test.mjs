@@ -18,7 +18,9 @@ const packageScripts = JSON.parse(
 
 function repository(t) {
   const directory = mkdtempSync(path.join(tmpdir(), 'mistboard-agent-branches-'));
-  (t.after ?? t.onTestFinished)(() => rmSync(directory, { recursive: true, force: true }));
+  const cleanup = () => rmSync(directory, { recursive: true, force: true });
+  if (t.after) t.after(cleanup);
+  else t.onTestFinished(cleanup);
   const run = (command, args, cwd = directory) =>
     spawnSync(command, args, {
       cwd,

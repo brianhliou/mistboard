@@ -12,7 +12,9 @@ const releaseSource = readFileSync(new URL('./release-prod.mjs', import.meta.url
 
 function fixture(t) {
   const directory = mkdtempSync(path.join(tmpdir(), 'mistboard-batch-ci-'));
-  (t.after ?? t.onTestFinished)(() => rmSync(directory, { recursive: true, force: true }));
+  const cleanup = () => rmSync(directory, { recursive: true, force: true });
+  if (t.after) t.after(cleanup);
+  else t.onTestFinished(cleanup);
   const root = path.join(directory, 'worktree');
   const remote = path.join(directory, 'origin.git');
   const bin = path.join(directory, 'bin');
