@@ -12,6 +12,7 @@ import {
 import { currentAccountUser } from '../account-session.js';
 import { resolveBanqiAnalysis, resolveBanqiDecisions } from './../banqi-analysis.js';
 import { banqiEngineBinaryAvailable, banqiNetPath } from './../banqi-engine.js';
+import { createBanqiFinalRevealRoutes } from './../banqi-final-reveal.js';
 import { banqiRooms } from './../banqi-registration.js';
 import type { BanqiEvent } from './../banqi-runtime.js';
 import { banqiTenant } from './../banqi-tenant.js';
@@ -126,6 +127,7 @@ export function createBanqiAnalysisRoutes(deps: GameAnalysisRouteDeps = {}) {
 }
 
 const handleAnalysisRoutes = createBanqiAnalysisRoutes();
+const handleFinalRevealRoutes = createBanqiFinalRevealRoutes();
 
 export async function tryHandle(
   _ctx: HttpApiContext,
@@ -134,6 +136,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleFinalRevealRoutes(request, response, pathname)) return true;
   if (await handleAnalysisRoutes(request, response, pathname)) return true;
 
   const postgameMatch = pathname.match(/^\/api\/banqi\/games\/([^/]+)$/);

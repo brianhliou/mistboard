@@ -210,6 +210,97 @@ describe('banqi deal recovery from a finished room', () => {
 });
 
 describe('cold join to a finished banqi room', () => {
+  it('announces a reveal failure without replacing the result and permits retry', async () => {
+    const finished = resigned(STATES[MID]!);
+    let fail = true;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (!url.endsWith('/reveal')) return new Response('{}', { status: 404 });
+        if (init?.method === 'HEAD') return new Response(null, { status: 204 });
+        if (fail) return new Response('{}', { status: 503 });
+        return new Response(
+          JSON.stringify({
+            roomId: ROOM,
+            finalizedAt: new Date(999).toISOString(),
+            view: truthView(finished),
+          }),
+        );
+      }),
+    );
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: seatView(finished, 'red'),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+      }),
+    );
+    options.render();
+    const button = document.querySelector<HTMLButtonElement>('[data-replay-reveal]')!;
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    const result = document.querySelector('[data-game-result]')!.textContent;
+    button.click();
+    const status = document.querySelector<HTMLElement>('[data-banqi-reveal-status]')!;
+    await vi.waitFor(() => expect(status.hidden).toBe(false));
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.textContent).toContain('Could not reveal pieces');
+    expect(document.querySelector('[data-game-result]')!.textContent).toBe(result);
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    fail = false;
+    button.click();
+    await vi.waitFor(() => expect(Object.values(boardOnScreen())).not.toContain(''));
+    expect(status.hidden).toBe(true);
+  });
+  it('uses masked finished history and reveals only through the opt-in menu, then restores it', async () => {
+    const finished = resigned(STATES[MID]!);
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith('/reveal')) return new Response('{}', { status: 404 });
+      if (init?.method === 'HEAD') return new Response(null, { status: 204 });
+      return new Response(
+        JSON.stringify({
+          roomId: ROOM,
+          finalizedAt: new Date(999).toISOString(),
+          view: truthView(finished),
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: seatView(finished, 'red'),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+        liveHistory: STATES.slice(0, MID + 1).map((state, ply) => ({
+          ply,
+          view: { ...seatView(state, 'red'), legalMoves: [] },
+        })),
+      }),
+    );
+    options.render();
+    const button = document.querySelector<HTMLButtonElement>('[data-replay-reveal]')!;
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    expect(button.hidden).toBe(false);
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    expect(controlButton('first').disabled).toBe(false);
+    expect(
+      fetcher.mock.calls.filter(
+        ([url, init]) => url.endsWith('/reveal') && init?.method !== 'HEAD',
+      ),
+    ).toHaveLength(0);
+    button.click();
+    await vi.waitFor(() => expect(Object.values(boardOnScreen())).not.toContain(''));
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    button.click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    button.click();
+    await vi.waitFor(() => expect(Object.values(boardOnScreen())).not.toContain(''));
+    controlButton('first').click();
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
   it('lists every move, links review at the final ply, and steps to any ply', async () => {
     const options = await mount();
     options.applyHello(
