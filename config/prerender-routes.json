@@ -483,5 +483,14 @@
     "classes": "landing-page club-route",
     "existing": true,
     "headExport": "clubWashingtonPrerenderHead"
+  },
+  {
+    "route": "/streamer",
+    "module": "src/streamer.ts",
+    "export": "renderStreamerShellForPrerender",
+    "file": "streamer.html",
+    "locales": ["en"],
+    "title": "Xiangqi Streamers | Mistboard",
+    "description": "Stream xiangqi or its variants with Mistboard. Bring an idea, prepare games and studies, and work directly with us as our tools for creators develop."
   }
 ]

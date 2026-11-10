@@ -27,6 +27,7 @@ import {
 import { renderPracticeShellForPrerender } from './practice-index.js';
 import { prerenderMount } from './prerender-copy.js';
 import { captureServerRender } from './server-render-fallback.js';
+import { renderStreamerShellForPrerender } from './streamer.js';
 import { renderVideosShellForPrerender } from './videos.js';
 import { renderImportShellForPrerender } from './xiangqi-import-page.js';
 
@@ -61,6 +62,7 @@ const renderers = [
   [renderContactShellForPrerender, 'contact.introAnon', '/contact'],
   [renderContributeShellForPrerender, 'contribute.intro', '/contribute'],
   [renderCreatorsShellForPrerender, 'creators.intro', '/creators'],
+  [renderStreamerShellForPrerender, 'streamer.invite.lede', '/streamer'],
   [renderChampionsShellForPrerender, 'champions.intro', '/champions'],
   [renderVideosShellForPrerender, 'videos.heading', '/videos'],
   [renderDataAboutShellForPrerender, 'data.aboutHeading', '/data/about'],
