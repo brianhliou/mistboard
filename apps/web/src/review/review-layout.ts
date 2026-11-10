@@ -20,6 +20,8 @@ import { createGameFavoriteButton } from '../game-favorite.js';
 import { t } from '../i18n/catalog.js';
 import { installMoveNavKeyboard } from '../move-nav-bar.js';
 import { createReviewControls, REVIEW_MENU_ICONS } from './review-controls.js';
+import { createReviewInfoSheet } from './review-info-sheet.js';
+import './analysis-phone-bar.css';
 import { type BoardStageHandle, type BoardStageSlot, createBoardStage } from './review-stage.js';
 import '../seat-disc-ink.css';
 import './review-shell.css';
@@ -388,6 +390,14 @@ export function createReviewScaffold(
     shell.className = nextShell.className;
   }
   shell.querySelector('.review-shell__cluster')?.classList.add(COL1_STACK_CLASS);
+  if (config.phoneOneScreen && config.reviewSurface === 'game' && !config.embedded) {
+    // A short board leaves room above the dock. Keep that room measurable so
+    // the next board fit does not count it as control chrome and shrink again.
+    const spacer = document.createElement('div');
+    spacer.className = 'review-phone-spacer';
+    spacer.setAttribute('aria-hidden', 'true');
+    stage.el.after(spacer);
+  }
   if (config.railBelow) {
     config.railBelow.classList.add('review-rail-below');
     config.railBelow.dataset.col1Area = 'extra';
@@ -499,6 +509,48 @@ function reviewActionsWithFavorite(existing: HTMLElement | undefined, roomId: st
 export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapter): void {
   let ply = adapter.maxPly;
   let flipped = false;
+  appearanceAbort?.abort();
+  const abort = new AbortController();
+  appearanceAbort = abort;
+  const gameSheet = adapter.metaCard
+    ? createReviewInfoSheet({
+        signal: abort.signal,
+        kind: 'game',
+        label: t('underboard.gameInfo'),
+        icon: REVIEW_MENU_ICONS.info,
+        blocks: () => [
+          adapter.metaCard,
+          adapter.actions,
+          adapter.underboard,
+          adapter.analysisSummary,
+        ],
+      })
+    : null;
+  const chatSheet =
+    gameSheet && adapter.details
+      ? createReviewInfoSheet({
+          signal: abort.signal,
+          kind: 'chat',
+          label: t('chat.title'),
+          blocks: () => [adapter.details],
+        })
+      : null;
+  const sheets = [gameSheet, chatSheet].filter((sheet) => sheet !== null);
+  if (gameSheet) {
+    root.classList.add('has-review-info-sheet');
+    root.append(...sheets.map((sheet) => sheet.sheet));
+    abort.signal.addEventListener(
+      'abort',
+      () => {
+        for (const sheet of sheets) {
+          sheet.close();
+          sheet.sheet.remove();
+        }
+        root.classList.remove('has-review-info-sheet');
+      },
+      { once: true },
+    );
+  }
 
   // Shared lichess control bar (nav + menu overlay), the SAME component the
   // xiangqi tree surface uses — so every /game review page carries identical
@@ -507,15 +559,18 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
   // for the reasoning); this controller replays server snapshots and owns no
   // tree, so it cannot offer Study or Clear moves either. Flip is what it has.
   const controls = createReviewControls({
+    signal: abort.signal,
     onFirst: () => go(0),
     onPrevious: () => go(ply - 1),
     onNext: () => go(ply + 1),
     onLast: () => go(adapter.maxPly),
     menuItems: [
       { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flip() },
+      ...sheets.map((sheet) => sheet.menuItem),
     ],
   });
   const scaffold = createReviewScaffold(root, {
+    signal: abort.signal,
     reviewSurface: 'game',
     ariaLabel: adapter.ariaLabel,
     pageClassName: adapter.pageClassName,
@@ -533,6 +588,7 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     boardMaxPx: adapter.boardMaxPx,
     underboard: adapter.underboard,
     underboardOverflows: adapter.underboardOverflows,
+    phoneOneScreen: Boolean(gameSheet),
     enginePanel: adapter.enginePanel,
     moves: adapter.moves,
     moveComment: adapter.moveComment,
@@ -571,8 +627,6 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
   });
 
   // One listener per page: a re-mount drops the previous page's.
-  appearanceAbort?.abort();
-  appearanceAbort = new AbortController();
   if (adapter.appearanceEvent) {
     window.addEventListener(
       adapter.appearanceEvent,
@@ -748,7 +802,10 @@ export function oneScreenBoardWidth(
   const moves = shell?.querySelector<HTMLElement>('.review-rail-main .review-move-list');
   if (!shell || !moves || boardHeight <= 0) return Number.POSITIVE_INFINITY;
   const stageTop = stageEl.getBoundingClientRect().top + window.scrollY;
-  const belowBoard = moves.getBoundingClientRect().bottom - stageEl.getBoundingClientRect().top;
+  const dockSpace =
+    shell.querySelector('.review-phone-spacer')?.getBoundingClientRect().height ?? 0;
+  const belowBoard =
+    moves.getBoundingClientRect().bottom - stageEl.getBoundingClientRect().top - dockSpace;
   const shellBottomPad = Number.parseFloat(getComputedStyle(shell).paddingBottom) || 0;
   const phonePage = shell.closest<HTMLElement>('.has-analysis-phone-bar');
   const pageBottomPad = phonePage
