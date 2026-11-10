@@ -15,7 +15,7 @@ import {
 import { flipSeatInk } from './flip-seat-ink.js';
 import { renderJungleFlipMaterial } from './jungle-flip-material.js';
 import {
-  animateJungleFlipBoardMove,
+  animateJungleFlipStep,
   type JungleFlipBoardArrow,
   type JungleFlipBoardMarker,
   type JungleFlipRenderBoard,
@@ -76,11 +76,11 @@ export function mountJungleFlipWatchReplay(
       }),
     // One-ply steps glide: forward animates the newly rendered view's lastMove,
     // a back step reverse-animates the move the previous ply carried. A flip is a
-    // self-move and animateJungleFlipBoardMove no-ops on it.
+    // self-move: a step forward turns the tile over, a step back shows the back.
     animateMove: (boardEl, view, prevView, direction) => {
       const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
       if (!move) return;
-      animateJungleFlipBoardMove(boardEl, move, { reverse: direction === 'back' });
+      animateJungleFlipStep(boardEl, move, { reverse: direction === 'back' });
     },
     // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
     moveSound: watchJungleFlipMoveSound,

@@ -19,7 +19,7 @@ import {
 import type { ArticleLang } from './article-i18n.js';
 import type { JungleFlipReplaySpec } from './articles/types.js';
 import {
-  animateJungleFlipBoardMove,
+  animateJungleFlipStep,
   type JungleFlipRenderBoard,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
@@ -189,7 +189,7 @@ export function mountJungleFlipReplay(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = moves[(forward ? index : animateFrom) - 1];
-      if (move) animateJungleFlipBoardMove(frame, move, { reverse: !forward });
+      if (move) animateJungleFlipStep(frame, move, { reverse: !forward });
     }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
