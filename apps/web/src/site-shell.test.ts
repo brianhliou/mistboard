@@ -415,6 +415,61 @@ const siteShellCss = readFileSync(
   'utf8',
 );
 
+describe('site shell nav dropdowns open one at a time', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const withProp = <E extends Event>(event: E, key: string, value: unknown): E => {
+    Object.defineProperty(event, key, { value });
+    return event;
+  };
+  const setup = () => {
+    const nav = buildNav();
+    document.body.append(nav);
+    const menus = [...nav.querySelectorAll<HTMLElement>('.site-nav-links > .site-nav-menu')];
+    const [first, second] = menus;
+    const item = first!.querySelector<HTMLAnchorElement>('.site-nav-menu-panel a')!;
+    item.focus();
+    expect(document.activeElement).toBe(item);
+    return { first: first!, second: second!, item };
+  };
+
+  it('closes a menu left open by a focused item when the page comes back from the cache', () => {
+    const { first } = setup();
+    first.classList.add('site-nav-menu-open');
+    window.dispatchEvent(withProp(new Event('pageshow'), 'persisted', true));
+    expect(first.contains(document.activeElement)).toBe(false);
+    expect(document.querySelectorAll('.site-nav-menu-open')).toHaveLength(0);
+  });
+
+  it('leaves focus alone on a fresh page load', () => {
+    const { item } = setup();
+    window.dispatchEvent(withProp(new Event('pageshow'), 'persisted', false));
+    expect(document.activeElement).toBe(item);
+  });
+
+  it('moving the mouse into another menu closes the one holding focus', () => {
+    const { first, second } = setup();
+    first.classList.add('site-nav-menu-open');
+    second.dispatchEvent(withProp(new Event('pointerenter'), 'pointerType', 'mouse'));
+    expect(first.contains(document.activeElement)).toBe(false);
+    expect(first.classList.contains('site-nav-menu-open')).toBe(false);
+  });
+
+  it('a touch entering another menu does not drop keyboard focus', () => {
+    const { second, item } = setup();
+    second.dispatchEvent(withProp(new Event('pointerenter'), 'pointerType', 'touch'));
+    expect(document.activeElement).toBe(item);
+  });
+
+  it('the mouse entering the focused menu keeps its focus', () => {
+    const { first, item } = setup();
+    first.dispatchEvent(withProp(new Event('pointerenter'), 'pointerType', 'mouse'));
+    expect(document.activeElement).toBe(item);
+  });
+});
+
 describe('site shell footer', () => {
   // The footer is the way into the /about rail: four links and the identity
   // line, the same on every width, so no phone-only hide rule.
