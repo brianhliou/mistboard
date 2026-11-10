@@ -433,7 +433,7 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  card and `details` (the chat) leave the rail for a sheet opened from the
    *  bar's ☰, with the advantage chart, the analysis summary and the engine
    *  card (#619), and the move list becomes a one-row strip. Needs `metaCard`;
-   *  off for embeds. */
+   *  enabled by default for game reviews with a meta card, off for embeds. */
   phoneInfoSheet?: boolean;
   /** Root the tree at a hand-set position (a FEN-seeded composition) instead of
    *  the variant's standard start. `truth` seeds the tree root; `fen` is the
@@ -1524,7 +1524,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // the board, the analysis strip, the bar and a move strip. Those blocks are
   // built further down; a sheet reads them only when it opens, and skips any
   // that never reached the page.
-  const phoneReview = Boolean(config.phoneInfoSheet && config.metaCard && !config.embedded);
+  const phoneReview = Boolean(
+    (config.phoneInfoSheet ?? (config.reviewSurface ?? 'game') === 'game') &&
+      config.metaCard &&
+      !config.embedded,
+  );
   // The Game info sheet shows only these underboard tabs; the chart is on the
   // page and the rest stay with the wide layout (review-info-sheet.css).
   const SHEET_TABS = ['times', 'share'];
@@ -1537,6 +1541,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         icon: REVIEW_MENU_ICONS.info,
         blocks: () => [
           config.metaCard,
+          config.actions,
           analysisSummaryEl,
           underboardEl,
           explorerBelowRail ? config.explorer?.el : undefined,
@@ -2041,7 +2046,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // and the engine bar above the board (review-phone-analysis.ts,
     // engine-bar.ts). Both are display: none above 600px.
     const stageEl = scaffold.stage.el;
-    if (phoneAnalysis) stageEl.after(phoneAnalysis.el);
+    const stripAnchor = stageEl.parentElement?.querySelector('.review-phone-spacer') ?? stageEl;
+    if (phoneAnalysis) stripAnchor.after(phoneAnalysis.el);
     if (reviewEngine) stageEl.before(reviewEngine.bar);
   }
 

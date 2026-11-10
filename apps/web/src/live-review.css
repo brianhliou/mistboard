@@ -697,6 +697,17 @@
     padding-bottom: 0;
   }
 
+  /* A finished room keeps its controls on the visible bottom edge as the
+     browser toolbar retracts. Reserve the home indicator inside that budget. */
+  main.shell:has(.live-review__cluster .game-result:not([hidden])) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.game-result:not([hidden])) {
+    --phone-room-viewport: 100dvh;
+    --phone-room-safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .review-shell__cluster.live-review__cluster {
     --phone-room-band: 44px;
     --phone-room-bar: 48px;
@@ -705,13 +716,14 @@
        and a rounded corner left wedges of page showing (Brian, 2026-10-30). */
     --board-corner-radius: 0px;
     --uni-board-h-budget: calc(
-      100svh -
+      var(--phone-room-viewport, 100svh) -
       var(--phone-room-header) -
       3 *
       var(--phone-room-band) -
       var(--phone-room-bar) -
       var(--phone-room-extra, 0px) -
       var(--phone-room-notice, 0px) -
+      var(--phone-room-safe-bottom, 0px) -
       var(--uni-board-chrome-h, 0px)
     );
     /* The board's unsnapped height: its width (the page, or the budget times

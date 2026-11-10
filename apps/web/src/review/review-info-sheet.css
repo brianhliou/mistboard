@@ -8,6 +8,10 @@
   display: none;
 }
 
+.review-phone-spacer {
+  display: none;
+}
+
 @media (min-width: 601px) {
   .move-nav-menu__item[data-review-info],
   .move-nav-menu__item[data-review-engine] {
@@ -55,7 +59,26 @@
   .has-review-info-sheet
     main.review-shell
     .review-shell__cluster.review-shell__cluster--col1-stack {
+    /* The board stays at the top; the spacer takes the remaining room above
+       the analysis strip, navigation and moves. Dynamic height follows the
+       browser toolbar, and border-box includes the top seat's padding. */
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 52px - env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    align-items: center;
     row-gap: 0;
+  }
+  .has-review-info-sheet .review-shell [data-col1-area],
+  .has-review-info-sheet .review-shell .analysis-engine-bar,
+  .has-review-info-sheet .review-shell .review-phone-analysis {
+    flex: none;
+  }
+  .has-review-info-sheet .review-shell .review-phone-spacer {
+    display: block;
+    order: 1;
+    flex: 1 0 0px;
+    min-height: 0;
   }
   .has-review-info-sheet main.review-shell .review-shell__cluster {
     --board-corner-radius: 0px;
