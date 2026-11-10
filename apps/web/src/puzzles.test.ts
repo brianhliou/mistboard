@@ -1125,7 +1125,7 @@ describe('puzzles route', () => {
     );
 
     // The sidebar is the Puzzles menu, this page current.
-    const side = root.querySelector<HTMLElement>('.puzzle-themes-side');
+    const side = root.querySelector<HTMLElement>('.puzzle-menu');
     expect(
       [...(side?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) => [
         a.getAttribute('href'),
@@ -1138,6 +1138,7 @@ describe('puzzles route', () => {
       ['/puzzles?mode=streak', 'Puzzle Streak', null],
       ['/puzzles?mode=storm', 'Puzzle Storm', null],
       ['/puzzles/dashboard', 'Puzzle Dashboard', null],
+      ['/puzzles/history', 'Puzzle history', null],
     ]);
   });
 

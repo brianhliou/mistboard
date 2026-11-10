@@ -76,17 +76,13 @@ describe('shared puzzle menu', () => {
     vi.unstubAllGlobals();
   });
 
-  it('orders training links before dashboard and history, with one gap between groups', () => {
+  it('orders all six links in one continuous menu', () => {
     const menu = renderPuzzleMenu('dashboard');
     expect(menu.tagName).toBe('NAV');
     expect(menu.getAttribute('aria-label')).toBe('Puzzles');
     expect([...menu.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual(HREFS);
-    const gap = menu.querySelector('.puzzle-menu__gap');
-    expect(menu.children).toHaveLength(7);
-    expect(menu.children[4]).toBe(gap);
-    expect(gap?.getAttribute('aria-hidden')).toBe('true');
-    expect(gap?.previousElementSibling?.getAttribute('href')).toBe('/puzzles?mode=storm');
-    expect(gap?.nextElementSibling?.getAttribute('href')).toBe('/puzzles/dashboard');
+    expect(menu.children).toHaveLength(6);
+    expect([...menu.children].every((child) => child.tagName === 'A')).toBe(true);
   });
 
   it.each(PAGES)('marks only the %s link as the current page', (page: PuzzleMenuPage) => {
