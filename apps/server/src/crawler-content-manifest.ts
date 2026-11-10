@@ -592,7 +592,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#960: curated streamer list is empty; a real listing would change visible UI',
     baselineChars: 0,
   },
   {

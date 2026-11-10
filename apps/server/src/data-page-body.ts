@@ -204,7 +204,15 @@ export function coachesPageBody(
     t('coach.heading'),
     p(t('coach.intro')) +
       `<p><a href="/verify-title">${escapeHtml(t('coach.verifyToCoach'))}</a> <a href="/blog/titled-players">${escapeHtml(t('verifyTitle.whatYouGet'))}</a></p>` +
-      (rows.length ? `<ul>${rows.join('')}</ul>` : p(t('coach.empty'))),
+      (rows.length ? `<ul>${rows.join('')}</ul>` : p(t('coach.empty'))) +
+      h(t('coach.invite.heading')) +
+      p(t('coach.invite.lede')) +
+      `<h3>${escapeHtml(t('coach.invite.firstTitle'))}</h3>` +
+      p(t('coach.invite.firstBody')) +
+      `<h3>${escapeHtml(t('coach.invite.secondTitle'))}</h3>` +
+      p(t('coach.invite.secondBody')) +
+      p(t('coach.invite.next')) +
+      `<p><a href="/contact?about=/coach">${escapeHtml(t('coach.invite.contact'))}</a> <a href="/study">${escapeHtml(t('coach.invite.studies'))}</a></p>`,
   );
 }
 

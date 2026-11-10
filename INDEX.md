@@ -658,7 +658,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `profile-puzzles.ts` + `profile-puzzles.test.ts` | Owner-only profile puzzle history: one shared fetch follows every chronological history API page, derives daily saved rating points for the shared profile spotlight with gaps for legacy data, and aggregates attempts into the Activity tab’s per-day solved/failed rows |
 | `account-profile.css` | Account, profile, and leaderboard route styles loaded by `account.ts` and `profile.ts` |
 | `streamers-data.ts` | Curated streamer directory data: the `StreamerEntry` shape and the `STREAMERS` list, hand-maintained like `videos-data.ts`. No backend, no channel verification, no live-status polling. The `/streamer` nav entry is derived from this list, so seeding the first entry reveals the link |
-| `streamer.ts` | `/streamer` mount (`mountStreamer`) — curated streamers directory rendered from `streamers-data.ts`, falling back to an empty state while the list is empty. Uses `site-shell.ts` chrome and loads `streamer.css` |
+| `streamer.ts` | `/streamer` mount and prerender — creator invitation plus curated directory from `streamers-data.ts`; navigation stays hidden while the list is empty |
+| `creator-invitation.ts` / `creator-invitation.css` | Shared localized teaching/streaming invitation: existing tools, early collaboration, contact and studies links; used by Coaches and Streamers |
 | `streamer.css` | Streamers directory route styles loaded by `streamer.ts` |
 | `profile-summary-card.ts` | Shared compact profile-summary renderer and singleton hover popover for players and bots. `buildUserCard`/`buildBotSummaryCard` fork only identity/actions; the bot directory embeds the bot renderer inline, while `attachUserCard`/`attachBotCard` load the same bodies on identity hover |
 | `profile-summary-card.css` | Shared inline + hover profile-summary styles (site design tokens; themes light/dark) |

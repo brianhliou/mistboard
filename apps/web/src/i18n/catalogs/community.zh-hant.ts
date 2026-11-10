@@ -207,6 +207,31 @@ export const ZH_HANT_COMMUNITY = {
   'verifyTitle.errRequestPending': '你已有一份申請正在等待審核。',
   'verifyTitle.coachCta': '建立你的教練主頁',
   'verifyTitle.whatYouGet': '持有頭銜的棋手能在 Mistboard 獲得什麼',
+  'coach.invite.heading': '一起打磨 Mistboard 的教學體驗',
+  'coach.invite.lede':
+    '你教象棋或其變體嗎？帶來一堂課，或一盤你喜歡講解的棋。我們希望和幾位老師一起嘗試，了解怎樣才能真正幫助學生。',
+  'coach.invite.firstTitle': '從一個研習開始',
+  'coach.invite.firstBody':
+    '把棋局或局面放進研習，加入變化和註解，讓學生自己探索棋盤。研習也可以嵌入你的網站。',
+  'coach.invite.secondTitle': '展示你的教學',
+  'coach.invite.secondBody':
+    '持有認證頭銜的棋手可以發布教練主頁，介紹授課語言、收費和聯絡方式。學員直接聯絡你，Mistboard 不收取佣金。',
+  'coach.invite.next':
+    '這裡的教學工具還在起步階段。告訴我們你教誰、想講什麼，以及研習還缺少什麼。我們可以從一堂課開始，一起決定接下來值得開發的功能。',
+  'coach.invite.contact': '聊聊你的教學想法',
+  'coach.invite.studies': '瀏覽研習',
+  'streamer.invite.heading': '一起嘗試你的下一場實況',
+  'streamer.invite.lede':
+    '你實況象棋或其變體嗎？我們希望與幾位創作者直接合作，一起嘗試內容，並圍繞實況的實際需要開發工具。',
+  'streamer.invite.firstTitle': '帶來你想做的內容',
+  'streamer.invite.firstBody':
+    '棋局複盤、入門教學，或介紹一種陌生的變體。告訴我們你想做什麼，以及希望吸引哪些觀眾。',
+  'streamer.invite.secondTitle': '從現有工具開始',
+  'streamer.invite.secondBody':
+    '在 Mistboard 對弈，或用研習準備局面和講解。分享研習，讓觀眾在實況後自己探索變化。',
+  'streamer.invite.next':
+    '我們的實況工具還在起步階段。傳來你的頻道、一期節目的想法，以及你需要的協助。我們會一起看看現在能做什麼，還有什麼值得共同開發。',
+  'streamer.invite.contact': '聊聊你的實況想法',
   'coach.heading': '教練',
   'coach.intro': '找一位教練學棋。這裡的每位教練都持有經認證的象棋或西洋棋頭銜。',
   'coach.verifyToCoach': '你是持有頭銜的棋手嗎？認證頭銜即可開課',
@@ -363,8 +388,8 @@ export const ZH_HANT_COMMUNITY = {
   'friends.online.menuCount': '{count} 人在線',
   'friends.online.online': '在線',
   'streamer.heading': '實況主',
-  'streamer.intro': '值得關注的象棋與變體實況主，可看直播與重播。',
-  'streamer.empty': '目前還沒有收錄實況主。請稍後再來。',
+  'streamer.intro': '和觀眾一起分享象棋與變體的樂趣。',
+  'streamer.empty': '目前還沒有收錄實況主。歡迎成為最早加入的創作者之一。',
   'streamer.profileLink': 'Mistboard 主頁',
   'challenge.button': '挑戰',
   'challenge.title': '挑戰 {name}',
