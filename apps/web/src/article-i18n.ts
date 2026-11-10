@@ -3007,9 +3007,9 @@ const ZH_HANS: Record<string, string> = {
   Piece: '棋子',
   'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
     '写给国际象棋棋手的象棋规则：九宫与楚河汉界、炮架、将帅对脸、长将、记谱法，以及一盘可以逐步重演的名局。可在 Mistboard 上与皮卡鱼引擎或朋友对弈。',
-  'For chess players: six rule changes': '写给国际象棋棋手：六条不同的规则',
-  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
-    '如果你会下国际象棋，象棋的大部分内容都会让你觉得熟悉。下面是最容易让国际象棋棋手吃亏的六条规则，后文会逐一详细说明。',
+  'For chess players: seven rule changes': '写给国际象棋棋手：七条不同的规则',
+  'If you already play chess, most of xiangqi will feel familiar. These are the seven rules that catch chess players out, each explained in full further down.':
+    '如果你会下国际象棋，象棋的大部分内容都会让你觉得熟悉。下面是最容易让国际象棋棋手吃亏的七条规则，后文会逐一详细说明。',
   Rule: '规则',
   'In chess': '国际象棋',
   'In xiangqi': '象棋',
@@ -3029,9 +3029,14 @@ const ZH_HANS: Record<string, string> = {
   'The knight jumps and the bishop slides': '马可以跳子，象沿斜线滑行',
   'The horse and elephant are stopped by a piece in their path':
     '马和象会被路上的棋子挡住（蹩马腿、塞象眼）',
-  'Promotion and castling': '升变与王车易位',
-  'Both exist': '两者都有',
-  'Neither exists; a soldier never promotes': '两者都没有；兵卒永不升变',
+  'The pawn and the soldier': '国际象棋的兵与象棋的兵卒',
+  'Moves forward, captures diagonally, and promotes on the last rank':
+    '向前走，斜着吃子，到达底线时升变',
+  'Moves and captures the same way, and never promotes': '走法与吃法相同，永不升变',
+  'The king and a rook move together once': '王和一个车一同移动一次',
+  'Does not exist': '没有',
+  'A soldier changes once, at the river, and never promotes. Before the river it steps one point straight ahead. Once across, it may also step one point to the left or right, and it captures on those same points, never diagonally. A soldier that reaches the last rank can only step sideways.':
+    '兵卒只在过河时改变一次走法，并且永不升变。过河前，它只能向正前方走一个点。过河后，它还可以向左或向右走一个点，吃子也在这些点上，从不斜着吃。走到底线的兵卒只能横走。',
   'Setting up': '摆棋',
   "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
     '从红方的左手边起，纵线依次标为 a 到 i；横线从红方一侧起标为 1 到 10，因此红方底线是第 1 横线。每一方底线从一边到另一边依次是：车、马、象、士、将、士、象、马、车。双方的炮都放在 b 线和 h 线、底线往前两格的位置（红方在第 3 横线），五个兵卒再往前一格，放在 a、c、e、g、i 五条线上。',
@@ -3039,7 +3044,8 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'Corrected the Chinese wording of the repetition rule.': '更正了重复局面规则的中文表述。',
+  'Added diagrams of how the soldier moves, for chess players.':
+    '为国际象棋棋手添加了兵卒走法的图示。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -3338,8 +3344,8 @@ const ZH_HANS: Record<string, string> = {
     '迷雾国际象棋就是只能看到己方棋子所能到达的格子的国际象棋。没有人提示将军，所以王要被吃掉才算输，王也可能易位到自己看不见的攻击之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
-  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. It is now among the most widely played board games in the world.':
-    '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪。它的姊妹棋是朝鲜半岛的朝鲜象棋和日本的将棋，与国际象棋则有更远的共同起源。今天它是世界上参与人数最多的棋类游戏之一。',
+  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. The Chinese Xiangqi Association [puts the number of players in China in the hundreds of millions](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html).':
+    '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪。它的姊妹棋是朝鲜半岛的朝鲜象棋和日本的将棋，与国际象棋则有更远的共同起源。中国象棋协会[认为中国的象棋棋手数以亿计](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html)。',
   'Fog Xiangqi Rules': '迷雾象棋规则',
   'Fog of War Xiangqi Rules': '迷雾象棋规则：战争迷雾下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
@@ -6205,6 +6211,7 @@ const ZH_HANS: Record<string, string> = {
   MOVE: '走子',
   'BEFORE THE RIVER': '过河前',
   'ACROSS THE RIVER': '过河后',
+  'ON THE LAST RANK': '到达底线',
   // fog xiangqi
   "RED'S VIEW": '红方视野',
   "RED'S VIEW BEFORE": '红方视野：之前',
@@ -10113,9 +10120,9 @@ const ZH_HANT: Record<string, string> = {
   Piece: '棋子',
   'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
     '寫給西洋棋棋手的象棋規則：九宮與楚河漢界、炮架、將帥對臉、長將、記譜法，以及一盤可以逐步重演的名局。可在 Mistboard 上與皮卡魚引擎或朋友對弈。',
-  'For chess players: six rule changes': '寫給西洋棋棋手：六條不同的規則',
-  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
-    '如果你會下西洋棋，象棋的大部分內容都會讓你覺得熟悉。下面是最容易讓西洋棋棋手吃虧的六條規則，後文會逐一詳細說明。',
+  'For chess players: seven rule changes': '寫給西洋棋棋手：七條不同的規則',
+  'If you already play chess, most of xiangqi will feel familiar. These are the seven rules that catch chess players out, each explained in full further down.':
+    '如果你會下西洋棋，象棋的大部分內容都會讓你覺得熟悉。下面是最容易讓西洋棋棋手吃虧的七條規則，後文會逐一詳細說明。',
   Rule: '規則',
   'In chess': '西洋棋',
   'In xiangqi': '象棋',
@@ -10135,9 +10142,14 @@ const ZH_HANT: Record<string, string> = {
   'The knight jumps and the bishop slides': '騎士可以跳子，主教沿斜線滑行',
   'The horse and elephant are stopped by a piece in their path':
     '馬和象會被路上的棋子擋住（蹩馬腿、塞象眼）',
-  'Promotion and castling': '升變與王車易位',
-  'Both exist': '兩者都有',
-  'Neither exists; a soldier never promotes': '兩者都沒有；兵卒永不升變',
+  'The pawn and the soldier': '西洋棋的兵與象棋的兵卒',
+  'Moves forward, captures diagonally, and promotes on the last rank':
+    '向前走，斜著吃子，到達底線時升變',
+  'Moves and captures the same way, and never promotes': '走法與吃法相同，永不升變',
+  'The king and a rook move together once': '王和一個車一同移動一次',
+  'Does not exist': '沒有',
+  'A soldier changes once, at the river, and never promotes. Before the river it steps one point straight ahead. Once across, it may also step one point to the left or right, and it captures on those same points, never diagonally. A soldier that reaches the last rank can only step sideways.':
+    '兵卒只在過河時改變一次走法，並且永不升變。過河前，它只能向正前方走一個點。過河後，它還可以向左或向右走一個點，吃子也在這些點上，從不斜著吃。走到底線的兵卒只能橫走。',
   'Setting up': '擺棋',
   "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
     '從紅方的左手邊起，直線依次標為 a 到 i；橫線從紅方一側起標為 1 到 10，因此紅方底線是第 1 橫線。每一方底線從一邊到另一邊依次是：車、馬、相、仕、帥、仕、相、馬、車。雙方的炮都放在 b 線和 h 線、底線往前兩格的位置（紅方在第 3 橫線），五個兵卒再往前一格，放在 a、c、e、g、i 五條線上。',
@@ -10145,7 +10157,8 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'Corrected the Chinese wording of the repetition rule.': '更正了重複局面規則的中文表述。',
+  'Added diagrams of how the soldier moves, for chess players.':
+    '為西洋棋棋手添加了兵卒走法的圖示。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -10420,8 +10433,8 @@ const ZH_HANT: Record<string, string> = {
     '迷霧西洋棋就是只能看到己方棋子所能到達的格子的西洋棋。沒有人提示將軍，所以王要被吃掉才算輸，王也可能易位到自己看不見的攻擊之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧西洋棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
-  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. It is now among the most widely played board games in the world.':
-    '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀。它的姊妹棋是朝鮮半島的朝鮮象棋和日本的將棋，與西洋棋則有更遠的共同起源。今天它是世界上參與人數最多的棋類遊戲之一。',
+  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. The Chinese Xiangqi Association [puts the number of players in China in the hundreds of millions](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html).':
+    '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀。它的姊妹棋是朝鮮半島的朝鮮象棋和日本的將棋，與西洋棋則有更遠的共同起源。中國象棋協會[認為中國的象棋棋手數以億計](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html)。',
   'Fog Xiangqi Rules': '迷霧象棋規則',
   'Fog of War Xiangqi Rules': '迷霧象棋規則：戰爭迷霧下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
@@ -12978,6 +12991,7 @@ const ZH_HANT: Record<string, string> = {
   MOVE: '走子',
   'BEFORE THE RIVER': '過河前',
   'ACROSS THE RIVER': '過河後',
+  'ON THE LAST RANK': '到達底線',
   // fog xiangqi
   "RED'S VIEW": '紅方視野',
   "RED'S VIEW BEFORE": '紅方視野：之前',

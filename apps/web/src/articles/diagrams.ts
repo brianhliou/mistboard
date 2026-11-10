@@ -2386,6 +2386,44 @@ export const XQ_PRIMER_SOLDIER_PAIR = () =>
     ].join(''),
   );
 
+// The chess-player comparison on the rules page: the soldier changes how it
+// moves once, at the river, and never promotes. On the last rank it can only
+// step sideways.
+export const XQ_PRIMER_SOLDIER_LAST = xqVisionDemoState('xq-primer-soldier-last', {
+  c10: { color: 'red', role: 'soldier' },
+});
+export const XQ_PRIMER_SOLDIER_TRIO = () =>
+  xqSvg(
+    XQ_BOARD_W * 3 + 56,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_BEFORE,
+        x: 0,
+        y: 0,
+        label: 'BEFORE THE RIVER',
+        perspective: 'red',
+        dots: xqDots(['e5']),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_AFTER,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'ACROSS THE RIVER',
+        perspective: 'red',
+        dots: xqDots(['e7', 'd6', 'f6']),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_LAST,
+        x: (XQ_BOARD_W + 28) * 2,
+        y: 0,
+        label: 'ON THE LAST RANK',
+        perspective: 'red',
+        dots: xqDots(['b10', 'd10']),
+      }),
+    ].join(''),
+  );
+
 export const XQ_VISION_STATES = [
   {
     label: 'SOLDIER',
