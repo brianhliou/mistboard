@@ -129,6 +129,35 @@ describe('chat vertical resize', () => {
     expect(manualHeight(panel)).toBe('400px');
     expect(separator.getAttribute('aria-valuemax')).toBe('400');
   });
+
+  it.each([0, 14])('keeps the grid height budget with %ipx of rail slack', async (slack) => {
+    const grid = document.createElement('div');
+    const rail = document.createElement('div');
+    rail.style.gap = '12px';
+    const card = document.createElement('section');
+    const panel = document.createElement('section');
+    const adjacent = document.createElement('section');
+    rail.append(card, panel);
+    grid.append(rail, adjacent);
+    document.body.append(grid);
+    const panelHeight = () => Number.parseFloat(manualHeight(panel)) || 300;
+    vi.spyOn(grid, 'getBoundingClientRect').mockImplementation(() => rect(700));
+    vi.spyOn(rail, 'getBoundingClientRect').mockImplementation(() =>
+      rect(panelHeight() + 172 + slack),
+    );
+    vi.spyOn(card, 'getBoundingClientRect').mockImplementation(() => rect(160));
+    vi.spyOn(panel, 'getBoundingClientRect').mockImplementation(() => rect(panelHeight()));
+    vi.spyOn(adjacent, 'getBoundingClientRect').mockImplementation(() => ({
+      ...rect(500),
+      left: 320,
+      right: 620,
+    }));
+    const separator = attachChatResize(panel);
+    await flushMicrotasks();
+    expect(separator.getAttribute('aria-valuemax')).toBe(String(528 - slack));
+    separator.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(manualHeight(panel)).toBe('324px');
+  });
 });
 
 function mountedChat(parentHeight: () => number = () => 700): {

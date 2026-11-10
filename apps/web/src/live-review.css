@@ -168,9 +168,8 @@
        rail ran ~160px past the board's bottom edge on a wide screen and the
        chat filled the void. Cap the rail at the board's rendered height (width
        over aspect, the same formula the shell uses for the board slot) so the
-       chat's bottom edge lands on the board's. The live chat has no resize
-       handle (spectator-chat.ts buildLiveRoomChat): the flex-fill below
-       outranks a manual height, and the board line is where it should end. */
+       automatic chat height ends at the board line. A chosen height overrides
+       that fill below without changing the board or the game table. */
     max-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
   }
   .live-review__cluster .review-spectator-chat--live {
@@ -181,6 +180,11 @@
        a floor keeps the feed usable when the board is short. */
     flex: 1 1 auto;
     min-height: 180px;
+  }
+  .live-review__cluster .review-spectator-chat--live.review-spectator-chat--manual-height {
+    flex: 0 0 auto;
+    height: var(--review-chat-manual-height);
+    max-height: 100%;
   }
 }
 
@@ -1355,6 +1359,7 @@
   }
 
   .live-review__cluster[data-room-sheet="open"] .review-spectator-chat--live {
+    display: flex;
     flex: 0 0 auto;
     height: 240px;
     min-height: 0;
