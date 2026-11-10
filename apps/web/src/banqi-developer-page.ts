@@ -150,10 +150,12 @@ export function buildBanqiDeveloperReference(): HTMLElement {
   nav.setAttribute('aria-label', 'On this page');
   for (const [label, id] of [
     ['Runtime & hosting', 'runtime'],
+    ['Public state', 'position'],
     ['Examples', 'examples'],
     ['Analysis & cost', 'analysis'],
     ['Rules', 'rules'],
     ['Game data', 'data'],
+    ['First handoff', 'next'],
   ])
     nav.append(proseLink(label, `#${id}`));
   section.append(
@@ -187,6 +189,16 @@ export function buildBanqiDeveloperReference(): HTMLElement {
       'Use our ',
       proseLink('contact page', '/contact'),
       ' to share your existing protocol, operating system and CPU/GPU requirements, build/model version, rules assumptions and any evaluation output. We translate the interface; you do not need to implement the JSON contract below yourself. Onboarding, capacity and permitted use are agreed with us, rather than through an upload form.',
+    ]),
+    proseParagraph([
+      'For an author-hosted HTTP worker, server-to-server requests use Bearer authentication over HTTPS to an operator-approved, configured host. The pinned-version client checks authenticated GET /health against the protocol and engine version before sending POST /turn with the public turn. Credentials never go to the browser. One bounded deadline covers the exchange, redirects are refused, and malformed, stale or illegal replies fail closed. The strict live adapter makes one attempt and resigns on failure rather than substituting another engine. We agree capacity and failure behavior before enabling a provider. See ',
+      sources('calling and onboarding', 'docs/banqi-engine-providers.md#calling-and-onboarding'),
+      ' and the ',
+      sources(
+        'worker operation recipe',
+        'docs/banqi-engine-providers.md#worker-operation-recipe-not-deployed',
+      ),
+      '.',
     ]),
     heading('The public turn boundary', 'position'),
     proseParagraph([
@@ -231,9 +243,33 @@ export function buildBanqiDeveloperReference(): HTMLElement {
       sources('checked JSON examples', 'docs/examples/banqi-provider-request.json'),
       '.',
     ]),
-    heading('Analysis uses an evaluator, not a new grading system', 'analysis'),
+    heading('Connect an evaluator to post-game review', 'analysis'),
     proseParagraph([
       'Mistboard already implements move classification, accuracy, evaluation graphs and Banqi’s decision-versus-luck calculation. A new engine supplies position evaluations; we connect those evaluations to the existing review features. The current default evaluator is MistyBanqi. A new engine is not automatically a postgame analysis backend when its live moves work.',
+    ]),
+    table(
+      'Choose the review capability to integrate',
+      ['Capability', 'Engine contribution', 'Review behavior after integration'],
+      [
+        [
+          'Play',
+          'Legal moves from public turn requests; evaluation output is optional.',
+          'Games can use Misty for separately labeled full review.',
+        ],
+        [
+          'Basic external review',
+          'Scores for recorded public positions, with agreed score meaning and relevant history.',
+          'Ordinary-move grades and an evaluation graph. Flips stay ungraded and are excluded from skill accuracy.',
+        ],
+        [
+          'Full external review',
+          'Additional searches of hypothetical public reveal outcomes and legal alternatives.',
+          'Adds flip decision grading and luck, with outcome weighting and a larger analysis budget.',
+        ],
+      ],
+    ),
+    proseParagraph([
+      'These are integration choices. A working play provider does not automatically enable external review; evaluator wiring, score mapping and validation are required for either external review level.',
     ]),
     reviewExample(),
     table(
