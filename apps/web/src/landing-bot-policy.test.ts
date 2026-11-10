@@ -369,6 +369,39 @@ describe('landing bot ladder (homepage play panel)', () => {
     expect(landingBotLadderIndex(ladder, 'rapfi-level-5')).toBe(4);
   });
 
+  it('offers TK engine-only Misty Levels 1-8 exactly as the runtime roster permits', () => {
+    const spec = 'three-kingdoms-banqi';
+    const engines = Array.from({ length: 8 }, (_, i) => `misty-${spec}-level-${i + 1}`);
+    expect(LANDING_BOT_GAME_SPEC_IDS.indexOf(spec)).toBe(
+      LANDING_BOT_GAME_SPEC_IDS.indexOf('banqi') + 1,
+    );
+    expect(landingBotLadder(spec)).toEqual([]);
+    expect(landingBotLadder(spec, new Set(['misty']))).toEqual([]);
+    expect(landingBotLadder(spec, new Set(), new Set(['misty-banqi-level-8']))).toEqual([]);
+    const ladder = landingBotLadder(spec, new Set(), new Set(engines));
+    expect(ladder.map((rung) => rung.engineId)).toEqual(engines);
+    expect(ladder.map((rung) => rung.name)).toEqual(engines.map((_, i) => `Misty Level ${i + 1}`));
+    expect(ladder.every((rung) => rung.botId === undefined && rung.engine === 'Misty')).toBe(true);
+    expect(ladder.map((rung) => rung.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(ladder.map((rung) => rung.net)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      'nnue',
+    ]);
+    for (const [i, engine] of engines.entries()) {
+      expect(landingBotLadderIndex(ladder, engine)).toBe(i);
+    }
+    expect(landingBotLadder(spec, new Set(), new Set(engines.slice(0, 7)))).toEqual(
+      ladder.slice(0, 7),
+    );
+    expect(landingBotLadder(spec, new Set(), new Set([engines[0]!]))).toEqual(ladder.slice(0, 1));
+  });
+
   it('offers no ladder, row or chip for a retired variant', () => {
     for (const spec of ['fortress-xiangqi', 'atomic-xiangqi']) {
       expect(ids(spec)).toEqual([]);
@@ -487,6 +520,9 @@ describe('landing bot ladder (homepage play panel)', () => {
 
   it('starts every ladder variant on a rung its canonical offer names', () => {
     for (const spec of LANDING_BOT_GAME_SPEC_IDS) {
+      // Engine-only TK waits for its runtime roster and uses the setup's
+      // default tier; its generic Misty offer is not a public bot profile.
+      if (spec === 'three-kingdoms-banqi') continue;
       const offer = landingBotOffer(spec);
       expect(landingBotLadderIndex(landingBotLadder(spec), offer?.botId)).toBeGreaterThanOrEqual(0);
     }
