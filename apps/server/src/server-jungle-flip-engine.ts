@@ -28,6 +28,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import {
@@ -222,7 +223,7 @@ export async function playJungleFlipEngineMoveIfReady(
       const parsed = engineUciToJungleFlipMove(uci);
       return parsed && isJungleFlipLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {

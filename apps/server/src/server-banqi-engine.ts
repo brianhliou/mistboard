@@ -41,6 +41,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
@@ -238,8 +239,9 @@ export async function playBanqiEngineMoveIfReady(
     ? (moveProvider.engineVersion ?? 'unversioned-external')
     : BANQI_ENGINE_VERSION;
   const turnPly = state.ply;
+  const currentSearch = searchStillCurrent(room, () => engineToMove(room, seat));
   const stillOnTurn = (): boolean => {
-    if (!engineToMove(room, seat)) return false;
+    if (!currentSearch()) return false;
     if (!strictProvider) return true;
     const currentClock = room.projection.clock;
     return (
