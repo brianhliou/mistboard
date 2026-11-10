@@ -47,8 +47,9 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
 
     const available = leftoverFor(parent, panel);
     const panelHeight = boxHeight(panel);
-    if (Math.abs(available - panelHeight) > 1) return Math.max(MIN_HEIGHT, available);
-
+    // Content-sized rails can retain a little grid slack after shrinking. A
+    // nonzero gap between available and current height does not prove the
+    // parent is fixed; probe it too, or that slack becomes a ratcheting ceiling.
     const chain = sizingAncestors(panel);
     const before = chain.map(boxHeight);
     const after = withProbeHeight(panelHeight + PROBE_STEP, () => chain.map(boxHeight));
@@ -195,13 +196,21 @@ function boxHeight(element: Element): number {
   return element.getBoundingClientRect().height;
 }
 
-// The height `child` could take inside `container`: the container's height
-// less its other visible children and the gaps between them.
+// The height `child` could take inside `container`: subtract visible siblings
+// in the same horizontal track. Adjacent grid columns use the same vertical
+// space, so subtracting their heights would collapse the budget to its floor.
 function leftoverFor(container: HTMLElement, child: HTMLElement): number {
-  const others = Array.from(container.children).filter(
-    (sibling): sibling is HTMLElement =>
-      sibling instanceof HTMLElement && sibling !== child && boxHeight(sibling) > 0,
-  );
+  const childBounds = child.getBoundingClientRect();
+  const others = Array.from(container.children).filter((sibling): sibling is HTMLElement => {
+    if (!(sibling instanceof HTMLElement) || sibling === child) return false;
+    const bounds = sibling.getBoundingClientRect();
+    return (
+      bounds.height > 0 &&
+      (childBounds.width === 0 ||
+        bounds.width === 0 ||
+        (bounds.left < childBounds.right && bounds.right > childBounds.left))
+    );
+  });
   const occupied = others.reduce((total, sibling) => total + boxHeight(sibling), 0);
   const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
   return boxHeight(container) - occupied - gap * others.length;
