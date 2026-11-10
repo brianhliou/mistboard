@@ -257,7 +257,8 @@ export function banqiEngineBinaryAvailable(): boolean {
 }
 
 export function banqiEngineDisplayName(engineId: string): string {
-  return banqiEngineTierFor(engineId)?.name ?? engineId;
+  const tier = banqiEngineTierFor(engineId);
+  return tier ? `Misty Level ${tier.level}` : engineId;
 }
 
 export function isBanqiEngineClientId(clientId: string | undefined): boolean {

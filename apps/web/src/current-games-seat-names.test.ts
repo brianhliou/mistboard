@@ -67,5 +67,27 @@ describe('/games seat names', () => {
       'FSF Level 3',
     );
     expect(seat?.title).toBe('Fairy-Stockfish Level 3');
+    expect(seat?.querySelector<HTMLElement>('.current-game-finished-seat-name')?.title).toBe(
+      'Fairy-Stockfish Level 3',
+    );
+  });
+
+  it('keeps an old recorded Three Kingdoms name readable on its name element', () => {
+    const fullName = 'MistyThreeKingdomsBanqi level 7';
+    const tile = buildFinishedTile(
+      finishedGame([
+        participant('red', 'Ann'),
+        {
+          ...participant('black', fullName),
+          subjectType: 'engine-version',
+          subjectId: 'misty-three-kingdoms-banqi-level-7',
+        },
+      ]),
+    );
+    const name = tile.querySelector<HTMLElement>(
+      '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',
+    );
+    expect(name?.textContent).toBe(fullName);
+    expect(name?.title).toBe(fullName);
   });
 });

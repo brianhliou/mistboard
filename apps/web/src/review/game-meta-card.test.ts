@@ -49,6 +49,19 @@ describe('game meta card head', () => {
 });
 
 describe('game meta card players', () => {
+  it('puts the full name on the clipped element, including after players update', () => {
+    const card = createGameMetaCard({
+      headline: [],
+      players: [{ color: 'black', name: 'Misty level 7', isEngine: true, score: '1' }],
+    });
+    const fullName = 'MistyThreeKingdomsBanqi level 7';
+    card.setPlayers([{ color: 'black', name: fullName, isEngine: true, score: '1' }]);
+    const name = card.el.querySelector<HTMLElement>('.game-meta-card__name');
+    expect(name?.textContent).toBe(fullName);
+    expect(name?.title).toBe(fullName);
+    expect(card.el.querySelector('.game-meta-card__bot')).not.toBeNull();
+    expect(card.el.querySelector('.game-meta-card__score')?.textContent).toBe('1');
+  });
   it('draws a disc per player, and none for a game whose seats have no colour', () => {
     const coloured = createGameMetaCard({
       headline: [],
