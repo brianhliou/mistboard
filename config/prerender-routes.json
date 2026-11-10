@@ -266,11 +266,11 @@
     "file": "developers.html",
     "locales": ["en"],
     "titleKey": "developers.heading",
-    "description": "Embed a study chapter, a game, Mistboard TV, the daily puzzle or an analysis board on your own page.",
+    "description": "Connect an engine, embed Mistboard boards on your own page, or use public game downloads and read APIs. Start with the Banqi integration guide, checked iframe examples and API reference.",
     "metaByLocale": {
       "en": {
-        "title": "Developers: Embeds and API | Mistboard",
-        "description": "Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider."
+        "title": "Developers: Engines, Embeds and API | Mistboard",
+        "description": "Connect an engine, embed Mistboard boards on your own page, or use public game downloads and read APIs. Start with the Banqi integration guide, checked iframe examples and API reference."
       }
     }
   },

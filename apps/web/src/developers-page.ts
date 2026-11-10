@@ -1,15 +1,7 @@
 import { prerenderCopy } from './prerender-copy.js';
-// /developers: how to put a Mistboard board in someone else's page.
-//
-// Five things are frameable, and the page documents each with a snippet a
-// reader can paste unchanged: a study chapter, a finished game, Mistboard TV,
-// a puzzle, and the analysis board. Every path and size is imported from
-// @mistboard/game rather than retyped, so the snippet a developer copies and
-// the limits the prose states cannot drift from what the server actually does.
-//
-// The live example at the top is the same widget the champions article uses. It
-// is here so the page proves the claim instead of describing it, and so a broken
-// embed is visible on the page whose whole job is to say the embed works.
+// /developers: engine integration, embeds and public data/API resources.
+// Embed paths and sizes come from @mistboard/game so copied snippets stay
+// aligned with the server contract. Localized pages retain their existing guide.
 
 import {
   EMBED_DEFAULT_HEIGHT,
@@ -39,6 +31,7 @@ import {
   proseSubheading,
 } from './static-page-dom.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
+import './developers-page.css';
 
 // The chapter shown in the live example and in every snippet on the page. A
 // real, public chapter on purpose: a reader can paste the snippet unchanged and
@@ -386,40 +379,76 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
   };
   if (live) void pointStudyExampleAtLocalStudy(origin, studyExample.figure, studyBlocks);
 
-  section.append(
-    proseHeading(t('developers.heading', {}, locale)),
-    proseParagraph([
-      'Five things on Mistboard can run inside your page, with nothing to install and ' +
-        'no API key: a study chapter, a finished game, Mistboard TV, a puzzle, and the ' +
-        'analysis board. Each is an iframe. The page inside the frame carries no ' +
-        'navigation, no footer, and no sign-in state; it renders the board and nothing ' +
-        'else. The study widget is the same one the articles on this site use.',
-    ]),
-    proseParagraph([
-      proseLink(t('source.heading', {}, locale), localizedHref('/source', locale)),
-      ' · ',
-      proseLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
-      ' · ',
-      proseLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
-      ' · ',
-      proseLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
-      ' · ',
-      proseLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
-    ]),
+  const embedIntro = proseParagraph([
+    'Five things on Mistboard can run inside your page, with nothing to install and ' +
+      'no API key: a study chapter, a finished game, Mistboard TV, a puzzle, and the ' +
+      'analysis board. Each is an iframe. The page inside the frame carries no ' +
+      'navigation, no footer, and no sign-in state; it renders the board and nothing ' +
+      'else. The study widget is the same one the articles on this site use.',
+  ]);
+  const resources = proseParagraph([
+    proseLink(t('source.heading', {}, locale), localizedHref('/source', locale)),
+    ' · ',
+    proseLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+    ' · ',
+    proseLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    ' · ',
+    proseLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    ' · ',
+    proseLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
+  ]);
+  section.append(proseHeading(t('developers.heading', {}, locale)));
+  const embedSection = locale === 'en' ? document.createElement('section') : section;
+  const embedSubheading = (text: string): HTMLElement => {
+    if (locale !== 'en') return proseSubheading(text);
+    const heading = document.createElement('h3');
+    heading.textContent = text;
+    return heading;
+  };
+  if (locale === 'en') {
+    const nav = document.createElement('nav');
+    nav.className = 'developers-hub-nav';
+    nav.setAttribute('aria-label', 'On this page');
+    for (const [label, id] of [
+      ['Engine integration', 'engines'],
+      ['Embeds', 'embeds'],
+      ['Public data & API', 'public-data'],
+    ])
+      nav.append(proseLink(label, `#${id}`));
+    const engines = document.createElement('section');
+    engines.id = 'engines';
+    engines.append(
+      proseSubheading('Engine integration'),
+      proseParagraph([
+        'Bring the interface your engine already uses. We can adapt an existing protocol and arrange Mistboard hosting or an author-hosted worker; engine source and models can remain private. Open-source builds are welcome too.',
+      ]),
+      proseParagraph([
+        'Hosting, authentication, deadlines and version identity are shared integration concerns. Positions, moves, hidden information, rules and evaluation meaning remain specific to each variant.',
+      ]),
+      proseParagraph([
+        proseLink('Banqi engine integration reference', '/developers/banqi'),
+        ' documents the concrete provider contract currently available, with hosting choices, checked examples, exact rules and review capabilities. For other engines or protocols, ',
+        proseLink('contact us', '/contact'),
+        ' so we can agree the adapter and validation work.',
+      ]),
+    );
+    section.append(
+      proseParagraph([
+        'Build with Mistboard: connect an engine, put a board on your own page, or use public game downloads and read APIs. Choose the section that matches your project.',
+      ]),
+      resources,
+      nav,
+      engines,
+    );
+    embedSection.id = 'embeds';
+    embedSection.append(proseSubheading('Embeds'), embedIntro);
+    section.append(embedSection);
+  } else section.append(embedIntro, resources);
 
-    ...(locale === 'en'
-      ? [
-          proseSubheading('Connect a Banqi engine'),
-          proseParagraph([
-            proseLink('Banqi engine integration reference', '/developers/banqi'),
-            ' — private binaries or author-hosted workers, public position examples, exact rules and the path from engine evaluations to postgame review. We can adapt your existing interface.',
-          ]),
-        ]
-      : []),
-
+  embedSection.append(
     studyExample.figure,
 
-    proseSubheading('Embed a study chapter'),
+    embedSubheading('Embed a study chapter'),
     proseParagraph([
       'Copy this. Swap the two ids for the study and chapter you want, which are the ' +
         'last two segments of the study URL you are reading. The board, the moves, the ' +
@@ -427,13 +456,13 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
     ]),
     studyBlocks.snippet,
 
-    proseSubheading('Embed a game'),
+    embedSubheading('Embed a game'),
     proseParagraph([
       'Any finished game, by its id, which is the last segment of its review URL. The ' +
         'frame shows the final position with the move list beside it; the reader steps ' +
         'through with the buttons, the arrow keys, or by clicking a move. Every variant ' +
-        'the site can replay works here, fog games included: a finished fog game is ' +
-        'shown from the truth board, exactly as on the review page.',
+        'the site can replay works here, fog games included. The frame uses the public ' +
+        'finished replay and preserves recipient-visible information; it does not unveil a hidden deal.',
     ]),
     gameExample.figure,
     gameBlock,
@@ -442,7 +471,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
         'progress is not available to the frame until it finishes.',
     ]),
 
-    proseSubheading('Embed Mistboard TV'),
+    embedSubheading('Embed Mistboard TV'),
     proseParagraph([
       'The live board: it follows the featured game in progress and, when there is ' +
         'none, holds the most recently finished one. A game that ends while the reader ' +
@@ -457,7 +486,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
     ]),
     codeBlock(`${origin}${embedTvPath()}`),
 
-    proseSubheading('Embed the daily puzzle'),
+    embedSubheading('Embed the daily puzzle'),
     proseParagraph([
       "Today's puzzle, solvable in place: the reader plays the moves on the board, with " +
         'hints and the solution one click away. Attempts from a frame are never rated. ' +
@@ -467,7 +496,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
       .figure,
     codeBlock(puzzleSnippet(origin)),
 
-    proseSubheading('Embed the analysis board'),
+    embedSubheading('Embed the analysis board'),
     proseParagraph([
       'The free xiangqi analysis board: play moves, branch, paste a game or a position. ' +
         'Add fen= to open on a position (underscores may stand in for spaces) and ' +
@@ -485,7 +514,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
         'analysis board itself.',
     ]),
 
-    proseSubheading('Embed a line of moves'),
+    embedSubheading('Embed a line of moves'),
     proseParagraph([
       'A move list with no game or study behind it, the same card as a chapter: an engine ' +
         "game from a match log, a puzzle's solution, a line from a book. Put the moves in " +
@@ -502,7 +531,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
     ).figure,
     codeBlock(lineSnippet(origin)),
 
-    proseSubheading('Sizing'),
+    embedSubheading('Sizing'),
     proseParagraph([
       `Give the frame whatever width suits your layout. ${EMBED_MIN_WIDTH}px is the ` +
         'narrowest the board and the move list can share, and anything wider than ' +
@@ -518,7 +547,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
         'wants the width of a column and a 4:3 box.',
     ]),
 
-    proseSubheading('Background'),
+    embedSubheading('Background'),
     proseParagraph([
       'The frame is transparent. Whatever your page has behind the iframe shows ' +
         'through around the board, so the embed sits on your surface rather than ' +
@@ -526,7 +555,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
         'of their own, so they stay legible either way.',
     ]),
 
-    proseSubheading('Theme'),
+    embedSubheading('Theme'),
     proseParagraph([
       'By default the embed follows the READER: it renders light or dark to match ' +
         'their system setting, the same as the rest of Mistboard. That is right for a ' +
@@ -541,7 +570,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
     ]),
     studyBlocks.theme,
 
-    proseSubheading('Notation'),
+    embedSubheading('Notation'),
     proseParagraph([
       'Move labels follow the reader the same way, and run into the same problem: a ' +
         'reader meeting Mistboard for the first time inside your page has no stored ' +
@@ -557,7 +586,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
     ]),
     studyBlocks.notation,
 
-    proseSubheading('oEmbed'),
+    embedSubheading('oEmbed'),
     proseParagraph([
       'If your platform speaks oEmbed, you do not need any of the above: paste a study ' +
         'or game link into WordPress, Ghost, Discourse or anything else that consumes ' +
@@ -573,7 +602,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
     ]),
     studyBlocks.oembed,
 
-    proseSubheading('What you can embed'),
+    embedSubheading('What you can embed'),
     proseParagraph([
       'Only what the anonymous public already sees. A private study is a 404 in the ' +
         'frame exactly as it is everywhere else; a game is available once it has ' +
@@ -591,8 +620,23 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
       proseLink('get in touch', '/contact'),
       ' first.',
     ]),
-
-    proseSubheading('HTTP API'),
+  );
+  const dataSection = locale === 'en' ? document.createElement('section') : section;
+  if (locale === 'en') {
+    dataSection.id = 'public-data';
+    dataSection.append(
+      proseSubheading('Public data & API'),
+      proseParagraph([
+        proseLink('Game downloads', '/data'),
+        ' provides monthly exports of published public games, with variant and bot filters. See ',
+        proseLink('formats, license and publication policy', '/data/about'),
+        ' before using the archives.',
+      ]),
+    );
+    section.append(dataSection);
+  }
+  dataSection.append(
+    embedSubheading('HTTP API'),
     proseParagraph([
       'The read endpoints behind these pages are public and documented: games, watch ' +
         'feeds, puzzles, studies, the leaderboard, the opening explorer. See the ',
@@ -600,7 +644,7 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
       '. It is version 0 and may change; the reference says what is stable.',
     ]),
 
-    proseSubheading('Everything else'),
+    embedSubheading('Everything else'),
     proseParagraph([
       'Mistboard is AGPL-3.0 and the whole site is on ',
       proseExternalLink('GitHub', 'https://github.com/brianhliou/mistboard'),
@@ -621,6 +665,10 @@ export function mountDevelopers(root: HTMLElement): void {
     buildNav(locale),
     buildStaticPageLayout('developers', buildDevelopers(locale), locale),
   );
+  if (window.location.hash)
+    requestAnimationFrame(() =>
+      document.getElementById(window.location.hash.slice(1))?.scrollIntoView(),
+    );
 }
 
 export function renderDevelopersShellForPrerender(locale: Locale): string {

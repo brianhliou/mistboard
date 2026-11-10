@@ -219,9 +219,9 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
       'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
   },
   '/developers': {
-    title: 'Developers: Embeds and API | Mistboard',
+    title: 'Developers: Engines, Embeds and API | Mistboard',
     description:
-      'Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider.',
+      'Connect an engine, embed Mistboard boards on your own page, or use public game downloads and read APIs. Start with the Banqi integration guide, checked iframe examples and API reference.',
   },
   '/developers/banqi': {
     title: 'Banqi Engine Integration Reference | Mistboard',
