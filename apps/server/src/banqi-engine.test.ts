@@ -17,6 +17,7 @@ import {
   BANQI_PLAYABLE_ENGINES,
   BANQI_RANDOM_ENGINE_ID,
   banqiEngineAvailable,
+  banqiEngineDisplayName,
   banqiEngineTierFor,
   banqiLiveEngineMove,
   banqiNetPath,
@@ -140,6 +141,7 @@ test('Banqi offers eight levels, retaining the historical id at L7', () => {
   assert.equal(BANQI_ENGINE_VERSION, '0.3.0');
   for (const tier of BANQI_PLAYABLE_ENGINES) {
     assert.equal(tier.version, '0.3.0');
+    assert.equal(banqiEngineDisplayName(tier.id), `Misty Level ${tier.level}`);
     const registry = loadEngine(tier.id);
     assert.ok(registry.configHash.startsWith('misty-banqi-0.3.0-'));
     assert.equal(registry.playSignature, registry.configHash);
@@ -158,7 +160,9 @@ test('the historical Banqi id resolves to level 7 and unknown ids fail closed', 
   assert.equal(banqiEngineTierFor(BANQI_DEFAULT_ENGINE_ID), BANQI_PLAYABLE_ENGINES[6]);
   for (const id of ['misty-banqi-amateur', 'misty-banqi-strong', 'misty-banqi-strongest']) {
     assert.equal(banqiEngineTierFor(id), BANQI_PLAYABLE_ENGINES[6]);
+    assert.equal(banqiEngineDisplayName(id), 'Misty Level 7');
   }
+  assert.equal(banqiEngineDisplayName('unknown-engine'), 'unknown-engine');
   assert.equal(banqiEngineTierFor('misty-banqi-level-7'), null);
   assert.equal(banqiEngineTierFor('misty-banqi-level-9'), null);
   assert.equal(banqiEngineTierFor('misty-jungle-flip-level-4'), null);
