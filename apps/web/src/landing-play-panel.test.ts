@@ -107,7 +107,7 @@ describe('homepage play panel', () => {
     expect(stepValue(jieqi, 'level')).toBe('AB-JChess');
   });
 
-  it('lists every launched public bot variant unless explicitly exempted', async () => {
+  it('already lists every live-roster bot variant at first paint unless explicitly exempted', async () => {
     vi.useFakeTimers();
     for (const flag of [
       'XIANGQI',
@@ -132,14 +132,31 @@ describe('homepage play panel', () => {
       vi.fn(async (url: string) =>
         Response.json(
           url === '/api/engines/playable'
-            ? { threeKingdomsBanqiEngines: THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES }
-            : {},
+            ? {
+                banqiEngines: knownEngineIds().map((id) => ({ id })),
+                jungleFlipEngines: knownEngineIds().map((id) => ({ id })),
+                threeKingdomsBanqiEngines: THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES,
+              }
+            : url === '/api/bots'
+              ? {
+                  bots: FIRST_PARTY_BOT_PROFILES.map((bot) => ({
+                    id: bot.id,
+                    playOptions: Object.keys(bot.engines).map((gameSpecId) => ({
+                      gameSpecId,
+                      playable: true,
+                    })),
+                  })),
+                }
+              : {},
         ),
       ),
     );
     const board = buildPlayPanel('en');
     document.body.append(board);
-    await flush();
+    const firstPaintBots = [...board.querySelectorAll<HTMLElement>('.pp-row-bot')].map(
+      (el) => el.dataset.gameSpec,
+    );
+    await vi.advanceTimersByTimeAsync(0);
     // The same bot identities used by /api/bots, independent of the web
     // picker's PvE predicate: a server bot omitted by the web must fail too.
     // Engine-only bots (TK) have no public bot profile. Include the server's
@@ -159,6 +176,14 @@ describe('homepage play panel', () => {
       (el) => el.dataset.gameSpec,
     );
     expect(bots).toEqual(orderPanelSpecs(expected));
+    for (const spec of bots) {
+      expect(firstPaintBots, `${spec} must already have a row before the live roster`).toContain(
+        spec,
+      );
+    }
+    expect(firstPaintBots.indexOf('three-kingdoms-banqi')).toBe(
+      firstPaintBots.indexOf('banqi') + 1,
+    );
     // A generic fallback row is not coverage if its bot does not play this
     // spec. In particular, TK cannot send Misty's public-profile botId.
     for (const spec of expected) {
@@ -235,6 +260,43 @@ describe('homepage play panel', () => {
     }
   });
 
+  it.each(['true', 'false'])(
+    'paints the static TK Levels 1-7 after Banqi only with the public flag (%s), before any engine response',
+    (flag) => {
+      vi.useFakeTimers();
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise<Response>(() => {})),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      if (flag === 'false') {
+        expect(
+          board.querySelector('.pp-row-bot[data-game-spec="three-kingdoms-banqi"]'),
+        ).toBeNull();
+        return;
+      }
+      const tk = row(board, 'three-kingdoms-banqi');
+      expect(tk.previousElementSibling?.getAttribute('data-game-spec')).toBe('banqi');
+      expect(stepValue(tk, 'level')).toBe('Level 4');
+      expect(tk.querySelector('.pp-step-tag')).toBeNull();
+      const easier = tk.querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[0]!;
+      for (let i = 0; i < 10; i++) easier.click();
+      const levels = [stepValue(tk, 'level')];
+      for (let i = 0; i < 6; i++) {
+        clickNext(tk, 'level');
+        levels.push(stepValue(tk, 'level'));
+      }
+      clickNext(tk, 'level');
+      expect(levels).toEqual(Array.from({ length: 7 }, (_, i) => `Level ${i + 1}`));
+      expect(stepValue(tk, 'level')).toBe('Level 7');
+      expect(
+        tk.querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]!.disabled,
+      ).toBe(true);
+    },
+  );
+
   it('hydrates the TK row after Banqi, defaults to Level 4, and starts the exact engine-only pick', async () => {
     vi.useFakeTimers();
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
@@ -251,7 +313,7 @@ describe('homepage play panel', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const board = buildPlayPanel('en');
     document.body.append(board);
-    expect(board.querySelector('.pp-row-bot[data-game-spec="three-kingdoms-banqi"]')).toBeNull();
+    expect(stepValue(row(board, 'three-kingdoms-banqi'), 'level')).toBe('Level 4');
     await vi.advanceTimersByTimeAsync(0);
     const tk = row(board, 'three-kingdoms-banqi');
     expect(tk.previousElementSibling?.getAttribute('data-game-spec')).toBe('banqi');
@@ -289,8 +351,8 @@ describe('homepage play panel', () => {
     );
   });
 
-  it.each(['no-net', 'no-binary', 'empty', 'failed'])(
-    'fails closed on the TK runtime roster (%s)',
+  it.each(['no-net', 'no-binary', 'empty', 'missing', 'failed', 'unavailable'])(
+    'replaces the static TK ladder only with an explicit live list (%s)',
     async (availability) => {
       vi.useFakeTimers();
       vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
@@ -299,6 +361,8 @@ describe('homepage play panel', () => {
         vi.fn(async (url: string) => {
           if (url !== '/api/engines/playable') return Response.json({});
           if (availability === 'failed') throw new Error('offline');
+          if (availability === 'unavailable') return new Response(null, { status: 503 });
+          if (availability === 'missing') return Response.json({});
           const tiers = THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES;
           return Response.json({
             threeKingdomsBanqiEngines:
@@ -313,14 +377,14 @@ describe('homepage play panel', () => {
       const board = buildPlayPanel('en');
       document.body.append(board);
       await vi.advanceTimersByTimeAsync(0);
-      if (availability === 'empty' || availability === 'failed') {
+      if (availability === 'empty') {
         expect(
           board.querySelector('.pp-row-bot[data-game-spec="three-kingdoms-banqi"]'),
         ).toBeNull();
       } else {
         const tk = row(board, 'three-kingdoms-banqi');
         clickNext(tk, 'level', 10);
-        expect(stepValue(tk, 'level')).toBe(availability === 'no-net' ? 'Level 7' : 'Level 1');
+        expect(stepValue(tk, 'level')).toBe(availability === 'no-binary' ? 'Level 1' : 'Level 7');
         expect(tk.querySelector('.pp-step-tag')).toBeNull();
       }
     },
