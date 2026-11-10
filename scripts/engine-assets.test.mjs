@@ -49,6 +49,15 @@ test('the unchanged upstream Pikafish pin applies the supplied CC0 patch before 
   assert.ok(build.indexOf('sf_make "$work/pikafish/src"') > apply);
 });
 
+test('the Pikafish licence is copied from the file upstream ships at the pin', () => {
+  // Pikafish 6a59ee2f has Copying.txt at its root and no COPYING; copying the
+  // wrong name failed the 2026-11-10 engines build at packaging, after compiling.
+  const build = recipe.slice(recipe.indexOf('  ref=$(pin pikafish.ref)'));
+  const step = build.slice(0, build.indexOf('pikafish_net "$bin"'));
+  assert.match(step, /cp "\$work\/pikafish\/Copying\.txt" "\$bin\/COPYING"/);
+  assert.doesNotMatch(step, /\$work\/pikafish\/COPYING/);
+});
+
 test('the CC0 patch is hashed and watched by the release workflow and all Railway services', () => {
   assert.match(recipe, /^RECIPE_VERSION=4$/m);
   assert.ok(recipeInputs().includes(pikafishPatch));
