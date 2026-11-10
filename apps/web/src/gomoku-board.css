@@ -49,6 +49,9 @@
   fill: #222;
   stroke: #080808;
 }
+.gomoku-preview {
+  opacity: 0.5;
+}
 .gomoku-stone--white {
   fill: #faf7ee;
   stroke: #8a806d;

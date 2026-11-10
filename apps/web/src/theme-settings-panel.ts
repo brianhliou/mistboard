@@ -8,7 +8,11 @@
 // preference setters this panel calls — the panel is a dumb view over that API.
 import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
-import { boardCoordinatesEnabled } from './display-preferences.js';
+import {
+  boardCoordinatesEnabled,
+  readDisplayPreferences,
+  writeDisplayPreference,
+} from './display-preferences.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
   currentLocale,
@@ -209,6 +213,7 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
   // Coordinates are every board's, not xiangqi's, so they sit outside the gate.
   // Until 2026-10-17 they lived only on the account page, out of a guest's reach.
   boardBody.push(createBoardCoordinatesField(locale));
+  boardBody.push(createTouchConfirmationField(locale));
   addCategory('board', t('prefs.board', {}, locale), boardBody);
 
   // Pieces carries XIANGQI ONLY (2026-07-26). Chess ships one set, so there is no
@@ -665,6 +670,22 @@ function createBoardCoordinatesField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setBoardCoordinatesPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.coordinates', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+function createTouchConfirmationField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.confirmMovesOnTouchToggle = '';
+  input.checked = readDisplayPreferences().confirmMovesOnTouch;
+  input.addEventListener('change', () =>
+    writeDisplayPreference('confirmMovesOnTouch', input.checked),
+  );
+  const text = document.createElement('span');
+  text.textContent = t('account.displayConfirmMovesOnTouch', {}, locale);
   field.append(input, text);
   return field;
 }

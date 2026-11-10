@@ -25,6 +25,7 @@ export function gomokuBoardSvg(
   view: GomokuPlayerView,
   interactive: boolean,
   markers: readonly GomokuBoardMarker[] = [],
+  preview: GomokuSquare | null = null,
 ): string {
   const winning = new Set(view.winningLine);
   const legal = new Set(interactive ? view.legalMoves.map((move) => move.to) : []);
@@ -61,7 +62,7 @@ export function gomokuBoardSvg(
       );
     else if (legal.has(square))
       nodes.push(
-        `<circle class="gomoku-ghost gomoku-stone--${view.perspective}" cx="${x}" cy="${y}" r="14" visibility="hidden" aria-hidden="true"/>`,
+        `<circle class="gomoku-ghost${square === preview ? ' gomoku-preview' : ''} gomoku-stone--${view.perspective}" cx="${x}" cy="${y}" r="14" visibility="${square === preview ? 'visible' : 'hidden'}" aria-hidden="true"/>`,
       );
     if (winning.has(square))
       nodes.push(`<circle class="gomoku-winning" cx="${x}" cy="${y}" r="14"/>`);
