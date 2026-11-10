@@ -6921,16 +6921,16 @@ const ZH_HANS: Record<string, string> = {
   'The Future of Fog Variants on Mistboard': 'Mistboard 迷雾变体的未来',
   'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
     '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。为什么它们的运行成本太高、哪些功能会保留，以及要怎样才能让它们回来。',
-  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
-    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。和朋友对弈、规则页面以及所有已完成的对局都会保留。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. For now, playing a friend stays. The rules pages and every finished game stay too.':
+    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。目前，和朋友对弈仍会保留；规则页面以及所有已完成的对局也都会保留。',
   'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
     '迷雾机器人必须记住迷雾背后所有可能的局面。在复杂的深局中，这会达到数亿个局面，所需内存远远超出这些对局值得的投入。',
   "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
     '在 12 月 8 日前登录并战胜 Misty，该棋种的留名徽章就会一直留在你的个人主页上：迷雾国际象棋一枚，迷雾象棋一枚。',
   'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
     '从 6 月起，Mistboard 一直在运行 Misty，一个会下[迷雾国际象棋](/rules/fog-chess)和[迷雾象棋](/rules/fog-xiangqi)的机器人。在这两种棋里，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，两个迷雾机器人都将下线。**',
-  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
-    '为了在看不见全盘的情况下下好棋，Misty 会追踪迷雾背后所有可能的局面。在漫长而复杂的对局里，这需要的内存远远超过服务器能为这少数玩家承担的。和朋友对弈、两个规则页面以及所有已完成的对局都会保留。',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. For now, games against a friend stay. Both rules pages and every finished game stay too.':
+    '为了在看不见全盘的情况下下好棋，Misty 会追踪迷雾背后所有可能的局面。在漫长而复杂的对局里，这需要的内存远远超过服务器能为这少数玩家承担的。目前，和朋友对弈仍会保留；两个规则页面以及所有已完成的对局也都会保留。',
   Timeline: '时间线',
   'This announcement': '本公告',
   'The Fog Chess and Fog Xiangqi legacy badges go live.':
@@ -13544,16 +13544,16 @@ const ZH_HANT: Record<string, string> = {
   'The Future of Fog Variants on Mistboard': 'Mistboard 迷霧變體的未來',
   'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
     '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。為什麼它們的運行成本太高、哪些功能會保留，以及要怎樣才能讓它們回來。',
-  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
-    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。和朋友對弈、規則頁面以及所有已完成的對局都會保留。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. For now, playing a friend stays. The rules pages and every finished game stay too.':
+    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。目前，和朋友對弈仍會保留；規則頁面以及所有已完成的對局也都會保留。',
   'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
     '迷霧機器人必須記住迷霧背後所有可能的局面。在複雜的深局中，這會達到數億個局面，所需記憶體遠遠超出這些對局值得的投入。',
   "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
     '在 12 月 8 日前登入並戰勝 Misty，該棋種的留名徽章就會一直留在你的個人頁面上：迷霧西洋棋一枚，迷霧象棋一枚。',
   'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
     '從 6 月起，Mistboard 一直在運行 Misty，一個會下[迷霧西洋棋](/rules/fog-chess)和[迷霧象棋](/rules/fog-xiangqi)的機器人。在這兩種棋裡，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，兩個迷霧機器人都將下線。**',
-  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
-    '為了在看不見全盤的情況下下好棋，Misty 會追蹤迷霧背後所有可能的局面。在漫長而複雜的對局裡，這需要的記憶體遠遠超過伺服器能為這少數玩家承擔的。和朋友對弈、兩個規則頁面以及所有已完成的對局都會保留。',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. For now, games against a friend stay. Both rules pages and every finished game stay too.':
+    '為了在看不見全盤的情況下下好棋，Misty 會追蹤迷霧背後所有可能的局面。在漫長而複雜的對局裡，這需要的記憶體遠遠超過伺服器能為這少數玩家承擔的。目前，和朋友對弈仍會保留；兩個規則頁面以及所有已完成的對局也都會保留。',
   Timeline: '時間軸',
   'This announcement': '本公告',
   'The Fog Chess and Fog Xiangqi legacy badges go live.': '迷霧西洋棋留名和迷霧象棋留名徽章上線。',
