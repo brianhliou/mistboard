@@ -2705,14 +2705,22 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     onStatus: showAnalysisStatus,
   });
 
-  function renderAnalysisRequest(source: AnalysisSource, error?: unknown, pending = false): void {
+  function renderAnalysisRequest(
+    source: AnalysisSource,
+    error?: unknown,
+    pending = false,
+    runFailed = false,
+  ): void {
     if (mountAbort.signal.aborted) return;
     if (mainlineLen < 1) {
       setAnalysisContent(null);
       return;
     }
+    // A signed-out viewer (requestHref set) cannot run analysis, so a failed
+    // read still offers sign-in; Retry is for viewers who can request it.
+    const failed = Boolean(error) && !source.requestHref;
     const control =
-      source.requestHref && !pending && !error
+      source.requestHref && !pending
         ? document.createElement('a')
         : document.createElement('button');
     if (control instanceof HTMLButtonElement) {
@@ -2726,7 +2734,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     icon.innerHTML =
       '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="8" width="3" height="6" rx="0.6"/><rect x="6.5" y="4" width="3" height="10" rx="0.6"/><rect x="12" y="1" width="3" height="13" rx="0.6"/></svg>';
     const label = document.createElement('span');
-    label.textContent = error ? t('replay.analysisRetry') : source.requestLabel;
+    // A run that failed says so; a failed read of saved work only offers a retry.
+    label.textContent = failed
+      ? t(runFailed ? 'replay.analysisFailed' : 'replay.analysisRetry')
+      : source.requestLabel;
     control.replaceChildren(icon, label);
     analysisControl = control;
     analysisLabel = label;
@@ -2772,7 +2783,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           applyAnalysis(analysis);
           if (decisionSource) await loadCachedDecisions(true);
         })().catch((failure) => {
-          if (!mountAbort.signal.aborted) renderAnalysisRequest(source, failure);
+          if (!mountAbort.signal.aborted) renderAnalysisRequest(source, failure, false, true);
         });
       });
     const box = document.createElement('div');

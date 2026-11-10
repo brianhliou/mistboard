@@ -144,9 +144,10 @@ describe('Three Kingdoms banqi postgame page', () => {
     // Nothing between the board and the move list: no right-rail material rows.
     expect(root.querySelector('.review-material-row:not(.review-seat__material)')).toBeNull();
     expect(root.textContent).toContain('Request computer analysis');
-    expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/analysis`, {
-      method: 'GET',
-    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${threeKingdomsBanqiPostgameApiUrl(ROOM)}/analysis`,
+      expect.objectContaining({ method: 'GET' }),
+    );
   });
 
   it('shows the not-found page on a 404', async () => {
@@ -264,9 +265,10 @@ describe('Three Kingdoms banqi postgame page', () => {
       mountThreeKingdomsBanqiPostgame(root, ROOM);
       await flushPromises();
       await flushPromises();
-      expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/decisions`, {
-        method: 'GET',
-      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `${threeKingdomsBanqiPostgameApiUrl(ROOM)}/decisions`,
+        expect.objectContaining({ method: 'GET' }),
+      );
       expect(
         fetchSpy.mock.calls.every(
           (call) => (call as unknown as [unknown, RequestInit?])[1]?.method !== 'POST',

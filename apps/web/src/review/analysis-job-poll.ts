@@ -58,7 +58,11 @@ async function analysisJob<T>(
     if (response.status !== 202) throw new Error(`${prefix}_${response.status}`);
     const accepted = (await response.json()) as JobStatusBody & { jobId?: string };
     if (!accepted.jobId) throw new Error(`${prefix}_missing_job`);
-    let body: JobStatusBody = accepted;
+    // The server's 202 carries only {jobId}; a job with no status yet is pending.
+    let body: JobStatusBody = {
+      ...accepted,
+      status: accepted.status ?? 'pending',
+    } as JobStatusBody;
     for (;;) {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
       if (body.status === 'done') return body.result as T;
