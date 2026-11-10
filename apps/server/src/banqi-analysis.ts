@@ -165,16 +165,51 @@ export async function analyzeBanqiPostgame(
   // resumes from the last checkpoint (persist expensive output incrementally).
   const resumed = progress ? await progress.load() : null;
   const plies: SweepPlyEval[] = resumed ? [...resumed.items] : [];
-  for (let ply = plies.length; ply < states.length; ply += 1) {
-    const s = states[ply]!;
-    if (s.status.type !== 'playing') {
-      plies.push(terminalPlyEval(ply, s));
-      continue;
+  // Two workers fit the existing analysis pool's two slots. Each search is
+  // cold/reset and keeps its full node budget. Buffer out-of-order completions;
+  // only serialized, contiguous checkpoints are durable/reusable on restart.
+  let nextPly = plies.length;
+  let failed = false;
+  const completed = new Map<number, SweepPlyEval>();
+  let checkpoint: Promise<void> = Promise.resolve();
+  const commit = (ply: number, value: SweepPlyEval): Promise<void> => {
+    completed.set(ply, value);
+    checkpoint = checkpoint.then(async () => {
+      const before = plies.length;
+      while (completed.has(plies.length)) {
+        const cursor = plies.length;
+        plies.push(completed.get(cursor)!);
+        completed.delete(cursor);
+      }
+      if (progress && plies.length > before)
+        await progress.save({ nextIndex: plies.length, items: [...plies] });
+    });
+    return checkpoint;
+  };
+  const worker = async (): Promise<void> => {
+    while (!failed && nextPly < states.length) {
+      const ply = nextPly++;
+      try {
+        const s = states[ply]!;
+        let value: SweepPlyEval;
+        if (s.status.type !== 'playing') value = terminalPlyEval(ply, s);
+        else {
+          const evaluation = await evaluate(s, banqiAnalysisRepetitionWindow(states, moves, ply));
+          value = { ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best };
+        }
+        await commit(ply, value);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
     }
-    const evaluation = await evaluate(s, banqiAnalysisRepetitionWindow(states, moves, ply));
-    plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
-    if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
-  }
+  };
+  // Promise.all would return on the first error while another search/write was
+  // still running, allowing a retry/next job to race its checkpoint. Drain both.
+  const settled = await Promise.allSettled([worker(), worker()]);
+  const failure = settled.find((result) => result.status === 'rejected');
+  if (failure?.status === 'rejected') throw failure.reason;
+  await checkpoint;
   return { engineId: BANQI_ANALYSIS_ENGINE_ID, depth: BANQI_ANALYSIS_DEPTH, plies };
 }
 

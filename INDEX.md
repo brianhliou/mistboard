@@ -1396,6 +1396,12 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 `apps/server/src/xiangqi-rules-replay.test.ts`: stored standard xiangqi draw-limit replay, reconnect, postgame views and export regressions.
 
+`apps/server/src/banqi-analysis-query-cache.ts` + `.test.ts`: bounded exact-public-UCI-query LRU/inflight coalescing, binary/model SHA identities, node-complete exact-score admission, clones and artifact-rotation guards (#1040). Default8192entries/16MiB/6h; max32inflight.
+
+`apps/server/src/banqi-analysis-runner.ts` + `.test.ts`: analysis-only cold-process cache wrapper, shared queue/startup/search deadline, strict model-load diagnostics, post-search artifact validation and shutdown/start guards. Live serving unchanged.
+
+`apps/server/src/banqi-analysis-parallel.test.ts`: two-position base-sweep overlap within the existing pool cap, immutable contiguous serialized checkpoints, failure drain/resume and failed-write ordering. Banqi analysis node budgets, roots and evaluation semantics remain unchanged.
+
 `scripts/banqi-provider.mjs`: local opaque-executable direct/HTTP probe and loopback bridge; `docs/banqi-engine-providers.md` and `docs/examples/banqi-provider-*.json` document the checked contributor contract.
 
 The provider guide's postgame section separates existing grading/luck algorithms from a new engine's evaluator adapter; the response-analysis JSON example carries an illustrative, explicitly typed score.

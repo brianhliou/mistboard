@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import type { GameEvent } from '@mistboard/game';
 import pg from 'pg';
 import { WebSocketServer } from 'ws';
+import { closeBanqiAnalysisQueries, openBanqiAnalysisQueries } from './banqi-analysis-runner.js';
 // Populates the VariantTenant registry (one registration module per variant).
 import './variant-tenant/register-tenants.js';
 import { drainAchievementTriggers, installAchievementEvaluator } from './achievement-triggers.js';
@@ -248,6 +249,7 @@ export type StartedServer = {
 export async function startServer(options: StartServerOptions = {}): Promise<StartedServer> {
   if (server) throw new Error('startServer: already running');
   shuttingDown = false;
+  openBanqiAnalysisQueries();
   if (typeof options.seatVacateGraceMs === 'number') {
     seatVacateGraceMsOverride = options.seatVacateGraceMs;
   } else {
@@ -415,6 +417,7 @@ export async function stopServer(): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  closeBanqiAnalysisQueries();
   await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
@@ -650,6 +653,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  closeBanqiAnalysisQueries();
   await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
