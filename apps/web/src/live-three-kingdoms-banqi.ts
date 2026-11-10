@@ -26,6 +26,7 @@ import type {
   ThreeKingdomsBanqiSquare,
   ThreeKingdomsBanqiStatus,
 } from '@mistboard/game';
+import { threeKingdomsBanqiMoveLabel } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
@@ -276,27 +277,15 @@ export function bootstrapThreeKingdomsBanqiLiveRoom(): void {
 
 // ── Notation ──────────────────────────────────────────────────────────────────
 
-// Banqi's letters, so the move list reads like a banqi study (G general, S soldier).
-const ROLE_LETTER: Record<BanqiPieceRole, string> = {
-  general: 'G',
-  advisor: 'A',
-  elephant: 'E',
-  chariot: 'R',
-  horse: 'H',
-  cannon: 'C',
-  soldier: 'S',
-};
-
-// "c2-c4" (a capture reads the same), and a flip names what it turned up: "c2(H)".
+// "c2-c4" (a capture reads the same), and a flip names what it turned up, in
+// the shared flip label every TK surface uses: upper case red, lower case
+// black ("c2(H)", "c2(h)"), "(?)" when the view after it is not in hand.
 function notate(
   move: ThreeKingdomsBanqiMove,
   boardAfter: Partial<Record<Square, TkLiveBoardEntry>> | undefined,
 ): string {
-  if (move.from === move.to) {
-    const entry = boardAfter?.[move.to];
-    return entry && !entry.faceDown ? `${move.to}(${ROLE_LETTER[entry.role]})` : `${move.to}()`;
-  }
-  return `${move.from}-${move.to}`;
+  const entry = boardAfter?.[move.to];
+  return threeKingdomsBanqiMoveLabel(move, entry && !entry.faceDown ? entry : null);
 }
 
 // ── Material and the no-progress line ─────────────────────────────────────────
