@@ -1,6 +1,8 @@
 // Review translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_REVIEW = {
+  'review.chooseLine': 'Choose a line',
+  'review.mainLine': 'Main line',
   // Remaining review widgets and dynamically generated move advice (#855).
   'review.explorer.move': 'Move',
   'review.explorer.games': 'Games',

@@ -7,6 +7,8 @@
 import type { ReviewI18nKey } from './review.js';
 
 export const ZH_HANT_REVIEW = {
+  'review.chooseLine': '選擇分支',
+  'review.mainLine': '主線',
   // Remaining review widgets and dynamically generated move advice (#855).
   'review.explorer.move': '著法',
   'review.explorer.games': '對局數',

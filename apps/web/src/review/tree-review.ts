@@ -95,6 +95,7 @@ import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from 
 import { createRetro, type RetroController, type RetroHost, type RetroSide } from './retro.js';
 import { createRetroPanel, type RetroPanel } from './retro-panel.js';
 import { createReviewControls, REVIEW_MENU_ICONS, type ReviewMenuItem } from './review-controls.js';
+import { createReviewForkPicker } from './review-fork-picker.js';
 import {
   createReviewScaffold,
   installReviewKeyboard,
@@ -290,6 +291,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  8x4 banqi board) otherwise stretch to the full column width; a cap keeps them at
    *  a sane size, matching the linear layout's boardMaxPx. Omit for square-ish boards. */
   boardMaxPx?: number;
+  /** Short boards can show existing continuations below the board on phones. */
+  phoneForkPicker?: boolean;
   /** With no client engine, keep the eval gauge's track as an empty spacer so the
    *  three columns land where an engine page's do (Three Kingdoms beside banqi). */
   reserveGaugeTrack?: boolean;
@@ -2087,6 +2090,18 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     );
   }
 
+  const forkPicker =
+    presentation.phoneForkPicker && !config.embedded
+      ? createReviewForkPicker((path) => {
+          if (retro?.preventGoingToNextMove()) return;
+          go(path);
+        })
+      : null;
+  if (forkPicker) {
+    scaffold.stage.el.after(forkPicker.el);
+    mountAbort.signal.addEventListener('abort', () => forkPicker.el.remove(), { once: true });
+  }
+
   function go(path: TreePath): void {
     closeVariationPicker();
     const fromPath = currentPath;
@@ -2301,6 +2316,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // reserved two-line box that never reflowed).
     commentPanelEl.hidden = !authoredComment;
     moveTree.setCurrent(currentPath);
+    if (forkPicker) {
+      const hadFork = !forkPicker.el.hidden;
+      forkPicker.update(
+        node.children.map((child) => ({ label: child.label, path: tree.pathTo(child) })),
+      );
+      // The one-screen phone fit includes the picker between board and moves.
+      if (hadFork || !forkPicker.el.hidden) scaffold.refit();
+    }
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
     if (phoneBar) {
       const seat = view ? presentation.seatFor(view) : null;
