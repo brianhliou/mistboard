@@ -529,29 +529,22 @@ test('banqi golden wire: spectators get the masked view while the game is live',
   assert.ok(liveSteps > 0, 'no live step in the scripts: this test asserted nothing');
 });
 
-test('banqi golden wire: a finished room opens fully to a spectator', () => {
-  // The other half of the matrix row above. Split so that the live invariant
-  // cannot be silently widened: weakening either test leaves the other failing.
+test('banqi golden wire: a finished room keeps its as-played board until an explicit reveal', () => {
   let finishedSteps = 0;
   for (const script of runAllScripts()) {
-    for (const step of script.steps) {
+    for (const [index, step] of script.steps.entries()) {
       if (!isFinishedStep(step)) continue;
       finishedSteps += 1;
-      const spectator = wireSnapshots(step).spectator!;
-      assert.ok(
-        Object.keys(spectator.state.board).length > 0,
-        `${script.id}/${step.label}: finished board must not be empty`,
-      );
-      assert.ok(spectator.events.length > 0, `${script.id}/${step.label}: log must be delivered`);
-      // Every tile is face-up, including ones never flipped in play: that is
-      // what "truth" means here, and it is already public via the postgame
-      // truth history (see f2ad3e9).
-      for (const [square, entry] of Object.entries(spectator.state.board)) {
-        assert.equal(
-          entry.faceDown,
-          false,
-          `${script.id}/${step.label}: ${square} still face-down`,
-        );
+      const snapshots = wireSnapshots(step);
+      const previous = wireSnapshots(script.steps[index - 1]!);
+      for (const seat of [...SEATS, 'spectator'] as const) {
+        const out = snapshots[seat]!;
+        // Resignation/timeout do not turn over a tile. Serialize the complete
+        // snapshot, not just the board's visually face-down slots.
+        assert.deepEqual(out.state.board, previous[seat]!.state.board);
+        for (const piece of Object.values(out.state.board))
+          if (piece.faceDown) assert.deepEqual(piece, { faceDown: true });
+        assert.doesNotMatch(JSON.stringify(out), /"setup"|"revealed"|"deal"/);
       }
     }
   }
@@ -588,7 +581,7 @@ test('banqi golden wire: a live hello carries only masked per-ply views, spectat
   // (roomViewPolicy 'public-view'), so every viewer gets its own per-ply
   // masked views. Each ply must be what the room served that viewer then: no
   // face-down tile with an identity, nothing face-down live that an earlier ply
-  // shows face-up, no deal, and a closed room sends nothing.
+  // shows face-up, no deal. Finished reconnects retain this same masked history.
   let liveSteps = 0;
   const dealRoles = JSON.stringify(GOLDEN_DEAL);
   for (const script of runAllScripts()) {
@@ -598,7 +591,7 @@ test('banqi golden wire: a live hello carries only masked per-ply views, spectat
       assert.ok(histories, `${where}: no hello history recorded`);
       const snapshots = wireSnapshots(step);
       const status = (snapshots.red!.state as { status?: { type?: string } }).status?.type;
-      if (status !== 'playing') {
+      if (status !== 'playing' && status !== 'finished') {
         for (const seat of SEATS) {
           assert.deepEqual(histories[seat], {}, `${where}: closed room sent ${seat} a history`);
         }
@@ -623,8 +616,8 @@ test('banqi golden wire: a live hello carries only masked per-ply views, spectat
         );
         // The tip is the viewer's live snapshot view (legal moves aside).
         assert.deepStrictEqual(
-          history.at(-1)!.view,
-          { ...snapshots[seat]!.state, legalMoves: [] },
+          { ...history.at(-1)!.view, status: undefined },
+          { ...snapshots[seat]!.state, legalMoves: [], status: undefined },
           `${where}: ${seat} history tip is not its live view`,
         );
         const liveBoard = snapshots[seat]!.state.board;
