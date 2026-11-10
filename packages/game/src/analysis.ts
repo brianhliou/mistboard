@@ -1,5 +1,7 @@
 // Postgame analysis math (P3): engine eval -> win probability -> per-move
 // judgment + accuracy. Formulas ported from lichess/lila.
+// The Xiangqi findings below describe @5 and older; CC0 @6 preserves their
+// win% on its new cp scale via PIKAFISH_CC0_WIN_PCT_K below.
 //
 // CALIBRATED AND LEFT ALONE, 2026-08-27. The note here used to say the chess
 // constants "likely want recalibration on real xiangqi games". That was tested
@@ -106,6 +108,13 @@ const WIN_PCT_CLAMP_CP = 1000;
 // too flat / too spiky.
 export const WIN_PCT_K = 0.00368208;
 
+// Pikafish CC0 analysis @6: least-squares match to @5 win% on 856 paired
+// positions / 70 games (848 cp pairs), keeping @5's WIN_PCT_K. K = 0.00465696,
+// by-game bootstrap 95% [0.004567, 0.004755] (2,000 replicates, seed 20261109).
+// Regenerate with scripts/fit-win-curve-paired.mjs; scripts/fit-win-curve.mjs
+// cross-checks outcomes. Built-in scale 79, 1M nodes, one thread; @5 stays as-is.
+export const PIKAFISH_CC0_WIN_PCT_K = 0.00465696;
+
 // AB-JChess's centipawns are on their own scale, not Pikafish's: fitted on 400 of
 // its match games (mistboard-engine lab/jieqi-abjchess-2026-09-29), p(win) =
 // 1/(1+exp(-0.00985*cp)), so +112cp already reads as 75%. Same logistic form as
@@ -140,6 +149,7 @@ const ABJCHESS_JQE_SCALE_NETS = ['abjchess-20261030'] as const;
  * directly to winPercent instead: not every engine uses a logistic model.
  */
 export function winPercentK(engineId: string | null | undefined): number {
+  if (engineId === 'pikafish-xiangqi-analysis@6') return PIKAFISH_CC0_WIN_PCT_K;
   if (engineId?.startsWith('rapfi-')) return RAPFI_WIN_PCT_K;
   if (!engineId?.startsWith('ab-jchess')) return WIN_PCT_K;
   return ABJCHESS_JQE_SCALE_NETS.some((net) => engineId.includes(`+${net}+`))

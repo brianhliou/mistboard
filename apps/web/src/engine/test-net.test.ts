@@ -14,7 +14,7 @@ describe('required test nets', () => {
     'fails for a missing net with %j',
     (env) => {
       expect(() => testNetAvailable(missing, env)).toThrow(missing);
-      expect(() => testNetAvailable(missing, env)).toThrow('MISTBOARD_PRIVATE_ASSETS_TOKEN');
+      expect(() => testNetAvailable(missing, env)).toThrow('public CC0 network');
     },
   );
 

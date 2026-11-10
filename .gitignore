@@ -108,9 +108,9 @@ scripts/.benedict-diagrams.mjs
 # own copy from the pinned refs; nothing here is ever committed.
 /bin/
 
-# The 51 MB Pikafish net is fetched by scripts/fetch-pikafish-net.mjs
-# against the pin in net.json (predev/build); upstream rolls it without a tag.
-apps/web/public/engine/pikafish/pikafish.nnue
+# The pinned CC0 Pikafish net is fetched and verified before dev/build.
+# Also ignore any stale network left in a prepared worktree.
+apps/web/public/engine/pikafish/*.nnue
 
 # Rapfi preloaded CC0 networks, verified by fetch-rapfi-net.mjs before dev.
 apps/web/public/engine/rapfi/rapfi-single-simd128.data

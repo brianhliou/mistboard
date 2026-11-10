@@ -24,13 +24,12 @@ on:
       - stockfish.ref
       - pikafish-jieqi.ref
       - pikafish.ref
+      - pikafish-cc0-net.patch
       - ab-jchess.ref
       - katago-jungle.ref
       - jqe.ref
       - rapfi.ref
       - scripts/rapfi-assets.mjs
-      - scripts/fetch-pikafish-net.mjs
-      - apps/web/public/engine/pikafish/net.json
       - scripts/engine-assets.sh
       - .github/workflows/build-engines.yml
 

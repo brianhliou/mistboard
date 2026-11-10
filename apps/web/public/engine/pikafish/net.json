@@ -1,9 +1,8 @@
 {
-  "file": "pikafish.nnue",
-  "url": "https://api.github.com/repos/brianhliou/mistboard-nets/releases/assets/723355852",
-  "sha256": "7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e",
-  "bytes": 50706378,
+  "file": "xiangqi-c07e94a5c7cb.nnue",
+  "url": "https://raw.githubusercontent.com/fairy-stockfish/Fairy-Stockfish-NNUE/0f4dce21530775b1dc862b7c84aa707548183097/xiangqi-c07e94a5c7cb.nnue",
+  "sha256": "c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11",
+  "bytes": 11261932,
   "engineCommit": "6a59ee2f7b105bff64d9efc2692591107787e2b1",
-  "releaseRepo": "brianhliou/mistboard-nets",
-  "releaseTag": "pikafish-net-7d13d735"
+  "netCommit": "0f4dce21530775b1dc862b7c84aa707548183097"
 }

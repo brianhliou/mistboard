@@ -151,3 +151,24 @@ test('resolveXiangqiAnalysis coalesces concurrent misses into one compute', asyn
   assert.ok(ra && rb);
   assert.deepEqual(ra.plies, rb.plies);
 });
+
+test('CC0 @6 recomputes on demand while retaining the historical @5 cache row', async () => {
+  const cache = memoryCache();
+  const old: PlyEval[] = [{ ply: 1, cp: 999, mate: null, best: null }];
+  const room = 'room-cc0-invalidation';
+  await cache.save(room, 'pikafish-xiangqi-analysis@5', 12, old);
+  let calls = 0;
+  const analyze = async (moves: string[]) => {
+    calls += 1;
+    return onePly(moves);
+  };
+  assert.equal(await resolveXiangqiAnalysis(room, oneMovePayload, cache, analyze, false), null);
+  assert.equal(calls, 0, 'GET must not start an engine pass');
+  const fresh = await resolveXiangqiAnalysis(room, oneMovePayload, cache, analyze);
+  assert.equal(fresh?.engineId, 'pikafish-xiangqi-analysis@6');
+  assert.equal(calls, 1);
+  assert.deepEqual(await cache.get(room, 'pikafish-xiangqi-analysis@5', 12), old);
+  assert.deepEqual(await cache.get(room, 'pikafish-xiangqi-analysis@6', 12), fresh?.plies);
+  assert.deepEqual(await resolveXiangqiAnalysis(room, oneMovePayload, cache, analyze), fresh);
+  assert.equal(calls, 1, 'subsequent @6 requests reuse the fresh row');
+});
