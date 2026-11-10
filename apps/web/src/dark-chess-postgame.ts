@@ -156,8 +156,9 @@ export function mountDarkChessPostgame(
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('dark-chess', game.roomId),
-      run: () => requestGameAnalysis('dark-chess', game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('dark-chess', game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('dark-chess', game.roomId, { signal, onStatus }),
     },
     // Ranked alternatives per ply, from Misty's own solve. Under fog a PV is undefined (the move
     // leads to a distribution over the opponent's real position), so the honest alternatives
@@ -166,13 +167,15 @@ export function mountDarkChessPostgame(
     // against the hidden truth. The POST is account-gated, so canRun keeps signed-out viewers
     // off a doomed 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedDarkChessDecisions(game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedDarkChessDecisions(game.roomId, options).then((summary) =>
           summary ? darkChessDecisionOverlay(summary, moves) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () =>
-        requestDarkChessDecisions(game.roomId).then((s) => darkChessDecisionOverlay(s, moves)),
+      run: (options) =>
+        requestDarkChessDecisions(game.roomId, options).then((s) =>
+          darkChessDecisionOverlay(s, moves),
+        ),
     },
   });
 }

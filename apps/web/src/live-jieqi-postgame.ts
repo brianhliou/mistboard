@@ -231,8 +231,9 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('jieqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('jieqi', postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('jieqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('jieqi', postgame.game.roomId, { signal, onStatus }),
     },
     // Decision-vs-luck decomposition: reveal plies get a decision-quality glyph + per-move luck
     // readout + a two-number summary. Computed on top of the basic analysis (heavier, so it runs
@@ -240,12 +241,13 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     // game analysed before the decomposition shipped). The POST is account-gated, so canRun keeps
     // signed-out viewers on the base summary instead of a 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedJieqiDecisions(postgame.game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedJieqiDecisions(postgame.game.roomId, options).then((summary) =>
           summary ? jieqiDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestJieqiDecisions(postgame.game.roomId).then(jieqiDecisionOverlay),
+      run: (options) =>
+        requestJieqiDecisions(postgame.game.roomId, options).then(jieqiDecisionOverlay),
     },
   });
 }

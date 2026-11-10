@@ -219,8 +219,10 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('jungle-flip', postgame.game.roomId),
-      run: () => requestGameAnalysis('jungle-flip', postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedGameAnalysis('jungle-flip', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('jungle-flip', postgame.game.roomId, { signal, onStatus }),
     },
     // Decision-vs-luck decomposition: flip plies get a decision-quality glyph + per-move luck
     // readout + a two-number summary. Computed on top of the basic analysis (heavier, so it runs
@@ -228,12 +230,13 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     // game analysed before the decomposition shipped). The POST is account-gated, so canRun keeps
     // signed-out viewers on the base summary instead of a 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedJungleFlipDecisions(postgame.game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedJungleFlipDecisions(postgame.game.roomId, options).then((summary) =>
           summary ? jungleFlipDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestJungleFlipDecisions(postgame.game.roomId).then(jungleFlipDecisionOverlay),
+      run: (options) =>
+        requestJungleFlipDecisions(postgame.game.roomId, options).then(jungleFlipDecisionOverlay),
     },
   });
 }

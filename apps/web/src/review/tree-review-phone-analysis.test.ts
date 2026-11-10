@@ -5,8 +5,10 @@
 // the Computer analysis tab.
 import type { XiangqiMove } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AnalysisJobPollOptions } from './analysis-job-poll.js';
 import { formatEval } from './engine/eval-format.js';
 import type { GameAnalysis } from './game-analysis.js';
+import type { AnalysisSource, DecisionSource } from './tree-review.js';
 import { mountXiangqiReview } from './xiangqi-review.js';
 
 const PLAYED: XiangqiMove[] = [
@@ -42,11 +44,9 @@ function stubMedia(phone: boolean): MediaQueryList {
 }
 
 function mount(
-  analysis: {
-    fetchCached: () => Promise<GameAnalysis | null>;
-    run: (onProgress?: (done: number, total: number) => void) => Promise<GameAnalysis>;
-  },
+  analysis: Pick<AnalysisSource, 'fetchCached' | 'run'>,
   analysisExtra?: HTMLElement,
+  decisions?: DecisionSource,
 ): HTMLElement {
   const root = document.createElement('div');
   document.body.append(root);
@@ -61,6 +61,7 @@ function mount(
     phoneInfoSheet: true,
     analysis: { requestLabel: 'Request computer analysis', ...analysis },
     analysisExtra,
+    decisions,
   });
   return root;
 }
@@ -233,4 +234,80 @@ describe('phone game review analysis strip', () => {
     expect(tabBody(root).querySelector('.xiangqi-review__analyse')).not.toBeNull();
     expect(strip(root).querySelector('.xiangqi-review__analyse')).toBeNull();
   });
+});
+
+it('refresh shows discovered queued/running progress and completion replaces it with the chart', async () => {
+  stubMedia(true);
+  let complete!: (value: GameAnalysis) => void;
+  const run = vi.fn();
+  const root = mount({
+    fetchCached: async (options) => {
+      options?.onStatus?.({ status: 'pending', state: 'queued' });
+      await Promise.resolve();
+      options?.onStatus?.({
+        status: 'pending',
+        state: 'running',
+        progress: { phase: 'analysis', completed: 2, total: 5 },
+      });
+      return new Promise((resolve) => {
+        complete = resolve;
+      });
+    },
+    run,
+  });
+  await settle();
+  expect(strip(root).textContent).toContain('Analysing positions… 2/5');
+  expect(strip(root).querySelector<HTMLButtonElement>('button')?.disabled).toBe(true);
+  expect(run).not.toHaveBeenCalled();
+  complete(ANALYSIS);
+  await settle();
+  expect(strip(root).querySelector('.advantage-chart__svg')).not.toBeNull();
+});
+
+it('base cache stays visible while a separate reveal job resumes, fails and retries read-only', async () => {
+  stubMedia(true);
+  let fail!: (error: Error) => void;
+  const run = vi.fn();
+  const fetchCached = vi.fn(async (options?: AnalysisJobPollOptions) => {
+    options?.onStatus?.({
+      status: 'pending',
+      state: 'running',
+      progress: { phase: 'decisions', completed: 1, total: 4 },
+    });
+    return new Promise<never>((_resolve, reject) => {
+      fail = reject;
+    });
+  });
+  const root = mount({ fetchCached: async () => ANALYSIS, run: vi.fn() }, undefined, {
+    canRun: false,
+    fetchCached,
+    run,
+  });
+  await settle();
+  expect(strip(root).querySelector('.advantage-chart__svg')).not.toBeNull();
+  expect(root.textContent).toContain('Grading reveals… through move 1/4');
+  fail(new Error('decisions_request_failed_analysis_failed'));
+  await settle();
+  expect(root.textContent).toContain('Analysis could not finish');
+  expect(strip(root).querySelector('.advantage-chart__svg')).not.toBeNull();
+  root.querySelector<HTMLButtonElement>('.review-analysis-job-retry')!.click();
+  await settle();
+  expect(fetchCached).toHaveBeenCalledTimes(2);
+  expect(run).not.toHaveBeenCalled();
+});
+it('removing the review shell aborts its discovery/polling lifetime', async () => {
+  stubMedia(true);
+  let signal: AbortSignal | undefined;
+  const root = mount({
+    fetchCached: async (options) => {
+      signal = options?.signal;
+      return new Promise(() => {});
+    },
+    run: vi.fn(),
+  });
+  await settle();
+  expect(signal?.aborted).toBe(false);
+  root.replaceChildren();
+  await settle();
+  expect(signal?.aborted).toBe(true);
 });

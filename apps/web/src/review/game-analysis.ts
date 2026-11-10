@@ -9,7 +9,11 @@ import {
   moveJudgment,
   winPercent,
 } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 
 /** One eval point from the server: position AFTER `ply` plies, from Red's POV. */
 export type PlyEval = {
@@ -424,8 +428,15 @@ function analysisUrl(variant: string, roomId: string): string {
 /** POST the analysis request for a finished game and compute the derived view.
  *  A cached game answers immediately (200); otherwise the server enqueues a
  *  background job (202) and this polls it to completion (see analysis-job-poll). */
-export async function requestGameAnalysis(variant: string, roomId: string): Promise<GameAnalysis> {
-  const body = await postAnalysisJob<XiangqiGameAnalysisResponse>(analysisUrl(variant, roomId));
+export async function requestGameAnalysis(
+  variant: string,
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<GameAnalysis> {
+  const body = await postAnalysisJob<XiangqiGameAnalysisResponse>(
+    analysisUrl(variant, roomId),
+    options,
+  );
   return computeGameAnalysis(body);
 }
 
@@ -434,8 +445,11 @@ export async function requestGameAnalysis(variant: string, roomId: string): Prom
 export async function fetchCachedGameAnalysis(
   variant: string,
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<GameAnalysis | null> {
-  const response = await fetch(analysisUrl(variant, roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return computeGameAnalysis((await response.json()) as XiangqiGameAnalysisResponse);
+  const body = await fetchAnalysisJob<XiangqiGameAnalysisResponse>(
+    analysisUrl(variant, roomId),
+    options,
+  );
+  return body ? computeGameAnalysis(body) : null;
 }
