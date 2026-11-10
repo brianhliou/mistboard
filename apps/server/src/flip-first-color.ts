@@ -1,12 +1,13 @@
-import { BANQI_SPEC_ID, JUNGLE_FLIP_SPEC_ID } from '@mistboard/game';
+import { BANQI_SPEC_ID, JUNGLE_FLIP_SPEC_ID, THREE_KINGDOMS_BANQI_SPEC_ID } from '@mistboard/game';
 import { banqiTenant } from './banqi-tenant.js';
 import { FinishedGameCache } from './finished-game-cache.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import * as persistence from './persistence.js';
 import type { PersistedRoomEvent } from './persistence-game-lifecycle.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import { isTenantEventLog, replayTenantEvents } from './variant-tenant/runtime.js';
 
-// The flip variants (Banqi, Flip Jungle) record their result by SEAT ('red-wins' =
+// The flip variants (Banqi, Flip Jungle, Three Kingdoms Banqi) record their result by SEAT ('red-wins' =
 // the first-mover seat won), but those seats are decoupled from piece ink, which
 // binds on the opening flip and is NOT a stored column. List surfaces (the watch
 // queue + its seat rows) need that bound ink to label results and paint player
@@ -38,6 +39,10 @@ const FIRST_COLOR_BY_SPEC: Record<
   [JUNGLE_FLIP_SPEC_ID]: (roomId, events) =>
     isTenantEventLog(jungleFlipTenant, events, roomId)
       ? replayTenantEvents(jungleFlipTenant, events).state.firstColor
+      : null,
+  [THREE_KINGDOMS_BANQI_SPEC_ID]: (roomId, events) =>
+    isTenantEventLog(threeKingdomsBanqiTenant, events, roomId)
+      ? replayTenantEvents(threeKingdomsBanqiTenant, events).state.firstColor
       : null,
 };
 

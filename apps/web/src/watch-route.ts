@@ -1148,7 +1148,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   scheduleLivePoll();
 }
 
-async function mountWatchQueuePreview(
+export async function mountWatchQueuePreview(
   root: HTMLElement,
   game: FeaturedGame,
   metadataByRoomId: Record<string, GameMeta>,
@@ -1167,6 +1167,7 @@ async function mountWatchQueuePreview(
       pov: 'white',
       revealOnFinish: true,
       hideReserve: true,
+      seatDiscs: variantSeatsHaveInk(game.variant),
     },
   );
   handle.setPov?.('truth');
@@ -1964,7 +1965,7 @@ export function watchGameStatusLine(game: FeaturedGame): string {
 // Populate the shared room table's board-relative player rows. The second mover
 // sits above the board and the first mover below it, matching every room's
 // default orientation.
-function renderWatchPlayers(
+export function renderWatchPlayers(
   top: HTMLElement,
   bottom: HTMLElement,
   game: FeaturedGame | null,
