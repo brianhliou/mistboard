@@ -1385,3 +1385,9 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 `scripts/study-chapter-decisions.mjs`: dry-run diff / explicit apply of validated offline Jieqi luck through `prod:db`; chapter edits invalidate stored rows.
 
 `apps/server/src/xiangqi-rules-replay.test.ts`: stored standard xiangqi draw-limit replay, reconnect, postgame views and export regressions.
+
+`apps/server/src/banqi-analysis-query-cache.ts` + `.test.ts`: bounded exact-public-UCI-query LRU/inflight coalescing, binary/model SHA identities, node-complete exact-score admission, clones and artifact-rotation guards (#1040). Default8192entries/16MiB/6h; max32inflight.
+
+`apps/server/src/banqi-analysis-runner.ts` + `.test.ts`: analysis-only cold-process cache wrapper, shared queue/startup/search deadline, strict model-load diagnostics, post-search artifact validation and shutdown/start guards. Live serving unchanged.
+
+`apps/server/src/banqi-analysis-parallel.test.ts`: two-position base-sweep overlap within the existing pool cap, immutable contiguous serialized checkpoints, failure drain/resume and failed-write ordering. Banqi analysis node budgets, roots and evaluation semantics remain unchanged.

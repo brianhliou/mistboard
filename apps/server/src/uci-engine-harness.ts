@@ -471,6 +471,9 @@ function stderrDetail(tail: string): string {
 }
 
 export type RunUciBestmoveArgs = {
+  /** Optional cancellation/validation used by analysis-only cold queries. */
+  signal?: AbortSignal;
+  rejectLine?(line: string): Error | null;
   /** Absolute path to the engine binary. */
   bin: string;
   /** UCI command block written to stdin (joined by newlines, trailing newline added). */
@@ -718,6 +721,10 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
   return withEngineProcess(
     (track) =>
       new Promise<UciEval>((resolveEval, reject) => {
+        if (args.signal?.aborted) {
+          reject(new Error('UCI eval aborted'));
+          return;
+        }
         // `env` is honoured here exactly as in runUciBestmove. It was silently
         // dropped until 2026-09-05, which mattered the moment the Flip Jungle live
         // move switched to this runner to record its search: its per-game tie-break
@@ -734,10 +741,12 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
         const evaluation = new UciEvalAccumulator();
         const advertisedOptions = new Set<string>();
 
+        const onAbort = () => finish(() => reject(new Error('UCI eval aborted')));
         const finish = (run: () => void): void => {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
+          args.signal?.removeEventListener('abort', onAbort);
           try {
             child.kill('SIGKILL');
           } catch {
@@ -771,6 +780,11 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
               finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
               return;
             }
+            const rejected = args.rejectLine?.(line);
+            if (rejected) {
+              finish(() => reject(rejected));
+              return;
+            }
             evaluation.note(line);
             const move = parseBestmoveLine(line);
             if (move !== undefined) {
@@ -802,8 +816,13 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
         });
 
-        child.stdin.write(`${commands.join('\n')}\n`);
+        if (args.signal?.aborted) onAbort();
+        else {
+          args.signal?.addEventListener('abort', onAbort, { once: true });
+          child.stdin.write(`${commands.join('\n')}\n`);
+        }
       }),
+    args.signal,
   );
 }
 
