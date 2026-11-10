@@ -363,10 +363,14 @@ describe('Gomoku finished-game review', () => {
     expect(button).not.toBeNull();
     button!.click();
     await vi.advanceTimersByTimeAsync(2000);
-    expect(fetchSpy).toHaveBeenCalledWith(`/api/gomoku/games/${ROOM}/analysis`, { method: 'POST' });
-    expect(fetchSpy).toHaveBeenCalledWith(`/api/gomoku/games/${ROOM}/analysis/jobs/sweep`, {
-      method: 'GET',
-    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `/api/gomoku/games/${ROOM}/analysis`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `/api/gomoku/games/${ROOM}/analysis/jobs/sweep`,
+      expect.objectContaining({ method: 'GET' }),
+    );
     const curve = root.querySelector('.advantage-chart__line')!;
     expect(curve.getAttribute('points')?.split(' ')).toHaveLength(4);
     expect(curve.getAttribute('points')).not.toMatch(/NaN|Infinity/);
@@ -464,7 +468,10 @@ describe('Gomoku finished-game review', () => {
       button.click();
       expect(button.textContent).toBe(t('replay.analysingWholeGame'));
       await vi.advanceTimersByTimeAsync(0);
-      expect(button.disabled).toBe(false);
+      // A failure re-renders the control; read the one now on the page.
+      const analyse = () => root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse')!;
+      expect(analyse().disabled).toBe(false);
+      expect(analyse().textContent).toBe(t('replay.analysisFailed'));
       // A failed request stays retryable. The actual async queue error gets
       // its existing unavailable copy, rather than an empty graph.
       fetchSpy.mockImplementation(async (input: RequestInfo | URL) =>
@@ -472,10 +479,11 @@ describe('Gomoku finished-game review', () => {
           ? Response.json({ status: 'failed', error: 'analysis_engine_unavailable' })
           : Response.json({ jobId: 'failed' }, { status: 202 }),
       );
-      button.click();
-      await vi.advanceTimersByTimeAsync(2000);
-      expect(button.textContent).toBe(t('replay.analysisFailed'));
-      expect(button.disabled).toBe(false);
+      analyse().click();
+      // Retry reads the in-flight job first, then posts: two poll waits.
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(analyse().textContent).toBe(t('replay.analysisFailed'));
+      expect(analyse().disabled).toBe(false);
       key('Home');
       root.querySelector<HTMLButtonElement>('.engine-panel__switch')!.click();
       const worker = WorkerStub.instances.at(-1)!;
