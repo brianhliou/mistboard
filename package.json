@@ -101,6 +101,7 @@
     "branch:park": "node scripts/branch-park.mjs park",
     "branch:unpark": "node scripts/branch-park.mjs unpark",
     "branch:parked": "node scripts/branch-park.mjs parked",
+    "batch:ci": "node scripts/batch-ci.mjs",
     "verify": "node scripts/verify.mjs",
     "ci:quick": "node scripts/ci-checks.mjs quick",
     "ci:preship": "node scripts/ci-checks.mjs preship",
