@@ -275,6 +275,21 @@
     }
   },
   {
+    "route": "/developers/banqi",
+    "module": "src/banqi-developer-page.ts",
+    "export": "renderBanqiDeveloperShellForPrerender",
+    "file": "developers/banqi.html",
+    "locales": ["en"],
+    "titleKey": "developers.heading",
+    "description": "Connect a private Banqi engine to Mistboard: hosting choices, masked position and protocol examples, exact rules, evaluation integration and public game downloads.",
+    "metaByLocale": {
+      "en": {
+        "title": "Banqi Engine Integration Reference | Mistboard",
+        "description": "Connect a private Banqi engine to Mistboard: hosting choices, masked position and protocol examples, exact rules, evaluation integration and public game downloads."
+      }
+    }
+  },
+  {
     "route": "/api-docs",
     "module": "src/api-docs-page.ts",
     "export": "renderApiDocsShellForPrerender",

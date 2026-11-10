@@ -466,6 +466,7 @@ export const CLIENT_ROUTE_PATTERNS: readonly ClientRoutePattern[] = [
   exact('/changelog'),
   { id: 'changelog-month', test: (path) => /^\/changelog\/\d{4}-\d{2}$/.test(path) },
   exact('/developers'),
+  exact('/developers/banqi'),
   exact('/api-docs'),
   exact('/thanks'),
   exact('/lag'),

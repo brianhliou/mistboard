@@ -223,6 +223,11 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider.',
   },
+  '/developers/banqi': {
+    title: 'Banqi Engine Integration Reference | Mistboard',
+    description:
+      'Connect a private Banqi engine to Mistboard: hosting choices, masked position and protocol examples, exact rules, evaluation integration and public game downloads.',
+  },
   '/api-docs': {
     title: 'Public Read API Reference | Mistboard',
     description:

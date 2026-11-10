@@ -271,6 +271,7 @@ function dynamicChunkAssetLinks(manifest, ownerId, chunkName, alreadyLinked) {
 // build loudly instead of silently shipping stale hints. A route absent from
 // this table just serves the plain shell (graceful degradation).
 const ROUTE_PRELOADS = [
+  { pattern: '^/developers/banqi$', module: 'src/banqi-developer-page.ts' },
   { pattern: '^/watch$', module: 'src/watch-route.ts' },
   { pattern: '^/room(?:/[^/]+)?$', module: 'src/live.ts' },
   // /game/:id mounts the replay/review surface through landing.ts (mountGame),

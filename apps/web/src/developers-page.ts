@@ -407,6 +407,16 @@ function buildDevelopers(locale: Locale = currentLocale(), live = true): HTMLEle
       proseLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
     ]),
 
+    ...(locale === 'en'
+      ? [
+          proseSubheading('Connect a Banqi engine'),
+          proseParagraph([
+            proseLink('Banqi engine integration reference', '/developers/banqi'),
+            ' — private binaries or author-hosted workers, public position examples, exact rules and the path from engine evaluations to postgame review. We can adapt your existing interface.',
+          ]),
+        ]
+      : []),
+
     studyExample.figure,
 
     proseSubheading('Embed a study chapter'),

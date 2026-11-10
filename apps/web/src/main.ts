@@ -219,6 +219,7 @@ const wantsChampions =
   path === '/zh-hant/champions';
 const wantsChangelog =
   path === '/changelog' || /^\/changelog\/\d{4}-\d{2}$/.exec(path) !== null || page === 'changelog';
+const wantsBanqiDeveloperReference = path === '/developers/banqi';
 const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
@@ -1047,6 +1048,13 @@ if (replaySample) {
   setTitleKey('changelog.heading');
   void mountOrReport(() =>
     import('./changelog-page.js').then(({ mountChangelog }) => mountChangelog(appRoot)),
+  );
+} else if (wantsBanqiDeveloperReference) {
+  setTitle('Banqi engine integration');
+  void mountOrReport(() =>
+    import('./banqi-developer-page.js').then(({ mountBanqiDeveloperReference }) =>
+      mountBanqiDeveloperReference(appRoot),
+    ),
   );
 } else if (wantsDevelopers) {
   setTitleKey('developers.heading');

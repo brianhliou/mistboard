@@ -1,0 +1,179 @@
+.banqi-engine-reference {
+  min-width: 0;
+}
+
+.banqi-engine-reference h2[id] {
+  scroll-margin-top: 80px;
+}
+
+.banqi-reference-contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding: 10px 0 18px;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.banqi-reference-contents a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.banqi-reference-code {
+  min-width: 0;
+  margin: 12px 0 18px;
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  background: var(--site-panel-soft);
+}
+
+.banqi-reference-code-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px 4px 14px;
+  border-bottom: 1px solid var(--site-border);
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.banqi-reference-code-bar button {
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--site-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.banqi-reference-code pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.banqi-reference-code code {
+  font-size: 13px;
+  white-space: pre;
+}
+
+.banqi-reference-example {
+  margin: 12px 0;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.banqi-reference-example summary {
+  min-height: 44px;
+  padding: 10px 0;
+  box-sizing: border-box;
+  color: var(--site-heading);
+  cursor: pointer;
+}
+
+.banqi-reference-table {
+  max-width: 100%;
+  margin: 16px 0 20px;
+  overflow-x: auto;
+}
+
+.banqi-reference-table table {
+  width: 100%;
+  min-width: 510px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.banqi-reference-table caption {
+  padding: 0 0 10px;
+  text-align: left;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.banqi-reference-table th,
+.banqi-reference-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--site-border);
+  vertical-align: top;
+  text-align: left;
+}
+
+.banqi-reference-table th {
+  color: var(--site-heading);
+  background: var(--site-panel-soft);
+}
+
+.banqi-reference-code pre:focus-visible,
+.banqi-reference-table:focus-visible,
+.banqi-reference-example summary:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+.banqi-reference-review {
+  margin: 20px 0;
+}
+
+.banqi-reference-review img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.banqi-reference-review figcaption {
+  margin-top: 10px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .banqi-reference-table table {
+    min-width: 0;
+  }
+
+  .banqi-reference-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .banqi-reference-table tbody tr {
+    display: block;
+    margin-bottom: 16px;
+    border: 1px solid var(--site-border);
+    border-radius: 4px;
+  }
+
+  .banqi-reference-table td {
+    display: block;
+  }
+
+  .banqi-reference-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .banqi-reference-table td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--site-muted);
+    font-size: 12px;
+    font-weight: 600;
+    content: attr(data-label);
+  }
+}

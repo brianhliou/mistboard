@@ -146,7 +146,7 @@ Reference exchanges are checked against the implemented protocol:
 These examples describe our adapter boundary, not a requirement to replace an
 author's existing engine interface. IDs and search budgets are illustrative;
 the request's zero-based example timestamps must be regenerated before sending
-a real turn. The example evaluation is not a measured CLAP_CDC result.
+a real turn. The example evaluation is illustrative, not a measured engine result.
 
 Agree on a separate analysis work budget before enabling it on a hosted engine.
 One review job can produce many searches; luck is not free reuse of the mainline
