@@ -19,6 +19,7 @@ import {
   assertAgentBranchesAccountedFor,
   readUnshippedAgentBranches,
 } from './lib/agent-branches.mjs';
+import { findReusableBatchCi } from './lib/batch-ci.mjs';
 import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
   assertChangelogCommitMatches,
@@ -151,6 +152,8 @@ const release = {
   gate: null,
   smokeTier: null,
   ciRunUrl: null,
+  ciTestedRevision: null,
+  reusedCiRun: null,
   // The commit the --changelog lines link (HEAD when the release started), and
   // the changelog commit made on top of it; null without --changelog.
   featureRevision: null,
@@ -320,11 +323,14 @@ try {
   if (options.push) {
     catchUpWithMain();
     enforceAgentBranchAccounting();
-    release.candidateBranch = `release/${release.headRevision}`;
-    runTimed(
-      'git push release candidate',
-      pushCommand(release.headRevision, release.candidateBranch),
-    );
+    release.reusedCiRun = findReusableBatchRun();
+    release.candidateBranch = `release/${release.reusedCiRun?.headSha ?? release.headRevision}`;
+    if (!release.reusedCiRun) {
+      runTimed(
+        'git push release candidate',
+        pushCommand(release.headRevision, release.candidateBranch),
+      );
+    }
     // Include games that started during the local gate in the drain that
     // overlaps hosted CI.
     if (release.deployRequired && !release.drainRequired) {
@@ -348,7 +354,13 @@ try {
     }
   }
 
-  if (release.ciRequired && options.ciWait) {
+  if (release.reusedCiRun) {
+    release.ciRunUrl = release.reusedCiRun.url;
+    release.ciTestedRevision = release.reusedCiRun.headSha;
+    console.log(
+      `hosted CI reused: ${release.ciRunUrl ?? release.ciTestedRevision} (release tree matches except CHANGELOG.md)`,
+    );
+  } else if (release.ciRequired && options.ciWait) {
     const verified = await timedStage('hosted CI wait', () =>
       waitForGithubCi({
         headRevision: release.headRevision,
@@ -356,6 +368,7 @@ try {
         exact: options.push,
       }),
     );
+    release.ciTestedRevision = verified.revision;
     if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
   } else if (!release.ciRequired) {
     console.log(`skip: hosted CI wait (${release.ciReason})`);
@@ -1133,6 +1146,19 @@ function findGithubRun(revision, branch = options.targetBranch) {
   return (
     listGithubRuns(revision, branch).find((candidate) => candidate.headSha === revision) ?? null
   );
+}
+
+function findReusableBatchRun() {
+  try {
+    return findReusableBatchCi({
+      root: workdir,
+      headRevision: release.headRevision,
+      findRun: findGithubRun,
+    });
+  } catch (error) {
+    console.log(`warn: could not reuse batch CI (${error.message}); testing a fresh candidate`);
+    return null;
+  }
 }
 
 function listGithubRuns(headRevision, branch = options.targetBranch) {
@@ -1915,6 +1941,7 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     deployRequired: release.deployRequired,
     ciRequired: release.ciRequired,
     ciRunUrl: release.ciRunUrl,
+    ciTestedRevision: release.ciTestedRevision,
     changelogCommit: release.changelogCommit,
     lockWaitMs: release.lockWaitMs,
     gate: release.gate,
@@ -2489,11 +2516,17 @@ function printHelp() {
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  agent branch accounting -> ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> push release/<sha> -> start pending drain -> exact candidate hosted CI -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
+  agent branch accounting -> ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> reuse green batch CI or push release/<sha> -> start pending drain -> exact candidate hosted CI when not reused -> drain to zero and announce restart -> fast-forward main -> production revision wait when deploying -> smoke
+
+Batch preparation:
+  npm run batch:ci -- <worktree> pushes the clean batch HEAD and waits for CI.
+  A completed green run can cover the same HEAD or its direct parent when
+  only CHANGELOG.md differs. All other tree changes require fresh candidate CI.
 
 Branch accounting:
   Local agent/* work outside both --head and origin/main must be merged or
-  parked: npm run branch:park -- <branch> "<reason>". agent/ship-* is exempt.
+  parked: npm run branch:park -- <branch> "<reason>". agent/ship-* is exempt;
+  branches contained in another agent/ship-* tip are listed as in that batch.
   Marks are local git config, shared across worktrees. branch:unpark removes a
   mark; branch:parked lists reasons and dates. Dry runs refuse with exit 1 too.
 

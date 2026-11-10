@@ -3,11 +3,13 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
 import {
   assertAgentBranchesAccountedFor,
   readUnshippedAgentBranches,
 } from './lib/agent-branches.mjs';
+
+// Keep the tooling suite's Node runner and targeted Vitest invocations compatible.
+const { test } = process.env.VITEST ? await import('vitest') : await import('node:test');
 
 const releaseScript = new URL('./release-prod.mjs', import.meta.url).pathname;
 const packageScripts = JSON.parse(
@@ -16,7 +18,7 @@ const packageScripts = JSON.parse(
 
 function repository(t) {
   const directory = mkdtempSync(path.join(tmpdir(), 'mistboard-agent-branches-'));
-  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  (t.after ?? t.onTestFinished)(() => rmSync(directory, { recursive: true, force: true }));
   const run = (command, args, cwd = directory) =>
     spawnSync(command, args, {
       cwd,
@@ -145,6 +147,37 @@ test('new commits on a partly merged branch remain unaccounted for', (t) => {
   repo.git('commit', '-qm', 'new work', '--allow-empty');
   repo.git('switch', '-q', 'agent/ship-fixture');
   assert.throws(repo.check, /agent\/partial/);
+});
+
+test('a branch contained in another ship batch is automatically parked without a config mark', (t) => {
+  const repo = repository(t);
+  repo.plant('agent/riding-next-batch');
+  repo.git('branch', 'agent/ship-next', 'agent/riding-next-batch');
+  const result = repo.dryRun();
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /in batch agent\/ship-next/);
+  assert.match(result.stdout, /agent_branches: allow \(0 unmarked, 1 parked\)/);
+  assert.doesNotMatch(result.stdout, /park: npm run branch:park/);
+  assert.equal(
+    repo.run('git', ['config', '--get', 'branch.agent/riding-next-batch.mistboardParked']).status,
+    1,
+  );
+});
+
+test('a branch outside every batch still refuses, including new work after a batch merge', (t) => {
+  const repo = repository(t);
+  repo.plant('agent/partly-in-next-batch');
+  repo.git('branch', 'agent/ship-next', 'agent/partly-in-next-batch');
+  repo.git('switch', '-q', 'agent/partly-in-next-batch');
+  repo.git('commit', '-qm', 'work after batch assembly', '--allow-empty');
+  repo.git('switch', '-q', 'agent/ship-fixture');
+  repo.plant('agent/in-no-batch');
+  const result = repo.dryRun();
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, /agent_branches: refuse \(2 unmarked, 0 parked\)/);
+  assert.match(result.stderr, /agent\/in-no-batch/);
+  assert.match(result.stderr, /agent\/partly-in-next-batch/);
+  assert.doesNotMatch(result.stdout, /in batch agent\/ship-next/);
 });
 
 test('npm park/list/unpark round-trip uses local config shared across worktrees', (t) => {
