@@ -15,6 +15,10 @@ const AXIS_Y = 164;
 const GAP = 2;
 const BAR_FILL = 'rgba(21, 120, 91, 0.75)';
 const FONT = 'font-family="system-ui, sans-serif"';
+// A three-letter month at 13px is about 28px wide. A month whose label would sit
+// closer than this to the next one (a lone week at the start of the series) goes
+// unlabelled; its bars still carry their dates in the tooltips.
+const MIN_LABEL_GAP = 32;
 
 const monthOf = (day: string, length: 'short' | 'long') =>
   new Date(`${day}T00:00:00Z`).toLocaleDateString('en-US', { month: length, timeZone: 'UTC' });
@@ -35,6 +39,7 @@ export function weeklyGamesChartSvg(weeks: Week[]): string {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" style="display:block;width:100%;max-width:560px;margin:0 auto" role="img" aria-label="Finished games per week, rising from a handful in June to a peak of ${peak.toLocaleString('en-US')}">`,
   ];
   let lastMonth = '';
+  const monthLabels: Array<{ x: number; month: string }> = [];
   weeks.forEach((week, i) => {
     const x = LEFT + i * (barW + GAP);
     const height = Math.max((week.games / peak) * (AXIS_Y - TOP), 1);
@@ -57,10 +62,15 @@ export function weeklyGamesChartSvg(weeks: Week[]): string {
     const month = monthOf(week.weekStart, 'short');
     if (month !== lastMonth) {
       lastMonth = month;
-      parts.push(
-        `<text x="${x.toFixed(1)}" y="${AXIS_Y + 18}" ${FONT} font-size="13" fill="currentColor" opacity="0.7">${month}</text>`,
-      );
+      monthLabels.push({ x, month });
     }
+  });
+  monthLabels.forEach(({ x, month }, i) => {
+    const next = monthLabels[i + 1];
+    if (next && next.x - x < MIN_LABEL_GAP) return;
+    parts.push(
+      `<text x="${x.toFixed(1)}" y="${AXIS_Y + 18}" ${FONT} font-size="13" fill="currentColor" opacity="0.7">${month}</text>`,
+    );
   });
   parts.push(`<line x1="${LEFT}" x2="${WIDTH - RIGHT}" y1="${AXIS_Y}" y2="${AXIS_Y}" stroke="currentColor" opacity="0.25"/>`);
   parts.push('</svg>');
