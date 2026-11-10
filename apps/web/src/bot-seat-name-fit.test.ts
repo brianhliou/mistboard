@@ -10,9 +10,16 @@ import {
   liveSeatEngineName,
   persistedSeatDisplayName,
 } from '../../server/src/first-party-bots.js';
+import { postgamePlayers } from '../../server/src/routes/lib.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
+import { buildFinishedTile } from './current-games.js';
 import { cardSeatName } from './current-games-model.js';
+import type { FeaturedGame, GameParticipant } from './game-display.js';
+import { buildProfileGameRow } from './profile-ui.js';
+import { createGameMetaCard } from './review/game-meta-card.js';
+import { reviewMetaPlayers } from './review/game-review-meta.js';
 import { webVariantTenants } from './variant-tenant/registry.js';
+import { watchGamePlayers, watchQueueMatchupLabel } from './watch-route.js';
 
 // Measured with the real components/CSS and loaded Noto Sans on the local pair,
 // 2026-11-10. Name space (not whole row width):
@@ -118,13 +125,90 @@ describe('bot seat names fit game cards', () => {
     expect(width('iiiiiiiiiiii')).toBeLessThan(NAME_BUDGET_PX);
   });
 
-  it('keeps the recorded name of old Three Kingdoms engine-version participants', () => {
+  it('shortens the recorded name of old Three Kingdoms engine-version participants', () => {
     expect(
       persistedSeatDisplayName({
         displayName: 'MistyThreeKingdomsBanqi level 7',
         subjectType: 'engine-version',
         subjectId: 'misty-three-kingdoms-banqi-level-7',
       }),
-    ).toBe('MistyThreeKingdomsBanqi level 7');
+    ).toBe('Misty level 7');
   });
+
+  it('leaves a human literally named MistyThreeKingdomsBanqi alone', () => {
+    expect(
+      persistedSeatDisplayName({
+        displayName: 'MistyThreeKingdomsBanqi',
+        subjectType: 'user',
+        subjectId: 'human-1',
+      }),
+    ).toBe('MistyThreeKingdomsBanqi');
+  });
+
+  it.each([
+    [
+      'three-kingdoms-banqi',
+      'misty-three-kingdoms-banqi-level-7',
+      'MistyThreeKingdomsBanqi level 7',
+      'Misty level 7',
+    ],
+    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Level 7'],
+  ])(
+    'carries old %s seat names through every finished-game display',
+    (variant, subjectId, displayName, expected) => {
+      const stored: GameParticipant = {
+        color: 'black',
+        displayName,
+        subjectType: 'engine-version',
+        subjectId,
+        visibility: 'public',
+      };
+      // The shared persisted-participant read feeds all these public surfaces.
+      const participants: GameParticipant[] = [
+        {
+          color: 'red',
+          displayName: 'Ann',
+          subjectType: 'user',
+          subjectId: 'ann',
+          visibility: 'public',
+        },
+        { ...stored, displayName: persistedSeatDisplayName(stored) },
+      ];
+      const game: FeaturedGame = {
+        roomId: 'old-bot-game',
+        variant,
+        mode: 'pve',
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 40,
+        whiteName: null,
+        blackName: displayName,
+        corpusId: null,
+        participants,
+        playerColor: 'red',
+      };
+      const tile = buildFinishedTile(game);
+      const cardName = tile.querySelector<HTMLElement>(
+        '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',
+      );
+      expect(cardName?.textContent).toBe(expected);
+      expect(cardName?.title).toBe(expected);
+      expect(watchQueueMatchupLabel(game)).toBe(`Ann vs ${expected}`);
+      expect(watchGamePlayers(game)[1]?.name).toBe(expected);
+      const profileName = buildProfileGameRow(game).querySelector<HTMLElement>(
+        '.profile-game-opponent-name',
+      );
+      expect(profileName?.textContent).toBe(expected);
+      expect(profileName?.title).toBe(expected);
+      const meta = createGameMetaCard({
+        headline: [],
+        players: reviewMetaPlayers(postgamePlayers(participants)),
+      });
+      const metaName = meta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
+      expect(metaName?.textContent).toBe(expected);
+      expect(metaName?.title).toBe(expected);
+      expect(stored.displayName).toBe(displayName);
+      expect(participants[1]?.subjectId).toBe(subjectId);
+    },
+  );
 });
