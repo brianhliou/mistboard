@@ -1,5 +1,5 @@
 // Fairy-Stockfish standard-Xiangqi provider for the human-facing difficulty
-// ladder. Unlike mainline Pikafish, FSF exposes Stockfish's stochastic Skill
+// ladder. Unlike Pikafish, FSF exposes Stockfish's stochastic Skill
 // Level: internally it searches multiple root candidates and sometimes selects a
 // plausible suboptimal move. Levels 1-7 copy the Lichess/PlayStrategy weakening
 // profiles (skill + depth cap + short movetime) on the classical eval.

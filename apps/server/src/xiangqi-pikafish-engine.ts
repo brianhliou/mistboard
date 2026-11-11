@@ -267,7 +267,7 @@ export function xiangqiEngineVersion(clientId: string | undefined): string | nul
 export type XiangqiEngineOptions = { movetimeMs?: number; clock?: EngineClock };
 
 /**
- * Ask mainline Pikafish for a move given the Pikafish-UCI move history since the
+ * Ask Pikafish for a move given the Pikafish-UCI move history since the
  * start position (built by the adapter via xiangqiMoveToPikafishUci). Returns the
  * search summary: `best` is the bestmove in Pikafish UCI (e.g. "b0c2") or null,
  * alongside the depth/nodes/time/score the live loop persists per move. The
