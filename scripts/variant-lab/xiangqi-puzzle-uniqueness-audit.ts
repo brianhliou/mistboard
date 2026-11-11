@@ -1,27 +1,30 @@
+import {
+  verifyXiangqiSolverTurn,
+  XIANGQI_PUZZLE_VERIFICATION_PROFILE,
+} from './xiangqi-puzzle-verification.ts';
 // Per-ply uniqueness audit for the live standard-xiangqi puzzle corpus.
 //
 // Independent re-verification of the gated miner (#180): for each solver ply
 // it re-judges the position via the SHARED analyzeXiangqiSolverPly
 // (scripts/variant-lab/xiangqi-pikafish-uci.ts) — the same history-free
-// `position fen` load, the same MultiPV-2 search shape, the same score
-// normalization (xiangqiUciScoreToCp), and the same winning-floor gate
+// `position fen` load, the same adaptive MultiPV search, the same score
+// normalization (xiangqiUciScoreToCp), and the same separation gate
 // (isXiangqiSolverMoveUnique) the miner's verify pass enforces. Verdicts are
 // therefore definitionally consistent with the miner (#185); what this tool
-// adds is independence in TIME and BUDGET (it can re-run at a deeper depth
-// floor than the mine did) plus the shipped-move comparison. It does not
+// adds is an independent run plus the shipped-move comparison. It does not
 // mutate the corpus.
 //
 // Scores are reported from the side-to-move (solver) POV, so a positive gap
 // means the shipped move beats the runner-up. Mate scores fold onto the cp
-// axis near XIANGQI_MATE_SCORE_CP. A depth floor (not just a node cap) is used
-// because too-low search mis-orders best vs second and makes the gap lie.
+// axis near XIANGQI_MATE_SCORE_CP. Verification uses 5M/25M nodes and selective
+// 100M escalation; every earlier disagreement remains unresolved.
 //
 // Run (needs the local Pikafish binary + NNUE net; auto-resolved via
 // xiangqi-pikafish-engine.ts, or set MISTBOARD_PIKAFISH_XIANGQI_PATH/_NET):
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-uniqueness-audit.ts \
-//     --depth 22 --out scripts/variant-lab/out/xiangqi-uniqueness-audit.jsonl
+//     --out scripts/variant-lab/out/xiangqi-uniqueness-audit.jsonl
 //   # quick smoke on a handful first:
-//   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-uniqueness-audit.ts --limit 3 --depth 16
+//   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-uniqueness-audit.ts --limit 3
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -33,24 +36,27 @@ import {
 import {
   applyStandardXiangqiMove,
   pikafishUciToXiangqiSquares,
+  XIANGQI_PUZZLE_ADMISSION_PROFILE,
+  XIANGQI_SOLVER_GATE_VERSION,
+  XIANGQI_SOLVER_SCORE_PROFILE,
   type XiangqiGameState,
   type XiangqiMove,
   type XiangqiPuzzle,
-  xiangqiWinRate,
+  xiangqiPuzzleHasStartingChoice,
+  xiangqiPuzzleSolutionEndpoint,
+  xiangqiSolverLineWinRate,
+  xiangqiSolverMoveCoverage,
 } from '../../packages/game/src/index.ts';
 import { loadSeedPuzzleRegistry } from '../../packages/game/src/puzzle-seed.ts';
-import {
-  analyzeXiangqiSolverPly,
-  PikafishEngine,
-  XIANGQI_SOLVER_GATE_DEFAULTS,
-} from './xiangqi-pikafish-uci.ts';
+import { PikafishEngine, XIANGQI_SOLVER_GATE_DEFAULTS } from './xiangqi-pikafish-uci.ts';
 
 export type XiangqiPuzzleAuditOptions = {
   depth: number;
   nodes: number | null;
   winHi: number;
-  winLo: number;
-  minGapCp: number;
+  minWinRateGap: number;
+  mateInOneMaxWinRate: number;
+  winRateK: number;
   limit: number;
   ids: Set<string> | null;
   out: string | null;
@@ -61,14 +67,18 @@ function parseOptions(): XiangqiPuzzleAuditOptions {
     options: {
       depth: { type: 'string', default: '22' },
       nodes: { type: 'string' },
-      // Winning-floor gate knobs: defaults come from the module shared with
+      // Separation gate knobs: defaults come from the module shared with
       // the miner, so this audit stays an apples-to-apples re-verification of
       // the mined corpus rather than a second, drifting definition.
+      'win-rate-k': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winRateK) },
       'win-hi': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi) },
-      'win-lo': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo) },
-      'min-gap-cp': {
+      'min-win-rate-gap': {
         type: 'string',
-        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
+        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minWinRateGap),
+      },
+      'mate-in-one-max-win-rate': {
+        type: 'string',
+        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.mateInOneMaxWinRate),
       },
       limit: { type: 'string', default: '0' },
       ids: { type: 'string' },
@@ -78,9 +88,17 @@ function parseOptions(): XiangqiPuzzleAuditOptions {
   return {
     depth: parsePositiveInt(values.depth, 22),
     nodes: values.nodes ? parsePositiveInt(values.nodes, 0) || null : null,
+    winRateK: Number.parseFloat(
+      values['win-rate-k'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winRateK),
+    ),
     winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
-    winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
-    minGapCp: parsePositiveInt(values['min-gap-cp'], XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
+    minWinRateGap: Number.parseFloat(
+      values['min-win-rate-gap'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.minWinRateGap),
+    ),
+    mateInOneMaxWinRate: Number.parseFloat(
+      values['mate-in-one-max-win-rate'] ??
+        String(XIANGQI_SOLVER_GATE_DEFAULTS.mateInOneMaxWinRate),
+    ),
     limit: parsePositiveInt(values.limit, 0),
     ids: values.ids
       ? new Set(
@@ -115,13 +133,23 @@ export type XiangqiPuzzleAuditPlyReport = {
 };
 
 export type XiangqiPuzzleAuditReport = {
+  solverGateVersion: typeof XIANGQI_SOLVER_GATE_VERSION;
+  scoreProfileId: string;
+  verificationProfile: typeof XIANGQI_PUZZLE_VERIFICATION_PROFILE;
   id: string;
   goal: string;
   solverPlies: number;
   plies: XiangqiPuzzleAuditPlyReport[];
   allMatch: boolean;
   firstNonUniquePly: number | null; // solution index of the first non-unique solver ply
-  verdict: 'clean' | 'non-unique-followups' | 'engine-disagrees';
+  endpointVersion: string;
+  endpoint: ReturnType<typeof xiangqiPuzzleSolutionEndpoint>;
+  verdict:
+    | 'clean'
+    | 'non-unique-followups'
+    | 'engine-disagrees'
+    | 'invalid-endpoint'
+    | 'invalid-start';
 };
 
 function moveLabel(move: XiangqiMove): string {
@@ -135,30 +163,58 @@ export async function auditXiangqiPuzzle(
 ): Promise<XiangqiPuzzleAuditReport> {
   const gate = {
     winHi: opts.winHi,
-    winLo: opts.winLo,
-    minGapCp: opts.minGapCp,
+    winRateK: opts.winRateK,
+    minWinRateGap: opts.minWinRateGap,
+    mateInOneMaxWinRate: opts.mateInOneMaxWinRate,
   };
-  const limits = { depth: opts.depth, ...(opts.nodes ? { nodes: opts.nodes } : {}) };
+  if (!xiangqiPuzzleHasStartingChoice(puzzle.initial)) {
+    return {
+      ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+      verificationProfile: XIANGQI_PUZZLE_VERIFICATION_PROFILE,
+      ...gate,
+      id: puzzle.id,
+      goal: puzzle.goal.type,
+      solverPlies: 0,
+      plies: [],
+      allMatch: false,
+      firstNonUniquePly: 0,
+      verdict: 'invalid-start',
+      endpoint: xiangqiPuzzleSolutionEndpoint(puzzle.initial, puzzle.solution, puzzle.goal),
+    };
+  }
+  if (opts.nodes !== null || opts.depth !== XIANGQI_PUZZLE_VERIFICATION_PROFILE.minimumFinalDepth)
+    throw new Error(
+      'Custom audit depth/node caps are retired; use the shared verification profile',
+    );
   const plies: XiangqiPuzzleAuditPlyReport[] = [];
   let state: XiangqiGameState = puzzle.initial;
   for (let ply = 0; ply < puzzle.solution.length; ply += 1) {
     const move = puzzle.solution[ply] as XiangqiMove;
     if (ply % 2 === 0 && state.status.type === 'playing') {
-      const { lines, best, second, unique, reason } = await analyzeXiangqiSolverPly(
-        engine,
-        state,
-        limits,
-        gate,
-      );
+      const verified = await verifyXiangqiSolverTurn(engine, state, ply, move, puzzle.goal, gate);
+      const last = verified.searches.at(-1);
+      const lines = last?.lines ?? [];
+      const best = last?.best;
+      const second = last?.second;
+      const unique = verified.judgment.verdict === 'pass';
+      const reason = verified.judgment.reason;
       const bestTok = lines[0]?.pvUci[0];
       const engineBest = bestTok ? pikafishUciToXiangqiSquares(bestTok) : null;
       const engineBestMove = engineBest ? `${engineBest.from}-${engineBest.to}` : (bestTok ?? '?');
-      const matchesShipped = engineBest?.from === move.from && engineBest?.to === move.to;
+      const coverage = xiangqiSolverMoveCoverage(state);
+      const matchesShipped =
+        verified.judgment.reason === 'kernel-mate-goal-completed' ||
+        (engineBest?.from === move.from && engineBest?.to === move.to) ||
+        (best?.mate === 1 &&
+          coverage.immediateWins.some((win) => win.from === move.from && win.to === move.to));
       const bestCp = best?.scoreCp ?? 0;
       const secondCp = second?.scoreCp ?? null;
       const gapCp = secondCp === null ? null : bestCp - secondCp;
       const gapWinrate =
-        secondCp === null ? null : xiangqiWinRate(bestCp) - xiangqiWinRate(secondCp);
+        best && second
+          ? xiangqiSolverLineWinRate(best, opts.winRateK) -
+            xiangqiSolverLineWinRate(second, opts.winRateK)
+          : null;
       plies.push({
         solutionPly: ply,
         shippedMove: moveLabel(move),
@@ -180,12 +236,22 @@ export async function auditXiangqiPuzzle(
 
   const allMatch = plies.every((p) => p.matchesShipped);
   const firstBad = plies.find((p) => !p.matchesShipped || !p.unique) ?? null;
-  const verdict: XiangqiPuzzleAuditReport['verdict'] = !allMatch
-    ? 'engine-disagrees'
-    : plies.every((p) => p.unique)
-      ? 'clean'
-      : 'non-unique-followups';
+  const endpoint = xiangqiPuzzleSolutionEndpoint(puzzle.initial, puzzle.solution, puzzle.goal);
+  const endpointMatches = endpoint.ok && endpoint.moves.length === puzzle.solution.length;
+  const verdict: XiangqiPuzzleAuditReport['verdict'] = !endpointMatches
+    ? 'invalid-endpoint'
+    : !allMatch
+      ? 'engine-disagrees'
+      : plies.every((p) => p.unique)
+        ? 'clean'
+        : 'non-unique-followups';
   return {
+    ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+    verificationProfile: XIANGQI_PUZZLE_VERIFICATION_PROFILE,
+    ...gate,
+    endpoint,
+    solverGateVersion: XIANGQI_SOLVER_GATE_VERSION,
+    scoreProfileId: XIANGQI_SOLVER_SCORE_PROFILE.id,
     id: puzzle.id,
     goal: puzzle.goal.type,
     solverPlies: plies.length,
@@ -199,7 +265,7 @@ export async function auditXiangqiPuzzle(
 async function main(opts: XiangqiPuzzleAuditOptions): Promise<void> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
-  const engine = new PikafishEngine(bin, net);
+  const engine = new PikafishEngine(bin, net, XIANGQI_PUZZLE_VERIFICATION_PROFILE.hashMb);
   await engine.init();
 
   let corpus = loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[];
@@ -233,7 +299,7 @@ async function main(opts: XiangqiPuzzleAuditOptions): Promise<void> {
   }
 
   process.stdout.write(
-    `\n=== audit summary (depth=${opts.depth} win-hi=${opts.winHi} win-lo=${opts.winLo} min-gap-cp=${opts.minGapCp}) ===\n` +
+    `\n=== audit summary (profile=${XIANGQI_PUZZLE_VERIFICATION_PROFILE.version} win-hi=${opts.winHi} min-win-rate-gap=${opts.minWinRateGap} mate-in-one-max-win-rate=${opts.mateInOneMaxWinRate}) ===\n` +
       `puzzles:            ${reports.length}\n` +
       `  single solver move: ${summary.singleMove}\n` +
       `  multi solver move:  ${summary.multiMove}\n` +

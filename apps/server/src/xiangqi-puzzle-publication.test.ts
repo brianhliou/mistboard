@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
+import { XIANGQI_PUZZLE_ADMISSION_PROFILE, XIANGQI_SOLVER_SCORE_PROFILE } from '@mistboard/game';
 import { loadAllSeedPuzzles } from '@mistboard/game/puzzle-seed';
 import type pg from 'pg';
 import { close, getPool, init } from './persistence-db.js';
@@ -7,6 +8,21 @@ import {
   planXiangqiPuzzlePublication,
   publishXiangqiPuzzlePublication,
 } from './xiangqi-puzzle-publication.js';
+
+const engineProfile = {
+  binary: { sha256: 'd'.repeat(64) },
+  network: { sha256: XIANGQI_SOLVER_SCORE_PROFILE.networkSha256 },
+};
+
+function runRow() {
+  return {
+    engine_profile: engineProfile,
+    status: 'review',
+    license_status: 'cleared',
+    scan_profile: { profileVersion: 'test-v3', ...XIANGQI_PUZZLE_ADMISSION_PROFILE },
+    audit_profile: { profileVersion: 'test-v3', ...XIANGQI_PUZZLE_ADMISSION_PROFILE },
+  };
+}
 
 function seedMatePuzzle() {
   const seed = loadAllSeedPuzzles().find(
@@ -46,11 +62,14 @@ function candidateRow(puzzle: unknown, auditEvidence: Record<string, unknown>) {
           id: `${stage}-judgment`,
           candidate_id: 'candidate',
           stage,
-          profile_version: 'test-v1',
+          profile_version: 'test-v3',
           verdict: 'pass',
           reason: null,
-          engine_profile: {},
-          evidence: stage === 'audit' ? auditEvidence : { bestMate: 3, secondMate: 5 },
+          engine_profile: engineProfile,
+          evidence: {
+            ...XIANGQI_PUZZLE_ADMISSION_PROFILE,
+            ...(stage === 'audit' ? auditEvidence : { bestMate: 3, secondMate: 5 }),
+          },
           artifact_sha256: null,
           created_at: now,
         }).map(([key, value]) => [`${stage}_${key}`, value]),
@@ -69,8 +88,7 @@ async function assertPublishedMateSpeedOnly(
   let inserted: { sql: string; values: unknown[] } | undefined;
   const db = {
     async query(sql: string, values: unknown[] = []) {
-      if (sql.includes('SELECT run.status'))
-        return { rows: [{ status: 'review', license_status: 'cleared' }] };
+      if (sql.includes('SELECT run.status')) return { rows: [runRow()] };
       if (sql.includes('SELECT candidate.*')) return { rows: [candidate] };
       if (sql.includes('max(seq)')) return { rows: [{ count: 0, max_seq: null }] };
       if (sql.includes('INSERT INTO puzzles')) inserted = { sql, values };
@@ -158,9 +176,7 @@ test('publication refuses a DPXQ puzzle without its http credit and accepts one 
       async query(sql: string) {
         if (sql.includes('SELECT run.status'))
           return {
-            rows: [
-              { status: 'review', license_status: 'cleared', source_slug: 'dpxq-archive-test' },
-            ],
+            rows: [{ ...runRow(), source_slug: 'dpxq-archive-test' }],
           };
         if (sql.includes('SELECT candidate.*')) return { rows: [candidate] };
         if (sql.includes('max(seq)')) return { rows: [{ count: 0, max_seq: null }] };
@@ -187,4 +203,85 @@ test('publication refuses a DPXQ puzzle without its http credit and accepts one 
     attribution: { name: 'DPXQ', url: 'http://www.dpxq.com/hldcg/search/view_m_1.html' },
   });
   assert.equal(ok.totalCandidates, 1);
+});
+
+// A prior pass may be valid evidence for its old policy, but cannot certify a
+// candidate under the current mining rule simply by being the latest row.
+test('publication rejects old gate versions and stale profile judgments', async () => {
+  const puzzle = { ...seedMatePuzzle(), sourceGame: { gameId: 'source-game', ply: 17 } };
+  const plan = (run: object, overrides: object = {}) => {
+    const candidate = { ...candidateRow(puzzle, {}), ...overrides };
+    const db = {
+      async query(sql: string) {
+        if (sql.includes('SELECT run.status')) return { rows: [run] };
+        if (sql.includes('SELECT candidate.*')) return { rows: [candidate] };
+        if (sql.includes('max(seq)')) return { rows: [{ count: 0, max_seq: null }] };
+        return { rows: [] };
+      },
+    };
+    return planXiangqiPuzzlePublication(db as unknown as pg.Pool, 'run');
+  };
+  await assert.rejects(
+    plan({ status: 'review', license_status: 'cleared' }),
+    /admission profile mismatch/,
+  );
+  await assert.rejects(plan(runRow(), { verify_evidence: {} }), /admission profile mismatch/);
+  await assert.rejects(plan(runRow(), { audit_evidence: {} }), /admission profile mismatch/);
+  await assert.rejects(
+    plan(runRow(), { verify_profile_version: 'previous-profile' }),
+    /different mining profile/,
+  );
+  await assert.rejects(
+    plan(runRow(), { audit_profile_version: 'previous-profile' }),
+    /different mining profile/,
+  );
+  await assert.rejects(
+    plan({ ...runRow(), audit_profile: { ...runRow().audit_profile, winRateK: 400 } }),
+    /admission profile mismatch: winRateK/,
+  );
+  await assert.rejects(
+    plan({ ...runRow(), scan_profile: { ...runRow().scan_profile, endpointVersion: 'old' } }),
+    /admission profile mismatch: endpointVersion/,
+  );
+  await assert.rejects(
+    plan({ ...runRow(), engine_profile: { ...engineProfile, network: { sha256: 'old' } } }),
+    /incompatible scoring engine/,
+  );
+  await assert.rejects(
+    plan(runRow(), {
+      verify_engine_profile: { ...engineProfile, binary: { sha256: 'e'.repeat(64) } },
+    }),
+    /different scoring engine/,
+  );
+  await assert.rejects(
+    plan(runRow(), { audit_engine_profile: { ...engineProfile, network: { sha256: 'old' } } }),
+    /different scoring engine/,
+  );
+  await assert.rejects(
+    plan({ ...runRow(), scan_profile: { ...runRow().scan_profile, minimumRootLegalMoves: 1 } }),
+    /admission profile mismatch: minimumRootLegalMoves/,
+  );
+  await assert.rejects(
+    plan(runRow(), {
+      puzzle_data: {
+        ...puzzle,
+        goal: { type: 'winning-advantage' },
+        solution: [{ from: 'a3', to: 'e3' }],
+        initial: {
+          ...puzzle.initial,
+          status: { type: 'playing', turn: 'red' },
+          board: {
+            e1: { color: 'red', role: 'general' },
+            a3: { color: 'red', role: 'chariot' },
+            d10: { color: 'black', role: 'general' },
+            e3: { color: 'black', role: 'chariot' },
+            d2: { color: 'black', role: 'chariot' },
+            h2: { color: 'black', role: 'horse' },
+          },
+        },
+      },
+    }),
+    /no starting choice/,
+  );
+  assert.equal((await plan(runRow())).eligibleCandidates, 1);
 });

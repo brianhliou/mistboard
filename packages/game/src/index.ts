@@ -36,6 +36,7 @@ export * from './puzzles-jungle.js';
 export * from './puzzles-xiangqi.js';
 export * from './puzzles-xiangqi-attribution.js';
 export * from './puzzles-xiangqi-difficulty.js';
+export * from './puzzles-xiangqi-endpoint.js';
 export * from './puzzles-xiangqi-mining.js';
 export * from './puzzles-xiangqi-motifs.js';
 export * from './puzzles-xiangqi-setup.js';

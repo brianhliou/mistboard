@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto';
 import {
+  assertXiangqiPuzzleAdmissionProfile,
   legacyPositionRepetitionKey,
   validateStandardXiangqiPuzzle,
+  XIANGQI_SOLVER_SCORE_PROFILE,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
   xiangqiPuzzleAttributionIssue,
+  xiangqiPuzzleHasStartingChoice,
 } from '@mistboard/game';
 import type pg from 'pg';
 import { withTransaction } from './persistence-db.js';
@@ -96,6 +99,9 @@ function validatedPuzzle(entry: XiangqiPuzzleEditorialCandidate): XiangqiPuzzle 
         `${validation.issue.code} at ply ${validation.issue.ply}`,
     );
   }
+  if (!xiangqiPuzzleHasStartingChoice(puzzle.initial)) {
+    throw new Error(`candidate ${entry.candidate.id} has no starting choice`);
+  }
   if (!puzzle.sourceGame) {
     throw new Error(`candidate ${entry.candidate.id} puzzle ${puzzle.id} lacks source provenance`);
   }
@@ -134,8 +140,12 @@ export async function planXiangqiPuzzlePublication(
     status: string;
     license_status: string;
     source_slug?: string | null;
+    engine_profile: Record<string, unknown>;
+    scan_profile: Record<string, unknown>;
+    audit_profile: Record<string, unknown>;
   }>(
-    `SELECT run.status, source.license_status, source.slug AS source_slug
+    `SELECT run.status, source.license_status, source.slug AS source_slug,
+            run.engine_profile, run.scan_profile, run.audit_profile
      FROM xiangqi_puzzle_mining_runs run
      JOIN historical_xiangqi_sources source ON source.id = run.source_id
      WHERE run.id = $1`,
@@ -150,6 +160,19 @@ export async function planXiangqiPuzzlePublication(
     throw new Error(`run ${runId} source license is not cleared`);
   }
 
+  assertXiangqiPuzzleAdmissionProfile(run.scan_profile ?? {});
+  assertXiangqiPuzzleAdmissionProfile(run.audit_profile ?? {});
+  const binary = run.engine_profile?.binary;
+  const network = run.engine_profile?.network;
+  if (
+    !isRecord(binary) ||
+    typeof binary.sha256 !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(binary.sha256) ||
+    !isRecord(network) ||
+    network.sha256 !== XIANGQI_SOLVER_SCORE_PROFILE.networkSha256
+  )
+    throw new Error(`run ${runId} has an incompatible scoring engine profile`);
+
   const entries = await listXiangqiPuzzleEditorialCandidates(db, {
     runId,
     statuses: ['review', 'approved', 'published'],
@@ -161,6 +184,30 @@ export async function planXiangqiPuzzlePublication(
     }
     if (entry.auditJudgment?.verdict !== 'pass') {
       throw new Error(`candidate ${entry.candidate.id} lacks a latest passing audit judgment`);
+    }
+    for (const judgment of [entry.verifyJudgment, entry.auditJudgment]) {
+      const judgedBinary = judgment.engineProfile.binary;
+      const judgedNetwork = judgment.engineProfile.network;
+      if (
+        !isRecord(judgedBinary) ||
+        judgedBinary.sha256 !== binary.sha256 ||
+        !isRecord(judgedNetwork) ||
+        judgedNetwork.sha256 !== network.sha256
+      ) {
+        throw new Error(
+          `candidate ${entry.candidate.id} has judgments from a different scoring engine`,
+        );
+      }
+    }
+    assertXiangqiPuzzleAdmissionProfile(entry.verifyJudgment.evidence);
+    assertXiangqiPuzzleAdmissionProfile(entry.auditJudgment.evidence);
+    if (
+      entry.verifyJudgment.profileVersion !== run.scan_profile.profileVersion ||
+      entry.auditJudgment.profileVersion !== run.audit_profile.profileVersion
+    ) {
+      throw new Error(
+        `candidate ${entry.candidate.id} has judgments from a different mining profile`,
+      );
     }
     if (entry.positionDuplicateCount !== 1) {
       throw new Error(`candidate ${entry.candidate.id} repeats a position in the publication set`);
