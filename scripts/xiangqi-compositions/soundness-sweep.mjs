@@ -25,9 +25,12 @@
  */
 import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import {
+  pikafishXiangqiNetPath,
+  pikafishXiangqiPath,
+} from '../../apps/server/src/xiangqi-pikafish-paths.ts';
 
 const { values } = parseArgs({
   options: {
@@ -35,17 +38,8 @@ const { values } = parseArgs({
     only: { type: 'string', default: '' },
     workers: { type: 'string', default: '8' },
     movetime: { type: 'string', default: '4000' },
-    engine: {
-      type: 'string',
-      default: join(
-        homedir(),
-        'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
-      ),
-    },
-    nnue: {
-      type: 'string',
-      default: join(homedir(), 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue'),
-    },
+    engine: { type: 'string' },
+    nnue: { type: 'string' },
   },
 });
 if (!values.dir) {
@@ -54,6 +48,9 @@ if (!values.dir) {
   );
   process.exit(2);
 }
+// Default: the server's engine, the patched pikafish.ref build on the CC0 net (#989).
+values.engine ??= pikafishXiangqiPath();
+values.nnue ??= pikafishXiangqiNetPath(values.engine);
 if (!existsSync(values.engine)) {
   console.error(`pikafish not found at ${values.engine}`);
   process.exit(2);
@@ -96,7 +93,7 @@ async function startEngine() {
   const e = openEngine();
   e.send('uci');
   await e.until((l) => l === 'uciok');
-  if (existsSync(values.nnue)) e.send(`setoption name EvalFile value ${values.nnue}`);
+  e.send(`setoption name EvalFile value ${values.nnue}`);
   e.send('setoption name Threads value 1');
   e.send('setoption name Hash value 64');
   await e.ready();
