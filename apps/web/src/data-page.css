@@ -425,6 +425,15 @@
   border-radius: 4px;
 }
 
+/* Explicit height on a touch screen: WebKit ignores min-height on a native
+   menulist. 16px because iOS zooms the page into any form control under that. */
+@media (pointer: coarse) {
+  .data-bot-filter select {
+    height: 44px;
+    font-size: 16px;
+  }
+}
+
 .current-games-rail-link.is-unavailable .current-games-rail-count {
   display: none;
 }

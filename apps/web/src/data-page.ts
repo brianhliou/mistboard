@@ -727,10 +727,9 @@ function renderMonths(
       body.append(tableRow(monthName(row.month), row.games, row.files, onDownload));
     host.append(table);
   }
+  // Each unbuilt file says in its own row when its size and checksum come.
   host.append(
-    note(
-      `${t('data.builtNote')} ${t('data.currentMonthNote', { month: formatMonth(currentMonthKey()) })}`,
-    ),
+    note(t('data.currentMonthNote', { month: formatMonth(currentMonthKey()) })),
     searchLink(listing, variant),
   );
   // The engine games, only where there are some: their own heading, note and

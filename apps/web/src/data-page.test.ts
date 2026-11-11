@@ -179,9 +179,11 @@ describe('/data page', () => {
     expect(root.querySelector('.data-months .data-download')?.getAttribute('href')).toBe(
       '/api/data/monthly/2026-09/all.jsonl.gz',
     );
-    // "Built on first download" is said once, under the table, with the open month.
+    // The unbuilt file says it in its own row; the note under the table no
+    // longer repeats it, and names the open month.
     const notes = root.querySelector('.data-months')?.textContent ?? '';
-    expect(notes.match(/first time anyone downloads/g)).toHaveLength(1);
+    expect(notes).not.toContain('first time anyone downloads');
+    expect(notes.match(/Built on first download/g)).toHaveLength(1);
     expect(notes).toContain(`${formatMonth(currentMonthKey())} is added when the month ends.`);
     // No collections and no notes on this page: the notes are one link away.
     expect(root.querySelector('.data-collections')).toBeNull();
