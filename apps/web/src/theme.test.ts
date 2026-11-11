@@ -465,7 +465,7 @@ describe('appearance family gating', () => {
     );
     expect(toggle).not.toBeNull();
     expect(toggle?.checked).toBe(true);
-    expect(toggle?.closest('label')?.textContent).toBe('Confirm moves on touch screens');
+    expect(toggle?.closest('label')?.textContent).toBe('Confirm touch moves');
     toggle!.click();
     expect(
       JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}')

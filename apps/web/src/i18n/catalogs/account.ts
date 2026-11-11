@@ -42,7 +42,7 @@ export const EN_ACCOUNT = {
   'account.displayBoardHighlights': 'Board highlights (last move and check)',
   'account.displayPieceDestinations': 'Piece destinations (valid moves and premoves)',
   'account.displayBoardCoordinates': 'Board coordinates (A-H, 1-8)',
-  'account.displayConfirmMovesOnTouch': 'Confirm moves on touch screens',
+  'account.displayConfirmMovesOnTouch': 'Confirm touch moves',
   'account.displayMoveListWhilePlaying': 'Move list while playing',
   'account.displayZenMode': 'Zen mode',
   'account.displayBoardResizeHandle': 'Show board resize handle',
