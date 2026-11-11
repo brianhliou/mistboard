@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { articleProse } from '../../article-prose.js';
+import blindspots from './gomoku-title-blindspots.json' with { type: 'json' };
 import decisive from './gomoku-title-decisive.json' with { type: 'json' };
 import match from './gomoku-title-match.json' with { type: 'json' };
 import {
@@ -17,6 +18,7 @@ import {
   featuredGameState,
   KATAGOMO_SCORE,
   LEVEL8_SHARE,
+  ORACLE_SHARE,
   PARTED,
   PARTED_AT_STONES,
   RAPFI_KATAGOMO_STUDY,
@@ -271,5 +273,86 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
     expect(prose).toContain(
       `[dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all ${match.openings.poolSize} of them as close to even`,
     );
+  });
+});
+
+describe('where Rapfi lost (gomoku-title-blindspots.json)', () => {
+  const prose = articleProse(rapfiVsKatagomoArticle)
+    .map((x) => x.text)
+    .join('\n');
+  const B = blindspots;
+  const R = B.rapfiLosses;
+  const K = B.katagomoLosses;
+  const pctOf = (x: number) => `${Math.round(x * 100)}%`;
+  const section = rapfiVsKatagomoArticle.sections.find((s) => s.heading.startsWith("Rapfi's losing moves"));
+
+  it('holds the record to itself and to the match record', () => {
+    const e = match.equal.total;
+    expect(R.games).toBe(e.losses);
+    expect(K.sample).toBeLessThanOrEqual(e.wins);
+    expect(R.located + R.lostFromFirstMove + R.stillLostStepsBack).toBe(R.games);
+    expect(R.oracleSameMove + R.oracleDisagreed).toBe(R.located);
+    expect(R.oracleBlocked).toBeLessThanOrEqual(R.oracleDisagreed);
+    expect(R.katagomo.read).toBe(R.located);
+    expect(R.katagomo.bestMatchesOracle).toBeLessThanOrEqual(R.katagomo.read);
+    expect(R.katagomo.chanceAfterMedian).toBeLessThan(R.katagomo.chanceBeforeMedian);
+    for (const x of [R, K]) {
+      expect(x.withinFifteen).toBeLessThanOrEqual(x.withinThirty);
+      expect(x.withinThirty).toBeLessThanOrEqual(x.located);
+      expect(x.sharp).toBeLessThanOrEqual(x.located);
+      // The losing move is the last one read above the lost line.
+      expect(x.chanceBeforeMedian).toBeGreaterThan(B.oracle.lostAt);
+    }
+    for (const r of [R.matchSearch, R.tenX]) {
+      expect(r.repeats + r.oracleMove).toBeLessThanOrEqual(R.located + R.oracleSameMove);
+      expect(r.holds).toBeLessThanOrEqual(R.located - r.repeats);
+    }
+    // The replays run at the match's median search and ten times it.
+    expect(R.matchSearch.nodes).toBe(match.equal.total.timing.rapfiNodesMedian);
+    expect(R.tenX.nodes).toBe(R.matchSearch.nodes * 10);
+    expect(ORACLE_SHARE).toBe(22);
+  });
+
+  it('pins the figures the coordinator read from the analysis', () => {
+    // A re-run of the analysis that moves these must be re-read in the prose.
+    expect([R.games, R.located, R.moveMedian, R.withinFifteen, R.movesToEndMedian, R.sharp]).toEqual([25, 22, 32, 6, 44, 5]);
+    expect(R.chanceBeforeMedian).toBe(0.164);
+    expect([R.tenX.oracleMove, R.tenX.holds, R.matchSearch.repeats, R.oracleSameMove]).toEqual([19, 16, 12, 5]);
+    expect([K.sample, K.located, K.moveMedian, K.withinFifteen, K.sharp]).toEqual([20, 19, 10, 11, 13]);
+  });
+
+  it('states the record numbers', () => {
+    for (const text of [
+      "Rapfi's losing moves came late, in positions already behind",
+      `at ${B.oracle.confirmNodes / 1_000_000} million positions a move, about ${ORACLE_SHARE} times its match search`,
+      `a win chance of ${pctOf(B.oracle.lostAt)} or less`,
+      `It found one in ${R.located} of the ${R.games} losses; in the other ${R.games - R.located}, Rapfi was lost as far back as it looked`,
+      `a random ${K.sample} of Rapfi's wins`,
+      `a median ${R.winnerQuietMovesMedian} moves that made no three or four`,
+      `In ${R.oracleBlocked} of the ${R.oracleDisagreed} positions where the deeper search chose a different move`,
+      `${R.tenX.nodes / 1_000_000} million positions, Rapfi plays the deeper search's move in ${R.tenX.oracleMove} of the ${R.located} positions, and in ${R.tenX.holds} the position after its move no longer reads as lost`,
+      `it plays the losing move again in ${R.matchSearch.repeats}`,
+      `In ${R.oracleSameMove} of the ${R.located}, the deeper search would have played Rapfi's move too`,
+      `at ${B.oracle.katagomoVisits.toLocaleString('en-US')} visits`,
+      `from a median ${pctOf(R.katagomo.chanceBeforeMedian)} to ${pctOf(R.katagomo.chanceAfterMedian)}`,
+      `matched the deeper search's in ${R.katagomo.bestMatchesOracle} of the ${R.katagomo.read}`,
+    ]) {
+      expect(prose, text).toContain(text);
+    }
+  });
+
+  it('tables both sides from the record', () => {
+    const table = section?.blocks?.find((b) => b.kind === 'table');
+    expect(table?.kind).toBe('table');
+    if (table?.kind !== 'table') return;
+    expect(table.headers).toEqual(['The losing move', 'Rapfi lost', 'KataGomo lost']);
+    expect(table.rows).toEqual([
+      ['Found', `${R.located} of ${R.games}`, `${K.located} of ${K.sample}`],
+      ['Median move', `${R.moveMedian}`, `${K.moveMedian}`],
+      ['In the first 15 moves', `${R.withinFifteen}`, `${K.withinFifteen}`],
+      ["Loser's win chance before it, median", pctOf(R.chanceBeforeMedian), pctOf(K.chanceBeforeMedian)],
+      [`From ${pctOf(B.oracle.sharpFrom)} or more to lost`, `${R.sharp}`, `${K.sharp}`],
+      ['Moves left after it, median', `${R.movesToEndMedian}`, `${K.movesToEndMedian}`],
+    ]);
   });
 });

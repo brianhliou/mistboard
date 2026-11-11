@@ -7,6 +7,7 @@ import {
 import { gomokuRulesBoard } from '../../gomoku-rules-diagrams.js';
 import { gameLengthChartSvg, resultLinesChartSvg } from '../gomoku-title-charts.js';
 import type { Article, ArticleBlock } from '../types.js';
+import blindspots from './gomoku-title-blindspots.json' with { type: 'json' };
 import decisive from './gomoku-title-decisive.json' with { type: 'json' };
 import match from './gomoku-title-match.json' with { type: 'json' };
 
@@ -22,7 +23,9 @@ import match from './gomoku-title-match.json' with { type: 'json' };
 // the equal-time match; the earlier one gets one sentence, its result, and
 // Level 8's budget (decided 2026-11-11). Why the games are decisive is read from
 // gomoku-title-decisive.json (Rapfi's own logged evals; KataGomo logged none).
-// gomoku-title-match.test.ts holds both records to themselves, replays the
+// Where Rapfi's losses turned is read from gomoku-title-blindspots.json (a deeper
+// Rapfi search as the judge, KataGomo as a cross-check).
+// gomoku-title-match.test.ts holds the records to themselves, replays the
 // featured game, and checks that the prose states the records' numbers.
 //
 // Left out on purpose: KataGomo sometimes asks to pass, which Gomoku here has
@@ -38,6 +41,9 @@ const SECONDS = match.equal.katagomoBudget.maxTimeS;
 const U = match.uneven;
 const D = decisive;
 const KV = decisive.katagomoView;
+const B = blindspots;
+const BR = blindspots.rapfiLosses;
+const BK = blindspots.katagomoLosses;
 
 const commas = (n: number): string => n.toLocaleString('en-US');
 const pct = (score: number): string => `${Math.round(score * 100)}%`;
@@ -72,6 +78,10 @@ export const FIRST = {
 };
 /** The opening's dealt stones, so a stone count reads as moves played. */
 const DEALT = match.featured.opening.stones.length;
+
+/** The deeper search that judges each loss, as a multiple of Rapfi's median match search. */
+export const ORACLE_SHARE = Math.round(B.oracle.confirmNodes / ET.rapfiNodesMedian);
+const millions = (n: number): string => `${n / 1_000_000} million`;
 
 /** The 55% a challenger needs (champions.ruleScore). */
 export const TITLE_BAR = 0.55;
@@ -260,6 +270,40 @@ export const rapfiVsKatagomoArticle: Article = {
         p(
           `**Rapfi attacks more.** ${pct1(D.attack.rapfi.fours / D.attack.rapfi.moves)} of its moves made a four, against ${pct1(D.attack.katagomo.fours / D.attack.katagomo.moves)} of KataGomo's, and it made ${D.attack.rapfi.doubleThreats} moves with two threats at once to KataGomo's ${D.attack.katagomo.doubleThreats}.`,
         ),
+      ],
+    },
+    {
+      heading: "Rapfi's losing moves came late, in positions already behind",
+      blocks: [
+        p(
+          `To find where each loss turned, a deeper Rapfi search read back through Rapfi's moves from the end of each lost game, at ${millions(B.oracle.confirmNodes)} positions a move, about ${ORACLE_SHARE} times its match search. The losing move is the last one after which it gives Rapfi a win chance of ${pct(B.oracle.lostAt)} or less. It found one in ${BR.located} of the ${BR.games} losses; in the other ${BR.games - BR.located}, Rapfi was lost as far back as it looked. It read a random ${BK.sample} of Rapfi's wins the same way, to compare KataGomo's losing moves.`,
+        ),
+        {
+          kind: 'table',
+          headers: ['The losing move', 'Rapfi lost', 'KataGomo lost'],
+          rows: [
+            ['Found', `${BR.located} of ${BR.games}`, `${BK.located} of ${BK.sample}`],
+            ['Median move', `${BR.moveMedian}`, `${BK.moveMedian}`],
+            ['In the first 15 moves', `${BR.withinFifteen}`, `${BK.withinFifteen}`],
+            ["Loser's win chance before it, median", pct(BR.chanceBeforeMedian), pct(BK.chanceBeforeMedian)],
+            [`From ${pct(B.oracle.sharpFrom)} or more to lost`, `${BR.sharp}`, `${BK.sharp}`],
+            ['Moves left after it, median', `${BR.movesToEndMedian}`, `${BK.movesToEndMedian}`],
+          ],
+          caption: "Moves are counted after the opening. Win chances are the deeper search's.",
+          keyColumn: true,
+          wrap: true,
+        },
+        p(
+          `KataGomo's losses turned early, from near even, mostly in one move. Rapfi's finished a slide, and KataGomo won them slowly: after the losing move it played a median ${BR.winnerQuietMovesMedian} moves that made no three or four before its five. In ${BR.oracleBlocked} of the ${BR.oracleDisagreed} positions where the deeper search chose a different move from Rapfi, its move took a point where a KataGomo stone would have made a three or a four.`,
+        ),
+        p(
+          `**More search finds most of them.** Given ten times its match search, ${millions(BR.tenX.nodes)} positions, Rapfi plays the deeper search's move in ${BR.tenX.oracleMove} of the ${BR.located} positions, and in ${BR.tenX.holds} the position after its move no longer reads as lost. Replayed at its match search, it plays the losing move again in ${BR.matchSearch.repeats}. In ${BR.oracleSameMove} of the ${BR.located}, the deeper search would have played Rapfi's move too.`,
+        ),
+        {
+          kind: 'note',
+          label: 'What the deeper search can miss',
+          text: `The deeper search is Rapfi, so it shares Rapfi's blind spots. KataGomo, reading the same positions at ${commas(B.oracle.katagomoVisits)} visits, also has Rapfi's chances falling at the losing move, from a median ${pct(BR.katagomo.chanceBeforeMedian)} to ${pct(BR.katagomo.chanceAfterMedian)}, and its best move matched the deeper search's in ${BR.katagomo.bestMatchesOracle} of the ${BR.katagomo.read}. With ${BR.located} positions, these are rough counts.`,
+        },
       ],
     },
     {

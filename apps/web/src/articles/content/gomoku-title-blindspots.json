@@ -1,0 +1,45 @@
+{
+ "$comment": "Where the Gomoku title match losses turned: aggregates from a Mac-local re-read on 2026-11-11 of the equal-time match games (mistboard-engine lab/gomoku-title-match-2026-11/run-equal-3s, 199 counted games), with the match's Rapfi and KataGomo builds and nets. The oracle is a deeper Rapfi search: it scans the loser's turns back from the end at scanNodes, then steps back at confirmNodes while it still reads the loser as lost; the losing move is the loser's last move after which the oracle reads its win chance at or below lostAt when it read it above lostAt before. A loss with no located move: the oracle read the loser as lost from its first turn (1) or still lost after stepsBack steps (2). Rapfi's 25 losses are all read; for comparison, a seeded random sample of 20 of Rapfi's 113 wins (KataGomo's losses) is read the same way. KataGomo cross-checks each Rapfi losing move at katagomoVisits, before it and at Rapfi's next turn. sharpFrom: the oracle read the loser at or above it before the losing move. winnerQuietMovesMedian: the winner's moves after the losing move that made no three, four or five (none of the 22 finishes was a run of only threats). oracleBlocked: of the moves where the oracle chose differently from Rapfi, those whose point would have given KataGomo a three or a four. matchSearch and tenX replay Rapfi at the losing position at a fixed node budget (the match median and ten times it, fresh hash); oracleMove counts its move equal to the oracle's, holds counts its move after which a scanNodes read no longer has Rapfi lost (a repeat of the losing move never holds). Medians of move numbers count moves after the dealt opening.",
+ "oracle": {
+  "scanNodes": 2000000,
+  "confirmNodes": 10000000,
+  "lostAt": 0.1,
+  "stepsBack": 10,
+  "sharpFrom": 0.3,
+  "katagomoVisits": 2000
+ },
+ "rapfiLosses": {
+  "games": 25,
+  "located": 22,
+  "lostFromFirstMove": 1,
+  "stillLostStepsBack": 2,
+  "moveMedian": 32,
+  "withinFifteen": 6,
+  "withinThirty": 11,
+  "movesToEndMedian": 44,
+  "chanceBeforeMedian": 0.164,
+  "sharp": 5,
+  "oracleSameMove": 5,
+  "oracleDisagreed": 17,
+  "oracleBlocked": 9,
+  "winnerQuietMovesMedian": 12,
+  "katagomo": {
+   "read": 22,
+   "chanceBeforeMedian": 0.179,
+   "chanceAfterMedian": 0.062,
+   "bestMatchesOracle": 12
+  },
+  "matchSearch": { "nodes": 450000, "repeats": 12, "oracleMove": 7, "holds": 9 },
+  "tenX": { "nodes": 4500000, "repeats": 5, "oracleMove": 19, "holds": 16 }
+ },
+ "katagomoLosses": {
+  "sample": 20,
+  "located": 19,
+  "moveMedian": 10,
+  "withinFifteen": 11,
+  "withinThirty": 16,
+  "movesToEndMedian": 27,
+  "chanceBeforeMedian": 0.445,
+  "sharp": 13
+ }
+}
