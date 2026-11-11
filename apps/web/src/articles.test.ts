@@ -146,7 +146,9 @@ describe('Pikafish search intent', () => {
       );
       expect(official?.parentElement?.textContent).toContain(download);
       expect(official?.closest('.article-cta-row')).toBeNull();
-      expect(intro?.textContent).toContain('51 MB');
+      // The intro says the official download's own net is stronger than the CC0
+      // net Mistboard runs (2026-11-10).
+      expect(intro?.textContent).toMatch(/CC0|更[强強]/);
     });
 
     it(`${lang}: renders FAQs for the online, analysis and download searches without interaction`, () => {
@@ -162,7 +164,8 @@ describe('Pikafish search intent', () => {
       const answers = [...page.querySelectorAll('.article-faq-answer')]
         .map((answer) => answer.textContent)
         .join('\n');
-      expect(answers).toContain('51 MB');
+      expect(answers).toContain('11 MB');
+      expect(answers).toContain('CC0');
       expect(answers).toContain('Fairy-Stockfish');
       expect(answers).toContain(`${name}官方`);
       expect(answers).not.toMatch(/\[[^\]]+\]\(/);

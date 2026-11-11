@@ -479,7 +479,7 @@ const baseAnnouncements: Announcement[] = [
     date: '2026-09-21',
     kind: 'release',
     headline: 'Pikafish now runs in your browser for xiangqi analysis.',
-    body: 'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.',
+    body: "Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty. Update, November 10: Pikafish on Mistboard now runs on the free CC0 Fairy-Stockfish xiangqi net, 11 MB, instead of Pikafish's own net.",
     href: '/analysis/xiangqi',
     cta: 'Open the analysis board',
   },

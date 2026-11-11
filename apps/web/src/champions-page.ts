@@ -22,9 +22,9 @@ import { isPublicGameSpec } from '@mistboard/game';
 import { articleIsLive } from './articles/publish-time.js';
 import {
   PIKAFISH_REPO_URL,
-  pikafishWeightsLicenseUrl,
   RAPFI_BUILD_URL,
   RAPFI_REPO_URL,
+  XIANGQI_CC0_NET_URL,
 } from './engine-credits.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
@@ -127,12 +127,12 @@ const PIKAFISH_CODE: Credit = {
   nameKey: 'champions.enginePikafish',
   href: PIKAFISH_REPO_URL,
 };
-// The official net prod pins (scripts/engine-assets.sh), credited through
-// pikafish.com's weights page like /source does.
+// The CC0 Fairy-Stockfish xiangqi net prod pins for Pikafish
+// (scripts/engine-assets.sh), credited like /source does.
 const PIKAFISH_NET: Credit = {
   name: 'Pikafish NNUE',
   nameKey: 'champions.netPikafish',
-  href: pikafishWeightsLicenseUrl,
+  href: XIANGQI_CC0_NET_URL,
 };
 
 const MISTY = { holder: 'Misty', botHref: '/bot/misty' } as const;
