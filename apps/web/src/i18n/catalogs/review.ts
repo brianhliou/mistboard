@@ -678,7 +678,8 @@ export const EN_REVIEW = {
   'practice.position.title': 'Play out a position',
   'practice.position.badFen': 'This link does not hold a xiangqi position the board can read.',
   'practice.position.finished': 'This position is already over: there is no move left to play.',
-  'practice.position.badGoal': 'This link does not say whether to play for mate or hold the draw.',
+  'practice.position.badGoal':
+    'This link does not say whether to play for mate, play for a win or hold the draw.',
   'practice.position.badSide': 'This link does not say which side you play.',
   'practice.position.toEditor': 'Set up a position in the board editor',
   'practice.ribbon.done': 'Done',

@@ -138,7 +138,7 @@ export const ZH_HANS_REVIEW = {
   'practice.position.title': '从局面开始练习',
   'practice.position.badFen': '这个链接里没有可读取的象棋局面。',
   'practice.position.finished': '这个局面已经结束，没有可走的棋。',
-  'practice.position.badGoal': '这个链接没有说明是要将死对手还是守和。',
+  'practice.position.badGoal': '这个链接没有说明是要将死对手、争取胜势还是守和。',
   'practice.position.badSide': '这个链接没有说明你执哪一方。',
   'practice.position.toEditor': '在棋盘编辑器里摆一个局面',
   'practice.ribbon.done': '完成',
