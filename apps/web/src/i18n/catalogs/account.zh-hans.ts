@@ -36,6 +36,7 @@ export const ZH_HANS_ACCOUNT = {
   'account.flair': '个性图标',
   'account.flairHelp': '显示在全站你的名字旁边的小图标。',
   'account.flairNone': '不使用图标',
+  'account.flairGroupXiangqiSet': '象棋：{set}',
   'account.publicProfileSaved': '公开资料已保存。',
   'account.invalidPublicProfile': '请检查简介、所在地和公开链接。',
   'account.settingsCopy': '邮箱用于登录。用户名会公开显示。',
