@@ -2616,61 +2616,6 @@ a.puzzle-tag--link:hover {
    the catalogue in one lifted panel, light headings, borderless rows. Compact
    on desktop (Brian, 2026-10-29: "too spread out and spacey"): three columns
    of short rows, the site's card type rather than display sizes. */
-.puzzle-themes-layout {
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  column-gap: 12px;
-  align-items: start;
-  width: min(100%, 1180px);
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-  color: var(--site-text);
-}
-
-/* The Puzzles menu, this page marked with the panel's own surface. */
-.puzzle-themes-side {
-  display: grid;
-  align-self: start;
-  position: sticky;
-  top: 16px;
-}
-
-.puzzle-themes-side a {
-  display: block;
-  padding: 10px 20px 10px 12px;
-  border-radius: 4px;
-  color: var(--site-muted);
-  font-size: 14px;
-  line-height: 1.2;
-  text-decoration: none;
-  transition:
-    background 140ms ease,
-    color 140ms ease;
-}
-
-/* Touch floor: the side menu is the page's only way back to Puzzles and Streak. */
-@media (pointer: coarse) {
-  .puzzle-themes-side a {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-  }
-}
-
-.puzzle-themes-side a:hover,
-.puzzle-themes-side a:focus-visible {
-  background: var(--site-hover);
-  color: var(--site-text);
-  outline: none;
-}
-
-.puzzle-themes-side a[aria-current="page"] {
-  background: var(--site-panel);
-  color: var(--site-text);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--site-shadow) 14%, transparent);
-}
-
 .puzzle-themes-index {
   min-width: 0;
   box-sizing: border-box;
@@ -2808,23 +2753,6 @@ a.puzzle-tag--link:hover {
 }
 
 @media (max-width: 760px) {
-  .puzzle-themes-layout {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 12px;
-    padding: 12px 8px 32px;
-  }
-
-  .puzzle-themes-side {
-    position: static;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .puzzle-themes-side a {
-    padding: 10px 14px;
-  }
-
   .puzzle-themes-index {
     padding: 20px 8px 24px;
   }
