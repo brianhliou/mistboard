@@ -1,4 +1,5 @@
 import type { I18nKey } from './i18n/catalog.js';
+import type { UiIconName } from './ui-icon.js';
 
 // The About rail and the phone menu share destinations, labels and order.
 // Keep the public information pages before the project pages; the rail renders
@@ -33,6 +34,7 @@ export const ABOUT_NAV_GROUPS = [
       label: 'Engine champions',
       labelKey: 'champions.heading',
       href: '/champions',
+      icon: 'title-champion',
     },
     { key: 'developers', label: 'Developers', labelKey: 'developers.heading', href: '/developers' },
     { key: 'data', label: 'Game data', labelKey: 'data.heading', href: '/data' },
@@ -40,5 +42,11 @@ export const ABOUT_NAV_GROUPS = [
     { key: 'thanks', label: 'Thank you', labelKey: 'thanks.heading', href: '/thanks' },
   ],
 ] as const satisfies ReadonlyArray<
-  ReadonlyArray<{ key: string; label: string; labelKey: I18nKey; href: string }>
+  ReadonlyArray<{
+    key: string;
+    label: string;
+    labelKey: I18nKey;
+    href: string;
+    icon?: UiIconName;
+  }>
 >;

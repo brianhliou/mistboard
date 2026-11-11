@@ -8,6 +8,7 @@ import './static-page-shell.css';
 import { ABOUT_NAV_GROUPS } from './about-nav-items.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { buildUiIcon } from './ui-icon.js';
 
 export type StaticPageKey =
   | 'about'
@@ -65,6 +66,10 @@ function buildStaticPageRail(
       link.className = 'static-page-rail-link';
       link.href = localizedHref(item.href, locale);
       link.textContent = t(item.labelKey, {}, locale);
+      if ('icon' in item) {
+        link.classList.add('static-page-rail-link-with-icon');
+        link.prepend(buildUiIcon(item.icon, 'static-page-rail-icon'));
+      }
       if (item.key === activeKey) {
         link.classList.add('active');
         link.setAttribute('aria-current', 'page');

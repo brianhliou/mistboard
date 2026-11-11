@@ -164,4 +164,13 @@ describe('phone About rail', () => {
     expect(rail.scrollLeft).toBe(0);
     expect(measure).not.toHaveBeenCalled();
   });
+
+  it('marks only Engine champions with the champion crown, keeping its label', () => {
+    const rail = mount('champions');
+    const links = [...rail.querySelectorAll<HTMLAnchorElement>('.static-page-rail-link')];
+    const crowned = links.filter((link) => link.querySelector('svg.ui-icon-title-champion'));
+    expect(crowned.map((link) => link.getAttribute('href'))).toEqual(['/champions']);
+    expect(crowned[0]!.textContent).toBe('Engine champions');
+    expect(crowned[0]!.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
+  });
 });

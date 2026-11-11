@@ -82,6 +82,22 @@
   text-decoration: none;
 }
 
+/* Engine champions carries the crown its champion badges use, in the same gold. */
+.static-page-rail-link-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.static-page-rail-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: #876013;
+}
+:root[data-effective-theme="dark"] .static-page-rail-icon {
+  color: #dfbe72;
+}
+
 .static-page-rail-link:hover,
 .static-page-rail-link:focus-visible,
 .static-page-rail-link.active {
