@@ -87,6 +87,7 @@ import {
   liveCardShowsHands,
 } from './current-games-model.js';
 import type { DarkChessBoardView } from './dark-chess-render.js';
+import { buildFogTile } from './fog-tile.js';
 import type { FeaturedGame } from './game-display.js';
 import {
   displayLiveName,
@@ -526,7 +527,7 @@ function buildBoardHost(
     const perspective = seatView.view.perspective;
     host.dataset.perspective =
       perspective === 'white' || perspective === 'red' ? 'first' : 'second';
-    host.append(buildFogTile(game.gameSpecId));
+    host.append(buildSeatFogTile(game.gameSpecId));
     void mountSeatBoard(ctx, host, seatView);
     return host;
   }
@@ -534,7 +535,7 @@ function buildBoardHost(
   host.dataset.perspective = side;
   const kind = inboxTileKind(game.gameSpecId, current);
   if (kind === 'fog') {
-    host.append(buildFogTile(game.gameSpecId));
+    host.append(buildSeatFogTile(game.gameSpecId));
     return host;
   }
   host.append(buildPlaceholderTile(game.gameSpecId));
@@ -622,29 +623,10 @@ function seatNames(current: CurrentGame): { first: string; second: string } {
   return { first: first?.name ?? '', second: second?.name ?? '' };
 }
 
-const FOG_WAVES =
-  '<svg viewBox="0 0 44 30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8c6-5 12 5 19 0s13-5 19 0M3 16c6-5 12 5 19 0s13-5 19 0M3 24c6-5 12 5 19 0s13-5 19 0"/></svg>';
-
-// The /games misty tile (same classes, same tokens), with a note for the seat:
-// the game page is where your own side of the fog is.
-function buildFogTile(gameSpecId: string): HTMLElement {
-  return buildFogTileWithNote(gameSpecId, t('correspondence.fogNote'));
-}
-
-function buildFogTileWithNote(gameSpecId: string, noteText: string): HTMLElement {
-  const tile = document.createElement('div');
-  tile.className = 'current-game-fog';
-  const waves = document.createElement('span');
-  waves.className = 'current-game-fog-waves';
-  waves.innerHTML = FOG_WAVES;
-  const name = document.createElement('span');
-  name.className = 'current-game-fog-variant';
-  name.textContent = variantDisplayLabel(gameSpecId);
-  const note = document.createElement('span');
-  note.className = 'current-game-fog-note';
-  note.textContent = noteText;
-  tile.append(waves, name, note);
-  return tile;
+// The /games misty tile (fog-tile.ts), with a note for the seat: the game
+// page is where your own side of the fog is.
+function buildSeatFogTile(gameSpecId: string): HTMLElement {
+  return buildFogTile(gameSpecId, t('correspondence.fogNote'));
 }
 
 function buildPlaceholderTile(gameSpecId: string): HTMLElement {
@@ -1944,7 +1926,7 @@ function buildShowcaseCard(ctx: PageContext, game: CurrentGame): HTMLElement {
   host.className = 'current-game-board';
   const kind = inboxTileKind(game.gameSpecId, game);
   if (kind === 'fog') {
-    host.append(buildFogTileWithNote(game.gameSpecId, t('games.inTheFog')));
+    host.append(buildFogTile(game.gameSpecId, t('games.inTheFog')));
   } else {
     host.append(buildPlaceholderTile(game.gameSpecId));
     if (kind === 'board' && game.payload) {

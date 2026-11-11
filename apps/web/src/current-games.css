@@ -871,6 +871,22 @@
   height: 30px;
 }
 
+/* A hidden-information variant shows its own marker above the name: the same
+   art for every game of it, so the tile says nothing about one game. */
+.current-game-fog-marker {
+  display: block;
+  width: 42%;
+  max-width: 110px;
+  aspect-ratio: 1;
+}
+
+.current-game-fog-marker .variant-marker {
+  display: block;
+  width: 100%;
+  height: 100%;
+  --variant-marker-color: var(--current-games-fog-strong);
+}
+
 .current-game-fog-variant {
   font-size: 0.95rem;
   font-weight: 600;
