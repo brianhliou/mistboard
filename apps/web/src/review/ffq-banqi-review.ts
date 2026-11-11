@@ -5,6 +5,7 @@ import {
   type FFQBanqiPlayerView,
 } from '@mistboard/game';
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
+import { DISPLAY_PREFERENCES_CHANGE_EVENT } from '../display-preferences.js';
 import { ffqBanqiBoardView } from '../ffq-banqi-board.js';
 import { createFFQBanqiHpRow } from '../ffq-banqi-hp.js';
 import { variantDisplayLabel } from '../game-display.js';
@@ -39,6 +40,8 @@ export function mountFFQBanqiReview(
     boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
     defaultBoardAriaLabel: variantDisplayLabel(FFQ_BANQI_SPEC_ID),
     boardAspect: 568 / 312,
+    // Coordinates are drawn inside the board, so a toggle only needs a re-render.
+    appearanceEvent: DISPLAY_PREFERENCES_CHANGE_EVENT,
     boardCols: 10,
     boardMaxPx: 560,
     perspective: (flipped) => (flipped ? 'black' : 'red'),
