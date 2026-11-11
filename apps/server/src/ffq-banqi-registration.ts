@@ -1,12 +1,14 @@
-/** Hidden FFQ PvP playtest. Every network door requires the flag AND an admin. */
+/** Hidden FFQ PvP/PvE playtest. Every network door requires the flag AND an admin. */
 import { type BanqiColor, FFQ_BANQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiAdmits, isFFQBanqiRequest } from './ffq-banqi-access.js';
+import { ffqBanqiEngineAvailable, isFFQBanqiEngineClientId } from './ffq-banqi-engine.js';
 import { type FFQBanqiRuntimeRoom, ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import * as persistence from './persistence.js';
 import { writeJson } from './routes/lib.js';
+import { scheduleFFQBanqiEngineMove } from './server-ffq-banqi-engine.js';
 import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -23,16 +25,21 @@ import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runt
 import { clearTenantRuntimeTimers, createTenantWsRuntime } from './variant-tenant/ws.js';
 
 export const ffqBanqiRooms = new Map<string, FFQBanqiRuntimeRoom>();
-export const ffqBanqiWs = createTenantWsRuntime(ffqBanqiTenant);
+export const ffqBanqiWs = createTenantWsRuntime(ffqBanqiTenant, {
+  scheduleEngineMove: scheduleFFQBanqiEngineMove,
+});
 
 export async function createFFQBanqiRoom(
   accountUser: Pick<persistence.UserAccount, 'accountRole'> | null,
   timeControl?: RoomTimeControl,
   creatorPreference?: BanqiColor | 'random',
+  engine?: { engineId: string; seat: BanqiColor; botId?: string },
 ) {
   if (!ffqBanqiAdmits(accountUser)) {
     return { ok: false, error: 'ffq_banqi_disabled' } as const;
   }
+  if (engine && !ffqBanqiEngineAvailable(engine.engineId))
+    return { ok: false, error: 'ffq_banqi_engine_disabled' } as const;
   return createTenantLiveRoom(
     ffqBanqiTenant,
     {
@@ -43,7 +50,7 @@ export async function createFFQBanqiRoom(
       recordPersistenceError: (id, seq, type, err) =>
         recordTenantPersistenceError(ffqBanqiTenant, id, seq, type, err),
     },
-    { timeControl, creatorPreference, rated: false },
+    { timeControl, creatorPreference, engine, rated: false },
   );
 }
 
@@ -51,7 +58,7 @@ export function getOrLoadFFQBanqiRoom(roomId: string) {
   return getOrLoadTenantRoom(ffqBanqiTenant, ffqBanqiRooms, roomId);
 }
 
-// Keep the route beside its registration: no bots, rated games or other create surface.
+// Engine IDs seat native bots; bot-profile requests and rated games stay closed.
 const route = createTenantRoomsRoute<
   TenantCreateHttpContext & { accountUser: persistence.UserAccount | null },
   BanqiColor | 'random',
@@ -62,9 +69,18 @@ const route = createTenantRoomsRoute<
   hasDisabledFlag: true,
   admits: ffqBanqiAdmits,
   preferredColors: ['red', 'black', 'random'],
-  engine: { kind: 'none', rejectEngineId: true },
-  createRoom: (ctx, { timeControl, preferredColor }) =>
-    createFFQBanqiRoom(ctx.accountUser, timeControl, preferredColor),
+  engine: {
+    kind: 'seated',
+    defaultEngineId: 'misty-ffq-banqi-level-4',
+    isEngineClientId: isFFQBanqiEngineClientId,
+    heldEngineError: (id) =>
+      isFFQBanqiEngineClientId(id) && !ffqBanqiEngineAvailable(id)
+        ? 'ffq_banqi_engine_disabled'
+        : undefined,
+    seats: ['red', 'black'],
+  },
+  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
+    createFFQBanqiRoom(ctx.accountUser, timeControl, preferredColor, engine),
 });
 
 registerVariantTenant({
@@ -72,7 +88,8 @@ registerVariantTenant({
   gameSpecId: ffqBanqiTenant.gameSpecId,
   roomIdPrefix: ffqBanqiTenant.roomIdPrefix,
   ownsSpecRouting: true,
-  isEngineClientId: () => false,
+  isEngineClientId: isFFQBanqiEngineClientId,
+  engineDisplayName: (id) => ffqBanqiTenant.engine?.displayName(id) ?? null,
   replays: tenantReplayCheck(ffqBanqiTenant),
   errorPrefix: 'ffq_banqi',
   enabled: ffqBanqiEnabled,

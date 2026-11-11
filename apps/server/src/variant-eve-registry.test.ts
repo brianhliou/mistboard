@@ -59,6 +59,7 @@ test('data-only adapters have no random floor, so nothing can rate them', () => 
 });
 
 test('binary-backed adapters ask workers for their engine, and the worker probes it', () => {
+  assert.equal(eveAdapterFor('ffq-banqi')?.requiredCapability, 'ffq_banqi_engine');
   assert.equal(eveAdapterFor('banqi')?.requiredCapability, 'banqi_engine');
   assert.equal(eveAdapterFor('jungle')?.requiredCapability, 'jungle_engine');
   assert.equal(eveAdapterFor('jungle-flip')?.requiredCapability, 'jungle_flip_engine');
@@ -69,6 +70,7 @@ test('binary-backed adapters ask workers for their engine, and the worker probes
   const capabilities = eveWorkerCapabilities();
   assert.deepEqual(Object.keys(capabilities).sort(), [
     'banqi_engine',
+    'ffq_banqi_engine',
     'jungle_engine',
     'jungle_flip_engine',
     'three_kingdoms_banqi_engine',
@@ -79,8 +81,10 @@ test('binary-backed adapters ask workers for their engine, and the worker probes
     banqi: process.env.MISTBOARD_BANQI_ENGINE_PATH,
     jungle: process.env.MISTBOARD_JUNGLE_ENGINE_PATH,
     flip: process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH,
+    ffq: process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH,
     tk: process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH,
   };
+  process.env.MISTBOARD_FFQ_BANQI_ENGINE_PATH = '/nonexistent/ffq-banqi-engine';
   process.env.MISTBOARD_BANQI_ENGINE_PATH = '/nonexistent/banqi-engine';
   process.env.MISTBOARD_JUNGLE_ENGINE_PATH = '/nonexistent/jungle-engine';
   process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = '/nonexistent/jungle-flip-engine';
@@ -88,12 +92,14 @@ test('binary-backed adapters ask workers for their engine, and the worker probes
   try {
     assert.deepEqual(eveWorkerCapabilities(), {
       banqi_engine: false,
+      ffq_banqi_engine: false,
       jungle_engine: false,
       jungle_flip_engine: false,
       three_kingdoms_banqi_engine: false,
     });
   } finally {
     for (const [key, value] of [
+      ['MISTBOARD_FFQ_BANQI_ENGINE_PATH', saved.ffq],
       ['MISTBOARD_BANQI_ENGINE_PATH', saved.banqi],
       ['MISTBOARD_JUNGLE_ENGINE_PATH', saved.jungle],
       ['MISTBOARD_JUNGLE_FLIP_ENGINE_PATH', saved.flip],

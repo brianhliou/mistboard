@@ -49,6 +49,8 @@ import { installSelectionClickAway } from './variant-tenant/selection-click-away
 export type FFQBanqiWireView = FFQBanqiPlayerView;
 type MoveEvent = TenantMovePlayed<BanqiColor, FFQBanqiMove>;
 let core: TenantLiveClientContext<BanqiColor, FFQBanqiWireView> | null = null;
+let roomMode: 'pve' | 'pvp' = 'pvp';
+let pveEngineId: string | null = null;
 let selectedSquare: BanqiSquare | null = null;
 let draggingFrom: BanqiSquare | null = null;
 let chaseBubble: BanqiChaseBubble | null = null;
@@ -96,14 +98,22 @@ const client = createTenantLiveClient<BanqiColor, FFQBanqiWireView, FFQBanqiMove
   gameSpecId: FFQ_BANQI_SPEC_ID,
   defaultRoomId: 'ffq_dev',
   boardClass: 'banqi-live-board',
-  chrome: { roomMode: () => 'pvp' },
+  chrome: { roomMode: () => roomMode },
+  onFrame: (frame) => {
+    if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+  },
   playAgainRequestBody: (state) => ({
     gameSpecId: FFQ_BANQI_SPEC_ID,
-    mode: 'pvp',
+    mode: roomMode,
+    ...(roomMode === 'pve' && pveEngineId ? { engineId: pveEngineId } : {}),
+    rated: false,
     preferredColor: isSeat(state.seat) ? state.seat : 'random',
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
   resetState: () => {
+    roomMode = 'pvp';
+    pveEngineId = null;
     clearChaseNotice();
     selectedSquare = null;
     draggingFrom = null;

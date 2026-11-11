@@ -54,11 +54,12 @@ import {
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from '../feature-flags.js';
+import { ffqBanqiEngineOptions, ffqBanqiOffered } from '../ffq-banqi-access.js';
 import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
-import { hasLikelyVariantGrant, isLikelyAdmin } from '../signed-in-state.js';
+import { hasLikelyVariantGrant } from '../signed-in-state.js';
 import {
   threeKingdomsBanqiEngineOptions,
   threeKingdomsBanqiOffered,
@@ -216,7 +217,7 @@ const mahjongOffered = playtestOffered(mahjongEnabled, MAHJONG_SPEC_ID);
 const xiangqiMahjongOffered = playtestOffered(xiangqiMahjongEnabled, XIANGQI_MAHJONG_SPEC_ID);
 // Unlike Three Kingdoms, FFQ always requires BOTH the build opt-in and admin.
 // The server repeats this check for create, HTTP shells and every connection.
-const ffqBanqiOffered = () => ffqBanqiEnabled() && isLikelyAdmin();
+
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -361,7 +362,16 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: ffqBanqiOffered,
       acceptsDeepLink: ffqBanqiOffered,
-      modes: ['pvp'],
+      modes: ['pvp', 'pve'],
+      get engineOptions() {
+        return ffqBanqiEngineOptions();
+      },
+      get defaultEngineId() {
+        const options = ffqBanqiEngineOptions();
+        return (
+          options?.find((engine) => engine.id === 'misty-ffq-banqi-level-4')?.id ?? options?.[0]?.id
+        );
+      },
     },
   },
   {

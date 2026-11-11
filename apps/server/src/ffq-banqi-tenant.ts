@@ -1,9 +1,10 @@
 /**
- * Unregistered FFQ banqi tenant. No route, room map, engine or public surface
- * is installed here. The shared access policy lives in ffq-banqi-access.ts.
+ * Hidden FFQ banqi tenant with admin-only PvP and casual PvE (#809).
+ * The shared access policy lives in ffq-banqi-access.ts.
  * The crypto deal is server-secret; snapshots and per-ply history remain
  * masked for both seats and observers, including after any game ending.
  */
+
 import { randomInt } from 'node:crypto';
 import {
   applyFFQBanqiMove,
@@ -20,8 +21,13 @@ import {
   oppositeBanqiColor,
 } from '@mistboard/game';
 import { FFQ_BANQI_ROOM_ID_PREFIX } from './ffq-banqi-access.js';
+import {
+  ffqBanqiEngineDisplayName,
+  ffqBanqiEngineVersion,
+  isFFQBanqiEngineClientId,
+} from './ffq-banqi-engine.js';
 import type * as persistence from './persistence.js';
-import { tenantPerPlyViews } from './variant-tenant/runtime.js';
+import { tenantPerPlyViews, tenantPveEngineId } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -106,7 +112,7 @@ export const ffqBanqiTenant: FFQBanqiTenant = {
   gameSpecId: FFQ_BANQI_SPEC_ID,
   roomIdPrefix: FFQ_BANQI_ROOM_ID_PREFIX,
   colors: ['red', 'black'],
-  // Runtime plumbing only. No registry entry or network door reaches it.
+  // Network admission is independently enforced by ffq-banqi-registration.
   enabled: () => true,
   oppositeColor: oppositeBanqiColor,
   rules: {
@@ -132,8 +138,20 @@ export const ffqBanqiTenant: FFQBanqiTenant = {
     liveHistory: (events, viewer) => tenantPerPlyViews(ffqBanqiTenant, events, viewer),
     liveHistoryWhenFinished: true,
   },
-  rematch: { optOut: 'unregistered playtest with no room factory' },
-  wire: { snapshotExtras: () => ({ roomMode: 'pvp' }) },
+  rematch: { optOut: 'Play again creates a fresh hidden admin room' },
+  engine: {
+    terminalContext: 'full-history',
+    isEngineClientId: isFFQBanqiEngineClientId,
+    displayName: ffqBanqiEngineDisplayName,
+    engineVersion: ffqBanqiEngineVersion,
+    reservationReleaseTag: 'ffq-banqi',
+  },
+  wire: {
+    snapshotExtras: (room) => {
+      const pveEngineId = tenantPveEngineId(ffqBanqiTenant, room);
+      return pveEngineId ? { roomMode: 'pve', pveEngineId } : { roomMode: 'pvp' };
+    },
+  },
   persistence: {
     resultForWinner: (winner) =>
       winner === 'red' ? 'red-wins' : winner === 'black' ? 'black-wins' : 'draw',

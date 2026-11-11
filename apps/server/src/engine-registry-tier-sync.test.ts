@@ -33,6 +33,7 @@ import {
   banqiEngineTierFor,
 } from './banqi-engine.js';
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
+import { FFQ_BANQI_PLAYABLE_ENGINES } from './ffq-banqi-engine.js';
 import {
   JUNGLE_FLIP_ENGINE_VERSION,
   JUNGLE_FLIP_PLAYABLE_ENGINES,
@@ -52,6 +53,16 @@ type TierSyncCase = {
 // list (see the exemptions below) a row here would only echo the generator, so
 // only the hand-written entries are covered.
 const TIER_SYNC_CASES: readonly TierSyncCase[] = [
+  ...FFQ_BANQI_PLAYABLE_ENGINES.map(
+    (tier): TierSyncCase => ({
+      family: 'ffq-banqi',
+      engineId: tier.id,
+      config:
+        tier.evaluation === 'random'
+          ? { kind: 'builtin', strategy: 'random-legal', version: 1 }
+          : { kind: 'ffq-banqi-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+    }),
+  ),
   ...THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS.map(
     (tier): TierSyncCase => ({
       family: 'three-kingdoms-banqi',
@@ -156,6 +167,7 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
   'pikafish-xiangqi',
   'banqi-uci',
   'three-kingdoms-banqi-uci',
+  'ffq-banqi-uci',
   'jungle-flip-uci',
   'jungle-uci',
   'katago-gtp',

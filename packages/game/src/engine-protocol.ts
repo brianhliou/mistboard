@@ -167,7 +167,9 @@ export type EngineClock = {
  * an `EngineTurnResponse` within the engine's clock budget (server enforces
  * timeouts).
  */
-export type EngineTurnRequest = {
+// Variant adapters supply their native move coordinates (FFQ uses 0..31).
+// Existing chess callers retain the default Move shape and wire contract.
+export type EngineTurnRequest<M = Move> = {
   protocolVersion: EngineProtocolVersion;
 
   /** Opaque game identifier. Engines may correlate logs/diagnostics by it. */
@@ -216,7 +218,7 @@ export type EngineTurnRequest = {
    * (server validates). Including this lets the engine skip its own
    * move-generation in simple cases and ensures move equality semantics.
    */
-  legalMoves: Move[];
+  legalMoves: M[];
 
   /**
    * COLD-START path: full observation history since game start. Present
@@ -244,7 +246,7 @@ export type EngineDiagnostics = Record<string, unknown>;
 /**
  * Engine's response to one `EngineTurnRequest`.
  */
-export type EngineTurnResponse = {
+export type EngineTurnResponse<M = Move> = {
   protocolVersion: EngineProtocolVersion;
 
   /** Echo of the request's gameId for correlation. */
@@ -258,7 +260,7 @@ export type EngineTurnResponse = {
    * `legalMoves`. Server validates; an illegal/missing move triggers a
    * fallback per the engine's live policy.
    */
-  move: Move;
+  move: M;
 
   diagnostics?: EngineDiagnostics;
 };
