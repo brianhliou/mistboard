@@ -295,9 +295,12 @@ export function flairLabel(key: FlairKey, locale: Locale = currentLocale()): str
 }
 
 // The Jungle token's outer ring spans 2 * ringRadiusRatio + ringStrokeRatio of
-// its size, so this size makes the ring's outer edge fill the 100-unit box
-// (the board's jungleTokenSize, at a 100-unit cell).
-const JUNGLE_FLAIR_TOKEN_SIZE = 100 / (2 * JUNGLE_ART.ringRadiusRatio + JUNGLE_ART.ringStrokeRatio);
+// its size. This size puts the ring's outer edge at 92 of the 100-unit box, the
+// same margin as the xiangqi discs: a ring that touches the box edge loses part
+// of its right and bottom stroke to pixel rounding at flair sizes.
+const JUNGLE_FLAIR_OUTER = 92;
+const JUNGLE_FLAIR_TOKEN_SIZE =
+  JUNGLE_FLAIR_OUTER / (2 * JUNGLE_ART.ringRadiusRatio + JUNGLE_ART.ringStrokeRatio);
 
 function jungleFlairSvg(ink: JungleColor, role: JunglePieceRole): string {
   const token = framedTokenSvg({ cx: 50, cy: 50, size: JUNGLE_FLAIR_TOKEN_SIZE, ink, role });
