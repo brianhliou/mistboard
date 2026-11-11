@@ -690,7 +690,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "At move 27 Pikafish has Meng's black about one and a half pawns better, short of a won game. Take his side from there against the bot and try to turn it into a win.",
+          text: "After Ju's 27th move Pikafish rates Meng's black clearly better but not yet winning. Take his side from there against the bot and try to turn it into a win.",
         },
         {
           kind: 'cta',
