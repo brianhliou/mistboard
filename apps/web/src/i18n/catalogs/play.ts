@@ -680,6 +680,9 @@ export const EN_PLAY = {
   'live.challengeFriend': 'Challenge a friend',
   'live.challengeFriendCreating': 'Creating challenge',
   'live.challengeFriendRetry': 'Try challenge again',
+  // Postgame "play again by correspondence" (correspondence-again.ts, #606).
+  'live.correspondenceAgain': 'Play again by correspondence',
+  'live.correspondenceAgainSending': 'Sending challenge',
   'live.finishWinner': 'Winner',
   // Tenant live room (variant-tenant/room-chrome.ts and the live-*.ts tenants), #427.
   'variant.mahjong.name': 'Mahjong',
