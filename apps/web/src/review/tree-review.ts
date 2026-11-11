@@ -72,14 +72,21 @@ import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engi
 import { createEnginePanel } from './engine/engine-panel.js';
 import { createEvalBar } from './engine/eval-bar.js';
 import { advantageSymbol, formatEval } from './engine/eval-format.js';
+import {
+  formatRuleEvalShort,
+  formatRuleEvalTitle,
+  ruleRecordNote,
+} from './engine/rule-eval-format.js';
 import { installFaceDownPeek } from './face-down-faces.js';
 import {
   type GameAnalysis,
   type GamePhases,
   type MovePraise,
   mergeDecisionAnalysis,
+  type PlyEval,
   regradeBestPlayed,
   withPraise,
+  withRuleVerdicts,
 } from './game-analysis.js';
 import {
   createGameTree,
@@ -223,6 +230,16 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
      *  was taken in the main line, or when no piece was offered. */
     pvAfterCapture: readonly string[];
   }): MovePraise | null;
+  /** Whether a whole-game eval's mate score is a rule verdict rather than a checkmate
+   *  (xiangqi: the engine scoring a perpetual-check repetition as "mate 1"; @mistboard/game
+   *  xiangqiRuleMate). `history` is the mainline moves before the evaluated position, from
+   *  `root`. Tags evals the server sweep did not (rows cached before the tag). Omit for a
+   *  variant whose engine reports no such verdicts. */
+  ruleVerdict?(input: {
+    root: Truth;
+    history: readonly Move[];
+    entry: PlyEval;
+  }): 'perpetual-check' | null;
   /** On-board arrows for live MultiPV lines. Omit while a board renderer has no
    *  overlay capability; the engine panel then hides its arrow setting. */
   engineArrowsFromLines?(lines: CevalLine[]): Arrow[];
@@ -257,6 +274,11 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   quoteEvalBestMove?: boolean;
   /** Omit centipawn loss for variants whose scores do not represent material. */
   hideAcpl?: boolean;
+  /** False when the moves are a record whose event did not play under our repetition rules
+   *  (a broadcast, an archive, an imported or pasted game): a move that walks into a
+   *  rule-verdict eval (PlyEval.rule) is then left ungraded with a note instead of read as a
+   *  blunder. Default true: in a game played here the rule decided the result. */
+  ruleVerdictsEnforced?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -691,6 +713,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   config: TreeReviewConfig<Move, Truth, Arrow>,
 ): TreeReviewHandle {
   const evalText = presentation.formatEval ?? formatEval;
+  /** One whole-game eval as the move list, chart and phone readout write it: a rule
+   *  verdict in words, never as the "#1" its mate score would format to. */
+  const entryEvalText = (entry: Pick<PlyEval, 'cp' | 'mate' | 'rule'>): string =>
+    entry.rule ? formatRuleEvalShort() : evalText(entry.cp, entry.mate);
   type Node = GameTreeNode<Move, Truth>;
   type Tree = GameTree<Move, Truth, View>;
   const { adapter } = presentation;
@@ -2389,7 +2415,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         gameAnalysis && mainlineNodes()[node.ply] === node
           ? gameAnalysis.evals.find((entry) => entry.ply === node.ply)
           : undefined;
-      phoneAnalysis.setEval(gameAnalysis ? (point ? evalText(point.cp, point.mate) : '–') : null);
+      phoneAnalysis.setEval(gameAnalysis ? (point ? entryEvalText(point) : '–') : null);
     }
     moveTimesChart?.setPly(node.ply);
     config.onPlyChange?.(node.ply);
@@ -2476,7 +2502,32 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return out;
   }
 
-  function applyAnalysis(raw: GameAnalysis): void {
+  /** Tag the rule-verdict evals the server left untagged (rows cached before it tagged
+   *  them), then re-grade a record without the rule (see ruleVerdictsEnforced). */
+  function withRuleTags(raw: GameAnalysis): GameAnalysis {
+    const judge = presentation.engine?.ruleVerdict;
+    let evals = raw.evals;
+    if (judge && evals.some((entry) => entry.mate != null && !entry.rule)) {
+      const nodes = mainlineNodes();
+      const root = nodes[0]?.truth;
+      const moves: Move[] = [];
+      for (const node of nodes.slice(1)) {
+        if (node.move === undefined || node.move === null) break;
+        moves.push(node.move);
+      }
+      if (root !== undefined) {
+        evals = evals.map((entry) => {
+          if (entry.rule || entry.mate == null || entry.ply > moves.length) return entry;
+          const rule = judge({ root, history: moves.slice(0, entry.ply), entry });
+          return rule ? { ...entry, rule } : entry;
+        });
+      }
+    }
+    return withRuleVerdicts(raw, evals, presentation.ruleVerdictsEnforced !== false);
+  }
+
+  function applyAnalysis(untagged: GameAnalysis): void {
+    const raw = withRuleTags(untagged);
     const regraded = regradeBestPlayed(raw, bestPlayedPlies(raw));
     const analysis = withPraise(regraded, praiseByPly(regraded));
     gameAnalysis = analysis;
@@ -2491,7 +2542,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : undefined;
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
-      formatScore: evalText,
+      formatScore: (cp, mate, entry) => (entry ? entryEvalText(entry) : evalText(cp, mate)),
       winK: winPercentK(analysis.engineId),
       phases: gamePhases,
       phaseLabels: {
@@ -2605,6 +2656,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (gameAnalysis || decisionOverlay) {
       const nodes = mainlineNodes();
       const evalByPly = new Map((gameAnalysis?.evals ?? []).map((entry) => [entry.ply, entry]));
+      const rulePlies = new Set(gameAnalysis?.rulePlies ?? []);
       for (const [ply, mark] of analysisMarkByPly) {
         const node = nodes[ply];
         if (!node) continue;
@@ -2628,14 +2680,16 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           luckByPathKey.set(nodeKey, { move: node.move, luck, before: node.parent.truth });
         }
         if (mark.grade) gradePlyByPathKey.set(nodeKey, ply);
+        const evalShown = entry && presentation.moveEvalVisible?.(node.truth) !== false;
+        // A record's move that walked into a rule verdict the event never applied: left
+        // ungraded (computeGameAnalysis), with the reason where the grade would have been.
+        const ruleNote = entry?.rule && rulePlies.has(ply) && !mark.comment;
         byPathKey.set(nodeKey, {
           suffix: mark.suffix,
           suffixClass: mark.suffixClass,
-          eval:
-            entry && presentation.moveEvalVisible?.(node.truth) !== false
-              ? evalText(entry.cp, entry.mate)
-              : undefined,
-          comment: hidden ? undefined : mark.comment,
+          eval: evalShown ? entryEvalText(entry) : undefined,
+          ...(evalShown && entry.rule ? { evalTitle: formatRuleEvalTitle(entry.mate) } : {}),
+          comment: hidden ? undefined : ruleNote ? ruleRecordNote() : mark.comment,
           commentClass: mark.commentClass,
           ...(luck === undefined
             ? {}
