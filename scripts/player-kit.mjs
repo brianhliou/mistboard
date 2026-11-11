@@ -130,7 +130,7 @@ export async function runKit(options, services) {
     } catch {
       missing.push({
         kind: 'engine',
-        detail: 'Pinned local Pikafish binary or net unavailable; no fallback used',
+        detail: 'Patched local Pikafish (pinned build, CC0 net) unavailable; no fallback used',
       });
     }
   }

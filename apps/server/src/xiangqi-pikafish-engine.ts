@@ -17,8 +17,6 @@
 // MISTBOARD_PIKAFISH_XIANGQI_NET). The engine source remains GPLv3; the net is
 // fetched from Fairy-Stockfish's public source, never bundled in our release.
 
-import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
 import { redPovScore } from '@mistboard/game';
 import {
   runUciEval,
@@ -27,6 +25,7 @@ import {
   type UciEval,
   UciWarmSessionCache,
 } from './uci-engine-harness.js';
+import { pikafishXiangqiNetPath, pikafishXiangqiPath } from './xiangqi-pikafish-paths.js';
 
 // Xiangqi -> engine UCI now lives in @mistboard/game so the browser FSF-wasm
 // analysis engine and this server Pikafish path share one converter. Re-exported
@@ -42,11 +41,10 @@ export const XIANGQI_DEFAULT_ENGINE_ID = 'pikafish-xiangqi-level-5';
 // Bump on any engine/net/config change.
 export const XIANGQI_ENGINE_VERSION = '0.4.0';
 
-// Source pin, applied patch sha256 prefix and net identity from the engine recipe.
-// bot-engine-versions.test.ts checks them against the actual build inputs.
-const PIKAFISH_XIANGQI_REF = '6a59ee2f';
-export const PIKAFISH_XIANGQI_NNUE_NET = 'xiangqi-c07e94a5c7cb.nnue';
-export const PIKAFISH_XIANGQI_VERSION = `${PIKAFISH_XIANGQI_REF} · cc0-790609318c02 · ${PIKAFISH_XIANGQI_NNUE_NET.replace(/\.nnue$/, '')}`;
+export { PIKAFISH_XIANGQI_NNUE_NET, PIKAFISH_XIANGQI_VERSION } from './xiangqi-pikafish-paths.js';
+// The pin, net identity and both path resolvers live in a dependency-free module
+// the offline scripts import too (#989), so a script cannot drift onto another build.
+export { pikafishXiangqiNetPath, pikafishXiangqiPath };
 
 export type XiangqiEngineId =
   | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
@@ -182,69 +180,6 @@ const analysisPool = new UciEnginePool({
   defaultQueueTimeoutMs: 30_000,
   queueTimeoutMessage: 'pikafish-xiangqi analysis queue timed out',
 });
-
-// Resolve the patched Pikafish binary: explicit env override, else the known dev
-// location, else the prod (railpack-baked) / system locations. Throws rather than
-// silently falling back to a first-legal move.
-export function pikafishXiangqiPath(): string {
-  const explicit = process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH;
-  if (explicit) {
-    const resolved = resolve(explicit);
-    if (!existsSync(resolved)) {
-      throw new Error(
-        `MISTBOARD_PIKAFISH_XIANGQI_PATH points at ${resolved} but the binary does not exist`,
-      );
-    }
-    return resolved;
-  }
-  const home = process.env.HOME;
-  if (home) {
-    const dev = resolve(
-      home,
-      'projects',
-      'tools',
-      `pikafish-${PIKAFISH_XIANGQI_REF}-cc0`,
-      'src',
-      'pikafish',
-    );
-    if (existsSync(dev)) return dev;
-  }
-  for (const candidate of [
-    resolve(process.cwd(), 'bin', 'pikafish'),
-    '/app/bin/pikafish',
-    '/usr/local/bin/pikafish',
-  ]) {
-    if (existsSync(candidate)) return candidate;
-  }
-  throw new Error(
-    'Patched Pikafish (xiangqi) binary not found. Set MISTBOARD_PIKAFISH_XIANGQI_PATH.',
-  );
-}
-
-// Resolve the CC0 net (absolute EvalFile): explicit override, else the pinned
-// filename beside the binary or one directory up. No upstream-net fallback.
-export function pikafishXiangqiNetPath(binPath: string): string {
-  const explicit = process.env.MISTBOARD_PIKAFISH_XIANGQI_NET;
-  if (explicit) {
-    const resolved = resolve(explicit);
-    if (!existsSync(resolved)) {
-      throw new Error(
-        `MISTBOARD_PIKAFISH_XIANGQI_NET points at ${resolved} but the file does not exist`,
-      );
-    }
-    return resolved;
-  }
-  const binDir = dirname(binPath);
-  for (const candidate of [
-    resolve(binDir, PIKAFISH_XIANGQI_NNUE_NET),
-    resolve(binDir, '..', PIKAFISH_XIANGQI_NNUE_NET),
-  ]) {
-    if (existsSync(candidate)) return candidate;
-  }
-  throw new Error(
-    `Pikafish CC0 NNUE net (${PIKAFISH_XIANGQI_NNUE_NET}) not found beside the binary. Set MISTBOARD_PIKAFISH_XIANGQI_NET.`,
-  );
-}
 
 export function xiangqiEngineTierFor(engineId: string | undefined): XiangqiEngineTier | null {
   if (!engineId) return null;
