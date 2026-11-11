@@ -2574,6 +2574,40 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   text-transform: uppercase;
 }
 
+.xq-replay-annotated .xq-replay-tree-branch {
+  margin-left: 8px;
+  color: var(--site-muted);
+}
+
+.xq-replay-annotated .xq-replay-tree-depth-2 {
+  flex-basis: 100%;
+  margin-left: 12px;
+}
+
+.xq-replay-annotated .xq-replay-tree-branch[hidden] {
+  display: none;
+}
+
+.xq-replay-annotated .xq-replay-tree-branch:hover > .xq-replay-move-button:not(.is-current),
+.xq-replay-annotated .xq-replay-tree-branch.is-active > .xq-replay-move-button:not(.is-current) {
+  color: var(--site-text);
+}
+
+.xq-replay-replies-toggle {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  min-height: 32px;
+  min-width: 32px;
+}
+
+.xq-replay-branch-note {
+  flex-basis: 100%;
+  font-size: 11px;
+}
+
 .xq-replay-annotated .xq-replay-glyph {
   font-weight: 700;
 }

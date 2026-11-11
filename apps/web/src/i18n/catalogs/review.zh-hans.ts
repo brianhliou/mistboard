@@ -7,6 +7,9 @@
 import type { ReviewI18nKey } from './review.js';
 
 export const ZH_HANS_REVIEW = {
+  'review.article.showReplies': '显示 {count} 个应手分支',
+  'review.article.hideReplies': '隐藏 {count} 个应手分支',
+  'review.article.variation': '变化',
   'review.chooseLine': '选择分支',
   'review.mainLine': '主线',
   // Remaining review widgets and dynamically generated move advice (#855).

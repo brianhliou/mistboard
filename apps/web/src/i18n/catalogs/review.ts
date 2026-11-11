@@ -1,6 +1,9 @@
 // Review translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_REVIEW = {
+  'review.article.showReplies': 'Show {count} reply variations',
+  'review.article.hideReplies': 'Hide {count} reply variations',
+  'review.article.variation': 'Variation',
   'review.chooseLine': 'Choose a line',
   'review.mainLine': 'Main line',
   // Remaining review widgets and dynamically generated move advice (#855).

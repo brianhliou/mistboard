@@ -33,37 +33,121 @@ const G_M_143657: XiangqiReplaySpec = {
         "glyph": "?!",
         "note": "inaccuracy: 6.1 win% given up, eval -0.02 after. The engine wanted the line in the sibling branch.",
         "line": "d4d6 c7c3 f0e1 a3b5 d6b6 c3i3 f4d5 a5a4 b6c6 a4a3 d5b6 h5d5 h4h9 g7h9 c6c4 d5d7 f2f8 i3f3 b6c8 e9f9 f8i8 f3f7 g4g5 g6g5 c4h4 h9g7 i8i9 g9i7 c1c4 g5g4 h4g4 e7g5",
-        "lineEval": "⩲"
+        "lineEval": "⩲",
+        "branches": [
+          {
+            "line": "d4d6 c7c3 f0e1 c3c2 f2f1 b1b5 f4g6 c2b2",
+            "lineEval": "⩲"
+          },
+          {
+            "line": "c3c4 c7c1 d4d1 b1b3 d1c1 b3e3 f0e1 e3i3",
+            "lineEval": "="
+          }
+        ]
       },
       "49": {
         "glyph": "?!",
         "note": "inaccuracy: 5.6 win% given up, eval -0.83 after. The engine wanted the line in the sibling branch.",
         "line": "d5e3 c2c3 e3d5 c3i3 d5e7 i3c3 e7g8 i7g8 f8g8 c3e3 g8g9 e8f9 e2g0 i6i5 g9g6 i5i4 g4g5 a5a4 g5f5 i4h4 g6g2 e3e4 g2d2 h4g4 d2e2 e4e2 g0e2 g4g3 e2g4 e9e8 e0f0 a4b4",
-        "lineEval": "="
+        "lineEval": "=",
+        "branches": [
+          {
+            "line": "d5e3 c2c3 e3d5 c3c2 d5e7 e6e5 e0f0 e5e4",
+            "lineEval": "⩱"
+          }
+        ]
       },
       "53": {
         "glyph": "?",
         "note": "mistake: 12.5 win% given up, eval -2.54 after. The engine wanted the line in the sibling branch.",
         "line": "d5e3 e2e3 e4c5 e3g3 f8i8 e9f9 e1f0 g3c3 c5b7 c3b3 b7d8 b3d3 d8c6 d3d7 c6a5 e6e5 i8h8 e5e4 h8h4 d7f7 d0e1 e4f4 a5c6 f9e9 h4h6 f7f6 c6a7 f4g4 a7c8 e9f9 h6i6 f6c6",
-        "lineEval": "∓"
+        "lineEval": "∓",
+        "branches": [
+          {
+            "line": "d5e3 e2e3 e4c5 e3g3 f8i8 e9f9 e1f0 g3c3",
+            "lineEval": "∓",
+            "replies": {
+              "2": [
+                {
+                  "line": "e6e5 e4c5 e2e3 f8f5 i7g8 f5h5 e3f3 h5e5",
+                  "lineEval": "⩱"
+                }
+              ]
+            }
+          }
+        ]
       },
       "57": {
         "glyph": "?!",
         "note": "inaccuracy: 7.4 win% given up, eval -3.62 after. The engine wanted the line in the sibling branch.",
         "line": "f3f7 e2h2 d5c3 h2h0 e1f0 h0h3 c3d1 c4e5 f7f6 e5g4 f6e6 d9e8 e6e4 g4f6 e4b4 g9e7 b4b6 e9f9 d0e1 e7c9 d1b2 i7g8 b6b5 h3h5 d6c4 h5f5 b5a5 g6g5 c4e3 f5f3 e3c4 f6e4",
-        "lineEval": "−+"
+        "lineEval": "−+",
+        "branches": [
+          {
+            "line": "f3f6 e2e5 d5c3 c4e3 f6f7 d9e8 f7g7 e3g4",
+            "lineEval": "∓"
+          },
+          {
+            "line": "f3f7 e2h2 d5c3 h2h0 e1f0 h0h3 d6c4 h3c3",
+            "lineEval": "−+",
+            "replies": {
+              "2": [
+                {
+                  "line": "e2e5 d5c3 e5d5 d6b7 d5d3 b7c5 d3c3 c5d7",
+                  "lineEval": "−+"
+                }
+              ]
+            }
+          }
+        ]
       },
       "114": {
         "glyph": "?!",
         "note": "inaccuracy: 5.1 win% given up, eval -5.49 after. The engine wanted the line in the sibling branch.",
         "line": "h5g3 d0e0 e8f7 e0d0 g3f1 d0e0 e7g5 d5f6 d3d2 f6d7 e9e8 d7e5 f1h2 e0d0 d2e2 e1f0 f3f2 e5f7 h2f3 f7g9 e8e7 g9i8 f3d2 i8h6 d2b1 d0e0 e7e8 h6f5",
-        "lineEval": "−+"
+        "lineEval": "−+",
+        "branches": [
+          {
+            "line": "h5g3 d0e0 e7g9 d5f4 f3e3 f4e6 e3e2 e6g5",
+            "lineEval": "−+",
+            "replies": {
+              "2": [
+                {
+                  "line": "d5f4 f3e3 d0e0 e7g9 f4e6 e3e2 e6c5 d3c3",
+                  "lineEval": "−+"
+                }
+              ]
+            }
+          },
+          {
+            "line": "e8f9 d0d1 h5i3 d5f4 d3e3 f4g6 i3g2 g6e5",
+            "lineEval": "−+",
+            "replies": {
+              "2": [
+                {
+                  "line": "d0d1 h5i3 d5f6 f3e3 f6g8 e9d9 g8f6 e3e2",
+                  "lineEval": "−+"
+                }
+              ]
+            }
+          },
+          {
+            "line": "e8f7 d0d1 h5i3 d5f4 d3e3 f4h3 f3g3 h3g1",
+            "lineEval": "−+"
+          }
+        ]
       },
       "115": {
         "glyph": "?!",
         "note": "inaccuracy: 7.2 win% given up, eval -8.33 after. The engine wanted the line in the sibling branch.",
         "line": "e1f0 h5i3 d2e1 i3g2 d5f6 e3e2 f6g8 e9d9 d0e0 e8f7 g8h6 e7g5 h6f7 g2f4 f7g5 d3e3 e0d0 f4g2 d0e0 g2h4 g5h3 h4f3 e1f2 d7e8 f0e1 e8f7 e1d0 e2d2 d0e1 d2d1",
-        "lineEval": "−+"
+        "lineEval": "−+",
+        "branches": [
+          {
+            "line": "e1f0 h5i3 d2e1 i3g2 d5f6 e3e2 d0e0 e8f7",
+            "lineEval": "−+"
+          }
+        ]
       }
     }
   }
@@ -91,31 +175,145 @@ const G_M_143947: XiangqiReplaySpec = {
         "glyph": "?!",
         "note": "inaccuracy: 9.0 win% given up, eval -1.32 after. The engine wanted the line in the sibling branch.",
         "line": "c0d0 e8d7 g4h4 h2i2 h4h2 i2i1 h2h1 i1i2 h1h7 d8b7 d4c6 b7d6 c4c5 d6e4 c6e7 i2i0 h7h0 g9e7 h0i0 e4c5 i0i1 b0b2 i1i2 c5e4 e2g0 b2i2 g0i2 e4g3 i2g0 g3h1 d0d2 d7e8",
-        "lineEval": "⩱"
+        "lineEval": "⩱",
+        "branches": [
+          {
+            "line": "c0d0 d8b7 d4c6 b0b3 c6d4 b3i3 d4f5 i3h3",
+            "lineEval": "⩱",
+            "replies": {
+              "2": [
+                {
+                  "line": "e8d7 g4f4 d8b7 d4c6 f9e8 f4h4 h2g2 h4g4",
+                  "lineEval": "="
+                }
+              ]
+            }
+          },
+          {
+            "line": "g4h4 h2i2 c0d0 e8d7 h4h2 i2i1 h2h7 d8b7",
+            "lineEval": "⩱",
+            "replies": {
+              "2": [
+                {
+                  "line": "h2g2 h4g4 g2h2 c0d0 d8b7 d4c6 b0b2 c6d4",
+                  "lineEval": "⩱"
+                }
+              ]
+            }
+          },
+          {
+            "line": "e1d0 h2h5 f0e1 b0b3 c4c5 b3i3 c5c6 h5d5",
+            "lineEval": "⩱",
+            "replies": {
+              "2": [
+                {
+                  "line": "b0b5 c0c2 h2h5 f0e1 b5e5 g4h4 h5g5 h4i4",
+                  "lineEval": "⩱"
+                }
+              ]
+            }
+          }
+        ]
       },
       "57": {
         "glyph": "?!",
         "note": "inaccuracy: 5.6 win% given up, eval -1.95 after. The engine wanted the line in the sibling branch.",
         "line": "h4g4 g2h2 g4h4 h2g2 e1d0 b0b2 h4e4 e6g5 f0e1 g2h2 e4e3 b2b5 f5d4 b5d5 d4f3 g5f3 e3f3 d5e5 c0c6 e5e2 f3h3 h2i2 c6d6 e2e6 h3h2 i2i0 h2d2 a6a5 c4c5 i0h0 d2d4 h0h2",
-        "lineEval": "∓"
+        "lineEval": "∓",
+        "branches": [
+          {
+            "line": "e1d0 b0b2 h4e4 e6g5 f0e1 b2b5 e4g4 g2h2",
+            "lineEval": "∓"
+          },
+          {
+            "line": "h4g4 g2h2 g4h4 h2g2 e1d0 b0b2 h4e4 e6g5",
+            "lineEval": "∓"
+          }
+        ]
       },
       "62": {
         "glyph": "?!",
         "note": "inaccuracy: 9.5 win% given up, eval -1.44 after. The engine wanted the line in the sibling branch.",
         "line": "g2i2 d6e4 g5e4 g4e4 i2i0 e2g0 b0b3 d0d5 b3g3 e4e2 g3g0 d5e5 e9d9 e2i2 i6i5 e5b5 d9e9 b5d5 a6a5 c4c5 c6c5 d5a5 c5c4 a5e5 e7c9 e5e4 c4d4 e4e2 e9e8 e2e3 d4d3 e3e4",
-        "lineEval": "−+"
+        "lineEval": "−+",
+        "branches": [
+          {
+            "line": "g2i2 d6e4 i2i0 e2g0 g5e4 g4e4 b0b3 d0d5",
+            "lineEval": "∓",
+            "replies": {
+              "2": [
+                {
+                  "line": "g4g2 i2i0 e2g0 f9e8 d6f5 i0h0 g2h2 g5f3",
+                  "lineEval": "−+"
+                }
+              ]
+            }
+          }
+        ]
       },
       "98": {
         "glyph": "?!",
         "note": "inaccuracy: 8.3 win% given up, eval -1.46 after. The engine wanted the line in the sibling branch.",
         "line": "g2g6 f0e1 g1i1 e4i4 i1h1 e6e4 g6g0 e1f0 g0g5 f0e1 h1h6 e4e6 h6h0 i4i0 h0h4 e6e4 h4h3 e4e3 c5c4 e3f3 h3h7 i0i4 c4c3 f3f2 h7h6 i4i3 g5g0 e1f0 g0g2 f0e1 h6e6 e0f0",
-        "lineEval": "∓"
+        "lineEval": "∓",
+        "branches": [
+          {
+            "line": "g2g6 f0e1 g1g3 e4e3 g3g0 e6e4 g6e6 e3g3",
+            "lineEval": "−+",
+            "replies": {
+              "2": [
+                {
+                  "line": "e6e5 g6e6 f0e1 g1g3 e4e3 g3g4 e3e4 g4g3",
+                  "lineEval": "−+"
+                }
+              ]
+            }
+          },
+          {
+            "line": "g2g6 f0e1 g1h1 e4h4 h1i1 h4i4 i1h1 e6e4",
+            "lineEval": "∓",
+            "replies": {
+              "2": [
+                {
+                  "line": "e6e5 g6e6 f0e1 g1g3 e4e3 g3g4 e1f2 g4a4",
+                  "lineEval": "−+"
+                }
+              ]
+            }
+          }
+        ]
       },
       "99": {
         "glyph": "?!",
         "note": "inaccuracy: 6.9 win% given up, eval -2.30 after. The engine wanted the line in the sibling branch.",
         "line": "f0e1 g5g6 i5h5 g9i7 e6e5 g1g3 e1d2 i7g9 e5f5 g3b3 e4b4 b3f3 d0e1 f3e3 e0d0 g6g0 f5f0 g0h0 h5i5 h0h6 b4b9 e8d9 b9b3 e3e4 b3b4 e4e3 f0f5 h6a6 f5f0 e3a3 b4g4 a6b6",
-        "lineEval": "∓"
+        "lineEval": "∓",
+        "branches": [
+          {
+            "line": "f0e1 g5g6 i5h5 g9i7 e6e5 g1g3 e1d2 i7g9",
+            "lineEval": "∓",
+            "replies": {
+              "2": [
+                {
+                  "line": "e9d9 e4a4 e7c9 e6d6 d9e9 d6e6 e9d9 a4a9",
+                  "lineEval": "∓"
+                }
+              ]
+            }
+          },
+          {
+            "line": "e6h6 e7c9 i5i6 g5g6 h6h9 g9e7 i6i7 g1g0",
+            "lineEval": "∓",
+            "replies": {
+              "2": [
+                {
+                  "line": "e8f9 h6h9 e9e8 i5i6 g5g6 h9h6 g1h1 e4h4",
+                  "lineEval": "∓"
+                }
+              ]
+            }
+          }
+        ]
       }
     }
   }
@@ -143,55 +341,233 @@ const G_M_143873: XiangqiReplaySpec = {
         "glyph": "?",
         "note": "mistake: 12.5 win% given up, eval +2.03 after. The engine wanted the line in the sibling branch.",
         "line": "c9a7 e6d6 b5b3 e3f5 g7i8 d6e6 a6a5 f5d6 e8d7 d6e4 i8h6 g6f8 d7e8 c6c7 d9d8 f8h7 d8d3 e4d6 e9d9 d6c8 d3e3 c7c0 a7c9 c0d0 e3d3 h7g9 h6f5 g9h7 g5g4 h7f6 f5d4 e6e7",
-        "lineEval": "⩲"
+        "lineEval": "⩲",
+        "branches": [
+          {
+            "line": "c9a7 e6d6 b5b3 e3f5 b3b7 d6e6 a6a5 e1d0",
+            "lineEval": "⩲",
+            "replies": {
+              "2": [
+                {
+                  "line": "c6a6 d9d4 e6d6 b5b3 e3c2 b3c3 a6a4 d4d3",
+                  "lineEval": "⩲"
+                }
+              ]
+            }
+          },
+          {
+            "line": "a6a5 e6d6 c9e7 e1d0 i6i5 f0e1 g7i6 e3c4",
+            "lineEval": "±",
+            "replies": {
+              "2": [
+                {
+                  "line": "e3c4 c9a7 c4b6 d9d8 e1d2 e9d9 g0i2 b5b0",
+                  "lineEval": "⩲"
+                }
+              ]
+            }
+          },
+          {
+            "line": "b5b7 e3f5 c9a7 a3a4 b7f7 f5d6 f7d7 d6c4",
+            "lineEval": "⩲",
+            "replies": {
+              "2": [
+                {
+                  "line": "a3a4 c9a7 e3f5 b7f7 e6f6 f7d7 e1f2 g7i8",
+                  "lineEval": "⩲"
+                }
+              ]
+            }
+          }
+        ]
       },
       "57": {
         "glyph": "?!",
         "note": "inaccuracy: 8.8 win% given up, eval +0.99 after. The engine wanted the line in the sibling branch.",
         "line": "e6d6 d7e8 c6c9 b5b6 e3f5 b6b7 c9c6 b7f7 f5g7 f7g7 g6e5 g7b7 e1d0 b7b5 e5c4 a6a5 i3i4 g5g4 e2g4 b5d5 c6c7 d5d0 e0e1 d0d4 c4b6 d4e4 g0e2 e4b4 b6c8 d9d8 d6d7 e8d7",
-        "lineEval": "±"
+        "lineEval": "±",
+        "branches": [
+          {
+            "line": "e6d6 f9e8 c6c9 g5g4 e3c4 g4g3 e2c0 b5f5",
+            "lineEval": "+−",
+            "replies": {
+              "2": [
+                {
+                  "line": "d7e8 c6c9 b5b6 d6c6 b6b5 e3c4 e8d7 c6d6",
+                  "lineEval": "+−"
+                }
+              ]
+            }
+          }
+        ]
       },
       "92": {
         "glyph": "?!",
         "note": "inaccuracy: 5.9 win% given up, eval +1.23 after. The engine wanted the line in the sibling branch.",
         "line": "f3e5 g4b4 e5f7 b4b9 f6f3 e3d5 f3f5 d5e3 f5e5 e3g2 e5g5 g2f4 g5f5 f4g2 f5h5 e1d2 h5g5 g2h4 g5h5 h4g2 h5h6 b9i9 f7e5 f2e1 h6h3 i9g9 h3h6 g2e3 h6g6 g9b9 g6g3 e3f5",
-        "lineEval": "⩲"
+        "lineEval": "⩲",
+        "branches": [
+          {
+            "line": "f3e5 g4h4 f6g6 h4h7 f8f9 h7h9 f9f8 e1d2",
+            "lineEval": "⩲",
+            "replies": {
+              "2": [
+                {
+                  "line": "g4g8 f8f9 g8g9 f9f8 g9h9 f6f3 h9h8 f8f9",
+                  "lineEval": "⩲"
+                }
+              ]
+            }
+          }
+        ]
       },
       "98": {
         "glyph": "?",
         "note": "mistake: 10.6 win% given up, eval +2.96 after. The engine wanted the line in the sibling branch.",
         "line": "f3e5 g4g5 e5d3 i3i4 d3c1 e0f0 c1d3 g5g9 f9f8 g9g4 f7f5 d5e7 f5f7 e7d5 f8f9 f0f1 f7f5 d5e7 f5f7 e7d5 a6a5 g4g5 d3f4 d5c3 f9e9 g5a5 f7f6 c3e4 f6e6 e4c5 e6d6 f1f0",
-        "lineEval": "±"
+        "lineEval": "±",
+        "branches": [
+          {
+            "line": "f3e5 g4g9 f9f8 i3i4 e5d3 g9g8 f8f9 g8g5",
+            "lineEval": "±",
+            "replies": {
+              "2": [
+                {
+                  "line": "g4g5 e5d3 i3i4 d3c1 e0f0 c1d3 g5g9 f9f8",
+                  "lineEval": "±"
+                }
+              ]
+            }
+          },
+          {
+            "line": "f7f5 d5e7 f5f7 e7d5 f3e5 g4g9 f9f8 g9g8",
+            "lineEval": "±",
+            "replies": {
+              "2": [
+                {
+                  "line": "g4g9 f9f8 d5e7 f5f7 e7d5 f3e5 g9g8 f8f9",
+                  "lineEval": "±"
+                }
+              ]
+            }
+          }
+        ]
       },
       "101": {
         "glyph": "?!",
         "note": "inaccuracy: 5.6 win% given up, eval +2.12 after. The engine wanted the line in the sibling branch.",
         "line": "g4g6 f7f5 d5e7 f5g5 g6a6 e8f7 a6a7 f3e5 e7d5 f7e8 a7a6 e5f7 d5f6 e9d9 f6g4 f7e5 a6a9 d9d8 a9a5 e5f3 a5g5 f3g5 g4i5 d8d9 e1d0 g5i4",
-        "lineEval": "+−"
+        "lineEval": "+−",
+        "branches": [
+          {
+            "line": "g4g6 f7f5 d5e7 f5g5 g6a6 e9d9 a6f6 f3e5",
+            "lineEval": "+−",
+            "replies": {
+              "2": [
+                {
+                  "line": "e8f9 d5b6 d7e8 b6c8 e9d9 g6d6 f7d7 d6a6",
+                  "lineEval": "+−"
+                }
+              ]
+            }
+          },
+          {
+            "line": "d5b6 e9d9 b6d5 f7f5 g4g9 f5f9 g9g6 f9f5",
+            "lineEval": "+−",
+            "replies": {
+              "2": [
+                {
+                  "line": "e9f9 g4g9 f9f8 b6d5 f3e5 g9g5 e5d3 g5i5",
+                  "lineEval": "+−"
+                }
+              ]
+            }
+          }
+        ]
       },
       "102": {
         "glyph": "?!",
         "note": "inaccuracy: 6.0 win% given up, eval +2.92 after. The engine wanted the line in the sibling branch.",
         "line": "f7f9 g9g7 f9f5 d5b6 e9f9 g7g6 f3e5 b6c8 e5f7 g6a6 f5c5 c8b6 c5c6 a6a9 f9f8 b6c4 i5i4 i3i4 c6i6 c4e3 i6i4 e3f5 i4i8 f5g7 i8g8 g7h5 f7g5 h5i7 g5h7 a9h9 g8g7 h9h8",
-        "lineEval": "±"
+        "lineEval": "±",
+        "branches": [
+          {
+            "line": "e8f9 g9g6 d7e8 g6a6 f7g7 a4a5 f3g5 a6c6",
+            "lineEval": "+−"
+          }
+        ]
       },
       "105": {
         "glyph": "?!",
         "note": "inaccuracy: 5.8 win% given up, eval +2.18 after. The engine wanted the line in the sibling branch.",
         "line": "d5e7 f5g5 g6a6 e8f7 a6a7 f3e5 e7d5 f7e8 a7a6 e5f7 d5f6 e9d9 f6g4 f7e5 a6a9 d9d8 a9a5 e5f3 a5g5 f3g5 g4i5 e8f7 a4a5 d7e8 i5g6 e8f9 a5b5 g5h3 b5c5 h3g1 e0f0 d8d9",
-        "lineEval": "+−"
+        "lineEval": "+−",
+        "branches": [
+          {
+            "line": "d5e7 f5g5 g6a6 e9d9 a4a5 g5e5 e7g6 e5f5",
+            "lineEval": "+−",
+            "replies": {
+              "2": [
+                {
+                  "line": "f5f7 e7d5 f7f5 d5e7 f5g5 g6a6 e8f7 a6a7",
+                  "lineEval": "+−"
+                }
+              ]
+            }
+          },
+          {
+            "line": "d5b6 e9d9 b6a8 f5c5 g6a6 f3e5 a8b6 d9e9",
+            "lineEval": "+−",
+            "replies": {
+              "2": [
+                {
+                  "line": "e9f9 b6c8 f3e5 g6a6 e5f7 a6i6 f5b5 e1d0",
+                  "lineEval": "+−"
+                }
+              ]
+            }
+          },
+          {
+            "line": "g6g9 f5f9 g9g6 f9f5 d5b6 e9d9 b6a8 d9e9",
+            "lineEval": "±"
+          }
+        ]
       },
       "113": {
         "glyph": "?!",
         "note": "inaccuracy: 5.8 win% given up, eval +1.89 after. The engine wanted the line in the sibling branch.",
         "line": "e3d5 c3i3 a6e6 e5d3 d5b6 e9d9 e6c6 i3f3 b6c8 f3f5 c6a6 f5c5 a6a9 d9d8 c8a7 c5c7 a4a5 d3b4 a7b5 c7c6 a9i9 e8f7 b5a7 c6b6 i9i5 b4d3 e0f0 b6b0 f0f1 b0b6",
-        "lineEval": "+−"
+        "lineEval": "+−",
+        "branches": [
+          {
+            "line": "e3d5 c3i3 a6e6 e5d3 d5b6 e9d9 a4a5 i3i4",
+            "lineEval": "±"
+          },
+          {
+            "line": "a6a9 e8d9 e3d5 c3i3 d5e7 d7e8 a9a6 e5d7",
+            "lineEval": "±"
+          }
+        ]
       },
       "114": {
         "glyph": "?!",
         "note": "inaccuracy: 9.3 win% given up, eval +3.14 after. The engine wanted the line in the sibling branch.",
         "line": "c3i3 f5h6 i3f3 a6a9 e8d9 a9a5 e5d3 a5i5 d7e8 h6f5 d3c5 a4a5 c5d7 a5b5 f3f4 e2c0 f4e4 f5h6 d7f8 b5c5 e4e6 h6g4 e8f9 c5d5 e6g6 g0e2 f8d7 g4e3 d9e8 e3f5 g6b6",
-        "lineEval": "±"
+        "lineEval": "±",
+        "branches": [
+          {
+            "line": "c3i3 f5e7 e8f7 a6a5 e5c6 a5a9 e9e8 e7f5",
+            "lineEval": "±",
+            "replies": {
+              "2": [
+                {
+                  "line": "f5h6 i3f3 a6a9 e8d9 a9a5 e5f7 h6g8 e9f9",
+                  "lineEval": "±"
+                }
+              ]
+            }
+          }
+        ]
       }
     }
   }
@@ -278,17 +654,6 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Chu Banruo has just played 40.Ece3. Black has two checks available. Would you give check here, or look for a quieter move? Choose your reply before revealing the line.",
-        },
-        {
-          kind: 'embed',
-          path: "/embed/line/xiangqi?fen=4kab1C%2F4a4%2Fb6r1%2F1R5N1%2F4p4%2F2pn2B1P%2FP1c6%2F4BA3%2F4K4%2F3A5+b+-+-+12+40&moves=d5c7%2Ch7f6%2Ch8h2%2Ce2e1%2Ch2h1%2Ce1e2%2Cc7d5%2Cf6h7&red=Chu+Banruo&black=Meng+Fanrui&event=2026+National+Xiangqi+Team+Championship&orientation=black",
-          title: "Would you give check?",
-          hideSolution: true,
-          caption: "Chu Banruo vs Meng Fanrui, National Team Championship, 28 March 2026. Position after 40.Ece3. Black to move. Exact time control not recorded.",
-        },
-        {
-          kind: 'paragraph',
           text: "Explore [the full game](/broadcast/xiangqi/board/2026-xiangqi-team-championship-2026-xiangqi-team-championship-r02-bu6564s).",
         },
       ],
@@ -299,17 +664,6 @@ export const mengFanruiArticle: Article = {
         {
           kind: 'paragraph',
           text: "On 9 September, Meng beat Luo Hangyuan with both colours in the first round of the Shanghai Cup. This position is from his win with red.",
-        },
-        {
-          kind: 'paragraph',
-          text: "Luo has just played 27…Cc3. Red can capture the pawn on g5 with either elephant. Which one would you choose? Decide before revealing the continuation.",
-        },
-        {
-          kind: 'embed',
-          path: "/embed/line/xiangqi?fen=4kab2%2F4a4%2F4b4%2Fp7p%2F9%2FP3P1p2%2F1R4c1P%2F2c1B1N1B%2Fr3A4%2F2C1KA3+w+-+-+8+28&moves=e3g5%2Ca2a5%2Ce5e6%2Cg4h4%2Cb4h4%2Cc3i3%2Ch4h3%2Ci3i1&red=Meng+Fanrui&black=Luo+Hangyuan&event=2026+Shanghai+Cup&orientation=red",
-          title: "Which elephant would you choose?",
-          hideSolution: true,
-          caption: "Meng Fanrui vs Luo Hangyuan, 2026 Shanghai Cup, 9 September. Position after 27…Cc3. Red to move. Exact time control not recorded.",
         },
         {
           kind: 'paragraph',

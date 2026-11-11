@@ -825,6 +825,10 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `xiangqi-appearance-storage.ts` | localStorage-backed xiangqi board-theme + piece-set preferences (read/write/normalize), shared by the xiangqi renderers |
 | `xiangqi-replay.ts` + `xiangqi-replay-metadata.js` | Full xiangqi (9×10) article replay with verified-source metadata headers and localized unknown states: one board stepped through a move list via the real kernel, rendered on demand (first used by the Xiangqi Rules article) |
 | `article-embed-engagement.ts` | Counts a same-origin decision-frame reveal once in the existing article board-use readout; ignores load, unrelated frames and untrusted messages |
+| `study-chapter-annotations.ts` + `study-chapter-spec.ts` | Study-tree mainline annotations and replay-spec conversion; preserves all sibling candidates and one nested reply level while retaining legacy single-line output |
+| `study-chapter-annotations.test.ts` + `xiangqi-replay-tree.test.ts` | Study siblings/depth/legacy compatibility and article variation paths, FEN board comparisons, 390px reply collapse, baked Meng tree legality |
+| `scripts/article-variation-tree.mjs` + `.test.mjs` | Local production-pinned Pikafish MultiPV candidate/reply pruning, eight-ply lines and end assessments, with JSON results and explicit baking into article specs |
+| `scripts/data/article-variation-trees.json` + `article-variation-tree-report.json` | Meng Fanrui measured variations, per-position timings/counts, verification and remaining exercise references for #1015 |
 | `scripts/player-page-article.mjs` + `scripts/annotated-game-to-spec.mjs` | Player-article generation from canonical private drafts: verified recorded metadata, safe decision-line embeds, captions, exact stored chart preparation (legacy 1M site series or 10M initial/row series, with separate identities) and regeneration checks |
 | `shogi4-rules-diagrams.ts` | GENERATED inline SVG diagrams for the Shogi4 rules article (Oca tiles); regenerate via the shogi4 repo's `gen_rules_diagrams.py`, do not hand-edit |
 | `shogi4-sample-game.ts` | GENERATED per-ply Shogi4 sample-game board frames (with hand trays) for the rules article; regenerate via the shogi4 repo's `gen_game_replay.py`, do not hand-edit |
@@ -1218,7 +1222,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/figure-lightbox.ts` | _needs a one-line description_ |
 | `apps/web/src/jieqi-platform-game.ts` | _needs a one-line description_ |
 | `apps/web/src/replay-stepper-copy.ts` | _needs a one-line description_ |
-| `apps/web/src/study-chapter-spec.ts` | _needs a one-line description_ |
+| `apps/web/src/study-chapter-spec.ts` | Runtime study-to-replay conversion with root FEN, annotations, sibling branches and nested replies |
 | `apps/web/src/xiangqi-crossed-soldier.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-import-page.ts` | _needs a one-line description_ |
 | `apps/server/src/dark-chess-analysis-job.ts` | _needs a one-line description_ |

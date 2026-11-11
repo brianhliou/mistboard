@@ -119,6 +119,17 @@ const RADIUS = 8;
  * analysis path and shaped by scripts/annotate-game.mjs, so an article never
  * hand-writes a judgment or a line.
  */
+/** A line replacing a move, with at most one further level of replies. */
+export type XiangqiReplayBranch = {
+  /** ICCS from the position before the mainline ply (or reply's replaced move). */
+  line: string;
+  label?: string;
+  lineEval?: string;
+  note?: string;
+  /** Alternatives to this line's move at a 1-based ply index. */
+  replies?: Record<number, XiangqiReplayBranch[]>;
+};
+
 export type XiangqiReplayAnnotation = {
   /**
    * Judgment glyph. The negative classes come from analysis.ts; `!` and `!!`
@@ -136,6 +147,7 @@ export type XiangqiReplayAnnotation = {
    * prefix and then this line.
    */
   line?: string;
+  branches?: XiangqiReplayBranch[];
   /** Optional human note, shown under the line. Prose is ours, never lifted. */
   note?: string;
   /**
@@ -896,7 +908,13 @@ export function mountXiangqiReplay(
    * mainline up to `atPly - 1`, then `moves` up to `cursor`. Mainline `index`
    * is left untouched so leaving a variation lands exactly where it started.
    */
-  let variation: { atPly: number; moves: XiangqiMove[]; cursor: number } | null = null;
+  let variation: {
+    atPly: number;
+    moves: XiangqiMove[];
+    cursor: number;
+    segments?: { id: string; start: number; end: number }[];
+  } | null = null;
+  const expandedReplies = new Set<string>();
 
   function annotationAt(ply: number): XiangqiReplayAnnotation | undefined {
     return annotated?.byPly[ply];
@@ -1049,6 +1067,139 @@ export function mountXiangqiReplay(
     return b;
   }
 
+  /** Render one tree path; all moves are validated from their actual parent. */
+  function renderTreeBranch(
+    ply: number,
+    data: XiangqiReplayBranch,
+    id: string,
+    prefix: XiangqiMove[] = [],
+    ancestors: { id: string; start: number; end: number }[] = [],
+    depth = 1,
+  ): HTMLElement | null {
+    let state = states[ply - 1]!;
+    for (const move of prefix) state = applyXiangqiRecordMove(state, move);
+    const line: XiangqiMove[] = [];
+    for (const token of data.line.trim().split(/\s+/)) {
+      if (!/^[a-i]\d[a-i]\d$/.test(token)) break;
+      const move = iccsToMove(token);
+      const next = applyXiangqiRecordMove(state, move);
+      if (next === state) break;
+      line.push(move);
+      state = next;
+    }
+    if (!line.length) return null;
+    const path = [...prefix, ...line];
+    const labels = formatXiangqiMoves(
+      [...moves.slice(0, ply - 1), ...path],
+      currentXiangqiNotationStyle(),
+      startState,
+    ).slice(ply - 1 + prefix.length);
+    const row = document.createElement('div');
+    row.className = `xq-replay-branch xq-replay-tree-branch xq-replay-tree-depth-${depth}`;
+    row.dataset.branchId = id;
+    const tag = document.createElement('span');
+    tag.className = 'xq-replay-branch-tag';
+    tag.textContent = data.label ?? t('review.article.variation', {}, options.lang ?? 'en');
+    row.append(tag);
+    const segments = [...ancestors, { id, start: prefix.length + 1, end: path.length }];
+    const active = variation?.segments?.find(
+      (segment) =>
+        variation && variation.cursor >= segment.start && variation.cursor <= segment.end,
+    );
+    if (variation?.atPly === ply && active?.id === id) row.classList.add('is-active');
+    const replies =
+      depth === 1
+        ? Object.entries(data.replies ?? {}).filter(
+            ([key]) =>
+              Number.isInteger(Number(key)) && Number(key) >= 1 && Number(key) <= line.length,
+          )
+        : [];
+    const count = replies.reduce((sum, [, children]) => sum + children.length, 0);
+    const collapsed = window.innerWidth <= 480 && !expandedReplies.has(id);
+    if (count && window.innerWidth <= 480) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'xq-replay-replies-toggle';
+      toggle.textContent = `${collapsed ? '+' : '−'}${count}`;
+      toggle.setAttribute(
+        'aria-label',
+        t(
+          collapsed ? 'review.article.showReplies' : 'review.article.hideReplies',
+          { count },
+          options.lang ?? 'en',
+        ),
+      );
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.addEventListener('click', () => {
+        if (collapsed) expandedReplies.add(id);
+        else expandedReplies.delete(id);
+        render();
+        moveList
+          .querySelector<HTMLElement>(`[data-branch-id="${id}"] .xq-replay-replies-toggle`)
+          ?.focus({ preventScroll: true });
+      });
+      row.append(toggle);
+    }
+    line.forEach((_move, i) => {
+      const absolutePly = ply + prefix.length + i + plyOffset;
+      if (i === 0 || absolutePly % 2 === 1) {
+        const number = document.createElement('span');
+        number.className = 'xq-replay-move-n';
+        number.textContent = `${Math.ceil(absolutePly / 2)}${absolutePly % 2 === 1 ? '.' : '…'}`;
+        row.append(number);
+      }
+      row.append(
+        moveButton(labels[i] ?? '', {
+          current:
+            variation?.atPly === ply &&
+            active?.id === id &&
+            variation.cursor === prefix.length + i + 1,
+          onClick: () => {
+            reportEngagement();
+            variation = { atPly: ply, moves: path, cursor: prefix.length + i + 1, segments };
+            render();
+          },
+        }),
+      );
+      for (const [key, children] of replies) {
+        if (Number(key) !== i + 1) continue;
+        children.forEach((child, childIndex) => {
+          const childPrefix = [...prefix, ...line.slice(0, i)];
+          const childAncestors = [
+            ...ancestors,
+            { id, start: prefix.length + 1, end: prefix.length + i },
+          ];
+          const childRow = renderTreeBranch(
+            ply,
+            child,
+            `${id}-${key}-${childIndex}`,
+            childPrefix,
+            childAncestors,
+            depth + 1,
+          );
+          if (childRow) {
+            childRow.hidden = collapsed;
+            row.append(childRow);
+          }
+        });
+      }
+    });
+    const result = lineResult(ply, path);
+    if (result || data.lineEval) {
+      const verdict = document.createElement('span');
+      verdict.className = 'xq-replay-branch-eval';
+      verdict.textContent = result ?? data.lineEval ?? '';
+      row.append(verdict);
+    }
+    if (data.note) {
+      const note = document.createElement('span');
+      note.className = 'xq-replay-branch-note';
+      note.textContent = data.note;
+      row.append(note);
+    }
+    return row;
+  }
+
   // The move tree: mainline in numbered pairs, and a judged move's engine line
   // rendered INLINE directly beneath the row it belongs to, the way a study
   // shows a variation.
@@ -1093,6 +1244,13 @@ export function mountXiangqiReplay(
         }),
       );
 
+      if (a?.branches) {
+        a.branches.forEach((branch, branchIndex) => {
+          const branchRow = renderTreeBranch(ply, branch, `${ply}-${branchIndex}`);
+          if (branchRow) moveList.append(branchRow);
+        });
+        continue;
+      }
       const line = a?.line ? parseLine(ply) : [];
       if (line.length === 0) continue;
       const labels = labelsForLine(ply, line);
@@ -1126,7 +1284,7 @@ export function mountXiangqiReplay(
         }
         branch.appendChild(
           moveButton(labels[i] ?? '', {
-            current: variation?.atPly === ply && variation.cursor === i + 1,
+            current: !variation?.segments && variation?.atPly === ply && variation.cursor === i + 1,
             onClick: () => {
               variation = { atPly: ply, moves: line, cursor: i + 1 };
               render();
@@ -1397,6 +1555,8 @@ export function mountXiangqiReplay(
     render();
   };
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
+  const onResize = () => render();
+  window.addEventListener('resize', onResize);
 
   // --- Advantage chart (lazy) ----------------------------------------------
   let chart: { setPly(ply: number): void } | null = null;
@@ -1521,6 +1681,7 @@ export function mountXiangqiReplay(
       host.removeEventListener('keydown', onKey);
       window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('click', onDocPointer);
       document.removeEventListener('keydown', onDocKey);
       host.replaceChildren();
@@ -1660,12 +1821,15 @@ export function mountXiangqiReplayBoard(
   const onNotation = (): void => relabel();
   window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
   window.addEventListener(xiangqiNotationChangedEvent, onNotation);
+  const onResize = () => render();
+  window.addEventListener('resize', onResize);
   render();
 
   return {
     destroy: () => {
       window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      window.removeEventListener('resize', onResize);
       host.replaceChildren();
     },
     jumpToPly: (ply) => {
