@@ -5837,8 +5837,8 @@ const ZH_HANS: Record<string, string> = {
   'Rule variants': '规则版本',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼象棋：在线对弈与分析',
-  "Now says which net Mistboard runs: Pikafish's search with the free CC0 Fairy-Stockfish xiangqi net. Pikafish's own, stronger net comes with the official download.":
-    '现在说明本站运行的是哪个神经网络：皮卡鱼的搜索，配合免费的 CC0 Fairy-Stockfish 象棋神经网络。皮卡鱼自己的、更强的神经网络随官方下载提供。',
+  "Corrected the analysis board's net and download size.":
+    '更正了分析棋盘所用的神经网络和下载大小。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     '皮卡鱼象棋在线：免费对弈、分析与引擎下载指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
@@ -5847,8 +5847,8 @@ const ZH_HANS: Record<string, string> = {
     '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
     '皮卡鱼（Pikafish）是基于 Stockfish 的开源象棋引擎。在这里可以直接与它在线对弈，也可以用它分析局面，免费、免注册。',
-  "Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. The official download comes with Pikafish's own net, which is stronger than the free net Mistboard runs.":
-    '想下载引擎本体？请到[皮卡鱼官方项目](https://github.com/official-pikafish/Pikafish)查看发布版本、源代码与安装说明。官方下载附带皮卡鱼自己的神经网络，比 Mistboard 运行的免费神经网络更强。',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads an 11 MB net on first use.':
+    '想下载引擎本体？请到[皮卡鱼官方项目](https://github.com/official-pikafish/Pikafish)查看发布版本、源代码与安装说明。网页分析首次使用需加载 11 MB 权重。',
   'Analyze with Pikafish': '用皮卡鱼分析',
   'Can I analyze with Pikafish online?': '皮卡鱼象棋怎么在线分析？',
   'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 11 MB net loads on first use.':
@@ -5880,11 +5880,6 @@ const ZH_HANS: Record<string, string> = {
     '对暗棋、揭棋和翻翻兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser, so nothing you analyze leaves your machine. The net is 11 MB and downloads once.':
     '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行皮卡鱼，你分析的内容不会离开你的电脑。权重 11 MB，只需下载一次。',
-  'Mistboard runs Pikafish on the free CC0 net': '本站的皮卡鱼使用免费的 CC0 神经网络',
-  "A modern engine has two parts, a search that looks ahead and a neural network that scores each position it reaches. Every Pikafish on Mistboard (the bot, game review and the analysis board) uses Pikafish's search with the [Fairy-Stockfish xiangqi net](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), which its authors released under CC0 for anyone to use.":
-    '现代引擎由两部分组成：向前看的搜索，以及为搜索到的每个局面打分的神经网络。Mistboard 上的所有皮卡鱼（机器人、对局复盘和分析棋盘）都使用皮卡鱼的搜索，配合 [Fairy-Stockfish 象棋神经网络](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE)，其作者以 CC0 发布，任何人都可使用。',
-  "Pikafish's own net is stronger. For Pikafish at full strength on your own machine, download it from the [official Pikafish project](https://github.com/official-pikafish/Pikafish).":
-    '皮卡鱼自己的神经网络更强。想在自己的电脑上使用全强度的皮卡鱼，请从[皮卡鱼官方项目](https://github.com/official-pikafish/Pikafish)下载。',
   Questions: '常见问题',
   'Can I play Pikafish online?': '皮卡鱼象棋在线怎么玩？',
   'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
@@ -5896,8 +5891,8 @@ const ZH_HANS: Record<string, string> = {
   "For the engine itself, use the official Pikafish project for releases, source code and setup instructions. The download includes Pikafish's own net, which is stronger than the free CC0 net Mistboard runs. To play or analyze on Mistboard, open your browser without installing an app.":
     '引擎本体的发布版本、源代码与安装说明见皮卡鱼官方项目。官方下载附带皮卡鱼自己的神经网络，比 Mistboard 运行的免费 CC0 神经网络更强。在 Mistboard 对弈或分析只需打开浏览器，不必安装应用。',
   'How strong is it?': '皮卡鱼有多强？',
-  'The Pikafish bot searches three million positions a move, about four seconds, on the server, with the CC0 net. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
-    '皮卡鱼机器人在服务器上使用 CC0 神经网络，每步搜索三百万个局面，约四秒。这已超出任何人类棋手。上面的阶梯一路降到初学者也能赢的级别。',
+  'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
+    '皮卡鱼机器人在服务器上每步搜索三百万个局面，约四秒。这已超出任何人类棋手。上面的阶梯一路降到初学者也能赢的级别。',
   'Does the jieqi engine see my hidden pieces?': '揭棋引擎能看到我的暗子吗？',
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     '不能。它收到的棋盘和你看到的一样全是暗子，而且暗子的分布没有任何一方知道：你不知道，引擎不知道，对手也不知道。',
@@ -12622,8 +12617,8 @@ const ZH_HANT: Record<string, string> = {
   'Rule variants': '規則版本',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚象棋：線上對弈與分析',
-  "Now says which net Mistboard runs: Pikafish's search with the free CC0 Fairy-Stockfish xiangqi net. Pikafish's own, stronger net comes with the official download.":
-    '現在說明本站運行的是哪個神經網路：皮卡魚的搜尋，搭配免費的 CC0 Fairy-Stockfish 象棋神經網路。皮卡魚自己的、更強的神經網路隨官方下載提供。',
+  "Corrected the analysis board's net and download size.":
+    '更正了分析棋盤所用的神經網路和下載大小。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     '皮卡魚象棋線上：免費對弈、分析與引擎下載指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
@@ -12632,8 +12627,8 @@ const ZH_HANT: Record<string, string> = {
     '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
   'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
     '皮卡魚（Pikafish）是基於 Stockfish 的開源象棋引擎。在這裡可以直接與它線上對弈，也可以用它分析局面，免費、免註冊。',
-  "Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. The official download comes with Pikafish's own net, which is stronger than the free net Mistboard runs.":
-    '想下載引擎本體？請到[皮卡魚官方專案](https://github.com/official-pikafish/Pikafish)查看發布版本、原始碼與安裝說明。官方下載附帶皮卡魚自己的神經網路，比 Mistboard 運行的免費神經網路更強。',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads an 11 MB net on first use.':
+    '想下載引擎本體？請到[皮卡魚官方專案](https://github.com/official-pikafish/Pikafish)查看發布版本、原始碼與安裝說明。網頁分析首次使用需載入 11 MB 權重。',
   'Analyze with Pikafish': '用皮卡魚分析',
   'Can I analyze with Pikafish online?': '皮卡魚象棋怎麼線上分析？',
   'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 11 MB net loads on first use.':
@@ -12665,11 +12660,6 @@ const ZH_HANT: Record<string, string> = {
     '對暗棋、揭棋和翻翻獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser, so nothing you analyze leaves your machine. The net is 11 MB and downloads once.':
     '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行皮卡魚，你分析的內容不會離開你的電腦。權重 11 MB，只需下載一次。',
-  'Mistboard runs Pikafish on the free CC0 net': '本站的皮卡魚使用免費的 CC0 神經網路',
-  "A modern engine has two parts, a search that looks ahead and a neural network that scores each position it reaches. Every Pikafish on Mistboard (the bot, game review and the analysis board) uses Pikafish's search with the [Fairy-Stockfish xiangqi net](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE), which its authors released under CC0 for anyone to use.":
-    '現代引擎由兩部分組成：向前看的搜尋，以及為搜尋到的每個局面評分的神經網路。Mistboard 上的所有皮卡魚（機器人、對局復盤和分析棋盤）都使用皮卡魚的搜尋，搭配 [Fairy-Stockfish 象棋神經網路](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE)，其作者以 CC0 發布，任何人都可使用。',
-  "Pikafish's own net is stronger. For Pikafish at full strength on your own machine, download it from the [official Pikafish project](https://github.com/official-pikafish/Pikafish).":
-    '皮卡魚自己的神經網路更強。想在自己的電腦上使用全強度的皮卡魚，請從[皮卡魚官方專案](https://github.com/official-pikafish/Pikafish)下載。',
   Questions: '常見問題',
   'Can I play Pikafish online?': '皮卡魚象棋線上怎麼玩？',
   'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
@@ -12681,8 +12671,8 @@ const ZH_HANT: Record<string, string> = {
   "For the engine itself, use the official Pikafish project for releases, source code and setup instructions. The download includes Pikafish's own net, which is stronger than the free CC0 net Mistboard runs. To play or analyze on Mistboard, open your browser without installing an app.":
     '引擎本體的發布版本、原始碼與安裝說明見皮卡魚官方專案。官方下載附帶皮卡魚自己的神經網路，比 Mistboard 運行的免費 CC0 神經網路更強。在 Mistboard 對弈或分析只需打開瀏覽器，不必安裝應用。',
   'How strong is it?': '皮卡魚有多強？',
-  'The Pikafish bot searches three million positions a move, about four seconds, on the server, with the CC0 net. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
-    '皮卡魚機器人在伺服器上使用 CC0 神經網路，每步搜尋三百萬個局面，約四秒。這已超出任何人類棋手。上面的階梯一路降到初學者也能贏的級別。',
+  'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
+    '皮卡魚機器人在伺服器上每步搜尋三百萬個局面，約四秒。這已超出任何人類棋手。上面的階梯一路降到初學者也能贏的等級。',
   'Does the jieqi engine see my hidden pieces?': '揭棋引擎能看到我的暗子嗎？',
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     '不能。它收到的棋盤和你看到的一樣全是暗子，而且暗子的分布沒有任何一方知道：你不知道，引擎不知道，對手也不知道。',
