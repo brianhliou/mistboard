@@ -6,6 +6,7 @@
 import {
   createUser,
   listRecentFinishedCorrespondenceGames,
+  listRecentOpponents,
   markNotificationsSeen,
   notificationsSeenAt,
   recordGameEnd,
@@ -199,5 +200,96 @@ definePersistenceTests('correspondence recently finished', () => {
     await recordGameEnd('corr_resigned', summary);
     const after = await unseenFinishedCorrespondenceGames('u_red', { limit: 3 }, undefined, NOW);
     assert.equal(after.total, 0);
+  });
+
+  test('recent opponents: accounts only, never the player, newest first, capped', async () => {
+    for (const [id, handle] of [
+      ['u_me', 'me'],
+      ['u_old', 'oldfriend'],
+      ['u_new', 'newfriend'],
+      ['u_closed', 'closedfriend'],
+      ['u_private', 'privatefriend'],
+    ]) {
+      await createUser({
+        id,
+        email: `${handle}@example.com`,
+        emailVerifiedAt: NOW,
+        handle,
+        displayName: handle === 'newfriend' ? 'New Friend' : handle,
+        now: NOW,
+      });
+    }
+    await sql(`UPDATE users SET closed_at = now() WHERE id = 'u_closed'`);
+    await sql(`UPDATE users SET profile_visibility = 'private' WHERE id = 'u_private'`);
+    async function seat(
+      roomId: string,
+      color: string,
+      subjectType: string,
+      subjectId: string | null,
+    ) {
+      await sql(
+        `INSERT INTO game_participants (game_id, color, subject_type, subject_id, display_name, visibility)
+         VALUES ($1, $2, $3, $4, $5, 'public')`,
+        [roomId, color, subjectType, subjectId, subjectId ?? 'Guest'],
+      );
+    }
+    async function game(roomId: string, endedAt: string, status = 'completed') {
+      await sql(
+        `INSERT INTO games (room_id, variant, result, termination, ply_count, started_at, ended_at,
+           mode, status, visibility, initial_ms, increment_ms)
+         VALUES ($1, 'xiangqi', 'black-wins', 'timeout', 30, $2::timestamptz - interval '1 hour', $2,
+           'pvp', $3, 'public', 180000, 0)`,
+        [roomId, endedAt, status],
+      );
+    }
+    // Two games with oldfriend: the newer one sets its place.
+    await game('g_old_1', '2026-09-01T00:00:00Z');
+    await seat('g_old_1', 'red', 'user', 'u_me');
+    await seat('g_old_1', 'black', 'user', 'u_old');
+    await game('g_new', '2026-09-20T00:00:00Z');
+    await seat('g_new', 'red', 'user', 'u_new');
+    await seat('g_new', 'black', 'user', 'u_me');
+    await game('g_old_2', '2026-09-10T00:00:00Z');
+    await seat('g_old_2', 'red', 'user', 'u_old');
+    await seat('g_old_2', 'black', 'user', 'u_me');
+    // A guest, a bot, a closed account, a private account: none listed.
+    await game('g_guest', '2026-09-25T00:00:00Z');
+    await seat('g_guest', 'red', 'user', 'u_me');
+    await seat('g_guest', 'black', 'guest', null);
+    await game('g_closed', '2026-09-26T00:00:00Z');
+    await seat('g_closed', 'red', 'user', 'u_me');
+    await seat('g_closed', 'black', 'user', 'u_closed');
+    await game('g_private', '2026-09-27T00:00:00Z');
+    await seat('g_private', 'red', 'user', 'u_me');
+    await seat('g_private', 'black', 'user', 'u_private');
+    // A game still in progress is not finished.
+    await sql(
+      `INSERT INTO games (room_id, variant, ply_count, started_at, mode, status, visibility,
+         initial_ms, increment_ms)
+       VALUES ('g_live', 'xiangqi', 4, '2026-09-28T00:00:00Z', 'pvp', 'running', 'public', 180000, 0)`,
+    );
+    await seat('g_live', 'red', 'user', 'u_me');
+    await seat('g_live', 'black', 'user', 'u_closed');
+    // A game between two other players never lists them for me.
+    await game('g_others', '2026-09-29T00:00:00Z');
+    await seat('g_others', 'red', 'user', 'u_old');
+    await seat('g_others', 'black', 'user', 'u_new');
+
+    assert.deepEqual(await listRecentOpponents('u_me', { limit: 8 }), [
+      { handle: 'newfriend', displayName: 'New Friend' },
+      { handle: 'oldfriend', displayName: 'oldfriend' },
+    ]);
+    assert.deepEqual(await listRecentOpponents('u_me', { limit: 1 }), [
+      { handle: 'newfriend', displayName: 'New Friend' },
+    ]);
+    const forOld = await listRecentOpponents('u_old', { limit: 8 });
+    assert.ok(
+      forOld.every((row) => row.handle !== 'oldfriend'),
+      'a player is never their own recent opponent',
+    );
+    assert.deepEqual(
+      forOld.map((row) => row.handle),
+      ['newfriend', 'me'],
+    );
   });
 });

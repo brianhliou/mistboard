@@ -46,8 +46,14 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     // Correspondence rooms are 'playing' before the clock arms (the first
     // move starts it), so the side to move is already real and marked.
     const toMove = dayScale && view?.status.type === 'playing' ? view.status.turn : null;
-    const colors: Color[] =
-      flippedBottom('white') === 'white' ? ['black', 'white'] : ['white', 'black'];
+    // The bottom row follows the board, as in the armed branch below: the
+    // seat, else the view's perspective, then the viewer's flip. Before the
+    // clock armed this was always White at the bottom, so a creator holding
+    // Black saw their own pieces labelled "White" (#1058).
+    const bottom = flippedBottom(
+      isColor(liveState.seat) ? liveState.seat : (view?.perspective ?? 'white'),
+    );
+    const colors: Color[] = bottom === 'white' ? ['black', 'white'] : ['white', 'black'];
     colors.forEach((color, index) => {
       const isTurn = color === toMove;
       const playerLine = document.createElement('span');

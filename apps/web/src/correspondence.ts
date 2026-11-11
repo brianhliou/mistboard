@@ -51,6 +51,7 @@ import {
 } from '@mistboard/game';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
+import { openChallengeDialog } from './challenge-dialog.js';
 import {
   type CorrespondenceGame,
   type CorrespondenceGamesResponse,
@@ -192,14 +193,13 @@ function buildSignedIn(
   incoming.hidden = true;
   main.append(incoming);
 
-  // Your own open seeks and challenges come next: right after the homepage
-  // button posts one, it is the only thing on the page that is yours, and in
-  // the side column under the form it read as a footnote (Brian, 2026-10-03).
-  // Hidden while you have none.
+  // The page runs by urgency (#1058): challenges to answer, games on your move,
+  // games waiting on the opponent, then your own open seeks and challenges,
+  // recent opponents, and the create cards. Before it the create cards led and
+  // pushed what was waiting on you below the first phone screen.
   const challenges = document.createElement('section');
   challenges.className = 'correspondence-section correspondence-own-seeks';
   challenges.hidden = true;
-  main.append(challenges);
 
   const { yourMove, waiting } = splitInbox(data.games);
   let empty: HTMLElement | null = null;
@@ -235,6 +235,22 @@ function buildSignedIn(
       main.append(waitSection);
     }
   }
+
+  // Your own open seeks and challenges: hidden while you have none.
+  main.append(challenges);
+
+  // People you have played, each one press from a new challenge. Hidden while
+  // there are none.
+  const recent = document.createElement('section');
+  recent.className = 'correspondence-section correspondence-recent-opponents';
+  recent.hidden = true;
+  main.append(recent);
+  void renderRecentOpponents(recent);
+
+  // The create cards (Post a seek, Play Brian) follow what is waiting on you.
+  const launchers = document.createElement('div');
+  launchers.className = 'correspondence-launchers-slot';
+  main.append(launchers);
 
   // Games that ended leave the lists above the moment they end; this says how
   // they ended (Brian, 2026-10-14: a lost game simply vanished from the page).
@@ -308,7 +324,7 @@ function buildSignedIn(
     tiles.className = 'correspondence-launchers';
     tiles.append(seekLauncher.tile);
     if (hostInfo) tiles.append(buildHostLauncher(hostInfo).tile);
-    top.append(tiles);
+    launchers.append(tiles);
     // Open seeks follow your own games.
     main.append(seekHost);
     refreshChallenges();
@@ -319,10 +335,12 @@ function buildSignedIn(
     }
   }
 
-  // A phone keeps today's order once you have games: your cards first, the
-  // form after them (correspondence.css). With none, the form leads.
+  // With games, a phone shows the create cards as one compact row
+  // (correspondence.css), so they stay below what is waiting on you.
   shell.classList.toggle('has-games', data.games.length > 0);
-  shell.append(top, main);
+  // The top bar now holds only the "coming soon" notice.
+  if (top.firstChild) shell.append(top);
+  shell.append(main);
   return shell;
 }
 
@@ -1249,6 +1267,62 @@ function buildOpenSeekCard(ctx: PageContext, host: HTMLElement, seek: OpenSeek):
 // Your challenges
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Recent opponents
+// ---------------------------------------------------------------------------
+
+export type RecentOpponent = { handle: string; displayName: string };
+
+export function parseRecentOpponents(value: unknown): RecentOpponent[] {
+  const list = (value as { opponents?: unknown } | null)?.opponents;
+  if (!Array.isArray(list)) return [];
+  const out: RecentOpponent[] = [];
+  for (const item of list) {
+    const handle = (item as { handle?: unknown })?.handle;
+    const displayName = (item as { displayName?: unknown })?.displayName;
+    if (typeof handle !== 'string' || handle === '') continue;
+    out.push({ handle, displayName: typeof displayName === 'string' ? displayName : handle });
+  }
+  return out;
+}
+
+/** The "Recent opponents" row: a name and a Challenge button per player. */
+export function buildRecentOpponents(opponents: readonly RecentOpponent[]): Node[] {
+  const section = buildSection(t('correspondence.recentOpponents'), null);
+  const list = document.createElement('ul');
+  list.className = 'correspondence-recent-list';
+  for (const opponent of opponents) {
+    const name = opponent.displayName.trim() || opponent.handle;
+    const item = document.createElement('li');
+    item.className = 'correspondence-recent-item';
+    item.append(
+      playerNameEl(
+        name,
+        profileTargetFor({ handle: opponent.handle }),
+        'correspondence-recent-name',
+      ),
+    );
+    const challenge = document.createElement('button');
+    challenge.type = 'button';
+    challenge.className = 'correspondence-recent-challenge';
+    challenge.textContent = t('challenge.button');
+    challenge.setAttribute('aria-label', `${t('challenge.button')}: ${name}`);
+    challenge.addEventListener('click', () => {
+      openChallengeDialog({ handle: opponent.handle, displayName: name });
+    });
+    item.append(challenge);
+    list.append(item);
+  }
+  return [...section.childNodes, list];
+}
+
+async function renderRecentOpponents(host: HTMLElement): Promise<void> {
+  const resp = await fetch('/api/correspondence/opponents/recent').catch(() => null);
+  const opponents = resp?.ok ? parseRecentOpponents(await resp.json().catch(() => null)) : [];
+  host.hidden = opponents.length === 0;
+  host.replaceChildren(...(opponents.length > 0 ? buildRecentOpponents(opponents) : []));
+}
+
 export async function renderChallenges(
   host: HTMLElement,
   onCount?: (count: number) => void,
@@ -1530,7 +1604,9 @@ export function buildOwnSeekCard(seek: OutgoingSeek, onChange: () => void): HTML
     ariaLabel = `${variant}, ${t('correspondence.challengeTo', { name: seek.targetName })}`;
   } else {
     const label =
-      seek.visibility === 'private' ? t('correspondence.linkChallenge') : t('games.seekWaiting');
+      seek.visibility === 'private'
+        ? t('correspondence.linkChallenge')
+        : t('correspondence.openSeek');
     waiting = document.createTextNode(label);
     ariaLabel = `${variant}, ${label}`;
   }

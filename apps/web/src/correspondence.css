@@ -353,8 +353,8 @@
 /* ---- Start tiles ------------------------------------------------------------------- */
 
 /* Two small tiles side by side, each opening its form in a dialog; a phone
-   stacks them. They stay on top on every width: at about 80px each they cost
-   less than scrolling past your games to find them. */
+   stacks them. They follow the games waiting on you (#1058); a phone with games
+   draws them as one compact row (below). */
 .correspondence-launchers {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 440px));
@@ -471,6 +471,76 @@
 
 .correspondence-host-signin {
   align-self: flex-start;
+}
+
+/* A phone with games: the two create cards share one row, title and button
+   only, so the first screen keeps what is waiting on you (#1058). */
+@media (max-width: 640px) {
+  .correspondence-shell.has-games .correspondence-launchers {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .correspondence-shell.has-games .correspondence-launcher {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .correspondence-shell.has-games .correspondence-launcher .correspondence-hint,
+  .correspondence-shell.has-games .correspondence-launcher > .correspondence-host-photo {
+    display: none;
+  }
+
+  .correspondence-shell.has-games .correspondence-launcher .correspondence-btn {
+    align-self: stretch;
+  }
+}
+
+/* ---- Recent opponents -------------------------------------------------------------- */
+
+.correspondence-recent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.correspondence-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.correspondence-recent-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.correspondence-recent-challenge {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-heading);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.correspondence-recent-challenge:hover {
+  border-color: var(--site-accent, currentColor);
 }
 
 @media (max-width: 640px) {

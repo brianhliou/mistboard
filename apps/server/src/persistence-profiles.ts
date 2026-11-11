@@ -607,6 +607,42 @@ export async function listRecentFinishedCorrespondenceGames(
   return games;
 }
 
+export type RecentOpponent = { handle: string; displayName: string };
+
+// The accounts the player most recently finished a game with, newest first:
+// the /correspondence "Recent opponents" row (#1058). Accounts only: a seat
+// that is not a signed-in user (a guest, a bot) never appears, nor the player's
+// own account, nor an account that is closed or private, so nothing here is
+// more than the handle a finished game row already links. Every completed game
+// counts, live or correspondence, since the row offers a new correspondence
+// challenge to anyone the player has played.
+export async function listRecentOpponents(
+  userId: string,
+  options: { limit: number },
+): Promise<RecentOpponent[]> {
+  const { rows } = await getPool().query<{ handle: string; display_name: string }>(
+    `SELECT opponent.handle, opponent.display_name, max(games.ended_at) AS last_played
+     FROM game_participants me
+     JOIN games ON games.room_id = me.game_id
+     JOIN game_participants them
+       ON them.game_id = games.room_id
+      AND them.subject_type = 'user'
+      AND them.subject_id <> me.subject_id
+     JOIN users opponent ON opponent.id = them.subject_id
+     WHERE me.subject_type = 'user'
+       AND me.subject_id = $1
+       AND games.status = 'completed'
+       AND ${notFFQBanqiGame()}
+       AND opponent.closed_at IS NULL
+       AND opponent.profile_visibility <> 'private'
+     GROUP BY opponent.id, opponent.handle, opponent.display_name
+     ORDER BY last_played DESC, opponent.handle
+     LIMIT $2`,
+    [userId, options.limit],
+  );
+  return rows.map((row) => ({ handle: row.handle, displayName: row.display_name || row.handle }));
+}
+
 // First page of a profile: identity, bucketed ratings, and the newest games.
 // Older game pages load lazily via getUserGamesPage.
 export async function getUserProfileByHandle(

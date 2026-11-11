@@ -313,7 +313,19 @@ export async function tryHandle(
     return listOpenSeeks(user, response);
   }
   if (!user) {
-    writeJson(response, 401, { error: 'not_signed_in' });
+    // A signed-out visitor holding a /challenge link is still told to sign in,
+    // but the 401 may carry who is asking, the game and the pace, so the page
+    // can say so above the button (#1058). Never for a directed challenge.
+    const viewMatch = pathname.match(/^\/api\/correspondence\/seeks\/([^/]+)$/);
+    const preview =
+      viewMatch && (request.method ?? 'GET') === 'GET'
+        ? await anonymousChallengePreviewFor(decodeURIComponent(viewMatch[1]!))
+        : null;
+    writeJson(
+      response,
+      401,
+      preview ? { error: 'not_signed_in', preview } : { error: 'not_signed_in' },
+    );
     return true;
   }
 
@@ -1034,6 +1046,64 @@ function quickPairSeekAnswer(seekId: string, existing: boolean): SeekRouteResult
       daysPerMove: QUICK_PAIR_TERMS.daysPerMove,
     },
   };
+}
+
+/** What a signed-out visitor holding a challenge link may read (#1058). */
+export type AnonymousChallengePreview = {
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: string;
+  visibility: string;
+  rated: boolean;
+  challengerName: string | null;
+  challengerHandle: string | null;
+};
+
+/**
+ * Pure: the preview a signed-out reader gets, or null. Only an open, unexpired
+ * seek nobody is named on (a link challenge or a public board seek): the same
+ * seeks a signed-in stranger holding the id already reads in full. A directed
+ * challenge stays a plain "sign in", so its target and challenger are never
+ * told to a stranger. Names, game, pace and move order only: no board, no seat, no email,
+ * no account id, so a hidden-information variant has nothing to leak here; the
+ * page draws the variant's own start-position thumbnail.
+ */
+export function anonymousChallengePreview(
+  seek: {
+    gameSpecId: string;
+    daysPerMove: number;
+    preferredColor: string;
+    visibility: string;
+    rated?: boolean;
+    targetUserId: string | null;
+    expiresAt: Date | null;
+    creatorName: string | null;
+    creatorHandle: string | null;
+  },
+  nowMs: number,
+): AnonymousChallengePreview | null {
+  if (seek.targetUserId !== null) return null;
+  if (seek.expiresAt !== null && seek.expiresAt.getTime() <= nowMs) return null;
+  return {
+    gameSpecId: seek.gameSpecId,
+    daysPerMove: seek.daysPerMove,
+    preferredColor: seek.preferredColor,
+    visibility: seek.visibility,
+    rated: seek.rated === true,
+    challengerName: seek.creatorName,
+    challengerHandle: seek.creatorHandle ?? null,
+  };
+}
+
+async function anonymousChallengePreviewFor(
+  seekId: string,
+): Promise<AnonymousChallengePreview | null> {
+  const seek = await persistence.getCorrespondenceSeekListing(seekId);
+  if (!seek) return null;
+  // A hidden or playtest variant passes only through its room door, which an
+  // anonymous reader never holds (seeksVisibleTo with no user).
+  if ((await seeksVisibleTo([seek], null)).length === 0) return null;
+  return anonymousChallengePreview(seek, Date.now());
 }
 
 // The challenge landing page's read: enough to render "X challenged you to Y"

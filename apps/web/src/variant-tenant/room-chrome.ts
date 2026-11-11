@@ -41,6 +41,13 @@ import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile
 import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import { postWithBrowserIdentity } from '../room-create-retry.js';
+import {
+  buildRoomInviteBoard,
+  correspondenceHostHandle,
+  loadedRoomInvitePreview,
+  roomInviteHeading,
+  roomInvitePreview,
+} from '../room-invite-preview.js';
 import { seatDiscEl } from '../seat-disc.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
@@ -525,7 +532,7 @@ export function createTenantRoomChrome<C extends string>(
         row.className = isTurn ? 'pregame active' : 'pregame';
         row.dataset.color = color;
         const time = document.createElement('strong');
-        setClockFace(time, formatClock(clock ? clock.remainingMs[color] : timeControl.initialMs));
+        setClockText(time, clock ? clock.remainingMs[color] : timeControl.initialMs, false);
         row.append(time);
         (index === 0 ? refs!.clockTop : refs!.clockBottom).append(row);
       });
@@ -582,20 +589,25 @@ export function createTenantRoomChrome<C extends string>(
       const remainingMs = clockRemainingMs(clock, color, displayAt);
       // A finished game's final times keep their tenths (lichess), which is
       // also what tells a 0:00 flag from a mate with 0.4 s left.
-      setClockFace(
+      setClockText(
         time,
-        formatClock(
-          remainingMs,
-          ended ? shouldShowFinalClockTenths() : shouldShowClockTenths(remainingMs, isActive),
-        ),
+        remainingMs,
+        ended ? shouldShowFinalClockTenths() : shouldShowClockTenths(remainingMs, isActive),
       );
       row.append(time);
-      applyClockEmphasis(row, remainingMs, timeControl.initialMs);
+      applyClockEmphasis(row, remainingMs, isCorrespondence() ? null : timeControl.initialMs);
       const panel = panelFor(color, index);
       (panel === 'top' ? refs!.playerTop : refs!.playerBottom).append(playerLine);
       (panel === 'top' ? refs!.clockTop : refs!.clockBottom).append(row);
     });
     lastActiveClockColor = activeColor;
+  }
+
+  // A clock face. Correspondence reads in days and hours ("2d 23h", the
+  // Fog Chess room's and the inbox's format), never "72:00:00" (#1058).
+  function setClockText(el: HTMLElement, remainingMs: number, tenths: boolean): void {
+    if (isCorrespondence()) el.textContent = formatDayClock(remainingMs);
+    else setClockFace(el, formatClock(remainingMs, tenths));
   }
 
   // Lightweight per-tick refresh (100ms). Updates only the time text and
@@ -625,13 +637,12 @@ export function createTenantRoomChrome<C extends string>(
         maybePlayLowTimeSound(view.id, remainingMs, ctx.timeControl()?.initialMs ?? null);
       }
       const strong = row.querySelector('strong');
-      if (strong) {
-        setClockFace(
-          strong,
-          formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive)),
-        );
-      }
-      applyClockEmphasis(row, remainingMs, ctx.timeControl()?.initialMs ?? null);
+      if (strong) setClockText(strong, remainingMs, shouldShowClockTenths(remainingMs, isActive));
+      applyClockEmphasis(
+        row,
+        remainingMs,
+        isCorrespondence() ? null : (ctx.timeControl()?.initialMs ?? null),
+      );
     }
   }
 
@@ -992,7 +1003,8 @@ export function createTenantRoomChrome<C extends string>(
       view?.status.type === 'playing' &&
       seatColor() !== null &&
       ctx.connectionState() === 'connected' &&
-      !waitingForOpponent()
+      !waitingForOpponent() &&
+      !isCorrespondence()
     ) {
       refs.actionSection.hidden = true;
       return;
@@ -1030,7 +1042,15 @@ export function createTenantRoomChrome<C extends string>(
     }
 
     notice.className = `action-notice ${actionTone(view)}`;
-    notice.append(noticeTitle(actionTitle(view)), noticeBody(actionBody(view)));
+    notice.append(noticeTitle(actionTitle(view)));
+    // A signed-out invitee (#1058): who asked, the game and the pace head the
+    // notice, with the variant's start board under it, before "Sign in".
+    const invite = invitePreview();
+    if (invite) {
+      notice.classList.add('room-invite-notice');
+      notice.append(buildRoomInviteBoard(invite.gameSpecId));
+    }
+    notice.append(noticeBody(actionBody(view)));
     // An account-gated seat (rated, correspondence): the guest gets a way in.
     // The login href carries this room as the auth referrer, so signing in
     // brings them straight back here and the reconnect seats them.
@@ -1059,8 +1079,9 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   function actionTone(view: TenantWebView<C> | null): 'danger' | 'default' | 'pending' | 'success' {
-    // Not an error: the room is fine, the game is simply not public yet.
-    if (liveGameRejection()) return 'default';
+    // Not an error: the room is fine, the game is simply not public yet, or it
+    // is an invitation waiting on a sign-in.
+    if (liveGameRejection() || invitePreview()) return 'default';
     if (ctx.connectionState() === 'rejected' || ctx.connectionState() === 'displaced') {
       return 'danger';
     }
@@ -1089,7 +1110,10 @@ export function createTenantRoomChrome<C extends string>(
       const gated = accountGatedRejection();
       if (gated === 'rated' || ctx.closeReason() === RATED_COUNTED_REASON)
         return t('live.titleRatedGame');
-      if (gated === 'correspondence') return t('correspondence.heading');
+      if (gated === 'correspondence') {
+        const invite = loadedRoomInvitePreview(ctx.room());
+        return invite ? roomInviteHeading(invite) : t('correspondence.heading');
+      }
       if (liveGameRejection()) return t('live.titleGameInProgress');
       return ctx.closeReason() === 'play disabled'
         ? t('live.titlePlayingOff')
@@ -1103,7 +1127,44 @@ export function createTenantRoomChrome<C extends string>(
     if (view.status.type === 'finished') return t('live.titleGameFinished');
     if (view.status.type === 'aborted') return t('live.statusGameAborted');
     if (ctx.seat() === view.status.turn) return t('live.statusYourMove');
+    // A correspondence player between moves: whose reply the game waits on.
+    const opponentName = correspondenceOpponentName(view);
+    if (opponentName) return t('correspondence.waitingOnName', { name: opponentName });
     return t('puzzle.toMove', { color: seatName(view.status.turn) });
+  }
+
+  // The invite preview for a signed-out visitor refused a correspondence seat,
+  // once loaded; the first call fetches it and re-renders the notice on arrival.
+  function invitePreview() {
+    if (ctx.connectionState() !== 'rejected' || accountGatedRejection() !== 'correspondence') {
+      return null;
+    }
+    return roomInvitePreview(ctx.room(), () => {
+      renderActionStatus();
+      renderBoardStatus();
+    });
+  }
+
+  // The opponent's name when the viewer is seated in a correspondence game the
+  // opponent is to move in, else null.
+  function correspondenceOpponentName(view: TenantWebView<C>): string | null {
+    if (!isCorrespondence() || view.status.type !== 'playing') return null;
+    const seat = seatColor();
+    if (seat === null || seat === view.status.turn) return null;
+    return ctx.seatDisplayNames()[view.status.turn as C] || null;
+  }
+
+  // Play Brian (#1058): a room against the site's host says once that he is a
+  // person, not a bot, and replies within the pace.
+  function hostRoomNote(view: TenantWebView<C>): string | null {
+    const name = correspondenceOpponentName(view);
+    const days = ctx.timeControl()?.daysPerMove;
+    if (!name || typeof days !== 'number') return null;
+    const handle =
+      view.status.type === 'playing' ? ctx.seatProfiles()[view.status.turn as C]?.handle : null;
+    const host = correspondenceHostHandle(() => renderActionStatus());
+    if (!handle || !host || handle !== host) return null;
+    return t('correspondence.hostRoomNote', { name, days });
   }
 
   function actionBody(view: TenantWebView<C> | null): string {
@@ -1144,7 +1205,7 @@ export function createTenantRoomChrome<C extends string>(
     }
     if (ctx.seat() === 'spectator') return t(tenant.spectatorBody);
     if (ctx.seat() === view.status.turn) return t(tenant.selectInstruction);
-    return t('live.roomWaitingOpponent');
+    return hostRoomNote(view) ?? t('live.roomWaitingOpponent');
   }
 
   // The in-game action row (#530, lichess shape): icon buttons under the move
@@ -1469,7 +1530,8 @@ export function createTenantRoomChrome<C extends string>(
     } else label = t('live.statusConnecting');
     // A live game refused to a non-player is not an error; every other refusal
     // keeps the danger tone the chess room uses.
-    refs.boardStatus.dataset.tone = terminal && !liveGameRejection() ? 'danger' : 'pending';
+    refs.boardStatus.dataset.tone =
+      terminal && !liveGameRejection() && !invitePreview() ? 'danger' : 'pending';
     const labelEl = refs.boardStatus.querySelector<HTMLElement>('[data-board-status-label]');
     if (labelEl) labelEl.textContent = label;
     const spinner = refs.boardStatus.querySelector<HTMLElement>('[data-board-status-spinner]');

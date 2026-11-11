@@ -3,6 +3,7 @@ import { writeAccountPreference } from '../account-preferences.js';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import { lastBotGame } from '../pve-memory.js';
+import { resetRoomInvitePreviews } from '../room-invite-preview.js';
 import {
   createTenantRoomChrome,
   type TenantChromeContext,
@@ -377,6 +378,95 @@ describe('tenant room chrome action status', () => {
     chrome.renderActionStatus();
     expect(refs.actionStatus.textContent).toContain('Second to move');
     expect(refs.actionStatus.textContent).not.toContain('Red to move');
+  });
+});
+
+describe('tenant room chrome correspondence status (#1058)', () => {
+  const threeDays = { initialMs: 3 * 86_400_000, incrementMs: 0, daysPerMove: 3 };
+  const twoDays = { initialMs: 2 * 86_400_000, incrementMs: 0, daysPerMove: 2 };
+  const settle = async (): Promise<void> => {
+    for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetRoomInvitePreviews();
+  });
+
+  it('says Your move to the seated player on move', () => {
+    const { chrome, refs } = chromeHarness({
+      timeControl: threeDays,
+      seatDisplayNames: { white: 'Me', red: 'Alice' },
+    });
+    chrome.renderActionStatus();
+    expect(refs.actionSection.hidden).toBe(false);
+    expect(refs.actionStatus.textContent).toContain('Your move');
+  });
+
+  it('names whose reply the game waits on', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 404 })),
+    );
+    const { chrome, refs } = chromeHarness({
+      view: playingView({ status: { type: 'playing', turn: 'red' } }),
+      timeControl: threeDays,
+      seatDisplayNames: { white: 'Me', red: 'Alice' },
+    });
+    chrome.renderActionStatus();
+    expect(refs.actionStatus.textContent).toContain('Waiting on Alice');
+    expect(refs.actionStatus.textContent).not.toContain('is a person');
+  });
+
+  it('says once that the Play Brian host is a person who replies within the pace', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ enabled: true, host: { handle: 'host' } }), {
+            status: 200,
+          }),
+      ),
+    );
+    const { chrome, refs } = chromeHarness({
+      view: playingView({ status: { type: 'playing', turn: 'red' } }),
+      timeControl: twoDays,
+      seatDisplayNames: { white: 'Me', red: 'Brian H. Liou' },
+      seatProfiles: { red: { handle: 'host' } },
+    });
+    chrome.renderActionStatus();
+    await settle();
+    chrome.renderActionStatus();
+    expect(refs.actionStatus.textContent).toContain('Waiting on Brian H. Liou');
+    expect(refs.actionStatus.textContent).toContain(
+      'Brian H. Liou is a person, not a bot, and replies within 2 days.',
+    );
+  });
+
+  it('heads a refused signed-out invitee with the invite, not a refusal', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ gameSpecId: 'xiangqi', daysPerMove: 3, creatorName: 'Alice' }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const { chrome, refs } = chromeHarness({
+      view: null,
+      seat: null,
+      connectionState: 'rejected',
+      closeReason: 'correspondence requires account',
+    });
+    chrome.renderActionStatus();
+    await settle();
+    chrome.renderActionStatus();
+    const text = refs.actionStatus.textContent ?? '';
+    expect(text).toContain('Alice invited you to Xiangqi, 3 days per move');
+    expect(refs.actionStatus.querySelector('.room-invite-board')).not.toBeNull();
+    expect(refs.actionStatus.querySelector('a')?.textContent).toBe('Sign in to take your seat');
   });
 });
 
