@@ -1,16 +1,28 @@
 import {
   applyBanqiMove,
+  applyThreeKingdomsBanqiMove,
   type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
   banqiSquareFromIndex,
   createBanqiDeal,
   createInitialBanqiState,
+  createThreeKingdomsBanqiSetup,
+  createThreeKingdomsBanqiStateFromSetup,
   getBanqiLegalMoves,
   getBanqiPlayerView,
+  getThreeKingdomsBanqiLegalMoves,
+  getThreeKingdomsBanqiPlayerView,
+  type ThreeKingdomsBanqiMove,
+  type ThreeKingdomsBanqiSquare,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { banqiFaceDownAtEnd, banqiRevealChance, banqiRevealOdds } from './banqi-reveal-odds.js';
+import {
+  banqiBoardAsPlayed,
+  banqiFaceDownAtEnd,
+  banqiRevealChance,
+  banqiRevealOdds,
+} from './banqi-reveal-odds.js';
 
 // The banqi reveal odds are an in-game aid in rated play (#542), so they must be
 // bookkeeping from the viewer's own view and nothing else (CLAUDE.md "In-game
@@ -126,9 +138,60 @@ describe('banqiFaceDownAtEnd (#544)', () => {
     expect(banqiRevealOdds(atEnd!).total).toBe(banqiRevealOdds(asPlayed).total);
   });
 
+  it('keeps a piece face up on the square it moved to after its flip', () => {
+    // Long games, so flipped pieces walk and capture before the end. Banqi's
+    // full 4x8 deal means a piece can only step onto a square already turned,
+    // so this held before the TK fix too; it guards the shared function.
+    for (const seed of [6, 7, 8, 9]) {
+      const { state, moves } = play(createBanqiDeal(mulberry32(seed)), 160, seed);
+      expect(moves.some((m) => m.from !== m.to)).toBe(true);
+      const asPlayed = getBanqiPlayerView(state, 'red');
+      const truth = {
+        ...asPlayed,
+        board: Object.fromEntries(
+          Object.entries(state.board).map(([sq, p]) => [
+            sq,
+            { color: p.color, role: p.role, faceDown: false as const },
+          ]),
+        ),
+      };
+      // From the truth view and from the already-masked view alike, the board
+      // is exactly the one play left, so a face-up piece is never drawn down.
+      expect(banqiFaceDownAtEnd(truth, moves)?.board).toEqual(asPlayed.board);
+      expect(banqiFaceDownAtEnd(asPlayed, moves)?.board).toEqual(asPlayed.board);
+    }
+  });
+
   it('gives up rather than guess when the log is short of the game', () => {
     const { state, moves } = play(createBanqiDeal(mulberry32(5)), 10, 5);
     const view = getBanqiPlayerView(state, 'red');
     expect(banqiFaceDownAtEnd(view, moves.slice(1))).toBeNull();
+  });
+});
+
+describe('banqiBoardAsPlayed on a finished Three Kingdoms room', () => {
+  it('draws the served final board as played, moved face-up pieces included', () => {
+    // Played to the end: the served final view is the masked one (the server
+    // keeps never-turned tiles covered), and the last frame must show it
+    // unchanged. Before the fix every piece that moved after its flip turned
+    // back into a green disc on the final ply only.
+    for (const seed of [11, 12, 13]) {
+      const rng = mulberry32(seed);
+      let state = createThreeKingdomsBanqiStateFromSetup('tk', createThreeKingdomsBanqiSetup(rng));
+      const moves: ThreeKingdomsBanqiMove[] = [];
+      while (state.status.type === 'playing' && moves.length < 600) {
+        const legal = getThreeKingdomsBanqiLegalMoves(state);
+        const move = legal[Math.floor(rng() * legal.length)];
+        if (!move) break;
+        state = applyThreeKingdomsBanqiMove(state, move);
+        moves.push(move);
+      }
+      expect(state.status.type).toBe('finished');
+      const served = getThreeKingdomsBanqiPlayerView(state, 'red');
+      const faceUp = Object.values(served.board).filter((e) => e && !e.faceDown).length;
+      expect(faceUp).toBeGreaterThan(0);
+      const drawn = banqiBoardAsPlayed<ThreeKingdomsBanqiSquare, typeof served>(served, moves);
+      expect(drawn.board).toEqual(served.board);
+    }
   });
 });
