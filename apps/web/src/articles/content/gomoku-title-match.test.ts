@@ -266,4 +266,10 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
     expect(prose).toContain("[Gomocup 2025 release](https://github.com/hzyhhzy/KataGomo/releases/tag/gomocup2025)");
     expect(prose).not.toMatch(/releases\/download/);
   });
+
+  it('reminds readers the openings are dealt and screened, with the rules page linked', () => {
+    expect(prose).toContain(
+      `[dealt openings](/rules/gomoku#dealt-openings), with stones already on the board. Rapfi screened all ${match.openings.poolSize} of them as close to even`,
+    );
+  });
 });
