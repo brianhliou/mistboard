@@ -361,6 +361,13 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     tv.destroy();
   };
   setRoomNavigator((url) => {
+    // The navigator also carries plain pages (a correspondence seek lands on
+    // /correspondence). Swapping one in as a room mounted the live shell with no
+    // room and showed "Access rejected"; a page gets a normal load.
+    if (landingNavigationKind(url) === 'page') {
+      window.location.assign(url);
+      return;
+    }
     void transitionToRoom(root, url, teardownLanding);
   });
 }
@@ -397,6 +404,12 @@ async function transitionToRoom(
   }
   prepareRoomTransition(root, url, teardownLanding, t('live.pageTitle'));
   liveModule.bootstrapLiveRoom();
+}
+
+// Only a room URL can be swapped in place; anything else is a page.
+export function landingNavigationKind(url: string): 'room' | 'page' {
+  const next = new URL(url, window.location.href);
+  return roomIdFromPath(next.pathname) || next.searchParams.get('room') ? 'room' : 'page';
 }
 
 // Tenants with a self-contained live client transition through
