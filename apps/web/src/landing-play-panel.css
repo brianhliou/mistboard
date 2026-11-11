@@ -71,6 +71,13 @@
   display: none;
 }
 
+/* The Your move count is the accent, not gold: gold in this panel is a player
+   waiting for a game, this is a game waiting on you. */
+.pp-badge-moves {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
 .pp-card {
   position: relative;
   flex: 1 0 auto;
@@ -92,7 +99,8 @@
   visibility: hidden;
 }
 
-.pp-view-person {
+.pp-view-person,
+.pp-view-moves {
   position: absolute;
   inset: 0;
 }
@@ -485,9 +493,11 @@
   white-space: nowrap;
 }
 
-/* Open games and Start one share a two-column grid of chips and tiles. */
+/* Open games, Start one and Your move share a two-column grid of chips and
+   tiles. */
 .pp-offers,
-.pp-person-rows {
+.pp-person-rows,
+.pp-move-rows {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
@@ -532,6 +542,19 @@
 .pp-tile.has-waiting {
   border-color: color-mix(in srgb, var(--pp-gold) 70%, transparent);
   background: color-mix(in srgb, var(--pp-gold) 9%, transparent);
+}
+
+/* A Your move tile is the link into its room: as tall as a Start one tile. */
+.pp-move {
+  min-height: 46px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pp-moves-foot {
+  padding: 8px var(--pp-pad);
+  border-top: 1px solid var(--site-border-soft);
+  font-size: 12.5px;
 }
 
 .pp-tile-text {
@@ -683,7 +706,8 @@
    games (11 bot rows at their 40px floor). The scroll stays only as a
    fallback. */
 @media (min-width: 641px) {
-  .pp-board .pp-view-person {
+  .pp-board .pp-view-person,
+  .pp-board .pp-view-moves {
     --pp-icon: 26px;
   }
 
@@ -763,7 +787,8 @@
 
   /* One column of tiles: two at 390px cut most names to a few letters. */
   .pp-offers,
-  .pp-person-rows {
+  .pp-person-rows,
+  .pp-move-rows {
     grid-template-columns: minmax(0, 1fr);
   }
 

@@ -63,3 +63,11 @@
   color: var(--site-muted);
   font-size: 12px;
 }
+
+/* Above the phone breakpoint (navPhoneMediaQuery, 600px) the Play panel lists
+   these games in its Your move tab, so the rail card would repeat them. */
+@media (min-width: 601px) {
+  .landing-corr-moves.is-phone-only {
+    display: none;
+  }
+}

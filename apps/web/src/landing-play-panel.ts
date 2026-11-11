@@ -15,7 +15,11 @@ import {
 import { track } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
-import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './correspondence-model.js';
+import {
+  type CorrespondenceGame,
+  correspondenceRatedAvailable,
+  isCorrespondenceSpecFor,
+} from './correspondence-model.js';
 import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { t } from './i18n/catalog.js';
@@ -28,6 +32,12 @@ import {
   landingBotOffer,
   playableBotIdsBySpec,
 } from './landing-bot-policy.js';
+import {
+  type YourMoveFeed,
+  yourMoveGamesInOrder,
+  yourMoveMeta,
+  yourMoveOpponentLabel,
+} from './landing-correspondence-moves.js';
 import {
   allowedTimePresetIds,
   daysPerMoveLabel,
@@ -80,7 +90,9 @@ import { variantMiniIdForGameSpec } from './variants.js';
 // panel turns into a lobby on its own as people arrive instead of showing an
 // empty one now.
 
-type PanelTab = 'computer' | 'person';
+type PanelTab = 'computer' | 'person' | 'moves';
+/** Your move tab: at most this many games, two per row, then the page link. */
+const MAX_MOVE_TILES = 12;
 type PersonMode = 'casual' | 'rated';
 type PersonPace = { kind: 'live'; id: TimeControlId } | { kind: 'days'; days: number };
 type PaceFamily = PersonPace['kind'];
@@ -339,7 +351,11 @@ export function personFamilyPaces(
 
 export function buildPlayPanel(
   locale: Locale = currentLocale(),
-  options: { hydrate?: boolean } = {},
+  options: {
+    hydrate?: boolean;
+    /** The signed-in player's correspondence games on their move, for the Your move tab. */
+    yourMove?: YourMoveFeed;
+  } = {},
 ): HTMLElement {
   const stored = readStored();
   const signedIn = isLikelySignedIn();
@@ -347,7 +363,9 @@ export function buildPlayPanel(
   // An account excluded from stats never plays rated (the server refuses it);
   // the Rated switch is greyed out with the reason instead of failing on click.
   let ratedBlocked = isLikelyStatsExcluded();
-  let tab: PanelTab = stored.tab ?? 'computer';
+  // Your move is never the opening tab: it exists only once the games load,
+  // so opening on it would swap the panel's content after first paint.
+  let tab: PanelTab = stored.tab === 'person' ? 'person' : 'computer';
   let mode: PersonMode =
     stored.mode === 'rated' && signedIn && ratedAvailable && !ratedBlocked ? 'rated' : 'casual';
   let openRequests: OpenLobbyRequest[] = [];
@@ -405,8 +423,15 @@ export function buildPlayPanel(
   badge.className = 'pp-badge';
   badge.hidden = true;
   personTab.append(badge);
-  for (const el of [computerTab, personTab]) el.setAttribute('role', 'tab');
-  tabBar.append(computerTab, personTab);
+  // Your move (2026-11-11, lichess's "Playing (3)"): the signed-in player's
+  // correspondence games on their move. Absent, not disabled, with none.
+  const movesTab = button('pp-tab pp-tab-moves', t('lobby.panelTabYourMove', {}, locale));
+  const movesCount = document.createElement('span');
+  movesCount.className = 'pp-badge pp-badge-moves';
+  movesTab.append(movesCount);
+  movesTab.hidden = true;
+  for (const el of [computerTab, personTab, movesTab]) el.setAttribute('role', 'tab');
+  tabBar.append(computerTab, personTab, movesTab);
 
   const card = document.createElement('div');
   card.className = 'landing-lobby-card pp-card';
@@ -416,30 +441,88 @@ export function buildPlayPanel(
   const personView = document.createElement('div');
   personView.className = 'pp-view pp-view-person';
   personView.setAttribute('role', 'tabpanel');
-  card.append(computerView, personView);
+  const movesView = document.createElement('div');
+  movesView.className = 'pp-view pp-view-moves';
+  movesView.setAttribute('role', 'tabpanel');
+  movesView.hidden = true;
+  card.append(computerView, personView, movesView);
   board.append(tabBar, card);
 
   const selectTab = (next: PanelTab, user: boolean): void => {
     tab = next;
-    computerTab.classList.toggle('is-active', next === 'computer');
-    personTab.classList.toggle('is-active', next === 'person');
-    computerTab.setAttribute('aria-selected', String(next === 'computer'));
-    personTab.setAttribute('aria-selected', String(next === 'person'));
+    for (const [el, id] of [
+      [computerTab, 'computer'],
+      [personTab, 'person'],
+      [movesTab, 'moves'],
+    ] as const) {
+      el.classList.toggle('is-active', next === id);
+      el.setAttribute('aria-selected', String(next === id));
+    }
     // The computer view is covered, not hidden: it stays in flow so the person
     // tab gets its exact height (the site's [hidden] rule is display:none
     // !important). inert keeps the covered rows out of focus and the a11y tree.
     computerView.classList.toggle('is-covered', next !== 'computer');
     computerView.inert = next !== 'computer';
     personView.hidden = next !== 'person';
+    movesView.hidden = next !== 'moves';
     if (user) {
-      writeStored((s) => {
-        s.tab = next;
-      });
+      // Your move is not remembered: the next visit opens where it did before.
+      if (next !== 'moves')
+        writeStored((s) => {
+          s.tab = next;
+        });
       track('play_panel_tab', { tab: next });
     }
   };
   computerTab.addEventListener('click', () => selectTab('computer', true));
   personTab.addEventListener('click', () => selectTab('person', true));
+  movesTab.addEventListener('click', () => selectTab('moves', true));
+
+  const renderMoves = (games: readonly CorrespondenceGame[]): void => {
+    const yours = yourMoveGamesInOrder(games);
+    movesTab.hidden = yours.length === 0;
+    movesCount.textContent = String(yours.length);
+    if (yours.length === 0) {
+      movesView.replaceChildren();
+      if (tab === 'moves') selectTab('computer', false);
+      return;
+    }
+    const head = document.createElement('div');
+    head.className = 'pp-section';
+    head.textContent = t('correspondence.homeYourMove', {}, locale);
+    const rows = document.createElement('div');
+    rows.className = 'pp-move-rows';
+    const now = Date.now();
+    for (const game of yours.slice(0, MAX_MOVE_TILES)) {
+      const tile = document.createElement('a');
+      tile.className = 'pp-tile pp-move';
+      tile.href = localizedHref(game.url, locale);
+      tile.dataset.gameSpec = game.gameSpecId;
+      const text = document.createElement('span');
+      text.className = 'pp-tile-text';
+      const name = document.createElement('span');
+      name.className = 'pp-name';
+      name.textContent = yourMoveOpponentLabel(game, locale);
+      const meta = document.createElement('small');
+      meta.className = 'pp-tile-meta';
+      meta.textContent = yourMoveMeta(game, now, locale);
+      text.append(name, meta);
+      tile.append(marker(game.gameSpecId, labelFor(game.gameSpecId)), text);
+      rows.append(tile);
+    }
+    const scroll = document.createElement('div');
+    scroll.className = 'pp-scroll';
+    scroll.append(head, rows);
+    const foot = document.createElement('div');
+    foot.className = 'pp-moves-foot';
+    const all = document.createElement('a');
+    all.className = 'hover-link';
+    all.href = localizedHref('/correspondence', locale);
+    all.textContent = t('lobby.corrYourGames', {}, locale);
+    foot.append(all);
+    movesView.replaceChildren(scroll, foot);
+  };
+  options.yourMove?.subscribe(board, renderMoves);
 
   // ── Play the computer ──
   const featureSlot = document.createElement('div');
