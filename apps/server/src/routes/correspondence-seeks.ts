@@ -14,6 +14,12 @@ import {
   mayPlayCorrespondenceByUserId,
 } from './../correspondence-access.js';
 import {
+  challengeTargetStatus,
+  notifyCorrespondenceChallenge,
+  notifyCorrespondenceHostStart,
+  notifyCorrespondenceJoinedStart,
+} from './../correspondence-player-emails.js';
+import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
@@ -470,6 +476,16 @@ export type CreateSeekOptions = {
   // in the same request, so it never stands; the host's own open seeks must not
   // block it.
   skipOpenSeekCap?: boolean;
+  // The host route mails both players its own start emails once the game is
+  // made, so the private seek it posts must not also mail a challenge (#1057).
+  skipChallengeEmail?: boolean;
+};
+
+/** Options for an accept made on a player's behalf (the correspondence host route). */
+export type AcceptSeekOptions = {
+  // Play the host: the host and the player get the host template and the
+  // player's receipt instead of the generic start emails (#1057).
+  hostGame?: boolean;
 };
 
 export async function createSeekResult(
@@ -635,6 +651,20 @@ export async function createSeekResult(
       source,
     });
   }
+  // A directed challenge mails its target (#1057), unless the account turned
+  // off correspondence game emails. Never awaited.
+  if (targetUserId && expiresAt && !options.skipChallengeEmail) {
+    notifyCorrespondenceChallenge({
+      seekId: id,
+      gameSpecId,
+      targetUserId,
+      challengerName: user.displayName || user.handle,
+      challengerHandle: user.handle || null,
+      daysPerMove,
+      rated,
+      expiresAt,
+    });
+  }
   return {
     status: 201,
     body: {
@@ -698,6 +728,7 @@ export async function acceptSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,
+  options: AcceptSeekOptions = {},
 ): Promise<SeekRouteResult> {
   if (persistence.isPlayDisabled(user)) {
     return { status: 403, body: { error: 'play_disabled' } };
@@ -820,7 +851,24 @@ export async function acceptSeekResult(
   // taken. Fire-and-forget on purpose: the seated game is the durable outcome,
   // so a mail provider outage must never turn a successful accept into an error
   // for the accepter, who is right here watching this response.
-  notifyCorrespondenceStart(correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide));
+  // #1057: the accepter gets a start email too. Play the host swaps both for
+  // its own pair: the host's "new game" email and the player's receipt.
+  const acceptedNotice = {
+    roomId: created.room.id,
+    gameSpecId: seek.gameSpecId,
+    daysPerMove: seek.daysPerMove,
+    creatorUserId: seek.creatorUserId,
+    accepter: { id: user.id, displayName: user.displayName, handle: user.handle },
+    accepterOnMove: accepterSide === 'first',
+  };
+  if (options.hostGame) {
+    notifyCorrespondenceHostStart(acceptedNotice);
+  } else {
+    notifyCorrespondenceStart(
+      correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide),
+    );
+    notifyCorrespondenceJoinedStart(acceptedNotice);
+  }
   const roomRated = created.room.rated === true;
   if ((seek.rated === true) !== roomRated) {
     // Unreachable while the conformance test holds (every isCorrespondenceRatedSpec
@@ -1011,6 +1059,10 @@ async function viewSeek(
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
+  // The creator's page of a directed challenge says whether the target was
+  // emailed (#1057): their current email switch, never the reason it is off.
+  const target =
+    view.isMine && seek.targetUserId ? await challengeTargetStatus(seek.targetUserId) : null;
   writeJson(response, 200, {
     id: seek.id,
     gameSpecId: seek.gameSpecId,
@@ -1020,6 +1072,9 @@ async function viewSeek(
     visibility: seek.visibility,
     challengerName: seek.creatorName,
     challengerHandle: seek.creatorHandle ?? null,
+    ...(target
+      ? { targetName: target.name, targetHandle: target.handle, targetEmailed: target.emailed }
+      : {}),
     isMine: view.isMine,
     canAccept: view.canAccept,
     canDecline: view.canDecline,

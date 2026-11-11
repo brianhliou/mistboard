@@ -600,14 +600,41 @@ export async function getClosedCorrespondenceSeekSpecId(seekId: string): Promise
  */
 export async function correspondenceStartRecipient(
   userId: string,
-): Promise<{ email: string; locale: string | null } | null> {
-  const { rows } = await getPool().query<{ email: string; locale: string | null }>(
-    `SELECT email, locale FROM users
+): Promise<{ email: string; locale: string | null; turnDigest: boolean } | null> {
+  const { rows } = await getPool().query<{
+    email: string;
+    locale: string | null;
+    turn_digest: boolean;
+  }>(
+    `SELECT email, locale,
+            COALESCE((account_preferences->>'correspondenceTurnDigest')::boolean, true)
+              AS turn_digest
+     FROM users
      WHERE id = $1
        AND email IS NOT NULL
        AND closed_at IS NULL
        AND COALESCE((account_preferences->>'correspondenceStartEmail')::boolean, true)`,
     [userId],
   );
-  return rows[0] ? { email: rows[0].email, locale: rows[0].locale } : null;
+  const row = rows[0];
+  // turnDigest: whether the daily "games waiting on your move" email is on, so a
+  // start email promises a reminder only to a player who will get one.
+  return row ? { email: row.email, locale: row.locale, turnDigest: row.turn_digest } : null;
+}
+
+/**
+ * How a correspondence email names a player: the display name (or handle), plus
+ * the handle only when their profile may be linked (linkableHandleSql). Null for
+ * an unknown id. Carries no email address.
+ */
+export async function correspondenceUserName(
+  userId: string,
+): Promise<{ name: string; handle: string | null } | null> {
+  const { rows } = await getPool().query<{ name: string; handle: string | null }>(
+    `SELECT COALESCE(u.display_name, u.handle) AS name, ${linkableHandleSql('u')} AS handle
+     FROM users u
+     WHERE u.id = $1`,
+    [userId],
+  );
+  return rows[0] ? { name: rows[0].name, handle: rows[0].handle ?? null } : null;
 }
