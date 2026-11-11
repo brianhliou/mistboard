@@ -1,5 +1,3 @@
-import { applyXiangqiRecordMove, createInitialXiangqiState, type XiangqiSquare } from '@mistboard/game';
-import { xqHalfBoardThumbnailSvg } from '../diagrams.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 import type { Article } from '../types.js';
 
@@ -560,35 +558,9 @@ const G_M_143873: XiangqiReplaySpec = {
   }
 };
 
-const THUMBNAIL_GAME_RECORD: XiangqiReplaySpec = {
-  "iccs": "c3c4 b7c7 h2e2 c9e7 h0g2 c6c5 i0h0 c5c4 b0a2 b9d8 h0h4 d8c6 e2e6 d9e8 c0e2 c4b4 a3a4 h9g7 e6f6 b4b3 b2d2 i9h9 a2b4 c6b4 h4b4 a9d9 d0e1 b3c3 b4b6 g6g5 a0a3 c3c2 d2d0 g7f5 a3c3 c2b2 e3e4 h7g7 f6g6 h9h3 b6b2 f5g3 c3g3 h3g3 g6g3 g7g3 b2b3 d9d1 d0a0 d1a1 a0c0 g5g4 g0i2 c7c2 e2g4 a1a0 c0d0 a0a4 b3g3",
-  "red": "Meng Fanrui",
-  "black": "Luo Hangyuan",
-  "event": "2026 Shanghai Cup",
-  "resultText": "1-0"
-};
-
-// Card art: THUMBNAIL_GAME_RECORD after 36 plies, replayed through the kernel
-// from the record above (an illegal move throws), bottom half from red's side.
-const THUMBNAIL_PLY = 36;
-const THUMBNAIL = (): string => {
-  let state = createInitialXiangqiState('meng-fanrui-thumb');
-  for (const tok of THUMBNAIL_GAME_RECORD.iccs.trim().split(/\s+/).slice(0, THUMBNAIL_PLY)) {
-    const sq = (c: string) => `${c[0]}${Number(c[1]) + 1}` as XiangqiSquare;
-    const next = applyXiangqiRecordMove(state, { from: sq(tok.slice(0, 2)), to: sq(tok.slice(2, 4)) });
-    if (next === state) throw new Error(`meng-fanrui thumbnail: illegal move ${tok}`);
-    state = next;
-  }
-  return xqHalfBoardThumbnailSvg({
-    state,
-    half: 'bottom',
-    perspective: 'red',
-    ariaLabel: "A position from Meng Fanrui's win with red over Luo Hangyuan at the 2026 Shanghai Cup.",
-  });
-};
-
 export const mengFanruiArticle: Article = {
   slug: "meng-fanrui",
+  contactNote: true,
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
@@ -600,7 +572,11 @@ export const mengFanruiArticle: Article = {
   showSummaryOnPage: false,
   status: "draft",
   publishedAt: "2026-11-18",
-  thumbnail: { kind: 'svg', svg: THUMBNAIL },
+  thumbnail: {
+    kind: 'image',
+    src: '/article-thumbs/meng-fanrui-2025-face.jpg',
+    alt: 'Meng Fanrui in glasses and a black jacket at the board.',
+  },
   audience: "Xiangqi players looking up Meng Fanrui, his year-end title and his games. English source for the usual reviewed English and Chinese editions.",
   readNext: ["yin-sheng","tang-dan","tony-fung-ga-zen"],
   tldr: ["Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.","In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.","Three full wins with both colours. At each marked move the engine's best candidates branch off the game, with the opponent's close replies nested under them."],
