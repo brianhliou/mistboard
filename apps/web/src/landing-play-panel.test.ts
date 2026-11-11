@@ -24,7 +24,8 @@ const flush = async (): Promise<void> => {
 };
 
 function row(board: HTMLElement, spec: string, kind: 'bot' | 'person' = 'bot'): HTMLElement {
-  const el = board.querySelector<HTMLElement>(`.pp-row-${kind}[data-game-spec="${spec}"]`);
+  const selector = kind === 'bot' ? '.pp-row-bot' : '.pp-person-rows .pp-tile';
+  const el = board.querySelector<HTMLElement>(`${selector}[data-game-spec="${spec}"]`);
   if (!el) throw new Error(`no ${kind} row for ${spec}`);
   return el;
 }
@@ -38,13 +39,28 @@ function stepValue(el: HTMLElement, which: 'level' | 'clock'): string {
   return value?.querySelector('.pp-step-main')?.firstChild?.textContent ?? '';
 }
 
+// The shared pace bar above the Play a person tiles.
+function paceBar(board: HTMLElement): HTMLElement {
+  const el = board.querySelector<HTMLElement>('.pp-view-person .pp-pace');
+  if (!el) throw new Error('no pace bar');
+  return el;
+}
+
+function tiles(board: HTMLElement): HTMLElement[] {
+  return [...board.querySelectorAll<HTMLElement>('.pp-person-rows .pp-tile')];
+}
+
+function tileNote(tile: HTMLElement): string | null {
+  return tile.querySelector('.pp-tile-meta')?.textContent ?? null;
+}
+
 function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
   for (let i = 0; i < times; i++) {
     el.querySelectorAll<HTMLButtonElement>(`.pp-step-${which} .pp-step-btn`)[1]!.click();
   }
 }
 
-// Person rows open on 3 days per move (#1058); a test of the live search picks 5+5 the
+// Signed in, Play a person opens on 3 days per move (#1058); a test of the live search picks 5+5 the
 // way a returning visitor's saved pace does.
 function rememberLivePace(): void {
   localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ personFamily: 'live' }));
@@ -201,9 +217,7 @@ describe('homepage play panel', () => {
         }
       }
     }
-    const people = [...board.querySelectorAll<HTMLElement>('.pp-row-person')].map(
-      (el) => el.dataset.gameSpec,
-    );
+    const people = tiles(board).map((el) => el.dataset.gameSpec);
     expect(people).toEqual(
       orderPanelSpecs(
         enabledLandingVariantGameSpecs('pvp', 'en')
@@ -253,9 +267,9 @@ describe('homepage play panel', () => {
       },
     ]);
     const board = buildPlayPanel('en', { hydrate: false });
-    for (const kind of ['bot', 'person']) {
+    for (const selector of ['.pp-row-bot', '.pp-person-rows .pp-tile']) {
       expect(
-        board.querySelector(`.pp-row-${kind}[data-game-spec="three-kingdoms-banqi"]`) !== null,
+        board.querySelector(`${selector}[data-game-spec="three-kingdoms-banqi"]`) !== null,
       ).toBe(flag === 'true');
     }
   });
@@ -596,9 +610,6 @@ describe('homepage play panel', () => {
     expect(desktop).toMatch(
       /\.landing-demo \.pp-view-computer \.pp-row \{\s*flex: 0 0 auto;\s*min-height: var\(--pp-row-height\);/,
     );
-    expect(css).toMatch(
-      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
-    );
     // No minimum leaks into the two-column or stacked layouts.
     expect(css.replace(desktop, '')).not.toContain('--pp-min-rows');
 
@@ -610,21 +621,32 @@ describe('homepage play panel', () => {
     expect(board.querySelector('.pp-card')).toBe(card);
   });
 
-  // The pace cell clips with an ellipsis: at 118px "3 days/move" read "3 days/…".
+  // The stepper clips with an ellipsis: at 118px "3 days/move" read "3 days/…".
   // Its text needs 81px at 13.5px and the two 22px arrows with their 3px gaps
-  // take 50, so every desktop person-row grid gives the pace track at least 131px.
-  it('gives the person pace cell room for the whole days label at desktop widths', () => {
+  // take 50, so the shared pace stepper is at least 131px wide.
+  it('gives the shared pace stepper room for the whole days label', () => {
     const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const width = Number(css.match(/\.pp-pace \.pp-step-clock \{\s*flex: 0 0 (\d+)px;/)?.[1]);
+    expect(width).toBeGreaterThanOrEqual(131);
+  });
+
+  // Play a person never scrolls (2026-10-27): the tiles share the height left
+  // under the open games, so on desktop their grid flexes and its rows shrink.
+  it('lets the tile grid give up height instead of scrolling on desktop', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const desktop = [...css.matchAll(/@media \(min-width: 641px\) \{([\s\S]*?)^\}/gm)]
+      .map((m) => m[1])
+      .join('\n');
+    expect(desktop).toMatch(
+      /\.pp-person-rows \{\s*flex: 1 1 auto;\s*min-height: 0;\s*grid-auto-rows: minmax\(min-content, 46px\);/,
+    );
+    expect(css).toMatch(
+      /\.pp-offers,\n\.pp-person-rows \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
+    );
     const phone = css.match(/@media \(max-width: 640px\) \{[\s\S]*$/)?.[0] ?? '';
-    const desktop = css.replace(phone, '');
-    const tracks = [
-      ...desktop.matchAll(/\.pp-row-person \{\s*grid-template-columns: ([^;]+);/g),
-    ].map((m) => m[1]!);
-    expect(tracks.length).toBeGreaterThanOrEqual(2);
-    for (const columns of tracks) {
-      const pace = Number(columns.match(/minmax\(0, 1fr\) (\d+)px/)?.[1]);
-      expect(pace, columns).toBeGreaterThanOrEqual(131);
-    }
+    expect(phone).toMatch(
+      /\.pp-offers,\n {2}\.pp-person-rows \{\s*grid-template-columns: minmax\(0, 1fr\);/,
+    );
   });
 
   // #543: .pp-name clips its overflow, so a line box shorter than the font's
@@ -658,7 +680,7 @@ describe('homepage play panel', () => {
     expect(person.hidden).toBe(true);
   });
 
-  it('only searches for a person from Find, never from a stray row click', () => {
+  it('only searches for a person from Find, never from a stray tile click', () => {
     const fetchSpy = vi.fn(async () => Response.json({}));
     vi.stubGlobal('fetch', fetchSpy);
     const board = buildPlayPanel('en', { hydrate: false });
@@ -927,7 +949,11 @@ describe('homepage play panel', () => {
     expect(jieqiName?.lastElementChild?.className).toBe('pp-playing');
     const person = row(board, 'xiangqi', 'person');
     expect(person.classList.contains('has-waiting')).toBe(true);
-    expect(person.querySelector('.pp-waiting')?.textContent).toBe('1 waiting');
+    expect(row(board, 'jieqi', 'person').classList.contains('has-waiting')).toBe(false);
+    // The open game is a chip above the tiles.
+    const chip = board.querySelector<HTMLElement>('.pp-offers .pp-offer');
+    expect(chip?.dataset.gameSpec).toBe('xiangqi');
+    expect(chip?.querySelector('.pp-tile-meta')?.textContent).toContain('5+5');
     board.remove();
     await vi.advanceTimersByTimeAsync(3_000);
   });
@@ -1010,13 +1036,21 @@ describe('homepage play panel', () => {
     expect(labels).toEqual(['Casual', 'Rated']);
   });
 
-  it('opens a signed-in person row on 3 days per move, with no bot-offer note', () => {
+  it('opens signed in on 3 days per move for every tile, with no bot-offer note', () => {
     setResolvedSignedIn(true);
     const board = buildPlayPanel('en', { hydrate: false });
+    expect(stepValue(paceBar(board), 'clock')).toBe('3 days/move');
+    const days = paceBar(board).querySelector('[data-family="days"]');
+    expect(days?.getAttribute('aria-pressed')).toBe('true');
     const person = row(board, 'xiangqi', 'person');
-    expect(person.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('3 days/move');
     expect(person.querySelector('.pp-act')?.textContent).toBe('+ Post');
+    expect(person.querySelector('.pp-act')?.getAttribute('aria-label')).toBe(
+      '+ Post: Xiangqi · 3 days/move',
+    );
+    expect(tileNote(person)).toBeNull();
     expect(board.querySelector('.pp-note')?.textContent).toBe('');
+    // The pace bar is one control: no tile has its own stepper.
+    expect(board.querySelectorAll('.pp-view-person .pp-step-clock')).toHaveLength(1);
     // Rated has no days while rated correspondence is held, so it opens on 5+5
     // and says why the days went away.
     setRatedModeEnabled(true);
@@ -1024,8 +1058,11 @@ describe('homepage play panel', () => {
     [...signedIn.querySelectorAll<HTMLButtonElement>('.pp-mode-btn')]
       .find((el) => el.textContent === 'Rated')!
       .click();
-    const rated = row(signedIn, 'xiangqi', 'person');
-    expect(rated.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('5+5');
+    expect(stepValue(paceBar(signedIn), 'clock')).toBe('5+5');
+    expect(
+      paceBar(signedIn).querySelector<HTMLButtonElement>('[data-family="days"]')?.disabled,
+    ).toBe(true);
+    expect(row(signedIn, 'xiangqi', 'person').querySelector('.pp-act')?.textContent).toBe('Find');
     expect(signedIn.querySelector('.pp-note')?.textContent).toBe(
       'Rated: 1+1, 3+2, 5+5, 10+5. Correspondence is casual for now.',
     );
@@ -1034,93 +1071,142 @@ describe('homepage play panel', () => {
   it('offers a signed-out visitor live clocks only, opening on 5+5 with Find', () => {
     setResolvedSignedIn(false);
     // An old pick of days per move on this device does not bring days back.
-    localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ people: { xiangqi: '3d' } }));
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({ people: { xiangqi: '3d' }, personFamily: 'days', personPace: '7d' }),
+    );
     expect(panelPersonPaces('xiangqi', 'casual', false).every((p) => p.kind === 'live')).toBe(true);
     const board = buildPlayPanel('en', { hydrate: false });
-    const rows = [...board.querySelectorAll<HTMLElement>('.pp-row-person')];
-    expect(rows.length).toBeGreaterThan(1);
-    for (const person of rows) {
-      const spec = person.dataset.gameSpec!;
-      const paces = panelPersonPaces(spec as never, 'casual', false);
-      if (paces.some((p) => p.kind === 'live' && p.id === '5m5')) {
-        expect(stepValue(person, 'clock'), spec).toBe('5+5');
-      }
-      expect(person.querySelector('.pp-act')?.textContent, spec).toBe('Find');
-      // Walk the whole stepper: no days per move anywhere.
-      clickNext(person, 'clock', 12);
-      expect(stepValue(person, 'clock'), spec).not.toMatch(/day/);
+    const bar = paceBar(board);
+    expect(stepValue(bar, 'clock')).toBe('5+5');
+    const days = bar.querySelector<HTMLButtonElement>('[data-family="days"]')!;
+    expect(days.disabled).toBe(true);
+    expect(days.title).toBe('Sign in for days per move');
+    const hint = bar.querySelector<HTMLAnchorElement>('.pp-pace-hint');
+    expect(hint?.textContent).toBe('Sign in for days per move');
+    expect(hint?.getAttribute('href')).toContain('/account?tab=login');
+    expect(tiles(board).length).toBeGreaterThan(1);
+    for (const person of tiles(board)) {
+      expect(person.querySelector('.pp-act')?.textContent, person.dataset.gameSpec).toBe('Find');
+    }
+    // Walk the whole stepper: no days per move anywhere, on the bar or a tile.
+    clickNext(bar, 'clock', 12);
+    expect(stepValue(paceBar(board), 'clock')).not.toMatch(/day/);
+    for (const person of tiles(board)) {
+      expect(person.querySelector('.pp-act')?.getAttribute('aria-label')).not.toMatch(/day/);
     }
   });
 
   it('labels one day per move in the singular', () => {
     setResolvedSignedIn(true);
     const board = buildPlayPanel('en', { hydrate: false });
-    const person = row(board, 'xiangqi', 'person');
     const prev = () =>
-      person.querySelectorAll<HTMLButtonElement>('.pp-step-clock .pp-step-btn')[0]!.click();
+      paceBar(board).querySelectorAll<HTMLButtonElement>('.pp-step-clock .pp-step-btn')[0]!.click();
     prev();
     prev();
-    expect(stepValue(person, 'clock')).toBe('1 day/move');
+    expect(stepValue(paceBar(board), 'clock')).toBe('1 day/move');
   });
 
-  it('remembers one pace family for every person row, keeping a row its own pick', () => {
+  it('moves every tile with the one shared pace, and names a game that lacks it', () => {
+    // Xiangqi Mahjong plays two live clocks and no days per move.
+    vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
     setResolvedSignedIn(true);
     rememberLivePace();
     const board = buildPlayPanel('en', { hydrate: false });
-    const others = () =>
-      [...board.querySelectorAll<HTMLElement>('.pp-row-person')].filter(
-        (el) => el.dataset.gameSpec !== 'xiangqi',
+    expect(stepValue(paceBar(board), 'clock')).toBe('5+5');
+    for (const el of tiles(board)) {
+      expect(el.querySelector('.pp-act')?.getAttribute('aria-label'), el.dataset.gameSpec).toMatch(
+        / · 5\+5$/,
       );
-    for (const el of others())
-      expect(stepValue(el, 'clock'), el.dataset.gameSpec).not.toMatch(/day/);
-    // Step Xiangqi from 5+5 up through the live clocks onto the first days pace.
-    const live = panelPersonPaces('xiangqi', 'casual', true).filter((p) => p.kind === 'live');
-    const fiveFive = live.findIndex((p) => p.kind === 'live' && p.id === '5m5');
-    clickNext(row(board, 'xiangqi', 'person'), 'clock', live.length - fiveFive);
-    expect(stepValue(row(board, 'xiangqi', 'person'), 'clock')).toBe('1 day/move');
-    // Every other row moved to days, on the family default, and posts.
-    const checkDays = (panel: HTMLElement): void => {
-      for (const el of [...panel.querySelectorAll<HTMLElement>('.pp-row-person')]) {
-        const spec = el.dataset.gameSpec!;
-        if (spec === 'xiangqi') continue;
-        const hasDays = panelPersonPaces(spec as never, 'casual', true).some(
-          (p) => p.kind === 'days',
-        );
-        // Xiangqi Mahjong has no days per move; it stays on its live default.
-        expect(stepValue(el, 'clock'), spec).toBe(hasDays ? '3 days/move' : '5+5');
+      expect(tileNote(el), el.dataset.gameSpec).toBeNull();
+    }
+    // Days per move: every tile posts at 3 days, but Xiangqi Mahjong has no days
+    // per move and says which clock it plays instead.
+    paceBar(board).querySelector<HTMLButtonElement>('[data-family="days"]')!.click();
+    expect(stepValue(paceBar(board), 'clock')).toBe('3 days/move');
+    const mahjongSeen = tiles(board).some((el) => el.dataset.gameSpec === 'xiangqi-mahjong');
+    expect(mahjongSeen).toBe(true);
+    for (const el of tiles(board)) {
+      const spec = el.dataset.gameSpec!;
+      const hasDays = panelPersonPaces(spec as never, 'casual', true).some(
+        (p) => p.kind === 'days',
+      );
+      const label = el.querySelector('.pp-act')?.getAttribute('aria-label') ?? '';
+      if (hasDays) {
+        expect(label, spec).toMatch(/ · 3 days\/move$/);
+        expect(tileNote(el), spec).toBeNull();
+      } else {
+        expect(el.querySelector('.pp-act')?.textContent, spec).toBe('Find');
+        expect(tileNote(el), spec).toBe('5+5 only');
       }
-    };
-    expect(others().length).toBeGreaterThan(1);
-    checkDays(board);
-    // A fresh page keeps the family and Xiangqi's own pick.
-    const again = buildPlayPanel('en', { hydrate: false });
-    expect(stepValue(row(again, 'xiangqi', 'person'), 'clock')).toBe('1 day/move');
-    checkDays(again);
-    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1')!);
-    expect(stored.personFamily).toBe('days');
-    expect(stored.personPicks).toEqual({ xiangqi: '1d' });
+    }
+    expect(tileNote(row(board, 'xiangqi-mahjong', 'person'))).toBe('5+5 only');
+    // Walk every live clock: a tile that has it plays it with no note; one
+    // that lacks it plays its nearest live clock and says so.
+    paceBar(board).querySelector<HTMLButtonElement>('[data-family="live"]')!.click();
+    const btns = () =>
+      paceBar(board).querySelectorAll<HTMLButtonElement>('.pp-step-clock .pp-step-btn');
+    for (let i = 0; i < 12; i++) btns()[0]!.click();
+    const seen = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      const shown = stepValue(paceBar(board), 'clock');
+      seen.add(shown);
+      for (const el of tiles(board)) {
+        const spec = el.dataset.gameSpec!;
+        const label = el.querySelector('.pp-act')?.getAttribute('aria-label') ?? '';
+        const note = tileNote(el);
+        if (label.endsWith(` · ${shown}`)) expect(note, `${spec} ${shown}`).toBeNull();
+        else expect(note, `${spec} ${shown}: ${label}`).toMatch(/^\S+ instead$/);
+      }
+      btns()[1]!.click();
+    }
+    expect(seen.size).toBeGreaterThan(2);
   });
 
-  it('reads old or broken panel storage without crashing, and drops the per-row record', () => {
+  it('remembers the one shared pace on this device', () => {
     setResolvedSignedIn(true);
-    for (const raw of ['null', '[]', '7', '{"personPicks":5,"personFamily":"weekly"}']) {
+    rememberLivePace();
+    const board = buildPlayPanel('en', { hydrate: false });
+    // Days per move, then down from 3 days to 1.
+    paceBar(board).querySelector<HTMLButtonElement>('[data-family="days"]')!.click();
+    paceBar(board).querySelectorAll<HTMLButtonElement>('.pp-step-clock .pp-step-btn')[0]!.click();
+    paceBar(board).querySelectorAll<HTMLButtonElement>('.pp-step-clock .pp-step-btn')[0]!.click();
+    expect(stepValue(paceBar(board), 'clock')).toBe('1 day/move');
+    const again = buildPlayPanel('en', { hydrate: false });
+    expect(stepValue(paceBar(again), 'clock')).toBe('1 day/move');
+    expect(row(again, 'jieqi', 'person').querySelector('.pp-act')?.getAttribute('aria-label')).toBe(
+      '+ Post: Jieqi · 1 day/move',
+    );
+    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1')!);
+    expect(stored.personFamily).toBe('days');
+    expect(stored.personPace).toBe('1d');
+    expect(stored.personPicks).toBeUndefined();
+  });
+
+  it('reads old or broken panel storage without crashing, and drops the per-row records', () => {
+    setResolvedSignedIn(true);
+    for (const raw of ['null', '[]', '7', '{"personPace":5,"personFamily":"weekly"}']) {
       localStorage.setItem('mistboard.playPanel.v1', raw);
       const board = buildPlayPanel('en', { hydrate: false });
-      expect(stepValue(row(board, 'xiangqi', 'person'), 'clock'), raw).toBe('3 days/move');
+      expect(stepValue(paceBar(board), 'clock'), raw).toBe('3 days/move');
     }
-    // The per-row record from before the shared family is ignored.
+    // The per-row records from before the shared pace are ignored.
     localStorage.setItem(
       'mistboard.playPanel.v1',
-      JSON.stringify({ tab: 'person', people: { xiangqi: '5m5', jieqi: '7d' } }),
+      JSON.stringify({
+        tab: 'person',
+        people: { xiangqi: '5m5' },
+        personPicks: { jieqi: '7d' },
+      }),
     );
     const board = buildPlayPanel('en', { hydrate: false });
-    expect(stepValue(row(board, 'xiangqi', 'person'), 'clock')).toBe('3 days/move');
-    expect(stepValue(row(board, 'jieqi', 'person'), 'clock')).toBe('3 days/move');
-    clickNext(row(board, 'jieqi', 'person'), 'clock');
+    expect(stepValue(paceBar(board), 'clock')).toBe('3 days/move');
+    clickNext(paceBar(board), 'clock');
     const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1')!);
     expect(stored.people).toBeUndefined();
+    expect(stored.personPicks).toBeUndefined();
     expect(stored.tab).toBe('person');
-    expect(stored.personPicks).toEqual({ jieqi: '7d' });
+    expect(stored.personPace).toBe('7d');
   });
 
   it('posts a days-per-move seek straight from + Post and lands on /correspondence', async () => {
@@ -1134,10 +1220,9 @@ describe('homepage play panel', () => {
     try {
       const board = buildPlayPanel('en', { hydrate: false });
       document.body.append(board);
-      const jieqi = row(board, 'jieqi', 'person');
-      clickNext(jieqi, 'clock'); // 3 days -> 7 days
-      expect(stepValue(jieqi, 'clock')).toBe('7 days/move');
-      jieqi.querySelector<HTMLButtonElement>('.pp-act')!.click();
+      clickNext(paceBar(board), 'clock'); // 3 days -> 7 days
+      expect(stepValue(paceBar(board), 'clock')).toBe('7 days/move');
+      row(board, 'jieqi', 'person').querySelector<HTMLButtonElement>('.pp-act')!.click();
       await flush();
       expect(document.querySelector('.landing-setup-overlay')).toBeNull();
       const post = fetchSpy.mock.calls.find(([url]) => url === '/api/correspondence/seeks');
@@ -1181,6 +1266,42 @@ describe('homepage play panel', () => {
       setRoomNavigator(null);
       document.body.replaceChildren();
     }
+  });
+
+  it('shows four open games at most: past four, three and a link to the rest', async () => {
+    vi.useFakeTimers();
+    rememberLivePace();
+    const request = (gameSpecId: string) => ({
+      gameSpecId,
+      rated: false,
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      waitingMs: 1_000,
+    });
+    const specs = ['xiangqi', 'jieqi', 'banqi', 'xiangqi', 'jieqi', 'banqi'];
+    let open = specs.slice(0, 4);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string) => {
+        if (input === '/api/lobby') return Response.json({ requests: open.map(request) });
+        return Response.json({});
+      }),
+    );
+    const board = buildPlayPanel('en');
+    document.body.append(board);
+    await vi.advanceTimersByTimeAsync(0);
+    await flush();
+    expect(board.querySelectorAll('.pp-offers .pp-offer')).toHaveLength(4);
+    expect(board.querySelector('.pp-offers-more')).toBeNull();
+    open = specs;
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(board.querySelectorAll('.pp-offers .pp-offer')).toHaveLength(3);
+    const more = board.querySelector<HTMLAnchorElement>('.pp-offers-more');
+    expect(more?.textContent).toBe('+3 more');
+    expect(more?.getAttribute('href')).toBe('/correspondence');
+    expect(board.querySelector('.pp-view-person .pp-section')?.textContent).toBe('Open games · 6');
+    board.remove();
+    await vi.advanceTimersByTimeAsync(3_000);
   });
 
   it('narrows rated to the rated clocks; days per move are rated where correspondence rates', () => {

@@ -19,7 +19,7 @@ import { correspondenceRatedAvailable, isCorrespondenceSpecFor } from './corresp
 import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import {
   type LandingBotRosterPlayOptions,
   type LandingBotRung,
@@ -89,13 +89,13 @@ type StoredPanel = {
   tab?: PanelTab;
   mode?: PersonMode;
   bots?: Record<string, { botId?: string; tc?: TimeControlId }>;
-  /** Live clocks or days per move, remembered for every person row at once
-   *  (2026-11-11): a pick on one row moves the whole panel to that family. */
+  /** Live clocks or days per move, shared by every game in Play a person. */
   personFamily?: PaceFamily;
-  /** Each row's own pick (a `paceKey`), used only while it is in the family. */
+  /** The shared pace bar's pick (a `paceKey`), used while it is in the family. */
+  personPace?: string;
+  /** Earlier per-row picks (`people` before 2026-11-11, `personPicks` until
+   *  the shared pace bar). Ignored, and dropped on the next write. */
   personPicks?: Record<string, string>;
-  /** Before 2026-11-11, one pick per row with no shared family. Ignored, and
-   *  dropped on the next write. */
   people?: Record<string, string>;
   /** Before 2026-10-24 the Play again record, written only by this panel's own
    *  Play button. Read as a fallback until a bot game writes the shared one. */
@@ -313,6 +313,23 @@ export function panelPersonPaces(
       ? DAYS_PER_MOVE_OPTIONS.map((d) => ({ kind: 'days', days: d }))
       : [];
   return [...live, ...days];
+}
+
+/** Every pace the shared bar can offer for one family: the union of the
+ *  games' paces, fastest first. */
+export function personFamilyPaces(
+  specs: readonly LandingGameSpecId[],
+  family: PaceFamily,
+  mode: PersonMode,
+  signedIn: boolean,
+): PersonPace[] {
+  const seen = new Map<string, PersonPace>();
+  for (const gameSpecId of specs)
+    for (const pace of panelPersonPaces(gameSpecId, mode, signedIn))
+      if (pace.kind === family && !seen.has(paceKey(pace))) seen.set(paceKey(pace), pace);
+  const order = (pace: PersonPace): number =>
+    pace.kind === 'live' ? TIME_CONTROLS.findIndex((tc) => tc.id === pace.id) : pace.days;
+  return [...seen.values()].sort((a, b) => order(a) - order(b));
 }
 
 export function buildPlayPanel(
@@ -749,12 +766,20 @@ export function buildPlayPanel(
   };
   renderModeSlot();
 
+  // One pace bar for the whole tab (2026-11-11): Live or Days per move and
+  // one stepper, then the open games, then every variant as a tile that
+  // starts a game at that pace. The tab fits its card without scrolling.
   const personScroll = document.createElement('div');
   personScroll.className = 'pp-scroll';
+  const paceSlot = document.createElement('div');
+  paceSlot.className = 'pp-pace';
   const offersSlot = document.createElement('div');
+  const startHead = document.createElement('div');
+  startHead.className = 'pp-section';
+  startHead.textContent = t('lobby.panelStartOne', {}, locale);
   const personRows = document.createElement('div');
   personRows.className = 'pp-person-rows';
-  personScroll.append(offersSlot, personRows);
+  personScroll.append(paceSlot, offersSlot, startHead, personRows);
 
   const searchBar = document.createElement('div');
   searchBar.className = 'pp-search';
@@ -778,23 +803,26 @@ export function buildPlayPanel(
   };
   searchCancel.addEventListener('click', stopSearch);
 
-  // The pace family and each row's pick, mirrored in memory so the panel
-  // keeps them when storage is blocked. Nothing stored: a signed-in player
-  // opens on days per move (a seek waits for someone instead of timing out to
-  // a bot offer), a visitor on live clocks, the only pace open to a guest.
+  // The shared pace (family plus one pick), mirrored in memory so the panel
+  // keeps it when storage is blocked. Nothing stored: a signed-in player opens
+  // on days per move (a seek waits for someone instead of timing out to a bot
+  // offer), a visitor on live clocks, the only pace open to a guest.
   let personFamily: PaceFamily =
     stored.personFamily === 'live' || stored.personFamily === 'days'
       ? stored.personFamily
       : signedIn
         ? 'days'
         : 'live';
-  const personPicks = new Map<string, string>(
-    stored.personPicks && typeof stored.personPicks === 'object'
-      ? Object.entries(stored.personPicks).filter(
-          (entry): entry is [string, string] => typeof entry[1] === 'string',
-        )
-      : [],
-  );
+  let personPick: string | undefined =
+    typeof stored.personPace === 'string' ? stored.personPace : undefined;
+  const savePace = (): void =>
+    writeStored((s) => {
+      s.personFamily = personFamily;
+      if (personPick) s.personPace = personPick;
+      else delete s.personPace;
+      delete s.personPicks;
+      delete s.people;
+    });
 
   const renderMode = (): void => {
     casualBtn.classList.toggle('is-active', mode === 'casual');
@@ -821,7 +849,7 @@ export function buildPlayPanel(
                   { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
                   locale,
                 ),
-                // Days per move leave the rows in Rated while rated
+                // Days per move leave the tiles in Rated while rated
                 // correspondence is held; say why instead of dropping them silently.
                 ...(isCorrespondenceRatedModeEnabled()
                   ? []
@@ -851,30 +879,112 @@ export function buildPlayPanel(
     renderPerson();
   });
 
-  const waitingIn = (gameSpecId: string, pace?: PersonPace): number =>
+  const waitingIn = (gameSpecId: string, pace: PersonPace): number =>
     othersRequests().filter(
       (r) =>
         (r.gameSpecId ?? 'dark-chess') === gameSpecId &&
         (mode === 'rated' ? r.rated !== false : r.rated === false) &&
-        (!pace ||
-          (pace.kind === 'live' &&
-            LANDING_TIME_PRESETS.some(
-              (p) =>
-                p.id === pace.id &&
-                p.initialMs === r.timeControl.initialMs &&
-                p.incrementMs === r.timeControl.incrementMs,
-            ))),
+        pace.kind === 'live' &&
+        LANDING_TIME_PRESETS.some(
+          (p) =>
+            p.id === pace.id &&
+            p.initialMs === r.timeControl.initialMs &&
+            p.incrementMs === r.timeControl.incrementMs,
+        ),
     ).length;
 
+  // ── The shared pace ──
+  const shared = (): { family: PaceFamily; list: PersonPace[]; pace: PersonPace | undefined } => {
+    const own = personFamilyPaces(ordered(), personFamily, mode, signedIn);
+    // A family no tile can play here (days signed out, or in Rated while rated
+    // correspondence is held) shows the other one; the stored family stays.
+    const family: PaceFamily =
+      own.length > 0 ? personFamily : personFamily === 'live' ? 'days' : 'live';
+    const list = own.length > 0 ? own : personFamilyPaces(ordered(), family, mode, signedIn);
+    return { family, list, pace: list[personPaceIndex(list, family, personPick)] };
+  };
+
+  const renderPace = (): void => {
+    const { family, list, pace } = shared();
+    const toggle = document.createElement('span');
+    toggle.className = 'pp-mode pp-pace-family';
+    for (const kind of ['live', 'days'] as const) {
+      const btn = button(
+        'pp-pace-btn',
+        t(kind === 'live' ? 'lobby.panelPaceLive' : 'lobby.panelPaceDays', {}, locale),
+      );
+      btn.dataset.family = kind;
+      btn.classList.toggle('is-active', family === kind);
+      btn.setAttribute('aria-pressed', String(family === kind));
+      if (personFamilyPaces(ordered(), kind, mode, signedIn).length === 0) {
+        btn.disabled = true;
+        btn.title = !signedIn
+          ? t('lobby.panelDaysSignIn', {}, locale)
+          : t('lobby.panelRatedCorrespondenceCasual', {}, locale);
+      }
+      btn.addEventListener('click', () => {
+        if (family === kind) return;
+        personFamily = kind;
+        personPick = undefined;
+        savePace();
+        stopSearchForPace();
+        renderPace();
+        renderPersonRows();
+        paceSlot.querySelector<HTMLButtonElement>(`[data-family="${kind}"]`)?.focus({
+          preventScroll: true,
+        });
+      });
+      toggle.append(btn);
+    }
+    const step = stepper({
+      className: 'pp-step-clock',
+      count: list.length,
+      index: pace ? list.indexOf(pace) : 0,
+      render: (i) => ({ text: paceLabel(list[i]!), named: list[i]!.kind === 'days' }),
+      onChange: (i) => {
+        personPick = paceKey(list[i]!);
+        savePace();
+        stopSearchForPace();
+        renderPersonRows();
+      },
+      prevLabel: t('lobby.panelFaster', {}, locale),
+      nextLabel: t('lobby.panelSlower', {}, locale),
+    });
+    const parts: HTMLElement[] = [toggle, step];
+    if (!signedIn) {
+      const hint = document.createElement('a');
+      hint.className = 'pp-pace-hint';
+      hint.href = loginHrefForCurrentPage(locale);
+      hint.textContent = t('lobby.panelDaysSignIn', {}, locale);
+      parts.push(hint);
+    }
+    paceSlot.replaceChildren(...parts);
+  };
+
+  // A new pace withdraws a live search or clears a failed post, so every tile
+  // offers the pace now shown.
+  const stopSearchForPace = (): void => {
+    if (searching) stopSearch();
+  };
+
+  const paceLabel = (pace: PersonPace): string =>
+    pace.kind === 'live' ? compactLabel(pace.id) : daysPerMoveLabel(pace.days, locale);
+  const paceShort = (pace: PersonPace): string =>
+    pace.kind === 'live'
+      ? compactLabel(pace.id)
+      : t('lobby.panelDaysShort', { days: pace.days }, locale);
+
+  // ── Open games ──
+  const OFFER_CAP = 4;
   const renderOffers = (): void => {
-    const rows: HTMLElement[] = [];
+    const chips: HTMLElement[] = [];
     for (const request of othersRequests()) {
       if (mode === 'rated' ? request.rated === false : request.rated !== false) continue;
       const gameSpecId = request.gameSpecId ?? 'dark-chess';
       const join = button('pp-act pp-act-join', t('play.join', {}, locale));
       join.addEventListener('click', () => joinRequest(request, join, 'panel-offer'));
-      rows.push(
-        offerRow(
+      chips.push(
+        offerChip(
           gameSpecId,
           t('lobby.panelAnonymous', {}, locale),
           formatClock(request.timeControl),
@@ -882,9 +992,8 @@ export function buildPlayPanel(
         ),
       );
     }
-    // Each mode lists the correspondence seeks of its own kind, like the live rows.
+    // Each mode lists the correspondence seeks of its own kind, like the live offers.
     for (const seek of corrSeeks.filter((s) => (s.rated === true) === (mode === 'rated'))) {
-      const label = daysPerMoveLabel(seek.daysPerMove, locale);
       let action: HTMLElement;
       if (seek.isMine) {
         action = document.createElement('span');
@@ -894,7 +1003,7 @@ export function buildPlayPanel(
         // Join accepts in place and lands in the room, like the live offers
         // above (seek-accept.ts); signed out it signs in first.
         action = buildSeekAcceptAction({
-          className: 'pp-act',
+          className: 'pp-act pp-act-join',
           label: t('play.join', {}, locale),
           locale,
           seek,
@@ -902,31 +1011,40 @@ export function buildPlayPanel(
           surface: 'home-panel',
         });
       }
-      rows.push(
-        offerRow(
+      chips.push(
+        offerChip(
           seek.gameSpecId,
           seek.creatorName ?? t('lobby.panelAnonymous', {}, locale),
-          label,
+          t('lobby.panelDaysShort', { days: seek.daysPerMove }, locale),
           action,
           true,
           profileTargetFor({ handle: seek.creatorHandle }),
         ),
       );
     }
-    if (rows.length === 0) {
+    if (chips.length === 0) {
       offersSlot.replaceChildren();
       return;
     }
     const head = document.createElement('div');
     head.className = 'pp-section';
-    head.textContent = t('lobby.panelOpenGames', {}, locale);
-    const tail = document.createElement('div');
-    tail.className = 'pp-section';
-    tail.textContent = t('lobby.panelStartOne', {}, locale);
-    offersSlot.replaceChildren(head, ...rows, tail);
+    head.textContent = `${t('lobby.panelOpenGames', {}, locale)} · ${chips.length}`;
+    const grid = document.createElement('div');
+    grid.className = 'pp-offers';
+    // Past four, three games and a link to the rest, so the tiles keep the fold.
+    const shown = chips.length > OFFER_CAP ? OFFER_CAP - 1 : OFFER_CAP;
+    grid.append(...chips.slice(0, shown));
+    if (chips.length > shown) {
+      const more = document.createElement('a');
+      more.className = 'pp-offers-more';
+      more.href = localizedHref('/correspondence', locale);
+      more.textContent = t('lobby.panelMoreGames', { count: chips.length - shown }, locale);
+      grid.append(more);
+    }
+    offersSlot.replaceChildren(head, grid);
   };
 
-  const offerRow = (
+  const offerChip = (
     gameSpecId: string,
     who: string,
     pace: string,
@@ -935,160 +1053,145 @@ export function buildPlayPanel(
     // A correspondence seek's creator profile; live offers are anonymous.
     whoTarget: ProfileTarget | null = null,
   ): HTMLElement => {
-    const row = document.createElement('div');
-    row.className = 'pp-offer';
+    const chip = document.createElement('div');
+    chip.className = 'pp-offer';
+    chip.dataset.gameSpec = gameSpecId;
     const label = labelFor(gameSpecId);
     const text = document.createElement('span');
-    text.className = 'pp-name';
-    text.textContent = label;
-    const whoEl = document.createElement('small');
-    whoEl.append(' · ', playerNameEl(who, whoTarget, 'pp-offer-who'));
-    text.append(whoEl);
+    text.className = 'pp-tile-text';
+    const name = document.createElement('span');
+    name.className = 'pp-name';
+    name.textContent = label;
+    const meta = document.createElement('small');
+    meta.className = 'pp-tile-meta';
     const paceEl = document.createElement('span');
     paceEl.className = `pp-offer-pace${slow ? ' is-slow' : ''}`;
     paceEl.textContent = pace;
-    row.append(marker(gameSpecId, label), text, paceEl, action);
-    return row;
+    meta.append(paceEl, ' · ', playerNameEl(who, whoTarget, 'pp-offer-who'));
+    text.append(name, meta);
+    chip.append(marker(gameSpecId, label), text, action);
+    return chip;
+  };
+
+  // ── Start one ──
+  /** The pace a tile starts at: the shared one where the game has it, else
+   *  the game's nearest default, named on the tile. */
+  const tilePace = (
+    gameSpecId: LandingGameSpecId,
+  ): { pace: PersonPace; note: string | null } | null => {
+    const paces = panelPersonPaces(gameSpecId, mode, signedIn);
+    if (paces.length === 0) return null;
+    const { family, pace: sharedPace } = shared();
+    const key = sharedPace ? paceKey(sharedPace) : personPick;
+    const pace = paces[personPaceIndex(paces, family, key)]!;
+    if (sharedPace && paceKey(pace) === paceKey(sharedPace)) return { pace, note: null };
+    const note =
+      pace.kind === family
+        ? t('lobby.panelPaceInstead', { pace: paceShort(pace) }, locale)
+        : t('lobby.panelPaceOnly', { pace: paceShort(pace) }, locale);
+    return { pace, note };
+  };
+
+  const startPerson = (gameSpecId: LandingGameSpecId, pace: PersonPace, act: HTMLButtonElement) => {
+    if (pace.kind === 'days') {
+      // Post the seek straight away at this game and pace, casual (or rated
+      // where that is on), colour by lot; no setup dialog. The helper lands on
+      // /correspondence, where the seek is listed. A failure (no account, the
+      // seek limit) shows in the search bar.
+      searching?.();
+      searchBar.querySelector('.landing-engine-offer')?.remove();
+      searchStatus.replaceChildren();
+      searchBar.hidden = true;
+      // Holds the tiles still (the 3 s refresh redraws them only when nothing
+      // is in flight) so the button keeps its Posting/Try again.
+      searching = () => {};
+      void postCorrespondenceSeekFromPlay(
+        act,
+        searchStatus,
+        pace.days,
+        gameSpecId,
+        mode === 'rated',
+        locale,
+      ).then(() => {
+        if (searchStatus.isConnected && searchStatus.textContent) searchBar.hidden = false;
+      });
+      return;
+    }
+    const preset = LANDING_TIME_PRESETS.find((p) => p.id === pace.id);
+    if (!preset) return;
+    searching?.();
+    searchBar.querySelector('.landing-engine-offer')?.remove();
+    searchBar.hidden = false;
+    ownSeek = {
+      gameSpecId,
+      initialMs: preset.initialMs,
+      incrementMs: preset.incrementMs,
+      rated: mode === 'rated',
+    };
+    // Casual seekers get the 15 s "play a bot instead" offer; a rated seeker
+    // asked for a rated game, so it is not offered there.
+    const fallbackBot = mode === 'casual' ? ladderFor(gameSpecId) : [];
+    const policyBot = landingBotOffer(gameSpecId)?.botId;
+    const botId = fallbackBot.find((r) => r.botId === policyBot)?.botId ?? fallbackBot[0]?.botId;
+    searching = joinLobbyFromPlay(
+      act,
+      {
+        gameSpecId,
+        rated: mode === 'rated',
+        timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs },
+        preferredColor: 'random',
+      },
+      searchStatus,
+      locale,
+      undefined,
+      {
+        startSource: 'panel-person',
+        // Starting any other game from this page (a bot row, Play again, a
+        // Join) withdraws the seek; put the search bar away with it.
+        onWithdrawn: endSearch,
+        ...(botId && landingVariantSupportsPve(gameSpecId)
+          ? { botFallback: { botId, gameSpecId, preferredColor: 'random' as const } }
+          : {}),
+      },
+    );
   };
 
   const renderPersonRows = (): void => {
     personRows.replaceChildren();
     for (const gameSpecId of ordered()) {
-      const paces = panelPersonPaces(gameSpecId, mode, signedIn);
-      if (paces.length === 0) continue;
+      const start = tilePace(gameSpecId);
+      if (!start) continue;
+      const { pace, note: paceNote } = start;
       const label = labelFor(gameSpecId);
-      let at = personPaceIndex(paces, personFamily, personPicks.get(gameSpecId));
-
-      const row = document.createElement('div');
-      row.className = 'pp-row pp-row-person';
-      row.dataset.gameSpec = gameSpecId;
+      const tile = document.createElement('div');
+      tile.className = 'pp-tile';
+      tile.dataset.gameSpec = gameSpecId;
+      tile.classList.toggle('has-waiting', waitingIn(gameSpecId, pace) > 0);
+      const text = document.createElement('span');
+      text.className = 'pp-tile-text';
       const name = document.createElement('span');
       name.className = 'pp-name';
       name.textContent = label;
-      const waiting = document.createElement('span');
-      waiting.className = 'pp-waiting';
-      const act = button('pp-act', '');
-      const paint = (): void => {
-        const pace = paces[at]!;
-        const count = waitingIn(gameSpecId, pace);
-        const any = waitingIn(gameSpecId);
-        waiting.textContent = any > 0 ? t('play.waitingCount', { count: any }, locale) : '';
-        row.classList.toggle('has-waiting', count > 0);
-        act.textContent =
-          pace.kind === 'days'
-            ? `+ ${t('lobby.panelPost', {}, locale)}`
-            : t('lobby.panelFind', {}, locale);
-      };
-      const clockStep = stepper({
-        className: 'pp-step-clock',
-        count: paces.length,
-        index: at,
-        render: (i) => {
-          const pace = paces[i]!;
-          return pace.kind === 'live'
-            ? { text: compactLabel(pace.id) }
-            : { text: daysPerMoveLabel(pace.days, locale), named: true };
-        },
-        onChange: (i) => {
-          const forward = i > at;
-          at = i;
-          const pace = paces[i]!;
-          const familyChanged = pace.kind !== personFamily;
-          personFamily = pace.kind;
-          personPicks.set(gameSpecId, paceKey(pace));
-          writeStored((s) => {
-            s.personFamily = personFamily;
-            s.personPicks = Object.fromEntries(personPicks);
-            delete s.people;
-          });
-          if (!familyChanged) {
-            paint();
-            return;
-          }
-          // Crossing between live and days moves every row to the new family.
-          // Redraw them all and keep focus on the arrow that was pressed.
-          renderPersonRows();
-          const arrows = personRows.querySelectorAll<HTMLButtonElement>(
-            `.pp-row-person[data-game-spec="${gameSpecId}"] .pp-step-clock .pp-step-btn`,
-          );
-          const arrow = arrows[forward ? 1 : 0];
-          if (arrow && !arrow.disabled) arrow.focus({ preventScroll: true });
-          else arrows[forward ? 0 : 1]?.focus({ preventScroll: true });
-        },
-        prevLabel: t('lobby.panelFaster', {}, locale),
-        nextLabel: t('lobby.panelSlower', {}, locale),
-      });
-      act.addEventListener('click', () => {
-        const pace = paces[at]!;
-        if (pace.kind === 'days') {
-          // Post the seek straight away at this row's game and pace, casual
-          // (or rated where that is on), colour by lot; no setup dialog. The
-          // helper lands on /correspondence, where the seek is listed. A
-          // failure (no account, the seek limit) shows in the search bar.
-          searching?.();
-          searchBar.querySelector('.landing-engine-offer')?.remove();
-          searchStatus.replaceChildren();
-          searchBar.hidden = true;
-          // Holds the rows still (the 3 s refresh redraws them only when
-          // nothing is in flight) so the button keeps its Posting/Try again.
-          searching = () => {};
-          void postCorrespondenceSeekFromPlay(
-            act,
-            searchStatus,
-            pace.days,
-            gameSpecId,
-            mode === 'rated',
-            locale,
-          ).then(() => {
-            if (searchStatus.isConnected && searchStatus.textContent) searchBar.hidden = false;
-          });
-          return;
-        }
-        const preset = LANDING_TIME_PRESETS.find((p) => p.id === pace.id);
-        if (!preset) return;
-        searching?.();
-        searchBar.querySelector('.landing-engine-offer')?.remove();
-        searchBar.hidden = false;
-        ownSeek = {
-          gameSpecId,
-          initialMs: preset.initialMs,
-          incrementMs: preset.incrementMs,
-          rated: mode === 'rated',
-        };
-        // Casual seekers get the 15 s "play a bot instead" offer; a rated
-        // seeker asked for a rated game, so it is not offered there.
-        const fallbackBot = mode === 'casual' ? ladderFor(gameSpecId) : [];
-        const policyBot = landingBotOffer(gameSpecId)?.botId;
-        const botId =
-          fallbackBot.find((r) => r.botId === policyBot)?.botId ?? fallbackBot[0]?.botId;
-        searching = joinLobbyFromPlay(
-          act,
-          {
-            gameSpecId,
-            rated: mode === 'rated',
-            timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs },
-            preferredColor: 'random',
-          },
-          searchStatus,
-          locale,
-          undefined,
-          {
-            startSource: 'panel-person',
-            // Starting any other game from this page (a bot row, Play again, a
-            // Join) withdraws the seek; put the search bar away with it.
-            onWithdrawn: endSearch,
-            ...(botId && landingVariantSupportsPve(gameSpecId)
-              ? { botFallback: { botId, gameSpecId, preferredColor: 'random' as const } }
-              : {}),
-          },
-        );
-      });
-      // No whole-row click here either: a stray click on a person row posted a
-      // public seek nobody meant to make, and 15 s later the bot offer appeared
-      // out of nowhere. Only Find searches.
-      paint();
-      row.append(marker(gameSpecId, label), name, clockStep, waiting, act);
-      personRows.append(row);
+      text.append(name);
+      if (paceNote) {
+        const sub = document.createElement('small');
+        sub.className = 'pp-tile-meta';
+        sub.textContent = paceNote;
+        text.append(sub);
+      }
+      const act = button(
+        'pp-act',
+        pace.kind === 'days'
+          ? `+ ${t('lobby.panelPost', {}, locale)}`
+          : t('lobby.panelFind', {}, locale),
+      );
+      act.setAttribute('aria-label', `${act.textContent}: ${label} · ${paceLabel(pace)}`);
+      // No whole-tile click: a stray click posted a public seek nobody meant
+      // to make, and 15 s later the bot offer appeared out of nowhere. Only
+      // the button starts.
+      act.addEventListener('click', () => startPerson(gameSpecId, pace, act));
+      tile.append(marker(gameSpecId, label), text, act);
+      personRows.append(tile);
     }
   };
 
@@ -1100,6 +1203,7 @@ export function buildPlayPanel(
 
   const renderPerson = (): void => {
     renderMode();
+    renderPace();
     renderOffers();
     if (!searching) renderPersonRows();
     renderBadge();

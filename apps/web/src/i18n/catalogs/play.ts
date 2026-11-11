@@ -970,6 +970,13 @@ export const EN_PLAY = {
   'lobby.panelVersus': '{variant} vs {opponent}',
   'lobby.panelAnonymous': 'Anonymous',
   'lobby.panelYours': 'Yours',
+  'lobby.panelPaceLive': 'Live',
+  'lobby.panelPaceDays': 'Days per move',
+  'lobby.panelPaceOnly': '{pace} only',
+  'lobby.panelPaceInstead': '{pace} instead',
+  'lobby.panelDaysShort': '{days}d',
+  'lobby.panelMoreGames': '+{count} more',
+  'lobby.panelDaysSignIn': 'Sign in for days per move',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;

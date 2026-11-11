@@ -176,8 +176,8 @@ describe('landing shell', () => {
       vi.stubGlobal('fetch', fetchSpy);
       const shell = document.createElement('div');
       shell.innerHTML = renderLandingPageForPrerender(readFileSync('index.html', 'utf8'), 'en');
-      for (const kind of ['bot', 'person']) {
-        const specs = [...shell.querySelectorAll<HTMLElement>(`.pp-row-${kind}`)].map(
+      for (const selector of ['.pp-row-bot', '.pp-person-rows .pp-tile']) {
+        const specs = [...shell.querySelectorAll<HTMLElement>(selector)].map(
           (el) => el.dataset.gameSpec,
         );
         expect(specs.at(-1)).toBe('gomoku');
@@ -396,21 +396,17 @@ describe('homepage band layout (CSS)', () => {
     expect(forum).toMatch(/\.landing-forum-topic-excerpt \{[^}]*-webkit-line-clamp: 1;/);
   });
 
-  it('fits Play a person without a scrollbar, with room for two more variants', () => {
-    // Brian, 2026-10-27: the person tab scrolled at 46px rows. A 32px floor
-    // and 4px bar padding fit 12 rows in the 11-bot-row computer tab height.
+  it('fits Play a person without a scrollbar', () => {
+    // 2026-10-27: the person tab must not scroll. Since the shared pace bar
+    // (2026-11-11) the tiles sit in a grid that flexes into the height left
+    // under the open games, rows from their content up to 46px.
     const panel = readFileSync('src/landing-play-panel.css', 'utf8');
     expect(panel).toMatch(
-      /\.pp-view-person \.pp-row-person \{\s*flex: 1 0 auto;\s*min-height: 32px;\s*max-height: 46px;/,
+      /\.pp-person-rows \{\s*flex: 1 1 auto;\s*min-height: 0;\s*grid-auto-rows: minmax\(min-content, 46px\);/,
     );
-    // Brian, 2026-10-27: "compress it even a tiny bit more" and account for
-    // the Casual/Rated bar: a 2px bar that never wraps, and 40px rows in the
-    // three-column band, the bot rows' floor.
+    // The Casual/Rated bar: 2px padding and a note that never wraps.
     expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
     expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
-    expect(panel).toMatch(
-      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
-    );
   });
 
   it('puts the deep-dives row above the blog row at every width', () => {
