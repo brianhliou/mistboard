@@ -27,7 +27,7 @@ import {
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { holdBoardSettle } from '../board-anim.js';
-import { brandedEngineName } from '../game-display.js';
+import { brandedEngineName, seatNameForGame } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
 import { t } from '../i18n/catalog.js';
 import {
@@ -404,6 +404,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   config: TenantLiveClientConfig<C, V, M>,
 ): TenantLiveClient<C, V> {
   const { tenant, moveList } = config;
+  // The seat names with engine builds collapsed to the bare brand ("Misty"),
+  // before Misty takes the game's name; read only by analytics.
+  let seatBrandNames: Partial<Record<C, string>> = {};
 
   const state: TenantLiveState<C, V> = {
     room: '',
@@ -570,16 +573,22 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.paused = frame.paused === true;
     state.timeControl = frame.timeControl ?? state.timeControl;
     state.seats = frame.seats ?? state.seats;
-    // Branded on the way in, not at each render site: the room paints these
-    // names into the meta card, the clock rows, and the seat labels, and an
-    // engine seat should read "Misty" in all three rather than "Misty DXQ 1.1"
-    // in whichever one was missed.
-    state.seatDisplayNames = frame.seatDisplayNames
-      ? brandSeatDisplayNames(frame.seatDisplayNames)
-      : state.seatDisplayNames;
-    // Kept in lockstep with the names above: a frame that carries one carries
+    // Kept in lockstep with the names below: a frame that carries one carries
     // the other, so a re-branded name never keeps a stale seat's link.
     state.seatProfiles = frame.seatDisplayNames ? (frame.seatProfiles ?? {}) : state.seatProfiles;
+    // Branded on the way in, not at each render site: the room paints these
+    // names into the meta card, the clock rows, and the seat labels, and an
+    // engine seat should read "Misty Fog Xiangqi" in all three rather than
+    // "Misty DXQ 1.1" in whichever one was missed. The bare brand is kept for
+    // analytics, whose bot_name must not change with the display name.
+    if (frame.seatDisplayNames) {
+      seatBrandNames = brandSeatDisplayNames(frame.seatDisplayNames);
+      state.seatDisplayNames = brandSeatDisplayNames(
+        frame.seatDisplayNames,
+        config.gameSpecId,
+        state.seatProfiles,
+      );
+    }
     if (frame.connectedSeats) state.connectedSeats = frame.connectedSeats;
     state.abortDeadline = frame.abortDeadline ?? null;
     // Read here rather than in each tenant's onFrame: the countdown is a room
@@ -946,13 +955,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   // The seat the viewer is not sitting in. In a bot room that is the engine,
-  // already collapsed to its brand by brandSeatDisplayNames, so the funnel can
-  // say which bot a first game was played against.
+  // collapsed to its bare brand (seatBrandNames, not the game-named display),
+  // so the funnel can say which bot a first game was played against.
   function opponentSeatName(): string | null {
     // A spectator has no opponent: without the seat we cannot tell which name
     // is the engine, and guessing would put a human account in bot_name.
     if (state.seat === null || state.seat === 'spectator') return null;
-    for (const [color, name] of Object.entries(state.seatDisplayNames)) {
+    for (const [color, name] of Object.entries(seatBrandNames)) {
       if (color !== state.seat && typeof name === 'string') return name;
     }
     return null;
@@ -1192,14 +1201,20 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   return { bootstrap, state, renderAll, send, connection, replay };
 }
 
-/** Seat names as the room should show them: engine builds collapse to the brand. */
+/** Seat names as the room should show them: engine builds collapse to the
+ *  brand, and with the game, Misty takes its name ("Misty Banqi Level 4"). */
 function brandSeatDisplayNames<C extends string>(
   names: Partial<Record<C, string>>,
+  gameSpecId?: string,
+  profiles: Partial<Record<C, ProfileIdentity>> = {},
 ): Partial<Record<C, string>> {
   const branded: Partial<Record<C, string>> = {};
   for (const [color, name] of Object.entries(names) as [C, string | undefined][]) {
     if (name === undefined) continue;
-    branded[color] = brandedEngineName(name) ?? name;
+    branded[color] =
+      gameSpecId === undefined
+        ? (brandedEngineName(name) ?? name)
+        : seatNameForGame(name, gameSpecId, { botId: profiles[color]?.botId ?? null });
   }
   return branded;
 }

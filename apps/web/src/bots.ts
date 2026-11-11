@@ -23,7 +23,7 @@ import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { RAPFI_BUILD_URL, RAPFI_REPO_URL } from './engine-credits.js';
 import { threeKingdomsBanqiEnabled } from './feature-flags.js';
-import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
+import { botNameForGame, type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import {
   JIEQI_FIRST_GAME_LEVEL,
   type LandingBotRung,
@@ -547,6 +547,12 @@ function buildOpponentCard(
 ): HTMLElement {
   const startLevel = startLevelFor(gameSpecId, opponent.key);
   const openLevel = startLevel ?? opponent.defaultLevel ?? null;
+  // A card shows one game, so Misty takes its name ("Misty Banqi"); the picker
+  // carries the level. Every other opponent keeps its own name.
+  const name =
+    opponent.name === undefined
+      ? undefined
+      : botNameForGame(opponent.members[0]?.bot.id, opponent.name, gameSpecId);
   const levelled = opponent.members.length > 1;
   const memberKey = (member: DirectoryMember): string => member.key ?? member.bot.id;
   let selected =
@@ -556,7 +562,7 @@ function buildOpponentCard(
   const picker = levelled ? document.createElement('select') : null;
   if (picker) {
     picker.className = 'site-select bot-level-select';
-    picker.setAttribute('aria-label', t('bots.levelPicker', { name: opponent.name ?? '' }));
+    picker.setAttribute('aria-label', t('bots.levelPicker', { name: name ?? '' }));
     for (const member of opponent.members) {
       const option = document.createElement('option');
       option.value = memberKey(member);
@@ -571,7 +577,7 @@ function buildOpponentCard(
     const card = buildBotSummaryCard(gameScopedProfile(bot, gameSpecId), {
       ratingGameSpecId: gameSpecId,
       primaryPlayGameSpecId: gameSpecId,
-      ...(opponent.name ? { name: opponent.name } : {}),
+      ...(name ? { name } : {}),
       ...(opponent.community
         ? {}
         : {

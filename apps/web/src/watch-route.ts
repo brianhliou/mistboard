@@ -923,7 +923,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
       noDisc: !variantSeatsHaveInk(featured.gameSpecId),
-      name: displayLiveName(p.name, t('watch.guest')),
+      name: displayLiveName(p.name, t('watch.guest'), { ...p, gameSpecId: featured.gameSpecId }),
       rating: null,
       isEngine: p.isEngine,
       profile: profileTargetFor(p),

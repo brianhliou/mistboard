@@ -28,6 +28,7 @@ import {
   type GameOutcome,
   gameOutcome,
   outcomeLabel,
+  seatNameForGame,
   terminationLabel,
 } from '../game-display.js';
 import { t } from '../i18n/catalog.js';
@@ -132,8 +133,8 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
     subline: timeAgoLabel(game.endedAt),
     // A wind-seated variant (the mahjong family) has no seat colour, so its
     // rows draw no disc, as in its room (room-chrome.ts).
-    players: reviewMetaPlayers(game.players, config.seatColors, game.result).map((player) =>
-      variantSeatsHaveInk(config.gameSpecId) ? player : { ...player, noDisc: true },
+    players: reviewMetaPlayers(game.players, config.seatColors, game.result, config.gameSpecId).map(
+      (player) => (variantSeatsHaveInk(config.gameSpecId) ? player : { ...player, noDisc: true }),
     ),
     status: config.status,
   });
@@ -210,6 +211,7 @@ export function reviewMetaPlayers(
   players: ReviewMetaPlayer[] | undefined,
   seatColors?: ReviewSeatColors,
   result?: string | null,
+  gameSpecId?: string,
 ): GameMetaPlayer[] {
   const rows = players ?? [];
   // Seat-keyed, so this runs on the persisted `player.color` (the seat) BEFORE
@@ -224,12 +226,18 @@ export function reviewMetaPlayers(
         ? reviewColorForSeat(player.color, seatColors)
         : player.color,
     // The persisted seat name is the engine BUILD ("Misty DXQ 1.1"); the card
-    // shows the brand, same as every list surface (see brandedEngineName). A
-    // nameless guest seat arrives as the server's English placeholder 'Guest'.
+    // shows the brand, same as every list surface (see brandedEngineName), and
+    // Misty takes the game's name (seatNameForGame). A nameless guest seat
+    // arrives as the server's English placeholder 'Guest'.
     name:
       player.kind === 'guest' && player.name === 'Guest'
         ? t('watch.guest')
-        : (brandedEngineName(player.name) ?? player.name),
+        : gameSpecId === undefined
+          ? (brandedEngineName(player.name) ?? player.name)
+          : seatNameForGame(player.name, gameSpecId, {
+              botId: player.botId ?? null,
+              isEngine: player.kind === 'engine' || player.botId != null,
+            }),
     rating: player.rating ?? null,
     // `kind` merges bots into 'account', so a bot seat needs its own tell here or
     // the BOT tag goes missing on every review page that faces one.

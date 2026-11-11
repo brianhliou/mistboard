@@ -114,7 +114,12 @@ export function displayParticipantName(
     return displayParticipant(
       participant.displayName,
       fallbackSeatName(game.variant, color, game.firstColor),
+      game.variant,
       participant.subjectId,
+      {
+        botId: participant.subjectType === 'bot' ? participant.subjectId : null,
+        isEngine: participant.subjectType === 'bot' || participant.subjectType === 'engine-version',
+      },
     );
   }
   const fallback = fallbackSeatName(game.variant, color, game.firstColor);
@@ -124,7 +129,7 @@ export function displayParticipantName(
       : color === 'black'
         ? (game.blackEngineId ?? game.blackName)
         : null;
-  return displayParticipant(legacyName, fallback);
+  return displayParticipant(legacyName, fallback, game.variant);
 }
 
 export function participantForColor(
@@ -202,11 +207,13 @@ function fallbackSeatName(
 function displayParticipant(
   name: string | null | undefined,
   fallback: string,
+  gameSpecId: string,
   subjectId?: string | null,
+  seat: SeatIdentity = {},
 ): string {
   const label = engineDisplayName(subjectId ?? name) ?? name;
   if (!label) return fallback;
-  return brandedEngineName(label) ?? label;
+  return seatNameForGame(label, gameSpecId, seat);
 }
 
 // Player-facing brand for a Misty build. Every Misty ships one brand: the
@@ -226,12 +233,76 @@ export function brandedEngineName(name: string): string | null {
   return MISTY_BUILD.test(name) ? 'Misty' : null;
 }
 
+// Misty is one bot account playing several games. Wherever she is shown in one
+// game, she takes that game's name ("Misty Banqi", "Misty 暗棋"); her multi-game
+// profile and anything listing her across games keep plain "Misty". Display
+// only: the bot id, ratings, URLs and stored names do not change.
+export const MISTY_BOT_ID = 'misty';
+// The ids Misty played under before her profiles merged (server
+// first-party-bots.ts legacyBotIds); an old bot seat may still carry one.
+const MISTY_LEGACY_BOT_IDS: ReadonlySet<string> = new Set([
+  'misty-dark-chess',
+  'misty-dmx',
+  'misty-banqi',
+  'misty-xiangqi-mahjong',
+]);
+// An engine seat's Misty names as the server resolves them: the brand, a rung
+// ("Misty Level 4", "Misty level 4", "Misty Jungle level 3") or an older engine
+// brand ("MistyBanqi Level 4"). Read only on a seat already known to be an
+// engine, so a human account named "Misty" is never renamed.
+const MISTY_ENGINE_SEAT =
+  /^Misty(?:\s?(?:Banqi|Jungle|JungleFlip|ThreeKingdomsBanqi|FFQ))?(?:\s+[Ll]evel\s+\d+)?$/;
+
+/** Who a seat is, as far as a payload says. */
+export type SeatIdentity = { botId?: string | null; isEngine?: boolean };
+
+/** The bot id behind a seat: its own when the payload names one, else Misty's
+ *  when the seat is a Misty engine build or (on an engine seat) a Misty name. */
+export function seatBotId(name: string | null | undefined, seat: SeatIdentity = {}): string | null {
+  if (seat.botId) return seat.botId;
+  if (!name) return null;
+  if (MISTY_BUILD.test(name)) return MISTY_BOT_ID;
+  return seat.isEngine && MISTY_ENGINE_SEAT.test(name) ? MISTY_BOT_ID : null;
+}
+
+/** A bot's name in one game. Misty takes the game's localized name and keeps
+ *  her level ("Misty Banqi Level 4"); an unknown game leaves her "Misty". Every
+ *  other bot keeps `name` unchanged. */
+export function botNameForGame(
+  botId: string | null | undefined,
+  name: string,
+  gameSpecId: string | null | undefined,
+): string {
+  if (!botId || (botId !== MISTY_BOT_ID && !MISTY_LEGACY_BOT_IDS.has(botId))) return name;
+  const level = /[Ll]evel\s+(\d+)$/.exec(name)?.[1];
+  const spec = gameSpecId ? maybeGameSpecForId(gameSpecId) : undefined;
+  const base = spec ? `Misty ${variantDisplayLabel(spec.id)}` : 'Misty';
+  return level ? `${base} Level ${level}` : base;
+}
+
+/** A seat name as a page about one game shows it: engine builds collapse to the
+ *  brand, and Misty takes the game's name. */
+export function seatNameForGame(
+  name: string,
+  gameSpecId: string | null | undefined,
+  seat: SeatIdentity = {},
+): string {
+  const branded = brandedEngineName(name) ?? name;
+  const botId = seatBotId(name, seat);
+  return botId ? botNameForGame(botId, branded, gameSpecId) : branded;
+}
+
 /** A live payload's seat name as a page should show it. The finished-game feeds
  *  reach the same result through displayParticipant; live frames carry a bare
- *  name, so they brand here instead. */
-export function displayLiveName(name: string | null | undefined, fallback: string): string {
+ *  name, so they brand here instead. With the game, Misty takes its name. */
+export function displayLiveName(
+  name: string | null | undefined,
+  fallback: string,
+  game?: SeatIdentity & { gameSpecId?: string | null },
+): string {
   if (!name) return fallback;
-  return brandedEngineName(name) ?? name;
+  if (!game) return brandedEngineName(name) ?? name;
+  return seatNameForGame(name, game.gameSpecId, game);
 }
 
 // The seat that moves first in a live game: red (xiangqi family, jungle), white
@@ -252,14 +323,17 @@ export function liveFirstMover<T extends { color: string }>(
 /** First/second-mover names for a live featured game, or null without two
  *  seats. A null name is a guest seat. */
 export function liveMatchupNames(
-  players: readonly { color: string; name: string | null | undefined }[],
+  players: readonly ({ color: string; name: string | null | undefined } & SeatIdentity)[],
   guest: string,
   gameSpecId: string,
 ): { first: string; second: string } | null {
   if (players.length < 2) return null;
   const first = liveFirstMover(players, gameSpecId)!;
   const second = players.find((player) => player !== first) ?? players[1]!;
-  return { first: displayLiveName(first.name, guest), second: displayLiveName(second.name, guest) };
+  return {
+    first: displayLiveName(first.name, guest, { ...first, gameSpecId }),
+    second: displayLiveName(second.name, guest, { ...second, gameSpecId }),
+  };
 }
 
 // Correspondence seeks store a side as MOVE ORDER ('first'/'second'), variant-neutral, so

@@ -15,10 +15,10 @@ function participant(color: GameParticipant['color'], displayName: string): Game
   return { color, displayName, subjectType: 'user', subjectId: null, visibility: 'public' };
 }
 
-function finishedGame(participants: GameParticipant[]): FeaturedGame {
+function finishedGame(participants: GameParticipant[], variant = 'xiangqi'): FeaturedGame {
   return {
     roomId: 'finished-room',
-    variant: 'xiangqi',
+    variant,
     result: 'red-wins',
     termination: 'checkmate',
     plyCount: 2,
@@ -72,17 +72,20 @@ describe('/games seat names', () => {
     );
   });
 
-  it('keeps an old recorded Three Kingdoms name readable on its name element', () => {
-    const fullName = 'MistyThreeKingdomsBanqi level 7';
+  it('names an old recorded Three Kingdoms seat after the game, level kept', () => {
+    const fullName = 'Misty Three Kingdoms Banqi Level 7';
     const tile = buildFinishedTile(
-      finishedGame([
-        participant('red', 'Ann'),
-        {
-          ...participant('black', fullName),
-          subjectType: 'engine-version',
-          subjectId: 'misty-three-kingdoms-banqi-level-7',
-        },
-      ]),
+      finishedGame(
+        [
+          participant('red', 'Ann'),
+          {
+            ...participant('black', 'MistyThreeKingdomsBanqi level 7'),
+            subjectType: 'engine-version',
+            subjectId: 'misty-three-kingdoms-banqi-level-7',
+          },
+        ],
+        'three-kingdoms-banqi',
+      ),
     );
     const name = tile.querySelector<HTMLElement>(
       '.current-game-finished-seat[data-seat="second"] .current-game-finished-seat-name',

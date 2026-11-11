@@ -1436,7 +1436,9 @@ describe('/bots covers every launched bot variant', () => {
     const card = root.querySelector<HTMLElement>(
       '.profile-summary-card[data-opponent-id="misty-three-kingdoms-banqi"]',
     );
-    expect(card?.querySelector('.profile-summary-card-name')?.textContent).toBe('Misty');
+    expect(card?.querySelector('.profile-summary-card-name')?.textContent).toBe(
+      'Misty Three Kingdoms Banqi',
+    );
     const select = card?.querySelector<HTMLSelectElement>('select.bot-level-select');
     expect(select?.value).toBe('misty-three-kingdoms-banqi-level-4');
     expect(card?.querySelector('.profile-summary-card-bio')?.textContent).toContain(
@@ -1511,9 +1513,10 @@ describe('/bots covers every launched bot variant', () => {
       const { mountBots } = await import('./bots.js');
       await mountBots(root);
 
-      // One Misty card, now a ladder.
+      // One Misty card, now a ladder, named after the game it plays.
       expect(root.querySelectorAll('.bot-roster-section .profile-summary-card')).toHaveLength(1);
       const card = cardFor(root, 'misty')!;
+      expect(card.querySelector('.profile-summary-card-name')?.textContent).toBe(`Misty ${label}`);
       const select = card.querySelector<HTMLSelectElement>('select.bot-level-select');
       expect(
         [...(select?.options ?? [])].map((option) => [option.value, option.textContent]),

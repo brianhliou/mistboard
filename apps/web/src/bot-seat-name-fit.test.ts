@@ -150,9 +150,9 @@ describe('bot seat names fit game cards', () => {
       'three-kingdoms-banqi',
       'misty-three-kingdoms-banqi-level-7',
       'MistyThreeKingdomsBanqi level 7',
-      'Misty level 7',
+      'Misty Three Kingdoms Banqi Level 7',
     ],
-    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Level 7'],
+    ['banqi', 'misty-banqi-strongest', 'MistyBanqi Level 7', 'Misty Banqi Level 7'],
   ])(
     'carries old %s seat names through every finished-game display',
     (variant, subjectId, displayName, expected) => {
@@ -202,7 +202,7 @@ describe('bot seat names fit game cards', () => {
       expect(profileName?.title).toBe(expected);
       const meta = createGameMetaCard({
         headline: [],
-        players: reviewMetaPlayers(postgamePlayers(participants)),
+        players: reviewMetaPlayers(postgamePlayers(participants), undefined, null, variant),
       });
       const metaName = meta.el.querySelectorAll<HTMLElement>('.game-meta-card__name')[1];
       expect(metaName?.textContent).toBe(expected);
