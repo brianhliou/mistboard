@@ -1,4 +1,3 @@
-import './meng-fanrui-preview.css';
 import { applyXiangqiRecordMove, createInitialXiangqiState, type XiangqiSquare } from '@mistboard/game';
 import { xqHalfBoardThumbnailSvg } from '../diagrams.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
@@ -721,16 +720,16 @@ export const mengFanruiArticle: Article = {
 };
 
 // LOCAL REVIEW ONLY: 10M analysis is integrated; publication remains held.
-// Regeneration removes this local notice and reference portrait.
+// Regeneration removes this local notice; the portrait is also in draft.md.
 mengFanruiArticle.intro?.unshift({
   kind: 'note',
   label: 'Local review',
   text: 'The three full replays, their graphs and alternative-line assessments now use 10M-node analysis. The candidate branches use the same budget. This is a local English draft awaiting final review and publication approval.',
 }, {
   kind: 'image-figure',
-  src: '/player-photos/meng-fanrui-baidu-preview.webp',
-  alt: 'Meng Fanrui wearing glasses and a navy jacket at the board.',
-  className: 'article-figure-native article-figure-meng-preview',
-  caption: 'Meng Fanrui. Reference image for local review; reuse permission has not been verified.',
-  credit: { text: 'Baidu Baike', href: 'https://baike.baidu.com/en/item/Meng%20Fanrui/660249' },
+  src: '/player-photos/meng-fanrui-cxa-2025.jpg',
+  alt: 'Meng Fanrui in a black jacket at the board, studying the position.',
+  className: 'article-figure-native',
+  caption: 'Meng Fanrui at the 2025 year-end finals in Chengmai, December 2025.',
+  credit: { text: 'Chinese Xiangqi Association', href: 'https://web.cmc.hebtv.com/cms/rmt0336/0/0rmhlm/dzjg/hbty/tyzx/12139099.shtml' },
 });
