@@ -128,6 +128,9 @@ export type BotCardOptions = {
   ratingGameSpecId?: string;
   /** This variant's chip reads "Play <variant>" and leads the row as the primary action. */
   primaryPlayGameSpecId?: string;
+  /** Play creates the room by the option's engine id, with no botId: an
+   *  engine-only tenant (Three Kingdoms Banqi) has no bot profile that plays it. */
+  engineOnlyPlay?: boolean;
 };
 
 // A bot that plays one variant keeps the compact shape: bio, its rating, one
@@ -166,7 +169,11 @@ export function buildBotSummaryCard(
     : buildBotRatingGrid(profile);
   if (ratings) card.append(ratings);
 
-  const actions = buildBotActions(profile, options.primaryPlayGameSpecId);
+  const actions = buildBotActions(
+    profile,
+    options.primaryPlayGameSpecId,
+    options.engineOnlyPlay === true,
+  );
   if (actions) card.append(actions);
   card.append(buildBotFooter(profile));
   return card;
@@ -476,6 +483,7 @@ function buildBotRatingGrid(profile: BotSummaryProfile): HTMLElement | null {
 function buildBotActions(
   profile: BotSummaryProfile,
   primaryGameSpecId?: string,
+  engineOnly = false,
 ): HTMLElement | null {
   const options = botPlayOptions(profile);
   if (options.length === 0) return null;
@@ -487,7 +495,7 @@ function buildBotActions(
   const row = document.createElement('div');
   row.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
   for (const option of ordered) {
-    row.append(buildBotPlayControl(profile, option, option === primary));
+    row.append(buildBotPlayControl(profile, option, option === primary, undefined, engineOnly));
   }
   return row;
 }
@@ -497,6 +505,7 @@ function buildBotPlayControl(
   option: BotSummaryPlayOption,
   primary = false,
   labelOverride?: string,
+  engineOnly = false,
 ): HTMLElement {
   const variant = gameSpecLabel(option.gameSpecId);
   const label = labelOverride ?? (primary ? t('bots.playVariant', { variant }) : variant);
@@ -517,7 +526,10 @@ function buildBotPlayControl(
   if (labelOverride) control.setAttribute('aria-label', t('bots.playVariant', { variant }));
   bindBotPlayControl(
     control,
-    () => ({ botId: profile.id, gameSpecId: option.gameSpecId, preferredColor: 'random' }),
+    () =>
+      engineOnly
+        ? { engineId: option.engineId, gameSpecId: option.gameSpecId, preferredColor: 'random' }
+        : { botId: profile.id, gameSpecId: option.gameSpecId, preferredColor: 'random' },
     {
       onStateChange: (state) => {
         control.textContent =

@@ -715,6 +715,9 @@ export const EN_COMMUNITY = {
   'bots.directorySub': 'Choose a game, then an opponent. Some opponents come in levels.',
   'bots.gamesLabel': 'Games',
   'bots.levelPicker': '{name} level',
+  'bots.mistyThreeKingdomsBio': "Mistboard's own engine, playing Three Kingdoms Banqi.",
+  'bots.mistyThreeKingdomsLevelBio':
+    "Level {level} of Misty, Mistboard's own engine, playing Three Kingdoms Banqi.",
 } as const;
 
 export type CommunityI18nKey = keyof typeof EN_COMMUNITY;

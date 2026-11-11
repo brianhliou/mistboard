@@ -414,25 +414,7 @@
   display: none;
 }
 
-.data-bot-filter select {
-  min-height: 44px;
-  max-width: 100%;
-  padding: 8px 12px;
-  font: inherit;
-  color: var(--site-text);
-  background: var(--site-bg);
-  border: 1px solid var(--site-border);
-  border-radius: 4px;
-}
-
-/* Explicit height on a touch screen: WebKit ignores min-height on a native
-   menulist. 16px because iOS zooms the page into any form control under that. */
-@media (pointer: coarse) {
-  .data-bot-filter select {
-    height: 44px;
-    font-size: 16px;
-  }
-}
+/* Both selects are the shared select.site-select (app-base.css). */
 
 .current-games-rail-link.is-unavailable .current-games-rail-count {
   display: none;

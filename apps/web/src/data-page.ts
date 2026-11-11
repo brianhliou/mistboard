@@ -133,10 +133,11 @@ export async function mountDataPage(root: HTMLElement): Promise<void> {
   const botLabelText = document.createElement('span');
   botLabelText.textContent = t('data.botFilter');
   const botSelect = document.createElement('select');
+  botSelect.className = 'site-select';
   botSelect.setAttribute('aria-label', t('data.botFilter'));
   botLabel.append(botLabelText, botSelect);
   const levelSelect = document.createElement('select');
-  levelSelect.className = 'data-level-select';
+  levelSelect.className = 'site-select data-level-select';
   levelSelect.setAttribute('aria-label', t('data.levelFilter'));
   botFilter.append(botLabel, levelSelect);
   header.append(botFilter);

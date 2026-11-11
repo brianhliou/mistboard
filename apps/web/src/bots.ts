@@ -10,6 +10,7 @@ import {
   botOpponentForBotId,
   canonicalVariantOrderIndex,
   type GameSpecId,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import './account-profile.css';
@@ -19,8 +20,13 @@ import { bindBotPlayControl } from './bot-play.js';
 import { CHAMPIONS } from './champions-page.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { RAPFI_BUILD_URL, RAPFI_REPO_URL } from './engine-credits.js';
+import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
-import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
+import {
+  JIEQI_FIRST_GAME_LEVEL,
+  landingBotLadder,
+  XIANGQI_FIRST_GAME_LEVEL,
+} from './landing-bot-policy.js';
 import { buildBotSummaryCard } from './profile-summary-card.js';
 import {
   buildProfileDashboard,
@@ -29,8 +35,13 @@ import {
   buildProfileTabsShell,
 } from './profile-ui.js';
 import { buildNav, buildNotice } from './site-shell.js';
+import {
+  setThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiOffered,
+} from './three-kingdoms-banqi-access.js';
 import { buildUiIcon } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
+import type { WebTenantEngineOption } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 
 type BotPlayOption = {
@@ -154,6 +165,9 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   shell.append(buildCommunityLayout('/bots', content));
   root.append(buildNav(), shell);
 
+  // The TK roster rides beside the bot list: TK's Misty plays by engine id and
+  // has no bot profile, so /api/bots never names it.
+  const tkRoster = fetchThreeKingdomsBanqiRoster();
   let bots: BotProfile[];
   try {
     bots = await fetchBots();
@@ -162,12 +176,30 @@ export async function mountBots(root: HTMLElement): Promise<void> {
     return;
   }
 
-  if (bots.length === 0) {
+  const engineOpponents = engineOnlyOpponents(bots, await tkRoster);
+  if (bots.length === 0 && engineOpponents.size === 0) {
     body.replaceChildren(statusLine(t('bots.none')));
     return;
   }
 
-  mountDirectory(rail, body, bots);
+  mountDirectory(rail, body, bots, engineOpponents);
+}
+
+// The live TK roster, or undefined when the server did not say (a failed fetch
+// or an older server). Never throws.
+async function fetchThreeKingdomsBanqiRoster(): Promise<WebTenantEngineOption[] | undefined> {
+  if (!threeKingdomsBanqiOffered()) return undefined;
+  try {
+    const resp = await fetch('/api/engines/playable', { headers: { accept: 'application/json' } });
+    if (!resp.ok) return undefined;
+    const data = (await resp.json()) as { threeKingdomsBanqiEngines?: WebTenantEngineOption[] };
+    if (data.threeKingdomsBanqiEngines !== undefined) {
+      setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines);
+    }
+    return data.threeKingdomsBanqiEngines;
+  } catch {
+    return undefined;
+  }
 }
 
 function buildDirectoryMeta(label: string): HTMLElement {
@@ -265,19 +297,106 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 // Play button, its rating and its record. Grouping is presentation only: the
 // card plays, links to and reports one member bot.
 
-type DirectoryMember = { bot: BotProfile; level: number | null };
+type DirectoryMember = {
+  bot: BotProfile;
+  level: number | null;
+  /** The picker value when members share a bot id (TK's levels are all Misty). */
+  key?: string;
+};
 type DirectoryOpponent = {
   key: string;
   name: string | undefined;
   members: DirectoryMember[];
   community: boolean;
+  /** Plays by engine id with no botId (Three Kingdoms Banqi). */
+  engineOnly?: boolean;
+  /** The member the card opens on, when it is not the first. */
+  defaultLevel?: number;
+};
+
+// TK opens on Level 4, as the homepage's TK row does.
+const THREE_KINGDOMS_BANQI_DEFAULT_LEVEL = 4;
+
+/** Opponents that play by engine id and so have no /api/bots profile: today
+ *  Misty's Three Kingdoms Banqi ladder, offered under the same door as its
+ *  play (threeKingdomsBanqiOffered). An explicit live roster is the truth, even
+ *  empty; without one, a public build seeds Levels 1-7 (no net), as the
+ *  homepage does. FFQ Banqi is admin-only and never listed here. */
+export function engineOnlyOpponents(
+  bots: readonly BotProfile[],
+  tkRoster: readonly WebTenantEngineOption[] | undefined,
+): Map<string, DirectoryOpponent[]> {
+  const opponents = new Map<string, DirectoryOpponent[]>();
+  if (!threeKingdomsBanqiOffered()) return opponents;
+  const engineIds = new Set(
+    tkRoster?.map((engine) => engine.id) ??
+      (threeKingdomsBanqiEnabled()
+        ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
+        : []),
+  );
+  const rungs = landingBotLadder(THREE_KINGDOMS_BANQI_SPEC_ID, undefined, engineIds);
+  if (rungs.length === 0) return opponents;
+  const misty = bots.find((bot) => bot.id === 'misty');
+  const tkRecord = misty?.recordsByGameSpecId?.[THREE_KINGDOMS_BANQI_SPEC_ID];
+  const members = rungs.map((rung): DirectoryMember => {
+    const engineId = rung.engineId ?? '';
+    const bot: BotProfile = {
+      ...(misty ?? MISTY_FALLBACK),
+      activeEngineId: engineId,
+      defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+      supportedGameSpecIds: [THREE_KINGDOMS_BANQI_SPEC_ID],
+      playOptions: [{ gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID, engineId, playable: true }],
+      rating: null,
+      ratings: [],
+      record: tkRecord ?? EMPTY_RECORD,
+      gamesTotal: tkRecord?.games ?? 0,
+      recordsByGameSpecId: tkRecord ? { [THREE_KINGDOMS_BANQI_SPEC_ID]: tkRecord } : {},
+    };
+    return { bot, level: rungs.length > 1 ? rung.level : null, key: engineId };
+  });
+  opponents.set(THREE_KINGDOMS_BANQI_SPEC_ID, [
+    {
+      key: 'misty-three-kingdoms-banqi',
+      name: 'Misty',
+      members,
+      community: false,
+      engineOnly: true,
+      defaultLevel: THREE_KINGDOMS_BANQI_DEFAULT_LEVEL,
+    },
+  ]);
+  return opponents;
+}
+
+// Misty as the card names her when /api/bots did not list her profile.
+const MISTY_FALLBACK: BotProfile = {
+  id: 'misty',
+  displayName: 'Misty',
+  bio: '',
+  ownerType: 'system',
+  ownerUserId: null,
+  activeEngineId: '',
+  defaultGameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+  supportedGameSpecIds: [],
+  play: {
+    mode: 'pve',
+    gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+    engineId: '',
+    timeControl: { initialMs: 0, incrementMs: 0 },
+    preferredColor: 'random',
+  },
+  gamesTotal: 0,
+  record: { games: 0, wins: 0, losses: 0, draws: 0 },
+  rating: null,
 };
 
 const EMPTY_RECORD: BotRecord = { games: 0, wins: 0, losses: 0, draws: 0 };
 
 /** Every game some listed bot offers, in the site's shelf order. */
-export function directoryGames(bots: readonly BotProfile[]): string[] {
-  const games = new Set<string>();
+export function directoryGames(
+  bots: readonly BotProfile[],
+  extraGames: Iterable<string> = [],
+): string[] {
+  const games = new Set<string>(extraGames);
   for (const bot of bots) for (const option of playOptionsFor(bot)) games.add(option.gameSpecId);
   return [...games].sort(
     (a, b) =>
@@ -366,22 +485,24 @@ function buildOpponentCard(
   strongest: boolean,
 ): HTMLElement {
   const startLevel = startLevelFor(gameSpecId, opponent.key);
+  const openLevel = startLevel ?? opponent.defaultLevel ?? null;
   const levelled = opponent.members.length > 1;
+  const memberKey = (member: DirectoryMember): string => member.key ?? member.bot.id;
   let selected =
-    opponent.members.find((member) => member.level !== null && member.level === startLevel) ??
+    opponent.members.find((member) => member.level !== null && member.level === openLevel) ??
     opponent.members[0]!;
 
   const picker = levelled ? document.createElement('select') : null;
   if (picker) {
-    picker.className = 'bot-level-select';
+    picker.className = 'site-select bot-level-select';
     picker.setAttribute('aria-label', t('bots.levelPicker', { name: opponent.name ?? '' }));
     for (const member of opponent.members) {
       const option = document.createElement('option');
-      option.value = member.bot.id;
+      option.value = memberKey(member);
       option.textContent = t('bots.levelName', { level: member.level ?? 0 });
       picker.append(option);
     }
-    picker.value = selected.bot.id;
+    picker.value = memberKey(selected);
   }
 
   const build = (): HTMLElement => {
@@ -391,28 +512,27 @@ function buildOpponentCard(
       primaryPlayGameSpecId: gameSpecId,
       ...(opponent.name ? { name: opponent.name } : {}),
       ...(opponent.community ? {} : { subtitle: t('bots.firstParty') }),
+      ...(opponent.engineOnly ? { engineOnlyPlay: true } : {}),
       badge:
         startLevel !== null && selected.level === startLevel
           ? t('bots.startHere')
           : strongest
             ? t('bots.strongest')
             : undefined,
-      // A ladder's stored bio restates the level the picker already shows.
-      bio: opponent.community ? undefined : levelled ? null : systemBotBio(bot),
+      bio: opponent.community
+        ? undefined
+        : opponent.engineOnly
+          ? engineOnlyBio(gameSpecId, selected.level)
+          : (systemBotBio(bot) ?? null),
     });
     card.dataset.opponentId = opponent.key;
-    if (picker) {
-      const wrap = document.createElement('div');
-      wrap.className = 'bot-level-picker';
-      wrap.append(picker);
-      card.querySelector('.profile-summary-card-header')?.after(wrap);
-    }
+    layoutDirectoryCard(card, bot, gameSpecId, picker, opponent.engineOnly === true);
     return card;
   };
 
   let card = build();
   picker?.addEventListener('change', () => {
-    const next = opponent.members.find((member) => member.bot.id === picker.value);
+    const next = opponent.members.find((member) => memberKey(member) === picker.value);
     if (!next) return;
     selected = next;
     const nextCard = build();
@@ -423,8 +543,82 @@ function buildOpponentCard(
   return card;
 }
 
-function buildDirectoryGame(bots: readonly BotProfile[], gameSpecId: string): HTMLElement[] {
-  const opponents = directoryOpponents(bots, gameSpecId);
+function engineOnlyBio(gameSpecId: string, level: number | null): string | null {
+  if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID) return null;
+  return level === null
+    ? t('bots.mistyThreeKingdomsBio')
+    : t('bots.mistyThreeKingdomsLevelBio', { level });
+}
+
+// The directory card: the shared summary card, then (from the repo's own
+// records only) the champion title and the engine credits under the bio, and a
+// foot holding the rating, games and record, and the play row: a ladder's level
+// select on the left, Play on the right, the same place on every card.
+function layoutDirectoryCard(
+  card: HTMLElement,
+  bot: BotProfile,
+  gameSpecId: string,
+  picker: HTMLSelectElement | null,
+  engineOnly: boolean,
+): void {
+  const header = card.querySelector('.profile-summary-card-header');
+  const bio = card.querySelector('.profile-summary-card-bio');
+  const champion = championTitleLink(bot.id, gameSpecId);
+  if (champion) {
+    champion.classList.add('bot-card-champion');
+    header?.after(champion);
+  }
+  const credits = engineOnly ? [] : botCredits(bot.id);
+  if (credits.length > 0) {
+    const list = buildBotCredits(credits);
+    list.className = 'bot-card-credits';
+    (bio ?? champion ?? header)?.after(list);
+  }
+
+  const foot = document.createElement('div');
+  foot.className = 'bot-card-foot';
+  const rating = card.querySelector('.profile-summary-card-rating-line');
+  const footer = card.querySelector('.profile-summary-card-footer');
+  let actions = card.querySelector<HTMLElement>('.profile-summary-card-bot-actions');
+  if (!actions && picker) {
+    actions = document.createElement('div');
+    actions.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
+  }
+  // TK games are kept on engine ids, not Misty's profile: with no TK record,
+  // say nothing rather than "0 games".
+  if (engineOnly && !bot.recordsByGameSpecId?.[gameSpecId]) footer?.remove();
+  else if (footer) foot.append(footer);
+  if (rating) foot.prepend(rating);
+  if (actions) {
+    if (picker) actions.prepend(picker);
+    foot.append(actions);
+  }
+  card.append(foot);
+}
+
+/** The champion title a bot holds in this game, linked to /champions; null
+ *  when it holds none (champions-page.ts is the record). */
+function championTitleLink(botId: string, gameSpecId: string): HTMLAnchorElement | null {
+  if (!CHAMPIONS.some((title) => title.botHref === `/bot/${botId}` && title.gameId === gameSpecId))
+    return null;
+  const champion = document.createElement('a');
+  champion.className = 'bot-champion-title';
+  champion.href = '/champions';
+  const title = `${variantDisplayLabel(gameSpecId)} ${t('champions.championBadge')}`;
+  champion.setAttribute('aria-label', title);
+  champion.append(buildUiIcon('title-champion'), title);
+  return champion;
+}
+
+function buildDirectoryGame(
+  bots: readonly BotProfile[],
+  gameSpecId: string,
+  engineOpponents: ReadonlyMap<string, DirectoryOpponent[]>,
+): HTMLElement[] {
+  const opponents = [
+    ...directoryOpponents(bots, gameSpecId),
+    ...(engineOpponents.get(gameSpecId) ?? []),
+  ];
   const firstParty = opponents.filter((opponent) => !opponent.community);
   const community = opponents.filter((opponent) => opponent.community);
   // The map lists each game's opponents weakest first, so with a choice of
@@ -495,8 +689,13 @@ function buildGameRail(
   );
 }
 
-function mountDirectory(rail: HTMLElement, body: HTMLElement, bots: readonly BotProfile[]): void {
-  const games = directoryGames(bots);
+function mountDirectory(
+  rail: HTMLElement,
+  body: HTMLElement,
+  bots: readonly BotProfile[],
+  engineOpponents: ReadonlyMap<string, DirectoryOpponent[]>,
+): void {
+  const games = directoryGames(bots, engineOpponents.keys());
   if (games.length === 0) {
     body.replaceChildren(statusLine(t('bots.none')));
     return;
@@ -504,7 +703,7 @@ function mountDirectory(rail: HTMLElement, body: HTMLElement, bots: readonly Bot
   const render = (): void => {
     const game = readDirectoryGame(games);
     buildGameRail(rail, games, game, render);
-    body.replaceChildren(...buildDirectoryGame(bots, game));
+    body.replaceChildren(...buildDirectoryGame(bots, game, engineOpponents));
   };
   window.addEventListener('popstate', () => {
     if (body.isConnected) render();
@@ -674,17 +873,8 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
     bot.ownerType === 'system' ? 'bots.firstPartyBadge' : 'bots.communityBadge',
   );
   meta.append(badge, owner);
-  if (
-    CHAMPIONS.some((title) => title.botHref === `/bot/${bot.id}` && title.gameId === gameSpecId)
-  ) {
-    const champion = document.createElement('a');
-    champion.className = 'bot-champion-title';
-    champion.href = '/champions';
-    const title = `${variantDisplayLabel(gameSpecId)} ${t('champions.championBadge')}`;
-    champion.setAttribute('aria-label', title);
-    champion.append(buildUiIcon('title-champion'), title);
-    heading.after(champion);
-  }
+  const champion = championTitleLink(bot.id, gameSpecId);
+  if (champion) heading.after(champion);
   identity.append(meta);
 
   const counts = document.createElement('div');

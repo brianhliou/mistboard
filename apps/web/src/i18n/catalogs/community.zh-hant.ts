@@ -684,4 +684,6 @@ export const ZH_HANT_COMMUNITY = {
   'bots.directorySub': '先選棋類，再選對手。部分對手分多個等級。',
   'bots.gamesLabel': '棋類',
   'bots.levelPicker': '{name} 等級',
+  'bots.mistyThreeKingdomsBio': 'Mistboard 自研引擎，下三國暗棋。',
+  'bots.mistyThreeKingdomsLevelBio': 'Misty 第 {level} 級，Mistboard 自研引擎，下三國暗棋。',
 } satisfies Partial<Record<CommunityI18nKey, string>>;

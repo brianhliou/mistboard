@@ -566,7 +566,13 @@ describe('bot pages', () => {
     const play = ladder.querySelectorAll('.profile-summary-card-action');
     expect(play).toHaveLength(1);
     expect(play[0]?.textContent).toBe('Play Xiangqi');
-    expect(ladder.querySelector('.profile-summary-card-bio')).toBeNull();
+    // The ladder card carries its level's bio, and the level select and Play
+    // share the bottom row: select first, Play last.
+    expect(ladder.querySelector('.profile-summary-card-bio')?.textContent).toContain('2');
+    const playRow = ladder.querySelector('.bot-card-foot .profile-summary-card-bot-actions');
+    expect(playRow?.firstElementChild?.matches('select.site-select.bot-level-select')).toBe(true);
+    expect(playRow?.lastElementChild?.textContent).toBe('Play Xiangqi');
+    expect(ladder.lastElementChild?.classList.contains('bot-card-foot')).toBe(true);
 
     // Picking a level swaps the bot the card plays and links, and keeps one card.
     const level1 = pickLevel(root, 'fairy-stockfish', 'fairy-stockfish-level-1');
@@ -1316,5 +1322,146 @@ describe('bot pages', () => {
     expect(version()).toBe('1.6');
     root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="banqi"]')?.click();
     expect(version()).toBe('0.3.0');
+  });
+});
+
+describe('/bots covers every launched bot variant', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    window.history.replaceState(null, '', '/');
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  const FLAGS = [
+    'XIANGQI',
+    'JUNGLE_FLIP',
+    'XIANGQI_MAHJONG',
+    'GOMOKU',
+    'THREE_KINGDOMS_BANQI',
+    'FFQ_BANQI',
+    'MAHJONG',
+  ];
+
+  async function serverFixtures() {
+    const { FIRST_PARTY_BOT_PROFILES } = await import('../../server/src/first-party-bots.js');
+    const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await import(
+      '../../server/src/three-kingdoms-banqi-engine.js'
+    );
+    const { maybeGameSpecForId } = await import('@mistboard/game');
+    // As /api/bots serves them: every first-party bot, every spec it has an
+    // engine for (all playable), hidden specs dropped as botPlayOptions does.
+    const bots = FIRST_PARTY_BOT_PROFILES.map((bot) => {
+      const specs = Object.keys(bot.engines).filter(
+        (id) => maybeGameSpecForId(id)?.publicSurface !== 'hidden',
+      );
+      return misty({
+        id: bot.id,
+        displayName: bot.displayName,
+        defaultGameSpecId: specs[0],
+        supportedGameSpecIds: specs,
+        playOptions: specs.map((gameSpecId) => ({
+          gameSpecId,
+          engineId: bot.engines[gameSpecId],
+          playable: true,
+        })),
+        rating: null,
+        ratings: [],
+        recordsByGameSpecId: {},
+      });
+    });
+    return { FIRST_PARTY_BOT_PROFILES, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES, bots };
+  }
+
+  function stubFetch(bots: readonly unknown[], tkEngines: readonly unknown[]) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/bots') return jsonResponse({ bots });
+      if (String(input) === '/api/engines/playable') {
+        return jsonResponse({ threeKingdomsBanqiEngines: tkEngines });
+      }
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bot_tk' });
+      return jsonResponse({}, { status: 404 });
+    });
+  }
+
+  function railGames(root: HTMLElement): (string | undefined)[] {
+    return [...root.querySelectorAll<HTMLElement>('.bots-game-rail a')].map(
+      (a) => a.dataset.gameSpecId,
+    );
+  }
+
+  it('lists a game for every live public variant a first-party bot or engine plays, never FFQ', async () => {
+    for (const flag of FLAGS) vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
+    const { FIRST_PARTY_BOT_PROFILES, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES, bots } =
+      await serverFixtures();
+    const { GAME_SPECS, isPublicGameSpec } = await import('@mistboard/game');
+    stubFetch(bots, THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES);
+    window.history.replaceState(null, '', '/bots');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    // Engine-only bots (TK) have no bot profile: count their engine catalog too,
+    // or a profile omission hides the missing game again.
+    const botSpecs = new Set([
+      ...FIRST_PARTY_BOT_PROFILES.flatMap((bot) => Object.keys(bot.engines)),
+      ...THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES.map(() => 'three-kingdoms-banqi'),
+    ]);
+    const expected = GAME_SPECS.filter(
+      (spec) => spec.runtimeStatus === 'live' && isPublicGameSpec(spec.id) && botSpecs.has(spec.id),
+    ).map((spec) => spec.id);
+    const rail = railGames(root);
+    expect([...rail].sort()).toEqual([...expected].sort());
+    expect(rail).toContain('three-kingdoms-banqi');
+    expect(rail).toContain('jungle-flip');
+    expect(rail).not.toContain('ffq-banqi');
+    expect(root.textContent).not.toMatch(/FFQ|Fu Fu Qi/i);
+  });
+
+  it('shows Misty on Three Kingdoms Banqi with its levels, opening on Level 4, playing by engine id', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await serverFixtures();
+    const fetchMock = stubFetch([misty()], THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES);
+    window.history.replaceState(null, '', '/bots?game=three-kingdoms-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    const card = root.querySelector<HTMLElement>(
+      '.profile-summary-card[data-opponent-id="misty-three-kingdoms-banqi"]',
+    );
+    expect(card?.querySelector('.profile-summary-card-name')?.textContent).toBe('Misty');
+    const select = card?.querySelector<HTMLSelectElement>('select.bot-level-select');
+    expect(select?.value).toBe('misty-three-kingdoms-banqi-level-4');
+    expect(card?.querySelector('.profile-summary-card-bio')?.textContent).toContain(
+      'Three Kingdoms Banqi',
+    );
+    // Misty's profile games are not TK's: no "0 games" footer.
+    expect(card?.querySelector('.profile-summary-card-footer')).toBeNull();
+    const play = card?.querySelector<HTMLButtonElement>('button.profile-summary-card-action');
+    expect(play?.textContent).toBe('Play Three Kingdoms Banqi');
+    play?.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    expect(JSON.parse(String((roomCall?.[1] as RequestInit | undefined)?.body))).toEqual({
+      mode: 'pve',
+      engineId: 'misty-three-kingdoms-banqi-level-4',
+      gameSpecId: 'three-kingdoms-banqi',
+      preferredColor: 'random',
+      rated: false,
+    });
+  });
+
+  it('a visitor without the TK flag sees no TK game and the page asks for no TK roster', async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
+    const fetchMock = stubFetch([misty()], []);
+    window.history.replaceState(null, '', '/bots');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+    expect(railGames(root)).not.toContain('three-kingdoms-banqi');
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(['/api/bots']);
   });
 });
