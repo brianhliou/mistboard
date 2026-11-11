@@ -96,6 +96,11 @@ export type PlyEval = {
    *  that capture, so it does not repeat it. Only present on the handful of
    *  plies that offer a piece the engine does not take (#315). */
   offerLine?: { capture: string; pv: string[] };
+  /** Set when `mate` is a rule verdict, not a checkmate: Pikafish scores a
+   *  perpetual check that completes its third repetition as a loss for the
+   *  checker and reports it as "mate N" (xiangqiRuleMate). Absent on every
+   *  other row, and on rows cached before the tag existed. */
+  rule?: 'perpetual-check';
 };
 
 export type AnalyzeXiangqiGameOptions = {
