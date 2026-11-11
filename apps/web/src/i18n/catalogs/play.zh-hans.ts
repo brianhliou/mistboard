@@ -362,6 +362,8 @@ export const ZH_HANS_PLAY = {
   'puzzle.embedLoadFailed': '这道题目无法加载。',
   'puzzle.embedNotAvailable': '这道题目暂不可用。',
   'puzzle.openInAnalysis': '在分析棋盘中打开',
+  'puzzle.exploration': '分析变化',
+  'puzzle.backToSolution': '返回答案',
   'puzzle.checkFailed': '无法检查着法，请重试。',
   'puzzle.dashboardTitle': '解题面板',
   'puzzle.dashboardSubtitle': '训练、分析、提高',

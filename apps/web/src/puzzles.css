@@ -345,6 +345,7 @@ a.puzzle-streak-chip:focus-visible {
    the edge, a red move's mark sat against the black move beside it. */
 .puzzle-move-mark {
   margin-left: 6px;
+  flex-shrink: 0;
   font-weight: 700;
 }
 
@@ -1131,6 +1132,7 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-move-red,
 .puzzle-move-black {
   min-width: 0;
+  padding-inline: 6px;
   overflow-wrap: anywhere;
   color: var(--site-text);
   font-size: 15px;
@@ -1142,7 +1144,7 @@ a.puzzle-streak-chip:focus-visible {
   align-self: stretch;
   display: flex;
   align-items: center;
-  margin: 0 -6px;
+  margin: 0;
   padding: 0 6px;
   background: var(--site-accent-soft);
   color: var(--site-heading);
@@ -1151,6 +1153,38 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-move-cell--right:not(.puzzle-move-cell--revealed) {
   color: #2b8a57;
+}
+
+.puzzle-exploration {
+  padding: 8px 12px;
+  border-top: 1px solid var(--site-border-soft);
+  font-size: 13px;
+}
+.puzzle-moves:has(> .puzzle-exploration) {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.puzzle-exploration-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.puzzle-exploration-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.puzzle-exploration button {
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--site-text);
+  cursor: pointer;
+}
+.puzzle-exploration button[aria-current] {
+  background: var(--site-accent-soft);
 }
 
 .puzzle-move-cell--revealed {
@@ -2023,6 +2057,22 @@ a.puzzle-tag--link:hover {
     align-items: center;
     height: 30px;
     box-sizing: border-box;
+  }
+
+  .puzzles-shell .puzzle-moves:has(> .puzzle-exploration) {
+    display: grid;
+    grid-template-rows: 44px auto;
+    height: auto;
+  }
+  .puzzles-shell .puzzle-exploration button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .puzzles-shell .puzzle-moves:has(.puzzle-move-cell--wrong[role="button"]) {
+    min-height: 44px;
+  }
+  .puzzles-shell .puzzle-move-cell--wrong[role="button"] {
+    min-height: 40px;
   }
 
   .puzzles-shell .puzzle-move-list {
