@@ -69,8 +69,10 @@ export function botPacingEnabled(env: NodeJS.ProcessEnv, variant: string): boole
   if (env.MISTBOARD_BOT_PACING !== 'true' || !Object.hasOwn(PACING_LEGAL_MEDIANS, variant)) {
     return false;
   }
-  // Unset preserves the existing rollout. Empty and unknown-only lists enable nothing.
-  const variants = env.MISTBOARD_BOT_PACING_VARIANTS ?? 'xiangqi,jieqi';
+  // Unset paces every variant with a median (only wired loops ever ask); the list
+  // exists to turn one off without a release. Empty and unknown-only lists enable nothing.
+  const variants = env.MISTBOARD_BOT_PACING_VARIANTS;
+  if (variants === undefined) return true;
   return variants.split(',').some((id) => id.trim() === variant);
 }
 

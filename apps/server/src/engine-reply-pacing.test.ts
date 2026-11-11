@@ -26,7 +26,9 @@ describe('replyPace', () => {
     assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING_VARIANTS: 'jungle' }, 'jungle'), false);
     assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'xiangqi'), true);
     assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'jieqi'), true);
-    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'jungle'), false);
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'jungle'), true);
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'banqi'), true);
+    assert.equal(botPacingEnabled({ MISTBOARD_BOT_PACING: 'true' }, 'dark-chess'), false);
     const env = {
       MISTBOARD_BOT_PACING: 'true',
       MISTBOARD_BOT_PACING_VARIANTS: ' jungle,banqi,typo ',

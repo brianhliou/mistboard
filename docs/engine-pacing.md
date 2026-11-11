@@ -9,9 +9,10 @@ time is subtracted from the target; the hold consumes real bot clock time.
 
 `MISTBOARD_BOT_PACING=true` is the master switch.
 `MISTBOARD_BOT_PACING_VARIANTS` is a comma-separated list of exact variant ids.
-Unset preserves xiangqi/jieqi; an empty list enables none. Unknown ids fail closed.
-The policy supports nine shared-allocator variants; this change integrates the
-existing xiangqi/jieqi loops only. Selecting another id does not wire its loop.
+Unset paces every variant with a median; an empty list enables none. Unknown ids fail closed.
+The policy supports nine shared-allocator variants. Live loops are integrated for
+xiangqi, jieqi, Banqi, Jungle and Flip Jungle (#1063). Selecting another id does
+not wire its loop. Fog and dark chess have no median and are never paced.
 Correspondence and engine-vs-engine turns never receive a hold or pacing reserve.
 
 ## Calibration provenance
@@ -89,3 +90,26 @@ to 4, then run the pacing/calibration tests and restore the source. The former
 must fail the independent 5000 ms reserve assertion; the latter must fail the
 fixture-derived median assertion. Both planted mutations failed these checks
 and were restored. Gate results are recorded in the burn handoff.
+
+## Banqi, Jungle and Flip Jungle integration (#1063)
+
+The three live loops use the same cancellable reply turn and pace payload as
+xiangqi/jieqi. This includes Banqi's chase fallback and strict external/internal
+providers, Jungle's in-process search, Rust engine and KataGo seat, and Flip
+Jungle's UCI provider. A provider that fails closed still resigns immediately;
+pacing does not delay infrastructure failures. Successful decisions add only
+`pace_wait_ms`, `pace_target_ms`, and `pace_reason` to the existing payload.
+
+Search allocation uses the shared starting-clock reserve and deducts preparation
+and earlier attempts before retrying. The hold charges the bot's running clock;
+`think_time_ms` records compute before the hold. Every path checks state/clock
+identity, terminal status, engine seat and live clock both during the wait and
+again after awaiting it, immediately before queuing the decision and appending.
+That final check also covers an abort between timer resolution and continuation.
+
+There is no live takeback endpoint for these tenants. Tests model a restored
+same-seat-to-move projection; this change adds no takeback surface. EvE and
+correspondence skip both hold and pacing reserve. No registry, tenant list, route,
+engine tier, or rollout default changes.
+
+Review and local rehearsal evidence: [#1063 handoff](engine-pacing-1063.md).
