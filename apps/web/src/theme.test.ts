@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   boardThemes,
@@ -435,6 +437,27 @@ describe('appearance family gating', () => {
     ).toBe(true);
   });
 
+  // The Board panel's checkbox rows get their side padding from one rule in
+  // theme.css that names each row's class; a row left out of it sat flush with
+  // the panel edge (touch confirmation, until 2026-11-11).
+  it('pads every Board panel checkbox row like the others', async () => {
+    await rebuildThemePanel();
+    const css = readFileSync(resolve(__dirname, 'theme.css'), 'utf8');
+    const padded = [
+      ...css.matchAll(/\.appearance-submenu\[data-key="board"\] \.([\w-]+)[,\s{]/g),
+    ].map((match) => match[1]);
+    const rows = [
+      ...document.querySelectorAll<HTMLLabelElement>(
+        '[data-theme-control] .appearance-submenu[data-key="board"] label.theme-control-check-field',
+      ),
+    ];
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    const unpadded = rows
+      .filter((row) => ![...row.classList].some((name) => padded.includes(name)))
+      .map((row) => row.textContent);
+    expect(unpadded).toEqual([]);
+  });
+
   it('offers touch move confirmation to guests and stores the disabled preference', async () => {
     await rebuildThemePanel();
     const toggle = document.querySelector<HTMLInputElement>(
@@ -442,7 +465,7 @@ describe('appearance family gating', () => {
     );
     expect(toggle).not.toBeNull();
     expect(toggle?.checked).toBe(true);
-    expect(toggle?.closest('label')?.textContent).toBe('Confirm moves on touch screens');
+    expect(toggle?.closest('label')?.textContent).toBe('Confirm touch moves');
     toggle!.click();
     expect(
       JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}')

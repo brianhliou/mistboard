@@ -205,7 +205,7 @@ export const ZH_HANS_ACCOUNT = {
   'account.displayBoardHighlights': '棋盘高亮（上一着与将军）',
   'account.displayPieceDestinations': '落子提示（合法着法与预走）',
   'account.displayBoardCoordinates': '棋盘坐标（A-H，1-8）',
-  'account.displayConfirmMovesOnTouch': '在触摸屏上确认落子',
+  'account.displayConfirmMovesOnTouch': '确认触屏落子',
   'account.displayMoveListWhilePlaying': '对局中显示着法列表',
   'account.displayZenMode': '禅模式',
   'account.displayBoardResizeHandle': '显示棋盘缩放手柄',
