@@ -30,6 +30,7 @@ import {
   XIANGQI_PUZZLE_ENDPOINT_VERSION,
   xiangqiPuzzleSolutionEndpoint,
 } from './puzzles-xiangqi-endpoint.js';
+import { XIANGQI_MATE_GOAL_PROFILE } from './puzzles-xiangqi-mate.js';
 import {
   positionRepetitionKey,
   type XiangqiColor,
@@ -168,6 +169,7 @@ export function xiangqiPuzzleHasStartingChoice(state: XiangqiGameState): boolean
 }
 
 export const XIANGQI_PUZZLE_ADMISSION_PROFILE = {
+  mateGoalVersion: XIANGQI_MATE_GOAL_PROFILE.version,
   solverGateVersion: XIANGQI_SOLVER_GATE_VERSION,
   scoreProfileId: XIANGQI_SOLVER_SCORE_PROFILE.id,
   endpointVersion: XIANGQI_PUZZLE_ENDPOINT_VERSION,

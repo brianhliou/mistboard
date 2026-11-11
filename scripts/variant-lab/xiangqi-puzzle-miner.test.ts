@@ -101,11 +101,11 @@ test('an illegal engine continuation cannot produce a mined puzzle', async () =>
   assert.equal(built.reason, 'illegal-engine-pv');
 });
 
-test('an engine mate score without a kernel mate is rejected at assembly', async () => {
+test('an engine mate score without a forced board mate is rejected before assembly', async () => {
   const built = await buildGatedLine(fake('unfinished-mate'), initial, options(1));
-  assert.equal(built.ok, true);
-  if (!built.ok) return;
-  assert.deepEqual(assemble(built, 1), { ok: false, reason: 'mate-not-reached' });
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.equal(built.reason, 'mate-goal-not-forced');
 });
 
 test('a complete uniquely verified material payoff remains mineable', async () => {

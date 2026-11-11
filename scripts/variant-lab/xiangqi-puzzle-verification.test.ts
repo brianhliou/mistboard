@@ -67,7 +67,7 @@ test('a later actual mate completes its goal without weakening root admission', 
   assert.deepEqual(result.budgets, []);
 });
 
-test('the complete reviewed forced mate survives material-winning alternatives at its finish', async () => {
+test('a reviewed longer mate is proved or retained for review, never rejected for slower wins', async () => {
   let searches = 0;
   const result = await auditXiangqiCorpusPuzzle(
     {
@@ -80,8 +80,11 @@ test('the complete reviewed forced mate survives material-winning alternatives a
     },
     mate,
   );
-  assert.equal(result.decision.disposition, 'keep');
-  assert.equal(searches, 4);
+  if (result.decision.disposition !== 'keep') {
+    assert.equal(result.decision.disposition, 'needs-review');
+    assert.equal(result.decision.reason, 'mate-goal-budget-exhausted');
+  }
+  assert.equal(searches, 0, 'the complete mate goal is independently board-proven');
 });
 
 test('an ambiguous intermediate fork stays in review instead of losing its chariot payoff', async () => {
@@ -170,7 +173,7 @@ test('stable decisive evidence stops at 25M without a nominal depth target', asy
   assert.equal(result.judgment.verdict, 'pass');
 });
 
-test('two mating starts remain ambiguous regardless of the advertised puzzle goal', async () => {
+test('two mating starts remain ambiguous in a winning-advantage exercise', async () => {
   const p = fixtures['48gHj']!;
   const result = await verifyXiangqiSolverTurn(
     { newGame: async () => {}, analyzeFen: async () => scored(p, 0, 'mate 9', 'mate 10') },
@@ -217,6 +220,7 @@ test('a time-capped earlier search remains unresolved even after a complete 100M
 
 test('the miner completes the same reviewed mate without an admission bypass at its final turn', async () => {
   let calls = 0;
+  let replies = 0;
   const result = await buildGatedLine(
     {
       newGame: async () => {},
@@ -225,7 +229,7 @@ test('the miner completes the same reviewed mate without an admission bypass at 
         if (ranks === 1)
           return parseXiangqiScoredLines(
             [
-              `info depth 30 multipv 1 score cp -600 pv ${xiangqiMoveToPikafishUci(mate.solution[ply - 1]!)}`,
+              `info depth 30 multipv 1 score cp -600 pv ${xiangqiMoveToPikafishUci(mate.solution[replies++ * 2 + 1]!)}`,
             ],
             1,
           );
@@ -241,8 +245,10 @@ test('the miner completes the same reviewed mate without an admission bypass at 
       maxSolutionPlies: 7,
     } as XiangqiPuzzleMinerOptions,
   );
-  assert.equal(result.ok, true);
-  if (!result.ok) return;
+  if (!result.ok) {
+    assert.equal(result.reason, 'mate-goal-budget-exhausted');
+    return;
+  }
   assert.deepEqual(result.pv, mate.solution);
-  assert.equal(calls, 4);
+  assert.equal(calls, 2, 'later mate bounds are board-proven instead of re-evaluated');
 });

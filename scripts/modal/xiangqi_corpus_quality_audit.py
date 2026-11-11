@@ -31,6 +31,7 @@ SOURCES = [
     "packages/game/src/variants-xiangqi.ts",
     "packages/game/src/xiangqi-position.ts",
     "packages/game/src/xiangqi-uci.ts",
+    "packages/game/src/puzzles-xiangqi-mate.ts",
 ]
 
 

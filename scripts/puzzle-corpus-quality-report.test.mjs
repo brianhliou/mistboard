@@ -114,3 +114,25 @@ test('root choice guard uses recorded kernel coverage and preserves the raw sear
   assert.equal(report.decisions.keep, 0);
   assert.equal(report.decisions['withhold-candidate'], 1);
 });
+
+test('mate proofs render their objective and provide root coverage without an engine score', () => {
+  const f = fixture();
+  const row = f.shards[0][2];
+  row.decision = { disposition: 'keep', reason: 'all-solver-turns-pass', firstProblemPly: null };
+  row.evidence[0].mateGoalEvidence = {
+    mateIn: 3,
+    verdict: 'unique',
+    reason: 'unique-within-mate-goal',
+    winningMoves: [{ from: 'a1', to: 'a5' }],
+    nodes: 123,
+    complete: true,
+    legalMoveCount: 1,
+  };
+  const report = buildCorpusQualityReport(f.snapshot, f.manifest, f.shards);
+  assert.equal(report.forcedStarts, 1);
+  const html = corpusQualityReportHtml(report);
+  assert.ok(html.includes('mate within 3 moves'));
+  assert.ok(html.includes('123 nodes'));
+  assert.ok(html.includes('All legal starting moves checked.'));
+  assert.ok(!html.includes('1M/5M'));
+});

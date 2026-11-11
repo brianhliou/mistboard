@@ -2,6 +2,10 @@
 import type { XiangqiPuzzleGoal } from '../../packages/game/src/puzzles-xiangqi.ts';
 import type { XiangqiPuzzleSolverJudgment } from '../../packages/game/src/puzzles-xiangqi-endpoint.ts';
 import {
+  proveXiangqiMateGoal,
+  type XiangqiMateGoalEvidence,
+} from '../../packages/game/src/puzzles-xiangqi-mate.ts';
+import {
   XIANGQI_SOLVER_GATE_DEFAULTS,
   type XiangqiSolverUniquenessOptions,
   xiangqiSolverLineWinRate,
@@ -19,7 +23,7 @@ import {
 } from './xiangqi-pikafish-uci.ts';
 
 export const XIANGQI_PUZZLE_VERIFICATION_PROFILE = {
-  version: 'cc0-25m-selective-100m-v1',
+  version: 'cc0-25m-selective-100m-mate-goal-v2',
   baselineNodes: [5_000_000, 25_000_000],
   baselineTimeMs: [30_000, 90_000],
   escalationNodes: 100_000_000,
@@ -149,18 +153,43 @@ export async function verifyXiangqiSolverTurn(
   stored?: XiangqiMove,
   goal?: XiangqiPuzzleGoal,
   gate: XiangqiSolverUniquenessOptions = XIANGQI_SOLVER_GATE_DEFAULTS,
+  /** Stored mate tasks derive this from their remaining solution length.
+   * A miner without a stored line must first obtain a coherent engine hint. */
+  mateIn?: number,
 ) {
   const searches: XiangqiSolverPlyAnalysis[] = [];
   const budgets: number[] = [];
   const transcripts: NonNullable<PikafishEngine['lastSearch']>[] = [];
+  let mateGoalEvidence: XiangqiMateGoalEvidence | undefined;
+  const proveMate = (bound: number, answer?: XiangqiMove) => {
+    mateGoalEvidence = proveXiangqiMateGoal(state, bound);
+    const proof = mateGoalEvidence;
+    let judgment: XiangqiPuzzleSolverJudgment;
+    if (proof.verdict === 'unresolved')
+      judgment = { solutionPly, verdict: 'unresolved', reason: proof.reason };
+    else if (proof.verdict !== 'unique')
+      judgment = { solutionPly, verdict: 'fail', reason: proof.reason };
+    else if (answer && coordinate(proof.winningMoves[0]!) !== coordinate(answer))
+      judgment = { solutionPly, verdict: 'fail', reason: 'stored-answer-mismatch' };
+    else judgment = { solutionPly, verdict: 'pass', reason: proof.reason };
+    return { transcripts, searches, budgets, escalationReasons: [], mateGoalEvidence, judgment };
+  };
+  if (mateIn !== undefined && goal?.type !== 'checkmate')
+    throw new Error('A mate bound requires a checkmate goal');
+  if (goal?.winner && (state.status.type !== 'playing' || goal.winner !== state.status.turn))
+    throw new Error('Mate goal winner does not match the solver');
+  if (mateIn !== undefined && (!Number.isSafeInteger(mateIn) || mateIn < 1))
+    return proveMate(mateIn, stored);
   if (stored && completesXiangqiMateGoal(state, stored, solutionPly, goal))
     return {
+      mateGoalEvidence,
       transcripts,
       searches,
       budgets,
       escalationReasons: [],
       judgment: { solutionPly, verdict: 'pass' as const, reason: 'kernel-mate-goal-completed' },
     };
+  if (goal?.type === 'checkmate' && mateIn !== undefined) return proveMate(mateIn, stored);
   const profile = XIANGQI_PUZZLE_VERIFICATION_PROFILE;
   if (engine.hashMb !== undefined && engine.hashMb !== profile.hashMb)
     throw new Error(`Puzzle verification requires engine hash ${profile.hashMb} MB`);
@@ -192,6 +221,7 @@ export async function verifyXiangqiSolverTurn(
   const answer = stored ?? (token ? pikafishUciToXiangqiSquares(token) : null);
   if (!answer)
     return {
+      mateGoalEvidence,
       transcripts,
       searches,
       budgets,
@@ -205,7 +235,39 @@ export async function verifyXiangqiSolverTurn(
   const escalationReasons = xiangqiSearchEscalationReasons(solutionPly, answer, searches, gate);
   if (timeCapped) escalationReasons.push('search-time-cap');
   if (escalationReasons.length) await search(profile.escalationNodes, profile.escalationTimeMs);
+  // Mining has no stored mate bound yet. Engine scores can propose the N,
+  // but admission requires an independent all-defences board proof. A general
+  // winning-advantage task never acquires a mating objective from its scores.
+  const inferred = searches.at(-1)?.best?.mate;
+  if (
+    goal?.type !== 'winning-advantage' &&
+    inferred !== null &&
+    inferred !== undefined &&
+    inferred > 0 &&
+    !timeCapped &&
+    searches.every(
+      (s) =>
+        !unknown.has(s.reason) &&
+        s.best?.mate === inferred &&
+        s.lines[0]?.pvUci[0] === coordinate(answer),
+    )
+  )
+    return proveMate(inferred, answer);
+  if (
+    goal?.type !== 'winning-advantage' &&
+    !timeCapped &&
+    searches.some((s) => s.best?.mate !== null && (s.best?.mate ?? 0) > 0)
+  )
+    return {
+      mateGoalEvidence,
+      transcripts,
+      searches,
+      budgets,
+      escalationReasons,
+      judgment: { solutionPly, verdict: 'unresolved' as const, reason: 'mate-goal-bound-unstable' },
+    };
   return {
+    mateGoalEvidence,
     transcripts,
     searches,
     budgets,

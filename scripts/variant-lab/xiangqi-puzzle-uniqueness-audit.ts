@@ -48,6 +48,7 @@ import {
   xiangqiSolverMoveCoverage,
 } from '../../packages/game/src/index.ts';
 import { loadSeedPuzzleRegistry } from '../../packages/game/src/puzzle-seed.ts';
+import type { XiangqiMateGoalEvidence } from '../../packages/game/src/puzzles-xiangqi-mate.ts';
 import { PikafishEngine, XIANGQI_SOLVER_GATE_DEFAULTS } from './xiangqi-pikafish-uci.ts';
 
 export type XiangqiPuzzleAuditOptions = {
@@ -122,7 +123,8 @@ export type XiangqiPuzzleAuditPlyReport = {
   shippedMove: string;
   engineBestMove: string;
   matchesShipped: boolean;
-  bestCp: number;
+  bestCp: number | null;
+  mateGoalEvidence?: XiangqiMateGoalEvidence;
   secondCp: number | null;
   bestMate: number | null;
   secondMate: number | null;
@@ -191,7 +193,15 @@ export async function auditXiangqiPuzzle(
   for (let ply = 0; ply < puzzle.solution.length; ply += 1) {
     const move = puzzle.solution[ply] as XiangqiMove;
     if (ply % 2 === 0 && state.status.type === 'playing') {
-      const verified = await verifyXiangqiSolverTurn(engine, state, ply, move, puzzle.goal, gate);
+      const verified = await verifyXiangqiSolverTurn(
+        engine,
+        state,
+        ply,
+        move,
+        puzzle.goal,
+        gate,
+        puzzle.goal.type === 'checkmate' ? (puzzle.solution.length - ply + 1) / 2 : undefined,
+      );
       const last = verified.searches.at(-1);
       const lines = last?.lines ?? [];
       const best = last?.best;
@@ -204,12 +214,15 @@ export async function auditXiangqiPuzzle(
       const coverage = xiangqiSolverMoveCoverage(state);
       const matchesShipped =
         verified.judgment.reason === 'kernel-mate-goal-completed' ||
+        (verified.mateGoalEvidence?.verdict === 'unique' &&
+          verified.mateGoalEvidence.winningMoves[0]?.from === move.from &&
+          verified.mateGoalEvidence.winningMoves[0]?.to === move.to) ||
         (engineBest?.from === move.from && engineBest?.to === move.to) ||
         (best?.mate === 1 &&
           coverage.immediateWins.some((win) => win.from === move.from && win.to === move.to));
-      const bestCp = best?.scoreCp ?? 0;
+      const bestCp = best?.scoreCp ?? null;
       const secondCp = second?.scoreCp ?? null;
-      const gapCp = secondCp === null ? null : bestCp - secondCp;
+      const gapCp = secondCp === null || bestCp === null ? null : bestCp - secondCp;
       const gapWinrate =
         best && second
           ? xiangqiSolverLineWinRate(best, opts.winRateK) -
@@ -228,6 +241,7 @@ export async function auditXiangqiPuzzle(
         gapWinrate,
         unique,
         uniquenessReason: reason,
+        mateGoalEvidence: verified.mateGoalEvidence,
       });
     }
     if (state.status.type !== 'playing') break;

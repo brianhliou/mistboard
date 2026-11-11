@@ -1,0 +1,1156 @@
+{
+  "0IMes": {
+    "id": "xq-mined-hxq_113db06bf37ec7229eac84ee-82",
+    "variant": "xiangqi",
+    "title": "Red mate in 2",
+    "initial": {
+      "id": "xq-mined-hxq_113db06bf37ec7229eac84ee-82",
+      "board": {
+        "a4": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "c6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d9": {
+          "role": "horse",
+          "color": "black"
+        },
+        "e3": {
+          "role": "general",
+          "color": "red"
+        },
+        "e9": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g5": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "g6": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "i5": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g10": {
+          "role": "elephant",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveLog": [
+        {
+          "to": "e5",
+          "from": "e4"
+        },
+        {
+          "to": "f8",
+          "from": "h8"
+        },
+        {
+          "to": "g5",
+          "from": "g4"
+        },
+        {
+          "to": "f7",
+          "from": "f8"
+        },
+        {
+          "to": "c5",
+          "from": "c4"
+        },
+        {
+          "to": "b7",
+          "from": "b8"
+        },
+        {
+          "to": "a5",
+          "from": "a4"
+        },
+        {
+          "to": "i8",
+          "from": "i10"
+        },
+        {
+          "to": "e2",
+          "from": "d1"
+        },
+        {
+          "to": "f4",
+          "from": "f7"
+        },
+        {
+          "to": "e3",
+          "from": "c1"
+        },
+        {
+          "to": "d4",
+          "from": "f4"
+        },
+        {
+          "to": "i5",
+          "from": "i4"
+        },
+        {
+          "to": "d1",
+          "from": "d4"
+        },
+        {
+          "to": "d1",
+          "from": "e1"
+        },
+        {
+          "to": "b1",
+          "from": "b7"
+        },
+        {
+          "to": "e1",
+          "from": "d1"
+        },
+        {
+          "to": "f1",
+          "from": "b1"
+        },
+        {
+          "to": "f1",
+          "from": "e1"
+        },
+        {
+          "to": "e8",
+          "from": "c10"
+        },
+        {
+          "to": "e1",
+          "from": "f1"
+        },
+        {
+          "to": "g8",
+          "from": "h10"
+        },
+        {
+          "to": "a4",
+          "from": "a1"
+        },
+        {
+          "to": "g6",
+          "from": "g7"
+        },
+        {
+          "to": "g6",
+          "from": "g5"
+        },
+        {
+          "to": "g6",
+          "from": "e8"
+        },
+        {
+          "to": "i4",
+          "from": "i1"
+        },
+        {
+          "to": "e8",
+          "from": "g6"
+        },
+        {
+          "to": "i3",
+          "from": "h3"
+        },
+        {
+          "to": "g6",
+          "from": "e8"
+        },
+        {
+          "to": "a3",
+          "from": "b3"
+        },
+        {
+          "to": "f6",
+          "from": "g8"
+        },
+        {
+          "to": "e4",
+          "from": "i4"
+        },
+        {
+          "to": "e4",
+          "from": "f6"
+        },
+        {
+          "to": "i4",
+          "from": "i3"
+        },
+        {
+          "to": "c5",
+          "from": "e4"
+        },
+        {
+          "to": "c5",
+          "from": "e3"
+        },
+        {
+          "to": "b8",
+          "from": "i8"
+        },
+        {
+          "to": "e3",
+          "from": "g1"
+        },
+        {
+          "to": "i8",
+          "from": "g6"
+        },
+        {
+          "to": "i7",
+          "from": "i4"
+        },
+        {
+          "to": "g6",
+          "from": "i8"
+        },
+        {
+          "to": "e6",
+          "from": "e5"
+        },
+        {
+          "to": "e6",
+          "from": "e7"
+        },
+        {
+          "to": "g1",
+          "from": "e3"
+        },
+        {
+          "to": "g8",
+          "from": "b8"
+        },
+        {
+          "to": "i4",
+          "from": "a4"
+        },
+        {
+          "to": "e8",
+          "from": "g6"
+        },
+        {
+          "to": "e3",
+          "from": "c5"
+        },
+        {
+          "to": "e5",
+          "from": "e6"
+        },
+        {
+          "to": "i3",
+          "from": "g1"
+        },
+        {
+          "to": "h8",
+          "from": "g8"
+        },
+        {
+          "to": "a7",
+          "from": "a3"
+        },
+        {
+          "to": "a7",
+          "from": "a10"
+        },
+        {
+          "to": "f2",
+          "from": "h1"
+        },
+        {
+          "to": "d5",
+          "from": "e5"
+        },
+        {
+          "to": "e4",
+          "from": "f2"
+        },
+        {
+          "to": "a5",
+          "from": "a7"
+        },
+        {
+          "to": "g5",
+          "from": "i3"
+        },
+        {
+          "to": "h1",
+          "from": "h8"
+        },
+        {
+          "to": "f1",
+          "from": "e2"
+        },
+        {
+          "to": "f1",
+          "from": "h1"
+        },
+        {
+          "to": "e2",
+          "from": "e1"
+        },
+        {
+          "to": "e1",
+          "from": "f1"
+        },
+        {
+          "to": "e1",
+          "from": "e2"
+        },
+        {
+          "to": "a1",
+          "from": "a5"
+        },
+        {
+          "to": "e2",
+          "from": "e1"
+        },
+        {
+          "to": "g1",
+          "from": "a1"
+        },
+        {
+          "to": "g1",
+          "from": "e3"
+        },
+        {
+          "to": "d4",
+          "from": "d5"
+        },
+        {
+          "to": "e3",
+          "from": "e2"
+        },
+        {
+          "to": "e4",
+          "from": "d4"
+        },
+        {
+          "to": "f3",
+          "from": "e3"
+        },
+        {
+          "to": "e3",
+          "from": "e4"
+        },
+        {
+          "to": "e3",
+          "from": "f3"
+        },
+        {
+          "to": "e9",
+          "from": "d10"
+        },
+        {
+          "to": "i3",
+          "from": "g5"
+        },
+        {
+          "to": "g6",
+          "from": "e8"
+        },
+        {
+          "to": "g5",
+          "from": "i3"
+        },
+        {
+          "to": "d9",
+          "from": "b10"
+        },
+        {
+          "to": "a4",
+          "from": "i4"
+        },
+        {
+          "to": "c6",
+          "from": "c7"
+        }
+      ],
+      "lastMove": {
+        "to": "c6",
+        "from": "c7"
+      },
+      "moveNumber": 42,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4rc,c6bs,d9bh,e10bg,e3rg,e9ba,f10ba,g1re,g10be,g5re,g6be,i5rs,i7rc": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "a10",
+        "from": "a4"
+      },
+      {
+        "to": "b10",
+        "from": "d9"
+      },
+      {
+        "to": "b10",
+        "from": "a10"
+      }
+    ],
+    "goal": {
+      "type": "checkmate",
+      "winner": "red"
+    },
+    "themes": ["checkmate", "matein2", "crushing", "endgame"]
+  },
+  "9wMa4": {
+    "id": "xq-mined-hxq_43cca0499e5939cb0bbc2235-72",
+    "variant": "xiangqi",
+    "title": "Red mate in 2",
+    "initial": {
+      "id": "xq-mined-hxq_43cca0499e5939cb0bbc2235-72",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e8": {
+          "role": "horse",
+          "color": "black"
+        },
+        "e9": {
+          "role": "general",
+          "color": "black"
+        },
+        "f1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "g5": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "h3": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "i1": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "i3": {
+          "role": "horse",
+          "color": "red"
+        },
+        "i4": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "c10": {
+          "role": "horse",
+          "color": "red"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g10": {
+          "role": "chariot",
+          "color": "red"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "lastMove": {
+        "to": "h3",
+        "from": "h4"
+      },
+      "moveNumber": 37,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4rs,c10rh,d1ra,d10ba,e1rg,e8bh,e9bg,f1ra,f10ba,g10rc,g5rs,h3bs,i1rc,i3rh,i4bc": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "g9",
+        "from": "g10"
+      },
+      {
+        "to": "e10",
+        "from": "e9"
+      },
+      {
+        "to": "d8",
+        "from": "c10"
+      }
+    ],
+    "goal": {
+      "type": "checkmate",
+      "winner": "red"
+    },
+    "themes": ["checkmate", "matein2", "crushing", "middlegame"]
+  },
+  "n6sE3": {
+    "id": "xq-mined-hxq_79f9a81415a32d9ba19ecd80-44",
+    "variant": "xiangqi",
+    "title": "Red mate in 2",
+    "initial": {
+      "id": "xq-mined-hxq_79f9a81415a32d9ba19ecd80-44",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c1": {
+          "role": "elephant",
+          "color": "red"
+        },
+        "c3": {
+          "role": "horse",
+          "color": "red"
+        },
+        "c5": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e2": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e5": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "e7": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "f1": {
+          "role": "general",
+          "color": "red"
+        },
+        "f6": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "g1": {
+          "role": "cannon",
+          "color": "black"
+        },
+        "h6": {
+          "role": "horse",
+          "color": "red"
+        },
+        "i4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "i7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c10": {
+          "role": "elephant",
+          "color": "black"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        },
+        "f10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "g10": {
+          "role": "elephant",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveLog": [
+        {
+          "to": "e3",
+          "from": "h3"
+        },
+        {
+          "to": "g8",
+          "from": "h10"
+        },
+        {
+          "to": "g3",
+          "from": "h1"
+        },
+        {
+          "to": "e8",
+          "from": "b8"
+        },
+        {
+          "to": "h1",
+          "from": "i1"
+        },
+        {
+          "to": "c8",
+          "from": "b10"
+        },
+        {
+          "to": "h7",
+          "from": "h1"
+        },
+        {
+          "to": "i8",
+          "from": "g10"
+        },
+        {
+          "to": "g7",
+          "from": "h7"
+        },
+        {
+          "to": "g10",
+          "from": "i10"
+        },
+        {
+          "to": "b5",
+          "from": "b3"
+        },
+        {
+          "to": "h10",
+          "from": "g8"
+        },
+        {
+          "to": "h7",
+          "from": "g7"
+        },
+        {
+          "to": "g8",
+          "from": "h8"
+        },
+        {
+          "to": "g7",
+          "from": "h7"
+        },
+        {
+          "to": "g4",
+          "from": "g8"
+        },
+        {
+          "to": "g10",
+          "from": "g7"
+        },
+        {
+          "to": "g1",
+          "from": "g4"
+        },
+        {
+          "to": "e2",
+          "from": "f1"
+        },
+        {
+          "to": "g10",
+          "from": "i8"
+        },
+        {
+          "to": "f5",
+          "from": "g3"
+        },
+        {
+          "to": "b10",
+          "from": "a10"
+        },
+        {
+          "to": "c5",
+          "from": "b5"
+        },
+        {
+          "to": "b8",
+          "from": "b10"
+        },
+        {
+          "to": "c3",
+          "from": "b1"
+        },
+        {
+          "to": "g8",
+          "from": "h10"
+        },
+        {
+          "to": "c8",
+          "from": "c5"
+        },
+        {
+          "to": "c8",
+          "from": "b8"
+        },
+        {
+          "to": "b1",
+          "from": "a1"
+        },
+        {
+          "to": "c6",
+          "from": "c7"
+        },
+        {
+          "to": "b5",
+          "from": "b1"
+        },
+        {
+          "to": "f6",
+          "from": "g8"
+        },
+        {
+          "to": "h6",
+          "from": "f5"
+        },
+        {
+          "to": "e4",
+          "from": "e8"
+        },
+        {
+          "to": "f5",
+          "from": "b5"
+        },
+        {
+          "to": "c5",
+          "from": "c6"
+        },
+        {
+          "to": "f6",
+          "from": "f5"
+        },
+        {
+          "to": "e5",
+          "from": "e4"
+        },
+        {
+          "to": "c5",
+          "from": "c4"
+        },
+        {
+          "to": "c5",
+          "from": "c8"
+        },
+        {
+          "to": "f1",
+          "from": "e1"
+        },
+        {
+          "to": "e9",
+          "from": "d10"
+        },
+        {
+          "to": "e7",
+          "from": "e3"
+        },
+        {
+          "to": "d10",
+          "from": "e9"
+        }
+      ],
+      "lastMove": {
+        "to": "d10",
+        "from": "e9"
+      },
+      "moveNumber": 23,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4rs,a7bs,c1re,c10be,c3rh,c5bc,d1ra,d10ba,e10bg,e2ra,e5bc,e7rc,f1rg,f10ba,f6rc,g1bc,g10be,h6rh,i4rs,i7bs": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "g8",
+        "from": "h6"
+      },
+      {
+        "to": "a6",
+        "from": "a7"
+      },
+      {
+        "to": "f10",
+        "from": "f6"
+      }
+    ],
+    "goal": {
+      "type": "checkmate",
+      "winner": "red"
+    },
+    "themes": ["checkmate", "matein2", "crushing", "middlegame"]
+  },
+  "mate-in-three-control": {
+    "id": "xq-mined-hxq_6897f568c542ad16226b0c1c-54",
+    "variant": "xiangqi",
+    "title": "Red mate in 3",
+    "initial": {
+      "id": "xq-mined-hxq_6897f568c542ad16226b0c1c-54",
+      "board": {
+        "a4": {
+          "role": "soldier",
+          "color": "red"
+        },
+        "a7": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "c7": {
+          "role": "chariot",
+          "color": "red"
+        },
+        "d1": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "d7": {
+          "role": "horse",
+          "color": "red"
+        },
+        "e1": {
+          "role": "general",
+          "color": "red"
+        },
+        "e2": {
+          "role": "advisor",
+          "color": "red"
+        },
+        "e9": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "f1": {
+          "role": "cannon",
+          "color": "red"
+        },
+        "g5": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "h9": {
+          "role": "horse",
+          "color": "black"
+        },
+        "i1": {
+          "role": "chariot",
+          "color": "black"
+        },
+        "i6": {
+          "role": "soldier",
+          "color": "black"
+        },
+        "d10": {
+          "role": "advisor",
+          "color": "black"
+        },
+        "e10": {
+          "role": "general",
+          "color": "black"
+        }
+      },
+      "status": {
+        "turn": "red",
+        "type": "playing"
+      },
+      "moveLog": [
+        {
+          "to": "e3",
+          "from": "h3"
+        },
+        {
+          "to": "e8",
+          "from": "b8"
+        },
+        {
+          "to": "g3",
+          "from": "h1"
+        },
+        {
+          "to": "c8",
+          "from": "b10"
+        },
+        {
+          "to": "h1",
+          "from": "i1"
+        },
+        {
+          "to": "f8",
+          "from": "h8"
+        },
+        {
+          "to": "h8",
+          "from": "h1"
+        },
+        {
+          "to": "h8",
+          "from": "e8"
+        },
+        {
+          "to": "e5",
+          "from": "e4"
+        },
+        {
+          "to": "b10",
+          "from": "a10"
+        },
+        {
+          "to": "a3",
+          "from": "a1"
+        },
+        {
+          "to": "g8",
+          "from": "h8"
+        },
+        {
+          "to": "e6",
+          "from": "e5"
+        },
+        {
+          "to": "g4",
+          "from": "g8"
+        },
+        {
+          "to": "e7",
+          "from": "e6"
+        },
+        {
+          "to": "e9",
+          "from": "f10"
+        },
+        {
+          "to": "e8",
+          "from": "e7"
+        },
+        {
+          "to": "g1",
+          "from": "g4"
+        },
+        {
+          "to": "e2",
+          "from": "f1"
+        },
+        {
+          "to": "e8",
+          "from": "c10"
+        },
+        {
+          "to": "e4",
+          "from": "e3"
+        },
+        {
+          "to": "f10",
+          "from": "e10"
+        },
+        {
+          "to": "f3",
+          "from": "b3"
+        },
+        {
+          "to": "e10",
+          "from": "f10"
+        },
+        {
+          "to": "e3",
+          "from": "f3"
+        },
+        {
+          "to": "b1",
+          "from": "b10"
+        },
+        {
+          "to": "e8",
+          "from": "e3"
+        },
+        {
+          "to": "e8",
+          "from": "g10"
+        },
+        {
+          "to": "e3",
+          "from": "a3"
+        },
+        {
+          "to": "g8",
+          "from": "h10"
+        },
+        {
+          "to": "g4",
+          "from": "e4"
+        },
+        {
+          "to": "e7",
+          "from": "c8"
+        },
+        {
+          "to": "g1",
+          "from": "g4"
+        },
+        {
+          "to": "c1",
+          "from": "b1"
+        },
+        {
+          "to": "e7",
+          "from": "e3"
+        },
+        {
+          "to": "f4",
+          "from": "f8"
+        },
+        {
+          "to": "e8",
+          "from": "e7"
+        },
+        {
+          "to": "f10",
+          "from": "g8"
+        },
+        {
+          "to": "e7",
+          "from": "e8"
+        },
+        {
+          "to": "h9",
+          "from": "f10"
+        },
+        {
+          "to": "h5",
+          "from": "g3"
+        },
+        {
+          "to": "g6",
+          "from": "g7"
+        },
+        {
+          "to": "f4",
+          "from": "h5"
+        },
+        {
+          "to": "c4",
+          "from": "c1"
+        },
+        {
+          "to": "g6",
+          "from": "f4"
+        },
+        {
+          "to": "i4",
+          "from": "c4"
+        },
+        {
+          "to": "c7",
+          "from": "e7"
+        },
+        {
+          "to": "i1",
+          "from": "i4"
+        },
+        {
+          "to": "f1",
+          "from": "g1"
+        },
+        {
+          "to": "g10",
+          "from": "i10"
+        },
+        {
+          "to": "e5",
+          "from": "g6"
+        },
+        {
+          "to": "g5",
+          "from": "g10"
+        },
+        {
+          "to": "d7",
+          "from": "e5"
+        },
+        {
+          "to": "i6",
+          "from": "i7"
+        }
+      ],
+      "lastMove": {
+        "to": "i6",
+        "from": "i7"
+      },
+      "moveNumber": 28,
+      "progressClock": 0,
+      "positionCounts": {
+        "red|a4rs,a7bs,c7rc,d1ra,d10ba,d7rh,e1rg,e10bg,e2ra,e9ba,f1rc,g5bc,h9bh,i1bc,i6bs": 1
+      }
+    },
+    "solution": [
+      {
+        "to": "c9",
+        "from": "d7"
+      },
+      {
+        "to": "f10",
+        "from": "e10"
+      },
+      {
+        "to": "f7",
+        "from": "c7"
+      },
+      {
+        "to": "f8",
+        "from": "h9"
+      },
+      {
+        "to": "f8",
+        "from": "f7"
+      }
+    ],
+    "goal": {
+      "type": "checkmate",
+      "winner": "red"
+    },
+    "themes": ["checkmate", "matein3", "crushing", "middlegame"]
+  }
+}

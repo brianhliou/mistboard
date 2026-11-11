@@ -70,8 +70,10 @@ export function buildCorpusQualityReport(snapshotText, manifest, shards) {
       assert.ok(input, 'Puzzle missing from snapshot');
       assert.equal(row.puzzleHash, sha(JSON.stringify(input.puzzle)), 'Stale puzzle content');
       assert.ok(dispositions.includes(row.decision?.disposition), 'Unknown disposition');
-      const rootCount = row.evidence.find((ply) => ply.solutionPly === 0)?.searches.at(-1)
-        ?.moveCoverage?.legalMoveCount;
+      const root = row.evidence.find((ply) => ply.solutionPly === 0);
+      const rootCount =
+        root?.mateGoalEvidence?.legalMoveCount ??
+        root?.searches.at(-1)?.moveCoverage?.legalMoveCount;
       const noChoice =
         Number.isInteger(rootCount) &&
         rootCount >= 0 &&
@@ -152,12 +154,13 @@ export function corpusQualityReportHtml(report) {
           (
             ply,
           ) => `<h4>Solver turn ${ply.solutionPly / 2 + 1} · solution ply ${ply.solutionPly + 1}</h4>
+      ${ply.mateGoalEvidence ? `<p>Board proof · mate within ${escapeHtml(ply.mateGoalEvidence.mateIn)} moves · ${escapeHtml(ply.mateGoalEvidence.verdict)} · ${escapeHtml(ply.mateGoalEvidence.reason)} · ${ply.mateGoalEvidence.nodes} nodes</p><p>Proven within-bound keys: ${escapeHtml(ply.mateGoalEvidence.winningMoves.map(moveText).join(' ') || 'none found')}. ${ply.mateGoalEvidence.complete ? 'All legal starting moves checked.' : 'Uniqueness is not certified by a partial search; two proved keys already establish ambiguity.'}</p>` : ''}
       ${ply.searches
         .map(
           (
             search,
             budget,
-          ) => `<p>${budget === 0 ? '1M' : '5M'} node cap · ${escapeHtml(search.reason)}</p>
+          ) => `<p>${ply.budgets?.[budget] ? `${ply.budgets[budget].toLocaleString('en-US')} node cap` : 'Engine search'} · ${escapeHtml(search.reason)}</p>
       <div class="scroll"><table><thead><tr><th>Rank</th><th>Score</th><th>Depth</th><th>Nodes</th><th>Continuation (UCI)</th></tr></thead><tbody>
       ${search.lines.map((line) => `<tr><td>${line.rank}</td><td>${escapeHtml(scoreText(line))}</td><td>${line.depth ?? '?'}</td><td>${line.nodes ?? '?'}</td><td>${escapeHtml(line.pvUci.join(' '))}</td></tr>`).join('')}</tbody></table></div>`,
         )
@@ -180,7 +183,7 @@ export function corpusQualityReportHtml(report) {
   <div class="counts">${Object.entries(report.decisions)
     .map(([name, count]) => `<span>${name}: <b>${count}</b></span>`)
     .join('')}</div>
-  <p>Single stored answer, with the grader's immediate-win equivalence. Scores use the frozen CC0 transform; percentages are score comparisons, not independently calibrated human win rates. Searches use cold 1M/5M node caps and a 30-second cap each. Final depth below 22, instability or missing evidence stays in review. Search results are not independent mate proofs.</p>
+  <p>Single stored answer, with the grader's immediate-win equivalence at the finish. Mate-in-N admission proves a unique key within the stated bound against every legal defence; slower wins are outside that objective. Exhausted proof budgets stay in review. General winning-advantage tasks retain the frozen CC0 score-separation rule; percentages are score comparisons, not independently calibrated human win rates. Actual engine budgets appear with each search. Under-depth, unstable or missing engine evidence stays in review; engine mate scores alone are not board-mate proofs.</p>
   <p>The initial position must offer at least two legal moves. This source guard is applied to the kernel coverage recorded by the workers; any overridden raw decision remains in the JSON report.</p>
   <p>Shorter versions are proposals for separate records. Mate goals are never converted into an earlier material win. A withhold candidate failed this policy; it is not automatically an editorially bad exercise. The audit stops at the first unresolved or failing solver turn.</p>
   <label>Disposition <select id="kind"><option value="">All</option>${dispositions.map((name) => `<option>${name}</option>`).join('')}</select></label>

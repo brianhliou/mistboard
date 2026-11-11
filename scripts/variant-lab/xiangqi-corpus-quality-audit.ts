@@ -14,6 +14,10 @@ import {
   type XiangqiPuzzleSolverJudgment,
 } from '../../packages/game/src/puzzles-xiangqi-endpoint.ts';
 import {
+  XIANGQI_MATE_GOAL_PROFILE,
+  type XiangqiMateGoalEvidence,
+} from '../../packages/game/src/puzzles-xiangqi-mate.ts';
+import {
   XIANGQI_PUZZLE_MINIMUM_ROOT_MOVES,
   XIANGQI_PUZZLE_ROOT_CHOICE_VERSION,
   XIANGQI_SOLVER_GATE_DEFAULTS,
@@ -49,6 +53,7 @@ export async function auditXiangqiCorpusPuzzle(
     transcripts: NonNullable<PikafishEngine['lastSearch']>[];
     budgets: number[];
     escalationReasons: string[];
+    mateGoalEvidence?: XiangqiMateGoalEvidence;
   }[] = [];
   const validation = validateStandardXiangqiPuzzle(puzzle);
   if (!validation.ok)
@@ -84,9 +89,19 @@ export async function auditXiangqiCorpusPuzzle(
       let budgets: number[] = [];
       let escalationReasons: string[] = [];
       let judgment: XiangqiPuzzleSolverJudgment;
+      let mateGoalEvidence: XiangqiMateGoalEvidence | undefined;
       try {
-        const verified = await verifyXiangqiSolverTurn(engine, state, ply, move, puzzle.goal);
-        ({ searches, transcripts, budgets, escalationReasons, judgment } = verified);
+        const verified = await verifyXiangqiSolverTurn(
+          engine,
+          state,
+          ply,
+          move,
+          puzzle.goal,
+          XIANGQI_SOLVER_GATE_DEFAULTS,
+          puzzle.goal.type === 'checkmate' ? (puzzle.solution.length - ply + 1) / 2 : undefined,
+        );
+        ({ searches, transcripts, budgets, escalationReasons, judgment, mateGoalEvidence } =
+          verified);
       } catch (error) {
         judgment = {
           solutionPly: ply,
@@ -100,6 +115,7 @@ export async function auditXiangqiCorpusPuzzle(
         transcripts,
         budgets,
         escalationReasons,
+        mateGoalEvidence,
         elapsedMs: Date.now() - started,
       });
       judgments.push(judgment);
@@ -150,6 +166,7 @@ async function main() {
     scoreProfile: XIANGQI_SOLVER_SCORE_PROFILE,
     gateOptions: XIANGQI_SOLVER_GATE_DEFAULTS,
     budgets: XIANGQI_PUZZLE_VERIFICATION_PROFILE,
+    mateGoalProfile: XIANGQI_MATE_GOAL_PROFILE,
   });
   let engine = new PikafishEngine(
     values.binary,

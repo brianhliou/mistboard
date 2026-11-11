@@ -734,16 +734,24 @@ export async function buildGatedLine(
     }
     let verified: Awaited<ReturnType<typeof verifyXiangqiSolverTurn>>;
     try {
-      verified = await verifyXiangqiSolverTurn(engine, cur, pv.length, undefined, mateGoal, gate);
+      verified = await verifyXiangqiSolverTurn(
+        engine,
+        cur,
+        pv.length,
+        undefined,
+        mateGoal,
+        gate,
+        mateGoal && firstScore?.mate ? firstScore.mate - pv.length / 2 : undefined,
+      );
     } catch (error) {
       return { ok: false, reason: error instanceof Error ? error.message : 'search-error', evals };
     }
     evals += verified.searches.length;
     const ply = verified.searches.at(-1);
-    if (!ply) return { ok: false, reason: 'missing-best', evals };
+    if (!ply && !verified.mateGoalEvidence) return { ok: false, reason: 'missing-best', evals };
     if (firstSolverPly) {
-      firstScore = ply.best ?? null;
-      firstSecondCp = ply.second?.scoreCp ?? null;
+      firstScore = ply?.best ?? null;
+      firstSecondCp = ply?.second?.scoreCp ?? null;
     }
     if (verified.judgment.verdict === 'unresolved')
       return { ok: false, reason: verified.judgment.reason, evals };
@@ -751,17 +759,18 @@ export async function buildGatedLine(
       if (firstSolverPly)
         return {
           ok: false,
-          reason:
-            ply.reason === 'insufficient-separation' ? 'near-tie' : 'not-unique-or-not-winning',
+          reason: ply?.reason === 'insufficient-separation' ? 'near-tie' : verified.judgment.reason,
           evals,
         };
       // Never publish an earlier preparation capture as if it were the full
       // payoff. A later ambiguous key requires review, not automatic cropping.
       return { ok: false, reason: 'followup-not-unique', evals };
     }
-    const solverTok = ply.lines[0]?.pvUci[0];
-    const sq = solverTok ? pikafishUciToXiangqiSquares(solverTok) : null;
-    if (!sq || !solverTok) return { ok: false, reason: 'pv-parse', evals };
+    const solverTok = ply?.lines[0]?.pvUci[0];
+    const sq =
+      verified.mateGoalEvidence?.winningMoves[0] ??
+      (solverTok ? pikafishUciToXiangqiSquares(solverTok) : null);
+    if (!sq) return { ok: false, reason: 'pv-parse', evals };
     const solverMove: XiangqiMove = { from: sq.from, to: sq.to };
     if (!isStandardXiangqiLegalMove(cur, solverMove))
       return { ok: false, reason: 'pv-illegal', evals };
@@ -791,6 +800,10 @@ export async function buildGatedLine(
   }
   if (pv.length % 2 === 0) pv.pop(); // guarantee the line ends on the solver's move
   if (pv.length < 1 || !firstScore) return { ok: false, reason: 'too-short', evals };
+  // A cooperative defence may shorten the displayed PV. Never publish that
+  // shorter title using a proof that only established the original larger N.
+  if (firstScore.mate !== null && firstScore.mate > 0 && pv.length !== 2 * firstScore.mate - 1)
+    return { ok: false, reason: 'mate-goal-length-mismatch', evals };
   return { ok: true, pv, verifyScore: firstScore, secondScoreCp: firstSecondCp, evals };
 }
 
