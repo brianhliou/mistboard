@@ -523,6 +523,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     seat: () => state.seat,
     connectionState: () => connection(),
     closeReason: () => socket?.closeReason() ?? '',
+    seatRefusal: () => socket?.seatRefusal?.() ?? '',
     clock: () => state.clock,
     paused: () => state.paused,
     timeControl: () => state.timeControl,

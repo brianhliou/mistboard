@@ -51,6 +51,7 @@ type CtxOverrides = Partial<{
   seat: unknown;
   connectionState: string;
   closeReason: string;
+  seatRefusal: string;
   connectedSeats: Partial<Record<Color, boolean>>;
   seats: Partial<Record<Color, string>>;
   seatDisplayNames: Partial<Record<Color, string>>;
@@ -88,6 +89,7 @@ function chromeHarness(
     seat: () => overrides.seat ?? 'white',
     connectionState: () => overrides.connectionState ?? 'connected',
     closeReason: () => overrides.closeReason ?? '',
+    seatRefusal: () => overrides.seatRefusal ?? '',
     clock: () => overrides.clock ?? null,
     timeControl: () => overrides.timeControl ?? null,
     connectedSeats: () => overrides.connectedSeats ?? { white: true, red: true },
@@ -468,6 +470,47 @@ describe('tenant room chrome correspondence status (#1058)', () => {
     expect(text).toContain('Alice invited you to Xiangqi, 3 days per move');
     expect(refs.actionStatus.querySelector('.room-invite-board')).not.toBeNull();
     expect(refs.actionStatus.querySelector('a')?.textContent).toBe('Sign in to take your seat');
+  });
+
+  it('lets a signed-out invitee watch the waiting board with the sign-in notice beside it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ gameSpecId: 'xiangqi', daysPerMove: 3, creatorName: 'Alice' }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const { chrome, refs } = chromeHarness({
+      seat: 'spectator',
+      seatRefusal: 'correspondence requires account',
+      seats: { white: 'c-white' },
+      timeControl: { initialMs: 0, incrementMs: 0, daysPerMove: 3 },
+    });
+    chrome.renderBoardStatus();
+    expect(refs.boardStatus.hidden).toBe(true);
+    chrome.renderActionStatus();
+    await settle();
+    chrome.renderActionStatus();
+    const text = refs.actionStatus.textContent ?? '';
+    expect(text).toContain('Alice invited you to Xiangqi, 3 days per move');
+    expect(text).toContain('This is a correspondence game.');
+    // The real board is already on screen: no second start board in the notice.
+    expect(refs.actionStatus.querySelector('.room-invite-board')).toBeNull();
+    expect(refs.actionStatus.querySelector('a')?.textContent).toBe('Sign in to take your seat');
+  });
+
+  it('drops the sign-in notice for a watcher once the seat is taken', () => {
+    const { chrome, refs } = chromeHarness({
+      seat: 'spectator',
+      seatRefusal: 'correspondence requires account',
+      timeControl: { initialMs: 0, incrementMs: 0, daysPerMove: 3 },
+    });
+    chrome.renderActionStatus();
+    expect(refs.actionStatus.textContent ?? '').not.toContain('This is a correspondence game.');
+    expect(refs.actionStatus.querySelector('a')).toBeNull();
   });
 });
 

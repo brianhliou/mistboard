@@ -29,6 +29,7 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
 import test from 'node:test';
 import {
+  correspondenceTimeControl,
   DARK_XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   STANDARD_JIEQI_DEAL,
@@ -42,7 +43,11 @@ import { jieqiTenant } from '../jieqi-tenant.js';
 import type { XiangqiEvent } from '../xiangqi-runtime.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
 import { clearTenantRuntimeTimers } from './lifecycle.js';
-import { createTenantRuntimeRoomFromEvents, tenantSnapshotPayload } from './runtime.js';
+import {
+  createTenantRuntimeRoomFromEvents,
+  tenantLiveHistoryExtras,
+  tenantSnapshotPayload,
+} from './runtime.js';
 import { createTenantWsRuntime, TENANT_LIVE_GAME_NO_SEAT_REASON } from './ws.js';
 
 process.env.MISTBOARD_JIEQI_ENABLED = 'true';
@@ -438,5 +443,139 @@ test('hidden-info: spectator payload holds no face-down identity and no private 
     // The public log, with the deal stripped from room-created.
     assert.ok(hello.events.length > 0, 'spectator receives the public log');
     for (const event of hello.events) assert.ok(!('setup' in event), 'the deal never ships');
+  });
+});
+
+// A correspondence friend invite whose creator holds red and whose black seat is
+// still empty: a signed-out visitor is refused that seat for want of an account.
+function waitingCorrespondenceRoom<E extends { type: string }>(
+  tenant: Parameters<typeof createTenantRuntimeRoomFromEvents>[0],
+  created: E,
+  roomId: string,
+) {
+  const events = [
+    { ...created, timeControl: correspondenceTimeControl(3) },
+    { type: 'seat-assigned', at: 2_000, roomId, clientId: 'client-red', seat: 'red' },
+  ];
+  const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as never);
+  assert.ok(hydrated.ok, 'fixture event log must hydrate');
+  return hydrated.room;
+}
+
+test('a signed-out visitor watches a waiting correspondence room it may not sit in', async () => {
+  await withEnv('NODE_ENV', 'production', () =>
+    withEnv('MISTBOARD_ADMIN_DEBUG_TOKEN', undefined, async () => {
+      const roomId = 'xq_corr_waiting_guest';
+      const room = waitingCorrespondenceRoom(
+        xiangqiTenant as never,
+        { type: 'room-created', at: 1_000, roomId, gameSpecId: XIANGQI_SPEC_ID },
+        roomId,
+      ) as unknown as XiangqiLiveRoom;
+      const socket = new FakeSocket();
+      await xiangqiWs.handleConnection(
+        WS_CTX,
+        socket.asWebSocket(),
+        fakeRequest('signed-out-friend'),
+        room,
+      );
+
+      assert.deepEqual(socket.closes, [], 'the visitor is not closed out of the room');
+      const hello = socket.sent[0] as { type: string; seat: string; seatRefusal?: string };
+      assert.equal(hello?.type, 'hello');
+      assert.equal(hello?.seat, 'spectator');
+      assert.equal(hello?.seatRefusal, 'correspondence requires account');
+      assert.equal('seatToken' in hello, false);
+      assert.equal(room.projection.seats.black, undefined, 'the empty seat stays open');
+      assert.equal(
+        room.events.filter((event) => event.type === 'seat-assigned').length,
+        1,
+        'watching appends no seat event',
+      );
+    }),
+  );
+});
+
+test('hidden-info: a refused correspondence visitor gets exactly the public spectator payload', async () => {
+  await withEnv('NODE_ENV', 'production', () =>
+    withEnv('MISTBOARD_ADMIN_DEBUG_TOKEN', undefined, async () => {
+      const roomId = 'jq_corr_waiting_guest';
+      const room = waitingCorrespondenceRoom(
+        jieqiTenant as never,
+        {
+          type: 'room-created',
+          at: 1_000,
+          roomId,
+          gameSpecId: JIEQI_SPEC_ID,
+          setup: STANDARD_JIEQI_DEAL,
+        },
+        roomId,
+      ) as unknown as JieqiLiveRoom;
+      const socket = new FakeSocket();
+      await jieqiWs.handleConnection(
+        WS_CTX,
+        socket.asWebSocket(),
+        fakeRequest('signed-out-jieqi-friend'),
+        room,
+      );
+
+      assert.deepEqual(socket.closes, []);
+      assert.equal(socket.sent.length >= 1, true);
+      const hello = socket.sent[0] as Record<string, unknown>;
+      assert.equal(hello.seat, 'spectator');
+      assert.equal(hello.seatRefusal, 'correspondence requires account');
+      // The whole frame, serialized, is the spectator payload plus the hello
+      // envelope: never a seat's view, never a token.
+      const spectator = {
+        id: 'signed-out-jieqi-friend',
+        seat: 'spectator' as const,
+        solo: false,
+      };
+      const runtimeRoom = room as unknown as JieqiRuntimeRoom;
+      const expected = JSON.parse(
+        JSON.stringify({
+          ...tenantSnapshotPayload(jieqiTenant, runtimeRoom, spectator),
+          ...tenantLiveHistoryExtras(jieqiTenant, runtimeRoom, spectator),
+          type: 'hello',
+          clientId: hello.clientId,
+          seatRefusal: 'correspondence requires account',
+        }),
+      );
+      assert.equal(typeof hello.serverAt, 'number');
+      assert.deepEqual(
+        { ...hello, serverAt: 0 },
+        { ...expected, serverAt: 0 },
+        'the whole frame is the public spectator payload plus the hello envelope',
+      );
+      const wire = JSON.stringify(socket.sent);
+      assert.equal(wire.includes('seatToken'), false, 'no seat token on the wire');
+      assert.equal(wire.includes('"setup"'), false, 'the deal never ships');
+      const board = (hello.state as { board: Record<string, { faceDown: boolean }> }).board;
+      const faceDown = Object.values(board).filter((piece) => piece.faceDown);
+      assert.equal(faceDown.length, 30);
+      for (const piece of faceDown) assert.ok(!('role' in piece), 'a face-down piece has no role');
+      assert.deepEqual((hello.state as { legalMoves: unknown[] }).legalMoves, []);
+    }),
+  );
+});
+
+test('a sealed class keeps the correspondence refusal: no frame before the close', async () => {
+  await withEnv('NODE_ENV', 'test', async () => {
+    const roomId = 'dxq_corr_waiting_guest';
+    const room = waitingCorrespondenceRoom(
+      darkXiangqiTenant as never,
+      { type: 'room-created', at: 1_000, roomId, gameSpecId: DARK_XIANGQI_SPEC_ID },
+      roomId,
+    ) as unknown as DarkXiangqiLiveRoom;
+    const socket = new FakeSocket();
+    await darkXiangqiWs.handleConnection(
+      WS_CTX,
+      socket.asWebSocket(),
+      fakeRequest('signed-out-fog-friend'),
+      room,
+    );
+
+    assert.deepEqual(socket.closes, [{ code: 1008, reason: 'correspondence requires account' }]);
+    assert.deepEqual(socket.sent, []);
+    assert.equal(room.clients.size, 0);
   });
 });

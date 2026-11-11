@@ -83,6 +83,9 @@ import { TENANT_SERVER_ONLY_EVENT_TYPES, tenantSeatMayAct } from './tenant.js';
 // shows spectators nothing while it is played (room-chrome.ts reads it).
 export const TENANT_LIVE_GAME_NO_SEAT_REASON = 'live game, no seat';
 
+// The seat refusal a sign-in fixes in a correspondence room (seat-session.ts).
+const CORRESPONDENCE_ACCOUNT_REASON = 'correspondence requires account';
+
 export type TenantLiveClient<C extends string> = {
   debugRequested: false;
   displaced: boolean;
@@ -294,13 +297,26 @@ export function createTenantWsRuntime<
       //    are refused here while live and open at completion.
       //  - isDebugViewAuthorized: dev runtime or an admin token, which also reaches
       //    rooms the policy refuses (dev /game-sheet spectates seeded corpus rooms).
-      // Every other rejection reason (rated/correspondence account gates) still
+      // Every other rejection reason (rated account gates, play lock) still
       // closes fail-closed.
-      const observable =
-        canObserveRoom(room.projection.state.status.type === 'finished', tenant.gameSpecId) ||
-        isDebugViewAuthorized(request);
+      const policyObservable = canObserveRoom(
+        room.projection.state.status.type === 'finished',
+        tenant.gameSpecId,
+      );
+      const observable = policyObservable || isDebugViewAuthorized(request);
       if (assignment.reason === 'private room' && observable) {
         joinAsSpectator(ctx, socket, room, clientId, accountUser?.id ?? null);
+        return null;
+      }
+      // A signed-out friend opening a correspondence invite whose other seat is
+      // still empty: refused the seat only for want of an account. Where the
+      // policy lets anyone watch, they watch the real board (the class's public
+      // spectator view, never a seat's) with the refusal named on the hello, so
+      // the room keeps its "Sign in to take your seat" notice beside the board.
+      // Signing in and reconnecting takes the seat. The debug bypass does not
+      // reach this branch: a sealed class keeps the plain refusal everywhere.
+      if (assignment.reason === CORRESPONDENCE_ACCOUNT_REASON && policyObservable) {
+        joinAsSpectator(ctx, socket, room, clientId, null, CORRESPONDENCE_ACCOUNT_REASON);
         return null;
       }
       // A full room whose class refuses live spectators (fog, concealed hands)
@@ -433,6 +449,9 @@ export function createTenantWsRuntime<
     room: LiveRoom,
     clientId: string,
     userId: string | null,
+    // Why this spectator holds no seat when a sign-in would give it one; the
+    // room page keeps its sign-in notice beside the board.
+    seatRefusal?: typeof CORRESPONDENCE_ACCOUNT_REASON,
   ): void {
     const client: LiveClient = {
       debugRequested: false,
@@ -451,6 +470,7 @@ export function createTenantWsRuntime<
       ...transportSnapshotPayload(room, client),
       type: 'hello',
       clientId: client.id,
+      ...(seatRefusal ? { seatRefusal } : {}),
       // A live spectator's per-ply public views where the visibility class
       // shows spectators a board (hidden-identity: banqi, flip jungle); never
       // for a 'dark' room (tenantLiveHistoryExtras gates on roomViewPolicy).
