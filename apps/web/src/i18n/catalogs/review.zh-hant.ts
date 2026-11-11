@@ -135,7 +135,7 @@ export const ZH_HANT_REVIEW = {
   'practice.position.title': '從局面開始練習',
   'practice.position.badFen': '這個連結裡沒有可讀取的象棋局面。',
   'practice.position.finished': '這個局面已經結束，沒有可走的棋。',
-  'practice.position.badGoal': '這個連結沒有說明是要將死對手還是守和。',
+  'practice.position.badGoal': '這個連結沒有說明是要將死對手、爭取勝勢還是守和。',
   'practice.position.badSide': '這個連結沒有說明你執哪一方。',
   'practice.position.toEditor': '在棋盤編輯器裡擺一個局面',
   'practice.ribbon.done': '完成',

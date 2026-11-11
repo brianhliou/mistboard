@@ -1,4 +1,4 @@
-// /practice/position?fen=…&goal=mate|draw&side=red|black: play any xiangqi
+// /practice/position?fen=…&goal=mate|draw|win&side=red|black: play any xiangqi
 // position out against the engine. The endgames page (/blog/xiangqi-endgames)
 // links here for each position it shows, and the board editor hands its
 // position over the same way.

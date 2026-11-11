@@ -1,3 +1,4 @@
+import { PRACTICE_WIN_CP } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   PRACTICE_POSITION_DRAW_MOVES,
@@ -34,11 +35,19 @@ describe('parsePracticePositionParams', () => {
     expect(request.side).toBe('black');
   });
 
+  it('accepts a win exercise, unbounded, at the standard win threshold', () => {
+    const request = parse({ fen: LIVE, goal: 'win', side: 'red' });
+    expect(request.ok).toBe(true);
+    if (!request.ok) return;
+    expect(request.goalKind).toBe('win');
+    expect(request.goal).toEqual({ kind: 'win', centipawns: PRACTICE_WIN_CP });
+  });
+
   it.each([
     ['missing side', { fen: LIVE, goal: 'mate' }, 'side'],
     ['unknown side', { fen: LIVE, goal: 'mate', side: 'white' }, 'side'],
     ['missing goal', { fen: LIVE, side: 'red' }, 'goal'],
-    ['unknown goal', { fen: LIVE, goal: 'win', side: 'red' }, 'goal'],
+    ['unknown goal', { fen: LIVE, goal: 'survive', side: 'red' }, 'goal'],
     ['missing fen', { goal: 'mate', side: 'red' }, 'fen'],
     ['blank fen', { fen: '   ', goal: 'mate', side: 'red' }, 'fen'],
     ['garbage fen', { fen: 'not a fen', goal: 'mate', side: 'red' }, 'fen'],

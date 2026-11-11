@@ -1,4 +1,4 @@
-// /practice/position?fen=…&goal=mate|draw&side=red|black: practice against the
+// /practice/position?fen=…&goal=mate|draw|win&side=red|black: practice against the
 // engine from any xiangqi position. The endgames page links here for each of its
 // positions, and the board editor hands its position over the same way.
 //
@@ -24,7 +24,7 @@ import {
 /** A draw exercise holds for this many moves, as the practice studies do. */
 export const PRACTICE_POSITION_DRAW_MOVES = 15;
 
-export type PracticePositionGoal = 'mate' | 'draw';
+export type PracticePositionGoal = 'mate' | 'draw' | 'win';
 
 export type PracticePositionRequest =
   | {
@@ -40,6 +40,9 @@ export type PracticePositionRequest =
 function goalFor(kind: string | null): PracticeGoal | null {
   if (kind === 'mate') return parsePracticeGoal('mate');
   if (kind === 'draw') return parsePracticeGoal(`draw in ${PRACTICE_POSITION_DRAW_MOVES}`);
+  // Win: play a level or better position on until the evaluation is decisive
+  // (PRACTICE_WIN_CP). Articles link here from a turning point in a real game.
+  if (kind === 'win') return parsePracticeGoal('win');
   return null;
 }
 
