@@ -207,27 +207,38 @@
   min-width: 0;
 }
 
+/* An arrow that does something reads as a button (solid rim, panel fill,
+   accent glyph); one at the end of its list drops the rim and fill so only a
+   faint glyph keeps its place. */
 .pp-step-btn {
   flex: none;
   width: 22px;
   height: 24px;
   padding: 0;
-  border: 1px solid var(--site-border-soft);
+  border: 1px solid var(--site-border);
   border-radius: 4px;
-  background: var(--site-panel-soft);
-  color: var(--site-muted);
+  background: var(--site-panel);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.06);
+  color: var(--site-accent);
   font: inherit;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
 }
 
 .pp-step-btn:hover:not(:disabled) {
   border-color: var(--site-accent);
-  color: var(--site-text);
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
 }
 
 .pp-step-btn:disabled {
-  opacity: 0.3;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--site-muted);
+  opacity: 0.35;
   cursor: default;
 }
 
@@ -249,10 +260,15 @@
     border-color: transparent;
     border-radius: 14px / 12px;
     background-clip: padding-box;
-    box-shadow: inset 0 0 0 1px var(--site-border-soft);
+    box-shadow: inset 0 0 0 1px var(--site-border);
+  }
+
+  .pp-step-btn:disabled {
+    box-shadow: none;
   }
 
   .pp-step-btn:hover:not(:disabled) {
+    border-color: transparent;
     box-shadow: inset 0 0 0 1px var(--site-accent);
   }
 
