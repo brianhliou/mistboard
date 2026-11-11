@@ -699,6 +699,7 @@ export const EN_PLAY = {
   // Public casual Three Kingdoms Banqi (#628).
   'variant.threeKingdomsBanqi.name': 'Three Kingdoms Banqi',
   'variant.threeKingdomsBanqi.cardName': '3 Kingdoms Banqi',
+  'variant.threeKingdomsBanqi.tileName': 'TK Banqi',
   'variant.ffqBanqi.name': 'Fanfanqi',
   'live.ffq.hp': '{hp}/{max} HP',
   'live.ffq.noProgress': 'No progress {count}/{limit}',

@@ -641,6 +641,7 @@ export const ZH_HANT_PLAY = {
   'variant.xiangqiMahjong.name': '象棋麻將',
   'variant.threeKingdomsBanqi.name': '三國暗棋',
   'variant.threeKingdomsBanqi.cardName': '三國暗棋',
+  'variant.threeKingdomsBanqi.tileName': '三國暗棋',
   'live.pageTitle': '對局',
   'live.you': '你',
   'live.guestAre': '訪客（{color}）',

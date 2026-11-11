@@ -274,6 +274,16 @@ describe('homepage play panel', () => {
     }
   });
 
+  it('names the TK tile TK Banqi and keeps the full name as its title', () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const board = buildPlayPanel('en', { hydrate: false });
+    const name = row(board, 'three-kingdoms-banqi', 'person').querySelector('.pp-name');
+    expect(name?.textContent).toBe('TK Banqi');
+    expect(name?.getAttribute('title')).toBe('Three Kingdoms Banqi');
+    const banqi = row(board, 'banqi', 'person').querySelector('.pp-name');
+    expect(banqi?.getAttribute('title')).toBeNull();
+  });
+
   it.each(['true', 'false'])(
     'paints the static TK Levels 1-7 after Banqi only with the public flag (%s), before any engine response',
     (flag) => {

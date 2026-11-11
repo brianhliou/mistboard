@@ -102,6 +102,11 @@ type StoredPanel = {
   last?: { gameSpecId: string; botId: string; tc: TimeControlId };
 };
 
+/** Short names for Play a person tiles whose full name does not fit one. */
+const TILE_NAME_KEYS: Partial<Record<string, Parameters<typeof t>[0]>> = {
+  'three-kingdoms-banqi': 'variant.threeKingdomsBanqi.tileName',
+};
+
 // Homepage merchandising only: these games remain in the Play menu, lobby
 // and setup deep links. New launches join automatically unless excluded here.
 export const HOMEPAGE_HERO_EXCLUDED_GAME_SPEC_IDS: readonly GameSpecId[] = [
@@ -1171,7 +1176,11 @@ export function buildPlayPanel(
       text.className = 'pp-tile-text';
       const name = document.createElement('span');
       name.className = 'pp-name';
-      name.textContent = label;
+      // A tile is half the panel wide, so a name too long for it takes its
+      // short form instead of an ellipsis; the full name stays the title.
+      const short = TILE_NAME_KEYS[gameSpecId];
+      name.textContent = short ? t(short, {}, locale) : label;
+      if (short) name.title = label;
       text.append(name);
       if (paceNote) {
         const sub = document.createElement('small');
