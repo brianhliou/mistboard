@@ -601,12 +601,9 @@ export const ZH_HANS_PLAY = {
   'correspondence.heroTitle': '等你落子的对局',
   'correspondence.heroPitch':
     '每一步给你几天，而不是几分钟。在任何设备上对弈，方便时再落子，计时交给我们。',
-  'correspondence.heroNote': '通信对局需要账号，这样你的对局在任何设备上都能继续。',
   'correspondence.factDays': '每步 {list} 天',
   'correspondence.factReminders': '到期前提醒',
   'correspondence.factVariantsMore': '{list}及另外 {count} 种',
-  'correspondence.heroLive': '正在进行：{matchup}',
-  'correspondence.heroStart': '每盘棋都从这里开始',
   'correspondence.gamesInProgress': '进行中的对局',
   'correspondence.toMoveLeft': '轮到 {name}，剩余 {time}',
   'correspondence.howHeading': '怎么玩',

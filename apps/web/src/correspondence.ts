@@ -42,12 +42,7 @@
 import './current-games.css';
 import './account-profile.css';
 import './correspondence.css';
-import {
-  createInitialXiangqiState,
-  DAYS_PER_MOVE_OPTIONS,
-  DEFAULT_DAYS_PER_MOVE,
-  getStandardXiangqiPlayerView,
-} from '@mistboard/game';
+import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { openChallengeDialog } from './challenge-dialog.js';
@@ -60,7 +55,6 @@ import {
   deadlineFraction,
   deadlineRemainingMs,
   deadlineUrgency,
-  heroBoardGame,
   type InboxBoardSide,
   type IncomingChallenge,
   inboxBoardSide,
@@ -1779,7 +1773,7 @@ function buildSignedOut(
 ): HTMLElement {
   const shell = document.createElement('main');
   shell.className = 'correspondence-shell is-signed-out';
-  shell.append(buildHero(ctx, inPlay));
+  shell.append(buildHero());
   if (hostInfo) shell.append(buildHostCard(hostInfo));
 
   const seeks = seeksFeed.status === 'ok' ? othersSeeks(seeksFeed.seeks) : [];
@@ -1829,74 +1823,38 @@ function variantFactText(labels: readonly string[]): string {
     : t('correspondence.factVariantsMore', { list: fact.shown, count: fact.more });
 }
 
-function buildHero(ctx: PageContext, inPlay: CurrentGame[]): HTMLElement {
+// The signed-out header: a compact strip (headline, pitch and one fact line
+// beside the two account buttons) so the games in play below it are the
+// picture and start at the fold.
+function buildHero(): HTMLElement {
   const hero = document.createElement('section');
   hero.className = 'correspondence-hero';
 
   const copy = document.createElement('div');
   copy.className = 'correspondence-hero-copy';
+  const head = document.createElement('div');
+  head.className = 'correspondence-hero-head';
   const eyebrow = document.createElement('p');
   eyebrow.className = 'correspondence-eyebrow';
   eyebrow.textContent = t('correspondence.heading');
   const title = document.createElement('h1');
   title.className = 'correspondence-hero-title';
   title.textContent = t('correspondence.heroTitle');
+  head.append(eyebrow, title);
   const pitch = document.createElement('p');
   pitch.className = 'correspondence-hero-pitch';
   pitch.textContent = t('correspondence.heroPitch');
-  const facts = document.createElement('ul');
+  const facts = document.createElement('p');
   facts.className = 'correspondence-hero-facts';
-  for (const text of [
+  facts.textContent = [
     t('correspondence.factDays', { list: DAYS_PER_MOVE_OPTIONS.join(' / ') }),
     variantFactText(variantFactSpecIds().map((specId) => variantDisplayLabel(specId))),
     t('correspondence.factReminders'),
-  ]) {
-    const item = document.createElement('li');
-    item.textContent = text;
-    facts.append(item);
-  }
-  const note = document.createElement('p');
-  note.className = 'correspondence-hero-note';
-  note.textContent = t('correspondence.heroNote');
-  copy.append(eyebrow, title, pitch, buildAccountActions(), facts, note);
+  ].join(' · ');
+  copy.append(head, pitch, facts);
 
-  const figure = document.createElement('figure');
-  figure.className = 'correspondence-hero-board';
-  const host = document.createElement('div');
-  host.className = 'current-game-board correspondence-hero-board-host';
-  const caption = document.createElement('figcaption');
-  caption.className = 'correspondence-hero-caption';
-  const live = heroBoardGame(inPlay);
-  if (live?.payload) {
-    host.append(buildPlaceholderTile(live.gameSpecId));
-    void mountBoard(ctx, host, live.gameSpecId, live.roomId, live, live.payload);
-    const link = document.createElement('a');
-    link.href = live.url;
-    link.textContent = t('correspondence.heroLive', { matchup: showcaseMatchup(live) });
-    caption.append(link);
-  } else {
-    host.append(buildStartingBoard());
-    caption.textContent = t('correspondence.heroStart');
-  }
-  figure.append(host, caption);
-
-  hero.append(copy, figure);
+  hero.append(copy, buildAccountActions());
   return hero;
-}
-
-// A static xiangqi starting position, drawn by the site's own xiangqi board
-// renderer from the kernel's initial state, for when nothing is in play.
-function buildStartingBoard(): HTMLElement {
-  const board = document.createElement('div');
-  board.className = 'correspondence-static-board';
-  void Promise.all([import('./xiangqi-board.js'), import('./live-xiangqi.css')])
-    .then(([{ renderXiangqiBoardSvg }]) => {
-      const view = getStandardXiangqiPlayerView(createInitialXiangqiState('hero'), 'red');
-      board.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
-      board.querySelector('svg')?.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    })
-    .catch((err) => console.warn('[correspondence] hero board failed', err));
-  return board;
 }
 
 function showcaseMatchup(game: CurrentGame): string {

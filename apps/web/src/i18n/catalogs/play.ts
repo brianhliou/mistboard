@@ -379,13 +379,9 @@ export const EN_PLAY = {
   'correspondence.heroTitle': 'Games that wait for you',
   'correspondence.heroPitch':
     'We give every move days, not minutes. Play from any device, move when it suits you, and we keep the clock.',
-  'correspondence.heroNote':
-    'Correspondence needs an account, so your games follow you to any device.',
   'correspondence.factDays': '{list} days per move',
   'correspondence.factReminders': 'Reminders before a deadline',
   'correspondence.factVariantsMore': '{list} and {count} more',
-  'correspondence.heroLive': 'In play now: {matchup}',
-  'correspondence.heroStart': 'Every game starts here',
   'correspondence.gamesInProgress': 'Games in progress',
   'correspondence.toMoveLeft': '{name} to move, {time} left',
   'correspondence.howHeading': 'How it works',

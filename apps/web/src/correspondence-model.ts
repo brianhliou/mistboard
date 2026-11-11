@@ -460,13 +460,3 @@ export function correspondenceInProgress<T extends Pick<CurrentGame, 'timeClass'
 ): T[] {
   return games.filter((game) => game.timeClass === 'correspondence');
 }
-
-// The game the hero draws: the first one the public feed sent an open board
-// for. Null means the hero shows a starting position instead.
-export function heroBoardGame<T extends Pick<CurrentGame, 'observe' | 'payload' | 'gameSpecId'>>(
-  games: readonly T[],
-): T | null {
-  return (
-    games.find((game) => inboxTileKind(game.gameSpecId, game) === 'board' && !!game.payload) ?? null
-  );
-}

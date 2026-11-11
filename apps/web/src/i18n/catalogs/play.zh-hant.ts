@@ -601,12 +601,9 @@ export const ZH_HANT_PLAY = {
   'correspondence.heroTitle': '等你落子的對局',
   'correspondence.heroPitch':
     '每一步給你幾天，而不是幾分鐘。在任何裝置上對弈，方便時再落子，計時交給我們。',
-  'correspondence.heroNote': '通信對局需要帳號，這樣你的對局在任何裝置上都能繼續。',
   'correspondence.factDays': '每步 {list} 天',
   'correspondence.factReminders': '到期前提醒',
   'correspondence.factVariantsMore': '{list}及另外 {count} 種',
-  'correspondence.heroLive': '正在進行：{matchup}',
-  'correspondence.heroStart': '每盤棋都從這裡開始',
   'correspondence.gamesInProgress': '進行中的對局',
   'correspondence.toMoveLeft': '輪到 {name}，剩餘 {time}',
   'correspondence.howHeading': '怎麼玩',

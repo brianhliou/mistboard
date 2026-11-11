@@ -152,6 +152,84 @@ describe('correspondence page order (#1058)', () => {
   });
 });
 
+// 2026-11-11: signed out, the page opens on a compact strip (headline, pitch,
+// one fact line, the two account buttons) and no board, so the games in play
+// sit right under it at the fold.
+describe('signed-out header strip', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  function stubSignedOut(): void {
+    const inPlay = {
+      roomId: 'corr-1',
+      gameSpecId: 'xiangqi',
+      channelId: null,
+      composition: 'pvp',
+      observe: 'open',
+      players: [
+        { seat: 'red', name: 'Ann' },
+        { seat: 'black', name: 'Ben' },
+      ],
+      ply: 10,
+      rated: false,
+      startedAt: null,
+      lastActivityAt: null,
+      timeControl: { initialMs: 0, incrementMs: 0, daysPerMove: 3 },
+      timeClass: 'correspondence',
+      clock: null,
+      deadline: null,
+      url: '/room/corr-1',
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(typeof input === 'object' && 'url' in input ? input.url : input);
+        const path = url.split('?')[0] ?? url;
+        if (path === '/api/correspondence/games') return new Response('{}', { status: 401 });
+        if (path === '/api/games/current') {
+          return new Response(JSON.stringify({ channel: 'all', channels: [], games: [inPlay] }), {
+            status: 200,
+          });
+        }
+        if (path === '/api/correspondence/seeks') {
+          return new Response(JSON.stringify({ seeks: [] }), { status: 200 });
+        }
+        return new Response('{}', { status: 404 });
+      }),
+    );
+  }
+
+  it('is copy and two buttons with no board, and the games in play come next', async () => {
+    stubSignedOut();
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountCorrespondence(root);
+    await settle();
+
+    const hero = root.querySelector<HTMLElement>('.is-signed-out > .correspondence-hero');
+    expect(hero).not.toBeNull();
+    expect(hero?.querySelector('h1')?.textContent).toBeTruthy();
+    expect(hero?.querySelector('.correspondence-hero-pitch')?.textContent).toBeTruthy();
+    // One fact line, not a row of pills.
+    const facts = hero?.querySelectorAll('.correspondence-hero-facts') ?? [];
+    expect(facts.length).toBe(1);
+    expect(facts[0]?.tagName).toBe('P');
+    expect(facts[0]?.textContent?.split(' · ').length).toBe(3);
+    // The buttons sit beside the copy, not inside it.
+    const actions = hero?.querySelector(':scope > .correspondence-signedout-actions');
+    expect([...(actions?.querySelectorAll('a') ?? [])].map((a) => a.className)).toEqual([
+      'correspondence-btn',
+      'correspondence-ghost',
+    ]);
+    expect(hero?.querySelector('figure, svg, .current-game-board')).toBeNull();
+    // The games grid follows the strip directly.
+    expect(hero?.nextElementSibling?.classList.contains('correspondence-showcase')).toBe(true);
+    expect(root.querySelectorAll('.correspondence-showcase-card')).toHaveLength(1);
+  });
+});
+
 describe('recent opponents (#1058)', () => {
   afterEach(() => openChallengeDialog.mockReset());
 
