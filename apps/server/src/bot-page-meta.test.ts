@@ -5,7 +5,7 @@ import { type BotPageSource, botPageMeta } from './bot-page-meta.js';
 const pikafish: BotPageSource = {
   id: 'pikafish',
   displayName: 'Pikafish',
-  bio: "Mistboard's elite challenge, backed by mainline Pikafish.",
+  bio: "Mistboard's elite challenge, backed by Pikafish.",
   supportedGameSpecIds: ['xiangqi', 'jieqi'],
 };
 const lookup = async (id: string) => (id === 'pikafish' ? pikafish : null);
@@ -16,7 +16,7 @@ test('a bot profile page names its bot and games in the title and its bio in the
   assert.equal(meta.title, 'Play Pikafish · xiangqi and jieqi bot | Mistboard');
   assert.equal(
     meta.description,
-    "Mistboard's elite challenge, backed by mainline Pikafish. Free, in the browser, no account needed.",
+    "Mistboard's elite challenge, backed by Pikafish. Free, in the browser, no account needed.",
   );
   assert.equal(meta.urlPath, '/bot/pikafish');
 });

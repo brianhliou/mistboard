@@ -3,7 +3,7 @@
 These files are the client-side analysis engine behind the review board's
 "local engine" (ceval) for the xiangqi variants (fortress, atomic, crazyhouse)
 and chess.
-Standard xiangqi runs on mainline Pikafish instead (`../pikafish/`, since
+Standard xiangqi runs on Pikafish instead (`../pikafish/`, since
 2026-09); jieqi on PikaJieQi (`../pikafish-jieqi/`). They run entirely in the
 browser, in a Web Worker, and require a cross-origin-isolated context
 (`SharedArrayBuffer`).
