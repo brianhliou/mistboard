@@ -122,17 +122,21 @@ describe('rapfi-vs-katagomo prose', () => {
     }
   });
 
+  it('joins scores with non-breaking hyphens so a line never wraps mid-score', () => {
+    expect(prose).not.toMatch(/\d+-\d+-\d+/);
+  });
+
   it('gives the earlier matched-search match one sentence, its result only', () => {
     const u = match.uneven.total;
-    const sentences = prose.split(/(?<=[.:])\s+/).filter((x) => x.includes(`${u.wins}-${u.draws}-${u.losses}`));
+    const sentences = prose.split(/(?<=[.:])\s+/).filter((x) => x.includes(`${u.wins}\u2011${u.draws}\u2011${u.losses}`));
     expect(sentences).toHaveLength(1);
     expect(prose).toContain(
-      `KataGomo at ${match.uneven.katagomoBudget.maxVisits} visits, the two scored level: ${u.wins}-${u.draws}-${u.losses} over ${u.games} games`,
+      `KataGomo at ${match.uneven.katagomoBudget.maxVisits} visits, the two scored level: ${u.wins}\u2011${u.draws}\u2011${u.losses} over ${u.games} games`,
     );
     expect(prose.match(new RegExp(`${match.uneven.katagomoBudget.maxVisits} visits`, 'g'))).toHaveLength(1);
     // No table, Elo range or TL;DR line for it.
     expect(prose).not.toContain(`${u.eloLow} to`);
-    expect(rapfiVsKatagomoArticle.tldr?.join(' ')).not.toContain(`${u.wins}-${u.draws}-${u.losses}`);
+    expect(rapfiVsKatagomoArticle.tldr?.join(' ')).not.toContain(`${u.wins}\u2011${u.draws}\u2011${u.losses}`);
     expect(prose).not.toMatch(/rematch/i);
   });
 
@@ -146,7 +150,7 @@ describe('rapfi-vs-katagomo prose', () => {
     const table = rapfiVsKatagomoArticle.sections
       .flatMap((s) => s.blocks ?? [])
       .find((b) => b.kind === 'table');
-    expect(table?.kind === 'table' ? table.rows[0]?.[1] : null).toBe(`${e.wins}-${e.draws}-${e.losses}`);
+    expect(table?.kind === 'table' ? table.rows[0]?.[1] : null).toBe(`${e.wins}\u2011${e.draws}\u2011${e.losses}`);
   });
 
   it('derived ratios match the record', () => {
@@ -206,6 +210,13 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
       `${((a.rapfi.fours / a.rapfi.moves) * 100).toFixed(1)}% of its moves made a four`,
       `${((a.katagomo.fours / a.katagomo.moves) * 100).toFixed(1)}% of KataGomo's`,
       `${a.rapfi.doubleThreats} moves with two threats at once to KataGomo's ${a.katagomo.doubleThreats}`,
+      `anywhere from ${pctOf(decisive.katagomoView.openings.blackMin)} to ${pctOf(decisive.katagomoView.openings.blackMax)}`,
+      `put ${decisive.katagomoView.openings.outsideFortySixty} of the ${decisive.katagomoView.openings.read} outside 40-60%`,
+      `in the ${decisive.katagomoView.openings.high.openings} openings it gave Black over 60%, Black scored ${pctOf(decisive.katagomoView.openings.high.blackScore)}`,
+      `in the ${decisive.katagomoView.openings.low.openings} it gave Black under 40%, Black scored ${pctOf(decisive.katagomoView.openings.low.blackScore)}`,
+      `In ${decisive.katagomoView.rapfiWins.sample} of Rapfi's wins`,
+      `a median ${pctOf(decisive.katagomoView.rapfiWins.chanceMedian)}`,
+      `it still gave itself ${pctOf(decisive.katagomoView.rapfiWins.deepChanceMedian)}`,
       `about ${Math.round(decisive.edges.colour * 100)} points of score`,
       `being Rapfi about ${Math.round(decisive.edges.engine * 100)}`,
     ]) {
@@ -218,6 +229,8 @@ describe('why the title games are decisive (gomoku-title-decisive.json)', () => 
     expect(L.decisiveMedian).toBe(44.5);
     expect(decisive.forcedWin.medianStone).toBe(22);
     expect(decisive.losses.bestChanceMedian).toBe(0.53);
+    expect(decisive.katagomoView.openings.outsideFortySixty).toBe(34);
+    expect(decisive.katagomoView.rapfiWins.chanceMedian).toBe(0.244);
   });
 
   it('draws both charts from the record', () => {

@@ -37,13 +37,15 @@ const SECONDS = match.equal.katagomoBudget.maxTimeS;
 /** The earlier match at matched search, which the post gives one sentence. */
 const U = match.uneven;
 const D = decisive;
+const KV = decisive.katagomoView;
 
 const commas = (n: number): string => n.toLocaleString('en-US');
 const pct = (score: number): string => `${Math.round(score * 100)}%`;
 const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
 const seconds = (ms: number): string => (ms / 1000).toFixed(1);
+/** A won-drawn-lost line joined by non-breaking hyphens (U+2011), so it never wraps mid-score. */
 const wdl = (r: { wins: number; draws: number; losses: number }): string =>
-  `${r.wins}-${r.draws}-${r.losses}`;
+  `${r.wins}\u2011${r.draws}\u2011${r.losses}`;
 const pct1 = (x: number): string => `${(x * 100).toFixed(1)}%`;
 const points = (x: number): string => `${Math.round(x * 100)}`;
 
@@ -215,6 +217,12 @@ export const rapfiVsKatagomoArticle: Article = {
         },
         p(
           `Its ${D.losses.games} losses were slides from an even game, not collapses from a won one. In the ${D.losses.read} with logged readings, the best Rapfi ever gave itself was a median ${pct(D.losses.bestChanceMedian)}, and only ${D.losses.aboveSeventy} went above 70%.`,
+        ),
+        p(
+          `The openings were screened by Rapfi, and Rapfi read them as even all match. KataGomo did not. Reading each one at ${commas(KV.openings.visits)} visits, it gave Black anywhere from ${pct(KV.openings.blackMin)} to ${pct(KV.openings.blackMax)}, and put ${KV.openings.outsideFortySixty} of the ${KV.openings.read} outside 40-60%. Its reading matched the results better: in the ${KV.openings.high.openings} openings it gave Black over 60%, Black scored ${pct(KV.openings.high.blackScore)}, and in the ${KV.openings.low.openings} it gave Black under 40%, Black scored ${pct(KV.openings.low.blackScore)}.`,
+        ),
+        p(
+          `KataGomo also knew when it was losing. In ${KV.rapfiWins.sample} of Rapfi's wins, it read the position one move before Rapfi saw a won game and gave itself a median ${pct(KV.rapfiWins.chanceMedian)}. With ten times its match search, ${commas(KV.rapfiWins.deepVisits)} visits, it still gave itself ${pct(KV.rapfiWins.deepChanceMedian)}: by then no move saved the game.`,
         ),
         p(
           `Rapfi also attacks more. ${pct1(D.attack.rapfi.fours / D.attack.rapfi.moves)} of its moves made a four, against ${pct1(D.attack.katagomo.fours / D.attack.katagomo.moves)} of KataGomo's, and it made ${D.attack.rapfi.doubleThreats} moves with two threats at once to KataGomo's ${D.attack.katagomo.doubleThreats}. The engine mattered far more than the colour: moving first was worth about ${points(D.edges.colour)} points of score, being Rapfi about ${points(D.edges.engine)}.`,

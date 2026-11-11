@@ -1,5 +1,5 @@
 {
- "$comment": "Why the Gomoku title match games are decisive: read from the equal-time match logs (mistboard-engine lab/gomoku-title-match-2026-11/run-equal-3s, 199 counted games) on 2026-11-11. Rapfi win chances are its own per-move evals as logged in the match, on its win curve (1/(1+exp(-eval/200)), a forced five as 0 or 1). Stone counts include the five dealt opening stones; game lengths are moves after the opening. KataGomo logged no evals, so nothing here reads KataGomo's view.",
+ "$comment": "Why the Gomoku title match games are decisive: read from the equal-time match logs (mistboard-engine lab/gomoku-title-match-2026-11/run-equal-3s, 199 counted games) on 2026-11-11. Rapfi win chances are its own per-move evals as logged in the match, on its win curve (1/(1+exp(-eval/200)), a forced five as 0 or 1). Stone counts include the five dealt opening stones; game lengths are moves after the opening. KataGomo logged no evals in the match; katagomoView is a re-read on 2026-11-11 with the match's KataGomo build and net: every opening at 400 visits, and in 30 of Rapfi's wins (chosen by seed) the position with KataGomo to move one ply before Rapfi's eval jumped to won, at 140 visits (its match budget; it repeated its match move in 22 of 30) and 1,400.",
  "games": 199,
  "lengths": {
   "decisive": 138,
@@ -387,5 +387,32 @@
  "edges": {
   "colour": 0.036,
   "engine": 0.221
+ },
+ "katagomoView": {
+  "openings": {
+   "read": 99,
+   "visits": 400,
+   "blackMin": 0.124,
+   "blackMax": 0.891,
+   "outsideFortySixty": 34,
+   "high": {
+    "over": 0.6,
+    "openings": 22,
+    "blackScore": 0.602
+   },
+   "low": {
+    "under": 0.4,
+    "openings": 12,
+    "blackScore": 0.396
+   }
+  },
+  "rapfiWins": {
+   "sample": 30,
+   "visits": 140,
+   "deepVisits": 1400,
+   "chanceMedian": 0.244,
+   "deepChanceMedian": 0.233,
+   "repeatedMatchMove": 22
+  }
  }
 }
