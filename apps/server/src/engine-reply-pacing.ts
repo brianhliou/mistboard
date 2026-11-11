@@ -30,11 +30,23 @@ export const PACING = {
    * The base caps at `maxBaseMs` before complexity and jitter apply, so a long
    * time control still varies move to move instead of sitting on one flat
    * ceiling (10-15: 5+5 and up all read 6.0 s on every move). Every target then
-   * lands in [minTargetMs, maxTargetMs].
+   * lands in [minTargetMs, maxTargetMs]. Raised 2026-11-11 from 4.5 s and 8 s: a
+   * 5+5 jieqi game sat on the 4.5 s cap every move and averaged 3-4 s even while level.
    */
-  maxBaseMs: 4_500,
+  maxBaseMs: 7_000,
   minTargetMs: 700,
-  maxTargetMs: 8_000,
+  maxTargetMs: 12_000,
+  /**
+   * A level game takes longer, a lopsided one less, by |eval| as a share of
+   * `decisiveCp`: full `closeFactor` up to `closeShare`, easing to 1 at `evenShare`,
+   * then to `lopsidedFactor` at `lopsidedShare` and beyond. Shares, not centipawns,
+   * because a jieqi eval swings several pawns in a position that is still level.
+   */
+  closeShare: 0.1,
+  evenShare: 0.3,
+  lopsidedShare: 0.6,
+  closeFactor: 1.4,
+  lopsidedFactor: 0.7,
   /** ± fraction of the target, seeded per room and ply. */
   jitter: 0.35,
   /** Opening plies reply faster: a player expects the first moves to be quick. */
@@ -167,14 +179,30 @@ export function replyPace(input: ReplyPaceInput): ReplyPace {
   const median = PACING_LEGAL_MEDIANS[input.variant as keyof typeof PACING_LEGAL_MEDIANS];
   const complexity = clamp(input.legalCount / median, 0.7, 1.4);
   const phase = input.ply < PACING.openingPlies ? PACING.openingFactor : 1;
+  const balance = balanceFactor(input.cp);
   const targetMs = Math.round(
     clamp(
-      Math.min(baseMs, PACING.maxBaseMs) * complexity * phase * jitter,
+      Math.min(baseMs, PACING.maxBaseMs) * complexity * phase * balance * jitter,
       PACING.minTargetMs,
       PACING.maxTargetMs,
     ),
   );
   return waitFor(targetMs, 'paced');
+}
+
+/** Longer when the eval is level, shorter when one side is well ahead; 1 with no eval. */
+export function balanceFactor(cp: number | null): number {
+  if (cp === null) return 1;
+  const share = Math.abs(cp) / PACING.decisiveCp;
+  const ease = (from: number, to: number, a: number, b: number) =>
+    a + ((b - a) * (share - from)) / (to - from);
+  if (share <= PACING.closeShare) return PACING.closeFactor;
+  if (share <= PACING.evenShare)
+    return ease(PACING.closeShare, PACING.evenShare, PACING.closeFactor, 1);
+  if (share <= PACING.lopsidedShare) {
+    return ease(PACING.evenShare, PACING.lopsidedShare, 1, PACING.lopsidedFactor);
+  }
+  return PACING.lopsidedFactor;
 }
 
 /** The pace as it rides in a `live-engine-decision` payload. */

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  balanceFactor,
   botPacingEnabled,
   PACING,
   pacingClockReserveMs,
@@ -145,8 +146,40 @@ describe('replyPace', () => {
     const opening = replyPace({ ...base, ply: 2 });
     const middle = replyPace({ ...base, ply: 2 + 40 });
     // Same jitter is not guaranteed across plies, so compare against the bounds.
-    assert.ok(opening.targetMs <= PACING.untimedBaseMs * PACING.openingFactor * 1.4 * 1.35 + 1);
+    assert.ok(
+      opening.targetMs <=
+        PACING.untimedBaseMs * PACING.openingFactor * 1.4 * PACING.closeFactor * 1.35 + 1,
+    );
     assert.ok(middle.targetMs >= PACING.minTargetMs);
+  });
+
+  it('thinks longer in a level game and less in a lopsided one', () => {
+    // 2026-11-11, a 5+5 jieqi game: level early (|eval| 0.1-4.5 pawns) and the bot
+    // still answered in 3-4 s. Same position and jitter, only the eval moves.
+    const at = (cp: number | null) =>
+      replyPace({ ...base, remainingMs: 300_000, incrementMs: 5_000, cp }).targetMs;
+    assert.equal(balanceFactor(0), PACING.closeFactor);
+    assert.equal(balanceFactor(-150), PACING.closeFactor);
+    assert.equal(balanceFactor(450), 1);
+    assert.equal(balanceFactor(-900), PACING.lopsidedFactor);
+    assert.equal(balanceFactor(1_400), PACING.lopsidedFactor);
+    assert.equal(balanceFactor(null), 1);
+    assert.ok(at(0) > at(300) && at(300) > at(450) && at(450) > at(700) && at(700) > at(1_200));
+    assert.equal(at(-200), at(200), 'symmetric in sign');
+    assert.equal(at(null), at(450), 'no eval paces as an even game');
+  });
+
+  it('lets a level middlegame at 5+5 run past the old 4.5 s cap', () => {
+    // legalCount at the median, so complexity is 1; jitter spans 0.65-1.35.
+    const targets = Array.from(
+      { length: 20 },
+      (_, i) =>
+        replyPace({ ...base, ply: 20 + i, remainingMs: 300_000, incrementMs: 5_000, cp: 0 })
+          .targetMs,
+    );
+    const avg = targets.reduce((s, v) => s + v, 0) / targets.length;
+    assert.ok(avg > 7_000, `avg ${avg}`);
+    assert.ok(Math.max(...targets) <= PACING.maxTargetMs);
   });
 
   it('never paces an engine-vs-engine game', () => {
