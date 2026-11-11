@@ -30,6 +30,9 @@ case "$name" in
   three-kingdoms-engine)
     repo=brianhliou/misty-three-kingdoms-banqi tag=v0.3.0 mode=exec
     sha=cbc675326519ae5d1d426e99ec66e5e1f79b63a23d985f3b1375d39cbeeaaf26 ;;
+  ffq-banqi-engine)
+    repo=brianhliou/misty-ffq-banqi tag=v0.1.0 mode=exec
+    sha=62e74d73d6caca517a73036e01e884027316c8f7a7a6c6394e0ac016b4e427ca ;;
   *)
     echo "release-asset: unknown asset $name" >&2
     exit 1 ;;
