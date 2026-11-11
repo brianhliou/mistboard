@@ -150,6 +150,7 @@ export {
   CORRESPONDENCE_SEEK_TTL_MS,
   closeCorrespondenceSeek,
   correspondenceStartRecipient,
+  correspondenceUserName,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
   deleteCorrespondenceSeek,

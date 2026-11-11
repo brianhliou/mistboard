@@ -31,6 +31,11 @@ export type ChallengeView = {
   expired: boolean;
   // Rated correspondence (2026-10-02); absent reads as casual.
   rated?: boolean;
+  // A directed challenge, to its creator only (#1057): who it is aimed at and
+  // whether their email switch let us tell them. Never why it is off.
+  targetName?: string | null;
+  targetHandle?: string | null;
+  targetEmailed?: boolean;
 };
 
 /**
@@ -209,6 +214,25 @@ function buildBoard(view: ChallengeView): HTMLElement {
   return board;
 }
 
+// "We emailed @bob" above the link of a directed challenge, or "Send them this
+// link" when the target's email is off; a plain link challenge has no target.
+function buildTargetStatus(view: ChallengeView): HTMLElement | null {
+  if (typeof view.targetEmailed !== 'boolean') return null;
+  const line = document.createElement('p');
+  line.className = 'challenge-target-status';
+  const name = view.targetHandle ? `@${view.targetHandle}` : view.targetName;
+  if (view.targetEmailed && name) {
+    appendWithNameNode(
+      line,
+      (token) => t('challenge.targetEmailed', { name: token }),
+      playerNameEl(name, profileTargetFor({ handle: view.targetHandle }), 'challenge-target-name'),
+    );
+  } else {
+    line.textContent = t('challenge.targetNotEmailed');
+  }
+  return line;
+}
+
 export function buildChallengeCard(view: ChallengeView): HTMLElement {
   const isPublic = view.visibility === 'public';
   const card = document.createElement('section');
@@ -289,6 +313,8 @@ export function buildChallengeCard(view: ChallengeView): HTMLElement {
     share.readOnly = true;
     share.value = `${location.origin}/challenge/${view.id}`;
     share.addEventListener('focus', () => share.select());
+    const target = buildTargetStatus(view);
+    if (target) body.append(target);
     body.append(share);
 
     const copy = document.createElement('button');

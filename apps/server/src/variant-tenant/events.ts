@@ -7,6 +7,10 @@ import { INTERNAL_BANQI_CORPUS_ID, internalEngineTestFor } from '../internal-eng
  */
 
 import { clockPolicyKindFor } from '@mistboard/game';
+import {
+  type GameOverNotice,
+  notifyCorrespondenceGameOver,
+} from '../correspondence-player-emails.js';
 import { engineFailureAbort } from '../engine-failure-abort.js';
 import {
   firstPartyBotForEngine,
@@ -119,6 +123,8 @@ export type TenantEventWriterContext<
    * turn.
    */
   scheduleEngineMove?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
+  /** The correspondence game-over email to both players (#1057). Never awaited. */
+  notifyCorrespondenceGameOver?(notice: GameOverNotice): void;
 };
 
 export async function appendTenantEvent<
@@ -219,6 +225,14 @@ export async function appendTenantEvent<
       // artifact must never fail the game-end path that just succeeded.
       if (gameEndRecorded) await flushPendingDebugArtifacts(tenant, room, writer.persistence);
       room.pendingDebugArtifacts = undefined;
+      // Once, after the games row holds the result the email's review link opens.
+      if (gameEndRecorded) {
+        notifyTenantCorrespondenceGameOver(tenant, room, writer, {
+          result: summary.abortedAs ? null : summary.result,
+          aborted: Boolean(summary.abortedAs),
+          termination: summary.abortedAs?.termination ?? summary.termination,
+        });
+      }
     }
     if (room.projection.state.status.type === 'aborted' && !room.gameEndRecorded) {
       room.gameEndRecorded = true;
@@ -238,6 +252,11 @@ export async function appendTenantEvent<
           writer.logGameAbortRecordFailure(room.id, err as Error);
         }
       }
+      notifyTenantCorrespondenceGameOver(tenant, room, writer, {
+        result: null,
+        aborted: true,
+        termination: 'abandoned',
+      });
     }
     await maintainTenantDeadlineRow(tenant, room, writer);
     return appendedSeq;
@@ -543,8 +562,43 @@ function contextWithDefaults<
     onRoomResynced: () => {},
     scheduleLifecycleTimers: () => {},
     scheduleEngineMove: () => {},
+    notifyCorrespondenceGameOver,
     ...ctx,
   };
+}
+
+// The game-over email goes to the seated accounts of a days-per-move room only;
+// a live game's players were there when it ended.
+function notifyTenantCorrespondenceGameOver<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(
+  tenant: { persistence: { resultForWinner(winner: C | null): persistence.GameResult } },
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  writer: Required<TenantEventWriterContext<Kind, C, M, State, Spec>>,
+  end: Pick<GameOverNotice, 'result' | 'aborted' | 'termination'>,
+): void {
+  if (!writer.persistence.isInitialized()) return;
+  if (clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move') return;
+  const seats = (Object.keys(room.seatTokens) as C[]).map((color) => {
+    const token = room.seatTokens[color];
+    return {
+      color,
+      userId: token?.userId ?? null,
+      name: token ? (token.userDisplayName ?? token.userHandle ?? null) : null,
+      winResult: tenant.persistence.resultForWinner(color),
+    };
+  });
+  if (!seats.some((seat) => seat.userId)) return;
+  writer.notifyCorrespondenceGameOver({
+    roomId: room.id,
+    gameSpecId: room.gameSpecId,
+    ...end,
+    seats,
+  });
 }
 
 // Maintain the durable room_deadlines row for days-per-move rooms: upsert

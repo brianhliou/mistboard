@@ -5,8 +5,15 @@ import test from 'node:test';
 import { accountCodeEmail } from './account-session.js';
 import { renderEmail } from './email-layout.js';
 import {
+  challengeUrl,
+  correspondenceChallengeEmail,
   correspondenceDeadlineEmail,
   correspondenceDigestEmail,
+  correspondenceGameOverEmail,
+  correspondenceHostReceiptEmail,
+  correspondenceHostStartEmail,
+  correspondenceJoinedStartEmail,
+  correspondencePlayAgainUrl,
   correspondenceStartEmail,
   EMAIL_VARIANT_NAMES,
   type EmailLocale,
@@ -430,4 +437,228 @@ test('the layout renders without a button or settings link', () => {
   });
   assert.equal(email.text, 'Mistboard\n\nHello\n\nOne line.\n\n--\nBecause.');
   assert.ok(!email.html.includes('mb-button'));
+});
+
+// ── #1057: challenge, joiner start, Play the host, game over ────────────────
+
+function noticeEmails(locale: EmailLocale): Array<[string, PlayerEmail]> {
+  return [
+    [
+      'challenge',
+      correspondenceChallengeEmail(
+        {
+          seekId: 'seek_1',
+          gameSpecId: 'jieqi',
+          challengerName: 'Alice',
+          challengerHandle: 'alice',
+          daysPerMove: 3,
+          rated: true,
+          openDays: 7,
+        },
+        locale,
+      ),
+    ],
+    [
+      'joined',
+      correspondenceJoinedStartEmail(
+        {
+          roomId: 'jq_room',
+          gameSpecId: 'jieqi',
+          opponentName: 'Alice',
+          recipientOnMove: true,
+          daysPerMove: 3,
+        },
+        locale,
+      ),
+    ],
+    [
+      'host',
+      correspondenceHostStartEmail(
+        {
+          roomId: 'xq_room',
+          gameSpecId: 'xiangqi',
+          playerName: 'Bob',
+          playerHandle: 'bob',
+          hostOnMove: true,
+          daysPerMove: 2,
+        },
+        locale,
+      ),
+    ],
+    [
+      'receipt',
+      correspondenceHostReceiptEmail(
+        {
+          roomId: 'xq_room',
+          gameSpecId: 'xiangqi',
+          hostName: 'Host',
+          playerOnMove: false,
+          daysPerMove: 2,
+          turnDigest: true,
+        },
+        locale,
+      ),
+    ],
+    ...(['won', 'lost', 'draw', 'cancelled'] as const).map((outcome): [string, PlayerEmail] => [
+      `over-${outcome}`,
+      correspondenceGameOverEmail(
+        {
+          roomId: 'xq_room',
+          gameSpecId: 'xiangqi',
+          opponentName: 'Bob',
+          outcome,
+          termination: 'resignation',
+          reviewPath: '/xiangqi/review/xq_room',
+        },
+        locale,
+      ),
+    ]),
+  ];
+}
+
+test('#1057 emails: settings link, both parts, no em dash, in every locale', () => {
+  for (const locale of LOCALES) {
+    for (const [kind, email] of noticeEmails(locale)) {
+      assert.ok(email.text.includes(notificationSettingsUrl), `${locale} ${kind}: text footer`);
+      assert.ok(email.html.includes(`href="${notificationSettingsUrl}"`), `${locale} ${kind}`);
+      assert.match(email.html, /^<!doctype html>/);
+      assert.ok(!/<[a-z]/i.test(email.text), `${locale} ${kind}: markup in text`);
+      for (const part of [email.subject, email.text, email.html]) {
+        assert.ok(!part.includes('\u2014'), `em dash in ${locale} ${kind}`);
+      }
+      // Text only: no board, no image.
+      assert.ok(!email.html.includes('<img'), `${locale} ${kind}: image`);
+      assert.ok(!email.html.includes('<svg'), `${locale} ${kind}: svg`);
+    }
+  }
+});
+
+test('the challenge email names the challenger and pace, and links to the challenge', () => {
+  const [, email] = noticeEmails('en')[0]!;
+  assert.equal(email.subject, 'Alice (@alice) challenged you to Jieqi, 3 days per move');
+  assert.match(email.text, /rated correspondence challenge: jieqi, 3 days per move/);
+  assert.match(email.text, /It stays open for 7 days/);
+  assert.equal(challengeUrl('seek_1'), 'https://mistboard.com/challenge/seek_1');
+  assert.match(email.text, /See the challenge: https:\/\/mistboard\.com\/challenge\/seek_1/);
+  const zh = noticeEmails('zh-Hans')[0]![1];
+  assert.match(zh.text, /计分通信对局挑战/);
+  assert.match(zh.text, /https:\/\/mistboard\.com\/challenge\/seek_1/);
+});
+
+test('the joiner start email links to the room and says who moves first', () => {
+  const email = correspondenceJoinedStartEmail(
+    {
+      roomId: 'jq_room',
+      gameSpecId: 'jieqi',
+      opponentName: 'Alice',
+      recipientOnMove: false,
+      daysPerMove: 3,
+    },
+    'en',
+  );
+  assert.match(email.text, /against Alice has started, and Alice has the first move/);
+  assert.match(email.text, /https:\/\/mistboard\.com\/room\/jq_room/);
+  assert.match(email.text, /because you accepted a correspondence seek or challenge/);
+});
+
+test('the host gets "New game", the player a receipt', () => {
+  const host = noticeEmails('en')[2]![1];
+  assert.equal(
+    host.subject,
+    'New game: Bob (@bob) started Xiangqi against you, 2 days per move: your move',
+  );
+  assert.match(host.text, /https:\/\/mistboard\.com\/room\/xq_room/);
+  const receipt = noticeEmails('en')[3]![1];
+  assert.match(receipt.text, /Your game against Host has started, and Host has the first move/);
+  assert.match(receipt.text, /at most one email a day/);
+  const noDigest = correspondenceHostReceiptEmail(
+    {
+      roomId: 'xq_room',
+      gameSpecId: 'xiangqi',
+      hostName: 'Host',
+      playerOnMove: true,
+      daysPerMove: 2,
+      turnDigest: false,
+    },
+    'en',
+  );
+  assert.match(noDigest.text, /Host replies to each move within 2 days/);
+  assert.ok(!noDigest.text.includes('at most one email a day'), 'no promise the digest is off');
+});
+
+test('the game-over email says the result and links to the review', () => {
+  const byKind = new Map(noticeEmails('en'));
+  assert.equal(byKind.get('over-won')?.subject, 'You won your xiangqi game against Bob');
+  assert.equal(byKind.get('over-lost')?.subject, 'You lost your xiangqi game against Bob');
+  assert.equal(byKind.get('over-draw')?.subject, 'Your xiangqi game against Bob was drawn');
+  const won = byKind.get('over-won')!;
+  assert.match(won.text, /ended by resignation/);
+  assert.match(won.text, /Review the game: https:\/\/mistboard\.com\/xiangqi\/review\/xq_room/);
+  // Play again is off until #606: no second link.
+  assert.equal(correspondencePlayAgainUrl({ roomId: 'xq_room', gameSpecId: 'xiangqi' }), null);
+  assert.ok(!won.text.includes('Play again'));
+  const cancelled = byKind.get('over-cancelled')!;
+  assert.equal(cancelled.subject, 'Your xiangqi game against Bob was cancelled');
+  assert.match(cancelled.text, /has no result/);
+  assert.ok(!cancelled.text.includes('resignation'));
+  assert.match(cancelled.text, /https:\/\/mistboard\.com\/room\/xq_room/);
+  // No review page for the variant: the room instead.
+  const noReview = correspondenceGameOverEmail(
+    {
+      roomId: 'r1',
+      gameSpecId: 'xiangqi',
+      opponentName: null,
+      outcome: 'draw',
+      termination: 'agreement',
+      reviewPath: null,
+    },
+    'en',
+  );
+  assert.equal(noReview.subject, 'Your xiangqi game was drawn');
+  assert.match(noReview.text, /https:\/\/mistboard\.com\/room\/r1/);
+  assert.ok(!noReview.text.includes('ended by'), 'an unlisted termination says nothing');
+});
+
+test('#1057 emails escape player names in the html part', () => {
+  const evil = '<img src=x onerror=alert(1)>';
+  const emails = [
+    correspondenceChallengeEmail(
+      {
+        seekId: 's',
+        gameSpecId: 'xiangqi',
+        challengerName: evil,
+        challengerHandle: null,
+        daysPerMove: 1,
+        rated: false,
+        openDays: 7,
+      },
+      'en',
+    ),
+    correspondenceHostStartEmail(
+      {
+        roomId: 'r',
+        gameSpecId: 'xiangqi',
+        playerName: evil,
+        playerHandle: null,
+        hostOnMove: false,
+        daysPerMove: 2,
+      },
+      'en',
+    ),
+    correspondenceGameOverEmail(
+      {
+        roomId: 'r',
+        gameSpecId: 'xiangqi',
+        opponentName: evil,
+        outcome: 'won',
+        termination: null,
+        reviewPath: null,
+      },
+      'en',
+    ),
+  ];
+  for (const email of emails) {
+    assert.ok(!email.html.includes('<img'), email.subject);
+    assert.ok(email.html.includes('&lt;img src=x onerror=alert(1)&gt;'), email.subject);
+  }
 });
