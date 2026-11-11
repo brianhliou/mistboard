@@ -55,7 +55,8 @@ test('whole-game clock simulations spend full budgets plus holds without crossin
               pacingEnabled: true,
             };
             const computeMs = liveBotMoveTime(input).movetimeMs;
-            const pace = replyPace({ ...input, computeMs, cp: null, mate: null, enabled: true });
+            // cp 0 is the longest wait the balance rule allows, so the reserve is checked at its worst.
+            const pace = replyPace({ ...input, computeMs, cp: 0, mate: null, enabled: true });
             remainingMs -= computeMs + pace.waitMs;
             assert.ok(
               remainingMs >= Math.max(5_000, tc.initialMs * 0.1),
