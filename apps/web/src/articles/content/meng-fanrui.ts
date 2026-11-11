@@ -36,11 +36,15 @@ const G_M_143657: XiangqiReplaySpec = {
         "lineEval": "⩲",
         "branches": [
           {
-            "line": "d4d6 c7c3 f0e1 c3c2 f2f1 b1b5 f4g6 c2b2",
+            "line": "d4d6 c7c3 f0e1 a3b5 d6b6 c3i3 f4e6 g7e6",
             "lineEval": "⩲"
           },
           {
-            "line": "c3c4 c7c1 d4d1 b1b3 d1c1 b3e3 f0e1 e3i3",
+            "line": "c3c4 c7c1 d4d1 a3c4 g4g5 c4b2 f2b2 b1b2",
+            "lineEval": "="
+          },
+          {
+            "line": "c1c4 a3c4 d4c4 b1f1 d0e1 h5c5 h4h9 g7h9",
             "lineEval": "="
           }
         ]
@@ -52,8 +56,8 @@ const G_M_143657: XiangqiReplaySpec = {
         "lineEval": "=",
         "branches": [
           {
-            "line": "d5e3 c2c3 e3d5 c3c2 d5e7 e6e5 e0f0 e5e4",
-            "lineEval": "⩱"
+            "line": "d5e3 c2c3 e3d5 c3i3 d5e7 i3c3 e7g8 i7g8",
+            "lineEval": "="
           }
         ]
       },
@@ -65,12 +69,28 @@ const G_M_143657: XiangqiReplaySpec = {
         "branches": [
           {
             "line": "d5e3 e2e3 e4c5 e3g3 f8i8 e9f9 e1f0 g3c3",
+            "lineEval": "∓"
+          },
+          {
+            "line": "d5c3 e2i2 e4d6 e8d7 f8f3 e3c2 c3e4 c5a7",
             "lineEval": "∓",
             "replies": {
               "2": [
                 {
-                  "line": "e6e5 e4c5 e2e3 f8f5 i7g8 f5h5 e3f3 h5e5",
-                  "lineEval": "⩱"
+                  "line": "e2h2 f8f3 e3c2 e4d6 e8d7 c3e4 c5a7 f3c3",
+                  "lineEval": "∓"
+                }
+              ]
+            }
+          },
+          {
+            "line": "d5f4 e2h2 f4e6 c5e7 e6c7 e8d7 f8f3 e3c4",
+            "lineEval": "∓",
+            "replies": {
+              "2": [
+                {
+                  "line": "e2h2 f4e6 c5e7 e6c7 e8d7 f8f3 e3c4 f3d3",
+                  "lineEval": "∓"
                 }
               ]
             }
@@ -84,11 +104,19 @@ const G_M_143657: XiangqiReplaySpec = {
         "lineEval": "−+",
         "branches": [
           {
-            "line": "f3f6 e2e5 d5c3 c4e3 f6f7 d9e8 f7g7 e3g4",
-            "lineEval": "∓"
+            "line": "f3f7 e2h2 d5c3 h2h0 e1f0 h0h3 c3d1 c4e5",
+            "lineEval": "−+",
+            "replies": {
+              "2": [
+                {
+                  "line": "e2e5 d5c3 e5d5 c3e4 c4e5 f7d7 i7g8 d7g7",
+                  "lineEval": "−+"
+                }
+              ]
+            }
           },
           {
-            "line": "f3f7 e2h2 d5c3 h2h0 e1f0 h0h3 d6c4 h3c3",
+            "line": "f3f7 e2h2 d5c3 h2h0 e1f0 h0h3 c3d1 c4e5",
             "lineEval": "−+",
             "replies": {
               "2": [
@@ -108,31 +136,7 @@ const G_M_143657: XiangqiReplaySpec = {
         "lineEval": "−+",
         "branches": [
           {
-            "line": "h5g3 d0e0 e7g9 d5f4 f3e3 f4e6 e3e2 e6g5",
-            "lineEval": "−+",
-            "replies": {
-              "2": [
-                {
-                  "line": "d5f4 f3e3 d0e0 e7g9 f4e6 e3e2 e6c5 d3c3",
-                  "lineEval": "−+"
-                }
-              ]
-            }
-          },
-          {
-            "line": "e8f9 d0d1 h5i3 d5f4 d3e3 f4g6 i3g2 g6e5",
-            "lineEval": "−+",
-            "replies": {
-              "2": [
-                {
-                  "line": "d0d1 h5i3 d5f6 f3e3 f6g8 e9d9 g8f6 e3e2",
-                  "lineEval": "−+"
-                }
-              ]
-            }
-          },
-          {
-            "line": "e8f7 d0d1 h5i3 d5f4 d3e3 f4h3 f3g3 h3g1",
+            "line": "h5g3 d0e0 e8d9 e0d0 g3f1 d0e0 e7g5 d5f6",
             "lineEval": "−+"
           }
         ]
@@ -144,7 +148,7 @@ const G_M_143657: XiangqiReplaySpec = {
         "lineEval": "−+",
         "branches": [
           {
-            "line": "e1f0 h5i3 d2e1 i3g2 d5f6 e3e2 d0e0 e8f7",
+            "line": "e1f0 h5i3 d2e1 i3g2 d5f6 e8f7 f6g4 d3c3",
             "lineEval": "−+"
           }
         ]
@@ -178,36 +182,36 @@ const G_M_143947: XiangqiReplaySpec = {
         "lineEval": "⩱",
         "branches": [
           {
-            "line": "c0d0 d8b7 d4c6 b0b3 c6d4 b3i3 d4f5 i3h3",
-            "lineEval": "⩱",
+            "line": "c0d0 e8d7 g4f4 b0b2 e2g0 d8b7 d4c6 h2h3",
+            "lineEval": "=",
             "replies": {
               "2": [
                 {
-                  "line": "e8d7 g4f4 d8b7 d4c6 f9e8 f4h4 h2g2 h4g4",
+                  "line": "d8b7 d4c6 b0b3 c6d4 b3h3 e2g0 h2h0 d4f5",
                   "lineEval": "="
                 }
               ]
             }
           },
           {
-            "line": "g4h4 h2i2 c0d0 e8d7 h4h2 i2i1 h2h7 d8b7",
-            "lineEval": "⩱",
+            "line": "g4h4 h2g2 h4g4 g2h2 c0d0 d8b7 d4c6 b0b3",
+            "lineEval": "=",
             "replies": {
               "2": [
                 {
-                  "line": "h2g2 h4g4 g2h2 c0d0 d8b7 d4c6 b0b2 c6d4",
+                  "line": "h2i2 c0d0 d8b7 d4c6 b0b3 h4h2 i2i1 h2h1",
                   "lineEval": "⩱"
                 }
               ]
             }
           },
           {
-            "line": "e1d0 h2h5 f0e1 b0b3 c4c5 b3i3 c5c6 h5d5",
+            "line": "e1d0 h2h5 d4c6 d8e6 g4h4 h5f5 c6d4 e6d4",
             "lineEval": "⩱",
             "replies": {
               "2": [
                 {
-                  "line": "b0b5 c0c2 h2h5 f0e1 b5e5 g4h4 h5g5 h4i4",
+                  "line": "b0b5 g4h4 h2g2 c0c2 g2g5 f0e1 b5e5 h4i4",
                   "lineEval": "⩱"
                 }
               ]
@@ -222,11 +226,11 @@ const G_M_143947: XiangqiReplaySpec = {
         "lineEval": "∓",
         "branches": [
           {
-            "line": "e1d0 b0b2 h4e4 e6g5 f0e1 b2b5 e4g4 g2h2",
+            "line": "h4g4 g2h2 g4h4 h2g2 e1d0 b0b2 h4e4 e6g5",
             "lineEval": "∓"
           },
           {
-            "line": "h4g4 g2h2 g4h4 h2g2 e1d0 b0b2 h4e4 e6g5",
+            "line": "e1d0 b0b2 h4e4 e6g5 f0e1 g2h2 e4e3 b2b5",
             "lineEval": "∓"
           }
         ]
@@ -238,13 +242,13 @@ const G_M_143947: XiangqiReplaySpec = {
         "lineEval": "−+",
         "branches": [
           {
-            "line": "g2i2 d6e4 i2i0 e2g0 g5e4 g4e4 b0b3 d0d5",
-            "lineEval": "∓",
+            "line": "g2i2 g4g2 i2i0 e2g0 f9e8 d6f5 i0h0 g2h2",
+            "lineEval": "−+",
             "replies": {
               "2": [
                 {
-                  "line": "g4g2 i2i0 e2g0 f9e8 d6f5 i0h0 g2h2 g5f3",
-                  "lineEval": "−+"
+                  "line": "d6e4 g5e4 g4e4 i2i0 e2g0 b0b3 d0d5 b3g3",
+                  "lineEval": "∓"
                 }
               ]
             }
@@ -258,28 +262,12 @@ const G_M_143947: XiangqiReplaySpec = {
         "lineEval": "∓",
         "branches": [
           {
-            "line": "g2g6 f0e1 g1g3 e4e3 g3g0 e6e4 g6e6 e3g3",
-            "lineEval": "−+",
-            "replies": {
-              "2": [
-                {
-                  "line": "e6e5 g6e6 f0e1 g1g3 e4e3 g3g4 e3e4 g4g3",
-                  "lineEval": "−+"
-                }
-              ]
-            }
+            "line": "g2g6 f0e1 g1g3 e4e3 g3g0 i5h5 g0i0 e0f0",
+            "lineEval": "−+"
           },
           {
-            "line": "g2g6 f0e1 g1h1 e4h4 h1i1 h4i4 i1h1 e6e4",
-            "lineEval": "∓",
-            "replies": {
-              "2": [
-                {
-                  "line": "e6e5 g6e6 f0e1 g1g3 e4e3 g3g4 e1f2 g4a4",
-                  "lineEval": "−+"
-                }
-              ]
-            }
+            "line": "g1g0 f0e1 g0i0 e0f0 g2g0 f0f1 g0g1 f1f0",
+            "lineEval": "∓"
           }
         ]
       },
@@ -295,19 +283,19 @@ const G_M_143947: XiangqiReplaySpec = {
             "replies": {
               "2": [
                 {
-                  "line": "e9d9 e4a4 e7c9 e6d6 d9e9 d6e6 e9d9 a4a9",
+                  "line": "e9d9 e4b4 e7c9 b4b9 g9e7 e6a6 d9e9 a6e6",
                   "lineEval": "∓"
                 }
               ]
             }
           },
           {
-            "line": "e6h6 e7c9 i5i6 g5g6 h6h9 g9e7 i6i7 g1g0",
+            "line": "e6h6 e8f9 h6h9 e9e8 h9h5 g1h1 e4h4 h1i1",
             "lineEval": "∓",
             "replies": {
               "2": [
                 {
-                  "line": "e8f9 h6h9 e9e8 i5i6 g5g6 h9h6 g1h1 e4h4",
+                  "line": "e7c9 i5i6 g5g6 h6h9 g9e7 i6i7 g1g0 e0e1",
                   "lineEval": "∓"
                 }
               ]
@@ -344,37 +332,37 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "⩲",
         "branches": [
           {
-            "line": "c9a7 e6d6 b5b3 e3f5 b3b7 d6e6 a6a5 e1d0",
+            "line": "c9a7 e6d6 b5b3 e3f5 b3f3 f5g7 f3f6 c6c7",
             "lineEval": "⩲",
             "replies": {
               "2": [
                 {
-                  "line": "c6a6 d9d4 e6d6 b5b3 e3c2 b3c3 a6a4 d4d3",
+                  "line": "c6a6 d9d4 e6d6 b5b3 e3c2 b3c3 a6a4 c3c2",
                   "lineEval": "⩲"
                 }
               ]
             }
           },
           {
-            "line": "a6a5 e6d6 c9e7 e1d0 i6i5 f0e1 g7i6 e3c4",
+            "line": "b5b7 e3f5 c9a7 c6a6 b7f7 f5d6 f7c7 e6f6",
             "lineEval": "±",
             "replies": {
               "2": [
                 {
-                  "line": "e3c4 c9a7 c4b6 d9d8 e1d2 e9d9 g0i2 b5b0",
+                  "line": "e6d6 c9a7 a3a4 b7b3 e3f5 b3b7 d6e6 b7f7",
                   "lineEval": "⩲"
                 }
               ]
             }
           },
           {
-            "line": "b5b7 e3f5 c9a7 a3a4 b7f7 f5d6 f7d7 d6c4",
-            "lineEval": "⩲",
+            "line": "b5b0 e2c0 b0b4 e3f5 b4b7 g0e2 a6a5 e6e7",
+            "lineEval": "±",
             "replies": {
               "2": [
                 {
-                  "line": "a3a4 c9a7 e3f5 b7f7 e6f6 f7d7 e1f2 g7i8",
-                  "lineEval": "⩲"
+                  "line": "e1d0 a6a5 e3c4 c9a7 c4b6 d9d8 c6d6 e9d9",
+                  "lineEval": "±"
                 }
               ]
             }
@@ -388,13 +376,25 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "±",
         "branches": [
           {
-            "line": "e6d6 f9e8 c6c9 g5g4 e3c4 g4g3 e2c0 b5f5",
-            "lineEval": "+−",
+            "line": "e6d6 d7e8 c6c9 b5b6 e3f5 b6b7 c9c5 b7f7",
+            "lineEval": "±",
             "replies": {
               "2": [
                 {
-                  "line": "d7e8 c6c9 b5b6 d6c6 b6b5 e3c4 e8d7 c6d6",
+                  "line": "f9e8 c6c9 g5g4 e3c4 g4f4 c9c6 g7e6 d6e6",
                   "lineEval": "+−"
+                }
+              ]
+            }
+          },
+          {
+            "line": "e2c0 c9a7 c6a6 d7e8 e6d6 b5b7 e3c4 d9a9",
+            "lineEval": "±",
+            "replies": {
+              "2": [
+                {
+                  "line": "d7e8 e6d6 c9e7 c6a6 b5c5 g0e2 i6i5 a3a4",
+                  "lineEval": "±"
                 }
               ]
             }
@@ -408,12 +408,12 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "⩲",
         "branches": [
           {
-            "line": "f3e5 g4h4 f6g6 h4h7 f8f9 h7h9 f9f8 e1d2",
+            "line": "f3e5 g4h4 e5f7 h4h9 f6e6 e3g4 f7e5 g4e3",
             "lineEval": "⩲",
             "replies": {
               "2": [
                 {
-                  "line": "g4g8 f8f9 g8g9 f9f8 g9h9 f6f3 h9h8 f8f9",
+                  "line": "g4g5 e5f7 e3g4 f8f9 g5b5 f6e6 b5b9 f9f8",
                   "lineEval": "⩲"
                 }
               ]
@@ -428,24 +428,24 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "±",
         "branches": [
           {
-            "line": "f3e5 g4g9 f9f8 i3i4 e5d3 g9g8 f8f9 g8g5",
+            "line": "f7f5 d5e7 f5f7 e7d5 f3e5 g4g5 e5d3 i3i4",
             "lineEval": "±",
             "replies": {
               "2": [
                 {
-                  "line": "g4g5 e5d3 i3i4 d3c1 e0f0 c1d3 g5g9 f9f8",
+                  "line": "d5e3 f5f6 g4g9 f9f8 e3d5 f6f5 d5e7 f5f7",
                   "lineEval": "±"
                 }
               ]
             }
           },
           {
-            "line": "f7f5 d5e7 f5f7 e7d5 f3e5 g4g9 f9f8 g9g8",
+            "line": "f3e5 g4g9 f9f8 g9g8 f8f9 g8g5 e5d3 i3i4",
             "lineEval": "±",
             "replies": {
               "2": [
                 {
-                  "line": "g4g9 f9f8 d5e7 f5f7 e7d5 f3e5 g9g8 f8f9",
+                  "line": "g4g9 f9f8 g9g8 f8f9 g8g5 e5d3 i3i4 d3c1",
                   "lineEval": "±"
                 }
               ]
@@ -460,24 +460,16 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "+−",
         "branches": [
           {
-            "line": "g4g6 f7f5 d5e7 f5g5 g6a6 e9d9 a6f6 f3e5",
-            "lineEval": "+−",
-            "replies": {
-              "2": [
-                {
-                  "line": "e8f9 d5b6 d7e8 b6c8 e9d9 g6d6 f7d7 d6a6",
-                  "lineEval": "+−"
-                }
-              ]
-            }
+            "line": "g4g6 f7f5 d5e7 f5g5 g6a6 e8f7 a6a7 f3e5",
+            "lineEval": "+−"
           },
           {
-            "line": "d5b6 e9d9 b6d5 f7f5 g4g9 f5f9 g9g6 f9f5",
+            "line": "g4c4 f7g7 c4c9 e8d9 c9c6 d7e8 c6a6 f3g5",
             "lineEval": "+−",
             "replies": {
               "2": [
                 {
-                  "line": "e9f9 g4g9 f9f8 b6d5 f3e5 g9g5 e5d3 g5i5",
+                  "line": "f3g5 c4c9 e8d9 c9c6 d7e8 c6a6 f7d7 d5f6",
                   "lineEval": "+−"
                 }
               ]
@@ -492,7 +484,7 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "±",
         "branches": [
           {
-            "line": "e8f9 g9g6 d7e8 g6a6 f7g7 a4a5 f3g5 a6c6",
+            "line": "e8f9 g9g6 d7e8 g6a6 f7b7 d5f6 b7f7 f6g4",
             "lineEval": "+−"
           }
         ]
@@ -504,7 +496,7 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "+−",
         "branches": [
           {
-            "line": "d5e7 f5g5 g6a6 e9d9 a4a5 g5e5 e7g6 e5f5",
+            "line": "d5e7 f5g5 g6a6 e8f7 a6a7 f3e5 a7b7 g5g3",
             "lineEval": "+−",
             "replies": {
               "2": [
@@ -516,20 +508,20 @@ const G_M_143873: XiangqiReplaySpec = {
             }
           },
           {
-            "line": "d5b6 e9d9 b6a8 f5c5 g6a6 f3e5 a8b6 d9e9",
+            "line": "d5b6 e9f9 b6c8 f3e5 g6a6 e5f7 a6i6 f5h5",
             "lineEval": "+−",
             "replies": {
               "2": [
                 {
-                  "line": "e9f9 b6c8 f3e5 g6a6 e5f7 a6i6 f5b5 e1d0",
+                  "line": "e9d9 b6c8 f5c5 g6g9 d9d8 c8a7 e8f7 g9g6",
                   "lineEval": "+−"
                 }
               ]
             }
           },
           {
-            "line": "g6g9 f5f9 g9g6 f9f5 d5b6 e9d9 b6a8 d9e9",
-            "lineEval": "±"
+            "line": "g6g9 f5f9 g9g6 f9f5 d5b6 e9d9 b6c8 f5c5",
+            "lineEval": "+−"
           }
         ]
       },
@@ -540,12 +532,8 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "+−",
         "branches": [
           {
-            "line": "e3d5 c3i3 a6e6 e5d3 d5b6 e9d9 a4a5 i3i4",
-            "lineEval": "±"
-          },
-          {
-            "line": "a6a9 e8d9 e3d5 c3i3 d5e7 d7e8 a9a6 e5d7",
-            "lineEval": "±"
+            "line": "e3d5 c3i3 a6e6 e5d3 d5b6 e9d9 e6c6 i3g3",
+            "lineEval": "+−"
           }
         ]
       },
@@ -556,12 +544,12 @@ const G_M_143873: XiangqiReplaySpec = {
         "lineEval": "±",
         "branches": [
           {
-            "line": "c3i3 f5e7 e8f7 a6a5 e5c6 a5a9 e9e8 e7f5",
+            "line": "c3i3 f5h6 i3f3 a6a9 e8d9 a9a5 e5c6 a5i5",
             "lineEval": "±",
             "replies": {
               "2": [
                 {
-                  "line": "f5h6 i3f3 a6a9 e8d9 a9a5 e5f7 h6g8 e9f9",
+                  "line": "f5e7 e8f7 a6a5 e5c6 a5a9 e9e8 e7f5 i3f3",
                   "lineEval": "±"
                 }
               ]
@@ -609,14 +597,14 @@ export const mengFanruiArticle: Article = {
   boardFamily: 'xiangqi',
   title: "Meng Fanrui 孟繁睿",
   seoTitle: "Meng Fanrui 孟繁睿: 2025 year-end champion, games and analysis",
-  summary: "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Two decisions to try and three annotated wins from his 2026 games, including a 5+3 tiebreak.",
+  summary: "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.",
   showSummaryOnPage: false,
   status: "draft",
   publishedAt: "2026-11-13",
   thumbnail: { kind: 'svg', svg: THUMBNAIL },
   audience: "Xiangqi players looking up Meng Fanrui, his year-end title and his games. English source for the usual reviewed English and Chinese editions.",
   readNext: ["yin-sheng","tang-dan","tony-fung-ga-zen"],
-  tldr: ["Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.","In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.","Try two decision positions, then explore three full wins with both colours. The replays and graphs use 10M-node analysis."],
+  tldr: ["Meng Fanrui won the men's 2025 Chinese Xiangqi Association year-end finals and finished the year first on its competition-points list.","In the 39 games held here from four 2026 events, he won seven, drew 30 and lost two.","Three full wins with both colours. At each marked move the engine's best candidates branch off the game, with the opponent's close replies nested under them."],
   intro: [
     {
       kind: 'paragraph',
@@ -624,7 +612,7 @@ export const mengFanruiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: "Meng plays for Hebei. Below, try two decisions from his wins, then explore three full games with both colours. Pikafish checked the positions and replays at a budget of ten million nodes per position. The two position answers begin with his recorded replies; the continuations are engine lines.",
+      text: "Meng plays for Hebei. Below are three of his wins in full, two with black and one with red. At each marked move the move list branches: the game's move first, then up to three engine candidates, and under each the opponent's close replies. Pikafish analysed every position at ten million nodes; every branch is an engine line, not a move from the game.",
     },
   ],
   sections: [
@@ -654,7 +642,7 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Explore [the full game](/broadcast/xiangqi/board/2026-xiangqi-team-championship-2026-xiangqi-team-championship-r02-bu6564s).",
+          text: "Explore [his win over Chu Banruo](/broadcast/xiangqi/board/2026-xiangqi-team-championship-2026-xiangqi-team-championship-r02-bu6564s).",
         },
       ],
     },
@@ -663,15 +651,15 @@ export const mengFanruiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "On 9 September, Meng beat Luo Hangyuan with both colours in the first round of the Shanghai Cup. This position is from his win with red.",
+          text: "On 9 September, Meng beat Luo Hangyuan with both colours in the first round of the Shanghai Cup.",
         },
         {
           kind: 'paragraph',
-          text: "Explore [the full game](/broadcast/xiangqi/board/2026-shanghai-cup-2026-shanghai-cup-r01-b1dmm1zm).",
+          text: "Explore [his win with red](/broadcast/xiangqi/board/2026-shanghai-cup-2026-shanghai-cup-r01-b1dmm1zm).",
         },
         {
           kind: 'paragraph',
-          text: "His other win over Luo came with Black, earlier that day. Use the alternative at Red's 27th move to compare Luo's choice with the engine's preference, then follow Meng's reply.",
+          text: "His other win over Luo came with Black, earlier that day. At Red's 27th move the branches set Luo's choice beside the engine's candidates; follow Meng's reply from there.",
         },
         {
           kind: 'xq-replay',
@@ -702,7 +690,15 @@ export const mengFanruiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Then look at the 5+3 game against Li. Click a sharp change on its graph, inspect the nearby marked move and its engine alternative, and replay Meng's reply from there.",
+          text: "At move 27 Pikafish has Meng's black about one and a half pawns better, short of a won game. Take his side from there against the bot and try to turn it into a win.",
+        },
+        {
+          kind: 'cta',
+          buttons: [{"label":"Play Meng's side from move 27","href":"/practice/position?fen=4kab2%2F3na4%2F4b4%2Fp1p5p%2F5N3%2F2P3R2%2F8P%2F4B2c1%2F4A4%2F1rC1KA3+b+-+-+3+27&goal=win&side=black","emphasis":"primary"}],
+        },
+        {
+          kind: 'paragraph',
+          text: "Then look at the 5+3 game against Li. Click a sharp change on its graph, open the branches at the nearby marked move, and replay Meng's reply from there.",
         },
         {
           kind: 'xq-replay',
@@ -716,7 +712,7 @@ export const mengFanruiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the five wins selected for the positions and replays.",
+          text: "These 39 games cover part of his 2026 season, from 25 February to 18 September. The table counts games with moves from the four events below. It includes the draws and losses alongside the three wins replayed above.",
         },
         {
           kind: 'table',
@@ -743,7 +739,7 @@ export const mengFanruiArticle: Article = {
 mengFanruiArticle.intro?.unshift({
   kind: 'note',
   label: 'Local review',
-  text: 'The three full replays, their graphs and alternative-line assessments now use 10M-node analysis. Both decision positions were independently checked at the same budget. This is a local English draft awaiting final review and publication approval.',
+  text: 'The three full replays, their graphs and alternative-line assessments now use 10M-node analysis. The candidate branches use the same budget. This is a local English draft awaiting final review and publication approval.',
 }, {
   kind: 'image-figure',
   src: '/player-photos/meng-fanrui-baidu-preview.webp',
