@@ -30,10 +30,12 @@ export const PACING = {
    * The base caps at `maxBaseMs` before complexity and jitter apply, so a long
    * time control still varies move to move instead of sitting on one flat
    * ceiling (10-15: 5+5 and up all read 6.0 s on every move). Every target then
-   * lands in [minTargetMs, maxTargetMs]. Raised 2026-11-11 from 4.5 s and 8 s: a
-   * 5+5 jieqi game sat on the 4.5 s cap every move and averaged 3-4 s even while level.
+   * lands in [minTargetMs, maxTargetMs]. Set 2026-11-11 to 3 s (was 4.5 s) with the
+   * log-normal spread below: a local 5+5 game against a player whose median move took
+   * 2.9 s projects to a 3.3 s median and 2.2-4.9 s quartiles. The 12 s ceiling leaves
+   * room for the occasional long think.
    */
-  maxBaseMs: 7_000,
+  maxBaseMs: 3_000,
   minTargetMs: 700,
   maxTargetMs: 12_000,
   /**
@@ -47,8 +49,17 @@ export const PACING = {
   lopsidedShare: 0.6,
   closeFactor: 1.4,
   lopsidedFactor: 0.7,
-  /** ± fraction of the target, seeded per room and ply. */
+  /** ± fraction of the short beat, seeded per room and ply. */
   jitter: 0.35,
+  /**
+   * A paced reply's spread: log-normal around the target, seeded per room and ply,
+   * so most replies are near or under it and a few run long, the shape a person's
+   * move times have (2026-11-11 local 5+5 game: the player's quartiles were 0.65x and
+   * 1.6x their median; the old uniform ±35% put the bot near 5 s on almost every move).
+   */
+  spreadSigma: 0.6,
+  spreadMin: 0.35,
+  spreadMax: 3,
   /** Opening plies reply faster: a player expects the first moves to be quick. */
   openingPlies: 6,
   openingFactor: 0.6,
@@ -182,7 +193,11 @@ export function replyPace(input: ReplyPaceInput): ReplyPace {
   const balance = balanceFactor(input.cp);
   const targetMs = Math.round(
     clamp(
-      Math.min(baseMs, PACING.maxBaseMs) * complexity * phase * balance * jitter,
+      Math.min(baseMs, PACING.maxBaseMs) *
+        complexity *
+        phase *
+        balance *
+        spread(input.roomId, input.ply),
       PACING.minTargetMs,
       PACING.maxTargetMs,
     ),
@@ -258,6 +273,14 @@ export function createReplyTurn(
         check();
       }),
   };
+}
+
+/** Seeded log-normal multiplier (median 1) for a paced reply. */
+export function spread(roomId: string, ply: number): number {
+  const u1 = 1 - seededUnit(roomId, ply);
+  const u2 = seededUnit(roomId, ply + 0x4000_0000);
+  const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  return clamp(Math.exp(PACING.spreadSigma * z), PACING.spreadMin, PACING.spreadMax);
 }
 
 /** Uniform [0, 1) from room id + ply: FNV-1a over the id, then a splitmix finaliser. */
