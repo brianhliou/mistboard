@@ -246,12 +246,12 @@ describe('retired variant conformance', () => {
 // added to the menu without joining that list silently gets real time only.
 // Mahjong (four seats) is the deliberate exception.
 describe('variant correspondence conformance', () => {
-  it('every picker variant offers every days-per-move pace, casual', () => {
+  it('every picker variant offers every days-per-move pace, casual, signed in', () => {
     for (const tenant of pickerTenants) {
       if (tenant.gameSpecId === MAHJONG_SPEC_ID) continue;
       if (tenant.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) continue;
       expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS, tenant.gameSpecId).toContain(tenant.gameSpecId);
-      const days = panelPersonPaces(tenant.gameSpecId as never, 'casual').filter(
+      const days = panelPersonPaces(tenant.gameSpecId as never, 'casual', true).filter(
         (pace) => pace.kind === 'days',
       );
       expect(days.length, `${tenant.gameSpecId}: days-per-move paces`).toBe(

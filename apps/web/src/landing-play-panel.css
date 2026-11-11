@@ -124,11 +124,6 @@
   border-bottom: 1px solid var(--site-border-soft);
 }
 
-.pp-row-person {
-  grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 78px;
-  grid-template-areas: "icon name clock wait act";
-}
-
 .pp-row:hover {
   background: var(--site-hover);
 }
@@ -147,9 +142,6 @@
 }
 .pp-row > .pp-act {
   grid-area: act;
-}
-.pp-row > .pp-waiting {
-  grid-area: wait;
 }
 
 .pp-name {
@@ -190,13 +182,6 @@
 
 .pp-playing:empty {
   display: none;
-}
-
-.pp-waiting {
-  color: var(--pp-gold-text);
-  font-size: 12px;
-  text-align: center;
-  white-space: nowrap;
 }
 
 /* ── Stepper ── */
@@ -323,13 +308,8 @@
   line-height: 1.3;
 }
 
-.pp-row-person .pp-step-value.is-named .pp-step-main {
+.pp-pace .pp-step-value.is-named .pp-step-main {
   color: var(--site-accent-strong);
-}
-
-.pp-row.has-waiting .pp-step-clock .pp-step-value {
-  color: var(--pp-gold-text);
-  font-weight: 600;
 }
 
 /* ── The "soft" action: tinted, solid on row hover (Brian, 2026-10-01). ── */
@@ -455,7 +435,8 @@
   border-radius: 6px;
 }
 
-.pp-mode-btn {
+.pp-mode-btn,
+.pp-pace-btn {
   padding: 4px 14px;
   border: 0;
   background: none;
@@ -465,12 +446,14 @@
   cursor: pointer;
 }
 
-.pp-mode-btn.is-active {
+.pp-mode-btn.is-active,
+.pp-pace-btn.is-active {
   background: var(--site-panel-soft);
   color: var(--site-text);
 }
 
-.pp-mode-btn:disabled {
+.pp-mode-btn:disabled,
+.pp-pace-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -489,14 +472,125 @@
   text-transform: uppercase;
 }
 
-.pp-offer {
-  display: grid;
-  grid-template-columns: var(--pp-icon) minmax(0, 1fr) auto auto;
+/* The shared pace bar: Live or Days per move, one stepper for every tile.
+   The stepper holds the longest days label whole between its arrows: "3
+   days/move" is 81px at 13.5px, the arrows and gaps take 50, so 134px. */
+.pp-pace {
+  display: flex;
   align-items: center;
-  column-gap: 12px;
-  min-height: 46px;
-  padding: 0 var(--pp-pad);
+  gap: 8px 12px;
+  padding: 6px var(--pp-pad);
   border-bottom: 1px solid var(--site-border-soft);
+}
+
+.pp-pace-btn {
+  white-space: nowrap;
+}
+
+.pp-pace .pp-step-clock {
+  flex: 0 0 134px;
+}
+
+.pp-pace-hint {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--site-accent-strong);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Open games and Start one share a two-column grid of chips and tiles. */
+.pp-offers,
+.pp-person-rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  padding: 6px var(--pp-pad);
+}
+
+.pp-offers {
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.pp-offer,
+.pp-tile {
+  display: grid;
+  grid-template-columns: var(--pp-icon) minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pp-offer {
+  min-height: 32px;
+}
+
+.pp-tile {
+  padding: 2px 6px 2px 8px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--site-panel-soft) 60%, transparent);
+}
+
+.pp-tile:hover {
+  border-color: color-mix(in srgb, var(--site-accent) 50%, transparent);
+}
+
+.pp-tile:hover .pp-act {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+/* A player is already waiting at this game and pace: Find pairs at once. */
+.pp-tile.has-waiting {
+  border-color: color-mix(in srgb, var(--pp-gold) 70%, transparent);
+  background: color-mix(in srgb, var(--pp-gold) 9%, transparent);
+}
+
+.pp-tile-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.pp-offer .pp-name,
+.pp-tile .pp-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.pp-tile-meta {
+  overflow: hidden;
+  color: var(--site-muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-offer .pp-act,
+.pp-tile .pp-act {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+/* Touch floor (#576), as for the rows. */
+@media (pointer: coarse) {
+  .pp-offer .pp-act,
+  .pp-tile .pp-act {
+    height: 40px;
+  }
+}
+
+.pp-offers-more {
+  align-self: center;
+  color: var(--site-accent-strong);
+  font-size: 12.5px;
 }
 
 .pp-offer-pace {
@@ -555,10 +649,6 @@
       column-gap: 8px;
     }
 
-    .pp-row-person {
-      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 62px;
-    }
-
     .pp-name-label {
       white-space: normal;
     }
@@ -602,16 +692,15 @@
   }
 }
 
-/* Play a person never scrolls (Brian, 2026-10-27), like the computer tab: its
-   rows drop to a 32px floor with a 32px marker and the Casual/Rated bar to
-   2px padding, so the ten variants plus room for two more fit the height the
-   computer tab sets (11 bot rows at their 40px floor), and they share whatever
-   is left over
-   instead of leaving dead panel under the last one. The scroll stays only as
-   the fallback for a long list of open seeks above the rows. */
+/* Play a person never scrolls (Brian, 2026-10-27), like the computer tab:
+   the Casual/Rated bar drops to 2px padding, at most four open games show,
+   and the tiles share the height left over, from their content up to 46px,
+   so the ten variants fit the height the computer tab sets at 0 to 6 open
+   games (11 bot rows at their 40px floor). The scroll stays only as a
+   fallback. */
 @media (min-width: 641px) {
   .pp-board .pp-view-person {
-    --pp-icon: 32px;
+    --pp-icon: 26px;
   }
 
   /* The Casual/Rated bar is one line at any note length (Brian, 2026-10-27:
@@ -621,7 +710,8 @@
     padding-block: 2px;
   }
 
-  .pp-view-person .pp-mode-btn {
+  .pp-view-person .pp-mode-btn,
+  .pp-view-person .pp-pace-btn {
     padding: 2px 12px;
     line-height: 1.35;
   }
@@ -638,26 +728,25 @@
     flex-direction: column;
   }
 
-  .pp-person-rows {
-    display: flex;
-    flex: 1 0 auto;
-    flex-direction: column;
-  }
-
-  .pp-view-person .pp-row-person {
-    flex: 1 0 auto;
-    min-height: 32px;
-    max-height: 46px;
-  }
-}
-
-/* Three-column band: a person row tops out at the bot rows' 40px floor, so
-   the two tabs share one row rhythm (Brian, 2026-10-27: "compress it even a
-   tiny bit more"). Spare height stays under the last row. */
-@media (min-width: 1241px) {
-  .landing-demo .pp-view-person .pp-row-person {
+  .pp-view-person .pp-pace,
+  .pp-view-person .pp-offers,
+  .pp-view-person .pp-section {
     flex: 0 0 auto;
-    max-height: var(--pp-row-height);
+  }
+
+  .pp-person-rows {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-auto-rows: minmax(min-content, 46px);
+    align-content: start;
+  }
+
+  .pp-view-person .pp-section {
+    padding-block: 4px 3px;
+  }
+
+  .pp-view-person .pp-pace {
+    padding-block: 4px;
   }
 }
 
@@ -677,8 +766,7 @@
 
   /* Phones: the clock rides the first line beside the game; the engine
      stepper gets the whole second line so the engine name fits. */
-  .pp-row,
-  .pp-row-person {
+  .pp-row {
     grid-template-columns: var(--pp-icon) minmax(0, 1fr) 82px 54px;
     grid-template-areas:
       "icon name clock act"
@@ -689,10 +777,23 @@
     padding-bottom: 7px;
   }
 
-  .pp-row-person {
-    grid-template-areas:
-      "icon name clock act"
-      "icon wait wait act";
+  /* One column of tiles: two at 390px cut most names to a few letters. */
+  .pp-offers,
+  .pp-person-rows {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pp-tile {
+    min-height: 44px;
+  }
+
+  .pp-pace {
+    flex-wrap: wrap;
+  }
+
+  .pp-pace-hint {
+    flex-basis: 100%;
+    margin-left: 0;
   }
 
   .pp-step-btn {

@@ -65,6 +65,7 @@ import {
   seatInkForVariant,
   variantSeatsHaveInk,
 } from './flip-seat-ink.js';
+import { buildFogTile } from './fog-tile.js';
 import {
   displayLiveName,
   displayParticipantName,
@@ -599,7 +600,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       placeFinishedSeats(entry.tile, handle.bottomSeat?.() ?? FINISHED_BOARD_BOTTOM_SEAT);
     } catch (err) {
       console.warn('[current-games] finished board failed', err);
-      host.replaceChildren(buildFogTile(variantDisplayLabel(game.variant), null));
+      host.replaceChildren(buildFogTile(game.variant, null));
     }
   }
 
@@ -846,9 +847,9 @@ function clockRemaining(
 // The tile shown where a board is not (yet) drawn. A hidden-information game
 // gets the misty tile for its whole life on this page; an open game shows its
 // variant marker until the live renderer mounts.
-function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
+export function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
   if (liveTileKind(game) === 'fog') {
-    root.replaceChildren(buildFogTile(variantDisplayLabel(game.gameSpecId), t('games.inTheFog')));
+    root.replaceChildren(buildFogTile(game.gameSpecId, t('games.inTheFog')));
     return;
   }
   root.replaceChildren();
@@ -868,28 +869,6 @@ function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
   label.textContent = variantDisplayLabel(game.gameSpecId);
   tile.append(label);
   root.append(tile);
-}
-
-const FOG_WAVES =
-  '<svg viewBox="0 0 44 30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8c6-5 12 5 19 0s13-5 19 0M3 16c6-5 12 5 19 0s13-5 19 0M3 24c6-5 12 5 19 0s13-5 19 0"/></svg>';
-
-function buildFogTile(variant: string, note: string | null): HTMLElement {
-  const tile = document.createElement('div');
-  tile.className = 'current-game-fog';
-  const waves = document.createElement('span');
-  waves.className = 'current-game-fog-waves';
-  waves.innerHTML = FOG_WAVES;
-  const name = document.createElement('span');
-  name.className = 'current-game-fog-variant';
-  name.textContent = variant;
-  tile.append(waves, name);
-  if (note) {
-    const text = document.createElement('span');
-    text.className = 'current-game-fog-note';
-    text.textContent = note;
-    tile.append(text);
-  }
-  return tile;
 }
 
 function renderMeta(root: HTMLElement, game: CurrentGame): void {
@@ -1029,7 +1008,7 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   board.className = 'current-game-board';
   setBoardAspect(board, finishedBoardAspect(game.variant));
   if (kind === 'fog') {
-    board.append(buildFogTile(variantDisplayLabel(game.variant), null));
+    board.append(buildFogTile(game.variant, null));
   } else {
     board.classList.add('is-loading');
   }
