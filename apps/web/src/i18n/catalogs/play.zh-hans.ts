@@ -868,6 +868,7 @@ export const ZH_HANS_PLAY = {
   'live.tk.adminOnly': '{variant}已暂停开放对弈，此房间暂时不可用。',
   'lobby.panelTabComputer': '与电脑对弈',
   'lobby.panelTabPerson': '与真人对弈',
+  'lobby.panelTabYourMove': '轮到你走',
   'lobby.panelPlayAgain': '再来一局',
   'lobby.panelPlayerWaiting': '有玩家在等待',
   'lobby.panelPlay': '开始',

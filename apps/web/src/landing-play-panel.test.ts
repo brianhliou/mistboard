@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
+import type { CorrespondenceGame } from './correspondence-model.js';
 import { landingBotLadder } from './landing-bot-policy.js';
+import type { YourMoveFeed } from './landing-correspondence-moves.js';
 import { enabledLandingVariantGameSpecs, setRoomNavigator } from './landing-play.js';
 import {
   buildPlayPanel,
@@ -651,11 +653,11 @@ describe('homepage play panel', () => {
       /\.pp-person-rows \{\s*flex: 1 1 auto;\s*min-height: 0;\s*grid-auto-rows: minmax\(min-content, 46px\);/,
     );
     expect(css).toMatch(
-      /\.pp-offers,\n\.pp-person-rows \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
+      /\.pp-offers,\n\.pp-person-rows,\n\.pp-move-rows \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
     );
     const phone = css.match(/@media \(max-width: 640px\) \{[\s\S]*$/)?.[0] ?? '';
     expect(phone).toMatch(
-      /\.pp-offers,\n {2}\.pp-person-rows \{\s*grid-template-columns: minmax\(0, 1fr\);/,
+      /\.pp-offers,\n {2}\.pp-person-rows,\n {2}\.pp-move-rows \{\s*grid-template-columns: minmax\(0, 1fr\);/,
     );
   });
 
@@ -1527,3 +1529,105 @@ function memoryStorage(): Storage {
     },
   };
 }
+
+// 2026-11-11: on desktop the signed-in player's correspondence games on their
+// move are the panel's third tab (lichess's "Playing (3)"), not a rail card.
+describe('homepage play panel: Your move tab', () => {
+  type Listener = (games: readonly CorrespondenceGame[]) => void;
+  function fakeFeed(): { feed: YourMoveFeed; push: (games: CorrespondenceGame[]) => void } {
+    const listeners: Listener[] = [];
+    return {
+      feed: { subscribe: (_anchor, listener) => void listeners.push(listener) },
+      push: (games) => {
+        for (const listener of listeners) listener(games);
+      },
+    };
+  }
+  function corrGame(roomId: string, isYourMove: boolean, dueInDays = 2): CorrespondenceGame {
+    return {
+      roomId,
+      url: `/room/${roomId}`,
+      gameSpecId: 'jieqi',
+      mySeat: 'red',
+      isYourMove,
+      opponentName: `Player ${roomId}`,
+      dueAt: new Date(Date.now() + dueInDays * 86_400_000).toISOString(),
+    };
+  }
+  const movesTab = (board: HTMLElement): HTMLElement =>
+    board.querySelector<HTMLElement>('.pp-tab-moves')!;
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    setResolvedSignedIn(true);
+  });
+
+  afterEach(() => {
+    document.body.replaceChildren();
+    setResolvedSignedIn(undefined);
+  });
+
+  it('is absent, not disabled, until a game waits on your move', () => {
+    const { feed, push } = fakeFeed();
+    const board = buildPlayPanel('en', { hydrate: false, yourMove: feed });
+    expect(movesTab(board).hidden).toBe(true);
+    push([corrGame('theirs', false)]);
+    expect(movesTab(board).hidden).toBe(true);
+    expect((movesTab(board) as HTMLButtonElement).disabled).toBe(false);
+    expect(board.querySelectorAll('.pp-move')).toHaveLength(0);
+  });
+
+  it('shows the count and lists each game as a link into its room, soonest first', () => {
+    const { feed, push } = fakeFeed();
+    const board = buildPlayPanel('en', { hydrate: false, yourMove: feed });
+    push([corrGame('later', true, 3), corrGame('theirs', false), corrGame('sooner', true, 1)]);
+    const tab = movesTab(board);
+    expect(tab.hidden).toBe(false);
+    expect(tab.textContent).toBe('Your move2');
+    expect(tab.querySelector('.pp-badge-moves')?.textContent).toBe('2');
+    // Third, after Play the computer and Play a person.
+    expect([...board.querySelectorAll('.pp-tab')].indexOf(tab)).toBe(2);
+    const tiles = [...board.querySelectorAll<HTMLAnchorElement>('.pp-view-moves a.pp-move')];
+    expect(tiles.map((el) => el.getAttribute('href'))).toEqual(['/room/sooner', '/room/later']);
+    expect(tiles[0]?.textContent).toContain('vs Player sooner');
+    expect(tiles[0]?.textContent).toContain('Jieqi');
+    expect(tiles[0]?.textContent).toMatch(/left/);
+    expect(tiles[0]?.querySelector('.pp-thumb')).not.toBeNull();
+    expect(board.querySelector('.pp-view-moves .pp-moves-foot a')?.getAttribute('href')).toBe(
+      '/correspondence',
+    );
+  });
+
+  it('covers the bot list like Play a person, and is not remembered as the opening tab', () => {
+    const { feed, push } = fakeFeed();
+    const board = buildPlayPanel('en', { hydrate: false, yourMove: feed });
+    push([corrGame('mine', true)]);
+    const computer = board.querySelector<HTMLElement>('.pp-view-computer')!;
+    const moves = board.querySelector<HTMLElement>('.pp-view-moves')!;
+    expect(moves.hidden).toBe(true);
+    movesTab(board).click();
+    expect(movesTab(board).getAttribute('aria-selected')).toBe('true');
+    expect(moves.hidden).toBe(false);
+    expect(computer.hidden).toBe(false);
+    expect(computer.classList.contains('is-covered')).toBe(true);
+    expect(board.querySelector<HTMLElement>('.pp-view-person')!.hidden).toBe(true);
+    const again = buildPlayPanel('en', { hydrate: false, yourMove: fakeFeed().feed });
+    expect(again.querySelector('.pp-tab.is-active')?.textContent).toBe('Play the computer');
+  });
+
+  it('falls back to Play the computer when the games go away while it is open', () => {
+    const { feed, push } = fakeFeed();
+    const board = buildPlayPanel('en', { hydrate: false, yourMove: feed });
+    push([corrGame('mine', true)]);
+    movesTab(board).click();
+    push([]);
+    expect(movesTab(board).hidden).toBe(true);
+    expect(board.querySelector('.pp-tab.is-active')?.textContent).toBe('Play the computer');
+    expect(board.querySelector<HTMLElement>('.pp-view-moves')!.hidden).toBe(true);
+  });
+
+  it('lays the tab over the bot list so the panel keeps its height', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    expect(css).toMatch(/\.pp-view-person,\s*\.pp-view-moves \{\s*position: absolute;\s*inset: 0;/);
+  });
+});

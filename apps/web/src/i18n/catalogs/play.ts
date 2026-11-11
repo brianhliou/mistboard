@@ -946,6 +946,7 @@ export const EN_PLAY = {
   'live.tk.adminOnly': 'This {variant} room is unavailable while play is switched off.',
   'lobby.panelTabComputer': 'Play the computer',
   'lobby.panelTabPerson': 'Play a person',
+  'lobby.panelTabYourMove': 'Your move',
   'lobby.panelPlayAgain': 'Play again',
   'lobby.panelPlayerWaiting': 'A player is waiting',
   'lobby.panelPlay': 'Play',

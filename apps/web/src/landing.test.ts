@@ -330,6 +330,30 @@ describe('landing shell', () => {
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
   });
 
+  it('keeps the Your move card under Play on a phone and leaves desktop to the panel tab', () => {
+    // 2026-11-11: desktop lists these games in the Play panel's Your move tab,
+    // so the rail card is phone-only there; the phone home has no panel and
+    // keeps the card at every width.
+    const desktop = buildLandingStage(fallbackPlayableEngines(), {
+      skipLiveWidgets: true,
+      phone: false,
+    }).el;
+    expect(desktop.querySelector('.landing-lobby-panel .pp-tab-moves')).not.toBeNull();
+    expect(
+      desktop
+        .querySelector('.landing-play-stack .landing-corr-moves')
+        ?.classList.contains('is-phone-only'),
+    ).toBe(true);
+    const phone = buildLandingStage(fallbackPlayableEngines(), {
+      skipLiveWidgets: true,
+      phone: true,
+    }).el;
+    expect(phone.querySelector('.pp-board')).toBeNull();
+    const card = phone.querySelector('.landing-play-stack .landing-corr-moves');
+    expect(card).not.toBeNull();
+    expect(card?.classList.contains('is-phone-only')).toBe(false);
+  });
+
   describe.each(SUPPORTED_LOCALES)('%s intro', (locale) => {
     it.each(['client', 'prerender'])('renders the same three-line %s structure', async (mode) => {
       await ensureLocaleCatalog(locale);

@@ -26,13 +26,18 @@
 
 .pp-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 22px;
-  padding: 0 4px 6px;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 0 6px;
 }
 
+/* Equal thirds (or halves): the strip reads as one control, not a row of
+   links, whichever tabs are present. */
 .pp-tab {
-  padding: 4px 0 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 6px 6px;
+  text-align: center;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
@@ -52,19 +57,22 @@
   border-bottom-color: var(--site-accent-strong);
 }
 
+/* Every count in the panel is one colour, the same as the bell's in the nav:
+   a number on a tab means something is waiting, whichever tab it is. */
 .pp-badge {
   display: inline-block;
   min-width: 17px;
   margin-left: 7px;
   padding: 0 5px;
-  border-radius: 9px;
-  background: var(--pp-gold);
-  color: #221a08;
+  border-radius: 999px;
+  background: var(--site-accent);
+  color: #fff;
   font-size: 11px;
   font-weight: 700;
   line-height: 17px;
   text-align: center;
   vertical-align: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .pp-badge[hidden] {
@@ -92,7 +100,8 @@
   visibility: hidden;
 }
 
-.pp-view-person {
+.pp-view-person,
+.pp-view-moves {
   position: absolute;
   inset: 0;
 }
@@ -501,9 +510,11 @@
   white-space: nowrap;
 }
 
-/* Open games and Start one share a two-column grid of chips and tiles. */
+/* Open games, Start one and Your move share a two-column grid of chips and
+   tiles. */
 .pp-offers,
-.pp-person-rows {
+.pp-person-rows,
+.pp-move-rows {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
@@ -548,6 +559,27 @@
 .pp-tile.has-waiting {
   border-color: color-mix(in srgb, var(--pp-gold) 70%, transparent);
   background: color-mix(in srgb, var(--pp-gold) 9%, transparent);
+}
+
+/* A Your move tile is the link into its room: as tall as a Start one tile. */
+.pp-move {
+  min-height: 46px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pp-moves-foot {
+  padding: 8px var(--pp-pad);
+  border-top: 1px solid var(--site-border-soft);
+  font-size: 12.5px;
+}
+
+/* Resting colour for the footer link; it rendered as the browser's default
+   blue. One element plus one class, so hover-grammar.css's two-class hover
+   rule still wins on hover. */
+.pp-moves-foot a {
+  color: var(--site-accent-strong);
+  text-decoration: none;
 }
 
 .pp-tile-text {
@@ -699,7 +731,8 @@
    games (11 bot rows at their 40px floor). The scroll stays only as a
    fallback. */
 @media (min-width: 641px) {
-  .pp-board .pp-view-person {
+  .pp-board .pp-view-person,
+  .pp-board .pp-view-moves {
     --pp-icon: 26px;
   }
 
@@ -757,7 +790,7 @@
   }
 
   .pp-tabs {
-    gap: 16px;
+    gap: 0;
   }
 
   .pp-tab {
@@ -779,7 +812,8 @@
 
   /* One column of tiles: two at 390px cut most names to a few letters. */
   .pp-offers,
-  .pp-person-rows {
+  .pp-person-rows,
+  .pp-move-rows {
     grid-template-columns: minmax(0, 1fr);
   }
 
