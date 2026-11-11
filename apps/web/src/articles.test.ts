@@ -231,8 +231,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      '/blog/fog-future',
+      // Meng Fanrui, dated Wednesday 2026-11-18, the day after the fog post.
       '/blog/meng-fanrui',
+      '/blog/fog-future',
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/ten-thousand-games',

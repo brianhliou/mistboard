@@ -599,7 +599,7 @@ export const mengFanruiArticle: Article = {
   summary: "The 2025 Chinese Xiangqi Association year-end champion and men's points leader. Three of his 2026 wins in full, including a 5+3 tiebreak, with the engine's candidate lines branching at each turning point.",
   showSummaryOnPage: false,
   status: "draft",
-  publishedAt: "2026-11-13",
+  publishedAt: "2026-11-18",
   thumbnail: { kind: 'svg', svg: THUMBNAIL },
   audience: "Xiangqi players looking up Meng Fanrui, his year-end title and his games. English source for the usual reviewed English and Chinese editions.",
   readNext: ["yin-sheng","tang-dan","tony-fung-ga-zen"],
