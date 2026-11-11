@@ -36,6 +36,7 @@ export const ZH_HANT_ACCOUNT = {
   'account.flair': '個性圖示',
   'account.flairHelp': '顯示在全站你的名字旁邊的小圖示。',
   'account.flairNone': '不使用圖示',
+  'account.flairGroupXiangqiSet': '象棋：{set}',
   'account.publicProfileSaved': '公開個人資料已儲存。',
   'account.invalidPublicProfile': '請檢查簡介、所在地和公開連結。',
   'account.settingsCopy': '信箱用於登入。使用者名稱會公開顯示。',

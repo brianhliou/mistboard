@@ -26,7 +26,7 @@ import {
   writeDisplayPreference,
 } from './display-preferences.js';
 import { suggestEmailDomain } from './email-domain-suggestion.js';
-import { buildFlairIcon, FLAIR_KEYS, flairLabel, flairOfferedInPicker } from './flair.js';
+import { buildFlairIcon, flairLabel, flairOfferedInPicker, flairPickerGroups } from './flair.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
@@ -494,8 +494,10 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
 }
 
 // A radio grid rather than a <select>: flair is chosen by how it looks, and a
-// dropdown of two dozen names shows the reader none of them. "No flair" is the
-// first option so clearing is as easy as picking.
+// dropdown of 150 names shows the reader none of them. "No flair" is the first
+// option so clearing is as easy as picking. Every option is on screen at once,
+// one labelled grid per family or piece set; all the radios share one name, so
+// they stay a single choice.
 function buildFlairPicker(
   current: string | null,
   locale: Locale,
@@ -509,11 +511,19 @@ function buildFlairPicker(
   legend.textContent = t('account.flair', {}, locale);
   group.append(legend);
 
-  const options = document.createElement('div');
-  options.className = 'account-flair-options';
+  const newOptionsGrid = (): HTMLElement => {
+    const grid = document.createElement('div');
+    grid.className = 'account-flair-options';
+    return grid;
+  };
 
   const inputs: HTMLInputElement[] = [];
-  const addOption = (key: string | null, label: string, icon: HTMLElement | null) => {
+  const addOption = (
+    options: HTMLElement,
+    key: string | null,
+    label: string,
+    icon: HTMLElement | null,
+  ) => {
     const item = document.createElement('label');
     item.className = 'account-flair-option';
     item.title = label;
@@ -540,13 +550,35 @@ function buildFlairPicker(
     options.append(item);
   };
 
-  addOption(null, t('account.flairNone', {}, locale), null);
-  for (const key of FLAIR_KEYS) {
-    if (key !== current && !flairOfferedInPicker(key)) continue;
-    addOption(key, flairLabel(key, locale), buildFlairIcon(key, { labelled: false, locale }));
-  }
+  const noneOptions = newOptionsGrid();
+  addOption(noneOptions, null, t('account.flairNone', {}, locale), null);
+  group.append(noneOptions);
 
-  group.append(options);
+  for (const section of flairPickerGroups(locale)) {
+    const keys = section.keys.filter((key) => key === current || flairOfferedInPicker(key));
+    if (keys.length === 0) continue;
+    const heading = document.createElement('p');
+    heading.className = 'account-flair-set-label';
+    heading.id = `account-flair-group-${section.id}`;
+    heading.textContent = section.label;
+    const options = newOptionsGrid();
+    options.dataset.flairGroup = section.id;
+    options.setAttribute('role', 'group');
+    options.setAttribute('aria-labelledby', heading.id);
+    if (section.perRow) {
+      options.classList.add('account-flair-options-rows');
+      options.style.setProperty('--flair-per-row', String(section.perRow));
+    }
+    for (const key of keys) {
+      addOption(
+        options,
+        key,
+        flairLabel(key, locale),
+        buildFlairIcon(key, { labelled: false, locale }),
+      );
+    }
+    group.append(heading, options);
+  }
 
   const help = document.createElement('p');
   help.className = 'account-field-help';

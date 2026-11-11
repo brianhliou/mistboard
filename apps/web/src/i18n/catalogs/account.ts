@@ -30,6 +30,7 @@ export const EN_ACCOUNT = {
   'account.flair': 'Flair',
   'account.flairHelp': 'A small icon shown beside your name across the site.',
   'account.flairNone': 'No flair',
+  'account.flairGroupXiangqiSet': 'Xiangqi: {set}',
   'account.publicProfileSaved': 'Public profile saved.',
   'account.invalidPublicProfile': 'Check the biography, location, and public links.',
   'account.settingsCopy': 'Email signs you in. Your username is public.',
