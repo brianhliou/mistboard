@@ -1941,6 +1941,7 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang)
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'xq-replay';
+  if (block.id) figure.id = block.id;
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';

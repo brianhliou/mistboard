@@ -500,3 +500,76 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Each played move is a button: click one to see the board as it stood then.
+   The board is read-only while looking back; the next move returns it live. */
+.practice__move-button {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.practice__move-button:hover {
+  background: color-mix(in srgb, var(--site-text) 8%, transparent);
+}
+.practice__move-button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+.practice__move.is-current .practice__move-button {
+  background: color-mix(in srgb, var(--site-accent) 22%, transparent);
+  color: var(--site-text);
+}
+
+.practice__stepper {
+  display: flex;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+}
+.practice__stepper[hidden] {
+  display: none;
+}
+.practice__step {
+  flex: 1 1 0;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.practice__step:hover:not(:disabled) {
+  color: var(--site-text);
+  background: color-mix(in srgb, var(--site-text) 6%, transparent);
+}
+.practice__step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.practice__step + .practice__step {
+  border-left: 1px solid var(--site-border-soft, var(--site-border));
+}
+
+/* A position page's right column is as tall as what it holds, up to the
+   board's height; a long attempt scrolls inside the move list. */
+@media (min-width: 60.01rem) {
+  .practice--single .practice__side {
+    align-self: start;
+    max-height: 100%;
+  }
+}
+
+/* The small print under a position from an article: who to ask about it. */
+.practice-position__contact {
+  margin: 0.75rem auto 1.5rem;
+  max-width: 60rem;
+  padding: 0 1rem;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  text-align: center;
+}
+.practice-position__contact a {
+  color: inherit;
+}

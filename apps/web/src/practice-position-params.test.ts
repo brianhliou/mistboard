@@ -80,6 +80,12 @@ describe('backPath', () => {
     expect(read('/blog/meng-fanrui')).toBe('/blog/meng-fanrui');
     expect(read('/zh-hant/blog/meng-fanrui')).toBe('/zh-hant/blog/meng-fanrui');
   });
+  it('keeps a #fragment so the way back lands on the game the reader left', () => {
+    expect(read('/blog/meng-fanrui#ju-longfei-game')).toBe('/blog/meng-fanrui#ju-longfei-game');
+    expect(read('/blog/meng-fanrui#')).toBeNull();
+    expect(read('/blog/meng-fanrui#x"onmouseover=1')).toBeNull();
+    expect(read('/blog/meng-fanrui#a#b')).toBeNull();
+  });
   it('refuses anything that is not an article path', () => {
     expect(read('https://evil.example/blog/x')).toBeNull();
     expect(read('//evil.example/blog/x')).toBeNull();

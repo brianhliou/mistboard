@@ -4304,3 +4304,9 @@ a.article-meta-author:hover .article-meta-author-name {
 :root[data-effective-theme="dark"] .article-image-row-item img.article-figure-dark {
   display: block;
 }
+
+/* A figure reached by #id (the way back from a practice position) lands with
+   a little air above it rather than flush against the window's edge. */
+.article-figure[id] {
+  scroll-margin-top: 1rem;
+}

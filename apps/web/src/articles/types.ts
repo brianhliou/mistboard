@@ -80,6 +80,9 @@ export type XiangqiReplayBlock = {
   kind: 'xq-replay';
   spec: XiangqiReplaySpec;
   caption?: string;
+  /** Element id for the figure, so a page that links out of the game (a
+   *  practice link's way back) can return the reader to it with #id. */
+  id?: string;
 };
 
 // Chess analogue of XiangqiReplayBlock: the game ships as a compact UCI string

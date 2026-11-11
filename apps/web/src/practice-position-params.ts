@@ -91,8 +91,10 @@ export function practicePositionHref(
 }
 
 /** An article path to link back to, or null. Only a site article path is
- *  accepted, so a crafted link cannot send the reader off the site. */
+ *  accepted, so a crafted link cannot send the reader off the site. It may end
+ *  in a #fragment naming the figure the reader left from, so the way back
+ *  lands on that game rather than the top of the article. */
 export function backPath(params: URLSearchParams): string | null {
   const from = params.get('from');
-  return from && /^(\/zh-han[st])?\/blog\/[a-z0-9-]+$/.test(from) ? from : null;
+  return from && /^(\/zh-han[st])?\/blog\/[a-z0-9-]+(#[a-z0-9-]+)?$/.test(from) ? from : null;
 }

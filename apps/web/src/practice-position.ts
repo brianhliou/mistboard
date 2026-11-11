@@ -57,6 +57,7 @@ export function mountPracticePosition(root: HTMLElement): void {
   const evaluate = (truth: XiangqiGameState): Promise<PracticeEval> =>
     evaluateXiangqiForPractice(ceval, truth);
   track('practice_started', { goal: request.goal.kind, source: 'position' });
+  const back = backPath(new URLSearchParams(location.search));
   mountXiangqiPractice(root, {
     initialTruth: request.state,
     goal: request.goal,
@@ -64,9 +65,23 @@ export function mountPracticePosition(root: HTMLElement): void {
     evaluate,
     title: t('practice.position.title'),
     nav: buildNav(),
-    aside: positionCard(request.side, backPath(new URLSearchParams(location.search))),
+    aside: positionCard(request.side, back),
     single: true,
   });
+  // A position taken from an article's game carries that article's footing:
+  // the same corrections and rights line, pointed at the article.
+  if (back) root.append(contactNote(back.replace(/#.*$/, '')));
+}
+
+function contactNote(about: string): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'practice-position__contact';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(about)}`);
+  link.rel = 'nofollow';
+  link.textContent = t('contact.correctionsLink');
+  note.append(t('contact.correctionsPrefix'), link, t('contact.correctionsSuffix'));
+  return note;
 }
 
 /** The left column, in the study practice rail's style: the side the learner
