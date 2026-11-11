@@ -1,0 +1,1476 @@
+{
+  "schema_version": "1.1",
+  "game_id": "xmj_4f0290ec-de4a-443c-b7f0-0b886889a468",
+  "source": {
+    "name": "Mistboard",
+    "url": "https://mistboard.com",
+    "game_url": "https://mistboard.com/xiangqi-mahjong/game/xmj_4f0290ec-de4a-443c-b7f0-0b886889a468"
+  },
+  "variant": "xiangqi-mahjong",
+  "mode": "pvp",
+  "time_control": { "initial_ms": 300000, "increment_ms": 5000, "label": "300+5" },
+  "players": { "east": { "handle": "rebirthfox333" }, "west": { "handle": "brianhliou-dev" } },
+  "started_at": "2026-10-26T08:01:02.747Z",
+  "ended_at": "2026-10-26T08:06:59.100Z",
+  "result": "west-wins",
+  "termination": "points",
+  "ply_count": 138,
+  "license": "CC BY 4.0",
+  "plies": [
+    {
+      "ply": 1,
+      "mover": "east",
+      "move": { "at": 1793001668962, "by": "east", "tile": "bE", "action": "discard" },
+      "notation": "discard 象",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 2,
+      "mover": "west",
+      "move": { "at": 1793001670462, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 3,
+      "mover": "west",
+      "move": { "at": 1793001676576, "by": "west", "tile": "bC", "action": "discard" },
+      "notation": "discard 包",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 4,
+      "mover": "east",
+      "move": { "at": 1793001678076, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 5,
+      "mover": "east",
+      "move": { "at": 1793001679482, "by": "east", "tile": "bR", "action": "discard" },
+      "notation": "discard 車",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 6,
+      "mover": "west",
+      "move": { "at": 1793001680982, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 7,
+      "mover": "west",
+      "move": { "at": 1793001687368, "by": "west", "tile": "rA", "action": "discard" },
+      "notation": "discard 仕",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 8,
+      "mover": "east",
+      "move": {
+        "at": 1793001690488,
+        "by": "east",
+        "kind": "chow",
+        "action": "claim",
+        "fromHand": ["rK", "rE"]
+      },
+      "notation": "claim chow 帥 相",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 9,
+      "mover": "east",
+      "move": { "at": 1793001692808, "by": "east", "tile": "rC", "action": "discard" },
+      "notation": "discard 炮",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 10,
+      "mover": "west",
+      "move": { "at": 1793001699985, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 11,
+      "mover": "west",
+      "move": { "at": 1793001701659, "by": "west", "tile": "rE", "action": "discard" },
+      "notation": "discard 相",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 12,
+      "mover": "east",
+      "move": { "at": 1793001703159, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 13,
+      "mover": "east",
+      "move": { "at": 1793001704980, "by": "east", "tile": "bP", "action": "discard" },
+      "notation": "discard 卒",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 14,
+      "mover": "west",
+      "move": { "at": 1793001706480, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 15,
+      "mover": "west",
+      "move": { "at": 1793001707853, "by": "west", "tile": "rA", "action": "discard" },
+      "notation": "discard 仕",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 16,
+      "mover": "east",
+      "move": { "at": 1793001709353, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 17,
+      "mover": "east",
+      "move": { "at": 1793001710363, "by": "east", "action": "self-draw" },
+      "notation": "self-draw",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 18,
+      "mover": "east",
+      "move": { "at": 1793001711764, "by": "east", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 19,
+      "mover": "west",
+      "move": { "at": 1793001714318, "by": "west", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 20,
+      "mover": "west",
+      "move": { "at": 1793001717124, "by": "west", "tile": "bC", "action": "discard" },
+      "notation": "discard 包",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 21,
+      "mover": "east",
+      "move": { "at": 1793001718624, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 22,
+      "mover": "east",
+      "move": { "at": 1793001720179, "by": "east", "tile": "rH", "action": "discard" },
+      "notation": "discard 傌",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 23,
+      "mover": "west",
+      "move": { "at": 1793001721679, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 24,
+      "mover": "west",
+      "move": { "at": 1793001725124, "by": "west", "tile": "rA", "action": "discard" },
+      "notation": "discard 仕",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 25,
+      "mover": "east",
+      "move": { "at": 1793001726624, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 26,
+      "mover": "east",
+      "move": { "at": 1793001727901, "by": "east", "tile": "rR", "action": "discard" },
+      "notation": "discard 俥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 27,
+      "mover": "west",
+      "move": { "at": 1793001729401, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 28,
+      "mover": "west",
+      "move": { "at": 1793001731950, "by": "west", "tile": "bH", "action": "discard" },
+      "notation": "discard 馬",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 29,
+      "mover": "east",
+      "move": { "at": 1793001733450, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 30,
+      "mover": "east",
+      "move": { "at": 1793001741454, "by": "east", "tile": "rA", "action": "discard" },
+      "notation": "discard 仕",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 31,
+      "mover": "west",
+      "move": { "at": 1793001742954, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 32,
+      "mover": "west",
+      "move": { "at": 1793001749223, "by": "west", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 33,
+      "mover": "east",
+      "move": {
+        "at": 1793001754947,
+        "by": "east",
+        "kind": "pung",
+        "action": "claim",
+        "fromHand": ["rP", "rP"]
+      },
+      "notation": "claim pung 兵 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 34,
+      "mover": "east",
+      "move": { "at": 1793001760584, "by": "east", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 35,
+      "mover": "west",
+      "move": { "at": 1793001762084, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 36,
+      "mover": "west",
+      "move": { "at": 1793001763284, "by": "west", "tile": "rR", "action": "discard" },
+      "notation": "discard 俥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 37,
+      "mover": "east",
+      "move": { "at": 1793001764784, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 38,
+      "mover": "east",
+      "move": { "at": 1793001767068, "by": "east", "tile": "bR", "action": "discard" },
+      "notation": "discard 車",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 39,
+      "mover": "west",
+      "move": { "at": 1793001768568, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 40,
+      "mover": "west",
+      "move": { "at": 1793001769994, "by": "west", "tile": "rC", "action": "discard" },
+      "notation": "discard 炮",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 41,
+      "mover": "east",
+      "move": { "at": 1793001771494, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 42,
+      "mover": "east",
+      "move": { "at": 1793001772962, "by": "east", "tile": "rK", "action": "discard" },
+      "notation": "discard 帥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 43,
+      "mover": "west",
+      "move": { "at": 1793001774462, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 44,
+      "mover": "west",
+      "move": { "at": 1793001775937, "by": "west", "tile": "bH", "action": "discard" },
+      "notation": "discard 馬",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 45,
+      "mover": "east",
+      "move": { "at": 1793001777437, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 46,
+      "mover": "east",
+      "move": { "at": 1793001778882, "by": "east", "tile": "bR", "action": "discard" },
+      "notation": "discard 車",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 47,
+      "mover": "west",
+      "move": { "at": 1793001780382, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 48,
+      "mover": "west",
+      "move": { "at": 1793001790633, "by": "west", "tile": "bK", "action": "discard" },
+      "notation": "discard 將",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 49,
+      "mover": "east",
+      "move": { "at": 1793001792133, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 50,
+      "mover": "east",
+      "move": { "at": 1793001793598, "by": "east", "tile": "bE", "action": "discard" },
+      "notation": "discard 象",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 51,
+      "mover": "west",
+      "move": {
+        "at": 1793001795098,
+        "by": "west",
+        "kind": "win",
+        "action": "claim",
+        "fromHand": []
+      },
+      "notation": "claim win ",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 52,
+      "mover": "west",
+      "move": { "at": 1793001798089, "by": "west", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 53,
+      "mover": "east",
+      "move": { "at": 1793001807144, "by": "east", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 54,
+      "mover": "east",
+      "move": { "at": 1793001810617, "by": "east", "tile": "bE", "action": "discard" },
+      "notation": "discard 象",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 55,
+      "mover": "west",
+      "move": {
+        "at": 1793001812117,
+        "by": "west",
+        "kind": "chow",
+        "action": "claim",
+        "fromHand": ["bK", "bA"]
+      },
+      "notation": "claim chow 將 士",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 56,
+      "mover": "west",
+      "move": { "at": 1793001818284, "by": "west", "tile": "rE", "action": "discard" },
+      "notation": "discard 相",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 57,
+      "mover": "east",
+      "move": { "at": 1793001819784, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 58,
+      "mover": "east",
+      "move": { "at": 1793001821395, "by": "east", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 59,
+      "mover": "west",
+      "move": { "at": 1793001822895, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 60,
+      "mover": "west",
+      "move": { "at": 1793001826580, "by": "west", "tile": "rA", "action": "discard" },
+      "notation": "discard 仕",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 61,
+      "mover": "east",
+      "move": { "at": 1793001828080, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 62,
+      "mover": "east",
+      "move": { "at": 1793001829484, "by": "east", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 63,
+      "mover": "west",
+      "move": {
+        "at": 1793001830583,
+        "by": "west",
+        "kind": "win",
+        "action": "claim",
+        "fromHand": []
+      },
+      "notation": "claim win ",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 64,
+      "mover": "east",
+      "move": { "at": 1793001833346, "by": "east", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 65,
+      "mover": "west",
+      "move": { "at": 1793001835086, "by": "west", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 66,
+      "mover": "west",
+      "move": { "at": 1793001841357, "by": "west", "tile": "bE", "action": "discard" },
+      "notation": "discard 象",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 67,
+      "mover": "east",
+      "move": { "at": 1793001842857, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 68,
+      "mover": "east",
+      "move": { "at": 1793001847281, "by": "east", "tile": "rE", "action": "discard" },
+      "notation": "discard 相",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 69,
+      "mover": "west",
+      "move": { "at": 1793001848781, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 70,
+      "mover": "west",
+      "move": { "at": 1793001855057, "by": "west", "tile": "bC", "action": "discard" },
+      "notation": "discard 包",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 71,
+      "mover": "east",
+      "move": { "at": 1793001856557, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 72,
+      "mover": "east",
+      "move": { "at": 1793001858051, "by": "east", "tile": "rR", "action": "discard" },
+      "notation": "discard 俥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 73,
+      "mover": "west",
+      "move": { "at": 1793001859551, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 74,
+      "mover": "west",
+      "move": { "at": 1793001861070, "by": "west", "tile": "rC", "action": "discard" },
+      "notation": "discard 炮",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 75,
+      "mover": "east",
+      "move": { "at": 1793001862570, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 76,
+      "mover": "east",
+      "move": { "at": 1793001863992, "by": "east", "tile": "bR", "action": "discard" },
+      "notation": "discard 車",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 77,
+      "mover": "west",
+      "move": { "at": 1793001865492, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 78,
+      "mover": "west",
+      "move": { "at": 1793001866711, "by": "west", "tile": "bH", "action": "discard" },
+      "notation": "discard 馬",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 79,
+      "mover": "east",
+      "move": { "at": 1793001868211, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 80,
+      "mover": "east",
+      "move": { "at": 1793001869355, "by": "east", "tile": "rC", "action": "discard" },
+      "notation": "discard 炮",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 81,
+      "mover": "west",
+      "move": { "at": 1793001870855, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 82,
+      "mover": "west",
+      "move": { "at": 1793001872065, "by": "west", "action": "self-draw" },
+      "notation": "self-draw",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 83,
+      "mover": "east",
+      "move": { "at": 1793001875067, "by": "east", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 84,
+      "mover": "west",
+      "move": { "at": 1793001877336, "by": "west", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 85,
+      "mover": "east",
+      "move": { "at": 1793001880720, "by": "east", "tile": "bP", "action": "discard" },
+      "notation": "discard 卒",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 86,
+      "mover": "west",
+      "move": { "at": 1793001882220, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 87,
+      "mover": "west",
+      "move": { "at": 1793001887920, "by": "west", "tile": "bP", "action": "discard" },
+      "notation": "discard 卒",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 88,
+      "mover": "east",
+      "move": { "at": 1793001889420, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 89,
+      "mover": "east",
+      "move": { "at": 1793001890471, "by": "east", "tile": "bA", "action": "discard" },
+      "notation": "discard 士",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 90,
+      "mover": "west",
+      "move": { "at": 1793001891971, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 91,
+      "mover": "west",
+      "move": { "at": 1793001902933, "by": "west", "tile": "bH", "action": "discard" },
+      "notation": "discard 馬",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 92,
+      "mover": "east",
+      "move": { "at": 1793001904433, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 93,
+      "mover": "east",
+      "move": { "at": 1793001905832, "by": "east", "tile": "bH", "action": "discard" },
+      "notation": "discard 馬",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 94,
+      "mover": "west",
+      "move": { "at": 1793001907332, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 95,
+      "mover": "west",
+      "move": { "at": 1793001909177, "by": "west", "tile": "rC", "action": "discard" },
+      "notation": "discard 炮",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 96,
+      "mover": "east",
+      "move": {
+        "at": 1793001911731,
+        "by": "east",
+        "kind": "chow",
+        "action": "claim",
+        "fromHand": ["rR", "rH"]
+      },
+      "notation": "claim chow 俥 傌",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 97,
+      "mover": "east",
+      "move": { "at": 1793001913327, "by": "east", "tile": "rH", "action": "discard" },
+      "notation": "discard 傌",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 98,
+      "mover": "west",
+      "move": { "at": 1793001914827, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 99,
+      "mover": "west",
+      "move": { "at": 1793001917824, "by": "west", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 100,
+      "mover": "east",
+      "move": {
+        "at": 1793001918920,
+        "by": "east",
+        "kind": "win",
+        "action": "claim",
+        "fromHand": []
+      },
+      "notation": "claim win ",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 101,
+      "mover": "east",
+      "move": { "at": 1793001920257, "by": "east", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 102,
+      "mover": "west",
+      "move": { "at": 1793001921726, "by": "west", "action": "next-hand" },
+      "notation": "next-hand",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 103,
+      "mover": "west",
+      "move": { "at": 1793001930388, "by": "west", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 104,
+      "mover": "east",
+      "move": { "at": 1793001931888, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 105,
+      "mover": "east",
+      "move": { "at": 1793001933464, "by": "east", "tile": "rC", "action": "discard" },
+      "notation": "discard 炮",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 106,
+      "mover": "west",
+      "move": { "at": 1793001934964, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 107,
+      "mover": "west",
+      "move": { "at": 1793001940256, "by": "west", "tile": "bP", "action": "discard" },
+      "notation": "discard 卒",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 108,
+      "mover": "east",
+      "move": { "at": 1793001941756, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 109,
+      "mover": "east",
+      "move": { "at": 1793001947122, "by": "east", "tile": "rR", "action": "discard" },
+      "notation": "discard 俥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 110,
+      "mover": "west",
+      "move": { "at": 1793001948622, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 111,
+      "mover": "west",
+      "move": { "at": 1793001954873, "by": "west", "tile": "bH", "action": "discard" },
+      "notation": "discard 馬",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 112,
+      "mover": "east",
+      "move": { "at": 1793001956373, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 113,
+      "mover": "east",
+      "move": { "at": 1793001959708, "by": "east", "tile": "bE", "action": "discard" },
+      "notation": "discard 象",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 114,
+      "mover": "west",
+      "move": { "at": 1793001961208, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 115,
+      "mover": "west",
+      "move": { "at": 1793001963536, "by": "west", "tile": "bK", "action": "discard" },
+      "notation": "discard 將",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 116,
+      "mover": "east",
+      "move": { "at": 1793001965036, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 117,
+      "mover": "east",
+      "move": { "at": 1793001969593, "by": "east", "tile": "rE", "action": "discard" },
+      "notation": "discard 相",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 118,
+      "mover": "west",
+      "move": { "at": 1793001971093, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 119,
+      "mover": "west",
+      "move": { "at": 1793001972469, "by": "west", "tile": "rR", "action": "discard" },
+      "notation": "discard 俥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 120,
+      "mover": "east",
+      "move": { "at": 1793001973969, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 121,
+      "mover": "east",
+      "move": { "at": 1793001975892, "by": "east", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 122,
+      "mover": "west",
+      "move": { "at": 1793001977392, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 123,
+      "mover": "west",
+      "move": { "at": 1793001978508, "by": "west", "tile": "rP", "action": "discard" },
+      "notation": "discard 兵",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 124,
+      "mover": "east",
+      "move": { "at": 1793001980008, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 125,
+      "mover": "east",
+      "move": { "at": 1793001981072, "by": "east", "tile": "rH", "action": "discard" },
+      "notation": "discard 傌",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 126,
+      "mover": "west",
+      "move": { "at": 1793001982572, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 127,
+      "mover": "west",
+      "move": { "at": 1793001985192, "by": "west", "tile": "bP", "action": "discard" },
+      "notation": "discard 卒",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 128,
+      "mover": "east",
+      "move": { "at": 1793001995719, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 129,
+      "mover": "east",
+      "move": { "at": 1793001996924, "by": "east", "tile": "rA", "action": "discard" },
+      "notation": "discard 仕",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 130,
+      "mover": "west",
+      "move": { "at": 1793001998424, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 131,
+      "mover": "west",
+      "move": { "at": 1793002006023, "by": "west", "tile": "bA", "action": "discard" },
+      "notation": "discard 士",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 132,
+      "mover": "east",
+      "move": { "at": 1793002007523, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 133,
+      "mover": "east",
+      "move": { "at": 1793002008636, "by": "east", "tile": "rH", "action": "discard" },
+      "notation": "discard 傌",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 134,
+      "mover": "west",
+      "move": { "at": 1793002010136, "by": "west", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 135,
+      "mover": "west",
+      "move": { "at": 1793002011872, "by": "west", "tile": "bE", "action": "discard" },
+      "notation": "discard 象",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 136,
+      "mover": "east",
+      "move": { "at": 1793002013372, "by": "east", "action": "pass" },
+      "notation": "pass",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 137,
+      "mover": "east",
+      "move": { "at": 1793002016928, "by": "east", "tile": "rK", "action": "discard" },
+      "notation": "discard 帥",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    },
+    {
+      "ply": 138,
+      "mover": "west",
+      "move": {
+        "at": 1793002018428,
+        "by": "west",
+        "kind": "win",
+        "action": "claim",
+        "fromHand": []
+      },
+      "notation": "claim win ",
+      "east_clock_ms_after": null,
+      "west_clock_ms_after": null
+    }
+  ],
+  "match": {
+    "setup": {
+      "walls": [
+        [
+          "rC",
+          "rE",
+          "bR",
+          "rK",
+          "bE",
+          "rA",
+          "rE",
+          "rC",
+          "bC",
+          "rR",
+          "rP",
+          "rH",
+          "rP",
+          "bP",
+          "rA",
+          "rP",
+          "bA",
+          "rR",
+          "bA",
+          "bE",
+          "rH",
+          "bP",
+          "bC",
+          "rP",
+          "bP",
+          "bH",
+          "bP",
+          "rP",
+          "bR",
+          "bK",
+          "bP",
+          "bH"
+        ],
+        [
+          "rP",
+          "bE",
+          "rA",
+          "bC",
+          "bK",
+          "rP",
+          "rP",
+          "rH",
+          "rA",
+          "rK",
+          "bP",
+          "rR",
+          "bH",
+          "rP",
+          "bP",
+          "rR",
+          "bR",
+          "rC",
+          "bP",
+          "bH",
+          "bR",
+          "bP",
+          "bE",
+          "rH",
+          "bC",
+          "rP",
+          "bP",
+          "rE",
+          "bA",
+          "rE",
+          "rC",
+          "bA"
+        ],
+        [
+          "rP",
+          "bC",
+          "bC",
+          "rC",
+          "bE",
+          "bK",
+          "rA",
+          "bA",
+          "rE",
+          "rH",
+          "rP",
+          "rP",
+          "rE",
+          "bR",
+          "bP",
+          "rH",
+          "bH",
+          "bP",
+          "bP",
+          "rA",
+          "bH",
+          "bP",
+          "rP",
+          "bP",
+          "rK",
+          "bE",
+          "rC",
+          "bR",
+          "rP",
+          "rR",
+          "rR",
+          "bA"
+        ],
+        [
+          "bE",
+          "bC",
+          "rP",
+          "bP",
+          "rC",
+          "bK",
+          "rR",
+          "rE",
+          "bP",
+          "bR",
+          "rP",
+          "bA",
+          "bP",
+          "bP",
+          "bH",
+          "rC",
+          "bP",
+          "rA",
+          "rH",
+          "bR",
+          "rP",
+          "bA",
+          "bH",
+          "bC",
+          "rP",
+          "rA",
+          "rP",
+          "rR",
+          "bE",
+          "rH",
+          "rE",
+          "rK"
+        ],
+        [
+          "rH",
+          "rR",
+          "rH",
+          "bP",
+          "rP",
+          "bP",
+          "bK",
+          "rK",
+          "bH",
+          "rP",
+          "bA",
+          "bP",
+          "bH",
+          "rC",
+          "bP",
+          "rA",
+          "bR",
+          "bE",
+          "bE",
+          "rR",
+          "rP",
+          "rP",
+          "bA",
+          "bR",
+          "rA",
+          "rE",
+          "bC",
+          "bC",
+          "rP",
+          "rC",
+          "bP",
+          "rE"
+        ],
+        [
+          "bK",
+          "rP",
+          "bC",
+          "bC",
+          "rA",
+          "rC",
+          "bP",
+          "bR",
+          "bE",
+          "bH",
+          "bP",
+          "rR",
+          "bH",
+          "rP",
+          "rE",
+          "rE",
+          "rR",
+          "bP",
+          "rP",
+          "rH",
+          "bP",
+          "rA",
+          "bA",
+          "rH",
+          "bE",
+          "rK",
+          "rP",
+          "bR",
+          "rP",
+          "bP",
+          "bA",
+          "rC"
+        ]
+      ],
+      "firstDealer": "east",
+      "taiTable": 2,
+      "correspondence": false
+    },
+    "hands": [
+      {
+        "dealer": 0,
+        "winner": 0,
+        "selfDrawn": true,
+        "score": {
+          "lines": [
+            { "key": "win", "label": "胡牌 Win", "tai": 1 },
+            { "key": "one-colour", "label": "清一色 One colour", "tai": 1 },
+            { "key": "red-general", "label": "帥之才 Red general", "tai": 1 },
+            { "key": "self-draw", "label": "自摸 Self-draw", "tai": 2 }
+          ],
+          "total": 5,
+          "shape": { "meld": ["rK", "rA", "rE"], "pair": ["rP", "rP"] }
+        },
+        "winningTile": "rP"
+      },
+      {
+        "dealer": 1,
+        "winner": 1,
+        "selfDrawn": false,
+        "score": {
+          "lines": [
+            { "key": "win", "label": "胡牌 Win", "tai": 1 },
+            { "key": "one-colour", "label": "清一色 One colour", "tai": 1 }
+          ],
+          "total": 2,
+          "shape": { "meld": ["bP", "bP", "bP"], "pair": ["bE", "bE"] }
+        },
+        "winningTile": "bE"
+      },
+      {
+        "dealer": 0,
+        "winner": 1,
+        "selfDrawn": false,
+        "score": {
+          "lines": [
+            { "key": "win", "label": "胡牌 Win", "tai": 1 },
+            { "key": "black-general", "label": "將之才 Black general", "tai": 1 }
+          ],
+          "total": 2,
+          "shape": { "meld": ["bK", "bA", "bE"], "pair": ["rP", "rP"] }
+        },
+        "winningTile": "rP"
+      },
+      {
+        "dealer": 1,
+        "winner": 1,
+        "selfDrawn": true,
+        "score": {
+          "lines": [
+            { "key": "win", "label": "胡牌 Win", "tai": 1 },
+            { "key": "mixed-soldiers", "label": "鼓角齊鳴 Five soldiers, mixed", "tai": 2 },
+            { "key": "self-draw", "label": "自摸 Self-draw", "tai": 2 }
+          ],
+          "total": 5,
+          "shape": { "meld": ["bP", "bP", "bP"], "pair": ["rP", "rP"] }
+        },
+        "winningTile": "bP"
+      },
+      {
+        "dealer": 0,
+        "winner": 0,
+        "selfDrawn": false,
+        "score": {
+          "lines": [
+            { "key": "win", "label": "胡牌 Win", "tai": 1 },
+            { "key": "one-colour", "label": "清一色 One colour", "tai": 1 }
+          ],
+          "total": 2,
+          "shape": { "meld": ["rR", "rH", "rC"], "pair": ["rP", "rP"] }
+        },
+        "winningTile": "rP"
+      },
+      {
+        "dealer": 1,
+        "winner": 1,
+        "selfDrawn": false,
+        "score": {
+          "lines": [
+            { "key": "win", "label": "胡牌 Win", "tai": 1 },
+            { "key": "red-general", "label": "帥之才 Red general", "tai": 1 }
+          ],
+          "total": 2,
+          "shape": { "meld": ["rK", "rA", "rE"], "pair": ["bC", "bC"] }
+        },
+        "winningTile": "rK"
+      }
+    ],
+    "final_score": { "east": 7, "west": 11 }
+  }
+}

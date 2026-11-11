@@ -182,7 +182,19 @@ class Audit:
         engine_key = (family, threading.get_ident())
         if engine_key not in self.engines:
             self.engines[engine_key] = UCI(spec)
-        row = self.engines[engine_key].search(pos['position'], nodes, forced)
+        try:
+            row = self.engines[engine_key].search(pos['position'], nodes, forced)
+        except RuntimeError as e:
+            # Fog allows moves standard xiangqi forbids (a general left in check);
+            # Pikafish refuses such a line and exits. Record the gap, restart, go on.
+            if family != 'fog' or 'CRITICAL ERROR' not in str(e): raise
+            eng = self.engines.pop(engine_key)
+            try: eng.close()
+            except Exception: pass
+            with self.lock:
+                gaps = self.errors.setdefault('fog_not_legal_xiangqi', [])
+                if pos['position'] not in gaps: gaps.append(pos['position'])
+            raise LookupError('not a legal xiangqi position')
         # Fail closed on missing conversion rather than cache a vacuous score.
         probability(row, family)
         with self.lock:
