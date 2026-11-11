@@ -692,6 +692,14 @@
   display: block;
 }
 
+/* The Three Kingdoms board carries an inline height:auto (its renderer,
+   three-kingdoms-banqi-diagrams.ts, sizes it by width on every other page),
+   which beat the rule above and drew the board at the top of the card with a
+   blank band below. Filling the box lets the viewBox centre it, as banqi's. */
+.current-game-board .replay-layout-solo .replay-board svg.banqi-board {
+  height: 100% !important;
+}
+
 /* Crazyhouse Xiangqi keeps its hands on a live card (liveCardShowsHands in
    current-games-model.ts; every other drop variant mounts with hideReserve).
    The renderer lays [hand, board, hand] in one row; stacked here as the game
