@@ -108,6 +108,21 @@ function click(square: string) {
     .querySelector<SVGElement>(`[data-square="${square}"] .gomoku-hit`)
     ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
+function pointer(coarse: boolean) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((media: string) => ({
+      media,
+      matches: media === '(pointer: coarse)' && coarse,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => true,
+    })),
+  );
+}
 const sentMoves = () => socket.sent.filter((value) => (value as { type?: string }).type === 'move');
 
 const workers: TestWorker[] = [];
@@ -143,6 +158,7 @@ beforeEach(() => {
   });
   workers.length = 0;
   vi.stubGlobal('Worker', TestWorker);
+  pointer(false);
   vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
   vi.stubGlobal(
     'fetch',
@@ -153,6 +169,154 @@ afterEach(() => {
   window.dispatchEvent(new Event('pagehide'));
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+});
+
+describe('Gomoku touch confirmation', () => {
+  const preview = () => document.querySelector('.gomoku-preview');
+  const previewPoint = () => preview()?.closest('[data-square]')?.getAttribute('data-square');
+
+  it.each(['pvp', 'pve'] as const)(
+    'previews the first tap and sends only the second tap in %s for either colour',
+    async (mode) => {
+      pointer(true);
+      for (const seat of ['black', 'white'] as const) {
+        await mount(
+          position(seat === 'black' ? 0 : 1),
+          seat,
+          undefined,
+          mode === 'pve' ? pveFrame(seat) : {},
+        );
+        click('h8');
+        expect(sentMoves()).toEqual([]);
+        expect(previewPoint()).toBe('h8');
+        expect(preview()?.getAttribute('visibility')).toBe('visible');
+        expect(preview()?.classList.contains(`gomoku-stone--${seat}`)).toBe(true);
+        expect(document.querySelector('[data-piece-square="h8"]')).toBeNull();
+        click('h8');
+        expect(sentMoves()).toEqual([{ type: 'move', to: 'h8' }]);
+        expect(preview()).toBeNull();
+      }
+    },
+  );
+
+  it('moves the preview from A to B without sending', async () => {
+    pointer(true);
+    await mount(position(0), 'black');
+    click('h8');
+    click('i8');
+    expect(sentMoves()).toEqual([]);
+    expect(previewPoint()).toBe('i8');
+    expect(document.querySelectorAll('.gomoku-preview')).toHaveLength(1);
+    expect(
+      document.querySelector('[data-square="h8"] .gomoku-ghost')?.getAttribute('visibility'),
+    ).toBe('hidden');
+    click('i8');
+    expect(sentMoves()).toEqual([{ type: 'move', to: 'i8' }]);
+  });
+
+  it('sends the first click with a fine pointer', async () => {
+    pointer(false);
+    await mount(position(0), 'black');
+    click('h8');
+    expect(sentMoves()).toEqual([{ type: 'move', to: 'h8' }]);
+    expect(preview()).toBeNull();
+  });
+
+  it('sends the first tap when confirmation is disabled and clears any preview', async () => {
+    pointer(true);
+    await mount(position(0), 'black');
+    click('h8');
+    expect(previewPoint()).toBe('h8');
+    writeDisplayPreference('confirmMovesOnTouch', false);
+    expect(preview()).toBeNull();
+    click('i8');
+    expect(sentMoves()).toEqual([{ type: 'move', to: 'i8' }]);
+    // The preference survives remounting a room.
+    await mount(position(0), 'black');
+    click('h8');
+    expect(sentMoves()).toEqual([{ type: 'move', to: 'h8' }]);
+  });
+
+  it('clears on occupied points, the board margin, and outside the board', async () => {
+    pointer(true);
+    await mount(position(1), 'white');
+    for (const clear of [
+      () => click('a1'),
+      () =>
+        document
+          .querySelector('.gomoku-wood')!
+          .dispatchEvent(new MouseEvent('click', { bubbles: true })),
+      () => document.body.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    ]) {
+      click('h8');
+      expect(previewPoint()).toBe('h8');
+      clear();
+      expect(preview()).toBeNull();
+    }
+    expect(sentMoves()).toEqual([]);
+  });
+
+  it('clears after an opponent move even if it is still our turn on reconnect', async () => {
+    pointer(true);
+    const options = await mount(position(0), 'black');
+    click('h8');
+    expect(previewPoint()).toBe('h8');
+    refresh(options, position(2), 'black');
+    expect(preview()).toBeNull();
+    click('h8');
+    expect(sentMoves()).toEqual([]);
+    expect(previewPoint()).toBe('h8');
+  });
+
+  it.each(['turn', 'end', 'illegal'] as const)('clears when the %s changes', async (change) => {
+    pointer(true);
+    const options = await mount(position(0), 'black');
+    click('h8');
+    expect(previewPoint()).toBe('h8');
+    if (change === 'illegal') {
+      const view = getGomokuPlayerView(position(0), 'black');
+      options.applySnapshot({
+        type: 'snapshot',
+        seat: 'black',
+        state: {
+          ...view,
+          legalMoves: view.legalMoves.filter((move) => move.to !== 'h8'),
+        },
+      } as TenantSocketFrame);
+      options.render();
+    } else {
+      refresh(options, position(change === 'turn' ? 1 : 9), 'black');
+    }
+    expect(preview()).toBeNull();
+    expect(sentMoves()).toEqual([]);
+  });
+
+  it('does not show a preview off turn, for spectators, or in replay', async () => {
+    pointer(true);
+    for (const seat of ['white', 'spectator'] as const) {
+      await mount(position(0), seat);
+      click('h8');
+      expect(preview()).toBeNull();
+      expect(sentMoves()).toEqual([]);
+    }
+    await mount(position(2), 'black');
+    click('h8');
+    document.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+    expect(preview()).toBeNull();
+    click('i8');
+    expect(preview()).toBeNull();
+    expect(sentMoves()).toEqual([]);
+  });
+
+  it('keeps keyboard activation immediate on a coarse pointer', async () => {
+    pointer(true);
+    await mount(position(0), 'black');
+    document
+      .querySelector('[data-square="h8"] .gomoku-hit')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(sentMoves()).toEqual([{ type: 'move', to: 'h8' }]);
+    expect(preview()).toBeNull();
+  });
 });
 
 describe('server-owned Gomoku PvE', () => {

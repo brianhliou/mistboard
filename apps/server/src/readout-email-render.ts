@@ -269,11 +269,21 @@ export function buildReadoutSummary(report: MistboardReadoutV1) {
 /** Every value and state is also present in text; color never carries meaning alone. */
 export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
   if (report.trigger !== 'weekly') return renderDailyEmail(report);
-  const { title, period, summary, metrics, actions, extraActions, breakdown, context, deploy } =
-    buildReadoutSummary(report);
-  const content = contentSummary(report.content);
+  const {
+    title,
+    period,
+    summary,
+    metrics,
+    actions,
+    extraActions,
+    breakdown,
+    context,
+    deploy,
+    content,
+    contentCaveats,
+  } = buildReadoutSummary(report);
   const contentUrl = `${emailPublicHost}/ops?tab=activity#content`;
-  const contentHtml = `<h2 style="font-size:17px;margin:24px 0 9px">Content</h2><p style="font-size:13px;line-height:1.7">${content.map(E).join('<br>')}</p><p style="font-size:12px">Observed visitors may include automation. Board events cover xiangqi replays only; assisted outcomes overlap.</p><a href="${E(contentUrl)}">Article comparison and definitions →</a>`;
+  const contentHtml = `<h2 style="font-size:17px;margin:24px 0 9px">Content</h2><p style="font-size:13px;line-height:1.7">${content.map(E).join('<br>')}</p><p style="font-size:12px">${contentCaveats.map(E).join('<br>')}</p><a href="${E(contentUrl)}">Article comparison and definitions →</a>`;
   const text: string[] = ['Mistboard weekly review', period, '', summary, ''];
   for (const metric of metrics)
     text.push(
@@ -309,7 +319,7 @@ export function renderReadoutEmail(report: MistboardReadoutV1): RenderedEmail {
     '',
     'Content',
     ...content,
-    'Observed visitors may include automation. Board events cover xiangqi replays only; assisted outcomes overlap.',
+    ...contentCaveats,
     contentUrl,
     '',
     'Database counts include guest browsers and accounts; bot-vs-bot games are excluded. Returning players is not a cohort-retention rate.',

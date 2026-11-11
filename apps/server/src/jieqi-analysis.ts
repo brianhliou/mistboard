@@ -10,7 +10,10 @@
 //      moves — there is no separate from===to flip as in banqi). So a "chance" ply is a move
 //      whose source piece was face-down beforehand; jieqiChancePlies() detects those by replay.
 //
-// New grading uses the released Level 8 Pikafish configuration (#1000), at fixed nodes.
+// Decided 2026-11-09: AB-JChess grades reviews when its binary and net resolve (prod),
+// because it is the strongest jieqi bot on the site, above Pikafish Level 8. PikaJieQi
+// is the fallback when they do not (dev). Both keep #1000's reveal budget split and
+// kernel rules alignment; AB-JChess uses its measured budgets below (~1.4M nps).
 // Each stored analysis keeps its engine id and win curve; reads also accept the earlier
 // AB-JChess and PikaJieQi rows without recomputing them. A
 // missing binary fails closed at the route (503), and an all-null sweep throws
@@ -78,7 +81,8 @@ const applyJieqiMove = jieqiTenant.rules.applyMove;
 // ply: nodes (final info line, including early mate termination):
 // 0:14315184, 4:13063484, 12:11522818, 24:10417208, 48:11833813, 80:10461455,
 // 120:9926158, 160:10105020, 220:23132637, 280:55772, 340:18457478, 380:1546179.
-// Median 10,992,136.5; round down to 10M. A later prod-class measurement may revise it.
+// Median 10,992,136.5; round down to 10M for the Pikafish fallback.
+// AB-JChess grading uses its separately measured budgets below; no recalibration is required.
 // Fixed nodes avoid depth extensions giving adjacent positions different search effort.
 export const JIEQI_ANALYSIS_NODES = 10_000_000;
 
@@ -134,12 +138,11 @@ const ABJCHESS_ANALYSIS_NODES = 500_000;
 const ABJCHESS_CONSISTENCY_RESEARCH_NODES = ABJCHESS_ANALYSIS_NODES * 4;
 // A safety net, never the dial: 2M nodes at 1.4M nps is ~1.4 s, well inside this cap.
 const ABJCHESS_ANALYSIS_MOVETIME_CAP_MS = 30_000;
-// This build has no MultiPV. Ranking costs one 50k-node eval per deterministic
-// child or dark capture, and up to six per reveal (one per distinct hidden role).
-// Opening position: 43 reveals + one quiet move = 259 ranking evals / 12.95M nodes.
-// True-baseline the top three plus played at 200k: up to 4 * 6 = 24 more evals,
-// 4.8M nodes. Total <= 17.75M nodes / 1.4M nps ~= 12.7 s per reveal (search time;
-// fewer as roles and legal moves disappear). Ranking scores never reach the output.
+// This build has no MultiPV. Rank every legal move: deterministic children cost
+// 50k nodes; reveal roles share that budget with #1000's 200k-per-piece floor.
+// True-baseline the top three plus played by splitting 200k across candidates
+// and distinct hidden roles, with the same floor. The floor can exceed the shared
+// budget when many roles remain. Ranking scores never reach the output.
 const ABJCHESS_DECISION_NODES = 200_000;
 const ABJCHESS_DECISION_RANK_NODES = 50_000;
 const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
@@ -168,7 +171,7 @@ export type JieqiAnalysisProfile = {
   movetimeCapMs: number;
   /** Parent/child consistency rule (reconcileJieqiSeries). */
   consistency: { unit: 'cp'; threshold: number } | { unit: 'win'; threshold: number };
-  /** Pikafish's shared pool-baseline budget; legacy AB profiles budget each term. */
+  /** Pool-baseline budget shared across distinct candidate/role terms, with a 200K floor. */
   decisionEval: JieqiEvalBudget;
   /** Budget of each legal-move ranking eval; defaults to decisionEval for older profiles. */
   decisionRank?: JieqiEvalBudget;
@@ -178,12 +181,17 @@ export type JieqiAnalysisProfile = {
   decisionMultiPv: JieqiEvalBudget;
 };
 
-export const ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID = `ab-jchess-jieqi-analysis@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_ANALYSIS_NODES}+consistent-win1+public1`;
+export const ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID = `ab-jchess-jieqi-analysis@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_ANALYSIS_NODES}+consistent-win1+public1`;
+// Distinguish the rule, history and reveal-split contract from earlier AB rows.
+export const ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID = `${ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID}+chasedefault+history2-rules1`;
 
 export type JieqiRepetitionWindow = {
   fen: string;
   moves: readonly string[];
   searchMoves?: readonly string[];
+  /** Canonical public state/window for AB legal-move ranking, including stored rules. */
+  state?: JieqiGameState;
+  decisionWindow?: JieqiDecisionWindow;
   /** Exact public root endings, scored by the kernel rather than Pikafish's rules. */
   terminalMoves?: readonly UciMultiPvLine[];
 };
@@ -774,7 +782,7 @@ export function jieqiDecisionDepsFromSession(
     (budget: JieqiEvalBudget): JieqiDecisionDeps['evalPosition'] =>
     (fen, repetitionWindow, searchTerms = 1) => {
       const split =
-        profile.engine === 'pikafish-jieqi' && budget.nodes != null
+        budget.nodes != null
           ? { ...budget, nodes: Math.max(200_000, Math.floor(budget.nodes / searchTerms)) }
           : budget;
       return evaluateKernelRoot(repetitionWindow ?? { fen, moves: [] }, () =>
@@ -799,9 +807,15 @@ export function jieqiDecisionDepsFromSession(
         const parsed = parseJieqiFen(fen, { rng: () => 0 });
         if (!parsed.ok) throw new Error(`Invalid jieqi decision FEN: ${parsed.error}`);
         const lines: (UciMultiPvLine & { win?: number })[] = [];
-        const state = parsed.state;
+        const state = repetitionWindow?.state ?? parsed.state;
         const mover = state.status.type === 'playing' ? state.status.turn : 'red';
-        const repWindow: JieqiDecisionWindow = { anchor: state, moves: [] };
+        const anchor = repetitionWindow
+          ? parseJieqiFen(repetitionWindow.fen, { rng: () => 0 })
+          : null;
+        const repWindow: JieqiDecisionWindow = repetitionWindow?.decisionWindow ?? {
+          anchor: anchor?.ok ? anchor.state : state,
+          moves: [...(repetitionWindow?.moves ?? [])],
+        };
         for (const move of getJieqiLegalMoves(state)) {
           const uci = jieqiMoveToPikafishUci(move);
           if (isJieqiChanceMove(state, move)) {
@@ -825,23 +839,40 @@ export function jieqiDecisionDepsFromSession(
             });
             continue;
           }
-          // Only face-up non-captures belong in UCI history. A known capture
-          // resets the anchor, just as jieqiAnalysisRepetitionWindows does.
-          const capture = state.board[move.to] != null;
-          const childFen = capture
-            ? jieqiStateToPikafishFen(applyJieqiMove(state, move), { public: true })
-            : (repetitionWindow?.fen ?? fen);
-          const evaluation = await session.evaluateFen(childFen, {
-            ...rankBudget,
-            moves: capture ? [] : [...(repetitionWindow?.moves ?? []), uci],
-            fresh: true,
-          });
+          const post = applyJieqiMove(state, move);
+          const childWindow = renderDecisionWindow(
+            jieqiDecisionWindowAfterMove(state, move, post, repWindow),
+            mover,
+            post,
+          );
+          const evaluation =
+            post.status.type === 'finished'
+              ? {
+                  cp:
+                    post.status.winner === null
+                      ? 0
+                      : post.status.winner === mover
+                        ? -TERMINAL_CP
+                        : TERMINAL_CP,
+                  mate: null,
+                  depth: 0,
+                }
+              : await evaluateKernelRoot(childWindow, () =>
+                  session.evaluateFen(childWindow.fen, {
+                    ...rankBudget,
+                    moves: childWindow.moves,
+                    searchMoves: childWindow.searchMoves,
+                    fresh: true,
+                  }),
+                );
+          const score = redPovScore(evaluation.cp, evaluation.mate, -1);
           lines.push({
             index: 0,
             move: uci,
-            ...redPovScore(evaluation.cp, evaluation.mate, -1),
-            depth: evaluation.depth,
-            pv: [uci, ...(evaluation.pv ?? [])],
+            cp: score.cp === 0 ? 0 : score.cp,
+            mate: score.mate,
+            depth: 0,
+            pv: [uci],
             bound: null,
           });
         }
@@ -911,6 +942,8 @@ function renderDecisionWindow(
   return kernelRootWindow(state, {
     fen: gradingFen(repWindow.anchor, mover),
     moves: repWindow.moves,
+    state,
+    decisionWindow: repWindow,
   });
 }
 
@@ -1181,7 +1214,8 @@ export async function analyzeJieqiDecisions(
 // fixed counterfactual hidden-role-multiset preservation.
 export const JIEQI_PRE_LEVEL8_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d6-public`;
 export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+nodes${JIEQI_ANALYSIS_NODES}+split1+rules1+hash256+threads1+d6-public`;
-export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+rank${ABJCHESS_DECISION_RANK_NODES}+d6-public`;
+export const ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+rank${ABJCHESS_DECISION_RANK_NODES}+d6-public`;
+export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `${ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID.replace(/\+d6-public$/, '')}+chasedefault+split1+rules1+d6-public`;
 /** Decisions ids of earlier algorithms that may still be served after every current id.
  *  Empty since d6 (2026-10-16): every earlier row was graded from the real deal, so its
  *  numbers (a capture's luck, a candidate valued on its true target) carry identities no
@@ -1235,7 +1269,7 @@ export function jieqiAnalysisProfileFor(engine: JieqiAnalysisEngine): JieqiAnaly
   return engine === 'ab-jchess' ? ABJCHESS_JIEQI_ANALYSIS_PROFILE : PIKAFISH_JIEQI_ANALYSIS_PROFILE;
 }
 
-/** NEW analysis uses the released Level 8 Pikafish. */
+/** New analysis uses AB-JChess when available, otherwise Pikafish. */
 export function currentJieqiAnalysisProfile(): JieqiAnalysisProfile {
   return jieqiAnalysisProfileFor(jieqiAnalysisEngine());
 }
@@ -1252,9 +1286,9 @@ export function jieqiStoredIdsFor(
   return [
     profile[key],
     ...JIEQI_ANALYSIS_PROFILES.filter((p) => p !== profile).map((p) => p[key]),
-    key === 'analysisEngineId'
-      ? JIEQI_PRE_LEVEL8_ANALYSIS_ENGINE_ID
-      : JIEQI_PRE_LEVEL8_DECISIONS_ENGINE_ID,
+    ...(key === 'analysisEngineId'
+      ? [ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID, JIEQI_PRE_LEVEL8_ANALYSIS_ENGINE_ID]
+      : [ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID, JIEQI_PRE_LEVEL8_DECISIONS_ENGINE_ID]),
     ...(key === 'decisionsEngineId' && previousAlgorithms ? JIEQI_LEGACY_DECISIONS_ENGINE_IDS : []),
   ];
 }

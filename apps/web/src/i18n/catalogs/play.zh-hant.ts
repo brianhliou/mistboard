@@ -852,7 +852,7 @@ export const ZH_HANT_PLAY = {
   'live.tk.none': '無',
   'live.tk.movesLeft': '還剩 {count} 步，之後按分數判定勝負',
   'live.tk.oneMoveLeft': '還剩 1 步，之後按分數判定勝負',
-  'live.tk.adminOnly': '{variant}仍在內部試玩，這個房間只對管理員帳號開放。',
+  'live.tk.adminOnly': '{variant}已暫停開放對弈，此房間暫時無法使用。',
   'lobby.panelTabComputer': '與電腦對弈',
   'lobby.panelTabPerson': '與真人對弈',
   'lobby.panelPlayAgain': '再來一局',

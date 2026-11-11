@@ -204,6 +204,7 @@ export const ZH_HANT_ACCOUNT = {
   'account.displayBoardHighlights': '棋盤高亮（上一著與將軍）',
   'account.displayPieceDestinations': '落子提示（合法著法與預走）',
   'account.displayBoardCoordinates': '棋盤座標（A-H，1-8）',
+  'account.displayConfirmMovesOnTouch': '在觸控螢幕上確認落子',
   'account.displayMoveListWhilePlaying': '對局中顯示著法列表',
   'account.displayZenMode': '禪模式',
   'account.displayBoardResizeHandle': '顯示棋盤縮放控點',

@@ -1,12 +1,40 @@
 # Production releases require a green candidate
 
-`npm run release:prod -- --push` publishes `release/<full commit SHA>` first.
+After assembling and committing a batch and passing its local gates, run hosted
+CI before the scheduled release:
+
+```sh
+npm run batch:ci -- /path/to/batch-worktree
+```
+
+The command requires a clean target worktree, pushes its HEAD to
+`release/<full commit SHA>`, and waits up to 35 minutes for a completed successful
+`ci.yml` push run on that exact branch and SHA. A failed run prints its failing
+jobs and exits nonzero. Missing, cancelled, skipped and timed-out runs cannot
+pass. This command never advances `main` or starts a production drain.
+After adding fixes or merging another branch, rerun the local gates and
+`batch:ci` on the new committed batch HEAD.
+
+`npm run release:prod -- --push` normally publishes `release/<full commit SHA>` first.
 Railway continues to deploy from `main`; publishing the candidate cannot deploy
 it. Hosted `ci.yml` runs on every candidate, including docs-only commits.
 
+The release reuses a completed green candidate run for the same HEAD, or for its
+direct parent when the complete trees differ only in `CHANGELOG.md` (the
+changelog commit added by the release). Reuse skips the candidate push and fresh
+CI wait; it still checks main, accounts for branches, and drains games before
+promotion. Any other tree change, a merge commit needing the parent exception,
+an unreadable comparison or a non-green run takes the normal fresh-candidate
+path. The release log records the tested revision and run URL separately from
+the promoted revision.
+
 Before a dry run or push can proceed, every local `agent/*` branch with commits
 outside both the release HEAD and local `origin/main` must be merged into the
-batch or explicitly parked. `agent/ship-*` branches are exempt. Update the local
+batch or explicitly parked. A branch whose entire tip is contained in another
+local `agent/ship-*` branch is automatically counted as parked and printed as
+`in batch agent/ship-...`, without changing local config. New commits after that
+batch was assembled still need accounting. `agent/ship-*` branches themselves
+are exempt. Update the local
 remote-tracking ref when assembling the batch. An unmarked branch stops either
 mode with exit 1 and its exact park command, before taking a lock or writing a
 changelog commit.
@@ -25,7 +53,8 @@ and before promotion, so work committed during a release also needs accounting.
 After publishing the candidate, the release starts a pending drain if live
 games need one. Games finish while hosted CI runs. The restart-now notification
 waits until CI is complete and successful for that exact SHA on that exact
-candidate branch. Cancelled, failed, skipped and timed-out runs cannot promote
+candidate branch, or the changelog exception above has verified an assembled
+batch. Cancelled, failed, skipped and timed-out runs cannot promote
 the candidate. `--skip-ci-wait` is forbidden with `--push`.
 
 Once CI passes, the script checks that `main` has not moved, rechecks live games
@@ -50,7 +79,7 @@ final drain step. An empty game pool remains token-free.
 Offline regression checks:
 
 ```sh
-node --test scripts/release-agent-branches.test.mjs scripts/release-green.test.mjs scripts/release-prod-structure.test.mjs scripts/release-drain.test.mjs scripts/release-lock.test.mjs
+node --test scripts/batch-ci.test.mjs scripts/release-agent-branches.test.mjs scripts/release-green.test.mjs scripts/release-prod-structure.test.mjs scripts/release-drain.test.mjs scripts/release-lock.test.mjs
 ```
 
 These execute the release orchestration with external effects replaced, test

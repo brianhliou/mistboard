@@ -382,6 +382,14 @@ export function abJchessNetPath(): string {
   return found;
 }
 
+function abJchessStartupOptions(): string[] {
+  // Site kernel uses jqe's chase rule since 2026-11-08; AB-JChess-20261031 defaults to skyrule.
+  return [
+    `setoption name EvalFile value ${abJchessNetPath()}`,
+    'setoption name ChaseRule value default',
+  ];
+}
+
 // jqe and its net: the engines release puts both in /app/bin. No dev fallback; jqe
 // builds on x86-64 only, so locally point MISTBOARD_JQE_PATH at a wrapper that runs the
 // released binary (docker --platform linux/amd64) and MISTBOARD_JQE_NET at the net.
@@ -464,7 +472,7 @@ export function jieqiEngineTierFor(engineId: string | undefined): JieqiEngineTie
 }
 
 // Presence check: true when the PikaJieQi binary resolves (live levels 1-8, the live
-// prewarm), and for new Level 8 review grading.
+// prewarm). Review grading prefers AB-JChess when its binary and net resolve.
 export function jieqiEngineBinaryAvailable(): boolean {
   try {
     pikaJieqiPath();
@@ -478,17 +486,17 @@ export function jieqiEngineBinaryAvailable(): boolean {
 export type JieqiAnalysisEngine = 'ab-jchess' | 'pikafish-jieqi';
 
 /**
- * New review grading uses the released Level 8 Pikafish, regardless of whether
- * AB-JChess is configured (#1000). Explicit AB sessions remain available to tools;
- * existing stored analyses retain their engine ids and win curves.
+ * AB-JChess grades new reviews when its binary and net resolve (prod): it is the
+ * strongest jieqi bot on the site, above Pikafish Level 8. PikaJieQi is the dev
+ * fallback. Stored analyses retain their own engine ids and win curves.
  */
 export function jieqiAnalysisEngine(): JieqiAnalysisEngine {
-  return 'pikafish-jieqi';
+  return abJchessAvailable() ? 'ab-jchess' : 'pikafish-jieqi';
 }
 
-/** Fail closed when Level 8 is missing, even if AB-JChess is installed. */
+/** Fail closed unless either grading engine resolves. */
 export function jieqiAnalysisEngineAvailable(): boolean {
-  return jieqiEngineBinaryAvailable();
+  return abJchessAvailable() || jieqiEngineBinaryAvailable();
 }
 
 // Per-process search resources for ANALYSIS. Single-threaded, because parallel search
@@ -523,9 +531,14 @@ export function jieqiAnalysisResourceOptions(
  *  net (AB-JChess always loads its own; PikaJieQi only when MISTBOARD_PIKAFISH_NET is
  *  set), then the fixed analysis Hash/Threads. */
 export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): string[] {
-  const net =
-    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
-  return ['uci', ...net, ...jieqiAnalysisResourceOptions(engine), 'ucinewgame', 'isready'];
+  const startupOptions = engine === 'ab-jchess' ? abJchessStartupOptions() : netOption();
+  return [
+    'uci',
+    ...startupOptions,
+    ...jieqiAnalysisResourceOptions(engine),
+    'ucinewgame',
+    'isready',
+  ];
 }
 
 /**
@@ -641,7 +654,7 @@ function jieqiAnalysisSessionSpec(engine: JieqiAnalysisEngine) {
  * pattern): binary spawn + option setup + net load happen once for the whole run, then
  * each position is a `position fen …` + `go` round-trip built by the SAME
  * jieqiGoCommand the per-spawn path uses, so eval semantics are unchanged. `engine`
- * picks the binary (jieqiAnalysisEngine() defaults to the released Level 8 Pikafish). The
+ * picks the binary (jieqiAnalysisEngine() prefers AB-JChess when it resolves). The
  * sweep and the decisions pass both run here: decisions used to spawn a process per
  * eval, several hundred per game, which for AB-JChess v0.2d meant reloading a 133 MB net
  * each time. Scores are side-to-move POV; the caller owns normalization, and the
@@ -854,13 +867,13 @@ export async function jieqiLiveEngineMove(
 /** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
  *  set here, once per process lifetime; AB-JChess and jqe load their nets here too. */
 export function buildJieqiLiveInitCommands(engine?: JieqiLiveEngine): string[] {
-  const net =
+  const startupOptions =
     engine === 'ab-jchess'
-      ? [`setoption name EvalFile value ${abJchessNetPath()}`]
+      ? abJchessStartupOptions()
       : engine === 'jqe'
         ? [`setoption name EvalFile value ${jqeNetPath()}`]
         : netOption();
-  return ['uci', ...net, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
+  return ['uci', ...startupOptions, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
 }
 
 /** The `go` line for a live move: a depth cap (if any) stops the search early for the

@@ -73,13 +73,19 @@ describe('static pages', () => {
       'Changelog',
       'FAQ',
       'Contact',
+      'Is Mistboard lagging?',
+      'Title verification',
       'Mistboard Patron',
       'Terms of Use',
       'Privacy',
       'Source code',
+      'Contribute',
       'Work with us',
       'Engine champions',
       'Developers',
+      'Game data',
+      'API',
+      'Thank you',
     ]);
     expect(
       [...root.querySelectorAll('.static-page-rail-group')].map((group) =>
@@ -93,11 +99,22 @@ describe('static pages', () => {
         '/changelog',
         '/faq',
         '/contact',
+        '/lag',
+        '/verify-title',
         '/patron',
         '/terms',
         '/privacy',
       ],
-      ['/source', '/creators', '/champions', '/developers'],
+      [
+        '/source',
+        '/contribute',
+        '/creators',
+        '/champions',
+        '/developers',
+        '/data',
+        '/api-docs',
+        '/thanks',
+      ],
     ]);
     // Game totals live only on /stats (linked from the rail above); About
     // neither fetches nor shows them.

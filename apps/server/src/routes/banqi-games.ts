@@ -9,12 +9,15 @@ import {
   getBanqiPlayerView,
   oppositeBanqiSeat,
 } from '@mistboard/game';
+import { currentAccountUser } from '../account-session.js';
 import { resolveBanqiAnalysis, resolveBanqiDecisions } from './../banqi-analysis.js';
 import { banqiEngineBinaryAvailable, banqiNetPath } from './../banqi-engine.js';
+import { createBanqiFinalRevealRoutes } from './../banqi-final-reveal.js';
 import { banqiRooms } from './../banqi-registration.js';
 import type { BanqiEvent } from './../banqi-runtime.js';
 import { banqiTenant } from './../banqi-tenant.js';
 import { banqiEnabled } from './../feature-flags.js';
+import { internalEngineTestFor, isInternalEngineTestLog } from '../internal-engine-test.js';
 import * as persistence from './../persistence.js';
 import type { BanqiLiveRoom } from './../server-ws-banqi.js';
 import {
@@ -124,6 +127,7 @@ export function createBanqiAnalysisRoutes(deps: GameAnalysisRouteDeps = {}) {
 }
 
 const handleAnalysisRoutes = createBanqiAnalysisRoutes();
+const handleFinalRevealRoutes = createBanqiFinalRevealRoutes();
 
 export async function tryHandle(
   _ctx: HttpApiContext,
@@ -132,6 +136,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleFinalRevealRoutes(request, response, pathname)) return true;
   if (await handleAnalysisRoutes(request, response, pathname)) return true;
 
   const postgameMatch = pathname.match(/^\/api\/banqi\/games\/([^/]+)$/);
@@ -145,7 +150,12 @@ export async function tryHandle(
   if (!requirePersistence(response)) return true;
 
   const roomId = decodeURIComponent(postgameMatch[1]!);
-  const payload = await banqiPostgameForApi(roomId);
+  const user = await currentAccountUser(request);
+  const payload = await banqiPostgameForApi(
+    roomId,
+    defaultPersistence,
+    user?.accountRole === 'admin' ? user.id : undefined,
+  );
   if (!payload) {
     writeJson(response, 404, { error: 'not_found' });
     return true;
@@ -161,6 +171,7 @@ async function loadFinishedBanqiGameInputs(
   roomId: string,
 ): Promise<{ deal: BanqiStoredSetup; moves: BanqiMove[] } | null> {
   const events = await persistence.loadRoomEvents<BanqiEvent>(roomId);
+  if (isInternalEngineTestLog(events ?? undefined)) return null;
   if (!events || !isTenantEventLog(banqiTenant, events, roomId)) return null;
   const projection = replayTenantEvents(banqiTenant, events);
   if (projection.state.status.type !== 'finished') return null;
@@ -184,12 +195,19 @@ async function loadFinishedBanqiGameInputs(
 export async function banqiPostgameForApi(
   roomId: string,
   deps: BanqiPostgamePersistence = defaultPersistence,
+  ownerUserId?: string,
 ) {
   const [game, events] = await Promise.all([
     deps.getGameSummary(roomId),
     deps.loadRoomEvents(roomId),
   ]);
   if (!game || game.variant !== BANQI_SPEC_ID) return null;
+  const internal = internalEngineTestFor(events ?? undefined);
+  if (
+    isInternalEngineTestLog(events ?? undefined) &&
+    (!internal || internal.ownerUserId !== ownerUserId)
+  )
+    return null;
   if (!events || !isTenantEventLog(banqiTenant, events, roomId)) return null;
 
   // Replay reconstructs the FULL-TRUTH state: the per-game deal lives in
@@ -211,13 +229,13 @@ export async function banqiPostgameForApi(
     // Truth view: every identity revealed (postgame-only; never on a live wire).
     // This is the final-position "here is the full deal" surface, used as a
     // fallback only — the replay below steps through the masked per-ply history.
-    view: banqiTruthView(projection.state),
+    view: internal ? getBanqiPlayerView(projection.state, 'red') : banqiTruthView(projection.state),
     // Two per-ply histories: 'truth' is the AS-PLAYED masked replay (unflipped
     // tiles render face-down, reproducing the game as it actually looked);
     // 'revealed' is the spoiler overlay (every face-down identity shown at every
     // ply) that the review's Reveal toggle swaps in. The watch surface only reads
     // the masked 'truth' history, so it never spoils the deal.
-    history: banqiPostgameHistory(events),
+    history: banqiPostgameHistory(events, !internal),
   };
 }
 
@@ -275,7 +293,7 @@ export function banqiLiveWatchPayloadFor(
   roomId: string,
   room: Pick<BanqiLiveRoom, 'id' | 'events' | 'projection'>,
 ): Record<string, unknown> | null {
-  if (room.id !== roomId) return null;
+  if (room.id !== roomId || isInternalEngineTestLog(room.events)) return null;
   const projection = room.projection;
   if (projection.state.status.type !== 'playing') return null;
   if (!isTenantEventLog(banqiTenant, room.events, roomId)) return null;

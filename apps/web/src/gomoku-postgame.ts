@@ -210,11 +210,12 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
           ? t('replay.requestComputerAnalysis')
           : t('replay.signInToRequestAnalysis'),
         requestHref: signedIn ? undefined : loginHrefForCurrentPage(),
-        fetchCached: async () => {
-          const cached = await fetchCachedGameAnalysis('gomoku', roomId);
+        fetchCached: async (options) => {
+          const cached = await fetchCachedGameAnalysis('gomoku', roomId, options);
           return cached ? checkedAnalysis(cached) : null;
         },
-        run: async () => checkedAnalysis(await requestGameAnalysis('gomoku', roomId)),
+        run: async (_progress, signal, onStatus) =>
+          checkedAnalysis(await requestGameAnalysis('gomoku', roomId, { signal, onStatus })),
       },
     });
     const onPageHide = (event: PageTransitionEvent): void => {

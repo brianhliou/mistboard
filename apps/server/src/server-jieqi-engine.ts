@@ -27,6 +27,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
 import {
@@ -358,7 +359,7 @@ export async function playJieqiEngineMoveIfReady(
       const parsed = pikafishUciToJieqiMove(uci);
       return parsed && isJieqiLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {

@@ -365,6 +365,14 @@ function ensureNavDismiss(): void {
       if (!menu.contains(target)) closeNavMenu(menu);
     }
   });
+  // Back/forward can restore the page from the browser cache as it was left:
+  // the clicked menu item still focused, so :focus-within keeps that panel
+  // open beside the one the mouse opens next. Start a restored page closed.
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    closeAll();
+    closeNavMenusExcept(null);
+  });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeAll();
@@ -670,6 +678,12 @@ function navMenu(
     toggle.classList.add('active');
   }
 
+  // One panel at a time follows the mouse: entering a menu closes the others,
+  // including one held open only by keyboard focus (:focus-within).
+  menu.addEventListener('pointerenter', (event) => {
+    if (event.pointerType === 'mouse') closeNavMenusExcept(menu);
+  });
+
   menu.append(toggle, panel);
   return menu;
 }
@@ -677,6 +691,19 @@ function navMenu(
 function closeNavMenu(menu: HTMLElement): void {
   menu.classList.remove('site-nav-menu-open');
   menu.querySelector('.site-nav-menu-toggle')?.setAttribute('aria-expanded', 'false');
+}
+
+// Closes every top-nav dropdown but `keep`, and drops focus left inside one,
+// since a focused item holds its panel open through :focus-within.
+function closeNavMenusExcept(keep: HTMLElement | null): void {
+  for (const menu of document.querySelectorAll<HTMLElement>('.site-nav-menu-open')) {
+    if (menu !== keep) closeNavMenu(menu);
+  }
+  const focused = document.activeElement;
+  if (focused instanceof HTMLElement) {
+    const holder = focused.closest<HTMLElement>('.site-nav-menu');
+    if (holder && holder !== keep) focused.blur();
+  }
 }
 
 function pathMatchesNavItem(path: string, href: string): boolean {

@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import vm from 'node:vm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { requireTestEngineNet } from '../../engine/test-net.js';
+import { PIKAFISH_NNUE_NET, pikafishEngineAsset } from './pikafish-ceval.js';
 
 beforeAll(() => requireTestEngineNet('pikafish'));
 
@@ -15,6 +16,7 @@ const WORKER_SOURCE = readFileSync(
   'utf8',
 );
 const ORIGIN = 'https://mistboard.test';
+const NET_NAME = 'xiangqi-c07e94a5c7cb.nnue';
 const NET = new Uint8Array([7, 1, 2, 3, 4, 5, 6, 9]);
 
 type Message = { type: string; [key: string]: unknown };
@@ -48,6 +50,7 @@ async function runInit(netUrl: string, caches: ReturnType<typeof fakeCacheStorag
   const messages: Message[] = [];
   const fetched: string[] = [];
   const written: Uint8Array[] = [];
+  const calls: string[] = [];
   type Listener = (event: { data: unknown }) => Promise<void>;
   const registered: { listener?: Listener } = {};
   const self: Record<string, unknown> = {
@@ -63,8 +66,15 @@ async function runInit(netUrl: string, caches: ReturnType<typeof fakeCacheStorag
     },
     importScripts: () => {
       self.Pikafish = async () => ({
-        FS: { writeFile: (_path: string, bytes: Uint8Array) => written.push(bytes) },
-        cwrap: () => () => {},
+        FS: {
+          writeFile: (path: string, bytes: Uint8Array) => {
+            calls.push(path);
+            written.push(bytes);
+          },
+        },
+        cwrap: (name: string) => () => {
+          calls.push(name);
+        },
       });
     },
   };
@@ -83,10 +93,28 @@ async function runInit(netUrl: string, caches: ReturnType<typeof fakeCacheStorag
   });
   // The cache write runs in the background after `ready`.
   await new Promise((resolve) => setTimeout(resolve, 0));
-  return { messages, fetched, written };
+  return { messages, fetched, written, calls };
 }
 
-const netUrl = (version: string) => `/engine/pikafish/pikafish.nnue?v=${version}`;
+const netUrl = (version: string) => `/engine/pikafish/${NET_NAME}?v=${version}`;
+
+describe('Pikafish CC0 assets (#988)', () => {
+  it('serves the complete CC0 patch identical to the native source patch', () => {
+    expect(
+      readFileSync(resolve(__dirname, '../../../public/engine/pikafish/pikafish-cc0-net.patch')),
+    ).toEqual(readFileSync(resolve(__dirname, '../../../../../pikafish-cc0-net.patch')));
+  });
+
+  it('pins the client, worker and patched default EvalFile to the same network', () => {
+    const dir = resolve(__dirname, '../../../public/engine/pikafish');
+    const pin = JSON.parse(readFileSync(resolve(dir, 'net.json'), 'utf8'));
+    const patch = readFileSync(resolve(dir, 'pikafish-cc0-net.patch'), 'utf8');
+    expect(pin.file).toBe(NET_NAME);
+    expect(PIKAFISH_NNUE_NET).toBe(NET_NAME);
+    expect(patch).toContain(`+#define EvalFileDefaultName "${NET_NAME}"`);
+    expect(pikafishEngineAsset(NET_NAME)).toBe(netUrl('6a59ee2-cc0-c07e94a5c7cb-emsdk3174'));
+  });
+});
 
 describe('pikafish worker net cache (#537)', () => {
   let caches: ReturnType<typeof fakeCacheStorage>;
@@ -97,6 +125,7 @@ describe('pikafish worker net cache (#537)', () => {
   it('fetches the net once and loads it from Cache Storage on the next visit', async () => {
     const first = await runInit(netUrl('a'), caches);
     expect(first.fetched).toEqual([netUrl('a')]);
+    expect(first.calls).toEqual([`/${NET_NAME}`, 'pikafish_initialize']);
     expect(first.messages.some((m) => m.type === 'net-progress')).toBe(true);
     expect(first.messages.at(-1)?.type).toBe('ready');
 
@@ -115,6 +144,14 @@ describe('pikafish worker net cache (#537)', () => {
     expect(bumped.fetched).toEqual([netUrl('b')]);
     const [store] = [...caches.stores.values()];
     expect([...store.keys()]).toEqual([`${ORIGIN}${netUrl('b')}`]);
+  });
+
+  it('evicts a previous network filename after caching the CC0 network', async () => {
+    const cache = await caches.open('mistboard-pikafish-net');
+    await cache.put('/engine/pikafish/obsolete-network.nnue?v=old', new Response(NET.slice()));
+    const run = await runInit(netUrl('cc0'), caches);
+    expect(run.fetched).toEqual([netUrl('cc0')]);
+    expect((await cache.keys()).map((key) => key.url)).toEqual([`${ORIGIN}${netUrl('cc0')}`]);
   });
 
   it('falls back to the network when Cache Storage is unavailable', async () => {

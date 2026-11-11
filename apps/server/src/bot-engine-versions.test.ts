@@ -2,6 +2,7 @@
 // Each value is checked against the file or constant that decides what prod runs.
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
@@ -17,11 +18,24 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (path: string): string => readFileSync(resolve(repoRoot, path), 'utf8');
 const pinnedSha = (refFile: string): string => read(refFile).split('\n')[0]!.trim();
 
-test('mainline Pikafish shows the pikafish.ref commit under its own release name', () => {
-  const sha = pinnedSha('pikafish.ref');
-  assert.ok(PIKAFISH_XIANGQI_VERSION.endsWith(`-${sha.slice(0, 8)}`), PIKAFISH_XIANGQI_VERSION);
-  assert.ok(read('pikafish.ref').includes(`Pikafish ${PIKAFISH_XIANGQI_VERSION}`));
-  assert.equal(botEngineVersion('pikafish-xiangqi-level-8'), sha.slice(0, 8));
+test('Pikafish identifies its upstream pin, applied patch and CC0 network', () => {
+  const sha = pinnedSha('pikafish.ref').slice(0, 8);
+  const patch = createHash('sha256')
+    .update(read('pikafish-cc0-net.patch'))
+    .digest('hex')
+    .slice(0, 12);
+  const net = /\nPIKAFISH_NET=(.+)\.nnue\n/.exec(read('scripts/engine-assets.sh'))?.[1];
+  assert.equal(net, 'xiangqi-c07e94a5c7cb');
+  const version = `${sha} · cc0-${patch} · ${net}`;
+  assert.equal(PIKAFISH_XIANGQI_VERSION, version);
+  for (const suffix of [
+    ...Array.from({ length: 8 }, (_, i) => `level-${i + 1}`),
+    'amateur',
+    'strong',
+    'strongest',
+  ]) {
+    assert.equal(botEngineVersion(`pikafish-xiangqi-${suffix}`), version);
+  }
 });
 
 test('pinned source builds show the short sha of their .ref', () => {

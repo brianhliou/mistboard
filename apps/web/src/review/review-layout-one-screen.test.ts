@@ -72,6 +72,35 @@ describe('oneScreenBoardWidth', () => {
     expect(oneScreenBoardWidth(phoneReview(), 333, 0.9)).toBe(Number.POSITIVE_INFINITY);
   });
 
+  it.each([
+    ['Banqi', 568 / 312],
+    ['Three Kingdoms Banqi', 586 / 330],
+    ['Flip Jungle', 1],
+    ['Xiangqi', 552 / 612],
+    ['Jungle', 336 / 432],
+  ])(
+    'uses the space above the dock to fit the %s board without shrinking on each refit',
+    (_, aspect) => {
+      stubPhone(true);
+      vi.stubGlobal('innerHeight', 844);
+      const stage = phoneReview();
+      const spacer = document.createElement('div');
+      spacer.className = 'review-phone-spacer';
+      stage.after(spacer);
+      // Docking adds 200px between the board and controls. That free space is
+      // available to the board, rather than part of the fixed control chrome.
+      spacer.getBoundingClientRect = () => box(451, 651);
+      const moves = stage.parentElement!.querySelector<HTMLElement>('.review-move-list')!;
+      moves.getBoundingClientRect = () => box(717, 763);
+      const expected = Math.floor((844 - 90 - 24 - 140 - 2) * aspect);
+      expect(oneScreenBoardWidth(stage, 333, aspect)).toBe(expected);
+      // A resized board takes 100px from the spacer; the dock stays put.
+      stage.getBoundingClientRect = () => box(90, 551);
+      spacer.getBoundingClientRect = () => box(551, 651);
+      expect(oneScreenBoardWidth(stage, 433, aspect)).toBe(expected);
+    },
+  );
+
   it('reserves the analysis toolbar and its page padding on a short phone', () => {
     stubPhone(true);
     vi.stubGlobal('innerHeight', 568);

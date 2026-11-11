@@ -46,6 +46,11 @@
     "build": "node scripts/build.mjs",
     "build:all": "npm run build --workspaces",
     "start": "node scripts/start.mjs",
+    "engine:banqi-host:test": "node --import tsx --test services/banqi-provider/host.test.mjs",
+    "engine:banqi-host:smoke": "node --import tsx scripts/banqi-host-smoke.mjs",
+    "engine:banqi-host:context": "node scripts/banqi-host-context.mjs",
+    "engine:banqi-provider-game": "node --import tsx scripts/banqi-provider-game.mjs",
+    "engine:banqi-provider": "node --import tsx scripts/banqi-provider.mjs",
     "engine:enqueue": "npm run engine:enqueue --workspace=@mistboard/server",
     "engine:enqueue-smoke": "npm run engine:enqueue-smoke --workspace=@mistboard/server",
     "engine:enqueue-tournament": "npm run engine:enqueue-tournament --workspace=@mistboard/server",
@@ -96,6 +101,7 @@
     "branch:park": "node scripts/branch-park.mjs park",
     "branch:unpark": "node scripts/branch-park.mjs unpark",
     "branch:parked": "node scripts/branch-park.mjs parked",
+    "batch:ci": "node scripts/batch-ci.mjs",
     "verify": "node scripts/verify.mjs",
     "ci:quick": "node scripts/ci-checks.mjs quick",
     "ci:preship": "node scripts/ci-checks.mjs preship",
@@ -184,6 +190,7 @@
     "@jridgewell/trace-mapping": "0.3.31",
     "@playwright/test": "^1.62.1",
     "concurrently": "10.0.4",
+    "esbuild": "0.28.1",
     "madge": "8.0.0",
     "opentype.js": "^2.0.0"
   }

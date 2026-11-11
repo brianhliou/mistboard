@@ -4,13 +4,20 @@ import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { createBanqiSetup, createBanqiStateFromSetup, getBanqiLegalMoves } from '@mistboard/game';
+import {
+  applyBanqiMove,
+  createBanqiSetup,
+  createBanqiStateFromSetup,
+  getBanqiLegalMoves,
+  isBanqiLegalMove,
+} from '@mistboard/game';
 import {
   BANQI_DEFAULT_ENGINE_ID,
   BANQI_ENGINE_VERSION,
   BANQI_PLAYABLE_ENGINES,
   BANQI_RANDOM_ENGINE_ID,
   banqiEngineAvailable,
+  banqiEngineDisplayName,
   banqiEngineTierFor,
   banqiLiveEngineMove,
   banqiNetPath,
@@ -134,6 +141,7 @@ test('Banqi offers eight levels, retaining the historical id at L7', () => {
   assert.equal(BANQI_ENGINE_VERSION, '0.3.0');
   for (const tier of BANQI_PLAYABLE_ENGINES) {
     assert.equal(tier.version, '0.3.0');
+    assert.equal(banqiEngineDisplayName(tier.id), `Misty Level ${tier.level}`);
     const registry = loadEngine(tier.id);
     assert.ok(registry.configHash.startsWith('misty-banqi-0.3.0-'));
     assert.equal(registry.playSignature, registry.configHash);
@@ -152,7 +160,9 @@ test('the historical Banqi id resolves to level 7 and unknown ids fail closed', 
   assert.equal(banqiEngineTierFor(BANQI_DEFAULT_ENGINE_ID), BANQI_PLAYABLE_ENGINES[6]);
   for (const id of ['misty-banqi-amateur', 'misty-banqi-strong', 'misty-banqi-strongest']) {
     assert.equal(banqiEngineTierFor(id), BANQI_PLAYABLE_ENGINES[6]);
+    assert.equal(banqiEngineDisplayName(id), 'Misty Level 7');
   }
+  assert.equal(banqiEngineDisplayName('unknown-engine'), 'unknown-engine');
   assert.equal(banqiEngineTierFor('misty-banqi-level-7'), null);
   assert.equal(banqiEngineTierFor('misty-banqi-level-9'), null);
   assert.equal(banqiEngineTierFor('misty-jungle-flip-level-4'), null);
@@ -503,4 +513,55 @@ test('the v0.3.0 binary and NNUE net serve all eight levels through the Banqi ad
       tier.id,
     );
   }
+});
+
+// 2026-11-10, bq_aff1e425: one guest move started two searches of the same
+// position. The first played; the guest replied; the second then returned its
+// answer to the old position while the bot was on move again. The turn check
+// passed, the kernel refused the stale move on every retry, and the bot
+// resigned. A search whose position has moved on must drop its answer.
+test('a search answered after the game moved on is dropped, never resigned', async () => {
+  const start = createBanqiStateFromSetup(
+    'bq_stale',
+    createBanqiSetup(() => 0.5),
+  );
+  const botMove = getBanqiLegalMoves(start)[0]!;
+  const afterBot = applyBanqiMove(start, botMove);
+  const guestReply = getBanqiLegalMoves(afterBot)[0]!;
+  const afterGuest = applyBanqiMove(afterBot, guestReply);
+  assert.equal(afterGuest.status.type, 'playing');
+  assert.equal(isBanqiLegalMove(afterGuest, botMove), false, 'the stale move is illegal now');
+
+  const room = {
+    id: 'bq_stale',
+    events: [] as Array<{ type: string; move?: unknown }>,
+    projection: {
+      state: start,
+      seats: { red: 'misty-banqi-level-4', black: 'human' },
+      clock: null,
+    },
+  };
+  const appended: Array<{ type: string }> = [];
+  let calls = 0;
+  await playBanqiEngineMoveIfReady(
+    {
+      appendEvent: async (_room: unknown, event: { type: string }) => {
+        appended.push(event);
+        return 1;
+      },
+      broadcastEventAppended: () => {},
+    } as never,
+    room as never,
+    async () => {
+      calls += 1;
+      // While this search ran, the other one played and the guest replied.
+      room.events.push({ type: 'move-played', move: botMove });
+      room.events.push({ type: 'move-played', move: guestReply });
+      room.projection.state = afterGuest;
+      const best = banqiMoveToEngineUci(botMove);
+      return { best, cp: 0, mate: null, depth: 2, pv: [best] };
+    },
+  );
+  assert.equal(calls, 1, 'no retry of a stale position');
+  assert.deepEqual(appended, [], 'nothing appended: no move, no resignation');
 });

@@ -38,6 +38,7 @@ if (!options.skipBuild) {
   console.log('skip: declaration builds disabled by --skip-build');
 }
 
+// Public CC0 network (about 11 MB), pinned by commit and sha256.
 run(['node', 'scripts/fetch-pikafish-net.mjs']);
 run(['node', 'apps/web/scripts/fetch-rapfi-net.mjs']);
 

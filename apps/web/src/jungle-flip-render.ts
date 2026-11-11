@@ -326,6 +326,24 @@ export function animateJungleFlipBoardMove(
   }
 }
 
+/**
+ * One replay step on a board that re-rendered for it: a step forward onto a
+ * flip turns the tile over as it did live; a step back over one just shows the
+ * back again; any other move glides. The replay, study, TV and review boards
+ * all step through here, the way the banqi ones do (#709).
+ */
+export function animateJungleFlipStep(
+  host: HTMLElement,
+  move: { from: JungleFlipSquare; to: JungleFlipSquare },
+  opts: { reverse?: boolean } = {},
+): void {
+  if (move.from === move.to) {
+    if (!opts.reverse) animateJungleFlipReveal(host, move.to);
+    return;
+  }
+  animateJungleFlipBoardMove(host, move, opts);
+}
+
 // The floating ghost piece shown while dragging a revealed animal (a framed token in a
 // one-cell SVG box), appended to <body> by installBoardDrag.
 export function jungleFlipPieceGhostSvg(entry: {

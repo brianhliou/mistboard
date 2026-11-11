@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { RATED_TIME_CONTROLS } from '@mistboard/game';
+import { GAME_SPECS, isPublicGameSpec, RATED_TIME_CONTROLS } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
+import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
+import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
+import { landingBotLadder } from './landing-bot-policy.js';
+import { enabledLandingVariantGameSpecs } from './landing-play.js';
 import {
   buildPlayPanel,
   orderPanelSpecs,
@@ -12,6 +17,7 @@ import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn, setResolvedStatsExcluded } from './signed-in-state.js';
+import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await Promise.resolve();
@@ -57,9 +63,11 @@ describe('homepage play panel', () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.useRealTimers();
     setRatedModeEnabled(false);
     setResolvedStatsExcluded(undefined);
+    setThreeKingdomsBanqiEngineOptions([]);
     window.history.replaceState(null, '', '/');
   });
 
@@ -99,14 +107,291 @@ describe('homepage play panel', () => {
     expect(stepValue(jieqi, 'level')).toBe('AB-JChess');
   });
 
-  it('keeps Fog Chess and Fog Xiangqi on a fixed Misty', () => {
-    const board = buildPlayPanel('en', { hydrate: false });
-    for (const spec of ['dark-chess', 'dark-xiangqi']) {
-      const bot = row(board, spec);
-      expect(stepValue(bot, 'level')).toBe('Misty');
-      expect(bot.querySelector('.pp-step-level.is-fixed')).not.toBeNull();
-      expect(bot.querySelector('.pp-step-sub')).toBeNull();
+  it('lists every launched public bot variant unless explicitly exempted', async () => {
+    vi.useFakeTimers();
+    for (const flag of [
+      'XIANGQI',
+      'JIEQI',
+      'BANQI',
+      'DARK_XIANGQI',
+      'JUNGLE',
+      'JUNGLE_FLIP',
+      'XIANGQI_MAHJONG',
+      'GOMOKU',
+      'THREE_KINGDOMS_BANQI',
+      'FFQ_BANQI',
+      'MAHJONG',
+    ]) {
+      vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     }
+    // Intentional homepage omissions: Fog games remain in the setup dialog.
+    // Keep this explicit; newly launched public PvE variants get no exemption.
+    const excluded = ['dark-xiangqi', 'dark-chess'];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        Response.json(
+          url === '/api/engines/playable'
+            ? { threeKingdomsBanqiEngines: THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES }
+            : {},
+        ),
+      ),
+    );
+    const board = buildPlayPanel('en');
+    document.body.append(board);
+    await flush();
+    // The same bot identities used by /api/bots, independent of the web
+    // picker's PvE predicate: a server bot omitted by the web must fail too.
+    // Engine-only bots (TK) have no public bot profile. Include the server's
+    // engine catalog too, or a profile omission hides the missing row again.
+    const botSpecs = new Set([
+      ...FIRST_PARTY_BOT_PROFILES.flatMap((bot) => Object.keys(bot.engines)),
+      ...knownEngineIds().map((id) => loadEngine(id).gameSpecId),
+    ]);
+    const expected = GAME_SPECS.filter(
+      (spec) =>
+        spec.runtimeStatus === 'live' &&
+        isPublicGameSpec(spec.id) &&
+        !excluded.includes(spec.id) &&
+        botSpecs.has(spec.id),
+    ).map((spec) => spec.id);
+    const bots = [...board.querySelectorAll<HTMLElement>('.pp-row-bot')].map(
+      (el) => el.dataset.gameSpec,
+    );
+    expect(bots).toEqual(orderPanelSpecs(expected));
+    // A generic fallback row is not coverage if its bot does not play this
+    // spec. In particular, TK cannot send Misty's public-profile botId.
+    for (const spec of expected) {
+      const ladder = landingBotLadder(spec, new Set(), new Set(knownEngineIds()));
+      expect(ladder.length, `${spec} needs a homepage bot ladder`).toBeGreaterThan(0);
+      for (const rung of ladder) {
+        if (rung.botId) {
+          expect(
+            FIRST_PARTY_BOT_PROFILES.find((bot) => bot.id === rung.botId)?.engines[spec],
+            `${spec}: ${rung.botId} must support the advertised variant`,
+          ).toBeDefined();
+        }
+        if (rung.engineId) {
+          expect(loadEngine(rung.engineId).gameSpecId).toBe(spec);
+        }
+      }
+    }
+    const people = [...board.querySelectorAll<HTMLElement>('.pp-row-person')].map(
+      (el) => el.dataset.gameSpec,
+    );
+    expect(people).toEqual(
+      orderPanelSpecs(
+        enabledLandingVariantGameSpecs('pvp', 'en')
+          .filter(
+            (spec) => isPublicGameSpec(spec.gameSpecId) && !excluded.includes(spec.gameSpecId),
+          )
+          .map((spec) => spec.gameSpecId),
+      ),
+    );
+    for (const spec of [
+      ...excluded,
+      ...GAME_SPECS.filter((spec) => !isPublicGameSpec(spec.id)).map((spec) => spec.id),
+    ]) {
+      expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+    }
+    expect(bots.at(-1)).toBe('gomoku');
+    expect(people.at(-1)).toBe('gomoku');
+    expect(bots.indexOf('three-kingdoms-banqi')).toBe(bots.indexOf('banqi') + 1);
+  });
+
+  it('omits flag-off variants and hidden playtests from both tabs', () => {
+    vi.stubEnv('DEV', false);
+    for (const flag of ['XIANGQI', 'GOMOKU', 'XIANGQI_MAHJONG', 'THREE_KINGDOMS_BANQI']) {
+      vi.stubEnv(`VITE_${flag}_ENABLED`, 'false');
+    }
+    vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+    const board = buildPlayPanel('en', { hydrate: false });
+    for (const spec of [
+      'xiangqi',
+      'gomoku',
+      'xiangqi-mahjong',
+      'three-kingdoms-banqi',
+      'ffq-banqi',
+    ]) {
+      expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+    }
+  });
+
+  it.each(['true', 'false'])('offers TK on both tabs only with its launch flag on (%s)', (flag) => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', flag);
+    setThreeKingdomsBanqiEngineOptions([
+      {
+        id: 'misty-three-kingdoms-banqi-level-1',
+        name: 'Misty Level 1',
+        familyName: 'Misty',
+        kind: 'container',
+      },
+    ]);
+    const board = buildPlayPanel('en', { hydrate: false });
+    for (const kind of ['bot', 'person']) {
+      expect(
+        board.querySelector(`.pp-row-${kind}[data-game-spec="three-kingdoms-banqi"]`) !== null,
+      ).toBe(flag === 'true');
+    }
+  });
+
+  it('hydrates the TK row after Banqi, defaults to Level 4, and starts the exact engine-only pick', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const fetchSpy = vi.fn(async (url: string, _init?: RequestInit) =>
+      Response.json(
+        url === '/api/engines/playable'
+          ? { threeKingdomsBanqiEngines: THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES }
+          : url === '/api/rooms'
+            ? { url: '/room/tk-level-5' }
+            : {},
+        { status: url === '/api/rooms' ? 201 : 200 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en');
+    document.body.append(board);
+    expect(board.querySelector('.pp-row-bot[data-game-spec="three-kingdoms-banqi"]')).toBeNull();
+    await vi.advanceTimersByTimeAsync(0);
+    const tk = row(board, 'three-kingdoms-banqi');
+    expect(tk.previousElementSibling?.getAttribute('data-game-spec')).toBe('banqi');
+    expect(tk.querySelector('.pp-step-main')?.textContent).toBe('Misty');
+    expect(stepValue(tk, 'level')).toBe('Level 4');
+    expect(stepValue(tk, 'clock')).toBe('10+5');
+    expect(panelBotPaces('three-kingdoms-banqi').ids).toEqual(['1m1', '3m2', '5m5', '10m5']);
+    clickNext(tk, 'level');
+    tk.querySelector<HTMLButtonElement>('.pp-act')!.click();
+    await flush();
+    const requests = () =>
+      fetchSpy.mock.calls
+        .filter(([url]) => url === '/api/rooms')
+        .map(([, init]) => JSON.parse(String(init?.body)));
+    expect(requests()).toEqual([
+      {
+        mode: 'pve',
+        gameSpecId: 'three-kingdoms-banqi',
+        engineId: 'misty-three-kingdoms-banqi-level-5',
+        timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+        preferredColor: 'random',
+        rated: false,
+      },
+    ]);
+    const returning = buildPlayPanel('en', { hydrate: false });
+    expect(stepValue(row(returning, 'three-kingdoms-banqi'), 'level')).toBe('Level 5');
+    expect(returning.querySelector('.pp-feature-again')?.textContent).toContain('Misty Level 5');
+    returning.querySelector<HTMLButtonElement>('.pp-feature-again .pp-act')!.click();
+    await flush();
+    expect(requests()[1]).toEqual(requests()[0]);
+    clickNext(row(returning, 'three-kingdoms-banqi'), 'level', 10);
+    expect(stepValue(row(returning, 'three-kingdoms-banqi'), 'level')).toBe('Level 8');
+    expect(row(returning, 'three-kingdoms-banqi').querySelector('.pp-step-tag')?.textContent).toBe(
+      'NNUE',
+    );
+  });
+
+  it.each(['no-net', 'no-binary', 'empty', 'failed'])(
+    'fails closed on the TK runtime roster (%s)',
+    async (availability) => {
+      vi.useFakeTimers();
+      vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (url !== '/api/engines/playable') return Response.json({});
+          if (availability === 'failed') throw new Error('offline');
+          const tiers = THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES;
+          return Response.json({
+            threeKingdomsBanqiEngines:
+              availability === 'no-net'
+                ? tiers.slice(0, 7)
+                : availability === 'no-binary'
+                  ? tiers.slice(0, 1)
+                  : [],
+          });
+        }),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      await vi.advanceTimersByTimeAsync(0);
+      if (availability === 'empty' || availability === 'failed') {
+        expect(
+          board.querySelector('.pp-row-bot[data-game-spec="three-kingdoms-banqi"]'),
+        ).toBeNull();
+      } else {
+        const tk = row(board, 'three-kingdoms-banqi');
+        clickNext(tk, 'level', 10);
+        expect(stepValue(tk, 'level')).toBe(availability === 'no-net' ? 'Level 7' : 'Level 1');
+        expect(tk.querySelector('.pp-step-tag')).toBeNull();
+      }
+    },
+  );
+
+  it.each(['dark-xiangqi', 'dark-chess'])(
+    'keeps %s off remembered and waiting-player hero rows',
+    async (spec) => {
+      vi.useFakeTimers();
+      localStorage.setItem(
+        'mistboard.playPanel.v1',
+        JSON.stringify({ last: { gameSpecId: spec, botId: 'misty', tc: '10m5' } }),
+      );
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: string) => {
+          if (input === '/api/lobby')
+            return Response.json({
+              requests: [
+                {
+                  gameSpecId: spec,
+                  rated: false,
+                  timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+                  createdAt: Date.now(),
+                },
+              ],
+            });
+          if (input === '/api/correspondence/seeks')
+            return Response.json({
+              seeks: [{ id: 'fog-seek', gameSpecId: spec, daysPerMove: 1, rated: false }],
+            });
+          return Response.json({ bots: [], engines: [], playing: 0, online: 0 });
+        }),
+      );
+      const board = buildPlayPanel('en');
+      document.body.append(board);
+      await flush();
+      expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
+      expect(board.querySelector('.pp-feature-again')).toBeNull();
+      expect(board.querySelector('.pp-feature-waiting')).toBeNull();
+      expect(board.querySelector<HTMLElement>('.pp-badge')?.hidden).toBe(true);
+      board.remove();
+      await vi.advanceTimersByTimeAsync(3_000);
+    },
+  );
+
+  it('walks Gomoku Levels 1-8, shows its icon and clock, and starts the chosen Rapfi level', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    const fetchSpy = vi.fn(async (_input: string, _init?: RequestInit) =>
+      Response.json({ url: '/room/gomoku' }, { status: 201 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    const gomoku = row(board, 'gomoku');
+    expect(gomoku.querySelector('[data-variant-marker-id="gomoku"]')).not.toBeNull();
+    expect(stepValue(gomoku, 'clock')).toBe('10+5');
+    for (let level = 1; level <= 8; level++) {
+      expect(stepValue(gomoku, 'level')).toBe(`Level ${level}`);
+      expect(gomoku.querySelector('.pp-step-main')?.textContent).toBe('Rapfi');
+      if (level < 8) clickNext(gomoku, 'level');
+    }
+    expect(
+      gomoku.querySelectorAll<HTMLButtonElement>('.pp-step-level .pp-step-btn')[1]?.disabled,
+    ).toBe(true);
+    gomoku.querySelector<HTMLButtonElement>('.pp-act')!.click();
+    await flush();
+    expect(JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))).toMatchObject({
+      botId: 'rapfi-level-8',
+      gameSpecId: 'gomoku',
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    });
   });
 
   it.each(['banqi', 'jungle-flip'])(
@@ -159,7 +444,7 @@ describe('homepage play panel', () => {
   });
 
   it.each(['banqi', 'jungle-flip'])(
-    'offers neural %s L8 only after the runtime roster confirms it',
+    'offers NNUE %s L8 only after the runtime roster confirms it',
     async (spec) => {
       vi.useFakeTimers();
       const engineId = `misty-${spec}-level-8`;
@@ -187,7 +472,7 @@ describe('homepage play panel', () => {
       expect(stepValue(row(board, spec), 'level')).toBe('Level 4');
       await vi.advanceTimersByTimeAsync(0);
       expect(stepValue(row(board, spec), 'level')).toBe('Level 8');
-      expect(row(board, spec).querySelector('.pp-step-tag')?.textContent).toBe('Neural net');
+      expect(row(board, spec).querySelector('.pp-step-tag')?.textContent).toBe('NNUE');
       board.remove();
       available = false;
       const noNet = buildPlayPanel('en');
@@ -233,6 +518,32 @@ describe('homepage play panel', () => {
     expect(landingCss).toMatch(/^\.landing-lobby-seed-thumb \{[^}]*width: 24px/m);
     expect(panelCss).toMatch(/^\.pp-board \.pp-thumb \{[^}]*width: var\(--pp-icon\)/m);
     expect(panelCss).not.toMatch(/^\.pp-thumb \{/m);
+  });
+
+  it('reserves ten natural-height rows on the shared card only in the three-column hero', () => {
+    const css = readFileSync('src/landing-play-panel.css', 'utf8');
+    const desktop = css.match(/@media \(min-width: 1241px\) \{([\s\S]*?)^\}/m)?.[1] ?? '';
+    expect(desktop).toMatch(/--pp-min-rows: 10;/);
+    expect(desktop).toMatch(/--pp-row-height: 40px;/);
+    expect(desktop).toMatch(/--pp-card-border-width: 1px;/);
+    expect(desktop).toMatch(
+      /\.landing-demo \.pp-card \{[^}]*min-height: calc\(\s*var\(--pp-min-rows\) \* var\(--pp-row-height\) \+ 2 \* var\(--pp-card-border-width\)\s*\);[^}]*border-width: var\(--pp-card-border-width\);/,
+    );
+    expect(desktop).toMatch(
+      /\.landing-demo \.pp-view-computer \.pp-row \{\s*flex: 0 0 auto;\s*min-height: var\(--pp-row-height\);/,
+    );
+    expect(css).toMatch(
+      /\.landing-demo \.pp-view-person \.pp-row-person \{\s*flex: 0 0 auto;\s*max-height: var\(--pp-row-height\);/,
+    );
+    // No minimum leaks into the two-column or stacked layouts.
+    expect(css.replace(desktop, '')).not.toContain('--pp-min-rows');
+
+    const board = buildPlayPanel('en', { hydrate: false });
+    const card = board.querySelector('.pp-card')!;
+    expect(card.contains(board.querySelector('.pp-view-computer'))).toBe(true);
+    expect(card.contains(board.querySelector('.pp-view-person'))).toBe(true);
+    board.querySelectorAll<HTMLButtonElement>('.pp-tab')[1]!.click();
+    expect(board.querySelector('.pp-card')).toBe(card);
   });
 
   // #543: .pp-name clips its overflow, so a line box shorter than the font's

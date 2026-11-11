@@ -1,0 +1,20 @@
+{
+  "dockerfilePath": "Dockerfile",
+  "startCommand": "node --max-old-space-size=256 /opt/banqi/worker.mjs",
+  "healthcheckPath": "/readyz",
+  "healthcheckTimeout": 120,
+  "restartPolicyType": "ON_FAILURE",
+  "restartPolicyMaxRetries": 3,
+  "regions": {
+    "us-west2": {
+      "numReplicas": 1
+    }
+  },
+  "limits": {
+    "vCPUs": 1,
+    "memoryGB": 1
+  },
+  "sleepApplication": false,
+  "overlapSeconds": 0,
+  "drainingSeconds": 12
+}

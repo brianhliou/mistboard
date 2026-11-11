@@ -283,7 +283,8 @@ export const ZH_HANS_CONTENT = {
   'source.pikafishWeightsLicense': '权重协议',
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及贡献者：皮卡鱼以下的各级象棋机器人和鸭子象棋机器人，GPL-3.0。',
-  'source.pikafishJieqi': '皮卡鱼的揭棋分支，含 Mistboard 的补丁：揭棋机器人和揭棋分析，GPL-3.0。',
+  'source.pikafishJieqi':
+    '皮卡鱼的揭棋分支，含 Mistboard 的补丁：揭棋分级机器人和浏览器分析，复盘由 AB-JChess 评分，GPL-3.0。',
   'source.chessPieceSets':
     '国际象棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），均采用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':

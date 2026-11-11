@@ -4,7 +4,11 @@
 // into the display numbers: a DECISION-quality glyph (graded) and a LUCK value (shown per move,
 // never graded). Mirrors review/banqi-decisions.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 import type { DecisionOverlay } from './analysis-marks.js';
 import { formatFlipVariantBestMove } from './move-advice-text.js';
 
@@ -122,10 +126,14 @@ function decisionsUrl(roomId: string): string {
 /** GET the already-cached decomposition, or null on a miss (204). Never triggers a compute. */
 export async function fetchCachedJungleFlipDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<JungleFlipDecisionSummary | null> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return summarizeDecisions(((await response.json()) as JungleFlipDecisionsResponse).decisions);
+  const cached = await fetchAnalysisJob<JungleFlipDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
+    errorPrefix: 'decisions_request_failed',
+  });
+  if (!cached) return null;
+  return summarizeDecisions(cached.decisions);
 }
 
 /** POST to compute the decomposition (account-gated on the server), then summarize it.
@@ -133,8 +141,10 @@ export async function fetchCachedJungleFlipDecisions(
  *  job (202) and this polls it to completion (see analysis-job-poll). */
 export async function requestJungleFlipDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<JungleFlipDecisionSummary> {
   const body = await postAnalysisJob<JungleFlipDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);

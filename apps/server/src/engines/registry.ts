@@ -62,7 +62,11 @@ import {
   XIANGQI_FSF_PLAYABLE_ENGINES,
   type XiangqiFsfEngineTier,
 } from '../xiangqi-fsf-engine.js';
-import { XIANGQI_ALL_ENGINE_TIERS, XIANGQI_ENGINE_VERSION } from '../xiangqi-pikafish-engine.js';
+import {
+  PIKAFISH_XIANGQI_VERSION,
+  XIANGQI_ALL_ENGINE_TIERS,
+  XIANGQI_ENGINE_VERSION,
+} from '../xiangqi-pikafish-engine.js';
 import {
   XIANGQI_RANDOM_ENGINE_ID,
   XIANGQI_RANDOM_ENGINE_VERSION,
@@ -1054,7 +1058,8 @@ const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
         version: XIANGQI_ENGINE_VERSION,
       },
       notes:
-        `Mainline Pikafish ${XIANGQI_ENGINE_VERSION} standard-Xiangqi profile; ` +
+        `Pikafish search, Fairy-Stockfish CC0 net (${PIKAFISH_XIANGQI_VERSION}); ` +
+        `standard-Xiangqi profile ${XIANGQI_ENGINE_VERSION}; ` +
         `${tier.nodes.toLocaleString('en-US')} node budget.`,
     } satisfies EngineDefinition,
   ]),

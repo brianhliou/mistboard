@@ -618,8 +618,9 @@ export function createTenantWsRuntime<
     }
     if (seq < 0) return; // A concurrent duplicate was rejected by the serialized writer.
     broadcastEventAppended(room, event, seq);
-    // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
-    scheduleEngineMove(room);
+    // No engine scheduling here: the event writer already scheduled it. By now
+    // its 0 ms timer has fired, so a second call started a second search of the
+    // same position on every human move.
   }
 
   async function expireActiveClock(

@@ -34,6 +34,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
 import { type EngineClock, liveBotMoveTime } from './engine-time-budget.js';
@@ -193,7 +194,7 @@ export async function playXiangqiEngineMoveIfReady(
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getStandardXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {

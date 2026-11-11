@@ -13,7 +13,10 @@ import {
 } from '@mistboard/game';
 import {
   ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID,
+  ABJCHESS_JIEQI_ANALYSIS_PROFILE,
   ABJCHESS_JIEQI_DECISIONS_ENGINE_ID,
+  ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID,
+  ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID,
   analyzeJieqiDecisions,
   currentJieqiAnalysisProfile,
   evaluateJieqiPosition,
@@ -32,10 +35,14 @@ import {
   jieqiAnalysisEngine,
   jieqiAnalysisEngineAvailable,
 } from './jieqi-engine.js';
-import { jieqiMoveToPikafishUci, pikafishUciToJieqiMove } from './jieqi-fen.js';
+import {
+  jieqiMoveToPikafishUci,
+  jieqiStateToPikafishFen,
+  pikafishUciToJieqiMove,
+} from './jieqi-fen.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 
-test('new review grading requests Level 8 Pikafish even with AB-JChess configured', () => {
+test('new review grading prefers AB-JChess and falls back only without its binary or net', () => {
   const keys = ['MISTBOARD_ABJCHESS_PATH', 'MISTBOARD_ABJCHESS_NET', 'MISTBOARD_PIKAFISH_PATH'];
   const prior = keys.map((key) => process.env[key]);
   try {
@@ -43,14 +50,23 @@ test('new review grading requests Level 8 Pikafish even with AB-JChess configure
     process.env.MISTBOARD_ABJCHESS_PATH = process.execPath;
     process.env.MISTBOARD_ABJCHESS_NET = process.execPath;
     process.env.MISTBOARD_PIKAFISH_PATH = process.execPath;
-    assert.equal(jieqiAnalysisEngine(), 'pikafish-jieqi');
-    assert.equal(currentJieqiAnalysisProfile(), PIKAFISH_JIEQI_ANALYSIS_PROFILE);
+    assert.equal(jieqiAnalysisEngine(), 'ab-jchess');
+    assert.match(ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID, /\+chasedefault/);
+    assert.match(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID, /\+chasedefault/);
+    assert.equal(ABJCHESS_JIEQI_ANALYSIS_PROFILE.winK, 0.00269);
+    assert.equal(currentJieqiAnalysisProfile(), ABJCHESS_JIEQI_ANALYSIS_PROFILE);
     assert.equal(jieqiAnalysisEngineAvailable(), true);
     assert.ok(
       buildJieqiAnalysisInitCommands('pikafish-jieqi').includes('setoption name Hash value 256'),
     );
     process.env.MISTBOARD_PIKAFISH_PATH = '/missing/level8-pikafish';
-    assert.equal(jieqiAnalysisEngineAvailable(), false, 'AB-JChess cannot substitute for Level 8');
+    assert.equal(jieqiAnalysisEngineAvailable(), true, 'AB-JChess does not need Pikafish');
+    process.env.MISTBOARD_ABJCHESS_NET = '/missing/ab-net';
+    assert.equal(jieqiAnalysisEngine(), 'pikafish-jieqi');
+    assert.equal(jieqiAnalysisEngineAvailable(), false);
+    process.env.MISTBOARD_PIKAFISH_PATH = process.execPath;
+    assert.equal(currentJieqiAnalysisProfile(), PIKAFISH_JIEQI_ANALYSIS_PROFILE);
+    assert.equal(jieqiAnalysisEngineAvailable(), true);
   } finally {
     keys.forEach((key, index) => {
       if (prior[index] === undefined) delete process.env[key];
@@ -72,36 +88,39 @@ test('analysis UCI restricts roots after its node budget and preserves public hi
 
 test('a reveal divides one node budget among distinct possible roles, with a 200K floor', async () => {
   const played = { from: 'b1', to: 'c3' } as const;
-  for (const total of [6_000_000, 600_000]) {
-    const requests: JieqiAnalysisRequest[] = [];
-    const profile = {
-      ...PIKAFISH_JIEQI_ANALYSIS_PROFILE,
-      decisionEval: { nodes: total, movetimeMs: 30_000 },
-    };
-    const deps = jieqiDecisionDepsFromSession(
-      {
-        evaluateFen: async (_fen, opts) => {
-          requests.push(opts);
-          return { cp: 25, mate: null, best: null, depth: 4 };
+  for (const base of [ABJCHESS_JIEQI_ANALYSIS_PROFILE, PIKAFISH_JIEQI_ANALYSIS_PROFILE]) {
+    for (const total of [6_000_000, base.decisionEval.nodes!]) {
+      const requests: JieqiAnalysisRequest[] = [];
+      const profile = {
+        ...base,
+        decisionCandidates: 'multipv' as const,
+        decisionEval: { nodes: total, movetimeMs: 30_000 },
+      };
+      const deps = jieqiDecisionDepsFromSession(
+        {
+          evaluateFen: async (_fen, opts) => {
+            requests.push(opts);
+            return { cp: 25, mate: null, best: null, depth: 4 };
+          },
+          multiPv: async () => [],
         },
-        multiPv: async () => [],
-      },
-      profile,
-    );
-    const [result] = await analyzeJieqiDecisions(
-      [played],
-      STANDARD_JIEQI_DEAL,
-      deps,
-      undefined,
-      profile,
-    );
-    assert.ok(result);
-    assert.equal(requests.length, 6, 'six distinct roles, not fifteen individual pieces');
-    assert.deepEqual(
-      requests.map((opts) => opts.nodes),
-      Array(6).fill(Math.max(200_000, total / 6)),
-    );
-    assert.ok(requests.every((opts) => opts.depth === undefined && opts.fresh));
+        profile,
+      );
+      const [result] = await analyzeJieqiDecisions(
+        [played],
+        STANDARD_JIEQI_DEAL,
+        deps,
+        undefined,
+        profile,
+      );
+      assert.ok(result);
+      assert.equal(requests.length, 6, 'six distinct roles, not fifteen individual pieces');
+      assert.deepEqual(
+        requests.map((opts) => opts.nodes),
+        Array(6).fill(Math.max(200_000, Math.floor(total / 6))),
+      );
+      assert.ok(requests.every((opts) => opts.depth === undefined && opts.fresh));
+    }
   }
 });
 
@@ -133,6 +152,8 @@ test('ranking plus every candidate pool stays within one Level 8 reveal budget',
     [{ from: 'b1', to: 'c3' }],
     STANDARD_JIEQI_DEAL,
     deps,
+    undefined,
+    PIKAFISH_JIEQI_ANALYSIS_PROFILE,
   );
   assert.equal(decision!.candidates!.length, 4);
   assert.ok(nodes <= JIEQI_ANALYSIS_NODES);
@@ -263,7 +284,11 @@ test('review roots distinguish a stamped perpetual-chase win from a legacy draw'
 
 test('new grading preserves historical AB-JChess and pre-Level-8 Pikafish cache rows', async () => {
   for (const [analysisId, decisionsId] of [
-    [ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID],
+    [ABJCHESS_PRE_CHASEDEFAULT_ANALYSIS_ENGINE_ID, ABJCHESS_PRE_CHASEDEFAULT_DECISIONS_ENGINE_ID],
+    [
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE.analysisEngineId,
+      PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionsEngineId,
+    ],
     [JIEQI_PRE_LEVEL8_ANALYSIS_ENGINE_ID, JIEQI_PRE_LEVEL8_DECISIONS_ENGINE_ID],
   ]) {
     const plies = [{ ply: 0, cp: 37, mate: null, best: null }];
@@ -301,14 +326,14 @@ test('new grading preserves historical AB-JChess and pre-Level-8 Pikafish cache 
       {
         get: async (_room, id) => (id === decisionsId ? decisions : null),
         save: async (_room, id) =>
-          assert.equal(id, currentJieqiAnalysisProfile().decisionsEngineId),
+          assert.equal(id, ABJCHESS_JIEQI_ANALYSIS_PROFILE.decisionsEngineId),
       },
       async () => [],
       true,
-      undefined,
+      ABJCHESS_JIEQI_ANALYSIS_PROFILE,
       { servePreviousAlgorithms: false },
     );
-    assert.equal(regraded!.engineId, currentJieqiAnalysisProfile().decisionsEngineId);
+    assert.equal(regraded!.engineId, ABJCHESS_JIEQI_ANALYSIS_PROFILE.decisionsEngineId);
     assert.deepEqual(regraded!.decisions, []);
   }
 });
@@ -322,4 +347,65 @@ test('a known draw cannot mask a scoreless search of a capture that could avoid 
   });
   assert.equal(result.cp, null);
   assert.equal(result.mate, null);
+});
+
+test('AB candidate ranking keeps the canonical clock, repetition, check and chase verdicts', async () => {
+  const neutral = ['e0f0', 'd9d8', 'f0e0', 'd8d9'];
+  const checks = ['e9f9', 'e7f7', 'f9e9', 'f7e7'];
+  const chases = ['a1b1', 'b3a5', 'b1a1', 'a5b3'];
+  const cases: Array<{ state: JieqiGameState; move: string; cp: number }> = [];
+  for (const stamped of [false, true]) {
+    const clock = position({ e0: 'K', d9: 'k' }, 'red', stamped);
+    clock.noCaptureClock = stamped ? 79 : 119;
+    cases.push({ state: clock, move: 'e0f0', cp: 0 });
+    cases.push({
+      state: play(position({ e0: 'K', d9: 'k' }, 'red', stamped), [
+        ...neutral,
+        ...neutral.slice(0, 3),
+      ]),
+      move: 'd8d9',
+      cp: 0,
+    });
+    cases.push({
+      state: play(position({ d0: 'K', e9: 'k', e7: 'R' }, 'black', stamped), [
+        ...checks,
+        ...checks.slice(0, 3),
+      ]),
+      move: 'f7e7',
+      cp: -30_000,
+    });
+    cases.push({
+      state: play(position({ d0: 'K', e9: 'k', a1: 'R', b3: 'n', h7: 'n' }, 'red', stamped), [
+        ...chases,
+        ...chases.slice(0, 3),
+      ]),
+      move: 'a5b3',
+      cp: stamped ? 30_000 : 0,
+    });
+  }
+  for (const { state, move, cp } of cases) {
+    const deps = jieqiDecisionDepsFromSession(
+      {
+        evaluateFen: async (_fen, opts) => {
+          assert.notEqual(opts.moves?.at(-1), move, 'kernel-terminal roots never reach the engine');
+          assert.ok(opts.searchMoves?.length, 'child roots are restricted by the kernel');
+          return { cp: 10, mate: null, best: null, depth: 3 };
+        },
+        multiPv: async () => assert.fail('AB ranks legal moves instead of MultiPV'),
+      },
+      ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+    );
+    const fen = jieqiStateToPikafishFen(state, { public: true });
+    const table = await deps.multiPv(fen, {
+      fen,
+      moves: [],
+      state,
+      decisionWindow: { anchor: state, moves: [] },
+    });
+    assert.equal(
+      table.find((line) => line.move === move)?.cp,
+      cp,
+      `${move} under ${state.adjudicationRule ?? 'legacy'} rules`,
+    );
+  }
 });

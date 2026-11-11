@@ -31,6 +31,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import {
@@ -188,7 +189,7 @@ export async function playFortressXiangqiEngineMoveIfReady(
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getFortressXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {

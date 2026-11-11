@@ -7,6 +7,7 @@
 // 2.5 minutes back.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -28,6 +29,79 @@ function recipeInputs() {
 function run(...args) {
   return execFileSync('sh', [script, ...args], { cwd: repoRoot, encoding: 'utf8' }).trim();
 }
+
+const pikafishPatch = 'pikafish-cc0-net.patch';
+const pikafishPatchSha = '790609318c020e3aeeb71a76ee7e987ee346d66005bb5eb26675544b2182d10b';
+
+test('the unchanged upstream Pikafish pin applies the supplied CC0 patch before compiling', () => {
+  assert.equal(
+    readFileSync(resolve(repoRoot, 'pikafish.ref'), 'utf8').split('\n')[0],
+    '6a59ee2f7b105bff64d9efc2692591107787e2b1',
+  );
+  const patch = readFileSync(resolve(repoRoot, pikafishPatch));
+  assert.equal(createHash('sha256').update(patch).digest('hex'), pikafishPatchSha);
+  const build = recipe.slice(recipe.indexOf('  ref=$(pin pikafish.ref)'));
+  const fetch = build.indexOf(
+    'fetch_source "$work/pikafish" https://github.com/official-pikafish/Pikafish.git "$ref"',
+  );
+  const apply = build.indexOf('git -C "$work/pikafish" apply "$ROOT/pikafish-cc0-net.patch"');
+  assert.ok(fetch >= 0 && apply > fetch);
+  assert.ok(build.indexOf('sf_make "$work/pikafish/src"') > apply);
+});
+
+test('the Pikafish licence is copied from the file upstream ships at the pin', () => {
+  // Pikafish 6a59ee2f has Copying.txt at its root and no COPYING; copying the
+  // wrong name failed the 2026-11-10 engines build at packaging, after compiling.
+  const build = recipe.slice(recipe.indexOf('  ref=$(pin pikafish.ref)'));
+  const step = build.slice(0, build.indexOf('pikafish_net "$bin"'));
+  assert.match(step, /cp "\$work\/pikafish\/Copying\.txt" "\$bin\/COPYING"/);
+  assert.doesNotMatch(step, /\$work\/pikafish\/COPYING/);
+});
+
+test('the CC0 patch is hashed and watched by the release workflow and all Railway services', () => {
+  assert.match(recipe, /^RECIPE_VERSION=4$/m);
+  assert.ok(recipeInputs().includes(pikafishPatch));
+  assert.ok(workflow.includes(`      - ${pikafishPatch}\n`));
+  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+    const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
+    assert.ok(build.watchPatterns.includes(`/${pikafishPatch}`), file);
+  }
+  const root = mkdtempSync(resolve(tmpdir(), 'pikafish-recipe-hash-'));
+  try {
+    mkdirSync(resolve(root, 'scripts'));
+    writeFileSync(resolve(root, 'scripts/engine-assets.sh'), recipe);
+    for (const input of recipeInputs()) {
+      mkdirSync(dirname(resolve(root, input)), { recursive: true });
+      writeFileSync(resolve(root, input), readFileSync(resolve(repoRoot, input)));
+    }
+    const hash = () => execFileSync('sh', [resolve(root, 'scripts/engine-assets.sh'), 'hash']);
+    const before = hash();
+    writeFileSync(resolve(root, pikafishPatch), 'changed patch fixture');
+    assert.notDeepEqual(hash(), before, 'changing only the patch must change the recipe hash');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Pikafish uses the public FSF xiangqi net pins and verifies its NNUE and fixed bench', () => {
+  const fsfNet = readFileSync(resolve(repoRoot, 'scripts/fetch-fsf-xiangqi-net.sh'), 'utf8');
+  const net = fsfNet.match(/^net=(.+)$/m)[1];
+  const url = fsfNet.match(/^url=(.+)$/m)[1].replace('$net', net);
+  const sha = fsfNet.match(/^net_sha=(.+)$/m)[1];
+  assert.equal(recipe.match(/^PIKAFISH_NET=(.+)$/m)?.[1], net);
+  const recipeUrl = recipe.match(/^PIKAFISH_NET_URL=(.+)$/m)?.[1];
+  assert.equal(recipeUrl?.replace('$PIKAFISH_NET', net), url);
+  assert.equal(recipe.match(/^PIKAFISH_NET_SHA256=(.+)$/m)?.[1], sha);
+  assert.match(recipe, /curl .*"\$bin\/\$PIKAFISH_NET" "\$PIKAFISH_NET_URL"/);
+  assert.match(recipe, /net_pinned "\$bin\/\$PIKAFISH_NET"/);
+  assert.doesNotMatch(recipe, /fetch-pikafish-net\.mjs|7d13d73569a9b571/);
+  assert.match(recipe, /NNUE evaluation using/);
+  assert.match(recipe, /grep -F "\$2"/);
+  assert.match(recipe, /\[ -n "\$loaded" \] \|\| die/);
+  assert.match(recipe, /net_search_ok "\$bin\/pikafish" "\$bin\/\$PIKAFISH_NET"/);
+  assert.match(recipe, /bench 16 1 13 default depth/);
+  assert.match(recipe, /\[ "\$nodes" = 1650882 \] \|\| die/);
+});
 
 test('every recipe input exists and each .ref pins a full commit sha on line 1', () => {
   for (const input of recipeInputs()) {
@@ -74,12 +148,10 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   const verify = railpack.indexOf(
     'sh /app/scripts/engine-assets.sh verify /app/bin /app/apps/server/src',
   );
-  const privateNet = railpack.indexOf(
-    'node /app/scripts/fetch-pikafish-net.mjs /app/bin/pikafish.nnue --require-token',
-  );
-  assert.ok(
-    privateNet > fetch && privateNet < verify,
-    'private Pikafish net is staged between fetch and verify',
+  assert.doesNotMatch(
+    railpack,
+    /fetch-pikafish-net\.mjs|pikafish\.nnue/,
+    'the image no longer stages the official Pikafish net; verify fetches the CC0 net',
   );
   const net = railpack.indexOf('sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin');
   assert.ok(fetch > 0, 'railpack.json must fetch the engine assets');
@@ -233,6 +305,7 @@ test('Rapfi native data and licences enter the tarball and checksum manifest', a
       writeFileSync(resolve(bin, name), 'fixture binary', { mode: 0o755 });
     }
     writeFileSync(resolve(bin, 'pikafish.nnue'), 'fixture net');
+    writeFileSync(resolve(bin, 'COPYING'), 'fixture Pikafish licence');
     writeFileSync(resolve(bin, 'it014.jqn'), 'fixture net');
     const out = resolve(bin, 'dist');
     run('package', bin, out);
@@ -582,7 +655,14 @@ test('the actual archive file list excludes Pikafish even when the net is staged
     mkdirSync(bin);
     mkdirSync(tools);
     const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
-    for (const file of [...binaries, 'it014.jqn', 'pikafish.nnue', 'fixture-rapfi.bin']) {
+    for (const file of [
+      ...binaries,
+      'it014.jqn',
+      'pikafish.nnue',
+      'xiangqi-c07e94a5c7cb.nnue',
+      'fixture-rapfi.bin',
+      'COPYING',
+    ]) {
       writeFileSync(resolve(bin, file), 'fixture');
     }
     // Only stub Rapfi's unrelated checksum gate and file inventory. The real
@@ -607,20 +687,48 @@ if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
     )
       .trim()
       .split('\n');
-    assert.deepEqual(files, [...binaries, 'it014.jqn', 'fixture-rapfi.bin']);
+    assert.deepEqual(files, [
+      ...binaries,
+      'it014.jqn',
+      'fixture-rapfi.bin',
+      'COPYING',
+      pikafishPatch,
+    ]);
     assert.ok(!files.includes('pikafish.nnue'));
+    assert.ok(
+      !files.includes('xiangqi-c07e94a5c7cb.nnue'),
+      'fetch the public net; never rehost it',
+    );
+    const manifest = readFileSync(resolve(out, 'MANIFEST'), 'utf8');
+    assert.ok(manifest.includes(`${pikafishPatch}=sha256:${pikafishPatchSha}\n`));
+    assert.ok(
+      manifest.includes(
+        'pikafish-net=sha256:c07e94a5c7cbeae443ed79a8fa412875d833a7f8e04333815e39729c59d52e11\n',
+      ),
+    );
+    assert.equal(
+      execFileSync(
+        'tar',
+        ['-xOzf', resolve(out, 'engines-x86-64-sse41-popcnt.tar.gz'), pikafishPatch],
+        {
+          encoding: 'utf8',
+        },
+      ),
+      readFileSync(resolve(repoRoot, pikafishPatch), 'utf8'),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test('CI supplies the private token to native, browser build and web test consumers', () => {
+test('CI caches the CC0 browser net without credentials; private native nets retain their token', () => {
   const ci = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const secret = `MISTBOARD_PRIVATE_ASSETS_TOKEN: \${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}`;
   assert.ok(workflow.includes(secret));
   for (const job of ['build', 'unit-web']) {
     const block = ci.split(/(?=^ {2}[\w-]+:\n)/m).find((part) => part.startsWith(`  ${job}:\n`));
-    assert.ok(block.includes(secret), `${job} must pass the repo secret to the fetch consumer`);
+    assert.ok(!block.includes(secret), `${job} uses the public CC0 net without a repo secret`);
+    assert.ok(block.includes('apps/web/public/engine/pikafish/xiangqi-c07e94a5c7cb.nnue'));
     assert.match(block, /key: engine-nets-.*hashFiles.*net\.json/);
   }
 });

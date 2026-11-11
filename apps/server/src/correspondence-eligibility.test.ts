@@ -19,6 +19,7 @@ import {
   isCorrespondenceRatedSpec,
   isOfficialTimeControl,
   MAHJONG_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
@@ -111,7 +112,10 @@ test('every rated-correspondence spec has a seek factory that honours `rated`', 
     const ratedSpecs = [...CORRESPONDENCE_ELIGIBLE_SPECS].filter(isCorrespondenceRatedSpec);
     assert.deepEqual(
       [...ratedSpecs].sort(),
-      [...CORRESPONDENCE_ELIGIBLE_SPECS].filter((id) => id !== GOMOKU_SPEC_ID).sort(),
+      // Three Kingdoms Banqi has no rating pool: casual only, like Gomoku.
+      [...CORRESPONDENCE_ELIGIBLE_SPECS]
+        .filter((id) => id !== GOMOKU_SPEC_ID && id !== THREE_KINGDOMS_BANQI_SPEC_ID)
+        .sort(),
     );
     for (const specId of ratedSpecs) {
       const tenant = correspondenceTenantForSpecId(specId);

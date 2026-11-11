@@ -212,6 +212,7 @@ export function thumbOf(board: OgBoard): ProfileBoardThumb {
         pieces: [
           ...board.pieces.map((p): ProfileBoardPiece => [p.file, p.rank, p.color]),
           ...board.extras.map((extra): ProfileBoardPiece => {
+            if (extra.kind === 'hidden-tile') return [extra.file, extra.rank, 'hidden'];
             if (extra.kind === 'duck') return [extra.file, extra.rank, 'duck'];
             if (extra.kind === 'face-down') return [extra.file, extra.rank, `${extra.ink}-down`];
             return [extra.file, extra.rank, extra.ink];

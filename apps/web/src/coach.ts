@@ -5,6 +5,7 @@
 // The editor lives at /coach/edit (coach-edit.ts).
 
 import './coach.css';
+import { buildCreatorInvitation } from './creator-invitation.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildTitleBadge } from './player-titles.js';
@@ -51,7 +52,10 @@ async function renderDirectory(shell: HTMLElement, locale: Locale): Promise<void
   intro.className = 'coach-intro';
   intro.textContent = t('coach.intro', {}, locale);
 
-  shell.append(heading, intro);
+  const directory = document.createElement('div');
+  directory.className = 'coach-directory';
+  shell.append(heading, intro, directory, buildCreatorInvitation('coach', locale));
+  void hydrateCoachCta(intro, locale);
 
   let coaches: CoachListing[];
   try {
@@ -63,7 +67,7 @@ async function renderDirectory(shell: HTMLElement, locale: Locale): Promise<void
     const failed = document.createElement('p');
     failed.className = 'coach-status';
     failed.textContent = t('coach.loadFailed', {}, locale);
-    shell.append(failed);
+    directory.append(failed);
     return;
   }
 
@@ -71,7 +75,7 @@ async function renderDirectory(shell: HTMLElement, locale: Locale): Promise<void
     const empty = document.createElement('p');
     empty.className = 'coach-empty';
     empty.textContent = t('coach.empty', {}, locale);
-    shell.append(empty);
+    directory.append(empty);
   } else {
     const grid = document.createElement('ul');
     grid.className = 'coach-grid';
@@ -80,14 +84,8 @@ async function renderDirectory(shell: HTMLElement, locale: Locale): Promise<void
       item.append(buildCoachCard(coach, locale));
       grid.append(item);
     }
-    shell.append(grid);
+    directory.append(grid);
   }
-
-  // Directory CTA. Titled players get the become-a-coach link; everyone else
-  // (untitled or anonymous) is funneled to title verification, since a verified
-  // title is the gate to being listed here. Fail-soft: an unreachable API hides
-  // the affordance entirely.
-  void hydrateCoachCta(intro, locale);
 }
 
 function buildCoachCard(coach: CoachListing, locale: Locale): HTMLElement {

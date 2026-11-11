@@ -1,5 +1,6 @@
 import './spectator-chat.css';
 import { t } from '../i18n/catalog.js';
+import { isSignedIn, signedInResolvedEvent } from '../signed-in-state.js';
 import { attachChatResize } from './chat-resize.js';
 
 type ChatLine = { id: string; handle: string | null; text: string; createdAt: string };
@@ -69,10 +70,8 @@ type GameChatOptions = {
   /** Chat API base for this room. Defaults to the per-game endpoint. */
   apiUrl?: string;
   /**
-   * Where to land when the primary room refuses this viewer (401/403). The live
-   * room asks for the players' private room first; a spectator (or a signed-out
-   * player) is turned away by the seat gate and reads the spectator room
-   * instead. Falling back is a demotion, so quick chat goes with it.
+   * Public room for guests and viewers refused by the player seat gate (403).
+   * Falling back is a demotion, so quick chat goes with it.
    */
   fallback?: { apiUrl: string; title: string };
   /** Live room: hold the first probe until the socket's hello names the seat. */
@@ -87,6 +86,8 @@ type GameChatOptions = {
  * probes the gated room ahead of it; `promoteAttemptsLeft` is the re-probe budget.
  */
 type ChatSession = {
+  active: boolean;
+  stop: () => void;
   apiUrl: string;
   live: boolean;
   demoted: boolean;
@@ -123,13 +124,7 @@ export function buildLiveRoomChat(roomId: string): HTMLElement {
     apiUrl: playerChatApiUrl(roomId),
     fallback: { apiUrl: gameChatApiUrl(roomId), title: t('review.spectatorRoom') },
     seatOf: roomId,
-    // No drag separator in the live room (Brian, 2026-10-02: "a handle that does
-    // nothing"). The room's rail is capped at the board's height and the chat
-    // flex-fills it (live-review.css), and that rule outranks the manual-height
-    // class, so a drag changed nothing. Even working, it could only shrink the
-    // chat off the board line the room aligns it to. Review and study rails
-    // keep it: there a drag does resize the room.
-    resizable: false,
+    resizable: true,
   });
 }
 
@@ -206,17 +201,58 @@ function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
   panel.append(header, feed, footer);
   if (options.resizable) attachChatResize(panel);
 
-  const session: ChatSession = {
-    apiUrl: options.apiUrl ?? gameChatApiUrl(roomId),
-    live: options.live,
-    demoted: false,
-    settled: false,
-    promoteAttemptsLeft: options.fallback ? PROMOTE_ATTEMPTS : 0,
-  };
   const known = new Set<string>();
   const ui: ChatPanelUi = { tab, feed, footer };
-  void hydrateGameChat(session, ui, known, options);
-  if (import.meta.env.MODE !== 'test') startPolling(session, panel, ui, known, options);
+  let session: ChatSession;
+  let signedIn = isSignedIn();
+  const restart = () => {
+    session?.stop();
+    let stopPolling: (() => void) | undefined;
+    const next: ChatSession = {
+      active: true,
+      stop: () => {
+        next.active = false;
+        stopPolling?.();
+      },
+      apiUrl: options.apiUrl ?? gameChatApiUrl(roomId),
+      live: options.live,
+      demoted: false,
+      settled: false,
+      promoteAttemptsLeft: options.fallback ? PROMOTE_ATTEMPTS : 0,
+    };
+    session = next;
+    feed.replaceChildren();
+    known.clear();
+    tab.textContent = options.title;
+    renderStatus(footer, t('live.chatLoading'));
+    void hydrateGameChat(next, ui, known, options).then(() => {
+      if (next.active) stopPolling = startPolling(next, panel, ui, known, options);
+    });
+  };
+  restart();
+
+  if (options.live) {
+    const onAuth = () => {
+      if (signedIn === isSignedIn()) return;
+      signedIn = isSignedIn();
+      restart();
+    };
+    window.addEventListener(signedInResolvedEvent, onAuth);
+    // Live panels listen for auth even when a 401 has stopped their timer.
+    // Release that listener and invalidate pending reads when the route leaves.
+    const observer = new MutationObserver((records) => {
+      if (panel.isConnected) return;
+      if (
+        !records.some((record) => [...record.removedNodes].some((node) => node.contains(panel)))
+      ) {
+        return;
+      }
+      session.stop();
+      window.removeEventListener(signedInResolvedEvent, onAuth);
+      observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 
   return panel;
 }
@@ -239,7 +275,10 @@ async function hydrateGameChat(
   known: Set<string>,
   options: GameChatOptions,
 ): Promise<void> {
-  const seated = options.seatOf ? await awaitLiveRoomSeat(options.seatOf, SEAT_WAIT_MS) : null;
+  const signedIn = isSignedIn();
+  const seated =
+    options.seatOf && signedIn ? await awaitLiveRoomSeat(options.seatOf, SEAT_WAIT_MS) : null;
+  if (!session.active) return;
   const demote = (fallback: { apiUrl: string; title: string }) => {
     session.apiUrl = fallback.apiUrl;
     session.live = false;
@@ -247,25 +286,38 @@ async function hydrateGameChat(
     ui.tab.textContent = fallback.title;
   };
   let result: Awaited<ReturnType<typeof fetchGameChat>>;
-  if (seated === false && options.fallback) {
+  if ((!signedIn || seated === false) && options.fallback) {
     // The hello says spectator: read the spectator room and never knock on
     // the players' door (a refused probe is a 403 in every viewer's console).
     demote(options.fallback);
     session.promoteAttemptsLeft = 0;
-    result = await fetchGameChat(session.apiUrl);
+    result = await fetchSessionChat(session, session.apiUrl, ui);
   } else {
-    result = await fetchGameChat(session.apiUrl);
-    if (!result.state && options.fallback && (result.status === 401 || result.status === 403)) {
+    result = await fetchSessionChat(session, session.apiUrl, ui);
+    if (session.active && !result.state && options.fallback && result.status === 403) {
       demote(options.fallback);
-      result = await fetchGameChat(session.apiUrl);
+      result = await fetchSessionChat(session, session.apiUrl, ui);
     }
   }
+  if (!session.active) return;
   session.settled = true;
   if (!result.state || !Array.isArray(result.state.lines)) {
     renderStatus(ui.footer, t('live.chatUnavailable'));
     return;
   }
   renderRoom(session, ui, known, result.state);
+}
+
+/** Invalidate a refused or superseded read before it can render or retry. */
+async function fetchSessionChat(session: ChatSession, apiUrl: string, ui: ChatPanelUi) {
+  if (!session.active) return { state: null, status: 0 };
+  const result = await fetchGameChat(apiUrl);
+  if (!session.active) return { state: null, status: 0 };
+  if (result.status === 401) {
+    session.stop();
+    renderStatus(ui.footer, t('live.chatUnavailable'));
+  }
+  return result;
 }
 
 /** Replace the panel's contents with a room's state (first load, or a promotion). */
@@ -287,48 +339,57 @@ function startPolling(
   ui: ChatPanelUi,
   known: Set<string>,
   options: GameChatOptions,
-): void {
+): () => void {
   // The live room waits for the hello (announceLiveRoomSeat) before its first
   // probe, so a player no longer beats their own seat token into the database.
   // When no hello arrives in time the panel probes anyway and may demote; then
   // it re-probes for a bounded window and promotes once the seat lands, rather
   // than stranding a player in the spectator room until they reload. A viewer
   // the hello names a spectator has no budget and polls one room.
+  let polling = false;
   const timer = window.setInterval(async () => {
     if (!panel.isConnected) {
-      window.clearInterval(timer);
+      session.stop();
       return;
     }
     if (document.visibilityState !== 'visible') return;
-    if (!session.settled) return;
-    if (session.demoted && session.promoteAttemptsLeft > 0 && options.apiUrl) {
-      session.promoteAttemptsLeft -= 1;
-      const promoted = await fetchGameChat(options.apiUrl);
-      if (promoted.state) {
-        session.apiUrl = options.apiUrl;
-        session.live = options.live;
-        session.demoted = false;
-        ui.tab.textContent = options.title;
-        renderRoom(session, ui, known, promoted.state);
-        return;
+    if (!session.active || !session.settled || polling) return;
+    polling = true;
+    try {
+      if (session.demoted && session.promoteAttemptsLeft > 0 && options.apiUrl) {
+        session.promoteAttemptsLeft -= 1;
+        const promoted = await fetchSessionChat(session, options.apiUrl, ui);
+        if (!session.active) return;
+        if (promoted.state) {
+          session.apiUrl = options.apiUrl;
+          session.live = options.live;
+          session.demoted = false;
+          ui.tab.textContent = options.title;
+          renderRoom(session, ui, known, promoted.state);
+          return;
+        }
       }
-    }
-    const { state } = await fetchGameChat(session.apiUrl);
-    if (!state) return;
-    const incoming = state.lines.filter((line) => !known.has(line.id)).slice(-VISIBLE_LINES);
-    appendLines(ui.feed, incoming, known, state, session.apiUrl);
-    // The phone room and the phone game review keep the chat in a closed sheet
-    // and mark ☰ unread. Lines already shown at load are in `known`, so only a
-    // poll's new lines reach here.
-    if (incoming.length > 0) {
-      panel.dispatchEvent(
-        new CustomEvent<ChatLinesDetail>(CHAT_LINES_EVENT, {
-          bubbles: true,
-          detail: chatLinesDetail(incoming, state.viewerHandle),
-        }),
-      );
+      const { state } = await fetchSessionChat(session, session.apiUrl, ui);
+      if (!session.active) return;
+      if (!state) return;
+      const incoming = state.lines.filter((line) => !known.has(line.id)).slice(-VISIBLE_LINES);
+      appendLines(ui.feed, incoming, known, state, session.apiUrl);
+      // The phone room and the phone game review keep the chat in a closed sheet
+      // and mark ☰ unread. Lines already shown at load are in `known`, so only a
+      // poll's new lines reach here.
+      if (incoming.length > 0) {
+        panel.dispatchEvent(
+          new CustomEvent<ChatLinesDetail>(CHAT_LINES_EVENT, {
+            bubbles: true,
+            detail: chatLinesDetail(incoming, state.viewerHandle),
+          }),
+        );
+      }
+    } finally {
+      polling = false;
     }
   }, options.pollMs);
+  return () => window.clearInterval(timer);
 }
 
 function renderFooter(

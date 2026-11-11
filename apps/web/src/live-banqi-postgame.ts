@@ -1,12 +1,26 @@
 import {
   BANQI_SPEC_ID,
-  type BanqiColor,
-  type BanqiGameStatus,
   type BanqiMove,
   type BanqiPlayerView,
   banqiRulesFromView,
 } from '@mistboard/game';
+import {
+  type BanqiPostgameResponse,
+  type BanqiPostgameLoadResult as LoadResult,
+  loadBanqiPostgame,
+} from './banqi-postgame-data.js';
 import { variantDisplayLabel } from './game-display.js';
+
+export {
+  type BanqiPostgameResponse,
+  type BanqiPostgameViewKey,
+  banqiPostgameApiUrl,
+  loadBanqiPostgame,
+  postgameReplayMaxPly,
+  postgameViewAtPly,
+  postgameViewEntries,
+} from './banqi-postgame-data.js';
+
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import './landing.css';
@@ -40,53 +54,6 @@ import { buildNav } from './site-shell.js';
 // flipping a tile in a line reveals what the fixed deal placed there. The server
 // per-ply snapshots are used only by the watch adapter (postgameViewAtPly below).
 
-export type BanqiPostgameViewKey = BanqiColor | 'truth' | 'revealed';
-
-export type BanqiPostgameResponse = {
-  game: {
-    roomId: string;
-    variant: 'banqi';
-    mode: string;
-    result: string;
-    termination: string;
-    plyCount: number;
-    startedAt: string;
-    endedAt: string;
-    rated: boolean;
-    visibility: string;
-    initialMs: number | null;
-    incrementMs: number | null;
-    players?: Array<{
-      color: string;
-      name: string;
-      rating: number | null;
-      kind: 'account' | 'guest' | 'engine';
-    }>;
-  };
-  state: {
-    status: BanqiGameStatus;
-    moveNumber: number;
-    clock?: unknown;
-    timeControl?: { initialMs: number; incrementMs: number };
-  };
-  timeline: Array<{
-    type: string;
-    at: number;
-    color?: BanqiColor;
-    move?: BanqiMove;
-    ply?: number;
-    winner?: BanqiColor;
-    reason?: string;
-  }>;
-  view: BanqiPlayerView;
-  views?: Partial<Record<BanqiPostgameViewKey, BanqiPlayerView>>;
-  history?: Partial<Record<BanqiPostgameViewKey, Array<{ ply: number; view: BanqiPlayerView }>>>;
-};
-
-type LoadResult =
-  | { ok: true; postgame: BanqiPostgameResponse }
-  | { ok: false; status: number; error: string };
-
 export function mountBanqiPostgame(root: HTMLElement, roomId: string): void {
   root.classList.add('landing-page', 'game-route');
   installBanqiBoardStyles();
@@ -100,9 +67,9 @@ export function mountBanqiPostgame(root: HTMLElement, roomId: string): void {
     return;
   }
   void loadBanqiPostgame(roomId)
-    .then((result) => {
+    .then(async (result) => {
       if (result.ok) {
-        renderPostgame(root, result.postgame);
+        await renderPostgame(root, result.postgame);
         return;
       }
       renderError(root, errorTitle(result.status), errorBody(result));
@@ -112,28 +79,7 @@ export function mountBanqiPostgame(root: HTMLElement, roomId: string): void {
     });
 }
 
-export async function loadBanqiPostgame(roomId: string): Promise<LoadResult> {
-  const response = await fetch(banqiPostgameApiUrl(roomId));
-  if (!response.ok) {
-    const body = await safeJson(response);
-    return {
-      ok: false,
-      status: response.status,
-      error: typeof body?.error === 'string' ? body.error : 'request_failed',
-    };
-  }
-  return {
-    ok: true,
-    postgame: (await response.json()) as BanqiPostgameResponse,
-  };
-}
-
-export function banqiPostgameApiUrl(roomId: string): string {
-  const url = new URL(`/api/banqi/games/${encodeURIComponent(roomId)}`, window.location.href);
-  return url.pathname;
-}
-
-function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): void {
+async function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): Promise<void> {
   // Reconstruct the fixed deal from the earliest fully-revealed snapshot, then let
   // the tree replay the move list + branch client-side. If the revealed stream is
   // missing/incomplete, recoverBanqiDeal throws and the outer .catch renders an
@@ -144,7 +90,25 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     null,
   );
   if (!earliestRevealed) {
-    throw new Error('banqi postgame: no revealed history to reconstruct the deal');
+    if (postgame.game.visibility !== 'private' || !postgame.history?.truth?.length) {
+      throw new Error('banqi postgame: no recorded history to replay');
+    }
+    // Private worker tests retain only the recorded public views. Reuse the
+    // as-played viewer without reconstructing a deal or offering new branches.
+    const shell = document.createElement('main');
+    shell.className = 'game-shell';
+    const title = document.createElement('h1');
+    title.textContent = variantDisplayLabel('banqi');
+    const replay = document.createElement('div');
+    shell.append(title, replay);
+    root.replaceChildren(buildNav(), shell);
+    const { mountBanqiWatchReplay } = await import('./watch-banqi-replay.js');
+    await mountBanqiWatchReplay(replay, postgame.game.roomId, {
+      autoplay: false,
+      followEnd: true,
+      loadPostgameOverride: async () => ({ ok: true, postgame }),
+    });
+    return;
   }
   const deal = recoverBanqiDeal(earliestRevealed.view);
 
@@ -231,8 +195,9 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('banqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('banqi', postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis('banqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('banqi', postgame.game.roomId, { signal, onStatus }),
     },
     // Decision-vs-luck decomposition: flip plies get a decision-quality glyph + per-move luck
     // readout + a two-number summary. Computed on top of the basic analysis (heavier, so it runs
@@ -240,43 +205,15 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     // game analysed before the decomposition shipped). The POST is account-gated, so canRun keeps
     // signed-out viewers on the base summary instead of a 401.
     decisions: {
-      fetchCached: () =>
-        fetchCachedBanqiDecisions(postgame.game.roomId).then((summary) =>
+      fetchCached: (options) =>
+        fetchCachedBanqiDecisions(postgame.game.roomId, options).then((summary) =>
           summary ? banqiDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestBanqiDecisions(postgame.game.roomId).then(banqiDecisionOverlay),
+      run: (options) =>
+        requestBanqiDecisions(postgame.game.roomId, options).then(banqiDecisionOverlay),
     },
   });
-}
-
-// Banqi is symmetric, so the review reduces to the single truth surface. Exported
-// for the watch-replay surface to reuse the per-ply view selection, mirroring the
-// jieqi postgame module's exported helpers.
-export function postgameViewEntries(
-  postgame: BanqiPostgameResponse,
-): Array<{ key: BanqiPostgameViewKey; label: string; view: BanqiPlayerView }> {
-  return [{ key: 'truth', label: t('replay.serverTruth'), view: postgame.view }];
-}
-
-export function postgameReplayMaxPly(postgame: BanqiPostgameResponse): number {
-  const history = Object.values(postgame.history ?? {}).flat();
-  return Math.max(postgame.game.plyCount, ...history.map((snapshot) => snapshot.ply), 0);
-}
-
-export function postgameViewAtPly(
-  postgame: BanqiPostgameResponse,
-  key: BanqiPostgameViewKey,
-  ply: number,
-): BanqiPlayerView | null {
-  const history = postgame.history?.[key];
-  if (!history || history.length === 0) return null;
-  let selected = history[0] ?? null;
-  for (const snapshot of history) {
-    if (snapshot.ply > ply) break;
-    selected = snapshot;
-  }
-  return selected?.view ?? null;
 }
 
 export function banqiInitialPlyFromSearch(search: string): number | null {
@@ -315,12 +252,4 @@ function errorBody(result: Extract<LoadResult, { ok: false }>): string {
     return t('replay.variantGameUnavailable', { variant: variantDisplayLabel('banqi') });
   if (result.status === 503) return t('replay.postgameServiceUnavailable');
   return result.error;
-}
-
-async function safeJson(response: Response): Promise<{ error?: unknown } | null> {
-  try {
-    return (await response.json()) as { error?: unknown };
-  } catch {
-    return null;
-  }
 }

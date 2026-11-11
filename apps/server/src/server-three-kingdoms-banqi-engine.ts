@@ -18,7 +18,7 @@ import {
   type ThreeKingdomsBanqiState,
   threeKingdomsBanqiStateToEngineFen,
 } from '@mistboard/game';
-import { resolveValidatedEngineMove } from './engine-move-guard.js';
+import { resolveValidatedEngineMove, searchStillCurrent } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import {
@@ -225,7 +225,7 @@ export async function playThreeKingdomsBanqiEngineMoveIfReady(
           ? parsed
           : null;
       },
-      stillOnTurn: () => engineToMove(room, seat),
+      stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
       onReject: ({ attempt, uci, reason, error }) =>
         logger.warn(
           {

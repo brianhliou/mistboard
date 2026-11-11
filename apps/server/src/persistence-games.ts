@@ -615,6 +615,7 @@ export async function listRecentEveGames(limit = 12): Promise<RecentEveGameRecor
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE games.mode = 'eve'
        AND games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
      ORDER BY games.ended_at DESC, games.room_id DESC
@@ -635,6 +636,7 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
        -- historical corpus, an off-site engine match) is dated when it was
        -- played elsewhere, and a 400-game match import would fill this list.
        AND games.mode <> 'imported'
+       AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
        AND NOT (games.mode = 'pvp' AND games.ply_count < $3)
@@ -884,6 +886,8 @@ export async function listWatchUnlockedGames(
        LIMIT 1
      ) last_events ON true
      WHERE games.status = 'completed'
+       -- A ply cap completes the worker task, not the game's replay.
+       AND games.termination IS DISTINCT FROM 'truncated'
        ${variantClause}
        AND ${notFFQBanqiGame()}
        ${modeClause}
@@ -1063,6 +1067,7 @@ const HEAD_TO_HEAD_FROM_SQL = `FROM games
       AND b.color <> a.color
      WHERE games.variant = $1
        AND games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND games.visibility <> 'private'
        AND a.visibility <> 'private'
@@ -1128,6 +1133,7 @@ export async function tallyHeadToHeadGames(
 // as a participant. Keeping this predicate beside every favorite query prevents
 // a later visibility flip from leaking a stale bookmark through the saved list.
 const FAVORITE_ACCESS_SQL = `games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND (
          games.visibility <> 'private'
@@ -1198,6 +1204,7 @@ export async function listFavoriteGames(
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE favorite.user_id = $1
        AND games.status = 'completed'
+       AND games.termination IS DISTINCT FROM 'truncated'
        AND ${notFFQBanqiGame()}
        AND (
          games.visibility <> 'private'
@@ -1345,7 +1352,9 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
       ))`,
     );
   }
-  if (filters.scheduledEngine) conditions.push(scheduledEngineGame('games'));
+  if (filters.scheduledEngine) {
+    conditions.push(scheduledEngineGame('games'), `games.termination IS DISTINCT FROM 'truncated'`);
+  }
   if (filters.result) conditions.push(`games.result = ${bind(filters.result)}`);
   if (filters.results) {
     conditions.push(

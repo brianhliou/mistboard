@@ -193,7 +193,7 @@ export const ZH_HANT_CONTENT = {
   'about.lede': 'Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。',
   'about.whyHeading': '三種語言的象棋',
   'about.whyBody':
-    '這裡的中國棋類包括象棋及其傳統近親揭棋和暗棋。上海的玩家與多倫多的玩家可以坐在同一張棋盤前，各自用自己的語言瀏覽網站。棋子可以顯示為圖示，認識漢字之前就能下棋，入門課程則從第一步開始教。',
+    '本站的象棋包括象棋本身，以及它的傳統近親揭棋和暗棋。上海的玩家與多倫多的玩家可以坐在同一張棋盤前，各自用自己的語言瀏覽網站。棋子可以顯示為圖示，認識漢字之前就能下棋，入門課程則從第一步開始教。',
   'about.darkChessHeading': '從熟悉的棋盤創造新遊戲',
   'about.darkChessBody':
     '鴨子象棋在棋盤上放入一隻不屬於任何一方的鴨子。迷霧象棋隱藏你的棋子無法到達的格點。瘋狂屋象棋讓你把吃到的棋子重新放回棋盤。每一種都從熟悉的遊戲出發，改變玩家需要做的決策，並且都有清楚的規則，由伺服器執行。',
@@ -283,7 +283,8 @@ export const ZH_HANT_CONTENT = {
   'source.pikafishWeightsLicense': '權重協議',
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
-  'source.pikafishJieqi': '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋機器人和揭棋分析，GPL-3.0。',
+  'source.pikafishJieqi':
+    '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋分級機器人和瀏覽器分析，復盤由 AB-JChess 評分，GPL-3.0。',
   'source.chessPieceSets':
     '西洋棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':

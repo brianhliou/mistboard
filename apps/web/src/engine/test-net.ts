@@ -8,7 +8,7 @@ export function testNetAvailable(path: string, env: NetEnv = process.env): boole
   const available = existsSync(path);
   if (!available && (env.MISTBOARD_REQUIRE_NETS === '1' || env.CI)) {
     throw new Error(
-      `Missing required engine net: ${path}. Run npm run worktree:prepare to fetch the pinned nets. Pikafish uses gh login locally or MISTBOARD_PRIVATE_ASSETS_TOKEN (required in CI and production builds).`,
+      `Missing required engine net: ${path}. Run npm run worktree:prepare to fetch the pinned nets. Pikafish uses the public CC0 network pinned in net.json.`,
     );
   }
   return available;

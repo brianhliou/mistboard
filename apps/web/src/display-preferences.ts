@@ -16,6 +16,7 @@ export const DISPLAY_PREFERENCE_DEFINITIONS = [
   // With the gutter always reserved, an 'outside' mode would just draw a smaller
   // board in the same space.
   { id: 'boardCoordinates', kind: 'boolean', defaultValue: false },
+  { id: 'confirmMovesOnTouch', kind: 'boolean', defaultValue: true },
   { id: 'moveListWhilePlaying', kind: 'boolean', defaultValue: true },
   // No move-notation row here: lichess's symbols/letters/coordinates switch
   // was declared and rendered but nothing ever read it. Xiangqi notation is

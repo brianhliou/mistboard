@@ -92,3 +92,28 @@ it('publishes the actual Gomoku launch once at the November 7 boundary with a pl
     vi.unstubAllEnvs();
   }
 });
+
+it('announces the casual Three Kingdoms Banqi launch in English, Chinese and Vietnamese', async () => {
+  const { allAnnouncements } = await import('./announcements.js');
+  const { localizeAnnouncement } = await import('./announcement-i18n.js');
+  const entry = allAnnouncements().find((item) =>
+    item.href?.includes('gameSpecId=three-kingdoms-banqi'),
+  );
+  expect(entry).toMatchObject({
+    date: '2026-11-10',
+    kind: 'release',
+    headline: 'Three Kingdoms Banqi is open to everyone.',
+  });
+  expect(entry?.body).toContain('All games are unrated.');
+  for (const [locale, name] of [
+    ['zh-Hans', '三国暗棋'],
+    ['zh-Hant', '三國暗棋'],
+    ['vi', 'Cờ úp Tam Quốc'],
+  ] as const) {
+    const translated = localizeAnnouncement(entry!, locale);
+    expect(translated.headline).toContain(name);
+    expect(translated.body).not.toBe(entry?.body);
+    expect(translated.cta).toContain(name);
+    expect(JSON.stringify(translated)).not.toContain('—');
+  }
+});

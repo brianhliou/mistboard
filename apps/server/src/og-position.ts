@@ -24,6 +24,7 @@ import {
 import {
   BANQI_HEIGHT,
   BANQI_WIDTH,
+  banqiInkForSeat,
   banqiMoverInk,
   banqiSquareOf,
   banqiStateToEngineFen,
@@ -35,6 +36,7 @@ import {
   createInitialJieqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
+  createInitialThreeKingdomsBanqiState,
   createInitialXiangqiState,
   darkChessFen,
   duckXiangqiFen,
@@ -61,8 +63,11 @@ import {
   parseJungleFen,
   parseJungleFlipFen,
   parseStandardXiangqiFen,
+  parseThreeKingdomsBanqiFen,
   type Square,
   standardXiangqiFen,
+  threeKingdomsBanqiSeatToMove,
+  threeKingdomsBanqiStateToPublicFen,
 } from '@mistboard/game';
 import { type AuthRateLimiter, createAuthRateLimiter } from './auth-rate-limit.js';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
@@ -82,6 +87,7 @@ export const POSITION_OG_IMAGE_VERSION = 5;
 export const POSITION_OG_VARIANTS = [
   'xiangqi',
   'banqi',
+  'three-kingdoms-banqi',
   'jieqi',
   'fortress-xiangqi',
   'duck-xiangqi',
@@ -160,7 +166,8 @@ type TileMark = { kind: 'glyph'; glyph: string } | { kind: 'text'; text: string 
 type IntersectionExtra =
   | { file: number; rank: number; kind: 'face-down'; ink: Ink }
   | { file: number; rank: number; kind: 'glyph'; ink: Ink; glyph: string }
-  | { file: number; rank: number; kind: 'duck' };
+  | { file: number; rank: number; kind: 'duck' }
+  | { file: number; rank: number; kind: 'hidden-tile' };
 
 export type PositionOgBoard =
   | {
@@ -397,6 +404,27 @@ export function resolvePositionOg(
         },
       };
     }
+    case 'three-kingdoms-banqi': {
+      const parsed = parseThreeKingdomsBanqiFen(trimmed, { gameId: 'og-card' });
+      if (!parsed.ok) return null;
+      const pieces: XiangqiOgPiece[] = [];
+      const extras: IntersectionExtra[] = [];
+      for (const [square, piece] of Object.entries(parsed.state.board)) {
+        if (!piece) continue;
+        const file = square.charCodeAt(0) - 97;
+        const rank = Number(square.slice(1));
+        if (piece.faceDown) extras.push({ file, rank, kind: 'hidden-tile' });
+        else pieces.push({ file, rank, color: piece.color, role: piece.role });
+      }
+      return {
+        variant,
+        publicFen: threeKingdomsBanqiStateToPublicFen(parsed.state),
+        toMove:
+          inkToMove(banqiInkForSeat(parsed.state, threeKingdomsBanqiSeatToMove(parsed.state))) ??
+          'First flip',
+        board: { kind: 'intersection', files: 9, ranks: 5, palaces: [], pieces, extras },
+      };
+    }
     case 'banqi': {
       // Ink AND role are hidden under a banqi tile; the projection keeps only
       // the square. The parser's sampled or given identities are dropped here.
@@ -503,6 +531,8 @@ export function startPositionFen(variant: PositionOgVariant): string {
       return jieqiStateToPikafishFen(createInitialJieqiState('og-card'));
     case 'fortress-xiangqi':
       return fortressXiangqiEngineFen(createInitialFortressXiangqiState('og-card'));
+    case 'three-kingdoms-banqi':
+      return threeKingdomsBanqiStateToPublicFen(createInitialThreeKingdomsBanqiState('og-card', 0));
     case 'banqi':
       return banqiStateToEngineFen(createInitialBanqiState('og-card'));
     case 'jungle-flip':

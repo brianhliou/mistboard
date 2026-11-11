@@ -38,6 +38,35 @@ function game(overrides: Partial<FeaturedGame> = {}): FeaturedGame {
 }
 
 describe('profile game rows', () => {
+  it('puts full names on opponent and neutral pairing name elements', () => {
+    const fullName = 'MistyThreeKingdomsBanqi level 7';
+    const fixture = game({
+      participants: [
+        {
+          color: 'white',
+          displayName: 'Ann',
+          subjectType: 'user',
+          subjectId: 'ann',
+          visibility: 'public',
+        },
+        {
+          color: 'black',
+          displayName: fullName,
+          subjectType: 'engine-version',
+          subjectId: 'misty-three-kingdoms-banqi-level-7',
+          visibility: 'public',
+        },
+      ],
+    });
+    const opponent = buildProfileGameRow(fixture).querySelector<HTMLElement>(
+      '.profile-game-opponent-name',
+    );
+    expect(opponent?.title).toBe(fullName);
+    const names = buildProfileGameRow(fixture, { neutral: true }).querySelectorAll<HTMLElement>(
+      '.profile-game-opponent-name',
+    );
+    expect([...names].map((name) => name.title)).toEqual(['Ann', fullName]);
+  });
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();

@@ -1,4 +1,4 @@
-/* /streamer: public streamers directory (basic empty-state scaffold). */
+/* /streamer: creator invitation and curated directory. */
 
 .streamer-shell {
   max-width: 860px;
@@ -11,7 +11,7 @@
 
 .streamer-empty {
   color: var(--site-muted);
-  margin: 12px 0;
+  margin: 28px 0 0;
 }
 
 .streamer-list {

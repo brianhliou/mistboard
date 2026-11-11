@@ -199,7 +199,9 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
         bot.textContent = t('watch.botBadge');
         row.append(bot);
       }
-      row.append(playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name'));
+      const name = playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name');
+      name.title = player.name;
+      row.append(name);
       if (player.rating !== null && player.rating !== undefined) {
         const rating = document.createElement('span');
         rating.className = 'game-meta-card__rating';

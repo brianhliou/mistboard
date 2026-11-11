@@ -359,13 +359,17 @@ test('tenant preview lookup preserves finished cards and refuses nonpublic recor
 
 test('tenant preview lookup fails closed for playtests, read failures and unloaded rooms', async () => {
   await loadRegistry();
-  const noReads = store({
-    summary: async () => assert.fail('A hidden playtest must not be read'),
-    events: async () => assert.fail('A hidden playtest must not be read'),
+  let tkReads = 0;
+  const missingTk = store({
+    summary: async () => {
+      tkReads += 1;
+      return null;
+    },
   });
-  assert.deepEqual(await tenantGameRoutePage('/three-kingdoms-banqi/game/tkb_preview', noReads), {
+  assert.deepEqual(await tenantGameRoutePage('/three-kingdoms-banqi/game/tkb_preview', missingTk), {
     noindex: true,
   });
+  assert.equal(tkReads, 0, 'runtime-disabled route previews do not read game data');
   assert.deepEqual(
     await tenantGameRoutePage(
       '/xiangqi/game/xq_error',
@@ -387,6 +391,9 @@ test('tenant preview lookup fails closed for playtests, read failures and unload
     { noindex: true },
   );
   // The archive and live room URLs keep their existing route policies.
+  const noReads = store({
+    summary: async () => assert.fail('unrelated route must not read a game'),
+  });
   assert.equal(await tenantGameRoutePage('/historical-xiangqi/game/123', noReads), null);
   assert.equal(await tenantGameRoutePage('/room/jq_live', noReads), null);
 });
@@ -653,6 +660,17 @@ test('every tenant with a review URL binds a card on a position-card variant', a
       assert.equal(entry.finishedGameOpensRoom, true, `${entry.kind}: match cards need a page`);
       assert.equal(entry.card.variant, entry.gameSpecId, entry.kind);
       assert.equal(entry.card.finalScores([], `${entry.roomIdPrefix}x`), null);
+      continue;
+    }
+    if (entry.gameSpecId === 'three-kingdoms-banqi') {
+      // TK deliberately has no export or seatBoard: its existing card uses a
+      // masked public FEN and the explicit review route, never the secret deal.
+      assert.equal(entry.export, null);
+      assert.equal(entry.reviewRouteBase, '/three-kingdoms-banqi/game');
+      assert.equal(entry.seatBoard, undefined);
+      assert.ok(entry.card);
+      assert.equal(entry.card.variant, entry.gameSpecId);
+      assert.equal(entry.card.fenAtPly([], `${entry.roomIdPrefix}x`, 0), null);
       continue;
     }
     if (!entry.export) {

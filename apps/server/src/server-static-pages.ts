@@ -241,12 +241,12 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/coach': {
     title: 'Xiangqi Coaches | Mistboard',
     description:
-      'Find a xiangqi (Chinese chess) or chess coach to study with. Every coach listed holds a verified title, with their languages, rate and how to reach them.',
+      'Find a verified xiangqi or chess coach, or help shape teaching on Mistboard. Share interactive studies and work with us on what your students need.',
   },
   '/streamer': {
     title: 'Xiangqi Streamers | Mistboard',
     description:
-      'Chinese chess (xiangqi) and variant streamers to watch live and on demand on Twitch and YouTube, with the language each streams in and a link to their channel.',
+      'Stream xiangqi or its variants with Mistboard. Bring an idea, prepare games and studies, and work directly with us as our tools for creators develop.',
   },
   '/player': {
     title: 'Xiangqi Leaderboard | Mistboard',
@@ -833,6 +833,7 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
   '/stats',
   '/data',
   '/coach',
+  '/streamer',
   '/forum',
   '/player/rating-stats',
   '/watch',
@@ -1768,7 +1769,13 @@ export async function serveArticlePage(params: {
   // the language prefix. This single redirect covers legacy /articles/<slug> ->
   // /blog (or /rules), the old *-rules / *-rules-primer slugs, and the reverse
   // /rules/<article> -> /blog/<article>.
-  const resolved = RENAMED_ARTICLE_SLUGS[params.slug] ?? params.slug;
+  const resolved = Object.hasOwn(RENAMED_ARTICLE_SLUGS, params.slug)
+    ? RENAMED_ARTICLE_SLUGS[params.slug]!
+    : params.slug;
+  if (!Object.hasOwn(ARTICLE_META, resolved)) {
+    await serveNotFoundShell({ response: params.response, staticDir: params.staticDir });
+    return;
+  }
   const canonicalBase = canonicalArticleBase(resolved);
   const prefix = params.langPrefix ? `/${params.langPrefix}` : '';
   if (resolved !== params.slug || params.base !== canonicalBase) {
@@ -1834,6 +1841,7 @@ export async function serveArticlePage(params: {
       url,
       imageUrl: articleOgImageUrl(params.publicHost, params.slug, params.langPrefix),
     });
+    html = html.replace('</head>', `<link rel="canonical" href="${escapeHtml(url)}"></head>`);
     if (!articleIsIndexable(params.slug)) {
       html = setRobotsMeta(html, 'noindex, follow');
     }

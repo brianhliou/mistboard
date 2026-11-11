@@ -20,6 +20,29 @@ import { getBuildInfo } from './build-info.js';
 import { type EngineAlertEmailPayload, sendEngineAlertNotification } from './engine-alert-email.js';
 import { engineCounters, logger } from './obs.js';
 
+/**
+ * Moves played so far in a tenant room. A search answers the position it was
+ * asked about, so its reply is stale once this changes, even when the engine
+ * is on move again. "Is it the engine's turn" alone passed a stale search
+ * after the bot's other search played and the guest replied; the old move
+ * was illegal, and the guard resigned the bot (2026-11-10). Seat and
+ * reconnect events do not count, so they never discard a live search.
+ */
+export function playedMoveCount(events: readonly { type: string }[]): number {
+  let n = 0;
+  for (const e of events) if (e.type === 'move-played') n += 1;
+  return n;
+}
+
+/** Turn check for one search: the engine is on move and no move has landed since it began. */
+export function searchStillCurrent(
+  room: { events: readonly { type: string }[] },
+  onTurn: () => boolean,
+): () => boolean {
+  const searchedAt = playedMoveCount(room.events);
+  return () => onTurn() && playedMoveCount(room.events) === searchedAt;
+}
+
 export type EngineMoveRejectReason = 'request-failed' | 'illegal-move' | 'no-move';
 
 export type EngineMoveAttempt = {

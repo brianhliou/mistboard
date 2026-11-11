@@ -424,7 +424,7 @@ async function listOutgoingChallenges(
   user: UserAccount,
   response: ServerResponse,
 ): Promise<boolean> {
-  const seeks = await seeksVisibleTo(await persistence.listOutgoingSeeksForUser(user.id), user);
+  const seeks = await persistence.listOutgoingSeeksForUser(user.id);
   writeJson(response, 200, {
     limit: MAX_OPEN_SEEKS_PER_USER,
     seeks: seeks.map((seek) => ({
@@ -1005,8 +1005,8 @@ async function viewSeek(
     return true;
   }
   const view = challengeViewModel(seek, user.id, Date.now());
-  // A restricted challenge does not exist for an account its room door refuses.
-  const hidden = (await seeksVisibleTo([seek], user)).length === 0;
+  // Creators retain management access; every other reader must pass the room door.
+  const hidden = !view.isMine && (await seeksVisibleTo([seek], user)).length === 0;
   if (!view.visible || hidden) {
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;
@@ -1033,18 +1033,19 @@ async function viewSeek(
 // which only a public board seek ever has, for seeks swept before outcomes existed.
 async function seekGoneFor(seekId: string, user: UserAccount): Promise<SeekGoneView | null> {
   const outcome = await persistence.getCorrespondenceSeekOutcome(seekId);
-  if (outcome) {
-    const specId = outcome.roomId ? variantTenantForRoomId(outcome.roomId)?.gameSpecId : null;
-    if (
-      specId &&
-      CORRESPONDENCE_RESTRICTED_SPECS.has(specId) &&
-      !(await mayPlayCorrespondence(user, specId))
-    )
-      return null;
-    return seekGoneView(outcome, user.id);
-  }
-  if (await persistence.hasSeekExpiryNotice(seekId)) return { reason: 'expired' };
-  return null;
+  // New outcomes retain the spec; legacy rows may still identify it through
+  // the accepted room or public expiry notice.
+  const specId =
+    outcome?.gameSpecId ??
+    (outcome?.roomId ? variantTenantForRoomId(outcome.roomId)?.gameSpecId : null) ??
+    (await persistence.getClosedCorrespondenceSeekSpecId(seekId));
+  const knowsChallenge = outcome?.creatorUserId === user.id || outcome?.targetUserId === user.id;
+  if (
+    !knowsChallenge &&
+    (!specId || (await seeksVisibleTo([{ gameSpecId: specId }], user)).length === 0)
+  )
+    return null;
+  return outcome ? seekGoneView(outcome, user.id) : { reason: 'expired' };
 }
 
 // The named target rejecting a directed challenge: deletes the seek. A link

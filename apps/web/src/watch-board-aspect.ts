@@ -37,6 +37,7 @@ const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   'mini-open-xiangqi': 1,
   // Banqi: 8 x 4, the one wide board on the rail (live-banqi-render.ts).
   banqi: 8 / 4,
+  'three-kingdoms-banqi': 9 / 5,
   // Chess-geometry boards: 8 x 8 (dark-chess-render.ts).
   'dark-chess': 1,
   chess: 1,

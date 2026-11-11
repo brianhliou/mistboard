@@ -17,6 +17,7 @@ import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
 import { internalEngineAnalysisConfigured } from './../internal-engine-client.js';
+import { INTERNAL_BANQI_CORPUS_ID } from '../internal-engine-test.js';
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
@@ -591,7 +592,7 @@ export async function tryHandle(
     if (!requirePersistence(response)) return true;
     const roomId = decodeURIComponent(crosstableMatch[1]!);
     const game = await persistence.getGameSummary(roomId);
-    if (!game) {
+    if (!game || game.corpusId === INTERNAL_BANQI_CORPUS_ID) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
@@ -718,6 +719,7 @@ async function gameSummaryForApi(
   roomId: string,
 ): Promise<persistence.RecentEveGameRecord | null> {
   const persisted = persistence.isInitialized() ? await persistence.getGameSummary(roomId) : null;
+  if (persisted?.corpusId === INTERNAL_BANQI_CORPUS_ID) return null;
   return persisted ?? ctx.inMemoryGameSummary(roomId);
 }
 

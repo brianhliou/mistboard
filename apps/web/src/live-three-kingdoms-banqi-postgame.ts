@@ -16,6 +16,7 @@ import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
 import {
@@ -28,12 +29,12 @@ import { buildNav } from './site-shell.js';
 import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
 
 // Postgame review for Three Kingdoms banqi (#628), on banqi's page
-// (live-banqi-postgame.ts). An admin playtest (#684): the page opens only where
-// a TK room would (threeKingdomsBanqiOffered), and the API answers only an
-// admin session.
+// (live-banqi-postgame.ts). Play and review admission follow the runtime
+// and build-time flags, with an admin fallback while they are off.
 //
 // Finished review navigates the server's as-played masked snapshots. No dealt
-// position reaches the browser, and review cannot branch into covered pieces.
+// position reaches the browser, and review cannot branch into covered pieces. No export:
+// the deal names pieces nobody turned over.
 
 export type ThreeKingdomsBanqiPostgameResponse = {
   game: {
@@ -174,6 +175,7 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
     metaCard,
     details,
     phoneInfoSheet: true,
+    ...gameExportShareExtra(VARIANT, postgame.game.roomId),
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
@@ -189,13 +191,15 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId),
-      run: () => requestGameAnalysis(VARIANT, postgame.game.roomId),
+      fetchCached: (options) => fetchCachedGameAnalysis(VARIANT, postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis(VARIANT, postgame.game.roomId, { signal, onStatus }),
     },
     decisions: {
-      fetchCached: () => fetchCachedThreeKingdomsBanqiDecisions(postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedThreeKingdomsBanqiDecisions(postgame.game.roomId, options),
       canRun: isLikelySignedIn(),
-      run: () => requestThreeKingdomsBanqiDecisions(postgame.game.roomId),
+      run: (options) => requestThreeKingdomsBanqiDecisions(postgame.game.roomId, options),
     },
   });
 }

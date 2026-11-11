@@ -4,7 +4,11 @@
 // into the display numbers: a DECISION-quality glyph (graded) and a LUCK value (shown per move,
 // never graded). Counterpart to game-analysis.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 import type { DecisionOverlay } from './analysis-marks.js';
 import { formatJieqiBestMove } from './move-advice-text.js';
 
@@ -141,17 +145,25 @@ function decisionsUrl(roomId: string): string {
 /** GET the already-cached decomposition, or null on a miss (204). Never triggers a compute. */
 export async function fetchCachedJieqiDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<JieqiDecisionSummary | null> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return summarizeDecisions(((await response.json()) as JieqiDecisionsResponse).decisions);
+  const cached = await fetchAnalysisJob<JieqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
+    errorPrefix: 'decisions_request_failed',
+  });
+  if (!cached) return null;
+  return summarizeDecisions(cached.decisions);
 }
 
 /** POST to compute the decomposition (account-gated on the server), then summarize it.
  *  A cached game answers immediately (200); otherwise the server enqueues a background
  *  job (202) and this polls it to completion (see analysis-job-poll). */
-export async function requestJieqiDecisions(roomId: string): Promise<JieqiDecisionSummary> {
+export async function requestJieqiDecisions(
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<JieqiDecisionSummary> {
   const body = await postAnalysisJob<JieqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);

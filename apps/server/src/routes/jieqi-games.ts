@@ -106,10 +106,10 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
   variantLabel: 'Jieqi',
   enabled: jieqiEnabled,
   requiresPersistence: true,
-  // New grading requires Level 8 Pikafish; cached AB-JChess results remain readable.
+  // New grading prefers AB-JChess, with Pikafish fallback; either engine's cached rows remain readable.
   engineBinary: {
     available: jieqiAnalysisEngineAvailable,
-    label: 'jieqi analysis engine (Pikafish Level 8)',
+    label: 'jieqi analysis engine (AB-JChess, with Pikafish fallback)',
   },
   loadInputs: loadFinishedJieqiGameInputs,
   countPlies: (inputs) => inputs.moves.length,

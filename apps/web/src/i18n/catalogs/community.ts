@@ -264,6 +264,31 @@ export const EN_COMMUNITY = {
   'verifyTitle.errRequestPending': 'You already have a request waiting for review.',
   'verifyTitle.coachCta': 'Create your coach profile',
   'verifyTitle.whatYouGet': 'What titled players get on Mistboard',
+  'coach.invite.heading': 'Help shape teaching on Mistboard',
+  'coach.invite.lede':
+    'Teach xiangqi or its variants? Bring a lesson or a game you like to explain. We would like to work with a few teachers and learn what would make Mistboard useful for their students.',
+  'coach.invite.firstTitle': 'Start with a study',
+  'coach.invite.firstBody':
+    'Put a game or position into a study, add variations and comments, and share a board your students can explore. Studies can also be embedded on your own website.',
+  'coach.invite.secondTitle': 'A profile of your own',
+  'coach.invite.secondBody':
+    'Verified titled players can publish a coach profile with their languages, rates and contact details. Students contact you directly; Mistboard takes no commission.',
+  'coach.invite.next':
+    'Teaching tools here are still early. Tell us who you teach, what you want to cover, and where studies fall short. We can start with one lesson and decide together what is worth building next.',
+  'coach.invite.contact': 'Talk to us about teaching',
+  'coach.invite.studies': 'Explore studies',
+  'streamer.invite.heading': 'Build your next stream with us',
+  'streamer.invite.lede':
+    'Stream xiangqi or its variants? We would like to work directly with a few creators, try ideas together, and build around what their streams actually need.',
+  'streamer.invite.firstTitle': 'Bring a format you care about',
+  'streamer.invite.firstBody':
+    'A game review, a beginner session, or a look at an unfamiliar variant. Tell us what you want to make and who you want to reach.',
+  'streamer.invite.secondTitle': 'Start with the tools here',
+  'streamer.invite.secondBody':
+    'Play on Mistboard or prepare positions and commentary in a study. Share the study so viewers can explore the moves after your stream.',
+  'streamer.invite.next':
+    'Our streaming tools are still early. Send your channel, an idea for a session, and what would help you make it. We will work through what is possible now and what we could build together.',
+  'streamer.invite.contact': 'Talk to us about a stream',
   'coach.heading': 'Coaches',
   'coach.intro':
     'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
@@ -314,8 +339,8 @@ export const EN_COMMUNITY = {
   'coach.errTitleRequired': 'Publishing needs a verified title. Verify your title first.',
   'coach.viewPublicPage': 'View your public coach page',
   'streamer.heading': 'Streamers',
-  'streamer.intro': 'Xiangqi and variant streamers to watch live and on demand.',
-  'streamer.empty': 'No streamers are listed yet. Check back soon.',
+  'streamer.intro': 'For people sharing xiangqi and its variants with an audience.',
+  'streamer.empty': 'No streamers are listed yet. You could be one of the first.',
   'streamer.profileLink': 'Mistboard profile',
   'profile.coachProfile': 'Coach profile',
   'profile.earlier': 'Earlier',

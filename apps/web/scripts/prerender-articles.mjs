@@ -764,7 +764,7 @@ try {
   // Chinese page silently. /zh-hans and /zh-hant are the Chinese home pages:
   // before this the path served a directory listing of dist/, and the site had
   // no Chinese URL for the page that matters most to a Chinese search.
-  const { renderLandingShellForPrerender } = await server.ssrLoadModule('/src/landing.ts');
+  const { renderLandingPageForPrerender } = await server.ssrLoadModule('/src/landing.ts');
   const { homeStructuredDataScripts } = await server.ssrLoadModule('/src/home-structured-data.ts');
   // The English home keeps the description index.html already carries; the
   // JSON-LD repeats each page's own description rather than a second copy.
@@ -801,13 +801,10 @@ try {
     `<link rel="alternate" hreflang="x-default" href="${host}/" />`,
   ].join('');
   for (const variant of homeVariants) {
-    const landingInner = await renderPage(`${host}${variant.path}`, () =>
-      renderLandingShellForPrerender(),
+    let homeHtml = await renderPage(`${host}${variant.path}`, () =>
+      renderLandingPageForPrerender(shell, variant.htmlLang),
     );
     const url = `${host}${variant.path === '/' ? '/' : variant.path}`;
-    let homeHtml = shell
-      .replace('<html lang="en">', `<html lang="${variant.htmlLang}">`)
-      .replace('<div id="app"></div>', `<div id="app">${landingInner}</div>`);
     if (variant.meta) {
       homeHtml = injectPageMeta(homeHtml, {
         title: variant.meta.title,

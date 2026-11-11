@@ -32,7 +32,9 @@ export function readUnshippedAgentBranches({
 } = {}) {
   const headRevision = git(root, ['rev-parse', '--verify', `${head}^{commit}`]);
   const baseRevision = git(root, ['rev-parse', '--verify', `${base}^{commit}`]);
-  const entries = branchRefs(root)
+  const refs = branchRefs(root);
+  const batches = refs.filter(({ branch }) => branch.startsWith('agent/ship-'));
+  const entries = refs
     .filter(({ branch }) => !branch.startsWith('agent/ship-'))
     .map((ref) => ({
       ...ref,
@@ -43,16 +45,22 @@ export function readUnshippedAgentBranches({
   return parkedBranches(entries).map((entry) => ({
     ...entry,
     parked: readParkedMark(root, entry.branch),
+    inBatch:
+      batches.find(
+        ({ branch }) =>
+          git(root, ['merge-base', '--is-ancestor', entry.branch, branch], 1) !== null,
+      )?.branch ?? null,
   }));
 }
 
 export function assertAgentBranchesAccountedFor({ log = console.log, ...options } = {}) {
   const entries = readUnshippedAgentBranches(options);
-  const unmarked = entries.filter(({ parked }) => !parked);
+  const unmarked = entries.filter(({ parked, inBatch }) => !parked && !inBatch);
   log('# unshipped agent branches');
   for (const entry of entries) {
     log(`  ${entry.branch} (+${entry.ahead}) ${entry.worktree ?? '(no worktree)'}`);
-    if (entry.parked) log(`    parked: ${entry.parked.date} ${entry.parked.reason}`);
+    if (entry.inBatch) log(`    in batch ${entry.inBatch}`);
+    else if (entry.parked) log(`    parked: ${entry.parked.date} ${entry.parked.reason}`);
     else
       log(`    park: npm run branch:park -- '${entry.branch.replaceAll("'", "'\\''")}' "<reason>"`);
   }

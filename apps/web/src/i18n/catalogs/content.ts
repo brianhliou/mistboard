@@ -317,7 +317,7 @@ export const EN_CONTENT = {
   'source.fairyStockfish':
     'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
   'source.pikafishJieqi':
-    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi bots and jieqi analysis, GPL-3.0.",
+    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi levels and browser analysis, with AB-JChess grading reviews, GPL-3.0.",
   'source.chessPieceSets':
     'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
   'source.sounds':
@@ -682,6 +682,8 @@ export const EN_CONTENT = {
   'privacy.promisesHeading': "What we promise, and don't",
   'privacy.promisesBody':
     'We tell you what we collect, and we send each player only what their seat may see. Data, accounts and ratings can change or be removed.',
+  'data.botFilter': 'Games involving',
+  'data.allBots': 'Everyone',
   'data.colMonth': 'Month',
   'data.colGames': 'Games',
   'data.colDownload': 'Download',
@@ -743,6 +745,8 @@ export const EN_CONTENT = {
   'data.licenseSuffix':
     '. Use them for anything, commercial or not, as long as you credit Mistboard and link to the game data page, for example:',
   'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
+  'data.botFilterNote':
+    'Choose a bot on the game data page to download its completed public games. Games against people and scheduled engine games keep separate files with the same formats and license.',
   'data.includedHeading': 'What is included',
   'data.included':
     'Every finished game played on the site since June 2026, people against people or against the bots, rated and casual, signed in or as a guest. A game is filed under the month it ended, in UTC.',

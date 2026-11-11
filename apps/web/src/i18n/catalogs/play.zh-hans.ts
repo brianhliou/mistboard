@@ -852,7 +852,7 @@ export const ZH_HANS_PLAY = {
   'live.tk.none': '无',
   'live.tk.movesLeft': '还剩 {count} 步，之后按分数判定胜负',
   'live.tk.oneMoveLeft': '还剩 1 步，之后按分数判定胜负',
-  'live.tk.adminOnly': '{variant}仍在内部试玩，这个房间只对管理员账号开放。',
+  'live.tk.adminOnly': '{variant}已暂停开放对弈，此房间暂时不可用。',
   'lobby.panelTabComputer': '与电脑对弈',
   'lobby.panelTabPerson': '与真人对弈',
   'lobby.panelPlayAgain': '再来一局',

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { analyzeXiangqiGame } from './xiangqi-analysis.js';
+import {
+  analyzeXiangqiGame,
+  XIANGQI_ANALYSIS_ENGINE_ID,
+  XIANGQI_ANALYSIS_ENGINE_VERSION,
+} from './xiangqi-analysis.js';
 
 test('analyzeXiangqiGame evaluates one point per ply cursor (0..N)', async () => {
   const seen: string[][] = [];
@@ -32,4 +36,9 @@ test('analyzeXiangqiGame handles an empty game (start position only)', async () 
   });
   assert.equal(evals.length, 1);
   assert.deepEqual(evals[0], { ply: 0, cp: 25, mate: null, best: 'h2e2' });
+});
+
+test('CC0 analysis uses cache version @6', () => {
+  assert.equal(XIANGQI_ANALYSIS_ENGINE_VERSION, 6);
+  assert.equal(XIANGQI_ANALYSIS_ENGINE_ID, 'pikafish-xiangqi-analysis@6');
 });

@@ -23,10 +23,12 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
+import { reportAnalysisJobProgress } from '../analysis-job-progress.js';
 import { type AuthRateLimiter, createAuthRateLimiter } from './../auth-rate-limit.js';
 import {
   analysisJobStatusBody,
   enqueueAnalysisJob,
+  findLatestAnalysisJob,
   findPendingAnalysisJob,
   getAnalysisJob,
 } from './../game-analysis-jobs.js';
@@ -97,8 +99,8 @@ export type GameAnalysisRouteHandler = (
  * Returns true when the request was handled (matched the section's paths).
  *
  * Semantics (identical across variants, previously copy-pasted):
- * - GET returns only the cached result: 204 on a miss, so the client can
- *   auto-load on page open without ever triggering an engine pass.
+ * - GET returns the cached result, an existing handle (202), or 204 on a miss; the client can
+ *   auto-load/resume on page open without ever triggering an engine pass.
  * - POST is account-gated (the whole-game sweep is the expensive path). A
  *   cached game answers 200 immediately; a miss enqueues a background job and
  *   answers 202 + {jobId} (never computes in-request, #208), bounded by the ply
@@ -107,7 +109,7 @@ export type GameAnalysisRouteHandler = (
  *   with the result envelope inlined on done.
  * - The decisions endpoint resolves the basic analysis first as its readiness
  *   gate: a basic-analysis miss on GET means analysis has not been requested
- *   yet, so 204.
+ *   yet; a retained decisions handle is still discoverable, otherwise 204.
  * - A VacuousAnalysisError (scoreless sweep/decomposition) maps to 503
  *   analysis_engine_unavailable with an alertable log; nothing is cached.
  */
@@ -146,6 +148,11 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
         return true;
       }
       if (!config.enabled()) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      if (config.requiresPersistence && !requirePersistence(response)) return true;
+      if (!(await config.loadInputs(roomId))) {
         writeJson(response, 404, { error: 'not_found' });
         return true;
       }
@@ -209,7 +216,7 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
       }
       const existing = findPendingAnalysisJob(config.routeId, roomId, kind);
       if (existing) {
-        writeJson(response, 202, { jobId: existing.id, status: 'pending' });
+        writeJson(response, 202, { jobId: existing.id, ...analysisJobStatusBody(existing) });
         return;
       }
       if (!enqueueLimiter.check(clientIpForRateLimit(request))) {
@@ -222,6 +229,7 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
         kind,
         // POST is account-gated above, so accountId is always set here.
         accountId: accountId ?? 'unknown',
+        total: config.countPlies(inputs) + 1,
         run,
       });
       if (!enqueued.ok) {
@@ -230,7 +238,19 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
         });
         return;
       }
-      writeJson(response, 202, { jobId: enqueued.job.id, status: 'pending' });
+      writeJson(response, 202, { jobId: enqueued.job.id, ...analysisJobStatusBody(enqueued.job) });
+    };
+
+    const discover = async (): Promise<void> => {
+      const existing = findLatestAnalysisJob(config.routeId, roomId, endpoint);
+      if (!existing) {
+        response.writeHead(204).end();
+        return;
+      }
+      const body = analysisJobStatusBody(existing);
+      if (endpoint === 'decisions' && existing.status === 'done' && config.decisionsForViewer)
+        body.result = await config.decisionsForViewer(existing.result as D, request);
+      writeJson(response, 202, { jobId: existing.id, ...body });
     };
 
     try {
@@ -243,7 +263,7 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
           return true;
         }
         if (method === 'GET') {
-          response.writeHead(204).end();
+          await discover();
           return true;
         }
         enqueue('analysis', async () => {
@@ -271,12 +291,17 @@ export function createGameAnalysisRoutes<Inputs, A extends object, D extends obj
         return true;
       }
       if (method === 'GET') {
-        response.writeHead(204).end();
+        await discover();
         return true;
       }
       enqueue('decisions', async () => {
         const analysis = await config.resolveAnalysis(roomId, inputs, true);
         if (!analysis) throw new Error('analysis_unavailable');
+        reportAnalysisJobProgress({
+          phase: 'decisions',
+          completed: 0,
+          total: config.countPlies(inputs),
+        });
         const decisions = await config.resolveDecisions?.(roomId, inputs, true);
         if (!decisions) throw new Error('decisions_unavailable');
         return decisions;

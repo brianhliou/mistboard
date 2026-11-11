@@ -93,6 +93,7 @@ const presentation: TreePresentation<
   boardAspect: TK_LIVE_BOARD_VIEW.width / TK_LIVE_BOARD_VIEW.height,
   boardCols: 10,
   boardMaxPx: 720,
+  phoneForkPicker: true,
   reserveGaugeTrack: true,
   // The board is the same for both seats, so the Flip control only swaps the
   // seat rows, as on banqi.
@@ -138,6 +139,18 @@ export function mountThreeKingdomsBanqiReview(
   return mountTreeReview(root, { ...presentation, adapter: faceDown.adapter }, faceDown.config);
 }
 
+/** A recorded flip names the piece it turned up, read from the view after the
+ * move: the tile is face up for every viewer then, and still face down in the
+ * view before it, which would label every flip "(?)". */
+export function recordedThreeKingdomsBanqiMoveLabel(
+  views: ReadonlyMap<number, ThreeKingdomsBanqiPlayerView>,
+  move: ThreeKingdomsBanqiMove,
+  ply: number,
+): string {
+  const piece = views.get(ply + 1)?.board[move.to];
+  return threeKingdomsBanqiMoveLabel(move, piece && !piece.faceDown ? piece : undefined);
+}
+
 /** Recorded games have no dealt position in the browser. Navigate only the
  * server's masked snapshots; never sample identities or branch into a secret. */
 export function mountThreeKingdomsBanqiRecordedReview(
@@ -157,10 +170,7 @@ export function mountThreeKingdomsBanqiRecordedReview(
       },
       applyMove: (ply) => ply + 1,
       project: (ply) => [{ key: 'truth', label: 'Board', tier: 'primary', view: views.get(ply)! }],
-      moveLabel: (move, ply) => {
-        const piece = views.get(ply)?.board[move.from];
-        return threeKingdomsBanqiMoveLabel(move, piece && !piece.faceDown ? piece : undefined);
-      },
+      moveLabel: (move, ply) => recordedThreeKingdomsBanqiMoveLabel(views, move, ply),
       moveKey: adapter.moveKey,
       toEngineUci: adapter.toEngineUci,
       fromUci: () => null,

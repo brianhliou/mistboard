@@ -2,6 +2,7 @@
 // byte-for-byte what it was before either existed, a 3D tile and its rim stay
 // inside the flat tile's footprint, and a reveal turns the tile over.
 import { createHash } from 'node:crypto';
+import { createInitialJungleFlipState, jungleFlipStateToDealtFen } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetPieceFlipStyleCache } from './board-anim.js';
 import {
@@ -13,6 +14,7 @@ import {
   jungleFlipTile3dGeometry,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
+import { mountJungleFlipReplayBoard, replayJungleFlipLine } from './jungle-flip-replay-board.js';
 import { cancelTileFlipOverlays, wallStrips } from './tile-flip-3d.js';
 
 // Flat pieces unless a test asks for 3D: the board-wide 3D default
@@ -337,5 +339,23 @@ describe('the coin wall', () => {
     const strips = wallStrips(30, null);
     expect(strips).toHaveLength(40);
     for (const { x, y } of strips) expect(Math.hypot(x, y)).toBeCloseTo(30, 6);
+  });
+});
+
+// The study embed on /rules/jungle-flip (and the replay, TV and review boards,
+// which step through the same helper) turned nothing over on a flip: the glide
+// helper no-ops on a self-move, and only live play called the reveal.
+describe('Flip Jungle replay steps', () => {
+  it('turns the tile over on a step forward onto a flip, and not back', () => {
+    const rootFen = jungleFlipStateToDealtFen(createInitialJungleFlipState('t'));
+    const line = replayJungleFlipLine(rootFen, ['b1b1', 'c2c2']);
+    expect(line?.played).toHaveLength(2);
+    const board = mountJungleFlipReplayBoard(document.createElement('div'), line!);
+    const flipBacks = (run: () => void) =>
+      recordAnimations(run).filter((c) => c.target === 'piece-flip-back');
+    expect(flipBacks(() => board.jumpToPly(1))).toHaveLength(1);
+    expect(flipBacks(() => board.jumpToPly(0))).toHaveLength(0);
+    // A jump repaints without turning anything over.
+    expect(flipBacks(() => board.jumpToPly(2))).toHaveLength(0);
   });
 });

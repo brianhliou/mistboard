@@ -85,10 +85,12 @@ const GOLDEN: Record<string, string> = {
   // outside their outline.
   xqCell: '18e27b8fa73c35f9',
   xqDrag: '0ca4d8b4ce76c8d5',
-  jqInternational: '1b1321bf428719e5',
-  jqWood: 'df4ddaf709b4f1da',
-  jqCell: '4f51dcccff28e48d',
-  jqDrag: '02962bb59f9aef29',
+  // Re-pinned 2026-11-09 (#1023): the jieqi move-hint layer is always drawn,
+  // empty when nothing is selected, and interactive boards show their hints.
+  jqInternational: '2bd9f17ddb47993b',
+  jqWood: '69dd0d95806c0753',
+  jqCell: '8e1b825bdd25c5c3',
+  jqDrag: '1626ee51b88de650',
 };
 
 function sha(svg: string): string {

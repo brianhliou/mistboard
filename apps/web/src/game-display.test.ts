@@ -313,6 +313,7 @@ describe('correspondence side names', () => {
       jungle: 'Red/Blue',
       'jungle-flip': 'First/Second',
       gomoku: 'Black/White',
+      'three-kingdoms-banqi': 'First/Second',
     });
     // A retired variant left the create list, but a game in progress still
     // names its sides.

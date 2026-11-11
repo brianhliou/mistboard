@@ -160,6 +160,78 @@ test('a finished bot seat stored with the bare bot name reads back with its rung
   );
 });
 
+test('old Three Kingdoms engine seats read short names without changing their identity', () => {
+  const cases = [
+    ['misty-three-kingdoms-banqi', 'MistyThreeKingdomsBanqi', 'Misty'],
+    ...Array.from({ length: 8 }, (_, index) => {
+      const level = index + 1;
+      return [
+        `misty-three-kingdoms-banqi-level-${level}`,
+        `MistyThreeKingdomsBanqi level ${level}`,
+        `Misty level ${level}`,
+      ];
+    }),
+  ];
+  for (const [subjectId, displayName, expected] of cases) {
+    const stored = { subjectType: 'engine-version', subjectId, displayName };
+    const before = { ...stored };
+    assert.equal(persistedSeatDisplayName(stored), expected);
+    // Recognized engine identity is enough even if its recorded name differs.
+    assert.equal(persistedSeatDisplayName({ ...stored, displayName: 'Old build' }), expected);
+    // The exact old name also works when its engine id is no longer recognized.
+    assert.equal(persistedSeatDisplayName({ ...stored, subjectId: null }), expected);
+    assert.deepEqual(stored, before);
+    for (const subjectType of ['user', 'guest', 'manual', 'imported', 'bot']) {
+      assert.equal(persistedSeatDisplayName({ ...stored, subjectType }), displayName);
+    }
+  }
+  assert.equal(
+    persistedSeatDisplayName({
+      displayName: 'MistyThreeKingdomsBanqi fan',
+      subjectType: 'engine-version',
+      subjectId: 'unknown-engine',
+    }),
+    'MistyThreeKingdomsBanqi fan',
+  );
+});
+
+test('old Banqi engine and bot seats read the short ladder names', () => {
+  const cases = [
+    ...Array.from({ length: 8 }, (_, index) => {
+      const level = index + 1;
+      return [
+        level === 7 ? 'misty-banqi' : `misty-banqi-level-${level}`,
+        `MistyBanqi Level ${level}`,
+        `Misty Level ${level}`,
+      ];
+    }),
+    ...['amateur', 'strong', 'strongest'].map((alias) => [
+      `misty-banqi-${alias}`,
+      'MistyBanqi Level 7',
+      'Misty Level 7',
+    ]),
+  ];
+  for (const [engineId, displayName, expected] of cases) {
+    for (const subjectType of ['bot', 'engine-version']) {
+      const stored = {
+        subjectType,
+        subjectId: subjectType === 'bot' ? 'misty' : engineId,
+        engineId,
+        displayName,
+      };
+      assert.equal(persistedSeatDisplayName(stored), expected);
+      assert.equal(
+        persistedSeatDisplayName({ ...stored, subjectId: null, engineId: null }),
+        expected,
+      );
+      assert.equal(
+        persistedSeatDisplayName({ ...stored, subjectType: 'user', subjectId: 'human-1' }),
+        displayName,
+      );
+    }
+  }
+});
+
 test('each Fairy-Stockfish level plays xiangqi, fortress and duck through one identity', () => {
   for (let level = 1; level <= 8; level += 1) {
     const botId = `fairy-stockfish-level-${level}`;

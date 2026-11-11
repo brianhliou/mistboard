@@ -57,7 +57,7 @@ export const jieqiPlatformArticle: Article = {
   // engineering post, it handed this page three xiangqi posts, yin-sheng's trio.
   readNext: ['jieqi-openings', 'jieqi-bot-wins', 'jieqi-puzzle-search'],
   updatedAt: '2026-11-09',
-  updateNote: 'Added how the review grades a flip and measures luck.',
+  updateNote: 'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.',
   tldr: [
     'Play Level 1 or invite a friend, with no account needed for casual games.',
     'Full-game analysis grades your moves and measures reveal luck separately.',
@@ -140,7 +140,7 @@ export const jieqiPlatformArticle: Article = {
         { kind: 'sub-heading', text: 'How the review grades a move' },
         {
           kind: 'paragraph',
-          text: 'Before each move, the engine estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.',
+          text: 'AB-JChess, the strongest jieqi bot on Mistboard, grades your review. Before each move, it estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.',
         },
         {
           kind: 'paragraph',

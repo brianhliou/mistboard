@@ -498,7 +498,11 @@ describe('Gomoku hidden registration', () => {
       for (const option of web?.landing?.engineOptions ?? [])
         expect(server?.engineDisplayName?.(option.id)).toBe('Rapfi');
       expect(server?.engineDisplayName?.('human')).toBeNull();
-      expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
+      expect(landingBotOffer(GOMOKU_SPEC_ID)).toMatchObject({
+        botId: 'rapfi-level-1',
+        gameSpecId: GOMOKU_SPEC_ID,
+        timeControlId: '10m5',
+      });
       for (const path of ['/gomoku', '/gomoku/review/test']) {
         expect(isClientRoute(path), path).toBe(false);
       }
@@ -575,5 +579,23 @@ describe('retired variants: replay kept on both sides, play offered on neither',
       expect(tenant.landing?.acceptsDeepLink() ?? false, tenant.gameSpecId).toBe(false);
       expect(landingBotOffer(tenant.gameSpecId), tenant.gameSpecId).toBeNull();
     }
+  });
+});
+
+describe('launched casual Three Kingdoms Banqi registry parity', () => {
+  it('registers its own review and TV board, with an unrated lobby', () => {
+    const server = registeredVariantTenants().find(
+      (tenant) => tenant.gameSpecId === 'three-kingdoms-banqi',
+    )!;
+    const web = webVariantTenants().find((tenant) => tenant.gameSpecId === 'three-kingdoms-banqi')!;
+    expect(maybeGameSpecForId(server.gameSpecId)?.publicSurface).toBe('casual');
+    expect(server.lobby?.supportsRated).toBe(false);
+    expect(web.landing?.capabilities.supportsRated).toBe(false);
+    expect(server.watch?.channelId).toBe('three-kingdoms-banqi');
+    expect(web.watch?.family).toBe(server.watch?.family);
+    // No export: covered identities stay masked after the game (#1002).
+    expect(server.export).toBeNull();
+    expect(server.card?.variant).toBe('three-kingdoms-banqi');
+    expect(isClientRoute('/three-kingdoms-banqi/game/tkb_launched')).toBe(true);
   });
 });

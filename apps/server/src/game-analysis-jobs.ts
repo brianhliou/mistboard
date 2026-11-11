@@ -17,6 +17,7 @@
 // Completed jobs (done/failed) are retained ~10 minutes for polling, then GC'd.
 
 import { randomUUID } from 'node:crypto';
+import { type AnalysisJobProgress, withAnalysisJobProgress } from './analysis-job-progress.js';
 import { VacuousAnalysisError } from './game-analysis-sweep.js';
 import { logger } from './obs.js';
 
@@ -37,6 +38,8 @@ export type AnalysisJob = {
   /** The 200-envelope the sync path used to return; held in memory so the poll
    *  endpoint can serve it even when persistence is disabled (memory-only dev). */
   result: unknown;
+  startedAt: number | null;
+  progress: AnalysisJobProgress;
   createdAt: number;
   finishedAt: number | null;
 };
@@ -97,6 +100,18 @@ export function findPendingAnalysisJob(
   return null;
 }
 
+/** Latest retained handle, including a failure or memory-only completed result. */
+export function findLatestAnalysisJob(
+  variant: string,
+  roomId: string,
+  kind: AnalysisJobKind,
+): AnalysisJob | null {
+  let latest: AnalysisJob | null = null;
+  for (const job of jobs.values())
+    if (job.variant === variant && job.roomId === roomId && job.kind === kind) latest = job;
+  return latest;
+}
+
 /** Jobs waiting or running, across lanes. The broadcast analysis sweep only
  *  enqueues when this is zero, so a reader's request never waits behind it. */
 export function pendingAnalysisJobCount(): number {
@@ -121,6 +136,7 @@ export function enqueueAnalysisJob(args: {
   roomId: string;
   kind: AnalysisJobKind;
   accountId: string;
+  total?: number;
   run(): Promise<unknown>;
 }): EnqueueAnalysisJobResult {
   const pending = pendingJobs();
@@ -142,6 +158,8 @@ export function enqueueAnalysisJob(args: {
     status: 'pending',
     error: null,
     result: null,
+    startedAt: null,
+    progress: { phase: 'analysis', completed: 0, total: args.total ?? 0 },
     createdAt: Date.now(),
     finishedAt: null,
   };
@@ -150,7 +168,14 @@ export function enqueueAnalysisJob(args: {
   const lane = laneFor(args.variant);
   chains[lane] = chains[lane].then(async () => {
     try {
-      job.result = await args.run();
+      job.startedAt = Date.now();
+      job.result = await withAnalysisJobProgress((update) => {
+        if (update.phase) job.progress.phase = update.phase;
+        if (Number.isSafeInteger(update.total) && update.total! >= 0)
+          job.progress.total = update.total!;
+        if (Number.isSafeInteger(update.completed) && update.completed! >= 0)
+          job.progress.completed = Math.min(update.completed!, job.progress.total);
+      }, args.run);
       job.status = 'done';
     } catch (err) {
       job.status = 'failed';
@@ -184,7 +209,11 @@ export function enqueueAnalysisJob(args: {
 export function analysisJobStatusBody(job: AnalysisJob): Record<string, unknown> {
   if (job.status === 'done') return { status: 'done', result: job.result };
   if (job.status === 'failed') return { status: 'failed', error: job.error ?? 'analysis_failed' };
-  return { status: 'pending' };
+  return {
+    status: 'pending',
+    state: job.startedAt === null ? 'queued' : 'running',
+    progress: { ...job.progress },
+  };
 }
 
 /** Test hook: drop all jobs and wait out the execution chain. */

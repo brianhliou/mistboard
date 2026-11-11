@@ -8,8 +8,8 @@
 #
 # Missing credentials, upstream failures and checksum mismatches warn and exit 0
 # so a net outage never blocks the web deploy. Only verified, non-empty bytes
-# move into <bindir>. MISTBOARD_PRIVATE_ASSETS_TOKEN (the token that also fetches the
-# private Pikafish net) needs read access to brianhliou/mistboard-nets.
+# move into <bindir>. MISTBOARD_PRIVATE_ASSETS_TOKEN needs read access to
+# brianhliou/mistboard-nets. Pikafish uses a separate public CC0 download.
 # The token goes through a mode-600 header file, never curl argv or child env;
 # the temporary directory and header are removed on exit. Never enable tracing.
 #

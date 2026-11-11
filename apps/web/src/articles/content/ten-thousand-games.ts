@@ -270,7 +270,7 @@ export function buildTenThousandGamesArticle(record: TenThousandGamesRecord): Ar
             kind: 'image-figure',
             src: '/article-thumbs/ten-thousand-games-new.webp',
             alt: 'Three phone screens: a Puzzle Storm run waiting for its first move, a Gomoku game won by Rapfi with five in a row, and a banqi board with 3D pieces among face-down tiles.',
-            className: 'article-figure-full',
+            className: 'article-figure-full article-figure-bare',
           },
         ],
       },
