@@ -784,7 +784,7 @@ export function createTenantRoomChrome<C extends string>(
   // correspondence player between moves, a friend whose tab dropped, an
   // engine) is not someone to invite. A lobby room has no link to share.
   // Correspondence seeks seat both accounts at accept, so their rooms never
-  // open it.
+  // open it; a direct correspondence invite (#1059) does, like a live one.
   function inviteWindowOpen(): boolean {
     const opponent = pregameOpponent();
     if (opponent === null || ctx.lobbyMatch()) return false;
@@ -847,9 +847,17 @@ export function createTenantRoomChrome<C extends string>(
     // joins. No Home button either (lichess parity): the site nav is the way
     // out, and the empty host collapses its row.
     if (view?.status.type === 'aborted') return;
+    // A guest who opened a correspondence invite (#1059) is asked to sign in
+    // once the friend has sat: the game now runs for days, and only an account
+    // gets an email when it is their move. The sign-in returns here and the
+    // reconnect binds this seat to the account (server seat-session.ts).
+    if (guestCorrespondenceSeat()) {
+      refs.roomActions.append(guestCorrespondenceNotice());
+      return;
+    }
     // The invite link only while the opponent's seat is unclaimed in a room
     // shared by link: never in a lobby room, a bot game (the engine holds its
-    // seat) or a correspondence game (both accounts seated at accept), and not
+    // seat) or a correspondence seek game (both accounts seated at accept), and not
     // once both seats are taken, where the button used to sit in the column
     // for the whole game (Brian's playtest, 2026-10-02).
     if (!inviteWindowOpen()) return;
@@ -867,6 +875,27 @@ export function createTenantRoomChrome<C extends string>(
     if (typeof body.gameSpecId === 'string') return body.gameSpecId;
     if (typeof body.variant === 'string') return body.variant;
     return undefined;
+  }
+
+  // A seated guest in a days-per-move game whose opponent has taken a seat. A
+  // guest can hold a correspondence seat only as the invite's creator; the
+  // friend's seat already needs an account.
+  function guestCorrespondenceSeat(): boolean {
+    if (!isCorrespondence() || isLikelySignedIn()) return false;
+    if (ctx.view()?.status.type !== 'playing') return false;
+    const seat = seatColor();
+    if (seat === null) return false;
+    return Boolean(ctx.seats()[tenant.oppositeColor(seat)]);
+  }
+
+  function guestCorrespondenceNotice(): HTMLElement {
+    const notice = document.createElement('div');
+    notice.className = 'action-notice default correspondence-guest-notice';
+    const signIn = document.createElement('a');
+    signIn.href = loginHrefForCurrentPage();
+    signIn.textContent = t('correspondence.signIn');
+    notice.append(noticeBody(t('live.correspondenceGuestSignIn')), signIn);
+    return notice;
   }
 
   function copyInviteButton(): HTMLButtonElement {

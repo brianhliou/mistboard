@@ -97,6 +97,13 @@ export function assignTenantSeat<
           clientId,
           deviceId: state.deviceId ?? deviceId,
           lastSeenAt: new Date(),
+          ...(bindsGuestSeat(tenant, room, state, accountUser)
+            ? {
+                userId: accountUser.id,
+                userHandle: accountUser.handle ?? null,
+                userDisplayName: accountUser.displayName ?? null,
+              }
+            : {}),
         };
         room.seatTokens[color] = tokenState;
         return {
@@ -159,11 +166,18 @@ export function assignTenantSeat<
   if (room.rated && isStatsExcluded(accountUser)) {
     return { ok: false, reason: 'rated requires counted account' };
   }
-  // Correspondence (days-per-move) seats are account-required on BOTH sides:
-  // notifications, deadline rows, and cross-device reseat all key off the seat's
-  // user id. The create route gates the creator; this gates the invitee. Keyed
-  // off the clock policy, not a room mode, so every future tenant inherits it.
-  if (!accountUser && clockPolicyKindFor(room.projection.timeControl) === 'days-per-move') {
+  // Correspondence (days-per-move) seats need an account for the friend who
+  // joins: notifications, deadline rows, and cross-device reseat all key off
+  // the seat's user id. The one exception is the creator of a friend invite
+  // (#1059): a guest takes the first seat of an empty room with the usual
+  // bearer token and binds it to an account by signing in later (the token
+  // branch above). Keyed off the clock policy, not a room mode, so every
+  // future tenant inherits it.
+  if (
+    !accountUser &&
+    clockPolicyKindFor(room.projection.timeControl) === 'days-per-move' &&
+    tenant.colors.some((color) => occupiedSeats.has(color))
+  ) {
     return { ok: false, reason: 'correspondence requires account' };
   }
 
@@ -184,6 +198,31 @@ export function assignTenantSeat<
   };
   room.seatTokens[seat] = tokenState;
   return { ok: true, seat, seatToken, seatTokenHash, tokenState };
+}
+
+// A guest's correspondence seat learns its account when the browser holding
+// its token signs in (#1059): the token branch keeps the seat, and the account
+// it now carries is what deadline rows, notifications and reseating on another
+// device key off. Only days-per-move rooms (a live guest seat stays a guest's),
+// and never when the account already holds another seat in this room, so one
+// account cannot end up playing both sides.
+function bindsGuestSeat<C extends string>(
+  tenant: { colors: readonly C[] },
+  room: {
+    projection: { timeControl?: { daysPerMove?: number } | null };
+    seatTokens: Partial<Record<C, TenantSeatTokenState<C>>>;
+  },
+  state: TenantSeatTokenState<C>,
+  accountUser: UserAccount | null,
+): accountUser is UserAccount {
+  if (!accountUser || state.userId !== null) return false;
+  if (clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move') return false;
+  return !tenant.colors.some(
+    (color) =>
+      color !== state.seat &&
+      room.seatTokens[color]?.revokedAt === null &&
+      room.seatTokens[color]?.userId === accountUser.id,
+  );
 }
 
 // Pre-issue a fresh seat token for a specific seat (used by rematch finalize to

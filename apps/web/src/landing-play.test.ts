@@ -1156,6 +1156,7 @@ describe('landing play panel', () => {
   ]) {
     it(`a correspondence friend invite on ${gameSpecId} as ${color} posts that variant and side`, async () => {
       vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setResolvedSignedIn(true);
       const navigated: string[] = [];
       setRoomNavigator((url) => {
         navigated.push(url);
@@ -1194,10 +1195,60 @@ describe('landing play panel', () => {
     });
   }
 
-  // #1055: signed out, the sign-in link was a bare /account, so the player came
-  // back to nothing. Its referrer now reopens the dialog with the same setup.
+  // #1059: signed out, Challenge a friend creates a direct invite room the guest
+  // sits in at once, instead of a sign-in wall. The side goes as the variant's
+  // own color, and no link challenge is posted.
+  for (const { gameSpecId, color, sent } of [
+    { gameSpecId: 'xiangqi', color: 'Black', sent: 'black' },
+    { gameSpecId: 'jieqi', color: 'Red', sent: 'red' },
+    { gameSpecId: 'dark-chess', color: 'White', sent: 'white' },
+    { gameSpecId: 'dark-chess', color: 'Random', sent: 'random' },
+  ]) {
+    it(`signed out, a correspondence friend invite on ${gameSpecId} as ${color} opens a room`, async () => {
+      vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setResolvedSignedIn(false);
+      const navigated: string[] = [];
+      setRoomNavigator((url) => {
+        navigated.push(url);
+      });
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/rooms') {
+          return jsonResponse({ roomId: 'xq_guest', url: '/room/xq_guest' }, { status: 201 });
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Challenge a friend');
+      selectModalVariant(gameSpecId);
+      clickModalButton('Correspondence');
+      clickModalTimeControl('3');
+      clickModalColor(color);
+      clickModalButton('Create room');
+      await flushPromises();
+
+      expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/correspondence/seeks')).toBe(
+        false,
+      );
+      const roomPost = fetchSpy.mock.calls.find(([url]) => String(url) === '/api/rooms');
+      expect(JSON.parse(String(roomPost?.[1]?.body))).toEqual({
+        gameSpecId,
+        mode: 'correspondence',
+        daysPerMove: 3,
+        preferredColor: sent,
+      });
+      expect(navigated).toEqual(['/room/xq_guest']);
+      expect(document.querySelector('.landing-setup-status')?.textContent ?? '').toBe('');
+    });
+  }
+
+  // #1055: a stale signed-in hint (the session expired) gets a sign-in link
+  // whose referrer reopens the dialog with the same setup.
   it('the correspondence sign-in link brings the player back to the same setup', async () => {
     vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setResolvedSignedIn(true);
     setRoomNavigator(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1245,6 +1296,7 @@ describe('landing play panel', () => {
 
   it('shows the correspondence sign-in notice in Chinese', async () => {
     vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+    setResolvedSignedIn(true);
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
