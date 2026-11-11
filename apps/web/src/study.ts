@@ -30,7 +30,11 @@ import {
   parsePracticeGoal,
   serializedTreeMainline,
 } from '@mistboard/game';
-import { createEmbedScoreChart, embedScoreSeries } from './embed/embed-score-chart.js';
+import {
+  createEmbedScoreChart,
+  embedScoreSeries,
+  scoreChartSeatNames,
+} from './embed/embed-score-chart.js';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { fetchStudyChapterDecisions } from './review/study-decisions.js';
@@ -1026,6 +1030,7 @@ function renderStudy(
       ? createEmbedScoreChart(series, {
           onJump: (ply) => handle?.jumpToPly(ply),
           moveLabel: (ply) => handle?.mainlineMoveLabel(ply) ?? '',
+          seatNames: scoreChartSeatNames(variant),
         })
       : null;
     return mountStudyReview(variant, root, {

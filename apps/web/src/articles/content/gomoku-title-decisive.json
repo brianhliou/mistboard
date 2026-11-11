@@ -1,0 +1,391 @@
+{
+ "$comment": "Why the Gomoku title match games are decisive: read from the equal-time match logs (mistboard-engine lab/gomoku-title-match-2026-11/run-equal-3s, 199 counted games) on 2026-11-11. Rapfi win chances are its own per-move evals as logged in the match, on its win curve (1/(1+exp(-eval/200)), a forced five as 0 or 1). Stone counts include the five dealt opening stones; game lengths are moves after the opening. KataGomo logged no evals, so nothing here reads KataGomo's view.",
+ "games": 199,
+ "lengths": {
+  "decisive": 138,
+  "decisiveMedian": 44.5,
+  "draws": 61,
+  "drawMoves": 220,
+  "drawMovesMin": 220,
+  "binMoves": 10,
+  "bins": [
+   {
+    "from": 10,
+    "games": 1
+   },
+   {
+    "from": 20,
+    "games": 24
+   },
+   {
+    "from": 30,
+    "games": 31
+   },
+   {
+    "from": 40,
+    "games": 21
+   },
+   {
+    "from": 50,
+    "games": 18
+   },
+   {
+    "from": 60,
+    "games": 14
+   },
+   {
+    "from": 70,
+    "games": 8
+   },
+   {
+    "from": 80,
+    "games": 5
+   },
+   {
+    "from": 90,
+    "games": 4
+   },
+   {
+    "from": 100,
+    "games": 3
+   },
+   {
+    "from": 110,
+    "games": 5
+   },
+   {
+    "from": 120,
+    "games": 2
+   },
+   {
+    "from": 130,
+    "games": 1
+   },
+   {
+    "from": 150,
+    "games": 1
+   }
+  ]
+ },
+ "trajectory": {
+  "binStones": 4,
+  "meanOf": "Rapfi win chance",
+  "wins": [
+   {
+    "stones": 8,
+    "games": 226,
+    "chance": 0.653
+   },
+   {
+    "stones": 12,
+    "games": 226,
+    "chance": 0.7232
+   },
+   {
+    "stones": 16,
+    "games": 226,
+    "chance": 0.7841
+   },
+   {
+    "stones": 20,
+    "games": 225,
+    "chance": 0.8345
+   },
+   {
+    "stones": 24,
+    "games": 213,
+    "chance": 0.8719
+   },
+   {
+    "stones": 28,
+    "games": 190,
+    "chance": 0.8761
+   },
+   {
+    "stones": 32,
+    "games": 167,
+    "chance": 0.8805
+   },
+   {
+    "stones": 36,
+    "games": 142,
+    "chance": 0.8888
+   },
+   {
+    "stones": 40,
+    "games": 121,
+    "chance": 0.8883
+   },
+   {
+    "stones": 44,
+    "games": 105,
+    "chance": 0.8873
+   },
+   {
+    "stones": 48,
+    "games": 90,
+    "chance": 0.8894
+   },
+   {
+    "stones": 52,
+    "games": 78,
+    "chance": 0.8922
+   },
+   {
+    "stones": 56,
+    "games": 66,
+    "chance": 0.9038
+   },
+   {
+    "stones": 60,
+    "games": 57,
+    "chance": 0.904
+   },
+   {
+    "stones": 64,
+    "games": 44,
+    "chance": 0.8887
+   },
+   {
+    "stones": 68,
+    "games": 37,
+    "chance": 0.8773
+   },
+   {
+    "stones": 72,
+    "games": 27,
+    "chance": 0.8322
+   },
+   {
+    "stones": 76,
+    "games": 22,
+    "chance": 0.8019
+   },
+   {
+    "stones": 80,
+    "games": 17,
+    "chance": 0.7835
+   }
+  ],
+  "draws": [
+   {
+    "stones": 8,
+    "games": 122,
+    "chance": 0.4945
+   },
+   {
+    "stones": 12,
+    "games": 122,
+    "chance": 0.5015
+   },
+   {
+    "stones": 16,
+    "games": 122,
+    "chance": 0.5146
+   },
+   {
+    "stones": 20,
+    "games": 122,
+    "chance": 0.5167
+   },
+   {
+    "stones": 24,
+    "games": 122,
+    "chance": 0.5233
+   },
+   {
+    "stones": 28,
+    "games": 122,
+    "chance": 0.5358
+   },
+   {
+    "stones": 32,
+    "games": 122,
+    "chance": 0.545
+   },
+   {
+    "stones": 36,
+    "games": 122,
+    "chance": 0.5503
+   },
+   {
+    "stones": 40,
+    "games": 122,
+    "chance": 0.5568
+   },
+   {
+    "stones": 44,
+    "games": 122,
+    "chance": 0.569
+   },
+   {
+    "stones": 48,
+    "games": 122,
+    "chance": 0.5829
+   },
+   {
+    "stones": 52,
+    "games": 122,
+    "chance": 0.5856
+   },
+   {
+    "stones": 56,
+    "games": 122,
+    "chance": 0.5948
+   },
+   {
+    "stones": 60,
+    "games": 122,
+    "chance": 0.6097
+   },
+   {
+    "stones": 64,
+    "games": 122,
+    "chance": 0.6108
+   },
+   {
+    "stones": 68,
+    "games": 122,
+    "chance": 0.6131
+   },
+   {
+    "stones": 72,
+    "games": 122,
+    "chance": 0.5992
+   },
+   {
+    "stones": 76,
+    "games": 122,
+    "chance": 0.5903
+   },
+   {
+    "stones": 80,
+    "games": 122,
+    "chance": 0.5727
+   }
+  ],
+  "losses": [
+   {
+    "stones": 8,
+    "games": 50,
+    "chance": 0.4189
+   },
+   {
+    "stones": 12,
+    "games": 50,
+    "chance": 0.3657
+   },
+   {
+    "stones": 16,
+    "games": 50,
+    "chance": 0.3362
+   },
+   {
+    "stones": 20,
+    "games": 50,
+    "chance": 0.2875
+   },
+   {
+    "stones": 24,
+    "games": 50,
+    "chance": 0.2645
+   },
+   {
+    "stones": 28,
+    "games": 50,
+    "chance": 0.2496
+   },
+   {
+    "stones": 32,
+    "games": 50,
+    "chance": 0.2301
+   },
+   {
+    "stones": 36,
+    "games": 50,
+    "chance": 0.217
+   },
+   {
+    "stones": 40,
+    "games": 48,
+    "chance": 0.2151
+   },
+   {
+    "stones": 44,
+    "games": 45,
+    "chance": 0.1872
+   },
+   {
+    "stones": 48,
+    "games": 44,
+    "chance": 0.1795
+   },
+   {
+    "stones": 52,
+    "games": 42,
+    "chance": 0.1756
+   },
+   {
+    "stones": 56,
+    "games": 38,
+    "chance": 0.1789
+   },
+   {
+    "stones": 60,
+    "games": 35,
+    "chance": 0.1533
+   },
+   {
+    "stones": 64,
+    "games": 34,
+    "chance": 0.1359
+   },
+   {
+    "stones": 68,
+    "games": 32,
+    "chance": 0.1312
+   },
+   {
+    "stones": 72,
+    "games": 30,
+    "chance": 0.1244
+   },
+   {
+    "stones": 76,
+    "games": 30,
+    "chance": 0.1046
+   },
+   {
+    "stones": 80,
+    "games": 29,
+    "chance": 0.0812
+   }
+  ]
+ },
+ "forcedWin": {
+  "rapfiWins": 113,
+  "medianStone": 22
+ },
+ "losses": {
+  "games": 25,
+  "read": 24,
+  "bestChanceMedian": 0.53,
+  "aboveSeventy": 2
+ },
+ "attack": {
+  "rapfi": {
+   "moves": 10386,
+   "fours": 1728,
+   "doubleThreats": 113
+  },
+  "katagomo": {
+   "moves": 10336,
+   "fours": 1181,
+   "doubleThreats": 41
+  }
+ },
+ "edges": {
+  "colour": 0.036,
+  "engine": 0.221
+ }
+}

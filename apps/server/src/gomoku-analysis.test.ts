@@ -297,3 +297,19 @@ test('Gomoku cache coalesces, keys engine/version/budget, and never saves all-nu
   assert.ok(await resolveGomokuAnalysis('bad', [], undefined, cache, analyze));
   assert.equal(keys.length, 2);
 });
+
+test('A Rapfi session takes a lab budget in place of the site analysis budget', async () => {
+  const { GOMOKU_ANALYSIS_NODES, GOMOKU_ANALYSIS_TIME_MS, RapfiSession } = await api();
+  const budgets: string[][] = [];
+  for (const budget of [undefined, { nodes: 1_000_000_000, timeMs: 3_000 }]) {
+    const engine = fakeEngine([recorded]);
+    const session = new RapfiSession({ spawnProcess: engine.spawnProcess, budget });
+    await session.ready();
+    await session.close();
+    budgets.push(engine.commands.filter((s) => /^INFO (max_node|timeout_turn) /.test(s)));
+  }
+  assert.deepEqual(budgets, [
+    [`INFO max_node ${GOMOKU_ANALYSIS_NODES}`, `INFO timeout_turn ${GOMOKU_ANALYSIS_TIME_MS}`],
+    ['INFO max_node 1000000000', 'INFO timeout_turn 3000'],
+  ]);
+});

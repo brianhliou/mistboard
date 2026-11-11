@@ -78,16 +78,28 @@ export type EmbedScoreChart = {
   setPly: (ply: number) => void;
 };
 
+/** Gomoku's seats under the chart's red/black series sides. */
+export const GOMOKU_SEAT_NAMES = { red: 'Black', black: 'White' } as const;
+
+/** The seat names a variant's chart readout uses, where they are not red and black. */
+export function scoreChartSeatNames(variant: string): { red: string; black: string } | undefined {
+  return variant === 'gomoku' ? GOMOKU_SEAT_NAMES : undefined;
+}
+
 export function createEmbedScoreChart(
   data: EmbedScoreSeries,
   opts: {
     onJump: (ply: number) => void;
     /** The move that reached a ply ("e2-e5"), shown after its number in the readout. */
     moveLabel?: (ply: number) => string;
+    /** The seat names for `side`, where they are not red and black: Gomoku's
+     *  red seat is Black (the first mover) and its black seat White. */
+    seatNames?: { red: string; black: string };
   },
 ): EmbedScoreChart {
   const maxPly = data.series[0]!.values.length - 1;
-  const sideName = data.side === 'red' ? 'Red' : 'Black';
+  const seats = opts.seatNames ?? { red: 'Red', black: 'Black' };
+  const sideName = data.side === 'red' ? seats.red : seats.black;
   const sideLabel = `Win chance for ${sideName}`;
 
   const el = document.createElement('div');

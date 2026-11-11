@@ -69,7 +69,7 @@ import {
   type SolutionHiddenLabels,
 } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
-import { createEmbedScoreChart, embedScoreSeries } from './embed-score-chart.js';
+import { createEmbedScoreChart, embedScoreSeries, GOMOKU_SEAT_NAMES } from './embed-score-chart.js';
 import './embed.css';
 
 type StudyPayload = {
@@ -351,14 +351,9 @@ async function mountGomokuEmbed(
     note(root, 'This chapter’s Gomoku position is invalid.');
     return;
   }
-  const moves: string[] = [];
-  let node = chapter.root?.root;
-  while (node?.children?.length) {
-    const next = node.children[0];
-    if (!next?.uci) break;
-    moves.push(next.uci);
-    node = next;
-  }
+  const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
+  // A shape drawn on the start position is a hint, often the answer's ring.
+  if (options.hideSolution) delete shapes[0];
   const line = replayGomokuLine(parsed.state, moves);
   const tags = chapter.tags ?? {};
   const status = line.states.at(-1)!.status;
@@ -375,7 +370,20 @@ async function mountGomokuEmbed(
             : status.type === 'finished'
               ? 'draw'
               : null;
-  await mountEmbedCard(root, {
+  // The win-chance graph under the board, as the jieqi embed draws it, when the
+  // chapter carries one that fits this line; a hidden solution keeps it off.
+  const series = options.hideSolution
+    ? null
+    : embedScoreSeries(chapter.scoreSeries, line.states.length);
+  let card: EmbedCard | null = null;
+  const chart = series
+    ? createEmbedScoreChart(series, {
+        onJump: (ply) => card?.jumpToPly(ply),
+        moveLabel: (ply) => line.played[ply - 1]?.to ?? '',
+        seatNames: GOMOKU_SEAT_NAMES,
+      })
+    : null;
+  card = await mountEmbedCard(root, {
     header: tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study'),
     seats: {
       first: { name: tags.black ?? t('setup.black'), ink: 'black' },
@@ -388,7 +396,21 @@ async function mountGomokuEmbed(
     railWidthPx: embedRailWidthPx('gomoku'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    mountBoard: async (host, hooks) => mountGomokuReplayBoard(host, line, hooks),
+    ...(chart ? { underBoard: chart.el } : {}),
+    mountBoard: async (host, hooks) =>
+      mountGomokuReplayBoard(
+        host,
+        line,
+        chart
+          ? {
+              onPlyChange: (ply, maxPly) => {
+                chart.setPly(ply);
+                hooks.onPlyChange(ply, maxPly);
+              },
+            }
+          : hooks,
+        { glyphs, notes, lines, assessments, shapes },
+      ),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

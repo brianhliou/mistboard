@@ -67,7 +67,10 @@ export function moveGlyphFor(before: number, after: number): MoveGlyph | null {
   return judgment ? GLYPH_FOR[judgment] : null;
 }
 
-export type StudyArrow = { kind: 'arrow'; brush: string; orig: string; dest: string };
+export type StudyArrow =
+  | { kind: 'arrow'; brush: string; orig: string; dest: string }
+  /** A ring on one point, for a variant whose moves are single points (Gomoku). */
+  | { kind: 'circle'; brush: string; orig: string };
 export type StudyNode = {
   uci?: string;
   annotations?: {
@@ -131,6 +134,9 @@ export type EngineAnnotationInput = {
   judgedComment?: (move: JudgedMove) => string;
   /** The root's comment. */
   intro?: string;
+  /** How a sideline's first move is drawn on the position it leaves from: a
+   *  from-to arrow by default; a point game (Gomoku) passes a ring. */
+  sidelineShape?: (move: string, brush: string) => StudyArrow;
 };
 
 function comment(node: StudyNode, text: string): void {
@@ -219,8 +225,11 @@ export function annotateFromEngine(input: EngineAnnotationInput): {
       if (side.comment) comment(head!, side.comment);
       if (side.redScoreEnd != null) glyph(tail!, assessmentForRedScore(side.redScoreEnd).nag);
       cursor.children.push(head!);
+      const brush = side.brush ?? 'green';
       arrows(cursor, [
-        { kind: 'arrow', brush: side.brush ?? 'green', ...squaresOf(side.moves[0]!) },
+        input.sidelineShape
+          ? input.sidelineShape(side.moves[0]!, brush)
+          : { kind: 'arrow', brush, ...squaresOf(side.moves[0]!) },
       ]);
     }
     cursor = node;

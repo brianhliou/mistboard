@@ -151,7 +151,7 @@ describe('/champions', () => {
       'Won the first Gomoku title match, against KataGomo, on 2026-11-11: 199 games at 3 s a move for both engines, scoring 72%.',
     );
     expect(card('gomoku').querySelector('.champions-about')?.textContent).toBe(
-      'By dhbloo and the Rapfi contributors, with its own neural networks. It plays here at 80,000 positions a move, a budget at which it scored about even with KataGomo.',
+      'By dhbloo and the Rapfi contributors, with its own neural networks. It plays here at 80,000 positions a move, a smaller search than the one that won the title.',
     );
     const buttons = (game: string) =>
       [...card(game).querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(

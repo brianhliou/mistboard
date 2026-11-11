@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { articleProse } from '../../article-prose.js';
+import decisive from './gomoku-title-decisive.json' with { type: 'json' };
 import match from './gomoku-title-match.json' with { type: 'json' };
 import {
   FEATURED_FIVE,
@@ -14,8 +15,10 @@ import {
   featuredGameState,
   KATAGOMO_SCORE,
   LEVEL8_SHARE,
+  PARTED,
+  PARTED_AT_STONES,
+  RAPFI_KATAGOMO_STUDY,
   rapfiVsKatagomoArticle,
-  UNEVEN_TIME_RATIO,
   VOIDED_MS,
 } from './rapfi-vs-katagomo.js';
 
@@ -73,9 +76,8 @@ describe('gomoku title match record', () => {
   });
 
   it('the title result clears the bar the champions page states', () => {
-    // KataGomo needed 55% in either match; the paired range keeps Rapfi above 55% itself.
-    expect(KATAGOMO_SCORE.uneven).toBeLessThan(0.55);
-    expect(KATAGOMO_SCORE.equal).toBeLessThan(0.55);
+    // KataGomo needed 55%; the paired range keeps Rapfi above 55% itself.
+    expect(KATAGOMO_SCORE).toBeLessThan(0.55);
     expect(match.equal.total.pairedScoreLow).toBeGreaterThan(0.55);
   });
 
@@ -102,31 +104,130 @@ describe('rapfi-vs-katagomo prose', () => {
   const prose = articleProse(rapfiVsKatagomoArticle)
     .map((x) => x.text)
     .join('\n');
-  const u = match.uneven.total;
   const e = match.equal.total;
 
   it('states the record numbers', () => {
     for (const text of [
       `${e.wins} wins, ${e.draws} draws and ${e.losses} losses`,
-      `${u.wins}-${u.draws}-${u.losses}`,
       `+${e.elo} Elo`,
       `+${e.eloLow} to +${e.eloHigh}`,
-      `${u.eloLow} to +${u.eloHigh}`,
       '80,000 positions',
       '450,000 positions',
-      `${match.uneven.katagomoBudget.maxVisits} visits`,
-      `about ${UNEVEN_TIME_RATIO} times as long`,
+      `${e.timing.katagomoVisitsMedian} visits`,
       `about ${LEVEL8_SHARE} times`,
       '72%',
       '28%',
-      '51%',
     ]) {
       expect(prose, text).toContain(text);
     }
   });
 
+  it('gives the earlier matched-search match one sentence, its result only', () => {
+    const u = match.uneven.total;
+    const sentences = prose.split(/(?<=[.:])\s+/).filter((x) => x.includes(`${u.wins}-${u.draws}-${u.losses}`));
+    expect(sentences).toHaveLength(1);
+    expect(prose).toContain(
+      `KataGomo at ${match.uneven.katagomoBudget.maxVisits} visits, the two scored level: ${u.wins}-${u.draws}-${u.losses} over ${u.games} games`,
+    );
+    expect(prose.match(new RegExp(`${match.uneven.katagomoBudget.maxVisits} visits`, 'g'))).toHaveLength(1);
+    // No table, Elo range or TL;DR line for it.
+    expect(prose).not.toContain(`${u.eloLow} to`);
+    expect(rapfiVsKatagomoArticle.tldr?.join(' ')).not.toContain(`${u.wins}-${u.draws}-${u.losses}`);
+    expect(prose).not.toMatch(/rematch/i);
+  });
+
+  it('frames the title on the CPUs the site serves from', () => {
+    expect(prose).toContain('On the CPUs Mistboard serves from, Rapfi is the stronger engine.');
+    expect(prose).toContain(`on its ${match.katagomo.backend} backend`);
+    expect(prose).toContain('one CPU thread');
+  });
+
+  it('tables the title result from the record', () => {
+    const table = rapfiVsKatagomoArticle.sections
+      .flatMap((s) => s.blocks ?? [])
+      .find((b) => b.kind === 'table');
+    expect(table?.kind === 'table' ? table.rows[0]?.[1] : null).toBe(`${e.wins}-${e.draws}-${e.losses}`);
+  });
+
   it('derived ratios match the record', () => {
-    expect(UNEVEN_TIME_RATIO).toBe(11);
     expect(LEVEL8_SHARE).toBe(6);
+  });
+
+  it('shows game 1 from the match study, opened on its last move', () => {
+    const embeds = rapfiVsKatagomoArticle.sections.flatMap((s) =>
+      (s.blocks ?? []).flatMap((b) => (b.kind === 'embed' ? [b.path] : [])),
+    );
+    expect(embeds).toEqual([
+      `/embed/study/${RAPFI_KATAGOMO_STUDY.id}/${RAPFI_KATAGOMO_STUDY.chapters.featured}?ply=${match.featured.moves.length}`,
+    ]);
+    expect(RAPFI_KATAGOMO_STUDY.id).toMatch(/^[A-Za-z0-9_-]{8}$/);
+    expect(RAPFI_KATAGOMO_STUDY.chapters.featured).toMatch(/^[A-Za-z0-9_-]{8}$/);
+  });
+});
+
+describe('why the title games are decisive (gomoku-title-decisive.json)', () => {
+  const prose = articleProse(rapfiVsKatagomoArticle)
+    .map((x) => x.text)
+    .join('\n');
+  const L = decisive.lengths;
+  const pctOf = (x: number) => `${Math.round(x * 100)}%`;
+
+  it('holds the record to itself and to the match record', () => {
+    expect(L.decisive + L.draws).toBe(decisive.games);
+    expect(L.bins.reduce((a, b) => a + b.games, 0)).toBe(L.decisive);
+    expect(L.drawMovesMin).toBe(L.drawMoves);
+    const e = match.equal.total;
+    expect(decisive.games).toBe(e.games);
+    expect(L.draws).toBe(e.draws);
+    expect(L.decisive).toBe(e.endings.five);
+    expect(L.draws).toBe(e.endings['board-full']);
+    expect(decisive.losses.games).toBe(e.losses);
+    expect(decisive.forcedWin.rapfiWins).toBe(e.wins);
+    for (const line of [decisive.trajectory.wins, decisive.trajectory.draws, decisive.trajectory.losses]) {
+      for (const p of line) {
+        expect(p.chance).toBeGreaterThanOrEqual(0);
+        expect(p.chance).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('states the record numbers', () => {
+    const a = decisive.attack;
+    for (const text of [
+      `${L.decisive} of the ${decisive.games} games ended in a five, at a median of ${L.decisiveMedian} moves`,
+      `All ${L.draws} draws ran the full ${L.drawMoves} moves`,
+      `by stone ${PARTED_AT_STONES}`,
+      `${pctOf(PARTED.wins)} in its eventual wins, ${pctOf(PARTED.draws)} in the draws and ${pctOf(PARTED.losses)} in its losses`,
+      `a median stone ${decisive.forcedWin.medianStone}`,
+      `Its ${decisive.losses.games} losses`,
+      `In the ${decisive.losses.read} with logged readings`,
+      `a median ${pctOf(decisive.losses.bestChanceMedian)}`,
+      `only ${decisive.losses.aboveSeventy} went above 70%`,
+      `${((a.rapfi.fours / a.rapfi.moves) * 100).toFixed(1)}% of its moves made a four`,
+      `${((a.katagomo.fours / a.katagomo.moves) * 100).toFixed(1)}% of KataGomo's`,
+      `${a.rapfi.doubleThreats} moves with two threats at once to KataGomo's ${a.katagomo.doubleThreats}`,
+      `about ${Math.round(decisive.edges.colour * 100)} points of score`,
+      `being Rapfi about ${Math.round(decisive.edges.engine * 100)}`,
+    ]) {
+      expect(prose, text).toContain(text);
+    }
+  });
+
+  it('pins the figures the coordinator read from the analysis', () => {
+    // A re-run of the analysis that moves these must be re-read in the prose.
+    expect(L.decisiveMedian).toBe(44.5);
+    expect(decisive.forcedWin.medianStone).toBe(22);
+    expect(decisive.losses.bestChanceMedian).toBe(0.53);
+  });
+
+  it('draws both charts from the record', () => {
+    const svgs = rapfiVsKatagomoArticle.sections.flatMap((s) =>
+      (s.blocks ?? []).flatMap((b) => (b.kind === 'raw-svg' ? [b.svg] : [])),
+    );
+    expect(svgs).toHaveLength(2);
+    expect(svgs[0]).toContain(`median ${L.decisiveMedian} moves`);
+    expect(svgs[0]).toContain(`Draws: ${L.draws} games, ${L.drawMoves} moves each`);
+    expect(svgs[1]).toContain('Rapfi won');
+    expect(svgs[1]).toContain('Rapfi lost');
   });
 });

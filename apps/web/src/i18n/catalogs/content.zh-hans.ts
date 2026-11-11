@@ -535,7 +535,7 @@ export const ZH_HANS_CONTENT = {
   'champions.tookGomoku':
     '2026-11-11 赢得首场五子棋头衔赛，对手 KataGomo，双方每步 {seconds} 秒，共 {games} 局，得分率 {score}%。',
   'champions.aboutGomoku':
-    '作者 dhbloo 及 Rapfi 贡献者，带有自己的神经网络。在本站每步搜索 {nodes} 个局面，在这个预算下与 KataGomo 得分大致持平。',
+    '作者 dhbloo 及 Rapfi 贡献者，带有自己的神经网络。在本站每步搜索 {nodes} 个局面，少于它赢得冠军时的搜索量。',
   'champions.readMatch': '阅读比赛报道',
   'champions.seeGames': '查看对局',
   'champions.playChampion': '与冠军对弈',

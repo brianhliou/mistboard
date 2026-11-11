@@ -458,7 +458,7 @@ export const EN_CONTENT = {
   'champions.tookGomoku':
     'Won the first Gomoku title match, against KataGomo, on 2026-11-11: {games} games at {seconds} s a move for both engines, scoring {score}%.',
   'champions.aboutGomoku':
-    'By dhbloo and the Rapfi contributors, with its own neural networks. It plays here at {nodes} positions a move, a budget at which it scored about even with KataGomo.',
+    'By dhbloo and the Rapfi contributors, with its own neural networks. It plays here at {nodes} positions a move, a smaller search than the one that won the title.',
   'champions.readMatch': 'Read the match',
   'champions.seeGames': 'See the games',
   'champions.playChampion': 'Play the champion',

@@ -54,6 +54,9 @@ export type GomokuAnalysisOptions = {
   cwd?: string;
   /** Owner watchdog, independent of the fixed engine search budget. */
   timeoutMs?: number;
+  /** Search budget per position; the site's analysis budget by default. Lab
+   *  scripts only: the cached site analysis is keyed on the default. */
+  budget?: { nodes: number; timeMs: number };
   progress?: AnalysisProgressStore<SweepPlyEval>;
   /** Recorded-output process double for tests; no native binary is needed. */
   spawnProcess?: (binaryPath: string, cwd: string) => ChildProcessWithoutNullStreams;
@@ -188,8 +191,8 @@ export class RapfiSession {
         'INFO thread_num 1',
         `INFO max_memory ${GOMOKU_ANALYSIS_HASH_BYTES}`,
         'INFO show_detail 2',
-        `INFO max_node ${GOMOKU_ANALYSIS_NODES}`,
-        `INFO timeout_turn ${GOMOKU_ANALYSIS_TIME_MS}`,
+        `INFO max_node ${this.options.budget?.nodes ?? GOMOKU_ANALYSIS_NODES}`,
+        `INFO timeout_turn ${this.options.budget?.timeMs ?? GOMOKU_ANALYSIS_TIME_MS}`,
         '',
       ].join('\n'),
     );

@@ -797,6 +797,54 @@ describe('mountEmbedStudy', () => {
     }
   });
 
+  it("draws a gomoku chapter's two engine lines under the board, with numbered stones and its glyphs", async () => {
+    const moves = ['h8', 'h9', 'i8', 'i9', 'j8'];
+    const tree = chainTree(moves) as { children: { annotations?: unknown; children: unknown[] }[] };
+    // The fourth move gets a blunder glyph and a comment.
+    let node = tree.children[0]!;
+    for (let i = 1; i < 4; i += 1) node = node.children[0] as typeof node;
+    node.annotations = { glyphs: [4], comments: [{ text: 'Misses the four.' }] };
+    const chapter = {
+      id: 'GmkTitle',
+      name: 'Game 1',
+      orientation: 'red',
+      variant: 'gomoku',
+      tags: { black: 'KataGomo', white: 'Rapfi' },
+      root: { root: tree },
+      scoreSeries: {
+        side: 'red',
+        series: [
+          { name: 'Rapfi', color: 'a', values: [0.5, 0.45, 0.4, 0.35, 0.2, 1] },
+          { name: 'KataGomo', color: 'b', values: [0.4, 0.3, 0.3, 0.3, 0.1, 1] },
+        ],
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'GmkTitle' }, { startPly: 4 });
+
+    const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+    expect(chart?.parentElement?.classList.contains('embed-card-board')).toBe(true);
+    const lines = [...(chart?.querySelectorAll('polyline.embed-score-chart__line') ?? [])];
+    expect(lines.map((l) => l.getAttribute('data-series'))).toEqual(['Rapfi', 'KataGomo']);
+    // Gomoku's red seat is Black, the first mover.
+    expect(chart?.querySelector('.embed-score-chart__legend')?.textContent).toBe(
+      'RapfiKataGomoWin chance for Black',
+    );
+    expect(chart?.dataset.ply).toBe('4');
+    const numbers = Object.fromEntries(
+      [...root.querySelectorAll('.gomoku-move-number')].map((n) => [
+        n.closest('[data-square]')?.getAttribute('data-square'),
+        n.textContent,
+      ]),
+    );
+    expect(numbers).toEqual({ h8: '1', h9: '2', i8: '3', i9: '4' });
+    expect(root.querySelector('.gomoku-glyph')?.getAttribute('data-square')).toBe('i9');
+    expect(root.textContent).toContain('Misses the four.');
+  });
+
   it("shows a jieqi chapter's glyphs, comments, verdicts, sidelines and shapes, not the mainline alone", async () => {
     // The opening of prod game 18 (wd6c7qvG / AMY9DrPj) annotated the way the
     // study page shows a chapter: a ?! with a verdict and comment, a ?, a
