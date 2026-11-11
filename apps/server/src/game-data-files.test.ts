@@ -213,7 +213,7 @@ test('opponent files (every level of one ladder) have their own keys, names and 
     '/api/data/opponents/../monthly/2026-09/xiangqi.pgn.gz',
     '/api/data/opponents/Fairy/monthly/2026-09/xiangqi.pgn.gz',
     '/api/data/opponents/fairy-stockfish/collections/x.jsonl.gz',
-    '/api/data/opponents/fairy-stockfish/monthly/2026-09/three-kingdoms-banqi.jsonl.gz',
+    '/api/data/opponents/fairy-stockfish/monthly/2026-09/not-a-variant.jsonl.gz',
   ])
     assert.equal(parseDataFilePath(bad)?.ok ?? false, false, bad);
 });
@@ -225,15 +225,14 @@ test('every public variant is offered on /data or named as unavailable, never bo
     if (!isPublicGameSpec(id) || id === 'chess') continue;
     assert.ok(offered.has(id) !== unavailable.has(id), id);
   }
-  // Three Kingdoms Banqi: a finished game still hides pieces nobody turned
-  // over, so it exports nothing and says why.
-  assert.equal(unavailable.get('three-kingdoms-banqi'), 'hidden-pieces');
-  assert.ok(!offered.has('three-kingdoms-banqi'));
-  assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/three-kingdoms-banqi.jsonl.gz'), {
-    ok: false,
-    status: 404,
-    error: 'unknown_variant',
-  });
+  // Three Kingdoms Banqi exports its masked public record, so it lists like
+  // any variant; nothing public is unavailable today.
+  assert.ok(offered.has('three-kingdoms-banqi'));
+  assert.deepEqual(DATA_UNAVAILABLE_VARIANTS, []);
+  assert.equal(
+    parseDataFilePath('/api/data/monthly/2026-09/three-kingdoms-banqi.jsonl.gz')?.ok,
+    true,
+  );
   assert.ok(offered.has('gomoku'));
   // A variant that is not public appears in neither list.
   for (const id of GAME_SPEC_IDS.filter((id) => !isPublicGameSpec(id))) {
@@ -262,9 +261,10 @@ test('a listing never names a variant that is not public, filtered or not', () =
     const wire = JSON.stringify(listing);
     for (const id of hidden) assert.ok(!wire.includes(`"${id}"`), `${id} in ${wire}`);
     assert.ok(!wire.includes('ffq'), wire);
-    // The unavailable variant is named only as unavailable, with no file.
-    assert.ok(!wire.includes('three-kingdoms-banqi.'), wire);
-    assert.deepEqual(listing.variants, ['xiangqi']);
+    assert.deepEqual(
+      listing.variants,
+      DATA_VARIANTS.filter((id) => id === 'xiangqi' || id === 'three-kingdoms-banqi'),
+    );
   }
 });
 

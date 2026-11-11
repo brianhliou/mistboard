@@ -658,8 +658,6 @@ export const ZH_HANT_CONTENT = {
   'data.allLevels': '全部等級',
   'data.notBuilt': '首次下載時產生，之後顯示大小和校驗和。',
   'data.notBuiltFormat': '{format}：首次下載時產生',
-  'data.unavailableHidden':
-    '{variant}暫不提供下載。對局結束後，從未翻開的棋子仍然保密，而檔案必須寫出它們。',
   'data.unavailableNone': '{variant}暫不提供下載。',
   'data.firstArchive': '首批{variant}對局下於{month}。該月結束後，即{date}，會出現它們的檔案。',
   'data.searchLink': '在對局搜尋中逐局瀏覽這些對局',

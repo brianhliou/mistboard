@@ -302,10 +302,10 @@ describe('/data page', () => {
       ...LISTING,
       offeredVariants: ['xiangqi', 'jieqi', 'gomoku'],
       firstArchives: [{ variant: 'gomoku', month: '2026-11' }],
-      unavailableVariants: [{ variant: 'three-kingdoms-banqi', reason: 'hidden-pieces' }],
+      unavailableVariants: [{ variant: 'jungle-flip', reason: 'no-export' }],
     };
     vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => listing } as Response);
-    expect(readVariant(listing, '?variant=three-kingdoms-banqi')).toBe('three-kingdoms-banqi');
+    expect(readVariant(listing, '?variant=jungle-flip')).toBe('jungle-flip');
     expect(readVariant(listing, '?variant=gomoku')).toBe('gomoku');
     const root = await mounted('?variant=gomoku');
     const rail = [...root.querySelectorAll<HTMLElement>('.current-games-rail-link')];
@@ -314,14 +314,14 @@ describe('/data page', () => {
       'xiangqi',
       'jieqi',
       'gomoku',
-      'three-kingdoms-banqi',
+      'jungle-flip',
     ]);
     expect(
       root.querySelector('[data-variant="gomoku"] .current-games-rail-count')?.textContent,
     ).toBe('0');
-    const tkb = root.querySelector<HTMLAnchorElement>('[data-variant="three-kingdoms-banqi"]')!;
-    expect(tkb.classList.contains('is-unavailable')).toBe(true);
-    expect(tkb.querySelector('.current-games-rail-count')?.textContent).toBe('');
+    const none = root.querySelector<HTMLAnchorElement>('[data-variant="jungle-flip"]')!;
+    expect(none.classList.contains('is-unavailable')).toBe(true);
+    expect(none.querySelector('.current-games-rail-count')?.textContent).toBe('');
 
     const months = () => root.querySelector('.data-months')!;
     expect(months().textContent).toContain(
@@ -332,9 +332,9 @@ describe('/data page', () => {
       '/games/search?variant=gomoku&source=mistboard',
     );
 
-    tkb.click();
-    expect(window.location.search).toBe('?variant=three-kingdoms-banqi');
-    expect(months().textContent).toContain('nobody turned over');
+    none.click();
+    expect(window.location.search).toBe('?variant=jungle-flip');
+    expect(months().textContent).toContain('No downloads for Flip Jungle yet.');
     expect(months().textContent).not.toMatch(/\b20\d\d\b/);
     expect(months().querySelector('.data-table, .data-download')).toBeNull();
     expect(months().textContent).not.toContain('first time anyone downloads');

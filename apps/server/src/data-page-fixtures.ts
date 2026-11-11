@@ -31,7 +31,7 @@ export const DATA_DOWNLOAD_FIXTURE: DataListing = {
   variants: ['xiangqi', 'jieqi'],
   offeredVariants: ['xiangqi', 'jieqi', 'gomoku'],
   firstArchives: [{ variant: 'gomoku', month: '2026-11' }],
-  unavailableVariants: [{ variant: 'three-kingdoms-banqi', reason: 'hidden-pieces' }],
+  unavailableVariants: [],
   collections: [],
   months: [
     {

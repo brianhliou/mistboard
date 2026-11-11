@@ -609,6 +609,7 @@ test('the PGN Variant tag is the registry public name for every exported tenant 
     'crazyhouse-xiangqi': 'Crazyhouse Xiangqi',
     jungle: 'Jungle Chess',
     'jungle-flip': 'Flip Jungle',
+    'three-kingdoms-banqi': 'Three Kingdoms Banqi',
     gomoku: 'Gomoku',
     'xiangqi-mahjong': 'Xiangqi Mahjong',
   };

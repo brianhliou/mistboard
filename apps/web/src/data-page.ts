@@ -74,7 +74,7 @@ export type DataListing = {
   /** A variant whose games are all in the open month: the month its first file covers. */
   firstArchives?: Array<{ variant: string; month: string }>;
   /** Launched variants with no downloads, and why. */
-  unavailableVariants?: Array<{ variant: string; reason: 'hidden-pieces' | 'no-export' }>;
+  unavailableVariants?: Array<{ variant: string; reason: 'no-export' }>;
 };
 
 export const ALL_VARIANTS = 'all';
@@ -698,9 +698,7 @@ function renderMonths(
   host.replaceChildren(sectionHeading(label));
   const unavailable = listing.unavailableVariants?.find((entry) => entry.variant === variant);
   if (unavailable) {
-    const key =
-      unavailable.reason === 'hidden-pieces' ? 'data.unavailableHidden' : 'data.unavailableNone';
-    host.append(note(t(key, { variant: label })), searchLink(listing, variant));
+    host.append(note(t('data.unavailableNone', { variant: label })), searchLink(listing, variant));
     return;
   }
   if (variant === ALL_VARIANTS) host.append(note(t('data.allVariantsNote')));

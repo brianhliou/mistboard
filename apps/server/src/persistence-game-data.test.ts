@@ -464,10 +464,7 @@ definePersistenceTests('game data files', () => {
     assert.ok(!listing.variants.includes('jungle'));
     assert.ok(listing.offeredVariants.includes('jungle'));
     assert.ok(listing.months.every((month) => month.month !== '2026-09'));
-    assert.deepEqual(
-      listing.unavailableVariants.map((entry) => entry.variant),
-      ['three-kingdoms-banqi'],
-    );
+    assert.deepEqual(listing.unavailableVariants, []);
   });
 
   test('the listing counts closed months only, without the excluded games', async () => {

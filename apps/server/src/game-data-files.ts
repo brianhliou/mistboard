@@ -88,14 +88,9 @@ function isOfferedVariant(variant: string): boolean {
   );
 }
 
-/** Why a public variant has no downloads. 'hidden-pieces': a finished game
- *  still hides pieces nobody turned over (Three Kingdoms Banqi, #1002), and a
- *  file would carry the deal that names them. */
-export type DataUnavailableReason = 'hidden-pieces' | 'no-export';
-
-const DATA_UNAVAILABLE_REASONS: Readonly<Record<string, DataUnavailableReason>> = {
-  'three-kingdoms-banqi': 'hidden-pieces',
-};
+/** Why a public variant has no downloads: it exports nothing. Three Kingdoms
+ *  Banqi left this list once its export became the masked public record. */
+export type DataUnavailableReason = 'no-export';
 
 /** Public variants in the export table that export nothing, so /data names
  *  them without offering a file: in rail order. A variant that is not public
@@ -111,7 +106,7 @@ export const DATA_UNAVAILABLE_VARIANTS: ReadonlyArray<{
       exportFormatsForVariant(variant).length === 0,
   )
   .sort((a, b) => canonicalIndex(a) - canonicalIndex(b))
-  .map((variant) => ({ variant, reason: DATA_UNAVAILABLE_REASONS[variant] ?? 'no-export' }));
+  .map((variant) => ({ variant, reason: 'no-export' as const }));
 
 /** The variants a monthly file can be built for: the single-game export table
  *  minus DATA_WITHHELD_VARIANTS, the variants that export nothing and the

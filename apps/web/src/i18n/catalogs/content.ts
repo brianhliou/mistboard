@@ -710,8 +710,6 @@ export const EN_CONTENT = {
   'data.allLevels': 'All levels',
   'data.notBuilt': 'Built on first download; size and checksum appear after.',
   'data.notBuiltFormat': '{format}: built on first download',
-  'data.unavailableHidden':
-    'No downloads for {variant} yet. A finished game still keeps hidden the pieces nobody turned over, and a file would have to name them.',
   'data.unavailableNone': 'No downloads for {variant} yet.',
   'data.firstArchive':
     'The first {variant} games were played in {month}. Their file appears once that month ends, on {date}.',
@@ -1054,7 +1052,6 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'data.allLevels',
   'data.notBuilt',
   'data.notBuiltFormat',
-  'data.unavailableHidden',
   'data.unavailableNone',
   'data.firstArchive',
   'data.searchLink',

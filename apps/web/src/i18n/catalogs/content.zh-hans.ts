@@ -658,8 +658,6 @@ export const ZH_HANS_CONTENT = {
   'data.allLevels': '全部等级',
   'data.notBuilt': '首次下载时生成，之后显示大小和校验和。',
   'data.notBuiltFormat': '{format}：首次下载时生成',
-  'data.unavailableHidden':
-    '{variant}暂不提供下载。对局结束后，从未翻开的棋子仍然保密，而文件必须写出它们。',
   'data.unavailableNone': '{variant}暂不提供下载。',
   'data.firstArchive': '首批{variant}对局下于{month}。该月结束后，即{date}，会出现它们的文件。',
   'data.searchLink': '在对局搜索中逐局浏览这些对局',
