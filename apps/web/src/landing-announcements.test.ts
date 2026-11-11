@@ -38,9 +38,27 @@ describe('landing announcements', () => {
     const expected = [...announcements()]
       .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
       .sort((a, b) => b.date.localeCompare(a.date))
-      .map((entry) => `/feed#${announcementSlug(entry)}`)
+      .map((entry) =>
+        entry.rowLinksToHref && entry.href ? entry.href : `/feed#${announcementSlug(entry)}`,
+      )
       .slice(0, hrefs.length);
     expect(hrefs).toEqual(expected);
+  });
+
+  it('links the Play Brian row straight to /correspondence, not /feed (#1058)', () => {
+    vi.stubEnv('DEV', false);
+    const entry = announcements().find((item) => item.headline.startsWith('Play a correspondence'));
+    expect(entry?.rowLinksToHref).toBe(true);
+    const panel = buildLandingAnnouncements();
+    const rows = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')];
+    const row = rows.find((link) => link.textContent?.includes('Brian H. Liou'));
+    if (row) {
+      expect(row.getAttribute('href')).toBe('/correspondence');
+      expect(row.dataset.directLink).toBe('');
+    }
+    for (const other of rows.filter((link) => link !== row)) {
+      expect(other.getAttribute('href')).toMatch(/^\/feed#/);
+    }
   });
 
   it('uses the same variant flag for the homepage News rail and /feed archive', () => {
@@ -143,9 +161,11 @@ describe('landing announcements', () => {
       const stamp = date?.querySelector('time')?.dateTime ?? '';
       expect(stamp).toMatch(/^2026-\d{2}-\d{2}$/);
       // The anchor starts with this row's own date, so a row cannot link to a
-      // different row's entry.
-      expect(row.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
-      expect(row.getAttribute('href')).toContain(`/feed#${stamp}-`);
+      // different row's entry. A rowLinksToHref entry goes to its page instead.
+      if (row.dataset.directLink === undefined) {
+        expect(row.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
+        expect(row.getAttribute('href')).toContain(`/feed#${stamp}-`);
+      }
       expect(date?.getAttribute('title')).toMatch(/2026/);
       expect(row.querySelector('.landing-news-headline')?.classList.contains('hover-title')).toBe(
         true,
@@ -174,7 +194,7 @@ describe('landing announcements', () => {
     expect(links).toHaveLength(
       panel.querySelectorAll('.landing-news-update[data-announcement-kind]').length,
     );
-    for (const link of links) {
+    for (const link of links.filter((row) => row.dataset.directLink === undefined)) {
       expect(link.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
     }
   });
@@ -200,9 +220,9 @@ describe('landing announcements', () => {
       [...news.querySelectorAll<HTMLElement>('.news-page-entry')].map((entry) => entry.id),
     );
 
-    const targets = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')].map(
-      (link) => link.getAttribute('href')?.split('#')[1] ?? '',
-    );
+    const targets = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')]
+      .filter((link) => link.dataset.directLink === undefined)
+      .map((link) => link.getAttribute('href')?.split('#')[1] ?? '');
     expect(targets.length).toBeGreaterThan(0);
     for (const target of targets) {
       expect(ids, `rail links to #${target}, which /feed does not render`).toContain(target);

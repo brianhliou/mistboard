@@ -29,6 +29,7 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
+import { buildLandingCorrespondenceMoves } from './landing-correspondence-moves.js';
 import {
   BROADCAST_SLOT_PENDING_CLASS,
   buildLandingEventBanners,
@@ -717,7 +718,13 @@ export function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
+  // A signed-in player's correspondence games on their move sit under the Play
+  // button (#1058); the row stays hidden for everyone else.
+  playStack.append(
+    playPanel,
+    buildLandingCorrespondenceMoves({ hydrate: !opts.skipLiveWidgets }),
+    buildLandingActivity({ hydrate: !opts.skipLiveWidgets }),
+  );
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('div');
   about.className = 'landing-about';

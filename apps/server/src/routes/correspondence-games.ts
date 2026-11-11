@@ -31,6 +31,7 @@ export async function tryHandle(
   pathname: string,
 ): Promise<boolean> {
   if (pathname === FINISHED_PATH) return handleFinished(request, response);
+  if (pathname === RECENT_OPPONENTS_PATH) return handleRecentOpponents(request, response);
   if (pathname !== '/api/correspondence/games') return false;
   if (!requireMethod(request, response, 'GET')) return true;
   if (!requirePersistence(response)) return true;
@@ -208,6 +209,57 @@ export function isNewFinishedGame(game: FinishedGameFacts, seenAt: Date | null):
   if (game.termination === 'resignation' && lost) return false;
   if (WINNING_MOVE_TERMINATIONS.has(game.termination) && won) return false;
   return true;
+}
+
+// GET /api/correspondence/opponents/recent: the accounts the signed-in player
+// most recently finished a game with, for the page's "Recent opponents" row
+// (#1058), each offered a correspondence challenge. Account-only like the rest
+// of the page. The row is handle and display name and nothing else: never an
+// email, a device id, a game or a board, so no hidden-information variant can
+// leak through it. The query (listRecentOpponents) already drops guests, bots,
+// the player's own account and closed or private accounts; the filter here is
+// a second, cheap guard on the player's own handle.
+const RECENT_OPPONENTS_PATH = '/api/correspondence/opponents/recent';
+export const RECENT_OPPONENTS_LIMIT = 8;
+
+export type RecentOpponentJson = { handle: string; displayName: string };
+
+export type RecentOpponentsDeps = {
+  list: (userId: string, options: { limit: number }) => Promise<RecentOpponentJson[]>;
+};
+
+const defaultRecentOpponentsDeps: RecentOpponentsDeps = {
+  list: (userId, options) => persistence.listRecentOpponents(userId, options),
+};
+
+async function handleRecentOpponents(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<true> {
+  if (!requireMethod(request, response, 'GET')) return true;
+  if (!requirePersistence(response)) return true;
+  const user = await currentAccountUser(request);
+  if (!user) {
+    writeJson(response, 401, { error: 'not_signed_in' });
+    return true;
+  }
+  writeJson(response, 200, await recentOpponentsForUser(user));
+  return true;
+}
+
+export async function recentOpponentsForUser(
+  user: { id: string; handle: string },
+  deps: RecentOpponentsDeps = defaultRecentOpponentsDeps,
+): Promise<{ opponents: RecentOpponentJson[] }> {
+  const rows = await deps.list(user.id, { limit: RECENT_OPPONENTS_LIMIT });
+  const own = user.handle.toLowerCase();
+  return {
+    opponents: rows
+      .filter((row) => row.handle && row.handle.toLowerCase() !== own)
+      .slice(0, RECENT_OPPONENTS_LIMIT)
+      // Spelled out so a field added to the row type is never sent by accident.
+      .map((row) => ({ handle: row.handle, displayName: row.displayName || row.handle })),
+  };
 }
 
 // ---------------------------------------------------------------------------

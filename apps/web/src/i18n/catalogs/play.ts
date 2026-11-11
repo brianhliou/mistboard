@@ -308,7 +308,7 @@ export const EN_PLAY = {
   'correspondence.couldNotPostGame': 'Could not post that game. Try again.',
   'correspondence.seekTileTitle': 'Post a seek',
   'correspondence.seekTileBody':
-    'It stays open until another player accepts it, here or in the lobby. Or make a link to send a friend.',
+    'It stays open until another player accepts it, here or on the Current games page. Or make a link to send a friend.',
   'correspondence.seekTileButton': 'New seek',
   'correspondence.hostTileBody':
     'The person who builds Mistboard. {days} days per move, and the game starts right away.',
@@ -325,6 +325,12 @@ export const EN_PLAY = {
     '{name} has {limit} games going, the most at once. Try again in a few days.',
   'correspondence.hostIsYou': 'This is you. Signed-in players start games against you here.',
   'correspondence.hostCouldNotStart': 'Could not start that game. Try again.',
+  'correspondence.invitedYouDay': '{name} invited you to {variant}, {days} day per move',
+  'correspondence.invitedYouDays': '{name} invited you to {variant}, {days} days per move',
+  'correspondence.waitingOnName': 'Waiting on {name}',
+  'correspondence.hostRoomNote': '{name} is a person, not a bot, and replies within {days} days.',
+  'correspondence.recentOpponents': 'Recent opponents',
+  'correspondence.homeYourMove': 'Your move in correspondence',
   'correspondence.cancel': 'Cancel',
   'correspondence.playsColor': 'Plays {color}',
   'correspondence.eitherColor': 'Either color',
@@ -343,12 +349,12 @@ export const EN_PLAY = {
   'correspondence.opponentLink': 'A link',
   'correspondence.yourSideLabel': 'Your side',
   'correspondence.sideRandom': 'Random',
-  'correspondence.kindHintPublic': 'Anyone can accept it here and in the lobby.',
+  'correspondence.kindHintPublic': 'Anyone can accept it here and on the Current games page.',
   'correspondence.kindHintLink': 'You get a link to send to one person.',
   'correspondence.postSeek': 'Post seek',
   'correspondence.createLink': 'Create link',
   'correspondence.seekPosted':
-    'Your seek is up. Other players see it under Open seeks and in the lobby.',
+    'Your seek is up. Other players see it under Open seeks and on the Current games page.',
   'correspondence.openSeeks': 'Open seeks',
   'correspondence.accept': 'Accept',
   'correspondence.noOpenSeeks':

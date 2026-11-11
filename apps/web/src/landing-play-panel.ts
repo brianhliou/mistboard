@@ -3,6 +3,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
   defaultEngineTimeControl,
   type GameSpecId,
   isPublicGameSpec,
@@ -880,9 +881,11 @@ export function buildPlayPanel(
       let index = personPace.get(`${mode}:${gameSpecId}`);
       if (index === undefined || index >= paces.length) {
         const fromSaved = paces.findIndex((p) => paceKey(p) === savedKey);
-        // A day per move first, where the variant plays by correspondence: an
-        // open seek waits for someone instead of timing out to a bot offer.
-        const day = paces.findIndex((p) => p.kind === 'days' && p.days === 1);
+        // The site's correspondence pace first (3 days per move, as on the
+        // homepage and challenge forms), where the variant plays by
+        // correspondence: an open seek waits for someone instead of timing out
+        // to a bot offer.
+        const day = paces.findIndex((p) => p.kind === 'days' && p.days === DEFAULT_DAYS_PER_MOVE);
         const live = paces.findIndex((p) => p.kind === 'live' && p.id === '5m5');
         const fallback = day >= 0 ? day : live;
         index = fromSaved >= 0 ? fromSaved : fallback >= 0 ? fallback : 0;

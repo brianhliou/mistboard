@@ -44,7 +44,7 @@ function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
   }
 }
 
-// Person rows open on a day per move; a test of the live search picks 5+5 the
+// Person rows open on 3 days per move (#1058); a test of the live search picks 5+5 the
 // way a returning visitor's saved pace does.
 function rememberLivePace(): void {
   localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ people: { xiangqi: '5m5' } }));
@@ -929,10 +929,10 @@ describe('homepage play panel', () => {
     expect(labels).toEqual(['Casual', 'Rated']);
   });
 
-  it('opens a person row on a day per move, with no bot-offer note', () => {
+  it('opens a person row on 3 days per move, with no bot-offer note', () => {
     const board = buildPlayPanel('en', { hydrate: false });
     const person = row(board, 'xiangqi', 'person');
-    expect(person.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('1d/move');
+    expect(person.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('3d/move');
     expect(board.querySelector('.pp-note')?.textContent).toBe('');
     // Rated has no days while rated correspondence is held, so it opens on 5+5.
     setResolvedSignedIn(true);
