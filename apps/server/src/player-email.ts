@@ -473,9 +473,10 @@ export function gameReviewUrl(roomId: string, reviewPath: string | null): string
 }
 
 /**
- * Play again (#606) is built separately. When it lands, return its URL here:
- * the game-over email shows a second link whenever this is not null, with no
- * other change. Null until then, so the email offers only the review.
+ * Play again (#606) is a button on the review page, which is already this
+ * email's main link, so a second link to the same page would repeat it. Stays
+ * null until play again has a page of its own; a non-null URL here adds the
+ * second link with no other change.
  */
 export function correspondencePlayAgainUrl(_game: {
   roomId: string;
