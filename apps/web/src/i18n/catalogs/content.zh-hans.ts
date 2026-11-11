@@ -179,6 +179,8 @@ export const ZH_HANS_CONTENT = {
   'contact.correctionsLink': '联系我们',
   'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相关页面：{path}',
+  'about.previousPages': '前面的页面',
+  'about.morePages': '更多页面',
   'about.heading': '关于 Mistboard',
   'about.mission': '通过中国象棋与世界经典策略游戏，让不同文化背景的人走到一起。',
   'about.lede': 'Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。',
@@ -217,6 +219,8 @@ export const ZH_HANS_CONTENT = {
     '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
   'stats.gamesPlayed': '已完成对局',
   'stats.gamesThisMonth': '最近 30 天 +{count}',
+  'stats.updatedJustNow': '刚刚更新',
+  'stats.updatedMinutesAgo': '{count} 分钟前更新',
   'stats.accounts': '注册玩家',
   'stats.inPlay': '正在进行',
   'stats.gamesPerWeek': '每周对局数',
@@ -272,7 +276,8 @@ export const ZH_HANS_CONTENT = {
   'source.pikafishWeightsLicense': '权重协议',
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及贡献者：皮卡鱼以下的各级象棋机器人和鸭子象棋机器人，GPL-3.0。',
-  'source.pikafishJieqi': '皮卡鱼的揭棋分支，含 Mistboard 的补丁：揭棋机器人和揭棋分析，GPL-3.0。',
+  'source.pikafishJieqi':
+    '皮卡鱼的揭棋分支，含 Mistboard 的补丁：揭棋分级机器人和浏览器分析，复盘由 AB-JChess 评分，GPL-3.0。',
   'source.chessPieceSets':
     '国际象棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），均采用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
@@ -535,7 +540,6 @@ export const ZH_HANS_CONTENT = {
     '其他所有有机器人的游戏。网站上最强的机器人持有头衔，直到有挑战者在对抗赛中击败它；目前还没有挑战者下过头衔赛。',
   'champions.heldBy': '持有者',
   'champions.openBadge': '头衔待争',
-  'champions.challengeCta': '挑战此头衔',
   'champions.enginePikafish': '皮卡鱼',
   'champions.engineFairyStockfish8': 'Fairy-Stockfish 第 8 级',
   'champions.writeUpLink': '文章',

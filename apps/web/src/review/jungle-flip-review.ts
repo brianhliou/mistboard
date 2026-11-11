@@ -20,7 +20,7 @@ import {
 import { rectangularGridAspect } from '../board-metrics.js';
 import { createJungleFlipInteractiveBoard } from '../jungle-flip-board.js';
 import {
-  animateJungleFlipBoardMove,
+  animateJungleFlipStep,
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipBoardArrow,
   type JungleFlipBoardMarker,
@@ -117,10 +117,10 @@ function makeJungleFlipPresentation(
       opts.signal?.addEventListener('abort', detach, { once: true });
       return board;
     },
-    // No glide animation (a flip has no travel; board re-renders on nav).
+    // A step forward onto a flip turns the tile over; other moves glide.
     // The board never flips (the deal has no sides), so the glide ignores the
     // review's perspective too.
-    animateMove: (host, move, _perspective, opts) => animateJungleFlipBoardMove(host, move, opts),
+    animateMove: (host, move, _perspective, opts) => animateJungleFlipStep(host, move, opts),
     shapeToArrow: (s: NodeShape): JungleFlipBoardArrow => ({
       from: s.orig as JungleFlipBoardArrow['from'],
       to: (s.dest ?? s.orig) as JungleFlipBoardArrow['to'],

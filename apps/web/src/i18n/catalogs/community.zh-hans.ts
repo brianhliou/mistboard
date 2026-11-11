@@ -207,6 +207,31 @@ export const ZH_HANS_COMMUNITY = {
   'verifyTitle.errRequestPending': '你已有一份申请正在等待审核。',
   'verifyTitle.coachCta': '创建你的教练主页',
   'verifyTitle.whatYouGet': '持有头衔的棋手能在 Mistboard 获得什么',
+  'coach.invite.heading': '一起打磨 Mistboard 的教学体验',
+  'coach.invite.lede':
+    '你教象棋或其变体吗？带来一堂课，或一盘你喜欢讲解的棋。我们希望和几位老师一起尝试，了解怎样才能真正帮助学生。',
+  'coach.invite.firstTitle': '从一个研习开始',
+  'coach.invite.firstBody':
+    '把棋局或局面放进研习，添加变化和注释，让学生自己探索棋盘。研习也可以嵌入你的网站。',
+  'coach.invite.secondTitle': '展示你的教学',
+  'coach.invite.secondBody':
+    '持有认证头衔的棋手可以发布教练主页，介绍授课语言、收费和联系方式。学员直接联系你，Mistboard 不收取佣金。',
+  'coach.invite.next':
+    '这里的教学工具还在起步阶段。告诉我们你教谁、想讲什么，以及研习还缺少什么。我们可以从一堂课开始，一起决定接下来值得开发的功能。',
+  'coach.invite.contact': '聊聊你的教学想法',
+  'coach.invite.studies': '浏览研习',
+  'streamer.invite.heading': '一起尝试你的下一场直播',
+  'streamer.invite.lede':
+    '你直播象棋或其变体吗？我们希望与几位创作者直接合作，一起尝试内容，并围绕直播的实际需要开发工具。',
+  'streamer.invite.firstTitle': '带来你想做的内容',
+  'streamer.invite.firstBody':
+    '棋局复盘、入门教学，或介绍一种陌生的变体。告诉我们你想做什么，以及希望吸引哪些观众。',
+  'streamer.invite.secondTitle': '从现有工具开始',
+  'streamer.invite.secondBody':
+    '在 Mistboard 对弈，或用研习准备局面和讲解。分享研习，让观众在直播后自己探索变化。',
+  'streamer.invite.next':
+    '我们的直播工具还在起步阶段。发来你的频道、一期节目的想法，以及你需要的帮助。我们会一起看看现在能做什么，还有什么值得共同开发。',
+  'streamer.invite.contact': '聊聊你的直播想法',
   'coach.heading': '教练',
   'coach.intro': '找一位教练学棋。这里的每位教练都持有经认证的象棋或国际象棋头衔。',
   'coach.verifyToCoach': '你是持有头衔的棋手吗？认证头衔即可开课',
@@ -363,8 +388,8 @@ export const ZH_HANS_COMMUNITY = {
   'friends.online.menuCount': '{count} 人在线',
   'friends.online.online': '在线',
   'streamer.heading': '主播',
-  'streamer.intro': '值得关注的象棋与变体主播，可看直播与录播。',
-  'streamer.empty': '暂时还没有收录主播。请稍后再来。',
+  'streamer.intro': '和观众一起分享象棋与变体的乐趣。',
+  'streamer.empty': '暂时还没有收录主播。欢迎成为最早加入的创作者之一。',
   'streamer.profileLink': 'Mistboard 主页',
   'challenge.button': '挑战',
   'challenge.title': '挑战 {name}',

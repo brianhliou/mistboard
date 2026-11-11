@@ -30,6 +30,7 @@ cp.spawnSync = (command, args, options) => {
     if (args[0] === 'write-tree') return ok(failures.tree ?? 'c'.repeat(40));
     if (args[0] === 'rev-parse' && args.includes('--git-path')) return ok(process.env.GATE_FIXTURE_INDEX);
     if (args[0] === 'status' || args[0] === 'fetch') return ok();
+    if (args[0] === 'for-each-ref') return ok();
     if (args[0] === 'ls-files') return ok((failures.untrackedFiles ?? []).join('\\n'));
     if (args[0] === 'ls-remote') return ok(base + '\\trefs/heads/main');
     if (args[0] === 'log') return ok('2020-01-01T00:00:00Z');

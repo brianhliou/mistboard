@@ -110,9 +110,10 @@ export function banqiClientEventFor(
   ply: number,
 ): TenantClientEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID> | null {
   if (event.type === 'room-created') {
-    if (event.setup === undefined) return event;
+    if (event.setup === undefined && event.internalEngineTest === undefined) return event;
     const redacted = { ...event };
     delete redacted.setup;
+    delete redacted.internalEngineTest;
     return redacted;
   }
   if (event.type === 'move-played') return { ...event, ply };
@@ -136,15 +137,8 @@ export function getBanqiClientView(
   return getBanqiPlayerView(state, client.seat);
 }
 
-// The unredacted board, served to every client once the game is FINISHED
-// (docs-private/spectator-visibility-matrix.md). The runtime owns the WHEN via
-// roomViewPolicy; this only says what truth looks like on the wire.
-//
-// Tiles that were never flipped come back with their dealt identity, which
-// exposes the deal. That is not a new disclosure: the postgame truth history
-// already reveals all 32 tiles once a game ends, and an earlier session
-// reconstructed a whole deal from exactly that public data to build the rules
-// page (commit f2ad3e9). The room was the last surface still withholding it.
+// Explicit postgame truth surfaces only. Ordinary room snapshots stay masked;
+// the final-board endpoint separately verifies persisted finalization.
 export function getBanqiTruthView(state: BanqiGameState): BanqiPlayerView {
   const { forbiddenMoves: _seatOnly, ...base } = getBanqiPlayerView(state, BANQI_SEATS[0]);
   const board: BanqiPlayerView['board'] = {};
@@ -189,7 +183,9 @@ export const banqiTenant: BanqiTenant = {
   visibility: {
     clientEventFor: banqiClientEventFor,
     viewForClient: (state, client) => getBanqiClientView(state, client),
-    truthView: (state) => getBanqiTruthView(state),
+    // Normal room snapshots stay as played, including at the end. A separate
+    // explicit HTTP request checks persisted finalization before revealing.
+    liveHistoryWhenFinished: true,
     // A live room's per-ply views for a reload: the deal is a server secret, so
     // the client cannot replay the log itself. Each ply is viewForClient's own
     // masked view for this viewer (a spectator's is the public board), so no

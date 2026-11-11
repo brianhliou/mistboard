@@ -10,6 +10,7 @@ import {
   animateXiangqiBoardMove,
   createXiangqiInteractiveBoard,
   renderXiangqiBoardSvg as renderSharedXiangqiBoardSvg,
+  XIANGQI_LIVE_PIECE_SIZE,
   type XiangqiBoardArrow,
   xiangqiArrowSvg,
   xiangqiBoardSvg,
@@ -46,6 +47,59 @@ const NON_SELECTABLE_RIVER_GROUP =
   '<g class="xq-live-river" aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;">';
 
 describe('standard Xiangqi board SVG', () => {
+  for (const layout of ['intersection', 'cell'] as const) {
+    for (const perspective of ['red', 'black'] as const) {
+      it.each([false, true])(
+        `keeps layout-specific capture hints below all flat pieces (${layout}, ${perspective}, interactive=%s)`,
+        (interactive) => {
+          const view = getStandardXiangqiPlayerView(
+            createInitialXiangqiState('capture-ring'),
+            'red',
+          );
+          expect(view.legalMoves.some((move) => move.from === 'b3' && move.to === 'b10')).toBe(
+            true,
+          );
+          const svg = xiangqiBoardSvg(view, perspective, {
+            layout,
+            interactive,
+            tile3d: false,
+            pieceSet: 'traditional',
+            selectedSquare: 'b3',
+            draggingFrom: null,
+          });
+          const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+          const circles = [...doc.querySelectorAll('circle.xq-live-hint-capture')];
+          const fills = [...doc.querySelectorAll('rect.xq-live-hint-capture-fill')];
+          const captureCount = view.legalMoves.filter(
+            (move) => move.from === 'b3' && view.board[move.to],
+          ).length;
+          expect(captureCount).toBeGreaterThan(0);
+          expect(circles).toHaveLength(layout === 'intersection' ? captureCount : 0);
+          expect(fills).toHaveLength(layout === 'cell' ? captureCount : 0);
+          for (const circle of circles) {
+            expect(Number(circle.getAttribute('r'))).toBeGreaterThan(XIANGQI_LIVE_PIECE_SIZE / 2);
+          }
+          for (const fill of fills) {
+            // A full cell with no stroke cannot bleed into a neighbour or river.
+            const bounds = ['x', 'y', 'width', 'height'];
+            const cells = [...doc.querySelectorAll('rect.xq-live-cell')];
+            expect(
+              cells.some((cell) =>
+                bounds.every((attr) => cell.getAttribute(attr) === fill.getAttribute(attr)),
+              ),
+            ).toBe(true);
+            expect(fill.getAttribute('style')).toContain('stroke: none');
+          }
+          for (const hint of [...circles, ...fills]) {
+            const index = svg.indexOf(`<${hint.tagName} class="${hint.getAttribute('class')}"`);
+            expect(index).toBeGreaterThan(-1);
+            expect(index).toBeLessThan(svg.indexOf('<g class="xq-live-pieces">'));
+          }
+        },
+      );
+    }
+  }
+
   it('renders a 9 by 10 square grid without moving the logical board centers', () => {
     const state = createInitialXiangqiState('xq-board-cell-layout');
     const view = getStandardXiangqiPlayerView(state, 'red');

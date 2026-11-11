@@ -232,7 +232,11 @@ test('job lifecycle: pending -> done with the result envelope; coalescing lookup
   assert.ok(result.ok);
   if (!result.ok) return;
   const job = result.job;
-  assert.deepEqual(analysisJobStatusBody(job), { status: 'pending' });
+  assert.deepEqual(analysisJobStatusBody(job), {
+    status: 'pending',
+    state: 'queued',
+    progress: { phase: 'analysis', completed: 0, total: 0 },
+  });
   assert.equal(findPendingAnalysisJob('lifetest', 'room-1', 'decisions'), job);
   assert.equal(findPendingAnalysisJob('lifetest', 'room-1', 'analysis'), null);
   release();

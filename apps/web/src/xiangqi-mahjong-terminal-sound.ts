@@ -28,13 +28,13 @@ export function xmjMoveSound(
   event: unknown,
   seat: unknown,
   matchOver: boolean,
-): 'move' | 'captured' | 'capture' | 'level-end' | 'learn-failure' | null {
+): 'move' | 'capture' | 'level-end' | 'learn-failure' | null {
   const played = event as
     | { type?: string; color?: string; move?: { action?: string; kind?: string } }
     | undefined;
   if (played?.type !== 'move-played') return null;
   const { action, kind } = played.move ?? {};
-  if (action === 'discard') return played.color === seat ? 'move' : 'captured';
+  if (action === 'discard') return 'move';
   const handWon = action === 'self-draw' || (action === 'claim' && kind === 'win');
   if (handWon) {
     if (matchOver) return null;

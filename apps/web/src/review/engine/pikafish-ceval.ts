@@ -1,9 +1,9 @@
-// Client-side standard-xiangqi analysis on mainline Pikafish, built to
-// WebAssembly with its NNUE net (apps/web/public/engine/pikafish). The engine
+// Client-side standard-xiangqi analysis on patched Pikafish, built to
+// WebAssembly with the CC0 NNUE net (apps/web/public/engine/pikafish). The engine
 // runs as a persistent UCI session in a dedicated worker and streams
 // iterative-deepening MultiPV updates, the same shape as the PikaJieQi backend.
 //
-// Two things are specific to this backend. The net is 51 MB and is fetched by
+// Two things are specific to this backend. The net is about 11 MB and is fetched by
 // the worker on the first preload (byte progress reaches the caller through
 // `preload(onProgress)`; later visits read it from Cache Storage with no
 // progress, see worker.js), and Pikafish speaks a0-i9 coordinates while every
@@ -24,9 +24,9 @@ import { parseInfo } from './uci-info.js';
 const ENGINE_BASE = '/engine/pikafish/';
 // Bump on any vendored-asset change; the CDN keys on the query string (see the
 // note above ENGINE_ASSET_VERSION in ceval.ts). Names the engine commit, the
-// net's release date, and the toolchain.
-export const PIKAFISH_ASSET_VERSION = '6a59ee2-net20260906-emsdk3174';
-export const PIKAFISH_NNUE_NET = 'pikafish.nnue';
+// patched CC0 net, and the toolchain.
+export const PIKAFISH_ASSET_VERSION = '6a59ee2-cc0-c07e94a5c7cb-emsdk3174';
+export const PIKAFISH_NNUE_NET = 'xiangqi-c07e94a5c7cb.nnue';
 export const pikafishEngineAsset = (file: string): string =>
   `${ENGINE_BASE}${file}?v=${PIKAFISH_ASSET_VERSION}`;
 const EMIT_THROTTLE_MS = 80;

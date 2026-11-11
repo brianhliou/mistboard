@@ -230,6 +230,8 @@ export type BanqiUciEngineConfig = {
 /** MistyJungleFlip standalone Rust αβ+Star1+TT UCI engine. */
 export type JungleFlipUciEngineConfig = {
   kind: 'jungle-flip-uci';
+  /** Absent on historical classical configurations. */
+  evaluation?: 'classical' | 'nnue';
   nodes: number;
   movetime_ms: number;
   noise?: number;

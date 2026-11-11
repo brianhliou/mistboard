@@ -1,5 +1,5 @@
-// Create route for the Three Kingdoms banqi playtest (#628, #684). With the
-// local flag off, only an admin account may create a room (admits); everyone
+// Create route for public casual Three Kingdoms Banqi (#628). With the
+// runtime kill-switch off, only an admin may create a test room; everyone
 // else gets 404 three_kingdoms_banqi_disabled, the same answer as before. PvE
 // search tiers need the engine binary, and L8 also needs its explicit net.
 // L1 needs neither. Unavailable tiers answer the same 404.

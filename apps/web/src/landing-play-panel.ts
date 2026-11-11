@@ -1,8 +1,11 @@
 import {
   canonicalVariantOrderIndex,
+  DARK_CHESS_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
   DAYS_PER_MOVE_OPTIONS,
   defaultEngineTimeControl,
   type GameSpecId,
+  isPublicGameSpec,
   RATED_TIME_CONTROLS,
   TIME_CONTROLS,
   type TimeControlId,
@@ -52,8 +55,16 @@ import {
   isLikelyStatsExcluded,
   statsExcludedResolvedEvent,
 } from './signed-in-state.js';
+import {
+  setThreeKingdomsBanqiEngineOptions,
+  threeKingdomsBanqiEngineOptions,
+} from './three-kingdoms-banqi-access.js';
 import { renderVariantMarker } from './variant-markers.js';
-import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
+import {
+  type WebTenantEngineOption,
+  webVariantOfferedInMenu,
+  webVariantTenantForSpecId,
+} from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 
 // The homepage's bot-first play panel (#491), replacing the lichess-shaped
@@ -78,6 +89,13 @@ type StoredPanel = {
    *  Play button. Read as a fallback until a bot game writes the shared one. */
   last?: { gameSpecId: string; botId: string; tc: TimeControlId };
 };
+
+// Homepage merchandising only: these games remain in the Play menu, lobby
+// and setup deep links. New launches join automatically unless excluded here.
+export const HOMEPAGE_HERO_EXCLUDED_GAME_SPEC_IDS: readonly GameSpecId[] = [
+  DARK_XIANGQI_SPEC_ID,
+  DARK_CHESS_SPEC_ID,
+];
 
 const STORAGE_KEY = 'mistboard.playPanel.v1';
 const LOBBY_POLL_MS = 3_000;
@@ -280,10 +298,13 @@ export function buildPlayPanel(
     rated: boolean;
   } | null = null;
   const othersRequests = (): OpenLobbyRequest[] => {
-    if (!ownSeek) return openRequests;
+    const offered = openRequests.filter((r) =>
+      variants.some((v) => v.gameSpecId === (r.gameSpecId ?? DARK_CHESS_SPEC_ID)),
+    );
+    if (!ownSeek) return offered;
     const own = ownSeek;
     let skipped = false;
-    return openRequests.filter((r) => {
+    return offered.filter((r) => {
       const mine =
         !skipped &&
         (r.gameSpecId ?? 'dark-chess') === own.gameSpecId &&
@@ -295,7 +316,10 @@ export function buildPlayPanel(
     });
   };
 
-  const variants = enabledLandingVariantGameSpecs('pvp', locale);
+  const variants = enabledLandingVariantGameSpecs('pvp', locale).filter(
+    ({ gameSpecId }) =>
+      isPublicGameSpec(gameSpecId) && !HOMEPAGE_HERO_EXCLUDED_GAME_SPEC_IDS.includes(gameSpecId),
+  );
   const labelFor = (id: string): string =>
     variants.find((v) => v.gameSpecId === id)?.label ??
     variantLabelForGameSpec(id as LandingGameSpecId, locale);
@@ -367,16 +391,25 @@ export function buildPlayPanel(
   // What GET /api/bots says each variant can seat; gated rungs (KataGo) wait for
   // it, so a box without the engine never offers a bot that cannot move.
   let playableBots = new Map<string, ReadonlySet<string>>();
+  let playableEngines: ReadonlySet<string> = new Set();
   const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
-    landingBotLadder(gameSpecId, playableBots.get(gameSpecId));
+    landingBotLadder(
+      gameSpecId,
+      playableBots.get(gameSpecId),
+      new Set([
+        ...playableEngines,
+        ...(threeKingdomsBanqiEngineOptions() ?? []).map((engine) => engine.id),
+      ]),
+    );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
-    a.length === b.length && a.every((rung, i) => rung.botId === b[i]?.botId);
+    a.length === b.length &&
+    a.every((rung, i) => rung.botId === b[i]?.botId && rung.engineId === b[i]?.engineId);
 
   const botRequest = (gameSpecId: string): BotPlayRequest => {
     const state = botState.get(gameSpecId)!;
     const preset = LANDING_TIME_PRESETS.find((p) => p.id === state.tc);
     return {
-      botId: state.ladder[state.at]!.botId,
+      ...state.ladder[state.at]!,
       gameSpecId,
       ...(preset
         ? { timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs } }
@@ -401,6 +434,12 @@ export function buildPlayPanel(
         const saved = state ? readStored().bots?.[gameSpecId] : stored.bots?.[gameSpecId];
         const fromPanel = landingBotLadderIndex(ladder, saved?.botId);
         const fromMemory = landingBotLadderIndex(ladder, rememberedPveEngine(gameSpecId));
+        const setupDefault = ladder.some((rung) => rung.engineId)
+          ? landingBotLadderIndex(
+              ladder,
+              webVariantTenantForSpecId(gameSpecId)?.landing?.defaultEngineId,
+            )
+          : -1;
         const policy = landingBotLadderIndex(
           ladder,
           landingBotOffer(gameSpecId, {
@@ -408,7 +447,7 @@ export function buildPlayPanel(
             rememberedJieqiBotId: rememberedPveEngine(gameSpecId),
           })?.botId,
         );
-        const at = [fromPanel, fromMemory, policy, 0].find((i) => i >= 0) ?? 0;
+        const at = [fromPanel, fromMemory, setupDefault, policy, 0].find((i) => i >= 0) ?? 0;
         const tc =
           state?.tc ?? (saved?.tc && paces.ids.includes(saved.tc) ? saved.tc : paces.defaultId);
         state = { ladder, at, tc };
@@ -436,7 +475,8 @@ export function buildPlayPanel(
       const save = (): void =>
         writeStored((s) => {
           s.bots ??= {};
-          s.bots[gameSpecId] = { botId: current.ladder[current.at]!.botId, tc: current.tc };
+          const rung = current.ladder[current.at]!;
+          s.bots[gameSpecId] = { botId: rung.engineId ?? rung.botId, tc: current.tc };
         });
       const levelStep = stepper({
         className: 'pp-step-level',
@@ -554,7 +594,7 @@ export function buildPlayPanel(
       bindBotPlayControl(
         again,
         () => ({
-          botId: lastRung.botId,
+          ...lastRung,
           gameSpecId: last.gameSpecId,
           ...(preset
             ? { timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs } }
@@ -1015,7 +1055,10 @@ export function buildPlayPanel(
       if (!correspondenceEnabled()) return;
       void fetchCorrespondenceSeeks()
         .then((feed) => {
-          corrSeeks = feed.status === 'ok' ? feed.seeks : [];
+          corrSeeks =
+            feed.status === 'ok'
+              ? feed.seeks.filter((s) => variants.some((v) => v.gameSpecId === s.gameSpecId))
+              : [];
           renderOffers();
           renderBadge();
         })
@@ -1027,7 +1070,36 @@ export function buildPlayPanel(
         paintPlaying();
       });
     };
-    // One-shot: which gated rungs this server can seat (playOptions[].playable).
+    const refreshBotLadders = (): void => {
+      const changed = ordered().some(
+        (gameSpecId) => !sameLadder(botState.get(gameSpecId)?.ladder ?? [], ladderFor(gameSpecId)),
+      );
+      if (!changed) return;
+      renderBotRows();
+      renderFeatures();
+    };
+    // Misty's neural tiers share a bot id, so their availability must come
+    // from the runtime engine roster, not Misty's playable bot profile.
+    void fetch('/api/engines/playable', { headers: { accept: 'application/json' } })
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<{
+              banqiEngines?: { id: string }[];
+              jungleFlipEngines?: { id: string }[];
+              threeKingdomsBanqiEngines?: WebTenantEngineOption[];
+            }>)
+          : null,
+      )
+      .then((data) => {
+        if (!data) return;
+        setThreeKingdomsBanqiEngineOptions(data.threeKingdomsBanqiEngines ?? []);
+        playableEngines = new Set(
+          [...(data.banqiEngines ?? []), ...(data.jungleFlipEngines ?? [])].map((e) => e.id),
+        );
+        refreshBotLadders();
+      })
+      .catch(() => {});
+    // One-shot: which gated bots this server can seat (playOptions[].playable).
     // A failure leaves them off, which is the safe side.
     void fetch('/api/bots', { headers: { accept: 'application/json' } })
       .then((r) => (r.ok ? (r.json() as Promise<{ bots?: LandingBotRosterPlayOptions[] }>) : null))
@@ -1036,12 +1108,7 @@ export function buildPlayPanel(
         playableBots = playableBotIdsBySpec(data.bots);
         // Re-render only when a ladder changed, so a Play already pending on
         // another row keeps its button.
-        const changed = [...botState].some(
-          ([gameSpecId, state]) => !sameLadder(state.ladder, ladderFor(gameSpecId)),
-        );
-        if (!changed) return;
-        renderBotRows();
-        renderFeatures();
+        refreshBotLadders();
       })
       .catch(() => {});
     void refreshLobby();

@@ -58,6 +58,7 @@ const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>([
   'pieceAnimation',
   'playerFlairs',
   'boardCoordinates',
+  'confirmMovesOnTouch',
 ]);
 const pieceAnimationSaveQueues = new WeakMap<AuthUser, Promise<void>>();
 
@@ -1697,6 +1698,7 @@ function displayPreferenceLabel(id: DisplayPreferenceId, locale: Locale): string
     boardHighlights: 'account.displayBoardHighlights',
     pieceDestinations: 'account.displayPieceDestinations',
     boardCoordinates: 'account.displayBoardCoordinates',
+    confirmMovesOnTouch: 'account.displayConfirmMovesOnTouch',
     moveListWhilePlaying: 'account.displayMoveListWhilePlaying',
     zenMode: 'account.displayZenMode',
     boardResizeHandle: 'account.displayBoardResizeHandle',

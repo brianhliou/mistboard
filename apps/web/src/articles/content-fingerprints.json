@@ -88,7 +88,7 @@
     "updatedAt": "2026-06-04"
   },
   "fog-future": {
-    "hash": "69725784b99bb1a8",
+    "hash": "d5d6d6ad339aabbc",
     "updatedAt": null
   },
   "fog-xiangqi": {
@@ -136,8 +136,8 @@
     "updatedAt": null
   },
   "jieqi-platform": {
-    "hash": "29fe8f7049c2dc6b",
-    "updatedAt": "2026-11-06"
+    "hash": "7eb1ee5272d6d934",
+    "updatedAt": "2026-11-09"
   },
   "jieqi-puzzle-search": {
     "hash": "32b508e6f756c6d1",
@@ -185,7 +185,7 @@
   },
   "mistybanqi": {
     "hash": "733a2267e8d75b78",
-    "updatedAt": "2026-10-16"
+    "updatedAt": "2026-11-09"
   },
   "most-played-move": {
     "hash": "68a77e509d351193",
@@ -240,7 +240,11 @@
     "updatedAt": null
   },
   "ten-thousand-games": {
-    "hash": "a6d567546c3ee5b7",
+    "hash": "be064a39fcf7364c",
+    "updatedAt": "2026-11-09"
+  },
+  "three-kingdoms-banqi": {
+    "hash": "32e7d8e0ee1f1adf",
     "updatedAt": null
   },
   "titled-players": {
@@ -256,8 +260,8 @@
     "updatedAt": null
   },
   "xiangqi": {
-    "hash": "c4b40a85f52d7ff9",
-    "updatedAt": "2026-11-06"
+    "hash": "310d055ac9d401e0",
+    "updatedAt": "2026-11-10"
   },
   "xiangqi-champions": {
     "hash": "3705491016d9f9f4",

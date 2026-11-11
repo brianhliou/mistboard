@@ -11,6 +11,7 @@ import {
   prerenderSitemapRecord,
   writePrerenderSitemap,
 } from '../apps/web/scripts/prerender-sitemap.mjs';
+import { crawlerDocument } from './lib/crawler-text.mjs';
 
 const host = 'https://mistboard.test';
 const head = (path, alternates = '') =>
@@ -248,4 +249,36 @@ test('server-only tracked gaps keep content dates and locale groups without a fa
     records.some((entry) => entry.path === '/planted-unclassified'),
     false,
   );
+});
+
+// Keep repeated parsing within a small heap budget, including diagram-heavy
+// markup and the public metadata and crawler text checks.
+test('sitemap parsing stays bounded across many diagram-heavy pages', () => {
+  execFileSync(
+    process.execPath,
+    [
+      '--max-old-space-size=192',
+      '--input-type=module',
+      '-e',
+      `import assert from 'node:assert/strict';
+       import { prerenderSitemapRecord } from './apps/web/scripts/prerender-sitemap.mjs';
+       const html = '<head><link rel="canonical" href="https://mistboard.test/blog/a"></head>'
+         + '<body><h1>Article</h1><p>' + 'Article content. '.repeat(20) + '</p><svg>'
+         + '<path d="M0 0L10 10" />'.repeat(800) + '</svg></body>';
+       for (let page = 0; page < 80; page++) {
+         const record = prerenderSitemapRecord(html, 'blog/a.html', 'https://mistboard.test', () => '2026-11-08');
+         assert.equal(record.path, '/blog/a');
+         assert.equal(record.contentChars, 346);
+         await new Promise(resolve => setImmediate(resolve));
+       }`,
+    ],
+    { cwd: new URL('..', import.meta.url), stdio: 'pipe', timeout: 30_000 },
+  );
+});
+
+test('crawler documents remain readable after their parser Window is closed', () => {
+  const document = crawlerDocument(head('/blog/a'));
+  assert.equal(document.defaultView.closed, true);
+  assert.equal(document.querySelector('h1').textContent, 'Page');
+  assert.equal(document.querySelector('link[rel="canonical"]').href, `${host}/blog/a`);
 });

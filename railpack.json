@@ -31,6 +31,7 @@
         "sh /app/scripts/fetch-release-asset.sh /app/bin three-kingdoms-engine",
         "sh /app/scripts/fetch-private-net.sh /app/bin three-kingdoms-banqi-net",
         "sh /app/scripts/fetch-private-net.sh /app/bin banqi-net",
+        "sh /app/scripts/fetch-private-net.sh /app/bin jungle-flip-net",
         "if [ ${MISTBOARD_JUNGLE_RUST_ENGINE:-false} = true ] || [ ${MISTBOARD_INSTALL_JUNGLE:-0} = 1 ] || [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then sh /app/scripts/fetch-release-asset.sh /app/bin jungle-engine; fi",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then pip install maturin; fi",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then python -m maturin build --release -m /app/mistboard-engine/fow_rust/Cargo.toml && ls /app/mistboard-engine/fow_rust/target/wheels/; fi",

@@ -102,10 +102,13 @@ describe('/champions', () => {
     }
     for (const card of open) {
       expect(card.querySelector('.champions-open-badge')?.textContent).toBe('Title open');
-      const cta = card.querySelector<HTMLAnchorElement>('a.champions-btn');
-      expect(cta?.textContent).toBe('Challenge for this title');
-      expect(cta?.getAttribute('href')).toBe('#challenge');
+      expect(card.querySelector('a.champions-btn')).toBeNull();
     }
+    const challengeLinks = page.querySelectorAll<HTMLAnchorElement>(
+      'a.champions-btn[href="#challenge"]',
+    );
+    expect(challengeLinks).toHaveLength(1);
+    expect(challengeLinks[0]?.textContent).toBe('Challenge for a title');
     expect(page.querySelector('h2#challenge')?.textContent).toBe('Challenge for a title');
     expect(TITLES).toHaveLength(CHAMPIONS.length + OPEN_TITLES.length);
   });
@@ -478,7 +481,6 @@ describe('Gomoku open title', () => {
     expect(hrefs(card as HTMLElement)).toEqual([
       'https://github.com/dhbloo/rapfi',
       'https://github.com/brianhliou/rapfi-wasm',
-      '#challenge',
     ]);
     expect(card!.textContent).toContain('Rapfi');
     expect(card!.querySelector('.champions-stat')).toBeNull();

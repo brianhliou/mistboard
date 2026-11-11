@@ -17,6 +17,7 @@ import { isTimeoutish, type KnownEngineFailure } from './engine-known-failures.j
 import {
   deliverEnginePoolWaitDigest,
   persistEnginePoolWait,
+  poolWaitDayWarrantsDigest,
 } from './persistence-engine-capacity.js';
 
 const isProd = process.env.NODE_ENV === 'production' || !process.stdout.isTTY;
@@ -668,8 +669,13 @@ export function dispatchAlertEmail(alert: EngineAlertEmailPayload): void {
 const poolWaits = new Map<string, { count: number; maxWaitMs: number; maxQueueDepth: number }>();
 let poolWaitDigestTimer: ReturnType<typeof setTimeout> | undefined;
 
-export function recordEnginePoolWait(pool: string, waitMs: number, queueDepth: number): void {
+/** A request has waited past the warning threshold and is still queued. */
+export function logEnginePoolWait(pool: string, waitMs: number, queueDepth: number): void {
   logger.warn({ kind: 'engine_pool_queue_wait', pool, wait_ms: waitMs, queue_depth: queueDepth });
+}
+
+/** A slow wait ended with a slot; `waitMs` is the whole wait. Feeds the daily digest. */
+export function recordEnginePoolWait(pool: string, waitMs: number, queueDepth: number): void {
   void persistEnginePoolWait(pool, waitMs, queueDepth)
     .then((stored) => {
       if (!stored) recordMemoryPoolWait(pool, waitMs, queueDepth);
@@ -694,6 +700,13 @@ function recordMemoryPoolWait(pool: string, waitMs: number, queueDepth: number):
       const summaries = [...poolWaits];
       poolWaits.clear();
       poolWaitDigestTimer = undefined;
+      if (
+        !poolWaitDayWarrantsDigest(
+          summaries.map(([, s]) => ({ count: s.count, maxWaitMs: s.maxWaitMs })),
+        )
+      ) {
+        return;
+      }
       dispatchAlertEmail({
         severity: 'warning',
         kind: 'engine_pool_queue_wait',

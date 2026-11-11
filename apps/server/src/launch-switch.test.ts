@@ -21,6 +21,7 @@ import {
   GAME_SPECS,
   type GameSpecId,
   isCorrespondenceAllowlistedSpec,
+  isCorrespondenceRatedSpec,
   isPublicGameSpec,
   PLAYTEST_GAME_SPEC_IDS,
   publicSpecPredicate,
@@ -169,7 +170,7 @@ test('every server list agrees with the launch switch as it stands', () => {
   assert.deepEqual(xmjListedNow(), xmjListedUnder(isPublicGameSpec));
 });
 
-test('Gomoku is launched with a public rated pool and no public correspondence', async () => {
+test('Gomoku is launched with a public live rating pool and casual correspondence', async () => {
   assert.equal(isPublicGameSpec('gomoku'), true);
   assert.equal(articleIsIndexable('gomoku'), true);
   assert.equal(CANONICAL_VARIANT_ORDER.at(-1), 'gomoku');
@@ -177,7 +178,8 @@ test('Gomoku is launched with a public rated pool and no public correspondence',
   assert.equal(await mayPlayVariant(null, 'gomoku'), true);
   assert.equal(isPublicRatingPool('gomoku'), true);
   assert.ok(!countedPublicGame('g').includes("'gomoku'"));
-  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes('gomoku'), true);
+  assert.equal(isCorrespondenceRatedSpec('gomoku'), false);
   assert.equal(isCorrespondenceAllowlistedSpec('gomoku'), false);
   const hidden = publicSpecPredicate(
     GAME_SPECS.map((spec) =>
@@ -238,4 +240,74 @@ test('flipping the XMJ switch lists it on every server surface', () => {
   // HK mahjong is untouched by XMJ's switch.
   assert.ok(launched.allowlisted.includes('mahjong'));
   assert.ok(playtestRulesSlugs(on).includes('mahjong'));
+});
+
+function threeKingdomsListedUnder(isPublic: (id: GameSpecId) => boolean) {
+  const id = 'three-kingdoms-banqi';
+  const lists = deriveLaunchLists(isPublic);
+  return {
+    shelf: lists.canonicalVariantOrder.includes(id),
+    playWithoutGrant: !lists.allowlisted.includes(id),
+    rules: !playtestRulesSlugs(isPublic).includes(id),
+    stats: !offPublicGameSpecIds(isPublic).includes(id),
+  };
+}
+
+test('Three Kingdoms Banqi is launched, casual and unrated, on every server surface', async () => {
+  const id = 'three-kingdoms-banqi';
+  assert.equal(isPublicGameSpec(id), true);
+  assert.equal(articleIsIndexable(id), true);
+  assert.equal(CANONICAL_VARIANT_ORDER[CANONICAL_VARIANT_ORDER.indexOf('banqi') + 1], id);
+  assert.equal(isAllowlistedGameSpec(id), false);
+  assert.equal(await mayPlayVariant(null, id), true);
+  assert.equal(ratingPoolForSpec(id), null);
+  // Correspondence follows launch (#1002 built it), casual only.
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(id), true);
+  assert.equal(isCorrespondenceRatedSpec(id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(id), false);
+  assert.ok(!countedPublicGame('g').includes(`'${id}'`));
+  const bot = { supportedGameSpecIds: [id, 'mahjong'] } as BotProfile;
+  assert.deepEqual(withoutHiddenSpecs(bot).supportedGameSpecIds, [id]);
+  const listed = threeKingdomsListedUnder(isPublicGameSpec);
+  assert.deepEqual(listed, everyValue(listed, true));
+  const profile = JSON.parse(
+    readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../../../config/product-profile.json'),
+      'utf8',
+    ),
+  );
+  assert.equal(profile.serverFlagByGameSpecId[id], 'MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED');
+});
+
+test('hiding Three Kingdoms Banqi removes every server listing again', () => {
+  const hidden = publicSpecPredicate(
+    GAME_SPECS.map((spec) =>
+      spec.id === 'three-kingdoms-banqi' ? { ...spec, publicSurface: 'hidden' as const } : spec,
+    ),
+  );
+  const listed = threeKingdomsListedUnder(hidden);
+  assert.deepEqual(listed, everyValue(listed, false));
+});
+
+test('the generated sitemap indexes the launched English TK rules', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-tk-launch-'));
+  await mkdir(join(staticDir, 'rules'), { recursive: true });
+  await writeFile(join(staticDir, 'rules/three-kingdoms-banqi.html'), '<html>Rules</html>');
+  await writeFile(
+    join(staticDir, 'prerender-sitemap.json'),
+    JSON.stringify([{ path: '/rules/three-kingdoms-banqi', lastmod: '2026-11-10' }]),
+  );
+  let xml = '';
+  await serveSitemap({
+    response: {
+      writeHead() {},
+      end(body: string) {
+        xml = body;
+      },
+    } as unknown as ServerResponse,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    section: 'pages',
+  });
+  assert.ok(xml.includes('<loc>https://mistboard.test/rules/three-kingdoms-banqi</loc>'));
 });

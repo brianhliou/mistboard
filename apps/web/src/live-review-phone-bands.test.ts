@@ -56,6 +56,20 @@ describe('phone room bands', () => {
     expect(rule('main.shell:has(.live-review__cluster)')).toContain('padding-bottom: 0;');
   });
 
+  it('keeps a finished room docked when the browser toolbar retracts, clearing the home indicator', () => {
+    const finished = rule(
+      '.review-shell__cluster.live-review__cluster:has(.game-result:not([hidden]))',
+    );
+    expect(finished).toContain('--phone-room-viewport: 100dvh;');
+    expect(finished).toContain('--phone-room-safe-bottom: env(safe-area-inset-bottom, 0px);');
+    const cluster = rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band');
+    expect(cluster).toContain('var(--phone-room-viewport, 100svh)');
+    expect(cluster).toContain('var(--phone-room-safe-bottom, 0px)');
+    expect(rule('main.shell:has(.live-review__cluster .game-result:not([hidden]))')).toContain(
+      'padding-bottom: env(safe-area-inset-bottom, 0px);',
+    );
+  });
+
   it('keeps the game card and chat in a sheet, off the page', () => {
     expect(
       rule('.review-shell__cluster.live-review__cluster > .meta-panel {\n    display: none;'),

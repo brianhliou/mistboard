@@ -10,7 +10,7 @@ import { prerenderMount } from './prerender-copy.js';
 // reading this actually care", and cover every game): titles won in a match
 // are hero cards (crown, game marker, the match score as a stat with a
 // win/draw/loss bar, quiet buttons); every other game with a bot sits in a
-// quieter "Open titles" grid pointing at the challenge rules (#challenge).
+// quieter "Open titles" grid with one button to the challenge rules (#challenge).
 // Motion only on hover: perpetual idle motion is banned on this site.
 //
 // The engines named here must match prod (`npm run variants -- --prod` and
@@ -461,7 +461,6 @@ function openCard(title: Title, locale: Locale): HTMLElement {
       : []),
     ...(title.credits ? [creditList(title.credits, locale)] : []),
     el('span', 'champions-open-badge', [t('champions.openBadge', {}, locale)]),
-    button(t('champions.challengeCta', {}, locale), '#challenge'),
   );
   return card;
 }
@@ -487,6 +486,11 @@ export function buildChampions(locale: Locale = currentLocale()): HTMLElement {
     proseSubheading(t('champions.openHeading', {}, locale)),
     proseParagraph([t('champions.openIntro', {}, locale)]),
     open,
+    // One link to the rules for the whole grid; a button on every card all
+    // pointed at the same #challenge (Brian, 2026-10-28: "bad redundant UI").
+    el('div', 'champions-actions champions-open-cta', [
+      button(t('champions.challengeHeading', {}, locale), '#challenge'),
+    ]),
 
     proseSubheading(t('champions.historyHeading', {}, locale)),
     list(TITLE_HISTORY.map((entry) => matchLine(locale, entry.textKey, entry))),

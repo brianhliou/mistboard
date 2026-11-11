@@ -7,7 +7,6 @@ import { DEFAULT_SOUND_SET, isSynthesizedSet, SOUND_SETS, soundFileFor } from '.
 const ALL_KINDS: SoundKind[] = [
   'move',
   'capture',
-  'captured',
   'cannon-capture',
   'castle',
   'king-capture',
@@ -49,6 +48,15 @@ describe('sound set registry', () => {
       for (const kind of ALL_KINDS) {
         expect(soundFileFor(set.id, kind)).toBeNull();
       }
+    }
+  });
+
+  it('keeps ordinary captures at the source pitch and gain in every file set', () => {
+    for (const set of SOUND_SETS) {
+      if (isSynthesizedSet(set.id)) continue;
+      expect(soundFileFor(set.id, 'capture')).toEqual({
+        file: `/sound/${set.id}/${set.id === 'wood' ? 'capture' : 'Capture'}.mp3`,
+      });
     }
   });
 

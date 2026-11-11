@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildLandingStage } from './landing.js';
+import { buildLandingStage, PHONE_NEWS_ROWS } from './landing.js';
 import { buildLandingPhoneTiles, buildLandingTvStrip, isPhoneHome } from './landing-phone.js';
 import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
@@ -22,7 +22,6 @@ describe('phone home widget set', () => {
     '.landing-puzzle-column',
     '.landing-forum-column',
     '.landing-studies-column',
-    '.landing-news-column',
   ];
 
   let fetchSpy: ReturnType<typeof vi.fn>;
@@ -96,6 +95,34 @@ describe('phone home widget set', () => {
     expect(stage.el.querySelector('.landing-activity-value')?.textContent).toBe('4,888');
     expect(stage.el.querySelector('.landing-chat-column .landing-chat-mount')).not.toBeNull();
     expect(stage.el.querySelector(':scope > .landing-demo + *')).not.toBeNull();
+    // The h1 tagline stays in the DOM (search, screen readers) though the phone
+    // hides it; the mission sits above News, with a link to /about
+    // (2026-11-08). The footer still closes the page.
+    expect(stage.el.querySelector('.landing-play-intro .landing-about h1')?.textContent).toBe(
+      'Bringing people together across cultures through Chinese chess.',
+    );
+    expect(
+      stage.el.querySelector('.landing-play-intro > .landing-about-more')?.getAttribute('href'),
+    ).toBe('/about');
+    const mission = stage.el.querySelector(
+      '.landing-phone-mission + .landing-news-column',
+    )?.previousElementSibling;
+    expect(mission?.querySelector('.landing-phone-mission-text')?.textContent).toBe(
+      "Bring people together across cultures through Chinese chess and the world's classic strategy games.",
+    );
+    expect(mission?.querySelector('a')?.getAttribute('href')).toBe('/about');
+    expect(
+      stage.el.querySelectorAll(':scope > .landing-footer .landing-footer-links a'),
+    ).toHaveLength(4);
+    // The three newest News entries (2026-11-08). News is static data, so it
+    // costs the phone no fetch.
+    expect(
+      stage.el.querySelectorAll(
+        '.landing-news-column .landing-news-update:not(.landing-news-more)',
+      ),
+    ).toHaveLength(PHONE_NEWS_ROWS);
+    // The header's More » leads on; no closing row under three entries.
+    expect(stage.el.querySelector('.landing-news-column .landing-news-more')).toBeNull();
   });
 
   it('on desktop, still mounts every widget and fetches its data', async () => {
@@ -118,46 +145,40 @@ describe('phone home widget set', () => {
 });
 
 describe('phone home TV strip', () => {
-  it('names Mistboard TV and links to the top channel before a game loads', () => {
-    const strip = buildLandingTvStrip('en', '/watch?channel=top');
+  it('names Mistboard TV before a game loads, with no link of its own', () => {
+    const strip = buildLandingTvStrip('en');
     expect(strip.el.querySelector('.landing-tv-strip-label')?.textContent).toBe('Mistboard TV');
-    const watch = strip.el.querySelector<HTMLAnchorElement>('.landing-tv-strip-watch');
-    expect(watch?.textContent).toBe('Watch');
-    expect(watch?.getAttribute('href')).toBe('/watch?channel=top');
+    // The board under the strip is the way to the TV (2026-11-08).
+    expect(strip.el.querySelector('a')).toBeNull();
     // Nothing claims to be live until the TV says so.
     expect(strip.el.querySelector<HTMLElement>('.landing-tv-strip-live')?.hidden).toBe(true);
     expect(strip.el.classList).not.toContain('is-live');
   });
 
   it('shows Live only for a live game and follows the game the TV switches to', () => {
-    const strip = buildLandingTvStrip('en', '/watch?channel=top');
+    const strip = buildLandingTvStrip('en');
     const live = () => strip.el.querySelector<HTMLElement>('.landing-tv-strip-live');
     const label = () => strip.el.querySelector('.landing-tv-strip-label')?.textContent;
-    const href = () =>
-      strip.el.querySelector<HTMLAnchorElement>('.landing-tv-strip-watch')?.getAttribute('href');
 
-    strip.update({ mode: 'live', variantLabel: 'Xiangqi', watchHref: '/watch?channel=top' });
+    strip.update({ mode: 'live', variantLabel: 'Xiangqi' });
     expect(live()?.hidden).toBe(false);
     expect(live()?.textContent).toBe('Live');
     expect(strip.el.classList).toContain('is-live');
     expect(label()).toBe('Mistboard TV · Xiangqi');
 
-    strip.update({
-      mode: 'frozen',
-      variantLabel: 'Jieqi',
-      watchHref: '/watch?channel=top&game=abc',
-    });
+    strip.update({ mode: 'frozen', variantLabel: 'Jieqi' });
     expect(live()?.hidden).toBe(true);
     expect(strip.el.classList).not.toContain('is-live');
     expect(label()).toBe('Mistboard TV · Jieqi');
-    expect(href()).toBe('/watch?channel=top&game=abc');
   });
 
   it('localizes', () => {
-    const strip = buildLandingTvStrip('zh-Hant', '/zh-hant/watch?channel=top');
-    strip.update({ mode: 'live', variantLabel: '象棋', watchHref: '/zh-hant/watch?channel=top' });
+    const strip = buildLandingTvStrip('zh-Hant');
+    strip.update({ mode: 'live', variantLabel: '象棋' });
     expect(strip.el.querySelector('.landing-tv-strip-live')?.textContent).toBe('直播');
-    expect(strip.el.querySelector('.landing-tv-strip-watch')?.textContent).toBe('觀看');
+    expect(strip.el.querySelector('.landing-tv-strip-label')?.textContent).toBe(
+      'Mistboard 電視 · 象棋',
+    );
   });
 });
 

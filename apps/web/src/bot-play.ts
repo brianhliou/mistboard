@@ -5,11 +5,16 @@ import { postThroughRestart } from './room-create-retry.js';
 
 // One-click PvE room creation against a public bot identity. The server
 // resolves the per-variant engine from the bot profile (routes/rooms.ts
-// resolveBotRoomRequest), so callers only name the bot, the variant, and
-// optionally a pace; the tenant time-control gates stay authoritative.
+// resolveBotRoomRequest). Callers name the bot, variant, optional pace and
+// optional tier within Misty's Banqi/Flip Jungle ladders. Engine-only tenants
+// use the same request as their setup dialog, without a public bot profile.
+// The tenant gates stay authoritative.
 
-export type BotPlayRequest = {
-  botId: string;
+export type BotPlayTarget =
+  | { botId: string; engineId?: string }
+  | { botId?: never; engineId: string };
+
+export type BotPlayRequest = BotPlayTarget & {
   gameSpecId: string;
   timeControl?: { initialMs: number; incrementMs: number };
   preferredColor?: 'random' | 'white' | 'black' | 'red';
@@ -23,6 +28,7 @@ export async function createBotGame(request: BotPlayRequest): Promise<string> {
   const body = {
     mode: 'pve',
     botId: request.botId,
+    ...(request.engineId ? { engineId: request.engineId } : {}),
     gameSpecId: request.gameSpecId,
     ...(request.timeControl ? { timeControl: request.timeControl } : {}),
     // Omitted, not 'random': a one-click bot start names no side, and the
@@ -86,7 +92,8 @@ export function bindBotPlayControl(
         // A one-click start skips the setup dialog, so it records the engine
         // itself; otherwise the device never "remembers" the game it just
         // played and the next visit hands out the first-game rung again (#365).
-        rememberPveEngine(req.gameSpecId, req.botId);
+        const rememberedId = req.engineId ?? req.botId;
+        if (rememberedId) rememberPveEngine(req.gameSpecId, rememberedId);
         if (opts.source) rememberGameStartSource(opts.source);
         opts.onCreated?.(req);
         window.location.href = url;

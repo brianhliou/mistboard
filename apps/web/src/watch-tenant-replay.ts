@@ -173,6 +173,12 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
 
 export type TenantWatchReplayOptions = {
   autoplay?: boolean;
+  /**
+   * Paint the latest ply immediately, without an opening glide. Reloading the
+   * same room follows new moves, gliding only a single-ply update. Off by
+   * default so TV replay callers keep starting at the opening position.
+   */
+  followEnd?: boolean;
   locale?: Locale;
   metadataByRoomId?: Record<string, GameMeta>;
   /**
@@ -494,8 +500,8 @@ export async function mountTenantWatchReplay<
   let maxPly = 0;
   let currentPly = 0;
   // The ply the previous sync rendered; a one-ply delta animates the step
-  // (adapter.animateMove). Null right after a (re)load so the first paint of a
-  // game never glides.
+  // (adapter.animateMove). Null on a new game; followEnd keeps it across reloads
+  // of the same room so only a newly arrived single move glides.
   let lastSyncedPly: number | null = null;
   let boardOrientation: 'red' | 'black' = 'red';
   let activePostgame: Postgame | null = null;
@@ -931,8 +937,8 @@ export async function mountTenantWatchReplay<
   const buildGame = (postgame: Postgame): void => {
     activePostgame = postgame;
     maxPly = adapter.maxPly(postgame);
-    currentPly = 0;
-    lastSyncedPly = null;
+    currentPly = options.followEnd ? maxPly : 0;
+    if (!options.followEnd) lastSyncedPly = null;
     lastNotifiedPly = null;
     paused = !autoplay;
     boardOrientation = 'red';
@@ -1169,6 +1175,7 @@ export async function mountTenantWatchReplay<
   const load = async (nextId: string): Promise<void> => {
     clearTimer();
     stopPlayback();
+    if (nextId !== activeId) lastSyncedPly = null;
     activeId = nextId;
     let result: Awaited<ReturnType<typeof adapter.loadPostgame>>;
     if (options.loadPostgameOverride) {

@@ -7,6 +7,8 @@
 import type { ReviewI18nKey } from './review.js';
 
 export const ZH_HANT_REVIEW = {
+  'review.chooseLine': '選擇分支',
+  'review.mainLine': '主線',
   // Remaining review widgets and dynamically generated move advice (#855).
   'review.explorer.move': '著法',
   'review.explorer.games': '對局數',
@@ -500,6 +502,16 @@ export const ZH_HANT_REVIEW = {
   'replay.gameCouldNotBeLoaded': '無法載入這盤對局。',
   'replay.requestComputerAnalysis': '請求引擎分析',
   'replay.analyse': '分析',
+  'replay.analysisQueued': '電腦分析排隊中…',
+  'replay.revealsQueued': '翻子評分排隊中…',
+  'replay.positionsProgress': '正在分析局面… {done}/{total}',
+  'replay.revealsProgress': '正在評估翻子… 已檢查至第 {done}/{total} 步',
+  'replay.analysisJobLost': '分析狀態已過期。重試以檢查已儲存的結果。',
+  'replay.analysisEngineUnavailable': '分析引擎暫不可用，請稍後重試。',
+  'replay.analysisConnectionLost': '無法取得分析進度。重試以檢查現有任務。',
+  'replay.analysisCouldNotFinish': '分析未能完成。重試以恢復已儲存的進度。',
+  'replay.analysisRetry': '重試分析',
+  'replay.revealsRetry': '重試翻子評分',
   'replay.analysingWholeGame': '正在分析整盤棋…',
   'replay.analysingProgress': '正在分析… {done}/{total}',
   'replay.analysingReveals': '正在分析揭子…',
@@ -958,6 +970,10 @@ export const ZH_HANT_REVIEW = {
   'analysis.editPosition': '編輯局面',
   'review.setDefaultView': '設為預設視角',
   'review.revealIdentities': '揭示身分',
+  'review.revealAllPieces': '顯示所有棋子',
+  'review.revealLoading': '正在顯示棋子…',
+  'review.revealFailed': '無法顯示棋子，請重試。',
+  'review.hideRevealedPieces': '隱藏未翻棋子',
   'review.hideIdentities': '隱藏身分',
   'review.showAlternatives': '顯示備選著法',
   'review.hideAlternatives': '隱藏備選著法',

@@ -19,10 +19,39 @@ export type CrawlerContentEntry = {
   hreflang: readonly string[];
   source: 'prerender' | 'server-body' | 'db-fixture';
   kind?: 'tool';
+  redirect?: { status: 301 | 302 | 307 | 308; location: string };
   knownGap?: `#${number}` | `#${number}: ${string}`;
 };
 
 export const CLIENT_ONLY_NOINDEX: readonly { routeId: string; path: string }[] = [
+  {
+    routeId: 'embed-study',
+    path: '/embed/study/CrawlerStudy/CrawlerChapter',
+  },
+  {
+    routeId: 'embed-game',
+    path: '/embed/game/crawler-game',
+  },
+  {
+    routeId: 'embed-puzzle',
+    path: '/embed/puzzle/crawler-puzzle',
+  },
+  {
+    routeId: 'embed-analysis',
+    path: '/embed/analysis/xiangqi',
+  },
+  {
+    routeId: 'embed-line',
+    path: '/embed/line/xiangqi',
+  },
+  {
+    routeId: 'embed-broadcast-board',
+    path: '/embed/broadcast/xiangqi/board/crawler-board',
+  },
+  {
+    routeId: 'embed-tv',
+    path: '/embed/tv',
+  },
   {
     routeId: '/database',
     path: '/database',
@@ -384,7 +413,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     routeId: '/zh-hans',
     path: '/zh-hans',
     minChars: 1294,
-    phrase: '中国象棋与世界经典策略游戏。免费且开源。关于 Mistboard...',
+    phrase: '通过中国象棋，让不同文化背景的人走到一起。',
     phraseKey: 'home.tagline',
     locale: 'zh-hans',
     h1: true,
@@ -397,7 +426,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     routeId: '/zh-hant',
     path: '/zh-hant',
     minChars: 1294,
-    phrase: '象棋與世界經典策略遊戲。免費且開源。關於 Mistboard...',
+    phrase: '透過象棋，連結不同文化背景的人。',
     phraseKey: 'home.tagline',
     locale: 'zh-hant',
     h1: true,
@@ -470,7 +499,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 827,
+    baselineChars: 910,
   },
   {
     routeId: '/zh-hans/rules',
@@ -483,7 +512,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 494,
+    baselineChars: 577,
   },
   {
     routeId: '/zh-hant/rules',
@@ -496,7 +525,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'prerender',
-    baselineChars: 492,
+    baselineChars: 575,
   },
   {
     routeId: '/watch',
@@ -563,7 +592,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#960: empty directory has fewer than 150 page-content characters',
     baselineChars: 0,
   },
   {
@@ -893,7 +921,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'db-fixture',
-    knownGap: '#960: sparse rating pools have fewer than 150 page-content characters',
     baselineChars: 333,
   },
   {
@@ -908,7 +935,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: [],
     source: 'prerender',
-    knownGap: '#960: alias returns a redirect to /player',
+    redirect: { status: 308, location: '/player' },
     baselineChars: 153,
   },
   {
@@ -1071,7 +1098,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1085,7 +1111,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1099,7 +1124,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: public directory body is below its crawler floor',
     baselineChars: 0,
   },
   {
@@ -1217,8 +1241,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
-    source: 'prerender',
-    knownGap: '#960: practice study list is database-backed',
+    source: 'db-fixture',
     baselineChars: 0,
   },
   {
@@ -1232,8 +1255,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
-    source: 'prerender',
-    knownGap: '#960: practice study list is database-backed',
+    source: 'db-fixture',
     baselineChars: 0,
   },
   {
@@ -1247,8 +1269,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     h1: true,
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
-    source: 'prerender',
-    knownGap: '#960: practice study list is database-backed',
+    source: 'db-fixture',
     baselineChars: 0,
   },
   {
@@ -1262,7 +1283,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 247,
   },
   {
@@ -1276,7 +1296,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 141,
   },
   {
@@ -1290,7 +1309,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     canonical: true,
     hreflang: ['en', 'zh-Hans', 'zh-Hant'],
     source: 'server-body',
-    knownGap: '#960: sparse study lists have fewer than 150 page-content characters',
     baselineChars: 141,
   },
   {
@@ -1675,8 +1693,7 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     routeId: 'root',
     path: '/',
     minChars: 3027,
-    phrase:
-      "Chinese chess and the world's classic strategy games. Free and open source. About Mistboard...",
+    phrase: 'Bringing people together across cultures through Chinese chess.',
     phraseKey: 'home.tagline',
     locale: 'en',
     h1: true,
@@ -1755,104 +1772,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: [],
     source: 'db-fixture',
     baselineChars: 289,
-  },
-  {
-    routeId: 'embed-study',
-    path: '/embed/study/CrawlerStudy/CrawlerChapter',
-    minChars: 150,
-    phrase: 'Seven Stars',
-    phraseKey: 'apps/server/src/crawler-content-fixtures.ts#CRAWLER_STUDY.chapters.name',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
-  },
-  {
-    routeId: 'embed-game',
-    path: '/embed/game/crawler-game',
-    minChars: 150,
-    phrase: 'This game is not available.',
-    phraseKey: 'apps/web/src/embed/embed-game-page.ts#note',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
-  },
-  {
-    routeId: 'embed-puzzle',
-    path: '/embed/puzzle/crawler-puzzle',
-    minChars: 150,
-    phrase: 'Solve on mistboard.com',
-    phraseKey: 'puzzle.embedSolveOn',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
-  },
-  {
-    routeId: 'embed-analysis',
-    path: '/embed/analysis/xiangqi',
-    minChars: 150,
-    phrase: 'Analysis board · mistboard.com',
-    phraseKey: 'apps/web/src/embed/embed-analysis-page.ts#credit',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
-  },
-  {
-    routeId: 'embed-line',
-    path: '/embed/line/xiangqi',
-    minChars: 150,
-    phrase: 'No moves to show: add ?moves= to the frame.',
-    phraseKey: 'apps/web/src/embed/embed-line-page.ts#note',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
-  },
-  {
-    routeId: 'embed-broadcast-board',
-    path: '/embed/broadcast/xiangqi/board/crawler-board',
-    minChars: 150,
-    phrase: 'This broadcast game is not available.',
-    phraseKey: 'apps/web/src/embed/embed-broadcast-page.ts#note',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
-  },
-  {
-    routeId: 'embed-tv',
-    path: '/embed/tv',
-    minChars: 150,
-    phrase: 'Mistboard TV · mistboard.com',
-    phraseKey: 'apps/web/src/embed/embed-tv-page.ts#credit',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    knownGap: '#956',
-    baselineChars: 0,
   },
   {
     routeId: '/game/*',

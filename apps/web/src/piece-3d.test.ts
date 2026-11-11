@@ -13,6 +13,8 @@ import { banqiTile3dBox } from './live-banqi-render.js';
 import { animateJieqiReveal, renderJieqiBoardSvg } from './live-jieqi-render.js';
 import {
   BANQI_PIECE_3D,
+  PIECE_3D_DOBUTSU_TAN,
+  PIECE_3D_IVORY,
   PIECE_3D_THICK_EDGE,
   piece3dLook,
   XIANGQI_PIECE_3D,
@@ -83,10 +85,12 @@ const GOLDEN: Record<string, string> = {
   // outside their outline.
   xqCell: '18e27b8fa73c35f9',
   xqDrag: '0ca4d8b4ce76c8d5',
-  jqInternational: '1b1321bf428719e5',
-  jqWood: 'df4ddaf709b4f1da',
-  jqCell: '4f51dcccff28e48d',
-  jqDrag: '02962bb59f9aef29',
+  // Re-pinned 2026-11-09 (#1023): the jieqi move-hint layer is always drawn,
+  // empty when nothing is selected, and interactive boards show their hints.
+  jqInternational: '2bd9f17ddb47993b',
+  jqWood: '69dd0d95806c0753',
+  jqCell: '8e1b825bdd25c5c3',
+  jqDrag: '1626ee51b88de650',
 };
 
 function sha(svg: string): string {
@@ -206,6 +210,15 @@ describe('xiangqi and jieqi 3D pieces', () => {
       expect(centre.x).toBe(100);
       expect(centre.y + (box * XIANGQI_PIECE_3D.depthShare) / 2).toBeCloseTo(200, 1);
     }
+  });
+
+  it('gives Animal Dobutsu a tan rim so it shows under the ivory faces', () => {
+    const body = (set: Parameters<typeof piece3dLook>[0]) =>
+      piece3dLook(set, banqiTile3dBox(64), BANQI_PIECE_3D).body;
+    expect(body('animal-dobutsu')).toEqual(PIECE_3D_DOBUTSU_TAN);
+    expect(body('animal-dobutsu')).not.toEqual(PIECE_3D_IVORY);
+    expect(body('traditional')).toEqual(PIECE_3D_IVORY);
+    expect(body('international')).toEqual(PIECE_3D_IVORY);
   });
 
   it("deepens every board's rim 1.5x on the Thicker edge, at the same footprint", () => {

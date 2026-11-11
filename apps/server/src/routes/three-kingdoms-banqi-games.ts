@@ -7,6 +7,7 @@ import {
   type ThreeKingdomsBanqiPlayerView,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { threeKingdomsBanqiEnabled } from '../feature-flags.js';
 import * as persistence from './../persistence.js';
 import { threeKingdomsBanqiAdmits } from './../three-kingdoms-banqi-access.js';
 import {
@@ -21,35 +22,32 @@ import {
   type ThreeKingdomsBanqiDecisionsCache,
 } from './../three-kingdoms-banqi-decisions.js';
 import { threeKingdomsBanqiEngineAvailable } from './../three-kingdoms-banqi-engine.js';
+import { threeKingdomsBanqiRooms } from '../three-kingdoms-banqi-registration.js';
 import {
-  getThreeKingdomsBanqiTruthView,
   type ThreeKingdomsBanqiEvent,
   threeKingdomsBanqiTenant,
 } from './../three-kingdoms-banqi-tenant.js';
+import {
+  getThreeKingdomsBanqiClientView,
+  type ThreeKingdomsBanqiRuntimeRoom,
+} from '../three-kingdoms-banqi-tenant.js';
 import {
   applyTenantEvent,
   isTenantEventLog,
   replayTenantEvents,
 } from './../variant-tenant/runtime.js';
+import { registerLiveWatchPayloadBuilder } from '../watch-live.js';
 import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
 
 // Three Kingdoms banqi (#628) postgame review: GET /api/three-kingdoms-banqi/games/:roomId.
 //
-// ADMIN PLAYTEST (#684). The route opens to exactly who may open a TK room
-// (three-kingdoms-banqi-access.ts: an admin account, or anyone under the local
-// flag). Everyone else gets the same 404 as a game that does not exist, so the
-// route cannot confirm that an admin's game is there.
+// Public casual release. Admission follows the runtime flag and its admin
+// fallback; a refused caller receives the same 404 as an unknown game.
 //
-// HIDDEN INFORMATION, banqi's finished-game policy exactly (routes/banqi-games.ts).
-// TK is symmetric hidden identity: a face-down tile is hidden from both seats
-// and every capture is of a face-up piece, so the deal is the one secret. The
-// route answers ONLY for a log that replays to 'finished' (a finished room
-// reveals everything); a live or aborted game gets the 404. The deal itself
-// (room-created setup) never goes out as such: the payload is the truth view of
-// the final position, the as-played masked board at every ply (`history.truth`,
-// the red seat's view, identical for both seats), and the revealed board at every
-// ply (`history.revealed`). Regression: routes/three-kingdoms-banqi-games.test.ts.
+// Covered identities stay secret after completion. Only finished logs are
+// reviewable; both history keys carry the as-played masked snapshots for wire
+// compatibility. No dealt position or revealed track reaches the browser.
 //
 // Whole-game analysis uses the live engine's public information state at L8.
 
@@ -111,7 +109,7 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
       routeId: 'three-kingdoms-banqi',
       logPrefix: 'three_kingdoms_banqi',
       variantLabel: 'Three Kingdoms banqi',
-      // The wrapper applies playtest admission to every path.
+      // The wrapper applies runtime admission to every path.
       enabled: () => true,
       requiresPersistence: false,
       engineBinary: {
@@ -154,10 +152,7 @@ export function createThreeKingdomsBanqiAnalysisRoutes(
     pathname: string,
   ): Promise<boolean> => {
     if (!ANALYSIS_ROUTE.test(pathname)) return false;
-    // Every TK path, decisions reads included, answers only to the playtest
-    // admission while TK is unlaunched: anyone else gets the unknown-game 404,
-    // so no route confirms that an admin's game exists. Decisions hold
-    // public-information values only; open the GET like banqi's at launch.
+    // Apply runtime admission consistently to every TK path, including decisions.
     if (!(await deps.admits(request))) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
@@ -228,8 +223,8 @@ export async function threeKingdomsBanqiPostgameForApi(
       ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
     },
     timeline: threeKingdomsBanqiPostgameTimeline(events),
-    // Every identity revealed: postgame only, never on a live wire.
-    view: getThreeKingdomsBanqiTruthView(projection.state),
+    // Completion does not reveal identities that remained covered.
+    view: getThreeKingdomsBanqiPlayerView(projection.state, 'red'),
     history: threeKingdomsBanqiPostgameHistory(events),
   };
 }
@@ -248,9 +243,8 @@ async function loadFinishedGame(roomId: string, deps: ThreeKingdomsBanqiPostgame
   return { game, events, projection };
 }
 
-// Per-ply snapshots in banqi's two tracks: 'truth' is the as-played masked board
-// (a tile not yet flipped is face down), 'revealed' shows every identity at every
-// ply. The masked view is the same for both seats, so 'red' is arbitrary.
+// Both legacy history keys contain the same masked snapshots. The second key
+// remains for older clients; it must never become a route around the mask.
 function threeKingdomsBanqiPostgameHistory(events: readonly ThreeKingdomsBanqiEvent[]): {
   truth: ThreeKingdomsBanqiPostgameSnapshot[];
   revealed: ThreeKingdomsBanqiPostgameSnapshot[];
@@ -260,13 +254,13 @@ function threeKingdomsBanqiPostgameHistory(events: readonly ThreeKingdomsBanqiEv
   let projection = replayTenantEvents(threeKingdomsBanqiTenant, [created]);
   let ply = 0;
   const truth = [{ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') }];
-  const revealed = [{ ply, view: getThreeKingdomsBanqiTruthView(projection.state) }];
+  const revealed = [{ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') }];
   for (const event of events.slice(1)) {
     projection = applyTenantEvent(threeKingdomsBanqiTenant, projection, event);
     if (event.type !== 'move-played') continue;
     ply += 1;
     truth.push({ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') });
-    revealed.push({ ply, view: getThreeKingdomsBanqiTruthView(projection.state) });
+    revealed.push({ ply, view: getThreeKingdomsBanqiPlayerView(projection.state, 'red') });
   }
   return { truth, revealed };
 }
@@ -300,4 +294,75 @@ function threeKingdomsBanqiPostgameTimeline(
     }
   }
   return timeline;
+}
+
+export function threeKingdomsBanqiLiveWatchPayloadFor(
+  roomId: string,
+  room: Pick<ThreeKingdomsBanqiRuntimeRoom, 'id' | 'events' | 'projection'>,
+): Record<string, unknown> | null {
+  if (room.id !== roomId) return null;
+  const projection = room.projection;
+  if (projection.state.status.type !== 'playing') return null;
+  if (!isTenantEventLog(threeKingdomsBanqiTenant, room.events, roomId)) return null;
+  const timeline = threeKingdomsBanqiPostgameTimeline(room.events);
+  const isEngine = threeKingdomsBanqiTenant.engine?.isEngineClientId ?? (() => false);
+  const hasEngineSeat = Object.values(projection.seats).some((clientId) => isEngine(clientId));
+  return {
+    game: {
+      roomId,
+      variant: THREE_KINGDOMS_BANQI_SPEC_ID,
+      mode: hasEngineSeat ? 'pve' : 'pvp',
+      result: 'in-progress',
+      termination: 'in-progress',
+      plyCount: timeline.filter((entry) => entry.type === 'move-played').length,
+      startedAt: new Date(room.events[0]?.at ?? Date.now()).toISOString(),
+      endedAt: null,
+      rated: projection.rated,
+      visibility: 'public',
+      initialMs: projection.timeControl?.initialMs ?? null,
+      incrementMs: projection.timeControl?.incrementMs ?? null,
+    },
+    state: {
+      status: projection.state.status,
+      moveNumber: projection.state.moveNumber,
+      ...(projection.clock ? { clock: projection.clock } : {}),
+      ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
+    },
+    timeline,
+    // Masked view (either seat's — they are identical), NOT banqiTruthView.
+    view: getThreeKingdomsBanqiClientView(projection.state, {
+      id: 'tv',
+      solo: false,
+      seat: 'spectator',
+    }),
+    // Masked track only; no `revealed` overlay exists for a live game.
+    history: { truth: threeKingdomsBanqiLiveHistory(room.events) },
+  };
+}
+
+async function threeKingdomsBanqiLiveWatchPayload(
+  roomId: string,
+): Promise<Record<string, unknown> | null> {
+  if (!threeKingdomsBanqiEnabled()) return null;
+  const room = threeKingdomsBanqiRooms.get(roomId) ?? null;
+  if (!room) return null;
+  await room.pendingWrites.catch(() => undefined);
+  return threeKingdomsBanqiLiveWatchPayloadFor(roomId, room);
+}
+
+registerLiveWatchPayloadBuilder('three-kingdoms-banqi', threeKingdomsBanqiLiveWatchPayload);
+
+function threeKingdomsBanqiLiveHistory(events: readonly ThreeKingdomsBanqiEvent[]) {
+  let projection = replayTenantEvents(threeKingdomsBanqiTenant, events.slice(0, 1));
+  const spectator = { id: 'tv', solo: false, seat: 'spectator' } as const;
+  const history = [{ ply: 0, view: getThreeKingdomsBanqiClientView(projection.state, spectator) }];
+  for (const event of events.slice(1)) {
+    projection = applyTenantEvent(threeKingdomsBanqiTenant, projection, event);
+    if (event.type === 'move-played')
+      history.push({
+        ply: projection.state.ply,
+        view: getThreeKingdomsBanqiClientView(projection.state, spectator),
+      });
+  }
+  return history;
 }

@@ -603,7 +603,7 @@ export function createTenantWsRuntime<
     }
     const event: TenantRoomEvent<C, M, Spec> = {
       type: 'move-played',
-      at: Date.now(),
+      at: tenant.rules.moveEventAt?.(canonical, Date.now()) ?? Date.now(),
       roomId: room.id,
       color: mover,
       move: canonical,
@@ -618,8 +618,9 @@ export function createTenantWsRuntime<
     }
     if (seq < 0) return; // A concurrent duplicate was rejected by the serialized writer.
     broadcastEventAppended(room, event, seq);
-    // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
-    scheduleEngineMove(room);
+    // No engine scheduling here: the event writer already scheduled it. By now
+    // its 0 ms timer has fired, so a second call started a second search of the
+    // same position on every human move.
   }
 
   async function expireActiveClock(
@@ -740,6 +741,32 @@ export function createTenantWsRuntime<
   ): void {
     for (const client of room.clients) {
       if (client.displaced) continue;
+      const count = tenant.visibility.clientEventCount?.(
+        room.projection.state,
+        room.events,
+        client.seat,
+      );
+      if (count !== undefined) {
+        // Sending even an empty delta leaks the private event's arrival and
+        // canonical seq. Release the ordered log and views together instead;
+        // snapshots reset the socket client's sequence-gap detector.
+        if (seq >= count && event.type === 'move-played') continue;
+        const snapshot = transportSnapshotPayload(room, client);
+        const clientEvent = TENANT_SERVER_ONLY_EVENT_TYPES.has(event.type)
+          ? null
+          : tenant.visibility.clientEventFor(
+              event,
+              client.seat,
+              tenantPlyAtEventIndex(room.events, seq),
+              room.events.slice(0, count),
+            );
+        sendPayload(client, {
+          ...snapshot,
+          ...tenantLiveHistoryExtras(tenant, room, client),
+          ...(clientEvent ? { event: clientEvent } : {}),
+        });
+        continue;
+      }
       if (room.projection.state.status.type !== 'playing') {
         sendPayload(client, transportSnapshotPayload(room, client));
         continue;
@@ -754,6 +781,7 @@ export function createTenantWsRuntime<
             event,
             client.seat,
             tenantPlyAtEventIndex(room.events, seq),
+            room.events,
           );
       sendPayload(client, {
         ...base,

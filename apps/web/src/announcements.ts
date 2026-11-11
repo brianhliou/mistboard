@@ -43,6 +43,30 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-10',
+    kind: 'release',
+    headline: 'Three Kingdoms Banqi is open to everyone.',
+    body: 'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.',
+    href: '/?play=computer&gameSpecId=three-kingdoms-banqi',
+    cta: 'Play Three Kingdoms Banqi',
+  },
+  {
+    date: '2026-11-09',
+    kind: 'release',
+    headline: 'Banqi and Flip Jungle now have eight bot levels.',
+    body: 'Each used to have one bot. In both, Levels 1 to 6 are new and easier, Level 7 is the bot you know, and Level 8 is new: a small neural net trained on the engine’s own games. In banqi it beat Level 7 by 219 Elo in a 120-game match; in Flip Jungle it beat the old bot by 139 Elo at equal thinking time.',
+    href: '/?play=computer&gameSpecId=banqi',
+    cta: 'Play banqi',
+  },
+  {
+    date: '2026-11-09',
+    kind: 'release',
+    headline: 'Play a correspondence game against Brian H. Liou, who builds Mistboard.',
+    body: 'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.',
+    href: '/correspondence',
+    cta: 'Play Brian H. Liou',
+  },
+  {
     date: '2026-11-08',
     kind: 'status',
     headline: '10,000 games played on Mistboard.',

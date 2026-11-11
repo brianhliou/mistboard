@@ -11,8 +11,16 @@ export function crawlerMinimumChars(entry) {
   return Math.max(150, entry.minChars, Math.floor((entry.baselineChars ?? 0) * 0.6));
 }
 
-export function pageFailures(entry, { status, html }) {
+export function pageFailures(entry, { status, html, location }) {
   const facts = crawlerFacts(html, { contentOnly: true });
+  if (entry.redirect) {
+    const failures = [];
+    if (status !== entry.redirect.status)
+      failures.push(`HTTP ${status}, expected redirect ${entry.redirect.status}`);
+    if (location !== entry.redirect.location)
+      failures.push(`Location ${location ?? '(missing)'}, expected ${entry.redirect.location}`);
+    return { failures, facts };
+  }
   const chars = crawlerCharCount(facts.text);
   const minimum = crawlerMinimumChars(entry);
   const failures = [];
@@ -54,7 +62,11 @@ export async function auditCrawlerRoute(
             headers: { 'user-agent': CRAWLER_UA },
             signal: AbortSignal.timeout(15_000),
           });
-          return { status: response.status, html: await response.text() };
+          return {
+            status: response.status,
+            location: response.headers?.get('location') ?? null,
+            html: await response.text(),
+          };
         })(),
       );
     return cache.get(path);

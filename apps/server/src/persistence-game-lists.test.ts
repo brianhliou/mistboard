@@ -47,7 +47,7 @@ definePersistenceTests('game lists', () => {
            (room_id, variant, result, termination, ply_count, started_at, ended_at,
             white_name, black_name, mode, status)
          VALUES
-           ('eve-older', 'dark-chess', 'draw', 'truncated', 32, $1, $1,
+           ('eve-older', 'dark-chess', 'draw', 'draw', 32, $1, $1,
             'engine-white-v1', 'engine-black-v1', 'eve', 'completed'),
            ('eve-newer', 'dark-chess', 'white-wins', 'king-captured', 15, $2, $2,
             'engine-white-v1', 'engine-black-v1', 'eve', 'completed'),
@@ -112,7 +112,7 @@ definePersistenceTests('game lists', () => {
             'short-white', 'short-black', NULL, NULL, 'pvp', 'completed', 'public'),
            ('one-move-public', 'dark-chess', 'white-wins', 'king-captured', 1, $5, $5,
             'one-white', 'one-black', NULL, NULL, 'pvp', 'completed', 'public'),
-           ('link-eve', 'dark-chess', 'draw', 'truncated', 28, $4, $4,
+           ('link-eve', 'dark-chess', 'draw', 'draw', 28, $4, $4,
             'engine:white', 'engine:black', 'White Engine', 'Black Engine', 'eve', 'completed', 'link'),
            ('short-timeout', 'dark-chess', 'black-wins', 'timeout', 4, $3, $3,
             'timeout-white', 'timeout-black', NULL, NULL, 'pvp', 'completed', 'public'),

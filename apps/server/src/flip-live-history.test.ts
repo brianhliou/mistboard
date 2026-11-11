@@ -12,7 +12,9 @@
  *      tile that is still face-down live;
  *   c. a seat and a live spectator both get one in the hello (hidden-identity:
  *      the spectator is shown the public board), no broadcast snapshot does;
- *   d. a finished room's hello carries none (it reveals truth instead);
+ *   d. a finished room's hello carries none (it reveals truth instead), unless
+ *      the tenant keeps finished rooms as played (liveHistoryWhenFinished, banqi
+ *      since #1038): then each viewer's hello carries the same masked history;
  *   e. perfect-info tenants declare no hook; a 'dark' tenant's spectator gets
  *      nothing even though the tenant has one.
  */
@@ -293,7 +295,7 @@ for (const c of CASES) {
     }
   });
 
-  test(`${c.name}: a finished room's hello carries no live history`, () => {
+  test(`${c.name}: a finished room's hello follows the tenant's finished-room rule`, () => {
     const roomId = `${c.name.replace(' ', '-')}_live_history_done`;
     const log = liveLog(c, roomId);
     log.push({
@@ -304,11 +306,28 @@ for (const c of CASES) {
     });
     const room = hydrate(c.tenant, log);
     assert.notEqual(room.projection.state.status.type, 'playing');
+    const keepsHistory = c.tenant.visibility.liveHistoryWhenFinished === true;
     for (const seat of ['red', 'black', 'spectator'] as const) {
-      assert.deepEqual(
-        tenantLiveHistoryExtras(c.tenant, room, { id: seat, seat, solo: false }),
-        {},
-      );
+      const client = { id: seat, seat, solo: false };
+      const extras = tenantLiveHistoryExtras(c.tenant, room, client) as {
+        liveHistory?: Entry[];
+      };
+      if (!keepsHistory) {
+        assert.deepEqual(extras, {});
+        continue;
+      }
+      // Finished but kept as played: still masked, never the deal.
+      const history = JSON.parse(JSON.stringify(extras.liveHistory ?? null)) as Entry[] | null;
+      assert.ok(history, `${c.name}: finished ${seat} got no history`);
+      const view = JSON.parse(
+        JSON.stringify(c.tenant.visibility.viewForClient(room.projection.state, client, log)),
+      ) as FlipView;
+      // The resignation is not a ply: the tip is the last move's view, which
+      // differs from the finished room's view only in its status.
+      assertMaskedHistory(`${c.name}/finished ${seat}`, history, {
+        ...view,
+        status: history.at(-1)!.view.status,
+      });
     }
   });
 }

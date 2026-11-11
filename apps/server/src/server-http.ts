@@ -63,6 +63,8 @@ export type CrawlerPageSources = Pick<
   | 'historicalGame'
   | 'bot'
   | 'dataPages'
+  | 'practiceStudies'
+  | 'routeBody'
 > & {
   getStudy?: Parameters<typeof serveStudyPage>[0]['getStudy'];
 };
@@ -111,19 +113,49 @@ type ServerHttpHandlerOptions = {
 export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
   const dispatch = createHttpRequestDispatcher(options);
   return function handleHttpRequest(request: IncomingMessage, response: ServerResponse): void {
-    const url = new URL(request.url ?? '/', 'http://localhost');
-    // The API dispatcher owns its own boundary, including direct callers.
-    // Pages, OG images and embeds must be checked before static/meta loading.
-    if (url.pathname.startsWith('/api/') || !ffqBanqiHttpTarget(url)) {
-      dispatch(request, response);
-      return;
+    try {
+      const url = new URL(request.url ?? '/', 'http://localhost');
+      // Validate encoding before any route can decode a component. Keep the
+      // original path for dispatch so encoded separators retain their meaning.
+      decodeURIComponent(url.pathname);
+      // The API dispatcher owns its own boundary, including direct callers.
+      // Pages, OG images and embeds must be checked before static/meta loading.
+      if (url.pathname.startsWith('/api/') || !ffqBanqiHttpTarget(url)) {
+        dispatch(request, response);
+        return;
+      }
+      void guardFFQBanqiHttpRead(options, request, response, url)
+        .then((handled) => {
+          if (!handled) dispatch(request, response);
+        })
+        .catch((err) => answerHttpFailure(response, request.url ?? '/', err));
+    } catch (err) {
+      // Node invokes this callback directly. A synchronous route failure must
+      // never escape into the process, including failures before a promise exists.
+      answerHttpFailure(response, request.url ?? '/', err);
     }
-    void guardFFQBanqiHttpRead(options, request, response, url)
-      .then((handled) => {
-        if (!handled) dispatch(request, response);
-      })
-      .catch((err) => answerApiFailure(response, request.url ?? '/', err));
   };
+}
+
+function answerHttpFailure(response: ServerResponse, url: string, err: unknown): void {
+  if (response.writableEnded || response.destroyed) return;
+  if (response.headersSent) {
+    response.destroy();
+    return;
+  }
+  if (
+    err instanceof URIError ||
+    (err instanceof TypeError && 'code' in err && err.code === 'ERR_INVALID_URL')
+  ) {
+    response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('Bad request');
+    return;
+  }
+  answerApiFailure(
+    response,
+    url,
+    err instanceof Error ? err : new Error('Unknown request failure'),
+  );
 }
 
 function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
@@ -159,6 +191,9 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       response.setHeader('X-Frame-Options', 'SAMEORIGIN');
       response.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
     } else {
+      // Widgets are alternate presentations, not search landing pages. Keep
+      // them crawlable so engines can observe this policy on existing URLs.
+      response.setHeader('X-Robots-Tag', 'noindex, follow');
       // An embed shell lives in OTHER PEOPLE'S pages, and the static fallback
       // that serves it sets no Cache-Control and no ETag: only Last-Modified.
       // Chrome then applies heuristic freshness, roughly a tenth of the
@@ -174,6 +209,25 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
       // no-cache is "revalidate", not "do not store": the browser still keeps
       // it and still takes a 304, it just may not replay it unasked.
       response.setHeader('Cache-Control', 'no-cache');
+    }
+
+    // The client allowlist trims slashes, but page metadata and article/study
+    // handlers match exact paths. Redirect first so /rules/banqi/ cannot fall
+    // through to an indexable homepage shell with no canonical. Keep the query
+    // intact for shared positions, filters and campaign attribution.
+    const cleanPath = pathname.replace(/\/+$/, '') || '/';
+    if (
+      pathname !== cleanPath &&
+      !pathname.startsWith('//') &&
+      (isClientRoute(cleanPath) ||
+        prerenderRoutes.has(cleanPath) ||
+        /^(?:\/zh-han[st])?\/articles\/[^/]+$/.test(cleanPath)) &&
+      (request.method === 'GET' || request.method === 'HEAD') &&
+      !cleanPath.slice(cleanPath.lastIndexOf('/') + 1).includes('.')
+    ) {
+      response.writeHead(301, { location: `${cleanPath}${url.slice(pathname.length)}` });
+      response.end();
+      return;
     }
 
     // The postgame review shell mounts an in-browser analysis engine that runs
@@ -693,6 +747,8 @@ function createHttpRequestDispatcher(options: ServerHttpHandlerOptions) {
         response,
         staticDir: options.staticDir,
         file: prerender.file,
+        pathname,
+        practiceStudies: options.crawlerSources?.practiceStudies,
       }).catch(() => {
         if (prerender.fallback) {
           response.writeHead(302, { location: prerender.fallback });

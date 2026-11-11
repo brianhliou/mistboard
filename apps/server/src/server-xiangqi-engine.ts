@@ -34,9 +34,10 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
-import { budgetForMove } from './engine-time-budget.js';
+import { type EngineClock, liveBotMoveTime } from './engine-time-budget.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
@@ -131,7 +132,7 @@ export function scheduleXiangqiEngineMove(
 export type XiangqiEngineMoveProvider = (
   engineId: string,
   moves: string[],
-  opts: { movetimeMs?: number },
+  opts: { movetimeMs?: number; clock?: EngineClock },
 ) => Promise<UciEval>;
 
 export async function playXiangqiEngineMoveIfReady(
@@ -156,12 +157,24 @@ export async function playXiangqiEngineMoveIfReady(
   // NODE budget is the strength anchor and binds first on a healthy clock; this
   // movetime is the latency ceiling + time-pressure guard. On the depth-capped
   // FSF rungs (levels 1-7) the movetime is, in practice, the strength knob too.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
+  // The top rungs at a short clock may run the phase rule instead
+  // (MISTBOARD_BOT_TIME_RULE=phase; engine-time-budget.ts `liveBotMoveTime`).
+  const {
+    movetimeMs,
+    rule: timeRule,
+    clock: engineClock,
+  } = liveBotMoveTime({
+    engineId,
+    roomId: room.id,
+    ply: history.length,
+    legalCount: getStandardXiangqiLegalMoves(room.projection.state).length,
+    initialMs: clock?.initialMs ?? null,
     remainingMs,
     incrementMs,
     ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
+    flatReserveMs: CLOCK_SAFETY_MS,
     floorMs: MIN_MOVETIME_MS,
+    engineVsEngine: xiangqiEngineSeatCount(room) === 2,
   });
 
   const startedAt = Date.now();
@@ -173,12 +186,15 @@ export async function playXiangqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, history, { movetimeMs });
+      const search = await moveProvider(engineId, history, {
+        movetimeMs,
+        ...(engineClock ? { clock: engineClock } : {}),
+      });
       lastSearch = search;
       return search.best;
     },
     validate: (uci) => legalMoveForUci(getStandardXiangqiLegalMoves(room.projection.state), uci),
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -302,6 +318,7 @@ export async function playXiangqiEngineMoveIfReady(
       guardReplaced: guarded !== validated,
     }),
     ...replyPacePayload(pace),
+    time_rule: timeRule,
   });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);

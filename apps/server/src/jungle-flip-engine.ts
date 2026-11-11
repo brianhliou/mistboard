@@ -8,8 +8,9 @@
 // One process per request (stateless, robust); promote to a persistent pool only under
 // real load.
 //
-// Classical engine (no net). L1–5 use measured root noise at a fixed depth;
-// L6–8 use a NODE budget (positions searched). A movetime cap bounds latency.
+// L1–5 use classical root noise at a fixed depth; L6–7 use classical node
+// budgets. L8 uses the private neural net only with an explicit readable EvalFile.
+// A movetime cap bounds latency.
 // Unlike banqi, the binary ignores
 // trailing `moves` (the clock is carried in the FEN); game-history threefold context
 // goes as a `reps` tail of positions already seen twice. Since v0.4.0 the binary also
@@ -18,14 +19,14 @@
 // line instead of shuffling a won position to the repetition draw.
 
 import { randomInt } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { accessSync, constants, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { EngineId } from './engines/types.js';
 import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyJungleFlip
 // <version>" over UCI, and the engines registry records it (configHash) per game.
-export const JUNGLE_FLIP_ENGINE_VERSION = '0.5.1';
+export const JUNGLE_FLIP_ENGINE_VERSION = '0.6.0';
 export const JUNGLE_FLIP_DEFAULT_ENGINE_ID = 'misty-jungle-flip';
 /** EvE-only uniformly random floor; never a player-facing level. */
 export const JUNGLE_FLIP_RANDOM_ENGINE_ID = 'random-legal-jungle-flip';
@@ -42,12 +43,13 @@ export type JungleFlipEngineTier = {
   // Latency cap (ms): `go nodes N movetime CAP` halts at whichever hits first, so a slow
   // box never exceeds CAP per move.
   movetimeCapMs: number;
+  evaluation: 'classical' | 'nnue';
   noise?: number;
   noiseDepth?: number;
 };
 
-// Full-strength (L8) budget history. The 5s cap is the latency promise and does
-// not move when introducing weaker levels.
+// Full-strength classical (now L7, the old L8) budget history. The 5s cap is the
+// latency promise and does not move when introducing weaker levels.
 //
 // Budget resized 512K -> 2.5M (2026-09-06) to fix a budget-FIT defect, not to claim a
 // strength gain. 512K left the ceiling almost entirely unspent: measured across 786 plies
@@ -89,17 +91,23 @@ export type JungleFlipEngineTier = {
 // check is ever run and 2.5M does not beat 512K, the correct response is to lower this
 // number, not to raise the cap.
 // L1–5 measured vs random: +77, +174, +269, +388, +567 Elo (400 paired games
-// each, #930). L6 is about +900; L7's 100k budget is provisional until an EvE run.
+// each, #930). L6 is about +900; L7 is the old L8 at 2.5M nodes. Drop the 100K rung.
+// L8's net runs at about 0.45x classical throughput: 1.0–1.3M vs 1.9–3.3M nps
+// on an M-series Mac at 50K nodes. Derating prod's slowest tolerated classical
+// 0.85M nps gives about 0.38M nps: 1M nodes takes about 2.6s worst case, a 1.9x
+// margin under the 5s cap. Self-play measured +139 [+118, +161] Elo over classical
+// at equal time and +119 at equal 2.5M nodes; the net is not yet rated on prod.
 export const JUNGLE_FLIP_PLAYABLE_ENGINES: readonly JungleFlipEngineTier[] = (
   [1, 2, 3, 4, 5, 6, 7, 8] as const
 ).map(
   (level): JungleFlipEngineTier => ({
-    id: `misty-jungle-flip-level-${level}`,
+    id: level === 7 ? JUNGLE_FLIP_DEFAULT_ENGINE_ID : `misty-jungle-flip-level-${level}`,
     level,
     name: `MistyJungleFlip Level ${level}`,
     version: JUNGLE_FLIP_ENGINE_VERSION,
-    nodes: level === 6 ? 2_000 : level === 7 ? 100_000 : 2_500_000,
+    nodes: level === 6 ? 2_000 : level === 8 ? 1_000_000 : 2_500_000,
     movetimeCapMs: 5000,
+    evaluation: level === 8 ? 'nnue' : 'classical',
     ...(level <= 5
       ? {
           noise: [1, 0.3, 0.1, 0.02, 0.01][level - 1]!,
@@ -112,10 +120,7 @@ export const JUNGLE_FLIP_PLAYABLE_ENGINES: readonly JungleFlipEngineTier[] = (
 const JUNGLE_FLIP_ENGINE_BY_ID: ReadonlyMap<string, JungleFlipEngineTier> = new Map<
   string,
   JungleFlipEngineTier
->([
-  ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier): [string, JungleFlipEngineTier] => [tier.id, tier]),
-  [JUNGLE_FLIP_DEFAULT_ENGINE_ID, JUNGLE_FLIP_PLAYABLE_ENGINES[7]!],
-]);
+>([...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier): [string, JungleFlipEngineTier] => [tier.id, tier])]);
 
 // Small per-process slot pool (Tier-B UCI subprocess; shared harness).
 const enginePool = new UciEnginePool({
@@ -182,6 +187,34 @@ export function jungleFlipEngineTierFor(engineId: string | undefined): JungleFli
   return JUNGLE_FLIP_ENGINE_BY_ID.get(engineId) ?? null;
 }
 
+function readableNetPath(path: string | undefined): string | null {
+  if (!path) return null;
+  const resolved = resolve(path);
+  try {
+    accessSync(resolved, constants.R_OK);
+    const stat = statSync(resolved);
+    return stat.isFile() && stat.size > 0 ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+/** No implicit net: L8 is held until an operator supplies its EvalFile. */
+export function jungleFlipNetPath(): string | null {
+  return readableNetPath(process.env.MISTBOARD_JUNGLE_FLIP_NET);
+}
+
+export function jungleFlipEngineAvailable(
+  clientId: string = JUNGLE_FLIP_DEFAULT_ENGINE_ID,
+): boolean {
+  const tier = jungleFlipEngineTierFor(clientId);
+  return (
+    tier !== null &&
+    jungleFlipEngineBinaryAvailable() &&
+    (tier.evaluation !== 'nnue' || jungleFlipNetPath() !== null)
+  );
+}
+
 // Presence check for the fail-closed analysis path: true when the binary resolves. The
 // analysis route uses this to return 503 (not a silent weaker eval) when the build is
 // missing the engine — mirrors jungleEngineBinaryAvailable().
@@ -210,6 +243,8 @@ export function jungleFlipEngineVersion(clientId: string | undefined): string | 
 }
 
 export type JungleFlipEngineOptions = {
+  /** L8's net; omit to explicitly reset the engine to classical evaluation. */
+  evalFile?: string;
   nodes?: number;
   movetimeCapMs?: number;
   noise?: number;
@@ -268,9 +303,15 @@ export async function jungleFlipLiveEngineMove(
 ): Promise<UciEval> {
   const tier = jungleFlipEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Flip Jungle engine: ${engineId}`);
+  const evalFile = tier.evaluation === 'nnue' ? jungleFlipNetPath() : null;
+  if (tier.evaluation === 'nnue' && !evalFile) throw new Error('Flip Jungle net is not available');
   const release = await enginePool.acquire();
   try {
+    if (evalFile !== null && !readableNetPath(evalFile)) {
+      throw new Error('Flip Jungle net is not available');
+    }
     return await jungleFlipEngineSearch(fen, {
+      evalFile: evalFile ?? undefined,
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       repSeedFens: opts.repSeedFens,
@@ -301,13 +342,35 @@ export function jungleFlipEngineSearch(
   fen: string,
   opts: JungleFlipEngineOptions = {},
 ): Promise<UciEval> {
+  return runUciEval(buildJungleFlipEngineRequest(fen, opts));
+}
+
+/** The complete subprocess request, built only from the caller's redacted FEN. */
+export function buildJungleFlipEngineRequest(fen: string, opts: JungleFlipEngineOptions = {}) {
+  const movetimeCapMs = opts.movetimeCapMs ?? 2500;
+  const commands = buildJungleFlipEngineCommands(fen, opts);
+  return {
+    bin: jungleFlipEnginePath(),
+    commands,
+    timeoutMs: movetimeCapMs + 4000,
+    timeoutMessage: 'jungle-flip-engine move timed out',
+    env: opts.tieSeed ? { JF_TIE_SEED: opts.tieSeed } : undefined,
+  };
+}
+
+/** Every search explicitly sets EvalFile, including classical requests on a reused process. */
+export function buildJungleFlipEngineCommands(
+  fen: string,
+  opts: JungleFlipEngineOptions = {},
+): string[] {
   const nodes = opts.nodes ?? 512_000;
   const movetimeCapMs = opts.movetimeCapMs ?? 2500;
   // Node budget = CPU-independent strength; movetime cap bounds latency (halt at
   // whichever first). The position carries the clock in the FEN plus an optional
   // `reps` seed (threefold game history) so the search adjudicates repetition draws.
-  const commands = [
+  return [
     'uci',
+    `setoption name EvalFile value ${opts.evalFile ?? ''}`,
     ...(opts.noise === undefined
       ? []
       : [
@@ -320,13 +383,6 @@ export function jungleFlipEngineSearch(
     buildJungleFlipPositionCommand(fen, opts.repSeedFens),
     `go nodes ${nodes} movetime ${movetimeCapMs}`,
   ];
-  return runUciEval({
-    bin: jungleFlipEnginePath(),
-    commands,
-    timeoutMs: movetimeCapMs + 4000,
-    timeoutMessage: 'jungle-flip-engine move timed out',
-    env: opts.tieSeed ? { JF_TIE_SEED: opts.tieSeed } : undefined,
-  });
 }
 
 // Whole-game ANALYSIS eval (distinct from the playable move provider above): read the
@@ -339,13 +395,7 @@ export async function evaluateJungleFlipFenNodes(
   fen: string,
   opts: { nodes: number; movetimeCapMs: number; repSeedFens?: readonly string[] },
 ): Promise<UciEval> {
-  const commands = [
-    'uci',
-    'ucinewgame',
-    'isready',
-    buildJungleFlipPositionCommand(fen, opts.repSeedFens),
-    `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
-  ];
+  const commands = buildJungleFlipEngineCommands(fen, opts);
   const release = await analysisPool.acquire();
   try {
     return await runUciEval({

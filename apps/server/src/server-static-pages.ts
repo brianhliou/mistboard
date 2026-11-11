@@ -49,6 +49,7 @@ import {
   playerSitemapEntries,
 } from './player-pages.js';
 import { practiceChapterPath } from './practice-chapter-redirect.js';
+import { practiceRouteBody } from './practice-page-body.js';
 import { isPublicRatingPool, visibleRatingTimeClasses } from './rating-buckets.js';
 import { type PublicPuzzle, puzzleById } from './routes/puzzles.js';
 import { isNoFollowRoute, isNoindexRoute } from './server-policy.js';
@@ -240,12 +241,12 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/coach': {
     title: 'Xiangqi Coaches | Mistboard',
     description:
-      'Find a xiangqi (Chinese chess) or chess coach to study with. Every coach listed holds a verified title, with their languages, rate and how to reach them.',
+      'Find a verified xiangqi or chess coach, or help shape teaching on Mistboard. Share interactive studies and work with us on what your students need.',
   },
   '/streamer': {
     title: 'Xiangqi Streamers | Mistboard',
     description:
-      'Chinese chess (xiangqi) and variant streamers to watch live and on demand on Twitch and YouTube, with the language each streams in and a link to their channel.',
+      'Stream xiangqi or its variants with Mistboard. Bring an idea, prepare games and studies, and work directly with us as our tools for creators develop.',
   },
   '/player': {
     title: 'Xiangqi Leaderboard | Mistboard',
@@ -832,6 +833,7 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
   '/stats',
   '/data',
   '/coach',
+  '/streamer',
   '/forum',
   '/player/rating-stats',
   '/watch',
@@ -1092,6 +1094,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Existing public API reads for the data directories (socketless fixtures). */
   dataPages?: DataPageSources;
+  /** The practice API's single public shelf read. */
+  practiceStudies?: typeof persistence.getPracticeStudiesBySlug;
   /** Override the player-page lookup (tests); the default reads persistence. */
   playerPage?: (pathname: string, locale?: BoardLocale) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
@@ -1283,6 +1287,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
     puzzle?.body ??
     profile?.body ??
     bot?.body ??
+    (await practiceRouteBody(params.pathname, params.practiceStudies).catch(() => null)) ??
     dataBody ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
@@ -1540,6 +1545,8 @@ export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
   file: string;
+  pathname?: string;
+  practiceStudies?: typeof persistence.getPracticeStudiesBySlug;
 }): Promise<void> {
   if (
     (SCHEDULE_DATED_PAGES.has(params.file) || params.file.startsWith('feed-')) &&
@@ -1547,7 +1554,18 @@ export async function servePrerenderedPage(params: {
   ) {
     throw new Error(`${params.file} predates a scheduled entry that is now live`);
   }
-  const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
+  let html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
+  const practice = await practiceRouteBody(params.pathname ?? '', params.practiceStudies).catch(
+    () => null,
+  );
+  if (practice) {
+    // Replace the hidden, baked sidebar with today's complete hidden shelf.
+    // Keep the built head and all its stylesheet links intact.
+    html = html.replace(
+      /(<div id="app"[^>]*>)[\s\S]*(<\/div>)/,
+      (_match, root, end) => `${root}<div class="crawler-copy">${practice}</div>${end}`,
+    );
+  }
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
 }
@@ -1703,7 +1721,9 @@ export async function pageSitemapEntries(staticDir: string): Promise<SitemapEntr
   const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.flatMap((path) => {
     const record = baked.find((entry) => entry.path === path);
     const contract = sitemapContract(path)!;
+    // Server-body routes use the build for dates and alternates, not body copy.
     if (
+      contract.source === 'prerender' &&
       !contract.knownGap &&
       record?.contentChars !== undefined &&
       record.contentChars <
@@ -1749,7 +1769,13 @@ export async function serveArticlePage(params: {
   // the language prefix. This single redirect covers legacy /articles/<slug> ->
   // /blog (or /rules), the old *-rules / *-rules-primer slugs, and the reverse
   // /rules/<article> -> /blog/<article>.
-  const resolved = RENAMED_ARTICLE_SLUGS[params.slug] ?? params.slug;
+  const resolved = Object.hasOwn(RENAMED_ARTICLE_SLUGS, params.slug)
+    ? RENAMED_ARTICLE_SLUGS[params.slug]!
+    : params.slug;
+  if (!Object.hasOwn(ARTICLE_META, resolved)) {
+    await serveNotFoundShell({ response: params.response, staticDir: params.staticDir });
+    return;
+  }
   const canonicalBase = canonicalArticleBase(resolved);
   const prefix = params.langPrefix ? `/${params.langPrefix}` : '';
   if (resolved !== params.slug || params.base !== canonicalBase) {
@@ -1815,6 +1841,7 @@ export async function serveArticlePage(params: {
       url,
       imageUrl: articleOgImageUrl(params.publicHost, params.slug, params.langPrefix),
     });
+    html = html.replace('</head>', `<link rel="canonical" href="${escapeHtml(url)}"></head>`);
     if (!articleIsIndexable(params.slug)) {
       html = setRobotsMeta(html, 'noindex, follow');
     }

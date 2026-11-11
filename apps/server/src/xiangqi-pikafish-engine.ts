@@ -18,6 +18,7 @@
 // fetched from Fairy-Stockfish's public source, never bundled in our release.
 
 import { redPovScore } from '@mistboard/game';
+import { type EngineClock, nativeWatchdogMs, uciClockWords } from './engine-time-budget.js';
 import {
   runUciEval,
   UciEnginePool,
@@ -198,7 +199,7 @@ export function xiangqiEngineVersion(clientId: string | undefined): string | nul
   return isXiangqiEngineClientId(clientId) ? XIANGQI_ENGINE_VERSION : null;
 }
 
-export type XiangqiEngineOptions = { movetimeMs?: number };
+export type XiangqiEngineOptions = { movetimeMs?: number; clock?: EngineClock };
 
 /**
  * Ask mainline Pikafish for a move given the Pikafish-UCI move history since the
@@ -219,6 +220,7 @@ export async function xiangqiLiveEngineMove(
     return await xiangqiEngineMove(moves, {
       nodes: tier.nodes,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
+      ...(opts.clock ? { clock: opts.clock } : {}),
     });
   } finally {
     release();
@@ -227,7 +229,7 @@ export async function xiangqiLiveEngineMove(
 
 export function xiangqiEngineMove(
   moves: string[],
-  opts: { nodes: number; movetimeMs: number },
+  opts: { nodes: number; movetimeMs: number; clock?: EngineClock },
 ): Promise<UciEval> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
@@ -248,8 +250,13 @@ export function xiangqiEngineMove(
         positionCommand: position,
         // `go nodes N movetime T` halts at whichever binds first: the node budget
         // is the reproducible strength anchor; the movetime is the latency ceiling.
-        goCommand: `go nodes ${nodes} movetime ${movetimeMs}`,
-        timeoutMs: movetimeMs + 4000,
+        // With a clock (MISTBOARD_BOT_TIME_RULE=native) the engine's own time
+        // manager replaces the movetime; `movetimeMs` is then the told clock, so the
+        // watchdog below still bounds the process.
+        goCommand: opts.clock
+          ? `go nodes ${nodes} ${uciClockWords(opts.clock)}`
+          : `go nodes ${nodes} movetime ${movetimeMs}`,
+        timeoutMs: opts.clock ? nativeWatchdogMs(opts.clock) : movetimeMs + 4000,
         timeoutMessage: 'pikafish-xiangqi move timed out',
       }),
   );

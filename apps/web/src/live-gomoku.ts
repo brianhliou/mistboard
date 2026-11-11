@@ -9,6 +9,7 @@ import {
   isGomokuColor,
   parseGomokuMove,
 } from '@mistboard/game';
+import { readDisplayPreferences } from './display-preferences.js';
 import { type GomokuBoardMarker, gomokuBoardSvg } from './gomoku-board.js';
 import './gomoku-board.css';
 import './live-xiangqi.css';
@@ -27,6 +28,20 @@ let core: TenantLiveClientContext<GomokuColor, GomokuPlayerView> | null = null;
 let roomMode: 'pvp' | 'pve' = 'pvp';
 let recordingPosition: ((ply: number, view: GomokuPlayerView) => void) | null = null;
 let recordingMarkers: readonly GomokuBoardMarker[] = [];
+let pendingPreview: { move: GomokuMove; id: string; ply: number; color: GomokuColor } | null = null;
+
+function confirmsTouchMoves(): boolean {
+  return (
+    window.matchMedia?.('(pointer: coarse)').matches === true &&
+    readDisplayPreferences().confirmMovesOnTouch
+  );
+}
+
+function clearPreview(): void {
+  if (!pendingPreview) return;
+  pendingPreview = null;
+  if (core?.refs.board.isConnected) core.renderAll();
+}
 
 function boardSvg(view: GomokuPlayerView, enabled: boolean): string {
   // Recorded spectator views deliberately have no playable moves. Validate
@@ -35,7 +50,17 @@ function boardSvg(view: GomokuPlayerView, enabled: boolean): string {
     recordingMarkers.length && view.status.type === 'playing'
       ? getGomokuPlayerView(view, view.status.turn)
       : view;
-  return gomokuBoardSvg(marked, enabled, recordingMarkers);
+  if (
+    pendingPreview &&
+    (!enabled ||
+      !confirmsTouchMoves() ||
+      view.id !== pendingPreview.id ||
+      view.ply !== pendingPreview.ply ||
+      view.perspective !== pendingPreview.color ||
+      !view.legalMoves.some((move) => move.to === pendingPreview?.move.to))
+  )
+    pendingPreview = null;
+  return gomokuBoardSvg(marked, enabled, recordingMarkers, pendingPreview?.move.to ?? null);
 }
 
 window.addEventListener('pageshow', (event) => {
@@ -44,6 +69,16 @@ window.addEventListener('pageshow', (event) => {
 window.addEventListener('mistboard:display-preferences-change', () => {
   if (core?.refs.board.isConnected) core.renderAll();
 });
+window.addEventListener(
+  'click',
+  (event) => {
+    // Check before placement repaints and detaches the tapped SVG node. Happy
+    // DOM recomputes composedPath() from the current DOM during bubbling.
+    if (core?.refs.board.isConnected && !event.composedPath().includes(core.refs.board))
+      clearPreview();
+  },
+  { capture: true },
+);
 
 const tenant: WebVariantTenant<GomokuColor> = {
   displayName: 'variant.gomoku.name',
@@ -95,11 +130,20 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
   chrome: { roomMode: () => roomMode },
   onFrame: (frame) => {
     if (frame.roomMode === 'pvp' || frame.roomMode === 'pve') roomMode = frame.roomMode;
+    if (
+      pendingPreview &&
+      (frame.state.id !== pendingPreview.id ||
+        frame.state.ply !== pendingPreview.ply ||
+        frame.state.status.type !== 'playing' ||
+        frame.state.status.turn !== pendingPreview.color)
+    )
+      pendingPreview = null;
   },
   resetState: () => {
     roomMode = 'pvp';
     recordingPosition = null;
     recordingMarkers = [];
+    pendingPreview = null;
   },
   renderExtras: (_refs, view) => {
     if (view) recordingPosition?.(client.replay.activePly() ?? client.replay.latestPly(), view);
@@ -135,7 +179,10 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
         !(event.target instanceof Element)
       )
         return;
-      hovered = event.target.closest('[data-square]')?.querySelector('.gomoku-ghost') ?? null;
+      hovered =
+        event.target
+          .closest('[data-square]')
+          ?.querySelector('.gomoku-ghost:not(.gomoku-preview)') ?? null;
       hovered?.setAttribute('visibility', 'visible');
     };
     ctx.refs.board.addEventListener('pointerover', hover);
@@ -143,7 +190,10 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     for (const event of ['pointerout', 'pointerleave', 'pointerdown', 'pointercancel'])
       ctx.refs.board.addEventListener(event, clearHover);
     const place = (event: Event) => {
-      if (!ctx.canActNow() || ctx.connection() !== 'connected') return;
+      if (!ctx.canActNow() || ctx.connection() !== 'connected') {
+        clearPreview();
+        return;
+      }
       // The shared replay handler returns to live and repaints first. Its old
       // target must not place a stone on the new position with that same tap.
       if (!(event.target instanceof Element) || !ctx.refs.board.contains(event.target)) return;
@@ -151,8 +201,29 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
         .closest('[data-square]')
         ?.getAttribute('data-square');
       const move = square ? parseGomokuMove(square) : null;
-      if (move && ctx.state.view?.legalMoves.some((legal) => legal.to === move.to))
-        ctx.send({ type: 'move', to: move.to });
+      const view = ctx.state.view;
+      if (!move || !view?.legalMoves.some((legal) => legal.to === move.to)) {
+        clearPreview();
+        return;
+      }
+      // Keyboard activation retains immediate placement, including on hybrids.
+      if (event.type === 'click' && confirmsTouchMoves()) {
+        if (
+          pendingPreview?.move.to !== move.to ||
+          pendingPreview.id !== view.id ||
+          pendingPreview.ply !== view.ply ||
+          pendingPreview.color !== view.perspective
+        ) {
+          pendingPreview = { move, id: view.id, ply: view.ply, color: view.perspective };
+          ctx.renderAll();
+          return;
+        }
+      }
+      const hadPreview = pendingPreview !== null;
+      pendingPreview = null;
+      clearHover();
+      ctx.send({ type: 'move', to: move.to });
+      if (hadPreview) ctx.renderAll();
     };
     ctx.refs.board.addEventListener('click', place);
     ctx.refs.board.addEventListener('keydown', (event) => {

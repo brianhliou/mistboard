@@ -63,13 +63,13 @@ function captureEmails(t: TestContext) {
   return bodies;
 }
 
-test('a planted slow wait logs once and emails a daily digest; fast acquires stay silent', async (t) => {
+test('a planted long wait logs once and emails a daily digest with the whole wait; fast acquires stay silent', async (t) => {
   const bodies = captureEmails(t);
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_800_000_000_000 });
   const { logger } = await import('./obs.js');
   const warnings: unknown[] = [];
   t.mock.method(logger, 'warn', (fields: unknown) => warnings.push(fields));
-  const p = pool('wait-digest');
+  const p = pool('wait-digest', 30_000);
   const release = await p.acquire();
   release();
   t.mock.timers.tick(1_001);
@@ -87,22 +87,45 @@ test('a planted slow wait logs once and emails a daily digest; fast acquires sta
     queue_depth: 1,
   });
   assert.equal(bodies.length, 0, 'waits are digested, not paged immediately');
-  await Promise.resolve(); // persist-or-memory routing settles outside the timer callback
+  // The request keeps waiting past the warning; the digest records the whole wait.
+  t.mock.timers.tick(5_000);
   held();
   (await queued)();
+  await Promise.resolve(); // persist-or-memory routing settles outside the release
   // Include another slow wait in the same digest, rather than losing it to a throttle.
   const heldAgain = await p.acquire();
   const queuedAgain = p.acquire();
   t.mock.timers.tick(1_001);
-  await Promise.resolve();
   heldAgain();
   (await queuedAgain)();
+  await Promise.resolve();
   t.mock.timers.tick(24 * 60 * 60 * 1_000);
   assert.equal(bodies.length, 1);
   assert.match(bodies[0]!.subject, /WARNING engine_pool_queue_wait/);
   assert.match(bodies[0]!.text, /wait_count: 2/);
-  assert.match(bodies[0]!.text, /wait-digest/);
+  assert.match(bodies[0]!.text, /wait-digest: count=2, max_wait_ms=6001/);
   assert.match(bodies[0]!.text, /max_queue_depth/);
+});
+
+test('a planted day of a few short waits logs each one and emails nothing', async (t) => {
+  const bodies = captureEmails(t);
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_800_050_000_000 });
+  const { logger } = await import('./obs.js');
+  const warnings: unknown[] = [];
+  t.mock.method(logger, 'warn', (fields: unknown) => warnings.push(fields));
+  const p = pool('wait-below-bar', 30_000);
+  // Nine waits of about two seconds: one short of the count bar, under the length bar.
+  for (let i = 0; i < 9; i += 1) {
+    const held = await p.acquire();
+    const queued = p.acquire();
+    t.mock.timers.tick(2_000);
+    held();
+    (await queued)();
+    await Promise.resolve();
+  }
+  assert.equal(warnings.length, 9, 'each slow wait is still logged');
+  t.mock.timers.tick(24 * 60 * 60 * 1_000);
+  assert.equal(bodies.length, 0, 'a day under the bar sends no digest');
 });
 
 test('a planted drop emails promptly, throttles repeats, and does not mask another pool', async (t) => {
@@ -390,7 +413,7 @@ test('digest retries through the alert throttle are not reported as suppressed a
   const day = {
     day: '2026-10-30',
     pool: 'jieqi',
-    wait_count: 3,
+    wait_count: 12,
     max_wait_ms: 1_500,
     max_queue_depth: 2,
   };

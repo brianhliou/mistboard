@@ -8,6 +8,7 @@ import {
   XQ_PRIMER_GENERAL_BOARD,
   XQ_PRIMER_HORSE_PAIR,
   XQ_PRIMER_SOLDIER_PAIR,
+  XQ_PRIMER_SOLDIER_TRIO,
   XQ_RULES_PRIMER_START_BOARD,
   XQ_RULES_PRIMER_THUMBNAIL,
 } from '../diagrams.js';
@@ -30,9 +31,9 @@ export const xiangqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
-    updatedAt: '2026-11-06',
+    updatedAt: '2026-11-10',
     updateNote:
-      'Corrected the Chinese wording of the repetition rule.',
+      'Added diagrams of how the soldier moves, for chess players.',
     audience:
       'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },
@@ -40,7 +41,7 @@ export const xiangqiArticle: Article = {
       {
         kind: 'paragraph',
         text:
-          'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.',
+          'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. The Chinese Xiangqi Association [puts the number of players in China in the hundreds of millions](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html).',
       },
       {
         kind: 'paragraph',
@@ -53,12 +54,12 @@ export const xiangqiArticle: Article = {
       // player. #410 (2026-09-25): the pages that rank for "how to play chinese
       // chess" carry a chess comparison; ours had it only in the FAQ.
       {
-        heading: 'For chess players: six rule changes',
+        heading: 'For chess players: seven rule changes',
         blocks: [
           {
             kind: 'paragraph',
             text:
-              'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.',
+              'If you already play chess, most of xiangqi will feel familiar. These are the seven rules that catch chess players out, each explained in full further down.',
           },
           {
             kind: 'table',
@@ -83,12 +84,22 @@ export const xiangqiArticle: Article = {
                 'The horse and elephant are stopped by a piece in their path',
               ],
               [
-                'Promotion and castling',
-                'Both exist',
-                'Neither exists; a soldier never promotes',
+                'The pawn and the soldier',
+                'Moves forward, captures diagonally, and promotes on the last rank',
+                'Moves and captures the same way, and never promotes',
               ],
+              ['Castling', 'The king and a rook move together once', 'Does not exist'],
             ],
           },
+          {
+            kind: 'paragraph',
+            text:
+              'A soldier changes once, at the river, and never promotes. Before the river it steps one point straight ahead. Once across, it may also step one point to the left or right, and it captures on those same points, never diagonally. A soldier that reaches the last rank can only step sideways.',
+          },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_SOLDIER_TRIO,
+          } as ArticleBlock,
         ],
       },
       {
@@ -391,7 +402,7 @@ export const xiangqiArticle: Article = {
               {
                 question: 'When was xiangqi invented?',
                 answer:
-                  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.',
+                  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess.',
               },
               {
                 question: 'What is the difference between xiangqi and chess?',

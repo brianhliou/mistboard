@@ -1,3 +1,4 @@
+import { INTERNAL_BANQI_ENGINE_ID } from './internal-engine-test.js';
 // MistyBanqi move provider for Banqi (半棋) PvE.
 //
 // The engine is our own `banqi-engine` binary ("MistyBanqi", in
@@ -5,7 +6,8 @@
 // driven as a UCI subprocess, the same Tier-B pattern as jieqi/xiangqi (NOT the
 // fog engine-worker). Banqi has hidden piece IDENTITIES the engine must not learn, so
 // we hand it a redacted CURRENT-position FEN built by banqi-fen.ts. One process per
-// request (stateless, robust); promote to a persistent pool only under real load.
+// live request (stateless, robust). Analysis reuses only exact completed public
+// queries; uncached analysis still uses a cold process.
 //
 // L1-4 use classical root noise at a fixed scoring depth; L5-7 use classical
 // node budgets. L8 uses the trained NNUE net, held without an explicit readable
@@ -15,6 +17,7 @@ import { randomInt } from 'node:crypto';
 import { accessSync, constants, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEFAULT_NO_PROGRESS_PLY_LIMIT } from '@mistboard/game';
+import { runBanqiAnalysisQuery } from './banqi-analysis-runner.js';
 import type { EngineId } from './engines/types.js';
 import { logger } from './obs.js';
 import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
@@ -256,17 +259,18 @@ export function banqiEngineBinaryAvailable(): boolean {
 }
 
 export function banqiEngineDisplayName(engineId: string): string {
-  return banqiEngineTierFor(engineId)?.name ?? engineId;
+  const tier = banqiEngineTierFor(engineId);
+  return tier ? `Misty Level ${tier.level}` : engineId;
 }
 
 export function isBanqiEngineClientId(clientId: string | undefined): boolean {
-  return banqiEngineTierFor(clientId) !== null;
+  return clientId === INTERNAL_BANQI_ENGINE_ID || banqiEngineTierFor(clientId) !== null;
 }
 
 // Engine BUILD version recorded per PvE game (subject_id is version-less). Bump
 // BANQI_ENGINE_VERSION on each shipped eval/search change.
 export function banqiEngineVersion(clientId: string | undefined): string | null {
-  return isBanqiEngineClientId(clientId) ? BANQI_ENGINE_VERSION : null;
+  return banqiEngineTierFor(clientId) ? BANQI_ENGINE_VERSION : null;
 }
 
 // `moves`: the quiet plies since the last irreversible move (capture/flip). When present,
@@ -498,26 +502,28 @@ export async function evaluateBanqiFenNodes(
     nodes: number;
     movetimeCapMs: number;
     moves?: readonly string[];
+    searchMoves?: readonly string[];
     noProgressLimit: number;
   },
 ): Promise<UciEval> {
-  const commands = [
-    'uci',
-    ...buildBanqiOptionCommands(opts.noProgressLimit),
-    'ucinewgame',
-    'isready',
-    buildBanqiPositionCommand(fen, opts.moves),
-    `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
-  ];
-  const release = await analysisPool.acquire();
-  try {
-    return await runUciEval({
-      bin: banqiEnginePath(),
-      commands,
-      timeoutMs: opts.movetimeCapMs + 4_000,
-      timeoutMessage: 'banqi-engine eval timed out',
-    });
-  } finally {
-    release();
-  }
+  // Review uses the same NNUE weights as L8. Missing weights must fail the job,
+  // never produce/cache a weaker classical evaluation under the NNUE identity.
+  const evalFile = banqiNetPath();
+  if (evalFile === null) throw new Error('Banqi net is not available');
+  return runBanqiAnalysisQuery({
+    binaryPath: banqiEnginePath(),
+    modelPath: evalFile,
+    initCommands: [
+      'uci',
+      `setoption name EvalFile value ${evalFile}`,
+      ...buildBanqiOptionCommands(opts.noProgressLimit),
+      'ucinewgame',
+      'isready',
+    ],
+    positionCommand: buildBanqiPositionCommand(fen, opts.moves),
+    goCommand: buildBanqiGoCommand(opts.nodes, opts.movetimeCapMs, opts.searchMoves),
+    nodes: opts.nodes,
+    movetimeCapMs: opts.movetimeCapMs,
+    pool: analysisPool,
+  });
 }

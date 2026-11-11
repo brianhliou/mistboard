@@ -179,12 +179,14 @@ export const ZH_HANT_CONTENT = {
   'contact.correctionsLink': '聯絡我們',
   'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相關頁面：{path}',
+  'about.previousPages': '前面的頁面',
+  'about.morePages': '更多頁面',
   'about.heading': '關於 Mistboard',
   'about.mission': '透過象棋與世界經典策略遊戲，連結不同文化背景的人。',
   'about.lede': 'Mistboard 是免費、開源的象棋對弈與學習網站，支援英文、簡體中文和繁體中文。',
   'about.whyHeading': '三種語言的象棋',
   'about.whyBody':
-    '這裡的中國棋類包括象棋及其傳統近親揭棋和暗棋。上海的玩家與多倫多的玩家可以坐在同一張棋盤前，各自用自己的語言瀏覽網站。棋子可以顯示為圖示，認識漢字之前就能下棋，入門課程則從第一步開始教。',
+    '本站的象棋包括象棋本身，以及它的傳統近親揭棋和暗棋。上海的玩家與多倫多的玩家可以坐在同一張棋盤前，各自用自己的語言瀏覽網站。棋子可以顯示為圖示，認識漢字之前就能下棋，入門課程則從第一步開始教。',
   'about.darkChessHeading': '從熟悉的棋盤創造新遊戲',
   'about.darkChessBody':
     '鴨子象棋在棋盤上放入一隻不屬於任何一方的鴨子。迷霧象棋隱藏你的棋子無法到達的格點。瘋狂屋象棋讓你把吃到的棋子重新放回棋盤。每一種都從熟悉的遊戲出發，改變玩家需要做的決策，並且都有清楚的規則，由伺服器執行。',
@@ -217,6 +219,8 @@ export const ZH_HANT_CONTENT = {
     '這裡的對局量。計入人與人或人與引擎之間已完成的對局；引擎對引擎的比賽和測試對局不計入。',
   'stats.gamesPlayed': '已完成對局',
   'stats.gamesThisMonth': '最近 30 天 +{count}',
+  'stats.updatedJustNow': '剛剛更新',
+  'stats.updatedMinutesAgo': '{count} 分鐘前更新',
   'stats.accounts': '註冊玩家',
   'stats.inPlay': '正在進行',
   'stats.gamesPerWeek': '每週對局數',
@@ -272,7 +276,8 @@ export const ZH_HANT_CONTENT = {
   'source.pikafishWeightsLicense': '權重協議',
   'source.fairyStockfish':
     'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
-  'source.pikafishJieqi': '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋機器人和揭棋分析，GPL-3.0。',
+  'source.pikafishJieqi':
+    '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋分級機器人和瀏覽器分析，復盤由 AB-JChess 評分，GPL-3.0。',
   'source.chessPieceSets':
     '西洋棋棋子取自 lichess：Cburnett（作者 Colin M.L. Burnett）和 Merida（作者 Armando Hernandez Marroquin），皆採用 GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
   'source.sounds':
@@ -535,7 +540,6 @@ export const ZH_HANT_CONTENT = {
     '其他所有有機器人的遊戲。網站上最強的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
   'champions.heldBy': '持有者',
   'champions.openBadge': '頭銜待爭',
-  'champions.challengeCta': '挑戰此頭銜',
   'champions.enginePikafish': '皮卡魚',
   'champions.engineFairyStockfish8': 'Fairy-Stockfish 第 8 級',
   'champions.writeUpLink': '文章',

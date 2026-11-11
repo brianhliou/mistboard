@@ -71,6 +71,7 @@ function reads(id: string): Array<[string, string]> {
     `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/embed/game/${id}`)}`,
     `/api/oembed?url=${encodeURIComponent(`https://mistboard.com/room/${id}`)}`,
     `/room/${id}/`,
+    `/room/${id}/?from=invite&seat=red`,
     `/room/${id}/unsupported`,
   ])
     paths.push(['GET', path]);
@@ -227,8 +228,22 @@ for (const flag of [undefined, 'false', 'true']) {
             !['ffq_inflight', 'ffq_wrong_variant'].includes(id) &&
             method === 'GET' &&
             (path === `/api/games/${id}` || path === `/api/ffq-banqi/games/${id}`);
-          const safeShell = method === 'GET' && [`/room/${id}`, `/room/${id}/`].includes(path);
-          const result = await invoke(handler, method, path, role !== null);
+          const url = new URL(path, 'http://localhost');
+          const safeShell =
+            method === 'GET' && [`/room/${id}`, `/room/${id}/`].includes(url.pathname);
+          let result = await invoke(handler, method, path, role !== null);
+          if (safeShell && url.pathname.endsWith('/')) {
+            const target = `/room/${id}${url.search}`;
+            // The FFQ guard runs before the SEO redirect. Closed doors stay
+            // 404; an admitted shell redirects, preserving its query, and the
+            // canonical target must independently pass the same gate.
+            assert.equal(result.status, admitted ? 301 : 404, `${method} ${path}`);
+            assert.equal(result.headers.location, admitted ? target : undefined);
+            assert.equal(result.body, admitted ? '' : '{"error":"not_found"}');
+            assert.equal(result.headers['cache-control'], 'no-store');
+            assert.equal(result.headers['x-robots-tag'], 'noindex');
+            result = await invoke(handler, method, target, role !== null);
+          }
           assert.equal(
             result.status,
             admitted && (safeSummary || safeShell) ? 200 : 404,

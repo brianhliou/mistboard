@@ -7,14 +7,12 @@ import {
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
   type ThreeKingdomsBanqiState,
-  threeKingdomsBanqiStateToDealtFen,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   mountThreeKingdomsBanqiPostgame,
   type ThreeKingdomsBanqiPostgameResponse,
   threeKingdomsBanqiPostgameApiUrl,
-  threeKingdomsBanqiPostgameRoot,
 } from './live-three-kingdoms-banqi-postgame.js';
 import { recoverThreeKingdomsBanqiDeal } from './review/three-kingdoms-banqi-tree-adapter.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
@@ -77,15 +75,11 @@ function postgameFixture(): ThreeKingdomsBanqiPostgameResponse {
       { type: 'move-played', at: 4, color: 'red', move: flip, ply: 1 },
       { type: 'seat-resigned', at: 5, color: 'black', winner: 'red' },
     ],
-    view: truthView(after),
+    view: getThreeKingdomsBanqiPlayerView(after, 'red'),
     history: {
       truth: [
         { ply: 0, view: getThreeKingdomsBanqiPlayerView(initial, 'red') },
         { ply: 1, view: getThreeKingdomsBanqiPlayerView(after, 'red') },
-      ],
-      revealed: [
-        { ply: 0, view: truthView(initial) },
-        { ply: 1, view: truthView(after) },
       ],
     },
   };
@@ -98,15 +92,6 @@ describe('Three Kingdoms banqi deal recovery', () => {
     expect(recoverThreeKingdomsBanqiDeal(truthView(state))).toEqual(deal);
   });
 
-  it('roots the tree at the dealt position the room started from', () => {
-    const postgame = postgameFixture();
-    const root = threeKingdomsBanqiPostgameRoot(postgame);
-    const deal = createThreeKingdomsBanqiSetup(seeded(11)).deal;
-    expect(root.fen).toBe(
-      threeKingdomsBanqiStateToDealtFen(createThreeKingdomsBanqiStateFromSetup(ROOM, { deal })),
-    );
-  });
-
   it('refuses a face-down setup square rather than guess the tile', () => {
     const state = createThreeKingdomsBanqiStateFromSetup(ROOM, {
       deal: createThreeKingdomsBanqiSetup(seeded(3)).deal,
@@ -115,12 +100,6 @@ describe('Three Kingdoms banqi deal recovery', () => {
     expect(() =>
       recoverThreeKingdomsBanqiDeal(getThreeKingdomsBanqiPlayerView(state, 'red')),
     ).toThrow(/not revealed/);
-  });
-
-  it('refuses a payload with no ply-0 revealed board', () => {
-    const postgame = postgameFixture();
-    postgame.history = { revealed: postgame.history?.revealed?.slice(1) };
-    expect(() => threeKingdomsBanqiPostgameRoot(postgame)).toThrow(/ply-0/);
   });
 });
 
@@ -165,9 +144,10 @@ describe('Three Kingdoms banqi postgame page', () => {
     // Nothing between the board and the move list: no right-rail material rows.
     expect(root.querySelector('.review-material-row:not(.review-seat__material)')).toBeNull();
     expect(root.textContent).toContain('Request computer analysis');
-    expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/analysis`, {
-      method: 'GET',
-    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${threeKingdomsBanqiPostgameApiUrl(ROOM)}/analysis`,
+      expect.objectContaining({ method: 'GET' }),
+    );
   });
 
   it('shows the not-found page on a 404', async () => {
@@ -285,9 +265,10 @@ describe('Three Kingdoms banqi postgame page', () => {
       mountThreeKingdomsBanqiPostgame(root, ROOM);
       await flushPromises();
       await flushPromises();
-      expect(fetchSpy).toHaveBeenCalledWith(`${threeKingdomsBanqiPostgameApiUrl(ROOM)}/decisions`, {
-        method: 'GET',
-      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `${threeKingdomsBanqiPostgameApiUrl(ROOM)}/decisions`,
+        expect.objectContaining({ method: 'GET' }),
+      );
       expect(
         fetchSpy.mock.calls.every(
           (call) => (call as unknown as [unknown, RequestInit?])[1]?.method !== 'POST',

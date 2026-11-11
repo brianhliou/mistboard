@@ -1,0 +1,33 @@
+--- a/apps/web/src/replay.ts
++++ b/apps/web/src/replay.ts
+@@ -772,12 +772,12 @@
+       if (splitCaptures) {
+         renderSplitPaneCaptures(whitePane, captures, boardOrientation);
+         renderSplitPaneCaptures(blackPane, captures, boardOrientation);
+-        renderSplitPaneCaptures(truthPane, captures, boardOrientation);
++        renderPaneCaptures(truthPane.topCapturesEl, [], 'white');
+       } else {
+         renderPaneCaptures(whitePane.capturesEl, captures.white, 'black');
+         renderPaneCaptures(blackPane.capturesEl, captures.black, 'white');
+-        renderTruthCaptures(truthPane.capturesEl, captures);
+       }
++      renderTruthCaptures(truthPane.capturesEl, captures);
+     }
+ 
+     if (showControls) {
+@@ -1459,7 +1459,6 @@
+     flipBtn.addEventListener('click', () => {
+       boardOrientation = boardOrientation === 'white' ? 'black' : 'white';
+       applyBoardOrientation();
+-      render();
+     });
+   }
+ 
+@@ -1496,7 +1495,6 @@
+           e.preventDefault();
+           boardOrientation = boardOrientation === 'white' ? 'black' : 'white';
+           applyBoardOrientation();
+-          render();
+         }
+       },
+       { signal: abortController.signal },

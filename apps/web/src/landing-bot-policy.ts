@@ -1,34 +1,30 @@
 import {
   BANQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
-  DARK_CHESS_SPEC_ID,
-  DARK_XIANGQI_SPEC_ID,
+  canonicalVariantOrderIndex,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
+  GAME_SPECS,
+  type GameSpecId,
+  GOMOKU_SPEC_ID,
   isAllowedEngineTimeControl,
+  isPublicGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   TIME_CONTROLS,
   type TimeControlId,
   XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
+import type { BotPlayTarget } from './bot-play.js';
 
 // One small merchandising policy shared by the Lobby rows and Quick Pairing's
 // Computer chips. Room creation remains server-authoritative.
 
-export type LandingBotGameSpecId =
-  | typeof XIANGQI_SPEC_ID
-  | typeof BANQI_SPEC_ID
-  | typeof JIEQI_SPEC_ID
-  | typeof DUCK_XIANGQI_SPEC_ID
-  | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
-  | typeof DARK_XIANGQI_SPEC_ID
-  | typeof DARK_CHESS_SPEC_ID
-  | typeof JUNGLE_SPEC_ID
-  | typeof JUNGLE_FLIP_SPEC_ID
-  | typeof XIANGQI_MAHJONG_SPEC_ID;
+// Standard chess is study-only, with no play setup or bot.
+export type LandingBotGameSpecId = Exclude<GameSpecId, 'chess'>;
 
 export type LandingBotOffer = {
   botId: string;
@@ -39,45 +35,39 @@ export type LandingBotOffer = {
 
 const ROTATION_BUCKET_MS = 6 * 60 * 60 * 1_000;
 
-export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
-  XIANGQI_SPEC_ID,
-  JIEQI_SPEC_ID,
-  BANQI_SPEC_ID,
-  DARK_XIANGQI_SPEC_ID,
-  DUCK_XIANGQI_SPEC_ID,
-  CRAZYHOUSE_XIANGQI_SPEC_ID,
-  DARK_CHESS_SPEC_ID,
-  JUNGLE_SPEC_ID,
-  JUNGLE_FLIP_SPEC_ID,
-  // Misty plays it (the in-process tile bot). Offered only where the play menu
-  // offers the variant (landingSeedVariantOffered), so it stays off the shelf
-  // for anyone the allowlist does not cover.
-  XIANGQI_MAHJONG_SPEC_ID,
-];
+// Launch eligibility comes from the same publicSurface switch as the lobby
+// and /api/bots. Runtime menu flags are checked by the caller.
+export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = GAME_SPECS.filter(
+  (spec) => spec.runtimeStatus === 'live' && isPublicGameSpec(spec.id),
+)
+  .map((spec) => spec.id)
+  .filter((id): id is LandingBotGameSpecId => id !== 'chess')
+  .sort((a, b) => canonicalVariantOrderIndex(a) - canonicalVariantOrderIndex(b));
 
-// Each bucket shows jieqi and three of these plus the two fixed heads (xiangqi,
-// fog chess), and any three CONSECUTIVE buckets must cover the whole shelf,
-// which is what stops a variant from disappearing for a whole day.
-//
-// Four wide (six variants with the two heads), which keeps the panel the
-// height it had once Atomic was unlisted (2026-10-06). Jieqi is the
-// most-played rotating variant (2026-09-17 read: 59% of counted human games),
-// so it holds a slot in every bucket. Xiangqi Mahjong made the others seven
-// for three slots: the window steps three along the ring each bucket, so the
-// cycle is seven long, each variant shows in three buckets of seven, and three
-// consecutive buckets (nine slots) see all seven. Where the play menu does not
-// offer Xiangqi Mahjong, the panel fills its slot from the rest of the shelf.
+// Each bucket shows xiangqi and jieqi plus four of these six, keeping six
+// distinct variants on the hero shelf. Stepping four along the ring repeats
+// after three buckets; each ring variant appears in two of the three, and any
+// two consecutive buckets cover the whole shelf. Fog games stay in the Play
+// setup dialog's bot roster. Where the play menu does not offer Xiangqi Mahjong,
+// the hero fills its slot from the rest of this shelf.
 const ROTATING_ANCHOR: LandingBotGameSpecId = JIEQI_SPEC_ID;
 const ROTATING_RING: readonly LandingBotGameSpecId[] = [
   BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
-  DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
 ];
-const ROTATING_WINDOW = 3;
+const ROTATING_WINDOW = 4;
+
+// Backfill uses the hero shelf too, so an unavailable variant cannot bring a
+// fog bot back into the hero from the broader Play panel roster.
+export const LANDING_HERO_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
+  XIANGQI_SPEC_ID,
+  ROTATING_ANCHOR,
+  ...ROTATING_RING,
+];
 
 // Xiangqi's Lobby block is a fixed difficulty ladder, not a rotation: the rungs
 // never change, so a returning player can climb them ("beat Level 5, try Level
@@ -119,8 +109,7 @@ const XIANGQI_ENGINE_ID_PREFIX = 'fairy-stockfish-xiangqi-level-';
 // Rungs stay within one step of the calibrated tier. Every rated ladder puts
 // Level 4 at random+400 (fortress, duck, atomic 2026-09-15), so a bucket that
 // showed Level 7 would be a worse first game than a stable Level 4; the band
-// is variety for a returning player, not a re-tuning. The cycle is three so it
-// never locks to the seven-cycle variant lineup.
+// is variety for a returning player, not a re-tuning. The rung cycle is three.
 const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 
 // The per-variant PvE memory holds a bot id after a one-click start (bot-play.ts)
@@ -197,16 +186,15 @@ export function landingBotRotationBucket(now: Date = new Date()): number {
   return Math.floor(now.getTime() / ROTATION_BUCKET_MS);
 }
 
-// Xiangqi, Fog Chess and jieqi are in every lineup. Three other slots slide
-// along the ring; any three consecutive buckets cover all eight rotating
-// variants.
+// Xiangqi and jieqi are in every lineup. Four other slots slide along the
+// six-variant ring; any two consecutive buckets cover all eight hero variants.
 export function landingBotLineup(bucket: number): readonly LandingBotGameSpecId[] {
   const start = positiveModulo(bucket, ROTATING_RING.length) * ROTATING_WINDOW;
   const rotating = Array.from(
     { length: ROTATING_WINDOW },
     (_, i) => ROTATING_RING[(start + i) % ROTATING_RING.length]!,
   );
-  return [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, ROTATING_ANCHOR, ...rotating];
+  return [XIANGQI_SPEC_ID, ROTATING_ANCHOR, ...rotating];
 }
 
 // The canonical offer for a variant: which opponent the Quick Pairing chip
@@ -229,6 +217,14 @@ export function landingBotOffer(
     return {
       botId: `pikafish-level-${level}`,
       botName: `Pikafish Level ${level}`,
+      gameSpecId,
+      timeControlId: offerPace(gameSpecId),
+    };
+  }
+  if (gameSpecId === GOMOKU_SPEC_ID) {
+    return {
+      botId: 'rapfi-level-1',
+      botName: 'Rapfi Level 1',
       gameSpecId,
       timeControlId: offerPace(gameSpecId),
     };
@@ -340,27 +336,27 @@ function positiveModulo(value: number, divisor: number): number {
 // full-strength Pikafish; jieqi's Pikafish Levels 1-8 (Level 8 is the
 // `pikafish` bot, the strongest Pikafish setting), then jqe where the server can
 // seat it, then AB-JChess on top; the other
-// Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo; the other
-// house-built variants a single Misty (no stepper). Mirrors the server roster in
-// apps/server/src/first-party-bots.ts; a rung the server cannot serve fails the
-// room create, so landing-bot-policy.test.ts pins the ids.
-export type LandingBotRung = {
-  botId: string;
+// Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo;
+// Banqi, TK and Flip Jungle Misty Levels 1-8 (L8 only with its net); the
+// remaining house-built variants a single Misty. Numbered Misty rungs select
+// an engine tier, matching the setup dialog; TK creates by engine id alone.
+export type LandingBotRung = BotPlayTarget & {
   /** Ladder level when the rung is a numbered level; null for a named bot. */
   level: number | null;
   /** Display name for a named rung (Pikafish, AB-JChess, jqe, Misty). */
   name: string;
   /** The engine family behind the rung, shown under the level. */
-  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'jqe' | 'KataGo' | 'Misty';
+  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'jqe' | 'KataGo' | 'Misty' | 'Rapfi';
   /** The trained net it evaluates with, shown as a tag under the name. NNUE:
    *  xiangqi Fairy-Stockfish Level 8 (the official xiangqi net), xiangqi
    *  Pikafish, AB-JChess and jqe; the jieqi Pikafish levels run classical, its jieqi
    *  branch has never had weights. KataGo plays a ResNet under MCTS, which is a
-   *  neural net but not an NNUE, so it gets the general tag. */
+   *  neural net but not an NNUE, so it gets the general tag. Banqi and Flip
+   *  Jungle L8 use the general neural tag too. */
   net: 'nnue' | 'neural' | null;
   /** The engine needs a binary and net the server box may lack (KataGo), or a flag
    *  that can be off (jqe, MISTBOARD_JQE_ENABLED), so the rung is offered only where
-   *  GET /api/bots reports it playable. */
+   *  GET /api/bots reports it playable, or /api/engines/playable lists its tier. */
   gated?: boolean;
 };
 
@@ -373,15 +369,57 @@ const JIEQI_LADDER_TOP_LEVEL = 7;
 
 const NO_PLAYABLE_BOTS: ReadonlySet<string> = new Set();
 
-// `playable` is the set of bot ids the server says it can seat for this variant
-// (playableBotIdsBySpec over GET /api/bots). Only gated rungs consult it; until
+// `playable` holds bot ids from GET /api/bots; `playableEngines` holds runtime
+// tier ids from GET /api/engines/playable. Only gated rungs consult them; until
 // the roster arrives, or where the box lacks the engine, a gated rung is left
 // off and the ladder is what every box can serve.
 export function landingBotLadder(
   gameSpecId: string,
   playable: ReadonlySet<string> = NO_PLAYABLE_BOTS,
+  playableEngines: ReadonlySet<string> = NO_PLAYABLE_BOTS,
 ): readonly LandingBotRung[] {
   if (!isLandingBotGameSpecId(gameSpecId)) return [];
+  if (gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) {
+    // TK's setup creates by engine id, without botId: Misty's public profile
+    // does not list TK and resolveBotRoomRequest would reject that pairing.
+    // Unlike Banqi, L7 has a numbered id too. Every search tier depends on
+    // runtime assets, so use exactly the server's roster (L8 also needs NNUE).
+    return Array.from(
+      { length: 8 },
+      (_, i): LandingBotRung => ({
+        engineId: `misty-three-kingdoms-banqi-level-${i + 1}`,
+        level: i + 1,
+        name: `Misty Level ${i + 1}`,
+        engine: 'Misty',
+        net: i === 7 ? 'nnue' : null,
+        gated: true,
+      }),
+    ).filter((rung) => playableEngines.has(rung.engineId!));
+  }
+  if (gameSpecId === GOMOKU_SPEC_ID) {
+    return Array.from({ length: 8 }, (_, i) => ({
+      botId: `rapfi-level-${i + 1}`,
+      level: i + 1,
+      name: `Rapfi Level ${i + 1}`,
+      engine: 'Rapfi',
+      net: null,
+    }));
+  }
+  if (gameSpecId === BANQI_SPEC_ID || gameSpecId === JUNGLE_FLIP_SPEC_ID) {
+    const base = gameSpecId === BANQI_SPEC_ID ? 'misty-banqi' : 'misty-jungle-flip';
+    return Array.from(
+      { length: 8 },
+      (_, i): LandingBotRung => ({
+        botId: 'misty',
+        engineId: i === 6 ? base : `${base}-level-${i + 1}`,
+        level: i + 1,
+        name: `Misty Level ${i + 1}`,
+        engine: 'Misty',
+        net: i === 7 ? 'nnue' : null,
+        ...(i === 7 ? { gated: true } : {}),
+      }),
+    ).filter((rung) => !rung.gated || playableEngines.has(rung.engineId!));
+  }
   if (FSF_LADDER_SPECS.includes(gameSpecId)) {
     const levels: LandingBotRung[] = Array.from({ length: 8 }, (_, i) => ({
       botId: `${LADDER_BOT_ID_PREFIX}${i + 1}`,
@@ -434,7 +472,9 @@ export function landingBotLadder(
       { botId: 'jqe', level: null, name: 'jqe', engine: 'jqe', net: 'nnue', gated: true },
       { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', net: 'nnue' },
     ];
-    return rungs.filter((rung) => !rung.gated || playable.has(rung.botId));
+    return rungs.filter(
+      (rung) => !rung.gated || (rung.botId !== undefined && playable.has(rung.botId)),
+    );
   }
   const misty: LandingBotRung = {
     botId: 'misty',
@@ -492,6 +532,12 @@ export function landingBotLadderIndex(
   remembered: string | null | undefined,
 ): number {
   if (!remembered) return -1;
+  const tier = ladder.findIndex((rung) => rung.engineId === remembered);
+  if (tier >= 0) return tier;
+  // Old one-click Misty picks meant the legacy engine, now Level 7.
+  if (remembered === 'misty' && ladder.some((rung) => rung.engineId)) {
+    return ladder.findIndex((rung) => rung.level === 7);
+  }
   const direct = ladder.findIndex((rung) => rung.botId === remembered);
   if (direct >= 0) return direct;
   const jieqiLevel = /^pikafish-jieqi-level-(\d+)$/.exec(remembered)?.[1];

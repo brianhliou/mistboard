@@ -1191,7 +1191,7 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // prod vCPU) capped by movetime as a wall-clock guard.
 // Flip Jungle (翻翻兽棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
-// fog engine-worker). The historical full-strength entry stays immutable; the
+// fog engine-worker). The historical full-strength bot is classical L7; the
 // numbered ladder records both its node budget and any root-noise settings.
 const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
   'misty-jungle-flip': {
@@ -1206,19 +1206,19 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
     // 512K -> 2.5M, and `movetime_ms: 2_500` never matched the tier's 5000ms cap even on
     // the first day. Bumped rather than edited in place for the same reason as banqi
     // above — eve_games snapshots the hash per game, so a mutated pair rewrites history.
-    configHash: 'misty-jungle-flip-0.5.1-nodes-2500000',
-    playSignature: 'misty-jungle-flip-0.5.1-nodes-2500000',
+    configHash: 'misty-jungle-flip-0.6.0-nodes-2500000',
+    playSignature: 'misty-jungle-flip-0.6.0-nodes-2500000',
     config: { kind: 'jungle-flip-uci', nodes: 2_500_000, movetime_ms: 5_000 },
     notes:
-      'MistyJungleFlip 0.5.1 — standalone Rust αβ+Star1+TT UCI engine over the redacted ' +
+      'MistyJungleFlip 0.6.0 Level 7 — standalone Rust αβ+Star1+TT UCI engine over the redacted ' +
       'jungle-flip FEN, with the <=4-piece exact tablebase (WLD + distance-to-mate) loaded ' +
       'since v0.4.0. Single full-strength bot at 2.5M nodes under a 5s latency cap ' +
       '(budget resized from 512K on 2026-09-06 to fit the ceiling; not a claimed strength ' +
       'gain). Chance-node (flip) search, not fog/belief.',
   },
   ...Object.fromEntries(
-    JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => {
-      const signature = `misty-jungle-flip-${tier.version}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
+    JUNGLE_FLIP_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-jungle-flip').map((tier) => {
+      const signature = `misty-jungle-flip-${tier.version}-${tier.evaluation}-nodes-${tier.nodes}${tier.noise === undefined ? '' : `-noise-${tier.noise}-depth-${tier.noiseDepth}`}`;
       return [
         tier.id,
         {
@@ -1232,15 +1232,33 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
           playSignature: signature,
           config: {
             kind: 'jungle-flip-uci',
+            evaluation: tier.evaluation,
             nodes: tier.nodes,
             movetime_ms: tier.movetimeCapMs,
             ...(tier.noise === undefined ? {} : { noise: tier.noise, noiseDepth: tier.noiseDepth }),
           },
-          notes: `MistyJungleFlip ${JUNGLE_FLIP_ENGINE_VERSION} level ${tier.level}. L1–5 require advertised Noise, NoiseDepth and Seed. L7 budget is provisional pending calibration.`,
+          notes:
+            tier.level === 8
+              ? 'MistyJungleFlip 0.6.0 Level 8 — private r6 net at 1M nodes under a 5s cap. ' +
+                'Requires EvalFile and MISTBOARD_JUNGLE_FLIP_NET. Self-play: +139 [118, 161] Elo ' +
+                'over classical at equal time, +119 at equal 2.5M nodes; not yet rated on prod.'
+              : `MistyJungleFlip ${JUNGLE_FLIP_ENGINE_VERSION} level ${tier.level}. L1–5 require advertised Noise, NoiseDepth and Seed.`,
         } satisfies EngineDefinition,
       ];
     }),
   ),
+  'misty-jungle-flip-level-7': {
+    id: 'misty-jungle-flip-level-7',
+    engineId: 'misty-jungle-flip',
+    engineName: 'MistyJungleFlip',
+    name: 'MistyJungleFlip Level 7 (retired)',
+    kind: 'container',
+    gameSpecId: 'jungle-flip',
+    configHash: 'misty-jungle-flip-0.5.1-nodes-100000',
+    playSignature: 'misty-jungle-flip-0.5.1-nodes-100000',
+    config: { kind: 'jungle-flip-uci', nodes: 100_000, movetime_ms: 5000 },
+    notes: 'Historical 100K-node classical rung, retired when neural L8 shipped. Never offered.',
+  },
   [JUNGLE_FLIP_RANDOM_ENGINE_ID]: {
     id: JUNGLE_FLIP_RANDOM_ENGINE_ID,
     engineId: 'random-legal-jungle-flip',

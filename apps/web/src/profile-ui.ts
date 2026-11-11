@@ -247,6 +247,7 @@ export function buildProfileGameRow(
       participantProfileTarget(participant),
       'profile-game-opponent-name',
     );
+    nameEl.title = nameEl.textContent ?? '';
     if (participant?.subjectType === 'bot' && participant.subjectId) {
       attachBotCard(nameEl, participant.subjectId);
     }
@@ -339,6 +340,7 @@ function matchupNameEl(game: FeaturedGame, seat: GameParticipant['color']): HTML
     participantProfileTarget(participant),
     'profile-game-opponent-name',
   );
+  el.title = el.textContent ?? '';
   if (participant?.subjectType === 'bot' && participant.subjectId) {
     attachBotCard(el, participant.subjectId);
   }

@@ -1,3 +1,7 @@
+import { threeKingdomsBanqiLiveWatchPayloadFor } from './routes/three-kingdoms-banqi-games.js';
+import './three-kingdoms-banqi-registration.js';
+import { resolvePositionOg } from './og-position.js';
+import { variantTenantForRoomId } from './variant-tenant/registry.js';
 /**
  * Three Kingdoms banqi (#628) hidden-information regression: two rooms whose
  * deals differ only by swapping two tiles that are still face down must look
@@ -34,6 +38,7 @@ import {
   type ThreeKingdomsBanqiEngineRequest,
 } from './three-kingdoms-banqi-engine.js';
 import {
+  getThreeKingdomsBanqiTruthView,
   type ThreeKingdomsBanqiEvent,
   threeKingdomsBanqiTenant,
 } from './three-kingdoms-banqi-tenant.js';
@@ -174,10 +179,7 @@ test('the scripted line exercises flips, quiet windows and captures, and keeps t
 test('the truth differs between the two deals (the planted difference is real)', () => {
   const truth = (events: readonly ThreeKingdomsBanqiEvent[]) =>
     JSON.stringify(
-      threeKingdomsBanqiTenant.visibility.truthView!(
-        replayTenantEvents(threeKingdomsBanqiTenant, events).state,
-        events,
-      ),
+      getThreeKingdomsBanqiTruthView(replayTenantEvents(threeKingdomsBanqiTenant, events).state),
     );
   assert.notEqual(truth(eventsA), truth(eventsB));
   // And the server-side event logs differ: the deal is in room-created.
@@ -249,47 +251,93 @@ test('the live PvE turn hands the provider that same redacted request and plays 
   assert.equal(appended.a[0]!.type, 'move-played');
 });
 
-test('a finished room: the deal never ships, and only the final board is the truth', () => {
-  // A finished room reveals the final board to everyone, by the site's policy
-  // (roomViewPolicy). What must still hold: the deal itself (room-created.setup)
-  // never reaches a client, the move log and every masked per-ply history view
-  // are identical under the swap, and the only difference between the two
-  // rooms is the final board, which is exactly the truth view.
-  const resign = (events: readonly ThreeKingdomsBanqiEvent[]): ThreeKingdomsBanqiEvent[] => [
+test('finished room and history payloads keep covered identities masked for every recipient', () => {
+  const finish = (events: readonly ThreeKingdomsBanqiEvent[]): ThreeKingdomsBanqiEvent[] => [
     ...events,
     { type: 'seat-resigned', at: 9_999, roomId: ROOM, color: 'red' },
   ];
-  const finishedA = resign(eventsA);
-  const finishedB = resign(eventsB);
-  assert.equal(
-    replayTenantEvents(threeKingdomsBanqiTenant, finishedA).state.status.type,
-    'finished',
-  );
-  const truth = (events: readonly ThreeKingdomsBanqiEvent[]) =>
-    JSON.stringify(
-      threeKingdomsBanqiTenant.visibility.truthView!(
-        replayTenantEvents(threeKingdomsBanqiTenant, events).state,
-        events,
-      ),
-    );
   for (const seat of ['red', 'black', 'spectator'] as const) {
-    const a = JSON.parse(joinPayload(finishedA, seat)) as Record<string, unknown> & {
-      snapshot: { state: unknown };
-    };
-    const b = JSON.parse(joinPayload(finishedB, seat)) as typeof a;
-    const raw = JSON.stringify(a);
-    assert.ok(!raw.includes('"setup"'), `${seat}: the deal never reaches a client`);
-    assert.equal(JSON.stringify(a.snapshot.state), truth(finishedA), `${seat}: final board`);
-    assert.equal(JSON.stringify(b.snapshot.state), truth(finishedB), `${seat}: final board`);
-    // Planted: the final boards differ, so the comparison below is not vacuous.
-    assert.notEqual(JSON.stringify(a.snapshot.state), JSON.stringify(b.snapshot.state));
-    const withoutFinalBoard = (p: typeof a) =>
-      JSON.stringify({ ...p, snapshot: { ...p.snapshot, state: null } });
-    assert.equal(
-      withoutFinalBoard(a),
-      withoutFinalBoard(b),
-      `${seat}: a finished payload carries a face-down identity outside the final board`,
-    );
-    assert.ok(Array.isArray(a.liveHistory), `${seat}: the masked per-ply history ships`);
+    const a = joinPayload(finish(eventsA), seat);
+    const b = joinPayload(finish(eventsB), seat);
+    assert.equal(a, b, `${seat}: whole finished payload is invariant under a hidden swap`);
+    assert.doesNotMatch(a, /"setup"|"deal"/);
+    assert.ok(Array.isArray(JSON.parse(a).liveHistory));
   }
+});
+
+// Registration parity must preserve the same hidden-information boundary.
+test('the entire live TV frame is byte-identical under a covered-deal swap', () => {
+  for (let n = 0; n <= moveEventCount; n += 1) {
+    const frame = (events: readonly ThreeKingdomsBanqiEvent[]) => {
+      const hydrated = createTenantRuntimeRoomFromEvents(threeKingdomsBanqiTenant, events);
+      if (!hydrated.ok) throw new Error(hydrated.error);
+      const payload = threeKingdomsBanqiLiveWatchPayloadFor(ROOM, hydrated.room);
+      assert.ok(payload);
+      return JSON.stringify(payload);
+    };
+    assert.equal(frame(eventsA.slice(0, 3 + n)), frame(eventsB.slice(0, 3 + n)));
+  }
+});
+
+test('the whole final-position card is byte-identical under a covered-deal swap', () => {
+  const payload = (events: readonly ThreeKingdomsBanqiEvent[]) => {
+    const finished: ThreeKingdomsBanqiEvent[] = [
+      ...events,
+      { type: 'seat-resigned', at: 9999, roomId: ROOM, color: 'red' },
+    ];
+    const card = variantTenantForRoomId(ROOM)?.card;
+    assert.ok(card && card.layout !== 'gomoku' && card.layout !== 'match');
+    const fen = card.fenAtPly(finished, ROOM, moveEventCount);
+    assert.ok(fen);
+    const position = resolvePositionOg('three-kingdoms-banqi', fen);
+    assert.ok(position);
+    return JSON.stringify({
+      variant: card.variant,
+      analysis: card.analysis,
+      fen,
+      inks: card.seatInks?.(finished, ROOM),
+      position,
+    });
+  };
+  assert.equal(payload(eventsA), payload(eventsB));
+});
+
+test('an attempted face-down capture is rejected and reveals nothing to the opponent or spectator', () => {
+  // TK rule 3 forbids capturing any covered tile. Check every attempt along
+  // the real line, rather than manufacturing an impossible capture event.
+  let attempts = 0;
+  for (let n = 1; n <= moveEventCount; n += 1) {
+    const events = eventsA.slice(0, 3 + n);
+    const state = replayTenantEvents(threeKingdomsBanqiTenant, events).state;
+    for (const [from, mover] of Object.entries(state.board)) {
+      if (!mover || mover.faceDown) continue;
+      for (const [to, target] of Object.entries(state.board)) {
+        if (!target?.faceDown) continue;
+        const attempted = { from, to } as ThreeKingdomsBanqiMove;
+        assert.equal(applyThreeKingdomsBanqiMove(state, attempted), state);
+        for (const seat of ['red', 'black', 'spectator'] as const) {
+          const raw = JSON.parse(joinPayload(events, seat));
+          assert.deepEqual(raw.snapshot.state.board[to], { faceDown: true });
+          assert.ok(!JSON.stringify(raw).includes('"setup"'));
+        }
+        attempts += 1;
+        break;
+      }
+      break;
+    }
+  }
+  assert.ok(attempts > 0);
+});
+
+test('registration offers casual-only Banqi time controls, TV and a card, and no export', async () => {
+  const registration = variantTenantForRoomId(ROOM)!;
+  assert.equal(registration.lobby?.supportsRated, false);
+  assert.equal(
+    registration.lobby?.allowsTimeControl({ initialMs: 300000, incrementMs: 5000 }),
+    true,
+  );
+  assert.equal(registration.lobby?.allowsTimeControl({ initialMs: 123, incrementMs: 0 }), false);
+  assert.equal(registration.watch?.channelId, 'three-kingdoms-banqi');
+  assert.equal(typeof registration.createCorrespondenceGameForSeek, 'function');
+  assert.equal(registration.export, null, 'no export: the deal names pieces nobody turned over');
 });

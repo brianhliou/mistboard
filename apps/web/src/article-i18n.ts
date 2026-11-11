@@ -244,6 +244,8 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  'three-kingdoms-banqi':
+    'English editorial review is still open; this launch deliberately publishes the rules in English only.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
@@ -299,8 +301,10 @@ const ZH_HANS: Record<string, string> = {
   '10,000 games played': '已下完 10,000 盘棋',
   'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
     'Mistboard 最初的 10,000 盘棋是怎样积累起来的：大家下了哪些棋类变体、和哪些电脑对弈，以及在这里下棋的都是哪些玩家。',
-  'Mistboard passed 10,000 finished games on November 8.':
-    '11 月 8 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
+  'Mistboard passed 10,000 finished games on November 7.':
+    '11 月 7 日，Mistboard 已完成的对局总数突破了 10,000 盘。',
+  'Weeks now end at midnight Pacific time, as on the statistics page, which moves the weekly counts slightly.':
+    '每周现在在太平洋时间午夜结束，与统计页面一致，因此每周的数字略有变化。',
   'Jieqi is 66% of them.': '揭棋占其中的 66%。',
   'All but 98 were against a bot.': '除了 98 盘，其余都是和电脑下的。',
   'The 15 players with at least 100 games were in 40% of them.':
@@ -311,11 +315,11 @@ const ZH_HANS: Record<string, string> = {
     '一个账号，或一个以访客身份下棋的浏览器，算一位玩家。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盘棋用了四个月。接下来的 9,000 盘只用了 39 天。',
-  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
-    '6 月 1 日至 11 月 1 日每周（周一至周日）完成的对局数。',
+  'Finished games each week, Monday to Sunday in Pacific time, through November 1.':
+    '截至 11 月 1 日每周（周一至周日，太平洋时间）完成的对局数。',
   'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
-  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
-    '从 10 月 5 日那一周起，每周都超过了 1,000 盘。最多的是 10 月 26 日那一周，共 2,647 盘，其中一位玩家下了 557 盘。[统计页面](/stats)会持续更新计数。',
+  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,670, and one player played 578 of those. The [statistics page](/stats) keeps the running count.':
+    '从 10 月 5 日那一周起，每周都超过了 1,000 盘。最多的是 10 月 26 日那一周，共 2,670 盘，其中一位玩家下了 578 盘。[统计页面](/stats)会持续更新计数。',
   'What people played': '大家下了什么棋',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
     '[揭棋](/rules/jieqi)，也就是棋子背面朝上开局的象棋，占全部对局的 66%。在最初的 1,000 盘中，这个比例是 61%。上一篇文章之后，疯狂屋象棋、象棋麻将和五子棋陆续上线。',
@@ -359,38 +363,39 @@ const ZH_HANS: Record<string, string> = {
     '感谢每一位来下过棋、报告过问题，或把 Mistboard 介绍给朋友和观众的人。因为有你们，才有 Mistboard；每一盘棋，我们都心怀感激。',
   "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
     '我们的使命是通过象棋和世界各地的经典策略游戏，让不同文化的人们走到一起。',
-  'Week of 2026-06-01: 2 games': '2026-06-01 当周：2 盘',
+  'Week of 2026-05-25: 1 games': '2026-05-25 当周：1 盘',
+  'Week of 2026-06-01: 1 games': '2026-06-01 当周：1 盘',
   Jun: '6月',
   'Week of 2026-06-08: 3 games': '2026-06-08 当周：3 盘',
-  'Week of 2026-06-15: 0 games': '2026-06-15 当周：0 盘',
-  'Week of 2026-06-22: 3 games': '2026-06-22 当周：3 盘',
+  'Week of 2026-06-15: 1 games': '2026-06-15 当周：1 盘',
+  'Week of 2026-06-22: 2 games': '2026-06-22 当周：2 盘',
   'Week of 2026-06-29: 0 games': '2026-06-29 当周：0 盘',
   'Week of 2026-07-06: 1 games': '2026-07-06 当周：1 盘',
   'Week of 2026-07-13: 19 games': '2026-07-13 当周：19 盘',
   'Week of 2026-07-20: 13 games': '2026-07-20 当周：13 盘',
   'Week of 2026-07-27: 30 games': '2026-07-27 当周：30 盘',
-  'Week of 2026-08-03: 27 games': '2026-08-03 当周：27 盘',
+  'Week of 2026-08-03: 28 games': '2026-08-03 当周：28 盘',
   Aug: '8月',
-  'Week of 2026-08-10: 21 games': '2026-08-10 当周：21 盘',
-  'Week of 2026-08-17: 45 games': '2026-08-17 当周：45 盘',
-  'Week of 2026-08-24: 21 games': '2026-08-24 当周：21 盘',
+  'Week of 2026-08-10: 20 games': '2026-08-10 当周：20 盘',
+  'Week of 2026-08-17: 46 games': '2026-08-17 当周：46 盘',
+  'Week of 2026-08-24: 20 games': '2026-08-24 当周：20 盘',
   'Week of 2026-08-31: 67 games': '2026-08-31 当周：67 盘',
-  'Week of 2026-09-07: 68 games': '2026-09-07 当周：68 盘',
+  'Week of 2026-09-07: 72 games': '2026-09-07 当周：72 盘',
   Sep: '9月',
-  'Week of 2026-09-14: 154 games': '2026-09-14 当周：154 盘',
-  'Week of 2026-09-21: 381 games': '2026-09-21 当周：381 盘',
-  'Week of 2026-09-28: 596 games': '2026-09-28 当周：596 盘',
-  'Week of 2026-10-05: 1,314 games': '2026-10-05 当周：1,314 盘',
+  'Week of 2026-09-14: 155 games': '2026-09-14 当周：155 盘',
+  'Week of 2026-09-21: 386 games': '2026-09-21 当周：386 盘',
+  'Week of 2026-09-28: 616 games': '2026-09-28 当周：616 盘',
+  'Week of 2026-10-05: 1,309 games': '2026-10-05 当周：1,309 盘',
   Oct: '10月',
-  'Week of 2026-10-12: 1,118 games': '2026-10-12 当周：1,118 盘',
-  'Week of 2026-10-19: 1,304 games': '2026-10-19 当周：1,304 盘',
-  'Week of 2026-10-26: 2,647 games': '2026-10-26 当周：2,647 盘',
+  'Week of 2026-10-12: 1,153 games': '2026-10-12 当周：1,153 盘',
+  'Week of 2026-10-19: 1,322 games': '2026-10-19 当周：1,322 盘',
+  'Week of 2026-10-26: 2,670 games': '2026-10-26 当周：2,670 盘',
   'Mistboard passes 10,000 games': 'Mistboard 突破 10,000 盘对局',
   'Everyone who plays on Mistboard.': '每一位在 Mistboard 下棋的玩家。',
   'A round Chinese chess piece marked with the character for ten thousand, beside the number 10,000 with a small grey cloud at its last zero.':
     '一枚刻着「萬」字的圆形象棋棋子，旁边是数字 10,000，最后一个零处有一朵灰色小云。',
-  'Finished games per week, rising from a handful in June to a peak of 2,647':
-    '每周完成的对局数，从 6 月的寥寥几盘上升到最高 2,647 盘',
+  'Finished games per week, rising from a handful in June to a peak of 2,670':
+    '每周完成的对局数，从 6 月的寥寥几盘上升到最高 2,670 盘',
   'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
@@ -504,67 +509,78 @@ const ZH_HANS: Record<string, string> = {
   'Three Kingdoms Banqi Rules': '三国暗棋规则',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
     '三国暗棋是在 9×5 棋盘上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方获胜。',
-  'All thirty-two pieces start face-down. On your turn, flip one or move one of your face-up pieces.':
-    '三十二颗棋子开局时全部盖着。轮到你时，翻开一颗暗子，或走一颗已翻开的己方棋子。',
-  'Pieces move much as in xiangqi, with no palace and no river, and any piece can capture any face-up enemy piece.':
-    '棋子的走法和象棋大致相同，但没有九宫，也没有河界，任何棋子都能吃任何已翻开的敌子。',
-  'Every capture scores points, and the first player to 100 wins.':
+  'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.':
+    '三十二颗棋子开局时全部盖着。轮到你时，翻开一颗暗子，或走一颗己方棋子。',
+  'Pieces move as in xiangqi with no palace and no river, and any piece can capture any face-up enemy piece.':
+    '棋子按象棋的走法走，但没有九宫，也没有河界，任何棋子都能吃任何已翻开的敌子。',
+  'Every capture scores points. The first player to 100 wins.':
     '每次吃子都得分，先到 100 分的一方获胜。',
   'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.':
     '在神来也（Gamesofa）的暗棋 App 里玩过三国模式、想看到成文规则的暗棋玩家，以及对计分版暗棋感兴趣的象棋棋手。',
-  'Three Kingdoms banqi takes banqi’s face-down luck and gives the pieces [xiangqi](/rules/xiangqi) moves with the limits taken off. Chariots sweep the board, cannons fire over tiles, horses leap, and there is no rank order: a soldier can take the general. Every capture scores points, and the first player to 100 wins, so a game turns on what to flip, what to grab and what to leave hanging.':
-    '三国暗棋保留了暗棋翻子的运气成分，又让棋子用上[象棋](/rules/xiangqi)的走法，并取消了其中的限制。车横扫全盘，炮隔子开火，马随处跳，而且没有大小顺序：兵也可以吃将。每次吃子都得分，先到 100 分的一方获胜，所以一盘棋的关键就在于该翻哪颗子、该吃哪颗子、哪颗子可以先放着不管。',
-  'The mode comes from Gamesofa’s banqi app, which added it in July 2026 without a written rulebook. This page gives the rules Mistboard plays; where the app leaves one unclear, the choice is ours. Mistboard is not affiliated with Gamesofa.':
-    '这个模式来自神来也（Gamesofa）的暗棋 App，它在 2026 年 7 月加入这个模式，但没有写成文的规则。本页列出的是 Mistboard 采用的规则；App 没有说清楚的地方，由我们自行决定。Mistboard 与神来也没有任何关联。另有一种三人玩的游戏也叫三国暗棋，本页讲的是两人对局的版本。',
-  'As in [banqi](/rules/banqi), all thirty-two pieces start shuffled and face-down. Here they stand on the points where the lines cross, in four blocks of eight with the middle row and column empty, on a board 9 points wide and 5 deep with no river. Each color has a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers.':
-    '和[暗棋](/rules/banqi)一样，三十二颗棋子开局时全部洗乱、盖着。这里的棋子放在线与线相交的交叉点上，分成四块，每块八颗，中间一行和中间一列空着。棋盘横向 9 个点、纵向 5 个点，没有河界。每一方有一将、二士、二象、二车、二马、二炮、五兵。',
-  'On your turn you do one thing: flip a face-down piece, or move one of your face-up pieces. A flip takes the whole turn.':
-    '每回合只做一件事：翻开一颗暗子，或走一颗已翻开的己方棋子。翻子就用掉了整个回合。',
-  'The first flip of the game decides the colors. Whoever makes it plays the color they turned up. After that you may flip any face-down piece, including one that turns out to be your opponent’s.':
-    '全局第一次翻子决定双方颜色：翻出什么颜色，翻子的一方就执什么颜色。之后你可以翻任何一颗暗子，翻出来的也可能是对方的棋子。',
-  'How the pieces move': '棋子怎么走',
-  'Pieces move much as in [xiangqi](/rules/xiangqi), but there is no palace and no river, so no piece is confined to one part of the board. Pieces in between do not block a horse or an elephant. The general slides like a chariot, and a soldier can step backward.':
-    '棋子的走法和[象棋](/rules/xiangqi)大致相同，但没有九宫，也没有河界，所以没有哪颗子被限制在棋盘的某一部分。马和象不会被中间的棋子挡住。将像车一样直走，兵可以后退。',
-  '**Any piece can capture any piece.** There is no rank order as in banqi: a soldier can take a chariot, and an advisor can take the general. Only face-up enemy pieces can be captured. Nothing can move onto a face-down piece, and it stops a sliding piece like any other. The general is an ordinary piece: there is no check, and capturing it only scores its points.':
-    '**任何棋子都能吃任何棋子。**这里没有暗棋那样的大小顺序：兵可以吃车，士可以吃将。只有已翻开的敌子才能被吃。任何棋子都不能走到暗子上，暗子也和其他棋子一样会挡住直走的子。将只是普通棋子：没有将军一说，吃掉它也只是得到它的分数。',
-  'In the diagrams, dots show where the piece can move, rings show what it can capture, and blank tiles are face-down pieces.':
-    '图中的圆点表示棋子可以走到的位置，圆环表示它可以吃的棋子，空白的棋子是暗子。',
-  '**General:** slides any distance along a row or column until a piece stops it. Below, it can take the black cannon.':
-    '**将：**沿横线或直线走任意距离，直到被棋子挡住。下图中，它可以吃黑方的炮。',
-  '**Chariot:** moves exactly like the general. Below, it can take the black horse, but the face-down tile blocks it.':
-    '**车：**走法和将完全一样。下图中，它可以吃黑方的马，但会被暗子挡住。',
-  '**Cannon:** slides like the chariot when it moves. To capture along a row or column, it jumps exactly one piece, face-up or face-down, of either color. Below, it can take the general by jumping the face-down tile, but not the soldier next to it, with nothing to jump.':
-    '**炮：**不吃子时和车一样走。吃子时沿横线或直线隔正好一颗子，这颗子已翻开或盖着都可以，哪一方的都行。下图中，它可以隔着暗子吃将，但吃不到紧贴着它的兵，因为中间没有子可隔。',
-  '**Horse:** jumps one point straight and one diagonally, even when a piece stands next to it. Below, all four points straight next to it are occupied, and it still reaches all eight of its points, including the capture on the black chariot.':
-    '**马：**走日字，先直走一点再斜走一点，旁边有子也不受影响。下图中，它上下左右相邻的四个点都有子，它仍然能走到全部八个落点，其中包括吃掉黑方的车。',
-  '**Elephant:** jumps two points diagonally, even over a piece. Below, it jumps the pieces next to it, but cannot land on the face-down tile at the bottom right.':
-    '**象：**走田字，沿斜线跳两点，中间有子也能跳过去。下图中，它跳过身边的棋子，但不能落在右下角的暗子上。',
-  '**Advisor:** steps one point diagonally. Below, it can take the general, but not the face-down tile.':
-    '**士：**沿斜线走一点。下图中，它可以吃将，但不能吃暗子。',
-  '**Soldier:** steps one point forward, backward or sideways. Below, it can take the chariot in front of it.':
-    '**兵：**向前、向后或向左右走一点。下图中，它可以吃前面的车。',
+  'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
+    '暗棋翻子的运气，加上[象棋](/rules/xiangqi)棋子的远程威力：车横扫全盘，炮隔着暗子开火，兵也可以吃将。一盘棋的关键就在于该翻哪颗子、该吃哪颗子、哪颗子可以先放着不管。',
+  'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
+    '神来也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三国暗棋。Mistboard 采用自己的版本，与神来也没有任何关联。',
+  'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
+    '棋盘横向 9 个点、纵向 5 个点，没有河界，也没有九宫。每一方都有一整套象棋棋子：一将、二士、二象、二车、二马、二炮、五兵。三十二颗棋子开局时全部洗乱、盖着，分成四块，每块八颗，中间一行和中间一列空着。',
+  'Your turn': '轮到你时',
+  'On your turn, **flip** a face-down piece or **move** one of your face-up pieces. The first flip of the game sets the colors: you play the color you turned up. After that you may flip any face-down piece, even one that turns out to be your opponent’s.':
+    '轮到你时，**翻开**一颗暗子，或**走**一颗已翻开的己方棋子。全局第一次翻子决定双方颜色：翻出什么颜色，你就执什么颜色。之后你可以翻任何一颗暗子，翻出来的也可能是对方的棋子。',
+  'Pieces move as in xiangqi, with three changes': '按象棋走法，但有三处不同',
+  '**No palace and no river.** Every piece can go anywhere on the board.':
+    '**没有九宫，也没有河界。**每种棋子都能走遍全盘。',
+  '**Nothing blocks a horse or an elephant.** They jump even when a piece stands next to them.':
+    '**马和象不会被中间的棋子挡住。**即使旁边有子，也能跳过去。',
+  '**The general slides like a chariot, and a soldier can step backward.**':
+    '**将像车一样直走，兵可以后退。**',
+  '**Any piece takes any piece.** There is no rank order, so a soldier can take a chariot. Only face-up enemy pieces can be captured: nothing moves onto a face-down piece, and it blocks a sliding piece like any other. The general is not royal. There is no check, and taking it scores 20 points.':
+    '**任何棋子都能吃任何棋子。**这里没有大小顺序，兵也可以吃车。只有已翻开的敌子才能被吃：任何棋子都不能走到暗子上，暗子也和其他棋子一样会挡住直走的子。将只是普通棋子，没有将军一说，吃掉它得 20 分。',
+  'Each piece': '各棋子的走法',
+  '*In the diagrams, dots are moves, rings are captures and blank tiles are face-down pieces.*':
+    '*图中的圆点表示可走的位置，圆环表示可吃的棋子，空白棋子是暗子。*',
+  '**Chariot:** slides any distance along a row or column. Here it can take the black horse, and the face-down tile blocks it.':
+    '**车：**沿横线或直线走任意距离。图中，它可以吃黑方的马，但会被暗子挡住。',
+  '**General:** moves exactly like the chariot. Here it can take the black cannon.':
+    '**将：**走法和车完全一样。图中，它可以吃黑方的炮。',
+  '**Cannon:** moves like the chariot, but captures by jumping exactly one piece of either color, face-up or face-down. Here it can take the general over the face-down tile, but not the soldier next to it.':
+    '**炮：**不吃子时和车一样走，吃子时要隔正好一颗子，这颗子已翻开或盖着都可以，哪一方的都行。图中，它可以隔着暗子吃将，但吃不到紧贴着它的兵。',
+  '**Horse:** one point straight, then one diagonally. Here all four neighbors are taken and it still reaches all eight points, including the black chariot.':
+    '**马：**走日字，先直走一点再斜走一点。图中，它上下左右相邻的四个点都有子，仍然能走到全部八个落点，其中包括吃掉黑方的车。',
+  '**Elephant:** two points diagonally, over any piece. Here it cannot land on the face-down tile at the bottom right.':
+    '**象：**走田字，沿斜线跳两点，中间有子也能跳过去。图中，它不能落在右下角的暗子上。',
+  '**Advisor:** one point diagonally. Here it can take the general, but not the face-down tile.':
+    '**士：**沿斜线走一点。图中，它可以吃将，但不能吃暗子。',
+  '**Soldier:** one point forward, backward or sideways. Here it can take the chariot in front of it.':
+    '**兵：**向前、向后或向左右走一点。图中，它可以吃前面的车。',
   Scoring: '计分',
-  'Every capture scores the value of the piece taken: 5 for a soldier, advisor or elephant, 10 for a cannon or horse, 15 for a chariot and 20 for the general. Each color’s sixteen pieces are worth 135 in all.':
-    '每次吃子都得到被吃棋子的分值：兵、士、象 5 分，炮、马 10 分，车 15 分，将 20 分。每一方的十六颗棋子合计 135 分。',
-  'Points go to the player who captures. If you flipped one of your opponent’s pieces earlier, taking it later still scores for you.':
-    '分数归吃子的一方。即使那颗对方的棋子是你之前翻开的，后来吃掉它照样算你的分。',
-  'The first player to reach 100 points wins at once, even with pieces still on the board. A side can never be wiped out: its sixteen pieces are worth 135, so whoever is capturing them reaches 100 before the last ones go. It is rare, but a player who has nothing left to flip and every face-up piece boxed in has no legal move, and loses.':
-    '先得到 100 分的一方立即获胜，即使棋盘上还有棋子。一方的棋子不可能被吃光：十六颗棋子共值 135 分，吃子的一方在吃到最后几颗之前就已经到 100 分了。很少见但可能发生的情况是：一方已经没有可翻的暗子，所有已翻开的棋子又都被困住，没有合法着法，这一方判负。',
-  'If 40 plies (single moves) pass with no flip and no capture, the game ends and the player with more points wins. Equal points is a draw. A flip or a capture starts the count again.':
-    '如果连续 40 步（双方各走一步各算一步）没有翻子也没有吃子，对局结束，分数高的一方获胜。分数相同则为和棋。翻子或吃子会让计数重新开始。',
-  'A repeated position never draws here, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing. A **chase** is a quiet move, with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
-    '这里重复局面不会判和，这一点和[暗棋](/rules/banqi)不同；最后由 40 步的计数来决定。唯一的限制在捉子上。**捉子**是指不翻子也不吃子的一步，走完之后，你走的那颗子可以吃掉对方刚走的那颗子。',
-  'You may not play a chase that brings about the same position, with the same player to move, for the third time or later, unless forbidding those chases would leave you with no legal move. A flip or capture starts that count again. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.':
-    '如果一步捉子会让同一局面（且轮到同一方走）出现第三次或更多次，你就不能走这一步，除非禁止这些捉子后你没有其他合法着法。翻子或吃子会让这个计数重新开始。被捉的子永远可以逃；既逃跑又反过来威胁的一步算普通着法；如果捉子一直把那颗子赶到新的交叉点，局面不会重复，也就不受限制。',
-  'Can you capture a face-down piece?': '可以吃暗子吗？',
-  'No. Only face-up enemy pieces can be captured, by the cannon or anything else. A face-down piece can only be flipped.':
-    '不行。只有已翻开的敌子才能被吃，炮和其他棋子都一样。暗子只能被翻开。',
-  'Is the general special in Three Kingdoms banqi?': '三国暗棋里的将有什么特别吗？',
-  'Only in its value. It is worth 20, the most of any piece, and it slides like a chariot. It is not royal: capturing it scores 20 points, and the usual endings still apply.':
-    '只特别在分值上。它值 20 分，是所有棋子里最高的，走法和车一样。但它不是必须保护的主帅：吃掉它得 20 分，对局照常按上面的方式结束。',
-  'How is this different from regular banqi?': '它和标准暗棋有什么不同？',
-  'Regular banqi is played on a 4 by 8 board, pieces move one square, cannons capture by jumping, and other captures follow a rank order with the soldier able to take the general. Three Kingdoms banqi uses a 9 by 5 board, xiangqi moves and no rank order, and you win on points, not by taking every enemy piece.':
-    '标准暗棋在 4×8 的棋盘上下，棋子每次走一格，炮隔子吃子，其他棋子按大小顺序吃子，其中兵可以吃将。三国暗棋用 9×5 的棋盘，按象棋的走法，没有大小顺序，靠得分获胜，而不是吃光对方的棋子。',
+  'A capture scores the value of the piece taken: **5** for a soldier, advisor or elephant, **10** for a cannon or horse, **15** for a chariot and **20** for the general. The points go to whoever captures, no matter who flipped the piece.':
+    '每次吃子都得到被吃棋子的分值：兵、士、象 **5** 分，炮、马 **10** 分，车 **15** 分，将 **20** 分。不论棋子是谁翻开的，分数都归吃子的一方。',
+  'The first player to reach **100 points** wins at once, with pieces still on the board. One color’s sixteen pieces are worth 135, so a side is never wiped out first.':
+    '先得到 **100 分**的一方立即获胜，即使棋盘上还有棋子。每一方的十六颗棋子共值 135 分，所以还没被吃光，对局就已经结束了。',
+  'If 40 plies (single moves) pass with no flip and no capture, the game ends: more points wins, and equal points is a draw. A player with no legal move loses, which is rare: it takes nothing left to flip and every face-up piece boxed in.':
+    '如果连续 40 步（双方各走一步各算一步）没有翻子也没有吃子，对局结束，分数高的一方获胜，分数相同则为和棋。没有合法着法的一方判负，但这种情况很少见：必须已经没有可翻的暗子，而且所有已翻开的己方棋子都被困住。',
+  'Repeating a position is never a draw, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing.':
+    '这里重复局面不会判和，这一点和[暗棋](/rules/banqi)不同；最后由 40 步的计数来决定。唯一的限制在捉子上。',
+  'A *chase* is a move with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
+    '*捉子*是指不翻子也不吃子的一步，走完之后，你走的那颗子可以吃掉对方刚走的那颗子。',
+  'You may not play a chase that brings about the same position, with the same player to move, for the third time.':
+    '如果一步捉子会让同一局面（且轮到同一方走）出现第三次，你就不能走这一步。',
+  'The chased piece may always run. A move that runs and threatens back is an ordinary move, and a chase onto new points never repeats.':
+    '被捉的子永远可以逃；既逃跑又反过来威胁的一步算普通着法；如果追捉让对方的子走到新的交叉点，局面就不会重复。',
+  'If forbidding the chase would leave you with no legal move, you may play it.':
+    '如果禁止这步捉子后你就没有其他合法着法，那么仍然可以走这一步。',
+  'A flip or a capture starts both counts again: the 40 plies and the chase repetitions.':
+    '翻子或吃子会让两个计数都重新开始：无翻子、无吃子的 40 步计数，以及捉子的重复局面计数。',
+  'Compared with banqi': '与暗棋的比较',
+  'Three Kingdoms banqi': '三国暗棋',
+  '4 by 8 squares': '4×8 格',
+  '9 by 5 points': '横 9 点、纵 5 点',
+  'One square; the cannon jumps to capture': '每次走一格；炮隔子吃子',
+  'Xiangqi moves': '象棋走法',
+  'By rank; the soldier can take the general': '按大小吃子；兵可以吃将',
+  'Any piece takes any piece': '任何棋子都能吃任何棋子',
+  'Take or trap every enemy piece': '吃光或困住所有敌子',
+  'First to 100 points': '先得 100 分',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋规则：15×15 无禁手与发放开局',
@@ -2991,9 +3007,9 @@ const ZH_HANS: Record<string, string> = {
   Piece: '棋子',
   'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
     '写给国际象棋棋手的象棋规则：九宫与楚河汉界、炮架、将帅对脸、长将、记谱法，以及一盘可以逐步重演的名局。可在 Mistboard 上与皮卡鱼引擎或朋友对弈。',
-  'For chess players: six rule changes': '写给国际象棋棋手：六条不同的规则',
-  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
-    '如果你会下国际象棋，象棋的大部分内容都会让你觉得熟悉。下面是最容易让国际象棋棋手吃亏的六条规则，后文会逐一详细说明。',
+  'For chess players: seven rule changes': '写给国际象棋棋手：七条不同的规则',
+  'If you already play chess, most of xiangqi will feel familiar. These are the seven rules that catch chess players out, each explained in full further down.':
+    '如果你会下国际象棋，象棋的大部分内容都会让你觉得熟悉。下面是最容易让国际象棋棋手吃亏的七条规则，后文会逐一详细说明。',
   Rule: '规则',
   'In chess': '国际象棋',
   'In xiangqi': '象棋',
@@ -3013,9 +3029,14 @@ const ZH_HANS: Record<string, string> = {
   'The knight jumps and the bishop slides': '马可以跳子，象沿斜线滑行',
   'The horse and elephant are stopped by a piece in their path':
     '马和象会被路上的棋子挡住（蹩马腿、塞象眼）',
-  'Promotion and castling': '升变与王车易位',
-  'Both exist': '两者都有',
-  'Neither exists; a soldier never promotes': '两者都没有；兵卒永不升变',
+  'The pawn and the soldier': '国际象棋的兵与象棋的兵卒',
+  'Moves forward, captures diagonally, and promotes on the last rank':
+    '向前走，斜着吃子，到达底线时升变',
+  'Moves and captures the same way, and never promotes': '走法与吃法相同，永不升变',
+  'The king and a rook move together once': '王和一个车一同移动一次',
+  'Does not exist': '没有',
+  'A soldier changes once, at the river, and never promotes. Before the river it steps one point straight ahead. Once across, it may also step one point to the left or right, and it captures on those same points, never diagonally. A soldier that reaches the last rank can only step sideways.':
+    '兵卒只在过河时改变一次走法，并且永不升变。过河前，它只能向正前方走一个点。过河后，它还可以向左或向右走一个点，吃子也在这些点上，从不斜着吃。走到底线的兵卒只能横走。',
   'Setting up': '摆棋',
   "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
     '从红方的左手边起，纵线依次标为 a 到 i；横线从红方一侧起标为 1 到 10，因此红方底线是第 1 横线。每一方底线从一边到另一边依次是：车、马、象、士、将、士、象、马、车。双方的炮都放在 b 线和 h 线、底线往前两格的位置（红方在第 3 横线），五个兵卒再往前一格，放在 a、c、e、g、i 五条线上。',
@@ -3023,7 +3044,8 @@ const ZH_HANS: Record<string, string> = {
     '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
-  'Corrected the Chinese wording of the repetition rule.': '更正了重复局面规则的中文表述。',
+  'Added diagrams of how the soldier moves, for chess players.':
+    '为国际象棋棋手添加了兵卒走法的图示。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了与普通象棋 120 个半回合无吃子规则的比较。实验对局仍采用记录时的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -3322,8 +3344,8 @@ const ZH_HANS: Record<string, string> = {
     '迷雾国际象棋就是只能看到己方棋子所能到达的格子的国际象棋。没有人提示将军，所以王要被吃掉才算输，王也可能易位到自己看不见的攻击之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
-  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
-    '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪，并与国际象棋、将棋、朝鲜象棋同源于更古老的印度游戏恰图兰卡。今天它是世界上参与人数最多的棋类游戏之一。',
+  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. The Chinese Xiangqi Association [puts the number of players in China in the hundreds of millions](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html).':
+    '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪。它的姊妹棋是朝鲜半岛的朝鲜象棋和日本的将棋，与国际象棋则有更远的共同起源。中国象棋协会[认为中国的象棋棋手数以亿计](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html)。',
   'Fog Xiangqi Rules': '迷雾象棋规则',
   'Fog of War Xiangqi Rules': '迷雾象棋规则：战争迷雾下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
@@ -4682,8 +4704,18 @@ const ZH_HANS: Record<string, string> = {
   Inaccuracy: '不精确',
   Mistake: '失误',
   Blunder: '严重失误',
-  'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.':
-    '紫色骰子表示揭得不走运，灰色表示接近预期，青绿色表示幸运。点数越多、颜色越深，影响越大。',
+  'How the review measures luck': '复盘如何衡量运气',
+  'Once the piece turns over, we compare two numbers:': '棋子揭开后，我们比较两个数值：',
+  'your winning chance with the piece you actually got;': '实际揭出这枚棋子时，你的获胜机会；',
+  'the average over every piece you could have got.': '所有可能揭出的棋子所对应的平均获胜机会。',
+  'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.':
+    '两者之差就是这次揭子的运气。棋子旁的骰子会显示它：揭出的棋子好于平均时为青绿色，差于平均时为紫色，接近平均时为灰色；点数越多，影响越大。着法列表会给出数值，例如 +12%。',
+  'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.':
+    '举个例子：这次可能揭出三枚棋子中的一枚，一枚车、两枚兵。揭出车时，你的获胜机会是 70；揭出兵时是 45。平均值为 (70 + 45 + 45) / 3，约为 53。如果揭出车，这次就走运了 17 个百分点；如果揭出兵，就不走运了 8 个百分点。',
+  '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.':
+    '“可能揭出”指的是你无法排除的棋子。包括你所有仍未揭开的棋子，以及对手在它们尚未揭开时吃掉的你的棋子，因为你从未见过那些棋子是什么。',
+  "Luck averages out to zero over many flips, by design. Adding up a game's dice tells you who drew better. Your accuracy tells you who played better. The two never mix, so a lucky flip cannot flatter your accuracy and an unlucky one cannot spoil it.":
+    '按这种计算方式，经过很多次揭子后，运气的平均值会趋近于零。把一盘棋的骰子数值加起来，可以看出谁揭得更好。准确率则告诉你谁下得更好。两者从不混在一起，所以揭得幸运不会抬高你的准确率，揭得不幸也不会拉低它。',
   'Illustrative examples. The same revealed piece can be lucky or unlucky depending on the position.':
     '示意图。同一种揭出的棋子，在不同局面下可能幸运，也可能不幸。',
   'Very unlucky': '非常不幸',
@@ -4737,15 +4769,17 @@ const ZH_HANS: Record<string, string> = {
     '同一盘棋，逐步评分。点击曲线或棋谱，回到局势转折的地方。',
   'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
     '已分析的揭棋对局，显示优势曲线、双方准确率和着法标记。',
-  'Good decisions and lucky flips are different': '好决定和好手气是两回事',
-  'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.':
-    '一步棋可以选得很好，却揭出不走运的棋子。着法质量符号评价揭子前的选择；骰子标记表示这次揭出的棋子，比其他可能揭出的棋子好或差多少。',
+  'How the review grades a move': '复盘如何为着法评分',
+  'AB-JChess, the strongest jieqi bot on Mistboard, grades your review. Before each move, it estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
+    'Mistboard 上最强的揭棋引擎 AB-JChess 为复盘评分。每步棋之前，它都会估计你的获胜机会，范围是 0 到 100。普通着法的评分方式与 Lichess 评国际象棋相同：把你的着法与引擎找到的最佳着法比较。如果你的着法损失了至少 5 个百分点的获胜机会，就会被标为不精确；损失达到 10 个百分点是失误，达到 15 个百分点是严重失误。你的准确率就是根据每步棋的这些损失计算出来的。',
+  'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.':
+    '揭开暗子的着法更难评，因为还没有人知道下面是什么。因此，引擎用平均值来评估这一步。它会考虑对你而言仍可能是暗子的每一种棋子，计算揭出该种棋子时你的获胜机会，再按这种棋子剩余的数量加权。我们评分用的就是这个平均值。评分评价的是你根据当时已知信息作出的选择，所以绝不会取决于实际揭出了什么。',
   'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
     '符号评价决定，骰子说明揭子的结果。两者都会显示在棋子旁和棋谱里。',
   'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.':
     '揭棋局面：移动后的棋子旁有着法质量符号和揭子运气骰子，棋谱中显示更好的着法。',
-  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
-    '当另一步明显更好时，复盘会给出最佳着法建议。你可以开启候选着法，探索更多选择。准确率只衡量决定，所以揭得幸运不会抬高它，揭得不幸也不会拉低它。',
+  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates.':
+    '当另一步明显更好时，复盘会给出最佳着法建议。你可以开启候选着法，探索更多选择。',
   'The same decision and luck marks on a phone.': '手机上也有同样的决定和运气标记。',
   'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.':
     '手机上的同一盘揭棋复盘，显示着法质量和揭子运气注解。',
@@ -5780,8 +5814,8 @@ const ZH_HANS: Record<string, string> = {
   'Checkmate the general, or leave your opponent with no legal move: unlike Western chess, stalemate is a loss for the player who cannot move. In practice games are decided by getting the chariots onto open files early, keeping cannons behind a screen, and using soldiers that have crossed the river as attacking pieces. The eight engine levels on this page start well below club strength, and the post-game review shows where a game turned.':
     '将死对方的将，或让对方无子可走：和国际象棋不同，困毙算输。实战中胜负常取决于尽早出车占据开放线、让炮位于炮架后方、以及把过河兵当作进攻棋子使用。本页的八个引擎等级从远低于棋社水平起步，赛后复盘会指出一盘棋在哪里转折。',
   'When was xiangqi invented?': '象棋是什么时候发明的？',
-  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.':
-    '带炮的现代象棋在中国宋代（960 至 1279 年）定型。它的前身可以再往前追溯几百年，并与国际象棋、将棋、朝鲜象棋同源于更古老的印度游戏恰图兰卡。',
+  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess.':
+    '带炮的现代象棋在中国宋代（960 至 1279 年）定型。它的前身可以再往前追溯几百年。它的姊妹棋是朝鲜半岛的朝鲜象棋和日本的将棋，与国际象棋则有更远的共同起源。',
   'What is the difference between xiangqi and chess?': '象棋和国际象棋有什么不同？',
   'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.':
     '棋子放在 9×10 的交叉点上，而不是格子里。楚河汉界把棋盘分成两半，九宫限制将和士的活动。炮隔子吃，马会被蹩腿，象不能过河，兵没有升变。困毙算输而不是和棋。',
@@ -6177,6 +6211,7 @@ const ZH_HANS: Record<string, string> = {
   MOVE: '走子',
   'BEFORE THE RIVER': '过河前',
   'ACROSS THE RIVER': '过河后',
+  'ON THE LAST RANK': '到达底线',
   // fog xiangqi
   "RED'S VIEW": '红方视野',
   "RED'S VIEW BEFORE": '红方视野：之前',
@@ -6498,7 +6533,8 @@ const ZH_HANS: Record<string, string> = {
     '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
   'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
-  'Corrected how a face-down piece is described.': '更正了对暗子走法的说明。',
+  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
+    '补充了复盘如何为揭子着法评分及衡量运气的说明，并明确由 AB-JChess 为复盘评分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
@@ -6515,8 +6551,8 @@ const ZH_HANS: Record<string, string> = {
   "Material counted on the engine's own value table.": '子力按引擎自己的价值表计算。',
   'The games measure this engine, not banqi between people.':
     '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
-  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
-    '新增引擎的构建过程：自我对弈、价值表、搜索的平台期和重复局面的修复。',
+  "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
+    '第 8 级现在在这套搜索上加入了一个训练好的神经网络。第 1 到第 7 级就是本文介绍的经典引擎。这个网络暂未公开，之后会发布，届时本页会更新说明。',
   'Added an FAQ on what the bot cannot see, and the sample game as a study.':
     '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
   'The Treasure figure now shows the five moves the rules allow, not eight.':
@@ -6892,16 +6928,16 @@ const ZH_HANS: Record<string, string> = {
   'The Future of Fog Variants on Mistboard': 'Mistboard 迷雾变体的未来',
   'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
     '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。为什么它们的运行成本太高、哪些功能会保留，以及要怎样才能让它们回来。',
-  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
-    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。和朋友对弈、规则页面以及所有已完成的对局都会保留。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. For now, playing a friend stays. The rules pages and every finished game stay too.':
+    '迷雾国际象棋和迷雾象棋的机器人将于 2026 年 12 月 8 日下线。目前，和朋友对弈仍会保留；规则页面以及所有已完成的对局也都会保留。',
   'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
     '迷雾机器人必须记住迷雾背后所有可能的局面。在复杂的深局中，这会达到数亿个局面，所需内存远远超出这些对局值得的投入。',
   "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
     '在 12 月 8 日前登录并战胜 Misty，该棋种的留名徽章就会一直留在你的个人主页上：迷雾国际象棋一枚，迷雾象棋一枚。',
   'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
     '从 6 月起，Mistboard 一直在运行 Misty，一个会下[迷雾国际象棋](/rules/fog-chess)和[迷雾象棋](/rules/fog-xiangqi)的机器人。在这两种棋里，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，两个迷雾机器人都将下线。**',
-  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
-    '为了在看不见全盘的情况下下好棋，Misty 会追踪迷雾背后所有可能的局面。在漫长而复杂的对局里，这需要的内存远远超过服务器能为这少数玩家承担的。和朋友对弈、两个规则页面以及所有已完成的对局都会保留。',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. For now, games against a friend stay. Both rules pages and every finished game stay too.':
+    '为了在看不见全盘的情况下下好棋，Misty 会追踪迷雾背后所有可能的局面。在漫长而复杂的对局里，这需要的内存远远超过服务器能为这少数玩家承担的。目前，和朋友对弈仍会保留；两个规则页面以及所有已完成的对局也都会保留。',
   Timeline: '时间线',
   'This announcement': '本公告',
   'The Fog Chess and Fog Xiangqi legacy badges go live.':
@@ -7013,8 +7049,10 @@ const ZH_HANT: Record<string, string> = {
   '10,000 games played': '已下完 10,000 盤棋',
   'How the first 10,000 games on Mistboard came in, which variants and bots people played, and who played them.':
     'Mistboard 最初的 10,000 盤棋是怎樣累積起來的：大家下了哪些棋類變體、和哪些電腦對弈，以及在這裡下棋的都是哪些玩家。',
-  'Mistboard passed 10,000 finished games on November 8.':
-    '11 月 8 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
+  'Mistboard passed 10,000 finished games on November 7.':
+    '11 月 7 日，Mistboard 已完成的對局總數突破了 10,000 盤。',
+  'Weeks now end at midnight Pacific time, as on the statistics page, which moves the weekly counts slightly.':
+    '每週現在在太平洋時間午夜結束，與統計頁面一致，因此每週的數字略有變化。',
   'Jieqi is 66% of them.': '揭棋佔其中的 66%。',
   'All but 98 were against a bot.': '除了 98 盤，其餘都是和電腦下的。',
   'The 15 players with at least 100 games were in 40% of them.':
@@ -7025,11 +7063,11 @@ const ZH_HANT: Record<string, string> = {
     '一個帳號，或一個以訪客身分下棋的瀏覽器，算一位玩家。',
   'The first 1,000 games on Mistboard took four months. The next 9,000 took 39 days.':
     'Mistboard 最初的 1,000 盤棋用了四個月。接下來的 9,000 盤只用了 39 天。',
-  'Finished games each week, Monday to Sunday, from June 1 to November 1.':
-    '6 月 1 日至 11 月 1 日每週（週一至週日）完成的對局數。',
+  'Finished games each week, Monday to Sunday in Pacific time, through November 1.':
+    '截至 11 月 1 日每週（週一至週日，太平洋時間）完成的對局數。',
   'Oct 26 to Nov 1': '10 月 26 日至 11 月 1 日',
-  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,647, and one player played 557 of those. The [statistics page](/stats) keeps the running count.':
-    '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,647 盤，其中一位玩家下了 557 盤。[統計頁面](/stats)會持續更新計數。',
+  'Every week since October 5 has had more than 1,000 games. The busiest was the week of October 26, with 2,670, and one player played 578 of those. The [statistics page](/stats) keeps the running count.':
+    '從 10 月 5 日那一週起，每週都超過了 1,000 盤。最多的是 10 月 26 日那一週，共 2,670 盤，其中一位玩家下了 578 盤。[統計頁面](/stats)會持續更新計數。',
   'What people played': '大家下了什麼棋',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 66% of all games. It was 61% of the first 1,000. Crazyhouse Xiangqi, Xiangqi Mahjong and Gomoku launched after that post.':
     '[揭棋](/rules/jieqi)，也就是棋子背面朝上開局的象棋，佔全部對局的 66%。在最初的 1,000 盤中，這個比例是 61%。上一篇文章之後，瘋狂屋象棋、象棋麻將和五子棋陸續推出。',
@@ -7073,38 +7111,39 @@ const ZH_HANT: Record<string, string> = {
     '感謝每一位來下過棋、回報過問題，或把 Mistboard 介紹給朋友和觀眾的人。因為有你們，才有 Mistboard；每一盤棋，我們都心懷感激。',
   "Our mission is to bring people together across cultures through Chinese chess and the world's classic strategy games.":
     '我們的使命是透過象棋和世界各地的經典策略遊戲，讓不同文化的人們走到一起。',
-  'Week of 2026-06-01: 2 games': '2026-06-01 當週：2 盤',
+  'Week of 2026-05-25: 1 games': '2026-05-25 當週：1 盤',
+  'Week of 2026-06-01: 1 games': '2026-06-01 當週：1 盤',
   Jun: '6月',
   'Week of 2026-06-08: 3 games': '2026-06-08 當週：3 盤',
-  'Week of 2026-06-15: 0 games': '2026-06-15 當週：0 盤',
-  'Week of 2026-06-22: 3 games': '2026-06-22 當週：3 盤',
+  'Week of 2026-06-15: 1 games': '2026-06-15 當週：1 盤',
+  'Week of 2026-06-22: 2 games': '2026-06-22 當週：2 盤',
   'Week of 2026-06-29: 0 games': '2026-06-29 當週：0 盤',
   'Week of 2026-07-06: 1 games': '2026-07-06 當週：1 盤',
   'Week of 2026-07-13: 19 games': '2026-07-13 當週：19 盤',
   'Week of 2026-07-20: 13 games': '2026-07-20 當週：13 盤',
   'Week of 2026-07-27: 30 games': '2026-07-27 當週：30 盤',
-  'Week of 2026-08-03: 27 games': '2026-08-03 當週：27 盤',
+  'Week of 2026-08-03: 28 games': '2026-08-03 當週：28 盤',
   Aug: '8月',
-  'Week of 2026-08-10: 21 games': '2026-08-10 當週：21 盤',
-  'Week of 2026-08-17: 45 games': '2026-08-17 當週：45 盤',
-  'Week of 2026-08-24: 21 games': '2026-08-24 當週：21 盤',
+  'Week of 2026-08-10: 20 games': '2026-08-10 當週：20 盤',
+  'Week of 2026-08-17: 46 games': '2026-08-17 當週：46 盤',
+  'Week of 2026-08-24: 20 games': '2026-08-24 當週：20 盤',
   'Week of 2026-08-31: 67 games': '2026-08-31 當週：67 盤',
-  'Week of 2026-09-07: 68 games': '2026-09-07 當週：68 盤',
+  'Week of 2026-09-07: 72 games': '2026-09-07 當週：72 盤',
   Sep: '9月',
-  'Week of 2026-09-14: 154 games': '2026-09-14 當週：154 盤',
-  'Week of 2026-09-21: 381 games': '2026-09-21 當週：381 盤',
-  'Week of 2026-09-28: 596 games': '2026-09-28 當週：596 盤',
-  'Week of 2026-10-05: 1,314 games': '2026-10-05 當週：1,314 盤',
+  'Week of 2026-09-14: 155 games': '2026-09-14 當週：155 盤',
+  'Week of 2026-09-21: 386 games': '2026-09-21 當週：386 盤',
+  'Week of 2026-09-28: 616 games': '2026-09-28 當週：616 盤',
+  'Week of 2026-10-05: 1,309 games': '2026-10-05 當週：1,309 盤',
   Oct: '10月',
-  'Week of 2026-10-12: 1,118 games': '2026-10-12 當週：1,118 盤',
-  'Week of 2026-10-19: 1,304 games': '2026-10-19 當週：1,304 盤',
-  'Week of 2026-10-26: 2,647 games': '2026-10-26 當週：2,647 盤',
+  'Week of 2026-10-12: 1,153 games': '2026-10-12 當週：1,153 盤',
+  'Week of 2026-10-19: 1,322 games': '2026-10-19 當週：1,322 盤',
+  'Week of 2026-10-26: 2,670 games': '2026-10-26 當週：2,670 盤',
   'Mistboard passes 10,000 games': 'Mistboard 突破 10,000 盤對局',
   'Everyone who plays on Mistboard.': '每一位在 Mistboard 下棋的玩家。',
   'A round Chinese chess piece marked with the character for ten thousand, beside the number 10,000 with a small grey cloud at its last zero.':
     '一枚刻著「萬」字的圓形象棋棋子，旁邊是數字 10,000，最後一個零處有一朵灰色小雲。',
-  'Finished games per week, rising from a handful in June to a peak of 2,647':
-    '每週完成的對局數，從 6 月的寥寥幾盤上升到最高 2,647 盤',
+  'Finished games per week, rising from a handful in June to a peak of 2,670':
+    '每週完成的對局數，從 6 月的寥寥幾盤上升到最高 2,670 盤',
   'Below, from a game on Mistboard, a red advisor chases a black chariot that has one free square, so the two shuttle back and forth.':
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
@@ -7218,67 +7257,78 @@ const ZH_HANT: Record<string, string> = {
   'Three Kingdoms Banqi Rules': '三國暗棋規則',
   'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.':
     '三國暗棋是在 9×5 棋盤上按象棋走法下的暗棋。任何棋子都能吃任何棋子，每次吃子都得分，先到 100 分的一方獲勝。',
-  'All thirty-two pieces start face-down. On your turn, flip one or move one of your face-up pieces.':
-    '三十二顆棋子開局時全部蓋著。輪到你時，翻開一顆暗子，或走一顆已翻開的己方棋子。',
-  'Pieces move much as in xiangqi, with no palace and no river, and any piece can capture any face-up enemy piece.':
-    '棋子的走法和象棋大致相同，但沒有九宮，也沒有河界，任何棋子都能吃任何已翻開的敵子。',
-  'Every capture scores points, and the first player to 100 wins.':
+  'All thirty-two pieces start face-down. On your turn, flip one or move one of yours.':
+    '三十二顆棋子開局時全部蓋著。輪到你時，翻開一顆暗子，或走一顆己方棋子。',
+  'Pieces move as in xiangqi with no palace and no river, and any piece can capture any face-up enemy piece.':
+    '棋子按象棋的走法走，但沒有九宮，也沒有河界，任何棋子都能吃任何已翻開的敵子。',
+  'Every capture scores points. The first player to 100 wins.':
     '每次吃子都得分，先到 100 分的一方獲勝。',
   'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.':
     '在神來也（Gamesofa）的暗棋 App 裡玩過三國模式、想看到成文規則的暗棋玩家，以及對計分版暗棋感興趣的象棋棋手。',
-  'Three Kingdoms banqi takes banqi’s face-down luck and gives the pieces [xiangqi](/rules/xiangqi) moves with the limits taken off. Chariots sweep the board, cannons fire over tiles, horses leap, and there is no rank order: a soldier can take the general. Every capture scores points, and the first player to 100 wins, so a game turns on what to flip, what to grab and what to leave hanging.':
-    '三國暗棋保留了暗棋翻子的運氣成分，又讓棋子用上[象棋](/rules/xiangqi)的走法，並取消了其中的限制。車橫掃全盤，炮隔子開火，馬隨處跳，而且沒有大小順序：兵也可以吃將。每次吃子都得分，先到 100 分的一方獲勝，所以一盤棋的關鍵就在於該翻哪顆子、該吃哪顆子、哪顆子可以先放著不管。',
-  'The mode comes from Gamesofa’s banqi app, which added it in July 2026 without a written rulebook. This page gives the rules Mistboard plays; where the app leaves one unclear, the choice is ours. Mistboard is not affiliated with Gamesofa.':
-    '這個模式來自神來也（Gamesofa）的暗棋 App，它在 2026 年 7 月加入這個模式，但沒有寫成文的規則。本頁列出的是 Mistboard 採用的規則；App 沒有說清楚的地方，由我們自行決定。Mistboard 與神來也沒有任何關聯。另有一種三人玩的遊戲也叫三國暗棋，本頁講的是兩人對局的版本。',
-  'As in [banqi](/rules/banqi), all thirty-two pieces start shuffled and face-down. Here they stand on the points where the lines cross, in four blocks of eight with the middle row and column empty, on a board 9 points wide and 5 deep with no river. Each color has a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers.':
-    '和[暗棋](/rules/banqi)一樣，三十二顆棋子開局時全部洗亂、蓋著。這裡的棋子放在線與線相交的交叉點上，分成四塊，每塊八顆，中間一行和中間一列空著。棋盤橫向 9 個點、縱向 5 個點，沒有河界。每一方有一將、二士、二象、二車、二馬、二炮、五兵。',
-  'On your turn you do one thing: flip a face-down piece, or move one of your face-up pieces. A flip takes the whole turn.':
-    '每回合只做一件事：翻開一顆暗子，或走一顆已翻開的己方棋子。翻子就用掉了整個回合。',
-  'The first flip of the game decides the colors. Whoever makes it plays the color they turned up. After that you may flip any face-down piece, including one that turns out to be your opponent’s.':
-    '全局第一次翻子決定雙方顏色：翻出什麼顏色，翻子的一方就執什麼顏色。之後你可以翻任何一顆暗子，翻出來的也可能是對方的棋子。',
-  'How the pieces move': '棋子怎麼走',
-  'Pieces move much as in [xiangqi](/rules/xiangqi), but there is no palace and no river, so no piece is confined to one part of the board. Pieces in between do not block a horse or an elephant. The general slides like a chariot, and a soldier can step backward.':
-    '棋子的走法和[象棋](/rules/xiangqi)大致相同，但沒有九宮，也沒有河界，所以沒有哪顆子被限制在棋盤的某一部分。馬和象不會被中間的棋子擋住。將像車一樣直走，兵可以後退。',
-  '**Any piece can capture any piece.** There is no rank order as in banqi: a soldier can take a chariot, and an advisor can take the general. Only face-up enemy pieces can be captured. Nothing can move onto a face-down piece, and it stops a sliding piece like any other. The general is an ordinary piece: there is no check, and capturing it only scores its points.':
-    '**任何棋子都能吃任何棋子。**這裡沒有暗棋那樣的大小順序：兵可以吃車，士可以吃將。只有已翻開的敵子才能被吃。任何棋子都不能走到暗子上，暗子也和其他棋子一樣會擋住直走的子。將只是普通棋子：沒有將軍一說，吃掉它也只是得到它的分數。',
-  'In the diagrams, dots show where the piece can move, rings show what it can capture, and blank tiles are face-down pieces.':
-    '圖中的圓點表示棋子可以走到的位置，圓環表示它可以吃的棋子，空白的棋子是暗子。',
-  '**General:** slides any distance along a row or column until a piece stops it. Below, it can take the black cannon.':
-    '**將：**沿橫線或直線走任意距離，直到被棋子擋住。下圖中，它可以吃黑方的炮。',
-  '**Chariot:** moves exactly like the general. Below, it can take the black horse, but the face-down tile blocks it.':
-    '**車：**走法和將完全一樣。下圖中，它可以吃黑方的馬，但會被暗子擋住。',
-  '**Cannon:** slides like the chariot when it moves. To capture along a row or column, it jumps exactly one piece, face-up or face-down, of either color. Below, it can take the general by jumping the face-down tile, but not the soldier next to it, with nothing to jump.':
-    '**炮：**不吃子時和車一樣走。吃子時沿橫線或直線隔正好一顆子，這顆子已翻開或蓋著都可以，哪一方的都行。下圖中，它可以隔著暗子吃將，但吃不到緊貼著它的兵，因為中間沒有子可隔。',
-  '**Horse:** jumps one point straight and one diagonally, even when a piece stands next to it. Below, all four points straight next to it are occupied, and it still reaches all eight of its points, including the capture on the black chariot.':
-    '**馬：**走日字，先直走一點再斜走一點，旁邊有子也不受影響。下圖中，它上下左右相鄰的四個點都有子，它仍然能走到全部八個落點，其中包括吃掉黑方的車。',
-  '**Elephant:** jumps two points diagonally, even over a piece. Below, it jumps the pieces next to it, but cannot land on the face-down tile at the bottom right.':
-    '**象：**走田字，沿斜線跳兩點，中間有子也能跳過去。下圖中，它跳過身邊的棋子，但不能落在右下角的暗子上。',
-  '**Advisor:** steps one point diagonally. Below, it can take the general, but not the face-down tile.':
-    '**士：**沿斜線走一點。下圖中，它可以吃將，但不能吃暗子。',
-  '**Soldier:** steps one point forward, backward or sideways. Below, it can take the chariot in front of it.':
-    '**兵：**向前、向後或向左右走一點。下圖中，它可以吃前面的車。',
+  'Banqi’s face-down luck with the long reach of [xiangqi](/rules/xiangqi) pieces: chariots sweep the board, cannons fire over hidden tiles, and a soldier can take the general. The game turns on what to flip, what to grab and what to leave hanging.':
+    '暗棋翻子的運氣，加上[象棋](/rules/xiangqi)棋子的遠程威力：車橫掃全盤，炮隔著暗子開火，兵也可以吃將。一盤棋的關鍵就在於該翻哪顆子、該吃哪顆子、哪顆子可以先放著不管。',
+  'Gamesofa’s banqi app introduced Three Kingdoms banqi in July 2026. Mistboard plays its own version and is not affiliated with Gamesofa.':
+    '神來也（Gamesofa）的暗棋 App 在 2026 年 7 月推出了三國暗棋。Mistboard 採用自己的版本，與神來也沒有任何關聯。',
+  'The board is 9 points wide and 5 deep, with no river and no palace. Each color has the full xiangqi set: a general, two advisors, two elephants, two chariots, two horses, two cannons and five soldiers. All thirty-two pieces start shuffled face-down in four blocks of eight, with the middle row and column empty.':
+    '棋盤橫向 9 個點、縱向 5 個點，沒有河界，也沒有九宮。每一方都有一整套象棋棋子：一將、二士、二象、二車、二馬、二炮、五兵。三十二顆棋子開局時全部洗亂、蓋著，分成四塊，每塊八顆，中間一行和中間一列空著。',
+  'Your turn': '輪到你時',
+  'On your turn, **flip** a face-down piece or **move** one of your face-up pieces. The first flip of the game sets the colors: you play the color you turned up. After that you may flip any face-down piece, even one that turns out to be your opponent’s.':
+    '輪到你時，**翻開**一顆暗子，或**走**一顆已翻開的己方棋子。全局第一次翻子決定雙方顏色：翻出什麼顏色，你就執什麼顏色。之後你可以翻任何一顆暗子，翻出來的也可能是對方的棋子。',
+  'Pieces move as in xiangqi, with three changes': '按象棋走法，但有三處不同',
+  '**No palace and no river.** Every piece can go anywhere on the board.':
+    '**沒有九宮，也沒有河界。**每種棋子都能走遍全盤。',
+  '**Nothing blocks a horse or an elephant.** They jump even when a piece stands next to them.':
+    '**馬和象不會被中間的棋子擋住。**即使旁邊有子，也能跳過去。',
+  '**The general slides like a chariot, and a soldier can step backward.**':
+    '**將像車一樣直走，兵可以後退。**',
+  '**Any piece takes any piece.** There is no rank order, so a soldier can take a chariot. Only face-up enemy pieces can be captured: nothing moves onto a face-down piece, and it blocks a sliding piece like any other. The general is not royal. There is no check, and taking it scores 20 points.':
+    '**任何棋子都能吃任何棋子。**這裡沒有大小順序，兵也可以吃車。只有已翻開的敵子才能被吃：任何棋子都不能走到暗子上，暗子也和其他棋子一樣會擋住直走的子。將只是普通棋子，沒有將軍一說，吃掉它得 20 分。',
+  'Each piece': '各棋子的走法',
+  '*In the diagrams, dots are moves, rings are captures and blank tiles are face-down pieces.*':
+    '*圖中的圓點表示可走的位置，圓環表示可吃的棋子，空白棋子是暗子。*',
+  '**Chariot:** slides any distance along a row or column. Here it can take the black horse, and the face-down tile blocks it.':
+    '**車：**沿橫線或直線走任意距離。圖中，它可以吃黑方的馬，但會被暗子擋住。',
+  '**General:** moves exactly like the chariot. Here it can take the black cannon.':
+    '**將：**走法和車完全一樣。圖中，它可以吃黑方的炮。',
+  '**Cannon:** moves like the chariot, but captures by jumping exactly one piece of either color, face-up or face-down. Here it can take the general over the face-down tile, but not the soldier next to it.':
+    '**炮：**不吃子時和車一樣走，吃子時要隔正好一顆子，這顆子已翻開或蓋著都可以，哪一方的都行。圖中，它可以隔著暗子吃將，但吃不到緊貼著它的兵。',
+  '**Horse:** one point straight, then one diagonally. Here all four neighbors are taken and it still reaches all eight points, including the black chariot.':
+    '**馬：**走日字，先直走一點再斜走一點。圖中，它上下左右相鄰的四個點都有子，仍然能走到全部八個落點，其中包括吃掉黑方的車。',
+  '**Elephant:** two points diagonally, over any piece. Here it cannot land on the face-down tile at the bottom right.':
+    '**象：**走田字，沿斜線跳兩點，中間有子也能跳過去。圖中，它不能落在右下角的暗子上。',
+  '**Advisor:** one point diagonally. Here it can take the general, but not the face-down tile.':
+    '**士：**沿斜線走一點。圖中，它可以吃將，但不能吃暗子。',
+  '**Soldier:** one point forward, backward or sideways. Here it can take the chariot in front of it.':
+    '**兵：**向前、向後或向左右走一點。圖中，它可以吃前面的車。',
   Scoring: '計分',
-  'Every capture scores the value of the piece taken: 5 for a soldier, advisor or elephant, 10 for a cannon or horse, 15 for a chariot and 20 for the general. Each color’s sixteen pieces are worth 135 in all.':
-    '每次吃子都得到被吃棋子的分值：兵、士、象 5 分，炮、馬 10 分，車 15 分，將 20 分。每一方的十六顆棋子合計 135 分。',
-  'Points go to the player who captures. If you flipped one of your opponent’s pieces earlier, taking it later still scores for you.':
-    '分數歸吃子的一方。即使那顆對方的棋子是你之前翻開的，後來吃掉它照樣算你的分。',
-  'The first player to reach 100 points wins at once, even with pieces still on the board. A side can never be wiped out: its sixteen pieces are worth 135, so whoever is capturing them reaches 100 before the last ones go. It is rare, but a player who has nothing left to flip and every face-up piece boxed in has no legal move, and loses.':
-    '先得到 100 分的一方立即獲勝，即使棋盤上還有棋子。一方的棋子不可能被吃光：十六顆棋子共值 135 分，吃子的一方在吃到最後幾顆之前就已經到 100 分了。很少見但可能發生的情況是：一方已經沒有可翻的暗子，所有已翻開的棋子又都被困住，沒有合法著法，這一方判負。',
-  'If 40 plies (single moves) pass with no flip and no capture, the game ends and the player with more points wins. Equal points is a draw. A flip or a capture starts the count again.':
-    '如果連續 40 步（雙方各走一步各算一步）沒有翻子也沒有吃子，對局結束，分數高的一方獲勝。分數相同則為和棋。翻子或吃子會讓計數重新開始。',
-  'A repeated position never draws here, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing. A **chase** is a quiet move, with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
-    '這裡重複局面不會判和，這一點和[暗棋](/rules/banqi)不同；最後由 40 步的計數來決定。唯一的限制在捉子上。**捉子**是指不翻子也不吃子的一步，走完之後，你走的那顆子可以吃掉對方剛走的那顆子。',
-  'You may not play a chase that brings about the same position, with the same player to move, for the third time or later, unless forbidding those chases would leave you with no legal move. A flip or capture starts that count again. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.':
-    '如果一步捉子會讓同一局面（且輪到同一方走）出現第三次或更多次，你就不能走這一步，除非禁止這些捉子後你沒有其他合法著法。翻子或吃子會讓這個計數重新開始。被捉的子永遠可以逃；既逃跑又反過來威脅的一步算普通著法；如果捉子一直把那顆子趕到新的交叉點，局面不會重複，也就不受限制。',
-  'Can you capture a face-down piece?': '可以吃暗子嗎？',
-  'No. Only face-up enemy pieces can be captured, by the cannon or anything else. A face-down piece can only be flipped.':
-    '不行。只有已翻開的敵子才能被吃，炮和其他棋子都一樣。暗子只能被翻開。',
-  'Is the general special in Three Kingdoms banqi?': '三國暗棋裡的將有什麼特別嗎？',
-  'Only in its value. It is worth 20, the most of any piece, and it slides like a chariot. It is not royal: capturing it scores 20 points, and the usual endings still apply.':
-    '只特別在分值上。它值 20 分，是所有棋子裡最高的，走法和車一樣。但它不是必須保護的主帥：吃掉它得 20 分，對局照常按上面的方式結束。',
-  'How is this different from regular banqi?': '它和標準暗棋有什麼不同？',
-  'Regular banqi is played on a 4 by 8 board, pieces move one square, cannons capture by jumping, and other captures follow a rank order with the soldier able to take the general. Three Kingdoms banqi uses a 9 by 5 board, xiangqi moves and no rank order, and you win on points, not by taking every enemy piece.':
-    '標準暗棋在 4×8 的棋盤上下，棋子每次走一格，炮隔子吃子，其他棋子按大小順序吃子，其中兵可以吃將。三國暗棋用 9×5 的棋盤，按象棋的走法，沒有大小順序，靠得分獲勝，而不是吃光對方的棋子。',
+  'A capture scores the value of the piece taken: **5** for a soldier, advisor or elephant, **10** for a cannon or horse, **15** for a chariot and **20** for the general. The points go to whoever captures, no matter who flipped the piece.':
+    '每次吃子都得到被吃棋子的分值：兵、士、象 **5** 分，炮、馬 **10** 分，車 **15** 分，將 **20** 分。不論棋子是誰翻開的，分數都歸吃子的一方。',
+  'The first player to reach **100 points** wins at once, with pieces still on the board. One color’s sixteen pieces are worth 135, so a side is never wiped out first.':
+    '先得到 **100 分**的一方立即獲勝，即使棋盤上還有棋子。每一方的十六顆棋子共值 135 分，所以還沒被吃光，對局就已經結束了。',
+  'If 40 plies (single moves) pass with no flip and no capture, the game ends: more points wins, and equal points is a draw. A player with no legal move loses, which is rare: it takes nothing left to flip and every face-up piece boxed in.':
+    '如果連續 40 步（雙方各走一步各算一步）沒有翻子也沒有吃子，對局結束，分數高的一方獲勝，分數相同則為和棋。沒有合法著法的一方判負，但這種情況很少見：必須已經沒有可翻的暗子，而且所有已翻開的己方棋子都被困住。',
+  'Repeating a position is never a draw, unlike in [banqi](/rules/banqi); the 40-ply count settles it. The one limit is on chasing.':
+    '這裡重複局面不會判和，這一點和[暗棋](/rules/banqi)不同；最後由 40 步的計數來決定。唯一的限制在捉子上。',
+  'A *chase* is a move with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved.':
+    '*捉子*是指不翻子也不吃子的一步，走完之後，你走的那顆子可以吃掉對方剛走的那顆子。',
+  'You may not play a chase that brings about the same position, with the same player to move, for the third time.':
+    '如果一步捉子會讓同一局面（且輪到同一方走）出現第三次，你就不能走這一步。',
+  'The chased piece may always run. A move that runs and threatens back is an ordinary move, and a chase onto new points never repeats.':
+    '被捉的子永遠可以逃；既逃跑又反過來威脅的一步算普通著法；如果追捉讓對方的子走到新的交叉點，局面就不會重複。',
+  'If forbidding the chase would leave you with no legal move, you may play it.':
+    '如果禁止這步捉子後你就沒有其他合法著法，那麼仍然可以走這一步。',
+  'A flip or a capture starts both counts again: the 40 plies and the chase repetitions.':
+    '翻子或吃子會讓兩個計數都重新開始：無翻子、無吃子的 40 步計數，以及捉子的重複局面計數。',
+  'Compared with banqi': '與暗棋的比較',
+  'Three Kingdoms banqi': '三國暗棋',
+  '4 by 8 squares': '4×8 格',
+  '9 by 5 points': '橫 9 點、縱 5 點',
+  'One square; the cannon jumps to capture': '每次走一格；炮隔子吃子',
+  'Xiangqi moves': '象棋走法',
+  'By rank; the soldier can take the general': '按大小吃子；兵可以吃將',
+  'Any piece takes any piece': '任何棋子都能吃任何棋子',
+  'Take or trap every enemy piece': '吃光或困住所有敵子',
+  'First to 100 points': '先得 100 分',
   'banqi soldier': '兵',
   'banqi cannon': '炮',
   'Gomoku Rules: Freestyle 15x15 and Dealt Openings': '五子棋規則：15×15 無禁手與發放開局',
@@ -10070,9 +10120,9 @@ const ZH_HANT: Record<string, string> = {
   Piece: '棋子',
   'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
     '寫給西洋棋棋手的象棋規則：九宮與楚河漢界、炮架、將帥對臉、長將、記譜法，以及一盤可以逐步重演的名局。可在 Mistboard 上與皮卡魚引擎或朋友對弈。',
-  'For chess players: six rule changes': '寫給西洋棋棋手：六條不同的規則',
-  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
-    '如果你會下西洋棋，象棋的大部分內容都會讓你覺得熟悉。下面是最容易讓西洋棋棋手吃虧的六條規則，後文會逐一詳細說明。',
+  'For chess players: seven rule changes': '寫給西洋棋棋手：七條不同的規則',
+  'If you already play chess, most of xiangqi will feel familiar. These are the seven rules that catch chess players out, each explained in full further down.':
+    '如果你會下西洋棋，象棋的大部分內容都會讓你覺得熟悉。下面是最容易讓西洋棋棋手吃虧的七條規則，後文會逐一詳細說明。',
   Rule: '規則',
   'In chess': '西洋棋',
   'In xiangqi': '象棋',
@@ -10092,9 +10142,14 @@ const ZH_HANT: Record<string, string> = {
   'The knight jumps and the bishop slides': '騎士可以跳子，主教沿斜線滑行',
   'The horse and elephant are stopped by a piece in their path':
     '馬和象會被路上的棋子擋住（蹩馬腿、塞象眼）',
-  'Promotion and castling': '升變與王車易位',
-  'Both exist': '兩者都有',
-  'Neither exists; a soldier never promotes': '兩者都沒有；兵卒永不升變',
+  'The pawn and the soldier': '西洋棋的兵與象棋的兵卒',
+  'Moves forward, captures diagonally, and promotes on the last rank':
+    '向前走，斜著吃子，到達底線時升變',
+  'Moves and captures the same way, and never promotes': '走法與吃法相同，永不升變',
+  'The king and a rook move together once': '王和一個車一同移動一次',
+  'Does not exist': '沒有',
+  'A soldier changes once, at the river, and never promotes. Before the river it steps one point straight ahead. Once across, it may also step one point to the left or right, and it captures on those same points, never diagonally. A soldier that reaches the last rank can only step sideways.':
+    '兵卒只在過河時改變一次走法，並且永不升變。過河前，它只能向正前方走一個點。過河後，它還可以向左或向右走一個點，吃子也在這些點上，從不斜著吃。走到底線的兵卒只能橫走。',
   'Setting up': '擺棋',
   "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
     '從紅方的左手邊起，直線依次標為 a 到 i；橫線從紅方一側起標為 1 到 10，因此紅方底線是第 1 橫線。每一方底線從一邊到另一邊依次是：車、馬、相、仕、帥、仕、相、馬、車。雙方的炮都放在 b 線和 h 線、底線往前兩格的位置（紅方在第 3 橫線），五個兵卒再往前一格，放在 a、c、e、g、i 五條線上。',
@@ -10102,7 +10157,8 @@ const ZH_HANT: Record<string, string> = {
     '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
   'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
     '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
-  'Corrected the Chinese wording of the repetition rule.': '更正了重複局面規則的中文表述。',
+  'Added diagrams of how the soldier moves, for chess players.':
+    '為西洋棋棋手添加了兵卒走法的圖示。',
   'Corrected the comparison with standard xiangqi’s 120-ply no-capture rule. The experimental games retain their recorded limits.':
     '更正了與普通象棋 120 個半回合無吃子規則的比較。實驗對局仍採用記錄時的上限。',
   'Clarified that Atomic Xiangqi keeps its 60-ply no-capture limit while standard xiangqi uses 120 plies.':
@@ -10377,8 +10433,8 @@ const ZH_HANT: Record<string, string> = {
     '迷霧西洋棋就是只能看到己方棋子所能到達的格子的西洋棋。沒有人提示將軍，所以王要被吃掉才算輸，王也可能易位到自己看不見的攻擊之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧西洋棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
-  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
-    '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀，並與西洋棋、將棋、朝鮮象棋同源於更古老的印度遊戲恰圖蘭卡。今天它是世界上參與人數最多的棋類遊戲之一。',
+  'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. The Chinese Xiangqi Association [puts the number of players in China in the hundreds of millions](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html).':
+    '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀。它的姊妹棋是朝鮮半島的朝鮮象棋和日本的將棋，與西洋棋則有更遠的共同起源。中國象棋協會[認為中國的象棋棋手數以億計](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html)。',
   'Fog Xiangqi Rules': '迷霧象棋規則',
   'Fog of War Xiangqi Rules': '迷霧象棋規則：戰爭迷霧下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
@@ -11432,8 +11488,18 @@ const ZH_HANT: Record<string, string> = {
   Inaccuracy: '不精確',
   Mistake: '失誤',
   Blunder: '嚴重失誤',
-  'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.':
-    '紫色骰子表示揭得不走運，灰色表示接近預期，青綠色表示幸運。點數越多、顏色越深，影響越大。',
+  'How the review measures luck': '復盤如何衡量運氣',
+  'Once the piece turns over, we compare two numbers:': '棋子揭開後，我們比較兩個數值：',
+  'your winning chance with the piece you actually got;': '實際揭出這枚棋子時，你的獲勝機會；',
+  'the average over every piece you could have got.': '所有可能揭出的棋子所對應的平均獲勝機會。',
+  'The difference is your luck on that flip. The die by the piece shows it: teal when the piece was better than average, violet when it was worse, grey when it was close, with more pips for a bigger swing. The move list gives the number, such as +12%.':
+    '兩者之差就是這次揭子的運氣。棋子旁的骰子會顯示它：揭出的棋子好於平均時為青綠色，差於平均時為紫色，接近平均時為灰色；點數越多，影響越大。著法列表會給出數值，例如 +12%。',
+  'An example: three pieces could be under the flip, a chariot and two soldiers. With the chariot your winning chance would be 70. With a soldier it would be 45. The average is (70 + 45 + 45) / 3, about 53. If the chariot comes up, that flip was 17 points lucky. If a soldier comes up, it was 8 points unlucky.':
+    '舉個例子：這次可能揭出三枚棋子中的一枚，一枚車、兩枚兵。揭出車時，你的獲勝機會是 70；揭出兵時是 45。平均值為 (70 + 45 + 45) / 3，約為 53。如果揭出車，這次就走運了 17 個百分點；如果揭出兵，就不走運了 8 個百分點。',
+  '"Could have got" means the pieces you cannot rule out. That is every piece of yours still face-down, plus any of your pieces your opponent captured while they were still face-down, since you never saw what those were.':
+    '「可能揭出」指的是你無法排除的棋子。包括你所有仍未揭開的棋子，以及對手在它們尚未揭開時吃掉的你的棋子，因為你從未見過那些棋子是什麼。',
+  "Luck averages out to zero over many flips, by design. Adding up a game's dice tells you who drew better. Your accuracy tells you who played better. The two never mix, so a lucky flip cannot flatter your accuracy and an unlucky one cannot spoil it.":
+    '按這種計算方式，經過很多次揭子後，運氣的平均值會趨近於零。把一盤棋的骰子數值加起來，可以看出誰揭得更好。準確率則告訴你誰下得更好。兩者從不混在一起，所以揭得幸運不會抬高你的準確率，揭得不幸也不會拉低它。',
   'Illustrative examples. The same revealed piece can be lucky or unlucky depending on the position.':
     '示意圖。同一種揭出的棋子，在不同局面下可能幸運，也可能不幸。',
   'Very unlucky': '非常不幸',
@@ -11487,15 +11553,17 @@ const ZH_HANT: Record<string, string> = {
     '同一盤棋，逐步評分。點擊曲線或棋譜，回到局勢轉折的地方。',
   'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
     '已分析的揭棋對局，顯示優勢曲線、雙方準確率和著法標記。',
-  'Good decisions and lucky flips are different': '好決定和好手氣是兩回事',
-  'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.':
-    '一步棋可以選得很好，卻揭出不走運的棋子。著法質量符號評價揭子前的選擇；骰子標記表示這次揭出的棋子，比其他可能揭出的棋子好或差多少。',
+  'How the review grades a move': '復盤如何為著法評分',
+  'AB-JChess, the strongest jieqi bot on Mistboard, grades your review. Before each move, it estimates your chance of winning, from 0 to 100. A normal move is graded the way Lichess grades chess: we compare your move with the best move the engine found. If your move gave up 5 points of winning chance or more, it is marked an inaccuracy. At 10 points it is a mistake, and at 15 a blunder. Your accuracy score comes from those losses, move by move.':
+    'Mistboard 上最強的揭棋引擎 AB-JChess 為復盤評分。每步棋之前，它都會估計你的獲勝機會，範圍是 0 到 100。普通著法的評分方式與 Lichess 評西洋棋相同：把你的著法與引擎找到的最佳著法比較。如果你的著法損失了至少 5 個百分點的獲勝機會，就會被標為不精確；損失達到 10 個百分點是失誤，達到 15 個百分點是嚴重失誤。你的準確率就是根據每步棋的這些損失計算出來的。',
+  'A move that flips a piece is harder, because nobody knows yet what is underneath. So the engine values that move as an average. It looks at every piece that could still be face-down for you, works out your winning chance if that piece came up, and weights each one by how many of that piece are left. That average is what we grade. The grade is about the choice you made with what you knew, so it never depends on what actually turned over.':
+    '揭開暗子的著法更難評，因為還沒有人知道下面是什麼。因此，引擎用平均值來評估這一步。它會考慮對你而言仍可能是暗子的每一種棋子，計算揭出該種棋子時你的獲勝機會，再按這種棋子剩餘的數量加權。我們評分用的就是這個平均值。評分評價的是你根據當時已知資訊作出的選擇，所以絕不會取決於實際揭出了什麼。',
   'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
     '符號評價決定，骰子說明揭子的結果。兩者都會顯示在棋子旁和棋譜裡。',
   'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.':
     '揭棋局面：移動後的棋子旁有著法質量符號和揭子運氣骰子，棋譜中顯示更好的著法。',
-  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
-    '當另一步明顯更好時，復盤會給出最佳著法建議。你可以開啓候選著法，探索更多選擇。準確率只衡量決定，所以揭得幸運不會抬高它，揭得不幸也不會拉低它。',
+  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates.':
+    '當另一步明顯更好時，復盤會給出最佳著法建議。你可以開啟候選著法，探索更多選擇。',
   'The same decision and luck marks on a phone.': '手機上也有同樣的決定和運氣標記。',
   'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.':
     '手機上的同一盤揭棋復盤，顯示著法質量和揭子運氣註解。',
@@ -12526,8 +12594,8 @@ const ZH_HANT: Record<string, string> = {
   'Checkmate the general, or leave your opponent with no legal move: unlike Western chess, stalemate is a loss for the player who cannot move. In practice games are decided by getting the chariots onto open files early, keeping cannons behind a screen, and using soldiers that have crossed the river as attacking pieces. The eight engine levels on this page start well below club strength, and the post-game review shows where a game turned.':
     '將死對方的將，或讓對方無子可走：和西洋棋不同，困斃算輸。實戰中勝負常取決於盡早出車佔據開放線、讓砲位於砲架後方、以及把過河兵當作進攻棋子使用。本頁的八個引擎等級從遠低於棋社水準起步，賽後覆盤會指出一盤棋在哪裡轉折。',
   'When was xiangqi invented?': '象棋是什麼時候發明的？',
-  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.':
-    '帶砲的現代象棋在中國宋代（960 至 1279 年）定型。它的前身可以再往前追溯幾百年，並與西洋棋、將棋、朝鮮象棋同源於更古老的印度遊戲恰圖蘭卡。',
+  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess.':
+    '帶砲的現代象棋在中國宋代（960 至 1279 年）定型。它的前身可以再往前追溯幾百年。它的姊妹棋是朝鮮半島的朝鮮象棋和日本的將棋，與西洋棋則有更遠的共同起源。',
   'What is the difference between xiangqi and chess?': '象棋和西洋棋有什麼不同？',
   'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.':
     '棋子放在 9×10 的交叉點上，而不是格子裡。楚河漢界把棋盤分成兩半，九宮限制將和士的活動。砲隔子吃，馬會被蹩腿，象不能過河，兵沒有升變。困斃算輸而不是和棋。',
@@ -12923,6 +12991,7 @@ const ZH_HANT: Record<string, string> = {
   MOVE: '走子',
   'BEFORE THE RIVER': '過河前',
   'ACROSS THE RIVER': '過河後',
+  'ON THE LAST RANK': '到達底線',
   // fog xiangqi
   "RED'S VIEW": '紅方視野',
   "RED'S VIEW BEFORE": '紅方視野：之前',
@@ -13028,7 +13097,8 @@ const ZH_HANT: Record<string, string> = {
     '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
   'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
-  'Corrected how a face-down piece is described.': '更正了對暗子走法的說明。',
+  'Added how the review grades a flip and measures luck, and clarified that AB-JChess grades reviews.':
+    '補充了復盤如何為揭子著法評分及衡量運氣的說明，並明確由 AB-JChess 為復盤評分。',
   'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
     '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Corrected a line that overlooked Lại Lý Huynh’s 2022 world rapid title.':
@@ -13045,8 +13115,8 @@ const ZH_HANT: Record<string, string> = {
   "Material counted on the engine's own value table.": '子力按引擎自己的價值表計算。',
   'The games measure this engine, not banqi between people.':
     '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
-  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
-    '新增引擎的構建過程：自我對弈、價值表、搜尋的平台期和重複局面的修復。',
+  "Level 8 now adds a trained neural net to this search. Levels 1 to 7 are the classical engine described here. The net isn't released yet; it will be later, and this page will say so then.":
+    '第 8 級現在在這套搜尋上加入了一個訓練好的神經網路。第 1 到第 7 級就是本文介紹的經典引擎。這個網路暫未公開，之後會發布，屆時本頁會更新說明。',
   'Added an FAQ on what the bot cannot see, and the sample game as a study.':
     '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
   'The Treasure figure now shows the five moves the rules allow, not eight.':
@@ -13488,16 +13558,16 @@ const ZH_HANT: Record<string, string> = {
   'The Future of Fog Variants on Mistboard': 'Mistboard 迷霧變體的未來',
   'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Why they cost too much to run, what stays, and what it would take to bring them back.':
     '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。為什麼它們的運行成本太高、哪些功能會保留，以及要怎樣才能讓它們回來。',
-  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. Playing a friend, the rules pages and every finished game stay.':
-    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。和朋友對弈、規則頁面以及所有已完成的對局都會保留。',
+  'The Fog Chess and Fog Xiangqi bots go offline on December 8, 2026. For now, playing a friend stays. The rules pages and every finished game stay too.':
+    '迷霧西洋棋和迷霧象棋的機器人將於 2026 年 12 月 8 日下線。目前，和朋友對弈仍會保留；規則頁面以及所有已完成的對局也都會保留。',
   'A fog bot has to hold every position the fog could be hiding. In deep games that runs to hundreds of millions of positions, far more memory than its games justify.':
     '迷霧機器人必須記住迷霧背後所有可能的局面。在複雜的深局中，這會達到數億個局面，所需記憶體遠遠超出這些對局值得的投入。',
   "Beat Misty while signed in before December 8 and that game's legacy badge stays on your profile: one for Fog Chess, one for Fog Xiangqi.":
     '在 12 月 8 日前登入並戰勝 Misty，該棋種的留名徽章就會一直留在你的個人頁面上：迷霧西洋棋一枚，迷霧象棋一枚。',
   'Since June, Mistboard has run Misty, a bot that plays [Fog Chess](/rules/fog-chess) and [Fog Xiangqi](/rules/fog-xiangqi), the versions of both games where you see only what your own pieces can reach. **On December 8, 2026, both fog bots go offline.**':
     '從 6 月起，Mistboard 一直在運行 Misty，一個會下[迷霧西洋棋](/rules/fog-chess)和[迷霧象棋](/rules/fog-xiangqi)的機器人。在這兩種棋裡，你只能看到自己的棋子走得到的地方。**2026 年 12 月 8 日，兩個迷霧機器人都將下線。**',
-  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. Games against a friend, both rules pages and every finished game stay.':
-    '為了在看不見全盤的情況下下好棋，Misty 會追蹤迷霧背後所有可能的局面。在漫長而複雜的對局裡，這需要的記憶體遠遠超過伺服器能為這少數玩家承擔的。和朋友對弈、兩個規則頁面以及所有已完成的對局都會保留。',
+  'To play well without seeing the board, Misty tracks every position the fog could be hiding. In long, tangled games that takes far more memory than a server can hold for the few people who play them. For now, games against a friend stay. Both rules pages and every finished game stay too.':
+    '為了在看不見全盤的情況下下好棋，Misty 會追蹤迷霧背後所有可能的局面。在漫長而複雜的對局裡，這需要的記憶體遠遠超過伺服器能為這少數玩家承擔的。目前，和朋友對弈仍會保留；兩個規則頁面以及所有已完成的對局也都會保留。',
   Timeline: '時間軸',
   'This announcement': '本公告',
   'The Fog Chess and Fog Xiangqi legacy badges go live.': '迷霧西洋棋留名和迷霧象棋留名徽章上線。',

@@ -1,7 +1,7 @@
 // Sound subsystem for the live game UI. Extracted from live-render.ts.
 //
 // Owns the audio context, volume tracking, and the policy that decides which
-// sound (move, capture, captured, king-capture, castle, win, lose) to play
+// sound (move, capture, king-capture, castle, win, lose) to play
 // for a given event sequence. Live-render and replay-of-live consume this
 // via the exported `sound` instance + `maybePlaySnapshotSound` and
 // `soundForOwnMove` helpers.
@@ -234,7 +234,7 @@ export function soundForOwnMove(view: PlayerView | null, move: Move): SoundKind 
 }
 
 // Exposed for live-render's replay-of-live keyboard handler — it needs the
-// same own-piece-count diff logic to pick 'captured' vs 'move' on a step.
+// same own-piece-count diff logic to pick 'capture' vs 'move' on a step.
 export function ownPieceCount(view: PlayerView, color: Color): number {
   return Object.values(view.board).filter((piece) => piece?.color === color).length;
 }
@@ -265,7 +265,6 @@ function createSoundController(): SoundController {
     for (const kind of [
       'move',
       'capture',
-      'captured',
       'castle',
       'king-capture',
       'win',
@@ -443,8 +442,6 @@ export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_S
   }
   if (kind === 'capture')
     return [{ delay: 0, duration: 0.11, frequency: 180, gain: 0.075, type: 'triangle' }];
-  if (kind === 'captured')
-    return [{ delay: 0, duration: 0.085, frequency: 130, gain: 0.04, type: 'sine' }];
   if (kind === 'king-capture') {
     return [
       { delay: 0, duration: 0.1, frequency: 523.25, gain: 0.065, type: 'triangle' },
@@ -750,21 +747,6 @@ function woodTonesForSound(kind: SoundKind): SoundTone[] | null {
         },
         { delay: 0, duration: 0.09, frequency: 200, gain: 0.07, type: 'triangle', attack: 0.002 },
       ];
-    case 'captured':
-      // Done to you: lower and softer than a capture you make.
-      return [
-        {
-          delay: 0,
-          duration: 0.03,
-          frequency: 1500,
-          gain: 0.075,
-          type: 'sine',
-          noise: true,
-          q: 0.5,
-          attack: 0.001,
-        },
-        { delay: 0, duration: 0.1, frequency: 165, gain: 0.055, type: 'triangle', attack: 0.003 },
-      ];
     case 'cannon-capture':
       // The xiangqi cannon slam: a hard crack over a deep board boom.
       return [
@@ -977,7 +959,7 @@ export function soundForMove(
   const captured = before.board[event.move.to];
   if (!captured) return 'move';
   if (captured.color === event.color) return 'move';
-  if (liveState.seat !== 'spectator' && captured.color === liveState.seat) return 'captured';
+  if (liveState.seat !== 'spectator' && captured.color === liveState.seat) return 'capture';
   if (captured.role === 'king') return 'king-capture';
   return 'capture';
 }
@@ -993,7 +975,7 @@ function playSanitizedOpponentSound(
 
   const kind =
     ownPieceCount(nextView, liveState.seat) < ownPieceCount(previousView, liveState.seat)
-      ? 'captured'
+      ? 'capture'
       : 'move';
   if (
     shouldDeferHiddenPveOpeningSound(previousView, nextView, liveState.seat, liveState.roomMode)

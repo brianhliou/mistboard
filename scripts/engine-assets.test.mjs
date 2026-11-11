@@ -49,6 +49,15 @@ test('the unchanged upstream Pikafish pin applies the supplied CC0 patch before 
   assert.ok(build.indexOf('sf_make "$work/pikafish/src"') > apply);
 });
 
+test('the Pikafish licence is copied from the file upstream ships at the pin', () => {
+  // Pikafish 6a59ee2f has Copying.txt at its root and no COPYING; copying the
+  // wrong name failed the 2026-11-10 engines build at packaging, after compiling.
+  const build = recipe.slice(recipe.indexOf('  ref=$(pin pikafish.ref)'));
+  const step = build.slice(0, build.indexOf('pikafish_net "$bin"'));
+  assert.match(step, /cp "\$work\/pikafish\/Copying\.txt" "\$bin\/COPYING"/);
+  assert.doesNotMatch(step, /\$work\/pikafish\/COPYING/);
+});
+
 test('the CC0 patch is hashed and watched by the release workflow and all Railway services', () => {
   assert.match(recipe, /^RECIPE_VERSION=4$/m);
   assert.ok(recipeInputs().includes(pikafishPatch));
@@ -530,6 +539,26 @@ test('Banqi serves the published v0.3.0 asset with its verified sha256', () => {
   assert.match(entry[1], /sha=9a5fb0f16438bf5521e321bc64a50417cda4715aac607ba238875db6430da068\b/);
 });
 
+test('Flip Jungle serves v0.6.0 with the private r6 net and keeps its v0.5.1 tablebase', () => {
+  const fetch = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
+  const entry = fetch.match(/^ {2}jungle-flip-engine\)\n([\s\S]*?);;/m);
+  assert.ok(entry);
+  assert.match(entry[1], /repo=brianhliou\/misty-flip-jungle tag=v0\.6\.0 mode=exec/);
+  assert.match(entry[1], /sha=8f5b97a8c4433034e5763f89d913db2d45946a02f9b0d4ed47a27a241395fe33\b/);
+  assert.match(
+    fetch.match(/^ {2}jungle_flip_tb_4.bin\)\n([\s\S]*?);;/m)[1],
+    /tag=v0\.5\.1 mode=data/,
+  );
+  const provider = readFileSync(resolve(repoRoot, 'apps/server/src/jungle-flip-engine.ts'), 'utf8');
+  assert.match(provider, /JUNGLE_FLIP_ENGINE_VERSION = '0\.6\.0'/);
+  assert.doesNotMatch(
+    recipe,
+    /jungle-flip\.jfnn/,
+    'the private net never enters the public engines archive',
+  );
+  assert.ok(railpack.includes('sh /app/scripts/fetch-private-net.sh /app/bin jungle-flip-net'));
+});
+
 test('every release asset railpack fetches has a pinned sha256', () => {
   const script = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
   const fetched = railpackCommands().flatMap((command) => [
@@ -692,13 +721,14 @@ if (process.argv[3] === 'files') console.log('fixture-rapfi.bin');
   }
 });
 
-test('CI supplies the private token to native, browser build and web test consumers', () => {
+test('CI caches the CC0 browser net without credentials; private native nets retain their token', () => {
   const ci = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const secret = `MISTBOARD_PRIVATE_ASSETS_TOKEN: \${{ secrets.MISTBOARD_PRIVATE_ASSETS_TOKEN }}`;
   assert.ok(workflow.includes(secret));
   for (const job of ['build', 'unit-web']) {
     const block = ci.split(/(?=^ {2}[\w-]+:\n)/m).find((part) => part.startsWith(`  ${job}:\n`));
-    assert.ok(block.includes(secret), `${job} must pass the repo secret to the fetch consumer`);
+    assert.ok(!block.includes(secret), `${job} uses the public CC0 net without a repo secret`);
+    assert.ok(block.includes('apps/web/public/engine/pikafish/xiangqi-c07e94a5c7cb.nnue'));
     assert.match(block, /key: engine-nets-.*hashFiles.*net\.json/);
   }
 });

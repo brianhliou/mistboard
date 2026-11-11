@@ -435,6 +435,25 @@ describe('appearance family gating', () => {
     ).toBe(true);
   });
 
+  it('offers touch move confirmation to guests and stores the disabled preference', async () => {
+    await rebuildThemePanel();
+    const toggle = document.querySelector<HTMLInputElement>(
+      '[data-theme-control] .appearance-submenu[data-key="board"] [data-confirm-moves-on-touch-toggle]',
+    );
+    expect(toggle).not.toBeNull();
+    expect(toggle?.checked).toBe(true);
+    expect(toggle?.closest('label')?.textContent).toBe('Confirm moves on touch screens');
+    toggle!.click();
+    expect(
+      JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}')
+        .confirmMovesOnTouch,
+    ).toBe(false);
+    await rebuildThemePanel();
+    expect(
+      document.querySelector<HTMLInputElement>('[data-confirm-moves-on-touch-toggle]')?.checked,
+    ).toBe(false);
+  });
+
   it('has no Flip row: the reveal turn follows the 3D look', async () => {
     // Brian, 2026-10-29: the flip is "tied to 3d".
     await rebuildThemePanel();

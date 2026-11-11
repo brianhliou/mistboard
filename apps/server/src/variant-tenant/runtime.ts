@@ -1,3 +1,4 @@
+import { internalEngineTestFor, isInternalEngineTest } from '../internal-engine-test.js';
 /**
  * Generic event-sourced live-room runtime over a VariantTenant.
  *
@@ -317,6 +318,7 @@ export function createTenantRuntimeRoom<
   options: {
     creatorPreference?: C | 'random';
     now?: number;
+    internalEngineTest?: import('../internal-engine-test.js').InternalEngineTest;
     pveBotId?: string;
     rated?: boolean;
     timeControl?: RoomTimeControl;
@@ -343,6 +345,7 @@ export function createTenantRuntimeRoom<
       roomId,
       gameSpecId: tenant.gameSpecId,
       ...(options.creatorPreference ? { creatorPreference: options.creatorPreference } : {}),
+      ...(options.internalEngineTest ? { internalEngineTest: options.internalEngineTest } : {}),
       ...(options.pveBotId ? { pveBotId: options.pveBotId } : {}),
       ...(options.rated ? { rated: true } : {}),
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
@@ -897,6 +900,11 @@ export function tenantSeatDisplayNames<
     const clientId = room.projection.seats[color];
     if (clientId && tenant.engine?.isEngineClientId(clientId)) {
       const engine = tenant.engine;
+      const internal = internalEngineTestFor(room.events);
+      if (internal?.engineId === clientId) {
+        names[color] = internal.displayName;
+        continue;
+      }
       names[color] = liveSeatEngineName(clientId, room.pveBotId, () =>
         engine.displayName(clientId),
       );
@@ -941,9 +949,48 @@ export function tenantSeatProfiles<
   return profiles;
 }
 
-// The board a client is shown: the `state` half of its snapshot. One function
-// so every surface that shows a seat its board (the room snapshot, the
-// /correspondence inbox card) runs the same redaction for that seat.
+// Project the recipient's durable delivery frontier. Keeping the clock and
+// event prefix with the state prevents snapshots and reconnects leaking a
+// private action that the live event channel is holding.
+export function tenantVisibleRoom<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): TenantRuntimeRoom<Kind, C, M, State, Spec> {
+  const count = tenant.visibility.clientEventCount?.(
+    room.projection.state,
+    room.events,
+    client.seat,
+  );
+  if (count === undefined || count === room.events.length) return room;
+  const events = room.events.slice(0, count);
+  let projection = replayTenantEvents(tenant, events);
+  // Presence and shutdown bookkeeping remain public while a move is held.
+  // Re-derive pause/resume clocks from the visible projection so even their
+  // stored clock anchors cannot expose a private action's timestamp/owner.
+  for (const event of room.events.slice(count)) {
+    if (event.type === 'move-played') continue;
+    const visible =
+      event.type === 'clock-paused'
+        ? tenantPauseEventFor<C, M, Spec>(projection, event.at, event.reason)
+        : event.type === 'clock-resumed'
+          ? tenantResumeEventFor<C, M, Spec>(projection, event.at, event.reason)
+          : event;
+    if (!visible) continue;
+    events.push(visible);
+    projection = applyTenantEvent(tenant, projection, visible);
+  }
+  return { ...room, events, projection };
+}
+
+// The board half of a snapshot and the correspondence inbox card.
 export function tenantSeatStateView<
   Kind extends string,
   C extends string,
@@ -956,6 +1003,7 @@ export function tenantSeatStateView<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): View {
+  room = tenantVisibleRoom(tenant, room, client);
   // Board half of the finished-game reveal, paired with the event half in
   // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
   // can never hand out a full move list beside an empty board, which is what a
@@ -978,6 +1026,7 @@ export function tenantSnapshotPayload<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantSnapshotPayload<C, M, View, Spec> & Record<string, unknown> {
+  room = tenantVisibleRoom(tenant, room, client);
   const state = tenantSeatStateView(tenant, room, client);
   return {
     type: 'snapshot' as const,
@@ -1070,8 +1119,9 @@ function tenantDrawCooldownFor<C extends string>(
  *     snapshot (and the client rebuilds from it), an aborted one has nothing
  *     to replay. A tenant that sets liveHistoryWhenFinished (its finished view
  *     cannot rebuild the game either) gets it for a finished room too.
- * Hello only, not every snapshot: broadcastEventAppended builds a snapshot per
+ * Normally hello only: broadcastEventAppended builds a snapshot per
  * client per move, and the history is O(plies) views.
+ * A tenant with a delivery frontier also includes it in atomic release frames.
  */
 export function tenantLiveHistoryExtras<
   Kind extends string,
@@ -1085,6 +1135,7 @@ export function tenantLiveHistoryExtras<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): { liveHistory?: Array<{ ply: number; view: View }> } {
+  room = tenantVisibleRoom(tenant, room, client);
   const liveHistory = tenant.visibility.liveHistory;
   if (!liveHistory) return {};
   const status = room.projection.state.status.type;
@@ -1243,6 +1294,7 @@ export function tenantEventsForClient<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantClientEvent<C, M, Spec>[] {
+  room = tenantVisibleRoom(tenant, room, client);
   const out: TenantClientEvent<C, M, Spec>[] = [];
   // A finished game hands every client the whole log, unredacted. This is the
   // event half of the same matrix row that opens the board (see
@@ -1264,7 +1316,7 @@ export function tenantEventsForClient<
       ? ((event.type === 'move-played'
           ? { ...event, ply }
           : revealedNonMoveEvent(event)) as TenantClientEvent<C, M, Spec>)
-      : tenant.visibility.clientEventFor(event, client.seat, ply);
+      : tenant.visibility.clientEventFor(event, client.seat, ply, room.events);
     if (visible) out.push(visible);
   }
   return out;
@@ -1297,6 +1349,7 @@ function tenantRoomRevealsTruth<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): boolean {
+  if (internalEngineTestFor(room.events)) return false;
   const spec = maybeGameSpecForId(tenant.gameSpecId);
   if (!spec) return false;
   // A tenant reveals as a unit or not at all. Requiring truthView here is what
@@ -1380,6 +1433,11 @@ export function isTenantEvent<
         event.creatorPreference === 'random' ||
         tenant.rules.isColor(event.creatorPreference)) &&
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
+      (event.internalEngineTest === undefined ||
+        (tenant.gameSpecId === 'banqi' &&
+          isInternalEngineTest(event.internalEngineTest) &&
+          event.rated !== true &&
+          event.pveBotId === undefined)) &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
       (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
       (event.origin === undefined || isTenantGameOrigin(event.origin)) &&

@@ -161,7 +161,8 @@ for (const [job, consumer] of [
     assert.ok(
       cache.includes(`key: engine-nets-\${{ hashFiles('apps/web/public/engine/*/net.json') }}`),
     );
-    assert.ok(cache.includes('apps/web/public/engine/pikafish/pikafish.nnue'));
+    const pikafishNet = JSON.parse(read('apps/web/public/engine/pikafish/net.json')).file;
+    assert.ok(cache.includes(`apps/web/public/engine/pikafish/${pikafishNet}`));
     assert.ok(cache.includes('apps/web/public/engine/rapfi/*.data'));
     // Only Build fetches both files. A shard saving first would leave an
     // immutable, Rapfi-only cache under the shared key on every later run.

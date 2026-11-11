@@ -22,6 +22,13 @@ const scriptPath = join(repoRoot, 'scripts/fetch-private-net.sh');
 const scriptText = readFileSync(scriptPath, 'utf8');
 const NETS = [
   {
+    NAME: 'jungle-flip-net',
+    TAG: 'jungle-flip-r6',
+    ASSET: 'jungle-flip-r6.jfnn',
+    NET: 'jungle-flip.jfnn',
+    SHA: 'b9a51b57f19f34cea8c88694282ee161ec32b9ffa22ed13bc20c64abf50f9b80',
+  },
+  {
     NAME: 'three-kingdoms-banqi-net',
     TAG: 'tk-v17q',
     ASSET: 'three-kingdoms-banqi-v17q.tknn',
@@ -229,7 +236,7 @@ out.write_bytes(pathlib.Path(os.environ[source]).read_bytes())
     );
     assert.ok(engine >= 0);
     assert.equal(
-      commands[engine + (NAME === 'banqi-net' ? 2 : 1)],
+      commands[engine + (NAME === 'jungle-flip-net' ? 3 : NAME === 'banqi-net' ? 2 : 1)],
       `sh /app/scripts/fetch-private-net.sh /app/bin ${NAME}`,
     );
     const pin = scriptText.match(new RegExp(`^  ${NAME}\\)\\n([\\s\\S]*?);;`, 'm'))?.[1];

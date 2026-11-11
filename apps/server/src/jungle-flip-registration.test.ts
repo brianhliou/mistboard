@@ -6,7 +6,10 @@
  */
 
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import type { ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { JUNGLE_FLIP_SPEC_ID } from '@mistboard/game';
 import {
@@ -157,13 +160,23 @@ test('flip jungle create makes a hostable room that hydrates back with its deal,
   });
 });
 
+// A PvE room is refused when the bot cannot run (jungleFlipEngineAvailable), so stand a
+// file in for the binary: these tests seat the engine but never ask it for a move.
 async function withFlag(fn: () => Promise<void>): Promise<void> {
   const previous = process.env[flag];
+  const previousPath = process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH;
+  const dir = mkdtempSync(join(tmpdir(), 'jungle-flip-bin-'));
+  const bin = join(dir, 'jungle-flip-engine');
+  writeFileSync(bin, '');
   process.env[flag] = 'true';
+  process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = bin;
   try {
     await fn();
   } finally {
     if (previous === undefined) delete process.env[flag];
     else process.env[flag] = previous;
+    if (previousPath === undefined) delete process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH;
+    else process.env.MISTBOARD_JUNGLE_FLIP_ENGINE_PATH = previousPath;
+    rmSync(dir, { recursive: true, force: true });
   }
 }

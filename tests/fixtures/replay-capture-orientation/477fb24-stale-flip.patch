@@ -1,0 +1,18 @@
+--- a/apps/web/src/replay.ts
++++ b/apps/web/src/replay.ts
+@@ -1459,7 +1459,6 @@
+     flipBtn.addEventListener('click', () => {
+       boardOrientation = boardOrientation === 'white' ? 'black' : 'white';
+       applyBoardOrientation();
+-      render();
+     });
+   }
+ 
+@@ -1496,7 +1495,6 @@
+           e.preventDefault();
+           boardOrientation = boardOrientation === 'white' ? 'black' : 'white';
+           applyBoardOrientation();
+-          render();
+         }
+       },
+       { signal: abortController.signal },

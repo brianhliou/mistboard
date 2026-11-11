@@ -35,6 +35,13 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Three Kingdoms Banqi is open to everyone.': '三国暗棋向所有人开放。',
+  'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
+    '与朋友休闲对弈，在大厅寻找对手，或挑战 Misty。在 9×5 棋盘上翻子，按象棋走法吃子，先得 100 分获胜。所有对局均不计分。',
+  'Play Three Kingdoms Banqi': '开始下三国暗棋',
+  'Banqi and Flip Jungle now have eight bot levels.': '暗棋和翻翻兽棋的机器人现在都有八个等级。',
+  'Each used to have one bot. In both, Levels 1 to 6 are new and easier, Level 7 is the bot you know, and Level 8 is new: a small neural net trained on the engine’s own games. In banqi it beat Level 7 by 219 Elo in a 120-game match; in Flip Jungle it beat the old bot by 139 Elo at equal thinking time.':
+    '两个游戏原来各只有一个机器人。两边的第 1 到第 6 级都是新的、更容易；第 7 级是你熟悉的那个机器人；第 8 级是新的：一个用引擎自己的对局训练出来的小型神经网络。在暗棋中，它在 120 盘的对抗中比第 7 级高 219 Elo；在翻翻兽棋中，相同思考时间下它比原来的机器人高 139 Elo。',
   '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盘棋。',
   'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
     '最初的 10,000 盘棋是怎样积累起来的，大家下了什么棋，又是哪些人在下。感谢大家来下棋。',
@@ -46,6 +53,12 @@ const ZH_HANS: Record<string, string> = {
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盘上玩休闲自由五子棋，从预设开局开始。可以邀请朋友下一盘计分对局，也可以与八个等级的 Rapfi 机器人对弈。计分对局采用 1+1、3+2 或 5+5 时限，双方均须登录。',
   'Play Gomoku': '开始下五子棋',
+  // ── 2026-11-09 (play Brian by correspondence) ── 通信对局 / 休闲 / 对弈 follow the play catalog's host card.
+  'Play a correspondence game against Brian H. Liou, who builds Mistboard.':
+    '与 Mistboard 的开发者 Brian H. Liou 下一盘通信对局。',
+  'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.':
+    '对手是真人，不是电脑。在通信对局页面的一张卡片上开始一盘休闲对局：选好变体和执子方，双方每步各有两天时间。登录后即可对弈。',
+  'Play Brian H. Liou': '与 Brian H. Liou 对弈',
   // ── 2026-11-02 (AB-JChess-20261031) ── 电脑 / 级 follow the 2026-10-22 jqe entry.
   'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成为最强揭棋电脑。',
   "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
@@ -577,6 +590,13 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Three Kingdoms Banqi is open to everyone.': '三國暗棋向所有人開放。',
+  'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
+    '與朋友休閒對弈，在大廳尋找對手，或挑戰 Misty。在 9×5 棋盤上翻子，按象棋走法吃子，先得 100 分獲勝。所有對局均不計分。',
+  'Play Three Kingdoms Banqi': '開始下三國暗棋',
+  'Banqi and Flip Jungle now have eight bot levels.': '暗棋和翻翻獸棋的機器人現在都有八個等級。',
+  'Each used to have one bot. In both, Levels 1 to 6 are new and easier, Level 7 is the bot you know, and Level 8 is new: a small neural net trained on the engine’s own games. In banqi it beat Level 7 by 219 Elo in a 120-game match; in Flip Jungle it beat the old bot by 139 Elo at equal thinking time.':
+    '兩個遊戲原本各只有一個機器人。兩邊的第 1 到第 6 級都是新的、更容易；第 7 級是你熟悉的那個機器人；第 8 級是新的：一個用引擎自己的對局訓練出來的小型神經網路。在暗棋中，它在 120 盤的對抗中比第 7 級高 219 Elo；在翻翻獸棋中，相同思考時間下它比原來的機器人高 139 Elo。',
   '10,000 games played on Mistboard.': 'Mistboard 已下完 10,000 盤棋。',
   'How the first 10,000 games came in, what people played, and who played them. Thank you for playing.':
     '最初的 10,000 盤棋是怎樣累積起來的，大家下了什麼棋，又是哪些人在下。感謝大家來下棋。',
@@ -588,6 +608,12 @@ const ZH_HANT: Record<string, string> = {
   'Play casual freestyle Gomoku on a 15x15 board with dealt openings, challenge a friend to a rated game, or play the Rapfi bot at eight levels. Rated games use 1+1, 3+2 or 5+5 clocks and require both players to sign in.':
     '在 15×15 棋盤上玩休閒自由五子棋，從預設開局開始。可以邀請朋友下一盤計分對局，也可以與八個等級的 Rapfi 機器人對弈。計分對局採用 1+1、3+2 或 5+5 時限，雙方均須登入。',
   'Play Gomoku': '開始下五子棋',
+  // ── 2026-11-09 (play Brian by correspondence) ── 通信對局 / 休閒 / 對弈 follow the play catalog's host card.
+  'Play a correspondence game against Brian H. Liou, who builds Mistboard.':
+    '與 Mistboard 的開發者 Brian H. Liou 下一盤通信對局。',
+  'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.':
+    '對手是真人，不是電腦。在通信對局頁面的一張卡片上開始一盤休閒對局：選好變體和執子方，雙方每步各有兩天時間。登入後即可對弈。',
+  'Play Brian H. Liou': '與 Brian H. Liou 對弈',
   // ── 2026-11-02 (AB-JChess-20261031) ── 電腦 / 級 follow the 2026-10-22 jqe entry.
   'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成為最強揭棋電腦。',
   "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
@@ -1104,18 +1130,30 @@ const ZH_HANT: Record<string, string> = {
   'Play the engine': '與引擎對弈',
 };
 
+// Vietnamese launch copy; older entries retain their English fallback.
+const VI: Record<string, string> = {
+  'Three Kingdoms Banqi is open to everyone.': 'Cờ úp Tam Quốc đã mở cho mọi người.',
+  'Play casual Three Kingdoms Banqi with a friend, find an opponent in the lobby, or play Misty. Flip pieces on a 9x5 board, capture with xiangqi moves, and race to 100 points. All games are unrated.':
+    'Chơi Cờ úp Tam Quốc giao hữu với bạn bè, tìm đối thủ ở sảnh hoặc đấu với Misty. Lật quân trên bàn 9×5, bắt quân theo cách đi của cờ tướng và đua đến 100 điểm. Mọi ván đều không tính điểm xếp hạng.',
+  'Play Three Kingdoms Banqi': 'Chơi Cờ úp Tam Quốc',
+};
+
 const ANNOUNCEMENT_DICTS: Record<AnnouncementLang, Record<string, string>> = {
   'zh-Hans': ZH_HANS,
   'zh-Hant': ZH_HANT,
 };
 
-function dictFor(locale: Locale): Record<string, string> | null {
+type AnnouncementLocale = Locale | 'vi';
+
+function dictFor(locale: AnnouncementLocale): Record<string, string> | null {
+  if (locale === 'vi') return VI;
   return locale === 'zh-Hans' || locale === 'zh-Hant' ? ANNOUNCEMENT_DICTS[locale] : null;
 }
 
 /** Translate one announcement string, falling back to the English source. */
-export function localizeAnnouncementString(text: string, locale: Locale): string {
-  return personNamesInText(dictFor(locale)?.[text] ?? text, locale);
+export function localizeAnnouncementString(text: string, locale: AnnouncementLocale): string {
+  const translated = dictFor(locale)?.[text] ?? text;
+  return locale === 'vi' ? translated : personNamesInText(translated, locale);
 }
 
 /**
@@ -1123,7 +1161,10 @@ export function localizeAnnouncementString(text: string, locale: Locale): string
  * dictionary) returns the entry untouched, so callers can render the result
  * unconditionally.
  */
-export function localizeAnnouncement(entry: Announcement, locale: Locale): Announcement {
+export function localizeAnnouncement(
+  entry: Announcement,
+  locale: AnnouncementLocale,
+): Announcement {
   const dict = dictFor(locale);
   if (!dict) return entry;
   return {

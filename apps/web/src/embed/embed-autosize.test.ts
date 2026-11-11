@@ -9,8 +9,12 @@ import { EMBED_HEIGHT_MESSAGE } from './embed-card.js';
 function frame(aspect = '702 / 780'): HTMLIFrameElement {
   const el = document.createElement('iframe');
   el.src = '/embed/study/abc/def';
+  // Create a distinct browsing context without loading the embed over HTTP.
+  // happy-dom 21 leaves contentWindow null when iframe page loading is disabled.
+  el.srcdoc = '';
   el.style.aspectRatio = aspect;
   document.body.append(el);
+  expect(el.contentWindow).not.toBeNull();
   autosizeEmbedFrame(el);
   return el;
 }

@@ -26,6 +26,7 @@ import type {
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
+import { selectionMarkSvg } from './board-capture-target.js';
 import {
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
@@ -581,7 +582,7 @@ function selectionLayer(square: XiangqiSquare | null, perspective: XiangqiColor)
   if (!square) return '';
   const coord = coordOf(square);
   const center = intersection(coord.file, coord.rank, perspective);
-  return `<circle class="xq-live-selection-cell" cx="${center.x}" cy="${center.y}" r="30"/>`;
+  return selectionMarkSvg('xq-live-selection-cell', center, CELL, activeLayout, 30);
 }
 
 function hintLayer(

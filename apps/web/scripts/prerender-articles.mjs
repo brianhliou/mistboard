@@ -38,10 +38,7 @@ const define = (key, value) => {
     /* read-only getter we can't override; leave Node's own */
   }
 };
-define('window', win);
-define('document', win.document);
-define('navigator', win.navigator);
-for (const key of [
+const windowGlobals = [
   'HTMLElement',
   'HTMLHeadingElement',
   'HTMLParagraphElement',
@@ -70,8 +67,50 @@ for (const key of [
   'getComputedStyle',
   'requestAnimationFrame',
   'cancelAnimationFrame',
-]) {
-  if (win[key] !== undefined && globalThis[key] === undefined) define(key, win[key]);
+];
+
+function installWindowGlobals(current) {
+  define('window', current);
+  define('document', current.document);
+  define('navigator', current.navigator);
+  for (const key of windowGlobals) {
+    if (current[key] !== undefined) define(key, current[key]);
+  }
+}
+installWindowGlobals(win);
+
+function copyStorage(from, to) {
+  for (const key of ['localStorage', 'sessionStorage']) {
+    to[key].clear();
+    for (let i = 0; i < from[key].length; i++) {
+      const name = from[key].key(i);
+      to[key].setItem(name, from[key].getItem(name));
+    }
+  }
+}
+
+// happy-dom 21 retains per-page DOM state on its Window. Only return serialized
+// markup, close the page even on failure, and restore the bootstrap globals used
+// while loading SSR modules. Constructors must follow the current document too.
+async function renderPage(url, render) {
+  const page = new Window({ url });
+  // Preserve the shared pass's string preferences (e.g. the piece set chosen by
+  // the first article) without carrying its DOM into subsequent pages.
+  copyStorage(win, page);
+  installWindowGlobals(page);
+  try {
+    return await render();
+  } finally {
+    try {
+      copyStorage(page, win);
+    } finally {
+      try {
+        await page.happyDOM.close();
+      } finally {
+        installWindowGlobals(win);
+      }
+    }
+  }
 }
 
 function escapeHtml(str) {
@@ -575,7 +614,9 @@ try {
     const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
     for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
-      const appInner = await renderArticlePageShellForPrerender(article.slug, v.lang);
+      const appInner = await renderPage(host, () =>
+        renderArticlePageShellForPrerender(article.slug, v.lang),
+      );
       const url = `${host}${v.urlPrefix}/${base}/${slug}`;
       const imageUrl = articleOgImageUrl(host, article.slug, v.lang);
       const structuredImage = articleStructuredDataImage(host, article.slug, v.lang);
@@ -723,7 +764,7 @@ try {
   // Chinese page silently. /zh-hans and /zh-hant are the Chinese home pages:
   // before this the path served a directory listing of dist/, and the site had
   // no Chinese URL for the page that matters most to a Chinese search.
-  const { renderLandingShellForPrerender } = await server.ssrLoadModule('/src/landing.ts');
+  const { renderLandingPageForPrerender } = await server.ssrLoadModule('/src/landing.ts');
   const { homeStructuredDataScripts } = await server.ssrLoadModule('/src/home-structured-data.ts');
   // The English home keeps the description index.html already carries; the
   // JSON-LD repeats each page's own description rather than a second copy.
@@ -760,12 +801,10 @@ try {
     `<link rel="alternate" hreflang="x-default" href="${host}/" />`,
   ].join('');
   for (const variant of homeVariants) {
-    win.happyDOM.setURL(`${host}${variant.path}`);
-    const landingInner = renderLandingShellForPrerender();
+    let homeHtml = await renderPage(`${host}${variant.path}`, () =>
+      renderLandingPageForPrerender(shell, variant.htmlLang),
+    );
     const url = `${host}${variant.path === '/' ? '/' : variant.path}`;
-    let homeHtml = shell
-      .replace('<html lang="en">', `<html lang="${variant.htmlLang}">`)
-      .replace('<div id="app"></div>', `<div id="app">${landingInner}</div>`);
     if (variant.meta) {
       homeHtml = injectPageMeta(homeHtml, {
         title: variant.meta.title,
@@ -785,7 +824,6 @@ try {
     await fs.writeFile(resolve(distDir, variant.file), homeHtml, 'utf-8');
     console.log(`prerendered ${variant.path} (${variant.file}, lang=${variant.htmlLang})`);
   }
-  win.happyDOM.setURL(host);
 
   // /blog, /zh-hans/blog, /zh-hant/blog: the post index, once per interface
   // language. Authored data only, so the baked DOM is the page a reader gets.
@@ -803,8 +841,9 @@ try {
     ['mistboard', 'community'].map((view) => ({ v, view })),
   )) {
     const head = articlesIndexPrerenderHead(host, v.lang, view);
-    win.happyDOM.setURL(head.url);
-    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang, view);
+    const blogIndexInner = await renderPage(head.url, () =>
+      renderArticlesIndexShellForPrerender(v.lang, view),
+    );
     if (view === 'community') {
       const problems = crawlerCopyProblems(blogIndexInner);
       if (problems.length) throw new Error(`${head.url}: ${problems.join('; ')}`);
@@ -843,8 +882,9 @@ try {
   // collide.
   for (const v of baseVariants) {
     const head = rulesIndexPrerenderHead(host, v.lang);
-    win.happyDOM.setURL(head.url);
-    const rulesIndexInner = await renderRulesIndexShellForPrerender(v.lang);
+    const rulesIndexInner = await renderPage(head.url, () =>
+      renderRulesIndexShellForPrerender(v.lang),
+    );
     let rulesIndexHtml = shell
       .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
       .replace(
@@ -868,7 +908,6 @@ try {
     await fs.writeFile(file, rulesIndexHtml, 'utf-8');
     console.log(`prerendered ${v.urlPrefix}/rules (${v.langDir ? `${v.langDir}/` : ''}rules.html)`);
   }
-  win.happyDOM.setURL(host);
 
   // Each live post's card art as one self-contained SVG, read by the server's
   // /thumb/article/<slug>.png route. The feeds link the PNG with a content
@@ -965,36 +1004,38 @@ try {
   );
   const routeMappings = homeVariants.map(({ path, file }) => ({ route: path, file }));
   for (const row of rows) {
-    win.happyDOM.setURL(`${host}${row.route}`);
-    const module = await server.ssrLoadModule(`/${row.module}`);
-    const args =
-      row.args ??
-      (row.openapi
-        ? [row.locale, buildOpenApiDocument(host)]
-        : row.variant
-          ? [row.locale, row.variant]
-          : row.existing && row.locales.length === 1 && row.route !== '/patron' && !row.headExport
-            ? []
-            : [row.locale]);
-    const inner = await module[row.export](...args);
-    if (!row.existing || row.route.endsWith('/learn/xiangqi')) {
-      const problems = crawlerCopyProblems(inner);
-      if (problems.length) throw new Error(`${row.route}: ${problems.join('; ')}`);
-    }
-    const params = row.variant ? { variant: variantDisplayLabel(row.variant) } : {};
-    const head = row.headExport
-      ? module[row.headExport](host, row.locale)
-      : {
-          title:
-            row.metaByLocale?.[row.locale]?.title ??
-            row.title ??
-            `${t(row.titleKey, params, row.locale)} | Mistboard`,
-          description:
-            row.metaByLocale?.[row.locale]?.description ??
-            row.description ??
-            t(row.descriptionKey, params, row.locale),
-          url: `${host}${row.route}`,
-        };
+    const { inner, head } = await renderPage(`${host}${row.route}`, async () => {
+      const module = await server.ssrLoadModule(`/${row.module}`);
+      const args =
+        row.args ??
+        (row.openapi
+          ? [row.locale, buildOpenApiDocument(host)]
+          : row.variant
+            ? [row.locale, row.variant]
+            : row.existing && row.locales.length === 1 && row.route !== '/patron' && !row.headExport
+              ? []
+              : [row.locale]);
+      const inner = await module[row.export](...args);
+      if (!row.existing || row.route.endsWith('/learn/xiangqi')) {
+        const problems = crawlerCopyProblems(inner);
+        if (problems.length) throw new Error(`${row.route}: ${problems.join('; ')}`);
+      }
+      const params = row.variant ? { variant: variantDisplayLabel(row.variant) } : {};
+      const head = row.headExport
+        ? module[row.headExport](host, row.locale)
+        : {
+            title:
+              row.metaByLocale?.[row.locale]?.title ??
+              row.title ??
+              `${t(row.titleKey, params, row.locale)} | Mistboard`,
+            description:
+              row.metaByLocale?.[row.locale]?.description ??
+              row.description ??
+              t(row.descriptionKey, params, row.locale),
+            url: `${host}${row.route}`,
+          };
+      return { inner, head };
+    });
     let html = shell
       .replace('<html lang="en">', `<html lang="${row.locale}">`)
       .replace(
@@ -1022,7 +1063,6 @@ try {
     resolve(distDir, 'prerender-routes.json'),
     `${JSON.stringify(prerenderRouteManifest(rows, routeMappings), null, 2)}\n`,
   );
-  win.happyDOM.setURL(host);
 
   const alternateProblems = await prerenderAlternateProblems(distDir, host);
   if (alternateProblems.length) {
@@ -1058,5 +1098,6 @@ try {
   console.error('prerender failed:', err);
   process.exitCode = 1;
 } finally {
+  await win.happyDOM.close();
   await server.close();
 }

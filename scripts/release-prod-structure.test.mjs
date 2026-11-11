@@ -88,7 +88,7 @@ test('changelog retries reuse all committed lines, including a changelog HEAD, b
     const options = { changelog: [entry] };
     const git = (args) => {
       if (args[0] === 'status') return '';
-      if (args[0] === 'show') return before;
+      if (args[0] === 'show') return args[1] === 'HEAD^:CHANGELOG.md' ? '## 2026-11\n' : before;
       if (args[0] === 'log') return subject;
       if (args[0] === 'diff-tree')
         return subject.startsWith('docs') ? 'CHANGELOG.md' : 'scripts/fix.mjs';
@@ -112,7 +112,10 @@ test('changelog retries reuse all committed lines, including a changelog HEAD, b
     assert.equal(plan.after, before);
     assert.equal(release.changelogCommit ?? null, null, 'no new changelog commit');
     options.changelog.push({ heading: 'Fixed', text: 'A new line' });
-    assert.throws(() => vm.runInContext('checkChangelogPreconditions()', context), /already has/);
+    assert.throws(
+      () => vm.runInContext('checkChangelogPreconditions()', context),
+      /already has|changelog commit differs/,
+    );
     assert.throws(() => vm.runInContext('commitChangelog()', context), /already has/);
     options.changelog = [entry, entry];
     assert.throws(() => vm.runInContext('checkChangelogPreconditions()', context), /given twice/);

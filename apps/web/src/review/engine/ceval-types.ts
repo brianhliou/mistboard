@@ -90,7 +90,7 @@ export interface CevalRequest {
   onUpdate?: (update: CevalUpdate) => void;
 }
 
-/** Bytes of a large engine asset fetched so far (Pikafish's 51 MB net).
+/** Bytes of a large engine asset fetched so far (Pikafish's CC0 net (about 11 MB)).
  *  `total` is 0 when the response carried no Content-Length. */
 export interface CevalLoadProgress {
   loaded: number;

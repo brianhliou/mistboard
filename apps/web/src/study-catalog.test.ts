@@ -141,14 +141,13 @@ describe('create-study variant picker', () => {
     expect(STUDY_ELIGIBLE_SPEC_IDS).toContain('duck-xiangqi');
   });
 
-  // Three Kingdoms banqi (#628) is eligible and unlaunched: its studies are
-  // admin-only, so the picker offers it to an admin and to nobody else.
-  it('offers an unlaunched admin-only variant to an admin only', () => {
+  // Launched TK studies are offered to players and admins alike.
+  it('offers launched Three Kingdoms Banqi studies to everyone', () => {
     const offered = (isAdmin: boolean) =>
       [...buildStudyVariantSelect('variant', DEFAULT_STUDY_VARIANT, () => isAdmin).options].map(
         (option) => option.value,
       );
-    expect(offered(false)).not.toContain('three-kingdoms-banqi');
+    expect(offered(false)).toContain('three-kingdoms-banqi');
     expect(offered(true)).toContain('three-kingdoms-banqi');
     // Retired variants stay out for an admin too: admin-only is a list, not a
     // blanket "admins see everything".

@@ -38,10 +38,8 @@ export function xiangqiMahjongEnabled(): boolean {
   return import.meta.env.VITE_XIANGQI_MAHJONG_ENABLED === 'true';
 }
 
-// Three Kingdoms banqi (#628): this build flag opens the playtest to everyone
-// and is set only locally, never in prod. On prod an admin account gets it
-// without the flag (#684); the entry reads three-kingdoms-banqi-access.ts, and
-// the public surfaces (rules page, rail) read this flag alone.
+// Three Kingdoms Banqi build-time play gate, off by default. Public content
+// follows publicSurface; coordinate the flag with the launch release.
 export function threeKingdomsBanqiEnabled(): boolean {
   return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
 }

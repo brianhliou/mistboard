@@ -56,6 +56,7 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
@@ -332,7 +333,7 @@ export async function playDuckXiangqiEngineMoveIfReady(
       return search.best;
     },
     validate: (uci) => legalTurnForUci(legalTurns, uci),
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {

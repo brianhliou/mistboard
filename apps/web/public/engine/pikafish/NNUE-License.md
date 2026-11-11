@@ -1,15 +1,8 @@
-# Networks
+# CC0 xiangqi network
 
-This repository contains the networks as required by the NNUE evaluation in [Pikafish](https://github.com/official-pikafish/Pikafish).
+`xiangqi-c07e94a5c7cb.nnue` is the Fairy-Stockfish xiangqi network published
+under CC0. It is distributed separately from the GPL-3.0-or-later engine.
 
-### NNUE-License
-
-Any usage of the Pikafish weights constitutes agreement to this License.
-
-The weights file (pikafish.nnue) released with the Pikafish and the weights file further derived from them are:
-1. Only for legal use, any consequences caused by any use beyond the legal scope (e.g. online cheating) shall be borne by the user.
-2. No commercial use without permission.
-
-The use of nnue weights for commercial purposes by [these individuals and organizations](https://pikafish.org/list.html) is permitted.
-
-However, the weights we train for the xiangqi variant of the [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) are licensed under [CC0 license](https://github.com/official-stockfish/networks/blob/master/LICENSE). Even though they are derived from the Pikafish training data and follow the same training procedure, they are not constrained by this license.
+- Network source: [Fairy-Stockfish-NNUE at the pinned commit](https://github.com/fairy-stockfish/Fairy-Stockfish-NNUE/tree/0f4dce21530775b1dc862b7c84aa707548183097)
+- License: [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
+- Exact download URL, commit, byte size and SHA-256: `net.json`

@@ -191,8 +191,10 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
         ? t('replay.requestComputerAnalysis')
         : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
-      fetchCached: () => fetchCachedGameAnalysis('atomic-xiangqi', postgame.game.roomId),
-      run: () => requestGameAnalysis('atomic-xiangqi', postgame.game.roomId),
+      fetchCached: (options) =>
+        fetchCachedGameAnalysis('atomic-xiangqi', postgame.game.roomId, options),
+      run: (_progress, signal, onStatus) =>
+        requestGameAnalysis('atomic-xiangqi', postgame.game.roomId, { signal, onStatus }),
     },
   });
 }

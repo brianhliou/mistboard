@@ -4,21 +4,16 @@
  * init: { type: 'init', jsUrl, wasmUrl, netUrl }
  *   Loads the NNUE net first (from Cache Storage, else the network, with
  *   progress messages carrying loaded/total bytes), writes it into the
- *   module's in-memory filesystem as /pikafish.nnue, then builds the engine,
+ *   module's in-memory filesystem as /xiangqi-c07e94a5c7cb.nnue, then builds the engine,
  *   whose default EvalFile resolves to that path.
  * command: { type: 'command', command } — one UCI line. */
 
 let command = null;
 
-// The net is 51 MB. Until #537 it came only through the HTTP cache, and the
-// stream below reported byte progress either way, so a disk-cache read counted
-// "6 / 51 … 51 / 51 MB" like a download on every open of a xiangqi board
-// (measured 2026-10-14: ~700 ms of counting with the net already cached), and
-// the HTTP cache is free to evict an entry that size. Cache Storage is kept
-// until the site clears it (lichess keeps its nets the same way), and a hit
-// reports no progress. The key is the full versioned URL (?v=…), so a new
-// PIKAFISH_ASSET_VERSION is a miss, and every other entry is deleted once the
-// new one is stored.
+// The CC0 net is about 11 MB. Cache Storage keeps it across visits and a hit
+// reports no download progress. The key is the full versioned URL (?v=…), so
+// a new PIKAFISH_ASSET_VERSION or filename is a miss. Other entries (including
+// the previous net) are deleted after the new one is stored.
 const NET_CACHE = 'mistboard-pikafish-net';
 
 async function openNetCache() {
@@ -108,7 +103,7 @@ self.addEventListener('message', async (event) => {
         printErr: (line) => self.postMessage({ type: 'stderr', line: String(line) }),
       });
       const net = await netPromise;
-      module.FS.writeFile('/pikafish.nnue', net.bytes);
+      module.FS.writeFile('/xiangqi-c07e94a5c7cb.nnue', net.bytes);
       self.postMessage({ type: 'net-written', bytes: net.bytes.byteLength, source: net.source });
       const initialize = module.cwrap('pikafish_initialize', null, []);
       command = module.cwrap('pikafish_command', null, ['string']);

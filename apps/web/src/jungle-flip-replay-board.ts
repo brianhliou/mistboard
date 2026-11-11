@@ -18,7 +18,7 @@ import {
   parseJungleFlipFen,
 } from '@mistboard/game';
 import {
-  animateJungleFlipBoardMove,
+  animateJungleFlipStep,
   type JungleFlipRenderBoard,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
@@ -90,7 +90,7 @@ export function mountJungleFlipReplayBoard(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = forward ? played[index - 1] : played[animateFrom - 1];
-      if (move) animateJungleFlipBoardMove(frame, move, { reverse: !forward });
+      if (move) animateJungleFlipStep(frame, move, { reverse: !forward });
     }
     hooks.onPlyChange?.(index, total);
   };

@@ -715,17 +715,26 @@ test('every static sitemap URL passes its crawler floor or has a tracked gap wit
   );
   const sources = crawlerFixtureSources();
   const fetchImpl = async (url: URL) => {
+    if (url.pathname === '/leaderboard')
+      return {
+        status: 308,
+        headers: new Headers({ location: '/player' }),
+        text: async () => '',
+      };
     const record = baked.find((entry) => entry.path === url.pathname && entry.file);
     if (record?.file)
       return {
         status: 200,
+        headers: new Headers(),
         text: async () => readFileSync(resolve(staticDir, record.file!), 'utf8'),
       };
     let html = '';
     let status = 200;
+    const headers = new Headers();
     const response = {
-      writeHead(code: number) {
+      writeHead(code: number, values: Record<string, string> = {}) {
         status = code;
+        for (const [name, value] of Object.entries(values)) headers.set(name, value);
       },
       end(body: string) {
         html = body;
@@ -738,9 +747,10 @@ test('every static sitemap URL passes its crawler floor or has a tracked gap wit
       pathname: url.pathname,
       publicHost: url.origin,
     });
-    return { status, text: async () => html };
+    return { status, headers, text: async () => html };
   };
-  for (const path of SITEMAP_STATIC_ROUTES) {
+  // Aliases stay outside the sitemap, but still have crawler redirect contracts.
+  for (const path of [...SITEMAP_STATIC_ROUTES, '/leaderboard']) {
     const entry = sitemapContract(path)!;
     const result = await auditCrawlerRoute(entry, {
       base: 'https://mistboard.test',
@@ -749,6 +759,15 @@ test('every static sitemap URL passes its crawler floor or has a tracked gap wit
     });
     assert.deepEqual(sitemapConformanceFailures(path, result.failures), [], path);
   }
+  // Planted: the right redirect status cannot compensate for the wrong target.
+  const wrongLocation = await auditCrawlerRoute(sitemapContract('/leaderboard')!, {
+    base: 'https://mistboard.test',
+    fetchImpl: async (url: URL) => ({
+      ...(await fetchImpl(url)),
+      headers: new Headers({ location: '/wrong' }),
+    }),
+  });
+  assert.deepEqual(wrongLocation.failures, ['Location /wrong, expected /player']);
 });
 
 test('isClientRoute matches parametric SPA routes', () => {
@@ -1001,9 +1020,10 @@ test('isPrivateOrReservedIp treats real public addresses as public', () => {
 
 test('proxyTrustWarningFor warns only in production when the resolved IP is private', () => {
   const prod: RuntimeEnv = { RAILWAY_SERVICE_NAME: 'web' };
-  // prod + private resolved IP → warns, and names the IP + hops in the message
+  // prod + private resolved IP → warns with the hop count, never header values
   const warning = proxyTrustWarningFor('10.0.0.5', 1, prod);
-  assert.ok(warning?.includes('10.0.0.5') && warning.includes('MISTBOARD_TRUSTED_PROXY_HOPS=1'));
+  assert.ok(warning?.includes('MISTBOARD_TRUSTED_PROXY_HOPS=1'));
+  assert.equal(warning?.includes('10.0.0.5'), false);
   // prod + public resolved IP → no warning
   assert.equal(proxyTrustWarningFor('203.0.113.7', 1, prod), null);
   // non-production → never warns, even for a private IP

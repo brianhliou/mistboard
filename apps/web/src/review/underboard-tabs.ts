@@ -248,7 +248,7 @@ function shareExportBody(
   urlInput.className = 'review-share__field';
   urlInput.readOnly = true;
   if (!urlInput.value) urlInput.value = gameUrl;
-  grid.append(shareRow('Share', urlInput));
+  grid.append(shareRow('Share', urlInput, { shareUrl: true }));
 
   movesInput.className = 'review-share__field review-share__field--moves';
   movesInput.readOnly = true;
@@ -263,6 +263,7 @@ function shareExportBody(
 export function shareRow(
   label: string,
   field: HTMLInputElement | HTMLTextAreaElement,
+  options: { shareUrl?: boolean } = {},
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'review-share__row';
@@ -272,15 +273,33 @@ export function shareRow(
   const copy = document.createElement('button');
   copy.type = 'button';
   copy.className = 'review-share__copy';
-  copy.textContent = 'Copy';
-  copy.addEventListener('click', () => {
-    void navigator.clipboard?.writeText(field.value).then(
-      () => {
-        copy.textContent = 'Copied';
-        setTimeout(() => (copy.textContent = 'Copy'), 1200);
-      },
-      () => {},
-    );
+  // Only URLs opt into native sharing. FEN, moves and embed code stay copy-only.
+  const nativeShare = options.shareUrl && typeof navigator.share === 'function';
+  const actionLabel = nativeShare ? 'Share' : 'Copy';
+  copy.textContent = actionLabel;
+  copy.addEventListener('click', async () => {
+    // Keep fallback copying tied to the position requested by this click.
+    const value = field.value;
+    if (nativeShare) {
+      try {
+        // Call directly from the click to preserve transient user activation,
+        // reading the field now because navigating the review changes its URL.
+        await navigator.share({ url: value });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      copy.textContent = 'Copied';
+      setTimeout(() => (copy.textContent = actionLabel), 1200);
+    } catch {
+      // Clipboard access can be absent or denied, including after a share sheet
+      // closes. Leave the field ready for a manual copy without claiming success.
+      field.focus();
+      field.select();
+    }
   });
   row.append(name, field, copy);
   return row;

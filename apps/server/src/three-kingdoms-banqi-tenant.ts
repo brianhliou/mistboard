@@ -1,11 +1,8 @@
 /**
- * Three Kingdoms banqi (三國暗棋, #628) VariantTenant: a hidden playtest.
- *
- * Playable by everyone under MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true (local),
- * and by admin accounts only on prod (#684; the gate is three-kingdoms-banqi-
- * access.ts, checked at create and at every websocket connection). No nav link,
- * lobby, TV channel, export, card, rating or correspondence. Whether it gets a public surface is
- * a checkpoint decision.
+ * Three Kingdoms Banqi (三國暗棋, #628): public casual play, always unrated.
+ * Runtime admission follows the flag, with an admin fallback when it is off.
+ * The registration supplies lobby, TV, finished export and card capabilities.
+ * Correspondence remains unavailable.
  *
  * Same hidden-information shape as banqi (banqi-tenant.ts): every occupied square
  * is public, so the masked board is the same for both seats; the one secret is
@@ -167,10 +164,9 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
   roomIdPrefix: THREE_KINGDOMS_BANQI_ROOM_ID_PREFIX,
   colors: SEATS,
-  // The runtime is on in every build: createTenantRuntimeRoom's enabled()
-  // backstop would otherwise refuse the admin playtest's rooms. Who may start
-  // one is decided at the doors (three-kingdoms-banqi-access.ts), and no other
-  // path starts a TK game (no lobby, correspondence, rematch or bot-vs-bot).
+  // The runtime stays on so historical rooms replay and admins can test
+  // while the runtime flag is off. Who may start one is decided at the doors
+  // (three-kingdoms-banqi-access.ts); every start path carries its own admission.
   enabled: () => true,
   oppositeColor: oppositeBanqiSeat,
   rules: {
@@ -202,17 +198,14 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   visibility: {
     clientEventFor: threeKingdomsBanqiClientEventFor,
     viewForClient: (state, client) => getThreeKingdomsBanqiClientView(state, client),
-    truthView: (state) => getThreeKingdomsBanqiTruthView(state),
     // The deal is a server secret, so a reload gets the server's per-ply masked
     // views rather than replaying the log itself.
     liveHistory: (events, viewer) => tenantPerPlyViews(threeKingdomsBanqiTenant, events, viewer),
-    // A finished room keeps the masked per-ply views too, so a reload can still
-    // step back through the game (the final position is the truth view).
+    // Keep covered identities masked after completion, including every per-ply view.
     liveHistoryWhenFinished: true,
   },
-  // The default rematch builds its room from the lobby factory, and this
-  // playtest has no lobby; the room's Play again button makes a new room instead.
-  rematch: { optOut: 'local playtest with no lobby factory (#628)' },
+  // Keep the existing Play again flow; rematch is a separate product change.
+  rematch: { optOut: 'Play again creates a fresh room (#628)' },
   engine: {
     terminalContext: 'repetition-window',
     isEngineClientId: isThreeKingdomsBanqiEngineClientId,

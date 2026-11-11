@@ -20,7 +20,16 @@
 // names; migration 111 remaps persisted attribution to the merged ids.
 
 import { RAPFI_LEVELS } from '@mistboard/game';
-import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
+import {
+  BANQI_PLAYABLE_ENGINES,
+  banqiEngineDisplayName,
+  banqiEngineTierFor,
+} from './banqi-engine.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
+import {
+  threeKingdomsBanqiEngineDisplayName,
+  threeKingdomsBanqiEngineTierFor,
+} from './three-kingdoms-banqi-engine.js';
 
 export type FirstPartyBotProfile = {
   id: string;
@@ -126,16 +135,15 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-level-1',
       'misty-jungle-level-3',
       ...BANQI_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-banqi').map((tier) => tier.id),
-      ...([1, 2, 3, 4, 5, 6, 7, 8] as const).map(
-        (level) => `misty-jungle-flip-level-${level}` as const,
+      ...JUNGLE_FLIP_PLAYABLE_ENGINES.filter((tier) => tier.id !== 'misty-jungle-flip').map(
+        (tier) => tier.id,
       ),
+      'misty-jungle-flip-level-7', // retired 100K rung: keep historical attribution
     ],
     seatNamesByEngineId: Object.fromEntries([
       ...BANQI_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
-      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => [
-        `misty-jungle-flip-level-${level}`,
-        `Misty Level ${level}`,
-      ]),
+      ...JUNGLE_FLIP_PLAYABLE_ENGINES.map((tier) => [tier.id, `Misty Level ${tier.level}`]),
+      ['misty-jungle-flip-level-7', 'Misty Level 7'],
     ]),
     // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
     // rooms created before 2026-10-28 stored as their pveBotId; a resumed one
@@ -297,9 +305,10 @@ export function botSeatName(
  * The display name of a persisted participant, resolved at read time. Bot seats
  * written before the writers used botSeatName stored the bare profile name
  * ("Pikafish" for a jieqi Level 8 game); the stored engine id still says which
- * rung played, so the label is recovered here without a backfill. Anything
- * without a rung label (humans, engine-version seats, bot seats written before
- * migration 148 recorded engine_id) keeps its stored name.
+ * rung played, so the label is recovered here without a backfill.
+ * Three Kingdoms and Banqi engine seats also shorten their old engine brand.
+ * These reads feed cards, /watch, profile lists and postgame review metadata;
+ * neither stored names nor engine identities change. Human names stay intact.
  */
 export function persistedSeatDisplayName(participant: {
   displayName: string;
@@ -307,7 +316,21 @@ export function persistedSeatDisplayName(participant: {
   subjectId: string | null;
   engineId?: string | null;
 }): string {
-  const { engineId } = participant;
+  const { engineId, subjectId, subjectType, displayName } = participant;
+  if (subjectType === 'engine-version') {
+    if (subjectId && threeKingdomsBanqiEngineTierFor(subjectId)) {
+      return threeKingdomsBanqiEngineDisplayName(subjectId);
+    }
+    const oldName = /^MistyThreeKingdomsBanqi(?: level ([1-8]))?$/.exec(displayName);
+    if (oldName) return oldName[1] ? `Misty level ${oldName[1]}` : 'Misty';
+  }
+  if (subjectType === 'engine-version' || subjectType === 'bot') {
+    const banqiId = subjectType === 'engine-version' ? subjectId : engineId;
+    if (banqiId && banqiEngineTierFor(banqiId)) return banqiEngineDisplayName(banqiId);
+    // Pre-engine_id rows can still recover the level from their exact old name.
+    const oldName = /^MistyBanqi Level ([1-8])$/.exec(displayName);
+    if (oldName) return `Misty Level ${oldName[1]}`;
+  }
   if (participant.subjectType !== 'bot' || !engineId) return participant.displayName;
   const bot =
     (participant.subjectId ? firstPartyBotForId(participant.subjectId) : null) ??

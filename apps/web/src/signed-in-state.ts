@@ -31,8 +31,17 @@ export function writeSignedInHint(value: boolean): void {
 // settles, or undefined to return to the unresolved (hint-only) state. Keeping
 // this in sync with account-nav's cachedUser is what lets isLikelySignedIn live
 // outside account-nav (and break the import cycle).
+export const signedInResolvedEvent = 'mb:signed-in-resolved';
+
 export function setResolvedSignedIn(value: boolean | undefined): void {
+  if (resolvedSignedIn === value) return;
   resolvedSignedIn = value;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(signedInResolvedEvent));
+}
+
+/** Confirmed auth only: persisted first-paint hints do not authorize requests. */
+export function isSignedIn(): boolean {
+  return resolvedSignedIn === true;
 }
 
 // Synchronous best guess used to choose the initial render shape: the resolved

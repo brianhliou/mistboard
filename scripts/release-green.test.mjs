@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import test from 'node:test';
+
+const { test } = process.env.VITEST ? await import('vitest') : await import('node:test');
 
 const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
 const HEAD = 'a'.repeat(40);
@@ -23,6 +24,8 @@ async function releaseScenario({
   failStage,
   ciRequired = true,
   localCi = false,
+  branchError = false,
+  batchRun = null,
 } = {}) {
   const events = [];
   const pushes = [];
@@ -49,6 +52,15 @@ async function releaseScenario({
       },
     },
     ensureCleanWorktree: noop,
+    enforceAgentBranchAccounting: () => {
+      events.push('branch accounting');
+      if (
+        branchError === true ||
+        branchError === events.filter((event) => event === 'branch accounting').length
+      ) {
+        throw new Error('unmarked agent/forgotten');
+      }
+    },
     enforceShipWindow: noop,
     takeReleaseLock: noop,
     catchUpBeforeGate: noop,
@@ -65,6 +77,7 @@ async function releaseScenario({
     fetchActiveGameCount: async () => (Array.isArray(liveGames) ? liveGames.shift() : liveGames),
     requireUsableDrainToken: () => events.push('token'),
     catchUpWithMain: noop,
+    findReusableBatchRun: () => batchRun,
     safeDeployBaseArgs: () => ['--owner', 'test-owner'],
     runTimed: (label, command) => {
       events.push(label);
@@ -120,6 +133,44 @@ test('release publishes an exact candidate, overlaps the pending drain with CI, 
   assert.equal(events[ci + 1].exact, true);
   assert.equal(release.pushCompleted, true);
 });
+
+test('a green assembled batch authorizes the changelog HEAD without a new candidate push or CI wait', async () => {
+  const batchRun = {
+    headSha: BASE,
+    status: 'completed',
+    conclusion: 'success',
+    url: 'https://example.test/batch-ci',
+  };
+  const { events, pushes, release, error } = await releaseScenario({ batchRun });
+  assert.equal(error, undefined);
+  assert.deepEqual(pushes, [`${HEAD}:refs/heads/main`]);
+  assert.ok(!events.includes('ci'));
+  assert.equal(release.ciRunUrl, batchRun.url);
+  assert.equal(release.ciTestedRevision, BASE);
+  assert.ok(events.indexOf('production drain') < events.indexOf('git push release head'));
+});
+
+test('unmarked branch accounting refuses push before a lock, CI, drain or push', async () => {
+  const { events, pushes, error } = await releaseScenario({ branchError: true });
+  assert.ok(error);
+  assert.deepEqual(events, ['branch accounting']);
+  assert.deepEqual(pushes, []);
+});
+
+for (const branchError of [2, 3, 4]) {
+  test(`new unmarked work at accounting check ${branchError} prevents promotion`, async () => {
+    const { events, pushes, release, error } = await releaseScenario({ branchError });
+    assert.ok(error);
+    assert.equal(release.pushCompleted, undefined);
+    assert.ok(!events.includes('git push release head'));
+    if (branchError < 4) assert.deepEqual(pushes, []);
+    else {
+      assert.deepEqual(pushes, [`${HEAD}:refs/heads/release/${HEAD}`]);
+      assert.ok(events.includes('cancel drain'));
+      assert.ok(!events.includes('production drain'));
+    }
+  });
+}
 
 for (const ciError of ['red CI', 'cancelled CI', 'timed out waiting for CI']) {
   test(`${ciError} cancels the pending drain and leaves main untouched`, async () => {

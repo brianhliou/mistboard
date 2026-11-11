@@ -13,6 +13,7 @@ import {
   pieceFlipDurationMs,
   pieceFlipStyle,
 } from './board-anim.js';
+import { captureTargetSvg, selectionMarkSvg } from './board-capture-target.js';
 import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -108,10 +109,11 @@ const MARGIN = 42;
 const PIECE_SIZE = xiangqiPieceDrawSize(CELL);
 // The layout piece size the marks are tuned on; it did not grow with the drawing.
 const MARK_PIECE_SIZE = tokenPieceSize(CELL);
-// Move/selection markers wrap the disc: radii track the layout piece radius.
+// Selection and last-move marks keep their layout geometry.
 const RING_SELECTION = MARK_PIECE_SIZE / 2 + 6;
 const RING_LAST = MARK_PIECE_SIZE / 2 + 4;
-const RING_CAPTURE = MARK_PIECE_SIZE / 2 + 1;
+// Capture rings must clear the enlarged drawing, including on live boards.
+const RING_CAPTURE = PIECE_SIZE / 2 + 1;
 const FILES = 9;
 const RANKS = 10;
 const HIT_HALF = 31;
@@ -270,6 +272,13 @@ export function renderJieqiBoardSvg(
         ? raisedPieceOutline(xiangqiPiece3dMarkPiece(pieceSet, CELL))
         : null;
   const selectedSquare = options.selectedSquare ?? null;
+  // Capture bands can overlap adjacent points, so paint them below every piece.
+  // Interactive quiet moves and repetition warnings stay in the hit layer.
+  const underMoves = options.interactive
+    ? legalMoves.filter(
+        (move) => view.board[move.to] !== undefined && !options.repetitionLossPoints?.has(move.to),
+      )
+    : legalMoves;
   return `
     <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(MARK_PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
@@ -280,7 +289,7 @@ export function renderJieqiBoardSvg(
       ${lastMoveMarkers(view, perspective, 'under', pieceSet, tile3d)}
       ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
       ${outline3d ? '' : selectionRing(selectedSquare, perspective)}
-      ${options.interactive ? '' : moveHints(view, legalMoves, perspective, outline3d !== null)}
+      <g class="jieqi-hints">${moveHints(view, underMoves, perspective, outline3d !== null)}</g>
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d, options.faceDownFaces)}
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, legalMoves, selectedSquare, perspective, outline3d)}</g>` : ''}
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
@@ -569,8 +578,13 @@ export function animateJieqiBoardMove(
 function selectionRing(selection: JieqiSquare | null, perspective: JieqiColor): string {
   if (!selection) return '';
   const { file, rank } = jieqiCoordOf(selection);
-  const { x, y } = intersection(file, rank, perspective);
-  return `<circle class="jieqi-selection" cx="${x}" cy="${y}" r="${RING_SELECTION}"/>`;
+  return selectionMarkSvg(
+    'jieqi-selection',
+    intersection(file, rank, perspective),
+    CELL,
+    activeLayout,
+    RING_SELECTION,
+  );
 }
 
 function moveHints(
@@ -587,7 +601,7 @@ function moveHints(
       // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
       if (capture && raised) return '';
       return capture
-        ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
+        ? captureTargetSvg('jieqi-hint-capture', { x, y }, CELL, activeLayout, RING_CAPTURE)
         : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`;
     })
     .join('');
@@ -690,11 +704,9 @@ function hitLayer(
       const marker = target
         ? loses
           ? `<g data-repetition-loss="${sq}" aria-hidden="true"><circle class="jieqi-repetition-ring-edge" cx="${x}" cy="${y}" r="18"/><circle class="jieqi-repetition-ring" cx="${x}" cy="${y}" r="18"/></g>`
-          : raised
+          : target.capture
             ? ''
-            : target.capture
-              ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
-              : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
+            : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
         : '';
       const hover = target
         ? loses
@@ -741,7 +753,7 @@ export function installJieqiBoardStyles(): void {
     .jieqi-selection { fill: rgba(31, 111, 91, 0.32); stroke: none; pointer-events: none; }
     .jieqi-hint { fill: var(--board-move-hint, rgba(31, 111, 91, 0.72)); opacity: 0.78; pointer-events: none; }
     .jieqi-hint-capture {
-      fill: none; stroke: rgba(31, 111, 91, 0.48); stroke-width: 3; pointer-events: none;
+      fill: none; stroke: var(--board-move-hint, rgba(31, 111, 91, 0.72)); stroke-width: 4; pointer-events: none;
     }
     .jieqi-target-hover {
       fill: rgba(31, 111, 91, 0.3);
@@ -751,8 +763,7 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit--target:hover .jieqi-target-hover {
       opacity: 1;
     }
-    .jieqi-hit--target:hover .jieqi-hint,
-    .jieqi-hit--target:hover .jieqi-hint-capture {
+    .jieqi-hit--target:hover .jieqi-hint {
       opacity: 0;
     }
     /* The disc shadow is drawn into each piece (xiangqiPieceShadowMarks). */
@@ -912,7 +923,14 @@ export function animateJieqiStepReveal(
   const square = jieqiRevealSquare(move, before, after);
   const piece = square ? after[square] : undefined;
   if (!square || !piece) return false;
-  return animateJieqiReveal(host, square, piece.color, perspective, {
-    alongGlide: move.from !== move.to,
+  const alongGlide = move.from !== move.to;
+  const revealed = animateJieqiReveal(host, square, piece.color, perspective, {
+    alongGlide,
   });
+  if (revealed && alongGlide) {
+    // The face starts to show halfway through the flip. Its badges arrive
+    // with it; later glyph refreshes inherit this same fade timeline.
+    animateMoveGlyphs(host, 150, Math.round(revealFlipDurationMs(true) / 2));
+  }
+  return revealed;
 }

@@ -2,13 +2,14 @@
 # Private nets fetched from GitHub releases at image build time, never re-hosted
 # publicly. Pins live here, separately from the release assets.
 # Prod sets MISTBOARD_THREE_KINGDOMS_BANQI_NET=/app/bin/three-kingdoms-banqi.tknn;
-# and MISTBOARD_BANQI_NET=/app/bin/banqi.bqnn. The server deliberately has no
-# default paths and hides each L8 without its net.
+# MISTBOARD_BANQI_NET=/app/bin/banqi.bqnn; and
+# MISTBOARD_JUNGLE_FLIP_NET=/app/bin/jungle-flip.jfnn. The server has no
+# default paths: each L8 stays hidden without its net.
 #
 # Missing credentials, upstream failures and checksum mismatches warn and exit 0
 # so a net outage never blocks the web deploy. Only verified, non-empty bytes
-# move into <bindir>. MISTBOARD_PRIVATE_ASSETS_TOKEN (the token that also fetches the
-# private Pikafish net) needs read access to brianhliou/mistboard-nets.
+# move into <bindir>. MISTBOARD_PRIVATE_ASSETS_TOKEN needs read access to
+# brianhliou/mistboard-nets. Pikafish uses a separate public CC0 download.
 # The token goes through a mode-600 header file, never curl argv or child env;
 # the temporary directory and header are removed on exit. Never enable tracing.
 #
@@ -23,6 +24,11 @@ unset MISTBOARD_PRIVATE_ASSETS_TOKEN
 
 # name -> repo, tag, release asset, sha256, installed filename
 case "$name" in
+  jungle-flip-net)
+    repo=brianhliou/mistboard-nets tag=jungle-flip-r6
+    asset=jungle-flip-r6.jfnn
+    sha=b9a51b57f19f34cea8c88694282ee161ec32b9ffa22ed13bc20c64abf50f9b80
+    net=jungle-flip.jfnn ;;
   banqi-net)
     repo=brianhliou/mistboard-nets tag=banqi-iter14
     asset=banqi-iter14.bqnn

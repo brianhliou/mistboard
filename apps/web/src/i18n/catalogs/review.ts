@@ -1,6 +1,8 @@
 // Review translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_REVIEW = {
+  'review.chooseLine': 'Choose a line',
+  'review.mainLine': 'Main line',
   // Remaining review widgets and dynamically generated move advice (#855).
   'review.explorer.move': 'Move',
   'review.explorer.games': 'Games',
@@ -277,6 +279,16 @@ export const EN_REVIEW = {
   'replay.gameCouldNotBeLoaded': 'The game could not be loaded.',
   'replay.requestComputerAnalysis': 'Request computer analysis',
   'replay.analyse': 'Analyse',
+  'replay.analysisQueued': 'Computer analysis queued…',
+  'replay.revealsQueued': 'Reveal grading queued…',
+  'replay.positionsProgress': 'Analysing positions… {done}/{total}',
+  'replay.revealsProgress': 'Grading reveals… through move {done}/{total}',
+  'replay.analysisJobLost': 'Analysis status expired. Retry to check saved work.',
+  'replay.analysisEngineUnavailable': 'Analysis engine unavailable. Please try again later.',
+  'replay.analysisConnectionLost': 'Could not follow analysis. Retry to check existing work.',
+  'replay.analysisCouldNotFinish': 'Analysis could not finish. Retry to resume saved work.',
+  'replay.analysisRetry': 'Retry analysis',
+  'replay.revealsRetry': 'Retry reveal grading',
   'replay.analysingWholeGame': 'Analysing the whole game…',
   'replay.analysingProgress': 'Analysing… {done}/{total}',
   'replay.analysingReveals': 'Analysing reveals…',
@@ -1040,6 +1052,10 @@ export const EN_REVIEW = {
   'analysis.editPosition': 'Edit position',
   'review.setDefaultView': 'Set as default view',
   'review.revealIdentities': 'Reveal identities',
+  'review.revealAllPieces': 'Reveal all pieces',
+  'review.revealLoading': 'Revealing pieces…',
+  'review.revealFailed': 'Could not reveal pieces. Try again.',
+  'review.hideRevealedPieces': 'Hide revealed pieces',
   'review.hideIdentities': 'Hide identities',
   'review.showAlternatives': 'Show alternatives',
   'review.hideAlternatives': 'Hide alternatives',

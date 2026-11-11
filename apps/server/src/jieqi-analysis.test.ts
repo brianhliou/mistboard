@@ -383,6 +383,7 @@ test('analyzeJieqiDecisions: only chance plies, per-mover POV, flat eval => zero
   for (const d of decisions) {
     assert.equal(d.mover, d.ply % 2 === 1 ? 'red' : 'black');
     assert.ok(Math.abs(d.playedWin - moverWin) < 1e-6);
+    assert.ok(d.realizedWin !== undefined);
     assert.ok(Math.abs(d.realizedWin - moverWin) < 1e-6);
     assert.ok(Math.abs(d.bestWin - moverWin) < 1e-6);
     assert.equal(d.playedRank, 1);
@@ -456,6 +457,7 @@ test('analyzeJieqiDecisions: playedWin is the TRUE pool-weighted mean; realizedW
     Math.abs(d.playedWin - expectedMean) < 1e-6,
     `playedWin ${d.playedWin} vs ${expectedMean}`,
   );
+  assert.ok(d.realizedWin !== undefined);
   assert.ok(Math.abs(d.realizedWin - expectedRealized) < 1e-6);
   assert.ok(Math.abs(d.bestWin - d.playedWin) < 1e-6); // only candidate
   assert.equal(d.playedRank, 1);
@@ -735,6 +737,7 @@ test('a reveal’s pool mean averages over the identities its mover believes pos
   assert.ok(Math.abs(d.playedWin - expected) < 1e-6, `playedWin ${d.playedWin} vs ${expected}`);
   const actual = before.board[reveal.from]!.role;
   const actualCh = Object.keys(charRole).find((k) => charRole[k] === actual)!;
+  assert.ok(d.realizedWin !== undefined);
   assert.ok(Math.abs(d.realizedWin - winPercent(-roleCp[actualCh]!, null)) < 1e-6);
 });
 
@@ -745,6 +748,82 @@ const sampleDecision = (ply: number): JieqiDecision => ({
   playedWin: 55,
   realizedWin: 48,
   playedRank: 2,
+});
+
+test('luck-off computation keeps all pool searches and grades while omitting realized outcomes', async (t) => {
+  const previous = process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  t.after(() => {
+    if (previous === undefined) delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+    else process.env.MISTBOARD_JIEQI_LUCK_ENABLED = previous;
+  });
+  const { move, uci } = firstRevealMove(STANDARD_JIEQI_DEAL);
+  const calls: string[] = [];
+  const deps: JieqiDecisionDeps = {
+    multiPv: async () => [mpvLine(1, uci, 0)],
+    evalPosition: async (fen) => {
+      calls.push(fen);
+      return { cp: 100, mate: null };
+    },
+  };
+  delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  const enabled = await analyzeJieqiDecisions([move], STANDARD_JIEQI_DEAL, deps);
+  const enabledCalls = [...calls];
+  calls.length = 0;
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'false';
+  const disabled = await analyzeJieqiDecisions([move], STANDARD_JIEQI_DEAL, deps);
+  assert.doesNotMatch(JSON.stringify(disabled), /"realizedWin"/);
+  assert.deepEqual(
+    disabled,
+    enabled.map(({ realizedWin: _luck, ...grade }) => grade),
+  );
+  assert.deepEqual(calls, enabledCalls);
+  assert.ok(calls.length > 1, 'grading still averages the hidden pool');
+});
+
+test('grade-only decisions use a separate cache and cannot satisfy a flag-on read', async (t) => {
+  const previous = process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+  t.after(() => {
+    if (previous === undefined) delete process.env.MISTBOARD_JIEQI_LUCK_ENABLED;
+    else process.env.MISTBOARD_JIEQI_LUCK_ENABLED = previous;
+  });
+  const cache = decisionsMemoryCache();
+  const { realizedWin: _luck, ...grade } = sampleDecision(1);
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'false';
+  const off = await resolveJieqiDecisions(
+    'grade-only',
+    [],
+    STANDARD_JIEQI_DEAL,
+    cache,
+    async () => [grade],
+  );
+  assert.ok(off?.engineId.endsWith('+no-luck1'));
+  assert.deepEqual(
+    (await resolveJieqiDecisions('grade-only', [], STANDARD_JIEQI_DEAL, cache, undefined, false))
+      ?.decisions,
+    [grade],
+  );
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'true';
+  assert.equal(
+    await resolveJieqiDecisions('grade-only', [], STANDARD_JIEQI_DEAL, cache, undefined, false),
+    null,
+  );
+  const on = await resolveJieqiDecisions('grade-only', [], STANDARD_JIEQI_DEAL, cache, async () => [
+    sampleDecision(1),
+  ]);
+  assert.deepEqual(on?.decisions, [sampleDecision(1)]);
+  process.env.MISTBOARD_JIEQI_LUCK_ENABLED = 'false';
+  assert.deepEqual(
+    (await resolveJieqiDecisions('grade-only', [], STANDARD_JIEQI_DEAL, cache, undefined, false))
+      ?.decisions,
+    [sampleDecision(1)],
+    'full cached decisions remain reusable for grading',
+  );
+  await assert.rejects(
+    resolveJieqiDecisions('grade-only-vacuous', [], STANDARD_JIEQI_DEAL, cache, async () => [
+      { ...grade, playedWin: 50, bestWin: 50 },
+    ]),
+    VacuousAnalysisError,
+  );
 });
 
 test('resolveJieqiDecisions: pure cache read misses without computing', async () => {
@@ -1206,6 +1285,7 @@ test('a reveal that captures face-down averages over the mover pool only', async
   assert.ok(Math.abs(d.playedWin - expected) < 1e-6, `playedWin ${d.playedWin} vs ${expected}`);
   // The reveal's luck is real (the piece moved, so everyone saw it); the capture's is none.
   const trueRevealed = redChar[state0.board[both!.from]!.role]!;
+  assert.ok(d.realizedWin !== undefined);
   assert.ok(Math.abs(d.realizedWin - winPercent(-revealedCp[trueRevealed]!, null)) < 1e-6);
 });
 

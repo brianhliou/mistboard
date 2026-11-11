@@ -27,9 +27,16 @@ import {
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
+  searchStillCurrent,
 } from './engine-move-guard.js';
 import { replyPace, replyPacePayload, sleepMs } from './engine-reply-pacing.js';
-import { budgetForMove } from './engine-time-budget.js';
+import {
+  type BotTimeRule,
+  botTimeRule,
+  budgetForMove,
+  effectiveTimeRule,
+  liveBotMoveTime,
+} from './engine-time-budget.js';
 import { guardJieqiRuleEnding, type JieqiDrawGuardResult } from './jieqi-draw-guard.js';
 import {
   isJieqiEngineClientId,
@@ -207,6 +214,16 @@ export type JieqiEngineMoveProvider = (
   },
 ) => Promise<UciEval>;
 
+export type JieqiLiveTurn = {
+  rule: BotTimeRule;
+  engineId: string;
+  roomId: string;
+  ply: number;
+  legalCount: number;
+  initialMs: number | null;
+  engineVsEngine: boolean;
+};
+
 /**
  * One live move's think time: the shared clock allocator under the tier's movetime.
  * `waitedMs` is time the move already spent queued for an engine slot, which came off
@@ -217,8 +234,24 @@ export function jieqiLiveMoveBudgetMs(input: {
   remainingMs: number | null;
   incrementMs: number;
   waitedMs?: number;
+  /**
+   * The live turn, when the caller is the live loop: lets a top rung at a short
+   * clock run the phase rule (engine-time-budget.ts `liveBotMoveTime`).
+   */
+  live?: JieqiLiveTurn;
 }): number {
-  const { ceilingMs, remainingMs, incrementMs, waitedMs = 0 } = input;
+  const { ceilingMs, remainingMs, incrementMs, waitedMs = 0, live } = input;
+  if (live) {
+    return liveBotMoveTime({
+      ...live,
+      remainingMs,
+      incrementMs,
+      ceilingMs,
+      waitedMs,
+      flatReserveMs: CLOCK_SAFETY_MS,
+      floorMs: MIN_MOVETIME_MS,
+    }).movetimeMs;
+  }
   return budgetForMove({
     remainingMs: remainingMs === null ? null : Math.max(0, remainingMs - waitedMs),
     incrementMs,
@@ -238,6 +271,7 @@ export function jieqiDrawGuardBudgetMs(input: {
   remainingMs: number | null;
   incrementMs: number;
   waitedMs: number;
+  live?: JieqiLiveTurn;
 }): number {
   return Math.max(MIN_MOVETIME_MS, Math.floor(jieqiLiveMoveBudgetMs(input) / 2));
 }
@@ -264,7 +298,19 @@ export async function playJieqiEngineMoveIfReady(
   // tier's search DEPTH (set inside jieqiLiveEngineMove); this movetime is the
   // latency ceiling + time-pressure guard. Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink.
-  const budgetInput = { ceilingMs: tier.movetimeMs, remainingMs, incrementMs };
+  // The top rungs at a short clock may run the phase rule instead
+  // (MISTBOARD_BOT_TIME_RULE=phase); `live.rule` is what the decision artifact records.
+  const live: JieqiLiveTurn = {
+    rule: botTimeRule(),
+    engineId,
+    roomId: room.id,
+    ply: gameMoves.length,
+    legalCount: getJieqiLegalMoves(room.projection.state).length,
+    initialMs: clock?.initialMs ?? null,
+    engineVsEngine: jieqiEngineSeatCount(room) === 2,
+  };
+  const timeRule = effectiveTimeRule({ ...live, incrementMs });
+  const budgetInput = { ceilingMs: tier.movetimeMs, remainingMs, incrementMs, live };
   const movetimeMs = jieqiLiveMoveBudgetMs(budgetInput);
   const budgetAfterWait = (waitedMs: number) => jieqiLiveMoveBudgetMs({ ...budgetInput, waitedMs });
 
@@ -313,7 +359,7 @@ export async function playJieqiEngineMoveIfReady(
       const parsed = pikafishUciToJieqiMove(uci);
       return parsed && isJieqiLegalMove(room.projection.state, parsed) ? parsed : null;
     },
-    stillOnTurn: () => engineToMove(room, seat),
+    stillOnTurn: searchStillCurrent(room, () => engineToMove(room, seat)),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
       logger.warn(
         {
@@ -464,6 +510,7 @@ export async function playJieqiEngineMoveIfReady(
       guardDetail: drawGuard?.detail ?? null,
     }),
     ...replyPacePayload(pace),
+    time_rule: timeRule,
   });
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);

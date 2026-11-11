@@ -1,5 +1,4 @@
-// The Three Kingdoms banqi (三國暗棋, #628) bot for the admin-only prod playtest
-// (#684).
+// The Three Kingdoms Banqi (三國暗棋, #628) bot for public casual play.
 //
 // The engine is the Rust `three-kingdoms-banqi-engine` binary from the private
 // engine repo (three_kingdoms_banqi_rust), driven as a UCI subprocess, one
@@ -65,7 +64,7 @@ export const THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES: readonly ThreeKingdomsBanqiE
   }),
 );
 
-// Historical rooms retain their ID, name, version and 2M-node classical search.
+// Historical rooms retain their ID, version and 2M-node classical search.
 export const THREE_KINGDOMS_BANQI_ALL_ENGINE_TIERS: readonly ThreeKingdomsBanqiEngineTier[] = [
   ...THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES,
   {
@@ -155,9 +154,7 @@ export function isThreeKingdomsBanqiEngineClientId(clientId: string | undefined)
 export function threeKingdomsBanqiEngineDisplayName(clientId: string): string {
   const tier = threeKingdomsBanqiEngineTierFor(clientId);
   if (!tier) return clientId;
-  return tier.level === undefined
-    ? THREE_KINGDOMS_BANQI_ENGINE_NAME
-    : `${THREE_KINGDOMS_BANQI_ENGINE_NAME} level ${tier.level}`;
+  return tier.level === undefined ? 'Misty' : `Misty level ${tier.level}`;
 }
 
 export function threeKingdomsBanqiEngineVersion(clientId: string | undefined): string | null {

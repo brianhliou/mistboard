@@ -201,7 +201,8 @@ build() {
   git -C "$work/pikafish" apply "$ROOT/pikafish-cc0-net.patch" || die "pikafish-cc0-net.patch does not apply to $ref"
   sf_make "$work/pikafish/src"
   cp "$work/pikafish/src/pikafish" "$bin/pikafish"
-  cp "$work/pikafish/COPYING" "$bin/COPYING"
+  # Upstream ships its GPL text as Copying.txt; the tarball carries it as COPYING.
+  cp "$work/pikafish/Copying.txt" "$bin/COPYING"
   pikafish_net "$bin"
 
   # The binary only: its net is fetched from the author's release by

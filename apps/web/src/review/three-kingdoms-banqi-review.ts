@@ -14,6 +14,7 @@ import {
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
   type ThreeKingdomsBanqiState,
+  threeKingdomsBanqiMoveLabel,
   threeKingdomsBanqiStateToDealtFen,
 } from '@mistboard/game';
 import { banqiPieceGhostSvg } from '../live-banqi-render.js';
@@ -28,7 +29,7 @@ import {
 import { tkPoints } from '../three-kingdoms-banqi-score.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
 import { withFaceDownReview } from './face-down-faces.js';
-import type { NodeShape } from './game-tree.js';
+import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { makeThreeKingdomsBanqiTreeAdapter } from './three-kingdoms-banqi-tree-adapter.js';
 import {
   mountTreeReview,
@@ -92,6 +93,7 @@ const presentation: TreePresentation<
   boardAspect: TK_LIVE_BOARD_VIEW.width / TK_LIVE_BOARD_VIEW.height,
   boardCols: 10,
   boardMaxPx: 720,
+  phoneForkPicker: true,
   reserveGaugeTrack: true,
   // The board is the same for both seats, so the Flip control only swaps the
   // seat rows, as on banqi.
@@ -135,4 +137,63 @@ export function mountThreeKingdomsBanqiReview(
   if (!config.root) throw new Error('three kingdoms banqi review needs a dealt root position');
   const faceDown = withFaceDownReview(presentation.adapter, config);
   return mountTreeReview(root, { ...presentation, adapter: faceDown.adapter }, faceDown.config);
+}
+
+/** A recorded flip names the piece it turned up, read from the view after the
+ * move: the tile is face up for every viewer then, and still face down in the
+ * view before it, which would label every flip "(?)". */
+export function recordedThreeKingdomsBanqiMoveLabel(
+  views: ReadonlyMap<number, ThreeKingdomsBanqiPlayerView>,
+  move: ThreeKingdomsBanqiMove,
+  ply: number,
+): string {
+  const piece = views.get(ply + 1)?.board[move.to];
+  return threeKingdomsBanqiMoveLabel(move, piece && !piece.faceDown ? piece : undefined);
+}
+
+/** Recorded games have no dealt position in the browser. Navigate only the
+ * server's masked snapshots; never sample identities or branch into a secret. */
+export function mountThreeKingdomsBanqiRecordedReview(
+  root: HTMLElement,
+  snapshots: readonly { ply: number; view: ThreeKingdomsBanqiPlayerView }[],
+  config: TreeReviewConfig<ThreeKingdomsBanqiMove, number, TkBoardArrow>,
+): TreeReviewHandle {
+  const views = new Map(snapshots.map(({ ply, view }) => [ply, view]));
+  if (!views.has(0)) throw new Error('three kingdoms banqi review needs a ply-0 view');
+  const recorded: VariantTreeAdapter<ThreeKingdomsBanqiMove, number, ThreeKingdomsBanqiPlayerView> =
+    {
+      mode: 'perfect-info',
+      initialTruth: () => 0,
+      isLegal: (ply, move) => {
+        const next = config.moves[ply];
+        return !!next && next.from === move.from && next.to === move.to && views.has(ply + 1);
+      },
+      applyMove: (ply) => ply + 1,
+      project: (ply) => [{ key: 'truth', label: 'Board', tier: 'primary', view: views.get(ply)! }],
+      moveLabel: (move, ply) => recordedThreeKingdomsBanqiMoveLabel(views, move, ply),
+      moveKey: adapter.moveKey,
+      toEngineUci: adapter.toEngineUci,
+      fromUci: () => null,
+    };
+  const {
+    adapter: _adapter,
+    fen: _fen,
+    engine: _engine,
+    moveEvalVisible: _moveEvalVisible,
+    moveLuckMarker: _moveLuckMarker,
+    moveListLuck: _moveListLuck,
+    gamePhases: _gamePhases,
+    material: _material,
+    ...boardPresentation
+  } = presentation;
+  return mountTreeReview(
+    root,
+    {
+      ...boardPresentation,
+      adapter: recorded,
+      engine: null,
+      seatFor: () => null,
+    },
+    config,
+  );
 }

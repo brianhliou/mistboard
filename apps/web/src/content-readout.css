@@ -1,0 +1,59 @@
+.content-readout {
+  margin-block: 1.5rem;
+}
+.content-readout p,
+.content-readout details {
+  max-width: 78ch;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.content-readout label {
+  display: block;
+  margin-block: 1rem;
+}
+.content-readout input {
+  max-width: 100%;
+  padding: 0.5rem;
+  font: inherit;
+}
+.content-readout-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: 1rem;
+}
+.content-readout table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  text-align: right;
+  width: 100%;
+}
+.content-readout caption {
+  text-align: left;
+  padding-block: 0.5rem;
+}
+.content-readout th,
+.content-readout td {
+  padding: 0.65rem;
+  border-bottom: 1px solid var(--border, #8885);
+  min-width: 7rem;
+  vertical-align: top;
+}
+.content-readout th:first-child {
+  text-align: left;
+  min-width: 14rem;
+}
+.content-readout th button {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0.3rem;
+  text-align: inherit;
+}
+.content-readout th[aria-sort="descending"] button::after {
+  content: " ↓";
+}
+.content-readout th[aria-sort="ascending"] button::after {
+  content: " ↑";
+}

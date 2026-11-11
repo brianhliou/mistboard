@@ -20,10 +20,11 @@ import {
   type BanqiStoredSetup,
   banqiNoProgressLimitOf,
   createBanqiStateFromSetup,
+  getBanqiForbiddenChaseMoves,
   getBanqiLegalMoves,
   winPercent,
 } from '@mistboard/game';
-import { BANQI_ENGINE_VERSION, evaluateBanqiFenNodes } from './banqi-engine.js';
+import { BANQI_ENGINE_VERSION, banqiEngineTierFor, evaluateBanqiFenNodes } from './banqi-engine.js';
 import { banqiMoveToEngineUci, banqiStateToEngineFen } from './banqi-fen.js';
 import {
   type AnalysisProgressStore,
@@ -40,8 +41,10 @@ import * as persistence from './persistence.js';
 
 // Search budget. Node budget = CPU-independent strength, so the eval is reproducible across
 // boxes (stable cache) and bounded in time and memory (an analysis sweep can't run away).
-const BANQI_ANALYSIS_NODES = 500_000;
-const BANQI_ANALYSIS_MOVETIME_CAP_MS = 4_000;
+const BANQI_ANALYSIS_NODES = banqiEngineTierFor('misty-banqi-level-8')!.nodes;
+// Offline work has no player clock. Leave ample headroom for NNUE on a busy CPU
+// so the node budget binds; the hard cap still bounds a stalled engine process.
+const BANQI_ANALYSIS_MOVETIME_CAP_MS = 30_000;
 
 // Nominal cache dimension: `depth` only has to be STABLE for the (room, engine, depth) cache
 // key (banqi's real dial is nodes, encoded in the engine id). Kept at the family default.
@@ -50,8 +53,14 @@ export const BANQI_ANALYSIS_DEPTH = 12;
 // Red-SEAT-POV cp for a decisive finished position (no engine query is made there).
 const TERMINAL_CP = 30_000;
 
-// The history suffix invalidates earlier FEN-only cached sweeps.
-export const BANQI_ANALYSIS_ENGINE_ID = `misty-banqi-analysis@${BANQI_ENGINE_VERSION}+history1`;
+// Invalidate classical sweeps and incremental checkpoints as well as FEN-only history.
+export const BANQI_ANALYSIS_ENGINE_ID = `misty-banqi-analysis@${BANQI_ENGINE_VERSION}+nnue-nodes-${BANQI_ANALYSIS_NODES}+history2`;
+
+function banqiAnalysisSearchMoves(state: BanqiGameState): readonly string[] | undefined {
+  return getBanqiForbiddenChaseMoves(state).length > 0
+    ? getBanqiLegalMoves(state).map(banqiMoveToEngineUci)
+    : undefined;
+}
 
 export type BanqiRepetitionWindow = {
   fen: string;
@@ -87,6 +96,7 @@ export async function evaluateBanqiPosition(
     nodes: BANQI_ANALYSIS_NODES,
     movetimeCapMs: BANQI_ANALYSIS_MOVETIME_CAP_MS,
     moves: repetitionWindow.moves,
+    searchMoves: banqiAnalysisSearchMoves(state),
     noProgressLimit: banqiNoProgressLimitOf(state),
   });
   return {
@@ -155,16 +165,51 @@ export async function analyzeBanqiPostgame(
   // resumes from the last checkpoint (persist expensive output incrementally).
   const resumed = progress ? await progress.load() : null;
   const plies: SweepPlyEval[] = resumed ? [...resumed.items] : [];
-  for (let ply = plies.length; ply < states.length; ply += 1) {
-    const s = states[ply]!;
-    if (s.status.type !== 'playing') {
-      plies.push(terminalPlyEval(ply, s));
-      continue;
+  // Two workers fit the existing analysis pool's two slots. Each search is
+  // cold/reset and keeps its full node budget. Buffer out-of-order completions;
+  // only serialized, contiguous checkpoints are durable/reusable on restart.
+  let nextPly = plies.length;
+  let failed = false;
+  const completed = new Map<number, SweepPlyEval>();
+  let checkpoint: Promise<void> = Promise.resolve();
+  const commit = (ply: number, value: SweepPlyEval): Promise<void> => {
+    completed.set(ply, value);
+    checkpoint = checkpoint.then(async () => {
+      const before = plies.length;
+      while (completed.has(plies.length)) {
+        const cursor = plies.length;
+        plies.push(completed.get(cursor)!);
+        completed.delete(cursor);
+      }
+      if (progress && plies.length > before)
+        await progress.save({ nextIndex: plies.length, items: [...plies] });
+    });
+    return checkpoint;
+  };
+  const worker = async (): Promise<void> => {
+    while (!failed && nextPly < states.length) {
+      const ply = nextPly++;
+      try {
+        const s = states[ply]!;
+        let value: SweepPlyEval;
+        if (s.status.type !== 'playing') value = terminalPlyEval(ply, s);
+        else {
+          const evaluation = await evaluate(s, banqiAnalysisRepetitionWindow(states, moves, ply));
+          value = { ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best };
+        }
+        await commit(ply, value);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
     }
-    const evaluation = await evaluate(s, banqiAnalysisRepetitionWindow(states, moves, ply));
-    plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
-    if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
-  }
+  };
+  // Promise.all would return on the first error while another search/write was
+  // still running, allowing a retry/next job to race its checkpoint. Drain both.
+  const settled = await Promise.allSettled([worker(), worker()]);
+  const failure = settled.find((result) => result.status === 'rejected');
+  if (failure?.status === 'rejected') throw failure.reason;
+  await checkpoint;
   return { engineId: BANQI_ANALYSIS_ENGINE_ID, depth: BANQI_ANALYSIS_DEPTH, plies };
 }
 
@@ -252,11 +297,9 @@ export async function resolveBanqiAnalysis(
 // counterfactual ourselves (no chance node → clean per-branch eval → correct pool-average) sidesteps
 // that bias, so 0 luck is exactly "the average outcome" and realized is one term of the same mean.
 
-// Search budget. Each candidate's baseline is a small fan of single-position evals (one per distinct
-// hidden tile), all at this node budget so realized and the mean share one search. Each branch is
-// lighter than the Layer-1 sweep since a flip fans out; whole-game results are cached.
-const BANQI_DECISION_NODES = 250_000;
-const BANQI_DECISION_MOVETIME_CAP_MS = 4_000;
+// Split one L8 budget across the DISTINCT possible identities for a flip. Counts
+// weight the pool mean, not the amount of search spent on duplicate pieces.
+const BANQI_FLIP_MIN_NODES = 200_000;
 // Matches the banqi-analysis engine pool's slot count: with launch concurrency ==
 // pool slots, no fan-out eval ever waits in the pool queue (headroom, not shedding).
 const BANQI_DECISION_EVAL_CONCURRENCY = 2;
@@ -292,17 +335,19 @@ export type BanqiDecisionDeps = {
   evalPosition: (
     fen: string,
     repetitionWindow?: BanqiRepetitionWindow,
+    search?: { nodes: number; searchMoves?: readonly string[] },
   ) => Promise<{ cp: number | null; mate: number | null }>;
 };
 
 /** The live engine deps for one game, searched under that game's no-progress limit. */
 function liveDecisionDeps(noProgressLimit: number): BanqiDecisionDeps {
   return {
-    evalPosition: (fen, repetitionWindow) =>
+    evalPosition: (fen, repetitionWindow, search) =>
       evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
-        nodes: BANQI_DECISION_NODES,
-        movetimeCapMs: BANQI_DECISION_MOVETIME_CAP_MS,
+        nodes: search?.nodes ?? BANQI_ANALYSIS_NODES,
+        movetimeCapMs: BANQI_ANALYSIS_MOVETIME_CAP_MS,
         moves: repetitionWindow?.moves,
+        searchMoves: search?.searchMoves,
         noProgressLimit,
       }).then((e) => ({ cp: e.cp, mate: e.mate })),
   };
@@ -331,12 +376,16 @@ async function moverWinAfter(
   mover: BanqiSeat,
   evalPosition: BanqiDecisionDeps['evalPosition'],
   repetitionWindow: BanqiRepetitionWindow,
+  nodes: number,
 ): Promise<number> {
   if (post.status.type === 'finished') {
     const winner = post.status.winner;
     return winner === mover ? 100 : winner === null ? 50 : 0;
   }
-  const { cp, mate } = await evalPosition(banqiStateToEngineFen(post), repetitionWindow);
+  const { cp, mate } = await evalPosition(banqiStateToEngineFen(post), repetitionWindow, {
+    nodes,
+    searchMoves: banqiAnalysisSearchMoves(post),
+  });
   return winPercent(
     cp == null ? null : -cp,
     mate == null ? null : -mate,
@@ -365,6 +414,7 @@ async function poolMeanWin(
       mover,
       evalPosition,
       banqiRepetitionWindowAfterMove(state, move, post, repetitionWindow),
+      BANQI_ANALYSIS_NODES,
     );
     return { baseline: win, realized: win };
   }
@@ -380,6 +430,7 @@ async function poolMeanWin(
     else pool.set(key, { color: piece.color, role: piece.role, count: 1 });
   }
   const entries = [...pool.values()];
+  const nodes = Math.max(BANQI_FLIP_MIN_NODES, Math.floor(BANQI_ANALYSIS_NODES / entries.length));
   const total = entries.reduce((sum, e) => sum + e.count, 0);
   // Bounded fan-out: an early flip has ~14 distinct counterfactual tiles. A bare
   // Promise.all fired them all into the 2-slot engine pool at once — everything
@@ -418,6 +469,7 @@ async function poolMeanWin(
       mover,
       evalPosition,
       banqiRepetitionWindowAfterMove(cf, move, post, repetitionWindow),
+      nodes,
     );
   });
   let baseline = 0;
@@ -520,9 +572,10 @@ export async function analyzeBanqiDecisions(
 // both live in the same game_analysis table without collision (see persistence-game-analysis).
 // The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
 // to invalidate cached decisions when the algorithm changes without an engine change. d4 adds
-// ranked alternatives selected by pool mean, invalidating both old results and checkpoints. d3 adds
+// ranked alternatives selected by pool mean. d5 uses L8 NNUE, split flip budgets and legal roots,
+// invalidating both old results and checkpoints. d3 adds
 // the live repetition window; d2 fixed counterfactual hidden-multiset preservation.
-export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+d4`;
+export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+nnue-nodes-${BANQI_ANALYSIS_NODES}+d5`;
 
 export type BanqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<BanqiDecision[] | null>;

@@ -67,6 +67,9 @@ interface PendingRequest {
   resolve: (response: PythonPoolResponse) => void;
   reject: (err: Error) => void;
   timeoutHandle: NodeJS.Timeout | null;
+  deadlineAt: number;
+  deadlineHandle: NodeJS.Timeout | null;
+  settled: boolean;
   /** Dispatch attempts so far (R1-recover: retry a transient failure once). */
   attempts: number;
   /**
@@ -93,8 +96,8 @@ class PoolWorker {
   private readyPromise: Promise<void> | null = null;
   private readyResolve: (() => void) | null = null;
   private readyReject: ((err: Error) => void) | null = null;
-  /** True once the worker has been started AND was ready at least once. */
-  private hasBeenReady = false;
+  /** Startup time does not count as healthy uptime for the crash-loop guard. */
+  private readyAt: number | null = null;
   /** True after dispose() — suppresses restart on the resulting close event. */
   private disposed = false;
   /** Set once handleDeath() has fired so we don't restart twice for one death. */
@@ -104,14 +107,26 @@ class PoolWorker {
     public readonly index: number,
     private readonly opts: PythonPoolOptions,
     private readonly onIdle: () => void,
-    private readonly onPermanentDeath: (worker: PoolWorker, err: Error) => void,
+    private readonly onPermanentDeath: (
+      worker: PoolWorker,
+      err: Error,
+      countCrash: boolean,
+    ) => void,
     // R1-recover: hand a failed request back to the pool to retry-or-reject,
     // instead of rejecting the caller directly.
     private readonly onRequestFailure: (req: PendingRequest, err: Error) => void,
   ) {}
 
   isReady(): boolean {
-    return this.ready && this.current === null && this.process !== null && !this.process.killed;
+    return this.isAlive() && this.current === null;
+  }
+
+  isAlive(): boolean {
+    return this.ready && !this.disposed && this.process !== null && !this.process.killed;
+  }
+
+  hadStableUptime(): boolean {
+    return this.readyAt !== null && Date.now() - this.readyAt >= 30_000;
   }
 
   async start(): Promise<void> {
@@ -166,6 +181,7 @@ class PoolWorker {
       );
       this.fail(err);
     });
+    child.stdin.on('error', (err) => this.fail(err));
     child.on('close', (code) => {
       this.ready = false;
       const err = new Error(`worker ${this.index} exited code=${code ?? 'null'}`);
@@ -195,6 +211,7 @@ class PoolWorker {
   }
 
   private handleLine(line: string): void {
+    if (this.disposed || this.process?.killed) return;
     let msg: {
       kind?: string;
       requestId?: string;
@@ -215,7 +232,7 @@ class PoolWorker {
 
     if (msg.kind === 'ready') {
       this.ready = true;
-      this.hasBeenReady = true;
+      this.readyAt = Date.now();
       this.readyResolve?.();
       this.readyResolve = null;
       this.readyReject = null;
@@ -298,7 +315,7 @@ class PoolWorker {
     this.onIdle();
   }
 
-  private fail(err: Error): void {
+  private fail(err: Error, countCrash = true): void {
     if (this.readyReject) {
       this.readyReject(err);
       this.readyResolve = null;
@@ -345,9 +362,9 @@ class PoolWorker {
     // replace this slot. Suppressed during dispose() — the pool is tearing
     // down on purpose.
     if (this.disposed || this.deathHandled) return;
-    if (!this.hasBeenReady) return; // initial-start failure surfaces via readyReject above
+    if (this.readyAt === null) return; // initial-start failure surfaces via readyReject above
     this.deathHandled = true;
-    this.onPermanentDeath(this, err);
+    this.onPermanentDeath(this, err, countCrash);
   }
 
   markDisposed(): void {
@@ -369,7 +386,9 @@ class PoolWorker {
     );
     req.timeoutHandle = setTimeout(() => {
       if (this.current !== req) return;
-      this.fail(new Error(`pool request timeout ${req.timeoutMs}ms`));
+      // A total deadline may have already rejected the caller. Still bound the
+      // outstanding search, without charging deadline cleanup to the crash guard.
+      this.fail(new Error(`pool request timeout ${req.timeoutMs}ms`), !req.settled);
     }, req.timeoutMs);
     const line = `${JSON.stringify({ ...req.payload, requestId: req.requestId })}\n`;
     this.process!.stdin.write(line, (err) => {
@@ -379,6 +398,7 @@ class PoolWorker {
 
   dispose(): void {
     this.markDisposed();
+    if (this.current) this.fail(new Error('pool disposed'));
     if (!this.process) return;
     try {
       this.process.stdin.end();
@@ -419,8 +439,8 @@ export class PythonPool {
   private queue: PendingRequest[] = [];
   /** Restart attempts per slot, used for crash-loop backoff. */
   private restartCount = new Map<number, number>();
-  /** Last-restart timestamp per slot. */
-  private lastRestartAt = new Map<number, number>();
+  private readonly restartTimers = new Map<number, NodeJS.Timeout>();
+  private readonly retiredSlots = new Set<number>();
   private disposed = false;
   /** Soft session-affinity pins: gameId → worker slot. Bounded LRU. */
   private readonly roomWorker = new Map<string, number>();
@@ -436,9 +456,13 @@ export class PythonPool {
     const results = await Promise.allSettled(workers.map((w) => w.start()));
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length === workers.length) {
+      this.dispose();
       throw new Error(
         `all ${workers.length} python pool workers failed to start: ${(failures[0] as PromiseRejectedResult).reason}`,
       );
+    }
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'rejected') this.handleWorkerDeath(workers[index]!, result.reason);
     }
     logger.info(
       {
@@ -456,17 +480,32 @@ export class PythonPool {
       index,
       this.opts,
       () => this.tryDispatch(),
-      (worker, err) => this.handleWorkerDeath(worker, err),
+      (worker, err, countCrash) => this.handleWorkerDeath(worker, err, countCrash),
       (req, err) => this.handleRequestFailure(req, err),
     );
+  }
+
+  /** Busy workers are live capacity too; readiness must not flap with traffic. */
+  isReady(): boolean {
+    return !this.disposed && this.workers.some((worker) => worker.isAlive());
+  }
+
+  private hasRecoverableCapacity(): boolean {
+    return !this.disposed && this.retiredSlots.size < this.workers.length;
   }
 
   // R1-recover: retry a failed move on a healthy worker (bounded), else reject.
   // Re-enqueueing routes through tryDispatch → the next ready worker; since the
   // failed worker is dead/restarting (or busy), the retry lands elsewhere and
   // cold-starts the belief from the transcript (correct continuation). The
-  // dispatch timeout + the caller's outer watchdog bound the total time.
-  private handleRequestFailure(req: PendingRequest, err: Error): void {
+  // dispatch timeout bounds each attempt; the enqueue deadline bounds queueing
+  // and all attempts together without depending on the caller's HTTP connection.
+  private handleRequestFailure(req: PendingRequest, err: Error, retry = true): void {
+    if (req.settled) return;
+    if (this.disposed) {
+      req.reject(err);
+      return;
+    }
     req.attempts += 1;
     if (isTimeoutish(err.message)) req.timedOut = true;
     // A known signature (engine-known-failures.ts) is data, not a page: neither
@@ -476,7 +515,12 @@ export class PythonPool {
       gameSpecId: this.opts.gameSpecId,
       timedOut: req.timedOut,
     });
-    if (!this.disposed && req.attempts < MAX_MOVE_ATTEMPTS) {
+    if (
+      retry &&
+      this.hasRecoverableCapacity() &&
+      Date.now() < req.deadlineAt &&
+      req.attempts < MAX_MOVE_ATTEMPTS
+    ) {
       if (!knownFailure) engineCounters.recordPythonPoolRetry();
       logger.warn(
         {
@@ -507,23 +551,24 @@ export class PythonPool {
     req.reject(err);
   }
 
-  private handleWorkerDeath(dead: PoolWorker, err: Error): void {
-    if (this.disposed) return;
+  private handleWorkerDeath(dead: PoolWorker, err: Error, countCrash = true): void {
+    if (this.disposed || this.workers[dead.index] !== dead) return;
+    dead.markDisposed();
     const slot = dead.index;
     // Drop affinity pins to this slot — its replacement starts cold, so those
     // games re-pin (and cold-replay) on their next move.
     for (const [game, idx] of this.roomWorker) {
       if (idx === slot) this.roomWorker.delete(game);
     }
-    const now = Date.now();
-    const lastAt = this.lastRestartAt.get(slot) ?? 0;
-    const sinceLast = now - lastAt;
-    // Crash-loop guard: if this slot died within 30s of its previous restart,
-    // back off exponentially. After 5 quick restarts give up on the slot —
-    // the pool keeps running with fewer workers and an alert-worthy log.
-    const burst = sinceLast < 30_000 ? (this.restartCount.get(slot) ?? 0) + 1 : 1;
-    this.restartCount.set(slot, burst);
-    this.lastRestartAt.set(slot, now);
+    // Only 30s of ready uptime resets a crash streak. Replacements that never
+    // become ready must accumulate failures even when startup itself is slow.
+    // Deadline-driven replacements do not consume the crash allowance.
+    const burst = countCrash
+      ? dead.hadStableUptime()
+        ? 1
+        : (this.restartCount.get(slot) ?? 0) + 1
+      : 0;
+    if (countCrash) this.restartCount.set(slot, burst);
 
     if (burst > 5) {
       engineCounters.recordPythonPoolError();
@@ -536,15 +581,15 @@ export class PythonPool {
         },
         'python pool slot gave up after repeated crashes',
       );
-      // Replace the dead slot reference with a stub-disposed worker so
-      // isReady() returns false; tryDispatch will skip it.
-      const stub = this.makeWorker(slot);
-      stub.markDisposed();
-      this.workers[slot] = stub;
+      this.retiredSlots.add(slot);
+      if (!this.hasRecoverableCapacity()) {
+        for (const req of this.queue) req.reject(new Error('no recoverable python pool workers'));
+        this.queue = [];
+      }
       return;
     }
 
-    const delay = burst === 1 ? 0 : Math.min(5_000, 250 * 2 ** (burst - 1));
+    const delay = burst <= 1 ? 0 : Math.min(5_000, 250 * 2 ** (burst - 1));
     logger.warn(
       {
         kind: 'python_pool_worker_restart',
@@ -558,17 +603,20 @@ export class PythonPool {
     );
 
     const restart = async () => {
+      this.restartTimers.delete(slot);
       if (this.disposed) return;
       const replacement = this.makeWorker(slot);
       this.workers[slot] = replacement;
       try {
         await replacement.start();
+        if (this.disposed) return;
         logger.info(
           { kind: 'python_pool_worker_replaced', engine_id: this.opts.engineId, worker_idx: slot },
           'pool worker replaced',
         );
         this.tryDispatch();
       } catch (startErr) {
+        if (this.disposed) return;
         engineCounters.recordPythonPoolError();
         logger.error(
           {
@@ -579,32 +627,58 @@ export class PythonPool {
           },
           'pool worker restart failed',
         );
-        // The new worker's own fail() will fire handleWorkerDeath again,
-        // honoring the burst counter.
+        // A worker that never reached ready rejects start() but does not fire
+        // onPermanentDeath. The restart loop owns that failure explicitly.
+        this.handleWorkerDeath(replacement, startErr as Error);
       }
     };
 
     if (delay === 0) {
       void restart();
     } else {
-      setTimeout(() => void restart(), delay).unref();
+      this.restartTimers.set(slot, setTimeout(() => void restart(), delay).unref());
     }
   }
 
   chooseMove(payload: Record<string, unknown>, timeoutMs: number): Promise<PythonPoolResponse> {
+    if (this.disposed) return Promise.reject(new Error('pool disposed'));
+    if (!this.hasRecoverableCapacity()) {
+      return Promise.reject(new Error('no recoverable python pool workers'));
+    }
     return new Promise<PythonPoolResponse>((resolvePromise, rejectPromise) => {
+      // Preserve the existing per-attempt timeout and maximum attempts. Their
+      // combined allowance now also caps queue waits and replacement startup.
+      const enqueuedAt = Date.now();
+      const totalTimeoutMs = timeoutMs * MAX_MOVE_ATTEMPTS;
+      const settle = (run: () => void): void => {
+        if (req.settled) return;
+        req.settled = true;
+        if (req.deadlineHandle) clearTimeout(req.deadlineHandle);
+        // The worker owns its attempt timer until it replies or fails. A total
+        // deadline settles the caller without freeing or killing a busy worker.
+        run();
+      };
       const req: PendingRequest = {
         dispatchedAt: null,
-        enqueuedAt: Date.now(),
+        enqueuedAt,
         requestId: randomUUID(),
         payload,
         timeoutMs,
-        resolve: resolvePromise,
-        reject: rejectPromise,
+        resolve: (response) => settle(() => resolvePromise(response)),
+        reject: (err) => settle(() => rejectPromise(err)),
         timeoutHandle: null,
+        deadlineAt: enqueuedAt + totalTimeoutMs,
+        deadlineHandle: null,
+        settled: false,
         attempts: 0,
         timedOut: false,
       };
+      req.deadlineHandle = setTimeout(() => {
+        this.queue = this.queue.filter((queued) => queued !== req);
+        const err = new Error(`pool total request timeout ${totalTimeoutMs}ms`);
+        // The timer is authoritative even if Date.now() is just under deadlineAt.
+        this.handleRequestFailure(req, err, false);
+      }, totalTimeoutMs).unref();
       this.queue.push(req);
       this.tryDispatch();
     });
@@ -654,6 +728,8 @@ export class PythonPool {
 
   dispose(): void {
     this.disposed = true;
+    for (const timer of this.restartTimers.values()) clearTimeout(timer);
+    this.restartTimers.clear();
     for (const req of this.queue) req.reject(new Error('pool disposed'));
     this.queue = [];
     for (const w of this.workers) w.dispose();
@@ -716,6 +792,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // Lazy-initialized singleton per engine_id. First chooseMove blocks on pool
 // boot; subsequent ones reuse warm workers.
 const POOLS: Map<string, Promise<PythonPool>> = new Map();
+// Pools become required when first requested. Keep failed startup visible until
+// a subsequent request replaces it, so health cannot report missing capacity as OK.
+const REQUIRED_POOLS = new Map<string, PythonPool>();
+
+export function pythonPoolsReady(): boolean {
+  return [...REQUIRED_POOLS.values()].every((pool) => pool.isReady());
+}
 
 /**
  * Returns a PythonPool for `engineId`, or null if pooling is disabled.
@@ -753,6 +836,7 @@ export async function getPythonPool(
       affinity: process.env.MISTBOARD_POOL_AFFINITY === '1',
     };
     const pool = new PythonPool(opts);
+    REQUIRED_POOLS.set(engineId, pool);
     try {
       await pool.start();
     } catch (err) {
@@ -783,6 +867,7 @@ export function disposeAllPythonPools(): void {
     promise.then((p) => p.dispose()).catch(() => undefined);
   }
   POOLS.clear();
+  REQUIRED_POOLS.clear();
 }
 
 // defaultStockfishPath now lives in engine-paths (one definition, three callers).

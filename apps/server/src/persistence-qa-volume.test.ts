@@ -6,6 +6,7 @@ import { assert, definePersistenceTests, test } from './persistence-test-support
 import { buildQaGame, QA_VOLUME, QA_VOLUME_CORPUS, qaVolumeSpecIds } from './qa-volume.js';
 import { seedQaVolume } from './qa-volume-store.js';
 import { resolveXiangqiAnalysis } from './routes/xiangqi-games.js';
+import { resolveThreeKingdomsBanqiAnalysis } from './three-kingdoms-banqi-analysis.js';
 
 const profile = JSON.parse(
   readFileSync(new URL('../../../config/product-profile.json', import.meta.url), 'utf8'),
@@ -44,7 +45,7 @@ definePersistenceTests('qa-volume', () => {
       assert.equal(first.studies, QA_VOLUME.studies);
       assert.equal(first.chapters, QA_VOLUME.studies);
       assert.equal(first.chat, QA_VOLUME.chatLines);
-      assert.equal(first.analyses, 14);
+      assert.equal(first.analyses, 16);
       assert.equal(
         (await client.query("SELECT display_name FROM users WHERE id='volume-sentinel'")).rows[0]
           .display_name,
@@ -53,10 +54,12 @@ definePersistenceTests('qa-volume', () => {
       const xq = buildQaGame('xiangqi', 0, now);
       const jq = buildQaGame('jieqi', 0, now);
       const bq = buildQaGame('banqi', 0, now);
+      const tk = buildQaGame('three-kingdoms-banqi', 0, now);
       const charts = [
         await resolveXiangqiAnalysis(xq.roomId, { timeline: [] }, undefined, undefined, false),
         await resolveJieqiAnalysis(jq.roomId, [], undefined as never, undefined, undefined, false),
         await resolveBanqiAnalysis(bq.roomId, [], undefined as never, undefined, undefined, false),
+        await resolveThreeKingdomsBanqiAnalysis(tk.roomId, [], undefined, undefined, false),
       ];
       for (const chart of charts) {
         assert.ok(chart);

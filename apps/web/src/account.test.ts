@@ -532,6 +532,15 @@ describe('account page auth flow', () => {
     expect(document.querySelector('.account-settings-panel .appearance-menu')).toBeNull();
     expect(document.querySelector('[name="pieceAnimation"]')).not.toBeNull();
     expect(document.querySelector('[name="playerRatings"]')).toBeNull();
+    const touchConfirmation = document.querySelector<HTMLInputElement>(
+      '[name="confirmMovesOnTouch"]',
+    );
+    expect(touchConfirmation?.checked).toBe(true);
+    touchConfirmation!.click();
+    expect(
+      JSON.parse(window.localStorage.getItem(displayPreferenceStorageKey) ?? '{}')
+        .confirmMovesOnTouch,
+    ).toBe(false);
     expect(
       [...document.querySelectorAll('.account-settings-rail-link')].map((link) => link.textContent),
     ).toEqual([

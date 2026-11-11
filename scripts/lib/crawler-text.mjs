@@ -1,16 +1,20 @@
 import { Window } from 'happy-dom';
 
-// Parse inertly: never execute scripts, follow links, or load page assets.
-const window = new Window({
-  settings: {
-    disableJavaScriptEvaluation: true,
-    disableJavaScriptFileLoading: true,
-    disableCSSFileLoading: true,
-  },
-});
-
+// A parser Window per document keeps happy-dom 21 from retaining earlier pages.
+// The returned DOM stays readable after closing its inert browsing context.
 export function crawlerDocument(html) {
-  return new window.DOMParser().parseFromString(html, 'text/html');
+  const window = new Window({
+    settings: {
+      disableJavaScriptEvaluation: true,
+      disableJavaScriptFileLoading: true,
+      disableCSSFileLoading: true,
+    },
+  });
+  try {
+    return new window.DOMParser().parseFromString(html, 'text/html');
+  } finally {
+    void window.happyDOM.close();
+  }
 }
 
 // Decided 2026-11-07 (#961): the English-calibrated floor counts each CJK
@@ -32,10 +36,10 @@ export function crawlerText(html) {
 // dialog. Server crawler bodies may have no shell at all. Strip only these
 // chrome containers and semantic header/nav/footer, retaining all other copy.
 export function crawlerContentText(html) {
-  return contentText(crawlerDocument(html));
+  return crawlerDocumentContentText(crawlerDocument(html));
 }
 
-function contentText(document) {
+export function crawlerDocumentContentText(document) {
   for (const node of document.querySelectorAll(
     'script,style,template,svg,header,nav,footer,.site-nav,#site-menu',
   ))
@@ -57,5 +61,5 @@ export function crawlerFacts(html, { contentOnly = false } = {}) {
   };
   // Read metadata before removing chrome (an article's h1 may be in a header).
   // Reuse the parsed document: large prerenders include many SVG diagrams.
-  return { ...facts, text: contentOnly ? contentText(document) : crawlerText(html) };
+  return { ...facts, text: contentOnly ? crawlerDocumentContentText(document) : crawlerText(html) };
 }

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CONTENT_CAVEATS } from './content-readout.js';
+import { escapeHtml } from './email-layout.js';
 import { buildMistboardReadout, type MistboardReadoutFacts } from './mistboard-readout.js';
 import { buildReadoutSummary, readoutDelta, renderReadoutEmail } from './readout-email-render.js';
 
@@ -152,6 +154,30 @@ test('page summary and email share the same decisions and daily periods are expl
   value.trigger = 'daily';
   assert.match(buildReadoutSummary(value).period, /rolling 7 complete UTC days/);
   assert.doesNotMatch(buildReadoutSummary(value).title, /this week/);
+});
+
+test('weekly email renders every shared content caveat in HTML and text', () => {
+  const value = report();
+  const summary = buildReadoutSummary(value);
+  const email = renderReadoutEmail(value);
+  assert.deepEqual(summary.contentCaveats, [...CONTENT_CAVEATS]);
+  for (const line of [...summary.content, ...summary.contentCaveats]) {
+    assert.ok(email.text.includes(line), `Text includes: ${line}`);
+    assert.ok(email.html.includes(escapeHtml(line)), `HTML includes: ${line}`);
+  }
+});
+
+test('weekly email reads content only once through the shared summary', () => {
+  const value = report();
+  let reads = 0;
+  Object.defineProperty(value, 'content', {
+    get() {
+      reads++;
+      return undefined;
+    },
+  });
+  renderReadoutEmail(value);
+  assert.equal(reads, 1);
 });
 
 test('schema-v1 history without player fields stays readable rather than inventing counts', () => {

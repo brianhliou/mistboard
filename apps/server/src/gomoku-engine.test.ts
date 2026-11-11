@@ -276,6 +276,53 @@ test('empty legacy boards use BEGIN without requiring candidates', async () => {
   }
 });
 
+test('calibration seed and telemetry hooks preserve the live request and selected move', async () => {
+  const opening = GOMOKU_OPENINGS[0]!;
+  const state = createGomokuRoomState('live-seed-reference', opening);
+  const reference = fakeEngine();
+  const expected = await gomokuLiveEngineMove(state, 'rapfi-level-1', reference);
+  const engine = fakeEngine();
+  const searches: { move: GomokuMove; lines: string[]; elapsedMs: number }[] = [];
+  const actual = await gomokuLiveEngineMove(
+    { ...state, id: 'different-calibration-identity' },
+    'rapfi-level-1',
+    {
+      ...engine,
+      gameSeed: rapfiGameSeed(state.id),
+      onSearch: (search) => searches.push(search),
+    },
+  );
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(engine.commands, reference.commands);
+  assert.equal(searches.length, 1);
+  assert.deepEqual(searches[0]!.move, expected);
+  assert.deepEqual(searches[0]!.lines, recorded.split('\n'));
+  assert.ok(Number.isFinite(searches[0]!.elapsedMs) && searches[0]!.elapsedMs >= 0);
+  assert.equal(engine.counts().active, 0);
+
+  const invalid = fakeEngine();
+  await assert.rejects(
+    gomokuLiveEngineMove(state, 'rapfi-level-1', { ...invalid, gameSeed: -1 }),
+    /Invalid Rapfi seed/,
+  );
+  assert.equal(invalid.commands.length, 0);
+});
+
+test('a failing search observer still reaps the native process and releases its slot', async () => {
+  const engine = fakeEngine({ output: '7,7' });
+  await assert.rejects(
+    gomokuLiveEngineMove(createGomokuRoomState('observer-error'), 'rapfi-level-8', {
+      ...engine,
+      onSearch: () => {
+        throw new Error('telemetry write failed');
+      },
+    }),
+    /telemetry write failed/,
+  );
+  assert.equal(engine.counts().active, 0);
+  assert.equal(aggregateEnginePoolStats().processes.active, 0);
+});
+
 test('live concurrency is global across rooms and slots include child reaping', async () => {
   process.env.RAPFI_MAX_PROCESSES = '1';
   const engine = fakeEngine({ delayMs: 10, reapMs: 10 });

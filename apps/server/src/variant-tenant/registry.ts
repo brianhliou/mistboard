@@ -308,6 +308,9 @@ export type VariantTenantRegistration = {
   // The tenant's live room map (adapter-owned). Read by the ws resolver
   // (live rooms route before flag checks) and the shutdown sweeps.
   rooms: ReadonlyMap<string, TenantManagedRoom>;
+  // Public discovery must use the same delivery frontier as a spectator's
+  // snapshot, including events, move count and clock. Absent: no held moves.
+  publicRoom?: (room: TenantManagedRoom) => TenantManagedRoom;
   // Rooms holding a live in-progress game. Feeds the drain controller's
   // activeGames gate (/api/server-status) so safe deploys wait on tenant
   // games exactly like chess games. Bound by the adapter because the

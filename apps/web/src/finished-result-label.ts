@@ -14,13 +14,14 @@ export function resultLabel(result: string): string {
   return t('watch.draw');
 }
 
-// Flip variants (Banqi, Flip Jungle) decouple seat from ink, so their seat-keyed
+// Flip variants (Banqi, Flip Jungle, Three Kingdoms Banqi) decouple seat from ink, so their seat-keyed
 // result needs the game's firstColor to read by ink ("Black wins" / "Blue wins").
 // Every other variant has seat == ink; route the winning-side word through
 // seatColorWord so the Jungle family reads "Blue wins" (its canonical second-seat
 // color) instead of "Black wins".
 export function watchQueueResultLabel(game: FeaturedGame): string {
-  if (game.variant === 'banqi') return banqiResultLabel(game.result, game.firstColor ?? null);
+  if (game.variant === 'banqi' || game.variant === 'three-kingdoms-banqi')
+    return banqiResultLabel(game.result, game.firstColor ?? null);
   if (game.variant === 'jungle-flip')
     return jungleFlipResultLabel(game.result, game.firstColor ?? null);
   const result = game.result;

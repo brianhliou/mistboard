@@ -72,3 +72,55 @@ test('a failed first read returns null', async () => {
     null,
   );
 });
+
+test('stale reads stop answering immediately at the 15-minute age boundary', async () => {
+  await getCachedPublicStats(0, async () => stats(1395));
+  let release: (value: PublicSiteStats) => void = () => {};
+  let loads = 0;
+  const slow = () => {
+    loads += 1;
+    return new Promise<PublicSiteStats>((resolve) => {
+      release = resolve;
+    });
+  };
+  const maxAge = 15 * 60_000;
+  assert.deepEqual(await getCachedPublicStats(maxAge - 1, slow), stats(1395));
+  let answered = false;
+  const atBoundary = getCachedPublicStats(maxAge, slow).then((value) => {
+    answered = true;
+    return value;
+  });
+  const afterBoundary = getCachedPublicStats(maxAge + 1, slow);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(answered, false);
+  assert.equal(loads, 1);
+  release(stats(1400));
+  assert.deepEqual(await atBoundary, stats(1400));
+  assert.deepEqual(await afterBoundary, stats(1400));
+});
+
+test('an hours-old value waits for one shared read and falls back on failure without renewing age', async () => {
+  await getCachedPublicStats(0, async () => stats(1395));
+  const now = 3 * 60 * 60_000;
+  let reject: (error: Error) => void = () => {};
+  let loads = 0;
+  const failing = () => {
+    loads += 1;
+    return new Promise<PublicSiteStats>((_resolve, rejectRead) => {
+      reject = rejectRead;
+    });
+  };
+  let answered = false;
+  const first = getCachedPublicStats(now, failing).then((value) => {
+    answered = true;
+    return value;
+  });
+  const second = getCachedPublicStats(now, failing);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(answered, false);
+  assert.equal(loads, 1);
+  reject(new Error('db down'));
+  assert.deepEqual(await first, stats(1395));
+  assert.deepEqual(await second, stats(1395));
+  assert.deepEqual(await getCachedPublicStats(now + 1, async () => stats(1400)), stats(1400));
+});

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   boardPageSamples,
+  EXTRA_PATHS,
   INDEX_PATHS,
   paintsBareCopy,
   routeShape,
@@ -9,6 +10,16 @@ import {
 
 const page = (app) =>
   `<html><head></head><body>${app}<script type="module" src="/assets/index.js"></script></body></html>`;
+
+test('the live shelf and rating distribution are first-paint samples in every admitted locale', () => {
+  for (const path of [
+    '/practice',
+    '/zh-hans/practice',
+    '/zh-hant/practice',
+    '/player/rating-stats',
+  ])
+    assert.ok(EXTRA_PATHS.includes(path), path);
+});
 
 test('flags the classless crawler copy /players painted before 2026-10-17', () => {
   // Planted failure: the shape prod served, text with no class and no wrapper.

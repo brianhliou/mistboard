@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-readout.js';
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 
@@ -84,6 +85,7 @@ export type MistboardReadoutTrendPoint = {
 export type MistboardReadoutComparison = {
   periodStart: string;
   periodEnd: string;
+  content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   broadcastBoards: number | null;
   engineFailedTasks: number | null;
@@ -260,6 +262,7 @@ export type MistboardReadoutV1 = {
     // local CLI) and on snapshots from before 2026-10-06.
     missingEngines?: MistboardReadoutMissingEngine[];
   };
+  content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
@@ -283,6 +286,7 @@ export type MistboardReadoutV1 = {
 };
 
 export type MistboardReadoutFacts = {
+  content?: ContentReadout;
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
@@ -350,6 +354,7 @@ export function buildMistboardReadout(input: {
     trigger: input.trigger,
     verdict,
     production: input.runtime,
+    content: input.facts.content,
     product: input.facts.product,
     puzzles: input.facts.puzzles,
     mining: input.facts.mining,
@@ -1048,6 +1053,12 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
       `- Unknown sections: ${report.collectorErrors.map((error) => error.section).join(', ')}`,
     );
   }
+  lines.push(
+    '',
+    '## Content',
+    ...contentSummary(report.content),
+    ...CONTENT_CAVEATS.map((line) => `- ${line}`),
+  );
   lines.push('', `<!-- mistboard-readout-snapshot:${report.snapshotId} -->`, '');
   return lines.join('\n');
 }

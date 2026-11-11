@@ -133,7 +133,6 @@ export type SoundKind =
   | 'blast'
   | 'cannon-capture'
   | 'capture'
-  | 'captured'
   | 'castle'
   | 'draw'
   | 'drop'

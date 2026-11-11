@@ -4,7 +4,11 @@
 // into the display numbers: a DECISION-quality glyph (graded) and a LUCK value (shown per move,
 // never graded). Counterpart to game-analysis.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
-import { postAnalysisJob } from './analysis-job-poll.js';
+import {
+  type AnalysisJobPollOptions,
+  fetchAnalysisJob,
+  postAnalysisJob,
+} from './analysis-job-poll.js';
 import type { DecisionOverlay } from './analysis-marks.js';
 import { formatJieqiBestMove } from './move-advice-text.js';
 
@@ -17,7 +21,7 @@ export type JieqiDecision = {
   /** True pool-mean EV (win%) of the played move — the decision, before the dice. */
   playedWin: number;
   /** Win% the reveal ACTUALLY produced — the truth, including luck. */
-  realizedWin: number;
+  realizedWin?: number;
   /** Rank of the played move among candidates by true baseline (1 = it WAS the best). */
   playedRank?: number | null;
   /** Alternatives the server true-baselined, best first. Absent on decisions cached before
@@ -65,7 +69,7 @@ export type DecisionView = {
   decisionLoss?: number;
   /** Win% the reveal swung vs its OWN pool-average expectation (signed: + lucky, - unlucky).
    *  0 = the reveal came out exactly average — "the average piece still in the bag". */
-  luck: number;
+  luck?: number;
   /** Per-decision accuracy in [0, 100] (lila's win%-drop curve, best -> played). */
   accuracy?: number;
   playedRank?: number | null;
@@ -74,12 +78,13 @@ export type DecisionView = {
 };
 
 export function decisionView(d: JieqiDecision): DecisionView {
+  const luck = d.realizedWin === undefined ? {} : { luck: d.realizedWin - d.playedWin };
   if (d.bestWin === undefined)
     return {
       ply: d.ply,
       mover: d.mover,
       judgment: null,
-      luck: d.realizedWin - d.playedWin,
+      ...luck,
     };
   const decisionLoss = Math.max(0, d.bestWin - d.playedWin);
   const judgment = moveJudgment(d.bestWin, d.playedWin);
@@ -88,7 +93,7 @@ export function decisionView(d: JieqiDecision): DecisionView {
     mover: d.mover,
     judgment,
     decisionLoss,
-    luck: d.realizedWin - d.playedWin,
+    ...luck,
     accuracy: accuracyPercent(d.bestWin, d.playedWin),
     playedRank: d.playedRank,
     ...(d.candidates?.length ? { candidates: d.candidates } : {}),
@@ -140,17 +145,25 @@ function decisionsUrl(roomId: string): string {
 /** GET the already-cached decomposition, or null on a miss (204). Never triggers a compute. */
 export async function fetchCachedJieqiDecisions(
   roomId: string,
+  options: AnalysisJobPollOptions = {},
 ): Promise<JieqiDecisionSummary | null> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'GET' });
-  if (response.status === 204 || !response.ok) return null;
-  return summarizeDecisions(((await response.json()) as JieqiDecisionsResponse).decisions);
+  const cached = await fetchAnalysisJob<JieqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
+    errorPrefix: 'decisions_request_failed',
+  });
+  if (!cached) return null;
+  return summarizeDecisions(cached.decisions);
 }
 
 /** POST to compute the decomposition (account-gated on the server), then summarize it.
  *  A cached game answers immediately (200); otherwise the server enqueues a background
  *  job (202) and this polls it to completion (see analysis-job-poll). */
-export async function requestJieqiDecisions(roomId: string): Promise<JieqiDecisionSummary> {
+export async function requestJieqiDecisions(
+  roomId: string,
+  options: AnalysisJobPollOptions = {},
+): Promise<JieqiDecisionSummary> {
   const body = await postAnalysisJob<JieqiDecisionsResponse>(decisionsUrl(roomId), {
+    ...options,
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);
@@ -167,7 +180,7 @@ export function jieqiDecisionOverlay(summary: JieqiDecisionSummary): DecisionOve
         {
           judgment: view.judgment,
           ...(view.accuracy === undefined ? {} : { accuracy: view.accuracy }),
-          luck: view.luck,
+          ...(view.luck === undefined ? {} : { luck: view.luck }),
           playedRank: view.playedRank ?? null,
           // Format at the variant seam: the review layer is variant-agnostic and never
           // shows engine UCI. Same formatter the "… was best." advice line uses. The raw

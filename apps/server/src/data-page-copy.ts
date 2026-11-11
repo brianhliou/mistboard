@@ -1,6 +1,18 @@
 // Catalog strings for request-time data bodies; data-page-body.test.ts pins every locale.
 export const DATA_PAGE_COPY = {
   en: {
+    'practice.title': 'Practice',
+    'practice.subtitle': 'against the engine',
+    'practice.empty': 'No practice sets are published yet.',
+    'practice.progress': 'Progress: {pct}%',
+    'practice.solvedOfTotal': '{solved} of {total} solved',
+    'practice.section.endgames': 'Basic endgames',
+    'practice.ribbon.play': 'Play!',
+    'practice.card.soldier': 'It never moves back',
+    'practice.card.chariot': 'Wins on its own',
+    'practice.card.horse': 'Mind the blocked leg',
+    'practice.card.cannon': 'Needs a screen',
+    'practice.card.insufficient': 'Hold the draw',
     'stats.heading': 'Statistics',
     'stats.lede':
       'How much gets played here. Games between people or against the bots, counted when they finish; engine matches and test games are left out.',
@@ -38,6 +50,19 @@ export const DATA_PAGE_COPY = {
     'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
     'data.copy': 'Copy',
     'privacy.ccByLink': 'CC BY 4.0',
+    'coach.invite.heading': 'Help shape teaching on Mistboard',
+    'coach.invite.lede':
+      'Teach xiangqi or its variants? Bring a lesson or a game you like to explain. We would like to work with a few teachers and learn what would make Mistboard useful for their students.',
+    'coach.invite.firstTitle': 'Start with a study',
+    'coach.invite.firstBody':
+      'Put a game or position into a study, add variations and comments, and share a board your students can explore. Studies can also be embedded on your own website.',
+    'coach.invite.secondTitle': 'A profile of your own',
+    'coach.invite.secondBody':
+      'Verified titled players can publish a coach profile with their languages, rates and contact details. Students contact you directly; Mistboard takes no commission.',
+    'coach.invite.next':
+      'Teaching tools here are still early. Tell us who you teach, what you want to cover, and where studies fall short. We can start with one lesson and decide together what is worth building next.',
+    'coach.invite.contact': 'Talk to us about teaching',
+    'coach.invite.studies': 'Explore studies',
     'coach.heading': 'Coaches',
     'coach.intro':
       'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
@@ -87,6 +112,18 @@ export const DATA_PAGE_COPY = {
     'setup.correspondence': 'Correspondence',
   },
   'zh-Hans': {
+    'practice.title': '练习',
+    'practice.subtitle': '与引擎对弈',
+    'practice.empty': '暂无已发布的练习。',
+    'practice.progress': '进度：{pct}%',
+    'practice.solvedOfTotal': '已完成 {solved} / {total}',
+    'practice.section.endgames': '基本残局',
+    'practice.ribbon.play': '开始',
+    'practice.card.soldier': '兵不能后退',
+    'practice.card.chariot': '单车就能取胜',
+    'practice.card.horse': '当心蹩马腿',
+    'practice.card.cannon': '要有炮架',
+    'practice.card.insufficient': '守住和棋',
     'stats.heading': '统计',
     'stats.lede':
       '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
@@ -121,6 +158,19 @@ export const DATA_PAGE_COPY = {
     'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
     'data.copy': '复制',
     'privacy.ccByLink': 'CC BY 4.0',
+    'coach.invite.heading': '一起打磨 Mistboard 的教学体验',
+    'coach.invite.lede':
+      '你教象棋或其变体吗？带来一堂课，或一盘你喜欢讲解的棋。我们希望和几位老师一起尝试，了解怎样才能真正帮助学生。',
+    'coach.invite.firstTitle': '从一个研习开始',
+    'coach.invite.firstBody':
+      '把棋局或局面放进研习，添加变化和注释，让学生自己探索棋盘。研习也可以嵌入你的网站。',
+    'coach.invite.secondTitle': '展示你的教学',
+    'coach.invite.secondBody':
+      '持有认证头衔的棋手可以发布教练主页，介绍授课语言、收费和联系方式。学员直接联系你，Mistboard 不收取佣金。',
+    'coach.invite.next':
+      '这里的教学工具还在起步阶段。告诉我们你教谁、想讲什么，以及研习还缺少什么。我们可以从一堂课开始，一起决定接下来值得开发的功能。',
+    'coach.invite.contact': '聊聊你的教学想法',
+    'coach.invite.studies': '浏览研习',
     'coach.heading': '教练',
     'coach.intro': '找一位教练学棋。这里的每位教练都持有经认证的象棋或国际象棋头衔。',
     'coach.empty': '暂无教练。',
@@ -169,6 +219,18 @@ export const DATA_PAGE_COPY = {
     'setup.correspondence': '通信对局',
   },
   'zh-Hant': {
+    'practice.title': '練習',
+    'practice.subtitle': '與引擎對弈',
+    'practice.empty': '暫無已發布的練習。',
+    'practice.progress': '進度：{pct}%',
+    'practice.solvedOfTotal': '已完成 {solved} / {total}',
+    'practice.section.endgames': '基本殘局',
+    'practice.ribbon.play': '開始',
+    'practice.card.soldier': '兵不能後退',
+    'practice.card.chariot': '單車就能取勝',
+    'practice.card.horse': '當心蹩馬腿',
+    'practice.card.cannon': '要有砲架',
+    'practice.card.insufficient': '守住和棋',
     'stats.heading': '統計',
     'stats.lede':
       '這裡的對局量。計入人與人或人與引擎之間已完成的對局；引擎對引擎的比賽和測試對局不計入。',
@@ -203,6 +265,19 @@ export const DATA_PAGE_COPY = {
     'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
     'data.copy': '複製',
     'privacy.ccByLink': 'CC BY 4.0',
+    'coach.invite.heading': '一起打磨 Mistboard 的教學體驗',
+    'coach.invite.lede':
+      '你教象棋或其變體嗎？帶來一堂課，或一盤你喜歡講解的棋。我們希望和幾位老師一起嘗試，了解怎樣才能真正幫助學生。',
+    'coach.invite.firstTitle': '從一個研習開始',
+    'coach.invite.firstBody':
+      '把棋局或局面放進研習，加入變化和註解，讓學生自己探索棋盤。研習也可以嵌入你的網站。',
+    'coach.invite.secondTitle': '展示你的教學',
+    'coach.invite.secondBody':
+      '持有認證頭銜的棋手可以發布教練主頁，介紹授課語言、收費和聯絡方式。學員直接聯絡你，Mistboard 不收取佣金。',
+    'coach.invite.next':
+      '這裡的教學工具還在起步階段。告訴我們你教誰、想講什麼，以及研習還缺少什麼。我們可以從一堂課開始，一起決定接下來值得開發的功能。',
+    'coach.invite.contact': '聊聊你的教學想法',
+    'coach.invite.studies': '瀏覽研習',
     'coach.heading': '教練',
     'coach.intro': '找一位教練學棋。這裡的每位教練都持有經認證的象棋或西洋棋頭銜。',
     'coach.empty': '暫無教練。',

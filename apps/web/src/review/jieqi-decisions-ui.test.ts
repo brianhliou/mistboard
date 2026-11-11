@@ -7,6 +7,7 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { computeGameAnalysis } from './game-analysis.js';
+import { jieqiDecisionOverlay, summarizeDecisions } from './jieqi-decisions.js';
 import { mountJieqiReview } from './jieqi-review.js';
 import { type DecisionOverlay, decisionBestQuote } from './tree-review.js';
 
@@ -47,6 +48,34 @@ function overlayWithFlaggedReveal(): DecisionOverlay {
 }
 
 describe('jieqi decision overlay wiring', () => {
+  it('renders grades and accuracy without dice or empty luck slots when luck is absent', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const moves = firstMoves(3);
+    const overlay = jieqiDecisionOverlay(
+      summarizeDecisions([{ ply: 1, mover: 'red', bestWin: 70, playedWin: 50, playedRank: 2 }]),
+    );
+    const review = mountJieqiReview(root, 'room-no-luck', STANDARD_JIEQI_DEAL, {
+      ariaLabel: 'test',
+      title: 'Jieqi',
+      summary: 'test',
+      moves,
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => fakeAnalysis(moves.length),
+        run: async () => fakeAnalysis(moves.length),
+      },
+      decisions: { fetchCached: async () => overlay, canRun: true, run: async () => overlay },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    review.jumpToPly(1);
+    expect(root.querySelector('.analysis-summary')?.textContent).toContain('Mistake');
+    expect(root.querySelector('.review-move-list__luck')).toBeNull();
+    expect(root.querySelector('.luck-mark')).toBeNull();
+    expect(root.textContent).not.toMatch(/🎲|NaN/);
+    review.destroy();
+    root.remove();
+  });
   it('renders the two-number summary, the reveal glyph, and the luck readout', async () => {
     const root = document.createElement('div');
     document.body.append(root);

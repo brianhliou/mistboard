@@ -49,6 +49,8 @@ import {
   type XmjRoomState,
   type XmjSeat,
   xmjAnswerAt,
+  xmjClaimAnswerEarliestAt,
+  xmjClaimant,
   xmjClockOwner,
   xmjIsDeclared,
   xmjIsLegalMove,
@@ -96,8 +98,9 @@ export type XmjTenantType = VariantTenant<
 
 export function xmjClientEventFor(
   event: XmjEvent,
-  _seat: TenantSeat<XmjSeat>,
+  seat: TenantSeat<XmjSeat>,
   ply: number,
+  visibleEvents?: readonly XmjEvent[],
 ): XmjClientEvent | null {
   if (event.type === 'room-created') {
     // The walls: every tile of every hand of the match, in order.
@@ -112,12 +115,42 @@ export function xmjClientEventFor(
   // says the discarder still holds a twin of the thrown tile, and no client
   // needs it (it only feeds the server's drawnDiscards).
   if (event.type === 'move-played') {
+    // Without a released log context, a pass is private to its owner. The
+    // delivery frontier excludes it until the next public move or hand end.
+    if (event.move.action === 'pass' && seat !== event.color && !visibleEvents?.includes(event)) {
+      return null;
+    }
     if (
       (event.move.action === 'discard' || event.move.action === 'declare-ready') &&
       event.move.handCopy !== undefined
     ) {
       const { handCopy: _concealed, ...move } = event.move;
       return { ...event, move, ply };
+    }
+    if (event.move.action === 'pass' && seat !== event.color && visibleEvents) {
+      const created = visibleEvents[0];
+      const correspondence =
+        created?.type === 'room-created' &&
+        isXmjRoomSetup(created.setup) &&
+        created.setup.correspondence;
+      if (!correspondence) {
+        // A released pass is bookkeeping, not a record of private thinking
+        // time. Keep the durable timestamp for clocks, but give every public
+        // pass the same date as an automatic pass on this discard.
+        const index = visibleEvents.indexOf(event);
+        const discard = visibleEvents
+          .slice(0, index)
+          .reverse()
+          .find(
+            (previous) =>
+              previous.type === 'move-played' &&
+              (previous.move.action === 'discard' || previous.move.action === 'declare-ready'),
+          );
+        if (discard?.type === 'move-played') {
+          const at = discard.move.at + XMJ_CLAIM_PAUSE_MS;
+          return { ...event, at, move: { by: event.move.by, at, action: 'pass' }, ply };
+        }
+      }
     }
     return { ...event, ply };
   }
@@ -210,11 +243,15 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     // by/at are placeholders; canonicalMove stamps them from the socket and the
     // server clock. 'timeout' is refused here: it is the runtime's move.
     moveFromMessage: xmjMoveFromMessage,
+    moveEventAt: (move) => move.at,
     canonicalMove: (state, move, seat) => {
-      // A claim-window answer made at once is dated to the pause end, like the
-      // runtime's pass for an empty hand (xmjAnswerAt), so `at` on the wire
-      // says nothing about whether there was a choice.
-      const stamped = { ...move, by: seat, at: xmjAnswerAt(state, Date.now()) } as XmjMove;
+      const now = Date.now();
+      // The universal pause is enforced on the server too. An early pass
+      // cannot draw privately and then release a discard (or stop a declared
+      // hand's clock) before an automatic pass could have drawn.
+      const earliest = xmjClaimAnswerEarliestAt(state);
+      if (move.action === 'pass' && earliest !== null && now < earliest) return null;
+      const stamped = { ...move, by: seat, at: xmjAnswerAt(state, now) } as XmjMove;
       if (!xmjSeatMayAct(state, seat)) return null;
       if (!xmjIsLegalMove(state, stamped)) return null;
       return stamped;
@@ -230,6 +267,19 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     reservationReleaseTag: 'xiangqi-mahjong',
   },
   visibility: {
+    clientEventCount: (state, events, seat) => {
+      if (state.correspondence) return undefined;
+      if (state.status.type !== 'playing' || state.match.between) return events.length;
+      for (let index = events.length - 1; index >= 0; index -= 1) {
+        const event = events[index];
+        if (event?.type !== 'move-played') continue;
+        // A pass and its draw stay one private step. Any subsequent move is
+        // public, so the entire prefix can then be released, in order. This
+        // is reconstructed from durable events, including after a restart.
+        return event.move.action === 'pass' && event.color !== seat ? index : events.length;
+      }
+      return events.length;
+    },
     clientEventFor: xmjClientEventFor,
     viewForClient: (state, client) => getXmjClientView(state, client),
     // The walls are a server secret, live or finished, so the client cannot
@@ -243,6 +293,14 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     snapshotExtras: (room, client) => {
       const pveEngineId = tenantPveEngineId(xiangqiMahjongTenant, room);
       return {
+        // Only the claimant needs the active first-reply countdown. Hiding it
+        // from others prevents its disappearance exposing a private pass.
+        abortDeadline:
+          !room.projection.state.correspondence &&
+          room.projection.state.moveNumber > 0 &&
+          client.seat !== xmjClaimant(room.projection.state)
+            ? null
+            : room.abortDeadline,
         roomMode: pveEngineId === null ? 'pvp' : 'pve',
         ...(pveEngineId === null ? {} : { pveEngineId }),
         rated: room.rated,

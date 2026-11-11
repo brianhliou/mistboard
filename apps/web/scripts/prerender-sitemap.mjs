@@ -2,15 +2,16 @@
 import { execFileSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { Window } from 'happy-dom';
-import { crawlerCharCount, crawlerContentText } from '../../../scripts/lib/crawler-text.mjs';
-
-const window = new Window({
-  settings: { disableJavaScriptEvaluation: true, disableCSSFileLoading: true },
-});
+import {
+  crawlerCharCount,
+  crawlerDocument,
+  crawlerDocumentContentText,
+} from '../../../scripts/lib/crawler-text.mjs';
 
 export function prerenderSitemapRecord(html, file, publicHost, sourceDate, knownGaps = new Set()) {
-  const doc = new window.DOMParser().parseFromString(html, 'text/html');
+  // Parse once: article diagrams can contain thousands of SVG nodes. The
+  // crawler parser closes its Window before handing back the inert document.
+  const doc = crawlerDocument(html);
   const canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href');
   if (
     !canonical ||
@@ -20,12 +21,9 @@ export function prerenderSitemapRecord(html, file, publicHost, sourceDate, known
   const url = new URL(canonical, publicHost);
   // Decided 2026-11-07: tracked gaps stay discoverable to rendering search engines.
   // Untracked shells still cannot become sitemap candidates.
-  const contentChars = crawlerCharCount(crawlerContentText(html));
-  if (
-    !knownGaps.has(url.pathname) &&
-    (!doc.querySelector('h1')?.textContent?.trim() || contentChars < 150)
-  )
-    return null;
+  const hasHeading = !!doc.querySelector('h1')?.textContent?.trim();
+  const contentChars = crawlerCharCount(crawlerDocumentContentText(doc));
+  if (!knownGaps.has(url.pathname) && (!hasHeading || contentChars < 150)) return null;
   if (url.origin !== new URL(publicHost).origin)
     throw new Error(`foreign prerender canonical: ${canonical}`);
   const ldDate =

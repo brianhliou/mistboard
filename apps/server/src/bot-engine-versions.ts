@@ -86,6 +86,8 @@ export function botEngineVersion(engineId: string): string | null {
   if (engineId === KATAGO_JUNGLE_ENGINE_ID) return katagoVersion();
   if (engineId === 'misty-banqi' || engineId.startsWith('misty-banqi-level-'))
     return BANQI_ENGINE_VERSION;
+  // The dropped 100K rung retains its historical build; every live tier is 0.6.0.
+  if (engineId === 'misty-jungle-flip-level-7') return '0.5.1';
   if (engineId.startsWith('misty-jungle-flip')) return JUNGLE_FLIP_ENGINE_VERSION;
   if (engineId.startsWith('misty-jungle-level-')) return JUNGLE_RUST_ENGINE_VERSION;
   if (engineId.startsWith('python-')) return registryVersion(engineId);

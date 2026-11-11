@@ -7,6 +7,7 @@ import {
   isAllowedEngineTimeControl,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { BANQI_PLAYABLE_ENGINES, banqiEngineAvailable } from '../banqi-engine.js';
 import { isBotSpecPlayable, parsePublicBotId } from './../bot-profile-policy.js';
 import { playableLiveEngines } from './../engine-registry.js';
 import { ratedEnabled } from './../feature-flags.js';
@@ -14,6 +15,7 @@ import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { InternalEngineClientError } from './../internal-engine-client.js';
+import { JUNGLE_FLIP_PLAYABLE_ENGINES, jungleFlipEngineAvailable } from '../jungle-flip-engine.js';
 import { engineCounters, logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { registeredVariantTenants } from './../variant-tenant/registry.js';
@@ -320,10 +322,6 @@ export async function resolveBotRoomRequest(
     writeJson(response, 400, { error: 'bot_requires_pve' });
     return null;
   }
-  if (body.engineId !== undefined) {
-    writeJson(response, 400, { error: 'bot_engine_conflict' });
-    return null;
-  }
   // Pre-consolidation bot ids keep working: canonicalize before the DB lookup
   // (the merged profile is the public row; legacy rows are unlisted).
   const botId = firstPartyBotForId(requestedBotId)?.id ?? requestedBotId;
@@ -347,12 +345,39 @@ export async function resolveBotRoomRequest(
     writeJson(response, 404, { error: 'bot_not_found' });
     return null;
   }
-  const engineId =
+  let engineId =
     firstPartyBotEngineFor(botId, gameSpecId) ??
     (gameSpecId === bot.play.gameSpecId ? bot.play.engineId : null);
   if (!engineId) {
     writeJson(response, 400, { error: 'bot_game_spec_conflict' });
     return null;
+  }
+  if (body.engineId !== undefined) {
+    // Only Misty's two numbered flip-game ladders accept a tier override.
+    // Match the playable table exactly: historical aliases, random anchors,
+    // unknown ids and other variants' engines must never fall back to L7.
+    const tiers =
+      botId !== 'misty'
+        ? []
+        : gameSpecId === 'banqi'
+          ? BANQI_PLAYABLE_ENGINES
+          : gameSpecId === 'jungle-flip'
+            ? JUNGLE_FLIP_PLAYABLE_ENGINES
+            : [];
+    const tier = tiers.find((candidate) => candidate.id === body.engineId);
+    if (!tier) {
+      writeJson(response, 400, { error: 'bot_engine_conflict' });
+      return null;
+    }
+    const available =
+      gameSpecId === 'banqi'
+        ? banqiEngineAvailable(tier.id)
+        : gameSpecId === 'jungle-flip' && jungleFlipEngineAvailable(tier.id);
+    if (!available) {
+      writeJson(response, 400, { error: 'invalid_engine' });
+      return null;
+    }
+    engineId = tier.id;
   }
   // The caller may pick any pace the target surface allows (the tenant/chess
   // time-control gates downstream stay authoritative); omitted resolves to
